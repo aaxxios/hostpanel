@@ -4,9 +4,10 @@
 # first anyone heard of it was every build failing NuGet's audit (TreatWarningsAsErrors).
 # Dependabot raises those as PRs instead, which CI then builds and tests.
 #
-# Minor and patch updates are grouped into one PR per ecosystem to keep the noise down;
-# major versions arrive one PR each, since they need reading. Security updates are not
-# grouped and are not limited by the PR cap.
+# Minor and patch updates are grouped into one PR per ecosystem to keep the noise down.
+# Major versions are not proposed at all: they need reading, and upgrading one is a
+# decision for the team rather than a weekly chore. Security updates still come through
+# for every version, since `ignore` does not apply to them.
 #
 # Docker base images are not listed: the Dockerfiles use moving tags (node:22-alpine,
 # dotnet/sdk:9.0) that already pick up patches on rebuild, and a major runtime bump is a
@@ -29,6 +30,16 @@ updates:
       - dependency-name: Innovayse.Auth
       # The ImageSharp line was dropped for licensing reasons; see Directory.Packages.props.
       - dependency-name: SixLabors.ImageSharp
+      # 8.0 moved FluentAssertions to a paid commercial licence (Xceed); 7.x is the last
+      # Apache-2.0 line. Same reasoning as ImageSharp. Explicit, so that a later change to
+      # the major-version rule below cannot let it through.
+      - dependency-name: FluentAssertions
+        versions: [">= 8.0.0"]
+      # No majors (see the header). For Microsoft.* / System.* this matters twice over: their
+      # majors track the .NET version (10.x is .NET 10) and move together with the
+      # TargetFramework, not one package at a time.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       # SkiaSharp and its native assets must stay on the same version.
       skiasharp:
@@ -46,6 +57,9 @@ updates:
       timezone: Asia/Yerevan
     open-pull-requests-limit: 5
     labels: [dependencies, "area: client"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       client-minor-patch:
         update-types: [minor, patch]
@@ -60,6 +74,9 @@ updates:
       timezone: Asia/Yerevan
     open-pull-requests-limit: 5
     labels: [dependencies, "area: admin"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       admin-minor-patch:
         update-types: [minor, patch]
