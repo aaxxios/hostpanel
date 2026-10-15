@@ -27,25 +27,25 @@
       declares JwtBearer >= 9.0.20, and central package management turns the resulting
       downgrade into NU1605, which TreatWarningsAsErrors makes a restore failure.
     -->
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.20" />
-    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.21" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.21" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.21" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.21" />
     <PackageVersion Include="Stripe.net" Version="51.2.0" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.0.1" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
   </ItemGroup>
   <!-- Entity Framework Core -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.1" />
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.21" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.21" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
   </ItemGroup>
   <!-- Microsoft Extensions -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.21" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="9.0.21" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.21" />
     <!--
       Polly's IHttpClientFactory integration, used by Innovayse.Infrastructure to put a timeout,
       a circuit breaker and a per-client retry predicate in front of every outbound HTTP client.
@@ -60,14 +60,14 @@
       dependency, while the implementation and AddLocalization() come from the ASP.NET Core
       shared framework the API already targets.
     -->
-    <PackageVersion Include="Microsoft.Extensions.Localization.Abstractions" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Localization.Abstractions" Version="9.0.21" />
     <!--
       The ResourceManager-backed IStringLocalizer implementation. Referenced by
       Innovayse.Application.Tests only: the API gets it from the ASP.NET Core shared framework,
       but a plain test project has no framework reference to get it from.
     -->
-    <PackageVersion Include="Microsoft.Extensions.Localization" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Localization" Version="9.0.21" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
     <!--
       9.0.10 rather than 9.0.1, which is the version every other Microsoft.Extensions.*
       package here carries. Microsoft.Extensions.Http.Resilience 9.10.0 raises the
@@ -77,18 +77,18 @@
       NU1605 downgrade, which src/Directory.Build.props turns into a build failure.
       Same servicing band, no API change; do not "restore" it to 9.0.1.
     -->
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.21" />
   </ItemGroup>
   <!-- Wolverine -->
   <ItemGroup>
-    <PackageVersion Include="WolverineFx" Version="5.31.0" />
-    <PackageVersion Include="WolverineFx.Postgresql" Version="5.31.0" />
+    <PackageVersion Include="WolverineFx" Version="5.41.0" />
+    <PackageVersion Include="WolverineFx.Postgresql" Version="5.41.0" />
     <!--
       Validation middleware in front of every handler that has a validator. Pinned to the same
       5.31.0 as WolverineFx itself: the two ship together and a mismatch is a startup failure,
       not a compile error.
     -->
-    <PackageVersion Include="WolverineFx.FluentValidation" Version="5.31.0" />
+    <PackageVersion Include="WolverineFx.FluentValidation" Version="5.41.0" />
   </ItemGroup>
   <!-- Application Libraries -->
   <ItemGroup>
@@ -102,19 +102,19 @@
       solution), and it has no 12.x release, so keeping it would hold FluentValidation below the
       version the middleware needs.
     -->
-    <PackageVersion Include="FluentValidation" Version="12.1.1" />
+    <PackageVersion Include="FluentValidation" Version="12.2.0" />
     <!--
       Supplies AddValidatorsFromAssemblyContaining, which Program.cs calls to put the validators
       in the container where the Wolverine middleware looks for them.
     -->
-    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-    <PackageVersion Include="Fluid.Core" Version="2.31.0" />
-    <PackageVersion Include="MailKit" Version="4.16.0" />
+    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+    <PackageVersion Include="Fluid.Core" Version="2.40.0" />
+    <PackageVersion Include="MailKit" Version="4.18.1" />
     <PackageVersion Include="Mapster" Version="7.4.0" />
-    <PackageVersion Include="Otp.NET" Version="1.4.0" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.0.27" />
+    <PackageVersion Include="Otp.NET" Version="1.4.1" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.0" />
     <PackageVersion Include="Serilog.AspNetCore" Version="8.0.3" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.9.0" />
   </ItemGroup>
   <!-- Roslyn / Tooling -->
   <ItemGroup>
@@ -122,12 +122,12 @@
   </ItemGroup>
   <!-- Testing -->
   <ItemGroup>
-    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="FluentAssertions" Version="6.12.2" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-    <PackageVersion Include="Moq" Version="4.20.70" />
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.0.0" />
-    <PackageVersion Include="xunit" Version="2.9.2" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="Moq" Version="4.21.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>
 </Project>
