@@ -87,7 +87,7 @@ const error = ref<string | null>(null)
 const currentCategoryId = ref<number | null>(null)
 
 /** Breadcrumb trail for nested navigation. */
-const breadcrumbs = ref<Array<{ id: number | null; name: string }>>([])
+const breadcrumbs = ref<Array<{ id: number; name: string }>>([])
 
 // --- Add Category form ---
 
