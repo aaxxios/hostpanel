@@ -1,0 +1,83 @@
+name: CI
+
+# Checks pull requests from contributors, who build the standalone flavour.
+#
+# The full pipeline (images, deploys) runs on GitLab, and GitLab always has the private
+# registry credential, so it only ever compiles the SSO build. This workflow covers the
+# other one: the build every outside contributor gets from a plain clone, with
+# Innovayse.Auth left out (-p:InnovayseSso=false, see backend/Directory.Build.props).
+# It needs no secrets, which is also what makes it safe to run on pull requests from forks.
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (standalone build + tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - name: Restore
+        run: dotnet restore Innovayse.Backend.sln -p:InnovayseSso=false
+      - name: Build
+        run: dotnet build Innovayse.Backend.sln -c Release --no-restore -p:InnovayseSso=false
+      - name: Unit tests
+        run: |
+          for suite in Domain Application Infrastructure CWP Inecobank; do
+            dotnet test "tests/Innovayse.$suite.Tests" -c Release --no-build
+          done
+      - name: Integration tests (Testcontainers)
+        run: dotnet test tests/Innovayse.Integration.Tests -c Release --no-build
+
+  client:
+    name: Client portal (unit tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: yarn
+          cache-dependency-path: client/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn test
+
+  admin:
+    name: Admin panel (type-check + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci
+      - run: npm run build
