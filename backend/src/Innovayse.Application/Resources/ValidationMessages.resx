@@ -285,7 +285,7 @@
   </data>
   <data name="BrandingImageInvalid" xml:space="preserve">
     <value>That file could not be read as an image. Upload a PNG, JPEG, WebP, GIF or BMP.</value>
-    <comment>BRANDING_IMAGE_INVALID. ImageSharpBrandingImageProcessor. Answered 400. The specific cause is logged, never sent.</comment>
+    <comment>BRANDING_IMAGE_INVALID. SkiaBrandingImageProcessor. Answered 400. The specific cause is logged, never sent.</comment>
   </data>
   <data name="BrandingImageTooLarge" xml:space="preserve">
     <value>That image is too large. Upload a file under 5 MB and no more than 8000 pixels on a side.</value>

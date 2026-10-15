@@ -16,9 +16,9 @@ using Innovayse.Application.Admin.Common;
 /// itself, which is what makes the stored file safe to serve.
 /// </para>
 /// <para>
-/// Named for the work rather than the library. The implementation today is ImageSharp, pinned
-/// to its Apache-2.0 2.x line because this repository is public; nothing in Application should
-/// have to change if that becomes something else.
+/// Named for the work rather than the library. The implementation today is SkiaSharp (it was
+/// ImageSharp until that line stopped receiving fixes), and nothing in Application had to change
+/// when it was swapped, which is the point of the abstraction.
 /// </para>
 /// </remarks>
 public interface IBrandingImageProcessor

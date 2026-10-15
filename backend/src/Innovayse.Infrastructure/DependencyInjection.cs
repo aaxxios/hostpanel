@@ -174,7 +174,7 @@ public static class DependencyInjection
                 "Branding:RelativePath must stay inside the web root.")
             .ValidateOnStart();
         services.AddSingleton<Innovayse.Application.Admin.Interfaces.IBrandingImageProcessor,
-            Innovayse.Infrastructure.Branding.ImageSharpBrandingImageProcessor>();
+            Innovayse.Infrastructure.Branding.SkiaBrandingImageProcessor>();
         services.AddSingleton<Innovayse.Application.Admin.Interfaces.IBrandingStorage,
             Innovayse.Infrastructure.Branding.FileSystemBrandingStorage>();
 
