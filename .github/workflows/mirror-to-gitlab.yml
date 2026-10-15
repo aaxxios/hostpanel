@@ -28,7 +28,7 @@ jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Full history: a shallow mirror push would truncate the GitLab
           # repo's log on the very first sync.
