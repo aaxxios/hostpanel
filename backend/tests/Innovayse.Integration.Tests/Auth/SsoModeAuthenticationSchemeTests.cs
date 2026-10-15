@@ -1,3 +1,6 @@
+#if INNOVAYSE_SSO
+// Only compiled into an SSO build: these tests exercise Innovayse.Auth itself. See
+// InnovayseSso in backend/Directory.Build.props.
 namespace Innovayse.Integration.Tests.Auth;
 
 using System.Security.Claims;
@@ -130,3 +133,5 @@ public sealed class SsoModeAuthenticationSchemeTests : IAsyncLifetime
         }
     }
 }
+
+#endif

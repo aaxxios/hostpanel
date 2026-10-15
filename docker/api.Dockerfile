@@ -36,8 +36,14 @@ COPY backend/tests/Innovayse.Inecobank.Tests/Innovayse.Inecobank.Tests.csproj ./
 # build arg is dropped with a warning, which is what turned the restore into a plain
 # 401 against a feed that was otherwise configured correctly.
 ARG NuGetPackageSourceCredentials_innovayse
+# The auth mode this image will run in. AUTH_MODE=sso asks for an SSO build explicitly
+# (-p:InnovayseSso=true), so a missing registry credential fails here with a 401 rather
+# than producing a standalone image that refuses to boot in sso mode. Anything else
+# leaves the choice to backend/Directory.Build.props.
+ARG AUTH_MODE
 
-RUN dotnet restore Innovayse.Backend.sln
+RUN SSO=$([ "$AUTH_MODE" = "sso" ] && echo "-p:InnovayseSso=true"); \
+    dotnet restore Innovayse.Backend.sln $SSO
 
 ENV ASPNETCORE_ENVIRONMENT=Development
 EXPOSE 5148
@@ -81,11 +87,19 @@ COPY backend/tests/Innovayse.Inecobank.Tests/Innovayse.Inecobank.Tests.csproj ./
 # build arg is dropped with a warning, which is what turned the restore into a plain
 # 401 against a feed that was otherwise configured correctly.
 ARG NuGetPackageSourceCredentials_innovayse
+# The auth mode this image will run in. AUTH_MODE=sso asks for an SSO build explicitly
+# (-p:InnovayseSso=true), so a missing registry credential fails here with a 401 rather
+# than producing a standalone image that refuses to boot in sso mode. Anything else
+# leaves the choice to backend/Directory.Build.props.
+ARG AUTH_MODE
 
-RUN dotnet restore Innovayse.Backend.sln
+RUN SSO=$([ "$AUTH_MODE" = "sso" ] && echo "-p:InnovayseSso=true"); \
+    dotnet restore Innovayse.Backend.sln $SSO
 
 COPY backend/ .
-RUN dotnet publish src/Innovayse.API/Innovayse.API.csproj -c Release -o /out --no-restore /p:ErrorOnDuplicatePublishOutputFiles=false
+# Same flag as the restore above: the two have to agree on whether INNOVAYSE_SSO is defined.
+RUN SSO=$([ "$AUTH_MODE" = "sso" ] && echo "-p:InnovayseSso=true"); \
+    dotnet publish src/Innovayse.API/Innovayse.API.csproj -c Release -o /out --no-restore /p:ErrorOnDuplicatePublishOutputFiles=false $SSO
 
 # ── Prod target ───────────────────────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS prod

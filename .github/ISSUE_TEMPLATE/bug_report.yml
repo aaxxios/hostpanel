@@ -1,0 +1,68 @@
+name: 🐛 Bug report
+description: Something does not work the way it should
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please search [existing issues](https://github.com/innovayse/hostpanel/issues) first.
+        **Security problems:** do not file them here, see [SECURITY.md](https://github.com/innovayse/hostpanel/blob/main/SECURITY.md).
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Client portal
+        - Admin panel
+        - Billing / payments
+        - Domains
+        - Provisioning (CWP, cPanel)
+        - Installation / Docker
+        - API
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: "API log: `docker compose logs hostpanel-api`. Remove passwords and tokens before pasting."
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: "e.g. main @ c16bccf, or the release tag"
+  - type: dropdown
+    id: deploy
+    attributes:
+      label: How do you run it?
+      options:
+        - docker compose (README quick start)
+        - Own Docker setup
+        - Bare metal
+        - Live demo
+  - type: dropdown
+    id: authmode
+    attributes:
+      label: AUTH_MODE
+      options:
+        - local
+        - sso

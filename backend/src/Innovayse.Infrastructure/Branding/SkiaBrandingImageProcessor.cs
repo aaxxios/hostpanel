@@ -4,13 +4,10 @@ using Innovayse.Application.Admin.Common;
 using Innovayse.Application.Admin.Interfaces;
 using Innovayse.Infrastructure.Branding.Options;
 using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 /// <summary>
-/// Renders branding uploads with ImageSharp, deciding the format from the bytes themselves.
+/// Renders branding uploads with SkiaSharp, deciding the format from the bytes themselves.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -21,23 +18,26 @@ using SixLabors.ImageSharp.Processing;
 /// <i>and</i> a valid archive or script at the same time.
 /// </para>
 /// <para>
-/// <b>SVG is refused, not stored.</b> ImageSharp is a raster library and cannot rasterise a
-/// vector, and storing the vector untouched is exactly the thing not to do: an SVG served from
-/// the same origin as the panel is a script tag with a picture around it — it carries
-/// <c>&lt;script&gt;</c> and event handlers, and a browser runs them, which turns "an admin
-/// uploads a logo" into stored XSS against every visitor. So the upload is refused with a
+/// <b>SVG is refused, not stored.</b> Storing the vector untouched is exactly the thing not to
+/// do: an SVG served from the same origin as the panel is a script tag with a picture around it —
+/// it carries <c>&lt;script&gt;</c> and event handlers, and a browser runs them, which turns "an
+/// admin uploads a logo" into stored XSS against every visitor. So the upload is refused with a
 /// readable message and the operator converts to PNG once, rather than the product growing a
 /// sanitiser it would have to keep ahead of.
 /// </para>
 /// <para>
-/// The format is decided by <see cref="Image.Identify(System.IO.Stream)"/>, which reads the
-/// container's own header. The multipart part's <c>Content-Type</c> and the filename's extension
-/// are both written by the client and are therefore claims, not evidence; the previous version of
-/// this upload trusted the former as its only check.
+/// The format is decided by <see cref="SKCodec"/>, which reads the container's own header. The
+/// multipart part's <c>Content-Type</c> and the filename's extension are both written by the
+/// client and are therefore claims, not evidence.
+/// </para>
+/// <para>
+/// This replaced an ImageSharp implementation with the same behaviour: SixLabors.ImageSharp 2.x
+/// stopped receiving fixes and 3.x is not under a licence this repository can take. See
+/// <c>backend/Directory.Packages.props</c>.
 /// </para>
 /// </remarks>
 /// <param name="options">Ceilings and paths for branding uploads.</param>
-public sealed class ImageSharpBrandingImageProcessor(IOptions<BrandingOptions> options)
+public sealed class SkiaBrandingImageProcessor(IOptions<BrandingOptions> options)
     : IBrandingImageProcessor
 {
     /// <summary>
@@ -70,15 +70,33 @@ public sealed class ImageSharpBrandingImageProcessor(IOptions<BrandingOptions> o
     ];
 
     /// <summary>
-    /// Format identifiers this deployment accepts, as ImageSharp names them.
+    /// Formats this deployment accepts.
     /// </summary>
     /// <remarks>
-    /// An allow-list rather than "whatever ImageSharp can decode". The library also reads TGA and
-    /// TIFF, which no browser renders as a favicon — accepting them would let an operator upload
-    /// a file that stores fine and then fails to display, with nothing explaining why.
+    /// An allow-list rather than "whatever the codec can decode". Skia also reads ICO, WBMP and
+    /// several camera raw formats, which no browser renders as a favicon — accepting them would
+    /// let an operator upload a file that stores fine and then fails to display, with nothing
+    /// explaining why.
     /// </remarks>
-    private static readonly HashSet<string> _acceptedFormats =
-        new(StringComparer.OrdinalIgnoreCase) { "PNG", "JPEG", "GIF", "WebP", "BMP" };
+    private static readonly HashSet<SKEncodedImageFormat> _acceptedFormats =
+    [
+        SKEncodedImageFormat.Png,
+        SKEncodedImageFormat.Jpeg,
+        SKEncodedImageFormat.Gif,
+        SKEncodedImageFormat.Webp,
+        SKEncodedImageFormat.Bmp,
+    ];
+
+    /// <summary>
+    /// Resampling for every resize: trilinear, i.e. bilinear between mipmap levels.
+    /// </summary>
+    /// <remarks>
+    /// Not bicubic. Skia's cubic filters are fixed 4-tap kernels that ignore mipmaps, so a
+    /// 1024px mark reduced to a 16px favicon samples a handful of source pixels and aliases:
+    /// fine stripes came out as the wrong overall brightness and moire. Mipmapped sampling
+    /// averages the whole footprint, which is what a large downscale needs.
+    /// </remarks>
+    private static readonly SKSamplingOptions _sampling = new(SKFilterMode.Linear, SKMipmapMode.Linear);
 
     /// <summary>Resolved ceilings and paths.</summary>
     private readonly BrandingOptions _options = options.Value;
@@ -115,10 +133,10 @@ public sealed class ImageSharpBrandingImageProcessor(IOptions<BrandingOptions> o
     /// Turns uploaded bytes into an image, or refuses them.
     /// </summary>
     /// <param name="content">The uploaded bytes.</param>
-    /// <returns>The decoded image; the caller owns it.</returns>
+    /// <returns>The decoded image, unpremultiplied RGBA; the caller owns it.</returns>
     /// <exception cref="InvalidBrandingImageException">Not a format this accepts.</exception>
     /// <exception cref="BrandingImageTooLargeException">Declares more pixels than allowed.</exception>
-    private Image<Rgba32> Decode(byte[] content)
+    private SKBitmap Decode(byte[] content)
     {
         // Named before anything else, because it is the one refusal an operator will hit by
         // accident: the admin panel used to accept SVG, so the message has to say what to do.
@@ -128,54 +146,65 @@ public sealed class ImageSharpBrandingImageProcessor(IOptions<BrandingOptions> o
                 "Upload is SVG. Vectors are not stored: convert to PNG before uploading.");
         }
 
-        using var probe = new MemoryStream(content, writable: false);
+        using var stream = new SKMemoryStream(content);
 
-        // Identify reads the header only. This is the decompression-bomb check, and it has to
-        // happen before the decode below: a highly compressible PNG a few hundred kilobytes in
-        // size can declare a 100 000-pixel side and become forty gigabytes once its pixels are
-        // materialised, so a byte ceiling alone lets one upload exhaust the container.
-        var info = Image.Identify(probe, out var format)
+        // Creating the codec reads the header only. This is the decompression-bomb check, and it
+        // has to happen before the decode below: a highly compressible PNG a few hundred
+        // kilobytes in size can declare a 100 000-pixel side and become forty gigabytes once its
+        // pixels are materialised, so a byte ceiling alone lets one upload exhaust the container.
+        using var codec = SKCodec.Create(stream)
             ?? throw new InvalidBrandingImageException("No decoder recognised the upload.");
 
-        if (format is null || !_acceptedFormats.Contains(format.Name))
+        if (!_acceptedFormats.Contains(codec.EncodedFormat))
         {
             throw new InvalidBrandingImageException(
-                $"Format '{format?.Name ?? "unknown"}' is not accepted here.");
+                $"Format '{codec.EncodedFormat}' is not accepted here.");
         }
 
-        if (info.Width > _options.MaxSourceEdge || info.Height > _options.MaxSourceEdge)
+        var width = codec.Info.Width;
+        var height = codec.Info.Height;
+
+        if (width <= 0 || height <= 0)
+        {
+            throw new InvalidBrandingImageException("Upload declares an empty image.");
+        }
+
+        if (width > _options.MaxSourceEdge || height > _options.MaxSourceEdge)
         {
             throw new BrandingImageTooLargeException(
-                $"Source declares {info.Width}x{info.Height}; ceiling is {_options.MaxSourceEdge} per edge.");
+                $"Source declares {width}x{height}; ceiling is {_options.MaxSourceEdge} per edge.");
         }
 
         // Area, not just edges. The buffer below is width * height * 4 bytes, so a shape that
         // clears both edge limits can still be the allocation that ends the process.
-        var pixels = (long)info.Width * info.Height;
+        var pixels = (long)width * height;
         if (pixels > _options.MaxSourcePixels)
         {
             throw new BrandingImageTooLargeException(
                 $"Source declares {pixels} pixels; ceiling is {_options.MaxSourcePixels}.");
         }
 
-        using var decode = new MemoryStream(content, writable: false);
-        try
+        var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        var bitmap = new SKBitmap(info);
+
+        // GetPixels decodes the first frame only, which is what a logo or icon from an animated
+        // GIF or WebP should be. IncompleteInput is a truncated file whose top rows decoded:
+        // refused like any other broken upload rather than stored half grey.
+        var result = codec.GetPixels(info, bitmap.GetPixels());
+        if (result != SKCodecResult.Success)
         {
-            return Image.Load<Rgba32>(decode);
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            // The header parsed and the pixels did not. Nothing here is worth showing a caller,
-            // but the decoder's own message is worth keeping for whoever reads the log.
+            bitmap.Dispose();
             throw new InvalidBrandingImageException(
-                $"Header parsed but decoding failed: {ex.Message}");
+                $"Header parsed but decoding failed: {result}.");
         }
+
+        return bitmap;
     }
 
     /// <summary>Renders the full square icon set from a favicon upload.</summary>
     /// <param name="source">The decoded upload.</param>
     /// <returns>The primary rendition plus every size in the set.</returns>
-    private static List<BrandingRendition> RenderFaviconSet(Image<Rgba32> source)
+    private static List<BrandingRendition> RenderFaviconSet(SKBitmap source)
     {
         var renditions = new List<BrandingRendition>(_faviconSet.Length + 1);
 
@@ -195,18 +224,17 @@ public sealed class ImageSharpBrandingImageProcessor(IOptions<BrandingOptions> o
 
             renditions.Add(new BrandingRendition(file, bytes, "image/png", size, role));
         }
+
         return renditions;
     }
 
     /// <summary>Renders the single stored logo, downscaled to fit if needed.</summary>
     /// <param name="source">The decoded upload.</param>
     /// <returns>A one-element list holding the primary rendition.</returns>
-    private List<BrandingRendition> RenderLogo(Image<Rgba32> source)
+    private List<BrandingRendition> RenderLogo(SKBitmap source)
     {
-        // Downscale only. ResizeMode.Max fits the image inside the box in both directions --
-        // including upwards, so a 512px mark handed to a 1024px box comes back at 1024,
-        // blurrier and several times the bytes for no gain. Measured: a 512x512 upload was
-        // stored as 1024x1024 before this guard.
+        // Downscale only: a 512px mark handed to a 1024px box is stored at 512, not enlarged
+        // into something blurrier and several times the bytes.
         var longest = Math.Max(source.Width, source.Height);
         if (longest <= _options.MaxLogoEdge)
         {
@@ -216,12 +244,16 @@ public sealed class ImageSharpBrandingImageProcessor(IOptions<BrandingOptions> o
             ];
         }
 
-        using var logo = source.Clone(ctx => ctx.Resize(new ResizeOptions
+        // Fit inside the box, keeping the aspect ratio.
+        var scale = (double)_options.MaxLogoEdge / longest;
+        var width = Math.Max(1, (int)Math.Round(source.Width * scale));
+        var height = Math.Max(1, (int)Math.Round(source.Height * scale));
+
+        using var logo = NewCanvasBitmap(width, height);
+        using (var canvas = new SKCanvas(logo))
         {
-            Size = new Size(_options.MaxLogoEdge, _options.MaxLogoEdge),
-            // Max keeps the aspect ratio; the guard above is what stops it enlarging.
-            Mode = ResizeMode.Max,
-        }));
+            DrawFitted(canvas, source, new SKRect(0, 0, width, height));
+        }
 
         return
         [
@@ -235,21 +267,20 @@ public sealed class ImageSharpBrandingImageProcessor(IOptions<BrandingOptions> o
     /// </summary>
     /// <remarks>
     /// Padded rather than stretched. An icon is square by definition, and a wide logo squashed
-    /// into 512&#215;512 is the failure operators notice immediately.
+    /// into 512&#215;512 is the failure operators notice immediately. The padding is transparent,
+    /// so a logo on a dark header does not gain a white box.
     /// </remarks>
     /// <param name="source">The decoded upload.</param>
     /// <param name="edge">Edge length of the output square, in pixels.</param>
     /// <returns>PNG bytes.</returns>
-    private static byte[] EncodeSquare(Image<Rgba32> source, int edge)
+    private static byte[] EncodeSquare(SKBitmap source, int edge)
     {
-        using var square = source.Clone(ctx => ctx.Resize(new ResizeOptions
+        using var square = NewCanvasBitmap(edge, edge);
+        using (var canvas = new SKCanvas(square))
         {
-            Size = new Size(edge, edge),
-            // Pad fits the whole image inside the square and fills the remainder with the colour
-            // below — transparent, so a logo on a dark header does not gain a white box.
-            Mode = ResizeMode.Pad,
-            PadColor = Color.Transparent,
-        }));
+            canvas.Clear(SKColors.Transparent);
+            DrawFitted(canvas, source, new SKRect(0, 0, edge, edge));
+        }
 
         return Encode(square);
     }
@@ -270,47 +301,75 @@ public sealed class ImageSharpBrandingImageProcessor(IOptions<BrandingOptions> o
     /// here. An operator's mark usually sits on its own tile, and sampling it keeps the padded
     /// area continuous with the artwork instead of introducing a colour the brand never had. A
     /// fully transparent corner falls back to white, because a maskable icon may not be
-    /// transparent: the launcher would fill the crop with whatever it liked.
+    /// transparent: the launcher would fill the crop with whatever it liked. A partly
+    /// transparent corner is used fully opaque, for the same reason.
     /// </para>
     /// </remarks>
     /// <param name="source">The decoded upload.</param>
     /// <param name="edge">Edge length of the output square, in pixels.</param>
     /// <returns>PNG bytes.</returns>
-    private static byte[] EncodeMaskable(Image<Rgba32> source, int edge)
+    private static byte[] EncodeMaskable(SKBitmap source, int edge)
     {
-        var corner = source[0, 0];
-        var field = corner.A == 0 ? Color.White : new Color(corner);
+        var corner = source.GetPixel(0, 0);
+        var field = corner.Alpha == 0 ? SKColors.White : corner.WithAlpha(255);
         var inner = (int)Math.Round(edge * 0.7);
+        var offset = (edge - inner) / 2f;
 
-        using var canvas = new Image<Rgba32>(edge, edge, field.ToPixel<Rgba32>());
-        using var art = source.Clone(ctx => ctx.Resize(new ResizeOptions
+        using var bitmap = NewCanvasBitmap(edge, edge);
+        using (var canvas = new SKCanvas(bitmap))
         {
-            Size = new Size(inner, inner),
-            Mode = ResizeMode.Pad,
-            PadColor = Color.Transparent,
-        }));
+            canvas.Clear(field);
+            DrawFitted(canvas, source, new SKRect(offset, offset, offset + inner, offset + inner));
+        }
 
-        var offset = (edge - inner) / 2;
-        canvas.Mutate(ctx => ctx.DrawImage(art, new Point(offset, offset), 1f));
-
-        return Encode(canvas);
+        return Encode(bitmap);
     }
 
-    /// <summary>Encodes an image as PNG.</summary>
-    /// <param name="image">The image to encode.</param>
-    /// <returns>PNG bytes.</returns>
-    private static byte[] Encode(Image<Rgba32> image)
+    /// <summary>
+    /// Draws the source inside a box, as large as fits without distortion, centred.
+    /// </summary>
+    /// <param name="canvas">Where to draw.</param>
+    /// <param name="source">The decoded upload.</param>
+    /// <param name="box">The area to fit into.</param>
+    private static void DrawFitted(SKCanvas canvas, SKBitmap source, SKRect box)
     {
+        var scale = Math.Min(box.Width / source.Width, box.Height / source.Height);
+        var width = source.Width * scale;
+        var height = source.Height * scale;
+        var left = box.Left + ((box.Width - width) / 2f);
+        var top = box.Top + ((box.Height - height) / 2f);
+
+        using var image = SKImage.FromBitmap(source);
+        using var paint = new SKPaint { IsAntialias = true };
+        canvas.DrawImage(image, new SKRect(left, top, left + width, top + height), _sampling, paint);
+    }
+
+    /// <summary>A blank RGBA bitmap in the format every rendition is drawn into.</summary>
+    /// <param name="width">Width in pixels.</param>
+    /// <param name="height">Height in pixels.</param>
+    /// <returns>A bitmap; the caller owns it.</returns>
+    private static SKBitmap NewCanvasBitmap(int width, int height) =>
+        new(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
+
+    /// <summary>Encodes an image as PNG.</summary>
+    /// <param name="bitmap">The image to encode.</param>
+    /// <returns>PNG bytes.</returns>
+    private static byte[] Encode(SKBitmap bitmap)
+    {
+        using var pixmap = bitmap.PeekPixels();
         using var output = new MemoryStream();
 
-        image.Save(output, new PngEncoder
+        // Icons are flat colour and text, which is what adaptive filtering and a full zlib pass
+        // are for. These files are written once and served for a year, so the encode cost is
+        // paid once and the transfer saving is permanent.
+        var encoded = pixmap.Encode(
+            output,
+            new SKPngEncoderOptions(SKPngEncoderFilterFlags.AllFilters, zLibLevel: 9));
+
+        if (!encoded)
         {
-            // Icons are flat colour and text, which is what this filter and a full compression
-            // pass are for. These files are written once and served for a year, so the encode
-            // cost is paid once and the transfer saving is permanent.
-            ColorType = PngColorType.RgbWithAlpha,
-            CompressionLevel = PngCompressionLevel.BestCompression,
-        });
+            throw new InvalidOperationException("PNG encoding failed.");
+        }
 
         return output.ToArray();
     }

@@ -14,6 +14,9 @@ services:
         # this as a build-arg for the images it builds, and this is the equivalent for
         # a host that builds in place.
         NuGetPackageSourceCredentials_innovayse: ${NUGET_INNOVAYSE_CREDENTIALS}
+        # sso asks for an SSO build explicitly, so a missing credential fails the build
+        # instead of shipping an image that will not boot. See docker/api.Dockerfile.
+        AUTH_MODE: ${AUTH_MODE}
     volumes: !reset []
     ports:
       - "127.0.0.1:5148:5148"

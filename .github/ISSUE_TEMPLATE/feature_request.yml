@@ -1,0 +1,33 @@
+name: 💡 Feature request
+description: Suggest something HostPanel should do
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [open feature requests](https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement) first. If yours is there, a 👍 on it helps us prioritise.
+        Not sure yet? Start a thread in [Ideas](https://github.com/innovayse/hostpanel/discussions/categories/ideas) instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the situation in your hosting business, not the solution yet.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: whmcs
+    attributes:
+      label: How does WHMCS (or another panel) handle this today?
+      description: Optional, but it helps us understand what people expect.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to work on this myself
