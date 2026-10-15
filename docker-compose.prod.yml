@@ -47,6 +47,9 @@ services:
         # intermediate `build` stage only — the published `prod` stage starts from a
         # fresh base and never re-declares the ARG, so nothing carries it.
         NuGetPackageSourceCredentials_innovayse: ${NUGET_INNOVAYSE_CREDENTIALS}
+        # sso asks for an SSO build explicitly, so a missing credential fails the build
+        # instead of shipping an image that will not boot. See docker/api.Dockerfile.
+        AUTH_MODE: ${AUTH_MODE}
     environment:
       # .NET GC tuned for a shared host: workstation GC (server GC reserves a heap per
       # core and grows freely), a conservative collector, and a hard cap at 75% of what the
@@ -107,7 +110,7 @@ services:
       # host that never mentioned it ran local auth; with the fallback gone an
       # absent AUTH_MODE reaches the API as an empty string, which is not "local",
       # and the API takes the SSO path and refuses to start without a client secret.
-      # .env.example carries `sso`; set it to `local` on a standalone box.
+      # .env.example carries `local`; Innovayse's own hosts set `sso`.
       Auth__Mode: ${AUTH_MODE}
       # The cookie session for the admin SPA, read only when AUTH_MODE=sso.
       # AddInnovayseAuth is skipped entirely under local — what a standalone box

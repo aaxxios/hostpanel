@@ -63,7 +63,7 @@ for what is coming next, and vote with a 👍 on the ones you need.
 |-------|-----------|
 | Backend API | ASP.NET Core 9, Wolverine, EF Core, PostgreSQL |
 | Client portal | Nuxt 4, Vue 3, TypeScript, Tailwind CSS, Pinia |
-| Admin panel | Vite, Vue 3, TypeScript, Tailwind CSS, shadcn-vue |
+| Admin panel | Vite, Vue 3, TypeScript, Tailwind CSS |
 | Messaging | RabbitMQ + Wolverine outbox |
 | Auth | ASP.NET Core Identity, JWT in an httpOnly cookie |
 | Email | MailKit (MailHog in development) |
@@ -76,12 +76,16 @@ for what is coming next, and vote with a 👍 on the ones you need.
 You need [Docker](https://docs.docker.com/get-docker/) with Compose v2. Nothing else, and no
 account or token from us.
 
+> **This runs a development stack** for trying HostPanel and working on it: the API runs
+> under `dotnet watch` with your source tree mounted, and it seeds demo data. Do not expose
+> it to the internet. See [Running in production](#running-in-production).
+
 ```bash
 git clone https://github.com/innovayse/hostpanel.git
 cd hostpanel
-cp .env.example .env      # set JWT_SECRET (32+ characters); AUTH_MODE=local is the default
+cp .env.example .env      # AUTH_MODE=local and ASPNETCORE_ENVIRONMENT=Development by default
 docker compose up -d
-docker compose logs -f hostpanel-api   # migrations run on startup
+docker compose logs -f hostpanel-api   # migrations and demo data run on startup
 ```
 
 Then open:
@@ -93,12 +97,27 @@ Then open:
 | API docs | http://localhost:5149/scalar |
 | MailHog (dev mail) | http://localhost:8027 |
 
-**First admin account.** On first boot the API prints a one-time setup token to its log.
-Open the admin panel, create your account, and paste the token when asked. It is the
-proof that you are the operator of this server; it stops working once setup is done.
+In Development the API seeds demo data on every start, including an admin account
+`admin@hostpanel.com` / `Admin123!` and sample clients such as `customer@hostpanel.com`.
 
 For local development without Docker you need the .NET 9 SDK, **Node.js 22+**, yarn and
 PostgreSQL 17 (Nuxt's toolchain refuses Node 20). See [Development](#development).
+
+### Running in production
+
+A step-by-step production guide is still to be written (help is welcome); until then, ask in
+[Q&A](https://github.com/innovayse/hostpanel/discussions/categories/q-a). What changes compared with the quick start:
+
+- `ASPNETCORE_ENVIRONMENT=Production`: no demo data, no seeded accounts
+- real secrets: `JWT_SECRET` (32+ characters), `ENCRYPTION_KEY` (`openssl rand -base64 32`),
+  `POSTGRES_PASSWORD`, and a real SMTP server
+- the `prod` build target (`docker-compose.prod.yml` builds it) instead of the dev target, and
+  no Docker socket mounted into the API
+- a reverse proxy with TLS in front of the client portal, admin panel and API
+
+**First admin account.** On a fresh install with no admin, the API prints a one-time setup
+token to its log. Open the admin panel, create your account, and paste the token when asked.
+It proves you operate this server, and it stops working once setup is done.
 
 ## Configuration
 
@@ -217,8 +236,10 @@ branding setting are in [guides/storefront.md](guides/storefront.md).
 
 ## Integrations
 
-HostPanel uses a pluggable provider model. Implement the interface in `Innovayse.Domain`
-(or against `Innovayse.SDK` for a separate plugin) and register it in Infrastructure:
+HostPanel uses a pluggable provider model. The simplest way to add a provider is a plugin
+project built on `Innovayse.SDK`: derive from its base class (for example
+`ProvisioningProviderBase` in `Innovayse.SDK.Base`), the way `Innovayse.Providers.CWP` and
+`Innovayse.Providers.Inecobank` do.
 
 | Interface | Purpose | Built-in providers |
 |-----------|---------|-------------------|
