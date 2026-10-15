@@ -118,6 +118,40 @@ public sealed class SkiaBrandingImageProcessorTests
         maskable.GetPixel(0, 0).Should().Be(SKColors.White);
     }
 
+    [Theory]
+    [InlineData("favicon-16x16.png", 205, 240)]
+    [InlineData("favicon-32x32.png", 205, 240)]
+    // At 180px each output pixel covers 5.7 source columns, which hold either one line or
+    // none, so even an exact area average ranges from 210 to 255. A 4-tap cubic filter gave
+    // 29 to 255 here; the bounds allow the area average and refuse that.
+    [InlineData("apple-touch-icon.png", 185, 255)]
+    public async Task Favicon_DownscalesFineDetailWithoutAliasing(string file, int min, int max)
+    {
+        // 1px black lines every 8px on white: the true average brightness is 255 * 7/8 = 223.
+        // A filter that samples only a few source pixels lands far from that, or in moire.
+        using var bitmap = new SKBitmap(new SKImageInfo(1024, 1024, SKColorType.Rgba8888, SKAlphaType.Premul));
+        using (var canvas = new SKCanvas(bitmap))
+        {
+            canvas.Clear(SKColors.White);
+            using var paint = new SKPaint { Color = SKColors.Black };
+            for (var x = 0; x < 1024; x += 8)
+            {
+                canvas.DrawRect(x, 0, 1, 1024, paint);
+            }
+        }
+
+        using var source = SKImage.FromBitmap(bitmap);
+        using var png = source.Encode(SKEncodedImageFormat.Png, 100);
+
+        var renditions = await Create().RenderAsync(
+            new BrandingSource(png.ToArray(), "stripes.png"), BrandingKind.Favicon, default);
+
+        using var icon = Read(renditions.Single(r => r.FileName == file).Content);
+        var values = Enumerable.Range(0, icon.Width).Select(x => (int)icon.GetPixel(x, icon.Height / 2).Red).ToList();
+
+        values.Should().OnlyContain(v => v >= min && v <= max, "fine detail should average out, not alias");
+    }
+
     [Fact]
     public async Task Logo_IsDownscaledToTheEdgeLimitKeepingAspectRatio()
     {

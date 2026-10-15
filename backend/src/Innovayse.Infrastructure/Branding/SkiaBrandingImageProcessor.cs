@@ -88,10 +88,15 @@ public sealed class SkiaBrandingImageProcessor(IOptions<BrandingOptions> options
     ];
 
     /// <summary>
-    /// Resampling for every resize: bicubic (Mitchell), the usual choice for downscaling logos
-    /// and icons without ringing around hard edges.
+    /// Resampling for every resize: trilinear, i.e. bilinear between mipmap levels.
     /// </summary>
-    private static readonly SKSamplingOptions _sampling = new(SKCubicResampler.Mitchell);
+    /// <remarks>
+    /// Not bicubic. Skia's cubic filters are fixed 4-tap kernels that ignore mipmaps, so a
+    /// 1024px mark reduced to a 16px favicon samples a handful of source pixels and aliases:
+    /// fine stripes came out as the wrong overall brightness and moire. Mipmapped sampling
+    /// averages the whole footprint, which is what a large downscale needs.
+    /// </remarks>
+    private static readonly SKSamplingOptions _sampling = new(SKFilterMode.Linear, SKMipmapMode.Linear);
 
     /// <summary>Resolved ceilings and paths.</summary>
     private readonly BrandingOptions _options = options.Value;
@@ -141,13 +146,13 @@ public sealed class SkiaBrandingImageProcessor(IOptions<BrandingOptions> options
                 "Upload is SVG. Vectors are not stored: convert to PNG before uploading.");
         }
 
-        using var data = SKData.CreateCopy(content);
+        using var stream = new SKMemoryStream(content);
 
         // Creating the codec reads the header only. This is the decompression-bomb check, and it
         // has to happen before the decode below: a highly compressible PNG a few hundred
         // kilobytes in size can declare a 100 000-pixel side and become forty gigabytes once its
         // pixels are materialised, so a byte ceiling alone lets one upload exhaust the container.
-        using var codec = SKCodec.Create(data)
+        using var codec = SKCodec.Create(stream)
             ?? throw new InvalidBrandingImageException("No decoder recognised the upload.");
 
         if (!_acceptedFormats.Contains(codec.EncodedFormat))
