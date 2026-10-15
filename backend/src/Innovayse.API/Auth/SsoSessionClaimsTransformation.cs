@@ -1,3 +1,4 @@
+#if INNOVAYSE_SSO
 using System.Security.Claims;
 using Innovayse.Domain.Auth.Interfaces;
 using Microsoft.AspNetCore.Authentication;
@@ -47,3 +48,5 @@ public sealed class SsoSessionClaimsTransformation(ISubjectRoleStore roles) : IC
         return principal;
     }
 }
+
+#endif

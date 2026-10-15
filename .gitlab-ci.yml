@@ -106,7 +106,7 @@ stages: [test, build, deploy]
     # The API image restores Innovayse.Auth during its build, so the credential has to
     # arrive as a build arg — see the note on .test-dotnet. Harmless for the client and
     # admin images, whose Dockerfiles never declare the ARG.
-    - docker build --build-arg "NuGetPackageSourceCredentials_innovayse=Username=gitlab-ci-token;Password=$CI_JOB_TOKEN" --target "$IMAGE_TARGET" -f "$DOCKERFILE" -t "$IMAGE:$TAG" -t "$IMAGE:$CI_COMMIT_SHORT_SHA" "$BUILD_CONTEXT"
+    - docker build --build-arg "NuGetPackageSourceCredentials_innovayse=Username=gitlab-ci-token;Password=$CI_JOB_TOKEN" --build-arg AUTH_MODE=sso --target "$IMAGE_TARGET" -f "$DOCKERFILE" -t "$IMAGE:$TAG" -t "$IMAGE:$CI_COMMIT_SHORT_SHA" "$BUILD_CONTEXT"
     - docker push "$IMAGE:$TAG"
     - docker push "$IMAGE:$CI_COMMIT_SHORT_SHA"
   rules:

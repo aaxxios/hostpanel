@@ -1,3 +1,8 @@
+<!--
+  Thanks for contributing! Please open this PR against the `develop` branch.
+  First time here? See CONTRIBUTING.md. We aim to give a first review within 3 working days.
+-->
+
 ## Summary
 
 <!-- What does this PR do? Why? -->

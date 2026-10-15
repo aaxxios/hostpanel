@@ -1,20 +1,48 @@
-# Contributing to Innovayse
+# Contributing to HostPanel
 
-Thank you for your interest in contributing! This document explains how to get started.
-
----
-
-## Before You Begin
-
-- Read the [LICENSE](LICENSE). By contributing, you agree that your contributions will be licensed under the same terms.
-- Check [open issues](../../issues) before starting work — someone may already be working on it.
-- For large changes, open an issue first to discuss the approach before writing code.
+Thanks for helping. HostPanel is built by a small team at Innovayse, and every issue, fix,
+translation and review makes a real difference.
 
 ---
 
-## Development Setup
+## Ways to help (no code required)
 
-Follow the [Quick Start](README.md#quick-start) guide in the README to get the project running locally.
+- **Report a bug** or **request a feature** through [the issue forms](../../issues/new/choose)
+- **Translate**: the UI ships in English, Russian and Armenian. Strings live in
+  `admin/src/locales/*.json` and `client/locales/<lang>/`. A new language or a fix to an
+  existing one is a great first PR
+- **Improve the docs**: if something in the README tripped you up, it will trip the next
+  person too
+- **Answer questions** in [Discussions](../../discussions)
+- **Star the repo** so other hosting companies can find it
+
+## Your first code contribution
+
+1. Pick an issue labelled [`good first issue`](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+   or [`help wanted`](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
+2. Leave a comment saying you are taking it. We will assign it to you
+3. Fork the repo and branch from **`develop`** (not `main`)
+4. Make your change, run the tests, open a pull request **against `develop`**
+5. We aim to give a first review within **3 working days**
+
+For anything bigger than a bug fix (a new payment gateway, registrar or control panel),
+open an issue first so we can agree on the approach before you spend time on code.
+
+---
+
+## Before you begin
+
+- HostPanel is licensed under the [AGPL-3.0-or-later](LICENSE). By contributing, you agree
+  that your contribution is licensed under the same terms.
+- Check [open issues](../../issues) before starting work: someone may already be on it.
+
+---
+
+## Development setup
+
+Follow the [Quick start](README.md#quick-start) and [Development](README.md#development)
+sections of the README. A plain clone builds and runs with `AUTH_MODE=local`; you do not
+need any token or account from Innovayse.
 
 ### Running the backend tests while the dev stack is up
 
@@ -61,10 +89,11 @@ Open a GitHub issue tagged `enhancement`. Describe:
 ### Submitting Code
 
 1. Fork the repository
-2. Create a branch from `main`: `git checkout -b feat/your-feature` or `fix/your-bug`
+2. Create a branch from `develop`: `git checkout -b feat/your-feature develop` or `fix/your-bug`
 3. Write your changes following the code standards below
 4. Commit with a clear message (see [Commit Messages](#commit-messages))
-5. Push and open a Pull Request against `main`
+5. Push and open a Pull Request against `develop`. `main` only accepts merges from
+   `develop` and `hotfix/*`, and a CI check blocks anything else
 6. Fill in the PR template and link the related issue
 
 ---
@@ -125,4 +154,7 @@ See [README.md](README.md#project-structure) for a full overview of the codebase
 
 ## Questions
 
-Open a GitHub Discussion or an issue tagged `question`.
+Ask in [GitHub Discussions](../../discussions). Security issues: see [SECURITY.md](SECURITY.md),
+please do not open a public issue.
+
+Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).

@@ -1,0 +1,37 @@
+name: 🔌 Integration request
+description: A payment gateway, domain registrar or control panel HostPanel should support
+labels: ["integration", "enhancement", "needs-triage"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type
+      options:
+        - Payment gateway
+        - Domain registrar
+        - Hosting control panel
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: Provider name and website
+      placeholder: "e.g. ResellerClub, https://www.resellerclub.com"
+    validations:
+      required: true
+  - type: input
+    id: docs
+    attributes:
+      label: Link to the provider's API documentation
+  - type: textarea
+    id: why
+    attributes:
+      label: Who needs it?
+      description: Your market or region, how many customers it would affect, anything that helps us prioritise.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contribution
+      options:
+        - label: I can help build or test this integration
