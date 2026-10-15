@@ -17,11 +17,10 @@ alternative. Clients order services, manage domains, pay invoices and open ticke
 products, billing, provisioning and integrations. Production is `host.innovayse.com`; a demo
 runs at `hostpanel.innovayse.com` with published credentials in `README.md`.
 
-**This is a public, separately licensed repository.** BUSL 1.1, converting to GPL v2 on
-2028-05-15. `origin` is **github.com/innovayse/hostpanel**, not GitLab. Anything written here
+**This is a public, separately licensed repository.** AGPL-3.0-or-later. `origin` is **github.com/innovayse/hostpanel**, not GitLab. Anything written here
 is read by people who have never seen the rest of the workspace, and the repo must build from
-a clone of itself alone — that is why `Innovayse.Auth` is consumed as a package rather than a
-project reference, and why `backend/nuget.config` restricts `auditSources` to nuget.org.
+a clone of itself alone — that is why `Innovayse.Auth` is consumed as an optional package (only in an
+`InnovayseSso=true` build, see `backend/Directory.Build.props`) rather than a project reference, and why `backend/nuget.config` restricts `auditSources` to nuget.org.
 
 **Read first:** the six rules files beside this one — [clean-architecture.md](clean-architecture.md),
 [csharp-style.md](csharp-style.md), [dotnet-format.md](dotnet-format.md),

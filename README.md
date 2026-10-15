@@ -1,14 +1,39 @@
-# Innovayse
+<p align="center">
+  <img src="logo.svg" alt="HostPanel" height="64">
+</p>
 
-A modern, self-hosted web hosting management platform — an open-source alternative to WHMCS. Built with ASP.NET Core 9, Nuxt 4, and Vue 3.
+<h1 align="center">HostPanel</h1>
 
-> **License:** [Business Source License 1.1](LICENSE) — free to self-host, source-available, converts to GPL v2 on 2028-05-15.
+<p align="center">
+  <b>Self-hosted billing and automation for web hosting companies.</b><br>
+  An open-source alternative to WHMCS, built with ASP.NET Core 9 and Vue 3.
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: AGPL v3" src="https://img.shields.io/badge/license-AGPL--3.0-blue"></a>
+  <a href="https://github.com/innovayse/hostpanel/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/innovayse/hostpanel?style=flat"></a>
+  <a href="https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22"><img alt="Good first issues" src="https://img.shields.io/github/issues/innovayse/hostpanel/good%20first%20issue?label=good%20first%20issues&color=7057ff"></a>
+  <a href="https://github.com/innovayse/hostpanel/discussions"><img alt="Discussions" src="https://img.shields.io/github/discussions/innovayse/hostpanel"></a>
+</p>
 
 ---
 
-## 🌐 Live Demo
+## Why HostPanel
 
-**[https://hostpanel.innovayse.com](https://hostpanel.innovayse.com)**
+If you sell hosting or domains, you probably run WHMCS: closed source, priced per client,
+and written in PHP you are not allowed to change. HostPanel covers the same job (client
+portal, billing, provisioning, domains, support tickets) with code you can read, run on
+your own server and extend.
+
+- **You own it.** AGPL-3.0, self-hosted with Docker, no per-client licence fee.
+- **Modern stack.** ASP.NET Core 9 + PostgreSQL on the backend, Nuxt 4 / Vue 3 on the front.
+- **Built to be extended.** Payment gateways, registrars and provisioning panels are
+  plugins behind small interfaces, with an SDK for writing your own.
+- **Migration path.** Import clients and data from an existing WHMCS installation.
+
+## Live demo
+
+**[hostpanel.innovayse.com](https://hostpanel.innovayse.com)** (reset periodically)
 
 | Role     | Email                    | Password  |
 |----------|--------------------------|-----------|
@@ -16,161 +41,114 @@ A modern, self-hosted web hosting management platform — an open-source alterna
 | Reseller | reseller@hostpanel.com   | Admin123! |
 | Client   | customer@hostpanel.com   | Admin123! |
 
----
-
 ## Features
 
-- **Client Portal** — order services, manage domains, view invoices, open support tickets
-- **Admin Panel** — full control over clients, products, billing, provisioning, and integrations
-- **Billing** — invoices, payment gateways (Stripe, PayPal, bank transfer)
-- **Domain Management** — registrar integrations (Namecheap, NameAm)
-- **Hosting Provisioning** — cPanel/WHM and CWP support
-- **Multi-language** — English, Russian, Armenian (hy)
-- **Plugin SDK** — extend functionality via the `Innovayse.SDK`
-- **WHMCS Migration** — import clients and data from existing WHMCS installations
+- **Client portal**: order services, manage domains, pay invoices, open support tickets
+- **Admin panel**: clients, products, billing, provisioning and integrations in one place
+- **Billing**: invoices and online payments (Stripe, Inecobank). PayPal and bank transfer are
+  [on the roadmap](https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+gateway)
+- **Domains**: registrar integrations for Namecheap and Name.am
+- **Provisioning**: CWP (CentOS Web Panel), with cPanel/WHM [in progress](https://github.com/innovayse/hostpanel/issues/51)
+- **Storefront templates**: three switchable designs, brandable from the admin panel
+- **Multi-language**: English, Russian and Armenian
+- **Plugin SDK**: extend it through `Innovayse.SDK`
+- **WHMCS migration**: import clients and data from an existing installation
 
----
+See the [open feature requests](https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
+for what is coming next, and vote with a 👍 on the ones you need.
 
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
 |-------|-----------|
-| Backend API | ASP.NET Core 9, Wolverine, EF Core 8, PostgreSQL |
-| Client Portal | Nuxt 4, Vue 3, TypeScript, Tailwind CSS, Pinia |
-| Admin Panel | Vite, Vue 3, TypeScript, Tailwind CSS, shadcn-vue |
+| Backend API | ASP.NET Core 9, Wolverine, EF Core, PostgreSQL |
+| Client portal | Nuxt 4, Vue 3, TypeScript, Tailwind CSS, Pinia |
+| Admin panel | Vite, Vue 3, TypeScript, Tailwind CSS, shadcn-vue |
 | Messaging | RabbitMQ + Wolverine outbox |
-| Auth | ASP.NET Core Identity, JWT + Refresh Tokens |
-| Email | MailKit (dev: MailHog) |
-| Docs | Scalar |
+| Auth | ASP.NET Core Identity, JWT in an httpOnly cookie |
+| Email | MailKit (MailHog in development) |
+| API docs | Scalar |
 
 ---
 
-## Requirements
+## Quick start
 
-- [Docker](https://docs.docker.com/get-docker/) and Docker Compose v2
-- (For local development without Docker) .NET 9 SDK, **Node.js 22+**, yarn, PostgreSQL 17
-
-> The client portal needs Node 22, not 20: Nuxt's `nitropack` pulls
-> `rollup-plugin-visualizer@7`, which declares `engines.node >= 22`, and `yarn install`
-> refuses on anything older. `docker/client.Dockerfile` already uses `node:22-alpine`.
-
----
-
-## Quick Start
+You need [Docker](https://docs.docker.com/get-docker/) with Compose v2. Nothing else, and no
+account or token from us.
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/innovayse/hostpanel.git
-cd innovayse
-
-# 2. Copy and configure environment variables
-cp .env.example .env
-# Edit .env — set JWT_SECRET, and NUGET_INNOVAYSE_CREDENTIALS if you are building
-# the API image yourself (see below)
-
-# 3. Start all services
+cd hostpanel
+cp .env.example .env      # set JWT_SECRET (32+ characters); AUTH_MODE=local is the default
 docker compose up -d
-# The API applies pending migrations on startup, so there is no separate step.
-# Follow it with: docker compose logs -f hostpanel-api
-
-# 4. Open in browser
-#   Client portal:  http://localhost:3001
-#   Admin panel:    http://localhost:5174
-#   API docs:       http://localhost:5149/scalar
-#   MailHog (dev):  http://localhost:8027
+docker compose logs -f hostpanel-api   # migrations run on startup
 ```
 
-The API depends on `Innovayse.Auth`, published to a private package registry, and
-the image restores it while it builds. Set `NUGET_INNOVAYSE_CREDENTIALS` in `.env`
-to a deploy token scoped to `read_package_registry` — the format is in
-`.env.example`. Without it the build stops at `NU1301 … 401 (Unauthorized)`.
+Then open:
 
----
+| | URL |
+|---|---|
+| Client portal | http://localhost:3001 |
+| Admin panel | http://localhost:5174 |
+| API docs | http://localhost:5149/scalar |
+| MailHog (dev mail) | http://localhost:8027 |
 
-## Environment Variables
+**First admin account.** On first boot the API prints a one-time setup token to its log.
+Open the admin panel, create your account, and paste the token when asked. It is the
+proof that you are the operator of this server; it stops working once setup is done.
 
-Copy `.env.example` to `.env` and fill in the values:
+For local development without Docker you need the .NET 9 SDK, **Node.js 22+**, yarn and
+PostgreSQL 17 (Nuxt's toolchain refuses Node 20). See [Development](#development).
+
+## Configuration
+
+Copy `.env.example` to `.env`. The file documents every variable; these are the ones you
+will touch first:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `POSTGRES_HOST` | PostgreSQL host the API connects to | `hostpanel-db` |
-| `POSTGRES_PORT` | PostgreSQL port | `5432` |
-| `POSTGRES_USER` | PostgreSQL username | `postgres` |
+| `AUTH_MODE` | `local` (standalone, this README) or `sso` (Innovayse SSO, see below) | `local` |
+| `JWT_SECRET` | JWT signing key, at least 32 characters | **change this** |
+| `ENCRYPTION_KEY` | Encrypts stored server passwords and API tokens. `openssl rand -base64 32` | dev-only key |
 | `POSTGRES_PASSWORD` | PostgreSQL password | `postgres` |
-| `POSTGRES_DB` | Database name | `innovayse_dev` |
-| `JWT_SECRET` | JWT signing key (min 32 chars) | **change this** |
-| `RABBITMQ_HOST` | Broker host the API connects to | `rabbitmq` |
-| `RABBITMQ_PORT` | Broker AMQP port | `5672` |
-| `RABBITMQ_USER` | RabbitMQ username | `guest` |
-| `RABBITMQ_PASSWORD` | RabbitMQ password | `guest` |
-| `SMTP_HOST` | SMTP server host | `mailhog` |
-| `SMTP_PORT` | SMTP server port | `1025` |
-| `SMTP_USERNAME` | SMTP username; empty for a local catcher, which refuses `AUTH` | *(empty)* |
-| `SMTP_PASSWORD` | SMTP password | *(empty)* |
-| `SMTP_ENCRYPTION` | `tls` (STARTTLS, 587), `ssl` (implicit TLS, 465) or `none`. **Required** — the API refuses to start without it rather than guess from the port | `none` |
+| `SMTP_HOST` / `SMTP_PORT` | Outgoing mail | `mailhog` / `1025` |
+| `SMTP_ENCRYPTION` | `tls`, `ssl` or `none`. Required: the API will not guess from the port | `none` |
 | `SMTP_FROM` | Sender address on outgoing mail | `noreply@innovayse.com` |
-| `SMTP_FROM_NAME` | Sender display name | `Innovayse` |
 
 For the client portal, copy `client/.env.example` to `client/.env`.
 
----
+### Authentication modes
 
-## Authentication modes
-
-`AUTH_MODE` decides how people sign in. `.env.example` ships `sso`; a standalone
-box sets `local`.
-
-| | `sso` | `local` |
+| | `local` (default) | `sso` |
 |---|---|---|
-| Client portal | Innovayse SSO | email and password, against this database |
-| API | SSO tokens | JWT from `POST /api/auth/login` |
-| **Admin panel** | **works** | **cannot be signed into — see below** |
+| Who it is for | Anyone self-hosting | Innovayse's own deployments |
+| Sign-in | Email and password (+ optional TOTP), against this database | Innovayse SSO |
+| Admin panel | Email/password form, session in an httpOnly cookie | SSO button |
+| Build requirement | None | `Innovayse.Auth` from a private registry |
 
-### The admin panel needs SSO today
-
-Its sign-in page offers one button, "Sign in with Innovayse SSO", and the SPA holds
-no token of its own: it asks `GET /api/auth/me` on every load and reads a session
-cookie it cannot see. That cookie is issued by the API's OIDC exchange, which only
-runs under `AUTH_MODE=sso`.
-
-Under `local` there is no such cookie. `POST /api/auth/login` succeeds and returns a
-JWT — the client portal uses it — but nothing in the admin SPA sends a bearer token,
-so `/api/auth/me` answers 401 and the panel stays on its login screen. `sso-api`,
-the service that would issue the cookie, is addressed by `docker-compose.yml` but
-defined in the platform overlay rather than here, so `docker compose up` on its own
-never starts one.
-
-Nothing in the panel is broken; there is simply no way in. Until that changes, a
-standalone deployment administers itself through the API, with a token from
-`POST /api/auth/login`:
-
-```bash
-TOKEN=$(curl -s -X POST http://localhost:5149/api/auth/login \
-  -H 'Content-Type: application/json' -H 'X-Requested-With: XMLHttpRequest' \
-  -d '{"email":"you@example.com","password":"…"}' | jq -r .accessToken)
-
-curl -s http://localhost:5149/api/products -H "Authorization: Bearer $TOKEN"
-```
-
-Closing this properly means choosing between issuing a session cookie in local mode
-and letting the SPA carry a bearer token again — the second being what the SPA was
-deliberately moved away from. That is a design decision, not an oversight, and it is
-tracked as an issue rather than guessed at here.
+`sso` mode depends on `Innovayse.Auth`, which is published to a private package registry.
+A plain clone builds without it: the package is referenced only when
+`NUGET_INNOVAYSE_CREDENTIALS` is set (or with `-p:InnovayseSso=true`), and a build without
+it refuses to start in `sso` mode with a message saying so. Details are in
+`backend/Directory.Build.props`.
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
-innovayse/
+hostpanel/
 ├── backend/                  # ASP.NET Core solution
-│   └── src/
+│   ├── src/
 │       ├── Innovayse.API/        # Controllers (thin, Wolverine dispatch)
 │       ├── Innovayse.Application/ # CQRS handlers, validators, DTOs
 │       ├── Innovayse.Domain/      # Entities, value objects, interfaces
 │       ├── Innovayse.Infrastructure/ # EF Core, repositories, integrations
 │       ├── Innovayse.Providers.CWP/  # CWP provisioning provider
+│       ├── Innovayse.Providers.CWP7/ # CWP7 provisioning provider
+│       ├── Innovayse.Providers.Inecobank/ # Inecobank payment gateway
 │       └── Innovayse.SDK/         # Plugin SDK
+│   └── tests/                    # xUnit suites (unit + Testcontainers integration)
 ├── client/                   # Nuxt 4 client portal
 │   ├── pages/                    # Routes: data, SEO, business logic
 │   ├── templates/                # Storefront designs — presentation only
@@ -190,24 +168,25 @@ innovayse/
 
 ### Backend
 
+The quickest loop is to let Docker run the infrastructure and run the API on your machine:
+
 ```bash
+docker compose up -d hostpanel-db rabbitmq mailhog   # Postgres :5434, RabbitMQ :5673, MailHog :1026
+
 cd backend
-dotnet restore
-dotnet run --project src/Innovayse.API
+export ASPNETCORE_ENVIRONMENT=Development Auth__Mode=local \
+  ConnectionStrings__DefaultConnection="Host=localhost;Port=5434;Database=innovayse_dev;Username=postgres;Password=postgres" \
+  RabbitMQ__Host=localhost RabbitMQ__Port=5673 RabbitMQ__User=guest RabbitMQ__Password=guest \
+  Smtp__Host=localhost Smtp__Port=1026 Smtp__Encryption=none
+dotnet run --project src/Innovayse.API      # http://localhost:5148
 ```
 
-`appsettings.Development.json` is committed and holds only local values, so this runs
-without copying a template first. It used to be an `appsettings.Development.example.json`
-you had to copy — which was a quiet hazard, because the copy is gitignored nowhere and
-went into the next commit along with whatever real credential had been filled into it.
+Instead of exporting variables you can put the same keys in
+`src/Innovayse.API/appsettings.Development.json` (it is gitignored, so nothing you put there
+is committed) or in user-secrets (`dotnet user-secrets set "Jwt:Secret" "…"`).
 
-Anything genuinely secret stays out of the repository. Use user-secrets rather than
-editing a settings file:
-
-```bash
-dotnet user-secrets init
-dotnet user-secrets set "Sso:Authority" "https://sso.example.com"
-```
+Run the tests with `dotnet test`. The integration suite starts its own PostgreSQL through
+Testcontainers, so it needs Docker running.
 
 ### Client Portal
 
@@ -225,172 +204,61 @@ npm install
 npm run dev     # http://localhost:5173
 ```
 
+
 ---
 
-## Storefront Templates
+## Storefront templates and branding
 
-The public portal ships two designs and renders whichever one is selected. Both
-produce identical SEO output — canonical, hreflang and schema.org live in
-`client/pages/`, never in a template.
-
-Set the site's own origin, or the sitemap will advertise whatever host each
-request happened to arrive on — behind a proxy that can be the container's
-internal address. `NUXT_PUBLIC_BASE_URL` covers it at build time; a prebuilt
-image reads `NUXT_SITE_URL` at startup, which overrides the built-in value.
-
-| Template | Description |
-|---|---|
-| `aurora` | Default. Dark and light modes, Armenian typography, live domain search |
-| `nova` | Conversion-focused hosting landing page: pricing, plan comparison, security, migration, FAQ |
-| `classic` | The original storefront design |
-
-`nova` supplies its own header, footer, homepage and hosting page, and reuses
-aurora's domain search and checkout — the checkout is the ordering path, and a
-second copy of it would be a second place for a payment bug to live. Its design
-tokens are prefixed `--n-*` and declared only under `.tpl-nova` and
-`html[data-template='nova']`, so activating it cannot disturb the other two.
-
-Several of its cards state things this codebase cannot verify — NVMe storage, a
-CDN, server-side caching, a firewall, a malware scanner, a backup schedule, an
-uptime figure, free migration. Each waits on a setting and is hidden until an
-operator turns it on:
-
-| Setting | Shows |
-|---|---|
-| `portal.features.storage` | the SSD/NVMe storage card |
-| `portal.features.caching` | the server-side caching card |
-| `portal.features.cdn` | the CDN card |
-| `portal.features.firewall` | the firewall card |
-| `portal.features.malware` | the malware-protection card |
-| `portal.features.backups` | the backup cards, in the hero, trust bar and security grid |
-| `portal.trust.uptime` | the uptime figure in the trust bar, printed verbatim |
-| `portal.migration.free` | the "free migration" badge, when set to `true` |
-
-Any non-empty value turns the first six on; the uptime setting holds the figure
-itself. The comparison table and the testimonials section are data-driven the
-same way: the table renders only the specification lines entered under
-**Admin → Products → Specification**, and the testimonials section does not
-render at all, because nothing serves customer quotes yet.
-
-**Choosing one.** In order of precedence:
-
-1. The `portal.template` setting, editable in **Admin → Settings → Portal appearance**
-2. The `NUXT_PUBLIC_PORTAL_TEMPLATE` environment variable
-3. `aurora`
-
-An unrecognised value falls back to `aurora` rather than leaving the site blank, so a
-typo in the admin field cannot take the storefront down.
-
-**Adding a template.** Create `client/templates/<name>/` with `layout/Header.vue`,
-`layout/Footer.vue` and a `pages/` component for each route, then register the
-loaders in `client/templates/registry.ts` and add the name to `TEMPLATE_NAMES` in
-`client/templates/types.ts`. A unit test asserts every template implements every
-slot, so a missing page fails the build rather than rendering nothing.
-
-Two rules make templates safe to swap:
-
-- **Templates render, pages decide.** A template component takes typed props and
-  returns markup; the page above it owns fetching, SEO and business logic. That
-  keeps both designs on one code path and one set of head tags.
-- **Copy lives in i18n** under a top-level key named for the template
-  (`aurora.hero.title`), registered in the `modules` array of
-  `client/plugins/i18n.ts`. Locale files are not auto-discovered.
-
-`aurora` follows the first rule throughout, with one exception: its
-`pages/Checkout.vue` still carries the ordering flow, because splitting a working
-payment path is only worth doing with a backend on hand to place a test order
-against. It is `classic`'s script byte-for-byte with restyled markup, so the two
-cannot drift apart.
-
-`classic`'s pages are lift-and-shifts of the original route components and keep
-their own data loading. That was the point: moving a 500-line page unchanged is
-far safer than rewriting it, and the design it renders is the one being replaced.
-New templates should follow `aurora`, not `classic`.
-
-**Branding and colour mode**, all from **Admin → Settings** with a
-`NUXT_PUBLIC_PORTAL_*` environment fallback for a first boot (the admin value
-wins once set):
-
-| Setting | Env fallback | What it does |
-|---|---|---|
-| `portal.site.name` | `NUXT_PUBLIC_PORTAL_SITE_NAME` | Site name for `og:site_name`, logo alt text and structured data. Empty shows the built-in name. |
-| `portal.site.tagline` | `NUXT_PUBLIC_PORTAL_SITE_TAGLINE` | Default meta description. |
-| `portal.theme.default` | `NUXT_PUBLIC_PORTAL_THEME_DEFAULT` | `light`, `dark` or `system` for a visitor with no saved choice. A visitor's own choice is kept in a `color-mode` cookie and rendered on the server, so there is no flash of the wrong theme. |
-| `portal.theme.user_toggle` | `NUXT_PUBLIC_PORTAL_THEME_USER_TOGGLE` | `false` hides the light/dark switch. |
-| `portal.logo` | `NUXT_PUBLIC_PORTAL_LOGO` | Logo for light backgrounds. |
-| `portal.logo.dark` | `NUXT_PUBLIC_PORTAL_LOGO_DARK` | Logo for dark backgrounds; falls back to the light one. |
-| `portal.logo.mark` | `NUXT_PUBLIC_PORTAL_LOGO_MARK` | Square icon-only logo for compact places. |
-| `portal.favicon` | `NUXT_PUBLIC_PORTAL_FAVICON` | Browser tab icon; an upload generates the whole icon set. |
-| `portal.brand.primary` | `NUXT_PUBLIC_PORTAL_BRAND_PRIMARY` | Brand colour as `#rrggbb`. The whole primary scale — buttons, links, highlights, e-mail buttons — is derived from it; the text on it turns dark automatically when the colour is too light for white. |
-| `portal.brand.accent` | `NUXT_PUBLIC_PORTAL_BRAND_ACCENT` | Accent colour as `#rrggbb`; gradients, badges and secondary highlights. |
-| `portal.brand.font_heading` | `NUXT_PUBLIC_PORTAL_BRAND_FONT_HEADING` | `inter`, `noto-sans-armenian`, `noto-serif-armenian` or `system`. Bundled; nothing loads from a font service. |
-| `portal.brand.font_body` | `NUXT_PUBLIC_PORTAL_BRAND_FONT_BODY` | Same list, for body text. |
-
-Logos and the favicon can be uploaded in **Admin → Settings → Branding** or pasted
-as URLs. `portal.template`, `portal.theme.default` and the typefaces accept only their
-listed values, and the colours only `#rrggbb`; anything else is refused with
-`INVALID_SETTING_VALUE` and a sentence saying what was expected. With every brand
-setting empty the storefront renders each template's own colours and typefaces,
-exactly as before the settings existed.
-
-**Analytics and chat** are settings too, empty by default, and nothing loads until
-they are set:
-
-| Setting | Env fallback | What it does |
-|---|---|---|
-| `portal.analytics.gtm_id` | `NUXT_PUBLIC_PORTAL_GTM_ID` | Google Tag Manager container (`GTM-…`). Loads only after a visitor accepts all cookies in the banner. |
-| `portal.chat.provider` | `NUXT_PUBLIC_PORTAL_CHAT_PROVIDER` | `chatwoot`, `innochat`, or empty for no widget. |
-| `portal.chat.base_url` | `NUXT_PUBLIC_PORTAL_CHAT_BASE_URL` | The chat server, `https://` only. |
-| `portal.chat.website_token` | `NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN` | The website token from the chat inbox. `.ru` / `.hy` variants override it per language. |
-
-**E-mails follow the brand.** Every template rendered by the API can use
-`{{ site.name }}`, `{{ brand.primary }}`, `{{ brand.primary_dark }}`,
-`{{ brand.on_primary }}`, `{{ brand.accent }}` and `{{ brand.logo_url }}` (the dark-background
-logo as an absolute URL, empty when none is uploaded). The password-reset template shipped
-with a fresh install uses them; an install that already has that row keeps its stored HTML
-until it is re-saved in **Admin → Settings → Email Templates**.
-
-Related operator settings, all optional and hidden when empty:
-`portal.contact.whatsapp`, `portal.contact.telegram`, `portal.contact.email`,
-`portal.contact.phone`, `portal.chat.provider`, `portal.newsletter.action_url`,
-`portal.legal.tax_id`, and `portal.social.{facebook,instagram,linkedin,youtube}`.
-
-The header app launcher is off unless `portal.apps.enabled` is `true`, because
-the apps it links to only exist in a deployment that runs them. Each entry then
-needs a URL of its own — `portal.apps.{account,tasks,erp,hostpanel,sheets,mail,docs,calendar}`,
-or the matching `NUXT_PUBLIC_*` variable — and entries without one are left out.
-
-Every seeded setting is editable in **Admin → Settings**; the table takes one row
-at a time.
-
-The plans page's comparison table is built from each product's specification
-lines, edited in **Admin → Products → Specification**. Plans line up by feature
-name, so the same line has to be spelled the same way across products; a plan
-that omits a line shows a dash rather than shifting its column. With no product
-specified, the table is not rendered at all.
+The client portal ships three designs (`aurora`, `nova`, `classic`) and can be rebranded
+from **Admin → Settings** without touching code. How to pick one, add your own, and every
+branding setting are in [guides/storefront.md](guides/storefront.md).
 
 ---
 
 ## Integrations
 
-Innovayse uses a pluggable provider model. Implement the relevant interface in `Innovayse.Domain` and register in Infrastructure:
+HostPanel uses a pluggable provider model. Implement the interface in `Innovayse.Domain`
+(or against `Innovayse.SDK` for a separate plugin) and register it in Infrastructure:
 
-| Interface | Purpose | Built-in Providers |
+| Interface | Purpose | Built-in providers |
 |-----------|---------|-------------------|
-| `IPaymentGateway` | Payment processing | Stripe |
-| `IRegistrarProvider` | Domain registration | Namecheap, NameAm |
-| `IProvisioningProvider` | Hosting provisioning | cPanel/WHM, CWP |
+| `IPaymentGateway` | Payment processing | Stripe, Inecobank |
+| `IRegistrarProvider` | Domain registration | Namecheap, Name.am |
+| `IProvisioningProvider` | Hosting provisioning | CWP, CWP7, cPanel/WHM (in progress) |
+
+A new payment gateway, registrar or control panel is one of the most useful things you can
+contribute. Open an issue first so we can agree on the shape.
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions of every size are welcome: a typo, a translation, a bug report, a new
+provider.
+
+1. Look at [good first issues](https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+   or [help wanted](https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
+2. Comment on the issue so nobody duplicates your work
+3. Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, code style and the PR checklist
+
+Questions and ideas go to [GitHub Discussions](https://github.com/innovayse/hostpanel/discussions).
+Security problems go to the address in [SECURITY.md](SECURITY.md), not to a public issue.
+
+## Community
+
+- 💬 [Discussions](https://github.com/innovayse/hostpanel/discussions): questions, ideas, show what you built
+- 🐛 [Issues](https://github.com/innovayse/hostpanel/issues): bugs and feature requests
+- ⭐ Star the repo if HostPanel is useful to you. It helps other hosting companies find it.
 
 ---
 
 ## License
 
-Copyright (c) 2024 Innovayse.
-Licensed under the [Business Source License 1.1](LICENSE).
-On 2028-05-15 this software will become available under the GNU GPL v2.0 or later.
+Copyright (c) 2024-2026 Innovayse LLC.
+
+HostPanel is free software, licensed under the
+[GNU Affero General Public License v3.0 or later](LICENSE). You may use, modify and
+self-host it, including commercially. If you run a modified version as a network service,
+the AGPL asks you to offer your users the source of that modified version.
+
+Releases before this change were published under the Business Source License 1.1.

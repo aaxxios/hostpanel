@@ -10,8 +10,10 @@ using Innovayse.Domain.Auth;
 using Innovayse.Infrastructure;
 using Innovayse.Infrastructure.Auth;
 using Innovayse.Infrastructure.Persistence;
+#if INNOVAYSE_SSO
 using Innovayse.Auth;
 using Innovayse.Auth.Endpoints;
+#endif
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.OpenApi;
@@ -96,6 +98,25 @@ try
     builder.Services.AddLocalization();
 
     var isLocalMode = AuthMode.IsLocal(builder.Configuration["Auth:Mode"]);
+
+#if INNOVAYSE_SSO
+    // The cookie scheme Innovayse.Auth registers under AUTH_MODE=sso.
+    var ssoCookieScheme = global::Innovayse.Auth.CookieSessionHandler.SchemeName;
+#else
+    // A standalone build carries no Innovayse.Auth (see InnovayseSso in
+    // backend/Directory.Build.props), so it can only run in local mode. Saying so here beats
+    // booting into an SSO configuration whose cookie scheme was never registered.
+    if (!isLocalMode)
+    {
+        throw new InvalidOperationException(
+            "This build has no Innovayse SSO support, so Auth:Mode (AUTH_MODE) must be 'local'. "
+            + "Set AUTH_MODE=local, or rebuild with -p:InnovayseSso=true and access to the "
+            + "Innovayse package registry.");
+    }
+
+    // Never read: every use sits behind !isLocalMode, which the check above rules out.
+    const string ssoCookieScheme = "InnovayseSsoUnavailable";
+#endif
 
     // The scheme that stands in front of the real ones under SSO mode. See where it is
     // registered, below AddInnovayseAuth, for what it is for.
@@ -247,7 +268,9 @@ try
         // Bearer stays for the machines: the client portal's Nuxt server calls this
         // API with an SSO token, and standalone deployments keep LocalJwt. That is
         // why this is an additional scheme rather than a replacement.
+#if INNOVAYSE_SSO
         builder.Services.AddInnovayseAuth(builder.Configuration);
+#endif
 
         // …except that registering it made it the default scheme, which is not what
         // "additional" means. Everything below turns on the difference between the
@@ -284,13 +307,15 @@ try
                             // issued tokens on to LocalJwt, so this only has to choose
                             // between "a token" and "a cookie".
                             ? JwtBearerDefaults.AuthenticationScheme
-                            : global::Innovayse.Auth.CookieSessionHandler.SchemeName;
+                            : ssoCookieScheme;
             });
 
         // The cookie principal carries the SSO's claims; the roles live in this
         // database. The transformation maps one onto the other.
+#if INNOVAYSE_SSO
         builder.Services.AddScoped<Microsoft.AspNetCore.Authentication.IClaimsTransformation,
             Innovayse.API.Auth.SsoSessionClaimsTransformation>();
+#endif
     }
 
     builder.Services.AddAuthorization(opts =>
@@ -300,7 +325,7 @@ try
             // Accept tokens from either SSO or local JWT scheme
             opts.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
                 JwtBearerDefaults.AuthenticationScheme, "LocalJwt",
-                global::Innovayse.Auth.CookieSessionHandler.SchemeName)
+                ssoCookieScheme)
                 .RequireAuthenticatedUser()
                 .Build();
         }
@@ -308,14 +333,14 @@ try
         {
             if (!isLocalMode)
                 p.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, "LocalJwt",
-                    global::Innovayse.Auth.CookieSessionHandler.SchemeName);
+                    ssoCookieScheme);
             p.RequireRole(Roles.Admin);
         });
         opts.AddPolicy("ResellerOrAdmin", p =>
         {
             if (!isLocalMode)
                 p.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, "LocalJwt",
-                    global::Innovayse.Auth.CookieSessionHandler.SchemeName);
+                    ssoCookieScheme);
             p.RequireRole(Roles.Admin, Roles.Reseller);
         });
     });
@@ -594,11 +619,13 @@ try
         // Forwarded headers, the CSRF check, authentication and authorisation, in the
         // order they have to be in. Bearer callers pass the CSRF check untouched — a
         // bearer header is already something a cross-site page cannot attach.
+#if INNOVAYSE_SSO
         app.UseInnovayseAuth();
         // GET /api/auth/login|callback and POST /api/auth/logout, for the admin SPA.
         // Not /api/auth/me: this product's own AuthController answers it with the
         // roles the database assigns, which the token cannot carry.
         app.MapInnovayseAuth(mapMe: false);
+#endif
 
         // The limiter has to sit after authentication — it partitions on the signed-in subject
         // and falls back to an address only for callers with no credential, so above
