@@ -1,0 +1,114 @@
+<script setup lang="ts">
+/**
+ * Collapsible inner sidebar for client detail sub-pages.
+ * Shows icons only by default and expands to show labels on hover (the kit's `UiSidebar`).
+ */
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import UiSidebar from '@/components/ui/UiSidebar.vue'
+import type { UiSidebarItem } from '@/utils/ui/sidebar'
+
+const { t } = useI18n()
+
+/** Props for ClientInnerSidebar. */
+const props = defineProps<{
+  /** Client ID for constructing sub-page route paths. */
+  clientId: string
+}>()
+
+/** Current route, used to mark the active entry. */
+const route = useRoute()
+
+/** Keys of the sidebar entries; also the suffix of each entry's `data-testid`. */
+const ClientNavKey = {
+  Summary: 'summary',
+  Profile: 'profile',
+  Services: 'services',
+  Domains: 'domains',
+  Users: 'users',
+  Contacts: 'contacts',
+  Billable: 'billable',
+  Invoices: 'invoices',
+  Quotes: 'quotes',
+  Transactions: 'transactions',
+  Tickets: 'tickets',
+  Emails: 'emails',
+  Log: 'log',
+} as const
+
+/** Icon markup (shape tags) per entry key. */
+const ICONS: Record<(typeof ClientNavKey)[keyof typeof ClientNavKey], string> = {
+  summary: '<rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="4" rx="1" /><rect x="14" y="11" width="7" height="10" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />',
+  profile: '<path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />',
+  services: '<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" />',
+  domains: '<circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />',
+  users: '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />',
+  contacts: '<path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />',
+  billable: '<line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />',
+  invoices: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />',
+  quotes: '<path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><line x1="8" y1="11" x2="16" y2="11" /><line x1="8" y1="15" x2="12" y2="15" />',
+  transactions: '<rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" />',
+  tickets: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />',
+  emails: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" />',
+  log: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /><line x1="9" y1="12" x2="15" y2="12" /><line x1="9" y1="16" x2="13" y2="16" />',
+}
+
+/** Path suffix per entry key (the route segment under `/clients/:id/`). */
+const SEGMENTS: Record<(typeof ClientNavKey)[keyof typeof ClientNavKey], string> = {
+  summary: 'summary',
+  profile: 'profile',
+  services: 'services',
+  domains: 'domains',
+  users: 'users',
+  contacts: 'contacts',
+  billable: 'billable-items',
+  invoices: 'invoices',
+  quotes: 'quotes',
+  transactions: 'transactions',
+  tickets: 'tickets',
+  emails: 'emails',
+  log: 'log',
+}
+
+/**
+ * Builds one sidebar entry.
+ *
+ * @param key - Entry key.
+ * @param label - Translated caption.
+ * @returns The entry for `UiSidebar`.
+ */
+const entry = (key: (typeof ClientNavKey)[keyof typeof ClientNavKey], label: string): UiSidebarItem => ({
+  key,
+  label,
+  to: `/clients/${props.clientId}/${SEGMENTS[key]}`,
+  icon: ICONS[key],
+})
+
+/** Inner sidebar navigation items. */
+const navItems = computed<UiSidebarItem[]>(() => [
+  entry(ClientNavKey.Summary, t('clients.clientSummary.summary')),
+  entry(ClientNavKey.Profile, t('clients.contactForm.profile')),
+  entry(ClientNavKey.Services, t('clients.clientSummary.productsServices2')),
+  entry(ClientNavKey.Domains, t('shared.domains')),
+  entry(ClientNavKey.Users, t('clients.clientInnerSidebar.users')),
+  entry(ClientNavKey.Contacts, t('clients.clientSummary.contacts')),
+  entry(ClientNavKey.Billable, t('nav.billingChildren.billableItems')),
+  entry(ClientNavKey.Invoices, t('shared.invoices')),
+  entry(ClientNavKey.Quotes, t('shared.quotes')),
+  entry(ClientNavKey.Transactions, t('shared.transactions')),
+  entry(ClientNavKey.Tickets, t('clients.clientTickets.tickets')),
+  entry(ClientNavKey.Emails, t('clients.clientEmails.emails')),
+  entry(ClientNavKey.Log, t('clients.clientInnerSidebar.log')),
+])
+
+/** Key of the entry whose path the current route starts with. */
+const activeKey = computed<string | undefined>(() => {
+  const active = navItems.value.find(item => route.path.startsWith(String(item.to)))
+  return active?.key
+})
+</script>
+
+<template>
+  <UiSidebar :items="navItems" :active-key="activeKey" testid="client-nav" />
+</template>

@@ -1,0 +1,50 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using FluentAssertions;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Xunit;
+
+namespace Innovayse.Hostpanel.Integration.Tests.Admin;
+
+/// <summary>
+/// <c>GET /api/admin/settings</c>: an admin reads back every configured setting, a caller with
+/// only the Client role is refused, and the route is closed to a caller with no credential.
+/// </summary>
+/// <remarks>Split out of the deleted <c>SettingsEndpointTests</c>.</remarks>
+/// <param name="factory">The shared API + PostgreSQL host.</param>
+public sealed class GetSettingsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+{
+    /// <summary>The seeded storefront settings come back, in full, for an admin.</summary>
+    [Fact]
+    public async Task ReturnsTheSeededSettingsAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.GetAsync("/api/admin/settings");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var rows = await response.Content.ReadFromJsonAsync<List<JsonElement>>();
+        rows!.Should().Contain(r => r.GetProperty("key").GetString() == "portal.template");
+    }
+
+    /// <summary>A caller with only the Client role is refused with 403.</summary>
+    [Fact]
+    public async Task IsClosedToTheClientRoleAsync()
+    {
+        var client = await AdminTestSeeds.ClientRoleClientAsync(factory, "get-settings-forbidden");
+
+        var response = await client.GetAsync("/api/admin/settings");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>A caller with no credential is refused with 401.</summary>
+    [Fact]
+    public async Task IsClosedToAnonymousCallersAsync()
+    {
+        var response = await factory.CreateClient().GetAsync("/api/admin/settings");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+}

@@ -1,3 +1,9 @@
+/**
+ * A password sign-in answer: a signed-in account or a second-factor challenge.
+ *
+ * @module types/loginresult
+ */
+
 import type { ClientUser } from '~/types/clientuser'
 import type { TwoFactorChallenge } from '~/types/twofactorchallenge'
 

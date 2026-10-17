@@ -32,12 +32,22 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.21" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.21" />
     <PackageVersion Include="Stripe.net" Version="51.2.0" />
+    <!--
+      8.23.0 rather than 8.0.1: Innovayse.Hostpanel.Shared references
+      Microsoft.AspNetCore.Authentication.JwtBearer 9.0.21, whose own dependency on
+      Microsoft.IdentityModel.Protocols.OpenIdConnect pulls this package to 8.19.2 or later.
+      Left at 8.0.1 that is an NU1605 downgrade, which TreatWarningsAsErrors turns into a
+      restore failure.
+    -->
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
   </ItemGroup>
   <!-- Entity Framework Core -->
   <ItemGroup>
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.21" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.21" />
+    <!-- MigrationBuilder extensions in Shared (Extensions/MigrationBuilderExtensions) need the
+         relational-provider abstractions, which the umbrella EntityFrameworkCore package does not carry. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.21" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
   </ItemGroup>
   <!-- Microsoft Extensions -->
@@ -83,29 +93,22 @@
   <ItemGroup>
     <PackageVersion Include="WolverineFx" Version="5.41.0" />
     <PackageVersion Include="WolverineFx.Postgresql" Version="5.41.0" />
-    <!--
-      Validation middleware in front of every handler that has a validator. Pinned to the same
-      5.31.0 as WolverineFx itself: the two ship together and a mismatch is a startup failure,
-      not a compile error.
-    -->
-    <PackageVersion Include="WolverineFx.FluentValidation" Version="5.41.0" />
   </ItemGroup>
   <!-- Application Libraries -->
   <ItemGroup>
     <!--
-      FluentValidation 12, not 11. WolverineFx.FluentValidation 5.31.0, the middleware that
-      finally runs this repository's validators, depends on FluentValidation 12.0.0 or later, and
-      innovayse-sso, whose wiring this follows, pins 12.* for the same reason.
+      FluentValidation 12, not 11. The Shared ValidationPolicy runs this repository's validators on
+      the Wolverine bus; innovayse-sso, whose wiring this follows, pins 12.* as well.
 
       FluentValidation.AspNetCore 11.3.0 used to sit on the next line and is gone. It wires MVC
       auto-validation, which this API never called (no type from it appears anywhere in the
-      solution), and it has no 12.x release, so keeping it would hold FluentValidation below the
-      version the middleware needs.
+      solution), and it has no 12.x release, so keeping it would hold FluentValidation below 12.
     -->
     <PackageVersion Include="FluentValidation" Version="12.2.0" />
     <!--
-      Supplies AddValidatorsFromAssemblyContaining, which Program.cs calls to put the validators
-      in the container where the Wolverine middleware looks for them.
+      Supplies AddValidatorsFromAssemblyContaining, which Innovayse.Hostpanel.Application's own
+      AddApplication (Program.cs split, A6 Task 7B) calls to put the validators in the container
+      where the Wolverine middleware looks for them.
     -->
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
     <PackageVersion Include="Fluid.Core" Version="2.40.0" />
@@ -119,6 +122,18 @@
   <!-- Roslyn / Tooling -->
   <ItemGroup>
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.14.0" />
+    <!--
+      Transitive pins for advisories NuGet reports through `dotnet list package, vulnerable and
+      include-transitive` (the build audit only looks at direct references):
+      Microsoft.Build.Tasks.Core arrives at 17.7.2 through Workspaces.MSBuild (design-time only,
+      PrivateAssets all; GHSA-h4j7-5rxr-p4wc), and System.Security.Cryptography.Pkcs arrives at 10.0.0
+      through MimeKit; System.Security.Cryptography.Xml arrives at 9.0.0 through
+      Build.Tasks.Core (GHSA-37gx-xxp4-5rgx, design-time only) (GHSA-846f-f764-76mx, GHSA-2fmv-rv2c-59x7; fixed from 10.0.13). Both are
+      raised by a direct reference in the project that owns the parent package.
+    -->
+    <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="17.14.28" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="9.0.21" />
   </ItemGroup>
   <!-- Testing -->
   <ItemGroup>

@@ -1,0 +1,78 @@
+using Innovayse.Hostpanel.Application.Admin.Common;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Shared.Models;
+using Innovayse.Hostpanel.Application.Admin.Common.Enums;
+
+namespace Innovayse.Hostpanel.Application.Admin.Commands.UploadBrandingImage;
+
+/// <summary>
+/// Handles <see cref="UploadBrandingImageCommand"/> by rendering the upload into every file the
+/// storefront needs and storing the set.
+/// </summary>
+/// <remarks>
+/// The handler owns the sequence and nothing else: validate-and-render, then store, then report
+/// which URL the setting should hold. Both steps are ports, so the use case reads the same
+/// whether the files land on a mounted volume or in an object store, and neither the image
+/// library nor the filesystem appears in this layer.
+/// <para>
+/// It deliberately does <b>not</b> write the setting row. The admin panel saves
+/// <c>portal.logo</c> / <c>portal.favicon</c> through <c>UpdateSettingCommand</c> once the
+/// operator confirms, which is what lets them upload, look at the preview and change their mind
+/// without having already replaced the live storefront's logo.
+/// </para>
+/// </remarks>
+public sealed class UploadBrandingImageHandler
+{
+    /// <summary>Validates the bytes and renders the icon set.</summary>
+    private readonly IBrandingImageProcessor _processor;
+
+    /// <summary>Writes the rendered files and reports their URLs.</summary>
+    private readonly IBrandingStorage _storage;
+
+    /// <summary>Initializes the handler.</summary>
+    /// <param name="processor">Validates the bytes and renders the icon set.</param>
+    /// <param name="storage">Writes the rendered files and reports their URLs.</param>
+    public UploadBrandingImageHandler(IBrandingImageProcessor processor, IBrandingStorage storage)
+    {
+        _processor = processor;
+        _storage = storage;
+    }
+
+    /// <summary>
+    /// Renders and stores the upload.
+    /// </summary>
+    /// <param name="command">The upload command; the validator has already confirmed
+    /// <see cref="UploadBrandingImageCommand.Kind"/> names a real <see cref="BrandingKind"/>.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// The primary URL to save into the setting and every file written, or
+    /// <c>BRANDING_IMAGE_INVALID</c> when the bytes are not an acceptable image, or
+    /// <c>BRANDING_IMAGE_TOO_LARGE</c> when the image is over a ceiling this deployment enforces.
+    /// </returns>
+    public async Task<Result<BrandingUploadResultDto>> HandleAsync(
+        UploadBrandingImageCommand command,
+        CancellationToken ct)
+    {
+        var kind = Enum.Parse<BrandingKind>(command.Kind, ignoreCase: true);
+
+        // 400 (BRANDING_IMAGE_INVALID) or 413 (BRANDING_IMAGE_TOO_LARGE): the processor logs the
+        // precise cause -- which signature failed, which ceiling was hit -- and keeps it out of
+        // the body, so probing the endpoint teaches nothing about the checks it runs.
+        using var buffer = new MemoryStream();
+        await command.Content.CopyToAsync(buffer, ct);
+        var source = new BrandingSource(buffer.ToArray(), command.FileName);
+        var rendered = await _processor.RenderAsync(source, kind, ct);
+        if (rendered.IsFailure)
+        {
+            return Result<BrandingUploadResultDto>.FailureCode(rendered.ErrorCode!);
+        }
+
+        var assets = await _storage.SaveAsync(kind, rendered.Value!, ct);
+
+        // The processor's contract guarantees exactly one Primary, and the storage contract
+        // guarantees the order is preserved -- so this is a lookup, not a search that might fail.
+        var primary = assets.First(a => a.Role == BrandingRole.Primary);
+
+        return Result<BrandingUploadResultDto>.Success(new BrandingUploadResultDto(primary.Url, assets));
+    }
+}

@@ -1,0 +1,41 @@
+using System.Net;
+using System.Net.Http.Json;
+using FluentAssertions;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Xunit;
+namespace Innovayse.Hostpanel.Integration.Tests.Products;
+
+/// <summary>
+/// <c>POST /api/products/groups</c> against Postgres: the happy path and the authorization
+/// boundary.
+/// </summary>
+/// <remarks>Split from the deleted <c>ProductsEndpointTests</c> (A7 Task 6).</remarks>
+/// <param name="factory">The shared API + PostgreSQL host.</param>
+public sealed class CreateProductGroupTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+{
+    /// <summary>Admin can create a product group and receives 201 Created with the new id.</summary>
+    [Fact]
+    public async Task CreateProductGroupAsync_ReturnsCreated_AsAdminAsync()
+    {
+        var client = await ProductsTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync("/api/products/groups",
+            new { name = "Shared Hosting", description = "Affordable hosting plans" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = await response.Content.ReadFromJsonAsync<int>();
+        id.Should().BeGreaterThan(0);
+    }
+
+    /// <summary>POST /api/products/groups without auth returns 401 Unauthorized.</summary>
+    [Fact]
+    public async Task CreateProductGroupAsync_Returns401_WithoutAuthAsync()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/products/groups",
+            new { name = "Unauthorized Group" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+}

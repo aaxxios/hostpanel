@@ -1,0 +1,49 @@
+using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Shared.Models;
+using Innovayse.Hostpanel.Shared.MultiTenancy;
+
+namespace Innovayse.Hostpanel.Application.Auth.Commands.DisableTwoFactor;
+
+/// <summary>Turns two-factor authentication off after verifying a code.</summary>
+public sealed class DisableTwoFactorHandler
+{
+    /// <summary>Mode-specific two-factor implementation.</summary>
+    private readonly ITwoFactorService _twoFactor;
+
+    /// <summary>Whose account; the command does not say, and must not.</summary>
+    private readonly ICurrentUserService _caller;
+
+    /// <summary>
+    ///     Initializes the handler.
+    /// </summary>
+    /// <param name="twoFactor">Mode-specific two-factor implementation.</param>
+    /// <param name="caller">Whose account; the command does not say, and must not.</param>
+    public DisableTwoFactorHandler(ITwoFactorService twoFactor, ICurrentUserService caller)
+    {
+        _twoFactor = twoFactor;
+        _caller = caller;
+    }
+
+    /// <summary>
+    ///     Handles the command.
+    /// </summary>
+    /// <param name="cmd">The command.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// Success once it is switched off, or <c>TWO_FACTOR_CODE_INVALID</c> when the code did not match.
+    /// </returns>
+    /// <remarks>
+    /// A code is required to switch it off, not just a signed-in session, and that is the whole
+    /// point of the feature: someone who has taken over a session could otherwise remove the
+    /// second factor that was meant to stop them. The SSO in this workspace asks for one on its
+    /// own disable path for the same reason.
+    /// </remarks>
+    public async Task<Result> HandleAsync(DisableTwoFactorCommand cmd, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(cmd);
+
+        var disabled = await _twoFactor.DisableAsync(_caller.RequireUserId(), cmd.Code, ct);
+        return disabled ? Result.Success() : Result.FailureCode(HostpanelErrorCodes.TWO_FACTOR_CODE_INVALID);
+    }
+}

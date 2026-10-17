@@ -1,6 +1,3 @@
-import type { Domain } from './domain'
-import type { Invoice } from './invoice'
-import type { Product } from './product'
 
 /** Contact record linked to a client account. */
 export interface Contact {
@@ -44,4 +41,11 @@ export interface Contact {
   notifyAffiliate: boolean
   /** ISO 8601 creation timestamp. */
   createdAt: string
+}
+
+/** Kind of a client contact, exactly as the API sends it. */
+export enum ContactType {
+  Billing = 'Billing',
+  Technical = 'Technical',
+  General = 'General',
 }

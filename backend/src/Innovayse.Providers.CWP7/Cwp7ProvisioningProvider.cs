@@ -1,9 +1,8 @@
-namespace Innovayse.Providers.CWP7;
-
-using Innovayse.Domain.Provisioning;
-using Innovayse.Domain.Provisioning.Interfaces;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Provisioning;
 using Microsoft.Extensions.Logging;
 
+namespace Innovayse.Providers.CWP7;
 /// <summary>
 /// Provisioning provider for Control Web Panel 7 (CWP7).
 /// Implements <see cref="IProvisioningProvider"/> to integrate with the provisioning pipeline.
@@ -49,7 +48,7 @@ public sealed class Cwp7ProvisioningProvider : IProvisioningProvider
     /// <param name="req">Provision request with domain, username, password, and package.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Provisioning result with the username as the provisioning reference.</returns>
-    public async Task<ProvisioningResult> ProvisionAsync(ProvisionRequest req, CancellationToken ct)
+    public async Task<ProvisioningResult> ProvisionAsync(ProvisionAccountOrder req, CancellationToken ct)
     {
         var response = await _client.CreateAccountAsync(
             _host, _apiKey, req.DomainName, req.Username, req.Password, req.Package,
@@ -72,7 +71,7 @@ public sealed class Cwp7ProvisioningProvider : IProvisioningProvider
     /// </summary>
     /// <param name="req">Suspend request with provisioning reference (username) and reason.</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task SuspendAsync(SuspendRequest req, CancellationToken ct)
+    public async Task SuspendAsync(SuspendAccountOrder req, CancellationToken ct)
     {
         var response = await _client.SuspendAccountAsync(_host, _apiKey, req.ProvisioningRef, ct);
 
@@ -108,7 +107,7 @@ public sealed class Cwp7ProvisioningProvider : IProvisioningProvider
     /// </summary>
     /// <param name="req">Terminate request with provisioning reference (username) and reason.</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task TerminateAsync(TerminateRequest req, CancellationToken ct)
+    public async Task TerminateAsync(TerminateAccountOrder req, CancellationToken ct)
     {
         var response = await _client.TerminateAccountAsync(
             _host, _apiKey, req.ProvisioningRef, $"{req.ProvisioningRef}@terminated.local", ct);

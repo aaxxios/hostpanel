@@ -1,171 +1,143 @@
 <template>
-  <div class="max-w-lg mx-auto">
-    <NuxtLink
-      to="/client/domains"
-      class="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors mb-6"
-    >
-      <ArrowLeft :size="16" :stroke-width="2" />
-      {{ $t('client.domains.backTo') }}
-    </NuxtLink>
+  <UiStack gap="lg" class="max-w-lg mx-auto">
+    <UiBackLink to="/client/domains" :label="$t('client.domains.backTo')" testid="transfer-back" />
 
-    <!-- Success state -->
-    <UiCard v-if="success">
-      <div class="text-center py-6">
-        <div class="w-14 h-14 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-4">
-          <CheckCircle :size="28" :stroke-width="2" class="text-green-400" />
-        </div>
-        <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-2">{{ $t('client.domainTransfer.successTitle') }}</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">{{ $t('client.domainTransfer.successDesc') }}</p>
-        <div class="flex flex-col sm:flex-row gap-3 justify-center">
-          <NuxtLink
-            :to="`/client/invoices/${success.invoiceId}`"
-            class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-primary-600 text-white font-semibold text-sm hover:opacity-90 transition-opacity"
-          >
-            <CreditCard :size="16" :stroke-width="2" />
+    <UiCard v-if="success" data-testid="transfer-success">
+      <UiEmptyState :icon="CheckCircle" :title="$t('client.domainTransfer.successTitle')" :description="$t('client.domainTransfer.successDesc')">
+        <UiStack direction="row" gap="sm" justify="center" wrap>
+          <UiButton :to="`/client/invoices/${success.invoiceId}`" data-testid="transfer-pay-invoice">
+            <CreditCard :size="16" :stroke-width="2" class="mr-2" />
             {{ $t('client.domainTransfer.payInvoice') }}
-          </NuxtLink>
-          <NuxtLink
-            to="/client/domains"
-            class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 text-gray-300 text-sm hover:bg-white/5 transition-colors"
-          >
-            {{ $t('client.domainTransfer.viewDomains') }}
-          </NuxtLink>
-        </div>
-      </div>
+          </UiButton>
+          <UiButton to="/client/domains" variant="subtle" data-testid="transfer-view-domains">{{ $t('client.domainTransfer.viewDomains') }}</UiButton>
+        </UiStack>
+      </UiEmptyState>
     </UiCard>
 
-    <!-- Transfer form -->
     <UiCard v-else>
-      <h1 class="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
-        <ArrowLeftRight :size="18" :stroke-width="2" class="text-cyan-500 dark:text-cyan-400" />
-        {{ $t('client.domainTransfer.title') }}
-      </h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">{{ $t('client.domainTransfer.subtitle') }}</p>
+      <UiCardHeader :title="$t('client.domainTransfer.title')" :icon="ArrowLeftRight" />
+      <UiText size="sm" tone="muted" class="mb-6">{{ $t('client.domainTransfer.subtitle') }}</UiText>
 
-      <!-- Info note -->
-      <div class="mb-5 flex gap-3 rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 p-3.5">
-        <Info :size="16" :stroke-width="2" class="text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-        <p class="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-          {{ $t('client.domainTransfer.infoNote') }}
-        </p>
-      </div>
+      <UiAlert variant="info" :icon-size="16" class="mb-5">{{ $t('client.domainTransfer.infoNote') }}</UiAlert>
 
-      <UiForm :error="formError" :success="''" spacing="sm" @submit="submit">
-        <!-- Domain name -->
+      <UiForm data-testid="domain-transfer-form" :error="formError" spacing="sm" @submit="submit">
         <UiInput
           v-model="form.domain"
           :label="$t('client.domainTransfer.domainLabel')"
-          placeholder="example.com"
+          :placeholder="$t('client.domainTransfer.domainPlaceholder')"
           :disabled="submitting"
           size="sm"
+          testid="transfer-domain"
         />
 
-        <!-- EPP / Auth Code -->
         <UiInput
           v-model="form.eppcode"
           :label="$t('client.domainTransfer.eppLabel')"
-          placeholder="Epp Code / Auth Code"
+          :placeholder="$t('client.domainTransfer.eppPlaceholder')"
           :disabled="submitting"
           size="sm"
+          testid="transfer-epp"
         />
 
-        <!-- Renewal period -->
         <UiSelect
-          v-model="form.years"
+          :model-value="form.years"
           :label="$t('client.domainTransfer.periodLabel')"
+          :placeholder="$t('client.domainTransfer.periodPlaceholder')"
           :options="periodOptions"
           size="sm"
+          testid="transfer-period"
+          @update:model-value="form.years = Number($event)"
         />
 
-        <!-- Payment method -->
-        <div>
-          <p v-if="pmLoading" class="h-10 rounded-xl bg-gray-100 dark:bg-white/5 animate-pulse" />
-          <UiSelect
-            v-else-if="paymentOptions.length"
-            v-model="form.paymentmethod"
-            :label="$t('client.domainTransfer.paymentLabel')"
-            :options="paymentOptions"
-            size="sm"
-          />
-          <p v-else class="text-xs text-gray-500 dark:text-gray-400">
-            {{ $t('client.domainTransfer.noPaymentMethods') }}
-          </p>
-        </div>
+        <UiSkeleton v-if="pmLoading" shape="block" class="h-10" />
+        <UiSelect
+          v-else-if="paymentOptions.length"
+          v-model="form.paymentmethod"
+          :label="$t('client.domainTransfer.paymentLabel')"
+          :placeholder="$t('client.domainTransfer.paymentPlaceholder')"
+          :options="paymentOptions"
+          size="sm"
+          testid="transfer-payment"
+        />
+        <UiText v-else size="xs" tone="subtle" data-testid="transfer-no-payment">{{ $t('client.domainTransfer.noPaymentMethods') }}</UiText>
 
         <template #actions>
-          <UiButton type="submit" :loading="submitting" :disabled="!form.domain || !form.paymentmethod">
+          <UiButton type="submit" :loading="submitting" :disabled="!form.domain || !form.paymentmethod" data-testid="transfer-submit">
             <ArrowLeftRight v-if="!submitting" :size="14" :stroke-width="2" class="mr-1.5" />
             {{ submitting ? $t('client.domainTransfer.submitting') : $t('client.domainTransfer.submit') }}
           </UiButton>
         </template>
       </UiForm>
 
-      <p class="text-xs text-gray-600 dark:text-gray-500 mt-4 text-center">
-        {{ $t('client.domainTransfer.note') }}
-      </p>
+      <UiText size="xs" tone="subtle" class="mt-4 text-center">{{ $t('client.domainTransfer.note') }}</UiText>
     </UiCard>
-  </div>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
-import { ArrowLeft, ArrowLeftRight, Info, CheckCircle, CreditCard } from 'lucide-vue-next'
-import { useBillingApi } from '~/composables/apis/useBillingApi'
-import { useDomainsApi } from '~/composables/apis/useDomainsApi'
-import { apiErrorMessage } from '~/utils/apiError'
+/**
+ * Domain transfer: the form that orders the transfer of a domain in (name, EPP code, period,
+ * payment method) and, once the order is placed, a link to its invoice. The order, its in-flight
+ * flag and the API's refusal belong to the domains store.
+ */
+import { ArrowLeftRight, CheckCircle, CreditCard } from 'lucide-vue-next'
+import { useDomainsStore } from '~/stores/domains'
+import { toPaymentMethodOptions } from '~/utils/paymentMethodOptions'
+import { buildYearOptions } from '~/utils/yearOptions'
 
 definePageMeta({ layout: 'client', middleware: 'client-auth' })
 
+/** Translates a key into the active locale. */
 const { t } = useI18n()
+/** The current route; its params name the record shown. */
 const route = useRoute()
 
+/** The form fields; the domain and EPP code may arrive in the query from the domain search. */
 const form = reactive({
-  domain:        (route.query.domain as string) || '',
-  eppcode:       (route.query.eppcode as string) || '',
-  years:         1,
+  domain: (route.query.domain as string) || '',
+  eppcode: (route.query.eppcode as string) || '',
+  years: 1,
   paymentmethod: '',
 })
 
-const submitting = ref(false)
-const formError  = ref('')
-const success    = ref<{ orderId: number; invoiceId: number } | null>(null)
+/** The domains store; reset so a previous order's result does not linger. */
+const domainsStore = useDomainsStore()
+domainsStore.reset()
 
-// Period options
-const periodOptions = computed(() => [
-  { label: `1 ${t('client.domainTransfer.year')}`,  value: 1 },
-  { label: `2 ${t('client.domainTransfer.years')}`, value: 2 },
-  { label: `3 ${t('client.domainTransfer.years')}`, value: 3 },
-])
+/** Whether the order request is in flight. */
+const submitting = computed(() => domainsStore.transferSaving)
 
-// Payment methods
-// Straight from the API composable rather than through a store: this page reads it once and
-// owns the result alone, which is the named exception to component -> store -> api.
-const { data: payMethods, pending: pmLoading } = await useBillingApi().loadPaymentMethods()
+/** The order a successful transfer raised; null until then. */
+const success = computed(() => domainsStore.transferResult)
 
-const paymentOptions = computed(() =>
-  (payMethods.value ?? []).map(m => ({
-    label: m.card_last_four ? `${m.description} •••• ${m.card_last_four}` : m.description,
-    value: m.gateway_name,
-  }))
-)
+/** The sentence for a refused order (owned by the store). */
+const formError = computed(() => domainsStore.transferError)
 
-// Pre-select first payment method
-watch(paymentOptions, (opts) => {
-  if (opts.length && !form.paymentmethod) form.paymentmethod = opts[0]!.value as string
+/** The period choices. */
+const periodOptions = computed(() => buildYearOptions(t('client.domainTransfer.year'), t('client.domainTransfer.years')))
+
+// Payment methods, read through the domains store.
+/** Loading flag of the data this page reads. */
+const { pending: pmLoading } = await useAsyncData('domain-transfer-payment-methods', () => domainsStore.loadPaymentMethods())
+
+/** The saved payment methods as select options. */
+const paymentOptions = computed(() => toPaymentMethodOptions(domainsStore.paymentMethods))
+
+// Pre-select the first payment method.
+watch(paymentOptions, (options) => {
+  const [first] = options
+  if (first && !form.paymentmethod) {
+    form.paymentmethod = first.value
+  }
 }, { immediate: true })
 
-async function submit() {
-  if (!form.domain.trim()) { formError.value = t('client.domainTransfer.errorDomain'); return }
-  submitting.value = true
-  formError.value  = ''
-  try {
-    const res = await useDomainsApi().createTransferOrder(form)
-    success.value = res
-  } catch (err: unknown) {
-    // The API's own wording, through the one shared reader in `utils/apiError.ts`;
-    // the local key is only the no-answer fallback.
-    formError.value = apiErrorMessage(err) || t('client.domainTransfer.errorDefault')
-  } finally {
-    submitting.value = false
-  }
+/**
+ * Places the transfer order through the store. The API validates the values and explains a
+ * refusal, which is rendered from the store's `transferError`.
+ *
+ * @returns Resolves when the attempt has ended.
+ */
+const submit = async (): Promise<void> => {
+  await domainsStore.placeTransfer(form)
 }
 </script>

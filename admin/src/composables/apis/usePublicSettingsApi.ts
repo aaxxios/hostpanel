@@ -10,8 +10,8 @@
  * come from any of the admin-only endpoints.
  */
 
-import { useApi } from '../useApi'
-import type { PublicSetting } from '../../types/branding'
+import { useApi } from '@/composables/useApi'
+import type { PublicSetting } from '@/types/branding'
 
 /**
  * Endpoint functions for `/api/settings/public`.

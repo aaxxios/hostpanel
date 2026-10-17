@@ -13,3 +13,15 @@ export interface ActivityLog {
   /** UTC ISO timestamp of the action. */
   createdAt: string
 }
+
+/** Filters the client activity-log endpoint accepts; an empty value is left off the request. */
+export interface ActivityLogFilters {
+  /** Date filter. */
+  date?: string
+  /** Admin name or email search. */
+  adminSearch?: string
+  /** Description search. */
+  description?: string
+  /** IP address search. */
+  ipAddress?: string
+}

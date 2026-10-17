@@ -2,30 +2,30 @@
   "refundPolicy": {
     "badge": "Financial Transparency",
     "title": "Refund & Cancellation",
-    "subtitle": "Clear rules for service cancellations and refund requests for Innovayse products and agency services.",
+    "subtitle": "Clear rules for service cancellations and refund requests for Innovayse hosting, domain and server services.",
     "lastUpdated": "Last updated",
     "sections": {
       "general": {
         "title": "General Principles",
         "content": {
-          "0": "At Innovayse, we strive to ensure complete satisfaction with our services. However, due to the digital nature of our work, specific refund rules apply to different categories of products and services."
+          "0": "At Innovayse, we strive to ensure complete satisfaction with our services. However, due to the digital nature of hosting and domain services, specific refund rules apply to different categories of services."
         }
       },
-      "saas": {
-        "title": "SaaS & Subscriptions",
+      "subscriptions": {
+        "title": "Subscriptions",
         "content": {
-          "0": "For our SaaS platforms (SmartLearn, PropSystem, etc.):",
+          "0": "For recurring hosting and service subscriptions:",
           "1": "Monthly subscriptions can be cancelled at any time. Refunds are not provided for partial months already billed. Upon cancellation, access remains active until the end of the current billing cycle.",
           "2": "Yearly subscriptions: Refund requests made within 14 days of the initial purchase are eligible for a full refund. After 14 days, refunds are handled on a case-by-case basis at our discretion."
         }
       },
-      "custom": {
-        "title": "Custom Projects",
+      "domains": {
+        "title": "Domains & Certificates",
         "content": {
-          "0": "For web development, mobile apps, and custom agency projects:",
-          "1": "Commitment Fees: The initial 50% deposit is non-refundable once work has commenced (UI/UX phase or architecture planning).",
-          "2": "Milestone Payments: Payments made upon the approval of specific milestones are non-refundable as they represent completed stages of production.",
-          "3": "Full Cancellation: If a project is cancelled before completion, the client is responsible for paying for all work completed up to the date of cancellation."
+          "0": "For domain registrations, transfers and SSL certificates:",
+          "1": "Registration and Renewal Fees: Domain fees are passed on to the registry and are non-refundable once the domain has been registered or renewed.",
+          "2": "Transfers: A transfer fee is non-refundable once the transfer has been initiated with the previous registrar.",
+          "3": "Certificates: SSL certificate fees are non-refundable once the certificate has been issued."
         }
       },
       "hosting": {
@@ -35,11 +35,11 @@
           "1": "Renewal fees for hosting services are non-refundable once the new billing cycle starts."
         }
       },
-      "digital": {
-        "title": "Digital Marketing & SEO",
+      "servers": {
+        "title": "Servers",
         "content": {
-          "0": "SEO and PPC management fees are non-refundable for months where services have already been delivered or campaigns have been actively managed.",
-          "1": "Ad spend paid directly to platforms like Google or Meta is subject to their respective refund policies and is not managed by Innovayse."
+          "0": "VPS and dedicated server subscriptions follow the same monthly and yearly cancellation rules as other subscriptions; unused time in a billing cycle that has already started is not refunded.",
+          "1": "Fees for additional IP addresses, licences and other add-ons are non-refundable once they have been provisioned."
         }
       },
       "process": {

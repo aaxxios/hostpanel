@@ -2,9 +2,9 @@
   "contact": {
     "hero": {
       "badge": "Get in Touch",
-      "title": "Let's Build Something",
-      "titleHighlight": "Amazing",
-      "subtitle": "Have a project in mind? We'd love to hear about it. Our team is ready to turn your ideas into reality."
+      "title": "We're Here",
+      "titleHighlight": "to Help",
+      "subtitle": "Have a question about hosting, domains or your account? Our team is ready to help."
     },
     "form": {
       "title": "Send us a message",
@@ -12,36 +12,32 @@
       "email": "Email Address",
       "phone": "Phone Number",
       "service": "What are you interested in?",
-      "message": "Project Details",
+      "message": "Message",
       "placeholders": {
         "name": "John Doe",
         "email": "john{'@'}example.com",
         "phone": "+1 (555) 000-0000",
         "service": "Select a service",
-        "message": "Tell us about your project, goals, timeline, and budget..."
+        "message": "Tell us what you need help with..."
       },
       "serviceOptions": {
-        "webDevelopment": "Web Development",
-        "mobileDevelopment": "Mobile Development",
-        "seo": "SEO Services",
-        "ppc": "PPC Advertising",
-        "saasProduct": "SaaS Product",
-        "consulting": "Consulting",
+        "hosting": "Hosting",
+        "domains": "Domains",
+        "servers": "Servers",
+        "billing": "Billing",
+        "support": "Technical Support",
         "other": "Other"
       },
       "consentPrefix": "I agree to the",
       "consentLink": "Privacy Policy",
       "consentSuffix": "and consent to be contacted about my inquiry",
       "submit": "Send Message",
-      "submitting": "Sending...",
       "success": {
         "title": "Message sent successfully!",
         "subtitle": "We'll get back to you within 24 hours."
       },
       "error": {
-        "consentRequired": "Please accept the privacy policy to continue",
-        "failed": "Failed to send message. Please try again later.",
-        "unavailable": "The contact form is unavailable right now. Please email or call us using the details on this page."
+        "consentRequired": "Please accept the privacy policy to continue"
       }
     },
     "info": {
@@ -54,8 +50,7 @@
         "title": "Contact Methods",
         "email": "Email",
         "phone": "Phone",
-        "workingHours": "Working Hours",
-        "workingHoursValue": "Mon-Fri: 9AM - 6PM PST"
+        "workingHours": "Working Hours"
       },
       "quickConnect": {
         "title": "Quick Connect",
@@ -64,6 +59,9 @@
         "liveChat": "Live Chat",
         "toggle": "Contact us"
       }
+    },
+    "map": {
+      "title": "Office location on the map"
     }
   }
 }

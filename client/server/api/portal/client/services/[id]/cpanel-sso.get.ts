@@ -7,10 +7,18 @@
  * `{ url: string }`, so the page's `const { url } = ...` read `undefined` off a string and
  * opened a blank tab with it. `MyServicesController` now answers with the object its staff-side
  * sibling always did, which is the shape declared here.
+ *
+ * @module server/api/portal/client/services/[id]/cpanel-sso.get
  */
-export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id')
-  if (!id) throw createError({ statusCode: 400, statusMessage: 'Service ID is required' })
 
-  return await internalApiCall<{ url: string }>(event, `/me/services/${id}/cpanel-sso`)
+/** What the backend answers a control-panel sign-in request with. */
+interface CpanelSsoResult {
+  /** The one-time sign-in address. */
+  url: string
+}
+
+export default defineEventHandler(async (event) => {
+  const id = requireRouteParam(event, 'id')
+
+  return await internalApiCall<CpanelSsoResult>(event, `/me/services/${id}/cpanel-sso`)
 })

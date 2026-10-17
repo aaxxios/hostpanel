@@ -5,6 +5,7 @@
     "yourOrder": "Ваш заказ",
     "account": "Аккаунт",
     "paymentMethod": "Способ оплаты",
+    "cardDetails": "Данные карты",
     "loggedInAs": "Вы вошли как",
     "notYou": "Не вы? Сменить аккаунт",
     "guestNotice": "Вы оформляете заказ как гость",
@@ -13,21 +14,14 @@
     "processing": "Обработка...",
     "redirectingToBank": "Перенаправляем на защищённую платёжную страницу банка…",
     "noPaymentMethods": "Нет доступных способов оплаты. Обратитесь в поддержку.",
-    "productConfig": "Конфигурация услуги",
     "fields": {
       "firstname": "Имя",
       "lastname": "Фамилия",
       "email": "Электронная почта",
-      "emailPlaceholder": "вы{'@'}example.com",
       "password": "Создать пароль",
-      "phonenumber": "Номер телефона",
-      "domain": "Адрес домена",
-      "username": "Имя пользователя хостинга",
-      "hostPassword": "Пароль хостинга"
+      "phonenumber": "Номер телефона"
     },
     "errors": {
-      "fillRequired": "Пожалуйста, заполните все обязательные поля",
-      "fillHostingDetails": "Пожалуйста, заполните все данные конфигурации хостинга",
       "generic": "Произошла ошибка. Попробуйте ещё раз."
     },
     "success": {
@@ -38,7 +32,29 @@
       "paid": "Оплачено",
       "amount": "Сумма",
       "setupService": "Настроить мою услугу",
-      "viewInvoices": "Посмотреть счета"
+      "viewInvoices": "Посмотреть счета",
+      "domain": "Домен",
+      "action": "Действие",
+      "registration": "Регистрация",
+      "transfer": "Перенос",
+      "manageDomain": "Управление доменом"
+    },
+    "secureCheckout": "Безопасная оплата",
+    "identifyPrompt": "Как нам вас идентифицировать?",
+    "choosePayment": "Выберите удобный способ оплаты",
+    "needHelp": "Нужна помощь?",
+    "supportAlways": "Наша поддержка работает 24/7",
+    "contactUs": "Связаться с нами",
+    "placeholders": {
+      "firstname": "Иван",
+      "lastname": "Иванов",
+      "email": "you{'@'}example.com",
+      "password": "••••••••"
+    },
+    "card": {
+      "notInitialized": "Форма оплаты картой ещё не готова. Подождите немного и повторите попытку.",
+      "failed": "Не удалось завершить оплату картой.",
+      "noIntent": "Не удалось подтвердить платёж."
     }
   }
 }

@@ -3,9 +3,10 @@
     "products": "Ապրանքներ",
     "hosting": "Հոսթինգ",
     "domains": "Դոմեններ",
-    "faq": "Հարցեր",
-    "getStarted": "Սկսել",
     "clientArea": "Անձնական էջ",
-    "contact": "Կապ"
+    "hostingDesc": "Ընդհանուր, VPS և նվիրված սերվերների պլաններ",
+    "domainsDesc": "Դոմենների որոնում և գրանցում",
+    "openMenu": "Բացել մենյուն",
+    "closeMenu": "Փակել մենյուն"
   }
 }

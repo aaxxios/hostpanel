@@ -1,3 +1,9 @@
+/**
+ * The envelope `GET /api/portal/client/announcements` answers with.
+ *
+ * @module types/announcementlist
+ */
+
 import type { Announcement } from '~/types/announcement'
 
 /** The envelope `GET /api/portal/client/announcements` answers with. */

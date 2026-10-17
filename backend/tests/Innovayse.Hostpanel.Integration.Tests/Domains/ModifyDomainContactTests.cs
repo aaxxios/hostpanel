@@ -1,0 +1,101 @@
+using System.Net;
+using System.Net.Http.Json;
+using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Domains.Commands.ModifyDomainContact;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+
+namespace Innovayse.Hostpanel.Integration.Tests.Domains;
+
+/// <summary>
+/// Integration tests for the admin <c>ModifyDomainContact</c> use case —
+/// <c>POST /api/domains/{id}/modify-contact</c>. The client-facing equivalent is
+/// <c>ModifyMyDomainContact</c>.
+/// </summary>
+/// <param name="factory">The shared API + PostgreSQL host.</param>
+public sealed class ModifyDomainContactTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+{
+    /// <summary>
+    /// POST .../modify-contact with the flat body <c>DomainContactModal.vue</c> emits — no nested
+    /// <c>contact</c> wrapper — succeeds. <see cref="ModifyDomainContactCommand"/> is flattened to
+    /// these top-level fields for exactly this wire.
+    /// </summary>
+    [Fact]
+    public async Task ModifyContact_WithFlatBody_Returns204Async()
+    {
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var domainId = await DomainsTestSeeds.SeedActiveDomainAsync(context);
+
+        var client = await DomainsTestSeeds.AdminClientAsync(factory);
+        var response = await client.PostAsJsonAsync($"/api/domains/{domainId}/modify-contact", new
+        {
+            firstName = "Ada",
+            lastName = "Lovelace",
+            organization = "",
+            email = "ada@example.test",
+            phone = "+10000000000",
+            address1 = "1 Analytical Engine Way",
+            address2 = "",
+            city = "London",
+            state = "London",
+            postalCode = "00000",
+            country = "GB",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    /// <summary>A missing required contact field (email) refuses with 400.</summary>
+    [Fact]
+    public async Task ModifyContact_MissingEmail_Returns400Async()
+    {
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var domainId = await DomainsTestSeeds.SeedActiveDomainAsync(context);
+
+        var client = await DomainsTestSeeds.AdminClientAsync(factory);
+        var response = await client.PostAsJsonAsync($"/api/domains/{domainId}/modify-contact", new
+        {
+            firstName = "Ada",
+            lastName = "Lovelace",
+            organization = "",
+            email = "",
+            phone = "+10000000000",
+            address1 = "1 Analytical Engine Way",
+            address2 = "",
+            city = "London",
+            state = "London",
+            postalCode = "00000",
+            country = "GB",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>An unauthenticated caller is refused with 401.</summary>
+    [Fact]
+    public async Task ModifyContact_WithoutToken_Returns401Async()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync($"/api/domains/{DomainsTestSeeds.UnknownId}/modify-contact", new
+        {
+            firstName = "Ada",
+            lastName = "Lovelace",
+            organization = "",
+            email = "ada@example.test",
+            phone = "+10000000000",
+            address1 = "1 Analytical Engine Way",
+            address2 = "",
+            city = "London",
+            state = "London",
+            postalCode = "00000",
+            country = "GB",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+}

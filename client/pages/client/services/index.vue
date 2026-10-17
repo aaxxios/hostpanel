@@ -1,14 +1,10 @@
 <template>
-  <div>
-    <div class="mb-8">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $t('client.services.title') }}</h1>
-      <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{{ $t('client.services.subtitle') }}</p>
-    </div>
+  <UiStack gap="lg">
+    <UiPageHeader :title="$t('client.services.title')" :description="$t('client.services.subtitle')" :icon="Server" class="!mb-0" />
 
-    <!-- Loading skeleton -->
-    <div v-if="store.servicesLoading" class="grid md:grid-cols-2 gap-4">
-      <div v-for="i in 4" :key="i" class="h-36 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
-    </div>
+    <UiGrid v-if="store.servicesLoading" cols="2">
+      <UiSkeleton v-for="i in 4" :key="i" shape="block" class="h-36" />
+    </UiGrid>
 
     <!-- Not a customer account. Checked before the failure branch: this is a state the
          API reported, not a fault, and it carries its own explanation and a way out. -->
@@ -16,115 +12,64 @@
 
     <!-- Failed. Checked before the empty state, which is otherwise what a failure renders as:
          the list is empty either way, and only this branch knows which of the two it is. -->
-    <UiAlert v-else-if="store.servicesError" variant="error">{{ store.servicesError }}</UiAlert>
+    <UiAlert v-else-if="store.servicesError" variant="error" data-testid="services-error">{{ store.servicesError }}</UiAlert>
 
-    <!-- Empty -->
-    <div v-else-if="!store.services.length" class="text-center py-20">
-      <Server :size="48" :stroke-width="2" class="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-      <p class="text-gray-400 mb-4">{{ $t('client.services.empty') }}</p>
-      <NuxtLink
-        to="/hosting"
-        class="px-6 py-2.5 rounded-xl bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-400 transition-colors"
-      >
-        {{ $t('client.services.browseHosting') }}
-      </NuxtLink>
-    </div>
+    <UiEmptyState v-else-if="!store.services.length" :icon="Server" :title="$t('client.services.empty')">
+      <UiButton to="/hosting" data-testid="services-browse-hosting">{{ $t('client.services.browseHosting') }}</UiButton>
+    </UiEmptyState>
 
-    <!-- Services grid -->
-    <div v-else>
-      <!-- Setup required alert -->
-      <UiAlert
-        v-if="servicesNeedingSetup.length > 0"
-        variant="info"
-        :title="servicesNeedingSetup.length === 1 ? $t('client.dashboard.setupAlertSingle') : $t('client.dashboard.setupAlertMultiple', { count: servicesNeedingSetup.length })"
-        class="mb-6"
-      >
+    <template v-else>
+      <UiAlert v-if="servicesNeedingSetup.length > 0" variant="info" :title="setupAlertTitle" data-testid="services-setup-alert">
         {{ $t('client.dashboard.setupAlertSubtitle') }}
       </UiAlert>
 
-      <div class="grid md:grid-cols-2 gap-4">
-      <NuxtLink
-        v-for="service in store.services"
-        :key="service.id"
-        :to="service.username ? `/client/services/${service.id}` : `/client/services/${service.id}/setup`"
-        class="group block p-5 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-cyan-500/30 hover:bg-gray-100 dark:hover:bg-white/8 transition-all duration-200"
-        :class="!service.username ? 'border-blue-500/20 hover:border-blue-500/40' : ''"
-      >
-        <div class="flex items-start justify-between gap-4 mb-3">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center flex-shrink-0">
-              <Server :size="18" :stroke-width="2" class="text-cyan-400" />
-            </div>
-            <div class="min-w-0">
-              <h3 class="text-gray-900 dark:text-white font-semibold text-sm truncate group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
-                {{ service.name }}
-              </h3>
-              <p class="text-gray-500 text-xs truncate">{{ service.domain || service.groupname }}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <span v-if="!service.username" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
-              {{ $t('client.dashboard.needsSetup') }}
-            </span>
-            <ClientStatusBadge v-else :status="service.status" />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 mt-4">
-          <div class="text-xs">
-            <span class="text-gray-500">{{ $t('client.services.nextDue') }}</span>
-            <div class="text-gray-700 dark:text-gray-300 font-medium mt-0.5">{{ formatDate(service.nextduedate) }}</div>
-          </div>
-          <div class="text-xs">
-            <span class="text-gray-500">{{ $t('client.services.amount') }}</span>
-            <div class="text-gray-700 dark:text-gray-300 font-medium mt-0.5">
-              {{ formatCurrency(service.recurringamount, clientCurrency) }}
-            </div>
-          </div>
-        </div>
-
-        <!-- Disk usage bar (if available) -->
-        <div v-if="service.disklimit && service.disklimit !== '0'" class="mt-4">
-          <div class="flex justify-between text-xs text-gray-500 mb-1">
-            <span>{{ $t('client.services.diskUsage') }}</span>
-            <span>{{ service.diskusage }}MB / {{ service.disklimit }}MB</span>
-          </div>
-          <div class="h-1.5 rounded-full bg-white/10 overflow-hidden">
-            <div
-              class="h-full rounded-full bg-gradient-to-r from-cyan-500 to-primary-500 transition-all duration-500"
-              :style="{ width: `${Math.min(100, (parseInt(service.diskusage) / parseInt(service.disklimit)) * 100)}%` }"
-            />
-          </div>
-        </div>
-      </NuxtLink>
-      </div>
-    </div>
-  </div>
+      <UiGrid cols="2" data-testid="services-list">
+        <ClientServicesServiceCard
+          v-for="service in store.services"
+          :key="service.id"
+          :service="service"
+          :currency="clientCurrency"
+        />
+      </UiGrid>
+    </template>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
+/**
+ * Service list: one card per hosting service with its status, next due date, amount and disk
+ * usage, plus a banner when some services still need setup. Loading, missing-profile and failure
+ * states come from the client store.
+ */
 import { Server } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
-import { formatCurrency } from '~/utils/formatCurrency'
-import { formatDate } from '~/utils/formatDate'
 
 definePageMeta({ layout: 'client', middleware: 'client-auth' })
 
+/** Translates a key into the active locale. */
+const { t } = useI18n()
+
+/** The client store that owns the service list and its loading and failure state. */
 const store = useClientStore()
 
 /**
  * What the client profile says these amounts are denominated in.
  *
- * The ISO 4217 code off the account — `ClientDto.Currency`, now forwarded by
- * `server/api/portal/client/me.get.ts` rather than hardcoded away. This used to read
- * `currencyprefix` / `currencysuffix`, two fields the C# API has never had. An account with no
- * currency set still passes nothing through rather than inventing one from the locale;
- * `formatCurrency` groups the digits either way, which is the difference between `24000` and
- * `24,000.00`.
+ * The ISO 4217 code off the account (`ClientDto.Currency`). An account with no currency set
+ * still passes nothing through rather than inventing one from the locale; `formatCurrency`
+ * groups the digits either way.
  */
 const clientCurrency = computed(() => ({ code: store.user?.currency }))
 
 await useAsyncData('client-services', () => store.fetchServices(true))
 
-const servicesNeedingSetup = computed(() => store.services.filter(s => !s.username))
+/** The services that have no control-panel account yet. */
+const servicesNeedingSetup = computed(() => store.services.filter((service) => !service.username))
+
+/** Headline of the setup banner, singular or plural by how many services wait. */
+const setupAlertTitle = computed(() =>
+  servicesNeedingSetup.value.length === 1
+    ? t('client.dashboard.setupAlertSingle')
+    : t('client.dashboard.setupAlertMultiple', { count: servicesNeedingSetup.value.length })
+)
 </script>

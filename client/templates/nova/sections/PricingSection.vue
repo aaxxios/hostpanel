@@ -1,58 +1,64 @@
 <template>
-  <section id="plans" class="border-b border-nova-border py-16 lg:py-24">
-    <div class="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
-      <div class="flex flex-wrap items-end justify-between gap-6">
-        <div v-if="showHeader" class="min-w-0">
-          <p class="text-[13px] font-semibold uppercase tracking-[0.1em] text-nova-brand">
-            {{ t('nova.plans.eyebrow') }}
-          </p>
-          <h2 class="mt-3 text-[clamp(1.6rem,3.4vw,2.4rem)] font-bold tracking-tight text-nova-ink">
-            {{ t('nova.plans.title') }}
-          </h2>
-          <p class="mt-3 max-w-[620px] text-[16px] leading-[1.7] text-nova-muted">
-            {{ t('nova.plans.lead') }}
-          </p>
-        </div>
+  <UiSection id="plans" padding="lg" class="border-b border-nova-border">
+    <UiStack direction="row" wrap align="end" justify="between" gap="lg">
+      <NovaSectionHeader
+        v-if="showHeader"
+        :eyebrow="t('nova.plans.eyebrow')"
+        :title="t('nova.plans.title')"
+        :lead="t('nova.plans.lead')"
+        class="min-w-0"
+      />
 
-        <div
-          role="group"
-          :aria-label="t('nova.plans.billingLabel')"
-          class="flex items-center gap-1 rounded-full border border-nova-border p-1"
-        >
-          <button
-            v-for="option in options"
-            :key="option.key"
-            type="button"
-            class="min-h-[44px] rounded-full px-5 text-sm font-semibold transition-colors"
-            :class="option.selected ? 'bg-nova-accent text-nova-on-accent' : 'text-nova-muted hover:text-nova-ink'"
-            :aria-pressed="option.selected"
-            @click="emit('update:yearly', option.value)"
-          >{{ t(option.labelKey) }}</button>
-        </div>
-      </div>
-
-      <!--
-        The catalogue not answering is not the visitor's fault and not their
-        problem to debug, so the empty state says what it is and stops.
-      -->
-      <div v-if="novaPlans.length === 0" class="mt-10 rounded-2xl border border-nova-border bg-nova-surface p-8">
-        <p class="text-[17px] font-semibold text-nova-ink">{{ t('nova.plans.empty') }}</p>
-        <p class="mt-2 text-[15px] text-nova-muted">{{ t('nova.plans.emptyHint') }}</p>
-      </div>
-
-      <div
-        v-else
-        class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+      <UiStack
+        direction="row"
+        align="center"
+        gap="none"
+        role="group"
+        :aria-label="t('nova.plans.billingLabel')"
+        class="gap-1 rounded-full border border-nova-border p-1"
       >
-        <NovaPricingCard
-          v-for="plan in novaPlans"
-          :key="plan.id"
-          :plan="plan"
-          :yearly="yearly"
-        />
-      </div>
-    </div>
-  </section>
+        <UiButton
+          v-for="option in options"
+          :key="option.key"
+          variant="bare"
+          class="min-h-[44px] rounded-full px-5 text-sm font-semibold"
+          :class="option.selected ? 'bg-nova-accent text-nova-on-accent' : 'text-nova-muted hover:text-nova-ink'"
+          :aria-pressed="option.selected"
+          :data-testid="`nova-billing-${option.key}`"
+          @click="emit('update:yearly', option.value)"
+        >
+          {{ t(option.labelKey) }}
+        </UiButton>
+      </UiStack>
+    </UiStack>
+
+    <!--
+      The catalogue not answering is not the visitor's fault and not their
+      problem to debug, so the empty state says what it is and stops.
+    -->
+    <UiCard
+      v-if="novaPlans.length === 0"
+      padding="xl"
+      class="mt-10 !border-nova-border !bg-nova-surface"
+      data-testid="nova-plans-empty"
+    >
+      <UiText size="inherit" tone="inherit" weight="semibold" class="text-[17px] text-nova-ink">
+        {{ t('nova.plans.empty') }}
+      </UiText>
+      <UiText size="inherit" tone="inherit" class="mt-2 text-[15px] text-nova-muted">
+        {{ t('nova.plans.emptyHint') }}
+      </UiText>
+    </UiCard>
+
+    <UiGrid v-else cols="3" gap="lg" class="mt-10">
+      <NovaPricingCard
+        v-for="plan in novaPlans"
+        :key="plan.id"
+        :plan="plan"
+        :yearly="yearly"
+      />
+    </UiGrid>
+  </UiSection>
 </template>
 
 <script setup lang="ts">
@@ -64,22 +70,33 @@
  * can keep the hosting page and the homepage on the same state.
  */
 import NovaPricingCard from '~/templates/nova/sections/PricingCard.vue'
+import NovaSectionHeader from '~/templates/nova/sections/NovaSectionHeader.vue'
 import { toNovaPlans } from '~/templates/nova/pricing'
-import type { PlanCard } from '~/templates/aurora/types'
+import type { PlanCard } from '~/types/plancard'
 
+/** Props of PricingSection. */
 const props = withDefaults(defineProps<{
+  /** Plans as the catalogue store formats them. */
   plans?: PlanCard[]
+  /** Whether the yearly price is selected. */
   yearly?: boolean
   /** Off on the hosting page, whose own hero already says the same thing. */
   showHeader?: boolean
 }>(), { plans: () => [], yearly: false, showHeader: true })
 
-const emit = defineEmits<{ 'update:yearly': [value: boolean] }>()
+/** Emits the section raises. */
+const emit = defineEmits<{
+  /** The reader chose the monthly or the yearly price. */
+  'update:yearly': [value: boolean]
+}>()
 
+/** Translator for the copy. */
 const { t } = useI18n()
 
+/** The plans in the shape the cards render. */
 const novaPlans = computed(() => toNovaPlans(props.plans))
 
+/** The two billing options and which one is selected. */
 const options = computed(() => [
   { key: 'monthly', labelKey: 'nova.plans.monthly', value: false, selected: !props.yearly },
   { key: 'yearly', labelKey: 'nova.plans.yearly', value: true, selected: props.yearly },

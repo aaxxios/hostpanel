@@ -1,0 +1,17 @@
+{
+  "clients": "Հաճախորդներ",
+  "invoices": "Հաշիվներ",
+  "services": "Ծառայություններ",
+  "domains": "Դոմեյններ",
+  "tickets": "Տոմսեր",
+  "products": "Ապրանքներ",
+  "orders": "Պատվերներ",
+  "transactions": "Գործարքներ",
+  "quotes": "Առաջարկներ",
+  "knowledgebase": "Գիտելիքների բազա",
+  "contacts": "Կոնտակտներ",
+  "ticketReplies": "Պատասխաններ տոմսերին",
+  "announcements": "Հայտարարություններ",
+  "downloads": "Ներբեռնումներ",
+  "networkIssues": "Ցանցային խնդիրներ"
+}

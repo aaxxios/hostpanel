@@ -1,3 +1,9 @@
+/**
+ * The storefront's colour mode composable: current mode, the operator's switch, and the toggle.
+ *
+ * @module composables/useAppColorMode
+ */
+
 import {
   COLOR_MODE_COOKIE,
   COLOR_MODE_COOKIE_MAX_AGE,
@@ -7,7 +13,8 @@ import {
   parseColorModeSetting,
   resolveColorMode,
 } from '~/utils/colorMode'
-import type { ColorMode, ColorModeSetting } from '~/utils/colorMode'
+import { ColorMode } from '~/types/colormode'
+import type { ColorModeSetting } from '~/types/colormodesetting'
 
 /**
  * The storefront's colour mode: what it is, whether the visitor may change it, and
@@ -68,14 +75,14 @@ export const useAppColorMode = () => {
    * class-less palette both templates declare on `:root`, and is corrected in the
    * browser before hydration.
    */
-  const isDark = computed(() => (applied.value ?? 'dark') === 'dark')
+  const isDark = computed(() => (applied.value ?? ColorMode.Dark) === ColorMode.Dark)
 
   /**
    * Applies a mode and remembers it as the visitor's choice.
    *
    * @param next The mode to switch to.
    */
-  function choose(next: ColorMode): void {
+  const choose = (next: ColorMode): void => {
     applied.value = next
     chosen.value = true
     cookie.value = next
@@ -86,9 +93,11 @@ export const useAppColorMode = () => {
    * the switch: the button is not rendered then, but a stale bundle or a keyboard
    * shortcut must not be able to bypass the setting.
    */
-  function toggle(): void {
-    if (!userToggleEnabled.value) return
-    choose(isDark.value ? 'light' : 'dark')
+  const toggle = (): void => {
+    if (!userToggleEnabled.value) {
+      return
+    }
+    choose(isDark.value ? ColorMode.Light : ColorMode.Dark)
   }
 
   return { isDark, mode, applied, userToggleEnabled, choose, toggle }

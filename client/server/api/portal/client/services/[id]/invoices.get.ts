@@ -41,8 +41,7 @@ interface ServiceInvoices {
 }
 
 export default defineEventHandler(async (event): Promise<ServiceInvoices> => {
-  const id = getRouterParam(event, 'id')
-  if (!id) throw createError({ statusCode: 400, statusMessage: 'Service ID is required' })
+  const id = requireRouteParam(event, 'id')
 
   return await internalApiCall<ServiceInvoices>(event, `/me/services/${id}/invoices`)
 })

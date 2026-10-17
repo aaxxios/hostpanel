@@ -1,44 +1,47 @@
 <template>
-  <div v-if="apps.length > 0" ref="rootEl" class="relative">
-    <button
-      type="button"
-      :title="t('aurora.apps.title')"
-      :aria-expanded="open"
-      aria-haspopup="menu"
-      class="grid h-10 w-10 place-items-center rounded-[11px] border border-line2 text-tx2"
-      :class="open ? 'bg-[rgba(125,227,255,0.12)]' : 'bg-transparent'"
-      @click="open = !open"
-    >
-      <span class="grid grid-cols-[repeat(3,4px)] gap-[3px]" aria-hidden="true">
-        <span v-for="dot in 9" :key="dot" class="h-1 w-1 rounded-[1px] bg-current" />
-      </span>
-    </button>
+  <UiPopover
+    v-if="apps.length > 0"
+    v-model="open"
+    panel-class="fixed right-[clamp(16px,4vw,48px)] top-[74px] w-[min(520px,calc(100vw-32px))]"
+  >
+    <template #trigger="{ toggle }">
+      <UiButton
+        variant="bare"
+        :title="t('aurora.apps.title')"
+        :aria-label="t('aurora.apps.title')"
+        :aria-expanded="open"
+        aria-haspopup="menu"
+        data-testid="app-launcher-trigger"
+        class="h-10 w-10 rounded-xl border border-line2 text-tx2"
+        :class="open ? 'bg-acbg' : ''"
+        @click="toggle"
+      >
+        <Icon name="lucide:layout-grid" class="h-[19px] w-[19px]" />
+      </UiButton>
+    </template>
 
-    <div
-      v-if="open"
-      role="menu"
-      class="fixed right-[clamp(16px,4vw,48px)] top-[74px] z-40 flex w-[min(520px,calc(100vw-32px))] flex-col rounded-[18px] border border-line2 bg-panel p-2.5 shadow-panel"
-    >
-      <div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-1">
-        <a
+    <template #default="{ close }">
+      <UiGrid cols="3" gap="xs">
+        <UiButton
           v-for="app in apps"
           :key="app.id"
+          variant="bare"
           :href="app.url"
           role="menuitem"
-          class="flex min-w-0 flex-col gap-2 rounded-[13px] px-3 py-[13px] text-tx hover:bg-[rgba(125,227,255,0.09)]"
-          @click="open = false"
+          full-width
+          :data-testid="`app-launcher-${app.id}`"
+          class="rounded-xl px-3 py-3 text-tx hover:bg-acbg"
+          @click="close"
         >
-          <!-- The tile gradient is per-app data, so it cannot come from a class. -->
-          <span
-            class="grid h-8 w-8 place-items-center rounded-[9px] font-mono text-[13px] font-medium text-[#08090F]"
-            :style="{ background: app.tint }"
-          >{{ app.tag }}</span>
-          <span class="text-sm font-semibold">{{ app.label }}</span>
-          <span class="text-xs leading-[1.4] text-mut2">{{ app.desc }}</span>
-        </a>
-      </div>
-    </div>
-  </div>
+          <UiStack gap="xs" align="start" class="w-full min-w-0 text-left">
+            <UiTile :class="[tileClass(app.id), 'font-mono text-tile-ink']">{{ app.tag }}</UiTile>
+            <UiText as="span" size="sm" weight="semibold" tone="inherit">{{ app.label }}</UiText>
+            <UiText as="span" size="xs" tone="inherit" class="leading-snug text-mut2">{{ app.desc }}</UiText>
+          </UiStack>
+        </UiButton>
+      </UiGrid>
+    </template>
+  </UiPopover>
 </template>
 
 <script setup lang="ts">
@@ -48,29 +51,35 @@
  * Renders nothing at all unless the deployment has apps to offer, so the header
  * of a stock install is unchanged. The design's "Manage all services" footer
  * link is left out: it points at `#` in the design, and there is no such page.
+ *
+ * Each tile gets its gradient from a named token class keyed by app id; the composable's own
+ * `tint` string (a CSS gradient) is not used here because it could only be applied through an
+ * inline style.
  */
 const { t } = useI18n()
+/** Apps the deployment offers; empty hides the launcher. */
 const { apps } = usePortalApps()
 
+/** Whether the panel is open (v-model of the popover). */
 const open = ref(false)
-const rootEl = ref<HTMLElement | null>(null)
 
-/** Closes the panel when the visitor clicks anywhere outside it. */
-const onClickOutside = (event: MouseEvent) => {
-  if (open.value && rootEl.value && !rootEl.value.contains(event.target as Node)) open.value = false
+/** Tile gradient token per known app id; an app this map does not know gets the brand gradient. */
+const TILE_CLASSES: Readonly<Record<string, string>> = {
+  account: 'bg-tile-sky',
+  tasks: 'bg-tile-mint',
+  erp: 'bg-tile-lilac',
+  hostpanel: 'bg-tile-pink',
+  sheets: 'bg-tile-cyan',
+  mail: 'bg-tile-indigo',
+  docs: 'bg-tile-ice',
+  calendar: 'bg-tile-rose',
 }
 
-const onEscape = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') open.value = false
-}
-
-onMounted(() => {
-  document.addEventListener('click', onClickOutside)
-  document.addEventListener('keydown', onEscape)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', onClickOutside)
-  document.removeEventListener('keydown', onEscape)
-})
+/**
+ * Gradient class for one app's tile.
+ *
+ * @param appId - Id of the app, as `usePortalApps` lists it.
+ * @returns A literal `bg-tile-*` class, or the brand gradient for an unknown id.
+ */
+const tileClass = (appId: string): string => TILE_CLASSES[appId] ?? 'bg-brand'
 </script>

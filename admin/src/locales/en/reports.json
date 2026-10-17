@@ -1,0 +1,302 @@
+{
+  "reportComingSoon": {
+    "comingSoon": "Coming Soon",
+    "thisReportIsUnderDevelopment": "This report is under development."
+  },
+  "reportTimestamp": {
+    "reportGeneratedOnTimestamp": "Report Generated on {timestamp}"
+  },
+  "agingInvoices": {
+    "agingInvoices": "Aging Invoices",
+    "aSummaryOfOutstandingInvoices": "A summary of outstanding invoices broken down into the period of which they are overdue",
+    "period": "Period",
+    "curAmount": "{cur} Amount"
+  },
+  "annualIncome": {
+    "annualIncomeReport": "Annual Income Report",
+    "totalIncomePerMonthFor": "Total income per month for the selected year",
+    "income": "Income"
+  },
+  "clientsByCountry": {
+    "clientsByCountry": "Clients by Country",
+    "thisReportShowsTheTotal": "This report shows the total number of active services per country, as well as total active unique clients per country in the table below.",
+    "top10Countries": "Top 10 Countries",
+    "clearSelection": "Clear selection",
+    "activeClients": "Active Clients",
+    "totalClients": "Total Clients:",
+    "mapHint": "Hover a dot to see the city."
+  },
+  "clientsReport": {
+    "thisReportCanBeUsed": "This report can be used to generate a custom export of clients by applying up to 5 filters. CSV Export is available via the Tools menu to the right.",
+    "creationDateRange": "Creation Date Range",
+    "totalcountClientSFound": "{totalCount} client(s) found",
+    "noClientsFoundClickFilter": "No clients found. Click Filter to load results."
+  },
+  "clientStatement": {
+    "clientAccountRegisterBalance": "Client Account Register Balance",
+    "thisReportProvidesAStatement": "This report provides a statement of account for individual client accounts.",
+    "selectClient": "Select Client",
+    "previousBalance": "Previous Balance:",
+    "noEntriesForThisPeriod": "No entries for this period.",
+    "endingBalance": "Ending Balance:",
+    "debit": "Debit"
+  },
+  "creditsReviewer": {
+    "creditsReviewer": "Credits Reviewer",
+    "thisReportAllowsYouTo": "This report allows you to review all the credits issued to clients between 2 dates you specify.",
+    "allClients": "All clients",
+    "minAmount": "Min. Amount",
+    "maxAmount": "Max. Amount",
+    "creditsFoundTotal": "credits found — Total:",
+    "creditId": "Credit ID",
+    "clientId": "Client ID",
+    "adminUser": "Admin User",
+    "noCreditsFoundForThis": "No credits found for this period."
+  },
+  "customerRetention": {
+    "averageCustomerRetentionTime": "Average Customer Retention Time",
+    "thisReportCalculatesAndProvides": "This report calculates and provides you with the average lifetime of products, services, addons and domains — that is the number of days between the registration date and the termination date. Averages are displayed by product and the associated billing cycle, and are displayed both as a number of days value and a years/months active.",
+    "includeActiveProductsServicesAssuming": "Include Active Products & Services (Assuming active will end Next Due Date) in Calculation of Average Retention Time",
+    "productCount": "Product Count",
+    "averageDaysActive": "Average Days Active",
+    "averageYearsMonthsActive": "Average Years/Months Active",
+    "noDataFound": "No data found."
+  },
+  "dailyPerformance": {
+    "dailyPerformance": "Daily Performance",
+    "overviewOfDailyActivityMetrics": "Overview of daily activity metrics",
+    "noDataFound": "No data found.",
+    "completedOrders": "Completed Orders",
+    "newInvoices": "New Invoices",
+    "paidInvoices": "Paid Invoices",
+    "openedTickets": "Opened Tickets",
+    "ticketReplies": "Ticket Replies",
+    "cancellationRequests": "Cancellation Requests"
+  },
+  "directDebit": {
+    "directDebitProcessing": "Direct Debit Processing",
+    "thisReportDisplaysAllUnpaid": "This report displays all unpaid invoices assigned to the Direct Debit payment method and the associated bank account details stored for their owners ready for processing.",
+    "subtotal": "Subtotal",
+    "tax": "Tax",
+    "credit": "Credit",
+    "bankName": "Bank Name",
+    "bankAccountType": "Bank Account Type",
+    "bankCode": "Bank Code",
+    "bankAccountNumber": "Bank Account Number"
+  },
+  "diskUsage": {
+    "diskSpaceBandwidthUsageSummary": "Disk Space & Bandwidth Usage Summary",
+    "thisReportShowsTheDisk": "This report shows the Disk Space & Bandwidth Usage Statistics for hosting accounts.",
+    "diskSpaceUsageStatsLast": "Disk Space Usage Stats Last Updated at {value}",
+    "noDataYetClickUpdate": "No data yet — click Update Now to fetch from servers.",
+    "updating": "Updating…",
+    "updateNow": "Update Now",
+    "clientNameDomain": "Client Name / Domain",
+    "diskUsage": "Disk Usage",
+    "diskLimit": "Disk Limit",
+    "used": "% Used",
+    "bwUsage": "BW Usage",
+    "bwLimit": "BW Limit",
+    "noAccountsOnThisServer": "No accounts on this server.",
+    "noData": "No data found. Click Update Now to fetch stats from your hosting servers."
+  },
+  "domainRenewalEmails": {
+    "domainRenewalReminderEmails": "Domain Renewal Reminder Emails",
+    "thisReportCanBeUsed": "This report can be used to generate a custom export of the Domain Renewal Reminder Emails.",
+    "optional": "Optional",
+    "dateSent": "Date Sent",
+    "reminder": "Reminder",
+    "recipients": "Recipients",
+    "sent": "Sent"
+  },
+  "domainsReport": {
+    "thisReportCanBeUsed": "This report can be used to generate a custom export of domains by applying up to 5 filters. CSV Export is available via the Tools menu to the right.",
+    "registrationDateRange": "Registration Date Range",
+    "nextDueDateRange": "Next Due Date Range",
+    "expiryDateRange": "Expiry Date Range",
+    "totalcountDomainSFound": "{totalCount} domain(s) found",
+    "noDomainsFound": "No domains found.",
+    "regType": "Reg Type",
+    "userId": "User ID",
+    "orderId": "Order ID"
+  },
+  "incomeByProduct": {
+    "thisReportGivesABreakdown": "This report gives a breakdown per product/service of income paid in a given month."
+  },
+  "incomeForecast": {
+    "incomeForecast": "Income Forecast",
+    "projectedIncomeBasedOnRecurring": "Projected income based on recurring billing cycles",
+    "cumulativeForecast": "Cumulative Forecast",
+    "monthly": "Monthly",
+    "quarterly": "Quarterly",
+    "semiAnnual": "Semi Annual",
+    "annual": "Annual"
+  },
+  "invoicesReport": {
+    "thisReportCanBeUsed": "This report can be used to generate a custom export of invoices by applying up to 5 filters.",
+    "creationDate": "Creation Date",
+    "totalcountInvoiceSFound": "{totalCount} invoice(s) found",
+    "userId": "User ID",
+    "invoiceNumber": "Invoice Number",
+    "tax2": "Tax2",
+    "taxRate2": "Tax Rate 2"
+  },
+  "monthlyOrders": {
+    "thisReportGivesABreakdown": "This report gives a breakdown of the number of units sold of each product per month.",
+    "unitsSold": "Units Sold"
+  },
+  "monthlyTransactions": {
+    "thisReportProvidesASummary": "This report provides a summary of daily pay transactions for a given month. The Amount Out figure includes both expenditure transactions and refunds.",
+    "noTransactionsFoundForThis": "No transactions found for this month."
+  },
+  "newCustomers": {
+    "newCustomers": "New Customers",
+    "monthlyNewSignupsAndOrder": "Monthly new signups and order activity",
+    "newSignups": "New Signups",
+    "ordersPlaced": "Orders Placed",
+    "ordersCompleted": "Orders Completed"
+  },
+  "pdfBatch": {
+    "pdfBatch": "Pdf Batch"
+  },
+  "productSuspensions": {
+    "productSuspensions": "Product Suspensions",
+    "thisReportAllowsYouTo": "This report allows you to review all suspended products and the reasons specified for their suspensions.",
+    "serviceId": "Service ID",
+    "suspendReason": "Suspend Reason"
+  },
+  "promotions": {
+    "promotions": "Promotions"
+  },
+  "salesTax": {
+    "salesTaxLiability": "Sales Tax Liability",
+    "thisReportShowsSalesTax": "This report shows sales tax liability for the selected period.",
+    "chooseCurrency": "Choose Currency",
+    "invoicesFound": "Invoices Found",
+    "totalInvoiced": "Total Invoiced:",
+    "taxLevel1Liability": "Tax Level 1 Liability:",
+    "taxLevel2Liability": "Tax Level 2 Liability:",
+    "tax": "Tax",
+    "credit": "Credit",
+    "noInvoicesFoundForThis": "No invoices found for this period.",
+    "thisReportExcludesInvoicesThat": "This report excludes invoices that affect a client's credit balance since this income will be counted and reported when it is applied to invoices for products/services."
+  },
+  "serverRevenueForecasts": {
+    "serverRevenueForecasts": "Server Revenue Forecasts"
+  },
+  "servicesReport": {
+    "services": "Services",
+    "thisReportCanBeUsed": "This report can be used to generate a custom export of services by applying up to 5 filters. CSV Export is available via the Tools menu to the right.",
+    "terminationDate": "Termination Date",
+    "totalcountServiceSFound": "{totalCount} service(s) found",
+    "noServicesFound": "No services found.",
+    "userId": "User ID",
+    "productId": "Product ID",
+    "terminatedAt": "Terminated At"
+  },
+  "smartyCompatibility": {
+    "smartyCompatibility": "Smarty Compatibility"
+  },
+  "sslMonitoring": {
+    "sslCertificateMonitoring": "SSL Certificate Monitoring",
+    "displaysAListOfDomains": "Displays a list of domains with their SSL status, if available.",
+    "hideInactiveDomains": "Hide Inactive Domains",
+    "showInactiveDomains": "Show Inactive Domains",
+    "reValidating": "Re-validating...",
+    "reValidateSslStatus": "Re-validate SSL Status",
+    "issuer": "Issuer",
+    "expiry": "Expiry",
+    "lastUpdate": "Last Update",
+    "valid": "Valid",
+    "noSsl": "No SSL"
+  },
+  "supportTicketsReport": {
+    "thisReportShowsABreakdown": "This report shows a breakdown of support tickets dealt with per admin for a given month.",
+    "admin": "Admin"
+  },
+  "ticketFeedbackComments": {
+    "ticketFeedbackComments": "Ticket Feedback Comments",
+    "thisReportAllowsYouTo": "This report allows you to review feedback comments submitted by customers.",
+    "staffName": "Staff Name",
+    "ticketId": "Ticket ID",
+    "feedbackLeft": "Feedback Left",
+    "rating": "Rating",
+    "comments": "Comments"
+  },
+  "ticketFeedbackScores": {
+    "ticketFeedbackScores": "Ticket Feedback Scores",
+    "thisReportProvidesASummary": "This report provides a summary of scores received on a per staff member basis for a given date range.",
+    "staffName": "Staff Name",
+    "totalRatings": "Total Ratings",
+    "averageRating": "Average Rating"
+  },
+  "ticketRatingsReviewer": {
+    "supportTicketRatingsReviewer": "Support Ticket Ratings Reviewer",
+    "thisReportIsShowingAll": "This report is showing all 0-ticket replies rated 1 between the selected date range for review.",
+    "rating": "Rating",
+    "ticket": "Ticket #",
+    "admin": "Admin",
+    "ratingAtLeast": "{rating}+"
+  },
+  "ticketTags": {
+    "ticketTagsOverview": "Ticket Tags Overview",
+    "thisReportProvidesAnOverview": "This report provides an overview of ticket tags assigned to tickets for a given date range.",
+    "tag": "Tag",
+    "count": "Count"
+  },
+  "topClients": {
+    "top10ClientsByIncome": "Top 10 Clients by Income",
+    "thisReportShowsThe10": "This report shows the 10 clients with the highest net income according to the transactions entered.",
+    "noData": "No data",
+    "denotesConvertedToDefaultCurrency": "* denotes converted to default currency"
+  },
+  "transactionsReport": {
+    "thisReportCanBeUsed": "This report can be used to generate a custom export of transactions by applying up to 5 filters.",
+    "totalcountTransactionSFound": "{totalCount} transaction(s) found",
+    "noTransactionsFound": "No transactions found.",
+    "userId": "User ID"
+  },
+  "vatMoss": {
+    "vatMossSettlementData": "VAT MOSS Settlement Data",
+    "thisReportProvidesTheInformation": "This report provides the information needed to complete a VATMOSS return. Please check with your tax authority to confirm how you can upload your settlement data into the MOSS portal.",
+    "selectQuarter": "Select Quarter",
+    "countryName": "Country Name",
+    "countryCode": "Country Code",
+    "vatRate": "VAT Rate",
+    "numberOfInvoices": "Number of Invoices",
+    "totalValueInvoicedExclVat": "Total Value Invoiced (Excl. VAT)",
+    "totalVatCollected": "Total VAT Collected",
+    "totals": "Totals",
+    "ifACountryDoesNot": "* If a country does not appear in the report, then no VAT was collected from customers in that country during the period selected.",
+    "isleOfManGbAnd": "Isle of Man (GB) and Monaco (FR) are listed in this report as EU Overseas Territories of their respective countries and should be included in any figures provided to tax authorities.",
+    "quarter1": "January - March",
+    "quarter2": "April - June",
+    "quarter3": "July - September",
+    "quarter4": "October - December",
+    "quarterOption": "{year} Q{quarter} - {months}"
+  },
+  "titles": {
+    "reports": {
+      "clientStatement": "Client Statement",
+      "customerRetentionTime": "Customer Retention Time",
+      "diskUsageSummary": "Disk Usage Summary",
+      "domainRenewalEmails": "Domain Renewal Emails",
+      "incomeByProduct": "Income by Product",
+      "monthlyOrders": "Monthly Orders",
+      "monthlyTransactions": "Monthly Transactions",
+      "promotionsUsage": "Promotions Usage",
+      "supportTicketReplies": "Support Ticket Replies",
+      "ticketRatingsReviewer": "Ticket Ratings Reviewer",
+      "ticketTags": "Ticket Tags",
+      "vatMoss": "Vat Moss"
+    },
+    "incomeByProductFor": "Income by Product for {month} {year}",
+    "salesByProductFor": "Sales by Product for {month} {year}",
+    "monthlyTransactionsFor": "Monthly Transactions Report for {month} {year}",
+    "supportTicketRepliesFor": "Support Ticket Replies for {month} {year}"
+  },
+  "common": {
+    "years": "{count} yr",
+    "clientCount": "{count} client | {count} clients"
+  }
+}

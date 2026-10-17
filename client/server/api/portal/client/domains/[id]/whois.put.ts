@@ -1,12 +1,12 @@
 /**
  * PUT /api/portal/client/domains/:id/whois
- * Updates WHOIS contact information for a domain via the C# backend.
+ * Updates the WHOIS registrant contact of a domain via the C# backend.
  *
- * Body: { Registrant, Admin, Tech, Billing }
+ * Body: { contact: { firstName, lastName, organization, email, phone, address1, address2, city,
+ * state, postalCode, country } } -- the backend's `ModifyMyDomainContactCommand`, forwarded as is.
  */
 export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id')
-  if (!id) throw createError({ statusCode: 400, statusMessage: 'Domain ID is required' })
+  const id = requireRouteParam(event, 'id')
 
   const body = await readBody(event)
   return await internalApiCall<Record<string, unknown>>(event, `/me/domains/${id}/whois`, {

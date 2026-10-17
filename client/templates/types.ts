@@ -1,23 +1,16 @@
-/** Every template the portal can render. The first entry is the shipped default. */
-export const TEMPLATE_NAMES = ['aurora', 'nova', 'classic'] as const
-
-/** A template the portal can render. */
-export type TemplateName = (typeof TEMPLATE_NAMES)[number]
-
 /**
- * A renderable position a template must supply.
- * `header` and `footer` are resolved by the layout; the rest are page bodies.
+ * The default template, the list of templates, and the rule that narrows a configured value to one.
+ *
+ * @module templates/types
  */
-export type TemplateSlot =
-  | 'header'
-  | 'footer'
-  | 'home'
-  | 'hosting'
-  | 'domains'
-  | 'checkout'
+
+import { TemplateName } from '~/types/templatename'
+
+/** Every template the portal can render. */
+export const TEMPLATE_NAMES: readonly TemplateName[] = Object.values(TemplateName)
 
 /** The template used when configuration is absent or unrecognised. */
-export const DEFAULT_TEMPLATE: TemplateName = 'aurora'
+export const DEFAULT_TEMPLATE: TemplateName = TemplateName.Aurora
 
 /**
  * Narrows an untrusted configuration value to a template name.
@@ -30,7 +23,7 @@ export const DEFAULT_TEMPLATE: TemplateName = 'aurora'
  * @param input Raw configured value.
  * @returns A template name that is guaranteed to exist in the registry.
  */
-export function resolveTemplateName(input: string | null | undefined): TemplateName {
+export const resolveTemplateName = (input: string | null | undefined): TemplateName => {
   return TEMPLATE_NAMES.includes(input as TemplateName)
     ? (input as TemplateName)
     : DEFAULT_TEMPLATE

@@ -1,311 +1,73 @@
 <template>
-  <div class="min-h-[60dvh] flex items-center justify-center py-10">
-    <div class="max-w-xl w-full">
-      <!-- Loading State -->
-      <div v-if="pending" class="text-center p-12">
-        <div class="w-16 h-16 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mx-auto mb-6" />
-        <h2 class="text-xl font-bold text-white mb-2">{{ $t('client.setup.loading') || 'Preparing Setup Wizard...' }}</h2>
-        <p class="text-gray-500">{{ $t('client.setup.pleaseWait') || 'Fetching your service details.' }}</p>
-      </div>
+  <UiStack gap="lg" class="max-w-xl w-full mx-auto py-10 min-h-[60dvh] justify-center">
+    <ClientServicesSetupStatePanel
+      v-if="pending"
+      loading
+      :title="$t('client.setup.loading')"
+      :description="$t('client.setup.pleaseWait')"
+    />
 
-      <!-- Error State -->
-      <div v-else-if="error || !service" class="bg-white/5 border border-white/10 rounded-3xl p-10 text-center">
-        <div class="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6 text-red-400">
-          <AlertCircle :size="32" />
-        </div>
-        <h2 class="text-2xl font-bold text-white mb-4">{{ $t('client.setup.errorTitle') || 'Setup Not Available' }}</h2>
-        <p class="text-gray-400 mb-8">{{ $t('client.setup.errorDesc') || 'This service cannot be configured at this time. It might already be active or requires manual intervention.' }}</p>
-        <UiButton to="/client/services" variant="subtle">{{ $t('client.setup.backToServices') || 'Back to Services' }}</UiButton>
-      </div>
+    <ClientServicesSetupStatePanel
+      v-else-if="error || !service"
+      :icon="AlertCircle"
+      tone="danger"
+      :title="$t('client.setup.errorTitle')"
+      :description="$t('client.setup.errorDesc')"
+    >
+      <UiButton to="/client/services" variant="subtle" data-testid="setup-back-to-services">{{ $t('client.setup.backToServices') }}</UiButton>
+    </ClientServicesSetupStatePanel>
 
-      <!-- Active Service (Already configured) -->
-      <div v-else-if="service.status === 'Active' && service.username && service.domain" class="bg-white/5 border border-white/10 rounded-3xl p-10 text-center">
-        <div class="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-6 text-green-400">
-          <CheckCircle :size="32" />
-        </div>
-        <h2 class="text-2xl font-bold text-white mb-4">{{ $t('client.setup.alreadyActive') || 'Already Configured' }}</h2>
-        <p class="text-gray-400 mb-8">{{ $t('client.setup.alreadyActiveDesc') || 'This hosting service is already set up and active.' }}</p>
-        <UiButton :to="`/client/services/${service.id}`" variant="primary">{{ $t('client.setup.goToManage') || 'Manage Service' }}</UiButton>
-      </div>
+    <ClientServicesSetupStatePanel
+      v-else-if="isAlreadySetUp"
+      :icon="CheckCircle"
+      tone="success"
+      :title="$t('client.setup.alreadyActive')"
+      :description="$t('client.setup.alreadyActiveDesc')"
+    >
+      <UiButton :to="`/client/services/${service.id}`" data-testid="setup-go-manage">{{ $t('client.setup.goToManage') }}</UiButton>
+    </ClientServicesSetupStatePanel>
 
-      <!-- Setup Wizard -->
-      <div v-else class="space-y-8">
-        <!-- Progress Header -->
-        <div class="text-center mb-10">
-          <div class="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded-full glass border border-white/10 text-xs font-semibold tracking-wider uppercase text-cyan-400">
-            Step {{ currentStep }} of {{ totalSteps }}
-          </div>
-          <h1 class="text-3xl font-bold text-white mb-2">{{ stepTitle }}</h1>
-          <p class="text-gray-400">{{ stepSubtitle }}</p>
-        </div>
-
-        <!-- Progress Bar -->
-        <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden mb-12">
-          <div 
-            class="h-full bg-gradient-to-r from-cyan-500 to-primary-500 transition-all duration-500"
-            :style="{ width: `${(currentStep / totalSteps) * 100}%` }" />
-        </div>
-
-        <!-- Step 1: Choose Domain -->
-        <div v-if="currentStep === 1" 
-             v-motion
-             :initial="{ opacity: 0, x: 20 }"
-             :enter="{ opacity: 1, x: 0 }"
-             class="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
-          <div class="flex items-center gap-4 mb-8">
-            <div class="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <Globe :size="24" />
-            </div>
-            <div>
-              <h3 class="text-lg font-bold text-white">Your Domain</h3>
-              <p class="text-sm text-gray-500">Every hosting needs a domain to start</p>
-            </div>
-          </div>
-
-          <div class="space-y-6">
-            <div>
-              <UiInput v-model="setupData.domain" label="Domain Name" placeholder="example.com" required :disabled="hasPurchasedDomain" />
-              <p v-if="domainError && !hasPurchasedDomain" class="text-xs text-red-400 mt-1">{{ domainError }}</p>
-            </div>
-            <p v-if="!hasPurchasedDomain" class="text-xs text-gray-500">
-              If you haven't bought a domain yet, enter the domain you plan to use. You'll need to point its nameservers to us later.
-            </p>
-            <p v-else class="text-xs text-cyan-400/70">
-              This domain was purchased with your hosting plan.
-            </p>
-            <UiButton full-width size="lg" :disabled="!setupData.domain || !!domainError" @click="nextStep">
-              Continue
-              <ArrowRight :size="18" class="ml-2" />
-            </UiButton>
-          </div>
-        </div>
-
-        <!-- Step 2: Credentials -->
-        <div v-if="currentStep === 2" 
-             v-motion
-             :initial="{ opacity: 0, x: 20 }"
-             :enter="{ opacity: 1, x: 0 }"
-             class="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
-          <div class="flex items-center gap-4 mb-8">
-            <div class="w-12 h-12 rounded-2xl bg-primary-500/20 border border-primary-500/30 flex items-center justify-center text-primary-400">
-              <Lock :size="24" />
-            </div>
-            <div>
-              <h3 class="text-lg font-bold text-white">Access Credentials</h3>
-              <p class="text-sm text-gray-500">Secure your hosting control panel</p>
-            </div>
-          </div>
-
-          <div class="space-y-6">
-            <div>
-              <UiInput
-                v-model="setupData.username"
-                label="Control Panel Username"
-                placeholder="e.g. webmaster"
-                required
-                @input="sanitizeUsername"
-              />
-              <p class="text-xs text-gray-500 mt-1.5">Lowercase letters and numbers only, no spaces or special characters.</p>
-              <p v-if="usernameError" class="text-xs text-red-400 mt-1">{{ usernameError }}</p>
-            </div>
-            <div>
-              <UiInput v-model="setupData.password" type="password" label="Control Panel Password" placeholder="••••••••" required />
-              <p class="text-xs text-gray-500 mt-1.5">At least 8 characters.</p>
-              <p v-if="passwordError" class="text-xs text-red-400 mt-1">{{ passwordError }}</p>
-            </div>
-
-            <div class="flex gap-4 pt-2">
-              <UiButton variant="subtle" full-width @click="prevStep">Back</UiButton>
-              <UiButton variant="primary" full-width :disabled="!setupData.username || !setupData.password || !!usernameError || !!passwordError" @click="nextStep">
-                Confirm Details
-              </UiButton>
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 3: Confirmation -->
-        <div v-if="currentStep === 3" 
-             v-motion
-             :initial="{ opacity: 0, scale: 0.95 }"
-             :enter="{ opacity: 1, scale: 1 }"
-             class="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
-          <div class="text-center mb-8">
-            <div class="w-20 h-20 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mx-auto mb-6 text-cyan-400">
-              <Rocket :size="32" />
-            </div>
-            <h3 class="text-xl font-bold text-white">Ready to Launch?</h3>
-            <p class="text-gray-400 mt-2">We're about to configure your server with the following details:</p>
-          </div>
-
-          <div class="space-y-3 mb-8 p-4 rounded-2xl bg-white/5 border border-white/5">
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Plan:</span>
-              <span class="text-white font-medium">{{ service.name }}</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Domain:</span>
-              <span class="text-white font-medium">{{ setupData.domain }}</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Username:</span>
-              <span class="text-white font-medium italic">{{ setupData.username }}</span>
-            </div>
-          </div>
-
-          <!-- Error Message if any -->
-          <div v-if="setupError" class="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex gap-3">
-            <AlertCircle :size="18" class="shrink-0" />
-            <p>{{ setupError }}</p>
-          </div>
-
-          <div class="space-y-3">
-            <UiButton variant="primary" full-width size="lg" :loading="submitting" @click="finishSetup">
-              <Zap v-if="!submitting" :size="18" class="mr-2" />
-              Build My Server
-            </UiButton>
-            <UiButton variant="ghost" full-width :disabled="submitting" @click="prevStep">I need to change something</UiButton>
-          </div>
-
-          <p class="text-[10px] text-center text-gray-500 mt-6 uppercase tracking-widest font-bold">
-            Account provisioning takes about 60 seconds
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+    <ClientServicesSetupWizard v-else :service="service" :service-id="serviceId" />
+  </UiStack>
 </template>
 
 <script setup lang="ts">
-import { Globe, Lock, Rocket, ArrowRight, Zap, CheckCircle, AlertCircle } from 'lucide-vue-next'
-import { useClientStore } from '~/stores/client'
-import { useClientApi } from '~/composables/apis/useClientApi'
-import { apiErrorMessage } from '~/utils/apiError'
+/**
+ * Hosting setup page: loads the service and shows the setup wizard, or says why there is nothing
+ * to set up (the service could not be read, or it is already configured). The service is read
+ * through the service management store.
+ */
+import { AlertCircle, CheckCircle } from 'lucide-vue-next'
+import { useServiceManagementStore } from '~/stores/servicemanagement'
+import { ServiceStatus } from '~/types/servicestatus'
 
 definePageMeta({ layout: 'client', middleware: 'client-auth' })
 
+/** Translates a key into the active locale. */
+const { t } = useI18n()
+
+/** Site name the operator set; the brand is the fallback. */
+const { name: siteName } = useSiteIdentity()
+/** The current route; its params name the record shown. */
 const route = useRoute()
+
+/** The id of the service in the route. */
 const serviceId = route.params.id as string
 
-/**
- * The few service fields this wizard renders.
- *
- * Deliberately *not* `~/types/clientservice`'s `ClientService`: that one is the full record
- * the list endpoint returns, and naming a five-field subset the same thing is how a page ends
- * up type-checking against a shape the API never sends. Local and unexported, which is the
- * carve-out to the one-type-per-file rule.
- */
-interface ServiceSummary {
-  id: number
-  name: string
-  status: string
-  domain: string
-  username: string
-}
+/** The service management store; reset so a previous visit's refusal does not linger. */
+const mgmt = useServiceManagementStore()
+mgmt.reset()
+/** Loading flag of the data this page reads. */
+const { pending } = await useAsyncData(`client-service-setup-${serviceId}`, () => mgmt.loadService(serviceId))
 
-// Straight from the API composable rather than through a store: this page reads one service
-// and owns the result alone, which is the named exception to component -> store -> api.
-const clientApi = useClientApi()
-const { data: service, pending, error } = await clientApi.loadService<ServiceSummary>(() => serviceId)
+/** The service being set up; null until loaded or after a failed read. */
+const service = computed(() => mgmt.service)
 
-const currentStep = ref(1)
-const totalSteps = 3
-const setupError = ref('')
-const submitting = ref(false)
+/** The sentence for a failed read. */
+const error = computed(() => mgmt.serviceError)
 
-/** Whether the domain was purchased alongside this hosting service. */
-const hasPurchasedDomain = computed(() => !!service.value?.domain)
+/** Whether the service is active and already has a control-panel account and a domain. */
+const isAlreadySetUp = computed(() => service.value?.status === ServiceStatus.Active && Boolean(service.value.username) && Boolean(service.value.domain))
 
-const setupData = reactive({
-  domain: service.value?.domain || '',
-  username: '',
-  password: ''
-})
-
-const usernameError = computed(() => {
-  const u = setupData.username
-  if (!u) return ''
-  if (!/^[a-z][a-z0-9]*$/.test(u)) return 'Must start with a letter and contain only lowercase letters and numbers.'
-  if (u.length < 3) return 'Must be at least 3 characters.'
-  if (u.length > 8) return 'Must be 8 characters or less (server requirement).'
-  return ''
-})
-
-/**
- * A domain the client typed but that is not a valid hostname, e.g. `notadomain` with no dot.
- * Empty while the field is blank so the placeholder — not an error — greets an untouched form;
- * the Continue button stays disabled on emptiness separately. Mirrors the server's
- * `SetupServiceValidator` so provisioning is never reached with a malformed domain.
- */
-const domainError = computed(() => {
-  const d = setupData.domain.trim()
-  if (!d) return ''
-  // Labels of a–z/0–9/hyphen (no leading/trailing hyphen), at least two of them, TLD ≥ 2 letters.
-  if (!/^(?=.{1,253}$)([a-z0-9](-*[a-z0-9])*\.)+[a-z]{2,}$/i.test(d)) {
-    return 'Enter a valid domain, e.g. example.com.'
-  }
-  return ''
-})
-
-/**
- * A password the client typed that is too short for the hosting control panel. Empty while the
- * field is blank. Eight characters is the same floor the server enforces, so a value that clears
- * this check clears the backend one too.
- */
-const passwordError = computed(() => {
-  const p = setupData.password
-  if (!p) return ''
-  if (p.length < 8) return 'Must be at least 8 characters.'
-  return ''
-})
-
-function sanitizeUsername() {
-  setupData.username = setupData.username.toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-const stepTitle = computed(() => {
-  if (currentStep.value === 1) return 'Pick your domain'
-  if (currentStep.value === 2) return 'Set your credentials'
-  return 'Final Review'
-})
-
-const stepSubtitle = computed(() => {
-  if (currentStep.value === 1) return 'Choose the address for your new website'
-  if (currentStep.value === 2) return 'These details will be used to log in to your control panel'
-  return 'Double check everything before we create your account'
-})
-
-function nextStep() {
-  if (currentStep.value < totalSteps) currentStep.value++
-}
-
-function prevStep() {
-  if (currentStep.value > 1) currentStep.value--
-}
-
-async function finishSetup() {
-  submitting.value = true
-  setupError.value = ''
-  
-  try {
-    await clientApi.setUpService(serviceId, setupData)
-    
-    // Invalidate cached services so pages fetch fresh data
-    const store = useClientStore()
-    store.servicesLoaded = false
-
-    // Clear Nuxt data cache for this service so the detail page refetches
-    clearNuxtData()
-
-    // Success - redirect to the service management page
-    await navigateTo(`/client/services/${serviceId}`)
-  } catch (err: unknown) {
-    // The API's own wording, through the one shared reader in `utils/apiError.ts`,
-    // rather than a sentence written here.
-    setupError.value = apiErrorMessage(err)
-  } finally {
-    submitting.value = false
-  }
-}
-
-useHead({ title: `Service Setup — Innovayse` })
+useHead({ title: computed(() => `${t('client.setup.pageTitle')} — ${siteName.value}`) })
 </script>

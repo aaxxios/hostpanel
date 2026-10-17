@@ -1,0 +1,42 @@
+{
+  "serviceStatusOptions": {
+    "pending": "В ожидании",
+    "terminated": "Завершена"
+  },
+  "domainStatusOptions": {
+    "pendingRegistration": "Ожидает регистрации",
+    "pendingTransfer": "Ожидает переноса",
+    "redemption": "Период выкупа",
+    "transferred": "Перенесён"
+  },
+  "paymentMethodOptions": {
+    "bankTransfer": "Банковский перевод"
+  },
+  "billingCycleOptions": {
+    "free": "Бесплатно",
+    "quarterly": "Ежеквартально",
+    "semiAnnual": "Раз в полгода",
+    "biennial": "Раз в два года",
+    "triennial": "Раз в три года"
+  },
+  "invoiceActionOptions": {
+    "recur": "Повторять"
+  },
+  "recurrencePeriodOptions": {
+    "days": "Дни",
+    "weeks": "Недели",
+    "months": "Месяцы"
+  },
+  "quoteStageOptions": {
+    "allStages": "Все этапы"
+  },
+  "orderStatusOptions": {
+    "fraud": "Мошенничество"
+  },
+  "ticketFilterOptions": {
+    "allActiveTickets": "Все активные тикеты",
+    "flagged": "Помеченные",
+    "answered": "Отвечено",
+    "customerReply": "Ответ клиента"
+  }
+}

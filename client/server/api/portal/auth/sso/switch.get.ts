@@ -1,5 +1,3 @@
-import { randomBytes, createHash } from 'node:crypto'
-
 /**
  * GET /api/portal/auth/sso/switch?sub=XXX&redirect=/some/path
  *
@@ -7,7 +5,12 @@ import { randomBytes, createHash } from 'node:crypto'
  * Generates a PKCE pair and redirects to sso.innovayse.local/switch-init
  * which auto-submits to the SSO switch endpoint, then comes back
  * via the normal OIDC callback with a new auth_token.
+ *
+ * @module server/api/portal/auth/sso/switch.get
  */
+
+import { randomBytes, createHash } from 'node:crypto'
+
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const query = getQuery(event)

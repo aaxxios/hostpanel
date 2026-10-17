@@ -24,7 +24,7 @@
  * @module server/api/portal/auth/accept-invite.post
  */
 
-import { PortalErrorCode } from '~/utils/apiError'
+import { PortalErrorCode } from '~/constants/portalErrorCode'
 
 /** Body this route accepts. The password the page used to send is deliberately not here. */
 interface AcceptInviteBody {
@@ -38,6 +38,12 @@ interface AcceptInviteResult {
   success: boolean
 }
 
+/** The one member of a thrown error this route reads. */
+interface ErrorWithStatus {
+  /** HTTP status the failed call carried, when it carried one. */
+  statusCode?: number
+}
+
 /**
  * Builds the refusal for a visitor who has not signed in yet.
  *
@@ -49,17 +55,15 @@ interface AcceptInviteResult {
  *
  * @returns The H3 error to throw, carrying the code the page branches on.
  */
-function signInRequired() {
+const signInRequired = () => {
   return createError({
     statusCode: 403,
-    statusMessage: 'Sign in before accepting this invitation.',
     // `data.code` is the only part of an H3Error that reaches the browser — `server/error.ts`
     // exists to keep it — and it is what the page branches on to show the sign-in step.
     //
     // This is the one refusal in the portal whose sentence is not the API's, because the API
     // never sees the request: the page words it from `client.acceptInvite.signInRequired`.
-    // `statusMessage` above is for the server log and for a non-browser caller, not for the
-    // screen.
+    // No `statusMessage`: the BFF authors no sentence, the page words this refusal itself.
     data: { code: PortalErrorCode.InviteSignInRequired },
   })
 }
@@ -91,7 +95,7 @@ export default defineEventHandler(async (event): Promise<AcceptInviteResult> => 
     // A cookie that is present but no longer good reaches the same dead end as no cookie at
     // all: `internalApiCall` does not refresh for `/auth/*` endpoints, so this 401 is final.
     // The page needs the same recovery action either way.
-    if ((err as { statusCode?: number })?.statusCode === 401) {
+    if ((err as ErrorWithStatus)?.statusCode === 401) {
       throw signInRequired()
     }
     throw err

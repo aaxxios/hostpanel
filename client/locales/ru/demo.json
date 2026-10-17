@@ -1,0 +1,10 @@
+{
+  "demo": {
+    "label": "Демо-режим",
+    "resetsIn": "Сброс через {time}",
+    "resetsSoon": "Сброс вот-вот",
+    "hoursMinutes": "{hours} ч {minutes} мин",
+    "minutes": "{minutes} мин",
+    "note": "Все данные здесь тестовые и регулярно сбрасываются."
+  }
+}

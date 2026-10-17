@@ -1,0 +1,350 @@
+{
+  "systemSettings": "System Settings",
+  "table": {
+    "key": "Key",
+    "value": "Value",
+    "description": "Description",
+    "noSettings": "No settings found."
+  },
+  "siteIdentity": {
+    "title": "Site identity",
+    "description": "What the storefront calls itself. The name reaches the browser title, social previews, logo alt text and structured data; the tagline is the default meta description.",
+    "name": {
+      "label": "Site name",
+      "hint": "Leave empty for the built-in name"
+    },
+    "tagline": {
+      "label": "Tagline",
+      "hint": "One line, used as the default page description"
+    }
+  },
+  "portalAppearance": {
+    "title": "Portal appearance",
+    "description": "Which template the public storefront renders and which colour mode a visitor starts in. Changes take effect on the next page load.",
+    "template": "Template",
+    "notSeeded": "The {key} setting has not been seeded yet, so it cannot be changed here. Until it exists the portal uses its {env} environment variable.",
+    "templates": {
+      "aurora": {
+        "label": "Aurora",
+        "hint": "Current default — dark/light, Armenian typography"
+      },
+      "nova": {
+        "label": "Nova",
+        "hint": "Editorial layout with a teal palette — dark/light"
+      },
+      "classic": {
+        "label": "Classic",
+        "hint": "The original storefront design"
+      }
+    },
+    "themeDefault": "Default colour mode",
+    "themeDefaultHint": "For a visitor who has not chosen one. A visitor's own choice is remembered in a cookie.",
+    "themeModes": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "Match the visitor's device"
+    },
+    "userToggle": "Let visitors switch between light and dark",
+    "userToggleHint": "Off hides the sun/moon button in the header."
+  },
+  "branding": {
+    "title": "Branding",
+    "description": "The storefront's logos and browser tab icon. Changes take effect on the next page load.",
+    "pasteUrl": "Or paste image URL...",
+    "logo": {
+      "label": "Logo (light backgrounds)",
+      "hint": "JPEG, PNG, WebP — max 5MB"
+    },
+    "logoDark": {
+      "label": "Logo (dark backgrounds)",
+      "hint": "Empty falls back to the light logo"
+    },
+    "logoMark": {
+      "label": "Mark (square icon)",
+      "hint": "For compact headers and sign-in pages; empty uses the built-in mark"
+    },
+    "favicon": {
+      "label": "Favicon",
+      "hint": "PNG, SVG, ICO — max 5MB"
+    },
+    "remove": "Remove image"
+  },
+  "brandColors": {
+    "title": "Brand colours",
+    "description": "Two colours the storefront derives its whole palette from — buttons, links, highlights and the e-mails. Empty keeps each template's own colours.",
+    "primary": {
+      "label": "Primary",
+      "hint": "Buttons, links and highlights. The eleven shades below are derived from it."
+    },
+    "accent": {
+      "label": "Accent",
+      "hint": "Gradients, badges and secondary highlights."
+    },
+    "reset": "Reset to default",
+    "previewButton": "Button",
+    "previewLink": "Link",
+    "contrastOk": "White text on this colour: {ratio}:1 — passes WCAG AA.",
+    "contrastDark": "White text on this colour: {ratio}:1 — too low, so buttons will use dark text.",
+    "contrastLow": "White text on this colour: {ratio}:1 — below WCAG AA for small text; fine for buttons."
+  },
+  "typography": {
+    "title": "Typography",
+    "description": "The typefaces the storefront uses. All are bundled with it; nothing loads from a font service.",
+    "heading": "Headings",
+    "body": "Body text",
+    "templateDefault": "Template default",
+    "sampleBody": "Domains, hosting and e-mail in one account, with a person on the other end of every ticket.",
+    "fonts": {
+      "inter": "Inter",
+      "notoSansArmenian": "Noto Sans Armenian",
+      "notoSerifArmenian": "Noto Serif Armenian",
+      "system": "System (device's own)"
+    },
+    "sampleHy": "Ձեր ամբողջ թվային ենթակառուցվածքը",
+    "sampleRu": "Вся ваша цифровая инфраструктура",
+    "sampleEn": "Your whole digital infrastructure"
+  },
+  "trackingChat": {
+    "title": "Tracking & chat",
+    "description": "Third-party services the storefront talks to. Nothing loads until it is configured here.",
+    "gtm": {
+      "label": "Google Tag Manager container",
+      "hint": "Loads only after a visitor accepts all cookies. Empty loads no tag at all."
+    },
+    "chat": {
+      "title": "Live chat",
+      "baseUrl": "Chat server",
+      "baseUrlHint": "https://chat.example.com",
+      "token": "Website token",
+      "tokenHint": "From the chat inbox settings",
+      "tokenRu": "Token for Russian visitors",
+      "tokenHy": "Token for Armenian visitors",
+      "tokenLocaleHint": "Optional; empty uses the default token",
+      "hint": "The widget appears only when a provider, the server and a token are all set."
+    },
+    "provider": {
+      "label": "Provider",
+      "off": "Off",
+      "chatwoot": "Chatwoot",
+      "innochat": "Innochat"
+    }
+  },
+  "productFeatures": {
+    "specification": "Specification",
+    "shownInTheStorefrontS": "Shown in the storefront's plan comparison table for",
+    "nothingSpecifiedYetTheComparison": "Nothing specified yet. The comparison table stays hidden until at least one plan has a line.",
+    "disk": "Disk",
+    "10Gb": "10 GB",
+    "removeLine": "Remove line",
+    "feature": "Feature",
+    "adding": "Adding…",
+    "add": "Add",
+    "plansLineUpByFeature": "Plans line up by feature name, so spell it the same way across products — \"Disk\" and \"Disk space\" become two separate rows. Within one product a name can only be used once; reusing it is refused rather than saved where it would never show."
+  },
+  "productForm": {
+    "editProduct": "Edit Product",
+    "createNewProduct": "Create New Product",
+    "productType": "Product Type",
+    "productGroup": "Product Group",
+    "selectAGroup": "Select a group",
+    "eGStarterHosting": "e.g. Starter Hosting",
+    "slugUrl": "Slug (URL)",
+    "eGStarterHosting2": "e.g. starter-hosting",
+    "autoGeneratedFromNameEdit": "Auto-generated from name. Edit to override.",
+    "packageName": "Package Name",
+    "eGStarterProBusiness": "e.g. starter, pro, business",
+    "hostingPackageNameUsedFor": "Hosting package name used for server provisioning. Optional.",
+    "serverGroup": "Server Group",
+    "noneAutoSelectByModule": "None (auto-select by module)",
+    "assignToAServerGroup": "Assign to a server group for load-balanced provisioning. Optional.",
+    "briefProductDescription": "Brief product description...",
+    "pricing": "Pricing",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "base": "Base",
+    "aBlankCycleLeavesThe": "A blank cycle leaves the product unsellable on that cycle in that currency.",
+    "hideThisProductFromThe": "Hide this product from the order form",
+    "createProduct": "Create Product",
+    "sharedHosting": "Shared Hosting",
+    "dedicated": "Dedicated",
+    "other": "Other",
+    "vps": "VPS"
+  },
+  "currencies": {
+    "loadingCurrencies": "Loading currencies..."
+  },
+  "emailTemplates": {
+    "emailTemplates": "Email Templates",
+    "noTemplatesFound": "No templates found."
+  },
+  "products": {
+    "products": "Products",
+    "manageHostingPlansAndServices": "Manage hosting plans and services available for purchase",
+    "createProduct": "Create Product",
+    "loadingProducts": "Loading products...",
+    "group": "Group",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "editSpecification": "Edit specification",
+    "editProduct": "Edit product",
+    "noProductsFoundCreateYour": "No products found. Create your first product to get started.",
+    "typeSharedHosting": "Shared Hosting",
+    "typeDedicated": "Dedicated",
+    "typeDomain": "Domain",
+    "typeOther": "Other",
+    "typeVps": "VPS",
+    "typeSsl": "SSL"
+  },
+  "slideForm": {
+    "slides": "Slides",
+    "loadingSlideData": "Loading slide data...",
+    "generalSettings": "General Settings",
+    "icon": "Icon",
+    "orTypeMdiIconName": "Or type MDI icon name (e.g. cloud-check)",
+    "brandColor": "Brand Color",
+    "image": "Image",
+    "slidePreview": "Slide preview",
+    "removeImage": "Remove image",
+    "jpegPngWebpSvgMax": "JPEG, PNG, WebP, SVG — max 5MB",
+    "orPasteImageUrl": "Or paste image URL...",
+    "demoUrl": "Demo URL",
+    "demoUrlPlaceholder": "https://demo.example.com",
+    "optionalTryDemoButtonLink": "Optional \"Try Demo\" button link on the slide",
+    "learnMoreUrl": "Learn More URL",
+    "productsExampleOrHttpsExample": "/products/example or https://example.com",
+    "optionalSecondaryLinkShownAs": "Optional secondary link shown as \"Learn More\" on the slide",
+    "linkedProduct": "Linked Product",
+    "sortOrder": "Sort Order",
+    "showThisSlideToVisitors": "Show this slide to visitors",
+    "targetAudience": "Target Audience",
+    "visibleFrom": "Visible From",
+    "noStartDate": "No start date",
+    "visibleUntil": "Visible Until",
+    "noEndDate": "No end date",
+    "translations": "Translations",
+    "slideTitle": "Slide title",
+    "tagline": "Tagline",
+    "shortSubtitle": "Short subtitle",
+    "slideBodyText": "Slide body text...",
+    "features": "Features",
+    "removeFeature": "Remove feature",
+    "addFeature": "Add Feature",
+    "ctaText": "CTA Text",
+    "getStarted": "Get Started",
+    "ctaUrl": "CTA URL",
+    "createSlide": "Create Slide",
+    "unsavedChanges": "Unsaved changes",
+    "youHaveUnsavedChangesAre": "You have unsaved changes. Are you sure you want to leave?",
+    "leave": "Leave",
+    "all": "All",
+    "guest": "Guest",
+    "authenticated": "Authenticated",
+    "hosting": "Hosting",
+    "globe": "Globe",
+    "analytics": "Analytics",
+    "education": "Education",
+    "property": "Property",
+    "eCommerce": "E-Commerce",
+    "restaurant": "Restaurant",
+    "launch": "Launch",
+    "security": "Security",
+    "premium": "Premium",
+    "mobile": "Mobile",
+    "design": "Design",
+    "finance": "Finance",
+    "media": "Media",
+    "health": "Health",
+    "pageTitleEdit": "Edit Slide",
+    "pageTitleCreate": "Create Slide",
+    "featureNumber": "Feature {number}",
+    "locales": {
+      "en": "English",
+      "ru": "Russian",
+      "hy": "Armenian"
+    },
+    "notFound": "Slide #{id} not found.",
+    "ai": "AI"
+  },
+  "slides": {
+    "slides": "Slides",
+    "manageHomepageHeroSlidesDrag": "Manage homepage hero slides — drag to reorder",
+    "savingOrder": "Saving order...",
+    "addSlide": "Add Slide",
+    "loadingSlides": "Loading slides...",
+    "image": "Image",
+    "audience": "Audience",
+    "visibility": "Visibility",
+    "slide": "Slide",
+    "editSlide": "Edit slide",
+    "deleteSlide": "Delete slide",
+    "noSlidesFoundAddYour": "No slides found. Add your first slide to get started.",
+    "deleteSlide2": "Delete Slide",
+    "always": "Always",
+    "from": "From {date}",
+    "until": "Until {date}",
+    "slideNumber": "Slide #{id}",
+    "deleteMessage": "Delete \"{title}\"? This action cannot be undone."
+  },
+  "tldConfigForm": {
+    "tldPricing": "TLD Pricing",
+    "loadingTldConfiguration": "Loading TLD configuration...",
+    "generalSettings": "General Settings",
+    "tld": "TLD",
+    "domainExtensionWithoutTheDot": "Domain extension without the dot (e.g. \"com\", \"net\", \"am\")",
+    "registrarProvider": "Registrar Provider",
+    "costCurrency": "Cost Currency",
+    "currencyUsedByTheRegistrar": "Currency used by the registrar for cost prices",
+    "sellCurrency": "Sell Currency",
+    "currencyShownToClientsFor": "Currency the sell prices are entered in; clients billed in another currency pay the amount converted with the stored exchange rates",
+    "makeThisTldAvailableFor": "Make this TLD available for purchase",
+    "sortOrder": "Sort Order",
+    "popularBusinessTech": "popular, business, tech",
+    "commaSeparatedCategoryTagsFor": "Comma-separated category tags for filtering",
+    "registrationPricing": "Registration Pricing",
+    "period": "Period",
+    "costCostsymbol": "Cost ({costSymbol})",
+    "sellSellsymbol": "Sell ({sellSymbol})",
+    "margin": "Margin",
+    "years": "Years",
+    "transferPricing": "Transfer Pricing",
+    "renewalPricing": "Renewal Pricing",
+    "createTld": "Create TLD",
+    "unsavedChanges": "Unsaved changes",
+    "youHaveUnsavedChangesAre": "You have unsaved changes. Are you sure you want to leave?",
+    "leave": "Leave",
+    "tldIsRequired": "TLD is required.",
+    "addTld": "Add TLD",
+    "editTld": "Edit TLD",
+    "notFound": "TLD config #{id} not found."
+  },
+  "tldConfigs": {
+    "tldPricing": "TLD Pricing",
+    "configureDomainExtensionPricingAnd": "Configure domain extension pricing and providers",
+    "importing": "Importing...",
+    "import": "Import",
+    "nameAm": "Name.am",
+    "namecheap": "Namecheap",
+    "syncing": "Syncing...",
+    "syncPrices": "Sync Prices",
+    "addTld": "Add TLD",
+    "searchTlds": "Search TLDs...",
+    "loadingTldConfigurations": "Loading TLD configurations...",
+    "tld": "TLD",
+    "provider": "Provider",
+    "cost1yr": "Cost (1yr)",
+    "sell1yr": "Sell (1yr)",
+    "margin": "Margin",
+    "lastSynced": "Last Synced",
+    "editTld": "Edit TLD",
+    "deleteTld": "Delete TLD",
+    "noTldConfigurationsFoundAdd": "No TLD configurations found. Add your first TLD or import from a provider.",
+    "showingValueValue2OfLength": "Showing {value}–{value2} of {length} TLDs",
+    "deleteTldConfiguration": "Delete TLD Configuration",
+    "allProviders": "All Providers",
+    "allStatus": "All Status",
+    "priceSyncComplete": "Price sync complete.",
+    "deleteMessage": "Delete \".{tld}\" TLD configuration? This action cannot be undone.",
+    "importComplete": "Import complete: {imported} imported, {updated} updated.",
+    "never": "Never"
+  }
+}

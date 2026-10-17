@@ -13,14 +13,19 @@
  * Only relative URLs. An absolute one is a different origin — another product's API
  * or a third party — and sending a header it did not ask for turns a simple request
  * into a preflighted one, which fails wherever the other side has not allowed it.
+ *
+ * @module plugins/csrf-header
  */
+
 export default defineNuxtPlugin(() => {
   const original = globalThis.$fetch
 
   globalThis.$fetch = original.create({
     onRequest({ request, options }) {
       const url = typeof request === 'string' ? request : request.url
-      if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) return
+      if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) {
+        return
+      }
 
       // ofetch gives a Headers instance on current versions and a plain object on
       // older ones, and these two apps do not pin the same Nuxt minor.

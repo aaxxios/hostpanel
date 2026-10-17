@@ -1,10 +1,10 @@
-namespace Innovayse.Inecobank.Tests;
-
 using System.Net;
 
+namespace Innovayse.Inecobank.Tests;
 /// <summary>Scripted HTTP handler that records every request and replays queued responses.</summary>
 public sealed class FakeHttpMessageHandler : HttpMessageHandler
 {
+    /// <summary>Responses to replay, one per request, oldest first.</summary>
     private readonly Queue<(HttpStatusCode Status, string Body)> _responses = new();
 
     /// <summary>Gets the requests the client sent, in order.</summary>

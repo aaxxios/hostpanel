@@ -3,7 +3,36 @@
  *
  * Exchanges the authorization code for tokens, stores them in httpOnly cookies,
  * then redirects to the client dashboard.
+ *
+ * @module server/api/portal/auth/sso/callback.get
  */
+
+/** The SSO token endpoint's reply (OAuth field names, as the standard spells them). */
+interface SsoTokenResponse {
+  /** Access token for the portal session. */
+  access_token: string
+  /** Refresh token, when the SSO issued one. */
+  refresh_token?: string
+  /** Lifetime of the access token, in seconds. */
+  expires_in: number
+  /** Token type, always `Bearer`. */
+  token_type: string
+}
+
+/** The members of a failed token exchange this route reads. */
+interface TokenExchangeFailure {
+  /** The SSO's error body. */
+  data?: TokenExchangeFailureBody
+  /** HTTP status of the failed exchange. */
+  statusCode?: number
+}
+
+/** The SSO's OAuth error body. */
+interface TokenExchangeFailureBody {
+  /** The RFC 6749 error identifier, e.g. `invalid_grant`. */
+  error?: string
+}
+
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const query = getQuery(event)
@@ -23,32 +52,27 @@ export default defineEventHandler(async (event) => {
 
   const code = query.code as string | undefined
   if (!code) {
-    throw createError({ statusCode: 400, statusMessage: 'Missing authorization code' })
+    throw createError({ statusCode: 400, data: { code: 'OAUTH_CODE_MISSING' } })
   }
 
   // Validate state to prevent CSRF
   const storedState = getCookie(event, 'oauth_state')
   const returnedState = query.state as string | undefined
   if (!storedState || storedState !== returnedState) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid state parameter' })
+    throw createError({ statusCode: 400, data: { code: 'OAUTH_STATE_INVALID' } })
   }
   deleteCookie(event, 'oauth_state', { path: '/' })
 
   const codeVerifier = getCookie(event, 'pkce_verifier')
   if (!codeVerifier) {
-    throw createError({ statusCode: 400, statusMessage: 'Missing PKCE verifier — session expired' })
+    throw createError({ statusCode: 400, data: { code: 'OAUTH_VERIFIER_MISSING' } })
   }
 
   // Clear the PKCE cookie immediately
   deleteCookie(event, 'pkce_verifier', { path: '/' })
 
   // Exchange code for tokens (server-to-server, uses internal SSO URL)
-  let tokenResponse: {
-    access_token: string
-    refresh_token?: string
-    expires_in: number
-    token_type: string
-  }
+  let tokenResponse: SsoTokenResponse
 
   // Bound to a plain `string` and given an explicit response type. Handed a template literal
   // with no generic, Nitro tries to infer the reply by matching this URL against its own route
@@ -70,10 +94,13 @@ export default defineEventHandler(async (event) => {
       }).toString(),
     })
   } catch (err: unknown) {
-    const e = err as { data?: { error?: string }; statusCode?: number }
+    // Allow-listed legacy-field read (scripts/check-no-legacy-error-fields.mjs): this `error` is the
+    // SSO's OAuth reply (`invalid_grant`, ...), an RFC 6749 identifier, not a field of the hostpanel
+    // backend's error body. It is forwarded as a code; the BFF writes no sentence.
+    const e = err as TokenExchangeFailure
     throw createError({
       statusCode: 401,
-      statusMessage: e?.data?.error ?? 'Token exchange failed',
+      data: { code: e?.data?.error ?? 'TOKEN_EXCHANGE_FAILED' }, // legacy-gate: allow -- the SSO's OAuth reply
     })
   }
 

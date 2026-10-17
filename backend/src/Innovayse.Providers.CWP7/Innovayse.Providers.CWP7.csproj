@@ -11,7 +11,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Innovayse.SDK\Innovayse.SDK.csproj" />
-    <ProjectReference Include="..\Innovayse.Domain\Innovayse.Domain.csproj" />
+    <ProjectReference Include="..\Innovayse.Hostpanel.Domain\Innovayse.Hostpanel.Domain.csproj" />
+    <ProjectReference Include="..\Innovayse.Hostpanel.Application\Innovayse.Hostpanel.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,16 +21,16 @@
 
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-      <_Parameter1>Innovayse.Infrastructure</_Parameter1>
+      <_Parameter1>Innovayse.Hostpanel.Infrastructure</_Parameter1>
     </AssemblyAttribute>
     <!--
-      Cwp7ApiClient and Cwp7ApiResponse are internal, and their tests live in the Infrastructure
-      suite rather than in a CWP7 suite of their own: Infrastructure already references this
-      provider (ProvisioningProviderFactory constructs the client), so a sixth test project would
-      have added a solution entry and a CI job for two test methods.
+      Cwp7ApiClient and Cwp7ApiResponse are internal, and their tests moved from the Infrastructure
+      suite into Integration.Tests/Adapters/Integrations/Cwp7 (ruling 6 of the A7 test-conformance
+      plan). Integration already references this provider transitively through the API project
+      (ProvisioningProviderFactory constructs the client).
     -->
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-      <_Parameter1>Innovayse.Infrastructure.Tests</_Parameter1>
+      <_Parameter1>Innovayse.Hostpanel.Integration.Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
 </Project>

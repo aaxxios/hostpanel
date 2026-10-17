@@ -1,3 +1,5 @@
+# Build context of admin/Dockerfile (the project root): keep local secrets, other apps'
+# sources and host build output out of it. backend/ and client/ have their own contexts and ignore files.
 **/node_modules
 **/bin
 **/obj
@@ -15,3 +17,8 @@
 *.png
 docs/
 rules/
+docker/.env
+docker/.env.*
+!docker/.env.example
+backend/
+client/

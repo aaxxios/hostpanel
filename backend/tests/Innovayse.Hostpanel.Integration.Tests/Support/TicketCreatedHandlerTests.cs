@@ -1,0 +1,60 @@
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Support;
+using Innovayse.Hostpanel.Domain.Support.Enums;
+using Innovayse.Hostpanel.Domain.Support.Events;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Microsoft.Extensions.DependencyInjection;
+using Wolverine;
+using Xunit;
+
+namespace Innovayse.Hostpanel.Integration.Tests.Support;
+
+/// <summary>
+/// Tests for <c>TicketCreatedHandler</c>: a created ticket notifies its department.
+/// Each test builds its own host from <see cref="IntegrationTestFactory"/> with the one port this platform
+/// does not own -- the SMTP relay -- replaced by <see cref="FakeEmailSender"/>, publishes the event exactly once
+/// through the real message bus and asserts the handler's one effect happened exactly once.
+/// </summary>
+/// <param name="factory">The shared API + PostgreSQL host.</param>
+public sealed class TicketCreatedHandlerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+{
+    /// <summary>A created ticket with a department that has an email notifies that department.</summary>
+    [Fact]
+    public async Task TicketCreated_WhenDepartmentHasEmail_SendsTicketCreatedEmailAsync()
+    {
+        var emailSender = new FakeEmailSender();
+        var host = EventHandlerTestHost.WithFakeRelay(factory, emailSender);
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        var departmentEmail = $"support-{Guid.NewGuid():N}@example.com";
+        var department = Department.Create($"Support-{Guid.NewGuid():N}", departmentEmail);
+        context.Departments.Add(department);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var ticket = Ticket.Create(clientId: 1, "Help", "Something's broken", department.Id, TicketPriority.Medium);
+        context.Tickets.Add(ticket);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        await bus.InvokeAsync(new TicketCreatedEvent(ticket.Id, 1, department.Id), CancellationToken.None);
+
+        var message = Assert.Single(emailSender.Sent);
+        Assert.Equal(departmentEmail, message.To);
+        Assert.Contains("Created", message.Subject, StringComparison.Ordinal);
+    }
+
+    /// <summary>A created ticket whose department does not exist sends no email.</summary>
+    [Fact]
+    public async Task TicketCreated_WhenDepartmentNotFound_DoesNotSendAsync()
+    {
+        var emailSender = new FakeEmailSender();
+        var host = EventHandlerTestHost.WithFakeRelay(factory, emailSender);
+        using var scope = host.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        await bus.InvokeAsync(new TicketCreatedEvent(1, 1, 999_999_999), CancellationToken.None);
+
+        Assert.Empty(emailSender.Sent);
+    }
+}

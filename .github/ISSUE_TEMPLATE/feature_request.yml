@@ -21,9 +21,9 @@ body:
     validations:
       required: true
   - type: textarea
-    id: whmcs
+    id: other-panels
     attributes:
-      label: How does WHMCS (or another panel) handle this today?
+      label: How do other hosting panels handle this today?
       description: Optional, but it helps us understand what people expect.
   - type: checkboxes
     id: help

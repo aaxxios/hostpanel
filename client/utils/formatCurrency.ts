@@ -12,7 +12,7 @@
  *   nullable ISO 4217 **code** (`backend/src/Innovayse.Application/Clients/Common/ClientDto.cs`).
  *   `server/api/portal/client/me.get.ts` used to discard it, hardcoding `currency: undefined,
  *   currencyprefix: '', currencysuffix: ''` in both its sso and local branches — which is why
- *   amounts rendered with no symbol in production: not a WHMCS quirk, a literal in the BFF. It
+ *   amounts rendered with no symbol in production: not a legacy quirk, a literal in the BFF. It
  *   now forwards the code, and `types/clientuser.ts` types `currency` as `string | null` rather
  *   than the *number* it claimed, which the backend has never sent.
  * - **The invoice — no.** `types/clientinvoice.ts` declared `currencycode` / `currencyprefix` /
@@ -55,6 +55,8 @@
  *
  * @module utils/formatCurrency
  */
+
+import type { AppWithI18n } from '~/types/appwithi18n'
 
 /**
  * What an amount renders as when there is no number to render.
@@ -104,10 +106,12 @@ export interface CurrencyInfo {
  * @returns The caller's locale, else the current request's, else `en`.
  */
 const resolveLocale = (locale?: string): string => {
-  if (locale) return locale
+  if (locale) {
+    return locale
+  }
 
   try {
-    const i18n = (useNuxtApp() as { $i18n?: { locale?: { value?: string } } }).$i18n
+    const i18n = (useNuxtApp() as AppWithI18n).$i18n
     return i18n?.locale?.value ?? 'en'
   }
   catch {
@@ -118,12 +122,14 @@ const resolveLocale = (locale?: string): string => {
 /**
  * Coerces an amount the API sent into a number, or `null` when it is not one.
  *
- * @param amount - The field as it arrived. WHMCS-shaped endpoints send decimal *strings*
+ * @param amount - The field as it arrived. legacy-shaped endpoints send decimal *strings*
  *                 (`"24000.00"`), so a string is the common case rather than the exception.
  * @returns The numeric value, or `null` for anything absent or unparseable.
  */
 const toNumber = (amount: string | number | null | undefined): number | null => {
-  if (amount === null || amount === undefined || amount === '') return null
+  if (amount === null || amount === undefined || amount === '') {
+    return null
+  }
 
   const value = typeof amount === 'number' ? amount : Number(amount)
   return Number.isFinite(value) ? value : null
@@ -149,7 +155,9 @@ export const formatCurrency = (
   info: CurrencyInfo = {}
 ): string => {
   const value = toNumber(amount)
-  if (value === null) return EMPTY_AMOUNT
+  if (value === null) {
+    return EMPTY_AMOUNT
+  }
 
   const locale = resolveLocale(info.locale)
   const code = info.code?.trim()

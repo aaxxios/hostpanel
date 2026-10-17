@@ -1,97 +1,127 @@
 <template>
-  <div>
+  <UiStack gap="none" data-testid="announcements-page">
     <!-- Hero -->
-    <section class="relative py-16 md:py-24 bg-[#0a0a0f] overflow-hidden">
-      <div class="absolute inset-0 pointer-events-none">
-        <div class="absolute top-0 left-1/4 w-[400px] h-[400px] bg-primary-500/15 rounded-full blur-[130px]" />
-        <div class="absolute bottom-0 right-1/3 w-[300px] h-[300px] bg-cyan-500/10 rounded-full blur-[110px]" />
-      </div>
-      <div class="container-custom relative z-10 text-center max-w-2xl mx-auto">
-        <div class="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full glass border border-primary-500/20 backdrop-blur-sm">
-          <Megaphone :size="14" :stroke-width="2" class="text-primary-400" />
-          <span class="text-sm font-medium text-gray-300">{{ $t('announcements.badge') }}</span>
-        </div>
-        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">{{ $t('announcements.title') }}</h1>
-        <p class="text-gray-400 leading-relaxed">{{ $t('announcements.subtitle') }}</p>
-      </div>
-    </section>
+    <UiPageHero
+      :badge="t('announcements.badge')"
+      :title="t('announcements.title')"
+      :subtitle="t('announcements.subtitle')"
+    />
 
     <!-- Content -->
-    <section class="py-12 bg-[#0a0a0f]">
-      <div class="container-custom max-w-3xl">
-
+    <UiSection padding="md">
+      <UiStack class="mx-auto w-full max-w-3xl" gap="lg">
         <!-- Month filter -->
-        <div v-if="months.length > 1" class="flex flex-wrap gap-2 mb-8">
-          <button
-            v-for="m in months"
-            :key="m"
-            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border"
-            :class="activeMonth === m
-              ? 'bg-primary-500/10 text-primary-400 border-primary-500/20'
-              : 'text-gray-400 hover:text-on-primary hover:bg-white/5 border-transparent'"
-            @click="activeMonth = m"
+        <UiStack
+          v-if="months.length > 1"
+          direction="row"
+          wrap
+          gap="xs"
+          data-testid="announcements-months"
+        >
+          <UiButton
+            v-for="month in months"
+            :key="month"
+            :variant="activeMonth === month ? 'outline' : 'ghost'"
+            size="sm"
+            :data-testid="`announcements-month-${month}`"
+            @click="activeMonth = month"
           >
-            {{ m === 'all' ? $t('announcements.allMonths') : m }}
-          </button>
-        </div>
+            {{ month === ALL_MONTHS ? t('announcements.allMonths') : month }}
+          </UiButton>
+        </UiStack>
 
         <!-- Loading -->
-        <div v-if="pending" class="space-y-4">
-          <div v-for="i in 4" :key="i" class="h-40 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
-        </div>
+        <UiStack v-if="pending" gap="md" data-testid="announcements-loading">
+          <UiSkeleton v-for="i in 4" :key="i" shape="block" class="h-40" />
+        </UiStack>
+
+        <!-- Signed out: the API serves announcements to signed-in members only -->
+        <UiEmptyState
+          v-else-if="needsSignIn"
+          :icon="Megaphone"
+          :title="t('announcements.signInRequired')"
+          :description="t('announcements.signInRequiredDesc')"
+          data-testid="announcements-sign-in"
+        >
+          <UiButton :to="localePath('/client/login?redirect=/announcements')" data-testid="announcements-sign-in-link">
+            {{ t('announcements.signIn') }}
+          </UiButton>
+        </UiEmptyState>
 
         <!-- Error -->
-        <div v-else-if="error" class="p-6 rounded-2xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
-          {{ $t('announcements.errorDesc') }}
-        </div>
+        <UiAlert v-else-if="error" variant="error" data-testid="announcements-error">
+          {{ t('announcements.errorDesc') }}
+        </UiAlert>
 
         <!-- Empty -->
-        <div v-else-if="!filtered.length" class="text-center py-24">
-          <Megaphone :size="48" :stroke-width="1.5" class="text-gray-600 mx-auto mb-4" />
-          <p class="text-gray-400">{{ $t('announcements.empty') }}</p>
-        </div>
+        <UiEmptyState
+          v-else-if="!filtered.length"
+          :icon="Megaphone"
+          :title="t('announcements.empty')"
+          data-testid="announcements-empty"
+        />
 
         <!-- List -->
-        <div v-else class="space-y-4">
-          <NuxtLink
+        <UiStack v-else gap="md" data-testid="announcements-list">
+          <UiLinkCard
             v-for="item in filtered"
             :key="item.id"
             :to="localePath(`/announcements/${item.id}`)"
-            class="block p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-primary-500/30 hover:bg-white/8 transition-all duration-200 group"
+            :testid="`announcement-${item.id}`"
           >
-            <div class="flex items-center gap-2 text-xs text-gray-500 mb-3">
+            <UiText
+              as="span"
+              size="xs"
+              tone="subtle"
+              class="mb-3 flex items-center gap-2"
+            >
               <Calendar :size="13" :stroke-width="2" />
               {{ formatDate(item.date, locale) }}
-            </div>
-            <h2 class="text-lg font-semibold text-white group-hover:text-primary-400 transition-colors mb-2">
+            </UiText>
+            <UiHeading
+              :level="2"
+              size="subsection"
+              class="mb-2 transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400"
+            >
               {{ item.title }}
-            </h2>
-            <p class="text-sm text-gray-400 leading-relaxed line-clamp-3 mb-4">
+            </UiHeading>
+            <UiText size="sm" tone="muted" class="mb-4 line-clamp-3 leading-relaxed">
               {{ item.excerpt }}
-            </p>
-            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-primary-400">
-              {{ $t('announcements.readMore') }}
-              <ArrowRight :size="13" :stroke-width="2" class="group-hover:translate-x-1 transition-transform" />
-            </span>
-          </NuxtLink>
-        </div>
-
-      </div>
-    </section>
-  </div>
+            </UiText>
+            <UiText
+              as="span"
+              size="xs"
+              tone="primary"
+              weight="medium"
+              class="inline-flex items-center gap-1.5"
+            >
+              {{ t('announcements.readMore') }}
+              <ArrowRight :size="13" :stroke-width="2" class="transition-transform group-hover:translate-x-1" />
+            </UiText>
+          </UiLinkCard>
+        </UiStack>
+      </UiStack>
+    </UiSection>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
 /**
  * Public announcements list page.
- * Fetches all announcements from WHMCS and supports month-based filtering.
+ * Fetches all announcements from the API and supports month-based filtering.
  */
 
 import { Megaphone, Calendar, ArrowRight } from 'lucide-vue-next'
-import { useContentApi } from '~/composables/apis/useContentApi'
+import { useContentStore } from '~/stores/content'
+import { formatDate } from '~/utils/formatDate'
 import type { Announcement } from '~/types/announcement'
 
+/** Month-filter value that shows every announcement. */
+const ALL_MONTHS = 'all'
+
+/** Localised path builder from the i18n module. */
 const localePath = useLocalePath()
+/** Translates a key in the active language; `locale` is that language. */
 const { t, locale } = useI18n()
 
 useSeoMeta({
@@ -99,14 +129,27 @@ useSeoMeta({
   description: t('announcements.subtitle')
 })
 
-// Straight from the API composable rather than through a store: this page fetches once and
-// owns the result alone, which is the named exception to component -> store -> api. It must
-// not call `useFetch`/`$fetch` — those skip the locale header `useApi()` sends, and this
-// content is localised.
-const { data, pending, error } = useContentApi().loadAnnouncements()
+// The announcements, read through the content store; the read runs again when the language changes.
+/** The content store that owns the lists this page renders. */
+const content = useContentStore()
+/** Whether the read is still running. */
+const { pending } = await useAsyncData('announcements:list', () => content.loadAnnouncements(), { watch: [locale] })
+
+/** The sentence explaining why the list could not be read, or `''`. */
+const error = computed(() => content.error)
+
+/** The `authed` cookie the sign-in sets; its absence means the visitor has no session. */
+const authed = useCookie('authed')
+
+/**
+ * Whether the refusal is just "not signed in". The API serves published announcements to signed-in
+ * members only, while the site footer links this page to every visitor, so a refusal with no
+ * session is an invitation to sign in -- not a failure worth a "try again later".
+ */
+const needsSignIn = computed(() => !!error.value && !authed.value)
 
 /** All announcement items from API */
-const items = computed<Announcement[]>(() => data.value?.items ?? [])
+const items = computed<Announcement[]>(() => content.announcements)
 
 /**
  * The month each announcement belongs to, as a label a person reads.
@@ -121,9 +164,13 @@ const items = computed<Announcement[]>(() => data.value?.items ?? [])
  * @returns The month and year in the active locale, or an empty string when unparseable.
  */
 const monthLabel = (value: string | undefined): string => {
-  if (!value) return ''
+  if (!value) {
+    return ''
+  }
   const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return ''
+  if (Number.isNaN(parsed.getTime())) {
+    return ''
+  }
   return new Intl.DateTimeFormat(locale.value, { month: 'long', year: 'numeric' }).format(parsed)
 }
 
@@ -137,16 +184,21 @@ const months = computed(() => {
   const seen: string[] = []
   for (const item of items.value) {
     const label = monthLabel(item.date)
-    if (label && !seen.includes(label)) seen.push(label)
+    if (label && !seen.includes(label)) {
+      seen.push(label)
+    }
   }
-  return seen.length > 1 ? ['all', ...seen] : []
+  return seen.length > 1 ? [ALL_MONTHS, ...seen] : []
 })
 
-const activeMonth = ref('all')
+/** The month filter currently chosen. */
+const activeMonth = ref(ALL_MONTHS)
 
 /** Announcements filtered by the active month selection. */
 const filtered = computed(() => {
-  if (activeMonth.value === 'all') return items.value
+  if (activeMonth.value === ALL_MONTHS) {
+    return items.value
+  }
   return items.value.filter(item => monthLabel(item.date) === activeMonth.value)
 })
 </script>

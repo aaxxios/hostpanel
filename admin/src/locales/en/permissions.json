@@ -1,0 +1,16 @@
+{
+  "permissionLabels": {
+    "modifyMasterAccountProfile": "Modify Master Account Profile",
+    "viewManageContacts": "View & Manage Contacts",
+    "viewProductsServices": "View Products & Services",
+    "viewModifyProductPasswords": "View & Modify Product Passwords",
+    "viewDomains": "View Domains",
+    "manageDomainSettings": "Manage Domain Settings",
+    "viewPayInvoices": "View & Pay Invoices",
+    "viewAcceptQuotes": "View & Accept Quotes",
+    "viewOpenSupportTickets": "View & Open Support Tickets",
+    "viewManageAffiliateAccount": "View & Manage Affiliate Account",
+    "viewEmails": "View Emails",
+    "placeNewOrdersUpgradesCancellations": "Place New Orders/Upgrades/Cancellations"
+  }
+}

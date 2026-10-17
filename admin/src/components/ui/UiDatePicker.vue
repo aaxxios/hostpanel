@@ -1,488 +1,429 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
-import UiSelect from './UiSelect.vue'
-import { splitIsoDate } from '../../utils/format'
+/**
+ * Single-date picker: a typed `DD/MM/YYYY` field with a month grid and quick choices.
+ *
+ * The model is an ISO `YYYY-MM-DD` string (or null). Typing a complete date commits it; a partial
+ * date moves the calendar so the reader sees where it will land. `direction` picks the quick
+ * choices: `past` (yesterday, 7 days ago, ...) or `future` (tomorrow, in 7 days, ...), which
+ * replaces the former separate future picker. Colours are theme tokens, so the popup follows the
+ * light/dark switch. `data-testid` and classes land on the root element.
+ */
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import UiSelect from '@/components/ui/UiSelect.vue'
+import { splitIsoDate } from '@/lib/format'
+import { translate } from '@/lib/translate'
+import {
+  QuickDate,
+  UiDatePickerDirection,
+  buildYearOptions,
+  dateActionClasses,
+  dateArrowClasses,
+  dateCellBaseClasses,
+  dateCellEmptyClasses,
+  dateCellIdleClasses,
+  dateCellSelectedClasses,
+  dateFieldClasses,
+  datePopupClasses,
+  datePresetActiveClasses,
+  datePresetIdleClasses,
+  formatDisplayDate,
+  formatIsoDate,
+  getDaysForMonth,
+  matchQuickDate,
+  parsePartialDate,
+  parseTypedDate,
+  quickDateFor,
+  quickDateLabelKeys,
+  quickDateOrder,
+} from '@/utils/ui/datePicker'
 
-const props = defineProps<{
+const { t } = useI18n()
+
+/** Props for UiDatePicker. */
+const props = withDefaults(defineProps<{
+  /** Selected day as ISO `YYYY-MM-DD`, or null for none. */
   modelValue: string | null
+  /** Hint shown in the empty field; the date format when omitted or empty. */
   placeholder?: string
-}>()
+  /** Direction of the quick choices. */
+  direction?: UiDatePickerDirection
+  /** Blocks typing and the popup. */
+  disabled?: boolean
+}>(), {
+  placeholder: undefined,
+  direction: UiDatePickerDirection.Past,
+  disabled: false,
+})
 
 const emit = defineEmits<{
+  /** Emitted with the new ISO day, or null when the date is cleared. */
   'update:modelValue': [value: string | null]
 }>()
 
+/** Approximate popup height, used to decide whether it fits below the field. */
+const POPUP_HEIGHT = 450
+
+/** Whether the popup is open. */
 const isOpen = ref(false)
+
+/** Whether the popup opens above the field because there is no room below. */
 const openAbove = ref(false)
+
+/** First day of the month the grid shows. */
 const currentMonth = ref(new Date())
+
+/** Root element, used for outside-click detection. */
 const popupRef = ref<HTMLElement | null>(null)
+
+/** The text field, measured to place the popup. */
 const inputRef = ref<HTMLInputElement | null>(null)
+
+/** Text in the field. */
 const inputText = ref('')
+
+/** Day typed so far, highlighted before the date is complete. */
 const previewDay = ref<number | null>(null)
+
+/** Month typed so far (1-12). */
 const previewMonth = ref<number | null>(null)
+
+/** Year typed so far. */
 const previewYear = ref<number | null>(null)
 
-const monthOptions = computed(() =>
-  monthNames.map((name, i) => ({ value: String(i), label: name }))
-)
+/** Month names for the month select. */
+const monthNames = Array.from({ length: 12 }, (_, i) => translate(`calendar.months.${i + 1}`))
 
-const syncInputText = () => {
-  if (!props.modelValue) {
-    inputText.value = ''
-  } else {
-    inputText.value = formatDisplayDate(props.modelValue)
-  }
-}
+/** Weekday names for the grid header. */
+const dayNames = Array.from({ length: 7 }, (_, i) => translate(`calendar.weekdays.${i}`))
 
-onMounted(() => {
-  syncInputText()
-})
+/** Options of the month select. */
+const monthOptions = computed(() => monthNames.map((name, i) => ({ value: String(i), label: name })))
 
-watch(isOpen, (newValue) => {
-  if (newValue) {
-    // Use nextTick to ensure DOM is updated before measuring
-    setTimeout(() => checkPopupPosition(), 0)
-  }
-})
+/** Options of the year select. */
+const yearOptions = buildYearOptions()
 
-const yearOptions = computed(() => {
-  const years: { value: string; label: string }[] = []
-  for (let y = 2020; y <= 2030; y++) {
-    years.push({ value: String(y), label: String(y) })
-  }
-  return years
-})
+/** The field hint: the caller's, else the date format. */
+const fieldPlaceholder = computed<string>(() => props.placeholder || t('ui.uiDatePicker.ddMmYyyy'))
 
-const currentMonthValue = computed({
+/** Width class of the quick-choice column; future captions are longer. */
+const quickPanelWidthClass = computed<string>(() => (props.direction === UiDatePickerDirection.Future ? 'w-48' : 'w-36'))
+
+/** Quick choice matching the model right now. */
+const selectedQuick = computed<QuickDate | null>(() => matchQuickDate(props.modelValue, props.direction))
+
+/** Cells of the visible month. */
+const monthDays = computed<(number | null)[]>(() => getDaysForMonth(currentMonth.value))
+
+/** Month select value, kept in step with the grid. */
+const currentMonthValue = computed<string>({
+  /**
+   * Reads the month index.
+   *
+   * @returns The value for the select.
+   */
   get: () => String(currentMonth.value.getMonth()),
+  /**
+   * Moves the grid to the picked month.
+   *
+   * @param value - The picked value, as the select emits it.
+   */
   set: (value) => {
-    const newMonth = parseInt(value)
-    currentMonth.value = new Date(currentMonth.value.getFullYear(), newMonth, 1)
+    currentMonth.value = new Date(currentMonth.value.getFullYear(), parseInt(value), 1)
   },
 })
 
-const currentYearValue = computed({
+/** Year select value, kept in step with the grid. */
+const currentYearValue = computed<string>({
+  /**
+   * Reads the year.
+   *
+   * @returns The value for the select.
+   */
   get: () => String(currentMonth.value.getFullYear()),
+  /**
+   * Moves the grid to the picked year.
+   *
+   * @param value - The picked value, as the select emits it.
+   */
   set: (value) => {
     currentMonth.value = new Date(parseInt(value), currentMonth.value.getMonth(), 1)
   },
 })
 
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-  if (props.modelValue) {
-    const date = new Date(props.modelValue)
-    currentMonth.value = new Date(date.getFullYear(), date.getMonth(), 1)
+/** Writes the model into the field text. */
+const syncInputText = (): void => {
+  inputText.value = props.modelValue ? formatDisplayDate(props.modelValue) : ''
+}
+
+/** Forgets the half-typed date highlight. */
+const clearPreview = (): void => {
+  previewDay.value = null
+  previewMonth.value = null
+  previewYear.value = null
+}
+
+/** Decides whether the popup opens above or below the field. */
+const checkPopupPosition = (): void => {
+  if (!inputRef.value) {
+    return
   }
-})
+  const rect = inputRef.value.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom
+  openAbove.value = spaceBelow < POPUP_HEIGHT && rect.top > POPUP_HEIGHT
+}
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+/** Opens the popup unless the picker is disabled. */
+const openPopup = (): void => {
+  if (!props.disabled) {
+    isOpen.value = true
+  }
+}
 
-const handleClickOutside = (e: MouseEvent) => {
+/** Closes the popup. */
+const closePopup = (): void => {
+  isOpen.value = false
+}
+
+/**
+ * Closes the popup on a click outside the picker.
+ *
+ * @param e - The document click.
+ */
+const handleClickOutside = (e: MouseEvent): void => {
   if (popupRef.value && !popupRef.value.contains(e.target as Node)) {
     isOpen.value = false
   }
 }
 
-const checkPopupPosition = () => {
-  if (!inputRef.value) return
-
-  const inputRect = inputRef.value.getBoundingClientRect()
-  const popupHeight = 450 // Approximate height of the popup
-  const spaceBelow = window.innerHeight - inputRect.bottom
-  const spaceAbove = inputRect.top
-
-  openAbove.value = spaceBelow < popupHeight && spaceAbove > popupHeight
+/** Moves the grid to the model's month once, and shows the model in the field. */
+const initFromModel = (): void => {
+  syncInputText()
+  if (props.modelValue) {
+    const { year, month } = splitIsoDate(props.modelValue)
+    currentMonth.value = new Date(year, month - 1, 1)
+  }
 }
 
-const formatDisplayDate = (dateStr: string) => {
-  const [year, month, day] = dateStr.split('-')
-  return `${day}/${month}/${year}`
-}
-
-const inputValue = ref('')
-
-const displayText = computed(() => {
-  if (!props.modelValue) return props.placeholder ?? 'Select date...'
-  return formatDisplayDate(props.modelValue)
-})
-
-const parseDateInput = (input: string) => {
-  // Try to parse DD/MM/YYYY or DDMMYYYY
-  const cleaned = input.replace(/\D/g, '')
-  if (cleaned.length === 8) {
-    const day = cleaned.substring(0, 2)
-    const month = cleaned.substring(2, 4)
-    const year = cleaned.substring(4, 8)
-
-    const dayNum = parseInt(day)
-    const monthNum = parseInt(month)
-    const yearNum = parseInt(year)
-
-    if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12 && yearNum >= 2000) {
-      const dateStr = `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
-      const testDate = new Date(dateStr)
-      if (!isNaN(testDate.getTime())) {
-        return dateStr
-      }
-    }
-  }
-  return null
-}
-
-const parsePartialDate = (input: string) => {
-  const cleaned = input.replace(/\D/g, '')
-  const result: { day?: number; month?: number; year?: number } = {}
-
-  if (cleaned.length >= 1) {
-    const day = cleaned.substring(0, 2)
-    const dayNum = parseInt(day)
-    if (dayNum >= 1 && dayNum <= 31) {
-      result.day = dayNum
-    }
-  }
-
-  if (cleaned.length >= 3) {
-    const month = cleaned.substring(2, 4)
-    const monthNum = parseInt(month)
-    if (monthNum >= 1 && monthNum <= 12) {
-      result.month = monthNum
-    }
-  }
-
-  if (cleaned.length >= 4) {
-    const year = cleaned.substring(4, 8)
-    if (year.length >= 1) {
-      const yearNum = parseInt(year)
-      if (yearNum >= 2000 && yearNum <= 2099) {
-        result.year = yearNum
-      }
-    }
-  }
-
-  return result
-}
-
-const handleInput = (event: Event) => {
-  const target = event.target as HTMLInputElement
+/** Reads the typed text: commits a complete date, or previews a partial one in the grid. */
+const handleInput = (): void => {
   const input = inputText.value
-
-  // If input is empty, clear the date
-  if (!input || input.trim() === '') {
+  if (input.trim() === '') {
     emit('update:modelValue', null)
     currentMonth.value = new Date()
-    previewDay.value = null
-    previewMonth.value = null
-    previewYear.value = null
+    clearPreview()
     return
   }
 
-  // Try to parse as complete date first
-  const parsed = parseDateInput(input)
+  const parsed = parseTypedDate(input)
   if (parsed) {
     emit('update:modelValue', parsed)
-    const { year: yearNum, month: monthNum } = splitIsoDate(parsed)
-    currentMonth.value = new Date(yearNum, monthNum - 1, 1)
-    // Clear preview when a complete date is confirmed
-    previewDay.value = null
-    previewMonth.value = null
-    previewYear.value = null
-  } else {
-    // Try to parse partial date and update calendar in real-time
-    const partial = parsePartialDate(input)
+    const { year, month } = splitIsoDate(parsed)
+    currentMonth.value = new Date(year, month - 1, 1)
+    clearPreview()
+    return
+  }
 
-    if (partial.year || partial.month || partial.day) {
-      const year = partial.year || currentMonth.value.getFullYear()
-      const month = partial.month || (currentMonth.value.getMonth() + 1)
-
-      currentMonth.value = new Date(year, month - 1, 1)
-
-      // Update preview for highlighting
-      previewDay.value = partial.day || null
-      previewMonth.value = partial.month || null
-      previewYear.value = partial.year || null
-    }
+  const partial = parsePartialDate(input)
+  if (partial.year || partial.month || partial.day) {
+    const year = partial.year || currentMonth.value.getFullYear()
+    const month = partial.month || currentMonth.value.getMonth() + 1
+    currentMonth.value = new Date(year, month - 1, 1)
+    previewDay.value = partial.day || null
+    previewMonth.value = partial.month || null
+    previewYear.value = partial.year || null
   }
 }
 
-const daysInMonth = (date: Date) => {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
-}
-
-const firstDayOfMonth = (date: Date) => {
-  return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
-}
-
-const getDaysForMonth = (date: Date) => {
-  const days: (number | null)[] = []
-  const firstDay = firstDayOfMonth(date)
-
-  for (let i = 0; i < firstDay; i++) {
-    days.push(null)
-  }
-
-  const daysCount = daysInMonth(date)
-  for (let i = 1; i <= daysCount; i++) {
-    days.push(i)
-  }
-
-  return days
-}
-
-const isSelectedDate = (day: number, month: Date) => {
-  // Check if this day matches the preview (while typing)
+/**
+ * Tells whether a grid day is the selected one (or the half-typed one while typing).
+ *
+ * @param day - Day of the visible month.
+ * @returns True when the day is highlighted as selected.
+ */
+const isSelectedDay = (day: number): boolean => {
   if (previewDay.value !== null && previewMonth.value !== null && previewYear.value !== null) {
     return (
-      day === previewDay.value &&
-      month.getMonth() === previewMonth.value - 1 &&
-      month.getFullYear() === previewYear.value
+      day === previewDay.value
+      && currentMonth.value.getMonth() === previewMonth.value - 1
+      && currentMonth.value.getFullYear() === previewYear.value
     )
   }
-
-  // Check if this day matches the confirmed date
-  if (!props.modelValue) return false
-  const current = new Date(month.getFullYear(), month.getMonth(), day)
-  const year = current.getFullYear()
-  const monthStr = String(current.getMonth() + 1).padStart(2, '0')
-  const dayStr = String(current.getDate()).padStart(2, '0')
-  const currentDateString = `${year}-${monthStr}-${dayStr}`
-  return currentDateString === props.modelValue
+  if (!props.modelValue) {
+    return false
+  }
+  return formatIsoDate(new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), day)) === props.modelValue
 }
 
-const formatDateString = (date: Date) => {
-  const year = date.getFullYear()
-  const monthStr = String(date.getMonth() + 1).padStart(2, '0')
-  const dayStr = String(date.getDate()).padStart(2, '0')
-  return `${year}-${monthStr}-${dayStr}`
+/**
+ * Class list of one grid cell.
+ *
+ * @param day - Day of the month, or null for padding.
+ * @returns Literal Tailwind classes for the cell's state.
+ */
+const dayClasses = (day: number | null): string[] => {
+  if (day === null) {
+    return [dateCellBaseClasses, dateCellEmptyClasses]
+  }
+  return [dateCellBaseClasses, isSelectedDay(day) ? dateCellSelectedClasses : dateCellIdleClasses]
 }
 
-const getSelectedQuickDate = () => {
-  if (!props.modelValue) return null
-  const selectedDate = props.modelValue
+/**
+ * Class list of one quick-choice button.
+ *
+ * @param choice - The quick choice the button stands for.
+ * @returns Active or idle classes.
+ */
+const quickClasses = (choice: QuickDate): string[] => [
+  'px-3 py-2 text-left text-[0.82rem] rounded transition-colors',
+  selectedQuick.value === choice ? datePresetActiveClasses : datePresetIdleClasses,
+]
 
-  const today = new Date()
-  if (selectedDate === formatDateString(today)) {
-    return 'today'
-  }
-
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  if (selectedDate === formatDateString(yesterday)) {
-    return 'yesterday'
-  }
-
-  const sevenDaysAgo = new Date(today)
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-  if (selectedDate === formatDateString(sevenDaysAgo)) {
-    return '7days'
-  }
-
-  const oneMonthAgo = new Date(today)
-  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-  if (selectedDate === formatDateString(oneMonthAgo)) {
-    return '1month'
-  }
-
-  const oneYearAgo = new Date(today)
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
-  if (selectedDate === formatDateString(oneYearAgo)) {
-    return '1year'
-  }
-
-  return 'custom'
-}
-
-const selectDate = (day: number, month: Date) => {
-  const date = new Date(month.getFullYear(), month.getMonth(), day)
-  const year = date.getFullYear()
-  const monthStr = String(date.getMonth() + 1).padStart(2, '0')
-  const dayStr = String(date.getDate()).padStart(2, '0')
-  const dateString = `${year}-${monthStr}-${dayStr}`
-  emit('update:modelValue', dateString)
-  inputText.value = formatDisplayDate(dateString)
-  previewDay.value = null
-  previewMonth.value = null
-  previewYear.value = null
+/**
+ * Commits a day: emits it, shows it, moves the grid and closes the popup.
+ *
+ * @param date - The chosen day.
+ */
+const commitDate = (date: Date): void => {
+  const iso = formatIsoDate(date)
+  emit('update:modelValue', iso)
+  inputText.value = formatDisplayDate(iso)
+  clearPreview()
+  currentMonth.value = new Date(date.getFullYear(), date.getMonth(), 1)
   isOpen.value = false
 }
 
-const selectQuickDate = (offset: number | string) => {
-  const today = new Date()
-  let date: Date
-
-  if (typeof offset === 'string') {
-    if (offset === 'today') {
-      date = new Date(today)
-    } else if (offset === 'yesterday') {
-      date = new Date(today)
-      date.setDate(date.getDate() - 1)
-    } else if (offset === '7days') {
-      date = new Date(today)
-      date.setDate(date.getDate() - 7)
-    } else if (offset === '1month') {
-      date = new Date(today)
-      date.setMonth(date.getMonth() - 1)
-    } else if (offset === '1year') {
-      date = new Date(today)
-      date.setFullYear(date.getFullYear() - 1)
-    }
-  } else {
-    date = new Date(today)
-    date.setDate(date.getDate() - offset)
+/**
+ * Picks a day of the visible month.
+ *
+ * @param day - Day of the visible month; null padding cells are ignored.
+ */
+const selectDay = (day: number | null): void => {
+  if (day === null) {
+    return
   }
+  commitDate(new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), day))
+}
 
-  const year = date!.getFullYear()
-  const monthStr = String(date!.getMonth() + 1).padStart(2, '0')
-  const dayStr = String(date!.getDate()).padStart(2, '0')
-  const dateString = `${year}-${monthStr}-${dayStr}`
-  emit('update:modelValue', dateString)
-  inputText.value = formatDisplayDate(dateString)
-  previewDay.value = null
-  previewMonth.value = null
-  previewYear.value = null
-  currentMonth.value = new Date(date!.getFullYear(), date!.getMonth(), 1)
+/**
+ * Picks a quick choice. `Custom` just keeps the popup open for the grid.
+ *
+ * @param choice - The quick choice.
+ */
+const selectQuick = (choice: QuickDate): void => {
+  if (choice === QuickDate.Custom) {
+    isOpen.value = true
+    return
+  }
+  commitDate(quickDateFor(choice, props.direction))
+}
+
+/** Clears the date and closes the popup. */
+const clearDate = (): void => {
+  emit('update:modelValue', null)
   isOpen.value = false
 }
 
-const prevMonth = () => {
+/** Shows the previous month. */
+const prevMonth = (): void => {
   currentMonth.value = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() - 1)
 }
 
-const nextMonth = () => {
+/** Shows the next month. */
+const nextMonth = (): void => {
   currentMonth.value = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() + 1)
 }
 
-const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+watch(isOpen, async (opened) => {
+  if (opened) {
+    // Wait for the render so the popup can be measured against the viewport.
+    await nextTick()
+    checkPopupPosition()
+  }
+})
+
+// An outside change of the model (form reset, loaded record) shows in the field.
+watch(() => props.modelValue, syncInputText)
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+  initFromModel()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
-  <div class="relative" ref="popupRef">
-    <!-- Input field -->
+  <div ref="popupRef" class="relative">
     <input
       ref="inputRef"
       v-model="inputText"
       type="text"
-      placeholder="DD/MM/YYYY"
-      @click="isOpen = true"
+      data-testid="date-picker-input"
+      :placeholder="fieldPlaceholder"
+      :disabled="disabled"
+      :class="dateFieldClasses"
+      class="disabled:opacity-50 disabled:cursor-not-allowed"
+      @click="openPopup"
+      @focus="openPopup"
       @input="handleInput"
-      @focus="isOpen = true"
-      class="w-full px-3 py-2 text-[0.82rem] text-text-primary bg-white/[0.05] border border-border rounded-[9px] focus:outline-none focus:border-primary-500/40 transition-colors"
-    />
+    >
 
-    <!-- Popup -->
     <div
       v-if="isOpen"
-      :class="openAbove ? 'bottom-full mb-2' : 'top-full mt-2'"
-      class="absolute left-0 z-50 bg-surface-card rounded-[10px] shadow-2xl border border-border overflow-hidden"
+      :class="[datePopupClasses, openAbove ? 'bottom-full mb-2' : 'top-full mt-2']"
+      class="absolute left-0 z-50 overflow-hidden"
     >
       <div class="flex">
-        <!-- Quick Selection Panel -->
-        <div class="w-36 bg-white/[0.02] border-r border-border p-3 flex flex-col gap-1">
+        <div :class="quickPanelWidthClass" class="bg-surface-hover border-r border-border p-3 flex flex-col gap-1">
           <button
+            v-for="choice in quickDateOrder"
+            :key="choice"
             type="button"
-            @click="selectQuickDate('today')"
-            :class="getSelectedQuickDate() === 'today' ? 'bg-primary-500 text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.05]'"
-            class="px-3 py-2 text-left text-[0.82rem] rounded transition-colors"
+            :data-testid="`date-picker-quick-${choice}`"
+            :class="quickClasses(choice)"
+            @click="selectQuick(choice)"
           >
-            Today
-          </button>
-          <button
-            type="button"
-            @click="selectQuickDate('yesterday')"
-            :class="getSelectedQuickDate() === 'yesterday' ? 'bg-primary-500 text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.05]'"
-            class="px-3 py-2 text-left text-[0.82rem] rounded transition-colors"
-          >
-            Yesterday
-          </button>
-          <button
-            type="button"
-            @click="selectQuickDate('7days')"
-            :class="getSelectedQuickDate() === '7days' ? 'bg-primary-500 text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.05]'"
-            class="px-3 py-2 text-left text-[0.82rem] rounded transition-colors"
-          >
-            7 Days Ago
-          </button>
-          <button
-            type="button"
-            @click="selectQuickDate('1month')"
-            :class="getSelectedQuickDate() === '1month' ? 'bg-primary-500 text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.05]'"
-            class="px-3 py-2 text-left text-[0.82rem] rounded transition-colors"
-          >
-            1 Month Ago
-          </button>
-          <button
-            type="button"
-            @click="selectQuickDate('1year')"
-            :class="getSelectedQuickDate() === '1year' ? 'bg-primary-500 text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.05]'"
-            class="px-3 py-2 text-left text-[0.82rem] rounded transition-colors"
-          >
-            1 Year Ago
-          </button>
-          <button
-            type="button"
-            @click="isOpen = true"
-            :class="getSelectedQuickDate() === 'custom' ? 'bg-primary-500 text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.05]'"
-            class="px-3 py-2 text-left text-[0.82rem] rounded transition-colors"
-          >
-            Custom
+            {{ t(quickDateLabelKeys[direction][choice]) }}
           </button>
         </div>
 
-        <!-- Calendar Panel -->
         <div class="p-4 w-80">
-          <!-- Navigation -->
           <div class="flex items-center justify-between mb-4">
-            <button @click="prevMonth" class="text-text-muted hover:text-text-primary text-lg transition-colors">‹</button>
+            <button type="button" data-testid="date-picker-prev" :class="dateArrowClasses" @click="prevMonth">‹</button>
             <div class="flex items-center gap-2">
               <div class="w-[140px]">
-                <UiSelect
-                  v-model="currentMonthValue"
-                  :options="monthOptions"
-                />
+                <UiSelect v-model="currentMonthValue" :options="monthOptions" :placeholder="t('ui.uiDatePicker.month')" />
               </div>
               <div class="w-[100px]">
-                <UiSelect
-                  v-model="currentYearValue"
-                  :options="yearOptions"
-                />
+                <UiSelect v-model="currentYearValue" :options="yearOptions" :placeholder="t('ui.uiDatePicker.year')" />
               </div>
             </div>
-            <button @click="nextMonth" class="text-text-muted hover:text-text-primary text-lg transition-colors">›</button>
+            <button type="button" data-testid="date-picker-next" :class="dateArrowClasses" @click="nextMonth">›</button>
           </div>
 
-          <!-- Calendar -->
-          <div>
-            <!-- Days of week -->
-            <div class="grid grid-cols-7 gap-1 mb-2">
-              <div v-for="day in dayNames" :key="day" class="text-center text-xs font-semibold text-text-muted">{{ day }}</div>
-            </div>
-            <!-- Days -->
-            <div class="grid grid-cols-7 gap-1">
-              <button
-                type="button"
-                v-for="(day, i) in getDaysForMonth(currentMonth)"
-                :key="i"
-                @click="day && selectDate(day as number, currentMonth)"
-                :disabled="!day"
-                :class="{
-                  'bg-primary-500 text-white rounded font-semibold': day && isSelectedDate(day as number, currentMonth),
-                  'text-text-muted cursor-not-allowed': !day,
-                  'text-text-primary hover:bg-white/[0.05]': day && !isSelectedDate(day as number, currentMonth),
-                }"
-                class="h-8 flex items-center justify-center text-sm rounded transition-colors"
-              >
-                {{ day }}
-              </button>
-            </div>
+          <div class="grid grid-cols-7 gap-1 mb-2">
+            <div v-for="name in dayNames" :key="name" class="text-center text-xs font-semibold text-text-muted">{{ name }}</div>
+          </div>
+          <div class="grid grid-cols-7 gap-1">
+            <button
+              v-for="(day, i) in monthDays"
+              :key="i"
+              type="button"
+              :data-testid="`date-picker-day-${i}`"
+              :disabled="day === null"
+              :class="dayClasses(day)"
+              @click="selectDay(day)"
+            >
+              {{ day }}
+            </button>
           </div>
 
-          <!-- Bottom buttons -->
           <div class="flex items-center justify-between border-t border-border mt-4 pt-4">
-            <button type="button" @click="() => { emit('update:modelValue', null); isOpen = false }" class="text-sm text-text-secondary hover:text-text-primary transition-colors">Clear</button>
-            <button type="button" @click="isOpen = false" class="text-sm text-text-secondary hover:text-text-primary transition-colors">Close</button>
+            <button type="button" data-testid="date-picker-clear" :class="dateActionClasses" @click="clearDate">{{ t('shared.clear') }}</button>
+            <button type="button" data-testid="date-picker-close" :class="dateActionClasses" @click="closePopup">{{ t('shared.close') }}</button>
           </div>
         </div>
       </div>

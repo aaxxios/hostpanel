@@ -1,16 +1,30 @@
 <script setup lang="ts">
+/**
+ * Country picker: a `UiSelect` over a fixed list of countries.
+ *
+ * The model is the ISO 3166 alpha-2 code. Names are the country list's own English names.
+ */
 import { computed } from 'vue'
-import UiSelect from './UiSelect.vue'
+import UiSelect from '@/components/ui/UiSelect.vue'
 
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
+/** Props for UiCountrySelect. */
 const props = defineProps<{
+  /** ISO code of the selected country. */
   modelValue: string
+  /** Text shown while nothing is selected. */
   placeholder?: string
 }>()
 
 const emit = defineEmits<{
+  /** Emitted with the ISO code of the country the user picks. */
   'update:modelValue': [value: string]
 }>()
 
+/** Countries offered, by ISO code and English name. */
 const countries = [
   { code: 'AF', name: 'Afghanistan' },
   { code: 'AX', name: 'Åland Islands' },
@@ -56,13 +70,27 @@ const countries = [
   { code: 'IN', name: 'India' },
 ]
 
+/** The countries as `UiSelect` options. */
 const countryOptions = computed(() =>
-  countries.map(c => ({ value: c.code, label: c.name }))
+  countries.map(c => ({ value: c.code, label: c.name })),
 )
 
+/** Two-way bridge between the prop and the inner select. */
 const selectedValue = computed({
+  /**
+   * Reads the bound code.
+   *
+   * @returns The ISO code the parent holds.
+   */
   get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
+  /**
+   * Publishes the picked code.
+   *
+   * @param value - The ISO code picked in the select.
+   */
+  set: (value) => {
+    emit('update:modelValue', value)
+  },
 })
 </script>
 
@@ -70,6 +98,6 @@ const selectedValue = computed({
   <UiSelect
     v-model="selectedValue"
     :options="countryOptions"
-    :placeholder="placeholder || 'Select country...'"
+    :placeholder="placeholder || t('ui.uiCountrySelect.selectCountry')"
   />
 </template>

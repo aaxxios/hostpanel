@@ -1,6 +1,8 @@
+/** Navigation guard for the admin router: loads the session state and redirects by route meta. */
 import type { RouteLocationNormalized } from 'vue-router'
-import { useAuthStore } from '../modules/auth/stores/authStore'
-import { pinia } from '../pinia'
+import { useAuthStore } from '@/stores/auth'
+import { AuthMode } from '@/types/auth'
+import { pinia } from '@/pinia'
 
 /**
  * Auth middleware — decides, per navigation, whether a route may be entered.
@@ -37,7 +39,9 @@ export const authMiddleware = async (
   // On an SSO deployment there is nothing for it to create — the accounts live in the
   // sign-on service — and reaching it would call endpoints that answer 404 there.
   if (to.meta.setup === true) {
-    if (!auth.setupRequired || auth.mode !== 'local') return '/login'
+    if (!auth.setupRequired || auth.mode !== AuthMode.Local) {
+      return '/login'
+    }
     return true
   }
 

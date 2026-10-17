@@ -1,0 +1,17 @@
+/**
+ * Tests of AnnualIncomeView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * refuses.
+ */
+import { vi } from 'vitest'
+import AnnualIncomeView from '@/views/AnnualIncomeView.vue'
+import { json } from '../helpers/fetch'
+import { runReportCase } from '../helpers/reportViews'
+
+vi.mock('chart.js', async () => (await import('../helpers/chartJsMock')).chartJsMock)
+
+runReportCase({
+  name: 'AnnualIncomeView',
+  view: AnnualIncomeView,
+  routes: { 'GET /reports/annual-income': () => json([{ month: 'January', amount: 12 }]) },
+  expected: ['Annual Income Report', 'January', '$12.00'],
+})

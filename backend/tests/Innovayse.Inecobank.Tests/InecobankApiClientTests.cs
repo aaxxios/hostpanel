@@ -1,5 +1,3 @@
-﻿namespace Innovayse.Inecobank.Tests;
-
 using System.Net;
 using System.Text.Json;
 using FluentAssertions;
@@ -7,12 +5,16 @@ using Innovayse.Providers.Inecobank;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
+namespace Innovayse.Inecobank.Tests;
 /// <summary>Tests for <see cref="InecobankApiClient"/> request encoding and response parsing.</summary>
 public class InecobankApiClientTests
 {
+    /// <summary>Client options pointing at a non-existent test endpoint.</summary>
     private static readonly InecobankClientOptions Options =
         new("https://testpg.example.am", "merchant-api", "secret-pw");
 
+    /// <summary>Builds a client wired to a fake handler.</summary>
+    /// <returns>The client and the handler whose responses and requests the test controls.</returns>
     private static (InecobankApiClient Client, FakeHttpMessageHandler Http) CreateClient()
     {
         var handler = new FakeHttpMessageHandler();
@@ -20,6 +22,7 @@ public class InecobankApiClientTests
         return (client, handler);
     }
 
+    /// <summary>Register order async, sends credentials amount and explicit currency.</summary>
     [Fact]
     public async Task RegisterOrderAsync_SendsCredentialsAmountAndExplicitCurrency()
     {
@@ -44,6 +47,7 @@ public class InecobankApiClientTests
         body.Should().Contain("language=hy");
     }
 
+    /// <summary>Register order async, sanitizes forbidden description characters.</summary>
     [Fact]
     public async Task RegisterOrderAsync_SanitizesForbiddenDescriptionCharacters()
     {
@@ -61,6 +65,7 @@ public class InecobankApiClientTests
         description.Length.Should().BeLessThanOrEqualTo(99);
     }
 
+    /// <summary>Register order async, non zero error code, throws with code.</summary>
     [Fact]
     public async Task RegisterOrderAsync_NonZeroErrorCode_ThrowsWithCode()
     {
@@ -75,6 +80,11 @@ public class InecobankApiClientTests
         ex.Which.ErrorCode.Should().Be(1);
     }
 
+    /// <summary>Get order status async, parses string and number error codes.</summary>
+    /// <param name="json">The gateway response body.</param>
+    /// <param name="expectedError">Error code that should be parsed.</param>
+    /// <param name="expectedStatus">Order status that should be parsed, or null.</param>
+    /// <param name="expectedRef">Authorization reference that should be parsed, or null.</param>
     [Theory]
     [InlineData("""{"errorCode":0,"orderStatus":2,"authRefNum":"ref-777"}""", 0, 2, "ref-777")]
     [InlineData("""{"errorCode":"0","orderStatus":0}""", 0, 0, null)]
@@ -93,6 +103,7 @@ public class InecobankApiClientTests
         http.Requests[0].Url.Should().Be("https://testpg.example.am/payment/rest/getOrderStatusExtended.do");
     }
 
+    /// <summary>Refund async, sends order id and minor amount, throws on error.</summary>
     [Fact]
     public async Task RefundAsync_SendsOrderIdAndMinorAmount_ThrowsOnError()
     {
@@ -115,6 +126,7 @@ public class InecobankApiClientTests
     // must still surface as its own exception type, naming the endpoint, with the underlying
     // failure attached rather than thrown raw at the caller. The status code is asserted too,
     // because when the body explains nothing the status is the only diagnostic left.
+    /// <summary>Non-success status with an unreadable body: the failure is wrapped and reports the status.</summary>
     [Fact]
     public async Task RegisterOrderAsync_NonSuccessStatusWithAnUnreadableBody_WrapsTheFailureAndReportsTheStatus()
     {
@@ -130,6 +142,7 @@ public class InecobankApiClientTests
         ex.Which.Message.Should().Contain(InecobankEndpoints.Register).And.Contain("502");
     }
 
+    /// <summary>Non-JSON response body: the parse failure is wrapped rather than thrown raw.</summary>
     [Fact]
     public async Task RegisterOrderAsync_NonJsonResponseBody_WrapsJsonExceptionRatherThanThrowingItRaw()
     {
@@ -147,6 +160,7 @@ public class InecobankApiClientTests
         ex.Which.Message.Should().Contain(InecobankEndpoints.Register);
     }
 
+    /// <summary>Operations, never log the configured merchant credentials.</summary>
     [Fact]
     public async Task Operations_NeverLogTheConfiguredMerchantCredentials()
     {

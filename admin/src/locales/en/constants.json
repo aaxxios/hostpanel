@@ -1,0 +1,42 @@
+{
+  "serviceStatusOptions": {
+    "pending": "Pending",
+    "terminated": "Terminated"
+  },
+  "domainStatusOptions": {
+    "pendingRegistration": "Pending Registration",
+    "pendingTransfer": "Pending Transfer",
+    "redemption": "Redemption",
+    "transferred": "Transferred"
+  },
+  "paymentMethodOptions": {
+    "bankTransfer": "Bank Transfer"
+  },
+  "billingCycleOptions": {
+    "free": "Free",
+    "quarterly": "Quarterly",
+    "semiAnnual": "Semi-Annual",
+    "biennial": "Biennial",
+    "triennial": "Triennial"
+  },
+  "invoiceActionOptions": {
+    "recur": "Recur"
+  },
+  "recurrencePeriodOptions": {
+    "days": "Days",
+    "weeks": "Weeks",
+    "months": "Months"
+  },
+  "quoteStageOptions": {
+    "allStages": "All Stages"
+  },
+  "orderStatusOptions": {
+    "fraud": "Fraud"
+  },
+  "ticketFilterOptions": {
+    "allActiveTickets": "All Active Tickets",
+    "flagged": "Flagged",
+    "answered": "Answered",
+    "customerReply": "Customer-Reply"
+  }
+}

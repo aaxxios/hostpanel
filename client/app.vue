@@ -1,12 +1,7 @@
 <template>
-  <div>
-    <NuxtLayout>
-      <NuxtPage />
-    </NuxtLayout>
-
-    <!-- Cookie Consent Banner -->
-    <UiCookieBanner />
-  </div>
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
 </template>
 
 <script setup lang="ts">
@@ -14,8 +9,13 @@
  * Root app component: global structured data, the favicon set and the site identity
  * metas. Third-party scripts live in plugins, driven by the operator's settings.
  */
+import { BrandingIconRel } from '~/types/brandingiconrel'
+import { resolveLanguage } from '~/utils/transportLanguage'
 
+/** Active UI locale; drives the `lang` attribute on `<html>`. */
 const { locale } = useI18n()
+
+/** Builders for the global structured data, and the function that injects them into the head. */
 const { organizationSchema, localBusinessSchema, websiteSchema, injectSchema } = useSchemaOrg()
 
 // Inject global schemas
@@ -25,14 +25,14 @@ injectSchema([
   websiteSchema()
 ])
 
-const langMap: Record<string, string> = { en: 'en', ru: 'ru', hy: 'hy' }
-
 // Live chat and the tag manager are loaded by plugins/live-chat.ts and
 // plugins/tracking.client.ts from the operator's settings; nothing here names a
 // server, a token or a container id.
 
-/** Operator-uploaded favicon, admin-managed with an environment fallback. Empty keeps nuxt.config's static default. */
+/** Reads an operator setting by its key. */
 const { get: getPortalSetting } = usePortalSettings()
+
+/** Operator-uploaded favicon, admin-managed with an environment fallback. Empty keeps nuxt.config's static default. */
 const faviconUrl = computed(() => getPortalSetting('portal.favicon', 'portalFavicon'))
 
 /**
@@ -47,12 +47,18 @@ const faviconUrl = computed(() => getPortalSetting('portal.favicon', 'portalFavi
  * Kept as a `computed` rather than an inline arrow so the dependency on the settings state
  * is explicit; both forms work with `useHead`.
  */
-const faviconLinks = computed(() => brandingIcons(faviconUrl.value).map(icon => ({
-  rel: icon.rel,
-  href: icon.href,
-  ...(icon.type ? { type: icon.type } : {}),
-  ...(icon.sizes ? { sizes: icon.sizes } : {})
-})))
+const faviconLinks = computed(() => brandingIcons(faviconUrl.value).map((icon) => {
+  const attributes = {
+    href: icon.href,
+    ...(icon.type ? { type: icon.type } : {}),
+    ...(icon.sizes ? { sizes: icon.sizes } : {})
+  }
+  // unhead types a link as a union keyed on its literal `rel`, so each relation is built as its
+  // own literal-typed object; a bare string-enum member (or a union of both) is not assignable.
+  return icon.rel === BrandingIconRel.AppleTouchIcon
+    ? { rel: 'apple-touch-icon' as const, ...attributes }
+    : { rel: 'icon' as const, ...attributes }
+}))
 
 /**
  * The operator's site name and tagline. `og:site_name` and `author` used to be static
@@ -60,6 +66,7 @@ const faviconLinks = computed(() => brandingIcons(faviconUrl.value).map(icon => 
  * at request time. A page's own `useSeo()` still wins for `description`, because it
  * runs after this and unhead lets the later tag replace the earlier one.
  */
+/** Operator-set site name and tagline, as reactive refs. */
 const { name: siteName, tagline: siteTagline } = useSiteIdentity()
 
 useSeoMeta({
@@ -70,7 +77,7 @@ useSeoMeta({
 
 useHead({
   htmlAttrs: {
-    lang: () => langMap[locale.value] ?? 'en'
+    lang: () => resolveLanguage(locale.value)
   },
   link: faviconLinks,
   // The colour-mode class on <html> is owned by plugins/color-mode.ts; the live-chat

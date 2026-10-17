@@ -12,10 +12,11 @@
 > not a review comment. `backend/tests/` inherits neither — documentation there is a rule the
 > compiler is not enforcing.
 
-**What it is:** the self-hosted hosting-management platform — an open-source WHMCS
-alternative. Clients order services, manage domains, pay invoices and open tickets; staff run
-products, billing, provisioning and integrations. Production is `host.innovayse.com`; a demo
-runs at `hostpanel.innovayse.com` with published credentials in `README.md`.
+**What it is:** the self-hosted hosting-management platform — open-source hosting billing and
+automation. Clients order services, manage domains, pay invoices and open tickets; staff run
+products, billing, provisioning and integrations. Production is `host.innovayse.com`. A public demo
+is the same build with `Demo__Enabled=true` (`deploy:demo`); its sign-in page shows the demo accounts,
+served by `GET /api/public/demo` — they are not written in `README.md`.
 
 **This is a public, separately licensed repository.** AGPL-3.0-or-later. `origin` is **github.com/innovayse/hostpanel**, not GitLab. Anything written here
 is read by people who have never seen the rest of the workspace, and the repo must build from
@@ -29,221 +30,206 @@ file. This repository is a submodule and keeps its **own** copies; the workspace
 folder is not vendored here, and editing anything under it means committing in another
 repository.
 
-## Where this project's rules win over the workspace — read this before your first review
+## Where this project's rules differ from the workspace — read this before your first review
 
-The workspace's copies of `clean-architecture.md` and `csharp-style.md` differ from the ones
-in this folder, and the differences have already been reported as defects in code that is
-correct. **The files beside this one are the authority here.** Four points, stated plainly:
+After the conformance pass (A1–A7) this backend is on the workspace shape. The old list of
+deliberate departures (primary constructors, `*Request` records, exception-only refusals,
+feature-local `Interfaces/` folders, repositories) is **gone** — do not resurrect any of it from
+memory. What remains is short:
 
-- **Primary constructors on controllers and handlers are correct.**
-  `public sealed class OrdersController(IMessageBus bus) : ControllerBase`. The workspace copy
-  of clean-architecture.md requires an explicit `private readonly` field and a written
-  constructor; [csharp-style.md](csharp-style.md) in this folder lists exactly that shape
-  under **AVOID**. All 54 controllers use the primary constructor. Do not "fix" them.
-- **`*Request` records under `API/<Feature>/Requests/` are sanctioned.** Ten such folders
-  exist and the controller maps the request onto the command itself. The workspace forbids a
-  request record beside the command and binds the command directly; that rule is not this
-  project's.
-- **There is no `Result<T>` and no `BaseApiController`.** Handlers return their value
-  directly (`Task<PlaceOrderResultDto>`, `Task<int>`), controllers return `IActionResult` or
-  `ActionResult<T>` and **do** name status codes, and every controller derives from
-  `ControllerBase`. Refusals travel as exceptions: `ExceptionMiddleware` in
-  `backend/src/Innovayse.API/ExceptionMiddleware.cs` is the single place a domain exception
-  becomes a status and an error code. A refusal the frontend must act on gets its own
-  exception type there — a bare `InvalidOperationException` lands in the unclassified 400 bin
-  (`INVALID_OPERATION`) and the caller has only the sentence to go on.
-- **The API sends the finished sentence, in the caller's language. The frontend does not
-  translate codes.** The workspace's `api-driven-frontend.md` closes its error contract with
-  "One mapping table. Codes translate to human text in a single `utils/*ErrorMessages.ts`".
-  **This project deliberately does not follow that**, and `client/utils/portalErrorMessages.ts`
-  is gone.
-
-  The rule assumes a backend that answers in one language and a frontend that owns every
-  translation. That is not this product. The portal ships **three** languages —
-  `client/locales/{en,ru,hy}` — and the table only ever covered five codes, so a Russian or
-  Armenian customer read English for every other refusal while the table's existence made it
-  look solved. The backend now owns the wording for all three:
-
-  - Sentences live in `backend/src/Innovayse.Application/Resources/ValidationMessages.resx` and its
-    `.ru.` / `.hy.` siblings. `Resources/ValidationMessages.cs` is the marker type
-    `IStringLocalizer<ValidationMessages>` names; **its full name is the resource base name**, so
-    moving or renaming either half makes every lookup answer with the key instead of a sentence,
-    silently. `ValidationMessagesLocalizationTests` exists because nothing else would notice.
-  - The culture comes from `Accept-Language`, through `app.UseRequestLocalization(...)` in
-    `Program.cs`, **above `app.UseMiddleware<ExceptionMiddleware>()`** — the other way round the
-    sentence would be resolved outside the culture the request asked for. Supported languages
-    come from `LocaleOptions.SupportedLocales`, beside the resources they select.
-  - A refusal still carries `{ error, code }` and the route is unchanged. `error` is the
-    sentence, now localised; `code` is still the machine-readable string, and it is still the
-    **only** thing a page may branch on.
-
-  **The frontend keeps the codes and loses the wording.** `client/utils/apiError.ts` replaces
-  the deleted table with two readers — `apiErrorMessage(err)` for the sentence,
-  `apiErrorCode(err)` for the branch — and a `PortalErrorCode` constant per code something
-  actually branches on. `stores/client.ts` holds `clientProfileMissing` *and*
-  `clientProfileMessage`, exactly as innovayse-sso's store holds `auth.errorCode` beside
-  `auth.error`. Branching on a sentence was always fragile; now it is fragile in three languages.
-
-  **Two sentences are still written in the frontend, and only these two.** The offline fallback
-  in `apiErrorMessage` — a request that got no answer has no body to quote — and
-  `client.acceptInvite.signInRequired`, because the refusal that carries
-  `INVITE_SIGN_IN_REQUIRED` is written by the BFF (`server/api/portal/auth/accept-invite.post.ts`)
-  before any call to the C# API is possible, so there is no API wording to read. Both are
-  `api-driven-frontend.md`'s own two sanctioned exceptions, which this project does still follow.
-
-  **A refusal a person reads gets its sentence from the resources, not from a string literal.**
-  `ExceptionMiddleware` localises the typed exceptions by the `MessageKey` constant beside their
-  `Code`; a handler that throws a bare `InvalidOperationException` must resolve the sentence
-  itself through an injected `IStringLocalizer<ValidationMessages>` first, because the middleware
-  cannot guess which key a message text came from and must not string-match to find out.
-
-  **No `LocalizedValidator<T>` base class was added**, though the pattern this came from has one.
-  The reason has changed since this was first written: all 57 validators are now wired and running
-  (see below), so their messages are no longer messages nothing reads — but they are still English
-  literals, and `ExceptionMiddleware` deliberately does not put them in the response for exactly
-  that reason. A rejected form gets one localised sentence and one code. The base class, plus a
-  resource key per validator message, is what per-field detail in the body waits on, and it is
-  now the next piece of this work rather than a file with no purpose.
-
-- **Application ports live in the feature's own `Interfaces/` folder, not one layer-wide
-  folder.** The workspace's `file-layout.md` closes its ports section with "Whatever the
-  folder, it is one folder, not one per feature", and names `innovayse-sso`'s
-  `Application/Abstractions/` as the precedent. **This project deliberately does not follow
-  that**, for the same kind of reason the thirty-four feature-grouped repositories stay where
-  they are. Three things decide it:
-
-  - *The rule's own justification does not hold here.* `file-layout.md` argues a port lives
-    layer-wide because it is "a contract the whole layer implements against" that "every
-    consumer of the Application layer may need to see". Exactly two ports here are that, and
-    they are **already** layer-wide: `Application/Common/IUnitOfWork.cs` and
-    `Application/Common/ICurrentRequestContext.cs`. Of the fifteen in `<Feature>/Interfaces/`,
-    **ten are consumed by exactly one feature** — all 44 references to
-    `Reports.Interfaces` sit inside `Application/Reports/**` and `Infrastructure/Reports/`,
-    and `IMigrationSource`, `IClientExportRepository`, `IAuthModeProvider`, `IJwtService`,
-    `ITwoFactorService`, `IUserService` and `IPluginRegistry` never leave theirs. Three more
-    reach two or three features (`IStripeService`, `IPaymentPluginResolver`,
-    `IServerConnectionTester`). Only **two** come close to the rule's premise:
-    `IIdentityProvider`, used from seven features, and `IUserProvisioning` from five. Those
-    two are the closest call and the first thing to revisit if this is ever reopened; they
-    stay for the reason below, and because their implementations are the `AUTH_MODE` pair
-    under `Infrastructure/Auth/` — the switch that makes them widely called is itself an Auth
-    concern.
-  - *Infrastructure is feature-grouped too, so a port and its implementation already mirror
-    each other.* `Application/Reports/Interfaces/IReportRepository.cs` sits opposite
-    `Infrastructure/Reports/ReportRepository.cs`, and the same holds for Auth (nine
-    implementations under `Infrastructure/Auth/`), Clients and Servers. Collapsing only the
-    Application side into an `Abstractions/` bucket would leave every one of those ports
-    feature-grouped on the Infrastructure side and layer-grouped on the Application side, which
-    is worse than either consistent shape.
-  - *The contract is written in the feature's own vocabulary.* `file-layout.md` says the port
-    carries the whole documentation of the contract, and seven of these spell that contract
-    entirely in their own feature's `Common/` DTOs — `IReportRepository`, `IDiskUsageService`
-    and `ISslMonitoringService` in `Reports.Common`, `IStripeService` in `Billing.Common`,
-    `ITwoFactorService` in `Auth.Common`, `IMigrationSource` in `Migration.Common`,
-    `IClientExportRepository` in its own query's folder. Moving an interface out of the folder
-    its every signature names is the split that costs a reader, not the one that pays.
-
-  So: **a new port goes in its feature's `Interfaces/` folder.** A port the whole layer
-  genuinely uses goes in `Application/Common/`, where the two that qualify already are. This is
-  not debt and does not need a plan — `Domain/<Feature>/Interfaces/` already holds forty
-  interfaces in the same shape, so "the feature's `Interfaces/` folder" stays one rule for
-  finding any interface in this backend rather than two.
-
+- **`LocalAuthController` is the one controller outside the shape, and the architecture tests
+  say so.** It derives from `ControllerBase`, keeps a primary constructor, resolves
+  `IUserService` from an injected `IServiceProvider`, and takes six `*Request` bodies from
+  `API/Auth/Requests/` — `ConfirmEmailRequest`, `ForgotPasswordRequest`, `LoginRequest`,
+  `RegisterRequest`, `ResetPasswordRequest`, `TwoFactorLoginRequest`. Each is a named allow-list
+  entry (`ControllerBaseTests`, `ExplicitConstructorTests`, `NoRequestTypesTests`); the entry is
+  removed when the controller is converted. Why it stays: its actions call
+  `IUserService`/`IJwtService` and issue the session cookie directly, and none dispatches one
+  command, so there is no command for a body to bind to; the token/cookie contract on `login`,
+  `2fa-login` and `logout` is what the admin SPA's refresh code and `LocalSessionCookie` depend
+  on. `IUserService` is registered only in the `if (ownsItsUsers)` branch of
+  `Infrastructure/DependencyInjection.cs`, so a constructor parameter would fail every route under
+  `sso` mode (including the ones that answer 404 on purpose). Converting it is its own reviewed
+  change, after the login flow is re-verified end to end. `HealthController` is **not** an
+  exception: it derives from `BaseApiController` with `[AllowAnonymous]`.
+- **Handler and validator naming is `<UseCase>Handler` / `<UseCase>Validator`; the product rule wins over
+  workspace `cqrs.md`.** Use-case names are unique across modules (`SuspendHostedAccount` in Provisioning,
+  `SuspendService` in Services), and a DTO two use cases share lives once in `<Module>/Common/` (one
+  `ProductPriceDto`, one `FileDownloadDto` in `Application/Common/` for every export and download).
+- **No `*Request` types in Application, API (bar the six auth bodies) or Domain.** Provider inputs in Domain
+  are named for what they carry (`ChargeInstruction`, `DomainRegistrationOrder`, `DomainRenewalOrder`,
+  `DomainTransferOrder`, `ProvisionAccountOrder`, `SuspendAccountOrder`, `TerminateAccountOrder`);
+  `NoRequestTypesTests` covers all three layers (the `CancellationRequest` entity is exempt). The wire models inside
+  `Innovayse.Providers.*` and the SDK's `PaymentRequest` are third-party-facing contracts and keep their names.
+- **Our own API contracts carry no `[JsonPropertyName]`**: the wire name is the property name in camelCase.
+  A route id is overlaid on the bound command with `with { ... }`; there are no `*Body` types. The SDK ports are
+  vendor-free too (`IHostingPanelApiClient`, `IHostingPanelV7ApiClient`; `NoVendorNamesTests` covers the SDK).
+- **Errors are one `ErrorResponse` body, `application/problem+json`**
+  (`Type`/`Title`/`Status`/`Detail`/`Errors`, camelCase on the wire), written by one serializer,
+  `Shared/Infrastructure/ErrorBody.cs`, for every surface: `BaseApiController`,
+  `ExceptionHandlingMiddleware`, the model-state factory, the auth-event writers and the rate
+  limiter. The body carries only those members: the old `error`/`code` pair is gone, and both
+  frontends read `type`/`detail`. Do not add the pair back.
+- **The API sends the finished sentence, in the caller's language; the frontend does not
+  translate codes.** Sentences live in `Application/Resources/ErrorMessages*.resx` (looked up by
+  error code through `IErrorMessageResolver`) and `Shared/Resources/ValidationMessages*.resx` (middleware, binders) and
+  `Application/Resources/ApplicationValidationMessages*.resx` (validator sentences; the marker is named differently from the
+  Shared one so the two resource sets can never share a base name),
+  in en/ru/hy, with `ResourceCoverageTests` failing on a code with no sentence or a sentence with
+  no code. The marker type's full name is the resource base name — moving either half makes every
+  lookup answer with the key. Culture comes from the `X-Language` header only
+  (`PlatformLocalizationExtensions` clears the other providers), through
+  `app.UseRequestLocalization(...)` registered **above** `ExceptionHandlingMiddleware` in
+  `Program.cs`. Both frontends stamp it from the active i18n locale on every call
+  (`client/composables/useApi.ts`, `admin/src/composables/useApi.ts`); the Nuxt BFF reads it from
+  the browser request, validates it against `AppLocale` (`client/utils/transportLanguage.ts`) and
+  forwards it on every backend call, the post-refresh retry included. `client/lib/errorHandler.ts`
+  (Nuxt) and `admin/src/lib/errorHandler.ts` (admin) are the frontend readers. Only two sentences
+  are written in the frontend: the offline fallback (`errors.noAnswer`), and
+  `client.acceptInvite.signInRequired` (refused by the Nuxt BFF before any API call exists).
 
 ## Architecture — Clean Architecture, four layers plus a plugin SDK
 
-`backend/Innovayse.Backend.sln`, 14 projects:
+`backend/Innovayse.Hostpanel.sln`, 15 projects:
 
 ```
 backend/src/
-  Innovayse.Domain/               entities, events, repository interfaces. No dependencies.
-  Innovayse.Application/          use cases (Commands/, Queries/), DTOs, ports, options
-  Innovayse.Infrastructure/       AppDbContext, migrations, repositories, Integrations/
-  Innovayse.API/                  controllers, ExceptionMiddleware, composition root
-  Innovayse.SDK/                  the plugin contract third parties compile against
-  Innovayse.Providers.CWP/        control-panel provisioning provider
-  Innovayse.Providers.CWP7/       control-panel provisioning provider
-  Innovayse.Providers.Inecobank/  payment plugin (net8.0 — the API is net9.0)
-backend/tests/                    Domain, Application, Infrastructure, CWP, Inecobank, Integration
-client/                           Nuxt 4 client portal + public site (yarn)
-admin/                            Vite + Vue 3 admin SPA (npm)
-docker/                           api / client / admin / nginx Dockerfiles + nginx.conf
+  SharedKernel/                      BaseEntity (DomainEvents), AuditableEntity, DomainException, IDomainEvent
+  Shared/                            BaseApiController + StatusMapping, Result/Result<T>, ErrorResponse,
+                                     ErrorBody, middleware, validation policy, resources, options
+  Innovayse.Hostpanel.Domain/        entities, events, Enums/ per area. References the kernel only.
+  Innovayse.Hostpanel.Application/   <Feature>/{Commands,Queries}/<UseCase>/, <Feature>/Common/,
+                                     Common/Interfaces/ (every port), Common/Errors/, Resources/
+  Innovayse.Hostpanel.Infrastructure/ AppDbContext, migrations, <Capability>/ adapters, Integrations/
+  Innovayse.Hostpanel.API/           controllers, Program.cs, composition root
+  Innovayse.SDK/                     the plugin contract third parties compile against
+  Innovayse.Providers.CWP/ CWP7/ Inecobank/   provisioning and payment providers (Inecobank is net8.0)
+backend/tests/                       Domain, Integration, Architecture, CWP, Inecobank
+client/  admin/                    Nuxt 4 portal, Vite admin SPA — each owns its Dockerfile (backend/Dockerfile too)
+docker/                              compose set (shared·dev·prod·platform), nginx/, scripts/, .env.example — docker/README.md
 ```
 
-**Plugins are loaded reflectively, not linked.** `PluginLoader.DiscoverAndRegister` scans
-`AppContext.BaseDirectory/plugins`, so `Innovayse.API.csproj` references
-`Innovayse.Providers.Inecobank` with `ReferenceOutputAssembly=false` purely for build order and
-stages exactly two files — the provider assembly and its `plugin.json`. Never widen that to a
-`**\*.*` glob: the provider's `bin` also holds a build-time copy of `Innovayse.SDK.dll`, and
-`Assembly.LoadFrom` over it would give the process two distinct `IPaymentPlugin` types with the
-same name, after which every cast in `PaymentPluginResolver` fails. The CWP providers are
-deliberately **not** staged, so they cannot activate at runtime by accident.
+- **No repositories.** Handlers use `IHostpanelDbContext` (`Application/Common/Interfaces/`)
+  directly; `IUnitOfWork` is a port in `Application/Common/Interfaces/`. Domain has no `Interfaces/` folders.
+- **Every application port is in `Application/Common/Interfaces/`** (`IPaymentGateway`,
+  `IProvisioningProvider`, `IEmailSender`, `IIdentityProvider`, `IUserService`, …) and
+  `PortPlacementTests` fails on one anywhere else. Adapters sit in Infrastructure under a
+  capability folder (`Storage/`, `Email/`, `Integrations/<Provider>/`, `Auth/`); EF configurations sit in `Persistence/Configurations/`.
+- **"Test Connection" runs a live probe where a provider has one.** `IIntegrationConnectionProbe`
+  (a port in `Application/Common/Interfaces/`, keyed by integration slug) is implemented per
+  integration in `Infrastructure/Integrations/<Provider>/` (today `NameAmConnectionProbe`, which
+  logs in with the saved credentials) and every implementation is registered in
+  `DependencyInjection`; `TestIntegrationConnectionHandler` picks the one whose `Slug` matches once
+  every required field is stored. A probe failure is logged and answered with a fixed sentence —
+  the provider's own text never reaches the response. `NameAmClient` reads the e-mail, password,
+  API URL and test mode saved on the admin Integrations page over the bound options
+  (`IsConfiguredAsync`), so the page now configures what requests actually use.
+- **Enums live in `Enums/` namespaces** (`Domain/<Area>/Enums/`, `SharedKernel/Domain/Enums/`,
+  `Infrastructure/Email/Enums/`); `EnumPlacementTests` enforces it.
+- **Domain refusals are `DomainException(code, message)`** (abstract, in the kernel); the exception
+  middleware turns an uncaught one into a body whose status comes from `StatusMapping.For(code)`
+  and whose sentence is the localised one for that code. A handler that can foresee a refusal returns
+  `Result.Failure` instead.
+- **Plugins are loaded reflectively, not linked.** `PluginLoader.DiscoverAndRegister` scans
+  `AppContext.BaseDirectory/plugins`, so `Innovayse.Hostpanel.API.csproj` references
+  `Innovayse.Providers.Inecobank` with `ReferenceOutputAssembly=false` purely for build order and
+  stages exactly two files — the provider assembly and its `plugin.json`. Never widen that to a
+  `**\*.*` glob: the provider's `bin` also holds a build-time copy of `Innovayse.SDK.dll`, and
+  `Assembly.LoadFrom` over it would give the process two distinct `IPaymentPlugin` types with the
+  same name, after which every cast in `PaymentPluginResolver` fails. The CWP providers are
+  deliberately **not** staged, so they cannot activate at runtime by accident.
 
-## CQRS — Wolverine, conforming in shape
+## CQRS — Wolverine, conforming
 
-Wolverine 5.31.0. `Program.cs` registers discovery over the API and Application assemblies;
-handlers are never registered by hand and never called directly. Commands and queries live
-one folder per use case under `Application/<Feature>/{Commands,Queries}/<UseCase>/`.
+Wolverine 5.41.0. `Extensions/MessagingRegistration.cs` registers discovery over the API and
+Application assemblies; handlers are never registered by hand and never called directly. One
+folder per use case under `Application/<Feature>/{Commands,Queries}/<UseCase>/`.
 
-### Validators exist on commands only, and they now run
+- **Handlers return `Result` / `Result<T>`** (`Shared/Models`); controllers derive from
+  `BaseApiController` and return through `HandleResult`, which maps the failure code to a status
+  with `StatusMapping`. every controller but the two named above derives from it (`ControllerBaseTests`); handlers and
+  controllers use explicit `private readonly` fields and a written constructor
+  (`ExplicitConstructorTests`).
+- **Validation is a Wolverine policy.** `opts.Policies.Add<ValidationPolicy>()` puts
+  `ValidationMiddleware` at position 0 of every chain; validators are registered Scoped with
+  `AddValidatorsFromAssemblyContaining<AcceptInvitationCommand>()` (Scoped is load-bearing:
+  validators take `ICurrentUserService`). A failure is a 400 `VALIDATION_ERROR` with the
+  field errors grouped under `errors`. Validators exist on both commands and queries.
+- **No identity on a message** (`NoIdentityOnMessagesTests`); handlers read it from
+  `ICurrentUserService` (`Shared/MultiTenancy/`).
+- **Architecture tests** (`Architecture.Tests`): `ControllerBase`, `ExplicitConstructor`,
+  `NoRequestTypes`, `NoIdentityOnMessages`, `PortPlacement`, `EnumPlacement`, `NoVendorNames`,
+  plus resource coverage, kernel purity, SDK contract and use-case shape. Application types carry
+  no vendor names (`ICardPaymentGateway`, `GetControlPanelSsoUrl`,
+  `GetHostingPanelServerInfo`/`V7`).
+- **A test per use case, enforced.** `UseCaseShapeTests` fails when
+  `Application/<Feature>/{Commands,Queries}/<UseCase>/` has no
+  `Integration.Tests/<Feature>/<UseCase>Tests.cs` (crons and event handlers under `Commands`
+  count as use cases).
+- **Domain events are dispatched.** `BaseEntity.DomainEvents` collects them and
+  `Infrastructure/Persistence/DomainEventDispatchInterceptor.cs` publishes them through Wolverine
+  after `SaveChanges`, then clears them. `IDomainEventGate` suppresses dispatch for bulk writers
+  (`MigrationPullWorker`, `DevDataSeeder`; tests use `Fixtures/SuppressedDomainEventGate`).
+  `BaseEntity.AddDomainEvent(Func<IDomainEvent>)` defers building an event that needs the id
+  until after the save. `ClientService.Suspend/Unsuspend/Terminate` take `hostingAlreadyUpdated`
+  (handlers pass `true` after the panel call) so the event handler does not repeat it. The
+  `PaymentReceived`/`InvoiceRefunded` transaction handlers are deleted; only notification
+  handlers remain.
 
-**This entry said the opposite until recently, and the old version is still quoted from
-memory.** The pipeline is wired. Read the two calls below before you decide a rule is dormant.
+## Demo mode
 
-- All 57 `*Validator.cs` files sit under a `Commands/` path. There is **not one validator on a
-  query**, in any feature. That is the convention; do not read it as an oversight — and it
-  matters more now than it did, because a query's inputs are checked by nothing but its handler.
-- FluentValidation 11 is referenced (`FluentValidation.AspNetCore` in `Innovayse.API.csproj`)
-  **and wired**. `Program.cs` calls
-  `AddValidatorsFromAssemblyContaining<AcceptInvitationCommand>()` — the whole Application
-  assembly, registered Scoped, which is load-bearing: `PlaceOrderValidator` takes the Scoped
-  `ICurrentRequestContext` and a Singleton registration would be a captive dependency serving
-  every checkout the first caller's identity — and the `UseWolverine(...)` block calls
-  `opts.UseFluentValidation()`. **All 57 validators run**, as middleware in front of any handler
-  whose message has one. A message with no validator passes straight through, so handlers that
-  already check for themselves are untouched and their checks are now duplicated rather than
-  replaced.
-- A failure throws FluentValidation's `ValidationException`, which `ExceptionMiddleware` catches
-  and answers **400** with the same `{ error, code }` body as every other refusal, code
-  `VALIDATION_FAILED`. It is not a 500.
+`Demo__Enabled=true` turns a deployment into the public demo; nothing is a default, so
+`Demo__ResetIntervalHours`, `Demo__AdminEmail`, `Demo__AdminPassword`, `Demo__ClientEmail` and
+`Demo__ClientPassword` must all be set or startup is refused (`DemoOptionsValidator`). It needs
+`AUTH_MODE=local`. What it does, and where:
 
-**What still is not done, and is the reason this is not simply "fixed":**
-
-- **Validator messages are English literals.** `WithMessage("Type must be 'Immediate' or
-  'EndOfBillingPeriod'.")` and its fifty-odd siblings are string literals in the Application
-  assembly, not keys in `ValidationMessages*.resx`. The per-field failures are therefore **logged and
-  not sent** — `ExceptionMiddleware` writes them to the log line and puts the localised
-  `ValidationFailed` sentence in `error`. So a rejected form gets **one localised sentence and
-  one code**, and the caller cannot tell the reader which field was wrong. That is the deliberate
-  trade: one sentence a Russian or Armenian customer can read, rather than per-field detail only
-  an English speaker can. It is not the end state.
-- **There is no `LocalizedValidator<T>` base class**, and no resource keys for validator messages
-  at all. The pattern this came from has both. Adding per-field detail to the response means
-  doing that first — every message becomes a key, the base class resolves it through
-  `IStringLocalizer<ValidationMessages>`, and only then can the failures travel in the body without
-  answering two of the three shipped languages in English.
-
-So a rule written in a validator **is** enforced, and a check duplicated in a handler is now
-belt-and-braces rather than the only guard. But a rule whose *wording* the reader needs still has
-to be thrown from the handler as a typed exception with a `MessageKey`, because a validator
-cannot yet say anything the caller will see.
-
-(`innovayse-main`, which forked from this backend, wired the same two calls first; this repo
-followed it rather than inventing a second shape.)
+- **Fakes, chosen once in DI.** `Infrastructure/Demo/DemoServiceRegistration` replaces every outward
+  port (payment, registrar, provisioning, rates, contact notifier, monitoring) with an `internal`
+  offline fake. Mail is not replaced. No adapter or handler asks whether it is a demo.
+- **Guard.** A command that must not run on a demo carries `IDemoRestricted` (`Shared/Contracts/Interfaces`);
+  `DemoGuardPolicy` puts `DemoGuardMiddleware` on exactly those chains and it answers 403
+  `DEMO_ACTION_DISABLED`. A new dangerous command is covered by adding the marker, never an `if`.
+  Sign-in in `LocalAuthController` has no command, so the guard does not see it. The demo accounts' own
+  credentials are protected by one rule, `IDemoAccountGuard` (Application port, `Infrastructure/Demo/DemoAccountGuard`):
+  with demo on, the email and password of `Demo__AdminEmail` / `Demo__ClientEmail` cannot change; password
+  reset (`ResetPasswordCommand`) and `UpdateClientHandler`'s email change ask it and answer 403 `DEMO_ACTION_DISABLED`.
+- **Currency.** The demo payment plugin accepts every currency stored (`IPaymentPlugin.AcceptsCurrency`), not only USD.
+- **Data.** `IDemoDataManager` seeds idempotently at startup (instead of `DevDataSeeder`) and
+  `ResetDemoDataCommand` truncates every table except the identity roles and reseeds in one
+  transaction every `ResetIntervalHours`; `GET /api/public/demo` publishes the accounts and the next
+  reset. Seed text names no outside product.
 
 ## Stack
 
-.NET 9 · Wolverine 5.31.0 · EF Core 9 + Npgsql 9 · PostgreSQL 17 · ASP.NET Identity (local
-mode) + JWT bearer · `Innovayse.Auth` 1.0.0 (cookie session for the admin SPA, sso mode) ·
+.NET 9 · Wolverine 5.41.0 · EF Core 9 + Npgsql 9 · PostgreSQL 17 · ASP.NET Identity (local
+mode) + JWT bearer · `Innovayse.Auth` (cookie session for the admin SPA, sso builds only) · SkiaSharp (branding images) ·
 Serilog · Scalar + Swashbuckle · Mapster · Stripe.net · MailKit · Otp.NET · Fluid.Core ·
 DnsClient · Redis (sessions + data-protection key ring) · RabbitMQ · xUnit + FluentAssertions +
 Moq + Testcontainers.PostgreSql 4.0.0 · Nuxt 4.3 / Vue 3.5 / Pinia / Tailwind / vitest (client,
-**yarn**) · Vite + Vue 3.5 / Tailwind 4 (admin, **npm**).
+**yarn**) · Vite + Vue 3.5 / Tailwind 4 / vitest (admin, **npm**).
 
 Central package management: versions live once in `backend/Directory.Packages.props`; a
 `.csproj` carries `<PackageReference Include="…" />` with no `Version`.
 
 ## Build, test, run
+
+**`Innovayse.Auth` is optional at build time.** A plain clone has no credential for the private
+registry, so `backend/Directory.Build.props` defines `InnovayseSso`: true when
+`NuGetPackageSourceCredentials_innovayse` is set (CI, Innovayse's own deployments), false
+otherwise, and forceable with `-p:InnovayseSso=true|false`. When true the package is referenced
+(`Innovayse.Hostpanel.API` and `Innovayse.Hostpanel.Infrastructure`) and `INNOVAYSE_SSO` is
+defined; when false nothing private is restored and the build is `AUTH_MODE=local` only — a
+standalone build started with `AUTH_MODE=sso` throws at startup from `AddHostpanelAuthentication`
+naming the property. Every file that touches the package is inside `#if INNOVAYSE_SSO`:
+`API/Program.cs` (`UseInnovayseAuth`/`MapInnovayseAuth`), `API/Extensions/AuthenticationRegistration.cs`
+(`AddInnovayseAuth`, the claims transformation), `Infrastructure/Auth/SsoSessionClaimsTransformation.cs`
+and `SsoModeAuthenticationSchemeTests`. The cookie scheme name is the one constant
+`AuthenticationRegistration.SsoCookieScheme` (a placeholder in a standalone build), which
+`PolicyRegistration` reads; do not name `Innovayse.Auth.CookieSessionHandler` anywhere else.
+`backend/Dockerfile` passes `-p:InnovayseSso=true` to restore and publish when `AUTH_MODE=sso`
+is the build arg, so a missing credential fails the build rather than yielding an image that
+refuses to boot. The GitHub workflow `.github/workflows/ci.yml` builds the standalone flavour and
+runs the Domain, Architecture, CWP, Inecobank and Integration suites.
 
 ```bash
 ./dev up hostpanel                # from the workspace root, when working inside the workspace
@@ -256,12 +242,12 @@ which rewrites `-w /src` into `C:/Program Files/Git/src` and exits 125:
 docker run --rm `
   -v "C:\Users\Dell\Desktop\Projects\innovayse\innovayse-workspace\hostpanel\backend:/src" `
   -v "C:\Users\Dell\.nuget\packages:/root/.nuget/packages" `
-  -w /src mcr.microsoft.com/dotnet/sdk:9.0 bash -lc "dotnet build Innovayse.Backend.sln"
+  -w /src mcr.microsoft.com/dotnet/sdk:9.0 bash -lc "dotnet build Innovayse.Hostpanel.sln"
 ```
 
 **A cold full solution build takes about eight minutes** — 7m43s measured, 14 projects, 0
 warnings. It prints nothing for minutes at a stretch and **appears to stop after
-`Innovayse.Infrastructure`**; that project is simply the slow one, and `Innovayse.API`, the
+`Innovayse.Hostpanel.Infrastructure`**; that project is simply the slow one, and `Innovayse.Hostpanel.API`, the
 test projects and the rest land minutes later. Only treat it as hung well past ten minutes.
 Three attempts in a row abandoned this build as stalled and fell back to a narrower one, losing
 the cross-project signal it exists for.
@@ -274,18 +260,29 @@ spelling NuGet reads; `gitlab-ci-token` as the username is for CI job tokens onl
 401 with a personal token. The feed is addressed by **numeric project id**, not by the encoded
 namespace path, which answers 400 to everything and reports as NU1301.
 
-**`Innovayse.Integration.Tests` needs Testcontainers**, and that means the docker socket plus
+**`Innovayse.Hostpanel.Integration.Tests` needs Testcontainers**, and that means the docker socket plus
 both `-e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal` and
 `--add-host=host.docker.internal:host-gateway`. Without them the resource reaper cannot start
 and every test in the suite fails with a stack trace that looks nothing like a networking
 problem. **Do not pass `--no-build` to the integration suite** — it silently produces no output
-and exits 0 whether or not the assembly is there. The three unit suites are fine with it.
+and exits 0 whether or not the assembly is there. The Domain, Architecture, CWP and Inecobank suites are fine with it.
 
 Containers: `hostpanel-api` (5148), `hostpanel-client` (3000, published 3001),
 `hostpanel-admin`, `hostpanel-db`, plus `hostpanel-redis`, `hostpanel-rabbitmq`,
 `hostpanel-mailhog` locally. Services address each other by **network alias**
 (`hostpanel-api`), never by the bare `api` — that name also belongs to `innovayse-main`'s
 backend on the shared network, and Docker's DNS round-robins between the two.
+
+## Operational scripts at the repo root (`scripts/`)
+
+- `scripts/check-client-owner-ids.sh [container]` — read-only check of what `clients.UserId` points at
+  (the local `AspNetUsers.Id` or the SSO subject), run before and after the SSO cut-over. Defaults to the
+  `hostpanel-db` container; over ssh as `ssh prod 'sh -s' < scripts/check-client-owner-ids.sh`.
+- `scripts/pack-cwp-plugin.sh` — publishes `Innovayse.Providers.CWP` (Release, net8.0) on the host, strips
+  PDB/XML and framework DLLs, adds `plugin.json` and writes `dist/innovayse-cwp.zip`.
+
+Both are `*.sh`, which `.gitattributes` (`*.sh text eol=lf`) pins to LF: the ssh pipe above fails with
+"Illegal option" on a CRLF copy.
 
 ## CI is on GitLab. Pull requests are on GitHub. Both halves are load-bearing.
 
@@ -326,10 +323,18 @@ Its own nginx exists for a standalone install.
   auth code is this switch. Under `sso` the API refuses to start without
   `CLIENT_HOSTPANEL_SECRET` rather than come up and hand every visitor an anonymous session.
 - **`ASPNETCORE_ENVIRONMENT` is set by the deploy job, never by a host's `.env`.**
-  `docker-compose.yml` defaults it to `Development`, which is right for a laptop and was what
+  `docker/docker-compose.dev.yml` passes it through from `docker/.env`: `Development` is right for a laptop and was what
   deployed hosts silently inherited. A Development API serves developer exception pages and
   treats an absent `EncryptionKey` as allowed rather than fatal — which is how server
   credentials and client-service passwords reached the database in plain text.
+  Every deployed tier (staging, prod, demo) sets `Production`, per `rules/environments.md`; the tier
+  is named by the job's `environment:`, never by `ASPNETCORE_ENVIRONMENT`.
+- **Demo mode (`Demo__Enabled`).** Set through `DEMO_*` env in `docker/docker-compose.demo.yml`, an overlay
+  placed last in the chain (`shared` + `prod` + `platform` + `demo`, project `hostpanel-demo`). It swaps the
+  payment, registrar and provisioning adapters for fakes, sends mail to the demo's own mailhog and resets
+  data every `Demo__ResetIntervalHours`. Everything stateful is `hostpanel-demo-*` so it can sit beside prod;
+  the demo passwords are `:?`-required like any secret. Deployed by the manual `deploy:demo` job; it needs
+  `AUTH_MODE=local`. Fake adapters live behind the existing ports, never in a code path guarded by a literal.
 - **Settings bind into a sealed `*Options` class naming its own `SectionName`** —
   `BillingOptions`, `CPanelOptions`, `NamecheapOptions`, `NameAmOptions`, `StripeOptions`, each
   in an `Options/` folder inside the feature or integration that owns it.
@@ -358,18 +363,16 @@ starts downloading the whole `template-aurora` chunk.
 **Runtime config in a production image.** A production Nitro build freezes `runtimeConfig`
 defaults — `nuxt.config.ts` is not re-evaluated at container start as it is in dev. Nitro's own
 escape hatch is reading `NUXT_<KEY>` / `NUXT_PUBLIC_<KEY>` at runtime and overriding the frozen
-default, so `docker-compose.prod.yml` spells every one of them that way. **The plain names used
-in `docker-compose.yml` are silently ignored on a deployed host** — that is how
+default, so `docker/docker-compose.prod.yml` spells every one of them that way. **The plain names used
+in `docker/docker-compose.dev.yml` are silently ignored on a deployed host** — that is how
 `NUXT_PUBLIC_PORTAL_TEMPLATE` and the apps launcher stayed permanently at their build-time
 values on production with no `.env` edit able to change them.
 
-The genuine build-time cases are the ones `nuxt.config.ts` reads from `process.env` **outside**
-`runtimeConfig`, and only those. The app-launcher `<script src="…/widget/header.js">` tag is
-built from `process.env.NUXT_PUBLIC_MAIN_URL` inside the static `app.head.script` array, so it
-is passed as a **build arg** in `docker/client.Dockerfile` *and* repeated as runtime env; the
-same applies to `site.url` and the esbuild `drop`. Adding a new `process.env` read outside
-`runtimeConfig` adds a value nobody can change without a rebuild — put it in `runtimeConfig`
-instead unless it truly cannot go there.
+**The client image has no build args.** The app-launcher `<script src="…/widget/header.js">` tag is
+added by `plugins/header-widget.ts` from `runtimeConfig.public.mainUrl`, so `NUXT_PUBLIC_MAIN_URL`
+is plain runtime env. `site.url` is read at runtime by nuxt-site-config from `NUXT_PUBLIC_SITE_URL`
+(set in `docker-compose.prod.yml`); the esbuild `drop` depends only on `NODE_ENV`, not on a
+deployment. Do not add a `process.env` read outside `runtimeConfig` that differs per deployment.
 
 That widget is served by **innovayse-main**, not by this product. It must be HTTPS on an HTTPS
 deployment or the browser blocks it as mixed content and the client dashboard's hydration
@@ -419,9 +422,9 @@ tokens with the rows empty before touching any of them. Text on a filled brand s
 `text-on-primary` / `text-on-tint` / `text-nova-on-brand` / `text-nova-on-accent`, never
 `text-white` or a literal — a brand yellow needs dark text. The ramp lives in
 `client/utils/brandPalette.ts` (OKLCH, gamut-mapped by reducing chroma, the picked colour pinned
-at 500); `admin/src/utils/brandPalette.ts` is a byte-for-byte copy below its header because the
+at 500); `admin/src/lib/brandPalette.ts` is a byte-for-byte copy below its header because the
 admin cannot import across the repository (`brandPalette.shared.test.ts` fails on drift), and
-`Application/Notifications/Services/BrandPalette.cs` is the e-mail renderer's port with the same
+`Application/Notifications/Rendering/BrandPalette.cs` is the e-mail renderer's port with the same
 reference numbers in `BrandPaletteTests`. Change the client file first; then the other two.
 
 **Third-party scripts come from settings and never from a literal.** The tag-manager container
@@ -449,139 +452,234 @@ twin** of that list; it cannot import the class, so a new key is added in both p
 `nuxt.config.ts`'s `runtimeConfig.public` **and** both compose files' `NUXT_PUBLIC_*` lines.
 `PortalSettingKeysTests` fails if `Defaults` and `Public` drift; nothing tests the BFF twin.
 
-## Migration debt — recorded, not endorsed
+### The client's shape (Nuxt exception, conformance C complete)
 
-The workspace standard is [clean-architecture.md](clean-architecture.md). These are the places
-this product is not on it. **Never spread one of them**, and never restructure as a side effect
-of a feature.
+`client/` is the Nuxt exception the workspace `frontend.md` allows: it has public, crawlable pages
+(SEO, SSR) beside the session-gated `/client/**` area, so it builds on Nuxt where the other
+products are Vite SPAs. Everything else in `rules/frontend.md` holds in full; the Nuxt specifics
+are these, and **no part of the client is exempt any more — the ratchet that once scoped the
+rules is deleted and the ESLint conformance block applies to every `.vue` and `.ts` file.**
 
-- **Every repository implementation is now in its feature's folder — the four strays are
-  gone.** `ServerRepository` and `ServerGroupRepository` moved out of
-  `Infrastructure/Repositories/` into `Infrastructure/Servers/`, beside `ServerConnectionTester`;
-  `MigrationJobRepository` and `MigrationLogRepository` moved out of
-  `Infrastructure/Persistence/Repositories/` into `Infrastructure/Integrations/Migration/`,
-  beside `MigrationSourceClient`. Both emptied folders went with them.
+- **Data flow, as everywhere:** `.vue` → `stores/<area>.ts` → `composables/apis/use<Area>Api.ts` →
+  `composables/useApi.ts` (and `apiFetch`) → Nitro BFF (`server/api/portal/**`, every route through
+  `internalApiCall`) → the C# API. A `.vue` file never calls `useApi`, `apiFetch`, `$fetch`,
+  `useFetch` or an api composable, holds no `catch` and never imports `lib/errorHandler`;
+  server-rendered data is `await useAsyncData(key, () => store.loadX(), { watch: [locale] })`.
+  A store is the only caller of `apis/`, and exposes `error` and `fieldErrors` for what it refused.
+  `useApi.ts` imports no store. The gates: ESLint `no-restricted-imports` and
+  `scripts/check-layers.mjs` (auto-imports hide the calls from import rules, so the script reads
+  the source for them too).
+- **Two hops, one language header.** The browser stamps `X-Language` (from the i18n locale,
+  validated by `utils/transportLanguage.ts`) on every call to the BFF; the BFF forwards it to the
+  API, and an unknown value becomes `en`. `Accept-Language` is not used anywhere.
+- **Errors are chosen in one place.** `lib/errorHandler.ts` (`apiErrorMessage`, `apiFieldErrors`,
+  `apiErrorCode`) orders `errors[field]`, then `detail`, then `title`, then the client's own
+  `errors.noAnswer`. The BFF writes no sentence (`scripts/` and `tests/server/contract.test.ts`
+  fail on a literal `statusMessage:`); a missing route parameter is a coded 400
+  (`requireRouteParam`). `scripts/check-no-legacy-error-fields.mjs` rejects a read of the old
+  `error`/`code` pair outside the one allow-listed OAuth call.
+- **The kit is `components/ui/` (`Ui*`), and screens are composed from it.** `pages/**`, `layouts/**`
+  and `templates/*/{pages,sections,layout}/**` carry no raw tag at all; an area's own components
+  (`components/<area>/`) compose the kit and may not hold a card-styled `div` or an interactive
+  raw element. A new visual need is a new `Ui*` first. Styling is Tailwind classes written out
+  literally and theme tokens (`assets/css/ui.css`, `tailwind.config.ts`); per-item colours that
+  are data go through `UiAccent`. No `<style>`, no `style=`, no `bg-[#...]`, no `v-html` —
+  operator HTML is rendered by `UiRichText` (`utils/ui/richText.ts`, an allow-list tokenizer that
+  builds nodes with `h()`; it has an XSS-corpus test). Every field has a `placeholder`, every
+  interactive element a `data-testid` (`<area>-<element>`).
+- **Types and closed sets.** One concept per file in `types/`, imported with `import type`;
+  every closed value set is an enum (`AppLocale`, `TemplateName`, `TicketStatus`, ...), never a
+  string union or a repeated literal. The language list is `APP_LOCALES` (`constants/appLocales.ts`),
+  derived from `AppLocale`; nothing spells `['en','ru','hy']` out. Server and client share
+  `types/` and `utils/transportLanguage.ts` only.
+- **Site identity.** The site name is `useSiteIdentity().name` (the operator's `portal.site.name`);
+  `Innovayse` survives as its fallback and in the locale copy, not in page titles, footers or alt
+  text. The billing portal's address is `BILLING_PORTAL_URL` (`NUXT_PUBLIC_BILLING_PORTAL_URL` in
+  the production compose file, `runtimeConfig.public.billingPortalUrl`); every link built from it
+  is guarded for the unset case.
+- **Locales.** `locales/{en,ru,hy}/<area>.json`, all three in the same change, loaded by
+  `plugins/i18n.ts`. `yarn lint:i18n` fails on a key missing from or extra in any language, an
+  unused key, or a literal `t('...')` with no `en` entry. A server-decided sentence is never
+  copied into a locale file.
+- **Tests mirror the source.** `tests/` mirrors `components/ stores/ composables/ lib/ server/utils/`
+  one test per file (`tests/coverage-shape.test.ts` fails on a missing mirror; its `KNOWN_GAPS`
+  list may only shrink), plus `tests/pages`, `tests/layouts`, `tests/templates`,
+  `tests/locales/parity.test.ts`. Real kit and real Pinia (`tests/helpers/mountWithKit.ts`,
+  `stubServer.ts`/`stubTransport.ts` for a real HTTP stub under `$fetch`); Nuxt auto-imports are
+  stubbed once in `vitest.setup.ts`. `e2e/` is Playwright, one spec per flow, `data-testid`
+  selectors only, against the production build with the C# API replaced by
+  `e2e/support/stub-backend.mjs` (fixtures in `fixtures.mjs`; `POST /__e2e/script` scripts a
+  refusal, `/__e2e/settings` switches the template, `/__e2e/requests` proves what the backend
+  received, including `X-Language`).
+- **Gates, in `.gitlab-ci.yml` `client:test` then `client:e2e` (all blocking):** `yarn lint`
+  (ESLint conformance block + `check-layers` + legacy-field gate), `yarn lint:i18n`,
+  `yarn audit:conformance --strict` (every metric zero), `yarn typecheck` (`nuxt typecheck`),
+  `yarn test --maxWorkers=2`, `yarn build`, then `yarn e2e`. On this laptop vitest needs
+  `--maxWorkers=2`.
 
-  The workspace's `file-layout.md` says repository implementations go in
-  `Infrastructure/Persistence/`. **This project deliberately does not follow that.** Keeping a
-  repository in its feature's own folder is the same grouping `Integrations/<Provider>/` and
-  `<Feature>/Options/` already use here. Collapsing the rest into `Persistence/` would empty
-  seven folders down to a lone `Configurations/` child — `Audit`, `Clients`, `Orders`,
-  `Products`, `Settings`, `Slides` and `Support` — while the other eleven keep code either way,
-  so it buys a flat `Persistence/Repositories/` at the cost of scattering seven features.
-  **A new repository goes in its feature's folder.**
+### The admin's shape (Vite SPA, conformance B complete)
 
-  That is the honest version of the argument. An earlier draft of this entry said "a dozen
-  folders"; it is seven, and the count is worth checking rather than repeating.
+`admin/` is the workspace's standard Vite SPA (`rules/frontend.md`) with no exception: the operator
+back office is session-gated, so it has no crawlable pages. **No part of it is exempt — the ratchet
+that once scoped the rules is deleted, and `strictRules` in `eslint.config.ts` applies to every `.vue` and
+`.ts` file under `src/`** (the one carve-out is `lib/brandPalette.ts`, a generated byte-for-byte copy).
 
-  **The Migration pair cannot live in an `Infrastructure/Migration/` folder**, which is the name
-  every other layer uses (`Domain/Migration/`, `Application/Migration/`). A namespace
-  `Innovayse.Infrastructure.Migration` is a member called `Migration` of
-  `Innovayse.Infrastructure`, and every scaffolded EF migration in
-  `Innovayse.Infrastructure.Migrations` derives from a bare `Migration`. Namespace-member lookup
-  walks the enclosing namespaces before it ever reads a `using`, so it finds the folder rather
-  than EF Core's base class and fails **every** migration file with CS0118. That has already
-  cost one build already. `Integrations/Migration/` is where this feature's Infrastructure code
-  already was, and it is a fair home rather than a dodge: the whole migration subsystem exists
-  to pull from a foreign install, and `MigrationJob` / `MigrationLog` are that integration's own
-  bookkeeping. It is also the only option that neither invents a name the feature is not called
-  anywhere else nor splits its Infrastructure code across two folders. Do not "correct" it to
-  `Infrastructure/Migration/`.
-- **`Infrastructure/Persistence/Configurations/` still holds fifteen EF configurations belonging
-  to eleven different features** — `ServerConfiguration`, `MigrationJobConfiguration`,
-  `InvoiceItemConfiguration`, `KbCategoryConfiguration`, `SslCheckConfiguration` and the rest —
-  while thirty-odd others sit in `Infrastructure/<Feature>/Configurations/`. "The repository sits
-  beside the `Configurations/` that maps the same entities" is therefore the intent here, not yet
-  the fact, and for the four repositories just moved it is now false in the other direction. This
-  is the same debt the repositories had and it is untouched; move a configuration when its
-  feature is being worked on anyway, never as a sweep.
-- **`LocalAuthController` resolves `IUserService` from an injected `IServiceProvider`, and that
-  stays.** It is the only service-locator call in the API layer, so it reads as debt, but every
-  alternative examined is worse. `IUserService` is registered **only** inside the
-  `if (ownsItsUsers)` branch of `Infrastructure/DependencyInjection.cs`; as a constructor
-  parameter it would make every route on the controller fail to resolve under `sso` mode —
-  including the seven that answer 404 on purpose, which would answer 500 instead. Moving the
-  actions down into Wolverine handlers is not a free swap either: **no Application handler in
-  this repository injects `IUserService`** (its only other consumer is `LocalTwoFactorService`,
-  registered in that same branch), so whether Wolverine's startup code generation tolerates a
-  handler with an unregistered dependency in `sso` mode is unproven here — and being wrong about
-  it takes the API down at boot rather than at one endpoint. Make the local-mode registrations
-  unconditional behind the same `IAuthModeProvider` the controller already uses before reopening
-  this. The same reasoning is in the controller's own `<remarks>`.
+- **Flat layout, no `modules/`.** `src/views/<Page>View.vue` (routed screens), `src/layouts/`,
+  `src/components/ui/` (the kit), `src/components/<area>/` (screen-specific parts composed from the
+  kit), `src/stores/<area>.ts`, `src/composables/apis/use<Area>Api.ts`, `src/composables/useApi.ts`,
+  `src/composables/use*.ts`, `src/types/<concept>.ts`, `src/lib/` (pure helpers: `errorHandler`,
+  `runAction`, `translate`, `format`, `money`, `tones`, `icons`, `reports*`), `src/utils/ui/` (TypeScript
+  the kit shares), `src/middleware/auth.ts` (the router guard), `src/locales/`. The API is
+  same-origin (`/api/...`), so the only per-deployment value is the base path, and it is runtime:
+  Vite builds with a relative `base`, `public/config.js` sets `window.__APP_CONFIG__.basePath`
+  (read through `lib/runtimeConfig.ts`), and the prod image's `docker/nginx/admin-entrypoint.sh`
+  rewrites `config.js` and `<base href>` from `ADMIN_BASE_URL_PATH` at start. No `VITE_BASE_URL`.
+- **Data flow, as everywhere:** view → `stores/<area>.ts` → `composables/apis/use<Area>Api.ts` →
+  `composables/useApi.ts` → HTTP. A view never calls `useApi`, an api composable or `lib/errorHandler`
+  and holds no `catch`; a store is the only caller of `apis/`, runs every request through
+  `runAction(error, task, fieldErrors?)` and exposes `error` and `fieldErrors`. `useApi` is the only
+  module that knows transport: base path, CSRF header, `X-Language` (from the active i18n locale, on
+  every call), `ApiError` carrying the problem+json body, `buildQuery`. It imports no store, and the
+  SSO redirect and end-session address live in `useAuthApi`, not in `useApi`. ESLint
+  `no-restricted-imports` enforces the layering.
+- **Errors are chosen in one place.** `lib/errorHandler.ts` returns `detail`, then `title`, then the
+  client's own `errors.noAnswer`; `errors.signInLoop` is the second client-authored sentence. There
+  is no status-to-sentence table. The admin is localised in en/ru/hy like the client — it is no
+  longer an English-only panel.
+- **The kit is `components/ui/` (`Ui*`), and screens are composed from it.** Views, layouts and area
+  components carry no raw `button/input/select/textarea/table/form/dialog/a` (`vue/no-restricted-html-elements`);
+  a new visual need is a new `Ui*` with its test first. No `<style>`, no `style=`, no `v-html`
+  (`UiIcon` builds SVG nodes with `h()` from a whitelist); Tailwind 4 classes are literals and colours
+  are theme tokens in `assets/main.css`. Every input-like has a `placeholder` (`local/require-placeholder`)
+  and every interactive element a `data-testid` (`<area>-<element>[-<id>]`). chart.js is only used
+  behind `UiChart`; reports share one scaffold (`ReportPage`, `ReportTable`, `ReportQueryPage`).
+- **Closed sets are enums or `as const` objects with a derived union** (`AuthMode`, `TicketStatus`,
+  `InvoiceBulkAction`, `CancellationType`, `UiTone`, ...); tones for API status words live in
+  `lib/tones.ts`. A screen whose feature is not built (affiliates, addons, disputes, offline card
+  processing) renders `ComingSoonPage` — never placeholder records.
+- **Locales.** `src/locales/{en,ru,hy}/<area>.json`, one file per area, the file name being the first
+  key segment (`nav.json` holds `nav.*`); `locales/messages.ts` assembles them with
+  `import.meta.glob` and `i18n.ts` loads the result. All three languages change together.
+  `npm run lint:i18n` fails on a key missing from or extra in any language, an unused key (a
+  `` t(`area.${x}`) `` prefix counts as use of the keys under it) and a literal `t('...')` /
+  `translate('...')` with no `en` entry; `tests/locales/parity.test.ts` also checks values and
+  `{placeholders}`. A server-decided sentence is never copied into a locale file.
+- **Tests mirror the source.** `tests/` mirrors `src/` (components, views, layouts, stores,
+  composables, `composables/apis`, lib, middleware, utils), with a real kit, real Pinia and the API
+  stubbed at the network level (`tests/helpers/{fetch,routes,mount}.ts`), never a mocked store or
+  `useApi`. `tests/coverage-shape.test.ts` fails when a component, layout, view, store, composable,
+  lib module or guard has no test importing it. `tests/lint/strictRules.test.ts` pins the lint rules.
+  On this laptop vitest needs `--maxWorkers=2`.
+- **e2e.** `admin/e2e/`: Playwright, one spec per flow, `data-testid` selectors only (`fieldOf` for
+  inputs), against `vite preview` of a production build with the API replaced by `page.route`
+  (`e2e/support/stubApi.ts`: stateful session endpoints, recorded calls, `unhandled` for anything
+  nobody stubbed; fixtures typed from `src/types/` in `e2e/fixtures/`). Flows cover sign-in (password,
+  SSO, sign-out), dashboard, clients (list, create, detail), billing (invoices, quotes, transactions),
+  orders/services/domains, servers, support (tickets, announcements, knowledgebase), settings,
+  currencies, slides (including the unsaved-changes guard), integrations, plugins, migration,
+  reports, an API outage and the language switch.
+- **Gates, in `.gitlab-ci.yml` `admin:test` then `admin:e2e` (blocking):** `npm run lint:ci`
+  (oxlint + ESLint, non-fixing), `npm run lint:i18n`, `npm run typecheck` (`vue-tsc -b --force`),
+  `npm test -- --maxWorkers=2`, `npm run build-only`, then `npm run e2e`. `npm run audit`
+  (`scripts/audit.mjs`) prints the raw-element, `function`-declaration, `style=`, `v-html`, `any`
+  and missing-placeholder counts, which must be zero.
+
+## Tests
+
+`backend/tests/` has five projects: `Domain.Tests`, `Integration.Tests`, `Architecture.Tests`,
+`Innovayse.CWP.Tests`, `Innovayse.Inecobank.Tests`. **`Application.Tests` and
+`Infrastructure.Tests` no longer exist** — use-case tests are `Integration.Tests/<Feature>/<UseCase>Tests.cs`
+(Testcontainers Postgres, fakes in `Fixtures/` for external ports only), and adapter tests live in
+`Integration.Tests/Adapters/{Auth,Billing,Integrations}`. Do not recreate either project.
+`Integration.Tests/Security/LeakGuardTests` guards against leaking secrets/internals in
+responses; `Fixtures/StubHttpServer` is the in-process HTTP fake for external APIs. The admin SPA
+has vitest (`npm test`, `admin/tests/`) and Playwright (`npm run e2e`, `admin/e2e/`) — see "The admin's shape".
+`Integration.Tests/Persistence/ModelDiffBaselineTests` is the schema guard (the spec's "snapshot unchanged" test): the EF differ's operations between the migrations snapshot and the live model must equal `Fixtures/model-diff-baseline.txt` (`(no differences)` since the ConformanceFixes migration), so an entity change without a migration fails.
+
+**The Integration suite runs in two shards, because one `dotnet test` host holds the EF model
+and a Postgres container for the whole suite and exhausted the runner's memory.** The shards
+split by namespace with `--filter "FullyQualifiedName~Integration.Tests.<Ns>."`: A is
+Admin, Adapters, Audit, Auth, Billing, Clients, Common, Demo, Domains, Health, Identity; B is Migration,
+Notifications, Orders, Persistence, Products, Provisioning, Reports, Security, Services,
+Shared, Slides, Support. **A new top-level folder in `Integration.Tests/` must be added to one
+shard in `.gitlab-ci.yml`, or its tests run nowhere.**
+
+## Packages worth knowing
+
+- **Branding images are rendered with SkiaSharp (MIT)**, in
+  `Infrastructure/ImageProcessing/SkiaBrandingImageProcessor.cs`, behind the
+  `IBrandingImageProcessor` port. It replaced `SixLabors.ImageSharp`: 2.1.x was the last Apache-2.0
+  line, stopped receiving fixes and carried high-severity advisories with no 2.x patch, and 3.x is a
+  split licence this public AGPL repository cannot hand to downstream users. The ImageSharp
+  `NuGetAuditSuppress` block is gone with it, and `.github/dependabot.yml` ignores that package.
+  `SkiaSharp` and `SkiaSharp.NativeAssets.Linux.NoDependencies` (so the Alpine image needs no apk
+  packages) must stay on one version. What the safety of an upload still rests on is unchanged: the
+  processor sniffs magic bytes first (PNG/JPEG/GIF/WebP/BMP only — Skia would otherwise also try
+  ICO, WBMP and raw codecs), reads the header to enforce the edge and pixel ceilings before decoding
+  any pixels, refuses SVG, and encodes PNG only. Keep that true. Downscales use mipmapped
+  (trilinear) sampling on purpose — Skia's cubic filter aliases a 1024px mark reduced to a 16px
+  favicon. A refusal is a `Result` failure (`BRANDING_IMAGE_INVALID` / `BRANDING_IMAGE_TOO_LARGE`);
+  the precise cause is logged, never returned.
+
+## Debt — recorded, not endorsed
+
+Never spread one of these, and never restructure as a side effect of a feature.
+
+- **`LocalAuthController`** — see the top of this file.
+- **Vendor names that remain, on purpose.** Integration slugs (`stripe`, `cwp`, ...) in
+  `IntegrationSlugs` / `BuiltInPaymentModules` and the `Integrations/<Vendor>/` adapter folders are
+  plugin identifiers: they are stored in settings rows, sent in URLs (`/api/admin/integrations/stripe`)
+  and chosen in the admin UI, so renaming them would break stored configuration. They are the only
+  place a vendor is named. Persisted *data* is neutral: `Client.CardGatewayCustomerId` and the ledger
+  payment method `Card` (the `ConformanceFixes` migration renamed the column and rewrote old
+  `Stripe` ledger rows).
+- **Table names are snake_case (`ticket_tags`, `invoices`, ...) except `Orders`/`OrderItems`.**
+  Snake_case is the overwhelming existing convention and the migrations carry it; moving to
+  PascalCase is a whole-schema rename of ~50 tables and is its own reviewed change, so a new table
+  follows its neighbours until then.
 - **`ClientRegisteredIntegrationEvent` carries five parameters nothing fills.**
   `LocalAuthController.RegisterAsync` publishes four arguments and stops, so `IpAddress`,
-  `UserAgent`, `DeviceType`, `OperatingSystem` and `Browser` all arrive null and `Client.Create`
-  writes five mapped, migrated columns from them. This is half of a removal: the
-  `UserAgentParser` that filled the last three had zero consumers after local self-registration
-  was rewritten and has now been deleted, but the fields have not. Finish it by capturing all
-  five from the request in `RegisterAsync`, not by trimming the record — cutting three of five
-  equally-empty fields is an arbitrary line and the columns would then be unreachable. Wolverine
-  runs with discovery only — no broker, no publishing rules — so despite the name this event
-  never leaves the process and no outside consumer can be reading those fields.
-- **Two repository interfaces are in Application, not Domain** —
-  `Application/Clients/Interfaces/` and `Application/Reports/Interfaces/` — while the other
-  forty are under `Domain/<Feature>/Interfaces/` as the rule says.
-- **`MigrationPullWorker` is 1,516 lines in the Application layer.** It no longer touches
-  HTTP: the transport moved behind `Application/Migration/Interfaces/IMigrationSource.cs`,
-  implemented by `Infrastructure/Integrations/Migration/MigrationSourceClient.cs`, and
-  `TestMigrationConnectionHandler` folded onto the same port, so there is one way to reach a
-  foreign install. `Microsoft.Extensions.Http` is gone from `Innovayse.Application.csproj` and
-  nothing in that project mentions `HttpClient`.
-
-  What is left is size, not layering — orchestration, batching and progress accounting for
-  fifteen entity types in one file. Splitting it is its own piece of work; the boundary that
-  made it untestable is already gone, so a fake `IMigrationSource` can now drive it without a
-  web server.
-- **Twelve refusal messages are wired through the localizer but still English only.** They have
-  entries in `ValidationMessages.resx` and none in `ValidationMessages.ru.resx` or `ValidationMessages.hy.resx`,
-  so `ResourceManager` serves the neutral file and a Russian or Armenian caller reads English for
-  these and only these: `ServiceNotFound`, `CancellationAlreadyPending`, `ProductNotFound`,
-  `ProductNotAvailable`, `ClientServiceNotFound`, `ServiceNotPending`, `NoEligibleServer`,
-  `ProvisioningFailed`, `ServiceNoProvisioningReference`, `ServiceNoServerAssigned`,
-  `ServiceNotProvisioned`. Every one of them prints an entity id or a provider's own message, and
-  most read as diagnostics rather than as something a customer can act on — rewording them is part
-  of translating them. **Finishing this is two resx entries per key and no code change**, which is
-  the whole point of the shape: the mechanism reaches these throw sites already.
-
-  Untouched entirely, and not in the resources at all: the `Client {id} not found.` family in
-  `AddContactHandler`, `UpdateContactHandler`, `RemoveContactHandler`, `UpdateClientHandler`,
-  `RemoveUserFromClientHandler` and `GetClientUsersHandler`, and every refusal thrown from the
-  admin-only features (`Admin`, `Audit`, `Migration`, `Notifications`, `Orders`, `Products`,
-  `Reports`, `Servers`, `Settings`, `Slides` and the staff half of `Billing`, `Domains` and
-  `Support`). Roughly 230 of the 264 `throw` sites in the Application layer. They still answer in
-  English, from the string literal in the handler, exactly as before — nothing regressed, nothing
-  improved. A staff member reading English in an English-only admin SPA is the deliberate
-  ordering, not an oversight.
-- **Validator messages are English literals and are not sent to the caller.** FluentValidation is
-  wired now, so this is no longer the "nothing runs them" debt it was; what is left is that
-  `WithMessage(...)` text lives in the Application assembly rather than in `ValidationMessages*.resx`,
-  so `ExceptionMiddleware` logs the per-field failures and answers with one localised
-  `ValidationFailed` sentence. Finishing it needs a `LocalizedValidator<T>` base class and a
-  resource key per message — both still absent. See the CQRS section above.
+  `UserAgent`, `DeviceType`, `OperatingSystem` and `Browser` arrive null and `Client.Create`
+  writes five mapped, migrated columns from them. Finish it by capturing all five from the
+  request, not by trimming the record. Wolverine runs with discovery only — no broker — so the
+  event never leaves the process.
+- **`MigrationPullWorker` is a very large file in the Application layer.** Its transport is
+  already behind `IMigrationSource`, so a fake can drive it without a web server; what is left is
+  size. Splitting it is its own piece of work.
+- **The migration job model is slim.** `ImportBatch` and `PingMigrationJob` are removed;
+  `CreateMigrationJobCommand` selects entities with `MigrationEntitySelectionDto`.
+- **`Infrastructure/Migration/` cannot exist.** A namespace `Innovayse.Hostpanel.Infrastructure.Migration`
+  shadows EF Core's `Migration` base class for every file in `Infrastructure.Migrations` (CS0118).
+  The migration subsystem's infrastructure lives in `Infrastructure/Integrations/Migration/`;
+  do not "correct" it.
+- **Validator messages are English literals** (`WithMessage(...)`), so the response carries one
+  localised sentence for a rejected form and the field errors as written. Per-field localisation
+  needs a resource key per message and a base validator that resolves it.
 
 ## Where things go
 
 | Kind | Path |
 |---|---|
-| HTTP endpoint | `backend/src/Innovayse.API/<Feature>/<Name>Controller.cs` |
-| Request record | `backend/src/Innovayse.API/<Feature>/Requests/` |
-| Exception → status mapping | `backend/src/Innovayse.API/ExceptionMiddleware.cs` — nowhere else |
-| Sentence a person reads for a refusal | `backend/src/Innovayse.Application/Resources/ValidationMessages*.resx` |
-| Command / query + handler | `backend/src/Innovayse.Application/<Feature>/{Commands,Queries}/<UseCase>/` |
-| DTO shared by several use cases in a feature | `backend/src/Innovayse.Application/<Feature>/Common/` |
-| DTO used by exactly one use case | that use case's own folder, beside its command or query |
+| HTTP endpoint | `backend/src/Innovayse.Hostpanel.API/Controllers/<Name>Controller.cs` (or the feature folder that already holds its siblings) — derives `BaseApiController` |
+| Command / query + handler + validator | `backend/src/Innovayse.Hostpanel.Application/<Feature>/{Commands,Queries}/<UseCase>/` |
+| DTO shared by several use cases in a feature | `.../Application/<Feature>/Common/` |
+| DTO used by exactly one use case | that use case's own folder |
+| Port | `.../Application/Common/Interfaces/I<Port>.cs` — nowhere else |
+| Error code → status | `backend/src/Shared/Controllers/StatusMapping.cs` |
+| Sentence a person reads for a refusal | `.../Application/Resources/ErrorMessages*.resx` (en, ru, hy together) |
+| Entity, domain event, enum | `backend/src/Innovayse.Hostpanel.Domain/<Area>/` (`Events/`, `Enums/`) |
+| EF configuration, migration, adapter | `backend/src/Innovayse.Hostpanel.Infrastructure/` |
+| External service client | `.../Infrastructure/Integrations/<Provider>/` |
+| Use-case test | `backend/tests/Innovayse.Hostpanel.Integration.Tests/<Feature>/<UseCase>Tests.cs` |
 | Options class | `.../<Feature or Integration>/Options/<Name>Options.cs` |
-| Extension class | `Extensions/` inside the layer or feature that owns it |
-| Port the Application declares | `.../Innovayse.Application/<Feature>/Interfaces/` — `Application/Common/` only if the whole layer uses it |
-| Entity, domain event, repository interface | `backend/src/Innovayse.Domain/<Feature>/` |
-| EF configuration, migration, repository impl | `backend/src/Innovayse.Infrastructure/` |
-| External service client | `backend/src/Innovayse.Infrastructure/Integrations/<Provider>/` |
 | Portal page / section | `client/templates/<template>/pages/`, `.../sections/` |
 | Shared component | `client/components/`, `client/components/ui/` |
 | API call | `client/composables/apis/` |
 | Nitro BFF route | `client/server/api/portal/` |
 | Exported TS type | `client/types/` |
-| Admin screen | `admin/src/` |
+| Admin screen | `admin/src/views/<Page>View.vue` (+ `admin/src/components/<area>/`) |
+| Admin store / API call | `admin/src/stores/<area>.ts` / `admin/src/composables/apis/use<Area>Api.ts` |
+| Admin e2e flow | `admin/e2e/<flow>.spec.ts` (fixtures in `admin/e2e/fixtures/`) |
 | Plan / spec | `docs/superpowers/plans/`, `docs/superpowers/specs/` |
 
 ## Gotchas
@@ -591,7 +689,7 @@ of a feature.
   a loop, and enumerating a directory being written to occasionally returns an entry twice over
   the Docker Desktop mount. It is a mount artefact, not your build. Recover with
   `stop` then `up -d`, never `restart`. The API itself serves fine; only hot reload is lost.
-  This is also why `Innovayse.API.csproj` carries `<Watch Remove="logs/**/*" />` — and
+  This is also why `Innovayse.Hostpanel.API.csproj` carries `<Watch Remove="logs/**/*" />` — and
   `<Content Remove>`, so a publish does not ship yesterday's logs.
 - **Wolverine logs `Invocation of {Message} failed!` at Error with a stack trace for every
   handler exception**, before its own policies get a say, and 5.31.0 has no knob for it. A

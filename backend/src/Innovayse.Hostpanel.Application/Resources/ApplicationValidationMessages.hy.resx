@@ -1,0 +1,1063 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    Armenian error messages.
+    A key omitted here falls back to the neutral file, so the messages that are still
+    English are deliberately absent rather than copied in untranslated.
+  -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="InvoiceNotFound" xml:space="preserve">
+    <value>Այդպիսի հաշիվ-ապրանքագիր չկա։</value>
+    <comment>INVOICE_NOT_FOUND.</comment>
+  </data>
+  <data name="DomainNotFound" xml:space="preserve">
+    <value>Այդպիսի դոմեն չկա։</value>
+    <comment>DOMAIN_NOT_FOUND.</comment>
+  </data>
+  <data name="InternalError" xml:space="preserve">
+    <value>Տեղի ունեցավ անսպասելի սխալ։</value>
+    <comment>INTERNAL_ERROR. The last-resort sentence; deliberately says nothing about what failed.</comment>
+  </data>
+  <data name="InvitationTokenInvalid" xml:space="preserve">
+    <value>Սխալ կամ ժամկետանց հրավերի հղում։</value>
+    <comment>AcceptInvitationHandler.</comment>
+  </data>
+  <data name="InvitationExpired" xml:space="preserve">
+    <value>Այս հրավերի ժամկետը լրացել է։</value>
+    <comment>AcceptInvitationHandler.</comment>
+  </data>
+  <data name="InvitationAlreadyAccepted" xml:space="preserve">
+    <value>Այս հրավերն արդեն ընդունված է։</value>
+    <comment>AcceptInvitationHandler.</comment>
+  </data>
+  <data name="AccountOwnerNotFound" xml:space="preserve">
+    <value>Այս հաշվի սեփականը չգտնվեց։</value>
+    <comment>InviteUserToClientHandler.</comment>
+  </data>
+  <data name="CannotInviteAccountOwner" xml:space="preserve">
+    <value>Հաշվի սեփականին հնարավոր չէ հրավիրել որպես լրացուցիչ օգտատեր։</value>
+    <comment>InviteUserToClientHandler.</comment>
+  </data>
+  <data name="UserAlreadyLinked" xml:space="preserve">
+    <value>«{0}» հասցեով օգտատերն արդեն կապված է այս հաշվին։</value>
+    <comment>InviteUserToClientHandler. {0} is the email address that was submitted.</comment>
+  </data>
+  <data name="InvitationAlreadyPending" xml:space="preserve">
+    <value>«{0}»-ի համար արդեն կա չընդունված հրավեր այս հաշվի համար։</value>
+    <comment>InviteUserToClientHandler. {0} is the email address that was submitted.</comment>
+  </data>
+  <data name="InvalidPermissionsValue" xml:space="preserve">
+    <value>Թույլտրերի անթույլատրելի արժեք՝ {0}։</value>
+    <comment>InviteUserToClientHandler. {0} is the value that was submitted.</comment>
+  </data>
+  <data name="NoSavedPaymentMethods" xml:space="preserve">
+    <value>Այս հաշիվը պահպանված վճարման եղանակներ չունի։</value>
+    <comment>RemovePaymentMethodHandler and SetDefaultPaymentMethodHandler.</comment>
+  </data>
+  <data name="PaymentMethodNotOwned" xml:space="preserve">
+    <value>Այդ վճարման եղանակը այս հաշվինը չէ։</value>
+    <comment>RemovePaymentMethodHandler and SetDefaultPaymentMethodHandler.</comment>
+  </data>
+  <data name="SetAsDefaultMustBeTrue" xml:space="preserve">
+    <value>Քարտի տվյալները հնարավոր չէ փոփոխել։ Հեռացրեք այն և ավելացրեք նոր քարտ։</value>
+    <comment>SetDefaultPaymentMethodValidator. The only update this endpoint accepts is making a card the default.</comment>
+  </data>
+  <data name="ContactEmailInvalid" xml:space="preserve">
+    <value>Նշեք վավեր էլ․ փոստի հասցե։</value>
+    <comment>SendContactMessageHandler.</comment>
+  </data>
+  <data name="ContactFieldRequired" xml:space="preserve">
+    <value>«{0}» դաշտը պարտադիր է։</value>
+    <comment>SendContactMessageHandler. {0} is the localised field label.</comment>
+  </data>
+  <data name="ContactFieldTooLong" xml:space="preserve">
+    <value>«{0}» դաշտը պետք է պարունակի առավելագույնը {1} նիշ։</value>
+    <comment>SendContactMessageHandler. {0} is the localised field label, {1} the limit.</comment>
+  </data>
+  <data name="ContactFieldName" xml:space="preserve">
+    <value>Անուն</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ContactFieldEmail" xml:space="preserve">
+    <value>Էլ․ փոստ</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ContactFieldMessage" xml:space="preserve">
+    <value>Հաղորդագրություն</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ContactFieldPhone" xml:space="preserve">
+    <value>Հեռախոս</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ContactFieldService" xml:space="preserve">
+    <value>Ծառայություն</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ContactFieldSubmittedAt" xml:space="preserve">
+    <value>Ուղարկման ժամանակ</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ValidationFailed" xml:space="preserve">
+    <value>Հարցման մեկ կամ մի քանի դաշտեր չեն ընդունվել։</value>
+    <comment>ExceptionMiddleware, for a message the Wolverine FluentValidation middleware refused. One sentence for every field failure on purpose: the per-field messages are English literals in the validators and are logged, not sent.</comment>
+  </data>
+  <data name="InvalidFilterValue" xml:space="preserve">
+    <value>Զտիչի անթույլատրելի արժեք՝ {0}։</value>
+    <comment>GetMigrationLogsValidator. {0} is the value submitted for the action or entity-type filter.</comment>
+  </data>
+  <data name="MigrationJobIdInvalid" xml:space="preserve">
+    <value>Նշեք վավեր միգրացիայի առաջադրանք։</value>
+  </data>
+  <data name="MigrationSelectionRequired" xml:space="preserve">
+    <value>Ընտրեք, թե որ տվյալները արտահանել։</value>
+  </data>
+  <data name="MigrationSourceUrlRequired" xml:space="preserve">
+    <value>Մուտքագրեք սկզբնաղբյուր համակարգի հասցեն։</value>
+  </data>
+  <data name="MigrationSourceUrlInvalid" xml:space="preserve">
+    <value>Մուտքագրեք վավեր բացարձակ URL հասցե։</value>
+  </data>
+<data name="CurrencyCodeInvalid" xml:space="preserve">
+    <value>Արժույթի կոդը պետք է լինի ISO 4217 եռատառ կոդ։</value>
+  </data>
+<data name="TwoFactorCodeInvalid" xml:space="preserve">
+    <value>Մուտքագրեք ձեր նույնականացման հավելվածի վեցանիշ կոդը։</value>
+  </data>
+<data name="CurrencyNumericInvalid" xml:space="preserve">
+    <value>Արժույթի թվային կոդը պետք է լինի ISO 4217 եռանիշ կոդ։</value>
+  </data>
+<data name="CurrencyAffixInvalid" xml:space="preserve">
+    <value>Արժույթի նախածանցն ու վերջածանցը պարտադիր են և կարող են ունենալ առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="CurrencyDecimalsInvalid" xml:space="preserve">
+    <value>Տասնորդական նիշերի քանակը պետք է լինի 0-ից {0}։</value>
+  </data>
+<data name="CurrencyRateInvalid" xml:space="preserve">
+    <value>Բազային արժույթի նկատմամբ փոխարժեքը պետք է մեծ լինի զրոյից։</value>
+  </data>
+<data name="CurrenciesRequired" xml:space="preserve">
+    <value>Նշեք թարմացվող առնվազն մեկ արժույթ։</value>
+  </data>
+<data name="InvoiceIdInvalid" xml:space="preserve">
+    <value>Նշեք վավեր հաշիվ-ապրանքագիր։</value>
+  </data>
+<data name="InvoiceClientIdInvalid" xml:space="preserve">
+    <value>Նշեք հաշիվ-ապրանքագիր ստանալիք վավեր հաճախորդ։</value>
+  </data>
+<data name="InvoiceDueDateInPast" xml:space="preserve">
+    <value>Վճարման ժամկետը չի կարող լինել անցյալում։</value>
+  </data>
+<data name="InvoiceItemsRequired" xml:space="preserve">
+    <value>Ավելացրեք առնվազն մեկ տողային նյութ։</value>
+  </data>
+<data name="InvoiceItemDescriptionInvalid" xml:space="preserve">
+    <value>Տողային նյութին անհրաժեշտ է առավելագույնը {0} նիշ նկարագրություն։</value>
+  </data>
+<data name="InvoiceItemUnitPriceInvalid" xml:space="preserve">
+    <value>Տողային նյութի միավոր գինը չի կարող բացասական լինել։</value>
+  </data>
+<data name="InvoiceItemQuantityInvalid" xml:space="preserve">
+    <value>Տողային նյութի քանակը պետք է լինի առնվազն 1։</value>
+  </data>
+<data name="InvoiceNotesTooLong" xml:space="preserve">
+    <value>Նշումները կարող են ունենալ առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="InvoiceTaxRateInvalid" xml:space="preserve">
+    <value>Հարկի դրույքաչափը պետք է լինի 0-ից 100-ի միջակայքում։</value>
+  </data>
+<data name="InvoicePaymentMethodTooLong" xml:space="preserve">
+    <value>Վճարման եղանակը կարող է ունենալ առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="QuoteIdInvalid" xml:space="preserve">
+    <value>Նշեք վավեր նախահաշիվ։</value>
+  </data>
+<data name="QuoteClientIdInvalid" xml:space="preserve">
+    <value>Նշեք նախահաշիվ ստանալիք վավեր հաճախորդ։</value>
+  </data>
+<data name="QuoteSubjectInvalid" xml:space="preserve">
+    <value>Նախահաշվի թեման կարող է ունենալ առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="QuoteStageInvalid" xml:space="preserve">
+    <value>Նշեք նախահաշվի վավեր փուլ։</value>
+  </data>
+<data name="QuoteItemsRequired" xml:space="preserve">
+    <value>Ավելացրեք առնվազն մեկ տող։</value>
+  </data>
+<data name="QuoteItemDescriptionInvalid" xml:space="preserve">
+    <value>Տողի նկարագրությունը կարող է ունենալ առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="QuoteItemUnitPriceInvalid" xml:space="preserve">
+    <value>Տողի միավոր գինը չի կարող լինել բացասական։</value>
+  </data>
+<data name="QuoteItemQuantityInvalid" xml:space="preserve">
+    <value>Տողի քանակը պետք է լինի առնվազն 1։</value>
+  </data>
+<data name="QuoteItemDiscountInvalid" xml:space="preserve">
+    <value>Տողի զեղչը պետք է լինի 0-ից 100-ի միջակայքում։</value>
+  </data>
+<data name="BillableItemIdInvalid" xml:space="preserve">
+    <value>Նշեք վավեր հաշվարկվող միավոր։</value>
+  </data>
+<data name="BillableItemClientIdInvalid" xml:space="preserve">
+    <value>Նշեք հաշվարկվող միավորին վավեր հաճախորդ։</value>
+  </data>
+<data name="BillableItemDescriptionInvalid" xml:space="preserve">
+    <value>Հաշվարկվող միավորի նկարագրությունը կարող է ունենալ առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="BillableItemAmountInvalid" xml:space="preserve">
+    <value>Հաշվարկվող միավորի գումարը չի կարող լինել բացասական։</value>
+  </data>
+<data name="BillableItemCurrencyInvalid" xml:space="preserve">
+    <value>Արժույթի կոդը պետք է լինի ISO 4217 եռատառ կոդ։</value>
+  </data>
+<data name="BillableItemTypeInvalid" xml:space="preserve">
+    <value>Տեսակը պետք է լինի OneTime կամ Recurring։</value>
+  </data>
+<data name="BillableItemRecurringPeriodRequired" xml:space="preserve">
+    <value>Կրկնվող միավորի համար նշեք կրկնության պարբերությունը։</value>
+  </data>
+<data name="InvoiceSelectedItemsRequired" xml:space="preserve">
+    <value>Հաշիվ-ապրանքագիր ստանալու համար նշեք առնվազն մեկ հաշվարկվող միավոր։</value>
+  </data>
+<data name="TimeBillingEntriesRequired" xml:space="preserve">
+    <value>Ավելացրեք առնվազն մեկ ժամային գրառում։</value>
+  </data>
+<data name="TimeBillingDescriptionInvalid" xml:space="preserve">
+    <value>Ժամային գրառման նկարագրությունը կարող է ունենալ առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="TimeBillingHoursInvalid" xml:space="preserve">
+    <value>Ժամային գրառման ժամերը պետք է լինեն զրոյից մեծ։</value>
+  </data>
+<data name="TimeBillingRateInvalid" xml:space="preserve">
+    <value>Ժամային գրառման դրույքաչափը չի կարող լինել բացասական։</value>
+  </data>
+<data name="TransactionClientIdInvalid" xml:space="preserve">
+    <value>Նշեք գործարքի համար վավեր հաճախորդ։</value>
+  </data>
+<data name="TransactionDescriptionInvalid" xml:space="preserve">
+    <value>Գործարքի նկարագրությունը կարող է ունենալ առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="TransactionPaymentMethodInvalid" xml:space="preserve">
+    <value>Նշեք օգտագործված վճարման եղանակը։</value>
+  </data>
+<data name="TransactionAmountInInvalid" xml:space="preserve">
+    <value>Մուտքագրված գումարը չի կարող լինել բացասական։</value>
+  </data>
+<data name="TransactionAmountOutInvalid" xml:space="preserve">
+    <value>Ելքագրված գումարը չի կարող լինել բացասական։</value>
+  </data>
+<data name="TransactionFeesInvalid" xml:space="preserve">
+    <value>Վճարները չեն կարող լինել բացասական։</value>
+  </data>
+<data name="TransactionAmountRequired" xml:space="preserve">
+    <value>Մուտքագրված կամ ելքագրված գումարներից առնվազն մեկը պետք է լինի զրոյից մեծ։</value>
+  </data>
+<data name="TransactionIdInvalid" xml:space="preserve">
+    <value>Նշեք վավեր գործարք։</value>
+  </data>
+<data name="InvoicePaymentGatewayInvalid" xml:space="preserve">
+    <value>Նշեք օգտագործված վճարային համակարգը, առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="InvoicePaymentTransactionIdInvalid" xml:space="preserve">
+    <value>Նշեք արտաքին գործարքի հղումը, առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="InvoicePaymentAmountInvalid" xml:space="preserve">
+    <value>Վճարման գումարը պետք է լինի զրոյից մեծ։</value>
+  </data>
+<data name="InvoicePaymentNotesInvalid" xml:space="preserve">
+    <value>Նշումները կարող են ունենալ առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="InvoiceCreditAmountInvalid" xml:space="preserve">
+    <value>Կրեդիտի գումարը պետք է լինի զրոյից մեծ։</value>
+  </data>
+<data name="InvoiceRefundAmountInvalid" xml:space="preserve">
+    <value>Վերադարձի գումարը չի կարող լինել բացասական. զրոն նշանակում է վերադարձնել ամբողջ սկզբնական գործարքը։</value>
+  </data>
+<data name="InvoiceRefundTypeInvalid" xml:space="preserve">
+    <value>Վերադարձի տեսակը պետք է լինի Gateway, Manual կամ CreditBalance։</value>
+  </data>
+<data name="InvoiceRefundGatewayInvalid" xml:space="preserve">
+    <value>Նշեք վճարային համակարգը՝ համակարգային կամ ձեռքով վերադարձի համար։</value>
+  </data>
+<data name="InvoiceRefundGatewayMaxLengthInvalid" xml:space="preserve">
+    <value>Համակարգի անվանումը կարող է ունենալ առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="InvoiceRefundTransactionIdRequiredInvalid" xml:space="preserve">
+    <value>Ձեռքով վերադարձի համար նշեք արտաքին վերադարձի հղումը։</value>
+  </data>
+<data name="InvoiceRefundNotesInvalid" xml:space="preserve">
+    <value>Նշումները կարող են ունենալ առավելագույնը {0} նիշ։</value>
+  </data>
+<data name="BulkInvoiceActionIdsRequired" xml:space="preserve">
+    <value>Նշեք գործողության համար առնվազն մեկ հաշիվ-ապրանքագիր։</value>
+  </data>
+<data name="BulkInvoiceActionIdInvalid" xml:space="preserve">
+    <value>Յուրաքանչյուր հաշիվ-ապրանքագրի ID-ն պետք է վավեր լինի։</value>
+  </data>
+<data name="BulkInvoiceActionNameInvalid" xml:space="preserve">
+    <value>Գործողությունը պետք է լինի հետևյալներից մեկը՝ MarkPaid, MarkUnpaid, MarkCancelled, Duplicate, Delete։</value>
+  </data>
+<data name="TicketIdInvalid" xml:space="preserve">
+    <value>Տոմսի ID-ն պետք է դրական թիվ լինի։</value>
+  </data>
+<data name="TicketClientIdInvalid" xml:space="preserve">
+    <value>Հաճախորդի ID-ն պետք է դրական թիվ լինի։</value>
+  </data>
+<data name="TicketDepartmentIdInvalid" xml:space="preserve">
+    <value>Բաժնի ID-ն պետք է դրական թիվ լինի։</value>
+  </data>
+<data name="TicketDepartmentRequired" xml:space="preserve">
+    <value>Ընտրեք բաժին։</value>
+  </data>
+<data name="TicketStaffIdInvalid" xml:space="preserve">
+    <value>Աշխատակցի ID-ն պետք է դրական թիվ լինի։</value>
+  </data>
+<data name="TicketSubjectRequired" xml:space="preserve">
+    <value>Թեման պարտադիր է և պետք է չգերազանցի 255 նիշը։</value>
+  </data>
+<data name="TicketMessageRequired" xml:space="preserve">
+    <value>Հաղորդագրությունը պարտադիր է։</value>
+  </data>
+<data name="TicketPriorityInvalid" xml:space="preserve">
+    <value>Առաջնահերթությունը պետք է լինի հետևյալներից մեկը՝ Low, Medium, High։</value>
+  </data>
+<data name="TicketStatusInvalid" xml:space="preserve">
+    <value>Կարգավիճակը պետք է լինի հետևյալներից մեկը՝ Open, AwaitingReply, Answered, Closed։</value>
+  </data>
+<data name="TicketTagRequired" xml:space="preserve">
+    <value>Պիտակը պարտադիր է և պետք է չգերազանցի 64 նիշը։</value>
+  </data>
+<data name="TicketIdsRequired" xml:space="preserve">
+    <value>Անհրաժեշտ է առնվազն մեկ տոմսի ID։</value>
+  </data>
+<data name="TicketBulkActionInvalid" xml:space="preserve">
+    <value>Գործողությունը պետք է լինի հետևյալներից մեկը՝ close, delete, flag, unflag։</value>
+  </data>
+<data name="TicketRatingInvalid" xml:space="preserve">
+    <value>Գնահատականը պետք է լինի 1-ից 10-ի սահմաններում։</value>
+  </data>
+<data name="TicketFeedbackLeftByRequired" xml:space="preserve">
+    <value>Կարծիք թողնողի անունը պարտադիր է։</value>
+  </data>
+  <data name="DomainClientIdRequired" xml:space="preserve">
+    <value>Հաճախորդի ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="DomainNameRequired" xml:space="preserve">
+    <value>Դոմենի անունը պետք է լինի վավեր որակավորված դոմենային անուն (օրինակ՝ 'example.com')։</value>
+  </data>
+  <data name="DomainYearsRange" xml:space="preserve">
+    <value>Տարիների թիվը պետք է լինի 1-ից 10-ի սահմաններում։</value>
+  </data>
+  <data name="DomainIdRequired" xml:space="preserve">
+    <value>Դոմենի ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="DomainEppCodeRequired" xml:space="preserve">
+    <value>EPP/լիազորման կոդը պետք է պարունակի առնվազն 6 նիշ։</value>
+  </data>
+  <data name="DomainStatusInvalid" xml:space="preserve">
+    <value>Կարգավիճակը պետք է լինի հետևյալներից մեկը՝ PendingRegistration, PendingTransfer, Active, Expired, Redemption, Transferred, Cancelled։</value>
+  </data>
+  <data name="DomainPageRequired" xml:space="preserve">
+    <value>Էջի համարը պետք է լինի 1 կամ ավելի։</value>
+  </data>
+  <data name="DomainPageSizeRange" xml:space="preserve">
+    <value>Էջի չափը պետք է լինի 1-ից 100-ի սահմաններում։</value>
+  </data>
+  <data name="GatewayLogPageRequired" xml:space="preserve">
+    <value>Էջի համարը պետք է լինի առնվազն 1։</value>
+  </data>
+  <data name="GatewayLogPageSizeRange" xml:space="preserve">
+    <value>Էջի չափը պետք է լինի 1-ից 100-ի սահմաններում։</value>
+  </data>
+  <data name="TicketPeriodRequired" xml:space="preserve">
+    <value>Ժամանակահատվածը պարտադիր է։</value>
+  </data>
+  <data name="KbArticleIdInvalid" xml:space="preserve">
+    <value>Հոդվածի ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="KbArticleTitleRequired" xml:space="preserve">
+    <value>Վերնագիրը պարտադիր է։</value>
+  </data>
+  <data name="KbArticleContentRequired" xml:space="preserve">
+    <value>Բովանդակությունը պարտադիր է։</value>
+  </data>
+  <data name="KbArticleCategoryRequired" xml:space="preserve">
+    <value>Կատեգորիան պարտադիր է։</value>
+  </data>
+  <data name="KbCategoryIdInvalid" xml:space="preserve">
+    <value>Կատեգորիայի ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="KbCategoryNameRequired" xml:space="preserve">
+    <value>Անվանումը պարտադիր է։</value>
+  </data>
+  <data name="KbCategoryDescriptionRequired" xml:space="preserve">
+    <value>Նկարագրությունը պարտադիր է։</value>
+  </data>
+  <data name="KbCategoryParentIdInvalid" xml:space="preserve">
+    <value>Ծնող կատեգորիայի ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="AnnouncementIdInvalid" xml:space="preserve">
+    <value>Հայտարարության ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="AnnouncementTitleRequired" xml:space="preserve">
+    <value>Վերնագիրը պարտադիր է։</value>
+  </data>
+  <data name="AnnouncementContentRequired" xml:space="preserve">
+    <value>Բովանդակությունը պարտադիր է։</value>
+  </data>
+  <data name="NetworkIssueIdInvalid" xml:space="preserve">
+    <value>Ցանցային խնդրի ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="NetworkIssueTitleRequired" xml:space="preserve">
+    <value>Վերնագիրը պարտադիր է։</value>
+  </data>
+  <data name="NetworkIssueTypeInvalid" xml:space="preserve">
+    <value>Տեսակը պետք է լինի հետևյալներից մեկը՝ Server, Other։</value>
+  </data>
+  <data name="NetworkIssuePriorityInvalid" xml:space="preserve">
+    <value>Առաջնահերթությունը պետք է լինի հետևյալներից մեկը՝ Low, Medium, High, Critical։</value>
+  </data>
+  <data name="NetworkIssueStatusInvalid" xml:space="preserve">
+    <value>Կարգավիճակը պետք է լինի հետևյալներից մեկը՝ Reported, Investigating, Scheduled, Resolved։</value>
+  </data>
+  <data name="NetworkIssueDescriptionRequired" xml:space="preserve">
+    <value>Նկարագրությունը պարտադիր է։</value>
+  </data>
+  <data name="DnsRecordIdRequired" xml:space="preserve">
+    <value>DNS գրառման ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="DnsHostRequired" xml:space="preserve">
+    <value>Գրառման հոսթը պարտադիր է։</value>
+  </data>
+  <data name="DnsValueRequired" xml:space="preserve">
+    <value>Գրառման արժեքը պարտադիր է։</value>
+  </data>
+  <data name="DnsTtlPositive" xml:space="preserve">
+    <value>TTL-ը պետք է լինի 0-ից մեծ։</value>
+  </data>
+  <data name="DnsPriorityRequiredForMxSrv" xml:space="preserve">
+    <value>MX և SRV գրառումների համար առաջնահերթությունը պետք է լինի 0-ից մեծ։</value>
+  </data>
+  <data name="EmailForwardingRuleIdRequired" xml:space="preserve">
+    <value>Էլփոստի փոխանցման կանոնի ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="EmailForwardingSourceRequired" xml:space="preserve">
+    <value>Աղբյուր կեղծանունը պարտադիր է։</value>
+  </data>
+  <data name="EmailForwardingDestinationRequired" xml:space="preserve">
+    <value>Նպատակակետի էլփոստի հասցեն պարտադիր է։</value>
+  </data>
+  <data name="EmailForwardingDestinationInvalid" xml:space="preserve">
+    <value>Նպատակակետը պետք է լինի վավեր էլփոստի հասցե։</value>
+  </data>
+  <data name="TldConfigIdRequired" xml:space="preserve">
+    <value>TLD կոնֆիգուրացիայի ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="TldExtensionRequired" xml:space="preserve">
+    <value>Տիրույթի գոտին պարտադիր է։</value>
+  </data>
+  <data name="TldRegistrarModuleRequired" xml:space="preserve">
+    <value>Ռեգիստրատորի մոդուլը պարտադիր է։</value>
+  </data>
+  <data name="TldCurrencyInvalid" xml:space="preserve">
+    <value>Արժույթի կոդը պետք է կազմված լինի 3 տառից։</value>
+  </data>
+  <data name="TldSellCurrencyInvalid" xml:space="preserve">
+    <value>Վաճառքի արժույթի կոդը պետք է կազմված լինի 3 տառից։</value>
+  </data>
+  <data name="TldSortOrderInvalid" xml:space="preserve">
+    <value>Դասավորության կարգը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="DomainNameserversMinimumTwo" xml:space="preserve">
+    <value>Պահանջվում է առնվազն 2 անվանացանկի սերվեր։</value>
+  </data>
+  <data name="DomainContactRequired" xml:space="preserve">
+    <value>Անհրաժեշտ են սեփականատիրոջ կոնտակտային տվյալները։</value>
+  </data>
+  <data name="DomainContactFirstNameRequired" xml:space="preserve">
+    <value>Սեփականատիրոջ անունը պարտադիր է։</value>
+  </data>
+  <data name="DomainContactLastNameRequired" xml:space="preserve">
+    <value>Սեփականատիրոջ ազգանունը պարտադիր է։</value>
+  </data>
+  <data name="DomainContactEmailRequired" xml:space="preserve">
+    <value>Սեփականատիրոջ էլ. փոստի հասցեն պարտադիր է։</value>
+  </data>
+  <data name="DomainContactEmailInvalid" xml:space="preserve">
+    <value>Սեփականատիրոջ էլ. փոստի հասցեն պետք է վավեր լինի։</value>
+  </data>
+  <data name="DomainContactPhoneRequired" xml:space="preserve">
+    <value>Սեփականատիրոջ հեռախոսահամարը պարտադիր է։</value>
+  </data>
+  <data name="DomainContactAddress1Required" xml:space="preserve">
+    <value>Սեփականատիրոջ հասցեն պարտադիր է։</value>
+  </data>
+  <data name="DomainContactCityRequired" xml:space="preserve">
+    <value>Սեփականատիրոջ քաղաքը պարտադիր է։</value>
+  </data>
+  <data name="DomainContactStateRequired" xml:space="preserve">
+    <value>Սեփականատիրոջ մարզը կամ նահանգը պարտադիր է։</value>
+  </data>
+  <data name="DomainContactPostalCodeRequired" xml:space="preserve">
+    <value>Սեփականատիրոջ փոստային ինդեքսը պարտադիր է։</value>
+  </data>
+  <data name="DomainContactCountryRequired" xml:space="preserve">
+    <value>Սեփականատիրոջ երկրի կոդը պարտադիր է։</value>
+  </data>
+  <data name="InvitationTokenRequired" xml:space="preserve">
+    <value>Հրավերի հղումը պարտադիր է։</value>
+  </data>
+  <data name="ClientIdInvalid" xml:space="preserve">
+    <value>Հաճախորդի ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="ClientContactFirstNameInvalid" xml:space="preserve">
+    <value>Անունը պարտադիր է և չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="ClientContactLastNameInvalid" xml:space="preserve">
+    <value>Ազգանունը պարտադիր է և չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="ClientContactCompanyNameInvalid" xml:space="preserve">
+    <value>Ընկերության անվանումը չպետք է գերազանցի 200 նիշը։</value>
+  </data>
+  <data name="ClientContactEmailInvalid" xml:space="preserve">
+    <value>Անհրաժեշտ է վավեր էլփոստի հասցե։</value>
+  </data>
+  <data name="ClientContactPhoneInvalid" xml:space="preserve">
+    <value>Հեռախոսահամարը չպետք է գերազանցի 50 նիշը։</value>
+  </data>
+  <data name="ClientContactTypeInvalid" xml:space="preserve">
+    <value>Կոնտակտի անճանաչելի տեսակ։</value>
+  </data>
+  <data name="ClientContactStreetInvalid" xml:space="preserve">
+    <value>Փողոցի հասցեն չպետք է գերազանցի 200 նիշը։</value>
+  </data>
+  <data name="ClientContactAddress2Invalid" xml:space="preserve">
+    <value>Հասցեի երկրորդ տողը չպետք է գերազանցի 200 նիշը։</value>
+  </data>
+  <data name="ClientContactCityInvalid" xml:space="preserve">
+    <value>Քաղաքը չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="ClientContactStateInvalid" xml:space="preserve">
+    <value>Մարզը կամ նահանգը չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="ClientContactPostCodeInvalid" xml:space="preserve">
+    <value>Փոստային ինդեքսը չպետք է գերազանցի 20 նիշը։</value>
+  </data>
+  <data name="ClientContactCountryInvalid" xml:space="preserve">
+    <value>Երկիրը պետք է լինի ISO 3166-1 alpha-2 2-նիշանոց կոդ։</value>
+  </data>
+  <data name="ClientContactIdInvalid" xml:space="preserve">
+    <value>Կոնտակտի ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="ClientUserIdRequired" xml:space="preserve">
+    <value>Օգտատիրոջ ID-ն պարտադիր է։</value>
+  </data>
+  <data name="ClientPermissionsInvalid" xml:space="preserve">
+    <value>Իրավունքների արժեքը հայտնի դրոշակների վավեր համակցություն չէ։</value>
+  </data>
+  <data name="ClientNewUserEmailInvalid" xml:space="preserve">
+    <value>Անհրաժեշտ է վավեր էլփոստի հասցե։</value>
+  </data>
+  <data name="ClientNewUserPasswordInvalid" xml:space="preserve">
+    <value>Անհրաժեշտ է առնվազն {0} նիշանոց գաղտնաբառ։</value>
+  </data>
+  <data name="ClientFirstNameInvalid" xml:space="preserve">
+    <value>Անունը պարտադիր է և չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="ClientLastNameInvalid" xml:space="preserve">
+    <value>Ազգանունը պարտադիր է և չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="ClientCompanyNameInvalid" xml:space="preserve">
+    <value>Ընկերության անվանումը չպետք է գերազանցի 200 նիշը։</value>
+  </data>
+  <data name="ClientPhoneInvalid" xml:space="preserve">
+    <value>Հեռախոսահամարը չպետք է գերազանցի 50 նիշը։</value>
+  </data>
+  <data name="ClientCountryInvalid" xml:space="preserve">
+    <value>Երկիրը պետք է լինի ISO 3166-1 alpha-2 2-նիշանոց կոդ։</value>
+  </data>
+  <data name="ClientCurrencyInvalid" xml:space="preserve">
+    <value>Արժույթը պետք է լինի ISO 4217 3-նիշանոց կոդ։</value>
+  </data>
+  <data name="ClientAdminNotesInvalid" xml:space="preserve">
+    <value>Ադմինիստրատորի նշումները չպետք է գերազանցեն 2000 նիշը։</value>
+  </data>
+  <data name="ClientPaymentMethodInvalid" xml:space="preserve">
+    <value>Վճարման եղանակը չպետք է գերազանցի 50 նիշը։</value>
+  </data>
+  <data name="ClientBillingContactInvalid" xml:space="preserve">
+    <value>Վճարման կոնտակտը չպետք է գերազանցի 256 նիշը։</value>
+  </data>
+  <data name="ClientStreetInvalid" xml:space="preserve">
+    <value>Փողոցի հասցեն չպետք է գերազանցի 200 նիշը։</value>
+  </data>
+  <data name="ClientCityInvalid" xml:space="preserve">
+    <value>Քաղաքը չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="ClientStateInvalid" xml:space="preserve">
+    <value>Մարզը կամ նահանգը չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="ClientPostCodeInvalid" xml:space="preserve">
+    <value>Փոստային ինդեքսը չպետք է գերազանցի 20 նիշը։</value>
+  </data>
+  <data name="ClientLanguageInvalid" xml:space="preserve">
+    <value>Լեզուն պետք է լինի տեղակայման աջակցվող լեզուներից մեկը։</value>
+  </data>
+  <data name="ClientStatusInvalid" xml:space="preserve">
+    <value>Կարգավիճակը պետք է լինի հետևյալներից մեկը՝ Active, Inactive, Suspended, Closed։</value>
+  </data>
+  <data name="ClientInviteEmailInvalid" xml:space="preserve">
+    <value>Անհրաժեշտ է վավեր էլփոստի հասցե։</value>
+  </data>
+  <data name="ClientInviteFirstNameInvalid" xml:space="preserve">
+    <value>Անունը պարտադիր է և չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="ClientInviteLastNameInvalid" xml:space="preserve">
+    <value>Ազգանունը պարտադիր է և չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="ClientNewOwnerUserIdRequired" xml:space="preserve">
+    <value>Նոր սեփականատիրոջ ID-ն պարտադիր է։</value>
+  </data>
+  <data name="DepartmentNameRequired" xml:space="preserve">
+    <value>Բաժնի անվանումը պարտադիր է։</value>
+  </data>
+  <data name="DepartmentEmailInvalid" xml:space="preserve">
+    <value>Նշեք բաժնի վավեր էլ. փոստ։</value>
+  </data>
+  <data name="DepartmentIdInvalid" xml:space="preserve">
+    <value>Նշեք բաժնի վավեր ID։</value>
+  </data>
+  <data name="DownloadIdInvalid" xml:space="preserve">
+    <value>Նշեք ֆայլի վավեր ID։</value>
+  </data>
+  <data name="DownloadTitleRequired" xml:space="preserve">
+    <value>Ներբեռնման վերնագիրը պարտադիր է։</value>
+  </data>
+  <data name="DownloadCategoryIdInvalid" xml:space="preserve">
+    <value>Ընտրեք ներբեռնումների վավեր կատեգորիա։</value>
+  </data>
+  <data name="DownloadCategoryNameRequired" xml:space="preserve">
+    <value>Կատեգորիայի անվանումը պարտադիր է։</value>
+  </data>
+  <data name="DownloadCategoryDescriptionInvalid" xml:space="preserve">
+    <value>Կատեգորիայի նկարագրությունը չափազանց երկար է։</value>
+  </data>
+  <data name="PredefinedReplyIdInvalid" xml:space="preserve">
+    <value>Նշեք պատրաստի պատասխանի վավեր ID։</value>
+  </data>
+  <data name="PredefinedReplyNameRequired" xml:space="preserve">
+    <value>Պատասխանի անվանումը պարտադիր է։</value>
+  </data>
+  <data name="PredefinedReplyContentRequired" xml:space="preserve">
+    <value>Պատասխանի բովանդակությունը պարտադիր է։</value>
+  </data>
+  <data name="PredefinedReplyCategoryIdInvalid" xml:space="preserve">
+    <value>Ընտրեք պատրաստի պատասխանների վավեր կատեգորիա։</value>
+  </data>
+  <data name="PredefinedReplyCategoryNameRequired" xml:space="preserve">
+    <value>Կատեգորիայի անվանումը պարտադիր է։</value>
+  </data>
+  <data name="SearchTermRequired" xml:space="preserve">
+    <value>Որոնման բառը պարտադիր է։</value>
+  </data>
+  <data name="ServiceIdInvalid" xml:space="preserve">
+    <value>Նշեք վավեր ծառայություն։</value>
+  </data>
+  <data name="CancellationTypeInvalid" xml:space="preserve">
+    <value>Տեսակը պետք է լինի 'Immediate' կամ 'EndOfBillingPeriod'։</value>
+  </data>
+  <data name="CancellationRequestIdInvalid" xml:space="preserve">
+    <value>Նշեք չեղարկման վավեր հայտ։</value>
+  </data>
+  <data name="OrderServiceClientIdInvalid" xml:space="preserve">
+    <value>Նշեք վավեր հաճախորդ։</value>
+  </data>
+  <data name="OrderServiceProductIdInvalid" xml:space="preserve">
+    <value>Նշեք վավեր ապրանք։</value>
+  </data>
+  <data name="OrderServiceBillingCycleInvalid" xml:space="preserve">
+    <value>Վճարման ցիկլը պետք է լինի 'monthly', 'annual' կամ 'annually'։</value>
+  </data>
+  <data name="OrderServiceAmountInvalid" xml:space="preserve">
+    <value>Գումարը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="ServiceDomainRequired" xml:space="preserve">
+    <value>Դոմեյնը պարտադիր է։</value>
+  </data>
+  <data name="ServiceDomainInvalid" xml:space="preserve">
+    <value>Մուտքագրեք վավեր դոմեյն, օրինակ՝ example.com։</value>
+  </data>
+  <data name="ServiceUsernameRequired" xml:space="preserve">
+    <value>Օգտանունը պարտադիր է։</value>
+  </data>
+  <data name="ServiceUsernameInvalid" xml:space="preserve">
+    <value>Օգտանունը պետք է սկսվի տառով, պարունակի միայն փոքրատառ տառեր և թվեր և լինի 3-ից 8 նիշ։</value>
+  </data>
+  <data name="ServicePasswordRequired" xml:space="preserve">
+    <value>Գաղտնաբառը պարտադիր է։</value>
+  </data>
+  <data name="ServicePasswordInvalid" xml:space="preserve">
+    <value>Գաղտնաբառը պետք է պարունակի առնվազն 8 նիշ։</value>
+  </data>
+  <data name="ServicePackageRequired" xml:space="preserve">
+    <value>Հոսթինգի փաթեթը պարտադիր է։</value>
+  </data>
+  <data name="SuspendReasonRequired" xml:space="preserve">
+    <value>Կասեցման պատճառը պարտադիր է։</value>
+  </data>
+  <data name="TerminateReasonRequired" xml:space="preserve">
+    <value>Դադարեցման պատճառը պարտադիր է։</value>
+  </data>
+  <data name="ServicePageInvalid" xml:space="preserve">
+    <value>Էջի համարը պետք է լինի 1 կամ ավելի։</value>
+  </data>
+  <data name="ServicePageSizeInvalid" xml:space="preserve">
+    <value>Էջի չափը պետք է լինի 1-ից 100 միջակայքում։</value>
+  </data>
+  <data name="ServiceClientIdFilterInvalid" xml:space="preserve">
+    <value>Զտման համար նշեք վավեր հաճախորդ։</value>
+  </data>
+  <data name="UpdateServiceDomainInvalid" xml:space="preserve">
+    <value>Դոմեյնը չի կարող գերազանցել 253 նիշը։</value>
+  </data>
+  <data name="UpdateServiceDedicatedIpInvalid" xml:space="preserve">
+    <value>Առանձնացված IP-ն չի կարող գերազանցել 45 նիշը։</value>
+  </data>
+  <data name="UpdateServiceUsernameInvalid" xml:space="preserve">
+    <value>Օգտանունը չի կարող գերազանցել 100 նիշը։</value>
+  </data>
+  <data name="UpdateServicePasswordInvalid" xml:space="preserve">
+    <value>Գաղտնաբառը չի կարող գերազանցել 256 նիշը։</value>
+  </data>
+  <data name="UpdateServiceBillingCycleInvalid" xml:space="preserve">
+    <value>Վճարման ցիկլը պարտադիր է և չի կարող գերազանցել 20 նիշը։</value>
+  </data>
+  <data name="UpdateServiceRecurringAmountInvalid" xml:space="preserve">
+    <value>Պարբերական վճարման գումարը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="UpdateServicePaymentMethodInvalid" xml:space="preserve">
+    <value>Վճարման եղանակը չի կարող գերազանցել 50 նիշը։</value>
+  </data>
+  <data name="UpdateServiceSubscriptionIdInvalid" xml:space="preserve">
+    <value>Բաժանորդագրության հղումը չի կարող գերազանցել 256 նիշը։</value>
+  </data>
+  <data name="UpdateServiceAutoTerminateReasonInvalid" xml:space="preserve">
+    <value>Ինքնաշխատ դադարեցման պատճառը չի կարող գերազանցել 2000 նիշը։</value>
+  </data>
+  <data name="UpdateServiceAdminNotesInvalid" xml:space="preserve">
+    <value>Ադմինիստրատորի նշումները չեն կարող գերազանցել 2000 նիշը։</value>
+  </data>
+  <data name="UpdateServiceProvisioningRefInvalid" xml:space="preserve">
+    <value>Տեղակայման հղումը չի կարող գերազանցել 256 նիշը։</value>
+  </data>
+  <data name="UpdateServiceFirstPaymentAmountInvalid" xml:space="preserve">
+    <value>Առաջին վճարման գումարը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="UpdateServicePromotionCodeInvalid" xml:space="preserve">
+    <value>Ակցիայի կոդը չի կարող գերազանցել 50 նիշը։</value>
+  </data>
+  <data name="UpdateServiceStatusInvalid" xml:space="preserve">
+    <value>Կարգավիճակը պետք է լինի հետևյալներից մեկը՝ Pending, Active, Suspended, Terminated։</value>
+  </data>
+  <data name="UpdateServiceQuantityInvalid" xml:space="preserve">
+    <value>Քանակը պետք է լինի առնվազն 1։</value>
+  </data>
+  <data name="UpdateServiceProductIdInvalid" xml:space="preserve">
+    <value>Նշեք վավեր ապրանք։</value>
+  </data>
+  <data name="UpdateServiceServerIdInvalid" xml:space="preserve">
+    <value>Նշեք վավեր սերվեր։</value>
+  </data>
+  <data name="EmailTemplateSlugRequired" xml:space="preserve">
+    <value>Ձևանմուշի սլագը պարտադիր է։</value>
+  </data>
+  <data name="EmailTemplateSubjectRequired" xml:space="preserve">
+    <value>Ձևանմուշի վերնագիրը պարտադիր է։</value>
+  </data>
+  <data name="EmailTemplateBodyRequired" xml:space="preserve">
+    <value>Ձևանմուշի բովանդակությունը պարտադիր է։</value>
+  </data>
+  <data name="EmailTemplateDescriptionInvalid" xml:space="preserve">
+    <value>Նկարագրությունը չպետք է գերազանցի 500 նիշը։</value>
+  </data>
+  <data name="EmailTemplateIdInvalid" xml:space="preserve">
+    <value>Նշեք նամակի ձևանմուշի վավեր ID։</value>
+  </data>
+  <data name="EmailLogIdInvalid" xml:space="preserve">
+    <value>Նշեք նամակների մատյանի գրառման վավեր ID։</value>
+  </data>
+  <data name="SendEmailToInvalid" xml:space="preserve">
+    <value>Նշեք ստացողի վավեր էլ. փոստի հասցե։</value>
+  </data>
+  <data name="SendEmailTemplateSlugRequired" xml:space="preserve">
+    <value>Նշեք ուղարկվող ձևանմուշը։</value>
+  </data>
+  <data name="ProductGroupIdInvalid" xml:space="preserve">
+    <value>Նշեք ապրանքախմբի վավեր ID։</value>
+  </data>
+  <data name="ProductGroupNameRequired" xml:space="preserve">
+    <value>Ապրանքախումբը պահանջում է անվանում։</value>
+  </data>
+  <data name="ProductGroupNameTooLong" xml:space="preserve">
+    <value>Խմբի անվանումը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ProductGroupDescriptionTooLong" xml:space="preserve">
+    <value>Նկարագրությունը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ProductIdInvalid" xml:space="preserve">
+    <value>Նշեք ապրանքի վավեր ID։</value>
+  </data>
+  <data name="ProductNameRequired" xml:space="preserve">
+    <value>Ապրանքը պահանջում է անվանում։</value>
+  </data>
+  <data name="ProductNameTooLong" xml:space="preserve">
+    <value>Ապրանքի անվանումը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ProductDescriptionTooLong" xml:space="preserve">
+    <value>Նկարագրությունը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ProductPackageNameTooLong" xml:space="preserve">
+    <value>Փաթեթի անվանումը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ProductPriceRequired" xml:space="preserve">
+    <value>Նոր ապրանքը պահանջում է առնվազն մեկ գին։</value>
+  </data>
+  <data name="ProductPriceCurrencyInvalid" xml:space="preserve">
+    <value>Արժույթի կոդը պետք է լինի ISO 4217 եռատառ կոդ։</value>
+  </data>
+  <data name="ProductPriceAmountInvalid" xml:space="preserve">
+    <value>Գինը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="ProductFeatureIdInvalid" xml:space="preserve">
+    <value>Նշեք բնութագրի տողի վավեր ID։</value>
+  </data>
+  <data name="ProductFeatureLabelRequired" xml:space="preserve">
+    <value>Բնութագրի տողը պահանջում է պիտակ։</value>
+  </data>
+  <data name="ProductFeatureLabelTooLong" xml:space="preserve">
+    <value>Պիտակը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ProductFeatureValueRequired" xml:space="preserve">
+    <value>Բնութագրի տողը պահանջում է արժեք։</value>
+  </data>
+  <data name="ProductFeatureValueTooLong" xml:space="preserve">
+    <value>Արժեքը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ProductFeatureSortOrderInvalid" xml:space="preserve">
+    <value>Դասավորության հերթականությունը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="SlideIdInvalid" xml:space="preserve">
+    <value>Նշեք սլայդի վավեր ID։</value>
+  </data>
+  <data name="SlideIconNameRequired" xml:space="preserve">
+    <value>Սլայդը պահանջում է պատկերակ։</value>
+  </data>
+  <data name="SlideBrandColorRequired" xml:space="preserve">
+    <value>Սլայդը պահանջում է բրենդային գույն։</value>
+  </data>
+  <data name="SlideImageUrlRequired" xml:space="preserve">
+    <value>Սլայդը պահանջում է պատկեր։</value>
+  </data>
+  <data name="SlideDemoUrlTooLong" xml:space="preserve">
+    <value>Դեմոյի հղումը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="SlideLearnMoreUrlTooLong" xml:space="preserve">
+    <value>«Իմանալ ավելին» հղումը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="SlideSortOrderInvalid" xml:space="preserve">
+    <value>Դասավորության հերթականությունը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="SlideTargetAudienceInvalid" xml:space="preserve">
+    <value>Ընտրեք հայտնի թիրախային լսարան։</value>
+  </data>
+  <data name="SlideTranslationLocaleRequired" xml:space="preserve">
+    <value>Յուրաքանչյուր թարգմանություն պահանջում է լոկալ։</value>
+  </data>
+  <data name="SlideTranslationTitleRequired" xml:space="preserve">
+    <value>Յուրաքանչյուր թարգմանություն պահանջում է վերնագիր։</value>
+  </data>
+  <data name="SlideImageRequired" xml:space="preserve">
+    <value>Ընտրեք վերբեռնման ֆայլ։</value>
+  </data>
+  <data name="ServerNameRequired" xml:space="preserve">
+    <value>Սերվերի անունը պարտադիր է։</value>
+  </data>
+  <data name="ServerNameTooLong" xml:space="preserve">
+    <value>Սերվերի անունը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ServerHostnameRequired" xml:space="preserve">
+    <value>Հոսթի անունը պարտադիր է։</value>
+  </data>
+  <data name="ServerHostnameTooLong" xml:space="preserve">
+    <value>Հոսթի անունը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ServerUsernameRequired" xml:space="preserve">
+    <value>Օգտանունը պարտադիր է։</value>
+  </data>
+  <data name="ServerUsernameTooLong" xml:space="preserve">
+    <value>Օգտանունը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ServerMonthlyCostInvalid" xml:space="preserve">
+    <value>Ամսական արժեքը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="ServerMaxAccountsInvalid" xml:space="preserve">
+    <value>Եթե նշված է, հաշիվների առավելագույն քանակը պետք է լինի զրոյից մեծ։</value>
+  </data>
+  <data name="ServerIdInvalid" xml:space="preserve">
+    <value>Դա վավեր սերվերի նույնացուցիչ չէ։</value>
+  </data>
+  <data name="ServerGroupNameRequired" xml:space="preserve">
+    <value>Խմբի անունը պարտադիր է։</value>
+  </data>
+  <data name="ServerGroupNameTooLong" xml:space="preserve">
+    <value>Խմբի անունը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ServerGroupIdInvalid" xml:space="preserve">
+    <value>Դա վավեր սերվերների խմբի նույնացուցիչ չէ։</value>
+  </data>
+  <data name="PluginZipRequired" xml:space="preserve">
+    <value>Ընտրեք վերբեռնման հավելագրիչի արխիվը։</value>
+  </data>
+  <data name="PluginIdRequired" xml:space="preserve">
+    <value>Հավելագրիչի նույնացուցիչը պարտադիր է։</value>
+  </data>
+  <data name="IntegrationSlugRequired" xml:space="preserve">
+    <value>Ինտեգրման սլագը պարտադիր է։</value>
+  </data>
+  <data name="IntegrationConfigRequired" xml:space="preserve">
+    <value>Կարգավորումների դաշտերը պարտադիր են։</value>
+  </data>
+  <data name="UserIdRequired" xml:space="preserve">
+    <value>Օգտատիրոջ ID-ն պարտադիր է։</value>
+  </data>
+  <data name="UserFirstNameInvalid" xml:space="preserve">
+    <value>Անունը պարտադիր է և չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="UserLastNameInvalid" xml:space="preserve">
+    <value>Ազգանունը պարտադիր է և չպետք է գերազանցի 100 նիշը։</value>
+  </data>
+  <data name="UserEmailInvalid" xml:space="preserve">
+    <value>Անհրաժեշտ է վավեր էլփոստի հասցե՝ ոչ ավելի քան 256 նիշ։</value>
+  </data>
+  <data name="UserPasswordRequired" xml:space="preserve">
+    <value>Գաղտնաբառը պարտադիր է։</value>
+  </data>
+  <data name="UserPasswordTooShort" xml:space="preserve">
+    <value>Գաղտնաբառը պետք է պարունակի առնվազն 8 նիշ։</value>
+  </data>
+  <data name="SettingIdInvalid" xml:space="preserve">
+    <value>Նշեք կարգավորման վավեր ID։</value>
+  </data>
+  <data name="BrandingKindInvalid" xml:space="preserve">
+    <value>Տեսակը պետք է լինի 'logo', 'logodark', 'logomark' կամ 'favicon'։</value>
+  </data>
+  <data name="BrandingImageRequired" xml:space="preserve">
+    <value>Անհրաժեշտ է պատկերի ֆայլ։</value>
+  </data>
+  <data name="ActivityLogClientIdInvalid" xml:space="preserve">
+    <value>Նշեք հաճախորդի վավեր ID։</value>
+  </data>
+  <data name="ReportDateRangeInvalid" xml:space="preserve">
+    <value>Ավարտի ամսաթիվը չի կարող լինել սկզբի ամսաթվից առաջ։</value>
+  </data>
+  <data name="ReportMonthInvalid" xml:space="preserve">
+    <value>Ամիսը պետք է լինի 1-ից 12-ի սահմաններում։</value>
+  </data>
+  <data name="ReportClientIdInvalid" xml:space="preserve">
+    <value>Նշեք հաճախորդի վավեր ID։</value>
+  </data>
+  <data name="ReportPageRequired" xml:space="preserve">
+    <value>Էջի համարը պետք է լինի 1 կամ ավելի։</value>
+  </data>
+  <data name="ReportPageSizeRange" xml:space="preserve">
+    <value>Էջի չափը պետք է լինի 1-ից 200-ի սահմաններում։</value>
+  </data>
+  <data name="ReportQuarterInvalid" xml:space="preserve">
+    <value>Եռամսյակը պետք է լինի 1-ից 4-ի սահմաններում։</value>
+  </data>
+  <data name="ReportTakeInvalid" xml:space="preserve">
+    <value>Քանակը պետք է լինի 1-ից 100-ի սահմաններում։</value>
+  </data>
+  <data name="BackchannelLogoutEmailInvalid" xml:space="preserve">
+    <value>Պահանջվում է վավեր էլ. փոստի հասցե։</value>
+  </data>
+  <data name="SignInEmailRequired" xml:space="preserve">
+    <value>Էլ. փոստի հասցեն պարտադիր է։</value>
+  </data>
+  <data name="SignInPasswordRequired" xml:space="preserve">
+    <value>Գաղտնաբառը պարտադիր է։</value>
+  </data>
+  <data name="SlideIconNameTooLong" xml:space="preserve">
+    <value>Պատկերակի անունը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="SlideBrandColorTooLong" xml:space="preserve">
+    <value>Բրենդային գույնը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="SlideImageUrlTooLong" xml:space="preserve">
+    <value>Պատկերի հղումը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="SlideTranslationLocaleTooLong" xml:space="preserve">
+    <value>Թարգմանության լոկալը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="SlideTranslationTitleTooLong" xml:space="preserve">
+    <value>Թարգմանության վերնագիրը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+</root>

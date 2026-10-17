@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Zero dependencies, on purpose: KernelPurityTests fails the build if one is added. -->
+  <PropertyGroup>
+    <RootNamespace>Innovayse.Hostpanel.SharedKernel</RootNamespace>
+  </PropertyGroup>
+</Project>

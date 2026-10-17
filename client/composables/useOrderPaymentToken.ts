@@ -41,7 +41,9 @@ export const useOrderPaymentToken = () => {
    * @param token - The payment token returned when the order was placed.
    */
   const remember = (orderId: string | number, token: string): void => {
-    if (!import.meta.client) return
+    if (!import.meta.client) {
+      return
+    }
     localStorage.setItem(keyFor(orderId), token)
   }
 
@@ -52,7 +54,9 @@ export const useOrderPaymentToken = () => {
    * @returns The token, or `undefined` when none was stored.
    */
   const recall = (orderId: string | number): string | undefined => {
-    if (!import.meta.client) return undefined
+    if (!import.meta.client) {
+      return undefined
+    }
     return localStorage.getItem(keyFor(orderId)) ?? undefined
   }
 
@@ -62,7 +66,9 @@ export const useOrderPaymentToken = () => {
    * @param orderId - The order whose token is no longer needed.
    */
   const forget = (orderId: string | number): void => {
-    if (!import.meta.client) return
+    if (!import.meta.client) {
+      return
+    }
     localStorage.removeItem(keyFor(orderId))
   }
 

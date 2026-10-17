@@ -9,7 +9,7 @@ translation and review makes a real difference.
 
 - **Report a bug** or **request a feature** through [the issue forms](../../issues/new/choose)
 - **Translate**: the UI ships in English, Russian and Armenian. Strings live in
-  `admin/src/locales/*.json` and `client/locales/<lang>/`. A new language or a fix to an
+  `admin/src/locales/{en,ru,hy}/<area>.json` (loaded by `messages.ts`) and `client/locales/<lang>/`. A new language or a fix to an
   existing one is a great first PR
 - **Improve the docs**: if something in the README tripped you up, it will trip the next
   person too
@@ -40,7 +40,7 @@ open an issue first so we can agree on the approach before you spend time on cod
 
 ## Development setup
 
-Follow the [Quick start](README.md#quick-start) and [Development](README.md#development)
+Follow the [Quick start](README.md#quick-start-with-docker) and [Development](README.md#run-from-source)
 sections of the README. A plain clone builds and runs with `AUTH_MODE=local`; you do not
 need any token or account from Innovayse.
 
@@ -49,11 +49,11 @@ need any token or account from Innovayse.
 Run them **inside** the API container, or stop the stack first:
 
 ```bash
-docker compose exec api dotnet test tests/Innovayse.Application.Tests
+docker compose -f docker/docker-compose.shared.yml -f docker/docker-compose.dev.yml exec hostpanel-api dotnet test tests/Innovayse.Hostpanel.Integration.Tests
 ```
 
 Running `dotnet test` or `dotnet restore` on the host against this tree while
-`docker compose up` is running writes into each project's `obj/`, and the
+the dev stack (`docker/docker-compose.dev.yml`) is running writes into each project's `obj/`, and the
 container's `dotnet watch` is polling that same bind mount. It reports the churn
 as source changes and eventually dies enumerating it:
 
@@ -123,7 +123,7 @@ Open a GitHub issue tagged `enhancement`. Describe:
 Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
-feat: add Stripe payment gateway integration
+feat: add payment gateway plugin
 fix: correct invoice total calculation on item removal
 docs: update Quick Start setup steps
 chore: upgrade EF Core to 8.0.5
@@ -148,13 +148,13 @@ Before submitting, confirm:
 
 ## Project Structure
 
-See [README.md](README.md#project-structure) for a full overview of the codebase layout.
+See [README.md](README.md#architecture-in-brief) for a full overview of the codebase layout.
 
 ---
 
 ## Questions
 
-Ask in [GitHub Discussions](../../discussions). Security issues: see [SECURITY.md](SECURITY.md),
+Ask in [GitHub Discussions](../../discussions) or chat on [Discord](https://discord.gg/NfqTkyTgD). Security issues: see [SECURITY.md](SECURITY.md),
 please do not open a public issue.
 
 Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).

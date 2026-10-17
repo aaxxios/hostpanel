@@ -1,11 +1,14 @@
-import { randomBytes, createHash } from 'node:crypto'
-
 /**
  * GET /api/portal/auth/sso/authorize
  *
  * Generates a PKCE pair, stores code_verifier in a short-lived httpOnly cookie,
  * then redirects the browser to the SSO authorization endpoint.
+ *
+ * @module server/api/portal/auth/sso/authorize.get
  */
+
+import { randomBytes, createHash } from 'node:crypto'
+
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
 
@@ -47,7 +50,9 @@ export default defineEventHandler(async (event) => {
   })
 
   // If the user explicitly wants to switch accounts, pass prompt=select_account
-  if (query.prompt) params.set('prompt', query.prompt as string)
+  if (query.prompt) {
+    params.set('prompt', query.prompt as string)
+  }
 
   // Save current page so callback can return here instead of always going to dashboard
   let returnTo = (query.returnTo as string | undefined) || ''

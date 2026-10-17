@@ -11,11 +11,9 @@
  * @module utils/colorMode
  */
 
-/** A colour mode the page can actually be in. */
-export type ColorMode = 'light' | 'dark'
-
-/** What an operator can set as the default: a fixed mode, or "follow the device". */
-export type ColorModeSetting = ColorMode | 'system'
+import { ColorMode } from '~/types/colormode'
+import { ColorModeSystem } from '~/types/colormodesystem'
+import type { ColorModeSetting } from '~/types/colormodesetting'
 
 /** The cookie that carries a visitor's explicit choice. Absent means "no choice made". */
 export const COLOR_MODE_COOKIE = 'color-mode'
@@ -27,16 +25,19 @@ export const COLOR_MODE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
  * The mode a fresh install starts in. Matches what the storefront did before the
  * operator setting existed, so an upgrade changes nothing a visitor sees.
  */
-export const DEFAULT_COLOR_MODE_SETTING: ColorModeSetting = 'dark'
+export const DEFAULT_COLOR_MODE_SETTING: ColorModeSetting = ColorMode.Dark
 
 /**
  * Narrows an untrusted string to a colour mode, or `null` when it is not one.
  *
  * @param input Raw cookie or setting value.
- * @returns `'light'`, `'dark'`, or `null`.
+ * @returns The matching {@link ColorMode}, or `null`.
  */
-export function parseColorMode(input: string | null | undefined): ColorMode | null {
-  return input === 'light' || input === 'dark' ? input : null
+export const parseColorMode = (input: string | null | undefined): ColorMode | null => {
+  if (input === ColorMode.Light) {
+    return ColorMode.Light
+  }
+  return input === ColorMode.Dark ? ColorMode.Dark : null
 }
 
 /**
@@ -48,8 +49,8 @@ export function parseColorMode(input: string | null | undefined): ColorMode | nu
  * @param input Raw `portal.theme.default` value.
  * @returns A usable setting.
  */
-export function parseColorModeSetting(input: string | null | undefined): ColorModeSetting {
-  return input === 'system' ? 'system' : (parseColorMode(input) ?? DEFAULT_COLOR_MODE_SETTING)
+export const parseColorModeSetting = (input: string | null | undefined): ColorModeSetting => {
+  return input === ColorModeSystem.System ? ColorModeSystem.System : (parseColorMode(input) ?? DEFAULT_COLOR_MODE_SETTING)
 }
 
 /**
@@ -63,13 +64,15 @@ export function parseColorModeSetting(input: string | null | undefined): ColorMo
  * @param operatorDefault The operator's `portal.theme.default`.
  * @returns The mode to render, or `null` to defer to the device.
  */
-export function resolveColorMode(
+export const resolveColorMode = (
   cookie: string | null | undefined,
   operatorDefault: ColorModeSetting,
-): ColorMode | null {
+): ColorMode | null => {
   const chosen = parseColorMode(cookie)
-  if (chosen) return chosen
-  return operatorDefault === 'system' ? null : operatorDefault
+  if (chosen) {
+    return chosen
+  }
+  return operatorDefault === ColorModeSystem.System ? null : operatorDefault
 }
 
 /**
@@ -80,7 +83,7 @@ export function resolveColorMode(
  * @param input Raw setting value.
  * @returns Whether visitors may switch modes.
  */
-export function isUserToggleEnabled(input: string | null | undefined): boolean {
+export const isUserToggleEnabled = (input: string | null | undefined): boolean => {
   return input !== 'false'
 }
 

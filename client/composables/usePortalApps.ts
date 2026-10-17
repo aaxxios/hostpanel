@@ -8,22 +8,32 @@
  * with `portal.apps.enabled`, and each entry still has to resolve to a URL of
  * its own before it renders. A stock install shows no launcher rather than eight
  * links into nothing.
+ *
+ * @module composables/usePortalApps
  */
 
 import type { PortalApp } from '~/types/portalapp'
+
+/** The static part of one launcher entry. */
+interface AppDefinition {
+  /** Stable id, also the suffix of the `portal.apps.<id>` setting. */
+  id: string
+  /** Two-letter tile label. */
+  tag: string
+  /** CSS gradient of the tile. */
+  tint: string
+  /** Key in `runtimeConfig.public` holding the app's host, or empty for a settings-only app. */
+  envKey: string
+  /** Path the app lives under on a shared host. */
+  path?: string
+}
 
 /**
  * Static part of each entry: identity, tile styling and where its URL comes
  * from. `envKey` names a `runtimeConfig.public` key; entries with none are
  * reachable only by setting `portal.apps.<id>` in the admin panel.
  */
-const APP_DEFS: ReadonlyArray<{
-  id: string
-  tag: string
-  tint: string
-  envKey: string
-  path?: string
-}> = [
+const APP_DEFS: ReadonlyArray<AppDefinition> = [
   { id: 'account',   tag: 'Ac', tint: 'linear-gradient(135deg, #7DE3FF, #5D3FFF)', envKey: 'baseUrl', path: '/account' },
   { id: 'tasks',     tag: 'Tk', tint: 'linear-gradient(135deg, #38E8A0, #00D1FF)', envKey: 'tasksUrl' },
   { id: 'erp',       tag: 'Er', tint: 'linear-gradient(135deg, #B9A6FF, #5D3FFF)', envKey: 'erpUrl' },
@@ -46,10 +56,15 @@ const APP_DEFS: ReadonlyArray<{
  * @param fromConfig Value of `runtimeConfig.public.portalAppsEnabled`.
  */
 export const isLauncherEnabled = (setting: string, fromConfig: unknown): boolean => {
-  const truthy = (value: string) => /^(true|1|yes|on)$/i.test(value.trim())
+  /** Whether a text value reads as switched on. */
+  const truthy = (value: string): boolean => /^(true|1|yes|on)$/i.test(value.trim())
 
-  if (setting) return truthy(setting)
-  if (typeof fromConfig === 'boolean') return fromConfig
+  if (setting) {
+    return truthy(setting)
+  }
+  if (typeof fromConfig === 'boolean') {
+    return fromConfig
+  }
   return typeof fromConfig === 'string' && truthy(fromConfig)
 }
 
@@ -65,8 +80,12 @@ export const isLauncherEnabled = (setting: string, fromConfig: unknown): boolean
  * @param path Path the app lives under, for hosts shared with other apps.
  */
 export const resolveAppUrl = (override: string, base: string, path = ''): string => {
-  if (override) return override.trim()
-  if (!base) return ''
+  if (override) {
+    return override.trim()
+  }
+  if (!base) {
+    return ''
+  }
   return `${base.trim().replace(/\/+$/, '')}${path}`
 }
 
@@ -84,7 +103,9 @@ export const resolveAppUrl = (override: string, base: string, path = ''): string
  *   the value is not an absolute URL (a relative path is this origin, which already knows).
  */
 export const withAccountHandoff = (url: string, email: string | undefined): string => {
-  if (!email || !/^https?:\/\//i.test(url)) return url
+  if (!email || !/^https?:\/\//i.test(url)) {
+    return url
+  }
   try {
     const target = new URL(url)
     // Set rather than appended: a second authuser would be ambiguous, and the last
@@ -113,20 +134,28 @@ export const usePortalApps = () => {
    * @param envKey Key in `runtimeConfig.public`, or empty for a settings-only app.
    */
   const fromEnv = (envKey: string): string => {
-    if (!envKey) return ''
+    if (!envKey) {
+      return ''
+    }
     const value = config.public[envKey as keyof typeof config.public]
     return typeof value === 'string' ? value.trim() : ''
   }
 
+  /** Whether the deployment has switched the launcher on. */
   const enabled = computed(() =>
     isLauncherEnabled(get('portal.apps.enabled', ''), config.public.portalAppsEnabled))
 
+  /** The entries that resolved to a URL. */
   const apps = computed<PortalApp[]>(() => {
-    if (!enabled.value) return []
+    if (!enabled.value) {
+      return []
+    }
 
     return APP_DEFS.flatMap(def => {
       const url = resolveAppUrl(get(`portal.apps.${def.id}`, ''), fromEnv(def.envKey), def.path)
-      if (!url) return []
+      if (!url) {
+        return []
+      }
 
       return [{
         id: def.id,

@@ -1,0 +1,87 @@
+{
+  "stripe": {
+    "shortDescription": "Ընդունեք առցանց քարտային վճարումներ Stripe վճարային հարթակի միջոցով։",
+    "hint": "Ավելացրեք այս webhook հասցեն ձեր Stripe վահանակում՝ https://yourdomain.com/api/webhooks/stripe",
+    "fieldSecretKey": "Գաղտնի բանալի",
+    "fieldPublishableKey": "Հրապարակային բանալի",
+    "fieldWebhookSecret": "Webhook-ի գաղտնիք",
+    "fieldMode": "Ռեժիմ"
+  },
+  "paypal": {
+    "shortDescription": "Միացրեք PayPal վճարումը այն հաճախորդների համար, ովքեր նախընտրում են այդ եղանակը։",
+    "fieldClientSecret": "Հաճախորդի գաղտնիք"
+  },
+  "bankTransfer": {
+    "shortDescription": "Թույլ տվեք հաճախորդներին վճարել ուղիղ բանկային փոխանցմամբ՝ ձեր բանկային տվյալներով։",
+    "fieldAccountName": "Հաշվի տիրոջ անուն",
+    "fieldInstructions": "Վճարման հրահանգներ"
+  },
+  "inecobank": {
+    "shortDescription": "Ընդունեք հայկական բանկային քարտեր Inecobank-ի տեղակայված վճարման էջի միջոցով։",
+    "fieldGateway_url": "Դարպասի բազային URL (օրինակ՝ https://pg.inecoecom.am)",
+    "fieldUsername": "API օգտանուն",
+    "fieldPassword": "API գաղտնաբառ",
+    "fieldCurrency": "Արժույթ (ISO 4217 թվային կոդ, լռելյայն՝ 051)",
+    "fieldLanguage": "Վճարման էջի լեզու (լռելյայն՝ hy)"
+  },
+  "namecheap": {
+    "shortDescription": "Գրանցեք և կառավարեք դոմեյններ Namecheap-ի ռեսելլերային API-ի միջոցով։",
+    "fieldApiKey": "API բանալի",
+    "fieldClientIp": "Սպիտակ ցուցակում գտնվող հաճախորդի IP"
+  },
+  "nameam": {
+    "shortDescription": "Գրանցեք և կառավարեք .am դոմեյններ Name.am գրանցողի API-ի միջոցով։",
+    "fieldEmail": "Հաշվի էլ. փոստ",
+    "fieldPassword": "Հաշվի գաղտնաբառ",
+    "fieldApiUrl": "API URL",
+    "fieldTest_mode": "Փորձնական ռեժիմ"
+  },
+  "resellerclub": {
+    "shortDescription": "Կառավարեք դոմեյնների գրանցումը ResellerClub ռեսելլերային հարթակի միջոցով։",
+    "fieldResellerId": "Ռեսելլերի ID"
+  },
+  "enom": {
+    "shortDescription": "Միացեք eNom-ին՝ դոմեյնների գրանցման և DNS կառավարման համար։",
+    "fieldAccountId": "Հաշվի ID"
+  },
+  "cpanel": {
+    "shortDescription": "Ստեղծեք հոսթինգ հաշիվներ և կառավարեք դրանք cPanel WHM սերվերի API-ի միջոցով։",
+    "fieldHost": "WHM հոսթ",
+    "fieldPort": "Պորտ",
+    "fieldApiToken": "API թոքեն"
+  },
+  "plesk": {
+    "shortDescription": "Ավտոմատացրեք սերվերների և հոսթինգի կառավարումը Plesk-ի XML API-ի միջոցով։",
+    "fieldHost": "Plesk հոսթ"
+  },
+  "cwp": {
+    "shortDescription": "Կառավարեք հոսթինգ հաշիվները CentOS Web Panel սերվերների վրա։",
+    "fieldHost": "CWP հոսթ"
+  },
+  "cwp7": {
+    "shortDescription": "Ստեղծեք հոսթինգ հաշիվներ և կառավարեք դրանք Control Web Panel 7 API-ի միջոցով։",
+    "fieldMonthly_cost": "Ամսական արժեք",
+    "fieldDatacenter": "Տվյալների կենտրոն/NOC",
+    "fieldAccess_hash": "Մուտքի հեշ",
+    "fieldPort": "API պորտ",
+    "fieldMax_accounts": "Հաշիվների առավելագույն քանակ",
+    "fieldNs1": "Հիմնական անվանային սերվեր",
+    "fieldNs1_ip": "Հիմնական անվանային սերվերի IP",
+    "fieldNs2": "Երկրորդական անվանային սերվեր",
+    "fieldNs2_ip": "Երկրորդական անվանային սերվերի IP",
+    "fieldSecure": "Օգտագործել SSL միացումների համար"
+  },
+  "smtp": {
+    "shortDescription": "Կարգավորեք ելքային նամակների առաքումը ձեր SMTP սերվերի միջոցով։",
+    "fieldHost": "SMTP հոսթ",
+    "fieldFromAddress": "Ուղարկողի հասցե",
+    "fieldEncryption": "Գաղտնագրում"
+  },
+  "maxmind": {
+    "shortDescription": "Հայտնաբերեք խարդախ պատվերները MaxMind-ի GeoIP ռիսկերի գնահատմամբ։",
+    "fieldLicenseKey": "Լիցենզիայի բանալի",
+    "fieldRegistrars": "Դոմեյն գրանցողներ",
+    "fieldEmail": "Էլ. փոստ / SMTP",
+    "fieldFraud": "Պաշտպանություն խարդախությունից"
+  }
+}

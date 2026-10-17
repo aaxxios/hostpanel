@@ -9,7 +9,7 @@
     :comparison-rows="comparisonRows"
     :yearly="yearly"
     @search="search"
-    @update:yearly="(value: boolean) => (yearly = value)"
+    @update:yearly="setYearly"
   />
 </template>
 
@@ -22,23 +22,38 @@
  * and schema.org output, which is why those calls live here and never inside a
  * template.
  */
+import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
+import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
+import { useDomainsStore } from '~/stores/domains'
+import { SeoPageType } from '~/types/seopagetype'
+import { TemplateSlot } from '~/types/templateslot'
 
-const { t } = useI18n()
+/** Translates a key in the active language; `locale` is that language. */
+const { t, locale } = useI18n()
+
+/** Operator-set site name that the SEO copy interpolates as `{site}`. */
+const { name: siteName } = useSiteIdentity()
+
+/** Localised path builder from the i18n module. */
+const localePath = useLocalePath()
+/** Resolves the component the active template provides for a named slot. */
 const { slot } = useTemplate()
 
-const home = slot('home')
+/** The active template's home component. */
+const home = slot(TemplateSlot.Home)
 
 // SEO setup with canonical, hreflang, OG, Twitter tags
 useSeo({
-  title: t('seo.home.title'),
-  description: t('seo.home.description'),
-  keywords: t('seo.home.keywords'),
-  type: 'website',
+  title: t('seo.home.title', { site: siteName.value }),
+  description: t('seo.home.description', { site: siteName.value }),
+  keywords: t('seo.home.keywords', { site: siteName.value }),
+  type: SeoPageType.Website,
   path: '/'
 })
 
 // Schema.org structured data
+/** Builders and the publisher of the schema.org structured data. */
 const { organizationSchema, localBusinessSchema, websiteSchema, injectSchema } = useSchemaOrg()
 
 // Inject organization and website schemas
@@ -48,22 +63,57 @@ injectSchema([
   websiteSchema()
 ])
 
-const { results: domainResults, pending: domainPending, search, offeredTlds } = useDomainLookup()
-const { plans } = usePortalPlans()
-
+/** The currency store: the payer's currency. */
 const currencyStore = useCurrencyStore()
+/** The catalog store: plans, features and TLD prices. */
+const catalogStore = useCatalogStore()
+/** The domains store: the domain lookup. */
+const domainsStore = useDomainsStore()
+
+// Prices follow the payer's currency, so each read runs again when it resolves or changes.
+await Promise.all([
+  useAsyncData('home:tld-pricing', () => catalogStore.loadTldPricing(), {
+    watch: [() => currencyStore.payerCode, locale]
+  }),
+  useAsyncData('home:hosting-plans', () => catalogStore.loadHostingPlans(), {
+    watch: [() => currencyStore.payerCode, locale]
+  }),
+  useAsyncData('home:hosting-features', () => catalogStore.loadProductFeatures(HOSTING_GROUP_ID), {
+    watch: [locale]
+  })
+])
+
+/** The domain lookup state the template's search box renders. */
+const { lookupResults: domainResults, lookupPending: domainPending, offeredTlds } = storeToRefs(domainsStore)
+
+/** Starts a domain search across the extensions the operator offers. */
+const search = domainsStore.searchOfferedTlds
+
+/** The hosting plans as cards, each linking to its configure page. */
+const plans = computed(() => catalogStore.planCards(id => localePath(`/configure/${id}`)))
+
 onMounted(() => {
   currencyStore.init()
   currencyStore.load()
 })
 
+/** Whether the plan prices are shown per year instead of per month. */
 const yearly = ref(false)
+
+/**
+ * Stores the billing period the visitor picked in the template.
+ *
+ * @param value - True for yearly prices.
+ */
+const setYearly = (value: boolean): void => {
+  yearly.value = value
+}
 
 // Assembled here rather than in the template, for the same reason
 // pages/hosting/index.vue assembles it: which column a value belongs to is
 // data, and templates only render what they are handed. aurora's home slot
 // declares no such prop and simply ignores it.
-const { features } = useProductFeatures(HOSTING_GROUP_ID)
+/** The feature comparison table: one row per feature, one column per plan. */
 const comparisonRows = computed(() =>
-  buildComparisonRows(features.value, plans.value.map(plan => plan.id)))
+  buildComparisonRows(catalogStore.featuresFor(HOSTING_GROUP_ID), plans.value.map(plan => plan.id)))
 </script>

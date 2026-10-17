@@ -1,7 +1,6 @@
-namespace Innovayse.Providers.CWP7.Models;
-
 using System.Text.Json.Serialization;
 
+namespace Innovayse.Providers.CWP7.Models;
 /// <summary>Parsed response from the CWP7 REST API.</summary>
 internal sealed class Cwp7ApiResponse
 {

@@ -1,7 +1,7 @@
 /**
  * The signed-in client account, as `GET /api/portal/client/me` answers with it.
  *
- * Field names are the backend's own (WHMCS-derived, lowercase and unseparated); they are kept
+ * Field names are the backend's own (legacy-derived, lowercase and unseparated); they are kept
  * verbatim rather than camel-cased so a reader can match a field here against the API response
  * without a translation table.
  */
@@ -60,7 +60,7 @@ export interface ClientUser {
    * deployment holds no currency for the account.
    *
    * This was typed `number` — "numeric id of the account's billing currency" — describing a
-   * WHMCS currencies table that has no counterpart here. `ClientDto.Currency` is and has
+   * legacy currencies table that has no counterpart here. `ClientDto.Currency` is and has
    * always been a `string?` holding the code, so the number was never a value that arrived.
    * The code is enough on its own: `utils/formatCurrency.ts` hands it to `Intl.NumberFormat`,
    * which places the symbol and picks the minor-unit count for the reader's locale.

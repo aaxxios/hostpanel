@@ -1,0 +1,228 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Billing;
+using Innovayse.Hostpanel.Domain.Clients;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
+
+/// <summary>
+/// Seeding and authentication helpers shared by every Billing (including Currencies) use-case
+/// test file, extracted from the endpoint-grouped files this A7 Task 3 batch split apart so the
+/// seeding logic exists exactly once rather than once per use case.
+/// </summary>
+public static class BillingTestSeeds
+{
+    /// <summary>Shared test password for every seeded client user.</summary>
+    public const string TestPassword = "Pass@123!";
+
+    /// <summary>An id no seeded or created invoice, quote, transaction or billable item ever takes.</summary>
+    public const int NoSuchId = 999_999_999;
+
+    /// <summary>An origin the test host's CORS configuration allows a payer to be returned to.</summary>
+    public const string AllowedReturnUrl = "https://host.innovayse.com/payment/result";
+
+    /// <summary>Builds a client carrying the seeded admin's bearer token.</summary>
+    /// <param name="factory">The factory whose admin credentials to mint a token from.</param>
+    /// <param name="host">The host to build the client against, or <paramref name="factory"/> itself when null.</param>
+    /// <returns>An authenticated admin <see cref="HttpClient"/>.</returns>
+    public static async Task<HttpClient> AdminClientAsync(
+        IntegrationTestFactory factory, WebApplicationFactory<Program>? host = null)
+    {
+        var client = (host ?? factory).CreateClient();
+        var token = await factory.GetAdminTokenAsync();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client;
+    }
+
+    /// <summary>Seeds a client row directly against the host's database, bypassing HTTP.</summary>
+    /// <param name="host">The host whose database to seed against.</param>
+    /// <param name="currency">The ISO 4217 alpha code to stamp the client with, or <see langword="null"/> for the default.</param>
+    /// <param name="firstName">The seeded client's first name.</param>
+    /// <param name="lastName">The seeded client's last name.</param>
+    /// <returns>The new client's primary key.</returns>
+    public static async Task<int> SeedClientAsync(
+        WebApplicationFactory<Program> host, string? currency = null, string firstName = "Ada", string lastName = "Lovelace")
+    {
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+
+        var client = Client.Create(
+            $"user-{Guid.NewGuid():N}", firstName, lastName, $"{firstName.ToLowerInvariant()}-{Guid.NewGuid():N}@example.test");
+        if (currency is not null)
+        {
+            client.SetCurrency(currency);
+        }
+
+        context.Clients.Add(client);
+        await context.SaveChangesAsync(CancellationToken.None);
+        return client.Id;
+    }
+
+    /// <summary>
+    /// Registers a new client user over HTTP, logs in, and waits for the Wolverine handler that
+    /// creates the corresponding <see cref="Client"/> row.
+    /// </summary>
+    /// <param name="factory">The factory to mint a client token from.</param>
+    /// <param name="host">The host to register against, or <paramref name="factory"/> itself when null.</param>
+    /// <param name="label">Distinguishes the seeded email between callers in the same test.</param>
+    /// <returns>The authenticated client and its numeric client id.</returns>
+    public static async Task<(HttpClient Client, int ClientId)> RegisterClientAsync(
+        IntegrationTestFactory factory, WebApplicationFactory<Program>? host, string label)
+    {
+        var httpClient = (host ?? factory).CreateClient();
+        var email = $"billing-{label}-{Guid.NewGuid():N}@example.test";
+        var registered = await httpClient.PostAsJsonAsync("/api/auth/register", new
+        {
+            email,
+            password = TestPassword,
+            firstName = "Billing",
+            lastName = label,
+        });
+        registered.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var token = await factory.GetClientTokenAsync(email, TestPassword);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var clientId = 0;
+        for (var i = 0; i < 10 && clientId == 0; i++)
+        {
+            await Task.Delay(300);
+            var me = await httpClient.GetAsync("/api/clients/me");
+            if (me.IsSuccessStatusCode)
+            {
+                var json = await me.Content.ReadFromJsonAsync<JsonElement>();
+                if (json.TryGetProperty("id", out var idProp))
+                {
+                    clientId = idProp.GetInt32();
+                }
+            }
+        }
+
+        clientId.Should().BeGreaterThan(0, "the Wolverine handler should have created the client record");
+        return (httpClient, clientId);
+    }
+
+    /// <summary>Registers a client user who owns nothing — the "somebody else" of an ownership test.</summary>
+    /// <param name="factory">The factory to mint a client token from.</param>
+    /// <param name="host">The host to register against, or <paramref name="factory"/> itself when null.</param>
+    /// <param name="label">Distinguishes the seeded email between callers in the same test.</param>
+    /// <returns>An authenticated client for the stranger.</returns>
+    public static async Task<HttpClient> RegisterStrangerAsync(
+        IntegrationTestFactory factory, WebApplicationFactory<Program>? host, string label)
+    {
+        var httpClient = (host ?? factory).CreateClient();
+        var email = $"billing-{label}-{Guid.NewGuid():N}@example.test";
+        var registered = await httpClient.PostAsJsonAsync("/api/auth/register", new
+        {
+            email,
+            password = TestPassword,
+            firstName = "Billing",
+            lastName = label,
+        });
+        registered.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var token = await factory.GetClientTokenAsync(email, TestPassword);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return httpClient;
+    }
+
+    /// <summary>Creates an invoice for <paramref name="clientId"/> as the admin and returns its id.</summary>
+    /// <param name="admin">The authenticated admin client.</param>
+    /// <param name="clientId">The client to invoice.</param>
+    /// <param name="unitPrice">The single line item's price.</param>
+    /// <param name="isDraft">Whether the invoice should be created as a Draft rather than Unpaid.</param>
+    /// <returns>The new invoice's primary key.</returns>
+    /// <remarks>
+    /// The invoice's currency is not a field on <c>CreateInvoiceCommand</c> — it comes from the
+    /// invoiced client's own stamped currency, resolved through <c>IPayerCurrencyResolver</c>. A
+    /// caller who needs a specific currency stamps the client first, through
+    /// <see cref="SeedClientAsync"/>.
+    /// </remarks>
+    public static async Task<int> CreateInvoiceAsync(
+        HttpClient admin, int clientId, decimal unitPrice, bool isDraft = false)
+    {
+        var created = await admin.PostAsJsonAsync("/api/billing", new
+        {
+            clientId,
+            dueDate = DateTimeOffset.UtcNow.AddDays(14),
+            isDraft,
+            items = new[] { new { description = "Hosting", unitPrice, quantity = 1 } },
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        return await created.Content.ReadFromJsonAsync<int>();
+    }
+
+    /// <summary>Creates a quote for <paramref name="clientId"/> as the admin and returns its id.</summary>
+    /// <param name="admin">The authenticated admin client.</param>
+    /// <param name="clientId">The client to quote.</param>
+    /// <param name="unitPrice">The single line item's price.</param>
+    /// <returns>The new quote's primary key.</returns>
+    public static async Task<int> CreateQuoteAsync(HttpClient admin, int clientId, decimal unitPrice)
+    {
+        var created = await admin.PostAsJsonAsync("/api/billing/quotes", new
+        {
+            clientId,
+            subject = "Website redesign",
+            expiryDate = DateTimeOffset.UtcNow.AddDays(30),
+            notes = (string?)null,
+            items = new[] { new { description = "Design", unitPrice, quantity = 1 } },
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        return await created.Content.ReadFromJsonAsync<int>();
+    }
+
+    /// <summary>Creates a transaction for <paramref name="clientId"/> as the admin and returns its id.</summary>
+    /// <param name="admin">The authenticated admin client.</param>
+    /// <param name="clientId">The client to credit or debit.</param>
+    /// <param name="amountIn">The amount credited to the client.</param>
+    /// <param name="addToCredit">Whether the amount should also be added to the client's credit balance.</param>
+    /// <returns>The new transaction's primary key.</returns>
+    public static async Task<int> CreateTransactionAsync(
+        HttpClient admin, int clientId, decimal amountIn, bool addToCredit = false)
+    {
+        var created = await admin.PostAsJsonAsync("/api/transactions", new
+        {
+            clientId,
+            date = DateTimeOffset.UtcNow,
+            description = "Manual top-up",
+            transactionId = $"txn-{Guid.NewGuid():N}",
+            invoiceId = (int?)null,
+            paymentMethod = PaymentMethodNames.Manual,
+            amountIn,
+            amountOut = 0m,
+            fees = 0m,
+            addToCredit,
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        return await created.Content.ReadFromJsonAsync<int>();
+    }
+
+    /// <summary>Stamps the client's card payment gateway customer id, the only way to make their saved payment methods reachable.</summary>
+    /// <param name="host">The host whose database the client lives in.</param>
+    /// <param name="clientId">The client to stamp.</param>
+    /// <param name="customerId">The card payment gateway customer id to write.</param>
+    public static async Task StampCardCustomerAsync(WebApplicationFactory<Program> host, int clientId, string customerId)
+    {
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var client = await context.Clients.FirstAsync(c => c.Id == clientId, CancellationToken.None);
+        client.SetCardGatewayCustomerId(customerId);
+        await context.SaveChangesAsync(CancellationToken.None);
+    }
+
+    /// <summary>Reads the <c>type</c> field of a refusal answered by <c>BaseApiController</c>.</summary>
+    /// <param name="response">The HTTP response.</param>
+    /// <returns>The error code.</returns>
+    public static async Task<string?> CodeOfAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        return body.GetProperty("type").GetString();
+    }
+}

@@ -1,16 +1,27 @@
+/**
+ * Colour-mode plugin: the one writer of the `dark` / `light` class on `<html>`.
+ *
+ * @module plugins/color-mode
+ */
+
 import { COLOR_MODE_COOKIE, SYSTEM_MODE_BOOTSTRAP, parseColorMode } from '~/utils/colorMode'
+import { ColorMode } from '~/types/colormode'
+import { ColorModeSystem } from '~/types/colormodesystem'
 import { resolveTemplateName } from '~/templates/types'
-import type { TemplateName } from '~/templates/types'
+import { TemplateName } from '~/types/templatename'
+
+/** The two page colours a template has: one per mode. */
+type PageColors = Record<ColorMode, string>
 
 /**
  * Page background per template and mode, for `<meta name="theme-color">` — the colour
  * the browser paints its own chrome on mobile. Read from the template stylesheets'
  * page tokens; classic has no light palette and stays dark either way.
  */
-const PAGE_COLORS: Record<TemplateName, { dark: string, light: string }> = {
-  aurora: { dark: '#08090f', light: '#f4f5fa' },
-  nova: { dark: '#08191f', light: '#f4f8fa' },
-  classic: { dark: '#0a0a0f', light: '#0a0a0f' },
+const PAGE_COLORS: Record<TemplateName, PageColors> = {
+  [TemplateName.Aurora]: { [ColorMode.Dark]: '#08090f', [ColorMode.Light]: '#f4f5fa' },
+  [TemplateName.Nova]: { [ColorMode.Dark]: '#08191f', [ColorMode.Light]: '#f4f8fa' },
+  [TemplateName.Classic]: { [ColorMode.Dark]: '#0a0a0f', [ColorMode.Light]: '#0a0a0f' },
 }
 
 /**
@@ -53,18 +64,20 @@ export default defineNuxtPlugin({
       // The bootstrap script has already put the device's mode on <html>. Read it
       // back before hydration so useHead below does not strip it.
       if (applied.value === null) {
-        applied.value = document.documentElement.classList.contains('light') ? 'light' : 'dark'
+        applied.value = document.documentElement.classList.contains('light') ? ColorMode.Light : ColorMode.Dark
       }
 
       // Follow the device while the visitor has not chosen; a saved choice wins.
       const media = window.matchMedia('(prefers-color-scheme: dark)')
       media.addEventListener('change', (e) => {
-        if (mode.value === 'system') applied.value = e.matches ? 'dark' : 'light'
+        if (mode.value === ColorModeSystem.System) {
+          applied.value = e.matches ? ColorMode.Dark : ColorMode.Light
+        }
       })
     }
 
     const template = computed(() => resolveTemplateName(get('portal.template', 'portalTemplate')))
-    const themeColor = computed(() => PAGE_COLORS[template.value][applied.value ?? 'dark'])
+    const themeColor = computed(() => PAGE_COLORS[template.value][applied.value ?? ColorMode.Dark])
 
     useHead({
       htmlAttrs: {

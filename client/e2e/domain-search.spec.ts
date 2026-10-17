@@ -1,0 +1,40 @@
+/**
+ * Flow: domain search.
+ *
+ * A visitor types a name; the page checks it against every offered extension and shows each as
+ * available or taken. An available name can be added to the cart, a taken one cannot.
+ */
+import { expect, test } from './support/test'
+import { FREE_TERM, TAKEN_DOMAIN } from './support/fixtures.mjs'
+import { required, waitForHydration } from './support/helpers'
+
+test('an available name can be added to the cart', async ({ page }) => {
+  await page.goto('/domains')
+  await waitForHydration(page)
+
+  await page.getByTestId('domain-search-input').fill(FREE_TERM)
+  await page.getByTestId('domain-search-submit').click()
+
+  const result = page.getByTestId(`domain-result-${FREE_TERM}.com`)
+  await expect(result).toHaveAttribute('data-status', 'available')
+
+  // Adding it disables the button, so the same name cannot be added twice.
+  const add = page.getByTestId(`domain-add-${FREE_TERM}.com`)
+  await add.click()
+  await expect(add).toBeDisabled()
+  await expect(page.getByTestId('nav-cart')).toBeVisible()
+})
+
+test('a registered name is reported as taken and offers no add button', async ({ page }) => {
+  await page.goto('/domains')
+  await waitForHydration(page)
+
+  // The stub registers `taken-e2e.com` only; the same name under another extension is free.
+  const name = required(TAKEN_DOMAIN.split('.')[0], 'name before the extension')
+  await page.getByTestId('domain-search-input').fill(name)
+  await page.getByTestId('domain-search-submit').click()
+
+  await expect(page.getByTestId(`domain-result-${TAKEN_DOMAIN}`)).toHaveAttribute('data-status', 'taken')
+  await expect(page.getByTestId(`domain-add-${TAKEN_DOMAIN}`)).toHaveCount(0)
+  await expect(page.getByTestId(`domain-result-${name}.net`)).toHaveAttribute('data-status', 'available')
+})

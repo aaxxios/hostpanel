@@ -1,3 +1,15 @@
+/** Reporting period of the support overview, as the API names it. */
+export enum SupportOverviewPeriod {
+  /** The current day. */
+  Today = 'today',
+  /** The previous day. */
+  Yesterday = 'yesterday',
+  /** The last seven days. */
+  Last7Days = 'last7days',
+  /** The last thirty days. */
+  Last30Days = 'last30days',
+}
+
 /** Support overview dashboard statistics. */
 export interface SupportOverviewStats {
   /** Number of new tickets in the period. */

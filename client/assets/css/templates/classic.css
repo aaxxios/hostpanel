@@ -1,0 +1,33 @@
+/*
+ * classic template surface tokens.
+ *
+ * The classic pages paint their page background and a few raised surfaces with colours the
+ * generic gray scale does not hold (a near-black dark mode). They are stored as space-separated
+ * `r g b` triplets so Tailwind's opacity modifier keeps working (`bg-classic-surface/95`), and
+ * `tailwind.config.ts` exposes them as `classic-*` colours. The light value sits in `:root`, the
+ * dark one under `.dark`; the summary card is dark in both modes, as the checkout always drew it.
+ */
+:root {
+  --classic-page: 249 250 251;
+  --classic-surface: 255 255 255;
+  --classic-footer: 243 244 246;
+  --classic-summary-from: 26 26 36;
+  --classic-summary-to: 18 18 23;
+}
+
+.dark {
+  --classic-page: 10 10 15;
+  --classic-surface: 10 10 15;
+  --classic-footer: 5 5 8;
+}
+
+/* A short sideways shake that draws the eye to the checkout error box. */
+@keyframes classic-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: classic-shake 0.2s ease-in-out 0s 2;
+}

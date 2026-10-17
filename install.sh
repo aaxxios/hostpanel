@@ -1,360 +1,399 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Hostpanel — One-command installer for Ubuntu 22.04 / 24.04
-# Usage: bash install.sh
+# Hostpanel -- one-command installer from the Docker Hub images.
+#
+#   curl -fsSL https://raw.githubusercontent.com/innovayse/hostpanel/main/install.sh | bash
+#
+# It downloads docker-compose.hub.yml, the Caddyfile and .env.example (nothing else: no clone, no
+# build), writes a .env with freshly generated secrets, pulls the images and starts the stack. The
+# bundled caddy edge obtains Let's Encrypt certificates for both hosts, so DNS for them must point
+# at this server and ports 80 and 443 must be reachable.
+# Run it again to upgrade: an existing .env is never overwritten, the images are pulled
+# and the stack is brought up again.
+#
+# Options (flag, or the environment variable in brackets):
+#   --dir <path>       install directory                  [HOSTPANEL_DIR, default /opt/hostpanel]
+#   --version <x.y.z>  release to install, e.g. 1.4.0     [HOSTPANEL_VERSION, default: main / latest]
+#   --no-tls           serve plain HTTP on 8080 behind your own TLS proxy [HOSTPANEL_TLS=off]
+#   --help             print this text
+#
+# Answers for a non-interactive run (no terminal, or HOSTPANEL_NONINTERACTIVE=1):
+#   HOSTPANEL_DOMAIN         public host of the client portal      (required)
+#   HOSTPANEL_ADMIN_DOMAIN   public host of the admin panel        (default admin.<domain>)
+#   HOSTPANEL_ADMIN_EMAIL    operator contact, sender and certificate e-mail (required)
+#
+# Needs: docker with the compose v2 plugin, curl, openssl.
+# Every command that could read stdin is given /dev/null: under `curl | bash` stdin IS this script.
 # =============================================================================
 set -euo pipefail
 
-# ── Colors ───────────────────────────────────────────────────────────────────
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
+REPO="innovayse/hostpanel"
+COMPOSE_FILE="docker-compose.hub.yml"
+HEALTH_ATTEMPTS=60
+HEALTH_INTERVAL=5
 
-info()    { echo -e "${BLUE}[info]${NC}  $*"; }
-success() { echo -e "${GREEN}[ok]${NC}    $*"; }
-warn()    { echo -e "${YELLOW}[warn]${NC}  $*"; }
-error()   { echo -e "${RED}[error]${NC} $*"; exit 1; }
-step()    { echo -e "\n${BOLD}${CYAN}▶ $*${NC}"; }
-
-# ── Root check ────────────────────────────────────────────────────────────────
-[[ $EUID -ne 0 ]] && error "Run as root: sudo bash install.sh"
-
-# ── Banner ────────────────────────────────────────────────────────────────────
-echo -e "${BOLD}"
-echo "  ██╗  ██╗ ██████╗ ███████╗████████╗██████╗  █████╗ ███╗   ██╗███████╗██╗     "
-echo "  ██║  ██║██╔═══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗████╗  ██║██╔════╝██║     "
-echo "  ███████║██║   ██║███████╗   ██║   ██████╔╝███████║██╔██╗ ██║█████╗  ██║     "
-echo "  ██╔══██║██║   ██║╚════██║   ██║   ██╔═══╝ ██╔══██║██║╚██╗██║██╔══╝  ██║     "
-echo "  ██║  ██║╚██████╔╝███████║   ██║   ██║     ██║  ██║██║ ╚████║███████╗███████╗"
-echo "  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝"
-echo -e "${NC}"
-echo -e "  ${CYAN}Hosting Panel Installer${NC} — github.com/innovayse/hostpanel"
-echo ""
-
-# ── Collect configuration ─────────────────────────────────────────────────────
-step "Configuration"
-
-read -rp "  Domain (e.g. hostpanel.example.com): " DOMAIN
-[[ -z "$DOMAIN" ]] && error "Domain is required"
-
-read -rp "  SSL email (for Let's Encrypt): " SSL_EMAIL
-[[ -z "$SSL_EMAIL" ]] && error "Email is required"
-
-read -rp "  Install path [/var/www/hostpanel]: " INSTALL_DIR
-INSTALL_DIR="${INSTALL_DIR:-/var/www/hostpanel}"
-
-echo ""
-read -rp "  Seed demo data? (y/n) [y]: " SEED_DEMO
-SEED_DEMO="${SEED_DEMO:-y}"
-
-echo ""
-echo -e "  ${BOLD}Summary:${NC}"
-echo "    Domain:       https://$DOMAIN"
-echo "    Admin panel:  https://$DOMAIN/admin"
-echo "    Install path: $INSTALL_DIR"
-echo "    Demo data:    $SEED_DEMO"
-echo ""
-read -rp "  Proceed? (y/n): " CONFIRM
-[[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]] && echo "Aborted." && exit 0
-
-# ── Generate secrets ──────────────────────────────────────────────────────────
-generate_password() { tr -dc 'A-Za-z0-9!@#$%' < /dev/urandom | head -c 24; }
-generate_secret()   { tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 48; }
-
-PG_PASS=$(generate_password)
-RMQ_PASS=$(generate_password)
-JWT_SECRET=$(generate_secret)
-
-# ── Install dependencies ──────────────────────────────────────────────────────
-step "Installing system dependencies"
-
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-
-# Docker
-if ! command -v docker &>/dev/null; then
-  info "Installing Docker..."
-  curl -fsSL https://get.docker.com | sh
-  systemctl enable --now docker
-  success "Docker installed"
+# ── Output helpers ────────────────────────────────────────────────────────────
+if [ -t 1 ]; then
+  RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'
+  BLUE=$'\033[0;34m'; BOLD=$'\033[1m'; NC=$'\033[0m'
 else
-  success "Docker already installed"
+  RED=''; GREEN=''; YELLOW=''; BLUE=''; BOLD=''; NC=''
 fi
 
-# Nginx
-if ! command -v nginx &>/dev/null; then
-  info "Installing Nginx..."
-  apt-get install -y -qq nginx
-  systemctl enable --now nginx
-  success "Nginx installed"
-else
-  success "Nginx already installed"
-fi
+info()    { printf '%s[info]%s  %s\n' "$BLUE" "$NC" "$*"; }
+success() { printf '%s[ok]%s    %s\n' "$GREEN" "$NC" "$*"; }
+warn()    { printf '%s[warn]%s  %s\n' "$YELLOW" "$NC" "$*" >&2; }
+fail()    { printf '%s[error]%s %s\n' "$RED" "$NC" "$*" >&2; exit 1; }
 
-# Certbot
-if ! command -v certbot &>/dev/null; then
-  info "Installing Certbot..."
-  apt-get install -y -qq certbot python3-certbot-nginx
-  success "Certbot installed"
-else
-  success "Certbot already installed"
-fi
-
-# Git
-if ! command -v git &>/dev/null; then
-  apt-get install -y -qq git
-fi
-
-# ── Clone repository ──────────────────────────────────────────────────────────
-step "Cloning repository"
-
-if [[ -d "$INSTALL_DIR/.git" ]]; then
-  info "Repository already exists, pulling latest..."
-  git -C "$INSTALL_DIR" pull origin main
-else
-  git clone https://github.com/innovayse/hostpanel.git "$INSTALL_DIR"
-fi
-success "Repository ready at $INSTALL_DIR"
-
-# ── Create .env ───────────────────────────────────────────────────────────────
-step "Creating .env"
-
-cat > "$INSTALL_DIR/.env" <<EOF
-# PostgreSQL
-POSTGRES_USER=hostpanel
-POSTGRES_PASSWORD=${PG_PASS}
-POSTGRES_DB=hostpanel_prod
-
-# RabbitMQ
-RABBITMQ_HOST=rabbitmq
-RABBITMQ_PORT=5672
-RABBITMQ_USER=hostpanel
-RABBITMQ_PASSWORD=${RMQ_PASS}
-
-# JWT
-JWT_SECRET=${JWT_SECRET}
-JWT_ISSUER=innovayse-api
-JWT_AUDIENCE=innovayse-clients
-
-# SMTP (configure after install)
-# SMTP_ENCRYPTION names one of tls (STARTTLS, port 587), ssl (implicit TLS, port 465) or
-# none (a local catcher). The API refuses to start without it rather than guess from the
-# port, so it is filled in to match the 587 above and edited alongside the host.
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USERNAME=
-SMTP_PASSWORD=
-SMTP_ENCRYPTION=tls
-SMTP_FROM=noreply@${DOMAIN}
-SMTP_FROM_NAME=${DOMAIN}
-
-# Domains
-DOMAIN=${DOMAIN}
-ADMIN_DOMAIN=admin.${DOMAIN}
-EOF
-
-chmod 600 "$INSTALL_DIR/.env"
-success ".env created"
-
-
-# ── Fix Dockerfile for duplicate plugin.json ──────────────────────────────────
-step "Patching api.Dockerfile"
-
-sed -i 's|RUN dotnet publish src/Innovayse.API/Innovayse.API.csproj -c Release -o /out --no-restore$|RUN dotnet publish src/Innovayse.API/Innovayse.API.csproj -c Release -o /out --no-restore /p:ErrorOnDuplicatePublishOutputFiles=false|' \
-  "$INSTALL_DIR/docker/api.Dockerfile"
-success "api.Dockerfile patched"
-
-# ── Build Docker images ────────────────────────────────────────────────────────
-step "Building Docker images (this takes ~5-10 minutes)"
-
-cd "$INSTALL_DIR"
-# docker-compose.server.yml ships with the repo: it disables the bundled nginx and
-# publishes the services on loopback for the host nginx to proxy.
-COMPOSE="docker compose -f docker-compose.prod.yml -f docker-compose.server.yml --env-file .env"
-$COMPOSE build
-success "Images built"
-
-# ── Start services ─────────────────────────────────────────────────────────────
-step "Starting services"
-
-$COMPOSE up -d
-info "Waiting for database to be ready..."
-sleep 10
-success "Services started"
-
-# ── Run database migrations ────────────────────────────────────────────────────
-step "Running database migrations"
-
-# Fix permissions for SDK container
-chmod -R 777 "$INSTALL_DIR/backend/"
-
-COMPOSE_PROJECT=$(basename "$INSTALL_DIR")
-NETWORK="${COMPOSE_PROJECT}_default"
-
-# Resolved from compose, not guessed: these services declare container_name, so the
-# <project>-<service>-<index> form does not apply to them.
-DB_CONTAINER=$($COMPOSE ps -q hostpanel-db)
-API_CONTAINER=$($COMPOSE ps -q hostpanel-api)
-API_IMAGE=$($COMPOSE images -q hostpanel-api | head -1)
-
-# The address the API and the migration container dial is the service name, which is a
-# DNS alias on the compose network whatever the container ends up being called.
-DB_HOST=hostpanel-db
-
-docker run --rm \
-  --network "$NETWORK" \
-  -v "$INSTALL_DIR/backend:/app" \
-  -w /app \
-  mcr.microsoft.com/dotnet/sdk:9.0 \
-  sh -c "dotnet tool install --global dotnet-ef && \
-         export PATH=\"\$PATH:/root/.dotnet/tools\" && \
-         dotnet restore Innovayse.Backend.sln -q && \
-         dotnet-ef database update --project src/Innovayse.API/Innovayse.API.csproj \
-         --connection 'Host=${DB_HOST};Port=5432;Database=hostpanel_prod;Username=hostpanel;Password=${PG_PASS}'" 2>&1
-
-success "Migrations applied"
-
-# ── Restart API ────────────────────────────────────────────────────────────────
-step "Restarting API"
-
-docker restart "$API_CONTAINER"
-sleep 8
-success "API restarted"
-
-# ── Seed superadmin ────────────────────────────────────────────────────────────
-step "Creating superadmin account"
-
-# Wait for API to be ready
-for i in {1..15}; do
-  STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5148/api/health 2>/dev/null || echo "000")
-  [[ "$STATUS" == "200" ]] && break
-  sleep 2
-done
-
-ADMIN_PASS=$(generate_password)
-
-SETUP_RESULT=$(curl -s -X POST http://127.0.0.1:5148/api/auth/setup \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"superadmin@${DOMAIN}\",\"password\":\"${ADMIN_PASS}\",\"firstName\":\"Super\",\"lastName\":\"Admin\"}" 2>/dev/null)
-
-# Confirm email in DB
-docker exec "$DB_CONTAINER" psql -U hostpanel -d hostpanel_prod \
-  -c "UPDATE \"AspNetUsers\" SET \"EmailConfirmed\" = true WHERE \"Email\" = 'superadmin@${DOMAIN}';" &>/dev/null
-
-success "Superadmin created"
-
-# ── Seed demo data (optional) ──────────────────────────────────────────────────
-if [[ "$SEED_DEMO" == "y" || "$SEED_DEMO" == "Y" ]]; then
-  step "Seeding demo data"
-
-  SEED_CONTAINER="${COMPOSE_PROJECT}-api-run-seed"
-  docker run --rm \
-    --name "$SEED_CONTAINER" \
-    --network "$NETWORK" \
-    -e "ConnectionStrings__DefaultConnection=Host=${DB_HOST};Port=5432;Database=hostpanel_prod;Username=hostpanel;Password=${PG_PASS}" \
-    -e "ASPNETCORE_ENVIRONMENT=Development" \
-    -e "Jwt__Secret=${JWT_SECRET}" \
-    -e "Jwt__Issuer=innovayse-api" \
-    -e "Jwt__Audience=innovayse-clients" \
-    -e "RabbitMQ__Host=rabbitmq" \
-    -e "RabbitMQ__Port=5672" \
-    -e "RabbitMQ__User=hostpanel" \
-    -e "RabbitMQ__Password=${RMQ_PASS}" \
-    -e "Smtp__Encryption=none" \
-    "$API_IMAGE" \
-    sh -c "timeout 30 dotnet Innovayse.API.dll --urls http://0.0.0.0:5148 2>&1 | grep -E 'Seed|seeded|INF|clients' || true" &>/dev/null || true
-
-  # Confirm all demo user emails
-  docker exec "$DB_CONTAINER" psql -U hostpanel -d hostpanel_prod \
-    -c 'UPDATE "AspNetUsers" SET "EmailConfirmed" = true;' &>/dev/null
-
-  success "Demo data seeded"
-fi
-
-# ── Configure Nginx ────────────────────────────────────────────────────────────
-step "Configuring Nginx"
-
-cat > "/etc/nginx/sites-available/${DOMAIN}" <<EOF
-server {
-    listen 80;
-    server_name ${DOMAIN};
-
-    client_max_body_size 50m;
-
-    # Admin panel — strip /admin prefix before proxying
-    location /admin/ {
-        proxy_pass         http://127.0.0.1:5173/;
-        proxy_http_version 1.1;
-        proxy_set_header   Host \$host;
-        proxy_set_header   X-Real-IP \$remote_addr;
-        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto \$scheme;
-    }
-
-    location = /admin {
-        return 301 /admin/;
-    }
-
-    # API
-    location /api/ {
-        proxy_pass         http://127.0.0.1:5148/api/;
-        proxy_http_version 1.1;
-        proxy_set_header   Host \$host;
-        proxy_set_header   X-Real-IP \$remote_addr;
-        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto \$scheme;
-    }
-
-    # API Docs
-    location /scalar/ {
-        proxy_pass         http://127.0.0.1:5148/scalar/;
-        proxy_http_version 1.1;
-        proxy_set_header   Host \$host;
-    }
-
-    # Nuxt SSR client (catch-all)
-    location / {
-        proxy_pass         http://127.0.0.1:3200;
-        proxy_http_version 1.1;
-        proxy_set_header   Host \$host;
-        proxy_set_header   X-Real-IP \$remote_addr;
-        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto \$scheme;
-        proxy_set_header   Upgrade \$http_upgrade;
-        proxy_set_header   Connection "upgrade";
-    }
+# Prints the leading comment block of this file (the usage text).
+usage() {
+  cat <<'USAGE'
+Usage: install.sh [--dir <path>] [--version <x.y.z>] [--no-tls]
+  --dir      install directory   (HOSTPANEL_DIR, default /opt/hostpanel)
+  --version  release to install  (HOSTPANEL_VERSION, default main / latest)
+  --no-tls   plain HTTP on 8080 for an install behind your own TLS proxy (HOSTPANEL_TLS=off)
+Non-interactive answers: HOSTPANEL_DOMAIN, HOSTPANEL_ADMIN_DOMAIN, HOSTPANEL_ADMIN_EMAIL
+(HOSTPANEL_NONINTERACTIVE=1 forces it even with a terminal).
+USAGE
 }
-EOF
 
-ln -sf "/etc/nginx/sites-available/${DOMAIN}" "/etc/nginx/sites-enabled/${DOMAIN}"
-nginx -t && systemctl reload nginx
-success "Nginx configured"
+# ── .env helpers ──────────────────────────────────────────────────────────────
 
-# ── SSL Certificate ────────────────────────────────────────────────────────────
-step "Obtaining SSL certificate"
+# Sets KEY=value in a dotenv file: replaces the line when the key exists, appends otherwise.
+# The value travels through the environment so no character in it is special to awk or sed.
+# $1 file, $2 key, $3 value
+set_env() {
+  local file="$1" key="$2" value="$3" tmp
+  tmp="$(mktemp)"
+  KEY="$key" VALUE="$value" awk '
+    BEGIN { k = ENVIRON["KEY"]; v = ENVIRON["VALUE"]; done = 0 }
+    index($0, k "=") == 1 { if (!done) { print k "=" v; done = 1 } ; next }
+    { print }
+    END { if (!done) { print k "=" v } }
+  ' "$file" > "$tmp"
+  cat "$tmp" > "$file"
+  rm -f "$tmp"
+}
 
-if certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$SSL_EMAIL" 2>&1; then
-  success "SSL certificate obtained"
-else
-  warn "SSL failed — DNS may not be pointing to this server yet."
-  warn "After DNS is set up, run: certbot --nginx -d ${DOMAIN} -m ${SSL_EMAIL} --agree-tos"
-fi
+# Prints the value of KEY in a dotenv file (empty when absent). $1 file, $2 key
+get_env() {
+  local line
+  line="$(grep -E "^$2=" "$1" | tail -n 1 || true)"
+  printf '%s' "${line#*=}"
+}
 
-# ── Done ───────────────────────────────────────────────────────────────────────
-echo ""
-echo -e "${BOLD}${GREEN}════════════════════════════════════════════════════${NC}"
-echo -e "${BOLD}${GREEN}  ✓  Hostpanel installed successfully!${NC}"
-echo -e "${BOLD}${GREEN}════════════════════════════════════════════════════${NC}"
-echo ""
-echo -e "  ${BOLD}URLs:${NC}"
-echo -e "    Client:       ${CYAN}https://${DOMAIN}${NC}"
-echo -e "    Admin panel:  ${CYAN}https://${DOMAIN}/admin${NC}"
-echo -e "    API docs:     ${CYAN}https://${DOMAIN}/scalar${NC}"
-echo ""
-echo -e "  ${BOLD}Superadmin credentials:${NC}"
-echo -e "    Email:    ${CYAN}superadmin@${DOMAIN}${NC}"
-echo -e "    Password: ${CYAN}${ADMIN_PASS}${NC}"
-echo ""
-echo -e "  ${BOLD}Install path:${NC} ${INSTALL_DIR}"
-echo ""
-echo -e "  ${YELLOW}Save the credentials above — they won't be shown again!${NC}"
-echo ""
+# Prints a fresh hex secret of $1 random bytes (hex is safe in connection strings and URLs).
+rand_hex() { openssl rand -hex "$1"; }
+
+# ── Input helpers ─────────────────────────────────────────────────────────────
+
+# True when a terminal can be read: stdin is the pipe under `curl | bash`, so we ask /dev/tty.
+have_tty() {
+  [ "${HOSTPANEL_NONINTERACTIVE:-0}" != "1" ] && { : < /dev/tty; } 2>/dev/null
+}
+
+# Asks a question on the terminal and prints the answer. $1 prompt, $2 default (may be empty)
+ask() {
+  local prompt="$1" default="$2" answer=''
+  if [ -n "$default" ]; then
+    printf '  %s [%s]: ' "$prompt" "$default" > /dev/tty
+  else
+    printf '  %s: ' "$prompt" > /dev/tty
+  fi
+  IFS= read -r answer < /dev/tty || true
+  printf '%s' "${answer:-$default}"
+}
+
+# Fails unless $1 looks like a host name. $2 is the label for the message.
+check_host() {
+  if ! printf '%s' "$1" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$'; then
+    fail "$2 '$1' is not a valid host name (example: panel.example.com)."
+  fi
+}
+
+# Fails unless $1 looks like an e-mail address.
+check_email() {
+  if ! printf '%s' "$1" | grep -Eq '^[^[:space:]@;]+@[^[:space:]@;]+\.[^[:space:]@;]+$'; then
+    fail "Admin e-mail '$1' is not a valid address."
+  fi
+}
+
+# ── Steps ─────────────────────────────────────────────────────────────────────
+
+# Exits with a clear message when docker, compose v2, curl or openssl is missing.
+check_prerequisites() {
+  command -v docker >/dev/null 2>&1 \
+    || fail "Docker is not installed. Install it first: https://docs.docker.com/engine/install/"
+  docker compose version >/dev/null 2>&1 \
+    || fail "Docker Compose v2 is missing ('docker compose' failed). Install the compose plugin: https://docs.docker.com/compose/install/"
+  docker info >/dev/null 2>&1 \
+    || fail "Cannot talk to the Docker daemon. Is it running, and is this user allowed to use it (try sudo)?"
+  command -v curl >/dev/null 2>&1 || fail "curl is required."
+  command -v openssl >/dev/null 2>&1 || fail "openssl is required to generate the secrets."
+}
+
+# Downloads one file from the pinned ref into the install dir, atomically. $1 repo path, $2 target name
+download() {
+  local url="https://raw.githubusercontent.com/${REPO}/${REF}/$1" tmp
+  tmp="$(mktemp)"
+  if ! curl -fsSL "$url" -o "$tmp" < /dev/null; then
+    rm -f "$tmp"
+    fail "Could not download $url (is ${REF} a real branch or release tag?)."
+  fi
+  mv "$tmp" "${INSTALL_DIR}/$2"
+  chmod 644 "${INSTALL_DIR}/$2"
+}
+
+# Asks (or reads from the environment) for the domain, admin domain and admin e-mail.
+collect_answers() {
+  DOMAIN="${HOSTPANEL_DOMAIN:-}"
+  ADMIN_DOMAIN="${HOSTPANEL_ADMIN_DOMAIN:-}"
+  ADMIN_EMAIL="${HOSTPANEL_ADMIN_EMAIL:-}"
+
+  if have_tty; then
+    printf '\n%sConfiguration%s\n' "$BOLD" "$NC" > /dev/tty
+    [ -n "$DOMAIN" ] || DOMAIN="$(ask 'Domain of the client portal (e.g. panel.example.com)' '')"
+    [ -n "$ADMIN_DOMAIN" ] || ADMIN_DOMAIN="$(ask 'Domain of the admin panel' "admin.${DOMAIN}")"
+    [ -n "$ADMIN_EMAIL" ] || ADMIN_EMAIL="$(ask 'Admin e-mail (contact form target and mail sender)' '')"
+  fi
+
+  [ -n "$DOMAIN" ] || fail "Domain is required: answer the prompt, or set HOSTPANEL_DOMAIN for a non-interactive run."
+  [ -n "$ADMIN_EMAIL" ] || fail "Admin e-mail is required: answer the prompt, or set HOSTPANEL_ADMIN_EMAIL."
+  [ -n "$ADMIN_DOMAIN" ] || ADMIN_DOMAIN="admin.${DOMAIN}"
+
+  check_host "$DOMAIN" "Domain"
+  check_host "$ADMIN_DOMAIN" "Admin domain"
+  check_email "$ADMIN_EMAIL"
+  if [ "$DOMAIN" = "$ADMIN_DOMAIN" ]; then
+    fail "The admin panel is built for the root path and needs a host of its own: domain and admin domain must differ."
+  fi
+}
+
+# Writes the edge settings for the chosen TLS mode. $1 file
+# on : caddy owns 80/443 and gets the certificates. off: caddy serves plain HTTP on 8080 (443 is
+# parked on 8443) so it never collides with the proxy that already owns 80 and 443 on this host.
+set_env_edge() {
+  if [ "$TLS" = "off" ]; then
+    set_env "$1" EDGE_SCHEME "http://"
+    set_env "$1" EDGE_HTTP_PORT 8080
+    set_env "$1" EDGE_HTTPS_PORT 8443
+  else
+    set_env "$1" EDGE_SCHEME "https://"
+    set_env "$1" EDGE_HTTP_PORT 80
+    set_env "$1" EDGE_HTTPS_PORT 443
+  fi
+}
+
+# Creates .env from .env.example with generated secrets and the answers. Never called when .env exists.
+create_env() {
+  local env="${INSTALL_DIR}/.env"
+  info "Creating ${env} with generated secrets"
+  collect_answers
+
+  # Written under a restrictive umask so the secrets are never world-readable, not even briefly.
+  ( umask 077; cp "${INSTALL_DIR}/.env.example" "$env" )
+
+  set_env "$env" ASPNETCORE_ENVIRONMENT Production
+  set_env "$env" AUTH_MODE local
+  set_env "$env" DOCKERHUB_NAMESPACE innovayse
+  set_env "$env" IMAGE_TAG "$IMAGE_TAG"
+
+  set_env "$env" DOMAIN "$DOMAIN"
+  set_env "$env" ADMIN_DOMAIN "$ADMIN_DOMAIN"
+  set_env "$env" ACME_EMAIL "$ADMIN_EMAIL"
+  set_env_edge "$env"
+  set_env "$env" NUXT_PUBLIC_BASE_URL "https://${DOMAIN}"
+  set_env "$env" ADMIN_BASE_URL "https://${ADMIN_DOMAIN}"
+  set_env "$env" CLIENT_BASE_URL "https://${DOMAIN}"
+  set_env "$env" ALLOWED_HOSTS "${DOMAIN};${ADMIN_DOMAIN};hostpanel-api;localhost"
+
+  set_env "$env" POSTGRES_USER hostpanel
+  set_env "$env" POSTGRES_DB hostpanel
+  set_env "$env" POSTGRES_PASSWORD "$(rand_hex 24)"
+  set_env "$env" RABBITMQ_USER hostpanel
+  set_env "$env" RABBITMQ_PASSWORD "$(rand_hex 24)"
+
+  set_env "$env" JWT_SECRET "$(rand_hex 32)"
+  # The API decodes this as base64 and requires exactly 32 bytes (AesEncryptionService).
+  set_env "$env" ENCRYPTION_KEY "$(openssl rand -base64 32)"
+  set_env "$env" HOSTPANEL_BACKCHANNEL_LOGOUT_KEY "$(rand_hex 24)"
+
+  # Mail: the bundled example points at a dev catcher that does not exist in this stack.
+  # The operator fills in a real relay afterwards; until then the API starts but cannot send.
+  set_env "$env" SMTP_HOST ""
+  set_env "$env" SMTP_PORT 587
+  set_env "$env" SMTP_ENCRYPTION tls
+  set_env "$env" SMTP_FROM "$ADMIN_EMAIL"
+  set_env "$env" SMTP_FROM_NAME "$DOMAIN"
+  set_env "$env" EMAIL_TO "$ADMIN_EMAIL"
+
+  chmod 600 "$env"
+  success ".env created (mode 600)"
+}
+
+# Keeps an existing .env: moves IMAGE_TAG when a version was asked for, and adds keys the new
+# .env.example introduced. Nothing already set is changed.
+update_env() {
+  local env="${INSTALL_DIR}/.env" key
+  info "Keeping the existing ${env}"
+
+  if [ -n "${HOSTPANEL_VERSION:-}" ]; then
+    set_env "$env" IMAGE_TAG "$IMAGE_TAG"
+    info "IMAGE_TAG set to ${IMAGE_TAG}"
+  fi
+
+  while IFS= read -r key; do
+    if ! grep -Eq "^${key}=" "$env"; then
+      set_env "$env" "$key" "$(get_env "${INSTALL_DIR}/.env.example" "$key")"
+      warn "New setting ${key} added to .env with its example value; review it."
+    fi
+  done < <(grep -Eo '^[A-Z][A-Z0-9_]*=' "${INSTALL_DIR}/.env.example" | tr -d '=')
+
+  # The certificate contact defaults to the operator address the install already holds.
+  if [ "$(get_env "$env" ACME_EMAIL)" = "$(get_env "${INSTALL_DIR}/.env.example" ACME_EMAIL)" ]; then
+    set_env "$env" ACME_EMAIL "$(get_env "$env" EMAIL_TO)"
+  fi
+  # An explicit --no-tls / HOSTPANEL_TLS on a re-run switches the mode; otherwise the .env decides.
+  if [ -n "$TLS_ASKED" ]; then
+    set_env_edge "$env"
+  fi
+}
+
+# Runs compose in the install dir. Every call gets /dev/null as stdin (see the header).
+compose() {
+  ( cd "$INSTALL_DIR" && docker compose -f "$COMPOSE_FILE" "$@" < /dev/null )
+}
+
+# Waits until the API answers /health from inside its own container (its port is not published).
+wait_for_api() {
+  local port
+  port="$(get_env "${INSTALL_DIR}/.env" API_PORT)"
+  info "Waiting for the API to become healthy (first start applies the database migrations)"
+  for _ in $(seq 1 "$HEALTH_ATTEMPTS"); do
+    if compose exec -T hostpanel-api wget -q -O /dev/null "http://127.0.0.1:${port}/health" >/dev/null 2>&1; then
+      success "API is healthy"
+      return 0
+    fi
+    sleep "$HEALTH_INTERVAL"
+  done
+  warn "The API did not become healthy in $((HEALTH_ATTEMPTS * HEALTH_INTERVAL))s."
+  warn "Look at it with:  cd ${INSTALL_DIR} && docker compose -f ${COMPOSE_FILE} logs hostpanel-api"
+  return 1
+}
+
+# Prints the one-time first-admin setup token the API logs while nobody holds the Admin role.
+read_setup_token() {
+  compose logs --no-color hostpanel-api 2>/dev/null \
+    | sed -n 's/.*paste this setup token when it asks for one: //p' \
+    | tail -n 1 | tr -d '"\r' | sed 's/[[:space:]]*$//' || true
+}
+
+# Prints the URLs and the exact first-admin step.
+print_summary() {
+  local domain admin_domain token http_port
+  domain="$(get_env "${INSTALL_DIR}/.env" DOMAIN)"
+  admin_domain="$(get_env "${INSTALL_DIR}/.env" ADMIN_DOMAIN)"
+  http_port="$(get_env "${INSTALL_DIR}/.env" EDGE_HTTP_PORT)"
+  token="$(read_setup_token)"
+
+  printf '\n%sHostpanel is running.%s\n\n' "$BOLD" "$NC"
+  printf '  Client portal : https://%s\n' "$domain"
+  printf '  Admin panel   : https://%s\n' "$admin_domain"
+  printf '  API docs      : https://%s/scalar/\n' "$domain"
+  printf '  Install dir   : %s  (secrets are in .env, mode 600)\n\n' "$INSTALL_DIR"
+  if [ "$(get_env "${INSTALL_DIR}/.env" EDGE_SCHEME)" = "http://" ]; then
+    printf '  TLS is off: the bundled caddy serves plain HTTP on port %s. Forward both hosts to it from\n' "$http_port"
+    printf '  your TLS proxy, keeping the Host header and sending X-Forwarded-Proto: https (sign-in\n'
+    printf '  cookies need a secure origin).\n\n'
+  else
+    printf '  Certificates are issued by Let'"'"'s Encrypt on first request. DNS for both hosts must point at\n'
+    printf '  this server and ports 80 and 443 must be open; watch it with:\n'
+    printf '       cd %s && docker compose -f %s logs hostpanel-caddy\n\n' "$INSTALL_DIR" "$COMPOSE_FILE"
+  fi
+
+  printf '%sFirst admin account%s\n' "$BOLD" "$NC"
+  if [ -n "$token" ]; then
+    printf '  1. Open https://%s and create your account.\n' "$admin_domain"
+    printf '  2. Paste this one-time setup token when asked (it proves you operate this server\n'
+    printf '     and stops working once setup is done):\n\n'
+    printf '       %s%s%s\n\n' "$BOLD" "$token" "$NC"
+    printf '  Lost it? It is repeated in the API log until setup completes:\n'
+    printf '       cd %s && docker compose -f %s logs hostpanel-api | grep "setup token"\n\n' "$INSTALL_DIR" "$COMPOSE_FILE"
+  else
+    printf '  No setup token is outstanding: an administrator already exists, so sign in at\n'
+    printf '  https://%s. If this is a fresh install, read the log for the token:\n' "$admin_domain"
+    printf '       cd %s && docker compose -f %s logs hostpanel-api | grep "setup token"\n\n' "$INSTALL_DIR" "$COMPOSE_FILE"
+  fi
+
+  printf '%sNext%s: set a real SMTP relay in %s/.env (SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD), then\n' "$BOLD" "$NC" "$INSTALL_DIR"
+  printf '  cd %s && docker compose -f %s up -d\n' "$INSTALL_DIR" "$COMPOSE_FILE"
+  printf 'Upgrade any time by running the install command again.\n'
+}
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+# Entry point. The whole script is a function called on the last line, so under `curl | bash`
+# bash has read it completely before anything runs and a truncated download runs nothing.
+main() {
+  INSTALL_DIR="${HOSTPANEL_DIR:-/opt/hostpanel}"
+  HOSTPANEL_VERSION="${HOSTPANEL_VERSION:-}"
+  TLS_ASKED="${HOSTPANEL_TLS:-}"
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --dir)      [ "$#" -ge 2 ] || fail "--dir needs a path"; INSTALL_DIR="$2"; shift 2 ;;
+      --version)  [ "$#" -ge 2 ] || fail "--version needs a value"; HOSTPANEL_VERSION="$2"; shift 2 ;;
+      --no-tls)   TLS_ASKED="off"; shift ;;
+      -h|--help)  usage; exit 0 ;;
+      *)          fail "Unknown option: $1 (see --help)" ;;
+    esac
+  done
+
+  TLS="${TLS_ASKED:-on}"
+  case "$TLS" in
+    on|off) ;;
+    *) fail "HOSTPANEL_TLS must be 'on' or 'off' (got '$TLS')." ;;
+  esac
+
+  # A release is the git tag vX.Y.Z; the images are innovayse/hostpanel:{api,client,admin}-X.Y.Z, so
+  # IMAGE_TAG is X.Y.Z (or latest) and the compose file adds the component prefix. Accept either spelling.
+  if [ -n "$HOSTPANEL_VERSION" ]; then
+    IMAGE_TAG="${HOSTPANEL_VERSION#v}"
+    REF="v${IMAGE_TAG}"
+  else
+    IMAGE_TAG="latest"
+    REF="main"
+  fi
+
+  printf '%sHostpanel installer%s  (%s, images :%s)\n' "$BOLD" "$NC" "$REF" "$IMAGE_TAG"
+  check_prerequisites
+
+  mkdir -p "$INSTALL_DIR" 2>/dev/null \
+    || fail "Cannot create ${INSTALL_DIR}. Re-run with sudo, or choose another place with --dir / HOSTPANEL_DIR."
+  [ -w "$INSTALL_DIR" ] || fail "${INSTALL_DIR} is not writable. Re-run with sudo, or use --dir / HOSTPANEL_DIR."
+  INSTALL_DIR="$(cd "$INSTALL_DIR" && pwd)"
+
+  info "Downloading ${COMPOSE_FILE}, Caddyfile and .env.example from ${REF} into ${INSTALL_DIR}"
+  download "docker/${COMPOSE_FILE}" "$COMPOSE_FILE"
+  download "docker/caddy/Caddyfile" "Caddyfile"
+  download "docker/.env.example" ".env.example"
+
+  if [ -f "${INSTALL_DIR}/.env" ]; then
+    update_env
+  else
+    create_env
+  fi
+
+  info "Pulling the images"
+  compose pull
+  info "Starting the stack"
+  compose up -d
+
+  if wait_for_api; then
+    print_summary
+  else
+    exit 1
+  fi
+}
+
+main "$@"

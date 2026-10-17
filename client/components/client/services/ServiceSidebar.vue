@@ -1,0 +1,89 @@
+<template>
+  <UiStack gap="sm" data-testid="service-sidebar">
+    <UiNavGroup :title="$t('client.services.sectionManage')" :icon="Settings">
+      <UiNavItem
+        v-for="tab in tabs"
+        :key="tab.key"
+        :icon="tab.icon"
+        :active="activeTab === tab.key"
+        :testid="`service-tab-${tab.key}`"
+        @click="emit('update:activeTab', tab.key)"
+      >
+        {{ tab.label }}
+      </UiNavItem>
+    </UiNavGroup>
+
+    <UiNavGroup :title="$t('client.services.sectionActions')" :icon="Zap">
+      <UiNavItem to="/client/tickets/new" :icon="MessageSquare" testid="service-open-ticket">
+        {{ $t('client.services.actionOpenTicket') }}
+      </UiNavItem>
+      <UiNavItem
+        v-if="service.status === ServiceStatus.Pending"
+        :to="`/client/services/${serviceId}/setup`"
+        :icon="Zap"
+        tone="warning"
+        testid="service-nav-setup"
+      >
+        {{ $t('client.services.completeSetup') }}
+      </UiNavItem>
+    </UiNavGroup>
+
+    <UiNavGroup v-if="service.serverhostname" :title="$t('client.services.sectionQuickLinks')" :icon="Link2">
+      <UiNavItem :icon="Monitor" :loading="ssoLoading" testid="service-link-cpanel" @click="emit('cpanel')">
+        {{ $t('client.services.linkCpanel') }}
+      </UiNavItem>
+      <UiNavItem :href="`https://${service.serverhostname}:2096`" :icon="Mail" testid="service-link-webmail">
+        {{ $t('client.services.linkWebmail') }}
+      </UiNavItem>
+      <!-- Automatic sign-in failed; the panel's own login form was opened instead. -->
+      <UiText v-if="ssoError" size="xs" tone="danger" class="px-3 pb-3" data-testid="service-sso-error">{{ ssoError }}</UiText>
+    </UiNavGroup>
+  </UiStack>
+</template>
+
+<script setup lang="ts">
+/**
+ * ServiceSidebar - the side menu of the service detail page: the panels to switch between, the
+ * actions (open a ticket, finish setup) and, when the server is known, quick links to the
+ * control panel and webmail.
+ */
+import { computed } from 'vue'
+import { KeyRound, LayoutGrid, Link2, Mail, MessageSquare, Monitor, Settings, XCircle, Zap } from 'lucide-vue-next'
+import type { ServiceDetail } from '~/types/servicedetail'
+import { ServiceStatus } from '~/types/servicestatus'
+import { ServiceTab } from '~/types/servicetab'
+
+/** Translates a key into the active locale. */
+const { t } = useI18n()
+
+/** Props of ServiceSidebar. */
+interface Props {
+  /** The service being shown. */
+  service: ServiceDetail
+  /** The id of the service, for the setup link. */
+  serviceId: string
+  /** The panel currently shown, a `ServiceTab` value. */
+  activeTab: string
+  /** Whether the control-panel sign-in is in flight. */
+  ssoLoading: boolean
+  /** The sentence for a failed automatic sign-in; empty when there is none. */
+  ssoError: string
+}
+
+defineProps<Props>()
+
+/** Events the component raises. */
+const emit = defineEmits<{
+  /** The reader picked another panel. */
+  'update:activeTab': [value: ServiceTab]
+  /** The reader asked to sign in to the control panel. */
+  cpanel: []
+}>()
+
+/** The panels the menu switches between. */
+const tabs = computed(() => [
+  { key: ServiceTab.Overview, label: t('client.services.tabOverview'), icon: LayoutGrid },
+  { key: ServiceTab.Password, label: t('client.services.tabChangePassword'), icon: KeyRound },
+  { key: ServiceTab.Cancel, label: t('client.services.tabCancel'), icon: XCircle },
+])
+</script>

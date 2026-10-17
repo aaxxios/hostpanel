@@ -5,23 +5,23 @@
     it in red told the person something had broken and gave them nowhere to go — the defect
     this component replaces.
   -->
-  <UiAlert variant="info" :title="$t('client.noProfile.title')">
+  <UiAlert variant="info" :title="$t('client.noProfile.title')" data-testid="no-profile-notice">
     {{ message }}
 
     <template #action>
-      <div class="flex flex-shrink-0 items-center gap-2">
+      <UiStack direction="row" align="center" gap="xs" class="flex-shrink-0">
         <!--
           The recovery action: a state the user cannot act on is a dead end. The admin panel
           is a separate app on the same host, so it is an href rather than a route — a
           NuxtLink would try to resolve it inside this app and 404.
         -->
-        <UiButton size="sm" variant="subtle" href="/admin">
+        <UiButton size="sm" variant="subtle" href="/admin" data-testid="no-profile-admin">
           {{ $t('client.noProfile.adminAction') }}
         </UiButton>
-        <UiButton size="sm" variant="subtle" to="/hosting">
+        <UiButton size="sm" variant="subtle" to="/hosting" data-testid="no-profile-browse">
           {{ $t('client.noProfile.browseAction') }}
         </UiButton>
-      </div>
+      </UiStack>
     </template>
   </UiAlert>
 </template>
@@ -36,13 +36,15 @@
  *
  * The explanation is the API's own sentence, kept by `stores/client.ts` when it recognised
  * the CLIENT_PROFILE_NOT_FOUND code, and already in the caller's language — the backend
- * resolves it from `ValidationMessages*.resx` in the culture `Accept-Language` asked for. No
+ * resolves it from `ApplicationValidationMessages*.resx` in the culture `Accept-Language` asked for. No
  * sentence is written in this template, and there is no longer a mapping table to look one up
  * in.
  */
 import { useClientStore } from '~/stores/client'
 
+/** Translator for the strings this file builds itself. */
 const { t } = useI18n()
+/** Client store: the signed-in person and their services, invoices, domains and tickets. */
 const store = useClientStore()
 
 /**

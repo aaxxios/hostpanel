@@ -1,0 +1,65 @@
+/**
+ * Tests for `composables/apis/useClientApi.ts`.
+ *
+ * Each endpoint function is called for real through `apiFetch` against a stub server, and the
+ * test asserts on the path, verb, query and body that arrived and on how the reply was typed.
+ *
+ * @module tests/composables/apis/useClientApi.test
+ */
+
+import { afterEach, describe, it } from 'vitest'
+import { expectLastRequest, startTransport } from '../../helpers/stubTransport'
+import type { ExpectedRequest } from '../../helpers/stubTransport'
+import type { StubServer } from '../../helpers/stubServer'
+import { useClientApi } from '~/composables/apis/useClientApi'
+import { makeContactInput } from '~/tests/helpers/accountContact'
+import { CancellationType } from '~/types/cancellationtype'
+
+/** The stub started by the current test. */
+let stub: StubServer | undefined
+
+afterEach(async () => {
+  await stub?.close()
+  stub = undefined
+})
+
+/** The api surface under test. */
+const api = useClientApi()
+
+/** Every endpoint function with the request it must send. */
+const rows: ExpectedRequest[] = [
+  { name: 'fetchMe reads the profile', call: () => api.fetchMe(), method: 'GET', url: '/api/portal/client/me' },
+  { name: 'fetchMeOnce reads the profile as a plain record', call: () => api.fetchMeOnce(), method: 'GET', url: '/api/portal/client/me' },
+  { name: 'updateMe puts the profile', call: () => api.updateMe({ firstname: 'Ada' }), method: 'PUT', url: '/api/portal/client/me', body: { firstname: 'Ada' } },
+  { name: 'fetchServices reads the list', call: () => api.fetchServices(), method: 'GET', url: '/api/portal/client/services' },
+  { name: 'fetchInvoices reads the list', call: () => api.fetchInvoices(), method: 'GET', url: '/api/portal/client/invoices' },
+  { name: 'fetchDomains reads the list', call: () => api.fetchDomains(), method: 'GET', url: '/api/portal/client/domains' },
+  { name: 'fetchTickets reads the list', call: () => api.fetchTickets(), method: 'GET', url: '/api/portal/client/tickets' },
+  { name: 'fetchUsers reads the team', call: () => api.fetchUsers(), method: 'GET', url: '/api/portal/client/users' },
+  { name: 'inviteUser posts the invitation', call: () => api.inviteUser({ email: 'a@b.c' }), method: 'POST', url: '/api/portal/client/users/invite', body: { email: 'a@b.c' } },
+  { name: 'removeUser deletes by id', call: () => api.removeUser('u1'), method: 'DELETE', url: '/api/portal/client/users/u1' },
+  { name: 'fetchContacts reads the list', call: () => api.fetchContacts(), method: 'GET', url: '/api/portal/client/contacts' },
+  { name: 'createContact posts the contact', call: () => api.createContact(makeContactInput({ firstName: 'A' })), method: 'POST', url: '/api/portal/client/contacts', body: makeContactInput({ firstName: 'A' }) },
+  { name: 'updateContact puts by id', call: () => api.updateContact(3, makeContactInput({ firstName: 'B' })), method: 'PUT', url: '/api/portal/client/contacts/3', body: makeContactInput({ firstName: 'B' }) },
+  { name: 'removeContact deletes by id', call: () => api.removeContact(3), method: 'DELETE', url: '/api/portal/client/contacts/3' },
+  { name: 'fetchEmails reads the list', call: () => api.fetchEmails(), method: 'GET', url: '/api/portal/client/emails' },
+  { name: 'fetchEmail reads one message', call: () => api.fetchEmail('5'), method: 'GET', url: '/api/portal/client/emails/5' },
+  { name: 'fetchService reads one service', call: () => api.fetchService('9'), method: 'GET', url: '/api/portal/client/services/9' },
+  { name: 'fetchHostingInfo reads the sub-resource', call: () => api.fetchHostingInfo('9'), method: 'GET', url: '/api/portal/client/services/9/hosting-info' },
+  { name: 'fetchCancellationStatus reads the sub-resource', call: () => api.fetchCancellationStatus('9'), method: 'GET', url: '/api/portal/client/services/9/cancellation-status' },
+  { name: 'fetchServiceInvoices reads the service invoices', call: () => api.fetchServiceInvoices('9'), method: 'GET', url: '/api/portal/client/services/9/invoices' },
+  { name: 'changeServicePassword posts the password', call: () => api.changeServicePassword('9', 'longenough'), method: 'POST', url: '/api/portal/client/services/9/change-password', body: { password: 'longenough' } },
+  { name: 'cancelService posts the type as a member name', call: () => api.cancelService('9', { type: CancellationType.EndOfBillingPeriod, reason: 'moving' }), method: 'POST', url: '/api/portal/client/services/9/cancel', body: { type: 'EndOfBillingPeriod', reason: 'moving' } },
+  { name: 'fetchCpanelSsoUrl reads the sign-in address', call: () => api.fetchCpanelSsoUrl('9'), method: 'GET', url: '/api/portal/client/services/9/cpanel-sso' },
+  { name: 'setUpService posts the setup answers', call: () => api.setUpService('9', { domain: 'a.com' }), method: 'POST', url: '/api/portal/client/services/9/setup', body: { domain: 'a.com' } },
+]
+
+describe('useClientApi', () => {
+  it.each(rows)('$name', async (row) => {
+    stub = await startTransport()
+
+    await row.call()
+
+    expectLastRequest(stub, row)
+  })
+})

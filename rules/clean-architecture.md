@@ -69,7 +69,7 @@ public class CreateInvoiceHandler(IInvoiceRepository repo, IUnitOfWork uow)
 
 - EF Core `DbContext`, migrations, and configurations live here only
 - Repository implementations implement Domain interfaces
-- External service clients (Stripe, Namecheap, cPanel) live in `Infrastructure/Integrations/`
+- External service clients (payment gateways, registrars, control panels) live in `Infrastructure/Integrations/`
 - No business logic — only I/O, mapping, persistence
 
 ## API Layer Rules

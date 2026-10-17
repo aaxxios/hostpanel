@@ -6,5 +6,5 @@
  */
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  return await internalApiCall<void>(event, '/me/2fa/enable', { method: 'POST', body })
+  return await internalApiCall<undefined>(event, '/me/2fa/enable', { method: 'POST', body })
 })

@@ -20,22 +20,34 @@
  * Bearer callers are exempt: a bearer token has to be attached deliberately, which
  * a cross-site page cannot do, and the server-to-server callers that use one are
  * not browsers.
+ *
+ * @module server/middleware/csrf
  */
+
+/** Methods that never change state, and so are never checked. */
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
+/** Refuses a state-changing `/api/` request that lacks the custom header. */
 export default defineEventHandler((event) => {
-  if (SAFE_METHODS.has(event.method)) return
+  if (SAFE_METHODS.has(event.method)) {
+    return
+  }
 
   // Only this app's own API. Everything else Nitro serves is a page render.
-  if (!(event.path ?? '').startsWith('/api/')) return
+  if (!(event.path ?? '').startsWith('/api/')) {
+    return
+  }
 
-  if (getHeader(event, 'authorization')?.startsWith('Bearer ')) return
+  if (getHeader(event, 'authorization')?.startsWith('Bearer ')) {
+    return
+  }
 
-  if (getHeader(event, 'x-requested-with') === 'XMLHttpRequest') return
+  if (getHeader(event, 'x-requested-with') === 'XMLHttpRequest') {
+    return
+  }
 
   throw createError({
     statusCode: 403,
-    statusMessage: 'Forbidden',
     message:
       'This endpoint changes state and requires the header '
       + 'X-Requested-With: XMLHttpRequest.',

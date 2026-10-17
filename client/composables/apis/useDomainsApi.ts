@@ -6,29 +6,32 @@
  * `/api/portal/public`, because an API file is named for the backend surface it covers rather
  * than for the screen that happens to call it.
  *
- * `load*` returns the `useApi()` handle for a server-rendered read; everything else returns a
- * plain `Promise`. Nothing here is cached or held.
+ * Every function returns a plain `Promise`. Nothing here is cached or held.
  *
  * @module composables/apis/useDomainsApi
  */
 
-import { apiFetch, useApi } from '~/composables/useApi'
-import type { ClientDomain } from '~/types/clientdomain'
+import { apiFetch } from '~/composables/useApi'
+import type { DomainContactFields } from '~/types/domaincontactfields'
+import type { DomainDetail } from '~/types/domaindetail'
+import type { RegistrantContact } from '~/types/registrantcontact'
+import type { WhoisRecord } from '~/types/whoisrecord'
 
 /**
  * The client-domain surface, one function per endpoint.
  *
  * @returns The domain endpoint functions.
  */
-export function useDomainsApi() {
+export const useDomainsApi = () => {
   /**
    * Reads one domain.
    *
-   * @param id - Domain id; a getter so the page re-reads when the route changes.
-   * @returns The `useApi()` handle for the domain.
+   * @param id - Domain id.
+   * @returns The domain.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadDomain = (id: () => string) =>
-    useApi<ClientDomain>(() => `/api/portal/client/domains/${id()}`)
+  const fetchDomain = (id: string): Promise<DomainDetail> =>
+    apiFetch<DomainDetail>(`/api/portal/client/domains/${id}`)
 
   /**
    * Switches automatic renewal on or off.
@@ -91,17 +94,18 @@ export function useDomainsApi() {
     })
 
   /**
-   * Replaces the domain's WHOIS contact details.
+   * Replaces the domain's WHOIS registrant contact.
    *
    * @param id - Domain id.
-   * @param contacts - The contact record to write.
+   * @param contact - The registrant contact; sent as `{ contact }`, the backend's
+   * `ModifyMyDomainContactCommand` body.
    * @returns Whatever the endpoint answers with.
    * @throws Whatever `apiFetch` throws.
    */
-  const setWhois = (id: string, contacts: Record<string, unknown>): Promise<unknown> =>
+  const setWhois = (id: string, contact: DomainContactFields): Promise<unknown> =>
     apiFetch(`/api/portal/client/domains/${id}/whois`, {
       method: 'PUT',
-      body: contacts
+      body: { contact }
     })
 
   /**
@@ -115,14 +119,24 @@ export function useDomainsApi() {
     apiFetch<T[]>(`/api/portal/client/domains/${id}/nameservers`)
 
   /**
-   * Reads the domain's current WHOIS contacts.
+   * Reads the registry's WHOIS record of the domain.
    *
    * @param id - Domain id.
-   * @returns The contact record, keyed by contact type.
+   * @returns The record: registrar, registrant and the registration dates.
    * @throws Whatever `apiFetch` throws.
    */
-  const fetchWhois = <T>(id: string): Promise<T> =>
-    apiFetch<T>(`/api/portal/client/domains/${id}/whois`)
+  const fetchWhois = (id: string): Promise<WhoisRecord> =>
+    apiFetch<WhoisRecord>(`/api/portal/client/domains/${id}/whois`)
+
+  /**
+   * Reads the WHOIS registrant contact the registrar currently holds for the domain.
+   *
+   * @param id - Domain id.
+   * @returns The registrant contact, the backend's `DomainContactDto`.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const fetchContact = (id: string): Promise<RegistrantContact> =>
+    apiFetch<RegistrantContact>(`/api/portal/client/domains/${id}/contact`)
 
   /**
    * Asks the registrar for the domain's transfer authorisation code.
@@ -172,13 +186,14 @@ export function useDomainsApi() {
     )
 
   return {
-    loadDomain,
+    fetchDomain,
     setAutoRenew,
     setLock,
     setIdProtect,
     fetchNameservers,
     setNameservers,
     fetchWhois,
+    fetchContact,
     setWhois,
     requestEppCode,
     createRenewOrder,

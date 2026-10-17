@@ -17,7 +17,10 @@
  * it in new markup is only safe once an order can actually be placed against a
  * running backend to prove nothing was dropped.
  */
+import { TemplateSlot } from '~/types/templateslot'
+
 const { slot } = useTemplate()
 
-const checkout = slot('checkout')
+/** The active template's checkout component. */
+const checkout = slot(TemplateSlot.Checkout)
 </script>

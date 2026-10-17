@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>13</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharedKernel\Innovayse.Hostpanel.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\src\Innovayse.SDK\Innovayse.SDK.csproj" />
+    <ProjectReference Include="..\..\src\Innovayse.Providers.CWP\Innovayse.Providers.CWP.csproj" />
+    <ProjectReference Include="..\..\src\Innovayse.Providers.CWP7\Innovayse.Providers.CWP7.csproj" />
+    <ProjectReference Include="..\..\src\Innovayse.Providers.Inecobank\Innovayse.Providers.Inecobank.csproj" />
+    <ProjectReference Include="..\..\src\Innovayse.Hostpanel.Domain\Innovayse.Hostpanel.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Innovayse.Hostpanel.Application\Innovayse.Hostpanel.Application.csproj" />
+    <ProjectReference Include="..\..\src\Innovayse.Hostpanel.Infrastructure\Innovayse.Hostpanel.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Innovayse.Hostpanel.API\Innovayse.Hostpanel.API.csproj" />
+  </ItemGroup>
+</Project>

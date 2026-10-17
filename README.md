@@ -5,283 +5,221 @@
 <h1 align="center">HostPanel</h1>
 
 <p align="center">
-  <b>Self-hosted billing and automation for web hosting companies.</b><br>
-  An open-source alternative to WHMCS, built with ASP.NET Core 9 and Vue 3.
+  <b>Self-hosted billing, domains and provisioning for web hosting companies.</b><br>
+  Client portal, admin panel and API in one open-source stack. Install it with one command.
 </p>
 
 <p align="center">
   <a href="LICENSE"><img alt="License: AGPL v3" src="https://img.shields.io/badge/license-AGPL--3.0-blue"></a>
-  <a href="https://github.com/innovayse/hostpanel/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/innovayse/hostpanel?style=flat"></a>
-  <a href="https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22"><img alt="Good first issues" src="https://img.shields.io/github/issues/innovayse/hostpanel/good%20first%20issue?label=good%20first%20issues&color=7057ff"></a>
-  <a href="https://github.com/innovayse/hostpanel/discussions"><img alt="Discussions" src="https://img.shields.io/github/discussions/innovayse/hostpanel"></a>
-  <a href="https://discord.gg/NfqTkyTgD"><img alt="Discord" src="https://img.shields.io/badge/chat-on%20Discord-5865F2?logo=discord&logoColor=white"></a>
+  <a href="https://hub.docker.com/r/innovayse/hostpanel"><img alt="Docker Hub" src="https://img.shields.io/docker/pulls/innovayse/hostpanel?logo=docker&logoColor=white&label=Docker%20Hub"></a>
   <a href="https://github.com/innovayse/hostpanel/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/innovayse/hostpanel/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://discord.gg/NfqTkyTgD"><img alt="Chat on Discord" src="https://img.shields.io/badge/chat-on%20Discord-5865F2?logo=discord&logoColor=white"></a>
 </p>
 
 ---
 
 ## Why HostPanel
 
-If you sell hosting or domains, you probably run WHMCS: closed source, priced per client,
-and written in PHP you are not allowed to change. HostPanel covers the same job (client
-portal, billing, provisioning, domains, support tickets) with code you can read, run on
-your own server and extend.
+If you sell hosting or domains you need a client portal, invoicing, a domain registrar link and
+automatic account creation on your servers. HostPanel does that job with code you can read, run on
+your own machine and extend.
 
 - **You own it.** AGPL-3.0, self-hosted with Docker, no per-client licence fee.
-- **Modern stack.** ASP.NET Core 9 + PostgreSQL on the backend, Nuxt 4 / Vue 3 on the front.
-- **Built to be extended.** Payment gateways, registrars and provisioning panels are
-  plugins behind small interfaces, with an SDK for writing your own.
-- **Migration path.** Import clients and data from an existing WHMCS installation.
-
-## Live demo
-
-**[hostpanel.innovayse.com](https://hostpanel.innovayse.com)** (reset periodically)
-
-| Role     | Email                    | Password  |
-|----------|--------------------------|-----------|
-| Admin    | superadmin@hostpanel.com | Admin123! |
-| Reseller | reseller@hostpanel.com   | Admin123! |
-| Client   | customer@hostpanel.com   | Admin123! |
+- **Modern stack.** ASP.NET Core 9 and PostgreSQL behind a Nuxt 4 storefront and a Vue 3 admin panel.
+- **Built to be extended.** Payment gateways, registrars and provisioning panels are plugins behind
+  small interfaces, with an SDK for writing your own.
+- **Ready in minutes.** Prebuilt multi-arch images (`amd64`, `arm64`) on Docker Hub and an installer
+  that sets up HTTPS for you.
 
 ## Features
 
-- **Client portal**: order services, manage domains, pay invoices, open support tickets
-- **Admin panel**: clients, products, billing, provisioning and integrations in one place
-- **Billing**: invoices and online payments (Stripe, Inecobank). PayPal and bank transfer are
-  [on the roadmap](https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+gateway)
-- **Domains**: registrar integrations for Namecheap and Name.am
-- **Provisioning**: CWP (CentOS Web Panel), with cPanel/WHM [in progress](https://github.com/innovayse/hostpanel/issues/51)
-- **Storefront templates**: three switchable designs, brandable from the admin panel
-- **Multi-language**: English, Russian and Armenian
-- **Plugin SDK**: extend it through `Innovayse.SDK`
-- **WHMCS migration**: import clients and data from an existing installation
+| Area | What you get |
+|---|---|
+| Billing and invoices | Invoices, transactions, credits, quotes, billable items, promotions, aging and income reports |
+| Multi-currency | Several currencies with rates, resolved per client |
+| Domains and TLD pricing | Domain search and registration through registrar plugins, per-TLD pricing, renewals and renewal e-mails |
+| Hosting provisioning | Products and services, orders, automatic account creation, suspension and termination on your servers |
+| Support tickets | Client tickets, predefined replies, announcements, network issues |
+| Knowledge base | Public articles for the storefront, managed from the admin panel |
+| Client portal | Order, pay invoices, manage services and domains, open tickets; three switchable storefront designs, brandable without code |
+| Admin panel | Clients, orders, products, gateways, integrations, e-mail templates, plugins, reports, audit log |
+| Demo mode | Fake payments, registrar and provisioning, caught mail and a scheduled data reset |
+| Languages | English, Russian and Armenian in both the portal and the admin panel |
+| Plugin SDK | `Innovayse.SDK` for your own payment, registrar and provisioning providers |
+| Data import | Importers for moving clients and data from another billing system |
 
 See the [open feature requests](https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
-for what is coming next, and vote with a 👍 on the ones you need.
+for what is coming next.
 
-## Tech stack
+## Quick start with Docker
 
-| Layer | Technology |
-|-------|-----------|
-| Backend API | ASP.NET Core 9, Wolverine, EF Core, PostgreSQL |
-| Client portal | Nuxt 4, Vue 3, TypeScript, Tailwind CSS, Pinia |
-| Admin panel | Vite, Vue 3, TypeScript, Tailwind CSS |
-| Messaging | RabbitMQ + Wolverine outbox |
-| Auth | ASP.NET Core Identity, JWT in an httpOnly cookie |
-| Email | MailKit (MailHog in development) |
-| API docs | Scalar |
+On a Linux server with [Docker](https://docs.docker.com/get-docker/) and Compose v2, point the DNS of your
+domain and admin domain at the server, keep ports 80 and 443 open, and run one command:
 
----
+```bash
+curl -fsSL https://raw.githubusercontent.com/innovayse/hostpanel/main/install.sh | bash
+```
 
-## Quick start
+The script downloads only `docker-compose.hub.yml`, `Caddyfile` and `.env.example` into `/opt/hostpanel`, then:
 
-You need [Docker](https://docs.docker.com/get-docker/) with Compose v2. Nothing else, and no
-account or token from us.
+1. asks for your domain, the admin domain and an admin e-mail (also the certificate contact);
+2. generates every secret with `openssl` and writes `.env`;
+3. pulls the images from Docker Hub and starts the stack;
+4. waits for the API and prints the URLs plus the one-time **setup token**.
 
-> **This runs a development stack** for trying HostPanel and working on it: the API runs
-> under `dotnet watch` with your source tree mounted, and it seeds demo data. Do not expose
-> it to the internet. See [Running in production](#running-in-production).
+**HTTPS is automatic.** The bundled [Caddy](https://caddyserver.com) edge obtains and renews Let's Encrypt
+certificates for both hosts.
+
+| Setting | Flag | Environment variable |
+|---|---|---|
+| Install directory (default `/opt/hostpanel`) | `--dir` | `HOSTPANEL_DIR` |
+| Release to install (default `latest`) | `--version` | `HOSTPANEL_VERSION` |
+| Plain HTTP on port 8080 behind your own TLS proxy | `--no-tls` | `HOSTPANEL_TLS=off` |
+| Non-interactive answers | | `HOSTPANEL_DOMAIN`, `HOSTPANEL_ADMIN_DOMAIN`, `HOSTPANEL_ADMIN_EMAIL` |
+
+Pass a flag through the pipe with `... | bash -s -- --version 1.4.0 --no-tls`. For a run without questions set the
+three answer variables (`HOSTPANEL_NONINTERACTIVE=1` forces it even with a terminal).
+
+**First admin account.** On a fresh install the API prints a one-time setup token to its log:
+
+```bash
+cd /opt/hostpanel && docker compose -f docker-compose.hub.yml logs hostpanel-api | grep "setup token"
+```
+
+Open the admin panel, create your account and paste the token when asked. It proves you operate the server and stops
+working once setup is done.
+
+## Using the Docker Hub images
+
+Everything is published to **one repository, [`innovayse/hostpanel`](https://hub.docker.com/r/innovayse/hostpanel)**.
+The component is part of the tag:
+
+| Component | Pinned to a release | Moving |
+|---|---|---|
+| API | `innovayse/hostpanel:api-<version>` | `innovayse/hostpanel:api-latest` |
+| Client portal | `innovayse/hostpanel:client-<version>` | `innovayse/hostpanel:client-latest` |
+| Admin panel | `innovayse/hostpanel:admin-<version>` | `innovayse/hostpanel:admin-latest` |
+
+`<version>` has no leading `v` (`1.2.3`). In `.env`, `IMAGE_TAG` is that version or `latest`; the compose file adds the
+component prefix. The images are built with `AUTH_MODE=local`.
+
+### Minimal manual run
+
+You need `docker-compose.hub.yml`, `docker/caddy/Caddyfile` (copy it next to the compose file) and a `.env`:
+
+```bash
+cd docker
+cp .env.example .env     # set DOCKERHUB_NAMESPACE=innovayse, IMAGE_TAG, ASPNETCORE_ENVIRONMENT=Production, ACME_EMAIL and the secrets
+docker compose -f docker-compose.hub.yml up -d
+```
+
+The file is standalone (it replaces `shared` + `prod`) and refuses to start without `DOCKERHUB_NAMESPACE`, `IMAGE_TAG`,
+`POSTGRES_PASSWORD`, `RABBITMQ_PASSWORD`, `JWT_SECRET`, `ENCRYPTION_KEY` and `ALLOWED_HOSTS`. The admin panel is built for
+the root path, so serve it on its own host. Use `EDGE_SCHEME=http://` for plain HTTP behind your own proxy.
+
+### Operating it
+
+| Task | How |
+|---|---|
+| Upgrade | Re-run the install script (an existing `.env` is kept; with `--version` it moves `IMAGE_TAG`), or `docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d` |
+| Pin a version | Set `IMAGE_TAG=1.4.0` in `.env` instead of `latest` |
+| Logs | `docker compose -f docker-compose.hub.yml logs -f hostpanel-api` (or `hostpanel-client`, `hostpanel-admin`) |
+| Back up the database | `docker compose -f docker-compose.hub.yml exec -T hostpanel-db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > backup.sql`, or snapshot the `hostpanel_pgdata` volume |
+| Keep certificates | Do not delete the `hostpanel_caddydata` volume; re-issuing can hit Let's Encrypt rate limits |
+
+## Demo mode
+
+Run a self-contained demo (fake payments, registrar and provisioning, mail caught by a test inbox, data reset on a
+schedule) next to anything else on the machine. Fill the `# Demo` block of `docker/.env` (from `docker/.env.example`,
+with `AUTH_MODE=local`), then:
+
+```bash
+docker compose -p hostpanel-demo -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.demo.yml up --build
+```
+
+The API runs with `Demo__Enabled`: the adapters are fakes, outgoing mail goes to the demo inbox, and the database is
+re-seeded every `DEMO_RESET_INTERVAL_HOURS` hours with the accounts from `DEMO_ADMIN_*` and `DEMO_CLIENT_*`. It uses its
+own `hostpanel-demo-*` containers and volumes, so it never touches a production stack on the same host. See
+[docker/README.md](docker/README.md). A public instance is at [hostpanel.innovayse.com](https://hostpanel.innovayse.com).
+
+## Configuration
+
+Copy `docker/.env.example` to `docker/.env`; the file documents every variable. The ones you touch first:
+
+| Variable | Description |
+|---|---|
+| `AUTH_MODE` | `local` (standalone, email and password, optional TOTP) or `sso` (Innovayse deployments only, needs a private package) |
+| `DOMAIN` / `ADMIN_DOMAIN` | Public hosts of the portal and the admin panel |
+| `ASPNETCORE_ENVIRONMENT` | `Production` for a real install: no demo data, no seeded accounts |
+| `JWT_SECRET` | JWT signing key, at least 32 characters |
+| `ENCRYPTION_KEY` | Encrypts stored server passwords and API tokens (`openssl rand -base64 32`) |
+| `POSTGRES_PASSWORD`, `RABBITMQ_PASSWORD` | Database and broker passwords |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_ENCRYPTION`, `SMTP_FROM` | Outgoing mail; `SMTP_ENCRYPTION` is `tls`, `ssl` or `none` and is never guessed from the port |
+| `IMAGE_TAG`, `DOCKERHUB_NAMESPACE` | Which published images `docker-compose.hub.yml` runs |
+| `NUXT_PUBLIC_PORTAL_*` | Storefront template, name, logo and colours, see [guides/storefront.md](guides/storefront.md) |
+
+## Run from source
+
+You need Docker with Compose v2 and nothing else.
+
+> This is a **development stack**: the API runs under `dotnet watch` with your source mounted and seeds demo data.
+> Do not expose it to the internet.
 
 ```bash
 git clone https://github.com/innovayse/hostpanel.git
-cd hostpanel
+cd hostpanel/docker
 cp .env.example .env      # AUTH_MODE=local and ASPNETCORE_ENVIRONMENT=Development by default
-docker compose up -d
-docker compose logs -f hostpanel-api   # migrations and demo data run on startup
+docker compose -f docker-compose.shared.yml -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.shared.yml -f docker-compose.dev.yml logs -f hostpanel-api   # migrations and seeding run on startup
 ```
-
-Then open:
 
 | | URL |
 |---|---|
 | Client portal | http://localhost:3001 |
 | Admin panel | http://localhost:5174 |
-| API docs | http://localhost:5149/scalar |
-| MailHog (dev mail) | http://localhost:8027 |
+| API docs (Scalar) | http://localhost:5149/scalar |
+| Dev mail inbox | http://localhost:8027 |
 
-In Development the API seeds demo data on every start, including an admin account
-`admin@hostpanel.com` / `Admin123!` and sample clients such as `customer@hostpanel.com`.
+In Development the API seeds an admin `admin@hostpanel.com` / `Admin123!` and sample clients such as `customer@hostpanel.com`.
+Every compose stack (shared, dev, prod, platform, demo, hub) is described in [docker/README.md](docker/README.md).
 
-For local development without Docker you need the .NET 9 SDK, **Node.js 22+**, yarn and
-PostgreSQL 17 (Nuxt's toolchain refuses Node 20). See [Development](#development).
+**Without Docker** you need the .NET 9 SDK, Node.js 22+, yarn and PostgreSQL 17:
 
-### Running in production
+```bash
+cd backend && dotnet run --project src/Innovayse.Hostpanel.API   # http://localhost:5148
+cd client  && yarn install && yarn dev                            # http://localhost:3000
+cd admin   && npm install && npm run dev                          # http://localhost:5173
+```
 
-A step-by-step production guide is still to be written (help is welcome); until then, ask in
-[Q&A](https://github.com/innovayse/hostpanel/discussions/categories/q-a). What changes compared with the quick start:
+Set the API's connection string, RabbitMQ and SMTP settings through environment variables, user-secrets or the
+git-ignored `appsettings.Development.json`.
 
-- `ASPNETCORE_ENVIRONMENT=Production`: no demo data, no seeded accounts
-- real secrets: `JWT_SECRET` (32+ characters), `ENCRYPTION_KEY` (`openssl rand -base64 32`),
-  `POSTGRES_PASSWORD`, and a real SMTP server
-- the `prod` build target (`docker-compose.prod.yml` builds it) instead of the dev target, and
-  no Docker socket mounted into the API
-- a reverse proxy with TLS in front of the client portal, admin panel and API
+**Tests.** `dotnet test` in `backend/` runs the unit, architecture and integration suites (the integration suite starts
+its own PostgreSQL through Testcontainers, so Docker must be running). Run `yarn test` / `yarn lint` in `client/` and
+`npm run test` / `npm run lint` in `admin/`.
 
-**First admin account.** On a fresh install with no admin, the API prints a one-time setup
-token to its log. Open the admin panel, create your account, and paste the token when asked.
-It proves you operate this server, and it stops working once setup is done.
+## Architecture in brief
 
-## Configuration
-
-Copy `.env.example` to `.env`. The file documents every variable; these are the ones you
-will touch first:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AUTH_MODE` | `local` (standalone, this README) or `sso` (Innovayse SSO, see below) | `local` |
-| `JWT_SECRET` | JWT signing key, at least 32 characters | **change this** |
-| `ENCRYPTION_KEY` | Encrypts stored server passwords and API tokens. `openssl rand -base64 32` | dev-only key |
-| `POSTGRES_PASSWORD` | PostgreSQL password | `postgres` |
-| `SMTP_HOST` / `SMTP_PORT` | Outgoing mail | `mailhog` / `1025` |
-| `SMTP_ENCRYPTION` | `tls`, `ssl` or `none`. Required: the API will not guess from the port | `none` |
-| `SMTP_FROM` | Sender address on outgoing mail | `noreply@innovayse.com` |
-
-For the client portal, copy `client/.env.example` to `client/.env`.
-
-### Authentication modes
-
-| | `local` (default) | `sso` |
+| Part | Technology | Notes |
 |---|---|---|
-| Who it is for | Anyone self-hosting | Innovayse's own deployments |
-| Sign-in | Email and password (+ optional TOTP), against this database | Innovayse SSO |
-| Admin panel | Email/password form, session in an httpOnly cookie | SSO button |
-| Build requirement | None | `Innovayse.Auth` from a private registry |
+| Backend `backend/` | ASP.NET Core 9, Wolverine, EF Core, PostgreSQL | Clean Architecture: `Domain` (entities, rules) <- `Application` (CQRS handlers, validators) <- `Infrastructure` (EF Core, integrations) <- `API` (thin controllers) |
+| Messaging | RabbitMQ with the Wolverine outbox | Reliable events between modules |
+| Client portal `client/` | Nuxt 4, Vue 3, TypeScript, Tailwind, Pinia | Server-rendered storefront; pages own data and SEO, `templates/` hold the switchable designs |
+| Admin panel `admin/` | Vite, Vue 3, TypeScript, Tailwind | Single-page app served by nginx |
+| Plugins | `Innovayse.SDK` and `Innovayse.Providers.*` | Payment, registrar and provisioning providers behind small interfaces |
+| Auth | ASP.NET Core Identity, JWT in an httpOnly cookie | `local` mode by default |
 
-`sso` mode depends on `Innovayse.Auth`, which is published to a private package registry.
-A plain clone builds without it: the package is referenced only when
-`NUGET_INNOVAYSE_CREDENTIALS` is set (or with `-p:InnovayseSso=true`), and a build without
-it refuses to start in `sso` mode with a message saying so. Details are in
-`backend/Directory.Build.props`.
+Each app owns its Dockerfile (`backend/Dockerfile`, `client/Dockerfile`, `admin/Dockerfile`). A new payment gateway, registrar
+or control-panel integration is one of the most useful contributions: open an issue first so we can agree on the shape.
 
----
+## Contributing, security, license
 
-## Project structure
-
-```
-hostpanel/
-├── backend/                  # ASP.NET Core solution
-│   ├── src/
-│       ├── Innovayse.API/        # Controllers (thin, Wolverine dispatch)
-│       ├── Innovayse.Application/ # CQRS handlers, validators, DTOs
-│       ├── Innovayse.Domain/      # Entities, value objects, interfaces
-│       ├── Innovayse.Infrastructure/ # EF Core, repositories, integrations
-│       ├── Innovayse.Providers.CWP/  # CWP provisioning provider
-│       ├── Innovayse.Providers.CWP7/ # CWP7 provisioning provider
-│       ├── Innovayse.Providers.Inecobank/ # Inecobank payment gateway
-│       └── Innovayse.SDK/         # Plugin SDK
-│   └── tests/                    # xUnit suites (unit + Testcontainers integration)
-├── client/                   # Nuxt 4 client portal
-│   ├── pages/                    # Routes: data, SEO, business logic
-│   ├── templates/                # Storefront designs — presentation only
-│   │   ├── registry.ts               # name + slot → component
-│   │   ├── aurora/                   # Default design
-│   │   └── classic/                  # Original design
-│   └── components/               # Shared component library
-├── admin/                    # Vue 3 admin panel
-├── docker/                   # Dockerfiles and nginx config
-├── docker-compose.yml
-└── .env.example
-```
-
----
-
-## Development
-
-### Backend
-
-The quickest loop is to let Docker run the infrastructure and run the API on your machine:
-
-```bash
-docker compose up -d hostpanel-db rabbitmq mailhog   # Postgres :5434, RabbitMQ :5673, MailHog :1026
-
-cd backend
-export ASPNETCORE_ENVIRONMENT=Development Auth__Mode=local \
-  ConnectionStrings__DefaultConnection="Host=localhost;Port=5434;Database=innovayse_dev;Username=postgres;Password=postgres" \
-  RabbitMQ__Host=localhost RabbitMQ__Port=5673 RabbitMQ__User=guest RabbitMQ__Password=guest \
-  Smtp__Host=localhost Smtp__Port=1026 Smtp__Encryption=none
-dotnet run --project src/Innovayse.API      # http://localhost:5148
-```
-
-Instead of exporting variables you can put the same keys in
-`src/Innovayse.API/appsettings.Development.json` (it is gitignored, so nothing you put there
-is committed) or in user-secrets (`dotnet user-secrets set "Jwt:Secret" "…"`).
-
-Run the tests with `dotnet test`. The integration suite starts its own PostgreSQL through
-Testcontainers, so it needs Docker running.
-
-### Client Portal
-
-```bash
-cd client
-yarn install
-yarn dev        # http://localhost:3000
-```
-
-### Admin Panel
-
-```bash
-cd admin
-npm install
-npm run dev     # http://localhost:5173
-```
-
-
----
-
-## Storefront templates and branding
-
-The client portal ships three designs (`aurora`, `nova`, `classic`) and can be rebranded
-from **Admin → Settings** without touching code. How to pick one, add your own, and every
-branding setting are in [guides/storefront.md](guides/storefront.md).
-
----
-
-## Integrations
-
-HostPanel uses a pluggable provider model. The simplest way to add a provider is a plugin
-project built on `Innovayse.SDK`: derive from its base class (for example
-`ProvisioningProviderBase` in `Innovayse.SDK.Base`), the way `Innovayse.Providers.CWP` and
-`Innovayse.Providers.Inecobank` do.
-
-| Interface | Purpose | Built-in providers |
-|-----------|---------|-------------------|
-| `IPaymentGateway` | Payment processing | Stripe, Inecobank |
-| `IRegistrarProvider` | Domain registration | Namecheap, Name.am |
-| `IProvisioningProvider` | Hosting provisioning | CWP, CWP7, cPanel/WHM (in progress) |
-
-A new payment gateway, registrar or control panel is one of the most useful things you can
-contribute. Open an issue first so we can agree on the shape.
-
----
-
-## Contributing
-
-Contributions of every size are welcome: a typo, a translation, a bug report, a new
-provider.
-
-1. Look at [good first issues](https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
-   or [help wanted](https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
-2. Comment on the issue so nobody duplicates your work
-3. Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, code style and the PR checklist
-
-Questions and ideas go to [GitHub Discussions](https://github.com/innovayse/hostpanel/discussions).
-Security problems go to the address in [SECURITY.md](SECURITY.md), not to a public issue.
-
-## Community
-
-- 💬 [Discussions](https://github.com/innovayse/hostpanel/discussions): questions, ideas, show what you built
-- 🐛 [Issues](https://github.com/innovayse/hostpanel/issues): bugs and feature requests
-- ⭐ Star the repo if HostPanel is useful to you. It helps other hosting companies find it.
-
----
-
-## License
-
-Copyright (c) 2024-2026 Innovayse LLC.
-
-HostPanel is free software, licensed under the
-[GNU Affero General Public License v3.0 or later](LICENSE). You may use, modify and
-self-host it, including commercially. If you run a modified version as a network service,
-the AGPL asks you to offer your users the source of that modified version.
-
-Releases before this change were published under the Business Source License 1.1.
+- **Contributing:** start with [good first issues](https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22),
+  read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Questions go to
+  [Discussions](https://github.com/innovayse/hostpanel/discussions).
+- **Community:** chat and ask questions on [Discord](https://discord.gg/NfqTkyTgD).
+- **Changes and help:** see the [CHANGELOG](CHANGELOG.md) for release notes and [SUPPORT.md](SUPPORT.md) for where to get help.
+- **Security:** report problems privately as described in [SECURITY.md](SECURITY.md), not in a public issue.
+- **License:** Copyright (c) 2024-2026 Innovayse LLC. Free software under the
+  [GNU Affero General Public License v3.0 or later](LICENSE): use, modify and self-host it, including commercially. If you
+  run a modified version as a network service, offer your users its source.

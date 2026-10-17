@@ -31,8 +31,7 @@ interface RenewOrderResult {
 }
 
 export default defineEventHandler(async (event): Promise<RenewOrderResult> => {
-  const id = getRouterParam(event, 'id')
-  if (!id) throw createError({ statusCode: 400, statusMessage: 'Domain ID is required' })
+  const id = requireRouteParam(event, 'id')
 
   const body = await readBody<Record<string, unknown>>(event)
 

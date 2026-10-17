@@ -12,6 +12,12 @@
  * yellow from turning brown at 800 and a blue from going grey at 200. The picked colour
  * is pinned at 500, so `bg-primary-500` is exactly what the operator chose.
  *
+ * This file is the single shared spec of the palette. The admin panel is built from its own
+ * directory and cannot import across the repository, so `admin/src/lib/brandPalette.ts` is a
+ * copy: the admin header followed by this file, byte for byte.
+ * `client/tests/utils/brandPalette.shared.test.ts` fails when the two drift. Change this file
+ * first, then copy it below the admin header.
+ *
  * @module utils/brandPalette
  */
 
@@ -42,10 +48,13 @@ const TARGET_L: Record<ShadeStep, number> = {
  * @param hex The colour, with its `#`.
  * @returns The channels, or `null` when the string is not a six-digit hex colour.
  */
-export function hexToRgb(hex: string): Rgb | null {
+export const hexToRgb = (hex: string): Rgb | null => {
   const m = /^#([0-9a-f]{6})$/i.exec(hex.trim())
-  if (!m) return null
-  const n = parseInt(m[1]!, 16)
+  if (!m) {
+    return null
+  }
+  // Group 1 always exists when the pattern matched; the fallback only satisfies the index type.
+  const n = parseInt(m[1] ?? '0', 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
@@ -55,24 +64,39 @@ export function hexToRgb(hex: string): Rgb | null {
  * @param rgb The channels.
  * @returns The hex string.
  */
-export function rgbToHex([r, g, b]: Rgb): string {
+export const rgbToHex = ([r, g, b]: Rgb): string => {
   return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('')
 }
 
-/** sRGB 0–255 → linear 0–1. */
+/**
+ * sRGB 0–255 → linear 0–1.
+ *
+ * @param c One sRGB channel.
+ * @returns The linear value.
+ */
 const toLinear = (c: number): number => {
   const s = c / 255
   return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
 }
 
-/** Linear 0–1 → sRGB 0–255, clamped. */
+/**
+ * Linear 0–1 → sRGB 0–255, clamped.
+ *
+ * @param l One linear channel.
+ * @returns The sRGB channel.
+ */
 const toSrgb = (l: number): number => {
   const c = l <= 0.0031308 ? l * 12.92 : 1.055 * l ** (1 / 2.4) - 0.055
   return Math.round(Math.min(1, Math.max(0, c)) * 255)
 }
 
-/** sRGB → OKLab (Björn Ottosson's matrices). */
-function rgbToOklab([r, g, b]: Rgb): [number, number, number] {
+/**
+ * sRGB → OKLab (Björn Ottosson's matrices).
+ *
+ * @param rgb The channels.
+ * @returns Lightness, a and b.
+ */
+const rgbToOklab = ([r, g, b]: Rgb): [number, number, number] => {
   const lr = toLinear(r), lg = toLinear(g), lb = toLinear(b)
   const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb)
   const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb)
@@ -84,8 +108,13 @@ function rgbToOklab([r, g, b]: Rgb): [number, number, number] {
   ]
 }
 
-/** OKLab → linear sRGB, unclamped, so a caller can tell whether the colour is in gamut. */
-function oklabToLinear([L, a, b]: [number, number, number]): [number, number, number] {
+/**
+ * OKLab → linear sRGB, unclamped, so a caller can tell whether the colour is in gamut.
+ *
+ * @param lab Lightness, a and b.
+ * @returns The linear channels.
+ */
+const oklabToLinear = ([L, a, b]: [number, number, number]): [number, number, number] => {
   const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
   const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
   const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3
@@ -96,7 +125,12 @@ function oklabToLinear([L, a, b]: [number, number, number]): [number, number, nu
   ]
 }
 
-/** Whether every linear channel is displayable, with a hair of tolerance for rounding. */
+/**
+ * Whether every linear channel is displayable, with a hair of tolerance for rounding.
+ *
+ * @param lin The linear channels.
+ * @returns True when the colour fits in sRGB.
+ */
 const inGamut = (lin: [number, number, number]): boolean =>
   lin.every(c => c >= -0.0005 && c <= 1.0005)
 
@@ -107,8 +141,14 @@ const inGamut = (lin: [number, number, number]): boolean =>
  * saturated blue into cyan and a light yellow into acid green, because the clipped channel
  * changes the hue. Pulling chroma back until the colour fits keeps the hue the operator
  * chose; the tint just gets a little paler, which is what a tint is.
+ *
+ * @param L OKLCH lightness.
+ * @param chroma OKLCH chroma the caller wants.
+ * @param hue OKLCH hue, in radians.
+ * @returns The in-gamut colour.
  */
-function oklchToRgb(L: number, chroma: number, hue: number): Rgb {
+const oklchToRgb = (L: number, chroma: number, hue: number): Rgb => {
+  /** The unclamped linear colour at a given chroma. */
   const at = (c: number): [number, number, number] =>
     oklabToLinear([L, c * Math.cos(hue), c * Math.sin(hue)])
 
@@ -117,8 +157,11 @@ function oklchToRgb(L: number, chroma: number, hue: number): Rgb {
     let lo = 0, hi = chroma
     for (let i = 0; i < 20; i++) {
       const mid = (lo + hi) / 2
-      if (inGamut(at(mid))) lo = mid
-      else hi = mid
+      if (inGamut(at(mid))) {
+        lo = mid
+      } else {
+        hi = mid
+      }
     }
     lin = at(lo)
   }
@@ -132,9 +175,11 @@ function oklchToRgb(L: number, chroma: number, hue: number): Rgb {
  * @returns The scale, with the picked colour itself at 500.
  * @throws {RangeError} When `hex` is not a six-digit hex colour.
  */
-export function buildScale(hex: string): Scale {
+export const buildScale = (hex: string): Scale => {
   const rgb = hexToRgb(hex)
-  if (!rgb) throw new RangeError(`Not a #rrggbb colour: ${hex}`)
+  if (!rgb) {
+    throw new RangeError(`Not a #rrggbb colour: ${hex}`)
+  }
 
   const [L0, a0, b0] = rgbToOklab(rgb)
   const chroma0 = Math.hypot(a0, b0)
@@ -176,7 +221,7 @@ export function buildScale(hex: string): Scale {
  * @param rgb The channels.
  * @returns Luminance in 0–1.
  */
-export function luminance([r, g, b]: Rgb): number {
+export const luminance = ([r, g, b]: Rgb): number => {
   return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b)
 }
 
@@ -187,9 +232,11 @@ export function luminance([r, g, b]: Rgb): number {
  * @param b The other, `#rrggbb`.
  * @returns The ratio, or `NaN` when either string is not a colour.
  */
-export function contrastRatio(a: string, b: string): number {
+export const contrastRatio = (a: string, b: string): number => {
   const ra = hexToRgb(a), rb = hexToRgb(b)
-  if (!ra || !rb) return NaN
+  if (!ra || !rb) {
+    return NaN
+  }
   const la = luminance(ra), lb = luminance(rb)
   const [hi, lo] = la > lb ? [la, lb] : [lb, la]
   return (hi + 0.05) / (lo + 0.05)
@@ -212,9 +259,11 @@ export const WCAG_AA_LARGE = 3
  * @param hex The surface colour, `#rrggbb`.
  * @returns `#ffffff` or `#111111`.
  */
-export function bestTextOn(hex: string): '#ffffff' | '#111111' {
+export const bestTextOn = (hex: string): '#ffffff' | '#111111' => {
   const white = contrastRatio('#ffffff', hex)
-  if (white >= WCAG_AA_LARGE) return '#ffffff'
+  if (white >= WCAG_AA_LARGE) {
+    return '#ffffff'
+  }
   return white >= contrastRatio('#111111', hex) ? '#ffffff' : '#111111'
 }
 
@@ -226,6 +275,6 @@ export function bestTextOn(hex: string): '#ffffff' | '#111111' {
  * @param scale The scale.
  * @returns One declaration per step, joined with `;`.
  */
-export function scaleToDeclarations(name: string, scale: Scale): string {
+export const scaleToDeclarations = (name: string, scale: Scale): string => {
   return SHADE_STEPS.map(step => `--${name}-${step}:${scale[step].join(' ')}`).join(';')
 }

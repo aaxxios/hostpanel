@@ -1,0 +1,223 @@
+{
+  "invoiceCreditTab": {
+    "addCreditToInvoice": "Add Credit to Invoice",
+    "valueUsdAvailable": "${value} USD Available",
+    "removeCreditFromInvoice": "Remove Credit from Invoice"
+  },
+  "invoiceNotesTab": {
+    "thereAreNoNotesOn": "There are no notes on this invoice."
+  },
+  "invoiceOptionsTab": {
+    "thisIsADraftInvoice": "This is a Draft Invoice. The client is not able to see or access this invoice until it is published.",
+    "taxRate": "Tax Rate"
+  },
+  "invoicePaymentTab": {
+    "publishTheInvoiceBeforeAdding": "Publish the invoice before adding payments.",
+    "invoiceIsCancelledPleaseMark": "Invoice is Cancelled: Please Mark Unpaid first to apply a payment.",
+    "addPayment": "Add Payment",
+    "gatewayReference": "Gateway reference"
+  },
+  "invoiceRefundTab": {
+    "thereAreNoTransactionsThat": "There are no transactions that are eligible for a refund.",
+    "publishTheInvoiceBeforeRequesting": "Publish the invoice before requesting a refund.",
+    "cannotRefundACancelledInvoice": "Cannot refund a cancelled invoice.",
+    "thisInvoiceHasAlreadyBeen": "This invoice has already been refunded.",
+    "leaveBlankForFullRefund": "Leave blank for full refund",
+    "refundType": "Refund Type",
+    "externalRefundReference": "External refund reference",
+    "warning": "WARNING",
+    "theseTransactionsResultedInA": "These transactions resulted in a credit being given to the user in the amount of",
+    "theCurrentCreditBalanceIs": ". The current credit balance is",
+    "weCanThereforeAutomaticallyRemove": "We can therefore automatically remove the amount from the user's credit balance.",
+    "clickHereToRemoveThe": "Click here to remove the amount from the credit balance.",
+    "clickHereToLeaveThe": "Click here to leave the credit untouched.",
+    "refund": "Refund",
+    "refundThroughGateway": "Refund through Gateway",
+    "manualRefundProcessedExternally": "Manual Refund Processed Externally",
+    "noTransactionsAppliedToThis": "No Transactions Applied To This Invoice Yet",
+    "selectATransaction": "Select a transaction..."
+  },
+  "invoiceSummaryTab": {
+    "thisIsADraftInvoice": "This is a Draft Invoice. The client is not able to see or access this invoice until it is published.",
+    "viewInvoices": "( View Invoices )",
+    "invoiceAmount": "Invoice Amount",
+    "lastCaptureAttempt": "Last Capture Attempt:",
+    "paymentMethod": "Payment Method:",
+    "publish": "Publish",
+    "attemptCapture": "Attempt Capture",
+    "markPaid": "Mark Paid"
+  },
+  "addBillableItem": {
+    "createANewBillableItem": "Create a new billable item for a client",
+    "whatIsThisChargeFor": "What is this charge for?",
+    "recurEvery": "Recur Every",
+    "nextDueDate": "(Next) Due Date",
+    "donTInvoiceForNow": "Don't Invoice for Now",
+    "invoiceOnNextCronRun": "Invoice on Next Cron Run",
+    "addToUserSNext": "Add to User's Next Invoice",
+    "invoiceAsNormalForDue": "Invoice as Normal for Due Date",
+    "recurringEvery": "Recurring Every",
+    "dayS": "Day(s)",
+    "weekS": "Week(s)",
+    "monthS": "Month(s)",
+    "yearS": "Year(s)",
+    "oneTime": "One Time",
+    "recurUnit": "Period"
+  },
+  "addQuote": {
+    "createQuote": "Create Quote",
+    "createANewQuoteFor": "Create a new quote for a client",
+    "generalInformation": "General Information",
+    "deleteRow": "Delete row",
+    "proposalText": "Proposal Text",
+    "displayedAtTheTopOf": "(Displayed at the Top of the Quote)",
+    "enterProposalText": "Enter proposal text...",
+    "customerNotes": "Customer Notes",
+    "displayedAsAFooterTo": "(Displayed as a Footer to the Quote)",
+    "enterCustomerNotes": "Enter customer notes...",
+    "adminOnlyNotes": "Admin Only Notes",
+    "privateNotes": "(Private Notes)",
+    "enterAdminNotes": "Enter admin notes...",
+    "delivered": "Delivered",
+    "onHold": "On Hold",
+    "accepted": "Accepted",
+    "lost": "Lost",
+    "dead": "Dead"
+  },
+  "addTransaction": {
+    "addTransaction": "Add Transaction",
+    "recordANewPaymentTransaction": "Record a new payment transaction",
+    "relatedClient": "Related Client",
+    "whatIsThisTransactionFor": "What is this transaction for?",
+    "externalTransactionId": "External transaction ID...",
+    "invoiceIdsCommaSeparated": "Invoice IDs (Comma Separated)",
+    "addToClientSCredit": "Add to Client's Credit Balance",
+    "creditDebitCard": "Credit/Debit Card",
+    "invoiceIdsExample": "e.g., 1, 2, 3"
+  },
+  "billableItems": {
+    "billableItems": "Billable Items",
+    "manageUninvoicedAndRecurringCharges": "Manage uninvoiced and recurring charges",
+    "searchDescription": "Search description...",
+    "lengthRecordsFound": "{length} Records Found",
+    "invoiced": "Invoiced",
+    "noItemsFound": "No items found.",
+    "uninvoiced": "Uninvoiced",
+    "activeRecurring": "Active Recurring",
+    "completedRecurring": "Completed Recurring",
+    "deleteItems": "Delete billable items",
+    "deleteItemsMessage": "Delete {count} selected billable items? This action cannot be undone."
+  },
+  "disputes": {
+    "listDisputes": "List Disputes",
+    "aDisputeOccursWhenA": "A dispute occurs when a customer questions your charge with their card issuer. When this happens, you're given the opportunity to respond to the dispute with evidence that shows that the charge is legitimate.",
+    "comingSoon": "Coming soon",
+    "comingSoonDescription": "Disputes will be listed here once a payment gateway reports them."
+  },
+  "editTransaction": {
+    "editTransaction": "Edit Transaction",
+    "updatePaymentTransactionDetails": "Update payment transaction details",
+    "updateTransaction": "Update Transaction"
+  },
+  "gatewayLog": {
+    "gatewayTransactionLog": "Gateway Transaction Log",
+    "viewPaymentGatewayTransactionLogs": "View payment gateway transaction logs",
+    "debugData": "Debug Data",
+    "searchInDebugData": "Search in debug data...",
+    "gateway": "Gateway",
+    "result": "Result",
+    "payment": "Payment",
+    "refund": "Refund",
+    "credit": "Credit",
+    "pending": "Pending"
+  },
+  "invoiceDetail": {
+    "invoiceId": "Invoice #{id}",
+    "manageAndViewInvoiceDetails": "Manage and view invoice details",
+    "viewInvoice": "View Invoice",
+    "manageInvoice": "Manage Invoice",
+    "theClientIsNotAble": "The client is not able to see or access this invoice until it is published.",
+    "thisIsADraftInvoice": "This is a Draft Invoice.",
+    "markUnpaid": "Mark Unpaid",
+    "addPayment": "Add Payment",
+    "options": "Options",
+    "unpaid": "Unpaid",
+    "tabSummary": "Summary",
+    "tabCredit": "Credit",
+    "tabRefund": "Refund"
+  },
+  "invoicesList": {
+    "manageBillingInvoices": "Manage billing invoices",
+    "dateRefunded": "Date Refunded",
+    "dateCancelled": "Date Cancelled",
+    "totalcountRecordsFoundShowingValue": "{totalCount} Records Found, Showing {value} to {value2}",
+    "markPaid": "Mark Paid",
+    "markUnpaid": "Mark Unpaid",
+    "duplicateInvoice": "Duplicate Invoice",
+    "collections": "Collections",
+    "paymentPending": "Payment Pending",
+    "deleteInvoice": "Delete invoice",
+    "deleteInvoiceMessage": "Delete invoice #{id}? This action cannot be undone.",
+    "deleteInvoices": "Delete invoices",
+    "deleteInvoicesMessage": "Delete {count} selected invoices? This action cannot be undone."
+  },
+  "offlineCC": {
+    "offlineCreditCardProcessing": "Offline Credit Card Processing",
+    "processOfflineCreditCardPayments": "Process offline credit card payments",
+    "comingSoon": "Coming soon",
+    "comingSoonDescription": "Offline card processing will be available here."
+  },
+  "quoteDetail": {
+    "newQuote": "New Quote",
+    "generalInformation": "General Information",
+    "quoteSubject": "Quote subject",
+    "selectStage": "Select stage",
+    "dateCreated": "Date Created",
+    "duplicate": "Duplicate",
+    "convertToInvoice": "Convert to Invoice",
+    "unitPrice": "Unit Price",
+    "discount": "Discount %",
+    "addItem": "+ Add Item",
+    "proposalText": "Proposal Text",
+    "proposalTextVisibleToThe": "Proposal text visible to the client...",
+    "customerNotes": "Customer Notes",
+    "notesVisibleToTheCustomer": "Notes visible to the customer...",
+    "adminOnlyNotes": "Admin Only Notes",
+    "internalNotesNotVisibleTo": "Internal notes (not visible to the client)...",
+    "deleteQuote": "Delete Quote",
+    "convert": "Convert",
+    "clientIdIsRequired": "Client ID is required.",
+    "convertMessage": "Convert quote #{id} to an invoice? The quote will remain unchanged.",
+    "deleteMessage": "Are you sure you want to delete quote #{id}? This action cannot be undone.",
+    "quoteNumber": "Quote #{id}"
+  },
+  "quotesList": {
+    "customerQuotesAndProposals": "Customer quotes and proposals",
+    "createQuote": "Create Quote",
+    "validityPeriod": "Validity Period",
+    "created": "Created",
+    "noQuotesFound": "No quotes found.",
+    "expired": "Expired",
+    "valid": "Valid"
+  },
+  "transactionsList": {
+    "paymentTransactionsAndRecords": "Payment transactions and records",
+    "addTransaction": "Add Transaction",
+    "show": "Show",
+    "netRevenueUsd": "Net Revenue (USD)",
+    "totalIncome": "Total Income",
+    "totalFees": "Total Fees",
+    "totalExpenditure": "Total Expenditure",
+    "manual": "Manual",
+    "noTransactionsFound": "No transactions found.",
+    "allActivity": "All Activity",
+    "paymentsReceived": "Payments Received",
+    "paymentsSent": "Payments Sent",
+    "deleteTransaction": "Delete transaction",
+    "deleteTransactionMessage": "Delete transaction #{id}? This action cannot be undone."
+  },
+  "invoiceItems": {
+    "removeItem": "Remove line",
+    "tax": "Tax"
+  }
+}

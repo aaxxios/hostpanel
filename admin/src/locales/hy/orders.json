@@ -1,0 +1,28 @@
+{
+  "orderDetail": {
+    "backToOrders": "Վերադառնալ պատվերներին",
+    "loadingOrder": "Պատվերը բեռնվում է...",
+    "accept": "Ընդունել",
+    "orderInfo": "Տեղեկություններ պատվերի մասին",
+    "created": "Ստեղծվել է",
+    "invoice": "Հաշիվ",
+    "noInvoiceLinkedToThis": "Այս պատվերին հաշիվ կապված չէ։",
+    "product": "Ապրանք",
+    "firstPayment": "Առաջին վճարում",
+    "recurring": "Կրկնվող",
+    "addNotesAboutThisOrder": "Ավելացրեք նշումներ այս պատվերի համար...",
+    "notesAreOnlyVisibleTo": "Նշումները տեսանելի են միայն ադմինիստրատորներին։",
+    "deleteOrder": "Ջնջել պատվերը",
+    "areYouSureYouWant": "Վստա՞հ եք, որ ցանկանում եք ընդմիշտ ջնջել այս պատվերը։ Այս գործողությունը հնարավոր չէ չեղարկել։"
+  },
+  "ordersList": {
+    "orders": "Պատվերներ",
+    "manageCustomerOrders": "Հաճախորդների պատվերների կառավարում",
+    "filterByStatus": "Զտել ըստ կարգավիճակի",
+    "order": "Պատվեր №",
+    "items": "Դիրքեր",
+    "accept": "Ընդունել",
+    "totalcountOrderValue": "Պատվերներ՝ {totalCount}",
+    "noOrdersFound": "Պատվերներ չեն գտնվել"
+  }
+}

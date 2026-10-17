@@ -1,13 +1,13 @@
-/** One message on a support ticket thread. */
+/** One message on a support ticket thread, as the backend's `TicketReplyDto` sends it. */
 export interface TicketReply {
   /** Reply primary key, used as the list key. */
-  replyid: number | string
-  /** Who wrote it. */
-  name: string
-  /** Staff name when a member of staff wrote it, empty when the client did. */
-  admin: string
-  /** When it was posted, already formatted by the backend for display. */
-  date: string
+  id: number
   /** The reply body. */
   message: string
+  /** Display name of who wrote it. */
+  authorName: string
+  /** Whether a member of staff wrote it. */
+  isStaffReply: boolean
+  /** When it was posted (ISO 8601). */
+  createdAt: string
 }

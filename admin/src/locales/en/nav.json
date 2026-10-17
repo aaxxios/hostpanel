@@ -1,0 +1,53 @@
+{
+  "dashboard": "Dashboard",
+  "clients": "Clients",
+  "clientsChildren": {
+    "view": "View/Search Clients",
+    "users": "Manage Users",
+    "sharedHostings": "Shared Hostings",
+    "addons": "Service Addons",
+    "domainRegistrations": "Domain Registrations",
+    "cancellations": "Cancellation Requests",
+    "affiliates": "Manage Affiliates"
+  },
+  "billing": "Billing",
+  "billingChildren": {
+    "transactions": "Transactions List",
+    "invoices": "Invoices",
+    "billableItems": "Billable Items",
+    "quotes": "Quotes",
+    "offlineCc": "Offline CC Processing",
+    "disputes": "Disputes",
+    "gatewayLog": "Gateway Log"
+  },
+  "reports": "Reports",
+  "orders": "Orders",
+  "domains": "Domains",
+  "support": "Support",
+  "supportChildren": {
+    "overview": "Support Overview",
+    "tickets": "Support Tickets",
+    "newTicket": "Open New Ticket",
+    "predefinedReplies": "Predefined Replies",
+    "announcements": "Announcements",
+    "downloads": "Downloads",
+    "knowledgebase": "Knowledgebase",
+    "networkIssues": "Network Issues"
+  },
+  "plugins": "Plugins",
+  "pluginManager": "Plugin Manager",
+  "servers": "Servers",
+  "integrations": "Integrations",
+  "migration": "Migration",
+  "settings": "Settings",
+  "settingsChildren": {
+    "general": "General",
+    "products": "Products",
+    "tldPricing": "TLD Pricing",
+    "slides": "Slides",
+    "emailTemplates": "Email Templates",
+    "gateways": "Payment Gateways",
+    "currencies": "Currencies"
+  },
+  "servicesTitle": "Services"
+}

@@ -1,14 +1,11 @@
 /**
- * Pinia store for the WHMCS client area.
+ * Pinia store for the legacy client area.
  *
  * Used **only** on `/client/*` pages — these pages are behind authentication
- * and do not require SSR / SEO, so a client-side store is appropriate.
- *
- * Public pages (/hosting, /domains, etc.) use `useFetch` / `useApi` directly
- * to preserve SSR and search-engine indexability, through their API composable rather than a
- * store. `nuxt.config.ts` makes the split concrete: `routeRules` sets `ssr: false` and
- * `X-Robots-Tag: noindex` for `/client/**`, `/cart/**` and `/checkout/**`, and nothing else.
- * A deliberate, documented exception to component -> store -> api, not an oversight.
+ * and do not require SSR / SEO, so a client-side store is appropriate. `nuxt.config.ts` makes
+ * the split concrete: `routeRules` sets `ssr: false` and `X-Robots-Tag: noindex` for
+ * `/client/**`, `/cart/**` and `/checkout/**`. The public pages read their data through
+ * `stores/catalog.ts` and `stores/content.ts` instead.
  *
  * URLs and transport belong to {@link useClientApi}; this store owns only the state, the
  * loaded/loading flags and how a failure is reported.
@@ -18,13 +15,16 @@
 
 import { defineStore } from 'pinia'
 import { useClientApi } from '~/composables/apis/useClientApi'
-import { PortalErrorCode, apiErrorCode, apiErrorMessage } from '~/utils/apiError'
+import { PortalErrorCode, apiErrorCode, apiErrorMessage } from '~/lib/errorHandler'
 import { isInvoiceOutstanding } from '~/utils/invoice'
+import type { ClientEmail } from '~/types/clientemail'
 import type { ClientUser } from '~/types/clientuser'
 import type { ClientService } from '~/types/clientservice'
 import type { ClientInvoice } from '~/types/clientinvoice'
 import type { ClientDomain } from '~/types/clientdomain'
 import type { ClientTicket } from '~/types/clientticket'
+import { ServiceStatus } from '~/types/servicestatus'
+import { TicketStatus } from '~/types/ticketstatus'
 
 /**
  * True when the API answered that the signed-in identity has no client profile at all.
@@ -36,7 +36,7 @@ import type { ClientTicket } from '~/types/clientticket'
  * @param err - Whatever the API composable threw.
  * @returns True when this is the "not a customer account" answer rather than a failure.
  */
-function isClientProfileMissing(err: unknown): boolean {
+const isClientProfileMissing = (err: unknown): boolean => {
   return apiErrorCode(err) === PortalErrorCode.ClientProfileNotFound
 }
 
@@ -52,7 +52,7 @@ function isClientProfileMissing(err: unknown): boolean {
  * @param err - Whatever the API composable threw.
  * @returns True when the session expired rather than the request failing.
  */
-function isSessionExpired(err: unknown): boolean {
+const isSessionExpired = (err: unknown): boolean => {
   const e = err as { statusCode?: number, status?: number, response?: { status?: number } }
   return (e?.statusCode ?? e?.status ?? e?.response?.status) === 401
 }
@@ -62,7 +62,7 @@ function isSessionExpired(err: unknown): boolean {
 // ---------------------------------------------------------------------------
 
 /**
- * Central store for all WHMCS client area data.
+ * Central store for all legacy client area data.
  *
  * Each section (user, services, invoices, domains, tickets) has:
  * - A state array / object
@@ -130,7 +130,12 @@ export const useClientStore = defineStore('client', {
     tickets: [] as ClientTicket[],
     ticketsLoading: false,
     ticketsLoaded: false,
-    ticketsError: null as string | null
+    ticketsError: null as string | null,
+
+    // ── One email (the detail page) ───────────────────────────────────────
+    email: null as ClientEmail | null,
+    emailLoading: false,
+    emailError: null as string | null
   }),
 
   getters: {
@@ -142,7 +147,9 @@ export const useClientStore = defineStore('client', {
 
     /** First letter of name for avatar */
     userInitial: (state): string => {
-      if (!state.user) return '?'
+      if (!state.user) {
+        return '?'
+      }
       const name = `${state.user.firstname} ${state.user.lastname}`.trim()
       return (name || state.user.email || '?').charAt(0).toUpperCase()
     },
@@ -158,18 +165,18 @@ export const useClientStore = defineStore('client', {
 
     /** Count of active services */
     activeServiceCount: (state): number =>
-      state.services.filter(s => s.status === 'Active').length,
+      state.services.filter(s => s.status === ServiceStatus.Active).length,
 
     /** Count of open tickets */
     openTicketCount: (state): number =>
-      state.tickets.filter(t => t.status === 'Open').length
+      state.tickets.filter(t => t.status === TicketStatus.Open).length
   },
 
   actions: {
     // ── User ──────────────────────────────────────────────────────────────
 
     /**
-     * Fetch the authenticated client's profile from WHMCS.
+     * Fetch the authenticated client's profile from the API.
      *
      * No-ops if already loaded unless `force` is true, and — the part `userLoaded` alone
      * cannot do — collapses *concurrent* callers onto a single request. Three layers ask for
@@ -188,20 +195,29 @@ export const useClientStore = defineStore('client', {
      * @returns Promise that resolves once {@link user} reflects the server's answer.
      */
     async fetchUser(force = false): Promise<void> {
-      if (this.userLoaded && !force) return
-      if (this.userInflight && !force) return this.userInflight
+      if (this.userLoaded && !force) {
+        return
+      }
+      if (this.userInflight && !force) {
+        return this.userInflight
+      }
 
       const epoch = this.userEpoch
+      /** The identity request itself, shared with every caller that asks while it is in flight. */
       const request = (async (): Promise<void> => {
         this.userLoading = true
         this.userError = null
         try {
           const me = await useClientApi().fetchMe()
-          if (this.userEpoch !== epoch) return
+          if (this.userEpoch !== epoch) {
+            return
+          }
           this.user = me
           this.userLoaded = true
         } catch (err) {
-          if (this.userEpoch !== epoch) return
+          if (this.userEpoch !== epoch) {
+            return
+          }
           // "Not a customer account" is a state, not a fault — it gets its own flag so
           // nothing renders it in red, and the API's own sentence is kept beside the flag
           // because that sentence is the explanation the notice shows, already in the
@@ -214,7 +230,9 @@ export const useClientStore = defineStore('client', {
             this.userError = apiErrorMessage(err)
           }
         } finally {
-          if (this.userEpoch === epoch) this.userLoading = false
+          if (this.userEpoch === epoch) {
+            this.userLoading = false
+          }
         }
       })()
 
@@ -224,7 +242,9 @@ export const useClientStore = defineStore('client', {
       } finally {
         // Only clear the slot if a forced call has not already claimed it for a newer
         // request — otherwise the older one finishing would hide the newer one from joiners.
-        if (this.userInflight === request) this.userInflight = null
+        if (this.userInflight === request) {
+          this.userInflight = null
+        }
       }
     },
 
@@ -237,7 +257,9 @@ export const useClientStore = defineStore('client', {
      * @param force - Set true to bypass the loaded cache
      */
     async fetchServices(force = false) {
-      if (this.servicesLoaded && !force) return
+      if (this.servicesLoaded && !force) {
+        return
+      }
       this.servicesLoading = true
       this.servicesError = null
       try {
@@ -267,7 +289,9 @@ export const useClientStore = defineStore('client', {
      * @param force - Set true to bypass the loaded cache
      */
     async fetchInvoices(force = false) {
-      if (this.invoicesLoaded && !force) return
+      if (this.invoicesLoaded && !force) {
+        return
+      }
       this.invoicesLoading = true
       this.invoicesError = null
       try {
@@ -297,7 +321,9 @@ export const useClientStore = defineStore('client', {
      * @param force - Set true to bypass the loaded cache
      */
     async fetchDomains(force = false) {
-      if (this.domainsLoaded && !force) return
+      if (this.domainsLoaded && !force) {
+        return
+      }
       this.domainsLoading = true
       this.domainsError = null
       try {
@@ -327,7 +353,9 @@ export const useClientStore = defineStore('client', {
      * @param force - Set true to bypass the loaded cache
      */
     async fetchTickets(force = false) {
-      if (this.ticketsLoaded && !force) return
+      if (this.ticketsLoaded && !force) {
+        return
+      }
       this.ticketsLoading = true
       this.ticketsError = null
       try {
@@ -364,6 +392,30 @@ export const useClientStore = defineStore('client', {
       ])
     },
 
+    // ── One email ─────────────────────────────────────────────────────────
+
+    /**
+     * Fetch one of the messages the system sent this account.
+     *
+     * @param id - Message id
+     * @returns The message; null when it could not be read ({@link emailError} holds the sentence)
+     */
+    async loadEmail(id: string): Promise<ClientEmail | null> {
+      this.emailLoading = true
+      this.emailError = null
+      this.email = null
+      try {
+        this.email = await useClientApi().fetchEmail(id)
+      } catch (err) {
+        if (!isSessionExpired(err)) {
+          this.emailError = apiErrorMessage(err)
+        }
+      } finally {
+        this.emailLoading = false
+      }
+      return this.email
+    },
+
     /**
      * Clear all client data on logout.
      */
@@ -392,6 +444,8 @@ export const useClientStore = defineStore('client', {
       this.tickets = []
       this.ticketsLoaded = false
       this.ticketsError = null
+      this.email = null
+      this.emailError = null
     }
   }
 })

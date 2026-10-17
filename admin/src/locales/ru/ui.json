@@ -1,0 +1,72 @@
+{
+  "uiAdvancedFilters": {
+    "filterValue": "Фильтр: {value}",
+    "selectField": "Выберите поле...",
+    "enterValue": "Введите значение...",
+    "addFilter": "Добавить фильтр",
+    "exactMatch": "Точное совпадение",
+    "containing": "Содержит"
+  },
+  "uiClientSelect": {
+    "noClientsFound": "Клиенты не найдены"
+  },
+  "uiCountrySelect": {
+    "selectCountry": "Выберите страну..."
+  },
+  "uiDatePicker": {
+    "ddMmYyyy": "ДД/ММ/ГГГГ",
+    "month": "Месяц",
+    "year": "Год",
+    "yesterday": "Вчера",
+    "7DaysAgo": "7 дней назад",
+    "1MonthAgo": "1 месяц назад",
+    "1YearAgo": "1 год назад"
+  },
+  "uiDatePickerFuture": {
+    "tomorrow": "Завтра",
+    "in7Days": "Через 7 дней",
+    "1MonthFromNow": "Через 1 месяц",
+    "1YearFromNow": "Через 1 год"
+  },
+  "uiDateRangePicker": {
+    "ddMmYyyyDdMm": "ДД/ММ/ГГГГ - ДД/ММ/ГГГГ",
+    "yesterday": "Вчера",
+    "last7Days": "Последние 7 дней",
+    "last30Days": "Последние 30 дней",
+    "thisMonth": "Этот месяц",
+    "1MonthAgo": "1 месяц назад",
+    "thisYear": "Этот год",
+    "1YearAgo": "1 год назад",
+    "selectDateRange": "Выберите период"
+  },
+  "uiFieldSelector": {
+    "fields": "Поля",
+    "clearAll": "Снять все"
+  },
+  "uiSelect": {
+    "noResults": "Нет результатов"
+  },
+  "selectCountry": "Выберите страну",
+  "dialog": {
+    "close": "Закрыть",
+    "confirm": "Подтвердить",
+    "processing": "Обработка..."
+  },
+  "pagination": {
+    "navigation": "Постраничная навигация",
+    "previous": "Назад",
+    "next": "Далее",
+    "page": "Страница"
+  },
+  "table": {
+    "empty": "Нет данных"
+  },
+  "chart": {
+    "empty": "Нет данных для графика"
+  },
+  "uploadZone": {
+    "dropOr": "Перетащите файл или",
+    "browse": "выберите",
+    "uploading": "Загрузка..."
+  }
+}

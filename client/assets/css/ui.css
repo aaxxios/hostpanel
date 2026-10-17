@@ -1,0 +1,71 @@
+/*
+ * Kit tokens and the few rules the kit cannot express as Tailwind utilities.
+ *
+ * `--ui-surface` paints cards, tables and dialogs; `--ui-popover` paints floating menus (select,
+ * dropdown, language switcher, phone country list). Both flip with the `.dark` class, and
+ * `tailwind.config.ts` exposes them as `bg-ui-surface` / `bg-ui-popover`, so no component carries
+ * a raw colour. The phone-input block restyles a third-party widget whose DOM we do not own, which
+ * is the only reason it is a stylesheet and not classes.
+ */
+:root {
+  --ui-surface: #ffffff;
+  --ui-popover: #ffffff;
+  --ui-page: #f9fafb;
+  --ui-raised: #ffffff;
+}
+
+.dark {
+  --ui-surface: #0d0d12;
+  --ui-popover: #0d0d14;
+  --ui-page: #0a0a0f;
+  --ui-raised: #12121a;
+}
+
+@layer components {
+  .phone-input-container .vue-tel-input {
+    @apply h-11 rounded-lg border border-gray-300 bg-white transition-all duration-200 dark:border-gray-700 dark:bg-white/5 !important;
+  }
+
+  .phone-input-container.has-error .vue-tel-input {
+    @apply border-red-400 bg-red-50 dark:border-red-500/50 dark:bg-red-500/5 !important;
+  }
+
+  .phone-input-container .vue-tel-input:focus-within {
+    @apply border-primary-500 outline-none ring-2 ring-primary-500/50 !important;
+  }
+
+  .phone-input-container .vti__input {
+    @apply bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none dark:text-white dark:placeholder:text-gray-500 !important;
+  }
+
+  .phone-input-container .vti__dropdown {
+    @apply rounded-l-lg transition-colors hover:bg-gray-50 dark:hover:bg-white/10 !important;
+  }
+
+  .phone-input-container .vti__dropdown-list {
+    @apply z-[9999] mb-2 mt-0 w-[280px] overflow-hidden rounded-xl border border-gray-200 bg-ui-popover shadow-2xl dark:border-white/10 !important;
+    top: auto !important;
+    bottom: 100% !important;
+  }
+
+  .phone-input-container .vti__dropdown-item {
+    @apply py-2 text-gray-700 dark:text-gray-300 !important;
+  }
+
+  .phone-input-container .vti__dropdown-item.highlighted {
+    @apply bg-primary-500/10 text-primary-500 !important;
+  }
+
+  .phone-input-container .vti__selection {
+    @apply text-sm font-medium text-gray-900 dark:text-white !important;
+  }
+}
+
+/* The signed-in account widget popover: nearly the full width on small screens.
+   Moved here from the client layout style block, which the layout may no longer carry. */
+@media (max-width: 639px) {
+  #inno-account-panel {
+    @apply right-[-4px];
+    width: calc(100vw - 16px);
+  }
+}

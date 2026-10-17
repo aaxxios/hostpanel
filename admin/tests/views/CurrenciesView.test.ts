@@ -1,0 +1,137 @@
+/**
+ * Smoke tests for CurrenciesView: the table, the edit dialog, "make base" with its confirmation,
+ * the exchange-rate refresh and the product-price picker, all through the store at network level.
+ */
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import CurrenciesView from '@/views/CurrenciesView.vue'
+import type { CurrencyDto } from '@/types/currency'
+import { json, problem } from '../helpers/fetch'
+import { mountScreen } from '../helpers/mount'
+import { requestsOf, stubRouteTable } from '../helpers/routes'
+
+/** The base currency. */
+const usd: CurrencyDto = {
+  code: 'USD', numeric: '840', prefix: '$', suffix: '', decimals: 2, rateToBase: 1, isBase: true, isEnabled: true,
+}
+
+/** A non-base currency. */
+const eur: CurrencyDto = { ...usd, code: 'EUR', numeric: '978', prefix: '€', rateToBase: 0.92, isBase: false }
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('CurrenciesView', () => {
+  it('lists the currencies with their format sample and rate', async () => {
+    stubRouteTable({ 'GET /admin/currencies': () => json([usd, eur]) })
+    const { wrapper } = await mountScreen(CurrenciesView)
+
+    expect(wrapper.get('h1').text()).toBe('Currencies')
+    expect(wrapper.get('[data-testid="currency-row-USD"]').text()).toContain('2.99 → $2.99')
+    expect(wrapper.get('[data-testid="currency-row-EUR"]').text()).toContain('0.92000000')
+    expect(wrapper.get('[data-testid="currency-row-USD"]').text()).toContain('Base')
+  })
+
+  it('opens the edit dialog with the stored values and closes it again', async () => {
+    stubRouteTable({ 'GET /admin/currencies': () => json([usd, eur]) })
+    const { wrapper } = await mountScreen(CurrenciesView)
+
+    await wrapper.get('[data-testid="currency-edit-EUR"]').trigger('click')
+    expect((wrapper.get('[data-testid="currency-form-prefix"]').element as HTMLInputElement).value).toBe('€')
+
+    await wrapper.get('[data-testid="currency-form-cancel"]').trigger('click')
+    expect(wrapper.find('[data-testid="currency-form"]').exists()).toBe(false)
+  })
+
+  it('saves an edit through PUT and closes the dialog', async () => {
+    const mock = stubRouteTable({
+      'GET /admin/currencies': () => json([usd, eur]),
+      'PUT /admin/currencies/EUR': () => new Response(null, { status: 204 }),
+    })
+    const { wrapper } = await mountScreen(CurrenciesView)
+
+    await wrapper.get('[data-testid="currency-edit-EUR"]').trigger('click')
+    await wrapper.get('[data-testid="currency-form"]').trigger('submit')
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="currency-form"]').exists()).toBe(false)
+    })
+
+    expect(requestsOf(mock)).toContain('PUT /admin/currencies/EUR')
+  })
+
+  it('asks before making a currency the base, then reports it', async () => {
+    const mock = stubRouteTable({
+      'GET /admin/currencies': () => json([usd, eur]),
+      'POST /admin/currencies/EUR/make-base': () => new Response(null, { status: 204 }),
+    })
+    const { wrapper } = await mountScreen(CurrenciesView)
+
+    await wrapper.get('[data-testid="currency-make-base-EUR"]').trigger('click')
+    expect(wrapper.get('[role="dialog"]').text()).toContain('Make EUR the base currency?')
+    expect(requestsOf(mock)).not.toContain('POST /admin/currencies/EUR/make-base')
+
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="currencies-result"]').text()).toBe('EUR is now the base currency.')
+    })
+  })
+
+  it('refreshes the rates and names the codes that changed', async () => {
+    stubRouteTable({
+      'GET /admin/currencies': () => json([usd, eur]),
+      'POST /admin/currencies/update-rates': () => json({ updated: ['EUR'], missing: ['AMD'] }),
+    })
+    const { wrapper } = await mountScreen(CurrenciesView)
+
+    await wrapper.get('[data-testid="currencies-update-rates"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="currencies-result"]').text()).toBe('Rates updated: EUR; not quoted: AMD')
+    })
+  })
+
+  it('shows a refusal in the result banner', async () => {
+    stubRouteTable({
+      'GET /admin/currencies': () => json([usd, eur]),
+      'POST /admin/currencies/update-rates': () => problem('The rate source did not answer.', 502),
+    })
+    const { wrapper } = await mountScreen(CurrenciesView)
+
+    await wrapper.get('[data-testid="currencies-update-rates"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="currencies-result"]').text()).toBe('The rate source did not answer.')
+    })
+    expect(wrapper.get('[data-testid="currencies-result"]').attributes('role')).toBe('alert')
+  })
+
+  it('walks the price recompute: pick currencies, confirm the overwrite, report the count', async () => {
+    const mock = stubRouteTable({
+      'GET /admin/currencies': () => json([usd, eur]),
+      'POST /admin/currencies/update-product-prices': () => json(4),
+    })
+    const { wrapper } = await mountScreen(CurrenciesView)
+
+    await wrapper.get('[data-testid="currencies-update-prices"]').trigger('click')
+    expect(wrapper.get('[data-testid="currencies-prices-continue"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('[data-testid="currencies-price-EUR"]').trigger('click')
+    await wrapper.get('[data-testid="currencies-prices-continue"]').trigger('click')
+    expect(wrapper.get('[role="dialog"]').text()).toContain('EUR')
+
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="currencies-result"]').text()).toBe('4 product price row(s) recomputed.')
+    })
+    expect(requestsOf(mock)).toContain('POST /admin/currencies/update-product-prices')
+  })
+
+  it('says so when no currency is configured and shows a load refusal', async () => {
+    stubRouteTable({ 'GET /admin/currencies': () => json([]) })
+    const empty = await mountScreen(CurrenciesView)
+    expect(empty.wrapper.text()).toContain('No currencies configured yet')
+
+    stubRouteTable({ 'GET /admin/currencies': () => problem('Currencies are unavailable.', 503) })
+    const failed = await mountScreen(CurrenciesView)
+    expect(failed.wrapper.get('[data-testid="currencies-error"]').text()).toBe('Currencies are unavailable.')
+  })
+})

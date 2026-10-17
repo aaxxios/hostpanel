@@ -1,7 +1,6 @@
-namespace Innovayse.Providers.CWP.Models;
-
 using System.Text.Json.Serialization;
 
+namespace Innovayse.Providers.CWP.Models;
 /// <summary>Parsed response from the CWP /v1/version endpoint.</summary>
 internal sealed class CwpVersionResponse
 {

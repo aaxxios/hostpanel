@@ -1,0 +1,128 @@
+name: Publish to Docker Hub
+
+# Primary publisher of the public hostpanel images: one repo, innovayse/hostpanel, with the component
+# in the tag: api-<version>, client-<version>, admin-<version> and the moving api-latest, client-latest,
+# admin-latest. Multi-arch (linux/amd64, linux/arm64); the version has no leading v.
+#
+# Images are public, so they are built with AUTH_MODE=local: Innovayse.Auth lives in a private
+# registry and no credential is passed. Both frontends take every deployment value from the
+# environment at start, so only the API image has a build arg.
+#
+# Secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN. Variable: DOCKERHUB_NAMESPACE.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, without the leading v (for example 1.2.3)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-dockerhub-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish hostpanel-${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            dockerfile: backend/Dockerfile
+            context: backend
+            target: prod
+            build_args: AUTH_MODE=local
+          - name: client
+            dockerfile: client/Dockerfile
+            context: client
+            target: prod
+            build_args: ""
+          - name: admin
+            dockerfile: admin/Dockerfile
+            # The Dockerfile copies admin/ and docker/nginx/admin.conf, so it builds from the repo root.
+            context: .
+            target: prod
+            build_args: ""
+    env:
+      NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve the version and licence
+        id: meta_in
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -eu
+          if [ -z "$NAMESPACE" ]; then
+            echo "DOCKERHUB_NAMESPACE must be set"; exit 1
+          fi
+          if [ "$REF_TYPE" = "tag" ]; then
+            version="${REF_NAME#v}"
+          else
+            version="${INPUT_VERSION#v}"
+          fi
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Version '$version' is not MAJOR.MINOR.PATCH"; exit 1
+          fi
+          # The licence label is read from LICENSE, not typed in here, so it cannot drift from it.
+          if ! grep -q "GNU AFFERO GENERAL PUBLIC LICENSE" LICENSE; then
+            echo "LICENSE is not the AGPL text, set the SPDX id for it"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "licenses=AGPL-3.0-or-later" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.NAMESPACE }}/hostpanel
+          tags: |
+            type=raw,value=${{ matrix.name }}-${{ steps.meta_in.outputs.version }}
+            type=raw,value=${{ matrix.name }}-latest
+          labels: |
+            org.opencontainers.image.title=hostpanel-${{ matrix.name }}
+            org.opencontainers.image.version=${{ steps.meta_in.outputs.version }}
+            org.opencontainers.image.licenses=${{ steps.meta_in.outputs.licenses }}
+            org.opencontainers.image.source=https://github.com/innovayse/hostpanel
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          build-args: ${{ matrix.build_args }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,scope=${{ matrix.name }},mode=max
+
+      - name: Sync the Docker Hub README
+        if: matrix.name == 'api'
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.NAMESPACE }}/hostpanel
+          readme-filepath: ./docker/DOCKERHUB.md

@@ -169,3 +169,17 @@ any of this and keep their own `min-h-dvh`.
 - No mutations of props — emit events instead
 - No `document.querySelector` in components — use template refs
 - No `setTimeout`/`setInterval` without cleanup in `onUnmounted`
+
+## File grouping and helper folders
+
+- **Enums are grouped one file per area, not one file per enum.** Every enum of one domain area
+  lives in a single file in the enums folder, named after that area; a new enum of an existing
+  area is added to that file, never to a new one. Each enum keeps its JSDoc; the file has a header.
+- **Helper modules are grouped one file per area too.** Pure helpers of one domain area live in a
+  single file named after that area; its tests mirror it in one test file of the same name.
+- **A kit component's own enums live in the component**, exported from its plain
+  `<script lang="ts">` block beside `<script setup>`; no separate enum file per UI component.
+
+- **Helper folder by framework: a Vue (Vite) app uses `src/lib/`, a Nuxt app uses `utils/`.**
+  A Vite SPA never has a `utils/` folder; its kit helpers live in `src/lib/ui/`. A Nuxt app keeps
+  helpers in `utils/` (auto-imported) and kit helpers in `utils/ui/`. Never mix the two in one app.

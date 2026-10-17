@@ -11,7 +11,10 @@
  * languages and every one of those reads fell through to its untranslated fallback. Localised
  * product copy is a backend change — a `ProductTranslation` entity beside the existing
  * `SlideTranslation` — and until it exists this parameter can only mislead its caller.
+ *
+ * @module server/api/portal/public/products.get
  */
+
 import type { H3Event } from 'h3'
 
 /**
@@ -21,14 +24,18 @@ import type { H3Event } from 'h3'
  * @param event - The request event.
  * @returns The catalogue, filtered to `pid` when given, priced in the caller's own currency.
  */
-async function loadProducts(event: H3Event) {
+const loadProducts = async (event: H3Event) => {
   const query = getQuery(event)
   const params = new URLSearchParams()
 
-  if (query.pid)   params.set('pid',   String(query.pid))
-  if (query.gids)  params.set('gids',  String(query.gids))
+  if (query.pid) {
+    params.set('pid', String(query.pid))
+  }
+  if (query.gids) {
+    params.set('gids', String(query.gids))
+  }
 
-  // `gid` is the WHMCS name callers use; ProductsController's parameter is
+  // `gid` is the legacy name callers use; ProductsController's parameter is
   // `groupId`. Forwarding `gid` verbatim meant the backend never saw a filter and
   // silently returned the whole catalogue, so the hosting page listed SSL
   // certificates, mailboxes and domain registration beside the hosting plans.
@@ -42,7 +49,9 @@ async function loadProducts(event: H3Event) {
   // Anonymous callers may ask for prices in a specific enabled currency (the storefront's
   // currency picker) — forwarded straight through, same as `tld-pricing.get.ts` does.
   // `ProductsController`/`GetProductsHandler` ignore it for a signed-in caller.
-  if (query.currency) params.set('currency', String(query.currency))
+  if (query.currency) {
+    params.set('currency', String(query.currency))
+  }
 
   const qs = params.toString()
   const all = await internalApiCall<Record<string, unknown>[]>(event, `/products${qs ? `?${qs}` : ''}`)
@@ -70,6 +79,7 @@ async function loadProducts(event: H3Event) {
   }))
 }
 
+/** The shared-cache path, reached only by guests: one entry per (filters, currency) pair. */
 const cachedLoadProducts = defineCachedEventHandler(loadProducts, {
   name: 'backend-products',
   maxAge: 3600,

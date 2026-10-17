@@ -1,74 +1,67 @@
 <template>
-  <div class="min-h-[60dvh] flex items-center justify-center px-4 py-16">
-    <div class="w-full max-w-md p-8 rounded-3xl bg-white/5 border border-white/10 text-center">
+  <UiStack align="center" justify="center" gap="none" class="min-h-[60dvh] px-4 py-16" data-testid="payment-result">
+    <UiCard padding="xl" class="w-full max-w-md text-center rounded-3xl">
       <!-- Verifying -->
-      <template v-if="state === 'verifying'">
-        <Loader2 :size="40" class="mx-auto text-cyan-400 animate-spin mb-4" />
-        <p class="text-gray-300">{{ $t('paymentResult.verifying') }}</p>
+      <template v-if="state === GatewayPaymentState.Verifying">
+        <Loader2 :size="40" class="mx-auto text-cyan-700 dark:text-cyan-400 animate-spin mb-4" />
+        <UiText tone="muted" data-testid="payment-verifying">{{ $t('paymentResult.verifying') }}</UiText>
       </template>
 
       <!-- Paid -->
-      <template v-else-if="state === 'paid'">
-        <CheckCircle2 :size="48" class="mx-auto text-green-400 mb-4" />
-        <h1 class="text-xl font-bold text-white mb-2">{{ $t('paymentResult.successTitle') }}</h1>
-        <p class="text-gray-400 mb-8">{{ $t('paymentResult.successBody') }}</p>
-        <NuxtLink :to="continueTarget"
-                  class="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-primary-600 text-white font-bold">
+      <template v-else-if="state === GatewayPaymentState.Paid">
+        <CheckCircle2 :size="48" class="mx-auto text-green-600 dark:text-green-400 mb-4" />
+        <UiHeading :level="1" size="subsection" class="text-xl mb-2" data-testid="payment-title">{{ $t('paymentResult.successTitle') }}</UiHeading>
+        <UiText tone="muted" class="mb-8">{{ $t('paymentResult.successBody') }}</UiText>
+        <UiButton :to="continueTarget" size="lg" class="font-bold" data-testid="payment-continue">
           {{ orderId ? $t('paymentResult.goToOrder') : $t('paymentResult.goToInvoice') }}
-        </NuxtLink>
+        </UiButton>
       </template>
 
       <!-- Pending -->
-      <template v-else-if="state === 'pending'">
-        <Clock :size="48" class="mx-auto text-yellow-400 mb-4" />
-        <h1 class="text-xl font-bold text-white mb-2">{{ $t('paymentResult.pendingTitle') }}</h1>
-        <p class="text-gray-400 mb-8">{{ $t('paymentResult.pendingBody') }}</p>
-        <button class="px-6 py-3 rounded-xl bg-white/10 border border-white/10 text-white font-bold disabled:opacity-50"
-                :disabled="checking" @click="check">
+      <template v-else-if="state === GatewayPaymentState.Pending">
+        <Clock :size="48" class="mx-auto text-yellow-600 dark:text-yellow-400 mb-4" />
+        <UiHeading :level="1" size="subsection" class="text-xl mb-2" data-testid="payment-title">{{ $t('paymentResult.pendingTitle') }}</UiHeading>
+        <UiText tone="muted" class="mb-8">{{ $t('paymentResult.pendingBody') }}</UiText>
+        <UiButton variant="subtle" size="lg" class="font-bold" :disabled="checking" data-testid="payment-retry" @click="check">
           {{ $t('paymentResult.retry') }}
-        </button>
+        </UiButton>
       </template>
 
       <!-- Declined -->
-      <template v-else-if="state === 'declined'">
-        <XCircle :size="48" class="mx-auto text-red-400 mb-4" />
-        <h1 class="text-xl font-bold text-white mb-2">{{ $t('paymentResult.declinedTitle') }}</h1>
-        <p class="text-gray-400 mb-8">{{ $t('paymentResult.declinedBody') }}</p>
-        <NuxtLink :to="retryTarget"
-                  class="inline-block px-6 py-3 rounded-xl bg-white/10 border border-white/10 text-white font-bold">
+      <template v-else-if="state === GatewayPaymentState.Declined">
+        <XCircle :size="48" class="mx-auto text-red-600 dark:text-red-400 mb-4" />
+        <UiHeading :level="1" size="subsection" class="text-xl mb-2" data-testid="payment-title">{{ $t('paymentResult.declinedTitle') }}</UiHeading>
+        <UiText tone="muted" class="mb-8">{{ $t('paymentResult.declinedBody') }}</UiText>
+        <UiButton variant="subtle" size="lg" :to="retryTarget" class="font-bold" data-testid="payment-try-again">
           {{ $t('paymentResult.tryAgain') }}
-        </NuxtLink>
+        </UiButton>
       </template>
 
       <!-- Missing: the URL carried neither ?order= nor ?invoice=, so there is nothing to check
-           and nothing to retry — copy and layout must not imply a payment attempt exists. -->
-      <template v-else-if="state === 'missing'">
-        <AlertTriangle :size="48" class="mx-auto text-yellow-400 mb-4" />
-        <h1 class="text-xl font-bold text-white mb-2">{{ $t('paymentResult.missingTitle') }}</h1>
-        <p class="text-gray-400 mb-8">{{ $t('paymentResult.missingBody') }}</p>
-        <NuxtLink :to="localePath('/client/invoices')"
-                  class="inline-block px-6 py-3 rounded-xl bg-white/10 border border-white/10 text-white font-bold">
+           and nothing to retry; copy and layout must not imply a payment attempt exists. -->
+      <template v-else-if="state === GatewayPaymentState.Missing">
+        <AlertTriangle :size="48" class="mx-auto text-yellow-600 dark:text-yellow-400 mb-4" />
+        <UiHeading :level="1" size="subsection" class="text-xl mb-2" data-testid="payment-title">{{ $t('paymentResult.missingTitle') }}</UiHeading>
+        <UiText tone="muted" class="mb-8">{{ $t('paymentResult.missingBody') }}</UiText>
+        <UiButton variant="subtle" size="lg" :to="localePath('/client/invoices')" class="font-bold" data-testid="payment-invoices">
           {{ $t('paymentResult.viewInvoices') }}
-        </NuxtLink>
+        </UiButton>
       </template>
 
-      <!-- Unknown: we could not reach/parse the completion check — do not assert a financial outcome -->
+      <!-- Unknown: the completion check could not be reached or parsed; no financial outcome is asserted. -->
       <template v-else>
-        <AlertTriangle :size="48" class="mx-auto text-yellow-400 mb-4" />
-        <h1 class="text-xl font-bold text-white mb-2">{{ $t('paymentResult.unknownTitle') }}</h1>
-        <p class="text-gray-400 mb-8">{{ $t('paymentResult.unknownBody') }}</p>
-        <button class="px-6 py-3 rounded-xl bg-white/10 border border-white/10 text-white font-bold disabled:opacity-50"
-                :disabled="checking" @click="check">
+        <AlertTriangle :size="48" class="mx-auto text-yellow-600 dark:text-yellow-400 mb-4" />
+        <UiHeading :level="1" size="subsection" class="text-xl mb-2" data-testid="payment-title">{{ $t('paymentResult.unknownTitle') }}</UiHeading>
+        <UiText tone="muted" class="mb-8">{{ $t('paymentResult.unknownBody') }}</UiText>
+        <UiButton variant="subtle" size="lg" class="font-bold" :disabled="checking" data-testid="payment-retry" @click="check">
           {{ $t('paymentResult.retry') }}
-        </button>
-        <div class="mt-4">
-          <NuxtLink :to="statusTarget" class="text-sm text-cyan-400 hover:underline">
-            {{ orderId ? $t('paymentResult.goToOrder') : $t('paymentResult.goToInvoice') }}
-          </NuxtLink>
-        </div>
+        </UiButton>
+        <UiLink :to="statusTarget" :underline="false" class="block mt-4 text-sm hover:underline" testid="payment-status">
+          {{ orderId ? $t('paymentResult.goToOrder') : $t('paymentResult.goToInvoice') }}
+        </UiLink>
       </template>
-    </div>
-  </div>
+    </UiCard>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
@@ -79,24 +72,36 @@
  * authoritative status from the bank.
  */
 import { AlertTriangle, CheckCircle2, Clock, Loader2, XCircle } from 'lucide-vue-next'
-import { useBillingApi } from '~/composables/apis/useBillingApi'
+import { useInvoicePaymentStore } from '~/stores/invoicepayment'
+import { GatewayPaymentState } from '~/types/gatewaypaymentstate'
 
+/** The current route. */
 const route = useRoute()
+/** Prefixes a path with the active language. */
 const localePath = useLocalePath()
+/** Translation helpers and the active language. */
 const { t } = useI18n()
+/** The invoice payment store, which verifies a hosted-gateway payment. */
+const paymentStore = useInvoicePaymentStore()
+/** Reads and forgets the token an order was placed with. */
 const { recall: recallPaymentToken, forget: forgetPaymentToken } = useOrderPaymentToken()
 
+/** The order id from `?order=`, when the payer came from checkout. */
 const orderId = computed(() => route.query.order as string | undefined)
+
+/** The invoice id from `?invoice=`, when the payer came from the invoice pay flow. */
 const invoiceId = computed(() => route.query.invoice as string | undefined)
 
-// 'unknown' means we could not get an authoritative answer from the backend
-// (network error, timeout, proxy failure, etc.) — distinct from 'declined',
-// which is only ever set when the backend itself reported that state. 'missing'
-// means the URL never carried an id to check in the first place (no ?order= or
-// ?invoice=) — distinct from 'unknown' because there is no payment attempt to
-// retry, so its copy and buttons must not imply one exists. Copy that asserts a
-// financial outcome must only show for backend-confirmed states.
-const state = ref<'verifying' | 'paid' | 'pending' | 'declined' | 'unknown' | 'missing'>('verifying')
+/**
+ * Where the check stands. `Unknown` means no authoritative answer could be had from the backend
+ * (network error, timeout, proxy failure) and is distinct from `Declined`, which is only ever set
+ * when the backend itself reported that state. `Missing` means the URL never carried an id to
+ * check in the first place, so there is no payment attempt to retry and the copy and buttons must
+ * not imply one exists. Copy that asserts a financial outcome only shows for confirmed states.
+ */
+const state = ref<GatewayPaymentState>(GatewayPaymentState.Verifying)
+
+/** Whether a check request is in flight; the retry buttons are disabled meanwhile. */
 const checking = ref(false)
 
 /** Where the primary button leads after a successful payment. */
@@ -110,9 +115,8 @@ const retryTarget = computed(() =>
   invoiceId.value ? localePath(`/client/invoices/${invoiceId.value}/pay`) : localePath('/cart'))
 
 /**
- * Where to send the payer from the 'unknown' state to check on the order/invoice
- * themselves — a read-only view, not a "pay again" link, since we do not know
- * whether the payment already succeeded.
+ * Where to send the payer from the unknown state to check on the order or invoice themselves: a
+ * read-only view, not a "pay again" link, since we do not know whether the payment succeeded.
  */
 const statusTarget = computed(() =>
   invoiceId.value ? localePath(`/client/invoices/${invoiceId.value}`) : localePath('/client/invoices'))
@@ -120,56 +124,50 @@ const statusTarget = computed(() =>
 /** Calls the matching complete endpoint and updates the view state. */
 const check = async (): Promise<void> => {
   // `onMounted` below already refuses to call this when neither id is present, but that
-  // guarantee lives in another function and the compiler cannot carry it here — where the
-  // invoice branch would otherwise post to `/invoices/undefined/gateway-payment/complete`. The
-  // check is restated rather than asserted away so the two cannot drift apart.
+  // guarantee lives in another function and the compiler cannot carry it here, where the invoice
+  // branch would otherwise post to `/invoices/undefined/gateway-payment/complete`. The check is
+  // restated rather than asserted away so the two cannot drift apart.
   const target = orderId.value ? 'order' : 'invoice'
   const id = orderId.value ?? invoiceId.value
   if (!id) {
-    state.value = 'missing'
+    state.value = GatewayPaymentState.Missing
     checking.value = false
     return
   }
 
   // An order is paid for without an account, so the backend authorises this call with the token
   // the order was placed with rather than a credential. An invoice is the caller's own and needs
-  // none. A missing token is not special-cased here: the request is made either way and the
-  // backend answers as it would for an order that does not exist, which is the same answer it
-  // gives anyone guessing at ids.
+  // none. A missing token is not special-cased: the request is made either way and the backend
+  // answers as it would for an order that does not exist, the same answer it gives anyone
+  // guessing at ids.
   const paymentToken = target === 'order' ? recallPaymentToken(id) : undefined
 
   checking.value = true
-  try {
-    const { state: result } = await useBillingApi().completeGatewayPayment(target, id, paymentToken)
-    state.value = result
-    if (target === 'order' && result !== 'pending') {
-      // Settled one way or the other: the token has done its job and should not sit in the
-      // browser afterwards. 'pending' is left alone so a retry can still verify.
-      forgetPaymentToken(id)
-    }
-  } catch {
-    // We could not confirm the outcome — do not claim the payment was declined
-    // (it may well have succeeded at the bank). The reconciler will settle the
-    // invoice/order status regardless; this only affects what we tell the payer.
-    state.value = 'unknown'
-  } finally {
-    checking.value = false
+  const result = await paymentStore.verifyGatewayPayment(target, id, paymentToken)
+  state.value = result
+  if (target === 'order' && result !== GatewayPaymentState.Pending && result !== GatewayPaymentState.Unknown) {
+    // Settled one way or the other: the token has done its job and should not sit in the browser
+    // afterwards. A pending payment keeps it so a retry can still verify, and so does an unknown
+    // outcome: the store reports a failure to get an answer as `Unknown`, and the payer may need
+    // the token to check again.
+    forgetPaymentToken(id)
   }
+  checking.value = false
 }
 
 onMounted(() => {
   if (!orderId.value && !invoiceId.value) {
-    // Nothing to verify — do not call check(), which would fall through to the
-    // invoice branch with an undefined id and hit /invoices/undefined/....
-    state.value = 'missing'
+    // Nothing to verify: do not call check(), which would fall through to the invoice branch
+    // with an undefined id and hit /invoices/undefined/....
+    state.value = GatewayPaymentState.Missing
     return
   }
   check()
 })
 
-// `t` is resolved here, at the top of setup, and not inside the computed below. A
-// `useNuxtApp()` call in the getter runs when the head is resolved rather than during
-// setup, by which point the Nuxt instance context is gone — server-side that threw
-// "[nuxt] instance unavailable" and turned this whole page into a 500.
+// `t` is resolved here, at the top of setup, and not inside the computed below. A `useNuxtApp()`
+// call in the getter runs when the head is resolved rather than during setup, by which point the
+// Nuxt instance context is gone: server-side that threw "[nuxt] instance unavailable" and turned
+// this whole page into a 500.
 useHead({ title: computed(() => t('paymentResult.title')) })
 </script>

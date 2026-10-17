@@ -6,6 +6,7 @@
     "vitest.config.*",
     "cypress.config.*",
     "playwright.config.*",
+    "e2e/**/*",
     "eslint.config.*"
   ],
   "compilerOptions": {
@@ -14,8 +15,13 @@
     "module": "preserve",
     "moduleResolution": "bundler",
 
-    // Include Node.js types and avoid accidentally including other `@types/*` packages.
-    "types": ["node"],
+    // The e2e fixtures import types from src/, which spell their own imports with the `@/` alias.
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    // Include Node.js types and avoid accidentally including other `@types/*` packages; `vite/client` types `import.meta.glob`, which the locale catalogue reached through the shared types uses.
+    "types": ["node", "vite/client"],
 
     // Disable emitting output during `vue-tsc --build`, which is used for type-checking only.
     "noEmit": true,

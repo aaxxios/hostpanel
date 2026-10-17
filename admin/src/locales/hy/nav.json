@@ -1,0 +1,53 @@
+{
+  "dashboard": "Ամփոփագիր",
+  "clients": "Հաճախորդներ",
+  "clientsChildren": {
+    "view": "Դիտել/Փնտրել հաճախորդներին",
+    "users": "Կառավարել օգտատերերին",
+    "sharedHostings": "Ընդհանուր հոսթինգներ",
+    "addons": "Ծառայության հավելումներ",
+    "domainRegistrations": "Դոմենի գրանցումներ",
+    "cancellations": "Չեղարկման հայտեր",
+    "affiliates": "Կառավարել գործընկերներին"
+  },
+  "billing": "Հաշվարկներ",
+  "billingChildren": {
+    "transactions": "Գործարքների ցանկ",
+    "invoices": "Հաշիվ-ապրանքագրեր",
+    "billableItems": "Վճարովի կետեր",
+    "quotes": "Գնառաջարկներ",
+    "offlineCc": "Offline քարտային վճարումներ",
+    "disputes": "Վեճեր",
+    "gatewayLog": "Վճարային համակարգի լոգ"
+  },
+  "reports": "Հաշվետվություններ",
+  "orders": "Պատվերներ",
+  "domains": "Դոմեններ",
+  "support": "Աջակցություն",
+  "supportChildren": {
+    "overview": "Աջակցության ամփոփում",
+    "tickets": "Աջակցության հայտեր",
+    "newTicket": "Բացել նոր հայտ",
+    "predefinedReplies": "Պատրաստի պատասխաններ",
+    "announcements": "Հայտարարություններ",
+    "downloads": "Ներբեռնումներ",
+    "knowledgebase": "Գիտելիքների բազա",
+    "networkIssues": "Ցանցային խնդիրներ"
+  },
+  "plugins": "Հավելումներ",
+  "pluginManager": "Հավելումների կառավարիչ",
+  "servers": "Սերվերներ",
+  "integrations": "Ինտեգրացիաներ",
+  "migration": "Միգրացիա",
+  "settings": "Կարգավորումներ",
+  "settingsChildren": {
+    "general": "Ընդհանուր",
+    "products": "Ապրանքներ",
+    "tldPricing": "TLD գնացուցակ",
+    "slides": "Սլայդներ",
+    "emailTemplates": "Նամակների ձևանմուշներ",
+    "gateways": "Վճարային համակարգեր",
+    "currencies": "Արժույթներ"
+  },
+  "servicesTitle": "Ծառայություններ"
+}

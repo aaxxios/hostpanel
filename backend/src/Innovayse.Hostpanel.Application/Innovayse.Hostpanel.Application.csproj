@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Settings inherited from Directory.Build.props -->
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Innovayse.Hostpanel.Domain\Innovayse.Hostpanel.Domain.csproj" />
+    <ProjectReference Include="..\Innovayse.SDK\Innovayse.SDK.csproj" />
+    <!-- Not consumed yet — this reference proves the graph compiles for phase 4, which wires
+         Result<T> and BaseApiController's helpers into the Application layer's handlers. -->
+    <ProjectReference Include="..\Shared\Innovayse.Hostpanel.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <!-- Supplies AddValidatorsFromAssemblyContaining, which DependencyInjection.cs's AddApplication
+         calls to put every validator in this assembly in the container where the Wolverine
+         middleware looks for them. -->
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Fluid.Core" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="WolverineFx" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
+    <!-- IStringLocalizer<ApplicationValidationMessages>: the refusal sentences in Resources/*.resx. -->
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+  </ItemGroup>
+</Project>

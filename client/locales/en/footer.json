@@ -1,6 +1,6 @@
 {
   "footer": {
-    "description": "Full-cycle digital agency delivering innovative solutions in development, SEO, PPC, and ready-to-use SaaS products.",
+    "description": "Web hosting, domains, servers, billing and a client portal, backed by 24/7 support.",
     "columns": {
       "navigation": "Navigation",
       "services": "Services",
@@ -14,7 +14,7 @@
       "contact": "Contact"
     },
     "services": {
-      "saasProducts": "SaaS Products"
+      "plans": "Hosting Plans"
     },
     "bottom": {
       "rights": "All rights reserved.",
@@ -23,6 +23,8 @@
       "terms": "Terms of Service",
       "refund": "Refund Policy",
       "secure": "Secure SSL"
-    }
+    },
+    "address": "Yerevan, Armenia",
+    "backToTop": "Back to top"
   }
 }

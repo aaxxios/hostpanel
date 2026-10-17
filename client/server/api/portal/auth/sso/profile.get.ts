@@ -4,11 +4,15 @@
  * Appends panel.innovayse.local-specific menuItems so the widget can render
  * quick-links (Dashboard, Services, Domains, Invoices, Support) inside
  * the account popup under "Manage your Innovayse Account".
+ *
+ * @module server/api/portal/auth/sso/profile.get
  */
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const accessToken = getCookie(event, 'auth_token')
-  if (!accessToken) throw createError({ statusCode: 401 })
+  if (!accessToken) {
+    throw createError({ statusCode: 401 })
+  }
 
   const profile = await $fetch<Record<string, unknown>>(`${config.ssoUrl}/api/account/profile`, {
     headers: { Authorization: `Bearer ${accessToken}` },

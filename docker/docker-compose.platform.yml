@@ -1,0 +1,32 @@
+# Joins innovayse_network and parks what the platform already provides. Goes last in every chain:
+#   laptop in the workspace: shared + dev + platform     deployed host: shared + prod + platform
+# Parked services carry no container_name, so their names never collide with the platform's.
+name: hostpanel
+
+networks:
+  default:
+    name: innovayse_network
+    external: true
+
+services:
+  hostpanel-rabbitmq:
+    profiles: ["standalone-only"]
+
+  hostpanel-redis:
+    profiles: ["standalone-only"]
+
+  # Only prod.yml defines it; the edge proxy already owns :80 on a deployed host.
+  hostpanel-nginx:
+    profiles: ["disabled"]
+
+  hostpanel-api:
+    # The database is this product's own and stays; the broker and redis are the platform's.
+    depends_on: !override
+      hostpanel-db:
+        condition: service_healthy
+    # Host, port and credentials override together or the catcher gets prod.yml's port with no credentials.
+    environment:
+      Smtp__Host: ${SMTP_HOST}
+      Smtp__Port: ${SMTP_PORT}
+      Smtp__Username: ${SMTP_USERNAME}
+      Smtp__Password: ${SMTP_PASSWORD}

@@ -1,0 +1,89 @@
+/**
+ * Orders, services and domains lists: each renders the page the API returned with a link to the
+ * owning client, a pending order can be accepted, and a refused load shows the API's sentence.
+ */
+import { expect, test } from '@playwright/test'
+import { domainsPage, hostingService, ordersPage, pendingOrder, registeredDomain, servicesPage } from './fixtures/orders'
+import type { OrderListItem } from '../src/types/order'
+import { OrderStatus } from '../src/types/order'
+import { json, stubApi } from './support/stubApi'
+
+test('accepting a pending order posts the command and reloads the list', async ({ page }) => {
+  // The order as the "database" holds it; the accept call activates it.
+  const stored: OrderListItem = { ...pendingOrder }
+
+  const api = await stubApi(page, {
+    signedIn: true,
+    routes: [
+      { method: 'GET', path: '/api/orders', respond: () => ({ body: { ...ordersPage, items: [stored] } }) },
+      {
+        method: 'POST',
+        path: `/api/orders/${pendingOrder.id}/accept`,
+        respond: () => {
+          stored.status = OrderStatus.Active
+          return { status: 204 }
+        },
+      },
+      { method: 'GET', path: `/api/orders/${pendingOrder.id}`, respond: () => ({ body: { ...stored, invoiceStatus: null, ipAddress: null, items: [] } }) },
+    ],
+  })
+
+  await page.goto('/orders')
+  await expect(page.getByTestId(`orders-row-${pendingOrder.id}`)).toContainText(pendingOrder.orderNumber)
+  await expect(page.getByTestId(`orders-client-${pendingOrder.id}`)).toHaveAttribute('href', `/clients/${pendingOrder.clientId}`)
+
+  await page.getByTestId(`orders-accept-${pendingOrder.id}`).click()
+
+  // An active order no longer offers accept or cancel.
+  await expect(page.getByTestId(`orders-accept-${pendingOrder.id}`)).toHaveCount(0)
+  expect(api.callsTo('POST', `/api/orders/${pendingOrder.id}/accept`)).toHaveLength(1)
+})
+
+test('a refused accept shows the API sentence and keeps the order pending', async ({ page }) => {
+  const sentence = 'The order cannot be accepted while the invoice is unpaid.'
+  await stubApi(page, {
+    signedIn: true,
+    routes: [
+      json('GET', '/api/orders', ordersPage),
+      json('POST', `/api/orders/${pendingOrder.id}/accept`, { type: 'CONFLICT', title: 'Conflict', status: 409, detail: sentence }, 409),
+    ],
+  })
+
+  await page.goto('/orders')
+  await page.getByTestId(`orders-accept-${pendingOrder.id}`).click()
+
+  await expect(page.getByTestId('orders-action-error')).toContainText(sentence)
+  await expect(page.getByTestId(`orders-accept-${pendingOrder.id}`)).toBeVisible()
+})
+
+test('the services list links each service to its client', async ({ page }) => {
+  await stubApi(page, { signedIn: true, routes: [json('GET', '/api/services', servicesPage)] })
+
+  await page.goto('/services')
+
+  await expect(page.getByTestId(`services-row-${hostingService.id}`)).toContainText(hostingService.productName)
+  await expect(page.getByTestId(`services-client-${hostingService.id}`)).toHaveAttribute('href', `/clients/${hostingService.clientId}`)
+})
+
+test('the domains list opens a domain under its client', async ({ page }) => {
+  await stubApi(page, { signedIn: true, routes: [json('GET', '/api/domains', domainsPage)] })
+
+  await page.goto('/domains')
+
+  await expect(page.getByTestId(`domains-row-${registeredDomain.id}`)).toContainText(registeredDomain.name)
+  await expect(page.getByTestId(`domains-name-${registeredDomain.id}`)).toHaveAttribute(
+    'href',
+    `/clients/${registeredDomain.clientId}/domains/${registeredDomain.id}`,
+  )
+})
+
+test('an empty services list shows the empty state', async ({ page }) => {
+  await stubApi(page, {
+    signedIn: true,
+    routes: [json('GET', '/api/services', { items: [], totalCount: 0, page: 1, pageSize: 20 })],
+  })
+
+  await page.goto('/services')
+
+  await expect(page.getByTestId('services-empty')).toBeVisible()
+})

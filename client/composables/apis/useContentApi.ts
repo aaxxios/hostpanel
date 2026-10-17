@@ -1,22 +1,16 @@
 /**
  * Endpoints for published editorial content — announcements and the knowledgebase.
  *
- * Two naming shapes appear here and mean different things:
- *
- * - `load*` returns the `useApi()` handle (`data` / `pending` / `error` refs). These are the
- *   server-rendered reads: the pages below are public and have to be indexable, so the request
- *   must run during SSR, which only `useFetch` — and therefore only `useApi()` — can do.
- * - `fetch*` returns a plain `Promise`. Those are the one-shot reads a store or an event
- *   handler makes.
- *
- * `load*` returning refs is the transport layer's handle being passed through, not state this
- * file keeps: nothing here is cached, computed or re-read.
+ * Every function returns a plain `Promise` through `apiFetch`, so `stores/content.ts` can call
+ * them from a store action, including the action a server-rendered page wraps in
+ * `useAsyncData`. Nothing here is cached, computed or re-read: the store keeps the state.
  *
  * @module composables/apis/useContentApi
  */
 
-import { useApi } from '~/composables/useApi'
+import { apiFetch } from '~/composables/useApi'
 import type { AnnouncementList } from '~/types/announcementlist'
+import type { AnnouncementSummary } from '~/types/announcementsummary'
 import type { KbArticle } from '~/types/kbarticle'
 import type { KbArticleList } from '~/types/kbarticlelist'
 import type { KbArticleQuery } from '~/types/kbarticlequery'
@@ -27,45 +21,59 @@ import type { KbCategory } from '~/types/kbcategory'
  *
  * @returns The content endpoint functions.
  */
-export function useContentApi() {
+export const useContentApi = () => {
   /**
-   * Server-rendered read of the announcement list.
+   * Reads the announcement list.
    *
-   * @returns The `useApi()` handle for the announcement list.
+   * @returns The announcement list.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadAnnouncements = () =>
-    useApi<AnnouncementList>('/api/portal/client/announcements')
+  const fetchAnnouncements = (): Promise<AnnouncementList> =>
+    apiFetch<AnnouncementList>('/api/portal/client/announcements')
 
   /**
-   * Server-rendered read of the knowledgebase categories.
+   * Reads the ten most recent published announcements, flattened for the dashboard card.
    *
-   * @returns The `useApi()` handle for the category list.
+   * @returns The announcement summaries, newest first.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadKbCategories = () =>
-    useApi<KbCategory[]>('/api/portal/knowledgebase/categories', { default: () => [] })
+  const fetchRecentAnnouncements = (): Promise<AnnouncementSummary[]> =>
+    apiFetch<AnnouncementSummary[]>('/api/portal/public/announcements')
 
   /**
-   * Server-rendered read of knowledgebase articles.
+   * Reads the knowledgebase categories.
    *
-   * @param query - Reactive filters; re-reads whenever they change, as `useApi()` watches them.
-   * @param immediate - False to defer the first request until the caller executes it, which is
-   * what the search box needs — it must not fire a blank search on page load.
-   * @returns The `useApi()` handle for the article list.
+   * @returns The categories.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadKbArticles = (query: () => KbArticleQuery, immediate = true) =>
-    useApi<KbArticleList>('/api/portal/knowledgebase/articles', {
-      query: () => query() as Record<string, unknown>,
-      immediate
-    })
+  const fetchKbCategories = (): Promise<KbCategory[]> =>
+    apiFetch<KbCategory[]>('/api/portal/knowledgebase/categories')
 
   /**
-   * Server-rendered read of one knowledgebase article, body included.
+   * Reads knowledgebase articles.
    *
-   * @param id - Article id; a getter so the page re-reads when the route changes.
-   * @returns The `useApi()` handle for the article.
+   * @param query - Which articles to read.
+   * @returns The article list.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadKbArticle = (id: () => string) =>
-    useApi<KbArticle>(() => `/api/portal/knowledgebase/${id()}`)
+  const fetchKbArticles = (query: KbArticleQuery): Promise<KbArticleList> =>
+    apiFetch<KbArticleList>('/api/portal/knowledgebase/articles', { query })
 
-  return { loadAnnouncements, loadKbCategories, loadKbArticles, loadKbArticle }
+  /**
+   * Reads one knowledgebase article, body included.
+   *
+   * @param id - Article id.
+   * @returns The article.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const fetchKbArticle = (id: string): Promise<KbArticle> =>
+    apiFetch<KbArticle>(`/api/portal/knowledgebase/${id}`)
+
+  return {
+    fetchAnnouncements,
+    fetchRecentAnnouncements,
+    fetchKbCategories,
+    fetchKbArticles,
+    fetchKbArticle
+  }
 }

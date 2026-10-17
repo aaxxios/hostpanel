@@ -46,3 +46,20 @@ export interface UpdateExchangeRatesResult {
   /** Codes the source did not quote; their stored rate was left alone. */
   missing: string[]
 }
+
+/** Closed set of the ISO 4217 currency codes this panel can price in, as the API sends them. */
+export const CurrencyCode = {
+  /** Armenian dram. */
+  Amd: 'AMD',
+  /** US dollar. */
+  Usd: 'USD',
+  /** Euro. */
+  Eur: 'EUR',
+  /** Pound sterling. */
+  Gbp: 'GBP',
+  /** Russian rouble. */
+  Rub: 'RUB',
+} as const
+
+/** One of the currency codes. */
+export type CurrencyCode = (typeof CurrencyCode)[keyof typeof CurrencyCode]

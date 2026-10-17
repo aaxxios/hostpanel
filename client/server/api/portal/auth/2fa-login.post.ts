@@ -1,11 +1,31 @@
+/**
+ * POST /api/portal/auth/2fa-login
+ *
+ * Completes a two-factor sign-in with the pending token and the authenticator code, then stores
+ * the session in httpOnly cookies. Anonymous (no session yet) but routed through
+ * `internalApiCall` so `X-Language` is forwarded and a refusal keeps the backend's `detail`.
+ *
+ * @module server/api/portal/auth/2fa-login.post
+ */
+
+/** What the backend answers a completed two-factor sign-in with. */
+interface TwoFactorLoginResult {
+  /** Access token stored in the httpOnly `auth_token` cookie. */
+  accessToken: string
+  /** Lifetime of the access token, in seconds. */
+  expiresIn: number
+}
+
+/**
+ * Completes the two-factor sign-in and sets the session cookies.
+ */
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig()
-  const apiUrl = (config.apiUrl as string) || 'http://localhost:5000'
   const body = await readBody(event)
 
-  const response = await $fetch<{ accessToken: string; expiresIn: number }>(
-    `${apiUrl}/api/auth/2fa-login`,
-    { method: 'POST', body }
+  const response = await internalApiCall<TwoFactorLoginResult>(
+    event,
+    '/auth/2fa-login',
+    { method: 'POST', body, anonymous: true }
   )
 
   setCookie(event, 'auth_token', response.accessToken, {

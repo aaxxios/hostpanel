@@ -5,6 +5,65 @@
 @import "@fontsource/noto-sans-armenian";
 @import "@fontsource/noto-serif-armenian";
 
+/* Runtime theme palette. Dark is the default; `<html class="light">` swaps every surface, border
+   and text token at once, so a Ui* component never carries a per-theme class. */
+:root {
+  color-scheme: dark;
+  --surface-base:     #0a0a0f;
+  --surface-panel:    #0f0f17;
+  --surface-card:     #12121a;
+  --surface-elevated: #16161f;
+  --surface-field:    rgb(255 255 255 / 0.04);
+  --surface-hover:    rgb(255 255 255 / 0.06);
+  --border:           #1e1e2e;
+  --border-subtle:    #161622;
+  --border-strong:    rgb(255 255 255 / 0.14);
+  --text-primary:     #f0f4ff;
+  --text-secondary:   #8b90a8;
+  --text-muted:       #4a4f66;
+  --chart-grid:       rgb(255 255 255 / 0.05);
+  --chart-tick:       #64748b;
+  --chart-1: #0ea5e9;
+  --chart-2: #a855f7;
+  --chart-3: #34d399;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+  --chart-6: #38bdf8;
+}
+
+:root.light {
+  color-scheme: light;
+  --surface-base:     #f4f6fb;
+  --surface-panel:    #eef1f8;
+  --surface-card:     #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-field:    rgb(15 23 42 / 0.04);
+  --surface-hover:    rgb(15 23 42 / 0.06);
+  --border:           #dfe3ee;
+  --border-subtle:    #eceff6;
+  --border-strong:    rgb(15 23 42 / 0.2);
+  --text-primary:     #0f172a;
+  --text-secondary:   #475069;
+  --text-muted:       #7a8199;
+  --chart-grid:       rgb(15 23 42 / 0.08);
+  --chart-tick:       #64748b;
+}
+
+@theme inline {
+  --color-surface-base:     var(--surface-base);
+  --color-surface-panel:    var(--surface-panel);
+  --color-surface-card:     var(--surface-card);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-field:    var(--surface-field);
+  --color-surface-hover:    var(--surface-hover);
+  --color-border:           var(--border);
+  --color-border-subtle:    var(--border-subtle);
+  --color-border-strong:    var(--border-strong);
+  --color-text-primary:     var(--text-primary);
+  --color-text-secondary:   var(--text-secondary);
+  --color-text-muted:       var(--text-muted);
+}
+
 @theme {
   /* Brand colors (matching innovayse.com) */
   --color-primary-50:  #f0f9ff;
@@ -20,21 +79,6 @@
   --color-secondary-500: #a855f7;
   --color-secondary-600: #9333ea;
 
-  /* App surfaces */
-  --color-surface-base:     #0a0a0f;
-  --color-surface-panel:    #0f0f17;
-  --color-surface-card:     #12121a;
-  --color-surface-elevated: #16161f;
-
-  /* Borders */
-  --color-border:        #1e1e2e;
-  --color-border-subtle: #161622;
-
-  /* Text */
-  --color-text-primary:   #f0f4ff;
-  --color-text-secondary: #8b90a8;
-  --color-text-muted:     #4a4f66;
-
   /* Status */
   --color-status-red:    #f87171;
   --color-status-green:  #34d399;
@@ -43,6 +87,12 @@
   /* Fonts */
   --font-display: 'Syne', sans-serif;
   --font-sans:    'Inter', system-ui, sans-serif;
+
+  /* Brand typefaces an operator can pick; each one backs a `font-brand-*` utility used to preview it. */
+  --font-brand-inter: 'Inter Variable', Inter, 'Noto Sans Armenian', system-ui, sans-serif;
+  --font-brand-noto-sans-armenian: 'Noto Sans Armenian', system-ui, sans-serif;
+  --font-brand-noto-serif-armenian: 'Noto Serif Armenian', Georgia, serif;
+  --font-brand-system: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Armenian', sans-serif;
 }
 
 @layer base {
@@ -64,11 +114,11 @@
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
   input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 1000px #0f0f17 inset !important;
-    -webkit-text-fill-color: #e4e4ed !important;
-    caret-color: #e4e4ed !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--surface-panel) inset !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    caret-color: var(--text-primary) !important;
     transition: background-color 5000s ease-in-out 0s !important;
-    background-color: #0f0f17 !important;
+    background-color: var(--surface-panel) !important;
   }
 }
 

@@ -1,18 +1,24 @@
 /**
  * Client auth initialisation plugin — runs on CLIENT SIDE ONLY
  *
- * After Nuxt hydrates on the browser, if the `whmcs_authed` cookie is present
+ * After Nuxt hydrates on the browser, if the `authed` cookie is present
  * (meaning the user logged in previously), we fetch their profile once and
- * store it in `useState('whmcs_user')`.
+ * keep it in the auth store.
  *
  * This ensures the client layout sidebar shows the user name/email immediately
  * on any client-side navigation without each page needing to fetch it separately.
  *
  * Note: `import.meta.client` guard makes this a no-op on the server,
- * preventing a redundant WHMCS API call during SSR.
+ * preventing a redundant billing API call during SSR.
+ *
+ * @module plugins/client-auth
  */
+
+/** Loads the signed-in user's profile once after hydration. */
 export default defineNuxtPlugin(async () => {
-  if (!import.meta.client) return
+  if (!import.meta.client) {
+    return
+  }
 
   const authStore = useAuthStore()
 

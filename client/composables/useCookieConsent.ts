@@ -1,5 +1,10 @@
-/** What a visitor agreed to: every cookie, only the ones the site needs, or nothing yet. */
-export type CookieConsent = 'all' | 'essential' | null
+/**
+ * The visitor's cookie consent composable.
+ *
+ * @module composables/useCookieConsent
+ */
+
+import { CookieConsent } from '~/types/cookieconsent'
 
 /** The cookie the banner writes. */
 export const COOKIE_CONSENT_NAME = 'cookie-consent'
@@ -20,21 +25,22 @@ const COOKIE_CONSENT_MAX_AGE = 60 * 60 * 24 * 365
  * @returns The current consent and a setter.
  */
 export const useCookieConsent = () => {
+  /** The browser cookie, shared with the server render. */
   const cookie = useCookie<string | null>(COOKIE_CONSENT_NAME, {
     sameSite: 'lax',
     maxAge: COOKIE_CONSENT_MAX_AGE,
   })
 
   /** Narrowed: anything but the two known values reads as "no choice made". */
-  const consent = computed<CookieConsent>(() =>
-    cookie.value === 'all' || cookie.value === 'essential' ? cookie.value : null)
+  const consent = computed<CookieConsent | null>(() =>
+    cookie.value === CookieConsent.All || cookie.value === CookieConsent.Essential ? cookie.value : null)
 
   /**
    * Records the visitor's choice.
    *
    * @param level What they agreed to.
    */
-  function accept(level: Exclude<CookieConsent, null>): void {
+  const accept = (level: CookieConsent): void => {
     cookie.value = level
   }
 

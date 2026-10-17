@@ -1,0 +1,196 @@
+<script setup lang="ts" generic="T extends object">
+/**
+ * Table every report draws its rows in.
+ *
+ * Columns are data (`ReportColumn`): the key reads a property of the row, the format turns the raw
+ * value into text (money, percent, date, status badge ...), and an empty value shows a dash. A
+ * screen that needs a cell the formats cannot express fills the `cell-<key>` slot; one that needs
+ * grouped rows replaces the whole body with the `body` slot. `totals` adds a footer row, and the
+ * empty text shows when there are no rows.
+ */
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import ReportStatusBadge from '@/components/reports/ReportStatusBadge.vue'
+import UiCard from '@/components/ui/UiCard.vue'
+import UiTable from '@/components/ui/UiTable.vue'
+import UiTableBody from '@/components/ui/UiTableBody.vue'
+import UiTableCell from '@/components/ui/UiTableCell.vue'
+import UiTableFoot from '@/components/ui/UiTableFoot.vue'
+import UiTableHead from '@/components/ui/UiTableHead.vue'
+import UiTableHeader from '@/components/ui/UiTableHeader.vue'
+import UiTableRow from '@/components/ui/UiTableRow.vue'
+import { formatDate } from '@/lib/format'
+import { formatReportAmount } from '@/lib/money'
+import { ReportCellFormat } from '@/types/reportcolumn'
+import type { ReportColumn } from '@/types/reportcolumn'
+
+const { t } = useI18n()
+
+/** Text shown for a value the row does not have. */
+const NO_VALUE = '—'
+
+/** Props for ReportTable. */
+const props = withDefaults(defineProps<{
+  /** Columns in display order. */
+  columns: readonly ReportColumn[]
+  /** Rows to draw. */
+  rows?: T[]
+  /** Property of a row that identifies it; the row position when omitted. */
+  rowKey?: keyof T & string
+  /** Text shown when there are no rows; "No data." when omitted. */
+  emptyText?: string
+  /** Forces the empty state on or off; by default it follows `rows`. */
+  empty?: boolean
+  /** Footer figures by column key; the first column shows `totalsLabel`. */
+  totals?: Record<string, string | number> | null
+  /** Caption of the footer row; "Total" when omitted. */
+  totalsLabel?: string
+  /** Formats a money cell; US dollars when omitted. */
+  formatMoney?: (amount: number) => string
+  /** Prefix of the `data-testid`s (`<prefix>`, `<prefix>-row`). */
+  testid?: string
+}>(), {
+  /**
+   * Default for the rows.
+   *
+   * @returns A new empty list, so instances never share one.
+   */
+  rows: () => [],
+  rowKey: undefined,
+  emptyText: undefined,
+  empty: undefined,
+  totals: null,
+  totalsLabel: undefined,
+  /**
+   * Default money formatter: US dollars.
+   *
+   * @param amount - Value to format.
+   * @returns The formatted amount.
+   */
+  formatMoney: (amount: number) => formatReportAmount(amount),
+  testid: 'report-table',
+})
+
+/** Slots a screen may fill. */
+defineSlots<{
+  /** Replaces the cell of one column; the slot name is `cell-` plus the column key. */
+  [slot: `cell-${string}`]: (scope: { row: T; value: unknown }) => unknown
+  /** Replaces all body rows (grouped reports). */
+  body?: () => unknown
+  /** Extra rows under the totals. */
+  footer?: () => unknown
+}>()
+
+/** Whether the empty state shows. */
+const isEmpty = computed<boolean>(() => props.empty ?? props.rows.length === 0)
+
+/** Column count, at least one so the status row always has a width. */
+const columnCount = computed<number>(() => Math.max(1, props.columns.length))
+
+/**
+ * Reads the raw value a column shows for a row.
+ *
+ * @param row - The row.
+ * @param key - Column key.
+ * @returns The property of the row, whatever its type.
+ */
+const valueOf = (row: T, key: string): unknown => (row as Record<string, unknown>)[key]
+
+/**
+ * Turns a raw value into the text of a cell.
+ *
+ * @param value - The raw value.
+ * @param format - How the column formats it.
+ * @returns The text; a dash when the value is missing.
+ */
+const formatValue = (value: unknown, format: ReportCellFormat | undefined): string => {
+  if (value === null || value === undefined || value === '') {
+    return NO_VALUE
+  }
+  switch (format) {
+    case ReportCellFormat.Money:
+      return props.formatMoney(Number(value))
+    case ReportCellFormat.Percent:
+      return `${value}%`
+    case ReportCellFormat.Date:
+      return formatDate(String(value), NO_VALUE)
+    case ReportCellFormat.Id:
+      return `#${value}`
+    case ReportCellFormat.Years:
+      return t('reports.common.years', { count: Number(value) })
+    default:
+      return String(value)
+  }
+}
+
+/**
+ * Finds the key of a row for the list rendering.
+ *
+ * @param row - The row.
+ * @param index - Position of the row.
+ * @returns The row property named by `rowKey`, or the position.
+ */
+const keyOf = (row: T, index: number): string | number => {
+  if (props.rowKey === undefined) {
+    return index
+  }
+  return String(row[props.rowKey])
+}
+
+/**
+ * Text of one footer cell.
+ *
+ * @param column - The column.
+ * @param position - Index of the column; the first shows the footer caption.
+ * @returns The caption, the formatted total, or nothing.
+ */
+const totalText = (column: ReportColumn, position: number): string => {
+  if (position === 0) {
+    return props.totalsLabel ?? t('shared.total')
+  }
+  const value = props.totals?.[column.key]
+  return value === undefined || value === '' ? '' : formatValue(value, column.format)
+}
+</script>
+
+<template>
+  <UiCard class="overflow-x-auto" :data-testid="testid">
+    <UiTable density="comfortable" :empty="isEmpty" :colspan="columnCount">
+      <UiTableHead>
+        <UiTableRow>
+          <UiTableHeader v-for="column in columns" :key="column.key" :align="column.align">
+            {{ column.label }}
+          </UiTableHeader>
+        </UiTableRow>
+      </UiTableHead>
+      <UiTableBody divided>
+        <slot name="body">
+          <UiTableRow v-for="(row, index) in rows" :key="keyOf(row, index)" hoverable :data-testid="`${testid}-row`">
+            <UiTableCell v-for="column in columns" :key="column.key" :align="column.align">
+              <slot :name="`cell-${column.key}`" :row="row" :value="valueOf(row, column.key)">
+                <ReportStatusBadge
+                  v-if="column.format === ReportCellFormat.Status && valueOf(row, column.key)"
+                  :status="String(valueOf(row, column.key))"
+                />
+                <template v-else>
+                  {{ formatValue(valueOf(row, column.key), column.format) }}
+                </template>
+              </slot>
+            </UiTableCell>
+          </UiTableRow>
+        </slot>
+      </UiTableBody>
+      <UiTableFoot v-if="totals && !isEmpty">
+        <UiTableRow data-testid="report-totals">
+          <UiTableCell v-for="(column, position) in columns" :key="column.key" :align="column.align" class="font-semibold text-text-primary">
+            {{ totalText(column, position) }}
+          </UiTableCell>
+        </UiTableRow>
+      </UiTableFoot>
+      <slot name="footer" />
+      <template #empty>
+        {{ emptyText ?? t('shared.noData') }}
+      </template>
+    </UiTable>
+  </UiCard>
+</template>

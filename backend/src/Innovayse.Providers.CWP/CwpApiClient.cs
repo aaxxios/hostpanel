@@ -1,15 +1,14 @@
-namespace Innovayse.Providers.CWP;
-
 using System.Net.Http.Json;
 using Innovayse.Providers.CWP.Models;
 using Innovayse.SDK.Plugins;
 using Microsoft.Extensions.Logging;
 
+namespace Innovayse.Providers.CWP;
 /// <summary>
 /// HTTP client wrapper for the CentOS Web Panel (CWP) REST API.
 /// Sends form-encoded POST requests to the /v1/account endpoint.
 /// </summary>
-internal sealed class CwpApiClient : ICwpApiClient
+internal sealed class CwpApiClient : IHostingPanelApiClient
 {
     /// <summary>Default CWP API port when not specified in configuration.</summary>
     /// <remarks>
@@ -19,20 +18,20 @@ internal sealed class CwpApiClient : ICwpApiClient
     /// used to carry its own fallback of 2031, so the same missing setting produced two
     /// different ports depending on which entry point was used; both now read this one constant.
     /// <para>
-    /// The number itself now lives on <see cref="ICwpApiClient.DefaultApiPort"/>, the contract
+    /// The number itself now lives on <see cref="IHostingPanelApiClient.DefaultApiPort"/>, the contract
     /// both this assembly and the Application layer can see. This alias stays so the consumers
     /// inside this provider keep reading a name local to them, but it can no longer drift from
     /// the fallback the Application layer applies.
     /// </para>
     /// </remarks>
-    internal const int DefaultPort = ICwpApiClient.DefaultApiPort;
+    internal const int DefaultPort = IHostingPanelApiClient.DefaultApiPort;
 
     /// <summary>
     /// Name of the <c>IHttpClientFactory</c> registration that serves this client.
     /// </summary>
     /// <remarks>
     /// Declared here, beside the client it configures, so the composition root in
-    /// <c>Innovayse.Infrastructure.DependencyInjection</c> and
+    /// <c>Innovayse.Hostpanel.Infrastructure.DependencyInjection</c> and
     /// <see cref="CwpProvisioningProvider"/> cannot drift apart over a string literal.
     /// </remarks>
     internal const string HttpClientName = "Cwp";

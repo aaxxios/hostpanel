@@ -2,7 +2,7 @@
  * One catalogue product, as `GET /api/portal/public/products` returns it.
  *
  * The route spreads the C# `ProductDto` verbatim and adds exactly one thing: `pid`, a
- * WHMCS-compatible alias of `id`. Every other field below is `ProductDto`'s own, camelCase, as
+ * legacy-compatible alias of `id`. Every other field below is `ProductDto`'s own, camelCase, as
  * `System.Text.Json` writes it — including `pricing` and `prices`, which the route used to
  * replace with a hardcoded `pricing.USD` block of decimal strings under six billing-cycle
  * keys. The backend prices only monthly and annually, and `pricing` already arrives in the
@@ -25,7 +25,7 @@
  * `translated_name`, `translated_tagline`, `translated_shortdescription`,
  * `translated_description`, `group_translations` and `group_features` used to be read across
  * `pages/products/`, `pages/hosting/`, `pages/trial/`, `components/sections/Products.vue`,
- * `templates/classic/pages/Hosting.vue` and `utils/whmcs.ts`. `ProductDto` carries none of
+ * `templates/classic/pages/Hosting.vue` and `utils/catalogGroups.ts`. `ProductDto` carries none of
  * them, `GET /api/products` was checked against a live backend and sends none of them, and
  * every read sat in front of an `|| p.name` / `|| p.description` fallback that was the only
  * branch ever taken. They are gone, along with the `lang` parameter the BFF forwarded to feed
@@ -34,49 +34,27 @@
  * **Localised product copy does not exist in the backend.** There is no product translations
  * table, no `lang` on `ProductsController`, nothing under `Application/Products/`. `Slide` is
  * the one entity with a `*Translation` sibling (`SlideTranslation`), and
- * `useCatalogApi().loadSlides(lang)` is the one place a `lang` parameter still means anything.
+ * `useCatalogStore().loadSlides(lang)` is the one place a `lang` parameter still means anything.
  * Making product copy translatable starts there — a `ProductTranslation` entity and a locale
  * on the query — and only then does a field belong back on this interface.
  *
  * **`group_features` already has a successor.** Structured, per-product specification lines
  * are `ProductFeature` (label / value / sortOrder), served by
  * `GET /api/portal/public/product-features` and read through
- * `useCatalogApi().loadProductFeatures(groupId)`. A caller that wanted `group_features` wants
+ * `useCatalogStore().loadProductFeatures(groupId)`. A caller that wanted `group_features` wants
  * that endpoint.
  *
  * @module types/portalproduct
  */
 
-/**
- * The product's price in the caller's own currency, as `ProductPricingDto` sends it.
- *
- * Both fields are `null` when the product carries no price in that currency at all — the
- * storefront hides such a product for the cycle that is null (`GET /products` without
- * `includeUnsellable` already excludes a product with no price in any currency, but a product
- * priced only annually, say, still needs the monthly card hidden).
- */
-export interface PortalProductPricing {
-  /** Monthly price in the caller's currency, or null when not offered. */
-  monthly: number | null
-  /** Annual price in the caller's currency, or null when not offered. */
-  annual: number | null
-}
-
-/** One product's price in one specific currency, as `ProductDto.prices` carries them. */
-export interface PortalProductCurrencyPrice {
-  /** ISO 4217 alpha code this row is priced in. */
-  currencyCode: string
-  /** Monthly price in this currency, or null when not offered. */
-  monthly: number | null
-  /** Annual price in this currency, or null when not offered. */
-  annual: number | null
-}
+import type { PortalProductPricing } from '~/types/portalproductpricing'
+import type { PortalProductCurrencyPrice } from '~/types/portalproductcurrencyprice'
 
 /** One catalogue product. */
 export interface PortalProduct {
   /** Product primary key. */
   id: number
-  /** WHMCS-compatible alias of {@link PortalProduct.id}, added by the proxy. */
+  /** legacy-compatible alias of {@link PortalProduct.id}, added by the proxy. */
   pid?: number
   /** Product group id this product belongs to. */
   groupId: number

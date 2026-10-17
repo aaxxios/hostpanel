@@ -1,0 +1,72 @@
+{
+  "uiAdvancedFilters": {
+    "filterValue": "Ֆիլտր՝ {value}",
+    "selectField": "Ընտրեք դաշտը...",
+    "enterValue": "Մուտքագրեք արժեքը...",
+    "addFilter": "Ավելացնել ֆիլտր",
+    "exactMatch": "Ճշգրիտ համընկնում",
+    "containing": "Պարունակում է"
+  },
+  "uiClientSelect": {
+    "noClientsFound": "Հաճախորդներ չեն գտնվել"
+  },
+  "uiCountrySelect": {
+    "selectCountry": "Ընտրեք երկիրը..."
+  },
+  "uiDatePicker": {
+    "ddMmYyyy": "ՕՕ/ԱԱ/ՏՏՏՏ",
+    "month": "Ամիս",
+    "year": "Տարի",
+    "yesterday": "Երեկ",
+    "7DaysAgo": "7 օր առաջ",
+    "1MonthAgo": "1 ամիս առաջ",
+    "1YearAgo": "1 տարի առաջ"
+  },
+  "uiDatePickerFuture": {
+    "tomorrow": "Վաղը",
+    "in7Days": "7 օր հետո",
+    "1MonthFromNow": "1 ամիս հետո",
+    "1YearFromNow": "1 տարի հետո"
+  },
+  "uiDateRangePicker": {
+    "ddMmYyyyDdMm": "ՕՕ/ԱԱ/ՏՏՏՏ - ՕՕ/ԱԱ/ՏՏՏՏ",
+    "yesterday": "Երեկ",
+    "last7Days": "Վերջին 7 օրը",
+    "last30Days": "Վերջին 30 օրը",
+    "thisMonth": "Այս ամիսը",
+    "1MonthAgo": "1 ամիս առաջ",
+    "thisYear": "Այս տարին",
+    "1YearAgo": "1 տարի առաջ",
+    "selectDateRange": "Ընտրեք ժամանակահատվածը"
+  },
+  "uiFieldSelector": {
+    "fields": "Դաշտեր",
+    "clearAll": "Մաքրել բոլորը"
+  },
+  "uiSelect": {
+    "noResults": "Արդյունքներ չկան"
+  },
+  "selectCountry": "Ընտրեք երկիրը",
+  "dialog": {
+    "close": "Փակել",
+    "confirm": "Հաստատել",
+    "processing": "Մշակվում է..."
+  },
+  "pagination": {
+    "navigation": "Էջավորում",
+    "previous": "Նախորդ",
+    "next": "Հաջորդ",
+    "page": "Էջ"
+  },
+  "table": {
+    "empty": "Տվյալներ չկան"
+  },
+  "chart": {
+    "empty": "Գրաֆիկի համար տվյալներ չկան"
+  },
+  "uploadZone": {
+    "dropOr": "Քաշեք ֆայլը կամ",
+    "browse": "ընտրեք",
+    "uploading": "Վերբեռնվում է..."
+  }
+}

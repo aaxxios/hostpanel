@@ -1,125 +1,152 @@
 <template>
-  <div>
+  <UiStack gap="none" data-testid="kb-page">
     <!-- Hero / Search -->
-    <section class="relative py-16 md:py-24 bg-[#0a0a0f] overflow-hidden">
-      <div class="absolute inset-0 pointer-events-none">
-        <div class="absolute top-0 right-1/4 w-[400px] h-[400px] bg-primary-500/15 rounded-full blur-[130px]" />
-        <div class="absolute bottom-0 left-1/3 w-[300px] h-[300px] bg-cyan-500/10 rounded-full blur-[110px]" />
-      </div>
-      <div class="container-custom relative z-10 text-center max-w-3xl mx-auto">
-        <div class="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full glass border border-primary-500/20 backdrop-blur-sm">
-          <BookOpen :size="14" :stroke-width="2" class="text-primary-400" />
-          <span class="text-sm font-medium text-gray-300">{{ $t('kb.badge') }}</span>
-        </div>
-        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">{{ $t('kb.title') }}</h1>
-        <p class="text-gray-400 mb-10 leading-relaxed">{{ $t('kb.subtitle') }}</p>
-
-        <!-- Search bar -->
-        <form class="flex gap-2" @submit.prevent="doSearch">
-          <input
+    <UiPageHero
+      :badge="t('kb.badge')"
+      :title="t('kb.title')"
+      :subtitle="t('kb.subtitle')"
+    >
+      <!-- Search bar -->
+      <UiForm
+        spacing="none"
+        class="mx-auto mt-10 max-w-3xl"
+        data-testid="kb-search-form"
+        @submit="doSearch"
+      >
+        <UiStack direction="row" gap="xs">
+          <UiInput
             v-model="searchQuery"
-            type="text"
-            :placeholder="$t('kb.searchPlaceholder')"
-            class="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all"
-          />
-          <button
-            type="submit"
-            class="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-primary-600 text-white font-semibold text-sm hover:opacity-90 transition-opacity flex items-center gap-2 flex-shrink-0"
+            class="flex-1"
+            :placeholder="t('kb.searchPlaceholder')"
+            testid="kb-search-input"
           >
-            <Search :size="16" :stroke-width="2" />
-            {{ $t('kb.search') }}
-          </button>
-        </form>
-      </div>
-    </section>
+            <template #prefix>
+              <Search :size="16" :stroke-width="2" class="text-gray-400" />
+            </template>
+          </UiInput>
+          <UiButton type="submit" size="lg" data-testid="kb-search-submit">
+            <Search :size="16" :stroke-width="2" class="mr-2" />
+            {{ t('kb.search') }}
+          </UiButton>
+        </UiStack>
+      </UiForm>
+    </UiPageHero>
 
     <!-- Content -->
-    <section class="py-12 bg-[#0a0a0f]">
-      <div class="container-custom max-w-5xl">
-
+    <UiSection padding="md">
+      <UiStack gap="xl" class="mx-auto w-full max-w-5xl">
         <!-- Search results -->
         <template v-if="searched">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-lg font-semibold text-white">
-              {{ searchResults.length }} {{ $t('kb.articles') }}
-            </h2>
-            <button class="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-1" @click="clearSearch">
-              <X :size="14" :stroke-width="2" />
-              {{ $t('kb.backToKb') }}
-            </button>
-          </div>
+          <UiStack direction="row" justify="between" align="center">
+            <UiHeading :level="2" size="subsection" data-testid="kb-search-count">
+              {{ searchResults.length }} {{ t('kb.articles') }}
+            </UiHeading>
+            <UiButton
+              variant="ghost"
+              size="sm"
+              data-testid="kb-clear-search"
+              @click="clearSearch"
+            >
+              <X :size="14" :stroke-width="2" class="mr-1.5" />
+              {{ t('kb.backToKb') }}
+            </UiButton>
+          </UiStack>
 
-          <div v-if="searchPending" class="space-y-3">
-            <div v-for="i in 5" :key="i" class="h-20 rounded-xl bg-white/5 border border-white/10 animate-pulse" />
-          </div>
+          <UiStack v-if="searchPending" gap="sm" data-testid="kb-search-loading">
+            <UiSkeleton v-for="i in 5" :key="i" shape="block" class="h-20" />
+          </UiStack>
 
-          <div v-else-if="!searchResults.length" class="text-center py-16">
-            <Search :size="40" :stroke-width="1.5" class="text-gray-600 mx-auto mb-4" />
-            <p class="text-gray-400">{{ $t('kb.noResults') }}</p>
-          </div>
+          <UiEmptyState
+            v-else-if="!searchResults.length"
+            :icon="Search"
+            :title="t('kb.noResults')"
+            data-testid="kb-search-empty"
+          />
 
-          <div v-else class="space-y-3">
-            <KbArticleRow v-for="article in searchResults" :key="article.id" :article="article" />
-          </div>
+          <UiCard
+            v-else
+            padding="none"
+            class="overflow-hidden"
+            data-testid="kb-search-results"
+          >
+            <UiStack gap="none" class="divide-y divide-gray-100 dark:divide-white/5">
+              <KbArticleRow v-for="article in searchResults" :key="article.id" :article="article" />
+            </UiStack>
+          </UiCard>
         </template>
 
         <!-- Default: categories + popular -->
         <template v-else>
           <!-- Categories grid -->
-          <div class="mb-12">
-            <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
-              <FolderOpen :size="20" :stroke-width="2" class="text-primary-400" />
-              {{ $t('kb.categories') }}
-            </h2>
+          <UiStack gap="lg" data-testid="kb-categories">
+            <UiHeading :level="2" size="subsection" class="flex items-center gap-2">
+              <FolderOpen :size="20" :stroke-width="2" class="text-primary-600 dark:text-primary-400" />
+              {{ t('kb.categories') }}
+            </UiHeading>
 
-            <div v-if="catPending" class="grid sm:grid-cols-2 gap-4">
-              <div v-for="i in 4" :key="i" class="h-24 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
-            </div>
+            <UiGrid v-if="catPending" cols="2">
+              <UiSkeleton v-for="i in 4" :key="i" shape="block" class="h-24" />
+            </UiGrid>
 
-            <div v-else-if="!categories.length" class="text-gray-400 text-sm">{{ $t('kb.empty') }}</div>
+            <UiText v-else-if="!categories.length" tone="muted" size="sm">
+              {{ t('kb.empty') }}
+            </UiText>
 
-            <div v-else class="grid sm:grid-cols-2 gap-4">
-              <NuxtLink
+            <UiGrid v-else cols="2">
+              <UiLinkCard
                 v-for="cat in categories"
                 :key="cat.id"
                 :to="localePath(`/knowledgebase/category/${cat.id}`)"
-                class="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-primary-500/30 hover:bg-white/8 transition-all duration-200 group"
+                :testid="`kb-category-${cat.id}`"
               >
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center flex-shrink-0">
-                    <Folder :size="18" :stroke-width="2" class="text-primary-400" />
-                  </div>
-                  <span class="font-semibold text-white group-hover:text-primary-400 transition-colors">{{ cat.name }}</span>
-                </div>
-                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-primary-500/15 text-primary-400 flex-shrink-0">
-                  {{ cat.articlecount }} {{ cat.articlecount === 1 ? $t('kb.article') : $t('kb.articles') }}
-                </span>
-              </NuxtLink>
-            </div>
-          </div>
+                <UiStack direction="row" justify="between" align="center">
+                  <UiStack direction="row" align="center" gap="sm">
+                    <UiTile
+                      :icon="Folder"
+                      size="xl"
+                      class="border border-primary-500/20 bg-primary-500/10 text-primary-600 dark:text-primary-400"
+                    />
+                    <UiText
+                      as="span"
+                      weight="semibold"
+                      class="transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400"
+                    >
+                      {{ cat.name }}
+                    </UiText>
+                  </UiStack>
+                  <UiBadge variant="primary" size="sm" rounded>
+                    {{ cat.articlecount }} {{ cat.articlecount === 1 ? t('kb.article') : t('kb.articles') }}
+                  </UiBadge>
+                </UiStack>
+              </UiLinkCard>
+            </UiGrid>
+          </UiStack>
 
           <!-- Most popular articles -->
-          <div>
-            <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
-              <Star :size="20" :stroke-width="2" class="text-yellow-400" />
-              {{ $t('kb.mostPopular') }}
-            </h2>
+          <UiStack gap="lg" data-testid="kb-popular">
+            <UiHeading :level="2" size="subsection" class="flex items-center gap-2">
+              <Star :size="20" :stroke-width="2" class="text-yellow-600 dark:text-yellow-400" />
+              {{ t('kb.mostPopular') }}
+            </UiHeading>
 
-            <div v-if="artPending" class="space-y-3">
-              <div v-for="i in 5" :key="i" class="h-20 rounded-xl bg-white/5 border border-white/10 animate-pulse" />
-            </div>
+            <UiStack v-if="artPending" gap="sm">
+              <UiSkeleton v-for="i in 5" :key="i" shape="block" class="h-20" />
+            </UiStack>
 
-            <div v-else-if="!popularArticles.length" class="text-gray-400 text-sm">{{ $t('kb.empty') }}</div>
+            <UiText v-else-if="!popularArticles.length" tone="muted" size="sm">
+              {{ t('kb.empty') }}
+            </UiText>
 
-            <div v-else class="divide-y divide-white/5 rounded-2xl border border-white/10 overflow-hidden">
-              <KbArticleRow v-for="article in popularArticles" :key="article.id" :article="article" />
-            </div>
-          </div>
+            <UiCard v-else padding="none" class="overflow-hidden">
+              <UiStack gap="none" class="divide-y divide-gray-100 dark:divide-white/5">
+                <KbArticleRow v-for="article in popularArticles" :key="article.id" :article="article" />
+              </UiStack>
+            </UiCard>
+          </UiStack>
         </template>
-
-      </div>
-    </section>
-  </div>
+      </UiStack>
+    </UiSection>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
@@ -129,68 +156,84 @@
  * Supports live search via query param.
  */
 
-import { BookOpen, Search, FolderOpen, Folder, Star, X } from 'lucide-vue-next'
-import { useContentApi } from '~/composables/apis/useContentApi'
+import { Search, FolderOpen, Folder, Star, X } from 'lucide-vue-next'
+import { useContentStore } from '~/stores/content'
 import type { KbArticle } from '~/types/kbarticle'
 import type { KbCategory } from '~/types/kbcategory'
 
+/** Localised path builder from the i18n module. */
 const localePath = useLocalePath()
+/** The current route. */
 const route = useRoute()
+/** Router, used to keep the search in the URL. */
 const router = useRouter()
-const { t } = useI18n()
+/** Translates a key in the active language; `locale` is that language. */
+const { t, locale } = useI18n()
 
 useSeoMeta({
   title: t('kb.title'),
   description: t('kb.subtitle')
 })
 
-// Straight from the API composable rather than through a store: this page fetches once and
-// owns the results alone, which is the named exception to component -> store -> api. The raw
-// `useFetch` calls this replaced skipped the locale header `useApi()` sends, so localised
-// articles came back in English.
-const content = useContentApi()
+// Categories and popular articles, read through the content store; a language change reads them again.
+/** The content store that owns the lists this page renders. */
+const content = useContentStore()
+/** Whether the landing read is still running. */
+const { pending: landingPending } = await useAsyncData(
+  'kb:landing',
+  () => Promise.all([content.loadKbCategories(), content.loadPopularArticles()]),
+  { watch: [locale] }
+)
 
-/** Fetch all top-level categories */
-const { data: catData, pending: catPending } = content.loadKbCategories()
-const categories = computed<KbCategory[]>(() => catData.value ?? [])
+/** The categories grid and the popular list are loaded together, so they share one pending flag. */
+const catPending = landingPending
 
-/** Fetch popular articles (sorted by views, no category filter) */
-const { data: artData, pending: artPending } = content.loadKbArticles(() => ({ limitnum: 10 }))
-const popularArticles = computed<KbArticle[]>(() => {
-  const items = artData.value?.items ?? []
-  return [...items].sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
-})
+/** Same flag for the popular list. */
+const artPending = landingPending
+
+/** All top-level categories */
+const categories = computed<KbCategory[]>(() => content.kbCategories)
+
+/** Popular articles (sorted by views, no category filter) */
+const popularArticles = computed<KbArticle[]>(() => content.popularArticles)
 
 // ── Search ──────────────────────────────────────────────────────────────────
 
+/** The text in the search box; starts from `?q=` so a shared link repeats the search. */
 const searchQuery = ref(String(route.query.q ?? ''))
+
+/** Whether the results view (rather than the landing view) is showing. */
 const searched = ref(!!route.query.q)
 
-// `immediate: false` so a page load does not fire a blank search; `doSearch` executes it.
-const { data: searchData, pending: searchPending, execute: runSearch } = content.loadKbArticles(
-  () => ({ search: searchQuery.value, limitnum: 50 }),
-  false
-)
+/** Whether a search is in flight. */
+const searchPending = computed(() => content.searching)
 
-const searchResults = computed<KbArticle[]>(() => searchData.value?.items ?? [])
-
-/** Run search and update URL query string */
-async function doSearch() {
-  if (!searchQuery.value.trim()) { clearSearch(); return }
-  searched.value = true
-  router.replace({ query: { q: searchQuery.value } })
-  await runSearch()
-}
+/** The articles the last search found. */
+const searchResults = computed<KbArticle[]>(() => content.searchResults)
 
 /** Clear search and return to default view */
-function clearSearch() {
+const clearSearch = (): void => {
   searchQuery.value = ''
   searched.value = false
+  content.clearSearch()
   router.replace({ query: {} })
+}
+
+/** Run search and update URL query string */
+const doSearch = async (): Promise<void> => {
+  if (!searchQuery.value.trim()) {
+    clearSearch()
+    return
+  }
+  searched.value = true
+  router.replace({ query: { q: searchQuery.value } })
+  await content.searchArticles(searchQuery.value)
 }
 
 // Re-run search if page is loaded with ?q= param
 onMounted(async () => {
-  if (route.query.q) await runSearch()
+  if (route.query.q) {
+    await content.searchArticles(searchQuery.value)
+  }
 })
 </script>

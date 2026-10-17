@@ -1,5 +1,3 @@
-import { pickBrandLogo, pickBrandMark, resolveBrandLogos } from '~/utils/brandLogo'
-
 /**
  * The operator's logo, in every form a template needs.
  *
@@ -20,18 +18,26 @@ import { pickBrandLogo, pickBrandMark, resolveBrandLogos } from '~/utils/brandLo
  * its built-in mark and wordmark then — exactly as before this composable existed.
  *
  * @returns Reactive logo URLs and the alt text to render them with.
+ *
+ * @module composables/useBrandLogo
  */
+
+import { pickBrandLogo, pickBrandMark, resolveBrandLogos } from '~/utils/brandLogo'
+
+/** Reads the operator's logo settings and binds them to the colour mode. */
 export const useBrandLogo = () => {
   const { get } = usePortalSettings()
   const { isDark } = useAppColorMode()
   const { name } = useSiteIdentity()
 
+  /** The three uploaded images, each empty when not set. */
   const sources = computed(() => ({
     light: get('portal.logo', 'portalLogo'),
     dark: get('portal.logo.dark', 'portalLogoDark'),
     mark: get('portal.logo.mark', 'portalLogoMark'),
   }))
 
+  /** Both wordmarks with their fallbacks. */
   const pair = computed(() => resolveBrandLogos(sources.value))
 
   /** The wordmark for light backgrounds, or `''`. Render with `dark:hidden` when {@link hasDarkVariant}. */

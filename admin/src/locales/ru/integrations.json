@@ -1,0 +1,63 @@
+{
+  "cwpBrandHeader": {
+    "centosWebPanel": "CentOS Web Panel",
+    "provisioningProvider": "Провайдер провижининга",
+    "connectionError": "Ошибка соединения",
+    "unknown": "Неизвестно"
+  },
+  "integrationCard": {
+    "plugin": "Плагин",
+    "configure": "Настроить →"
+  },
+  "integrationStatusSidebar": {
+    "connectionStatus": "Состояние соединения",
+    "testingConnection": "Проверка соединения…",
+    "connectionOk": "Соединение в порядке",
+    "connectionFailed": "Соединение не удалось",
+    "endpoint": "Конечная точка",
+    "tested": "Проверено",
+    "roundTrip": "Время отклика",
+    "previouslyTestedOk": "Ранее проверено успешно",
+    "notTestedYet": "Ещё не проверялось",
+    "lastTestedFormatlasttested": "Последняя проверка: {formatLastTested}",
+    "setupNote": "Примечание по настройке"
+  },
+  "cwp7Integration": {
+    "cwp7": "CWP7",
+    "controlWebPanel7Provisioning": "Control Web Panel 7 — провайдер провижининга для управления хостинг-аккаунтами, пакетами и ресурсами сервера.",
+    "hostingProvisioning": "Хостинг / провижининг",
+    "moduleType": "Тип модуля",
+    "serverModule": "Серверный модуль",
+    "developer": "Разработчик",
+    "createNewServer": "Создать новый сервер",
+    "addACwp7ServerWith": "Добавьте сервер CWP7: имя хоста, учётные данные и серверы имён",
+    "createNewProduct": "Создать новый продукт",
+    "createAHostingPlanLinked": "Создайте тариф хостинга, связанный с сервером CWP7",
+    "cwp7Servers": "Серверы CWP7",
+    "lengthServerValue": "Серверов: {length}",
+    "noCwp7ServersConfiguredYet": "Серверы CWP7 пока не настроены.",
+    "addYourFirstServer": "Добавьте первый сервер →",
+    "accountscountValueAccounts": "Аккаунтов: {accountsCount} / {value}"
+  },
+  "cwpIntegration": {
+    "centosWebPanel": "CentOS Web Panel"
+  },
+  "integrations": {
+    "lengthIntegrationValue": "Интеграций: {length}",
+    "activecountActive": "· активно: {activeCount}",
+    "noIntegrationsInThisCategory": "В этой категории нет интеграций"
+  },
+  "common": {
+    "never": "Никогда"
+  },
+  "providerStatus": {
+    "notConnected": "Не подключено",
+    "statusUnknown": "Статус неизвестен",
+    "lastTested": "Последняя проверка",
+    "cwpVersion": "Версия CWP"
+  },
+  "integrationConfigForm": {
+    "enterValue": "Введите: {label}",
+    "chooseValue": "Выберите: {label}"
+  }
+}

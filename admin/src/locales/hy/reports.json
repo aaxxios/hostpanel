@@ -1,0 +1,302 @@
+{
+  "reportComingSoon": {
+    "comingSoon": "Շուտով",
+    "thisReportIsUnderDevelopment": "Այս հաշվետվությունը մշակման փուլում է։"
+  },
+  "reportTimestamp": {
+    "reportGeneratedOnTimestamp": "Հաշվետվությունը ստեղծվել է՝ {timestamp}"
+  },
+  "agingInvoices": {
+    "agingInvoices": "Ժամկետանց հաշիվներ",
+    "aSummaryOfOutstandingInvoices": "Չվճարված հաշիվների ամփոփում՝ ըստ ժամկետանցության ժամանակահատվածների",
+    "period": "Ժամանակահատված",
+    "curAmount": "Գումար ({cur})"
+  },
+  "annualIncome": {
+    "annualIncomeReport": "Տարեկան եկամուտների հաշվետվություն",
+    "totalIncomePerMonthFor": "Ընդհանուր եկամուտը ըստ ամիսների ընտրված տարվա համար",
+    "income": "Եկամուտ"
+  },
+  "clientsByCountry": {
+    "clientsByCountry": "Հաճախորդներ ըստ երկրների",
+    "thisReportShowsTheTotal": "Այս հաշվետվությունը ցույց է տալիս ակտիվ ծառայությունների ընդհանուր քանակը ըստ երկրների, ինչպես նաև ակտիվ եզակի հաճախորդների ընդհանուր քանակը ըստ երկրների՝ ստորև աղյուսակում։",
+    "top10Countries": "Թոփ 10 երկրներ",
+    "clearSelection": "Մաքրել ընտրությունը",
+    "activeClients": "Ակտիվ հաճախորդներ",
+    "totalClients": "Ընդամենը հաճախորդներ՝",
+    "mapHint": "Սավառնեք կետի վրա՝ քաղաքը տեսնելու համար։"
+  },
+  "clientsReport": {
+    "thisReportCanBeUsed": "Այս հաշվետվությունը թույլ է տալիս ստեղծել հաճախորդների անհատական արտահանում՝ կիրառելով մինչև 5 ֆիլտր։ CSV արտահանումը հասանելի է աջ կողմի «Գործիքներ» մենյուից։",
+    "creationDateRange": "Ստեղծման ժամանակահատված",
+    "totalcountClientSFound": "Գտնվել է հաճախորդ՝ {totalCount}",
+    "noClientsFoundClickFilter": "Հաճախորդներ չեն գտնվել։ Սեղմեք «Ֆիլտր»՝ արդյունքները բեռնելու համար։"
+  },
+  "clientStatement": {
+    "clientAccountRegisterBalance": "Հաճախորդի հաշվի մնացորդ",
+    "thisReportProvidesAStatement": "Այս հաշվետվությունը պարունակում է առանձին հաճախորդների հաշիվների քաղվածք։",
+    "selectClient": "Ընտրեք հաճախորդին",
+    "previousBalance": "Նախորդ մնացորդ՝",
+    "noEntriesForThisPeriod": "Այս ժամանակահատվածի համար գրառումներ չկան։",
+    "endingBalance": "Վերջնական մնացորդ՝",
+    "debit": "Դեբետ"
+  },
+  "creditsReviewer": {
+    "creditsReviewer": "Կրեդիտների ստուգում",
+    "thisReportAllowsYouTo": "Այս հաշվետվությունը թույլ է տալիս դիտել հաճախորդներին տրված բոլոր կրեդիտները ձեր նշած երկու ամսաթվերի միջև։",
+    "allClients": "Բոլոր հաճախորդները",
+    "minAmount": "Նվազ. գումար",
+    "maxAmount": "Առավ. գումար",
+    "creditsFoundTotal": "կրեդիտ գտնվել է — ընդամենը՝",
+    "creditId": "Կրեդիտի ID",
+    "clientId": "Հաճախորդի ID",
+    "adminUser": "Ադմինիստրատոր",
+    "noCreditsFoundForThis": "Այս ժամանակահատվածում կրեդիտներ չեն գտնվել։"
+  },
+  "customerRetention": {
+    "averageCustomerRetentionTime": "Հաճախորդների պահման միջին ժամանակ",
+    "thisReportCalculatesAndProvides": "Այս հաշվետվությունը հաշվում է ապրանքների, ծառայությունների, հավելումների և դոմեյնների կյանքի միջին տևողությունը՝ գրանցման և դադարեցման ամսաթվերի միջև օրերի քանակը։ Միջին արժեքները ցուցադրվում են ըստ ապրանքների և համապատասխան վճարման պարբերությունների՝ օրերով և ակտիվության տարիներով/ամիսներով։",
+    "includeActiveProductsServicesAssuming": "Ներառել ակտիվ ապրանքներն ու ծառայությունները (ենթադրելով, որ դրանք կավարտվեն հաջորդ վճարման ամսաթվին) պահման միջին ժամանակի հաշվարկում",
+    "productCount": "Ապրանքների քանակ",
+    "averageDaysActive": "Ակտիվ օրերի միջին քանակ",
+    "averageYearsMonthsActive": "Միջին ակտիվություն (տարիներ/ամիսներ)",
+    "noDataFound": "Տվյալներ չեն գտնվել։"
+  },
+  "dailyPerformance": {
+    "dailyPerformance": "Օրական արդյունավետություն",
+    "overviewOfDailyActivityMetrics": "Օրական ակտիվության ցուցանիշների ակնարկ",
+    "noDataFound": "Տվյալներ չեն գտնվել։",
+    "completedOrders": "Կատարված պատվերներ",
+    "newInvoices": "Նոր հաշիվներ",
+    "paidInvoices": "Վճարված հաշիվներ",
+    "openedTickets": "Բացված տոմսեր",
+    "ticketReplies": "Պատասխաններ տոմսերին",
+    "cancellationRequests": "Չեղարկման հարցումներ"
+  },
+  "directDebit": {
+    "directDebitProcessing": "Ուղիղ դեբետի մշակում",
+    "thisReportDisplaysAllUnpaid": "Այս հաշվետվությունը ցույց է տալիս «ուղիղ դեբետ» վճարման եղանակով բոլոր չվճարված հաշիվները և դրանց սեփականատերերի պահպանված բանկային տվյալները՝ պատրաստ մշակման համար։",
+    "subtotal": "Ենթագումար",
+    "tax": "Հարկ",
+    "credit": "Կրեդիտ",
+    "bankName": "Բանկի անվանում",
+    "bankAccountType": "Բանկային հաշվի տեսակ",
+    "bankCode": "Բանկի կոդ",
+    "bankAccountNumber": "Բանկային հաշվի համար"
+  },
+  "diskUsage": {
+    "diskSpaceBandwidthUsageSummary": "Սկավառակային տարածության և թրաֆիկի ամփոփում",
+    "thisReportShowsTheDisk": "Այս հաշվետվությունը ցույց է տալիս հոսթինգ հաշիվների սկավառակային տարածության և թրաֆիկի օգտագործման վիճակագրությունը։",
+    "diskSpaceUsageStatsLast": "Սկավառակի օգտագործման վիճակագրությունը թարմացվել է՝ {value}",
+    "noDataYetClickUpdate": "Տվյալներ դեռ չկան — սեղմեք «Թարմացնել»՝ սերվերներից ստանալու համար։",
+    "updating": "Թարմացվում է…",
+    "updateNow": "Թարմացնել",
+    "clientNameDomain": "Հաճախորդ / դոմեյն",
+    "diskUsage": "Սկավառակի օգտագործում",
+    "diskLimit": "Սկավառակի սահման",
+    "used": "% օգտագործված",
+    "bwUsage": "Թրաֆիկի օգտագործում",
+    "bwLimit": "Թրաֆիկի սահման",
+    "noAccountsOnThisServer": "Այս սերվերում հաշիվներ չկան։",
+    "noData": "Տվյալներ չեն գտնվել։ Սեղմեք «Թարմացնել»՝ հոսթինգ սերվերներից վիճակագրություն ստանալու համար։"
+  },
+  "domainRenewalEmails": {
+    "domainRenewalReminderEmails": "Դոմեյնի երկարաձգման հիշեցման նամակներ",
+    "thisReportCanBeUsed": "Այս հաշվետվությունը թույլ է տալիս ստեղծել դոմեյնի երկարաձգման հիշեցման նամակների անհատական արտահանում։",
+    "optional": "Ոչ պարտադիր",
+    "dateSent": "Ուղարկման ամսաթիվ",
+    "reminder": "Հիշեցում",
+    "recipients": "Ստացողներ",
+    "sent": "Ուղարկվել է"
+  },
+  "domainsReport": {
+    "thisReportCanBeUsed": "Այս հաշվետվությունը թույլ է տալիս ստեղծել դոմեյնների անհատական արտահանում՝ կիրառելով մինչև 5 ֆիլտր։ CSV արտահանումը հասանելի է աջ կողմի «Գործիքներ» մենյուից։",
+    "registrationDateRange": "Գրանցման ժամանակահատված",
+    "nextDueDateRange": "Հաջորդ վճարման ժամանակահատված",
+    "expiryDateRange": "Ավարտման ժամանակահատված",
+    "totalcountDomainSFound": "Գտնվել է դոմեյն՝ {totalCount}",
+    "noDomainsFound": "Դոմեյններ չեն գտնվել։",
+    "regType": "Գրանցման տեսակ",
+    "userId": "Օգտատիրոջ ID",
+    "orderId": "Պատվերի ID"
+  },
+  "incomeByProduct": {
+    "thisReportGivesABreakdown": "Այս հաշվետվությունը ցույց է տալիս տվյալ ամսում վճարված եկամտի բաշխումն ըստ ապրանքների/ծառայությունների։"
+  },
+  "incomeForecast": {
+    "incomeForecast": "Եկամուտների կանխատեսում",
+    "projectedIncomeBasedOnRecurring": "Կանխատեսվող եկամուտ՝ հիմնված կրկնվող վճարման պարբերությունների վրա",
+    "cumulativeForecast": "Կուտակային կանխատեսում",
+    "monthly": "Ամսական",
+    "quarterly": "Եռամսյակային",
+    "semiAnnual": "Կիսամյակային",
+    "annual": "Տարեկան"
+  },
+  "invoicesReport": {
+    "thisReportCanBeUsed": "Այս հաշվետվությունը թույլ է տալիս ստեղծել հաշիվների անհատական արտահանում՝ կիրառելով մինչև 5 ֆիլտր։",
+    "creationDate": "Ստեղծման ամսաթիվ",
+    "totalcountInvoiceSFound": "Գտնվել է հաշիվ՝ {totalCount}",
+    "userId": "Օգտատիրոջ ID",
+    "invoiceNumber": "Հաշվի համար",
+    "tax2": "Հարկ 2",
+    "taxRate2": "Հարկի դրույք 2"
+  },
+  "monthlyOrders": {
+    "thisReportGivesABreakdown": "Այս հաշվետվությունը ցույց է տալիս յուրաքանչյուր ապրանքի վաճառված միավորների քանակը ըստ ամիսների։",
+    "unitsSold": "Վաճառված միավորներ"
+  },
+  "monthlyTransactions": {
+    "thisReportProvidesASummary": "Այս հաշվետվությունը պարունակում է տվյալ ամսվա օրական վճարային գործարքների ամփոփում։ «Ելք» ցուցանիշը ներառում է և՛ ծախսային գործարքները, և՛ վերադարձները։",
+    "noTransactionsFoundForThis": "Այս ամսվա գործարքներ չեն գտնվել։"
+  },
+  "newCustomers": {
+    "newCustomers": "Նոր հաճախորդներ",
+    "monthlyNewSignupsAndOrder": "Ամսական նոր գրանցումներ և պատվերների ակտիվություն",
+    "newSignups": "Նոր գրանցումներ",
+    "ordersPlaced": "Կատարված պատվերներ",
+    "ordersCompleted": "Ավարտված պատվերներ"
+  },
+  "pdfBatch": {
+    "pdfBatch": "PDF փաթեթ"
+  },
+  "productSuspensions": {
+    "productSuspensions": "Ապրանքների կասեցումներ",
+    "thisReportAllowsYouTo": "Այս հաշվետվությունը թույլ է տալիս դիտել բոլոր կասեցված ապրանքները և դրանց կասեցման նշված պատճառները։",
+    "serviceId": "Ծառայության ID",
+    "suspendReason": "Կասեցման պատճառ"
+  },
+  "promotions": {
+    "promotions": "Ակցիաներ"
+  },
+  "salesTax": {
+    "salesTaxLiability": "Վաճառքի հարկի պարտավորություն",
+    "thisReportShowsSalesTax": "Այս հաշվետվությունը ցույց է տալիս վաճառքի հարկի պարտավորությունը ընտրված ժամանակահատվածի համար։",
+    "chooseCurrency": "Ընտրեք արժույթը",
+    "invoicesFound": "Գտնված հաշիվներ",
+    "totalInvoiced": "Ընդամենը դուրս գրված՝",
+    "taxLevel1Liability": "Հարկի 1-ին մակարդակի պարտավորություն՝",
+    "taxLevel2Liability": "Հարկի 2-րդ մակարդակի պարտավորություն՝",
+    "tax": "Հարկ",
+    "credit": "Կրեդիտ",
+    "noInvoicesFoundForThis": "Այս ժամանակահատվածում հաշիվներ չեն գտնվել։",
+    "thisReportExcludesInvoicesThat": "Այս հաշվետվությունը չի ներառում հաճախորդի կրեդիտային մնացորդի վրա ազդող հաշիվները, քանի որ այդ եկամուտը հաշվառվում և արտացոլվում է ապրանքների/ծառայությունների հաշիվներին կիրառվելիս։"
+  },
+  "serverRevenueForecasts": {
+    "serverRevenueForecasts": "Սերվերների եկամուտների կանխատեսում"
+  },
+  "servicesReport": {
+    "services": "Ծառայություններ",
+    "thisReportCanBeUsed": "Այս հաշվետվությունը թույլ է տալիս ստեղծել ծառայությունների անհատական արտահանում՝ կիրառելով մինչև 5 ֆիլտր։ CSV արտահանումը հասանելի է աջ կողմի «Գործիքներ» մենյուից։",
+    "terminationDate": "Դադարեցման ամսաթիվ",
+    "totalcountServiceSFound": "Գտնվել է ծառայություն՝ {totalCount}",
+    "noServicesFound": "Ծառայություններ չեն գտնվել։",
+    "userId": "Օգտատիրոջ ID",
+    "productId": "Ապրանքի ID",
+    "terminatedAt": "Դադարեցման ամսաթիվ"
+  },
+  "smartyCompatibility": {
+    "smartyCompatibility": "Smarty համատեղելիություն"
+  },
+  "sslMonitoring": {
+    "sslCertificateMonitoring": "SSL սերտիֆիկատների մոնիտորինգ",
+    "displaysAListOfDomains": "Ցուցադրում է դոմեյնների ցանկը և դրանց SSL կարգավիճակը, եթե հասանելի է։",
+    "hideInactiveDomains": "Թաքցնել ոչ ակտիվ դոմեյնները",
+    "showInactiveDomains": "Ցուցադրել ոչ ակտիվ դոմեյնները",
+    "reValidating": "Կրկնակի ստուգում...",
+    "reValidateSslStatus": "Կրկին ստուգել SSL կարգավիճակը",
+    "issuer": "Թողարկող",
+    "expiry": "Ավարտ",
+    "lastUpdate": "Վերջին թարմացում",
+    "valid": "Վավեր",
+    "noSsl": "SSL չկա"
+  },
+  "supportTicketsReport": {
+    "thisReportShowsABreakdown": "Այս հաշվետվությունը ցույց է տալիս տվյալ ամսում մշակված աջակցության տոմսերի բաշխումն ըստ ադմինիստրատորների։",
+    "admin": "Ադմինիստրատոր"
+  },
+  "ticketFeedbackComments": {
+    "ticketFeedbackComments": "Հաճախորդների մեկնաբանությունները տոմսերի վերաբերյալ",
+    "thisReportAllowsYouTo": "Այս հաշվետվությունը թույլ է տալիս դիտել հաճախորդների թողած մեկնաբանությունները։",
+    "staffName": "Աշխատակցի անուն",
+    "ticketId": "Տոմսի ID",
+    "feedbackLeft": "Թողնված կարծիք",
+    "rating": "Գնահատական",
+    "comments": "Մեկնաբանություններ"
+  },
+  "ticketFeedbackScores": {
+    "ticketFeedbackScores": "Տոմսերի գնահատականներ",
+    "thisReportProvidesASummary": "Այս հաշվետվությունը պարունակում է գնահատականների ամփոփում ըստ աշխատակիցների՝ ընտրված ժամանակահատվածի համար։",
+    "staffName": "Աշխատակցի անուն",
+    "totalRatings": "Ընդհանուր գնահատականներ",
+    "averageRating": "Միջին գնահատական"
+  },
+  "ticketRatingsReviewer": {
+    "supportTicketRatingsReviewer": "Աջակցության տոմսերի գնահատականների ստուգում",
+    "thisReportIsShowingAll": "Այս հաշվետվությունը ցույց է տալիս ընտրված ժամանակահատվածում 1 գնահատական ստացած բոլոր պատասխանները՝ ստուգման համար։",
+    "rating": "Գնահատական",
+    "ticket": "Տոմս №",
+    "admin": "Ադմինիստրատոր",
+    "ratingAtLeast": "{rating}+"
+  },
+  "ticketTags": {
+    "ticketTagsOverview": "Տոմսերի թեգերի ակնարկ",
+    "thisReportProvidesAnOverview": "Այս հաշվետվությունը պարունակում է տոմսերին նշանակված թեգերի ակնարկ՝ ընտրված ժամանակահատվածի համար։",
+    "tag": "Թեգ",
+    "count": "Քանակ"
+  },
+  "topClients": {
+    "top10ClientsByIncome": "Թոփ 10 հաճախորդներ եկամտով",
+    "thisReportShowsThe10": "Այս հաշվետվությունը ցույց է տալիս մուտքագրված գործարքների համաձայն ամենաբարձր զուտ եկամուտ ունեցող 10 հաճախորդներին։",
+    "noData": "Տվյալներ չկան",
+    "denotesConvertedToDefaultCurrency": "* նշանակում է վերահաշվարկ լռելյայն արժույթով"
+  },
+  "transactionsReport": {
+    "thisReportCanBeUsed": "Այս հաշվետվությունը թույլ է տալիս ստեղծել գործարքների անհատական արտահանում՝ կիրառելով մինչև 5 ֆիլտր։",
+    "totalcountTransactionSFound": "Գտնվել է գործարք՝ {totalCount}",
+    "noTransactionsFound": "Գործարքներ չեն գտնվել։",
+    "userId": "Օգտատիրոջ ID"
+  },
+  "vatMoss": {
+    "vatMossSettlementData": "VAT MOSS հաշվարկների տվյալներ",
+    "thisReportProvidesTheInformation": "Այս հաշվետվությունը պարունակում է VATMOSS հայտարարագրի համար անհրաժեշտ տեղեկությունները։ Ճշտեք հարկային մարմնի մոտ, թե ինչպես կարելի է բեռնել տվյալները MOSS պորտալ։",
+    "selectQuarter": "Ընտրեք եռամսյակը",
+    "countryName": "Երկրի անվանում",
+    "countryCode": "Երկրի կոդ",
+    "vatRate": "ԱԱՀ դրույք",
+    "numberOfInvoices": "Հաշիվների քանակ",
+    "totalValueInvoicedExclVat": "Դուրս գրված հաշիվների ընդհանուր արժեք (առանց ԱԱՀ)",
+    "totalVatCollected": "Հավաքված ԱԱՀ ընդամենը",
+    "totals": "Ընդամենը",
+    "ifACountryDoesNot": "* Եթե երկիրը հաշվետվության մեջ չկա, ապա ընտրված ժամանակահատվածում այդ երկրի հաճախորդներից ԱԱՀ չի գանձվել։",
+    "isleOfManGbAnd": "Մեն կղզին (GB) և Մոնակոն (FR) այս հաշվետվության մեջ նշված են որպես իրենց համապատասխան երկրների ԵՄ անդրծովյան տարածքներ և պետք է ներառվեն հարկային մարմիններին ներկայացվող տվյալների մեջ։",
+    "quarter1": "Հունվար – մարտ",
+    "quarter2": "Ապրիլ – հունիս",
+    "quarter3": "Հուլիս – սեպտեմբեր",
+    "quarter4": "Հոկտեմբեր – դեկտեմբեր",
+    "quarterOption": "{year} Q{quarter} - {months}"
+  },
+  "titles": {
+    "reports": {
+      "clientStatement": "Հաճախորդի քաղվածք",
+      "customerRetentionTime": "Հաճախորդների պահման ժամանակ",
+      "diskUsageSummary": "Սկավառակի օգտագործման ամփոփում",
+      "domainRenewalEmails": "Դոմեյնների երկարաձգման նամակներ",
+      "incomeByProduct": "Եկամուտ ըստ ապրանքների",
+      "monthlyOrders": "Պատվերներ ըստ ամիսների",
+      "monthlyTransactions": "Գործարքներ ըստ ամիսների",
+      "promotionsUsage": "Ակցիաների օգտագործում",
+      "supportTicketReplies": "Աջակցության տոմսերի պատասխաններ",
+      "ticketRatingsReviewer": "Տոմսերի գնահատականների ստուգում",
+      "ticketTags": "Տոմսերի թեգեր",
+      "vatMoss": "VAT MOSS"
+    },
+    "incomeByProductFor": "Եկամուտ ըստ ապրանքների՝ {month} {year}",
+    "salesByProductFor": "Վաճառք ըստ ապրանքների՝ {month} {year}",
+    "monthlyTransactionsFor": "Գործարքների հաշվետվություն՝ {month} {year}",
+    "supportTicketRepliesFor": "Աջակցության տոմսերի պատասխաններ՝ {month} {year}"
+  },
+  "common": {
+    "years": "{count} տարի",
+    "clientCount": "{count} հաճախորդ | {count} հաճախորդ"
+  }
+}
