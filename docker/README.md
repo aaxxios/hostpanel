@@ -79,9 +79,28 @@ piece a name of its own (`hostpanel-demo-db`, `-rabbitmq`, `-redis`, `-mailhog`,
 `-admin`; volumes `hostpanel-demo_*`), so it can share a server with production without touching
 its data. Services reach each other by those container names, over a demo-private network
 (`hostpanel-demo_default`): the db, broker, redis and mailhog are on it alone. Only the api, client and admin
-also join `innovayse_network`, as compose services named `hostpanel-demo-api`, `-client` and `-admin` (the
-production ones are parked in this overlay): compose adds the service name as an alias on every network, so
-a service still named `hostpanel-api` would be round-robined with production's. Never rename them back.
+also join `hostpanel_demo_edge`, a dedicated external network that is **not** `innovayse_network`, as compose
+services named `hostpanel-demo-api`, `-client` and `-admin` (the production ones are parked in this overlay).
+Keep those names unique: compose adds the service name as an alias on every network it joins, so never rename
+them back to `hostpanel-api`.
+
+**The demo cannot see production.** No demo container is on `innovayse_network`, so `hostpanel-db`,
+`hostpanel-api`, `main-client`, `sso-api` and every other production container neither resolve by name nor
+answer by IP from inside the demo. The only production-side container on `hostpanel_demo_edge` is the edge
+proxy `innovayse-edge` (it is on both networks and routes by Host header), which is how the public demo URLs
+reach the demo. Create the network once per host, before the first demo `up` and before the proxy is
+(re)started with the new `edge-proxy/docker-compose.yml`:
+
+```bash
+docker network create hostpanel_demo_edge        # `deploy:demo` does this when it is missing
+docker network connect hostpanel_demo_edge innovayse-edge   # attach an already-running proxy, no restart
+```
+
+Outbound traffic: the demo needs nothing external (fake payment, registrar and provisioning adapters, mail to
+mailhog), and the db, broker, redis and mailhog sit on a bridge with no production peer. The api, client and
+admin keep the ordinary bridge egress of `hostpanel_demo_edge`; to cut that too, create the network with
+`--internal` and drop the `DEMO_*_HOST_PORT` publishes (Docker cannot publish a port from an internal-only
+network). `hostpanel-demo_default` is not `internal` for the same reason: mailhog publishes its UI port.
 The overlay publishes the api, client,
 admin and mailhog UI on the `DEMO_*_HOST_PORT` ports, bound to `127.0.0.1` only (the edge proxy reaches them by name), and never starts the bundled nginx.
 

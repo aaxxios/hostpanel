@@ -432,6 +432,9 @@ deploy:demo:
     - git -C "$DEPLOY_DIR" fetch "$CI_REPOSITORY_URL" "$CI_COMMIT_SHA"
     - git -C "$DEPLOY_DIR" checkout -f "$CI_COMMIT_SHA"
     - cd "$DEPLOY_DIR"
+    # The demo's edge network is external (docker-compose.demo.yml) and is not innovayse_network: create it
+    # when missing. The edge proxy must also be attached to it (edge-proxy/docker-compose.yml) to route here.
+    - docker network inspect hostpanel_demo_edge >/dev/null 2>&1 || docker network create hostpanel_demo_edge
     - docker compose -p hostpanel-demo $COMPOSE_FILES pull --ignore-buildable
     - docker compose -p hostpanel-demo $COMPOSE_FILES build hostpanel-demo-api hostpanel-demo-client hostpanel-demo-admin
     # Services named one by one: nginx is parked, and the demo's broker, redis and mailhog come with the api.
