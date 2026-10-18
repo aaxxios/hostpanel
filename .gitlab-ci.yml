@@ -398,19 +398,22 @@ deploy:demo:
   extends: .deploy-staging
   tags: [prod]
   variables:
-    DEPLOY_DIR: /home/innovayse-server/www/innovayse-workspace/hostpanel
+    # The demo has a checkout of its own: this job runs `git checkout -f`, which in production's directory
+    # would swap the files under the running production stack.
+    DEPLOY_DIR: /home/innovayse-server/www/hostpanel-demo
     COMPOSE_FILES: -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml -f docker/docker-compose.demo.yml
     IMAGE_TAG: demo
     # Demo behaviour comes from Demo__Enabled, not from the environment name.
     ASPNETCORE_ENVIRONMENT: Production
   script:
+    - test -d "$DEPLOY_DIR/.git" || git init "$DEPLOY_DIR"
     - git -C "$DEPLOY_DIR" fetch "$CI_REPOSITORY_URL" "$CI_COMMIT_SHA"
     - git -C "$DEPLOY_DIR" checkout -f "$CI_COMMIT_SHA"
     - cd "$DEPLOY_DIR"
     - docker compose -p hostpanel-demo $COMPOSE_FILES pull --ignore-buildable
-    - docker compose -p hostpanel-demo $COMPOSE_FILES build hostpanel-api hostpanel-client hostpanel-admin
+    - docker compose -p hostpanel-demo $COMPOSE_FILES build hostpanel-demo-api hostpanel-demo-client hostpanel-demo-admin
     # Services named one by one: nginx is parked, and the demo's broker, redis and mailhog come with the api.
-    - docker compose -p hostpanel-demo $COMPOSE_FILES up -d hostpanel-db hostpanel-api hostpanel-client hostpanel-admin
+    - docker compose -p hostpanel-demo $COMPOSE_FILES up -d hostpanel-db hostpanel-demo-api hostpanel-demo-client hostpanel-demo-admin
   environment: { name: demo/hostpanel }
   when: manual
   allow_failure: true

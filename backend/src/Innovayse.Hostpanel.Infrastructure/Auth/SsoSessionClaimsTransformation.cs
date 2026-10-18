@@ -42,7 +42,7 @@ public sealed class SsoSessionClaimsTransformation : IClaimsTransformation
     public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
     {
         if (principal.Identity is not ClaimsIdentity identity
-            || identity.AuthenticationType != global::Innovayse.Auth.CookieSessionHandler.SchemeName)
+            || identity.AuthenticationType != global::Innovayse.Auth.Authentication.CookieSessionHandler.SchemeName)
         {
             return principal;
         }

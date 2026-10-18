@@ -83,9 +83,9 @@ public sealed class SsoModeAuthenticationSchemeTests : IAsyncLifetime
     /// <param name="expected">The scheme the selector should forward to.</param>
     [Theory]
     [InlineData("Bearer eyJhbGciOiJSUzI1NiJ9.e30.x", JwtBearerDefaults.AuthenticationScheme)]
-    [InlineData(null, Innovayse.Auth.CookieSessionHandler.SchemeName)]
-    [InlineData("", Innovayse.Auth.CookieSessionHandler.SchemeName)]
-    [InlineData("Basic dXNlcjpwYXNz", Innovayse.Auth.CookieSessionHandler.SchemeName)]
+    [InlineData(null, Innovayse.Auth.Authentication.CookieSessionHandler.SchemeName)]
+    [InlineData("", Innovayse.Auth.Authentication.CookieSessionHandler.SchemeName)]
+    [InlineData("Basic dXNlcjpwYXNz", Innovayse.Auth.Authentication.CookieSessionHandler.SchemeName)]
     public async Task TheSelectorSendsABearerToTheBearerHandlerAndEverythingElseToTheCookie(
         string? authorization, string expected)
     {
@@ -137,6 +137,10 @@ public sealed class SsoModeAuthenticationSchemeTests : IAsyncLifetime
             builder.UseSetting("Sso:Authority", "https://sso.invalid");
             builder.UseSetting("Sso:ClientId", "hostpanel");
             builder.UseSetting("Sso:ServiceKey", "test-service-key");
+
+            // Required whenever Auth:Mode is not local (BackchannelLogoutOptionsValidator), so an SSO host
+            // refuses to boot without it.
+            builder.UseSetting("BackchannelLogout:Key", "test-backchannel-key");
 
             builder.ConfigureAppConfiguration((_, config) =>
                 config.AddInMemoryCollection(new Dictionary<string, string?>
