@@ -92,9 +92,17 @@ reach the demo. Create the network once per host, before the first demo `up` and
 (re)started with the new `edge-proxy/docker-compose.yml`:
 
 ```bash
-docker network create hostpanel_demo_edge        # `deploy:demo` does this when it is missing
+docker network create --subnet 172.29.0.0/16 hostpanel_demo_edge   # `deploy:demo` does this when it is missing
 docker network connect hostpanel_demo_edge innovayse-edge   # attach an already-running proxy, no restart
 ```
+
+The subnet is **fixed at 172.29.0.0/16** (checked free on the server). The edge proxy routes by `Host` header,
+so without a guard a demo container could send `Host: host.innovayse.com` to it and reach production.
+`edge-proxy/nginx.conf` therefore carries `deny 172.29.0.0/16;` in the http context: every host answers 403
+to that subnet, and only the two demo server blocks opt back in with `allow all;`. Real traffic arrives over
+the WireGuard tunnel from a different range. Change the subnet in three places together: the `deploy:demo`
+network creation, that `deny` line, and this paragraph. An existing network cannot change subnet in place:
+disconnect the edge, remove the network, recreate it, reconnect the edge, then redeploy the demo.
 
 Outbound traffic: the demo needs nothing external (fake payment, registrar and provisioning adapters, mail to
 mailhog), and the db, broker, redis and mailhog sit on a bridge with no production peer. The api, client and
