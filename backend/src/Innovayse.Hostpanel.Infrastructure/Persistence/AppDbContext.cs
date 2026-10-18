@@ -190,6 +190,10 @@ public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbConte
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
+        // The counter behind order numbers; read through INumberSequence so two concurrent orders
+        // can never be handed the same number.
+        modelBuilder.HasSequence<long>(NumberSequence.OrderSequenceName);
+
         // Every entity now carries DomainEvents (the kernel's BaseEntity); EF must never try to map
         // it. One convention here rather than an Ignore in each of the 50 configurations — the
         // seven that already ignore it stay harmless.

@@ -143,6 +143,54 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
         body.RootElement.GetProperty("paymentToken").GetString().Should().NotBeNullOrWhiteSpace();
     }
 
+    /// <summary>
+    /// Orders placed at the same moment each get their own number and none fails. The number used to
+    /// be the stored maximum plus one, so concurrent orders computed the same value and the unique
+    /// index refused all but one with a server error.
+    /// </summary>
+    [Fact]
+    public async Task ConcurrentOrdersAreNumberedDistinctlyAndNoneFails()
+    {
+        // Arrange
+        const int Parallel = 12;
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync();
+
+        // Act: every request starts behind one gate so they overlap as much as the host allows.
+        var gate = new TaskCompletionSource();
+        var requests = Enumerable.Range(0, Parallel).Select(async _ =>
+        {
+            await gate.Task;
+            return await factory.CreateClient().PostAsJsonAsync("/api/orders", new
+            {
+                firstName = "Ada",
+                lastName = "Lovelace",
+                email = $"guest-{Guid.NewGuid():N}@example.test",
+                password = TestPassword,
+                paymentMethod = "bank_transfer",
+                items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
+            });
+        }).ToList();
+        gate.SetResult();
+        var responses = await Task.WhenAll(requests);
+
+        // Assert: all created, all numbers different.
+        responses.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.Created);
+        var orderIds = new List<int>();
+        foreach (var response in responses)
+        {
+            using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            orderIds.Add(body.RootElement.GetProperty("orderId").GetInt32());
+        }
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var numbers = await db.Orders.Where(o => orderIds.Contains(o.Id)).Select(o => o.OrderNumber).ToListAsync();
+        numbers.Should().HaveCount(Parallel);
+        numbers.Should().OnlyHaveUniqueItems();
+        numbers.Should().OnlyContain(n => n.StartsWith("ORD-"));
+    }
+
     /// <summary>A guest checkout naming a currency this panel does not offer is refused before an account exists.</summary>
     [Fact]
     public async Task GuestCheckoutRefusesAnUnconfiguredCurrency()
