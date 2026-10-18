@@ -4,13 +4,22 @@
 # volumes) and the demo gets its own broker, redis and mail catcher, so nothing here can read or write
 # production data.
 #
-# Networks. The demo must never resolve to production, and production never to the demo:
+# Networks. The demo must see NOTHING of production, at the network level:
 #   - `default` is a demo-private bridge (it replaces the platform overlay's attachment to innovayse_network),
-#     so the database, broker, redis and mailhog are reachable only from inside the demo.
-#   - `edge` is innovayse_network. Only the three edge-facing services join it, and each is its own
-#     compose service named hostpanel-demo-*: compose always adds the SERVICE name as an alias on every
-#     network, so a service still called hostpanel-api would answer to production's name there and Docker's
-#     DNS would round-robin prod traffic into the demo. The original hostpanel-api/-client/-admin are parked.
+#     so the database, broker, redis and mailhog are reachable only from inside the demo. It is deliberately
+#     not `internal: true`: mailhog publishes its UI port on the host, which Docker cannot do from an
+#     internal-only network. Nothing production-side is on it, so it reaches no production container anyway.
+#   - `edge` is the dedicated external network hostpanel_demo_edge, NOT innovayse_network. Only the edge proxy
+#     (innovayse-edge, which is on both networks) and the three edge-facing demo services are on it. The demo
+#     therefore cannot resolve or route to any production container (hostpanel-db, main-client, sso-api, ...);
+#     the one production-side peer it can address is the proxy itself, which routes by Host header.
+#     Create it once per host:  docker network create hostpanel_demo_edge  (deploy:demo does, idempotently).
+#     Each of the three is its own compose service named hostpanel-demo-*: compose always adds the SERVICE name
+#     as an alias on every network, so keeping the names unique stops a hostpanel-api alias from ever
+#     existing next to production's. The original hostpanel-api/-client/-admin are parked.
+#   - Outbound: the demo needs no external service (fake adapters, mail to mailhog). The db, broker, redis and
+#     mailhog are on the private bridge only; the api, client and admin keep the ordinary bridge egress of
+#     hostpanel_demo_edge. To cut that too, create the edge network with --internal and drop the host ports.
 # The API runs in demo mode: fake payment, registrar and provisioning adapters, mail to the catcher,
 # a scheduled data reset. Needs AUTH_MODE=local and a database of its own (POSTGRES_DB).
 name: hostpanel-demo
@@ -19,8 +28,9 @@ networks:
   # Replaces (not merges with) the platform overlay's external innovayse_network.
   default: !override
     name: hostpanel-demo_default
+  # Created by hand or by deploy:demo; it must exist before `up`. Never innovayse_network.
   edge:
-    name: innovayse_network
+    name: hostpanel_demo_edge
     external: true
 
 volumes:
@@ -62,7 +72,7 @@ services:
           memory: 256M
     restart: unless-stopped
 
-  # prod.yml's services are parked: they would carry the production service names onto innovayse_network.
+  # prod.yml's services are parked: they would carry the production service names onto the demo's networks.
   # The demo's own copies below extend them.
   hostpanel-api:
     profiles: ["disabled"]
