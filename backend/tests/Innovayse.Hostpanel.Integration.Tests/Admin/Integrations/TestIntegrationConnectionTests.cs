@@ -147,10 +147,12 @@ public sealed class TestIntegrationConnectionTests(IntegrationTestFactory factor
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var text = await response.Content.ReadAsStringAsync();
         text.Should().NotContain("provider detail nobody should see");
-        text.Should().NotContain("401");
 
+        // Assert on the user-facing field only: the raw body also carries a timestamp whose
+        // fractional seconds can contain any digits, so a substring match on it is flaky.
         using var doc = JsonDocument.Parse(text);
         doc.RootElement.GetProperty("success").GetBoolean().Should().BeFalse();
+        doc.RootElement.GetProperty("message").GetString().Should().NotContain("401").And.NotContain("Unauthorized");
         probe.Calls.Should().Be(1);
     }
 
