@@ -22,6 +22,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.HasSequence("OrderNumberSequence");
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Audit.ActivityLog", b =>
                 {
                     b.Property<int>("Id")
