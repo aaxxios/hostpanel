@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Billing.Extensions;
 using Innovayse.Hostpanel.Application.Billing.Queries.ListAvailablePaymentMethods;
+using Innovayse.Hostpanel.Application.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
@@ -47,6 +48,9 @@ public sealed class PlaceOrderHandler
     /// <summary>Saves a signed-in caller's client record once, whichever writer gets there first.</summary>
     private readonly IClientRecordStore _clientRecords;
 
+    /// <summary>Hands out order numbers atomically, so concurrent orders never share one.</summary>
+    private readonly INumberSequence _numbers;
+
     /// <summary>
     /// Logs the precise reason a line item's price could not be resolved -- which TLD, which
     /// currency mismatch -- since the code the caller receives is deliberately generic.
@@ -61,6 +65,7 @@ public sealed class PlaceOrderHandler
     /// <param name="caller">Who is ordering, and from where; the command says neither, and must not.</param>
     /// <param name="payerCurrency">The currency the ordering client is billed in, stamped on the order's invoice.</param>
     /// <param name="clientRecords">Saves a signed-in caller's client record once, whichever writer gets there first.</param>
+    /// <param name="numbers">Hands out order numbers atomically, so concurrent orders never share one.</param>
     /// <param name="logger">Logs the precise reason a line item's price could not be resolved.</param>
     public PlaceOrderHandler(
         IHostpanelDbContext context,
@@ -70,6 +75,7 @@ public sealed class PlaceOrderHandler
         ICurrentUserService caller,
         IPayerCurrencyResolver payerCurrency,
         IClientRecordStore clientRecords,
+        INumberSequence numbers,
         ILogger<PlaceOrderHandler> logger)
     {
         _context = context;
@@ -79,6 +85,7 @@ public sealed class PlaceOrderHandler
         _caller = caller;
         _payerCurrency = payerCurrency;
         _clientRecords = clientRecords;
+        _numbers = numbers;
         _logger = logger;
     }
 
@@ -143,11 +150,11 @@ public sealed class PlaceOrderHandler
             clientId = created.Value;
         }
 
-        // Next after the highest id ever used, not a row count: a deleted order must never free
-        // its number back up for reuse, which a count-based scheme would do silently.
-        var nextNumber = await _context.Orders.AnyAsync(ct)
-            ? await _context.Orders.MaxAsync(o => o.Id, ct) + 1
-            : 1;
+        // Taken from a database sequence, not derived from the stored maximum: reading the maximum
+        // and claiming max + 1 are two steps, so two concurrent orders claimed the same number and
+        // the second hit the unique index. A sequence also never frees a number for reuse, so a
+        // deleted order's number stays retired.
+        var nextNumber = await _numbers.NextAsync(NumberKind.Order, ct);
         var orderNumber = $"ORD-{nextNumber:D4}";
 
         var productIds = cmd.Items.Select(i => i.ProductId).Distinct().ToList();
