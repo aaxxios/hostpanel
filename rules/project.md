@@ -596,13 +596,16 @@ responses; `Fixtures/StubHttpServer` is the in-process HTTP fake for external AP
 has vitest (`npm test`, `admin/tests/`) and Playwright (`npm run e2e`, `admin/e2e/`) — see "The admin's shape".
 `Integration.Tests/Persistence/ModelDiffBaselineTests` is the schema guard (the spec's "snapshot unchanged" test): the EF differ's operations between the migrations snapshot and the live model must equal `Fixtures/model-diff-baseline.txt` (`(no differences)` since the ConformanceFixes migration), so an entity change without a migration fails.
 
-**The Integration suite runs in two shards, because one `dotnet test` host holds the EF model
-and a Postgres container for the whole suite and exhausted the runner's memory.** The shards
-split by namespace with `--filter "FullyQualifiedName~Integration.Tests.<Ns>."`: A is
-Admin, Adapters, Audit, Auth, Billing, Clients, Common, Demo, Domains, Health, Identity; B is Migration,
-Notifications, Orders, Persistence, Products, Provisioning, Reports, Security, Services,
-Shared, Slides, Support. **A new top-level folder in `Integration.Tests/` must be added to one
-shard in `.gitlab-ci.yml`, or its tests run nowhere.**
+**The Integration suite runs in four shards, one at a time, because one `dotnet test` host holds
+the EF model and a Postgres container for every test class and grows to several gigabytes, and the
+12 GB builder is shared with other products.** Two half-suite shards running together were
+OOM-killed on every attempt. The shards (the same split as `.github/workflows/ci.yml`) are
+`backend:test:integration:a` to `:d`, share a `resource_group` so only one runs at a time, and split
+by namespace with `--filter "FullyQualifiedName~Integration.Tests.<Ns>."`: A is Adapters, Admin,
+Audit, Auth, Clients, Common, Demo, Health, Identity, Security, Shared; B is Billing, Domains; C is
+Reports, Slides, Support; D is Migration, Notifications, Orders, Persistence, Products,
+Provisioning, Services. **A new top-level folder in `Integration.Tests/` must be added to one
+shard in `.gitlab-ci.yml` and in `ci.yml`, or its tests run nowhere.**
 
 ## Packages worth knowing
 
