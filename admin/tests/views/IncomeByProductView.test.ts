@@ -1,0 +1,25 @@
+/**
+ * Tests of IncomeByProductView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * refuses.
+ */
+import { vi } from 'vitest'
+import IncomeByProductView from '@/views/IncomeByProductView.vue'
+import { json } from '../helpers/fetch'
+import { runReportCase } from '../helpers/reportViews'
+
+vi.mock('chart.js', async () => (await import('../helpers/chartJsMock')).chartJsMock)
+
+/** A product group of the report. */
+const productGroup = { groupName: 'Hosting', groupUnitsSold: 2, products: [{ productId: 1, productName: 'Basic', unitsSold: 2 }] }
+
+runReportCase({
+  name: 'IncomeByProductView',
+  view: IncomeByProductView,
+  routes: {
+    'GET /reports/income-by-product-grouped': () => json({
+      month: 1, year: 2024, totalUnitsSold: 2, totalIncome: 20,
+      groups: [{ ...productGroup, groupIncome: 20, products: [{ ...productGroup.products[0], totalIncome: 20 }] }],
+    }),
+  },
+  expected: ['Income by Product for January 2024', 'Basic', '$20.00 USD'],
+})

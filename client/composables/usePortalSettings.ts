@@ -22,10 +22,14 @@ export const usePortalSettings = () => {
    */
   const get = (key: string, envKey: string, fallback = ''): string => {
     const fromSettings = settings.value?.[key]
-    if (fromSettings) return fromSettings.trim()
+    if (fromSettings) {
+      return fromSettings.trim()
+    }
 
     const fromEnv = config.public[envKey as keyof typeof config.public]
-    if (typeof fromEnv === 'string' && fromEnv) return fromEnv.trim()
+    if (typeof fromEnv === 'string' && fromEnv) {
+      return fromEnv.trim()
+    }
 
     return fallback
   }

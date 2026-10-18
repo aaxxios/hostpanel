@@ -18,36 +18,65 @@
  * implies is absorbed by the products endpoint's server-side cache, and it buys
  * a far smaller change to a 500-line page that already works.
  */
+import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
+import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
+import { SeoPageType } from '~/types/seopagetype'
+import { TemplateSlot } from '~/types/templateslot'
 
-const { t } = useI18n()
+/** Translation helpers and the active language. */
+const { t, locale } = useI18n()
+
+/** Operator-set site name that the SEO copy interpolates as `{site}`. */
+const { name: siteName } = useSiteIdentity()
+/** Prefixes a path with the active language. */
+const localePath = useLocalePath()
+/** The template registry: resolves the component the active template provides for a slot. */
 const { slot } = useTemplate()
 
-const hosting = slot('hosting')
+/** The template's hosting component (classic or aurora), resolved by the registry. */
+const hosting = slot(TemplateSlot.Hosting)
 
 // SEO — this page shipped without any, so it had no title, canonical or
 // hreflang. The seo.hosting copy already existed in all three locales.
 useSeo({
-  title: t('seo.hosting.title'),
-  description: t('seo.hosting.description'),
-  keywords: t('seo.hosting.keywords'),
-  type: 'website',
+  title: t('seo.hosting.title', { site: siteName.value }),
+  description: t('seo.hosting.description', { site: siteName.value }),
+  keywords: t('seo.hosting.keywords', { site: siteName.value }),
+  type: SeoPageType.Website,
   path: '/hosting'
 })
 
-const { plans } = usePortalPlans()
+/** The payer's currency and the currencies prices can be shown in. */
+const currencyStore = useCurrencyStore()
+/** The catalogue: products, plans, slides and TLD prices. */
+const catalogStore = useCatalogStore()
+
+// Prices follow the payer's currency, so the plans are read again when it resolves or changes.
+await Promise.all([
+  useAsyncData('hosting:plans', () => catalogStore.loadHostingPlans(), {
+    watch: [() => currencyStore.payerCode, locale]
+  }),
+  useAsyncData('hosting:features', () => catalogStore.loadProductFeatures(HOSTING_GROUP_ID), {
+    watch: [locale]
+  })
+])
+
+/** The hosting plans as the storefront cards, each linking to its configure page. */
+const plans = computed(() => catalogStore.planCards(id => localePath(`/configure/${id}`)))
+/** Whether the visitor chose yearly billing; the template reports changes through `update:yearly`. */
 const yearly = ref(false)
 
-const currencyStore = useCurrencyStore()
 onMounted(() => {
   currencyStore.init()
   currencyStore.load()
 })
 
-// The comparison rows are assembled here rather than in the template: which
-// column a value belongs to is data, and templates only render what they are
-// handed.
-const { features } = useProductFeatures(HOSTING_GROUP_ID)
+/**
+ * The comparison rows, assembled here rather than in the template: which
+ * column a value belongs to is data, and templates only render what they are
+ * handed.
+ */
 const comparisonRows = computed(() =>
-  buildComparisonRows(features.value, plans.value.map(plan => plan.id)))
+  buildComparisonRows(catalogStore.featuresFor(HOSTING_GROUP_ID), plans.value.map(plan => plan.id)))
 </script>

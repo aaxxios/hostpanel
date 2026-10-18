@@ -26,8 +26,10 @@ export interface BrandLogoSources {
  * @param isDark Whether the page is in dark mode.
  * @returns The URL to render, or `''` when nothing was uploaded.
  */
-export function pickBrandLogo(sources: BrandLogoSources, isDark: boolean): string {
-  if (isDark && sources.dark) return sources.dark
+export const pickBrandLogo = (sources: BrandLogoSources, isDark: boolean): string => {
+  if (isDark && sources.dark) {
+    return sources.dark
+  }
   return sources.light
 }
 
@@ -54,7 +56,7 @@ export interface BrandLogoPair {
  * @param sources The uploaded images.
  * @returns Both URLs and whether they differ.
  */
-export function resolveBrandLogos(sources: BrandLogoSources): BrandLogoPair {
+export const resolveBrandLogos = (sources: BrandLogoSources): BrandLogoPair => {
   // Each side falls back to the other: an operator who uploaded only one logo gets it
   // in both modes, which is what every install had before the dark variant existed.
   const light = sources.light || sources.dark
@@ -73,6 +75,6 @@ export function resolveBrandLogos(sources: BrandLogoSources): BrandLogoPair {
  * @param isDark Whether the page is in dark mode.
  * @returns The URL to render, or `''` when nothing was uploaded.
  */
-export function pickBrandMark(sources: BrandLogoSources, isDark: boolean): string {
+export const pickBrandMark = (sources: BrandLogoSources, isDark: boolean): string => {
   return sources.mark || pickBrandLogo(sources, isDark)
 }

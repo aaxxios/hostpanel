@@ -2,14 +2,12 @@
  * Endpoints for money — invoices under `/api/portal/client/invoices`, the saved payment
  * methods at `/api/portal/client/payment-methods`, and ordering under `/api/portal/order`.
  *
- * Two naming shapes, as elsewhere in `composables/apis/`: `load*` returns the `useApi()`
- * handle for a server-rendered read, everything else returns a plain `Promise`. Nothing here
- * is cached or held.
+ * Every function returns a plain `Promise`. Nothing here is cached or held.
  *
  * @module composables/apis/useBillingApi
  */
 
-import { apiFetch, useApi } from '~/composables/useApi'
+import { apiFetch } from '~/composables/useApi'
 import type { ClientInvoice } from '~/types/clientinvoice'
 import type { GatewayMethod } from '~/types/gatewaymethod'
 import type { PaymentMethod } from '~/types/payment'
@@ -19,23 +17,16 @@ import type { PaymentMethod } from '~/types/payment'
  *
  * @returns The billing endpoint functions.
  */
-export function useBillingApi() {
+export const useBillingApi = () => {
   /**
    * Reads one invoice with its line items.
    *
-   * @param id - Invoice id; a getter so the page re-reads when the route changes.
-   * @returns The `useApi()` handle for the invoice.
+   * @param id - Invoice id.
+   * @returns The invoice.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadInvoice = (id: () => string) =>
-    useApi<ClientInvoice>(() => `/api/portal/client/invoices/${id()}`)
-
-  /**
-   * Reads the client's saved cards and bank accounts.
-   *
-   * @returns The `useApi()` handle for the saved payment methods, defaulting to an empty list.
-   */
-  const loadPaymentMethods = () =>
-    useApi<PaymentMethod[]>('/api/portal/client/payment-methods', { default: () => [] })
+  const fetchInvoice = (id: string): Promise<ClientInvoice> =>
+    apiFetch<ClientInvoice>(`/api/portal/client/invoices/${id}`)
 
   /**
    * Reads the client's saved cards and bank accounts as a one-shot call.
@@ -52,10 +43,11 @@ export function useBillingApi() {
    * Note the path: this is under `/api/portal/order`, not `/api/portal/client`, because the
    * list is the same whether or not anybody is signed in.
    *
-   * @returns The `useApi()` handle for the gateway list, defaulting to an empty list.
+   * @returns Every gateway the order can be paid through.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadGatewayMethods = () =>
-    useApi<GatewayMethod[]>('/api/portal/order/payment-methods', { default: () => [] })
+  const fetchGatewayMethods = (): Promise<GatewayMethod[]> =>
+    apiFetch<GatewayMethod[]>('/api/portal/order/payment-methods')
 
   /**
    * Pays an invoice with a saved payment method.
@@ -109,10 +101,10 @@ export function useBillingApi() {
    * Places an order, creating the order and its invoice on the backend.
    *
    * @param order - Cart contents, billing details and chosen payment method.
-   * @returns The new order and invoice ids.
+   * @returns The new order and invoice ids, plus the payment token that authorises paying for the order.
    * @throws Whatever `apiFetch` throws.
    */
-  const createOrder = (order: Record<string, unknown>): Promise<{ orderId: number, invoiceId: number }> =>
+  const createOrder = (order: Record<string, unknown>): Promise<{ orderId: number, invoiceId: number, paymentToken: string }> =>
     apiFetch<{ orderId: number, invoiceId: number, paymentToken: string }>('/api/portal/order/create', {
       method: 'POST',
       body: order
@@ -222,10 +214,9 @@ export function useBillingApi() {
     })
 
   return {
-    loadInvoice,
-    loadPaymentMethods,
+    fetchInvoice,
     fetchPaymentMethods,
-    loadGatewayMethods,
+    fetchGatewayMethods,
     createOrder,
     createOrderPaymentIntent,
     startOrderGatewayPayment,

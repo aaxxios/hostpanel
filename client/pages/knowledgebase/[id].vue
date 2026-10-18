@@ -1,117 +1,141 @@
 <template>
-  <div>
-    <section class="py-12 md:py-20 bg-[#0a0a0f] min-h-dvh">
-      <div class="container-custom max-w-3xl">
+  <UiSection padding="lg" data-testid="kb-article-page">
+    <UiStack class="mx-auto w-full max-w-3xl" gap="lg">
+      <!-- Back link -->
+      <UiLink
+        :to="localePath('/knowledgebase')"
+        tone="muted"
+        :underline="false"
+        class="inline-flex items-center gap-2 self-start text-sm"
+        testid="kb-back"
+      >
+        <ArrowLeft :size="15" :stroke-width="2" />
+        {{ t('kb.backToKb') }}
+      </UiLink>
 
-        <!-- Back link -->
-        <NuxtLink
-          :to="localePath('/knowledgebase')"
-          class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-8"
-        >
-          <ArrowLeft :size="15" :stroke-width="2" />
-          {{ $t('kb.backToKb') }}
-        </NuxtLink>
+      <!-- Loading -->
+      <UiStack v-if="pending" gap="md" data-testid="kb-article-loading">
+        <UiSkeleton shape="block" class="h-8 w-3/4" />
+        <UiSkeleton class="w-1/3" />
+        <UiSkeleton :lines="8" class="mt-8" />
+      </UiStack>
 
-        <!-- Loading -->
-        <div v-if="pending" class="space-y-4">
-          <div class="h-8 w-3/4 rounded-xl bg-white/5 animate-pulse" />
-          <div class="h-4 w-1/3 rounded-lg bg-white/5 animate-pulse" />
-          <div class="mt-8 space-y-3">
-            <div v-for="i in 8" :key="i" class="h-4 rounded bg-white/5 animate-pulse" :style="{ width: `${90 - i * 5}%` }" />
-          </div>
-        </div>
+      <!-- Error -->
+      <UiEmptyState
+        v-else-if="error || !article"
+        :icon="BookOpen"
+        :title="t('kb.errorDesc')"
+        data-testid="kb-article-error"
+      />
 
-        <!-- Error -->
-        <div v-else-if="error || !article" class="text-center py-20">
-          <BookOpen :size="48" :stroke-width="1.5" class="text-gray-600 mx-auto mb-4" />
-          <p class="text-gray-400">{{ $t('kb.errorDesc') }}</p>
-        </div>
+      <!-- Article -->
+      <UiStack v-else as="article" gap="lg">
+        <!-- Meta row -->
+        <UiStack direction="row" wrap align="center" gap="sm">
+          <UiText
+            v-if="article.dateupdated"
+            as="span"
+            size="xs"
+            tone="subtle"
+            class="flex items-center gap-1"
+            data-testid="kb-article-updated"
+          >
+            <Calendar :size="12" :stroke-width="2" />
+            {{ t('kb.lastUpdated') }}: {{ article.dateupdated }}
+          </UiText>
+          <UiText
+            v-if="article.views"
+            as="span"
+            size="xs"
+            tone="subtle"
+            class="flex items-center gap-1"
+            data-testid="kb-article-views"
+          >
+            <Eye :size="12" :stroke-width="2" />
+            {{ article.views }} {{ t('kb.views') }}
+          </UiText>
+        </UiStack>
 
-        <!-- Article -->
-        <article v-else>
-          <!-- Meta row -->
-          <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-5">
-            <span v-if="article.dateupdated" class="flex items-center gap-1">
-              <Calendar :size="12" :stroke-width="2" />
-              {{ $t('kb.lastUpdated') }}: {{ article.dateupdated }}
-            </span>
-            <span v-if="article.views" class="flex items-center gap-1">
-              <Eye :size="12" :stroke-width="2" />
-              {{ article.views }} {{ $t('kb.views') }}
-            </span>
-          </div>
+        <!-- Title -->
+        <UiHeading :level="1" data-testid="kb-article-heading">
+          {{ article.title }}
+        </UiHeading>
 
-          <!-- Title -->
-          <h1 class="text-3xl md:text-4xl font-bold text-white mb-6 leading-tight">
-            {{ article.title }}
-          </h1>
+        <UiDivider />
 
-          <div class="h-px bg-white/10 mb-8" />
+        <!-- HTML body from the API, rebuilt from an allow-list of tags -->
+        <UiRichText :html="article.body" />
 
-          <!-- HTML body from WHMCS -->
-          <div
-            class="prose prose-invert prose-sm md:prose-base max-w-none
-                   prose-p:text-gray-300 prose-p:leading-relaxed
-                   prose-a:text-primary-400 prose-a:no-underline hover:prose-a:underline
-                   prose-headings:text-white prose-strong:text-white
-                   prose-ul:text-gray-300 prose-ol:text-gray-300 prose-li:marker:text-primary-400
-                   prose-blockquote:border-primary-500 prose-blockquote:text-gray-400
-                   prose-code:text-cyan-400 prose-code:bg-white/5 prose-code:rounded prose-code:px-1"
-            v-html="article.body"
-          />
+        <UiDivider />
 
-          <div class="h-px bg-white/10 my-10" />
-
-          <!-- Was this helpful? -->
-          <div class="flex items-center justify-between gap-4 flex-wrap">
-            <p class="text-sm text-gray-400">{{ $t('kb.helpful') }}</p>
-            <div class="flex gap-2">
-              <button
-                class="px-4 py-2 rounded-lg text-sm font-medium border border-green-500/30 text-green-400 hover:bg-green-500/10 transition-colors flex items-center gap-1.5"
-                :class="vote === 'yes' ? 'bg-green-500/10' : ''"
-                @click="vote = 'yes'"
-              >
-                <ThumbsUp :size="14" :stroke-width="2" />
-                {{ $t('kb.yes') }}
-              </button>
-              <button
-                class="px-4 py-2 rounded-lg text-sm font-medium border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-1.5"
-                :class="vote === 'no' ? 'bg-red-500/10' : ''"
-                @click="vote = 'no'"
-              >
-                <ThumbsDown :size="14" :stroke-width="2" />
-                {{ $t('kb.no') }}
-              </button>
-            </div>
-          </div>
-        </article>
-
-      </div>
-    </section>
-  </div>
+        <!-- Was this helpful? -->
+        <UiStack direction="row" wrap justify="between" align="center">
+          <UiText size="sm" tone="muted">
+            {{ t('kb.helpful') }}
+          </UiText>
+          <UiStack direction="row" gap="xs">
+            <UiButton
+              :variant="vote === KbVote.Yes ? 'primary' : 'subtle'"
+              size="sm"
+              data-testid="kb-vote-yes"
+              @click="vote = KbVote.Yes"
+            >
+              <ThumbsUp :size="14" :stroke-width="2" class="mr-1.5" />
+              {{ t('kb.yes') }}
+            </UiButton>
+            <UiButton
+              :variant="vote === KbVote.No ? 'danger' : 'subtle'"
+              size="sm"
+              data-testid="kb-vote-no"
+              @click="vote = KbVote.No"
+            >
+              <ThumbsDown :size="14" :stroke-width="2" class="mr-1.5" />
+              {{ t('kb.no') }}
+            </UiButton>
+          </UiStack>
+        </UiStack>
+      </UiStack>
+    </UiStack>
+  </UiSection>
 </template>
 
 <script setup lang="ts">
 /**
  * Knowledgebase article detail page.
- * Fetches a single article by ID and renders the full HTML body from WHMCS.
+ * Fetches a single article by ID and renders the full HTML body from the API.
  */
 
 import { ArrowLeft, BookOpen, Calendar, Eye, ThumbsUp, ThumbsDown } from 'lucide-vue-next'
-import { useContentApi } from '~/composables/apis/useContentApi'
+import { useContentStore } from '~/stores/content'
+import { KbVote } from '~/types/kbvote'
 
+/** The current route. */
 const route = useRoute()
-const localePath = useLocalePath()
-const { t } = useI18n()
 
-// Straight from the API composable rather than through a store: this page fetches once and
-// owns the result alone, which is the named exception to component -> store -> api. The raw
-// `useFetch` this replaced skipped the locale header `useApi()` sends, so a localised article
-// came back in English.
-const { data: article, pending, error } = useContentApi().loadKbArticle(() => String(route.params.id))
+/** Localised path builder from the i18n module. */
+const localePath = useLocalePath()
+/** Translates a key in the active language; `locale` is that language. */
+const { t, locale } = useI18n()
+
+// The article, read through the content store; the key follows the route, so a new article is
+// read, and a language change reads it again.
+/** The content store that owns the lists this page renders. */
+const content = useContentStore()
+/** Whether the read is still running. */
+const { pending } = await useAsyncData(
+  () => `kb:article:${String(route.params.id)}`,
+  () => content.loadArticle(String(route.params.id)),
+  { watch: [locale] }
+)
+
+/** The sentence explaining why the article could not be read, or `''`. */
+const error = computed(() => content.error)
+
+/** The article the route names, once the store has it. */
+const article = computed(() => content.articleFor(String(route.params.id)))
 
 /** Local helpful vote state (UI only, no API submission) */
-const vote = ref<'yes' | 'no' | null>(null)
+const vote = ref<KbVote | null>(null)
 
 watchEffect(() => {
   if (article.value?.title) {

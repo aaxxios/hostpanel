@@ -1,4 +1,12 @@
 /**
+ * Reads the deployment's authentication mode and the sign-in destination that follows from it.
+ *
+ * @module composables/useAuthMode
+ */
+
+import { AuthMode } from '~/types/authmode'
+
+/**
  * The deployment's authentication mode, and the sign-in destination that follows
  * from it.
  *
@@ -11,7 +19,7 @@
  *             `SSO_PUBLIC_URL/connect/authorize`. The local form is never used.
  * - `local` — the standalone open-source path: hostpanel authenticates users
  *             from its own table through `/client/login`. This is the mode the
- *             imported WHMCS client accounts sign in under, so the page stays.
+ *             imported legacy client accounts sign in under, so the page stays.
  *
  * The mode arrives as `runtimeConfig.public.authMode` (env `AUTH_MODE`, passed
  * to the client container as `NUXT_PUBLIC_AUTH_MODE`). This composable exists so
@@ -31,10 +39,10 @@ export const useAuthMode = () => {
    * `nuxt.config.ts` defaults to and what every Innovayse-operated tier runs;
    * a standalone install sets `AUTH_MODE=local`.
    */
-  const mode = computed<string>(() => (config.public.authMode as string) || 'sso')
+  const mode = computed<string>(() => (config.public.authMode as string) || AuthMode.Sso)
 
   /** True when the platform SSO is the identity provider for this deployment. */
-  const isSso = computed<boolean>(() => mode.value === 'sso')
+  const isSso = computed<boolean>(() => mode.value === AuthMode.Sso)
 
   /**
    * Where a signed-out visitor is sent to sign in.

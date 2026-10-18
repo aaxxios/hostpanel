@@ -1,4 +1,10 @@
-import type { Feature } from '~/templates/nova/types'
+/**
+ * Visibility rule for nova's capability cards: which claims this install may state.
+ *
+ * @module templates/nova/features
+ */
+
+import type { Feature } from '~/templates/nova/types/feature'
 
 /**
  * Filters a feature list down to the claims this install is entitled to make.
@@ -22,7 +28,9 @@ export const useVisibleFeatures = (features: readonly Feature[]) => {
   const { get } = usePortalSettings()
 
   return computed(() => features.filter((feature) => {
-    if (!feature.requiresSetting) return true
+    if (!feature.requiresSetting) {
+      return true
+    }
 
     const [key, envKey] = feature.requiresSetting
     return get(key, envKey).length > 0

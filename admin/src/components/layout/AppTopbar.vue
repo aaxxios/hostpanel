@@ -1,0 +1,238 @@
+<script setup lang="ts">
+/**
+ * Admin top navigation bar.
+ *
+ * Shows the current page title, the language switch, the notification feed (in a side drawer), the
+ * signed-in account and the sign-out action. On mobile it emits `toggle-sidebar` to open the
+ * navigation drawer.
+ */
+import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
+import { SUPPORTED_LOCALES, setLocale } from '@/i18n'
+import type { SupportedLocale } from '@/i18n'
+import { activityEventLink } from '@/lib/activityEventLink'
+import { formatRelativeFromNow } from '@/lib/format'
+import { useActivityStore } from '@/stores/activity'
+import { useAuthStore } from '@/stores/auth'
+import type { ActivityEvent } from '@/types/activityevent'
+import UiBadge from '@/components/ui/UiBadge.vue'
+import UiButton from '@/components/ui/UiButton.vue'
+import UiDrawer from '@/components/ui/UiDrawer.vue'
+import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiHeading from '@/components/ui/UiHeading.vue'
+import UiIcon from '@/components/ui/UiIcon.vue'
+import UiIconButton from '@/components/ui/UiIconButton.vue'
+import UiLink from '@/components/ui/UiLink.vue'
+import UiSelect from '@/components/ui/UiSelect.vue'
+import UiSkeleton from '@/components/ui/UiSkeleton.vue'
+import UiStack from '@/components/ui/UiStack.vue'
+import UiText from '@/components/ui/UiText.vue'
+
+/** Emitted when the hamburger button is clicked on mobile. */
+const emit = defineEmits<{
+  /** Emitted to toggle the sidebar drawer on mobile/tablet. */
+  'toggle-sidebar': []
+}>()
+
+/** Translation function and the active locale. */
+const { t, locale } = useI18n()
+
+/** Current route, to derive the page title. */
+const route = useRoute()
+
+/** Router, for sign-out and the notification links. */
+const router = useRouter()
+
+/** Auth store: the signed-in account and the sign-out action. */
+const auth = useAuthStore()
+
+/** Activity store: the notification feed. */
+const activity = useActivityStore()
+
+/** Hamburger glyph. */
+const MENU_MARKUP = '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>'
+
+/** Bell glyph. */
+const BELL_MARKUP = '<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/>'
+
+/** Maps route paths to i18n keys for the page title. */
+const titleKeys: Record<string, string> = {
+  '/dashboard': 'nav.dashboard',
+  '/clients': 'nav.clients',
+  '/billing': 'nav.billing',
+  '/services': 'nav.servicesTitle',
+  '/domains': 'nav.domains',
+  '/support': 'nav.support',
+  '/plugins': 'nav.pluginManager',
+  '/servers': 'nav.servers',
+  '/integrations': 'nav.integrations',
+  '/settings': 'nav.settings',
+  '/reports': 'nav.reports',
+  '/orders': 'nav.orders',
+  '/notifications': 'common.notifications',
+}
+
+/** Display labels for the language switcher. */
+const localeLabels: Record<SupportedLocale, string> = { en: 'EN', hy: 'ՀՅ', ru: 'РУ' }
+
+/** Controls the notification drawer. */
+const showNotifications = ref(false)
+
+/** Current page title derived from the active route. */
+const pageTitle = computed<string>(() => {
+  const match = Object.entries(titleKeys).find(([k]) => route.path === k || route.path.startsWith(`${k}/`))
+  return match ? t(match[1]) : t('common.admin')
+})
+
+/** Options of the language select. */
+const localeOptions = computed(() =>
+  SUPPORTED_LOCALES.map(code => ({ value: code, label: localeLabels[code] })),
+)
+
+/** Number of events in the feed, shown as the badge and header count. */
+const notificationCount = computed<number>(() => activity.events.length)
+
+/**
+ * The signed-in operator's address, or a neutral label before the profile has loaded.
+ *
+ * The header used to read "Admin" for everyone, spelled into the markup — so an operator could
+ * not tell which account they were acting as, which matters on a panel where several people
+ * share one screen.
+ */
+const accountLabel = computed<string>(() => auth.user?.email ?? t('common.admin'))
+
+/**
+ * Switches the active locale when the chosen code is one the panel ships.
+ *
+ * @param code - The code picked in the select.
+ */
+const chooseLocale = (code: string): void => {
+  const chosen = SUPPORTED_LOCALES.find(supported => supported === code)
+  if (chosen !== undefined) {
+    setLocale(chosen)
+  }
+}
+
+/** Opens the notification drawer, loading the feed the first time it opens. */
+const openNotifications = (): void => {
+  showNotifications.value = true
+  if (activity.events.length === 0 && !activity.loading) {
+    void activity.fetchActivity()
+  }
+}
+
+/**
+ * Describes how long ago an event happened, in the active locale.
+ *
+ * @param iso - ISO 8601 timestamp.
+ * @returns Relative wording such as "5 minutes ago".
+ */
+const relativeTime = (iso: string): string => formatRelativeFromNow(iso, locale.value)
+
+/** Closes the drawer and sends the operator to the full notification feed. */
+const viewAllNotifications = (): void => {
+  showNotifications.value = false
+  void router.push('/notifications')
+}
+
+/**
+ * Closes the drawer and navigates to the record a notification is about.
+ *
+ * @param event - The activity event that was clicked.
+ */
+const goToActivityEvent = (event: ActivityEvent): void => {
+  showNotifications.value = false
+  void router.push(activityEventLink(event))
+}
+
+/**
+ * Ends the session and returns to the sign-in screen.
+ *
+ * @returns Promise that resolves once the operator is on the sign-in screen.
+ */
+const signOut = async (): Promise<void> => {
+  await auth.logout()
+  await router.push('/login')
+}
+
+/** Loads the notification feed once on mount so the badge reflects real data immediately. */
+onMounted(() => {
+  void activity.fetchActivity()
+})
+</script>
+
+<template>
+  <header class="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface-panel px-4 lg:px-6" data-testid="app-topbar">
+    <!-- Left: hamburger + page title -->
+    <UiStack direction="row" align="center" gap="sm">
+      <!-- Hamburger: visible on mobile/tablet -->
+      <UiIconButton :label="t('common.toggleSidebar')" class="lg:hidden" data-testid="topbar-toggle-sidebar" @click="emit('toggle-sidebar')">
+        <UiIcon :markup="MENU_MARKUP" />
+      </UiIconButton>
+
+      <UiHeading :level="2" variant="card" data-testid="topbar-title">{{ pageTitle }}</UiHeading>
+    </UiStack>
+
+    <!-- Right: language + notifications + account -->
+    <UiStack direction="row" align="center" gap="sm">
+      <UiSelect
+        :model-value="locale"
+        :options="localeOptions"
+        :placeholder="localeLabels.en"
+        class="w-20"
+        data-testid="topbar-locale"
+        @update:model-value="chooseLocale"
+      />
+
+      <UiStack direction="row" align="center" gap="xs">
+        <UiIconButton :label="t('common.notifications')" data-testid="topbar-notifications" @click="openNotifications">
+          <UiIcon :markup="BELL_MARKUP" />
+        </UiIconButton>
+        <UiBadge v-if="notificationCount > 0" tone="primary" small data-testid="topbar-notification-count">
+          {{ notificationCount }}
+        </UiBadge>
+      </UiStack>
+
+      <UiText tone="secondary" size="md" class="hidden max-w-[12rem] truncate font-medium sm:block" data-testid="topbar-account">
+        {{ accountLabel }}
+      </UiText>
+      <UiLink to="/settings" variant="ghost" size="sm" data-testid="topbar-settings">
+        {{ t('nav.settings') }}
+      </UiLink>
+      <UiButton type="button" variant="danger" size="sm" data-testid="topbar-sign-out" @click="signOut">
+        {{ t('common.signOut') }}
+      </UiButton>
+    </UiStack>
+
+    <!-- Notification feed -->
+    <UiDrawer :open="showNotifications" :title="t('common.notifications')" @close="showNotifications = false">
+      <UiStack gap="sm" data-testid="notifications-drawer">
+        <UiBadge tone="primary" small>{{ t('common.newCount', { count: notificationCount }) }}</UiBadge>
+
+        <UiSkeleton v-if="activity.loading && activity.events.length === 0" :lines="3" />
+        <UiEmptyState v-else-if="activity.events.length === 0" :title="t('common.noNotifications')" />
+        <UiStack v-else gap="xs">
+          <UiButton
+            v-for="(event, index) in activity.events"
+            :key="`${event.type}-${event.occurredAt}-${index}`"
+            type="button"
+            variant="ghost"
+            class="w-full !justify-start text-left"
+            :data-testid="`notification-${index}`"
+            @click="goToActivityEvent(event)"
+          >
+            <UiStack gap="xs" class="min-w-0">
+              <UiText tone="primary" size="md">{{ event.message }}</UiText>
+              <UiText tone="muted" size="xs">{{ relativeTime(event.occurredAt) }}</UiText>
+            </UiStack>
+          </UiButton>
+        </UiStack>
+
+        <UiButton type="button" variant="link" data-testid="notifications-view-all" @click="viewAllNotifications">
+          {{ t('common.viewAllNotifications') }}
+        </UiButton>
+      </UiStack>
+    </UiDrawer>
+  </header>
+</template>

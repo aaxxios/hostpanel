@@ -5,8 +5,8 @@
  * permission spells it the same way.
  */
 
-import type { Domain } from './domain'
-import type { Product } from './product'
+import { translate } from '@/lib/translate'
+
 
 /** User linked to a client account with permissions. */
 export interface ClientUserItem {
@@ -64,17 +64,29 @@ export enum ClientPermission {
 
 /** Labels for each permission flag, used for checkbox rendering. */
 export const PERMISSION_LABELS: { flag: ClientPermission; label: string }[] = [
-  { flag: ClientPermission.ModifyMasterProfile, label: 'Modify Master Account Profile' },
-  { flag: ClientPermission.ViewManageContacts, label: 'View & Manage Contacts' },
-  { flag: ClientPermission.ViewProductsServices, label: 'View Products & Services' },
-  { flag: ClientPermission.ViewModifyPasswords, label: 'View & Modify Product Passwords' },
-  { flag: ClientPermission.AllowSingleSignOn, label: 'Allow Single Sign-On' },
-  { flag: ClientPermission.ViewDomains, label: 'View Domains' },
-  { flag: ClientPermission.ManageDomainSettings, label: 'Manage Domain Settings' },
-  { flag: ClientPermission.ViewPayInvoices, label: 'View & Pay Invoices' },
-  { flag: ClientPermission.ViewAcceptQuotes, label: 'View & Accept Quotes' },
-  { flag: ClientPermission.ViewOpenSupportTickets, label: 'View & Open Support Tickets' },
-  { flag: ClientPermission.ViewManageAffiliate, label: 'View & Manage Affiliate Account' },
-  { flag: ClientPermission.ViewEmails, label: 'View Emails' },
-  { flag: ClientPermission.PlaceNewOrders, label: 'Place New Orders/Upgrades/Cancellations' },
+  { flag: ClientPermission.ModifyMasterProfile, get label() { return translate('permissions.permissionLabels.modifyMasterAccountProfile') } },
+  { flag: ClientPermission.ViewManageContacts, get label() { return translate('permissions.permissionLabels.viewManageContacts') } },
+  { flag: ClientPermission.ViewProductsServices, get label() { return translate('permissions.permissionLabels.viewProductsServices') } },
+  { flag: ClientPermission.ViewModifyPasswords, get label() { return translate('permissions.permissionLabels.viewModifyProductPasswords') } },
+  { flag: ClientPermission.AllowSingleSignOn, get label() { return translate('shared.allowSingleSignOn') } },
+  { flag: ClientPermission.ViewDomains, get label() { return translate('permissions.permissionLabels.viewDomains') } },
+  { flag: ClientPermission.ManageDomainSettings, get label() { return translate('permissions.permissionLabels.manageDomainSettings') } },
+  { flag: ClientPermission.ViewPayInvoices, get label() { return translate('permissions.permissionLabels.viewPayInvoices') } },
+  { flag: ClientPermission.ViewAcceptQuotes, get label() { return translate('permissions.permissionLabels.viewAcceptQuotes') } },
+  { flag: ClientPermission.ViewOpenSupportTickets, get label() { return translate('permissions.permissionLabels.viewOpenSupportTickets') } },
+  { flag: ClientPermission.ViewManageAffiliate, get label() { return translate('permissions.permissionLabels.viewManageAffiliateAccount') } },
+  { flag: ClientPermission.ViewEmails, get label() { return translate('permissions.permissionLabels.viewEmails') } },
+  { flag: ClientPermission.PlaceNewOrders, get label() { return translate('permissions.permissionLabels.placeNewOrdersUpgradesCancellations') } },
 ]
+
+/** An Identity user offered by the add-user search. */
+export interface UserSearchHit {
+  /** Identity user id. */
+  id: string
+  /** Email address. */
+  email: string
+  /** First name. */
+  firstName: string
+  /** Last name. */
+  lastName: string
+}

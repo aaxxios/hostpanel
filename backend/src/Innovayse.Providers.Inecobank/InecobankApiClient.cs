@@ -1,8 +1,7 @@
-﻿namespace Innovayse.Providers.Inecobank;
-
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
+namespace Innovayse.Providers.Inecobank;
 /// <summary>
 /// Low-level HTTP client for the Inecobank (Armenian Card) merchant REST API.
 /// Sends form-urlencoded POSTs and parses the JSON responses leniently — the

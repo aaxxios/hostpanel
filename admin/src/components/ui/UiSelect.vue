@@ -1,11 +1,15 @@
 <script setup lang="ts" generic="T extends string | number | null">
 /**
- * Custom styled dropdown select that matches the dark panel theme.
- * Replaces native <select> whose options cannot be themed cross-browser.
- * Supports an optional search filter for long option lists.
+ * Themed dropdown select with an optional search filter.
+ *
+ * Replaces the native `<select>`, whose options cannot be themed across browsers. The trigger and
+ * the option list read theme tokens, so the control follows light/dark. `data-testid` and classes
+ * land on the root element.
  */
-
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 /** Props for UiSelect. */
 const props = defineProps<{
@@ -13,14 +17,14 @@ const props = defineProps<{
   modelValue: T
   /** Options to display. Each option may include a displayLabel for the dropdown. */
   options: { value: T; label: string; displayLabel?: string }[]
-  /** Placeholder shown when nothing is selected. */
+  /** Text shown in the trigger while nothing is selected. */
   placeholder?: string
   /** Disables the select. */
   disabled?: boolean
   /** Enables a search input inside the dropdown. */
   searchable?: boolean
-  /** Minimum width for the dropdown panel (e.g. "16rem"). */
-  dropdownWidth?: string
+  /** Gives the dropdown panel a wider minimum width, for long labels (country and phone lists). */
+  wide?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -40,18 +44,23 @@ const searchInput = ref<HTMLInputElement | null>(null)
 /** Search term for filtering options. */
 const search = ref('')
 
-/** The label of the currently selected option (short form for trigger). */
-const selectedLabel = computed(
-  () => props.options.find(o => o.value === props.modelValue)?.label ?? props.placeholder ?? '—'
+/** The label of the currently selected option (short form for the trigger). */
+const selectedLabel = computed<string>(
+  () => props.options.find(o => o.value === props.modelValue)?.label ?? props.placeholder ?? '—',
 )
 
-/** Filtered options based on search term. Searches both label and displayLabel. */
+/** Whether the trigger is showing the placeholder instead of a chosen label. */
+const showingPlaceholder = computed<boolean>(() => selectedLabel.value === (props.placeholder ?? '—'))
+
+/** Options after the search term is applied (matches both label and displayLabel). */
 const filteredOptions = computed(() => {
-  if (!props.searchable || !search.value) return props.options
+  if (!props.searchable || !search.value) {
+    return props.options
+  }
   const term = search.value.toLowerCase()
   return props.options.filter(o =>
-    o.label.toLowerCase().includes(term) ||
-    (o.displayLabel?.toLowerCase().includes(term))
+    o.label.toLowerCase().includes(term)
+    || (o.displayLabel?.toLowerCase().includes(term)),
   )
 })
 
@@ -60,28 +69,26 @@ const filteredOptions = computed(() => {
  *
  * @param value - The value to select.
  */
-function select(value: T): void {
+const select = (value: T): void => {
   emit('update:modelValue', value)
   open.value = false
   search.value = ''
 }
 
-/**
- * Toggles the dropdown and auto-focuses the search input.
- */
-function toggle(): void {
+/** Toggles the dropdown and focuses the search input when there is one. */
+const toggle = (): void => {
   open.value = !open.value
   if (open.value && props.searchable) {
-    nextTick(() => searchInput.value?.focus())
+    void nextTick(() => searchInput.value?.focus())
   }
 }
 
 /**
- * Closes the dropdown when clicking outside the component.
+ * Closes the dropdown when the pointer goes down outside the component.
  *
  * @param e - The mouse event.
  */
-function onOutsideClick(e: MouseEvent): void {
+const onOutsideClick = (e: MouseEvent): void => {
   if (root.value && !root.value.contains(e.target as Node)) {
     open.value = false
     search.value = ''
@@ -89,7 +96,9 @@ function onOutsideClick(e: MouseEvent): void {
 }
 
 watch(open, (val) => {
-  if (!val) search.value = ''
+  if (!val) {
+    search.value = ''
+  }
 })
 
 onMounted(() => document.addEventListener('mousedown', onOutsideClick))
@@ -102,17 +111,24 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
     <button
       type="button"
       :disabled="props.disabled"
-      class="w-full flex items-center justify-between gap-2 bg-white/[0.04] border border-border rounded-[10px] px-3 py-2 text-[0.82rem] text-text-primary focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      :aria-expanded="open"
+      aria-haspopup="listbox"
+      data-testid="ui-select-trigger"
+      class="w-full flex items-center justify-between gap-2 bg-surface-field border border-border rounded-[10px] px-3 py-2 text-[0.82rem] text-text-primary outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       :class="open ? 'border-primary-500/50 ring-1 ring-primary-500/10' : ''"
       @click="toggle"
     >
-      <span class="truncate" :class="selectedLabel === (props.placeholder ?? '—') ? 'text-text-muted' : 'text-text-primary'">
+      <span class="truncate" :class="showingPlaceholder ? 'text-text-muted' : 'text-text-primary'">
         {{ selectedLabel }}
       </span>
       <svg
         class="w-4 h-4 text-text-muted shrink-0 transition-transform duration-150"
         :class="open ? 'rotate-180' : ''"
-        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
       >
         <polyline points="6 9 12 15 18 9" />
       </svg>
@@ -129,9 +145,9 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
     >
       <div
         v-if="open"
+        role="listbox"
         class="absolute z-50 mt-1.5 bg-surface-card border border-border rounded-[10px] shadow-xl overflow-hidden"
-        :class="dropdownWidth ? '' : 'w-full'"
-        :style="dropdownWidth ? { minWidth: dropdownWidth } : undefined"
+        :class="wide ? 'min-w-[18rem]' : 'w-full'"
       >
         <!-- Search input -->
         <div v-if="props.searchable" class="p-1.5 border-b border-border">
@@ -139,10 +155,10 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
             ref="searchInput"
             v-model="search"
             type="text"
-            placeholder="Search..."
-            class="w-full bg-white/[0.04] border border-border rounded-lg px-2.5 py-1.5 text-[0.82rem] text-text-primary placeholder-text-muted focus:outline-none focus:border-primary-500/50 transition-colors"
+            :placeholder="t('shared.search')"
+            class="w-full bg-surface-field border border-border rounded-lg px-2.5 py-1.5 text-[0.82rem] text-text-primary placeholder:text-text-muted outline-none focus:border-primary-500/50 transition-colors"
             @click.stop
-          />
+          >
         </div>
 
         <div class="max-h-56 overflow-y-auto py-1">
@@ -150,22 +166,31 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
             v-for="opt in filteredOptions"
             :key="String(opt.value)"
             type="button"
+            role="option"
+            data-testid="ui-select-option"
+            :aria-selected="opt.value === props.modelValue"
             class="w-full flex items-center justify-between px-3 py-1.5 text-[0.82rem] transition-colors"
             :class="opt.value === props.modelValue
               ? 'text-primary-400 bg-primary-500/10'
-              : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.05]'"
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'"
             @mousedown.prevent.stop="select(opt.value)"
           >
             <span class="truncate">{{ opt.displayLabel ?? opt.label }}</span>
             <svg
               v-if="opt.value === props.modelValue"
               class="w-3.5 h-3.5 text-primary-400 shrink-0 ml-2"
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              aria-hidden="true"
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </button>
-          <p v-if="filteredOptions.length === 0" class="px-3 py-2 text-[0.82rem] text-text-muted">No results</p>
+          <p v-if="filteredOptions.length === 0" class="px-3 py-2 text-[0.82rem] text-text-muted">
+            {{ t('ui.uiSelect.noResults') }}
+          </p>
         </div>
       </div>
     </Transition>

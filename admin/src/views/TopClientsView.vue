@@ -1,0 +1,78 @@
+<script setup lang="ts">
+/**
+ * Top clients report: the ten clients with the highest net income, as a pie chart and a table,
+ * with a CSV download of the table.
+ */
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import ReportChartCard from '@/components/reports/ReportChartCard.vue'
+import ReportPage from '@/components/reports/ReportPage.vue'
+import ReportTable from '@/components/reports/ReportTable.vue'
+import UiButton from '@/components/ui/UiButton.vue'
+import UiStack from '@/components/ui/UiStack.vue'
+import UiText from '@/components/ui/UiText.vue'
+import { useReport } from '@/composables/useReport'
+import { downloadCsv } from '@/lib/reportsCsv'
+import { formatReportAmount } from '@/lib/money'
+import { ReportCellFormat } from '@/types/reportcolumn'
+import type { ReportColumn } from '@/types/reportcolumn'
+import type { ReportTopClient } from '@/types/reporttopclient'
+import { UiChartType } from '@/utils/ui/chart'
+import type { UiChartSeries } from '@/utils/ui/chart'
+import { UiAlign } from '@/utils/ui/table'
+
+const { t } = useI18n()
+
+/** Name of the downloaded file. */
+const CSV_FILE_NAME = 'top-clients-by-income.csv'
+
+const { data } = useReport<ReportTopClient[]>(() => '/reports/top-clients-by-income?take=10')
+
+/** Clients ranked by income; empty until loaded. */
+const rows = computed<ReportTopClient[]>(() => data.value ?? [])
+
+/** Table columns. */
+const columns = computed<ReportColumn[]>(() => [
+  { key: 'clientId', label: t('reports.creditsReviewer.clientId') },
+  { key: 'clientName', label: t('shared.clientName') },
+  { key: 'totalAmountIn', label: t('shared.amountIn'), align: UiAlign.Right, format: ReportCellFormat.Money },
+  { key: 'totalFees', label: t('shared.fees'), align: UiAlign.Right, format: ReportCellFormat.Money },
+  { key: 'totalAmountOut', label: t('shared.amountOut'), align: UiAlign.Right, format: ReportCellFormat.Money },
+  { key: 'balance', label: t('shared.balance'), align: UiAlign.Right, format: ReportCellFormat.Money },
+])
+
+/** Pie labels: the client names. */
+const labels = computed<string[]>(() => rows.value.map(row => row.clientName))
+
+/** Pie data: the money received from each client. */
+const series = computed<UiChartSeries[]>(() => [
+  { label: t('shared.amountIn'), data: rows.value.map(row => row.totalAmountIn) },
+])
+
+/** Downloads the table as a CSV file. */
+const exportCsv = (): void => {
+  downloadCsv(
+    CSV_FILE_NAME,
+    columns.value.map(column => column.label),
+    rows.value.map(row => [row.clientId, row.clientName, row.totalAmountIn, row.totalFees, row.totalAmountOut, row.balance]),
+  )
+}
+</script>
+
+<template>
+  <ReportPage :title="t('reports.topClients.top10ClientsByIncome')" :description="t('reports.topClients.thisReportShowsThe10')">
+    <template #filters>
+      <UiStack direction="row" justify="end" class="mb-6">
+        <UiButton variant="secondary" data-testid="report-export" @click="exportCsv">
+          {{ t('shared.exportCsv') }}
+        </UiButton>
+      </UiStack>
+    </template>
+
+    <ReportChartCard :type="UiChartType.Pie" :labels="labels" :series="series" :value-formatter="formatReportAmount" height="lg" />
+    <ReportTable :columns="columns" :rows="rows" row-key="clientId" :empty-text="t('reports.topClients.noData')" />
+    <UiText tone="muted" size="sm">
+      {{ t('reports.topClients.denotesConvertedToDefaultCurrency') }}
+    </UiText>
+  </ReportPage>
+</template>

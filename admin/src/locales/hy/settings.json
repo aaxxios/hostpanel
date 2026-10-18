@@ -1,0 +1,350 @@
+{
+  "systemSettings": "Համակարգային կարգավորումներ",
+  "table": {
+    "key": "Բանալի",
+    "value": "Արժեք",
+    "description": "Նկարագրություն",
+    "noSettings": "Կարգավորումներ չեն գտնվել։"
+  },
+  "siteIdentity": {
+    "title": "Կայքի ինքնություն",
+    "description": "Ինչպես է կայքն իրեն անվանում։ Անունը հասնում է browser-ի վերնագրին, սոցիալական preview-ներին, logo-ի alt տեքստին և structured data-ին; կարգախոսը լռելյայն էջի նկարագրությունն է։",
+    "name": {
+      "label": "Կայքի անուն",
+      "hint": "Դատարկ — ներկառուցված անունը"
+    },
+    "tagline": {
+      "label": "Կարգախոս",
+      "hint": "Մեկ տող, էջի լռելյայն նկարագրություն"
+    }
+  },
+  "portalAppearance": {
+    "title": "Պորտալի տեսք",
+    "description": "Ո՛ր ձևանմուշն է կիրառում հանրային կայքը և ո՛ր գունային ռեժիմով է այցելուն այն բացում։ Փոփոխությունները կիրառվում են հաջորդ էջի բեռնումից։",
+    "template": "Ձևանմուշ",
+    "notSeeded": "{key} կարգավորումը դեռ սերմանված (seed) չէ, ուստի այստեղից փոփոխել հնարավոր չէ։ Մինչև այն կստեղծվի, պորտալն օգտագործում է իր {env} environment փոփոխականը։",
+    "templates": {
+      "aurora": {
+        "label": "Aurora",
+        "hint": "Ընթացիկ լռելյայն ձևանմուշ — մուգ/բաց թեմա, հայկական տառատեսակ"
+      },
+      "nova": {
+        "label": "Nova",
+        "hint": "Խմբագրական դասավորություն փիրուզագույն երանգներով — մուգ/բաց"
+      },
+      "classic": {
+        "label": "Classic",
+        "hint": "Սկզբնական կայքի ձևավորումը"
+      }
+    },
+    "themeDefault": "Լռելյայն գունային ռեժիմ",
+    "themeDefaultHint": "Այն այցելուի համար, որը դեռ չի ընտրել։ Այցելուի սեփական ընտրությունը պահվում է cookie-ում։",
+    "themeModes": {
+      "light": "Բաց",
+      "dark": "Մուգ",
+      "system": "Ինչպես այցելուի սարքում"
+    },
+    "userToggle": "Թույլ տալ այցելուներին փոխել ռեժիմը",
+    "userToggleHint": "Անջատված — header-ի արև/լուսին կոճակը թաքնված է։"
+  },
+  "branding": {
+    "title": "Բրենդինգ",
+    "description": "Հանրային կայքի logo-ները և browser tab-ի icon-ը։ Փոփոխությունները կիրառվում են հաջորդ էջի բեռնումից։",
+    "pasteUrl": "Կամ տեղադրեք նկարի URL...",
+    "logo": {
+      "label": "Logo (բաց ֆոն)",
+      "hint": "JPEG, PNG, WebP — մինչև 5ՄԲ"
+    },
+    "logoDark": {
+      "label": "Logo (մուգ ֆոն)",
+      "hint": "Դատարկ — օգտագործվում է բաց logo-ն"
+    },
+    "logoMark": {
+      "label": "Նշան (քառակուսի icon)",
+      "hint": "Կոմպակտ header-ների և մուտքի էջերի համար; դատարկ — ներկառուցված նշանը"
+    },
+    "favicon": {
+      "label": "Favicon",
+      "hint": "PNG, SVG, ICO — մինչև 5ՄԲ"
+    },
+    "remove": "Հեռացնել պատկերը"
+  },
+  "brandColors": {
+    "title": "Բրենդի գույներ",
+    "description": "Երկու գույն, որոնցից կայքը ստանում է ամբողջ palette-ը՝ կոճակներ, հղումներ, ընդգծումներ և նամակներ։ Դատարկ — ամեն ձևանմուշ իր գույներով։",
+    "primary": {
+      "label": "Հիմնական",
+      "hint": "Կոճակներ, հղումներ, ընդգծումներ։ Ներքևի տասնմեկ երանգները ստացվում են սրանից։"
+    },
+    "accent": {
+      "label": "Շեշտադրող",
+      "hint": "Gradient-ներ, badge-եր և երկրորդական ընդգծումներ։"
+    },
+    "reset": "Վերականգնել",
+    "previewButton": "Կոճակ",
+    "previewLink": "Հղում",
+    "contrastOk": "Սպիտակ տեքստ այս գույնի վրա՝ {ratio}:1 — համապատասխանում է WCAG AA-ին։",
+    "contrastDark": "Սպիտակ տեքստ այս գույնի վրա՝ {ratio}:1 — շատ ցածր է, կոճակները մուգ տեքստ կստանան։",
+    "contrastLow": "Սպիտակ տեքստ այս գույնի վրա՝ {ratio}:1 — մանր տեքստի WCAG AA-ից ցածր; կոճակների համար բավարար է։"
+  },
+  "typography": {
+    "title": "Տառատեսակներ",
+    "description": "Կայքի տառատեսակները։ Բոլորը ներկառուցված են; ոչինչ չի բեռնվում արտաքին ծառայությունից։",
+    "heading": "Վերնագրեր",
+    "body": "Հիմնական տեքստ",
+    "templateDefault": "Ձևանմուշի լռելյայնը",
+    "sampleBody": "Դոմեններ, հոսթինգ և փոստ մեկ հաշվում, և իրական մարդ ամեն տոմսի մյուս ծայրում։",
+    "fonts": {
+      "inter": "Inter",
+      "notoSansArmenian": "Noto Sans Armenian",
+      "notoSerifArmenian": "Noto Serif Armenian",
+      "system": "Համակարգային (սարքի)"
+    },
+    "sampleHy": "Ձեր ամբողջ թվային ենթակառուցվածքը",
+    "sampleRu": "Вся ваша цифровая инфраструктура",
+    "sampleEn": "Your whole digital infrastructure"
+  },
+  "trackingChat": {
+    "title": "Վերլուծություն և չաթ",
+    "description": "Երրորդ կողմի ծառայություններ, որոնց կայքը դիմում է։ Ոչինչ չի բեռնվում, մինչև այստեղ չկարգավորվի։",
+    "gtm": {
+      "label": "Google Tag Manager container",
+      "hint": "Բեռնվում է միայն, երբ այցելուն ընդունում է բոլոր cookie-ները։ Դատարկ — tag չի բեռնվում։"
+    },
+    "chat": {
+      "title": "Օնլայն չաթ",
+      "baseUrl": "Չաթի սերվեր",
+      "baseUrlHint": "https://chat.example.com",
+      "token": "Website token",
+      "tokenHint": "Չաթի inbox-ի կարգավորումներից",
+      "tokenRu": "Token ռուսալեզու այցելուների",
+      "tokenHy": "Token հայալեզու այցելուների",
+      "tokenLocaleHint": "Ոչ պարտադիր; դատարկ — հիմնականը",
+      "hint": "Widget-ը երևում է միայն, երբ provider-ը, սերվերը և token-ը երեքն էլ նշված են։"
+    },
+    "provider": {
+      "label": "Provider",
+      "off": "Անջատված",
+      "chatwoot": "Chatwoot",
+      "innochat": "Innochat"
+    }
+  },
+  "productFeatures": {
+    "specification": "Սպեցիֆիկացիա",
+    "shownInTheStorefrontS": "Ցուցադրվում է առաջարկների համեմատման աղյուսակում՝ վիտրինայում՝",
+    "nothingSpecifiedYetTheComparison": "Դեռ ոչինչ նշված չէ։ Համեմատման աղյուսակը մնում է թաքնված, մինչև գոնե մեկ պլանում տող չհայտնվի։",
+    "disk": "Սկավառակ",
+    "10Gb": "10 ԳԲ",
+    "removeLine": "Ջնջել տողը",
+    "feature": "Հատկություն",
+    "adding": "Ավելացվում է…",
+    "add": "Ավելացնել",
+    "plansLineUpByFeature": "Պլանները համադրվում են հատկության անվանմամբ, ուստի այն նույն կերպ գրեք բոլոր ապրանքներում. «Սկավառակ» և «Սկավառակային տարածք» կդառնան երկու առանձին տողեր։ Մեկ ապրանքի շրջանակում անվանումը կարելի է օգտագործել միայն մեկ անգամ. կրկնությունը մերժվում է, այլ ոչ թե պահպանվում այնտեղ, որտեղ երբեք չի ցուցադրվի։"
+  },
+  "productForm": {
+    "editProduct": "Խմբագրել ապրանքը",
+    "createNewProduct": "Ստեղծել նոր ապրանք",
+    "productType": "Ապրանքի տեսակ",
+    "productGroup": "Ապրանքների խումբ",
+    "selectAGroup": "Ընտրեք խումբը",
+    "eGStarterHosting": "օրինակ՝ Սկսնակ հոսթինգ",
+    "slugUrl": "Slug (URL)",
+    "eGStarterHosting2": "օրինակ՝ starter-hosting",
+    "autoGeneratedFromNameEdit": "Ստեղծվում է ավտոմատ կերպով անվանումից։ Փոխեք՝ վերասահմանելու համար։",
+    "packageName": "Փաթեթի անվանում",
+    "eGStarterProBusiness": "օրինակ՝ starter, pro, business",
+    "hostingPackageNameUsedFor": "Հոսթինգ փաթեթի անվանումը սերվերի մատակարարման համար։ Ոչ պարտադիր։",
+    "serverGroup": "Սերվերների խումբ",
+    "noneAutoSelectByModule": "Ոչ (ավտոմատ ընտրություն ըստ մոդուլի)",
+    "assignToAServerGroup": "Նշանակեք սերվերների խումբ՝ բեռի հավասարակշռմամբ մատակարարման համար։ Ոչ պարտադիր։",
+    "briefProductDescription": "Ապրանքի համառոտ նկարագրություն...",
+    "pricing": "Գներ",
+    "monthly": "Ամսական",
+    "annual": "Տարեկան",
+    "base": "Հիմնական",
+    "aBlankCycleLeavesThe": "Դատարկ պարբերությունը ապրանքը դարձնում է չվաճառվող այդ պարբերության և արժույթի համար։",
+    "hideThisProductFromThe": "Թաքցնել այս ապրանքը պատվերի ձևից",
+    "createProduct": "Ստեղծել ապրանք",
+    "sharedHosting": "Ընդհանուր հոսթինգ",
+    "dedicated": "Հատկացված",
+    "other": "Այլ",
+    "vps": "VPS"
+  },
+  "currencies": {
+    "loadingCurrencies": "Արժույթները բեռնվում են..."
+  },
+  "emailTemplates": {
+    "emailTemplates": "Նամակների ձևանմուշներ",
+    "noTemplatesFound": "Ձևանմուշներ չեն գտնվել։"
+  },
+  "products": {
+    "products": "Ապրանքներ",
+    "manageHostingPlansAndServices": "Գնման համար հասանելի հոսթինգ պլանների և ծառայությունների կառավարում",
+    "createProduct": "Ստեղծել ապրանք",
+    "loadingProducts": "Ապրանքները բեռնվում են...",
+    "group": "Խումբ",
+    "monthly": "Ամսական",
+    "annual": "Տարեկան",
+    "editSpecification": "Խմբագրել սպեցիֆիկացիան",
+    "editProduct": "Խմբագրել ապրանքը",
+    "noProductsFoundCreateYour": "Ապրանքներ չեն գտնվել։ Սկսելու համար ստեղծեք առաջին ապրանքը։",
+    "typeSharedHosting": "Ընդհանուր հոսթինգ",
+    "typeDedicated": "Հատկացված",
+    "typeDomain": "Դոմեյն",
+    "typeOther": "Այլ",
+    "typeVps": "VPS",
+    "typeSsl": "SSL"
+  },
+  "slideForm": {
+    "slides": "Սլայդներ",
+    "loadingSlideData": "Սլայդի տվյալները բեռնվում են...",
+    "generalSettings": "Ընդհանուր կարգավորումներ",
+    "icon": "Պատկերակ",
+    "orTypeMdiIconName": "Կամ մուտքագրեք MDI պատկերակի անունը (օրինակ՝ cloud-check)",
+    "brandColor": "Բրենդի գույն",
+    "image": "Պատկեր",
+    "slidePreview": "Սլայդի նախադիտում",
+    "removeImage": "Հեռացնել պատկերը",
+    "jpegPngWebpSvgMax": "JPEG, PNG, WebP, SVG — առավելագույնը 5 ՄԲ",
+    "orPasteImageUrl": "Կամ տեղադրեք պատկերի URL-ը...",
+    "demoUrl": "Դեմոյի URL",
+    "demoUrlPlaceholder": "https://demo.example.com",
+    "optionalTryDemoButtonLink": "Ոչ պարտադիր հղում սլայդի «Փորձել դեմոն» կոճակի համար",
+    "learnMoreUrl": "«Իմանալ ավելին» URL",
+    "productsExampleOrHttpsExample": "/products/example կամ https://example.com",
+    "optionalSecondaryLinkShownAs": "Ոչ պարտադիր լրացուցիչ «Իմանալ ավելին» հղում սլայդի վրա",
+    "linkedProduct": "Կապված ապրանք",
+    "sortOrder": "Տեսակավորման հերթականություն",
+    "showThisSlideToVisitors": "Ցուցադրել այս սլայդը այցելուներին",
+    "targetAudience": "Թիրախային լսարան",
+    "visibleFrom": "Տեսանելի է սկսած",
+    "noStartDate": "Առանց մեկնարկի ամսաթվի",
+    "visibleUntil": "Տեսանելի է մինչև",
+    "noEndDate": "Առանց ավարտի ամսաթվի",
+    "translations": "Թարգմանություններ",
+    "slideTitle": "Սլայդի վերնագիր",
+    "tagline": "Կարգախոս",
+    "shortSubtitle": "Կարճ ենթավերնագիր",
+    "slideBodyText": "Սլայդի հիմնական տեքստը...",
+    "features": "Առանձնահատկություններ",
+    "removeFeature": "Հեռացնել առանձնահատկությունը",
+    "addFeature": "Ավելացնել առանձնահատկություն",
+    "ctaText": "Կոճակի տեքստ",
+    "getStarted": "Սկսել",
+    "ctaUrl": "Կոճակի URL",
+    "createSlide": "Ստեղծել սլայդ",
+    "unsavedChanges": "Չպահպանված փոփոխություններ",
+    "youHaveUnsavedChangesAre": "Դուք ունեք չպահպանված փոփոխություններ։ Վստա՞հ եք, որ ցանկանում եք հեռանալ։",
+    "leave": "Հեռանալ",
+    "all": "Բոլորը",
+    "guest": "Հյուր",
+    "authenticated": "Մուտք գործած",
+    "hosting": "Հոսթինգ",
+    "globe": "Գլոբուս",
+    "analytics": "Վերլուծություն",
+    "education": "Կրթություն",
+    "property": "Անշարժ գույք",
+    "eCommerce": "Էլեկտրոնային առևտուր",
+    "restaurant": "Ռեստորան",
+    "launch": "Մեկնարկ",
+    "security": "Անվտանգություն",
+    "premium": "Պրեմիում",
+    "mobile": "Բջջային",
+    "design": "Դիզայն",
+    "finance": "Ֆինանսներ",
+    "media": "Մեդիա",
+    "health": "Առողջություն",
+    "pageTitleEdit": "Սլայդի խմբագրում",
+    "pageTitleCreate": "Սլայդի ստեղծում",
+    "featureNumber": "Առանձնահատկություն {number}",
+    "locales": {
+      "en": "Անգլերեն",
+      "ru": "Ռուսերեն",
+      "hy": "Հայերեն"
+    },
+    "notFound": "Սլայդ #{id}-ը չի գտնվել։",
+    "ai": "AI"
+  },
+  "slides": {
+    "slides": "Սլայդներ",
+    "manageHomepageHeroSlidesDrag": "Գլխավոր էջի սլայդների կառավարում — քաշեք՝ հերթականությունը փոխելու համար",
+    "savingOrder": "Հերթականությունը պահպանվում է...",
+    "addSlide": "Ավելացնել սլայդ",
+    "loadingSlides": "Սլայդները բեռնվում են...",
+    "image": "Պատկեր",
+    "audience": "Լսարան",
+    "visibility": "Տեսանելիություն",
+    "slide": "Սլայդ",
+    "editSlide": "Խմբագրել սլայդը",
+    "deleteSlide": "Ջնջել սլայդը",
+    "noSlidesFoundAddYour": "Սլայդներ չեն գտնվել։ Սկսելու համար ավելացրեք առաջին սլայդը։",
+    "deleteSlide2": "Ջնջել սլայդը",
+    "always": "Միշտ",
+    "from": "Սկսած {date}",
+    "until": "Մինչև {date}",
+    "slideNumber": "Սլայդ #{id}",
+    "deleteMessage": "Ջնջե՞լ «{title}»։ Այս գործողությունը հնարավոր չէ չեղարկել։"
+  },
+  "tldConfigForm": {
+    "tldPricing": "TLD գներ",
+    "loadingTldConfiguration": "TLD կարգավորումները բեռնվում են...",
+    "generalSettings": "Ընդհանուր կարգավորումներ",
+    "tld": "TLD",
+    "domainExtensionWithoutTheDot": "Դոմեյնի ընդլայնումն առանց կետի (օրինակ՝ «com», «net», «am»)",
+    "registrarProvider": "Գրանցող պրովայդեր",
+    "costCurrency": "Ինքնարժեքի արժույթ",
+    "currencyUsedByTheRegistrar": "Արժույթ, որով գրանցողը նշում է ինքնարժեքը",
+    "sellCurrency": "Վաճառքի արժույթ",
+    "currencyShownToClientsFor": "Արժույթ, որով մուտքագրվում են վաճառքի գները․ այլ արժույթով վճարող հաճախորդները վճարում են պահպանված փոխարժեքով փոխարկված գումարը",
+    "makeThisTldAvailableFor": "Այս TLD-ն հասանելի դարձնել գնման համար",
+    "sortOrder": "Տեսակավորման հերթականություն",
+    "popularBusinessTech": "հայտնի, բիզնես, տեխնոլոգիա",
+    "commaSeparatedCategoryTagsFor": "Կատեգորիաների թեգեր ստորակետով՝ ֆիլտրման համար",
+    "registrationPricing": "Գրանցման գներ",
+    "period": "Ժամանակահատված",
+    "costCostsymbol": "Ինքնարժեք ({costSymbol})",
+    "sellSellsymbol": "Վաճառք ({sellSymbol})",
+    "margin": "Մարժա",
+    "years": "Տարի",
+    "transferPricing": "Տրանսֆերի գներ",
+    "renewalPricing": "Երկարաձգման գներ",
+    "createTld": "Ստեղծել TLD",
+    "unsavedChanges": "Չպահպանված փոփոխություններ",
+    "youHaveUnsavedChangesAre": "Դուք ունեք չպահպանված փոփոխություններ։ Վստա՞հ եք, որ ցանկանում եք հեռանալ։",
+    "leave": "Հեռանալ",
+    "tldIsRequired": "TLD-ն պարտադիր է։",
+    "addTld": "Ավելացնել TLD",
+    "editTld": "Խմբագրել TLD",
+    "notFound": "TLD կոնֆիգուրացիա #{id}-ը չի գտնվել։"
+  },
+  "tldConfigs": {
+    "tldPricing": "TLD գներ",
+    "configureDomainExtensionPricingAnd": "Դոմեյնային ընդլայնումների գների և պրովայդերների կարգավորում",
+    "importing": "Ներմուծվում է...",
+    "import": "Ներմուծում",
+    "nameAm": "Name.am",
+    "namecheap": "Namecheap",
+    "syncing": "Համաժամեցվում է...",
+    "syncPrices": "Համաժամեցնել գները",
+    "addTld": "Ավելացնել TLD",
+    "searchTlds": "TLD-ների որոնում...",
+    "loadingTldConfigurations": "TLD կարգավորումները բեռնվում են...",
+    "tld": "TLD",
+    "provider": "Պրովայդեր",
+    "cost1yr": "Ինքնարժեք (1 տարի)",
+    "sell1yr": "Վաճառք (1 տարի)",
+    "margin": "Մարժա",
+    "lastSynced": "Վերջին համաժամեցում",
+    "editTld": "Խմբագրել TLD-ն",
+    "deleteTld": "Ջնջել TLD-ն",
+    "noTldConfigurationsFoundAdd": "TLD կարգավորումներ չեն գտնվել։ Ավելացրեք առաջին TLD-ն կամ ներմուծեք պրովայդերից։",
+    "showingValueValue2OfLength": "Ցուցադրված է {value}–{value2}՝ {length} TLD-ից",
+    "deleteTldConfiguration": "Ջնջել TLD կարգավորումը",
+    "allProviders": "Բոլոր պրովայդերները",
+    "allStatus": "Բոլոր կարգավիճակները",
+    "priceSyncComplete": "Գների համաժամեցումն ավարտվեց։",
+    "deleteMessage": "Ջնջե՞լ «.{tld}» TLD կոնֆիգուրացիան։ Այս գործողությունը հնարավոր չէ չեղարկել։",
+    "importComplete": "Ներմուծումն ավարտված է. ավելացվել է {imported}, թարմացվել է {updated}։",
+    "never": "Երբեք"
+  }
+}

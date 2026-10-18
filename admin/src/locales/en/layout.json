@@ -1,0 +1,11 @@
+{
+  "emailVerificationBanner": {
+    "verifyYourEmail": "Verify Your Email",
+    "pleaseCheckYourInboxAnd": "Please check your inbox and click the verification link to activate your admin account. You won't be able to use the admin panel until your email is verified.",
+    "didnTReceiveTheEmail": "Didn't receive the email? Check your spam folder.",
+    "resend": "Resend the email",
+    "resent": "Verification email sent."
+  },
+  "menu": "Menu",
+  "navigation": "Main navigation"
+}

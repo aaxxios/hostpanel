@@ -7,8 +7,26 @@
  * produces it.
  */
 
+/** Closed set of sign-in mechanisms a deployment can run. */
+export const AuthMode = {
+  /** Accounts belong to the sign-on service. */
+  Sso: 'sso',
+  /** The deployment owns its accounts (standalone install). */
+  Local: 'local',
+} as const
+
 /** Which sign-in mechanism a deployment runs. */
-export type AuthMode = 'sso' | 'local'
+export type AuthMode = (typeof AuthMode)[keyof typeof AuthMode]
+
+/** Closed set of results of a sign-in attempt, as the auth store reports them. */
+export const SignInResult = {
+  /** A session now exists. */
+  Done: 'done',
+  /** An authenticator code is still needed. */
+  Totp: 'totp',
+  /** The API rejected the attempt; the sentence is in the store's `error`. */
+  Failed: 'failed',
+} as const
 
 /** Body of `GET /api/auth/mode`. */
 export interface AuthModeResponse {
@@ -70,3 +88,17 @@ export interface TwoFactorLoginResponse {
   /** Lifetime of {@link accessToken} in seconds. */
   expiresIn: number
 }
+
+/** One of the {@link SignInResult} values. */
+export type SignInResult = (typeof SignInResult)[keyof typeof SignInResult]
+
+/** Closed set of how far a sign-out reaches. */
+export const LogoutScope = {
+  /** Ends this browser's session only. */
+  This: 'this',
+  /** Ends every session of the account. */
+  All: 'all',
+} as const
+
+/** One of the {@link LogoutScope} values. */
+export type LogoutScope = (typeof LogoutScope)[keyof typeof LogoutScope]

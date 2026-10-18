@@ -3,7 +3,18 @@
  */
 
 /** Quote stage values. */
-export type QuoteStage = 'Draft' | 'Delivered' | 'OnHold' | 'Accepted' | 'Lost' | 'Expired' | 'Dead'
+export const QuoteStage = {
+  Draft: 'Draft',
+  Delivered: 'Delivered',
+  OnHold: 'OnHold',
+  Accepted: 'Accepted',
+  Lost: 'Lost',
+  Expired: 'Expired',
+  Dead: 'Dead',
+} as const
+
+/** One of the {@link QuoteStage} values. */
+export type QuoteStage = (typeof QuoteStage)[keyof typeof QuoteStage]
 
 /** Quote list item returned by the list endpoint. */
 export interface QuoteListItem {
@@ -69,4 +80,54 @@ export interface Quote {
   adminNotes?: string
   /** Line items on the quote. */
   items: QuoteItem[]
+}
+
+/** One line of a quote being created. */
+export interface QuoteItemInput {
+  /** Number of units. */
+  quantity: number
+  /** Human-readable charge description. */
+  description: string
+  /** Price per unit. */
+  unitPrice: number
+  /** Discount percentage (0-100). */
+  discountPercent: number
+  /** Whether the item is subject to tax. */
+  taxed: boolean
+}
+
+/** One line of a quote being updated; `id` is absent for a new line. */
+export interface QuoteItemUpdate extends QuoteItemInput {
+  /** Existing line item id. */
+  id?: number
+}
+
+/** Fields the quote create and update bodies share. */
+export interface QuoteFields {
+  /** Quote subject line. */
+  subject: string
+  /** Stage of the quote. */
+  stage: QuoteStage
+  /** ISO 8601 validity deadline. */
+  validUntil: string
+  /** Proposal/sales text sent to the client. */
+  proposalText?: string
+  /** Notes visible to the customer. */
+  customerNotes?: string
+  /** Internal admin-only notes. */
+  adminNotes?: string
+}
+
+/** Body of `POST /billing/quotes`. */
+export interface CreateQuotePayload extends QuoteFields {
+  /** The client the quote is for. */
+  clientId: number
+  /** Line items. */
+  items: QuoteItemInput[]
+}
+
+/** Body of `PUT /quotes/{id}`. */
+export interface UpdateQuotePayload extends QuoteFields {
+  /** Line items. */
+  items: QuoteItemUpdate[]
 }

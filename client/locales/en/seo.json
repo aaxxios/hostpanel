@@ -1,54 +1,79 @@
 {
   "seo": {
     "home": {
-      "title": "Innovayse - Digital Agency | Development, SEO, PPC & SaaS Products",
-      "h1": "Web & Mobile Development, SEO and PPC Services",
-      "description": "Full-cycle digital agency delivering innovative solutions in web development, SEO, PPC advertising, and ready-to-use SaaS products. 8+ years of experience, 150+ projects delivered.",
-      "keywords": "digital agency, web development, mobile app development, SEO services, PPC advertising, Google Ads, Yandex Direct, SaaS products, e-commerce development"
+      "title": "{site} - Web Hosting, Domains and Servers {'|'} Client Portal",
+      "h1": "Web hosting, domains and servers with a self-service client portal",
+      "description": "{site} offers web hosting, domain registration, VPS and dedicated servers with automatic setup, online billing and a client portal to manage services, invoices and support.",
+      "keywords": "web hosting, domain registration, VPS, dedicated servers, SSL certificates, client portal, online billing, hosting control panel"
     },
     "contact": {
-      "title": "Contact Us - Get in Touch | Innovayse",
-      "description": "Contact Innovayse for digital solutions. Located in Yerevan, Armenia. Email: contact{'@'}yourdomain.com, Phone: +1 000 000 0000. Free consultation available.",
-      "keywords": "contact innovayse, digital agency contact, web development inquiry, SEO consultation, PPC agency contact, Yerevan Armenia"
+      "title": "Contact Us - Get in Touch {'|'} {site}",
+      "description": "Contact {site} for help with hosting, domains, servers or billing. Email: contact{'@'}yourdomain.com, Phone: +1 000 000 0000.",
+      "keywords": "contact {site}, hosting support, billing questions, domain help, sales inquiry"
     },
     "products": {
-      "title": "White-label SaaS Products and Business Solutions | Innovayse",
-      "description": "Ready-to-launch white-label SaaS platforms for your business: SmartLearn LMS, PropSystem CRM, ShopKit Pro, and more. Scale fast with our enterprise-grade solutions.",
-      "keywords": "SaaS products, white label software, business automation, CRM systems, analytics, e-commerce, LMS platforms, SaaS development"
+      "title": "Hosting, Server and Domain Services {'|'} {site}",
+      "description": "Browse the hosting plans, servers, domains and add-on services offered by {site}. Order online and manage everything from your client portal.",
+      "keywords": "hosting services, VPS, dedicated servers, domains, SSL certificates, add-on services, order online"
     },
     "faq": {
-      "title": "FAQ - Frequently Asked Questions | Innovayse",
-      "description": "Find answers to frequently asked questions about Innovayse services, products, development, SEO, PPC, and SaaS solutions.",
-      "keywords": "FAQ, questions, web development, SEO, PPC, SaaS, support, pricing, services, digital agency help"
+      "title": "FAQ - Frequently Asked Questions {'|'} {site}",
+      "description": "Find answers to frequently asked questions about {site} hosting, domains, servers, billing and your client account.",
+      "keywords": "FAQ, hosting questions, domain questions, billing, invoices, support, client account"
     },
     "faqCategory": {
       "general": {
-        "title": "General FAQ - Common Questions | Innovayse",
+        "title": "General FAQ - Common Questions {'|'} {site}",
         "h1": "General Questions",
-        "description": "Answers to the most common general questions about Innovayse — who we are, how we work, and what to expect.",
-        "keywords": "general FAQ, about innovayse, how we work, digital agency questions, getting started"
+        "description": "Answers to the most common questions about ordering, billing, your client account and support.",
+        "keywords": "general FAQ, ordering, billing, client account, support, getting started"
       },
       "products": {
-        "title": "SaaS Products FAQ - Software & Platform Questions | Innovayse",
-        "h1": "Product Questions",
-        "description": "Answers to questions about our SaaS products — pricing, white-label options, setup, and support.",
-        "keywords": "SaaS FAQ, software products questions, white label, SmartLearn, PropSystem, ShopKit, product pricing"
+        "title": "Hosting and Services FAQ - Plans and Setup Questions {'|'} {site}",
+        "h1": "Hosting and Service Questions",
+        "description": "Answers to questions about hosting plans, domains, servers, pricing, setup and renewals.",
+        "keywords": "hosting FAQ, domain FAQ, server questions, pricing, setup, renewals"
       }
     },
     "hosting": {
-      "title": "Web Hosting Plans - Fast & Reliable Hosting | Innovayse",
-      "description": "Choose the perfect web hosting plan for your website. SSD storage, free SSL certificate, 99.9% uptime guarantee, and 24/7 expert support. Affordable plans starting today.",
-      "keywords": "web hosting, SSD hosting, cloud hosting, cheap hosting, web hosting plans, managed hosting, SSL hosting, Armenia hosting"
+      "title": "Web Hosting Plans - Fast & Reliable Hosting {'|'} {site}",
+      "description": "Choose the right web hosting plan for your website. SSD storage, free SSL certificate, 99.9% uptime guarantee, and 24/7 expert support. Order online and get set up automatically.",
+      "keywords": "web hosting, SSD hosting, cloud hosting, web hosting plans, managed hosting, SSL hosting, hosting control panel"
     },
     "hostingPlan": {
-      "title": "Hosting Plan Details | Innovayse",
+      "named": "{name} - Web Hosting Plan {'|'} {site}",
+      "title": "Hosting Plan Details {'|'} {site}",
       "description": "Get detailed information about our hosting plan. SSD storage, free SSL, high performance, and 24/7 support included.",
       "keywords": "hosting plan, web hosting, SSD storage, SSL certificate, managed hosting"
     },
     "domains": {
-      "title": "Domain Registration & Transfer | Innovayse",
-      "description": "Register or transfer your domain name at competitive prices. Search from hundreds of TLDs including .com, .net, .org, .am, and more. Free WHOIS privacy included.",
-      "keywords": "domain registration, domain transfer, buy domain, domain name search, cheap domains, .com domain, .am domain, WHOIS privacy"
+      "title": "Domain Registration & Transfer {'|'} {site}",
+      "description": "Register or transfer your domain name at competitive prices. Search hundreds of TLDs including .com, .net and .org, and manage DNS and renewals from your client portal.",
+      "keywords": "domain registration, domain transfer, buy domain, domain name search, domain renewal, DNS management, WHOIS privacy"
+    },
+    "legal": {
+      "aup": {
+        "title": "Acceptable Use Policy {'|'} {site}",
+        "description": "Understand the acceptable use policies for {site} hosting, servers and domain services."
+      },
+      "privacy": {
+        "title": "Privacy Policy {'|'} {site}",
+        "description": "Learn how {site} collects, uses, and protects your personal information. Read our Privacy Policy for details on data handling practices."
+      },
+      "refund": {
+        "title": "Refund & Cancellation Policy {'|'} {site}",
+        "description": "Understand the refund and cancellation policies for {site} hosting, server and domain services."
+      },
+      "terms": {
+        "title": "Terms of Service {'|'} {site}",
+        "description": "Read our Terms of Service to understand the rules and guidelines for using {site} services."
+      },
+      "cookies": {
+        "title": "Cookie Policy {'|'} {site}",
+        "description": "Learn how {site} uses cookies to enhance your browsing experience. Understand what cookies are, how we use them, and how you can manage your cookie preferences.",
+        "ogDescription": "Learn about how {site} uses cookies on our website and how you can manage your preferences.",
+        "twitterDescription": "Understand how we use cookies on our website"
+      }
     }
   }
 }

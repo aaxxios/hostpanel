@@ -1,0 +1,90 @@
+<script setup lang="ts">
+/**
+ * Strip shown at the top of the layout while the deployment runs in demo mode: the "Demo mode"
+ * label, the time left until the next data reset and the note that data is reset.
+ *
+ * Renders nothing when demo mode is off. The countdown ticks once a minute.
+ */
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useDemoStore } from '@/stores/demo'
+import UiAlert from '@/components/ui/UiAlert.vue'
+import UiBadge from '@/components/ui/UiBadge.vue'
+import UiStack from '@/components/ui/UiStack.vue'
+import UiText from '@/components/ui/UiText.vue'
+
+/** Translation function. */
+const { t } = useI18n()
+
+/** Demo store: whether demo mode is on and when the data resets. */
+const demo = useDemoStore()
+
+/** Milliseconds per minute. */
+const MINUTE_MS = 60_000
+
+/** Current time in epoch milliseconds, refreshed every minute so the countdown moves. */
+const now = ref(Date.now())
+
+/** Handle of the countdown timer, cleared on unmount. */
+let timer: ReturnType<typeof setInterval> | undefined
+
+/** Starts the minute tick. */
+onMounted(() => {
+  timer = setInterval(() => {
+    now.value = Date.now()
+  }, MINUTE_MS)
+})
+
+/** Stops the minute tick. */
+onBeforeUnmount(() => {
+  if (timer !== undefined) {
+    clearInterval(timer)
+  }
+})
+
+/** Whole minutes left until the reset, or null when no reset is scheduled. */
+const minutesLeft = computed<number | null>(() => {
+  if (demo.nextResetAt === null) {
+    return null
+  }
+  const target = Date.parse(demo.nextResetAt)
+  if (Number.isNaN(target)) {
+    return null
+  }
+  return Math.max(0, Math.ceil((target - now.value) / MINUTE_MS))
+})
+
+/** Reloads the demo description once the countdown hits zero, so the next reset time replaces the stale one. */
+watch(minutesLeft, (minutes) => {
+  if (minutes === 0 && demo.enabled) {
+    void demo.load(true)
+  }
+})
+
+/** The countdown as a sentence fragment ("1h 5m", "12m", "less than a minute"), or null. */
+const timeLeft = computed<string | null>(() => {
+  const minutes = minutesLeft.value
+  if (minutes === null) {
+    return null
+  }
+  if (minutes === 0) {
+    return t('demo.banner.soon')
+  }
+  const hours = Math.floor(minutes / 60)
+  return hours > 0
+    ? t('demo.banner.hoursMinutes', { hours, minutes: minutes % 60 })
+    : t('demo.banner.minutes', { minutes })
+})
+</script>
+
+<template>
+  <UiAlert v-if="demo.enabled" variant="info" data-testid="demo-banner">
+    <UiStack direction="row" gap="sm" align="center" wrap>
+      <UiBadge tone="info" small data-testid="demo-banner-label">{{ t('demo.banner.label') }}</UiBadge>
+      <UiText v-if="timeLeft !== null" size="sm" data-testid="demo-banner-countdown">
+        {{ t('demo.banner.resetsIn', { time: timeLeft }) }}
+      </UiText>
+      <UiText size="sm" tone="secondary">{{ t('demo.banner.dataResets') }}</UiText>
+    </UiStack>
+  </UiAlert>
+</template>

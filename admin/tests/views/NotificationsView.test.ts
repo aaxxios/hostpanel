@@ -1,0 +1,41 @@
+/**
+ * Mount tests of NotificationsView (the notification feed): it renders what the API sent, shows the empty state where it
+ * has one, and shows the API's sentence when the load is refused.
+ */
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import NotificationsView from '@/views/NotificationsView.vue'
+import { mountRoutedSettled } from '../helpers/mount'
+import { json, problem } from '../helpers/fetch'
+import { stubRoutes } from '../helpers/routes'
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('NotificationsView', () => {
+  it('links each event to the record it is about', async () => {
+    stubRoutes({
+      'GET /api/admin/dashboard/activity': () => json([
+        { type: 'ClientRegistered', message: 'Ada signed up', occurredAt: '2026-05-01T09:00:00Z', entityId: 7 },
+      ]),
+    })
+    const wrapper = await mountRoutedSettled(NotificationsView, '/notifications')
+
+    expect(wrapper.get('[data-testid="notification-0"]').attributes('href')).toBe('/clients/7')
+    expect(wrapper.get('[data-testid="notification-0"]').text()).toContain('Ada signed up')
+  })
+
+  it('shows the empty state when the feed is empty', async () => {
+    stubRoutes({ 'GET /api/admin/dashboard/activity': () => json([]) })
+    const wrapper = await mountRoutedSettled(NotificationsView, '/notifications')
+
+    expect(wrapper.get('[data-testid="notifications-empty"]').text()).toContain('No notifications')
+  })
+
+  it('shows the API sentence when the load is refused', async () => {
+    stubRoutes({ 'GET /api/admin/dashboard/activity': () => problem('Not allowed.', 403) })
+    const wrapper = await mountRoutedSettled(NotificationsView, '/notifications')
+
+    expect(wrapper.get('[data-testid="notifications-error"]').text()).toContain('Not allowed.')
+  })
+})

@@ -9,20 +9,28 @@
  * @module composables/apis/useClientApi
  */
 
-import { apiFetch, useApi } from '~/composables/useApi'
+import { apiFetch } from '~/composables/useApi'
+import type { ClientEmail } from '~/types/clientemail'
+import type { ClientEmailSummary } from '~/types/clientemailsummary'
+import type { TeamMember } from '~/types/teammember'
+import type { AccountContact } from '~/types/accountcontact'
+import type { AccountContactInput } from '~/types/accountcontactinput'
 import type { ClientUser } from '~/types/clientuser'
 import type { ClientService } from '~/types/clientservice'
 import type { ClientInvoice } from '~/types/clientinvoice'
 import type { ClientDomain } from '~/types/clientdomain'
 import type { ClientTicket } from '~/types/clientticket'
+import type { CancellationStatus } from '~/types/cancellationstatus'
 import type { CancellationType } from '~/types/cancellationtype'
+import type { HostingInfo } from '~/types/hostinginfo'
+import type { ServiceDetail } from '~/types/servicedetail'
 
 /**
  * The `/api/portal/client` surface, one function per endpoint.
  *
  * @returns The client-area endpoint functions.
  */
-export function useClientApi() {
+export const useClientApi = () => {
   /**
    * Reads the signed-in client's profile.
    *
@@ -92,10 +100,11 @@ export function useClientApi() {
   /**
    * Reads the people who may sign in to this client account.
    *
-   * @returns The `useApi()` handle for the user list, defaulting to an empty list.
+   * @returns The team members.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadUsers = <T>() =>
-    useApi<T[]>('/api/portal/client/users', { default: () => [] })
+  const fetchUsers = (): Promise<TeamMember[]> =>
+    apiFetch<TeamMember[]>('/api/portal/client/users')
 
   /**
    * Invites somebody to this client account.
@@ -118,32 +127,24 @@ export function useClientApi() {
     apiFetch(`/api/portal/client/users/${id}`, { method: 'DELETE' })
 
   /**
-   * Reads the account's sub-contacts.
-   *
-   * @returns The `useApi()` handle for the contact list, defaulting to an empty list.
-   */
-  const loadContacts = <T>() =>
-    useApi<T[]>('/api/portal/client/contacts', { default: () => [] })
-
-  /**
    * Adds a sub-contact.
    *
-   * @param contact - The contact's details.
+   * @param contact - The contact's details, in the backend's `AddContactCommand` shape.
    * @returns Whatever the endpoint answers with.
    * @throws Whatever `apiFetch` throws.
    */
-  const createContact = (contact: Record<string, unknown>): Promise<unknown> =>
+  const createContact = (contact: AccountContactInput): Promise<unknown> =>
     apiFetch('/api/portal/client/contacts', { method: 'POST', body: contact })
 
   /**
    * Updates a sub-contact.
    *
    * @param id - The contact to update.
-   * @param contact - The fields to change.
+   * @param contact - The whole contact, in the backend's `UpdateContactCommand` shape (an update replaces it).
    * @returns Whatever the endpoint answers with.
    * @throws Whatever `apiFetch` throws.
    */
-  const updateContact = (id: string | number, contact: Record<string, unknown>): Promise<unknown> =>
+  const updateContact = (id: number, contact: AccountContactInput): Promise<unknown> =>
     apiFetch(`/api/portal/client/contacts/${id}`, { method: 'PUT', body: contact })
 
   /**
@@ -153,30 +154,8 @@ export function useClientApi() {
    * @returns Whatever the endpoint answers with.
    * @throws Whatever `apiFetch` throws.
    */
-  const removeContact = (id: string | number): Promise<unknown> =>
+  const removeContact = (id: number): Promise<unknown> =>
     apiFetch(`/api/portal/client/contacts/${id}`, { method: 'DELETE' })
-
-  /**
-   * Reads the billing addresses saved on the account.
-   *
-   * @returns Every saved address.
-   * @throws Whatever `apiFetch` throws.
-   */
-  const fetchAddresses = <T>(): Promise<T[]> =>
-    apiFetch<T[]>('/api/portal/client/addresses')
-
-  /**
-   * Saves a new billing address.
-   *
-   * @param address - The address fields.
-   * @returns The new address's id, so the caller can select it.
-   * @throws Whatever `apiFetch` throws.
-   */
-  const createAddress = (address: Record<string, unknown>): Promise<{ addressid: string }> =>
-    apiFetch<{ addressid: string }>('/api/portal/client/addresses', {
-      method: 'POST',
-      body: address
-    })
 
   /**
    * Reads the sub-contacts as a one-shot call.
@@ -184,47 +163,57 @@ export function useClientApi() {
    * @returns Every sub-contact on the account.
    * @throws Whatever `apiFetch` throws.
    */
-  const fetchContacts = <T>(): Promise<T[]> =>
-    apiFetch<T[]>('/api/portal/client/contacts')
+  const fetchContacts = (): Promise<AccountContact[]> =>
+    apiFetch<AccountContact[]>('/api/portal/client/contacts')
 
   /**
    * Reads the mail the system has sent this account.
    *
-   * @returns The `useApi()` handle for the message list, defaulting to an empty list.
+   * @returns The message list.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadEmails = <T>() =>
-    useApi<T[]>('/api/portal/client/emails', { default: () => [] })
+  const fetchEmails = (): Promise<ClientEmailSummary[]> =>
+    apiFetch<ClientEmailSummary[]>('/api/portal/client/emails')
 
   /**
    * Reads one of the messages the system sent this account.
    *
-   * @param id - Message id; a getter so the page re-reads when the route changes.
-   * @returns The `useApi()` handle for the message.
+   * @param id - Message id.
+   * @returns The message.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadEmail = <T>(id: () => string) =>
-    useApi<T>(() => `/api/portal/client/emails/${id()}`)
+  const fetchEmail = (id: string): Promise<ClientEmail> =>
+    apiFetch<ClientEmail>(`/api/portal/client/emails/${id}`)
 
   /**
    * Reads one hosting service.
    *
-   * @param id - Service id; a getter so the page re-reads when the route changes.
-   * @returns The `useApi()` handle for the service.
+   * @param id - Service id.
+   * @returns The service.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadService = <T>(id: () => string) =>
-    useApi<T>(() => `/api/portal/client/services/${id()}`)
+  const fetchService = (id: string): Promise<ServiceDetail> =>
+    apiFetch<ServiceDetail>(`/api/portal/client/services/${id}`)
 
   /**
-   * Reads a sub-resource of one hosting service — `hosting-info`,
-   * `cancellation-status` and the like.
+   * Reads the nameservers and certificate of one hosting service.
    *
-   * @param id - Service id; a getter so the page re-reads when the route changes.
-   * @param resource - Path segment under the service, e.g. "hosting-info".
-   * @param defaultValue - What `data` holds before the first response. These sub-resources
-   * are all optional extras, so a page renders "not available" rather than guarding on null.
-   * @returns The `useApi()` handle for that sub-resource.
+   * @param id - Service id.
+   * @returns The hosting info.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadServiceResource = <T>(id: () => string, resource: string, defaultValue?: () => T) =>
-    useApi<T>(() => `/api/portal/client/services/${id()}/${resource}`, { default: defaultValue })
+  const fetchHostingInfo = (id: string): Promise<HostingInfo> =>
+    apiFetch<HostingInfo>(`/api/portal/client/services/${id}/hosting-info`)
+
+  /**
+   * Reads whether a cancellation is pending on one hosting service.
+   *
+   * @param id - Service id.
+   * @returns The cancellation status.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const fetchCancellationStatus = (id: string): Promise<CancellationStatus> =>
+    apiFetch<CancellationStatus>(`/api/portal/client/services/${id}/cancellation-status`)
 
   /**
    * Reads the invoices raised for one hosting service.
@@ -296,20 +285,18 @@ export function useClientApi() {
     fetchInvoices,
     fetchDomains,
     fetchTickets,
-    loadUsers,
+    fetchUsers,
     inviteUser,
     removeUser,
-    loadContacts,
     fetchContacts,
     createContact,
     updateContact,
     removeContact,
-    fetchAddresses,
-    createAddress,
-    loadEmails,
-    loadEmail,
-    loadService,
-    loadServiceResource,
+    fetchEmails,
+    fetchEmail,
+    fetchService,
+    fetchHostingInfo,
+    fetchCancellationStatus,
     fetchServiceInvoices,
     changeServicePassword,
     cancelService,

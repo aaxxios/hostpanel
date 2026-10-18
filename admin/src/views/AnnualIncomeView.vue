@@ -1,0 +1,56 @@
+<script setup lang="ts">
+/**
+ * Annual income report: income per month of the chosen year, as a bar chart and a table.
+ */
+import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import ReportChartCard from '@/components/reports/ReportChartCard.vue'
+import ReportPage from '@/components/reports/ReportPage.vue'
+import ReportPeriodFilter from '@/components/reports/ReportPeriodFilter.vue'
+import ReportTable from '@/components/reports/ReportTable.vue'
+import { useReport } from '@/composables/useReport'
+import { formatReportAmount } from '@/lib/money'
+import { reportPath } from '@/lib/reportsQuery'
+import { currentYear } from '@/lib/reportsPeriod'
+import { ReportCellFormat } from '@/types/reportcolumn'
+import type { ReportColumn } from '@/types/reportcolumn'
+import type { ReportMonthIncome } from '@/types/reportmonthincome'
+import { UiChartType } from '@/utils/ui/chart'
+import type { UiChartSeries } from '@/utils/ui/chart'
+import { UiAlign } from '@/utils/ui/table'
+
+const { t } = useI18n()
+
+/** The year being reported. */
+const year = ref(currentYear())
+
+const { data, load } = useReport<ReportMonthIncome[]>(() => reportPath('/reports/annual-income', { year: year.value }))
+
+// Picking another year reloads at once, as the dropdown has always done.
+watch(year, load)
+
+/** Months with their income; empty until loaded. */
+const rows = computed<ReportMonthIncome[]>(() => data.value ?? [])
+
+/** Table columns. */
+const columns = computed<ReportColumn[]>(() => [
+  { key: 'month', label: t('shared.month') },
+  { key: 'amount', label: t('shared.amount'), align: UiAlign.Right, format: ReportCellFormat.Money },
+])
+
+/** Chart labels. */
+const labels = computed<string[]>(() => rows.value.map(row => row.month))
+
+/** Chart series. */
+const series = computed<UiChartSeries[]>(() => [{ label: t('reports.annualIncome.income'), data: rows.value.map(row => row.amount) }])
+</script>
+
+<template>
+  <ReportPage :title="t('reports.annualIncome.annualIncomeReport')" :description="t('reports.annualIncome.totalIncomePerMonthFor')">
+    <template #filters>
+      <ReportPeriodFilter v-model:year="year" @generate="load" />
+    </template>
+    <ReportChartCard :type="UiChartType.Bar" :labels="labels" :series="series" :value-formatter="formatReportAmount" />
+    <ReportTable :columns="columns" :rows="rows" row-key="month" />
+  </ReportPage>
+</template>

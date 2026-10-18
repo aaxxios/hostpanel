@@ -16,7 +16,7 @@ body:
         - Admin panel
         - Billing / payments
         - Domains
-        - Provisioning (CWP, cPanel)
+        - Provisioning (control panels)
         - Installation / Docker
         - API
         - Other

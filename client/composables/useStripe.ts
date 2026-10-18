@@ -5,10 +5,13 @@
  * from runtime config. The same promise is reused across all callers so
  * the Stripe.js script is loaded at most once.
  *
- * @returns Object with {@link getStripe} function that resolves to a Stripe instance.
+ * @module composables/useStripe
  */
-import { loadStripe, type Stripe } from '@stripe/stripe-js'
 
+import { loadStripe } from '@stripe/stripe-js'
+import type { Stripe } from '@stripe/stripe-js'
+
+/** The one Stripe.js load shared by every caller; null until the first `getStripe()`. */
 let stripePromise: Promise<Stripe | null> | null = null
 
 /**
@@ -16,7 +19,7 @@ let stripePromise: Promise<Stripe | null> | null = null
  *
  * @returns Object containing the getStripe method.
  */
-export function useStripe() {
+export const useStripe = () => {
   const config = useRuntimeConfig()
 
   /**
@@ -24,7 +27,7 @@ export function useStripe() {
    *
    * @returns Promise resolving to the Stripe instance, or null if the key is missing.
    */
-  function getStripe(): Promise<Stripe | null> {
+  const getStripe = (): Promise<Stripe | null> => {
     if (!stripePromise) {
       const key = config.public.stripePublishableKey as string
       if (!key) {

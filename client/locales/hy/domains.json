@@ -12,9 +12,7 @@
     "invalidDomain": "Մուտքագրեք դոմեն ընդլայնումով (օր.՝ mysite.com)",
     "tabRegister": "Գրանցում",
     "tabTransfer": "Փոխանցում",
-    "transferPlaceholder": "Մուտքագրեք փոխանցվող դոմենը (օր.՝ mysite.com)",
     "transferBtn": "Ավելացնել զամբյուղ",
-    "transferNow": "Փոխանցել հիմա",
     "takenTransfer": "Փոխանցել այս դոմենը",
     "transferNote": "* Բացառությամբ որոշ TLD-ների և վերջերս երկարաձգված դոմենների",
     "transferFormTitle": "Մեկ դոմենի փոխանցում",
@@ -32,7 +30,6 @@
     },
     "pricing": {
       "title": "Դոմենների գներ",
-      "subtitle": "Մրցունակ գներ բոլոր հանրաճանաչ դոմենի ընդլայնումների համար",
       "extension": "Դոմեն",
       "register": "Նոր գին",
       "renew": "Երկարաձգում",
@@ -51,10 +48,8 @@
         "other": "Այլ"
       },
       "noResults": "Այս կատեգորիայում ընդլայնումներ չեն գտնվել։",
-      "showAll": "Ցուցադրել բոլոր {count} ընդլայնումները",
-      "showLess": "Ծալել",
-      "action": "Գործողություն",
-      "registerNow": "Գրանցել"
+      "registerNow": "Գրանցել",
+      "notAvailable": "Հասանելի չէ"
     },
     "promoHostingTitle": "Ավելացնել հոսթինգ",
     "promoHostingSubtitle": "Ընտրեք հոսթինգ պակետ",
@@ -66,6 +61,8 @@
     "promoTransferNote": "* Բացառությամբ որոշ TLD-ների և վերջերս երկարաձգված դոմենների",
     "tldNotSupported": "Այս TLD-ն հասանելի չէ գրանցման համար",
     "alreadyInCart": "Արդեն զամբյուղում է",
-    "currencyMismatch": "Այս դոմենի գինը նշված է արժույթով, որով դուք ներկայումս չեք վճարում։"
+    "transferEppPlaceholder": "EPP կոդ / Auth կոդ",
+    "transferDomainPlaceholder": "example.com",
+    "years": "{n} տարի | {n} տարի"
   }
 }

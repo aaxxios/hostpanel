@@ -1,0 +1,8 @@
+{
+  "servicesList": {
+    "services": "Ծառայություններ",
+    "viewAndManageAllClient": "Հաճախորդների բոլոր հոսթինգ ծառայությունների դիտում և կառավարում",
+    "totalcountServiceValue": "Ծառայություններ՝ {totalCount}",
+    "noServicesFound": "Ծառայություններ չեն գտնվել"
+  }
+}

@@ -3,15 +3,11 @@
     "makePayment": "Կատարել Վճարում",
     "invoiceNum": "Հաշիվ-ապրանքագիր #{id}",
     "paymentMethod": "Վճարման Եղանակ",
-    "payByCardInecobank": "Վճարել քարտով (Inecobank)",
     "enterCardBelow": "Մուտքագրեք Նոր Քարտի Տվյալներ",
     "newCard": "Մուտքագրել Նոր Քարտ",
     "cardNumber": "Քարտի Համարը",
     "expiryDate": "Վավերականության Ժամկետ",
     "cvv": "CVV/CVC2",
-    "whereIsFindThis": "Որտե՞ղ գտնել",
-    "billingAddress": "Վճարման Հասցե",
-    "addNewBillingAddress": "Ավելացնել նոր հասցե",
     "cardDescription": "Քարտի Անվանում",
     "cardDescriptionPlaceholder": "Մուտքագրեք քարտի անվանումը (Ըստ ցանկության)",
     "submitPayment": "Ուղարկել Վճարումը",
@@ -21,7 +17,10 @@
     "alreadyPaid": "Այս հաշիվ-ապրանքագիրն արդեն վճարված է։",
     "viewInvoice": "Դիտել Հաշիվ-ապրանքագիրը",
     "paymentSuccess": "Վճարումը հաջողությամբ կատարվեց!",
-    "paymentFailed": "Վճարումը ձախողվեց։ Փորձեք կրկին։",
-    "securityNotice": "Ձեր մուտքագրած բոլոր տվյալները փոխանցվում են կոդավորված ձևով՝ խարդախությունից պաշտպանվելու համար"
+    "securityNotice": "Ձեր մուտքագրած բոլոր տվյալները փոխանցվում են կոդավորված ձևով՝ խարդախությունից պաշտպանվելու համար",
+    "payByCardHosted": "Վճարել քարտով",
+    "cardNumberPlaceholder": "1234 1234 1234 1234",
+    "expiryPlaceholder": "ԱԱ / ՏՏ",
+    "cvvPlaceholder": "CVC"
   }
 }

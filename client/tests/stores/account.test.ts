@@ -1,0 +1,355 @@
+/**
+ * Tests for `stores/account.ts`.
+ *
+ * The store, not the account page, owns every loading flag and refusal sentence, so these
+ * assertions pin the contract the page renders from.
+ *
+ * @module tests/stores/account.test
+ */
+
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { ref } from 'vue'
+import { makeContactInput } from '~/tests/helpers/accountContact'
+
+/** Mocked client endpoints, re-created for every test. */
+const clientApi = {
+  updateMe: vi.fn(),
+  inviteUser: vi.fn(),
+  removeUser: vi.fn(),
+  createContact: vi.fn(),
+  updateContact: vi.fn(),
+  removeContact: vi.fn(),
+  fetchUsers: vi.fn(),
+  fetchContacts: vi.fn(),
+  fetchEmails: vi.fn()
+}
+
+/** Mocked billing endpoints. */
+const billingApi = {
+  updatePaymentMethod: vi.fn(),
+  setDefaultPaymentMethod: vi.fn(),
+  removePaymentMethod: vi.fn(),
+  fetchPaymentMethods: vi.fn(),
+  fetchGatewayMethods: vi.fn()
+}
+
+/** Mocked two-factor endpoints. */
+const authApi = {
+  setupTwoFactor: vi.fn(),
+  enableTwoFactor: vi.fn(),
+  disableTwoFactor: vi.fn()
+}
+
+/** Mocked profile reload on the client store. */
+const fetchUser = vi.fn()
+
+vi.stubGlobal('ref', ref)
+
+vi.mock('qrcode', () => ({
+  default: {
+    /**
+     * Stands in for the QR renderer.
+     *
+     * @returns A fixed data URL.
+     */
+    toDataURL: async (): Promise<string> => 'data:image/png;base64,QR'
+  }
+}))
+
+vi.mock('~/composables/apis/useClientApi', () => ({
+  /**
+   * Stands in for the client API composable.
+   *
+   * @returns The mocked endpoints.
+   */
+  useClientApi: () => clientApi
+}))
+
+vi.mock('~/composables/apis/useBillingApi', () => ({
+  /**
+   * Stands in for the billing API composable.
+   *
+   * @returns The mocked endpoints.
+   */
+  useBillingApi: () => billingApi
+}))
+
+vi.mock('~/composables/apis/useAuthApi', () => ({
+  /**
+   * Stands in for the auth API composable.
+   *
+   * @returns The mocked endpoints.
+   */
+  useAuthApi: () => authApi
+}))
+
+vi.mock('~/stores/client', () => ({
+  /**
+   * Stands in for the client store.
+   *
+   * @returns A store exposing only the profile reload.
+   */
+  useClientStore: () => ({ fetchUser })
+}))
+
+const { useAccountStore } = await import('~/stores/account')
+const { ActionOutcome } = await import('~/types/actionoutcome')
+const { ContactSaveOutcome } = await import('~/types/contactsaveoutcome')
+const { TwoFactorMode } = await import('~/types/twofactormode')
+
+/** A refusal shaped like the API's problem body. */
+const refused = { data: { detail: 'Refused.' } }
+
+beforeEach(() => {
+  setActivePinia(createPinia())
+  for (const api of [clientApi, billingApi, authApi]) {
+    for (const fn of Object.values(api)) {
+      fn.mockReset()
+    }
+  }
+  fetchUser.mockReset()
+})
+
+describe('useAccountStore.saveProfile', () => {
+  it('saves, reloads the profile and reports Succeeded', async () => {
+    clientApi.updateMe.mockResolvedValue({})
+    const store = useAccountStore()
+
+    const outcome = await store.saveProfile({ firstname: 'Ada' })
+
+    expect(outcome).toBe(ActionOutcome.Succeeded)
+    expect(fetchUser).toHaveBeenCalledWith(true)
+    expect(store.saveError).toBe('')
+    expect(store.saving).toBe(false)
+  })
+
+  it('keeps the API sentence and reports Failed', async () => {
+    clientApi.updateMe.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    const outcome = await store.saveProfile({})
+
+    expect(outcome).toBe(ActionOutcome.Failed)
+    expect(store.saveError).toBe('Refused.')
+    expect(fetchUser).not.toHaveBeenCalled()
+    expect(store.saving).toBe(false)
+  })
+})
+
+describe('useAccountStore field errors', () => {
+  it('keeps the field messages of a refused profile save and clears them when the next save starts', async () => {
+    clientApi.updateMe.mockRejectedValueOnce({ data: { type: 'VALIDATION_ERROR', errors: { phone: ['Phone is invalid.'] } } })
+    const store = useAccountStore()
+
+    expect(await store.saveProfile({})).toBe(ActionOutcome.Failed)
+    expect(store.fieldErrors).toEqual({ phone: 'Phone is invalid.' })
+
+    clientApi.updateMe.mockResolvedValueOnce({})
+    await store.saveProfile({})
+    expect(store.fieldErrors).toEqual({})
+  })
+
+})
+
+describe('useAccountStore team members', () => {
+  it('reports Succeeded for an invitation', async () => {
+    clientApi.inviteUser.mockResolvedValue({})
+    const store = useAccountStore()
+
+    expect(await store.inviteUser({ email: 'a@b.c' })).toBe(ActionOutcome.Succeeded)
+    expect(store.inviting).toBe(false)
+  })
+
+  it('keeps the sentence when an invitation is refused', async () => {
+    clientApi.inviteUser.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    expect(await store.inviteUser({})).toBe(ActionOutcome.Failed)
+    expect(store.inviteError).toBe('Refused.')
+  })
+
+  it('keeps the sentence when a removal is refused and clears the in-flight id', async () => {
+    clientApi.removeUser.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    expect(await store.removeUser('7')).toBe(ActionOutcome.Failed)
+    expect(store.inviteError).toBe('Refused.')
+    expect(store.removingUserId).toBeNull()
+  })
+})
+
+describe('useAccountStore contacts', () => {
+  it('rejects a contact without names and makes no request', async () => {
+    const store = useAccountStore()
+
+    expect(await store.saveContact(null, makeContactInput({ firstName: '' }))).toBe(ContactSaveOutcome.Invalid)
+    expect(clientApi.createContact).not.toHaveBeenCalled()
+  })
+
+  it('creates when the id is null and updates when it is set', async () => {
+    clientApi.createContact.mockResolvedValue({})
+    clientApi.updateContact.mockResolvedValue({})
+    const store = useAccountStore()
+    const body = makeContactInput({ firstName: 'A', lastName: 'L' })
+
+    expect(await store.saveContact(null, body)).toBe(ContactSaveOutcome.Saved)
+    expect(await store.saveContact(5, body)).toBe(ContactSaveOutcome.Saved)
+
+    expect(clientApi.createContact).toHaveBeenCalledWith(body)
+    expect(clientApi.updateContact).toHaveBeenCalledWith(5, body)
+    expect(store.contactSaving).toBe(false)
+  })
+
+  it('keeps the sentence when saving is refused', async () => {
+    clientApi.createContact.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    expect(await store.saveContact(null, makeContactInput({ firstName: 'A', lastName: 'L' }))).toBe(ContactSaveOutcome.Failed)
+    expect(store.contactError).toBe('Refused.')
+  })
+
+  it('reports Failed for a refused removal', async () => {
+    clientApi.removeContact.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    expect(await store.removeContact(5)).toBe(ActionOutcome.Failed)
+  })
+})
+
+describe('useAccountStore two-factor', () => {
+  it('returns the setup with a locally rendered QR code', async () => {
+    authApi.setupTwoFactor.mockResolvedValue({ secret: 'S', qrCodeUri: 'otpauth://x' })
+    const store = useAccountStore()
+
+    const setup = await store.startTwoFactorSetup()
+
+    expect(setup).toEqual({ secret: 'S', qrCodeUri: 'otpauth://x', qrDataUrl: 'data:image/png;base64,QR' })
+    expect(store.tfaLoading).toBe(false)
+  })
+
+  it('returns null and keeps the sentence when enrolment cannot start', async () => {
+    authApi.setupTwoFactor.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    expect(await store.startTwoFactorSetup()).toBeNull()
+    expect(store.tfaError).toBe('Refused.')
+  })
+
+  it('enables or disables by mode and reloads the profile', async () => {
+    authApi.enableTwoFactor.mockResolvedValue({})
+    authApi.disableTwoFactor.mockResolvedValue({})
+    const store = useAccountStore()
+
+    expect(await store.submitTwoFactor(TwoFactorMode.Enable, '123456')).toBe(ActionOutcome.Succeeded)
+    expect(await store.submitTwoFactor(TwoFactorMode.Disable, '654321')).toBe(ActionOutcome.Succeeded)
+
+    expect(authApi.enableTwoFactor).toHaveBeenCalledWith('123456')
+    expect(authApi.disableTwoFactor).toHaveBeenCalledWith('654321')
+    expect(fetchUser).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps the sentence when a code is refused', async () => {
+    authApi.enableTwoFactor.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    expect(await store.submitTwoFactor(TwoFactorMode.Enable, 'x')).toBe(ActionOutcome.Failed)
+    expect(store.tfaModalError).toBe('Refused.')
+    expect(store.tfaSaving).toBe(false)
+  })
+})
+
+describe('useAccountStore payment methods', () => {
+  it('keeps the sentence when an expiry edit is refused', async () => {
+    billingApi.updatePaymentMethod.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    expect(await store.updatePaymentMethod('1', {})).toBe(ActionOutcome.Failed)
+    expect(store.editError).toBe('Refused.')
+    expect(store.editSaving).toBe(false)
+  })
+
+  it('reports Succeeded for set-default and clears the in-flight id', async () => {
+    billingApi.setDefaultPaymentMethod.mockResolvedValue({})
+    const store = useAccountStore()
+
+    expect(await store.setDefaultPaymentMethod('1')).toBe(ActionOutcome.Succeeded)
+    expect(store.settingDefaultId).toBeNull()
+  })
+
+  it('keeps the sentence when a removal is refused', async () => {
+    billingApi.removePaymentMethod.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    expect(await store.removePaymentMethod('1')).toBe(ActionOutcome.Failed)
+    expect(store.paymentActionError).toBe('Refused.')
+    expect(store.removingId).toBeNull()
+  })
+
+  it('clears every modal error on request', async () => {
+    clientApi.updateMe.mockRejectedValue(refused)
+    const store = useAccountStore()
+    await store.saveProfile({})
+
+    store.clearModalErrors()
+
+    expect(store.saveError).toBe('')
+  })
+})
+
+describe('useAccountStore reads', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    Object.values(clientApi).forEach(fn => fn.mockReset())
+    Object.values(billingApi).forEach(fn => fn.mockReset())
+  })
+
+  it.each([
+    ['loadUsers', 'fetchUsers', 'users', 'usersLoading'],
+    ['loadContacts', 'fetchContacts', 'contacts', 'contactsLoading'],
+    ['loadEmails', 'fetchEmails', 'emails', 'emailsLoading']
+  ] as const)('%s keeps the list, and empties it when the read fails', async (action, endpoint, state, flag) => {
+    clientApi[endpoint].mockResolvedValueOnce([{ id: '1' }]).mockRejectedValueOnce(new Error('down'))
+    const store = useAccountStore()
+
+    await store[action]()
+    expect(store[state]).toEqual([{ id: '1' }])
+    expect(store[flag]).toBe(false)
+
+    await store[action]()
+    expect(store[state]).toEqual([])
+    expect(store[flag]).toBe(false)
+  })
+
+  it('keeps the saved payment methods', async () => {
+    billingApi.fetchPaymentMethods.mockResolvedValue([{ id: 'pm_1' }])
+    const store = useAccountStore()
+
+    await store.loadPaymentMethods()
+
+    expect(store.paymentMethods).toEqual([{ id: 'pm_1' }])
+    expect(store.paymentLoadError).toBeNull()
+  })
+
+  it('says it could not read the payment methods instead of showing an empty account', async () => {
+    billingApi.fetchPaymentMethods.mockRejectedValue({ data: { detail: 'Cannot reach the gateway.' } })
+    const store = useAccountStore()
+
+    await store.loadPaymentMethods()
+
+    expect(store.paymentMethods).toEqual([])
+    expect(store.paymentLoadError).toBe('Cannot reach the gateway.')
+    expect(store.paymentLoading).toBe(false)
+  })
+
+  it('keeps the gateways the profile can default to, and none when the read fails', async () => {
+    billingApi.fetchGatewayMethods.mockResolvedValueOnce([{ module: 'stripe', displayName: 'Card' }]).mockRejectedValueOnce(new Error('down'))
+    const store = useAccountStore()
+
+    await store.loadGatewayMethods()
+    expect(store.gatewayMethods).toHaveLength(1)
+
+    await store.loadGatewayMethods()
+    expect(store.gatewayMethods).toEqual([])
+  })
+})

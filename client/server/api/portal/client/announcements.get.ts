@@ -10,11 +10,12 @@
  * list came back empty and the loop that reads `date` never ran. Every signed-in customer got
  * a 500. The sibling public proxy has always mapped the shape; this one now does the same.
  *
- * The old query also spelled its paging the WHMCS way, `limitstart`/`limitnum`, which no
+ * The old query also spelled its paging the legacy way, `limitstart`/`limitnum`, which no
  * controller here has ever read — the backend pages with `page`/`pageSize`, so the parameters
  * were silently ignored and the caller always got page one at the default size.
  */
-import type { Announcement, PublishedAnnouncementPage } from '~/types/announcement'
+import type { Announcement } from '~/types/announcement'
+import type { PublishedAnnouncementPage } from '~/types/publishedannouncementpage'
 import type { AnnouncementList } from '~/types/announcementlist'
 
 export default defineEventHandler(async (event): Promise<AnnouncementList> => {

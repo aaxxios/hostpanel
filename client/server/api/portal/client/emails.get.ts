@@ -6,23 +6,35 @@
  * the list the account screen renders, and asks for a page big enough to cover what that screen
  * paginates client-side. The mapping lives here rather than in the API because it exists for
  * one screen — the API keeps the shape every other caller already reads.
+ *
+ * @module server/api/portal/client/emails.get
  */
 
 /** One email as the C# backend describes it. */
 interface EmailLogEntry {
+  /** Email primary key. */
   id: number
+  /** Recipient address. */
   to: string
+  /** Subject line. */
   subject: string
+  /** When the email was sent (ISO 8601). */
   sentAt: string
+  /** Whether delivery succeeded. */
   success: boolean
+  /** Delivery error, when it failed. */
   error: string | null
 }
 
 /** A page of them. */
 interface EmailLogPage {
+  /** The emails on this page. */
   items: EmailLogEntry[]
+  /** How many emails exist in total. */
   totalCount: number
+  /** One-based page number. */
   page: number
+  /** Page size the backend applied. */
   pageSize: number
 }
 

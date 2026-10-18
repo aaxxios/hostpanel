@@ -13,7 +13,7 @@ export interface KbArticle {
   excerpt?: string
   /** View counter, used to order the "popular" list. */
   views?: number
-  /** Full body as HTML — rendered with `v-html`, so the backend owns its sanitisation. */
+  /** Full body as HTML — rendered through `UiRichText`, which rebuilds it from an allow-list of tags. */
   body?: string
   /** When the article was last edited, already formatted by the backend for display. */
   dateupdated?: string

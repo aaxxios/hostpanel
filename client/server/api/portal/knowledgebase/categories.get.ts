@@ -10,7 +10,7 @@
  */
 
 import { toKbCategories } from '../../../utils/kb'
-import type { BackendKbArticle } from '../../../utils/kb'
+import type { BackendKbArticle } from '~/types/backendkbarticle'
 import type { KbCategory } from '~/types/kbcategory'
 
 export default defineEventHandler(async (event): Promise<KbCategory[]> => {

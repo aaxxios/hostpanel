@@ -1,92 +1,91 @@
 <template>
-  <div>
-    <section class="py-12 md:py-20 bg-[#0a0a0f] min-h-dvh">
-      <div class="container-custom max-w-3xl">
+  <UiSection padding="lg" data-testid="announcement-page">
+    <UiStack class="mx-auto w-full max-w-3xl" gap="lg">
+      <!-- Back link -->
+      <UiLink
+        :to="localePath('/announcements')"
+        tone="muted"
+        :underline="false"
+        class="inline-flex items-center gap-2 self-start text-sm"
+        testid="announcement-back"
+      >
+        <ArrowLeft :size="15" :stroke-width="2" />
+        {{ t('announcements.backToList') }}
+      </UiLink>
 
-        <!-- Back link -->
-        <NuxtLink
-          :to="localePath('/announcements')"
-          class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-8"
+      <!-- Loading -->
+      <UiStack v-if="pending" gap="md" data-testid="announcement-loading">
+        <UiSkeleton shape="block" class="h-8 w-2/3" />
+        <UiSkeleton class="w-1/4" />
+        <UiSkeleton :lines="6" class="mt-8" />
+      </UiStack>
+
+      <!-- Error / not found -->
+      <UiEmptyState
+        v-else-if="error || !item"
+        :icon="Megaphone"
+        :title="t('announcements.errorDesc')"
+        data-testid="announcement-error"
+      />
+
+      <!-- Content -->
+      <UiStack v-else as="article" gap="lg">
+        <!-- Date -->
+        <UiText
+          as="span"
+          size="xs"
+          tone="subtle"
+          class="flex items-center gap-2"
+          data-testid="announcement-date"
         >
-          <ArrowLeft :size="15" :stroke-width="2" />
-          {{ $t('announcements.backToList') }}
-        </NuxtLink>
+          <Calendar :size="13" :stroke-width="2" />
+          {{ t('announcements.published') }}: {{ formatDate(item.date, locale) }}
+        </UiText>
 
-        <!-- Loading -->
-        <div v-if="pending" class="space-y-4">
-          <div class="h-8 w-2/3 rounded-xl bg-white/5 animate-pulse" />
-          <div class="h-4 w-1/4 rounded-lg bg-white/5 animate-pulse" />
-          <div class="mt-8 space-y-3">
-            <div v-for="i in 6" :key="i" class="h-4 rounded bg-white/5 animate-pulse" :style="{ width: `${85 - i * 5}%` }" />
-          </div>
-        </div>
+        <!-- Title -->
+        <UiHeading :level="1" data-testid="announcement-heading">
+          {{ item.title }}
+        </UiHeading>
 
-        <!-- Error / not found -->
-        <div v-else-if="error || !item" class="text-center py-20">
-          <Megaphone :size="48" :stroke-width="1.5" class="text-gray-600 mx-auto mb-4" />
-          <p class="text-gray-400">{{ $t('announcements.errorDesc') }}</p>
-        </div>
+        <UiDivider />
 
-        <!-- Content -->
-        <article v-else>
-          <!-- Date -->
-          <div class="flex items-center gap-2 text-xs text-gray-500 mb-4">
-            <Calendar :size="13" :stroke-width="2" />
-            {{ $t('announcements.published') }}: {{ formatDate(item.date, locale) }}
-          </div>
-
-          <!-- Title -->
-          <h1 class="text-3xl md:text-4xl font-bold text-white mb-8 leading-tight">
-            {{ item.title }}
-          </h1>
-
-          <!-- Divider -->
-          <div class="h-px bg-white/10 mb-8" />
-
-          <!-- Body (HTML from WHMCS) -->
-          <div
-            class="prose prose-invert prose-sm md:prose-base max-w-none
-                   prose-p:text-gray-300 prose-p:leading-relaxed
-                   prose-a:text-primary-400 prose-a:no-underline hover:prose-a:underline
-                   prose-headings:text-white prose-strong:text-white
-                   prose-ul:text-gray-300 prose-ol:text-gray-300
-                   prose-blockquote:border-primary-500 prose-blockquote:text-gray-400"
-            v-html="item.body"
-          />
-        </article>
-
-      </div>
-    </section>
-  </div>
+        <!-- Body (HTML from the API, rebuilt from an allow-list of tags) -->
+        <UiRichText :html="item.body" />
+      </UiStack>
+    </UiStack>
+  </UiSection>
 </template>
 
 <script setup lang="ts">
 /**
  * Public announcement detail page.
- * Loads a single announcement by id from WHMCS and renders the full HTML body.
+ * Loads a single announcement by id from the API and renders the full HTML body.
  */
 
 import { ArrowLeft, Calendar, Megaphone } from 'lucide-vue-next'
-import { useContentApi } from '~/composables/apis/useContentApi'
+import { useContentStore } from '~/stores/content'
+import { formatDate } from '~/utils/formatDate'
 import type { Announcement } from '~/types/announcement'
 
 /** The reader's language, so the publication date is written the way they read dates. */
-const { locale } = useI18n()
+const { t, locale } = useI18n()
 
+/** The current route. */
 const route = useRoute()
+
+/** Localised path builder from the i18n module. */
 const localePath = useLocalePath()
 
-// Straight from the API composable rather than through a store: this page fetches once and
-// owns the result alone, which is the named exception to component -> store -> api.
-// `useApi()` behind the composable is what sends the locale header, which the raw `useFetch`
-// this replaced did not.
-/** Fetch full announcements list and find the one matching the route id */
-const { data, pending, error } = useContentApi().loadAnnouncements()
+/** Fetch full announcements list (through the content store) and find the one matching the route id */
+const content = useContentStore()
+/** Whether the read is still running. */
+const { pending } = await useAsyncData('announcements:list', () => content.loadAnnouncements(), { watch: [locale] })
 
-const item = computed<Announcement | null>(() => {
-  const id = String(route.params.id)
-  return data.value?.items?.find(a => String(a.id) === id) ?? null
-})
+/** The sentence explaining why the announcement could not be read, or `''`. */
+const error = computed(() => content.error)
+
+/** The announcement the route names, once the store has it. */
+const item = computed<Announcement | null>(() => content.announcementFor(String(route.params.id)))
 
 watchEffect(() => {
   if (item.value) {

@@ -1,0 +1,28 @@
+namespace Innovayse.Hostpanel.Infrastructure.Demo;
+
+/// <summary>What the people seeder needs to create one demo customer.</summary>
+/// <param name="Email">Sign-in email.</param>
+/// <param name="Password">Sign-in password.</param>
+/// <param name="FirstName">Given name.</param>
+/// <param name="LastName">Family name.</param>
+/// <param name="Company">Company name.</param>
+/// <param name="Phone">Phone number.</param>
+/// <param name="Street">Street address.</param>
+/// <param name="City">City.</param>
+/// <param name="State">State or region; null where the country has none.</param>
+/// <param name="PostCode">Postal code.</param>
+/// <param name="Country">ISO 3166 alpha-2 country code.</param>
+/// <param name="Currency">ISO 4217 billing currency.</param>
+internal sealed record DemoClientProfile(
+    string Email,
+    string Password,
+    string FirstName,
+    string LastName,
+    string Company,
+    string Phone,
+    string Street,
+    string City,
+    string? State,
+    string PostCode,
+    string Country,
+    string Currency);

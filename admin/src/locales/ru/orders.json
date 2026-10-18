@@ -1,0 +1,28 @@
+{
+  "orderDetail": {
+    "backToOrders": "Назад к заказам",
+    "loadingOrder": "Загрузка заказа...",
+    "accept": "Принять",
+    "orderInfo": "Информация о заказе",
+    "created": "Создан",
+    "invoice": "Счёт",
+    "noInvoiceLinkedToThis": "К этому заказу не привязан счёт.",
+    "product": "Продукт",
+    "firstPayment": "Первый платёж",
+    "recurring": "Регулярный",
+    "addNotesAboutThisOrder": "Добавьте заметки к этому заказу...",
+    "notesAreOnlyVisibleTo": "Заметки видны только администраторам.",
+    "deleteOrder": "Удалить заказ",
+    "areYouSureYouWant": "Вы уверены, что хотите безвозвратно удалить этот заказ? Это действие нельзя отменить."
+  },
+  "ordersList": {
+    "orders": "Заказы",
+    "manageCustomerOrders": "Управление заказами клиентов",
+    "filterByStatus": "Фильтр по статусу",
+    "order": "Заказ №",
+    "items": "Позиции",
+    "accept": "Принять",
+    "totalcountOrderValue": "Заказов: {totalCount}",
+    "noOrdersFound": "Заказы не найдены"
+  }
+}

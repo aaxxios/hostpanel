@@ -1,5 +1,3 @@
-import { brandTokensCss } from '~/utils/brandTokens'
-
 /**
  * Brand tokens plugin: puts the operator's colours and typefaces on `:root` before any
  * stylesheet applies.
@@ -15,7 +13,12 @@ import { brandTokensCss } from '~/utils/brandTokens'
  * The maths lives in `utils/brandTokens.ts` and `utils/brandPalette.ts`, shared with the
  * admin preview and (as a port) the e-mail renderer. Runs after `portal-settings`, which
  * loads the values.
+ *
+ * @module plugins/brand-tokens
  */
+
+import { brandTokensCss } from '~/utils/brandTokens'
+
 export default defineNuxtPlugin({
   name: 'brand-tokens',
   dependsOn: ['portal-settings'],

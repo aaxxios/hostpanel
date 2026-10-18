@@ -47,16 +47,19 @@
   --surf: #ffffff;
   --panel: #ffffff;
   --input: #ffffff;
-  --ac1: rgb(var(--brand-primary-700, 14 106 135));
-  --ac2: rgb(var(--brand-accent-700, 75 53 184));
-  --ac3: #a31e7c;
-  --ac-bg: rgba(0, 120, 160, 0.07);
+  --ac1: rgb(var(--brand-primary-700, 29 78 216));
+  --ac2: rgb(var(--brand-accent-700, 8 145 178));
+  --ac3: #0e7490;
+  --ac-bg: rgba(62, 123, 250, 0.08);
   --ok: #0f8a5f;
   --danger: #c2334d;
   --card: linear-gradient(180deg, #ffffff, #f7f8fd);
-  --card-hi: linear-gradient(180deg, rgba(93, 63, 255, 0.1), #ffffff);
-  --hero-grad: linear-gradient(100deg, #0e6a87, #4b35b8 55%, #a31e7c);
-  --glow1: rgba(93, 63, 255, 0.1);
-  --glow2: rgba(0, 209, 255, 0.08);
+  --card-hi: linear-gradient(180deg, rgba(62, 123, 250, 0.1), #ffffff);
+  --hero-grad: linear-gradient(100deg, #1d4ed8, #3e7bfa 55%, #0891b2);
+  --glow1: rgba(62, 123, 250, 0.18);
+  --glow2: rgba(14, 165, 233, 0.12);
   --sh: 0 24px 50px -22px rgba(20, 22, 42, 0.28);
+  /* The brand gradient is saturated in light mode; white text reads on it where the
+     operator-computed near-black does not. :root.light outranks the injected :root rule. */
+  --brand-on-tint: 255 255 255;
 }

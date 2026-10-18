@@ -3,7 +3,7 @@
  *
  * ## One vocabulary, and it is the backend's
  *
- * This file used to declare WHMCS-era names — `date`, `duedate`, `datepaid`, `subtotal`,
+ * This file used to declare legacy names — `date`, `duedate`, `datepaid`, `subtotal`,
  * `currencycode`, `currencyprefix`, `currencysuffix` — none of which the API has ever sent.
  * `server/api/portal/client/invoices/index.get.ts` and `[id].get.ts` are bare passthroughs of
  * `GET /api/me/invoices` and `/api/me/invoices/{id}`, both of which answer with
@@ -37,64 +37,16 @@
  * @module types/clientinvoice
  */
 
-/**
- * Lifecycle status of an invoice, as `Innovayse.Domain.Billing.InvoiceStatus` serialises.
- *
- * `Program.cs` registers a `JsonStringEnumConverter`, so these arrive as the member names
- * verbatim. All eight members are listed: the previous union omitted `Overdue` and
- * `PaymentPending`, which are states the backend really does write, so a row in either one
- * type-checked as impossible while rendering in production.
- */
-export type ClientInvoiceStatus =
-  | 'Draft'
-  | 'Unpaid'
-  | 'Paid'
-  | 'Overdue'
-  | 'Cancelled'
-  | 'Refunded'
-  | 'Collections'
-  | 'PaymentPending'
-
-/** One line item on an invoice, as `InvoiceItemDto` sends it. */
-export interface ClientInvoiceItem {
-  /** Line item primary key. */
-  id: number
-  /** Human-readable charge description. */
-  description: string
-  /** Price per unit. */
-  unitPrice: number
-  /** Number of units. */
-  quantity: number
-  /** Line total (`unitPrice` × `quantity`). */
-  amount: number
-}
-
-/** One financial transaction recorded against an invoice, as `InvoiceTransactionDto` sends it. */
-export interface ClientInvoiceTransaction {
-  /** Transaction primary key. */
-  id: number
-  /** UTC timestamp of the transaction, ISO 8601. */
-  date: string
-  /** Payment gateway name. */
-  gateway: string
-  /** External transaction reference. */
-  transactionId: string
-  /** Transaction amount. */
-  amount: number
-  /** Fees charged by the gateway. */
-  fees: number
-  /** Transaction type, as `InvoiceTransactionType` serialises. */
-  type: string
-  /** Optional notes; null when not provided. */
-  notes: string | null
-}
+import type { ClientInvoiceStatus } from '~/types/clientinvoicestatus'
+import type { ClientInvoiceItem } from '~/types/clientinvoiceitem'
+import type { ClientInvoiceTransaction } from '~/types/clientinvoicetransaction'
 
 /**
  * One invoice, as `GET /api/portal/client/invoices` and `.../invoices/:id` return it.
  *
  * Field names and types are `InvoiceDto`'s. Every date is an ISO 8601 string carrying an
  * offset (a serialised `DateTimeOffset`); every amount is a `number`, not the decimal string a
- * WHMCS-shaped endpoint would have sent.
+ * legacy-shaped endpoint would have sent.
  */
 export interface ClientInvoice {
   /** Invoice primary key. */

@@ -6,14 +6,14 @@
  * The backend exposes one public list route -- `GET /api/knowledgebase`, which answers the
  * whole published set as `KbArticleDto[]`. It has no `articles` sub-path, no filters and no
  * paging, which is why this route used to call `/knowledgebase/articles` and 404 on every
- * request. The WHMCS-shaped filters the pages send (`categoryid`, `search`, `limitstart`,
+ * request. The legacy-shaped filters the pages send (`categoryid`, `search`, `limitstart`,
  * `limitnum`) are therefore applied here rather than upstream: the published knowledgebase is
  * a small, public, cacheable set, so narrowing it in the BFF costs one call and keeps the API
  * surface as it is.
  */
 
 import { toKbArticle } from '../../../utils/kb'
-import type { BackendKbArticle } from '../../../utils/kb'
+import type { BackendKbArticle } from '~/types/backendkbarticle'
 import type { KbArticle } from '~/types/kbarticle'
 import type { KbArticleList } from '~/types/kbarticlelist'
 

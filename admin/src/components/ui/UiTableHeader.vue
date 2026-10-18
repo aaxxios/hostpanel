@@ -1,0 +1,73 @@
+<script setup lang="ts">
+/**
+ * Table header cell (`<th>`).
+ *
+ * Typography is the kit default (small uppercase muted caption) at zero specificity, so a screen
+ * can still override a single property. `sortable` turns the caption into a button that emits
+ * `sort`; the parent owns the order and passes the current `direction`, which is mirrored into
+ * `aria-sort` and an arrow.
+ */
+import { computed, inject } from 'vue'
+import { UI_TABLE_CONTEXT, UiTableDensity } from '@/utils/ui/injection'
+import { alignClasses, headerDensityClasses } from '@/utils/ui/table'
+import type { UiAlign, UiSortDirection } from '@/utils/ui/table'
+
+/** Props for UiTableHeader. */
+const props = withDefaults(defineProps<{
+  /** Horizontal alignment; omitted leaves it to the screen. */
+  align?: UiAlign
+  /** Makes the caption a sort button. */
+  sortable?: boolean
+  /** Current order of this column. */
+  direction?: UiSortDirection
+  /** `data-testid` of the sort button (the `<th>` keeps the inherited one). */
+  sortTestid?: string
+}>(), {
+  align: undefined,
+  sortable: false,
+  direction: 'none',
+  sortTestid: undefined,
+})
+
+const emit = defineEmits<{
+  /** Emitted when the user activates the sort button. */
+  sort: []
+}>()
+
+/** Density shared by the parent table (plain when used outside one). */
+const context = inject(UI_TABLE_CONTEXT, { density: UiTableDensity.Plain })
+
+/** Padding and alignment classes. */
+const classes = computed<string[]>(() => [
+  headerDensityClasses[context.density],
+  props.align === undefined ? '' : alignClasses[props.align],
+])
+
+/** Arrow glyph of the current order. */
+const arrow = computed<string>(() => {
+  if (props.direction === 'ascending') {
+    return '▲'
+  }
+  return props.direction === 'descending' ? '▼' : '↕'
+})
+</script>
+
+<template>
+  <th
+    :aria-sort="sortable ? direction : undefined"
+    class="[:where(&)]:text-[0.68rem] [:where(&)]:font-semibold [:where(&)]:uppercase [:where(&)]:tracking-[0.08em] [:where(&)]:text-text-muted"
+    :class="classes"
+  >
+    <button
+      v-if="sortable"
+      type="button"
+      class="inline-flex items-center gap-1 uppercase hover:text-text-primary transition-colors cursor-pointer"
+      :data-testid="sortTestid"
+      @click="emit('sort')"
+    >
+      <slot />
+      <span aria-hidden="true">{{ arrow }}</span>
+    </button>
+    <slot v-else />
+  </th>
+</template>

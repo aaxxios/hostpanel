@@ -1,38 +1,45 @@
 <template>
   <div>
-    <form
-      class="mx-auto flex max-w-[720px] flex-wrap justify-center gap-2.5"
-      @submit.prevent="emit('search', query)"
-    >
-      <input
-        v-model="query"
-        type="text"
-        :disabled="!hasZones"
-        :placeholder="t('aurora.domainSearch.placeholder')"
-        class="min-w-[200px] flex-[1_1_260px] rounded-xl border border-line2 bg-input px-[18px] py-4 text-base text-tx outline-none focus:border-ac1 disabled:opacity-50"
-      >
-      <button
-        type="submit"
-        :disabled="!hasZones"
-        class="rounded-xl bg-brand px-[26px] py-4 text-base font-bold text-on-tint hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-      >{{ t('aurora.domainSearch.cta') }}</button>
-    </form>
+    <UiForm data-testid="domain-search-bar-form" spacing="none" class="mx-auto max-w-[720px]" @submit="emit('search', query)">
+      <UiStack direction="row" wrap justify="center" align="end" gap="xs">
+        <UiInput
+          v-model="query"
+          testid="domain-search-input"
+          :disabled="!hasZones"
+          :placeholder="t('aurora.domainSearch.placeholder')"
+          class="min-w-[200px] flex-[1_1_260px]"
+        />
+        <UiButton
+          type="submit"
+          variant="bare"
+          :disabled="!hasZones"
+          data-testid="domain-search-submit"
+          :class="[BRAND_BUTTON, 'px-[26px] py-4 text-base']"
+        >
+          {{ t('aurora.domainSearch.cta') }}
+        </UiButton>
+      </UiStack>
+    </UiForm>
 
     <!--
       Categories come from the registrar data, so the filter reflects the zones an
       operator actually sells rather than a fixed list. Hidden when the backend
       supplies none, which is also when there is nothing to filter.
     -->
-    <div v-if="categories.length > 1" class="mt-4 flex flex-wrap justify-center gap-2">
-      <button
+    <UiStack v-if="categories.length > 1" direction="row" wrap justify="center" gap="xs" class="mt-4">
+      <UiButton
         v-for="entry in categories"
         :key="entry"
-        type="button"
-        class="rounded-full px-3.5 py-2 text-[13px] font-semibold"
-        :class="entry === active ? 'bg-brand text-on-tint' : 'border border-line2 text-mut'"
+        variant="bare"
+        :data-testid="`domain-category-${entry}`"
+        :aria-pressed="entry === active"
+        class="px-3.5 py-2 text-[13px] font-semibold"
+        :class="entry === active ? PILL_ACTIVE : 'rounded-full border border-line2 text-mut'"
         @click="emit('update:category', entry)"
-      >{{ entry === ALL_CATEGORY ? t('aurora.tldTable.all') : entry }}</button>
-    </div>
+      >
+        {{ entry === ALL_CATEGORY ? t('aurora.tldTable.all') : entry }}
+      </UiButton>
+    </UiStack>
   </div>
 </template>
 
@@ -41,23 +48,32 @@
  * aurora domain search bar — the wide field and category filter that head the
  * domains page. Presentation only: it emits the term and the chosen category.
  */
-import { ALL_CATEGORY } from '~/templates/aurora/types'
+import { BRAND_BUTTON, PILL_ACTIVE } from '~/templates/aurora/buttons'
+import { ALL_CATEGORY } from '~/templates/aurora/types/allcategory'
 
-withDefaults(defineProps<{
+/** Props with their defaults applied. */
+const props = withDefaults(defineProps<{
   /** Category names offered by the filter, including the "all" sentinel. */
   categories?: string[]
   /** Currently selected category. */
   active?: string
   /** False when no extension is priced; the field then explains itself upstream. */
   hasZones?: boolean
+  /** Text the field starts with. */
   initialQuery?: string
 }>(), { categories: () => [], active: ALL_CATEGORY, hasZones: true, initialQuery: '' })
 
+/** Events this component raises. */
 const emit = defineEmits<{
+  /** The visitor submitted a term. */
   search: [term: string]
+  /** The visitor picked a category. */
   'update:category': [category: string]
 }>()
 
+/** Translator for the active locale. */
 const { t } = useI18n()
-const query = ref('')
+
+/** What the visitor has typed (v-model of the field). */
+const query = ref(props.initialQuery)
 </script>

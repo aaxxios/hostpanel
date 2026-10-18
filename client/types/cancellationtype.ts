@@ -6,4 +6,9 @@
  * `CancelServiceValidator` matches case-sensitively. The sentence a person reads is a
  * separate thing and comes from `client.services.cancel*` in the locale files.
  */
-export type CancellationType = 'Immediate' | 'EndOfBillingPeriod'
+export enum CancellationType {
+  /** The service stops now. */
+  Immediate = 'Immediate',
+  /** The service runs to the end of the period already paid for. */
+  EndOfBillingPeriod = 'EndOfBillingPeriod'
+}

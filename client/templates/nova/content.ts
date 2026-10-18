@@ -1,14 +1,3 @@
-import type {
-  ComparisonRow,
-  DashboardRow,
-  FaqItem,
-  Feature,
-  MigrationStep,
-  NavItem,
-  Testimonial,
-  UseCase,
-} from '~/templates/nova/types'
-
 /**
  * nova's structure, in one place.
  *
@@ -16,7 +5,18 @@ import type {
  * card or an FAQ entry is a line here plus its i18n keys in the three locale
  * files, and no component changes. The strings themselves are never here — only
  * the keys — so a translator never has to open a `.ts` file.
+ *
+ * @module templates/nova/content
  */
+
+import type { DashboardRow } from '~/templates/nova/types/dashboardrow'
+import type { FaqItem } from '~/templates/nova/types/faqitem'
+import type { Feature } from '~/templates/nova/types/feature'
+import type { MigrationStep } from '~/templates/nova/types/migrationstep'
+import type { NavItem } from '~/templates/nova/types/navitem'
+import type { Testimonial } from '~/templates/nova/types/testimonial'
+import type { UseCase } from '~/templates/nova/types/usecase'
+import type { ComparisonRow } from '~/types/comparisonrow'
 
 /**
  * Primary navigation.
@@ -288,8 +288,11 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
 
 /** One footer column: a heading and the links beneath it. */
 export interface FooterColumn {
+  /** Stable key, used for the list key. */
   key: string
+  /** i18n key for the column heading. */
   titleKey: string
+  /** The links beneath the heading. */
   links: readonly NavItem[]
 }
 
@@ -388,7 +391,13 @@ export const COMPARISON_LABEL_ORDER: readonly string[] = [
  * @returns The same rows, reordered. Never more, never fewer.
  */
 export const orderComparisonRows = (rows: readonly ComparisonRow[]): ComparisonRow[] => {
-  const rank = (label: string) => {
+  /**
+   * Position of a label in the preferred order; unknown labels rank after every known one.
+   *
+   * @param label Row label as the operator entered it.
+   * @returns The index in {@link COMPARISON_LABEL_ORDER}, or its length when unknown.
+   */
+  const rank = (label: string): number => {
     const normalised = label.trim().toLowerCase()
     const index = COMPARISON_LABEL_ORDER.findIndex(known => normalised.includes(known))
     return index === -1 ? COMPARISON_LABEL_ORDER.length : index

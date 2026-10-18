@@ -1,0 +1,100 @@
+using System.Net;
+using System.Net.Http.Json;
+using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Xunit;
+
+namespace Innovayse.Hostpanel.Integration.Tests.Admin.Users;
+
+/// <summary>
+/// <c>POST /api/admin/users/{id}/change-password</c>: setting a new password lets the account
+/// sign in with it, a too-short password is refused by the validator, an unknown subject is
+/// refused <c>IDENTITY_USER_NOT_FOUND</c>, where an SSO owns the accounts the write refuses with
+/// its own code, a caller with only the Client role is refused, and the route is closed to a
+/// caller with no credential.
+/// </summary>
+/// <remarks>Split out of the deleted <c>AdminUsersEndpointTests</c>.</remarks>
+/// <param name="factory">The shared API + PostgreSQL host, in local mode.</param>
+public sealed class SetUserPasswordTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+{
+    /// <summary>Setting a new password lets the account sign in with it.</summary>
+    [Fact]
+    public async Task LetsTheAccountSignInWithTheNewOneAsync()
+    {
+        var client = await UsersTestSeeds.AdminClientAsync(factory);
+        var (subject, email) = await UsersTestSeeds.RegisterUserAsync(factory.CreateClient());
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/admin/users/{subject}/change-password", new { password = "NewPassword123!" });
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var login = await factory.CreateClient().PostAsJsonAsync(
+            "/api/auth/login", new { email, password = "NewPassword123!" });
+        login.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>A password under the minimum length is refused by the validator.</summary>
+    [Fact]
+    public async Task RefusesATooShortOneAsync()
+    {
+        var client = await UsersTestSeeds.AdminClientAsync(factory);
+        var (subject, _) = await UsersTestSeeds.RegisterUserAsync(factory.CreateClient());
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/admin/users/{subject}/change-password", new { password = "short" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>Setting a password for an unknown subject answers 404 with <c>IDENTITY_USER_NOT_FOUND</c>.</summary>
+    [Fact]
+    public async Task UnknownSubject_RefusesNotFoundAsync()
+    {
+        var client = await UsersTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/admin/users/{UsersTestSeeds.NoSuchSubject}/change-password", new { password = "NewPassword123!" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await UsersTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.IDENTITY_USER_NOT_FOUND);
+    }
+
+#if INNOVAYSE_SSO
+    /// <summary>Where an SSO owns the accounts, setting a password refuses with its own code.</summary>
+    [Fact]
+    public async Task UnderSso_RefusesWithItsOwnCodeAsync()
+    {
+        var host = UsersTestSeeds.SsoModeHost(factory, knownAccount: null);
+        var client = UsersTestSeeds.SsoAdminClient(host);
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/admin/users/{Guid.NewGuid():N}/change-password", new { password = "NewPassword123!" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await UsersTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.USER_PROVISIONING_NOT_ALLOWED_SET_PASSWORD);
+    }
+#endif
+
+    /// <summary>A caller with only the Client role is refused with 403.</summary>
+    [Fact]
+    public async Task IsClosedToTheClientRoleAsync()
+    {
+        var client = await UsersTestSeeds.ClientRoleClientAsync(factory, "set-user-password-forbidden");
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/admin/users/{UsersTestSeeds.NoSuchSubject}/change-password", new { password = "NewPassword123!" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>The admin routes are not for anonymous callers.</summary>
+    [Fact]
+    public async Task IsClosedToAnonymousCallersAsync()
+    {
+        var response = await factory.CreateClient().PostAsJsonAsync(
+            $"/api/admin/users/{UsersTestSeeds.NoSuchSubject}/change-password", new { password = "NewPassword123!" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+}

@@ -1,0 +1,12 @@
+{
+  "loading": "Loading...",
+  "save": "Save",
+  "saving": "Saving…",
+  "signOut": "Sign out",
+  "admin": "Admin",
+  "notifications": "Notifications",
+  "toggleSidebar": "Toggle sidebar",
+  "viewAllNotifications": "View all notifications",
+  "newCount": "{count} new",
+  "noNotifications": "No notifications"
+}

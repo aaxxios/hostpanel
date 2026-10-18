@@ -74,7 +74,9 @@ const api = (win: unknown): LiveChatApi | null => {
  */
 export const openLiveChat = (win: unknown): boolean => {
   const widget = api(win)
-  if (!widget) return false
+  if (!widget) {
+    return false
+  }
 
   widget.toggle('open')
   return true
@@ -88,7 +90,9 @@ export const openLiveChat = (win: unknown): boolean => {
  */
 export const closeLiveChat = (win: unknown): boolean => {
   const widget = api(win)
-  if (!widget) return false
+  if (!widget) {
+    return false
+  }
 
   widget.toggle('close')
   return true
@@ -109,7 +113,9 @@ export const setLiveChatLocale = (
   language: string,
 ): boolean => {
   const widget = api(win)
-  if (!widget) return false
+  if (!widget) {
+    return false
+  }
 
   widget.setLocale(locale)
   widget.setCustomAttributes({ language })
@@ -146,7 +152,7 @@ window.${LIVE_CHAT_SETTINGS_GLOBAL} = {"position":"right","type":"standard","lau
   g.async=true;
   s.parentNode.insertBefore(g,s);
   g.onload=function(){
-    if (!window.${LIVE_CHAT_SDK_GLOBAL}) return;
+    if (!window.${LIVE_CHAT_SDK_GLOBAL}) { return; }
     window.${LIVE_CHAT_SDK_GLOBAL}.run({
       websiteToken: ${JSON.stringify(websiteToken)},
       baseUrl: BASE_URL

@@ -15,12 +15,11 @@
  */
 
 import { toKbArticle } from '../../../utils/kb'
-import type { BackendKbArticle } from '../../../utils/kb'
+import type { BackendKbArticle } from '~/types/backendkbarticle'
 import type { KbArticle } from '~/types/kbarticle'
 
 export default defineEventHandler(async (event): Promise<KbArticle> => {
-  const id = getRouterParam(event, 'id')
-  if (!id) throw createError({ statusCode: 400, statusMessage: 'Article ID is required' })
+  const id = requireRouteParam(event, 'id')
 
   const article = await internalApiCall<BackendKbArticle>(event, `/knowledgebase/${id}`)
   return toKbArticle(article)

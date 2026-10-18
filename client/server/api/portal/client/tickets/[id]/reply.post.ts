@@ -5,8 +5,7 @@
  * Body: { message }
  */
 export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id')
-  if (!id) throw createError({ statusCode: 400, statusMessage: 'Ticket ID is required' })
+  const id = requireRouteParam(event, 'id')
 
   const body = await readBody(event)
   return await internalApiCall<Record<string, unknown>>(event, `/me/tickets/${id}/reply`, {

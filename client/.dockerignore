@@ -1,0 +1,9 @@
+# Build context of client/Dockerfile (client/): host dependencies, build output and local env stay out.
+**/node_modules
+**/.nuxt
+**/.output
+**/dist
+**/.git
+.env
+.env.*
+!.env.example

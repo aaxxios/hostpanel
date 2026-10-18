@@ -1,4 +1,3 @@
-import type { Product } from './product'
 
 /** Represents a system setting key-value pair. */
 export interface Setting {

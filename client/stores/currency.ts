@@ -20,6 +20,11 @@ import type { MoneyCurrency } from '~/utils/formatMoney'
 /** localStorage key the guest's chosen currency is persisted under. */
 const STORAGE_KEY = 'innovayse_currency'
 
+/**
+ * Central store for the billing currencies and the payer's chosen one.
+ *
+ * @returns The currency state and the actions that change it.
+ */
 export const useCurrencyStore = defineStore('currency', {
   state: () => ({
     /** Every currency a visitor may be billed in, base first. Empty until {@link load}. */
@@ -47,7 +52,9 @@ export const useCurrencyStore = defineStore('currency', {
      */
     payerCode(state): string | null {
       const clientCurrency = useClientStore().user?.currency
-      if (clientCurrency) return clientCurrency
+      if (clientCurrency) {
+        return clientCurrency
+      }
 
       if (state.selectedCode && state.currencies.some(c => c.code === state.selectedCode)) {
         return state.selectedCode
@@ -55,6 +62,14 @@ export const useCurrencyStore = defineStore('currency', {
 
       return this.baseCode
     },
+
+    /**
+     * True when the signed-in client's currency is fixed on their record.
+     *
+     * The backend prices a signed-in caller in that currency and ignores any `currency`
+     * query, so the storefront shows it read-only instead of offering a switcher.
+     */
+    isFixed: (): boolean => Boolean(useClientStore().user?.currency),
 
     /** The full {@link BillingCurrency} row for {@link payerCode}, or null before it resolves. */
     payerCurrency(): BillingCurrency | null {
@@ -90,7 +105,9 @@ export const useCurrencyStore = defineStore('currency', {
      * Must be called client-side only (e.g. in `onMounted`); validated once {@link load} has run.
      */
     init() {
-      if (!import.meta.client) return
+      if (!import.meta.client) {
+        return
+      }
       try {
         this.selectedCode = localStorage.getItem(STORAGE_KEY)
       } catch {
@@ -102,11 +119,16 @@ export const useCurrencyStore = defineStore('currency', {
      * Sets the guest's chosen currency and persists it.
      *
      * @param code - The currency code to select. Only meaningful for a guest — a signed-in
-     * client's currency is fixed and this selection is ignored by {@link payerCode}.
+     * client's currency is fixed ({@link isFixed}), so the call is a no-op for them.
      */
     select(code: string) {
+      if (this.isFixed) {
+        return
+      }
       this.selectedCode = code
-      if (!import.meta.client) return
+      if (!import.meta.client) {
+        return
+      }
       try {
         localStorage.setItem(STORAGE_KEY, code)
       } catch {
@@ -122,7 +144,9 @@ export const useCurrencyStore = defineStore('currency', {
      * @returns Promise that resolves once {@link currencies} reflects the server's answer.
      */
     async load(force = false): Promise<void> {
-      if (this.loaded && !force) return
+      if (this.loaded && !force) {
+        return
+      }
       this.loading = true
       try {
         this.currencies = await useCurrencyApi().loadBillingCurrencies()

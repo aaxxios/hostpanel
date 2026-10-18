@@ -1,0 +1,16 @@
+{
+  "permissionLabels": {
+    "modifyMasterAccountProfile": "Հիմնական հաշվի պրոֆիլի փոփոխում",
+    "viewManageContacts": "Կոնտակտների դիտում և կառավարում",
+    "viewProductsServices": "Ապրանքների և ծառայությունների դիտում",
+    "viewModifyProductPasswords": "Ապրանքների գաղտնաբառերի դիտում և փոփոխում",
+    "viewDomains": "Դոմեյնների դիտում",
+    "manageDomainSettings": "Դոմեյնների կարգավորումների կառավարում",
+    "viewPayInvoices": "Հաշիվների դիտում և վճարում",
+    "viewAcceptQuotes": "Առաջարկների դիտում և ընդունում",
+    "viewOpenSupportTickets": "Աջակցության տոմսերի դիտում և բացում",
+    "viewManageAffiliateAccount": "Գործընկերային հաշվի դիտում և կառավարում",
+    "viewEmails": "Նամակների դիտում",
+    "placeNewOrdersUpgradesCancellations": "Պատվերների, թարմացումների և չեղարկումների ձևակերպում"
+  }
+}

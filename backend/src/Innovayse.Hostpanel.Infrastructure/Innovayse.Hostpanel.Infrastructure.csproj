@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Settings inherited from Directory.Build.props -->
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Innovayse.Hostpanel.Domain\Innovayse.Hostpanel.Domain.csproj" />
+    <ProjectReference Include="..\Innovayse.Hostpanel.Application\Innovayse.Hostpanel.Application.csproj" />
+    <ProjectReference Include="..\Innovayse.SDK\Innovayse.SDK.csproj" />
+    <ProjectReference Include="..\Innovayse.Providers.CWP\Innovayse.Providers.CWP.csproj" />
+    <ProjectReference Include="..\Innovayse.Providers.CWP7\Innovayse.Providers.CWP7.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(InnovayseSso)' == 'true'">
+    <!--
+      Auth/SsoSessionClaimsTransformation reads the cookie scheme name from the shared session handler.
+      Only referenced in an SSO build; see InnovayseSso in backend/Directory.Build.props.
+    -->
+    <PackageReference Include="Innovayse.Auth" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="DnsClient" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="MailKit" />
+    <PackageReference Include="Mapster" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <!--
+      Polly, reached through the IHttpClientFactory integration. Eleven typed and named clients
+      are registered in DependencyInjection.cs and every one of them calls a third party over the
+      public internet; until this was referenced, none had a retry, a breaker or a timeout, so a
+      stalled registrar held a request thread for HttpClient's 100-second default.
+
+      Referenced here rather than in Innovayse.Hostpanel.API because the client registrations are here:
+      Resilience/Extensions/HttpClientResilienceExtensions.cs needs the Polly types directly, and
+      the retry predicates need ResilienceContext.GetRequestMessage() to see what was sent.
+    -->
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- Transitive security pins, see Directory.Packages.props. -->
+    <PackageReference Include="Microsoft.Build.Tasks.Core">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="System.Security.Cryptography.Xml">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Otp.NET" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <!-- Branding uploads are rendered in ImageProcessing/SkiaBrandingImageProcessor.cs. -->
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+    <PackageReference Include="Stripe.net" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+    <PackageReference Include="WolverineFx" />
+    <PackageReference Include="WolverineFx.Postgresql" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- PaymentPluginResolverTests moved here from Infrastructure.Tests (A6 Task 5, ruling 2):
+         it registers a fake plugin directly on PluginRegistry, whose Register method is
+         internal on purpose, since only the startup loader is meant to populate it. -->
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>Innovayse.Hostpanel.Integration.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

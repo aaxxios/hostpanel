@@ -12,9 +12,7 @@
     "invalidDomain": "Введите домен с расширением (например, mysite.com)",
     "tabRegister": "Регистрация",
     "tabTransfer": "Перенос",
-    "transferPlaceholder": "Введите домен для переноса (например, mysite.com)",
     "transferBtn": "Добавить в корзину",
-    "transferNow": "Перенести",
     "takenTransfer": "Перенести этот домен",
     "transferNote": "* Исключает некоторые TLD и недавно продлённые домены",
     "transferFormTitle": "Перенос одного домена",
@@ -32,7 +30,6 @@
     },
     "pricing": {
       "title": "Цены на домены",
-      "subtitle": "Конкурентные цены на все популярные доменные расширения",
       "extension": "Домен",
       "register": "Новая цена",
       "renew": "Продление",
@@ -51,10 +48,8 @@
         "other": "Другие"
       },
       "noResults": "В этой категории расширений не найдено.",
-      "showAll": "Показать все {count} расширений",
-      "showLess": "Свернуть",
-      "action": "Действие",
-      "registerNow": "Зарегистрировать"
+      "registerNow": "Зарегистрировать",
+      "notAvailable": "Н/Д"
     },
     "promoHostingTitle": "Добавить хостинг",
     "promoHostingSubtitle": "Выберите из широкого ассортимента хостинг-пакетов",
@@ -66,6 +61,8 @@
     "promoTransferNote": "* Исключает некоторые TLD и недавно продлённые домены",
     "tldNotSupported": "Это расширение недоступно для регистрации",
     "alreadyInCart": "Уже в корзине",
-    "currencyMismatch": "Этот домен указан в валюте, в которой вы сейчас не платите."
+    "transferEppPlaceholder": "EPP-код / код авторизации",
+    "transferDomainPlaceholder": "example.com",
+    "years": "{n} год | {n} года | {n} лет"
   }
 }

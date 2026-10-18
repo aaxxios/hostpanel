@@ -2,7 +2,7 @@
  * GET /api/portal/public/slides
  *
  * Returns active slides for the current locale.
- * Forwards the x-locale header to the backend for translation resolution.
+ * The language reaches the backend as `X-Language` (stamped by `internalApiCall`).
  * Optionally accepts `audience` query param (guest/authenticated).
  */
 export default defineEventHandler(async (event) => {

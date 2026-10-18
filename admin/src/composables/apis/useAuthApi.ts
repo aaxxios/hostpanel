@@ -5,29 +5,29 @@
  * Callers are the auth store, never a `.vue` file.
  */
 
-import { useApi } from '../useApi'
+import { buildQuery, useApi } from '@/composables/useApi'
+import { LogoutScope } from '@/types/auth'
 import type {
-  AuthMode,
   AuthModeResponse,
   LocalLoginResponse,
   MeResponse,
   RegisterResponse,
   SetupRequiredResponse,
   TwoFactorLoginResponse,
-} from '../../types/auth'
+} from '@/types/auth'
 
 
 /**
  * Endpoint functions for `/api/auth/*`.
  *
  * Every function rejects with an `ApiError` carrying the response body on failure;
- * turning that into words is `utils/authErrorMessages.ts`'s job, and deciding what to
+ * turning that into words is `lib/errorHandler.ts`'s job, and deciding what to
  * render is the store's.
  *
  * @returns One typed function per auth endpoint the admin panel uses.
  */
 export const useAuthApi = () => {
-  const { request } = useApi()
+  const { request, probe } = useApi()
 
   /**
    * Asks how this deployment signs people in. Anonymous, and has to be — a client
@@ -50,9 +50,9 @@ export const useAuthApi = () => {
    * Loads the signed-in account. Whether a session exists is a question only the
    * server can answer, in either mode.
    *
-   * @returns Email, locally granted roles, and email-verified flag.
+   * @returns Email, locally granted roles, and email-verified flag; null when signed out (401).
    */
-  const fetchMe = (): Promise<MeResponse> => request<MeResponse>('/auth/me')
+  const fetchMe = (): Promise<MeResponse | null> => probe<MeResponse>('/auth/me')
 
   /**
    * Signs in with email and password. Local mode only — under SSO this same path is
@@ -134,8 +134,62 @@ export const useAuthApi = () => {
   const localLogout = (): Promise<{ success: boolean }> =>
     request<{ success: boolean }>('/auth/logout', { method: 'DELETE' })
 
+  /**
+   * Confirms an email address with the token mailed to it. Anonymous; local mode only --
+   * the API answers 404 where an SSO owns the accounts, and no SSO route exists for it.
+   * Resolves on 200; a 400 (`TOKEN_INVALID_OR_EXPIRED`) rejects with an `ApiError`.
+   *
+   * @param token - Verification token from the mailed link.
+   * @param email - Address being verified.
+   * @returns Nothing once the API accepted the token.
+   */
+  const verifyEmail = (token: string, email: string): Promise<void> =>
+    request<void>('/auth/confirm-email', {
+      method: 'POST',
+      body: JSON.stringify({ email, token }),
+    })
+
+  /**
+   * Asks the API to mail the signed-in account its verification link again. Authenticated,
+   * no body; answers 204, also when the address is already confirmed.
+   *
+   * @returns Nothing once the API accepted the request.
+   */
+  const resendVerification = (): Promise<void> =>
+    request<void>('/auth/resend-verification', { method: 'POST' })
+
+  /**
+   * Builds the address that sends the browser through the SSO sign-in and back to a page.
+   * Meaningful only under `AUTH_MODE=sso`, where `/api/auth/login` is a redirect endpoint;
+   * in local mode the same path is a JSON POST endpoint, which is why the login page asks for
+   * the mode first.
+   *
+   * @param returnTo - Path (with query) to come back to after signing in.
+   * @returns The same-origin URL to navigate to.
+   */
+  const ssoLoginUrl = (returnTo: string): string => `/api/auth/login${buildQuery({ returnTo })}`
+
+  /**
+   * Ends the session under SSO — this product's, or every product's with scope 'all' — and
+   * asks where the SSO wants the browser sent to finish signing out.
+   *
+   * @param scope - 'this' ends only Hostpanel's session, 'all' ends every product's.
+   * @returns The SSO end-session URL, or null when the API gave none or refused.
+   */
+  const endSessionUrl = async (scope: LogoutScope = LogoutScope.This): Promise<string | null> => {
+    const query = buildQuery({ scope: scope === LogoutScope.All ? scope : undefined })
+    const result = await request<{ endSessionUrl?: string } | undefined>(`/auth/logout${query}`, {
+      method: 'POST',
+    }).catch(() => undefined)
+    return result?.endSessionUrl ?? null
+  }
+
   return {
     fetchMode,
+    ssoLoginUrl,
+    endSessionUrl,
+    verifyEmail,
+    resendVerification,
     fetchSetupRequired,
     fetchMe,
     localLogin,

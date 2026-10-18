@@ -1,0 +1,68 @@
+# Edge of the standalone (Docker Hub) stack: routes the client portal, the admin panel and the API,
+# and obtains Let's Encrypt certificates for both hosts on its own. Every value comes from .env
+# through docker-compose.hub.yml: {$DOMAIN}, {$ADMIN_DOMAIN}, {$API_PORT}, {$ACME_EMAIL} and
+# {$EDGE_SCHEME} ("https://" = automatic HTTPS, "http://" = plain HTTP behind an existing proxy).
+{
+	email {$ACME_EMAIL}
+
+	servers {
+		# A proxy in front (private address) is believed about X-Forwarded-*, so the API sees https
+		# there; a direct client is never believed, so it cannot forge the scheme or its address.
+		trusted_proxies static private_ranges
+	}
+}
+
+# Operator-uploaded branding is served on BOTH origins on purpose: the setting rows store
+# root-relative URLs, so the same path must mean the same file wherever it is read. nosniff stops a
+# browser deciding that a stored file is something executable.
+(uploads) {
+	handle /uploads/* {
+		header X-Content-Type-Options nosniff
+		reverse_proxy hostpanel-api:{$API_PORT}
+	}
+}
+
+# Client portal + API
+{$EDGE_SCHEME}{$DOMAIN} {
+	# Never name the web server in a response.
+	header -Server
+	request_body {
+		max_size 50MB
+	}
+
+	handle /api/* {
+		reverse_proxy hostpanel-api:{$API_PORT} {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+
+	import uploads
+
+	handle /scalar/* {
+		reverse_proxy hostpanel-api:{$API_PORT}
+	}
+
+	# Everything else: Nuxt SSR (WebSocket upgrades are proxied automatically)
+	handle {
+		reverse_proxy hostpanel-client:3000 {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+}
+
+# Admin panel
+{$EDGE_SCHEME}{$ADMIN_DOMAIN} {
+	# Never name the web server in a response.
+	header -Server
+	request_body {
+		max_size 1MB
+	}
+
+	import uploads
+
+	handle {
+		reverse_proxy hostpanel-admin:80 {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+}

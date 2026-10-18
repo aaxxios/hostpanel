@@ -1,4 +1,5 @@
-import { useAuthStore } from '../modules/auth/stores/authStore'
+/** Thin composable over the auth store for components that only need the sign-in state. */
+import { useAuthStore } from '@/stores/auth'
 
 /**
  * Composable for authentication actions.
@@ -7,7 +8,7 @@ import { useAuthStore } from '../modules/auth/stores/authStore'
  *
  * @returns login, logout actions and reactive auth state.
  */
-export function useAuth() {
+export const useAuth = () => {
   const store = useAuthStore()
 
   return {

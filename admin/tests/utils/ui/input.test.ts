@@ -1,0 +1,26 @@
+/**
+ * Unit tests for the field vocabulary: the unstyled types and the shared class sets.
+ */
+import { describe, expect, it } from 'vitest'
+import {
+  fieldBaseClasses,
+  fieldInvalidClasses,
+  fieldWidthClasses,
+  UNSTYLED_INPUT_TYPES,
+} from '@/utils/ui/input'
+
+describe('field vocabulary', () => {
+  it('draws a colour well without the bordered text box', () => {
+    expect(UNSTYLED_INPUT_TYPES).toEqual(['color'])
+  })
+
+  it('applies width through :where() so a screen class always wins', () => {
+    expect(fieldWidthClasses).toContain(':where(&)')
+  })
+
+  it('reads the theme tokens, and the invalid set swaps the border to red', () => {
+    expect(fieldBaseClasses).toContain('bg-surface-field')
+    expect(fieldBaseClasses).toContain('border-border')
+    expect(fieldInvalidClasses).toContain('border-status-red')
+  })
+})

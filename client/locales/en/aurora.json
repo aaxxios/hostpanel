@@ -16,11 +16,11 @@
       "titleLine1": "Your whole",
       "titleLine2": "digital",
       "titleAccent": "infrastructure",
-      "lead": "Domains, hosting, web development and marketing from one team. Register a domain in minutes and we take care of the rest.",
+      "lead": "Domains, hosting, servers and billing in one client portal. Register a domain in minutes and manage everything from one panel.",
       "ctaPrimary": "Check a domain",
       "ctaSecondary": "Talk to a specialist",
       "statDomains": "domains managed",
-      "statProjects": "projects delivered",
+      "statProjects": "sites hosted",
       "statSupport": "support in Armenian"
     },
     "domainSearch": {
@@ -62,28 +62,28 @@
     },
     "services": {
       "eyebrow": "Services",
-      "title": "From the server to your first sale",
-      "webTitle": "Web development",
-      "webBody": "Corporate sites, online stores and web applications.",
-      "appTitle": "Mobile development",
-      "appBody": "iOS and Android apps from one codebase, published to both stores.",
-      "seoTitle": "SEO",
-      "seoBody": "Technical audits, content strategy and local search optimisation.",
-      "ppcTitle": "PPC advertising",
-      "ppcBody": "Google and Meta campaigns with measurable ROAS and weekly optimisation."
+      "title": "From the domain to the server",
+      "hostingTitle": "Web hosting",
+      "hostingBody": "NVMe web hosting with free SSL, daily backups and free migration.",
+      "serversTitle": "VPS and servers",
+      "serversBody": "Virtual and dedicated servers with full root access and monitoring.",
+      "domainsTitle": "Domains and DNS",
+      "domainsBody": "Register, transfer and renew domains, with DNS and WHOIS privacy managed in the panel.",
+      "billingTitle": "Billing and client portal",
+      "billingBody": "Invoices, payments, renewals and support tickets in one account."
     },
     "process": {
       "eyebrow": "Process",
-      "title": "Four steps to launch",
-      "lead": "One accountable manager and clear deadlines at every stage.",
-      "step1Title": "Brief and audit",
-      "step1Body": "We agree the goals and review your existing infrastructure and competitors.",
-      "step2Title": "Plan and estimate",
-      "step2Body": "You get a defined scope, deadlines and a fixed price with no hidden costs.",
-      "step3Title": "Build and test",
-      "step3Body": "We work in two-week cycles and show you the result at the end of each one.",
-      "step4Title": "Launch and support",
-      "step4Body": "We move you to the server, set up monitoring and keep maintaining it."
+      "title": "Four steps to go live",
+      "lead": "Clear steps and a support team at every stage.",
+      "step1Title": "Choose a plan",
+      "step1Body": "Pick hosting or a server and search for the domain you want.",
+      "step2Title": "Order and pay",
+      "step2Body": "Check out with a clear price and no hidden costs; invoices are issued automatically.",
+      "step3Title": "Activation",
+      "step3Body": "Your service is provisioned automatically and the login details arrive by email.",
+      "step4Title": "Manage and get support",
+      "step4Body": "Manage services, domains and invoices in the client portal; support is there 24/7."
     },
     "testimonials": {
       "eyebrow": "Clients",
@@ -97,12 +97,12 @@
           "role": "Product team"
         },
         {
-          "quote": "Organic traffic grew 2.4× in three months, and the reports show leads rather than charts.",
+          "quote": "Renewals and invoices are all in one portal, so nothing expires unnoticed.",
           "author": "UK Voshozhdenie",
           "role": "Marketing"
         },
         {
-          "quote": "The mobile app and the backend were built by the same team, which saved us months of coordination.",
+          "quote": "Domains, hosting and mail now live under one account, which saves us hours every month.",
           "author": "Eduzdrav",
           "role": "Digital direction"
         },
@@ -129,19 +129,19 @@
           "a": "24/7 support in Armenian, Russian and English by chat and phone, plus server monitoring."
         },
         {
-          "q": "Do you work on a monthly retainer?",
-          "a": "Yes — for digital services we offer a monthly retainer with fixed hours and priorities."
+          "q": "Can I change my plan later?",
+          "a": "Yes. You can upgrade your plan from the client portal at any time."
         }
       ]
     },
     "cta": {
       "title": "Let's start with your project",
-      "lead": "A free 20-minute consultation on choosing a domain, hosting and a website.",
+      "lead": "A free 20-minute consultation on choosing a domain, hosting and a server.",
       "primary": "Book a call",
       "secondary": "See the plans"
     },
     "footer": {
-      "tagline": "Hosting, domains and digital services under one roof. Yerevan, Armenia.",
+      "tagline": "Hosting, domains and servers under one roof. Yerevan, Armenia.",
       "newsletterTitle": "Newsletter",
       "newsletterPlaceholder": "you{'@'}email.com",
       "newsletterCta": "Subscribe",

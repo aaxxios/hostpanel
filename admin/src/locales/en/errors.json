@@ -1,0 +1,4 @@
+{
+  "noAnswer": "Could not reach the server. Check your connection and try again.",
+  "signInLoop": "Signed in, but the session was not accepted. Try again."
+}

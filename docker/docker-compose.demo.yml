@@ -1,0 +1,93 @@
+# Demo overlay: a second, self-contained copy of the stack that can share a server with production.
+#   deployed host: shared + prod + platform + demo     laptop: shared + prod + demo
+# Goes LAST in the chain so its project name wins. Everything stateful is renamed (project, containers,
+# volumes) and the demo gets its own broker, redis and mail catcher, so nothing here can read or write
+# production data. Services find each other by the hostpanel-demo-* container names: on the shared
+# innovayse_network the service names (hostpanel-db, ...) would also resolve to production's containers.
+# The API runs in demo mode: fake payment, registrar and provisioning adapters, mail to the catcher,
+# a scheduled data reset. Needs AUTH_MODE=local and a database of its own (POSTGRES_DB).
+name: hostpanel-demo
+
+volumes:
+  pgdata:
+    name: hostpanel-demo_pgdata
+  redisdata:
+    name: hostpanel-demo_redisdata
+  hostpanel_branding:
+    name: hostpanel-demo_branding
+
+services:
+  hostpanel-db:
+    container_name: hostpanel-demo-db
+
+  # shared.yml defines the broker and redis; the platform overlay parks them for production's own.
+  # The demo runs private ones, so the parking is lifted.
+  hostpanel-rabbitmq:
+    container_name: hostpanel-demo-rabbitmq
+    profiles: !reset []
+
+  hostpanel-redis:
+    container_name: hostpanel-demo-redis
+    profiles: !reset []
+
+  # Mail catcher: every message the demo sends lands here and goes no further.
+  hostpanel-mailhog:
+    container_name: hostpanel-demo-mailhog
+    image: mailhog/mailhog
+    ports:
+      - "127.0.0.1:${DEMO_MAILHOG_UI_HOST_PORT}:8025"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 256M
+    restart: unless-stopped
+
+  hostpanel-api:
+    container_name: hostpanel-demo-api
+    ports:
+      - "127.0.0.1:${DEMO_API_HOST_PORT}:${API_PORT}"
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=hostpanel-demo-db;Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+      Auth__RedisConnection: hostpanel-demo-redis:${DEMO_REDIS_PORT}
+      RabbitMQ__Host: hostpanel-demo-rabbitmq
+      # Mail goes to the catcher: host, port and credentials override together (the platform overlay sets them too).
+      Smtp__Host: hostpanel-demo-mailhog
+      Smtp__Port: ${DEMO_SMTP_PORT}
+      Smtp__Username: ""
+      Smtp__Password: ""
+      Smtp__Encryption: none
+      # The demo admin has its own address; production's would send demo mail links to the live panel.
+      AdminBaseUrl: ${DEMO_ADMIN_BASE_URL:?DEMO_ADMIN_BASE_URL must be set}
+      ClientBaseUrl: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
+      Demo__Enabled: ${DEMO_ENABLED}
+      Demo__ResetIntervalHours: ${DEMO_RESET_INTERVAL_HOURS}
+      Demo__AdminEmail: ${DEMO_ADMIN_EMAIL}
+      Demo__AdminPassword: ${DEMO_ADMIN_PASSWORD:?DEMO_ADMIN_PASSWORD must be set}
+      Demo__ClientEmail: ${DEMO_CLIENT_EMAIL}
+      Demo__ClientPassword: ${DEMO_CLIENT_PASSWORD:?DEMO_CLIENT_PASSWORD must be set}
+    depends_on: !override
+      hostpanel-db:
+        condition: service_healthy
+      hostpanel-rabbitmq:
+        condition: service_healthy
+      hostpanel-redis:
+        condition: service_healthy
+      hostpanel-mailhog:
+        condition: service_started
+
+  hostpanel-client:
+    container_name: hostpanel-demo-client
+    ports:
+      - "127.0.0.1:${DEMO_CLIENT_HOST_PORT}:3000"
+    environment:
+      NUXT_API_URL: http://hostpanel-demo-api:${API_PORT}
+
+  hostpanel-admin:
+    container_name: hostpanel-demo-admin
+    ports:
+      - "127.0.0.1:${DEMO_ADMIN_HOST_PORT}:80"
+
+  # The bundled edge proxy is never part of the demo: the host's proxy (or the published ports) fronts it.
+  hostpanel-nginx:
+    profiles: ["disabled"]

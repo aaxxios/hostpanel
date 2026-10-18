@@ -1,0 +1,12 @@
+{
+  "loading": "Բեռնվում է...",
+  "save": "Պահպանել",
+  "saving": "Պահպանվում է…",
+  "signOut": "Դուրս գալ",
+  "admin": "Ադմին",
+  "notifications": "Ծանուցումներ",
+  "toggleSidebar": "Ցույց տալ/թաքցնել մենյուն",
+  "viewAllNotifications": "Դիտել բոլոր ծանուցումները",
+  "newCount": "{count} նոր",
+  "noNotifications": "Ծանուցումներ չկան"
+}

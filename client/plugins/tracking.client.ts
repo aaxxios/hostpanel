@@ -11,7 +11,18 @@
  * before the visitor answered is the thing consent exists to prevent. The `<noscript>`
  * iframe fallback is gone with it; it cannot be gated on consent, and a visitor with
  * scripts off is not one who can be tracked anyway.
+ *
+ * @module plugins/tracking.client
  */
+
+import { CookieConsent } from '~/types/cookieconsent'
+
+/** The `window` as the tag manager extends it. */
+interface WindowWithDataLayer {
+  /** The queue the tag manager reads events from. */
+  dataLayer?: unknown[]
+}
+
 export default defineNuxtPlugin({
   name: 'tracking',
   dependsOn: ['portal-settings'],
@@ -21,14 +32,17 @@ export default defineNuxtPlugin({
 
     const containerId = computed(() => get('portal.analytics.gtm_id', 'portalGtmId'))
 
+    /** True once the snippet has been injected. */
     let loaded = false
 
     /** Injects the standard GTM snippet for the configured container, once. */
-    function load(): void {
-      if (loaded || !containerId.value) return
+    const load = (): void => {
+      if (loaded || !containerId.value) {
+        return
+      }
       loaded = true
 
-      const w = window as unknown as { dataLayer?: unknown[] }
+      const w = window as unknown as WindowWithDataLayer
       w.dataLayer = w.dataLayer ?? []
       w.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' })
 
@@ -41,7 +55,9 @@ export default defineNuxtPlugin({
     // Immediately for a returning visitor who already agreed, and again whenever the
     // banner records an answer. `essential` and "no answer yet" both mean no tag.
     watch(consent, (value) => {
-      if (value === 'all') load()
+      if (value === CookieConsent.All) {
+        load()
+      }
     }, { immediate: true })
   },
 })

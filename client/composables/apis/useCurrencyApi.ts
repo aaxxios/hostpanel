@@ -16,7 +16,7 @@ import type { BillingCurrency } from '~/types/currency'
  *
  * @returns The currency endpoint functions.
  */
-export function useCurrencyApi() {
+export const useCurrencyApi = () => {
   /**
    * Loads every currency a visitor may be billed in, base first.
    *

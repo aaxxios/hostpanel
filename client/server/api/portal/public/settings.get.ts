@@ -75,9 +75,17 @@ const PUBLIC_KEYS = [
   'portal.apps.calendar',
 ] as const
 
+/** One public setting row, as the backend lists it. */
+interface PublicSettingRow {
+  /** Setting key, e.g. `portal.apps.mail`. */
+  key: string
+  /** Setting value. */
+  value: string
+}
+
 export default defineEventHandler(async (event) => {
   try {
-    const rows = await internalApiCall<{ key: string, value: string }[]>(event, '/settings/public')
+    const rows = await internalApiCall<PublicSettingRow[]>(event, '/settings/public')
 
     const settings: Record<string, string> = {}
     for (const row of rows ?? []) {

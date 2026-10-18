@@ -5,6 +5,7 @@
     "yourOrder": "Your Order",
     "account": "Account",
     "paymentMethod": "Payment Method",
+    "cardDetails": "Card details",
     "loggedInAs": "Logged in as",
     "notYou": "Not you? Switch account",
     "guestNotice": "You are checking out as a guest",
@@ -13,21 +14,14 @@
     "processing": "Processing...",
     "redirectingToBank": "Redirecting to the bank's secure payment page…",
     "noPaymentMethods": "No payment methods available. Please contact support.",
-    "productConfig": "Service Configuration",
     "fields": {
       "firstname": "First Name",
       "lastname": "Last Name",
       "email": "Email Address",
-      "emailPlaceholder": "you{'@'}example.com",
       "password": "Create Password",
-      "phonenumber": "Phone Number",
-      "domain": "Domain Address",
-      "username": "Hosting Username",
-      "hostPassword": "Hosting Password"
+      "phonenumber": "Phone Number"
     },
     "errors": {
-      "fillRequired": "Please fill in all required fields",
-      "fillHostingDetails": "Please fill in all hosting configuration details",
       "generic": "An error occurred. Please try again."
     },
     "success": {
@@ -38,7 +32,29 @@
       "paid": "Paid",
       "amount": "Amount",
       "setupService": "Set Up My Service",
-      "viewInvoices": "View Invoices"
+      "viewInvoices": "View Invoices",
+      "domain": "Domain",
+      "action": "Action",
+      "registration": "Registration",
+      "transfer": "Transfer",
+      "manageDomain": "Manage Your Domain"
+    },
+    "secureCheckout": "Secure Checkout",
+    "identifyPrompt": "How should we identify you?",
+    "choosePayment": "Select your preferred payment way",
+    "needHelp": "Need Help?",
+    "supportAlways": "Our support is here 24/7",
+    "contactUs": "Contact Us",
+    "placeholders": {
+      "firstname": "John",
+      "lastname": "Doe",
+      "email": "you{'@'}example.com",
+      "password": "••••••••"
+    },
+    "card": {
+      "notInitialized": "The card form is not ready yet. Please wait a moment and try again.",
+      "failed": "The card payment could not be completed.",
+      "noIntent": "The payment could not be confirmed."
     }
   }
 }

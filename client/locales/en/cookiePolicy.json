@@ -5,7 +5,7 @@
     "sections": {
       "introduction": {
         "title": "Introduction",
-        "content": "Innovayse uses cookies and similar digital technologies to enhance your experience across our agency website and SaaS platforms. This policy explains what these technologies are, why we use them, and your rights to manage them."
+        "content": "Innovayse uses cookies and similar technologies to enhance your experience across our website and client portal. This policy explains what these technologies are, why we use them, and your rights to manage them."
       },
       "whatAreCookies": {
         "title": "What Are Cookies?",
@@ -16,7 +16,7 @@
         "types": [
           {
             "title": "Strictly Necessary",
-            "description": "Essential for our SaaS platforms (SmartLearn, PropSystem) to handle authentication, security, and session management. Without these, you cannot log in or use your account."
+            "description": "Essential for the client portal to handle authentication, security, and session management. Without these, you cannot log in or use your account."
           },
           {
             "title": "Preferences & Settings",
@@ -24,7 +24,7 @@
           },
           {
             "title": "Performance & Analytics",
-            "description": "We use Google Analytics and internal tools to see how visitors interact with our services. This data helps us improve our agency's digital offerings and SaaS performance."
+            "description": "We use Google Analytics and internal tools to see how visitors interact with our website. This data helps us improve our services and platform performance."
           },
           {
             "title": "Targeted Advertising",
@@ -35,9 +35,9 @@
       "howWeUseCookies": {
         "title": "How We Use Cookies",
         "uses": [
-          "Authenticating users on our SaaS platforms and client portals.",
+          "Authenticating users in the client portal and on our website.",
           "Preventing security threats and unauthorized access to client data.",
-          "Analyzing website traffic to optimize our SEO and PPC campaigns.",
+          "Analyzing website traffic to improve our pages and hosting offers.",
           "Remembering project preferences and language settings.",
           "Providing interactive support through our chat and contact tools.",
           "Managing billing sessions and secure payment processes."
@@ -45,12 +45,12 @@
       },
       "thirdPartyCookies": {
         "title": "Third-Party Services",
-        "content": "Our website integrates services from partners like Google (Analytics), Meta (Social Tracking), and legal billing systems (WHMCS). These third parties may set their own cookies to monitor service performance or deliver specific content. We only integrate trusted, secure partners."
+        "content": "Our website integrates services from partners like Google (Analytics), Meta (Social Tracking), and legal billing systems. These third parties may set their own cookies to monitor service performance or deliver specific content. We only integrate trusted, secure partners."
       },
       "managingCookies": {
         "title": "Cookie Control",
         "content": "Most browsers automatically accept cookies, but you can modify your settings to decline them. You can also clear your browser cache at any time to remove existing cookies.",
-        "note": "Disabling certain cookies may limit your ability to use specific features of our SaaS products, such as remaining logged in."
+        "note": "Disabling certain cookies may limit your ability to use specific features of the client portal, such as remaining logged in."
       },
       "contact": {
         "title": "Questions?",

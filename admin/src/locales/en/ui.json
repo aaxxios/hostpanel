@@ -1,0 +1,72 @@
+{
+  "uiAdvancedFilters": {
+    "filterValue": "Filter {value}",
+    "selectField": "Select field...",
+    "enterValue": "Enter value...",
+    "addFilter": "Add Filter",
+    "exactMatch": "Exact Match",
+    "containing": "Containing"
+  },
+  "uiClientSelect": {
+    "noClientsFound": "No clients found"
+  },
+  "uiCountrySelect": {
+    "selectCountry": "Select country..."
+  },
+  "uiDatePicker": {
+    "ddMmYyyy": "DD/MM/YYYY",
+    "month": "Month",
+    "year": "Year",
+    "yesterday": "Yesterday",
+    "7DaysAgo": "7 Days Ago",
+    "1MonthAgo": "1 Month Ago",
+    "1YearAgo": "1 Year Ago"
+  },
+  "uiDatePickerFuture": {
+    "tomorrow": "Tomorrow",
+    "in7Days": "In 7 Days",
+    "1MonthFromNow": "1 Month From Now",
+    "1YearFromNow": "1 Year From Now"
+  },
+  "uiDateRangePicker": {
+    "ddMmYyyyDdMm": "DD/MM/YYYY - DD/MM/YYYY",
+    "yesterday": "Yesterday",
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days",
+    "thisMonth": "This Month",
+    "1MonthAgo": "1 Month Ago",
+    "thisYear": "This Year",
+    "1YearAgo": "1 Year Ago",
+    "selectDateRange": "Select date range"
+  },
+  "uiFieldSelector": {
+    "fields": "Fields",
+    "clearAll": "Clear All"
+  },
+  "uiSelect": {
+    "noResults": "No results"
+  },
+  "selectCountry": "Select country",
+  "dialog": {
+    "close": "Close",
+    "confirm": "Confirm",
+    "processing": "Processing..."
+  },
+  "pagination": {
+    "navigation": "Pagination",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page"
+  },
+  "table": {
+    "empty": "No data"
+  },
+  "chart": {
+    "empty": "No data to chart"
+  },
+  "uploadZone": {
+    "dropOr": "Drop a file or",
+    "browse": "browse",
+    "uploading": "Uploading..."
+  }
+}

@@ -1,96 +1,53 @@
 <template>
-  <div>
-    <NuxtLink to="/client/tickets" class="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors mb-8">
-      <ArrowLeft :size="16" :stroke-width="2" />
-      {{ $t('client.tickets.backTo') }}
-    </NuxtLink>
+  <UiStack gap="lg">
+    <UiBackLink to="/client/tickets" :label="$t('client.tickets.backTo')" testid="ticket-back" />
 
-    <!-- Loading -->
-    <div v-if="pending" class="space-y-4">
-      <div class="h-32 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
-      <div class="h-48 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
-    </div>
+    <UiStack v-if="pending">
+      <UiSkeleton shape="block" class="h-32" />
+      <UiSkeleton shape="block" class="h-48" />
+    </UiStack>
 
-    <!-- Error -->
-    <div v-else-if="error || !ticket" class="text-center py-20">
-      <AlertCircle :size="48" :stroke-width="2" class="text-red-400 mx-auto mb-4" />
-      <p class="text-gray-400">{{ $t('client.tickets.notFound') }}</p>
-    </div>
+    <UiEmptyState v-else-if="error || !ticket" :icon="AlertCircle" :title="$t('client.tickets.notFound')" />
 
-    <div v-else>
-      <!-- Ticket header -->
-      <UiCard class="mb-6">
-        <div class="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ ticket.subject }}</h1>
-            <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
-              <span>{{ ticket.deptname }}</span>
-              <span>·</span>
-              <span>{{ formatDateTime(ticket.date) }}</span>
-              <span>·</span>
-              <span class="capitalize">{{ ticket.priority }}</span>
-            </div>
-          </div>
+    <template v-else>
+      <UiCard data-testid="ticket-header">
+        <UiStack direction="row" justify="between" align="start" wrap>
+          <UiStack gap="xs">
+            <UiHeading :level="1" size="subsection">{{ ticket.subject }}</UiHeading>
+            <UiStack direction="row" align="center" gap="sm" wrap>
+              <UiText as="span" size="xs" tone="subtle">{{ ticket.departmentName }}</UiText>
+              <UiText as="span" size="xs" tone="subtle">·</UiText>
+              <UiText as="span" size="xs" tone="subtle">{{ formatDateTime(ticket.createdAt) }}</UiText>
+              <UiText as="span" size="xs" tone="subtle">·</UiText>
+              <UiText as="span" size="xs" tone="subtle" class="capitalize">{{ ticket.priority }}</UiText>
+            </UiStack>
+          </UiStack>
           <ClientStatusBadge :status="ticket.status" />
-        </div>
+        </UiStack>
       </UiCard>
 
-      <!-- Thread -->
-      <div class="space-y-4 mb-6">
-        <!-- Original message -->
-        <UiCard padding="md">
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-xs font-bold text-cyan-400">
-                {{ authorName.charAt(0).toUpperCase() }}
-              </div>
-              <div>
-                <div class="text-gray-900 dark:text-white text-sm font-medium">{{ authorName }}</div>
-                <div class="text-gray-500 text-xs">{{ formatDateTime(ticket.date) }}</div>
-              </div>
-            </div>
-            <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">{{ $t('client.tickets.you') }}</span>
-          </div>
-          <!-- Render message as pre-wrapped text to preserve formatting -->
-          <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{{ ticket.message }}</p>
-        </UiCard>
+      <UiStack data-testid="ticket-thread">
+        <ClientSupportTicketMessage
+          :author="authorName"
+          :date="formatDateTime(ticket.createdAt)"
+          :message="ticket.message"
+          :badge="$t('client.tickets.you')"
+        />
+        <ClientSupportTicketMessage
+          v-for="reply in replies"
+          :key="reply.id"
+          :author="replyAuthor(reply)"
+          :date="formatDateTime(reply.createdAt)"
+          :message="reply.message"
+          :badge="reply.isStaffReply ? $t('client.tickets.staff') : undefined"
+          :staff="reply.isStaffReply"
+        />
+      </UiStack>
 
-        <!-- Replies -->
-        <div
-          v-for="reply in ticket.replies?.reply ?? []"
-          :key="reply.replyid"
-          class="p-5 rounded-2xl border transition-all"
-          :class="reply.admin
-            ? 'bg-primary-500/5 border-primary-500/20'
-            : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'"
-        >
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border"
-                :class="reply.admin
-                  ? 'bg-primary-500/20 border-primary-500/30 text-primary-400'
-                  : 'bg-gray-500/20 border-gray-500/30 text-gray-400'"
-              >
-                {{ (reply.admin || reply.name || '?').charAt(0).toUpperCase() }}
-              </div>
-              <div>
-                <div class="text-gray-900 dark:text-white text-sm font-medium">{{ reply.admin ? `${reply.admin} (${$t('client.tickets.support')})` : reply.name }}</div>
-                <div class="text-gray-500 text-xs">{{ formatDateTime(reply.date) }}</div>
-              </div>
-            </div>
-            <span v-if="reply.admin" class="text-xs px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-400 border border-primary-500/20">
-              {{ $t('client.tickets.staff') }}
-            </span>
-          </div>
-          <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{{ reply.message }}</p>
-        </div>
-      </div>
-
-      <!-- Reply form (only for open tickets) -->
-      <UiCard v-if="ticket.status !== 'Closed'">
-        <h2 class="text-base font-bold text-gray-900 dark:text-white mb-4">{{ $t('client.tickets.addReply') }}</h2>
+      <UiCard v-if="ticket.status !== TicketStatus.Closed">
+        <UiHeading :level="2" size="subsection" class="mb-4">{{ $t('client.tickets.addReply') }}</UiHeading>
         <UiForm
+data-testid="ticket-reply-form"
           :error="replyError"
           :success="replySuccess ? $t('client.tickets.replySent') : undefined"
           spacing="md"
@@ -101,84 +58,119 @@
             :placeholder="$t('client.tickets.replyPlaceholder')"
             :rows="4"
             :resize="false"
+            testid="ticket-reply-message"
             required
           />
           <template #actions>
-            <UiButton type="submit" :loading="replying">
-              <Send v-if="!replying" :size="16" :stroke-width="2" class="mr-2" />
-              {{ replying ? $t('client.tickets.sending') : $t('client.tickets.sendReply') }}
+            <UiButton type="submit" :loading="replyLoading" data-testid="ticket-reply-submit">
+              <Send v-if="!replyLoading" :size="16" :stroke-width="2" class="mr-2" />
+              {{ replyLoading ? $t('client.tickets.sending') : $t('client.tickets.sendReply') }}
             </UiButton>
           </template>
         </UiForm>
       </UiCard>
 
-      <!-- Closed ticket notice -->
-      <div v-else class="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-center text-gray-500 dark:text-gray-500 text-sm">
-        {{ $t('client.tickets.closedNotice') }}
-        <NuxtLink to="/client/tickets/new" class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors">
-          {{ $t('client.tickets.openNewLink') }}
-        </NuxtLink>
-        {{ $t('client.tickets.closedSuffix') }}
-      </div>
-    </div>
-  </div>
+      <UiCard v-else padding="sm" data-testid="ticket-closed-notice">
+        <UiText size="sm" tone="subtle" class="text-center">
+          {{ $t('client.tickets.closedNotice') }}
+          <UiLink data-testid="ticket-new-link" to="/client/tickets/new" :underline="false">{{ $t('client.tickets.openNewLink') }}</UiLink>
+          {{ $t('client.tickets.closedSuffix') }}
+        </UiText>
+      </UiCard>
+    </template>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
-import { ArrowLeft, AlertCircle, Send } from 'lucide-vue-next'
-import { useSupportApi } from '~/composables/apis/useSupportApi'
-import { apiErrorMessage } from '~/utils/apiError'
+/**
+ * One support ticket: its header, the conversation and, while the ticket is open, a reply form.
+ * The ticket is read through the support store; the reply flags and refusal sentence are the
+ * store's too.
+ */
+import { AlertCircle, Send } from 'lucide-vue-next'
+import { useSupportStore } from '~/stores/support'
+import type { TicketReply } from '~/types/ticketreply'
+import { SubmitOutcome } from '~/types/submitoutcome'
+import { TicketStatus } from '~/types/ticketstatus'
 import { formatDateTime } from '~/utils/formatDate'
 
 definePageMeta({ layout: 'client', middleware: 'client-auth' })
 
+/** Translates a key into the active locale. */
 const { t } = useI18n()
+/** The current route; its params name the record shown. */
 const route = useRoute()
+/** The signed-in person. */
 const { user } = storeToRefs(useAuthStore())
-const { loadTicket, replyToTicket } = useSupportApi()
 
 /**
  * The signed-in person's display name, for the author line on their own ticket message.
  *
- * `ClientUser` has no `name` — it carries `firstname` and `lastname` — so the template's
- * `user?.name` was `undefined` on every render, and the author line and its avatar initial were
- * both blank on every ticket in the portal. Composed the same way `useClientStore.fullName`
- * composes it, and falling back to the email so the avatar is never an empty circle.
+ * `ClientUser` carries `firstname` and `lastname` rather than a `name`, so the line is composed
+ * from those and falls back to the email so the avatar is never an empty circle.
  */
 const authorName = computed(() => {
   const person = user.value
-  if (!person) return ''
+  if (!person) {
+    return ''
+  }
 
   return `${person.firstname ?? ''} ${person.lastname ?? ''}`.trim() || person.email
 })
 
-// Straight from the API composable rather than through a store: this page fetches one ticket
-// and owns it alone, which is the named exception to component -> store -> api.
-const { data: ticket, pending, error, refresh } = await loadTicket(() => String(route.params.id))
+/** The support store: the ticket, the reply flags and the refusal sentences. */
+const supportStore = useSupportStore()
+/** Loading flag and reload function of the data this page reads. */
+const { pending, refresh } = await useAsyncData(
+  () => `client-ticket-${String(route.params.id)}`,
+  () => supportStore.loadTicket(String(route.params.id))
+)
 
-// Reply form state
+/** The ticket being read; null until loaded or after a failed read. */
+const ticket = computed(() => supportStore.ticket)
+
+/** The sentence for a failed read. */
+const error = computed(() => supportStore.ticketReadError)
+
+/** The replies of the thread, oldest first. */
+const replies = computed(() => ticket.value?.replies ?? [])
+
+/** Submission state of the reply form; the store owns the loading flag and the refusal. */
+const { replyLoading, replyError } = storeToRefs(supportStore)
+/** Action that posts a reply to the ticket. */
+const { replyToTicket } = supportStore
+
+/** The reply being typed. */
 const replyMessage = ref('')
-const replying = ref(false)
-const replyError = ref('')
+
+/** True after a reply was accepted, until the next attempt starts. */
 const replySuccess = ref(false)
 
-async function submitReply() {
-  if (!replyMessage.value.trim()) return
-  replying.value = true
-  replyError.value = ''
+/**
+ * The author line of a reply: a staff member's name followed by the "support" tag, or the
+ * name the client wrote it under.
+ *
+ * @param reply - The reply to name the author of.
+ * @returns The text shown above the reply.
+ */
+const replyAuthor = (reply: TicketReply): string => (reply.isStaffReply ? `${reply.authorName} (${t('client.tickets.support')})` : reply.authorName)
+
+/**
+ * Sends the typed reply through the store and reloads the thread when it was accepted.
+ *
+ * @returns Resolves when the attempt has ended; a refusal is rendered from `replyError`.
+ */
+const submitReply = async (): Promise<void> => {
+  if (!replyMessage.value.trim()) {
+    return
+  }
   replySuccess.value = false
-  try {
-    await replyToTicket(String(route.params.id), replyMessage.value)
+  const outcome = await replyToTicket(String(route.params.id), replyMessage.value)
+  if (outcome === SubmitOutcome.Sent) {
     replyMessage.value = ''
     replySuccess.value = true
-    // Refresh the ticket thread to show the new reply
+    // Reload the thread so the new reply shows.
     await refresh()
-  } catch (err: unknown) {
-    // The wording comes from the response body via the one mapping helper in
-    // `utils/apiError.ts`; the local key is only the no-answer fallback.
-    replyError.value = apiErrorMessage(err) || t('client.tickets.replyError')
-  } finally {
-    replying.value = false
   }
 }
 </script>

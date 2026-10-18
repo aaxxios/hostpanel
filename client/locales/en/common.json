@@ -2,41 +2,47 @@
   "ui": {
     "selectPlaceholder": "Select an option",
     "noOptions": "No options available",
-    "theme": { "switchDark": "Switch to dark mode", "switchLight": "Switch to light mode" },
+    "theme": {
+      "switchDark": "Switch to dark mode",
+      "switchLight": "Switch to light mode"
+    },
     "pagination": {
       "showing": "Showing {from}–{to} of {total} entries",
       "show": "Show",
       "entries": "entries",
       "prev": "Previous",
       "next": "Next",
-      "noResults": "No results match your search"
-    }
+      "label": "Pagination"
+    },
+    "search": "Search…",
+    "phoneNumber": "Enter phone number",
+    "close": "Close",
+    "loading": "Loading",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "clearSearch": "Clear search",
+    "searchButton": "Search",
+    "tabs": "Tabs",
+    "digit": "Digit {n}",
+    "language": "Language",
+    "currency": "Currency",
+    "currencyFixed": "Your currency is set on your account and cannot be changed here.",
+    "phoneExample": "00 000 000"
   },
   "common": {
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "learnMore": "Learn More",
-    "getStarted": "Get Started",
-    "viewAll": "View All",
-    "contact": "Contact",
-    "back": "Back",
     "next": "Next",
     "previous": "Previous",
-    "close": "Close",
     "home": "Home",
-    "services": "Services",
     "products": "Products",
-    "portfolio": "Portfolio",
-    "allProjects": "All Projects",
-    "backToPortfolio": "Back to Portfolio",
-    "backToServices": "Back to Services",
     "backToProducts": "Back to Products",
-    "notFound": "Not Found",
-    "industry": "Industry",
-    "duration": "Duration",
-    "teamSize": "Team Size",
-    "startingAt": "Starting at",
     "scrollDown": "Scroll Down",
-    "scrollHorizontal": "Scroll to explore"
+    "scrollHorizontal": "Scroll to explore",
+    "retry": "Retry",
+    "breadcrumb": "Breadcrumb"
+  },
+  "errors": {
+    "noAnswer": "Could not reach the server."
   }
 }

@@ -1,0 +1,38 @@
+/**
+ * Endpoint functions for the admin dashboard: statistics and the recent-activity feed.
+ *
+ * No state lives here — the dashboard and activity stores own it. Every function rejects
+ * with an `ApiError`; turning that into words is `lib/errorHandler.ts`'s job.
+ */
+
+import { useApi } from '@/composables/useApi'
+import type { ActivityEvent } from '@/types/activityevent'
+import type { DashboardStats } from '@/types/dashboardstats'
+
+/**
+ * Endpoint functions for `/api/admin/dashboard/*`.
+ *
+ * @returns One typed function per dashboard endpoint the admin panel uses.
+ */
+export const useDashboardApi = () => {
+  const { request } = useApi()
+
+  /**
+   * Reads the headline statistics.
+   *
+   * @returns Revenue, service, invoice, ticket and client totals.
+   */
+  const fetchStats = (): Promise<DashboardStats> =>
+    request<DashboardStats>('/admin/dashboard/stats')
+
+  /**
+   * Reads the recent activity feed.
+   *
+   * @param limit - Maximum number of events to return.
+   * @returns Events, newest first.
+   */
+  const fetchActivity = (limit: number): Promise<ActivityEvent[]> =>
+    request<ActivityEvent[]>(`/admin/dashboard/activity?limit=${limit}`)
+
+  return { fetchStats, fetchActivity }
+}

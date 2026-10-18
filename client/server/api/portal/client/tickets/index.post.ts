@@ -2,7 +2,7 @@
  * POST /api/portal/client/tickets
  * Opens a new support ticket via the C# backend.
  *
- * Body: { deptid, subject, message, priority? }
+ * Body: { departmentId, subject, message, priority } -- the backend's `CreateTicketCommand`
  */
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)

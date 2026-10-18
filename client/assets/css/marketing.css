@@ -1,0 +1,81 @@
+/*
+ * Skins of the third-party carousel on the marketing sections.
+ *
+ * Swiper builds its pagination bullets itself, so the only way to restyle them is a stylesheet
+ * that targets its class names; everything else in the sections is Tailwind in the template. Each
+ * block is scoped to a class the section puts on its own `Swiper`, so nothing leaks to another
+ * carousel. Colours that a stylesheet must spell out are the carousel's own (white bullets on a
+ * photograph, a brand gradient on the active testimonial bullet).
+ */
+
+/* Testimonials carousel: room for the bullets below the cards, a pill for the active one. */
+.testimonials-swiper {
+  padding-bottom: 50px;
+}
+
+.testimonials-swiper .swiper-pagination {
+  bottom: 0;
+}
+
+.testimonials-swiper .swiper-pagination-bullet {
+  width: 8px;
+  height: 8px;
+  background: #4b5563;
+  opacity: 1;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+}
+
+.testimonials-swiper .swiper-pagination-bullet-active {
+  width: 32px;
+  background: linear-gradient(90deg, #0ea5e9, #a855f7);
+}
+
+/* Full-screen product slider: white dots over the photograph. */
+.products-slider .swiper-pagination {
+  bottom: 20px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.products-slider .swiper-pagination-bullet {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.45) !important;
+  opacity: 1 !important;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  pointer-events: auto !important;
+  padding: 4px;
+  box-sizing: content-box;
+}
+
+.products-slider .swiper-pagination-bullet:hover {
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+.products-slider .swiper-pagination-bullet-active {
+  background: white !important;
+  transform: scale(1.2);
+}
+
+/*
+ * The film grain over each slide, drawn by the browser (feTurbulence) as a data URI, so the page
+ * asks nothing of anyone else. It used to be fetched from a third-party host on every visit.
+ */
+.slider-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* The slide copy sits on a photograph, so it keeps a tight leading and the body face. */
+.products-slider .swiper-slide h2,
+.products-slider .swiper-slide h3,
+.products-slider .swiper-slide p,
+.products-slider .swiper-slide span {
+  line-height: 1.2;
+  font-family: 'Inter', sans-serif;
+}

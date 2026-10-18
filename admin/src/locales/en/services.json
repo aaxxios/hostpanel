@@ -1,0 +1,8 @@
+{
+  "servicesList": {
+    "services": "Services",
+    "viewAndManageAllClient": "View and manage all client hosted services",
+    "totalcountServiceValue": "Services: {totalCount}",
+    "noServicesFound": "No services found"
+  }
+}

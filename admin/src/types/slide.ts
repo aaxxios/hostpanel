@@ -2,7 +2,6 @@
  * A storefront slide, its per-locale text, and the payloads that write one.
  */
 
-import type { Product } from './product'
 
 /** A single slide translation for a specific locale. */
 export interface SlideTranslation {
@@ -88,4 +87,12 @@ export interface CreateSlidePayload {
 export interface UpdateSlidePayload extends CreateSlidePayload {
   /** Slide ID. */
   id: number
+}
+
+/** One slide's new position in the display order. */
+export interface SlideOrderItem {
+  /** Slide ID. */
+  id: number
+  /** New display order. */
+  sortOrder: number
 }

@@ -31,3 +31,25 @@ export interface KbArticle {
   /** Whether published and visible to clients. */
   isPublished: boolean
 }
+
+/** Body that creates or replaces a knowledge base category. */
+export interface KbCategoryPayload {
+  /** Category display name. */
+  name: string
+  /** Category description. */
+  description: string
+  /** Whether hidden from clients. */
+  isHidden: boolean
+}
+
+/** Body that creates a knowledge base article. */
+export interface KbArticlePayload {
+  /** Article title. */
+  title: string
+  /** Article body content. */
+  content: string
+  /** Category name. */
+  category: string
+  /** Whether the article is visible to clients at once; false saves a draft. */
+  isPublished: boolean
+}

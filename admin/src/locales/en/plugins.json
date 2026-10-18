@@ -1,0 +1,32 @@
+{
+  "pluginCard": {
+    "pendingRestart": "Pending restart",
+    "categoryByAuthor": "{category} · by {author}",
+    "removing": "Removing…",
+    "remove": "Remove"
+  },
+  "pluginUploader": {
+    "dropYourPlugin": "Drop your plugin",
+    "here": "here",
+    "zip": ".zip",
+    "orClickToBrowseFiles": "or click to browse files",
+    "valueKbReadyToInstall": "{value} KB · Ready to install",
+    "installPlugin": "Install Plugin"
+  },
+  "restartBanner": {
+    "restartRequired": "Restart required",
+    "pluginChangesWillTakeEffect": "Plugin changes will take effect after a server restart.",
+    "restarting": "Restarting…",
+    "restartServer": "Restart Server"
+  },
+  "plugins": {
+    "pluginManager": "Plugin Manager",
+    "installAndManageProviderPlugins": "Install and manage provider plugins",
+    "lengthInstalled": "· {length} installed",
+    "noPluginsInstalledYet": "No plugins installed yet",
+    "uploadA": "Upload a",
+    "fileAboveToGetStarted": "file above to get started",
+    "zip": ".zip",
+    "installedPlugins": "Installed Plugins"
+  }
+}

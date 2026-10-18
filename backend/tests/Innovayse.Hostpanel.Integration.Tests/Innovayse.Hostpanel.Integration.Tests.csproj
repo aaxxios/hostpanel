@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Settings inherited from Directory.Build.props -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="coverlet.collector" />
+    <!-- Moq backs the Clients/* validator tests; HTTP adapters are tested against Fixtures/StubHttpServer, never a mocked HttpMessageHandler. -->
+    <PackageReference Include="Moq" />
+    <!-- Options<T> wrapping for the Adapters/Integrations/* provider settings in the tests moved from Infrastructure.Tests. -->
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Innovayse.Hostpanel.API\Innovayse.Hostpanel.API.csproj" />
+    <!--
+      Named explicitly rather than leant on transitively: Cwp7ApiClientTests
+      (Adapters/Integrations/Cwp7) constructs the internal Cwp7ApiClient directly, and the
+      InternalsVisibleTo that permits it is declared in this project's own file.
+    -->
+    <ProjectReference Include="..\..\src\Innovayse.Providers.CWP7\Innovayse.Providers.CWP7.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Fixtures\model-diff-baseline.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

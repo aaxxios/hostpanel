@@ -1,58 +1,70 @@
 <template>
-  <section class="relative px-[clamp(20px,5vw,48px)] pb-[clamp(56px,8vw,84px)]">
-    <div class="mx-auto flex max-w-[980px] flex-col gap-2.5">
-      <p v-if="!hasZones" class="text-center text-[15px] text-mut2">
+  <UiStack as="section" gap="none" class="relative pb-[clamp(56px,8vw,84px)]">
+    <UiStack gap="xs" class="mx-auto w-full max-w-[980px]">
+      <UiText v-if="!hasZones" tone="inherit" class="text-center text-[15px] text-mut2" data-testid="domain-results-no-zones">
         {{ t('aurora.domainSearch.noZones') }}
-      </p>
-      <p v-else-if="pending" class="text-center text-[15px] text-mut2">
+      </UiText>
+      <UiText v-else-if="pending" tone="inherit" class="text-center text-[15px] text-mut2" data-testid="domain-results-pending">
         {{ t('aurora.domainSearch.searching') }}
-      </p>
-      <p v-else-if="results.length === 0" class="text-center text-[15px] text-mut2">
+      </UiText>
+      <UiText v-else-if="results.length === 0" tone="inherit" class="text-center text-[15px] text-mut2" data-testid="domain-results-empty">
         {{ t('aurora.domainSearch.empty') }}
-      </p>
+      </UiText>
 
-      <div
-        v-for="result in results"
-        v-else
-        :key="result.name"
-        class="flex flex-wrap items-center justify-between gap-3.5 rounded-[14px] border px-5 py-[18px]"
-        :class="result.status === 'available' ? 'border-ok bg-surf' : 'border-line bg-surf'"
-      >
-        <div class="flex min-w-0 items-center gap-3.5">
-          <span class="h-[9px] w-[9px] shrink-0 rounded-full" :class="dotClass(result.status)" />
-          <span class="break-all font-mono text-[clamp(15px,2vw,18px)] text-tx">{{ result.name }}</span>
-          <span
-            class="whitespace-nowrap rounded-full border border-line2 px-2.5 py-[3px] text-xs"
-            :class="labelClass(result.status)"
-          >{{ t(`aurora.domainSearch.${result.status}`) }}</span>
-        </div>
+      <template v-else>
+        <UiCard
+          v-for="result in results"
+          :key="result.name"
+          tone="bare"
+          padding="none"
+          :data-testid="`domain-result-${result.name}`"
+          :data-status="result.status"
+          class="bg-surf px-5 py-[18px]"
+          :class="result.status === DomainResultStatus.Available ? 'border-ok' : 'border-line'"
+        >
+          <UiStack direction="row" wrap align="center" justify="between" gap="md">
+            <UiStack direction="row" align="center" gap="md" class="min-w-0">
+              <span class="h-[9px] w-[9px] shrink-0 rounded-full" :class="AVAILABILITY_DOT_CLASSES[result.status]" />
+              <UiText as="span" size="inherit" tone="inherit" class="break-all font-mono text-[clamp(15px,2vw,18px)] text-tx">
+                {{ result.name }}
+              </UiText>
+              <UiBadge size="sm" rounded :variant="AVAILABILITY_TONES[result.status]">
+                {{ t(`aurora.domainSearch.${result.status}`) }}
+              </UiBadge>
+            </UiStack>
 
-        <div class="flex items-center gap-[18px]">
-          <span class="text-[17px] font-bold text-tx">{{ result.price }}</span>
+            <UiStack direction="row" align="center" gap="lg">
+              <UiText as="span" size="inherit" tone="inherit" weight="bold" class="text-[17px] text-tx">{{ result.price }}</UiText>
 
-          <!--
-            Available names go to the cart; taken ones offer transfer instead,
-            which is the only thing a visitor can actually do with them here.
-          -->
-          <button
-            v-if="result.status === 'available'"
-            type="button"
-            :disabled="inCart.includes(result.name) || currencyBlocked.includes(result.name)"
-            :title="currencyBlocked.includes(result.name) ? t('domains.currencyMismatch') : undefined"
-            class="rounded-[10px] border border-line2 bg-brand px-[18px] py-[11px] text-sm font-bold text-on-tint hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-            @click="emit('add', result.name)"
-          >
-            {{ inCart.includes(result.name) ? t('aurora.domainSearch.inCart') : t('aurora.domainSearch.add') }}
-          </button>
-          <NuxtLink
-            v-else-if="result.status === 'taken'"
-            :to="`${localePath('/domains/transfer')}?domain=${result.name}`"
-            class="rounded-[10px] border border-line2 px-[18px] py-[11px] text-sm font-bold text-tx hover:border-ac1 hover:text-ac1"
-          >{{ t('aurora.domainSearch.transfer') }}</NuxtLink>
-        </div>
-      </div>
-    </div>
-  </section>
+              <!--
+                Available names go to the cart; taken ones offer transfer instead,
+                which is the only thing a visitor can actually do with them here.
+              -->
+              <UiButton
+                v-if="result.status === DomainResultStatus.Available"
+                variant="bare"
+                :data-testid="`domain-add-${result.name}`"
+                :disabled="inCart.includes(result.name)"
+                :class="[BRAND_BUTTON, 'px-[18px] py-[11px] text-sm disabled:opacity-50']"
+                @click="emit('add', result.name)"
+              >
+                {{ inCart.includes(result.name) ? t('aurora.domainSearch.inCart') : t('aurora.domainSearch.add') }}
+              </UiButton>
+              <UiButton
+                v-else-if="result.status === DomainResultStatus.Taken"
+                variant="bare"
+                :to="`${localePath('/domains/transfer')}?domain=${result.name}`"
+                :data-testid="`domain-transfer-${result.name}`"
+                :class="[LINE_BUTTON, 'px-[18px] py-[11px] text-sm font-bold']"
+              >
+                {{ t('aurora.domainSearch.transfer') }}
+              </UiButton>
+            </UiStack>
+          </UiStack>
+        </UiCard>
+      </template>
+    </UiStack>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
@@ -62,41 +74,30 @@
  * Presentation only: adding to the cart is emitted upward, because a template
  * never writes to a store.
  */
-import type { DomainResult } from '~/templates/aurora/types'
+import { BRAND_BUTTON, LINE_BUTTON } from '~/templates/aurora/buttons'
+import { AVAILABILITY_DOT_CLASSES, AVAILABILITY_TONES } from '~/templates/aurora/domainStatus'
+import { DomainResultStatus } from '~/templates/aurora/types/domainresultstatus'
+import type { DomainResult } from '~/templates/aurora/types/domainresult'
 
 withDefaults(defineProps<{
+  /** Lookup results, one row per checked extension. */
   results?: DomainResult[]
+  /** Whether a lookup is under way. */
   pending?: boolean
+  /** False when the operator has priced no extensions. */
   hasZones?: boolean
   /** Domains already in the cart, so their button reads as done rather than repeating. */
   inCart?: string[]
-  /**
-   * Available result names whose TLD sells in a currency other than the payer's current one —
-   * the cart store refuses these, so the button is shown disabled with a hint instead of doing
-   * nothing when clicked. Same rule as the classic template's `canAddDomain`.
-   */
-  currencyBlocked?: string[]
-}>(), { results: () => [], pending: false, hasZones: true, inCart: () => [], currencyBlocked: () => [] })
+}>(), { results: () => [], pending: false, hasZones: true, inCart: () => [] })
 
-const emit = defineEmits<{ add: [domain: string] }>()
+/** Events this component raises. */
+const emit = defineEmits<{
+  /** The visitor added an available domain to the cart. */
+  add: [domain: string]
+}>()
 
+/** Translator for the active locale. */
 const { t } = useI18n()
+/** Prefixes a path with the active locale. */
 const localePath = useLocalePath()
-
-/**
- * Status dot colour. `unknown` is muted rather than red — the name is fine, the
- * check did not complete.
- *
- * @param status Availability state of the row.
- */
-const dotClass = (status: DomainResult['status']) =>
-  status === 'available' ? 'bg-ok' : status === 'taken' ? 'bg-danger' : 'bg-mut2'
-
-/**
- * Status label colour, matching {@link dotClass}.
- *
- * @param status Availability state of the row.
- */
-const labelClass = (status: DomainResult['status']) =>
-  status === 'available' ? 'text-ok' : status === 'taken' ? 'text-danger' : 'text-mut2'
 </script>

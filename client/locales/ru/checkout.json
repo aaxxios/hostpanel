@@ -5,6 +5,7 @@
     "yourOrder": "Ваш заказ",
     "account": "Аккаунт",
     "paymentMethod": "Способ оплаты",
+    "cardDetails": "Данные карты",
     "loggedInAs": "Вы вошли как",
     "notYou": "Не вы? Сменить аккаунт",
     "guestNotice": "Вы оформляете заказ как гость",
@@ -17,12 +18,43 @@
       "firstname": "Имя",
       "lastname": "Фамилия",
       "email": "Электронная почта",
-      "emailPlaceholder": "вы{'@'}example.com",
-      "password": "Создать пароль"
+      "password": "Создать пароль",
+      "phonenumber": "Номер телефона"
     },
     "errors": {
-      "fillRequired": "Пожалуйста, заполните все обязательные поля",
       "generic": "Произошла ошибка. Попробуйте ещё раз."
+    },
+    "success": {
+      "title": "Оплата прошла успешно!",
+      "description": "Заказ оформлен, оплата подтверждена. Теперь вы можете настроить услугу.",
+      "orderNumber": "Заказ",
+      "status": "Оплата",
+      "paid": "Оплачено",
+      "amount": "Сумма",
+      "setupService": "Настроить мою услугу",
+      "viewInvoices": "Посмотреть счета",
+      "domain": "Домен",
+      "action": "Действие",
+      "registration": "Регистрация",
+      "transfer": "Перенос",
+      "manageDomain": "Управление доменом"
+    },
+    "secureCheckout": "Безопасная оплата",
+    "identifyPrompt": "Как нам вас идентифицировать?",
+    "choosePayment": "Выберите удобный способ оплаты",
+    "needHelp": "Нужна помощь?",
+    "supportAlways": "Наша поддержка работает 24/7",
+    "contactUs": "Связаться с нами",
+    "placeholders": {
+      "firstname": "Иван",
+      "lastname": "Иванов",
+      "email": "you{'@'}example.com",
+      "password": "••••••••"
+    },
+    "card": {
+      "notInitialized": "Форма оплаты картой ещё не готова. Подождите немного и повторите попытку.",
+      "failed": "Не удалось завершить оплату картой.",
+      "noIntent": "Не удалось подтвердить платёж."
     }
   }
 }

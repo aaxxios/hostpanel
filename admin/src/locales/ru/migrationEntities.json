@@ -1,0 +1,17 @@
+{
+  "clients": "Клиенты",
+  "invoices": "Счета",
+  "services": "Услуги",
+  "domains": "Домены",
+  "tickets": "Тикеты",
+  "products": "Продукты",
+  "orders": "Заказы",
+  "transactions": "Транзакции",
+  "quotes": "Предложения",
+  "knowledgebase": "База знаний",
+  "contacts": "Контакты",
+  "ticketReplies": "Ответы на тикеты",
+  "announcements": "Объявления",
+  "downloads": "Загрузки",
+  "networkIssues": "Сетевые проблемы"
+}

@@ -19,7 +19,9 @@
  * @module utils/invoice
  */
 
-import type { ClientInvoice, ClientInvoiceTransaction } from '~/types/clientinvoice'
+import type { ClientInvoice } from '~/types/clientinvoice'
+import type { ClientInvoiceTransaction } from '~/types/clientinvoicetransaction'
+import { InvoiceStatus } from '~/types/invoicestatus'
 
 /**
  * How much has actually been received against an invoice.
@@ -41,7 +43,9 @@ export const paymentsToDate = (transactions: ClientInvoiceTransaction[] | null |
  * @returns The outstanding balance; `0` when there is no invoice to read.
  */
 export const balanceDue = (invoice: ClientInvoice | null | undefined): number => {
-  if (!invoice) return 0
+  if (!invoice) {
+    return 0
+  }
 
   return invoice.total - paymentsToDate(invoice.transactions)
 }
@@ -62,7 +66,7 @@ export const balanceDue = (invoice: ClientInvoice | null | undefined): number =>
  * @returns True when the invoice is awaiting payment.
  */
 export const isInvoiceOutstanding = (invoice: Pick<ClientInvoice, 'status'>): boolean =>
-  invoice.status === 'Unpaid' || invoice.status === 'Overdue'
+  invoice.status === InvoiceStatus.Unpaid || invoice.status === InvoiceStatus.Overdue
 
 /**
  * Whether an invoice should be shown to the customer as late.
@@ -84,9 +88,15 @@ export const isInvoiceOverdue = (
   invoice: Pick<ClientInvoice, 'status' | 'dueDate'> | null | undefined,
   now: Date = new Date()
 ): boolean => {
-  if (!invoice) return false
-  if (invoice.status === 'Overdue') return true
-  if (invoice.status !== 'Unpaid') return false
+  if (!invoice) {
+    return false
+  }
+  if (invoice.status === InvoiceStatus.Overdue) {
+    return true
+  }
+  if (invoice.status !== InvoiceStatus.Unpaid) {
+    return false
+  }
 
   const due = new Date(invoice.dueDate)
   // An unparseable due date is not evidence of lateness. Reading `Invalid Date < now` as false

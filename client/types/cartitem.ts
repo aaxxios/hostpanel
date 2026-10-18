@@ -1,3 +1,12 @@
+/**
+ * A single line in the shopping cart — a hosting plan or a domain.
+ *
+ * @module types/cartitem
+ */
+
+import type { CartItemType } from '~/types/cartitemtype'
+import type { DomainOrderAction } from '~/types/domainorderaction'
+
 /** A single line in the shopping cart — a hosting plan or a domain. */
 export interface CartItem {
   /** Product ID (generic domain product PID for domain items) */
@@ -25,10 +34,10 @@ export interface CartItem {
   username?: string
   /** Account password for hosting items */
   password?: string
-  /** Item type: "hosting" or "domain". Defaults to "hosting" if omitted. */
-  itemType?: 'hosting' | 'domain'
-  /** Domain action: "register" or "transfer" */
-  domainAction?: 'register' | 'transfer'
+  /** Item type: hosting or domain. Defaults to "hosting" if omitted. */
+  itemType?: CartItemType
+  /** Domain action: register or transfer */
+  domainAction?: DomainOrderAction
   /** EPP/auth code for domain transfers */
   eppCode?: string
   /** TLD extension, e.g. "com", "net" */

@@ -1,47 +1,61 @@
 <template>
-  <div>
-    <section class="py-12 md:py-20 bg-[#0a0a0f] min-h-dvh">
-      <div class="container-custom max-w-4xl">
+  <UiSection padding="lg" data-testid="kb-category-page">
+    <UiStack class="mx-auto w-full max-w-4xl" gap="lg">
+      <!-- Back link -->
+      <UiLink
+        :to="localePath('/knowledgebase')"
+        tone="muted"
+        :underline="false"
+        class="inline-flex items-center gap-2 self-start text-sm"
+        testid="kb-back"
+      >
+        <ArrowLeft :size="15" :stroke-width="2" />
+        {{ t('kb.backToKb') }}
+      </UiLink>
 
-        <!-- Back link -->
-        <NuxtLink
-          :to="localePath('/knowledgebase')"
-          class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-8"
-        >
-          <ArrowLeft :size="15" :stroke-width="2" />
-          {{ $t('kb.backToKb') }}
-        </NuxtLink>
+      <!-- Category header -->
+      <UiStack direction="row" align="center" gap="md">
+        <UiTile
+          :icon="Folder"
+          size="xl"
+          class="border border-primary-500/20 bg-primary-500/10 text-primary-600 dark:text-primary-400"
+        />
+        <UiStack gap="none">
+          <UiHeading :level="1" size="section" data-testid="kb-category-heading">
+            {{ categoryName }}
+          </UiHeading>
+          <UiText size="sm" tone="subtle" data-testid="kb-category-count">
+            {{ articles.length }} {{ t('kb.articles') }}
+          </UiText>
+        </UiStack>
+      </UiStack>
 
-        <!-- Category header -->
-        <div class="flex items-center gap-4 mb-8">
-          <div class="w-12 h-12 rounded-xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center flex-shrink-0">
-            <Folder :size="22" :stroke-width="2" class="text-primary-400" />
-          </div>
-          <div>
-            <h1 class="text-2xl font-bold text-white">{{ categoryName }}</h1>
-            <p class="text-sm text-gray-500">{{ articles.length }} {{ $t('kb.articles') }}</p>
-          </div>
-        </div>
+      <!-- Loading -->
+      <UiStack v-if="pending" gap="sm" data-testid="kb-category-loading">
+        <UiSkeleton v-for="i in 6" :key="i" shape="block" class="h-16" />
+      </UiStack>
 
-        <!-- Loading -->
-        <div v-if="pending" class="space-y-3">
-          <div v-for="i in 6" :key="i" class="h-16 rounded-xl bg-white/5 border border-white/10 animate-pulse" />
-        </div>
+      <!-- Empty -->
+      <UiEmptyState
+        v-else-if="!articles.length"
+        :icon="FileText"
+        :title="t('kb.empty')"
+        data-testid="kb-category-empty"
+      />
 
-        <!-- Empty -->
-        <div v-else-if="!articles.length" class="text-center py-20">
-          <FileText :size="40" :stroke-width="1.5" class="text-gray-600 mx-auto mb-4" />
-          <p class="text-gray-400">{{ $t('kb.empty') }}</p>
-        </div>
-
-        <!-- Articles list -->
-        <div v-else class="divide-y divide-white/5 rounded-2xl border border-white/10 overflow-hidden">
+      <!-- Articles list -->
+      <UiCard
+        v-else
+        padding="none"
+        class="overflow-hidden"
+        data-testid="kb-category-articles"
+      >
+        <UiStack gap="none" class="divide-y divide-gray-100 dark:divide-white/5">
           <KbArticleRow v-for="article in articles" :key="article.id" :article="article" />
-        </div>
-
-      </div>
-    </section>
-  </div>
+        </UiStack>
+      </UiCard>
+    </UiStack>
+  </UiSection>
 </template>
 
 <script setup lang="ts">
@@ -51,32 +65,37 @@
  */
 
 import { ArrowLeft, Folder, FileText } from 'lucide-vue-next'
-import { useContentApi } from '~/composables/apis/useContentApi'
+import { useContentStore } from '~/stores/content'
 import type { KbArticle } from '~/types/kbarticle'
 
+/** The current route. */
 const route = useRoute()
-const localePath = useLocalePath()
-const { t } = useI18n()
 
+/** Localised path builder from the i18n module. */
+const localePath = useLocalePath()
+/** Translates a key in the active language; `locale` is that language. */
+const { t, locale } = useI18n()
+
+/** Id of the category the route names. */
 const categoryId = computed(() => String(route.params.id))
 
-// Straight from the API composable rather than through a store: this page fetches once and
-// owns the results alone, which is the named exception to component -> store -> api. The raw
-// `useFetch` calls this replaced skipped the locale header `useApi()` sends, so localised
-// articles came back in English.
-const content = useContentApi()
+// Articles and category names, read through the content store; the key follows the route, so a
+// new category is read, and a language change reads it again.
+/** The content store that owns the lists this page renders. */
+const content = useContentStore()
 
-/** Fetch articles for this category */
-const { data, pending } = content.loadKbArticles(() => ({ categoryid: categoryId.value, limitnum: 100 }))
+/** Fetch articles for this category, and the categories to get its name */
+const { pending } = await useAsyncData(
+  () => `kb:category:${categoryId.value}`,
+  () => Promise.all([content.loadCategoryArticles(categoryId.value), content.loadKbCategories()]),
+  { watch: [locale] }
+)
 
-const articles = computed<KbArticle[]>(() => data.value?.items ?? [])
+/** The articles of this category. */
+const articles = computed<KbArticle[]>(() => content.articlesFor(categoryId.value))
 
-/** Fetch categories to get the category name */
-const { data: catData } = content.loadKbCategories()
-const categoryName = computed(() => {
-  const cats = catData.value ?? []
-  return cats.find(c => String(c.id) === categoryId.value)?.name ?? t('kb.categories')
-})
+/** The category's name, or the generic "Categories" label until the store knows it. */
+const categoryName = computed(() => content.categoryName(categoryId.value) ?? t('kb.categories'))
 
 watchEffect(() => {
   if (categoryName.value) {

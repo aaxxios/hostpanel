@@ -1,198 +1,341 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import UiSelect from './UiSelect.vue'
-import { splitIsoDate } from '../../utils/format'
+/**
+ * Date-range picker: a typed `DD/MM/YYYY - DD/MM/YYYY` field with two month grids and presets.
+ *
+ * The model is a `[start, end]` pair of ISO `YYYY-MM-DD` strings (or null). Clicking two days
+ * picks a range and Apply commits it; a preset commits at once; typing a complete range commits
+ * it, a partial one moves the calendar. The popup is teleported to the body so a clipped parent
+ * cannot cut it off, and is placed through CSS variables set from script (no inline style).
+ * Colours are theme tokens, so the popup follows the light/dark switch.
+ */
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import UiSelect from '@/components/ui/UiSelect.vue'
+import { splitIsoDate } from '@/lib/format'
+import { translate } from '@/lib/translate'
+import {
+  RangeEdge,
+  buildYearOptions,
+  dateActionClasses,
+  dateArrowClasses,
+  dateCellBaseClasses,
+  dateCellEmptyClasses,
+  dateCellIdleClasses,
+  dateCellInRangeClasses,
+  dateCellSelectedClasses,
+  dateFieldClasses,
+  datePopupClasses,
+  datePresetIdleClasses,
+  dateRangePresets,
+  formatDisplayDate,
+  formatIsoDate,
+  getDaysForMonth,
+  parsePartialDate,
+  parseTypedDate,
+  partialToDate,
+  presetRange,
+} from '@/utils/ui/datePicker'
+import type { DateRangePreset } from '@/utils/ui/datePicker'
 
+const { t } = useI18n()
+
+/** Props for UiDateRangePicker. */
 const props = defineProps<{
+  /** Selected range as ISO `[start, end]`, or null for none. */
   modelValue: [string, string] | null
+  /** Hint shown in the empty field; the range format when omitted or empty. */
   placeholder?: string
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [[string, string] | null]
+  /** Emitted with the new ISO range, or null when it is cleared. */
+  'update:modelValue': [value: [string, string] | null]
 }>()
 
+/** Widest the popup grows, in pixels. */
+const POPUP_MAX_WIDTH = 900
+
+/** Gap kept between the popup and the viewport edge, in pixels. */
+const POPUP_EDGE_GAP = 16
+
+/** Whether the popup is open. */
 const isOpen = ref(false)
+
+/** First day of the range being picked. */
 const selectedStart = ref<Date | null>(null)
+
+/** Last day of the range being picked. */
 const selectedEnd = ref<Date | null>(null)
+
+/** First day of the left-hand month. */
 const currentMonth = ref(new Date())
 
+/** Popup panel, outside-click detection and CSS-variable target. */
 const popupRef = ref<HTMLElement | null>(null)
-const inputRef = ref<HTMLInputElement | null>(null)
+
+/** Field wrapper, measured to place the popup. */
 const wrapperRef = ref<HTMLElement | null>(null)
 
-const popupStyle = ref({ top: '0px', left: '0px' })
-
-function updatePopupPosition() {
-  if (!wrapperRef.value) return
-  const rect = wrapperRef.value.getBoundingClientRect()
-  const popupWidth = Math.min(900, window.innerWidth - 32)
-  let left = rect.left
-  if (left + popupWidth > window.innerWidth - 16) {
-    left = window.innerWidth - popupWidth - 16
-  }
-  if (left < 8) left = 8
-  popupStyle.value = {
-    top: `${rect.bottom + window.scrollY + 8}px`,
-    left: `${left}px`,
-  }
-}
+/** Text in the field. */
 const inputText = ref('')
+
+/** Start typed so far, highlighted before the range is complete. */
 const previewStart = ref<Date | null>(null)
+
+/** End typed so far, highlighted before the range is complete. */
 const previewEnd = ref<Date | null>(null)
 
-const syncInputText = () => {
-  if (!props.modelValue) {
-    inputText.value = ''
-  } else {
-    inputText.value = `${formatDisplayDate(props.modelValue[0])} - ${formatDisplayDate(props.modelValue[1])}`
-  }
-}
+/** Popup top edge in viewport pixels. */
+const popupTop = ref(0)
 
-onMounted(() => {
-  syncInputText()
+/** Popup left edge in viewport pixels. */
+const popupLeft = ref(0)
+
+/** Month names for the month selects. */
+const monthNames = Array.from({ length: 12 }, (_, i) => translate(`calendar.months.${i + 1}`))
+
+/** Weekday names for the grid headers. */
+const dayNames = Array.from({ length: 7 }, (_, i) => translate(`calendar.weekdays.${i}`))
+
+/** Options of the month selects. */
+const monthOptions = computed(() => monthNames.map((name, i) => ({ value: String(i), label: name })))
+
+/** Options of the year selects. */
+const yearOptions = buildYearOptions()
+
+/** The field hint: the caller's, else the range format. */
+const fieldPlaceholder = computed<string>(() => props.placeholder || t('ui.uiDateRangePicker.ddMmYyyyDdMm'))
+
+/** The two months on show. */
+const months = computed<Date[]>(() => {
+  const first = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth())
+  return [first, new Date(first.getFullYear(), first.getMonth() + 1)]
 })
 
-const monthOptions = computed(() =>
-  monthNames.map((name, i) => ({ value: String(i), label: name }))
-)
+/** Cells of each shown month. */
+const monthCells = computed<(number | null)[][]>(() => months.value.map(getDaysForMonth))
 
-const yearOptions = computed(() => {
-  const years: { value: string; label: string }[] = []
-  for (let y = 2020; y <= 2030; y++) {
-    years.push({ value: String(y), label: String(y) })
-  }
-  return years
-})
-
-const currentMonthValue = computed({
+/** Left month select value. */
+const currentMonthValue = computed<string>({
+  /**
+   * Reads the left month index.
+   *
+   * @returns The value for the select.
+   */
   get: () => String(currentMonth.value.getMonth()),
+  /**
+   * Moves the grid to the picked month.
+   *
+   * @param value - The picked value, as the select emits it.
+   */
   set: (value) => {
-    const newMonth = parseInt(value)
-    currentMonth.value = new Date(currentMonth.value.getFullYear(), newMonth, 1)
+    currentMonth.value = new Date(currentMonth.value.getFullYear(), parseInt(value), 1)
   },
 })
 
-const currentYearValue = computed({
+/** Left year select value. */
+const currentYearValue = computed<string>({
+  /**
+   * Reads the left year.
+   *
+   * @returns The value for the select.
+   */
   get: () => String(currentMonth.value.getFullYear()),
+  /**
+   * Moves the grid to the picked year.
+   *
+   * @param value - The picked value, as the select emits it.
+   */
   set: (value) => {
     currentMonth.value = new Date(parseInt(value), currentMonth.value.getMonth(), 1)
   },
 })
 
-const nextMonthValue = computed({
-  get: () => {
-    const m2 = months.value[1]
-    return String(m2?.getMonth() ?? 0)
-  },
+/** Right month select value; choosing a month makes the left grid the month before it. */
+const nextMonthValue = computed<string>({
+  /**
+   * Reads the right month index.
+   *
+   * @returns The value for the select.
+   */
+  get: () => String(months.value[1]?.getMonth() ?? 0),
+  /**
+   * Makes the left grid the month before the picked one.
+   *
+   * @param value - The picked value, as the select emits it.
+   */
   set: (value) => {
-    const newMonth = parseInt(value)
-    const nextMonth = new Date(currentMonth.value)
-    nextMonth.setMonth(newMonth)
-    const prevMonth = newMonth === 0 ? 11 : newMonth - 1
-    const prevYear = newMonth === 0 ? nextMonth.getFullYear() - 1 : nextMonth.getFullYear()
-    currentMonth.value = new Date(prevYear, prevMonth, 1)
+    const picked = parseInt(value)
+    const year = months.value[1]?.getFullYear() ?? new Date().getFullYear()
+    currentMonth.value = new Date(year, picked - 1, 1)
   },
 })
 
-const nextYearValue = computed({
-  get: () => {
-    const m2 = months.value[1]
-    return String(m2?.getFullYear() ?? 2026)
-  },
+/** Right year select value; choosing a year keeps the right month and moves the left one. */
+const nextYearValue = computed<string>({
+  /**
+   * Reads the right year.
+   *
+   * @returns The value for the select.
+   */
+  get: () => String(months.value[1]?.getFullYear() ?? new Date().getFullYear()),
+  /**
+   * Moves the left grid relative to the picked year.
+   *
+   * @param value - The picked value, as the select emits it.
+   */
   set: (value) => {
-    const newYear = parseInt(value)
-    const nextDate = new Date(currentMonth.value)
-    nextDate.setFullYear(newYear)
-    nextDate.setMonth(nextDate.getMonth() - 1)
-    currentMonth.value = nextDate
+    const month = months.value[1]?.getMonth() ?? 0
+    currentMonth.value = new Date(parseInt(value), month - 1, 1)
   },
 })
 
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
+/** The range being picked, rendered for the bottom bar; null until both ends are set. */
+const pickedLabel = computed<string | null>(() => {
+  if (!selectedStart.value || !selectedEnd.value) {
+    return null
+  }
+  return `${formatDisplayDate(formatIsoDate(selectedStart.value))} - ${formatDisplayDate(formatIsoDate(selectedEnd.value))}`
 })
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+/**
+ * Renders a range for the field.
+ *
+ * @param start - ISO start day.
+ * @param end - ISO end day.
+ * @returns `DD/MM/YYYY - DD/MM/YYYY`.
+ */
+const formatRangeText = (start: string, end: string): string =>
+  `${formatDisplayDate(start)} - ${formatDisplayDate(end)}`
 
-const handleClickOutside = (e: MouseEvent) => {
-  if (
-    popupRef.value && !popupRef.value.contains(e.target as Node) &&
-    wrapperRef.value && !wrapperRef.value.contains(e.target as Node)
-  ) {
+/** Writes the model into the field text. */
+const syncInputText = (): void => {
+  inputText.value = props.modelValue ? formatRangeText(props.modelValue[0], props.modelValue[1]) : ''
+}
+
+/** Forgets the half-typed range highlight. */
+const clearPreview = (): void => {
+  previewStart.value = null
+  previewEnd.value = null
+}
+
+/** Computes where the popup sits: under the field, kept inside the viewport. */
+const updatePopupPosition = (): void => {
+  if (!wrapperRef.value) {
+    return
+  }
+  const rect = wrapperRef.value.getBoundingClientRect()
+  const width = Math.min(POPUP_MAX_WIDTH, window.innerWidth - 2 * POPUP_EDGE_GAP)
+  let left = rect.left
+  if (left + width > window.innerWidth - POPUP_EDGE_GAP) {
+    left = window.innerWidth - width - POPUP_EDGE_GAP
+  }
+  popupTop.value = rect.bottom + 8
+  popupLeft.value = Math.max(left, 8)
+}
+
+/** Hands the computed position to the popup as CSS variables its classes read. */
+const applyPopupPosition = async (): Promise<void> => {
+  // The popup is v-if'd, so it exists only after the next render.
+  await nextTick()
+  popupRef.value?.style.setProperty('--dp-top', `${popupTop.value}px`)
+  popupRef.value?.style.setProperty('--dp-left', `${popupLeft.value}px`)
+}
+
+/** Opens the popup under the field. */
+const openPopup = (): void => {
+  updatePopupPosition()
+  isOpen.value = true
+  void applyPopupPosition()
+}
+
+/**
+ * Closes the popup on a click outside both the popup and the field.
+ *
+ * @param e - The document click.
+ */
+const handleClickOutside = (e: MouseEvent): void => {
+  const target = e.target as Node
+  const outsidePopup = !popupRef.value || !popupRef.value.contains(target)
+  const outsideField = !wrapperRef.value || !wrapperRef.value.contains(target)
+  if (outsidePopup && outsideField) {
     isOpen.value = false
   }
 }
 
-const displayText = computed(() => {
-  if (!props.modelValue) return props.placeholder ?? 'Select date range...'
-  return `${formatDisplayDate(props.modelValue[0])} - ${formatDisplayDate(props.modelValue[1])}`
-})
-
-const months = computed(() => {
-  const m1 = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth())
-  const m2 = new Date(m1.getFullYear(), m1.getMonth() + 1)
-  return [m1, m2]
-})
-
-const daysInMonth = (date: Date) => {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
-}
-
-const firstDayOfMonth = (date: Date) => {
-  return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
-}
-
-const getDaysForMonth = (date: Date) => {
-  const days: (number | null)[] = []
-  const firstDay = firstDayOfMonth(date)
-
-  for (let i = 0; i < firstDay; i++) {
-    days.push(null)
+/**
+ * Tells which edge of the range a day is, preferring what is being typed.
+ *
+ * @param day - Day of the month shown.
+ * @param month - First day of that month.
+ * @returns The edge, or null for an ordinary day.
+ */
+const edgeOf = (day: number, month: Date): RangeEdge | null => {
+  const time = new Date(month.getFullYear(), month.getMonth(), day).getTime()
+  if (previewStart.value && time === previewStart.value.getTime()) {
+    return RangeEdge.Start
   }
-
-  const daysCount = daysInMonth(date)
-  for (let i = 1; i <= daysCount; i++) {
-    days.push(i)
+  if (previewEnd.value && time === previewEnd.value.getTime()) {
+    return RangeEdge.End
   }
-
-  return days
+  if (selectedStart.value && time === selectedStart.value.getTime()) {
+    return RangeEdge.Start
+  }
+  if (selectedEnd.value && time === selectedEnd.value.getTime()) {
+    return RangeEdge.End
+  }
+  return null
 }
 
-const isBetweenDates = (day: number, month: Date) => {
+/**
+ * Tells whether a day lies strictly inside the range, preferring what is being typed.
+ *
+ * @param day - Day of the month shown.
+ * @param month - First day of that month.
+ * @returns True for a day between the two edges.
+ */
+const isBetween = (day: number, month: Date): boolean => {
   const current = new Date(month.getFullYear(), month.getMonth(), day)
-
-  // Check preview first (while typing)
   if (previewStart.value && previewEnd.value) {
     return current > previewStart.value && current < previewEnd.value
   }
-
-  // Check confirmed dates
-  if (!selectedStart.value || !selectedEnd.value) return false
+  if (!selectedStart.value || !selectedEnd.value) {
+    return false
+  }
   return current > selectedStart.value && current < selectedEnd.value
 }
 
-const isSelectedDate = (day: number, month: Date) => {
-  const current = new Date(month.getFullYear(), month.getMonth(), day)
-
-  // Check preview first (while typing)
-  if (previewStart.value && current.getTime() === previewStart.value.getTime()) return 'start'
-  if (previewEnd.value && current.getTime() === previewEnd.value.getTime()) return 'end'
-
-  // Check confirmed dates
-  const start = selectedStart.value ? new Date(selectedStart.value) : null
-  const end = selectedEnd.value ? new Date(selectedEnd.value) : null
-
-  if (start && current.getTime() === start.getTime()) return 'start'
-  if (end && current.getTime() === end.getTime()) return 'end'
-  return false
+/**
+ * Class list of one grid cell.
+ *
+ * @param day - Day of the month, or null for padding.
+ * @param month - First day of the month shown.
+ * @returns Literal Tailwind classes for the cell's state.
+ */
+const dayClasses = (day: number | null, month: Date): string[] => {
+  if (day === null) {
+    return [dateCellBaseClasses, dateCellEmptyClasses]
+  }
+  if (edgeOf(day, month)) {
+    return [dateCellBaseClasses, dateCellSelectedClasses]
+  }
+  if (isBetween(day, month)) {
+    return [dateCellBaseClasses, dateCellInRangeClasses]
+  }
+  return [dateCellBaseClasses, dateCellIdleClasses]
 }
 
-const selectDate = (day: number, month: Date) => {
+/**
+ * Picks a day: first click starts, second ends (swapping if earlier), a third restarts.
+ *
+ * @param day - Day of the month; null padding is ignored.
+ * @param month - First day of the month shown.
+ */
+const selectDay = (day: number | null, month: Date): void => {
+  if (day === null) {
+    return
+  }
   const date = new Date(month.getFullYear(), month.getMonth(), day)
-
   if (!selectedStart.value) {
     selectedStart.value = date
   } else if (!selectedEnd.value) {
@@ -208,346 +351,236 @@ const selectDate = (day: number, month: Date) => {
   }
 }
 
-const applyRange = () => {
-  if (selectedStart.value && selectedEnd.value) {
-    const start = formatDateString(selectedStart.value)
-    const end = formatDateString(selectedEnd.value)
-    emit('update:modelValue', [start, end])
-    inputText.value = `${formatDisplayDate(start)} - ${formatDisplayDate(end)}`
-    isOpen.value = false
+/** Commits the picked range and closes the popup. */
+const applyRange = (): void => {
+  if (!selectedStart.value || !selectedEnd.value) {
+    return
   }
+  const start = formatIsoDate(selectedStart.value)
+  const end = formatIsoDate(selectedEnd.value)
+  emit('update:modelValue', [start, end])
+  inputText.value = formatRangeText(start, end)
+  isOpen.value = false
 }
 
-const clearRange = () => {
+/** Clears the range. */
+const clearRange = (): void => {
   selectedStart.value = null
   selectedEnd.value = null
   inputText.value = ''
   emit('update:modelValue', null)
 }
 
-const formatDateString = (date: Date) => {
-  const year = date.getFullYear()
-  const monthStr = String(date.getMonth() + 1).padStart(2, '0')
-  const dayStr = String(date.getDate()).padStart(2, '0')
-  return `${year}-${monthStr}-${dayStr}`
+/**
+ * Commits a range at once.
+ *
+ * @param start - First day.
+ * @param end - Last day.
+ */
+const applyPreset = (start: Date, end: Date): void => {
+  selectedStart.value = start
+  selectedEnd.value = end
+  const startIso = formatIsoDate(start)
+  const endIso = formatIsoDate(end)
+  emit('update:modelValue', [startIso, endIso])
+  inputText.value = formatRangeText(startIso, endIso)
+  isOpen.value = false
 }
 
-const formatDisplayDate = (dateStr: string) => {
-  const [year, month, day] = dateStr.split('-')
-  return `${day}/${month}/${year}`
+/**
+ * Commits the range a preset stands for.
+ *
+ * @param preset - The preset button pressed.
+ */
+const selectPreset = (preset: DateRangePreset): void => {
+  const [start, end] = presetRange(preset)
+  applyPreset(start, end)
 }
 
-const parseSingleDate = (input: string) => {
-  const cleaned = input.replace(/\D/g, '')
-  if (cleaned.length === 8) {
-    const day = cleaned.substring(0, 2)
-    const month = cleaned.substring(2, 4)
-    const year = cleaned.substring(4, 8)
-
-    const dayNum = parseInt(day)
-    const monthNum = parseInt(month)
-    const yearNum = parseInt(year)
-
-    if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12 && yearNum >= 2000) {
-      const dateStr = `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
-      const testDate = new Date(dateStr)
-      if (!isNaN(testDate.getTime())) {
-        return dateStr
-      }
-    }
+/**
+ * Moves the grid to the month of what has been typed, and returns its full date if complete.
+ *
+ * @param text - One typed date, possibly partial.
+ * @returns The date when day, month and year are all valid, else null.
+ */
+const followPartial = (text: string): Date | null => {
+  const partial = parsePartialDate(text)
+  if (partial.year || partial.month || partial.day) {
+    const year = partial.year || currentMonth.value.getFullYear()
+    const month = partial.month || currentMonth.value.getMonth() + 1
+    currentMonth.value = new Date(year, month - 1, 1)
   }
-  return null
+  return partialToDate(partial)
 }
 
-const parsePartialDate = (input: string) => {
-  const cleaned = input.replace(/\D/g, '')
-  const result: { day?: number; month?: number; year?: number } = {}
-
-  if (cleaned.length >= 1) {
-    const day = cleaned.substring(0, 2)
-    const dayNum = parseInt(day)
-    if (dayNum >= 1 && dayNum <= 31) {
-      result.day = dayNum
-    }
-  }
-
-  if (cleaned.length >= 3) {
-    const month = cleaned.substring(2, 4)
-    const monthNum = parseInt(month)
-    if (monthNum >= 1 && monthNum <= 12) {
-      result.month = monthNum
-    }
-  }
-
-  if (cleaned.length >= 4) {
-    const year = cleaned.substring(4, 8)
-    if (year.length >= 1) {
-      const yearNum = parseInt(year)
-      if (yearNum >= 2000 && yearNum <= 2099) {
-        result.year = yearNum
-      }
-    }
-  }
-
-  return result
-}
-
-const handleInput = (event: Event) => {
+/** Reads the typed text: commits a complete range, or previews a partial one in the grid. */
+const handleInput = (): void => {
   const input = inputText.value
-
-  // If input is empty, clear the range
-  if (!input || input.trim() === '') {
+  if (input.trim() === '') {
     emit('update:modelValue', null)
     selectedStart.value = null
     selectedEnd.value = null
-    previewStart.value = null
-    previewEnd.value = null
+    clearPreview()
     currentMonth.value = new Date()
     return
   }
 
-  // Try to parse as range (e.g., "25052026-31052026" or "25/05/2026 - 31/05/2026")
-  const parts = input.split(/[\s\-]+/).filter(p => p.length > 0)
-  // `filter` already guarantees each element is a non-empty string, but under
-  // `noUncheckedIndexedAccess` the compiler still types `parts[n]` as `string | undefined`.
-  // Destructuring once lets a single truthiness check stand in for the length checks below:
-  // `firstPart && secondPart` is exactly `parts.length >= 2`, and `firstPart` alone is
-  // exactly `parts.length === 1 && parts[0].length > 0`.
-  const [firstPart, secondPart] = parts
+  // Split on whitespace and dashes: "25052026-31052026" and "25/05/2026 - 31/05/2026" both work.
+  // Under noUncheckedIndexedAccess `parts[n]` is `string | undefined`, so destructure once.
+  const [firstPart, secondPart] = input.split(/[\s-]+/).filter(part => part.length > 0)
+  if (!firstPart) {
+    return
+  }
 
-  if (firstPart && secondPart) {
-    const start = parseSingleDate(firstPart)
-    const end = parseSingleDate(secondPart)
-
+  if (secondPart) {
+    const start = parseTypedDate(firstPart)
+    const end = parseTypedDate(secondPart)
     if (start && end) {
-      const startDate = new Date(start + 'T00:00:00')
-      const endDate = new Date(end + 'T00:00:00')
-
+      const startDate = new Date(`${start}T00:00:00`)
+      const endDate = new Date(`${end}T00:00:00`)
       if (startDate <= endDate) {
         selectedStart.value = startDate
         selectedEnd.value = endDate
-        previewStart.value = null
-        previewEnd.value = null
+        clearPreview()
         emit('update:modelValue', [start, end])
-        inputText.value = `${formatDisplayDate(start)} - ${formatDisplayDate(end)}`
-        // Navigate calendar to show the start date's month
-        const { year: startYear, month: startMonth } = splitIsoDate(start)
-        currentMonth.value = new Date(startYear, startMonth - 1, 1)
+        inputText.value = formatRangeText(start, end)
+        const { year, month } = splitIsoDate(start)
+        currentMonth.value = new Date(year, month - 1, 1)
         isOpen.value = false
       }
-    } else {
-      // Partial range - update calendar based on what's typed so far
-      const partial = parsePartialDate(firstPart)
-      if (partial.year || partial.month || partial.day) {
-        const year = partial.year || currentMonth.value.getFullYear()
-        const month = partial.month || (currentMonth.value.getMonth() + 1)
-        currentMonth.value = new Date(year, month - 1, 1)
-
-        // Update preview for first date
-        if (partial.day && partial.month && partial.year) {
-          const fullDate = `${partial.year}-${String(partial.month).padStart(2, '0')}-${String(partial.day).padStart(2, '0')}`
-          previewStart.value = new Date(fullDate + 'T00:00:00')
-        } else {
-          previewStart.value = null
-        }
-      }
-
-      // Check if there's a partial second date
-      {
-        const partial2 = parsePartialDate(secondPart)
-        if (partial2.day && partial2.month && partial2.year) {
-          const fullDate = `${partial2.year}-${String(partial2.month).padStart(2, '0')}-${String(partial2.day).padStart(2, '0')}`
-          previewEnd.value = new Date(fullDate + 'T00:00:00')
-        }
-      }
+      return
     }
-  } else if (firstPart) {
-    // User typing first date only
-    const partial = parsePartialDate(firstPart)
-    if (partial.year || partial.month || partial.day) {
-      const year = partial.year || currentMonth.value.getFullYear()
-      const month = partial.month || (currentMonth.value.getMonth() + 1)
-      currentMonth.value = new Date(year, month - 1, 1)
-
-      // Update preview
-      if (partial.day && partial.month && partial.year) {
-        const fullDate = `${partial.year}-${String(partial.month).padStart(2, '0')}-${String(partial.day).padStart(2, '0')}`
-        previewStart.value = new Date(fullDate + 'T00:00:00')
-      } else {
-        previewStart.value = null
-      }
-      previewEnd.value = null
+    previewStart.value = followPartial(firstPart)
+    const typedEnd = partialToDate(parsePartialDate(secondPart))
+    if (typedEnd) {
+      previewEnd.value = typedEnd
     }
+    return
   }
+
+  previewStart.value = followPartial(firstPart)
+  previewEnd.value = null
 }
 
-const applyPreset = (start: Date, end: Date) => {
-  selectedStart.value = start
-  selectedEnd.value = end
-  const startStr = formatDateString(start)
-  const endStr = formatDateString(end)
-  emit('update:modelValue', [startStr, endStr])
-  inputText.value = `${formatDisplayDate(startStr)} - ${formatDisplayDate(endStr)}`
-  isOpen.value = false
-}
-
-const setPreset = (days: number) => {
-  const end = new Date()
-  const start = new Date()
-  start.setDate(start.getDate() - days)
-  applyPreset(start, end)
-}
-
-const setThisMonth = () => {
-  const today = new Date()
-  const start = new Date(today.getFullYear(), today.getMonth(), 1)
-  applyPreset(start, new Date())
-}
-
-const setLastMonth = () => {
-  const today = new Date()
-  const start = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-  const end = new Date(today.getFullYear(), today.getMonth(), 0)
-  applyPreset(start, end)
-}
-
-const setThisYear = () => {
-  const today = new Date()
-  const start = new Date(today.getFullYear(), 0, 1)
-  applyPreset(start, new Date())
-}
-
-const setLastYear = () => {
-  const today = new Date()
-  const start = new Date(today.getFullYear() - 1, 0, 1)
-  const end = new Date(today.getFullYear() - 1, 11, 31)
-  applyPreset(start, end)
-}
-
-const prevMonth = () => {
+/** Shows the previous month. */
+const prevMonth = (): void => {
   currentMonth.value = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() - 1)
 }
 
-const nextMonth = () => {
+/** Shows the next month. */
+const nextMonth = (): void => {
   currentMonth.value = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() + 1)
 }
 
-const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+onMounted(() => {
+  syncInputText()
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
-  <div class="relative" ref="wrapperRef">
-    <!-- Input field -->
+  <div ref="wrapperRef" class="relative">
     <input
-      ref="inputRef"
       v-model="inputText"
       type="text"
-      placeholder="DD/MM/YYYY - DD/MM/YYYY"
-      @click="() => { updatePopupPosition(); isOpen = true }"
+      data-testid="date-range-input"
+      :placeholder="fieldPlaceholder"
+      :class="dateFieldClasses"
+      @click="openPopup"
+      @focus="openPopup"
       @input="handleInput"
-      @focus="() => { updatePopupPosition(); isOpen = true }"
-      class="w-full px-3 py-2 text-[0.82rem] text-text-primary bg-white/[0.05] border border-border rounded-[9px] focus:outline-none focus:border-primary-500/40 transition-colors"
-    />
+    >
 
-    <!-- Popup teleported to body -->
     <Teleport to="body">
-    <div v-if="isOpen" ref="popupRef" :style="{ position: 'fixed', top: popupStyle.top, left: popupStyle.left, width: '900px', maxWidth: 'calc(100vw - 32px)' }" class="z-[9999] bg-surface-card rounded-[10px] shadow-2xl p-0 border border-border">
-      <div class="flex h-[400px]">
-        <!-- Left sidebar with presets -->
-        <div class="w-[150px] border-r border-border p-4 flex flex-col gap-2">
-          <button type="button" @click="setPreset(0)" class="text-left px-3 py-2 hover:bg-white/[0.05] rounded text-sm text-text-secondary hover:text-text-primary transition-colors">Today</button>
-          <button type="button" @click="setPreset(1)" class="text-left px-3 py-2 hover:bg-white/[0.05] rounded text-sm text-text-secondary hover:text-text-primary transition-colors">Yesterday</button>
-          <button type="button" @click="setPreset(6)" class="text-left px-3 py-2 hover:bg-white/[0.05] rounded text-sm text-text-secondary hover:text-text-primary transition-colors">Last 7 Days</button>
-          <button type="button" @click="setPreset(29)" class="text-left px-3 py-2 hover:bg-white/[0.05] rounded text-sm text-text-secondary hover:text-text-primary transition-colors">Last 30 Days</button>
-          <button type="button" @click="setThisMonth" class="text-left px-3 py-2 hover:bg-white/[0.05] rounded text-sm text-text-secondary hover:text-text-primary transition-colors">This Month</button>
-          <button type="button" @click="setLastMonth" class="text-left px-3 py-2 hover:bg-white/[0.05] rounded text-sm text-text-secondary hover:text-text-primary transition-colors">1 Month Ago</button>
-          <button type="button" @click="setThisYear" class="text-left px-3 py-2 hover:bg-white/[0.05] rounded text-sm text-text-secondary hover:text-text-primary transition-colors">This Year</button>
-          <button type="button" @click="setLastYear" class="text-left px-3 py-2 hover:bg-white/[0.05] rounded text-sm text-text-secondary hover:text-text-primary transition-colors">1 Year Ago</button>
-          <button type="button" class="text-left px-3 py-2 text-primary-500 font-semibold rounded text-sm hover:bg-white/[0.05] transition-colors">Custom</button>
-        </div>
+      <div
+        v-if="isOpen"
+        ref="popupRef"
+        :class="datePopupClasses"
+        class="fixed z-[9999] p-0 w-[900px] max-w-[calc(100vw-32px)] top-[var(--dp-top)] left-[var(--dp-left)]"
+      >
+        <div class="flex h-[400px]">
+          <div class="w-[150px] border-r border-border p-4 flex flex-col gap-2">
+            <button
+              v-for="item in dateRangePresets"
+              :key="item.preset"
+              type="button"
+              :data-testid="`date-range-preset-${item.preset}`"
+              :class="datePresetIdleClasses"
+              class="text-left px-3 py-2 rounded text-sm transition-colors"
+              @click="selectPreset(item.preset)"
+            >
+              {{ t(item.labelKey) }}
+            </button>
+            <div class="text-left px-3 py-2 text-primary-500 font-semibold rounded text-sm">{{ t('shared.custom') }}</div>
+          </div>
 
-        <!-- Right side with calendars -->
-        <div class="flex-1 p-4">
-          <!-- Navigation -->
-          <div class="flex items-center justify-between mb-4">
-            <button type="button" @click="prevMonth" class="text-text-muted hover:text-text-primary text-lg transition-colors">‹</button>
+          <div class="flex-1 p-4">
+            <div class="flex items-center justify-between mb-4">
+              <button type="button" data-testid="date-range-prev" :class="dateArrowClasses" @click="prevMonth">‹</button>
+              <div class="flex gap-8">
+                <div class="flex items-center gap-2">
+                  <div class="w-[140px]">
+                    <UiSelect v-model="currentMonthValue" :options="monthOptions" :placeholder="t('ui.uiDatePicker.month')" />
+                  </div>
+                  <div class="w-[100px]">
+                    <UiSelect v-model="currentYearValue" :options="yearOptions" :placeholder="t('ui.uiDatePicker.year')" />
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="w-[140px]">
+                    <UiSelect v-model="nextMonthValue" :options="monthOptions" :placeholder="t('ui.uiDatePicker.month')" />
+                  </div>
+                  <div class="w-[100px]">
+                    <UiSelect v-model="nextYearValue" :options="yearOptions" :placeholder="t('ui.uiDatePicker.year')" />
+                  </div>
+                </div>
+              </div>
+              <button type="button" data-testid="date-range-next" :class="dateArrowClasses" @click="nextMonth">›</button>
+            </div>
+
             <div class="flex gap-8">
-              <div class="flex items-center gap-2">
-                <div class="w-[140px]">
-                  <UiSelect
-                    v-model="currentMonthValue"
-                    :options="monthOptions"
-                  />
+              <div v-for="(month, idx) in months" :key="idx" class="flex-1">
+                <div class="grid grid-cols-7 gap-1 mb-2">
+                  <div v-for="name in dayNames" :key="name" class="text-center text-xs font-semibold text-text-muted">{{ name }}</div>
                 </div>
-                <div class="w-[100px]">
-                  <UiSelect
-                    v-model="currentYearValue"
-                    :options="yearOptions"
-                  />
+                <div class="grid grid-cols-7 gap-1">
+                  <button
+                    v-for="(day, i) in monthCells[idx]"
+                    :key="i"
+                    type="button"
+                    :data-testid="`date-range-day-${idx}-${i}`"
+                    :disabled="day === null"
+                    :class="dayClasses(day, month)"
+                    @click="selectDay(day, month)"
+                  >
+                    {{ day }}
+                  </button>
                 </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="w-[140px]">
-                  <UiSelect
-                    v-model="nextMonthValue"
-                    :options="monthOptions"
-                  />
-                </div>
-                <div class="w-[100px]">
-                  <UiSelect
-                    v-model="nextYearValue"
-                    :options="yearOptions"
-                  />
-                </div>
-              </div>
-            </div>
-            <button type="button" @click="nextMonth" class="text-text-muted hover:text-text-primary text-lg transition-colors">›</button>
-          </div>
-
-          <!-- Calendars -->
-          <div class="flex gap-8">
-            <div v-for="(month, idx) in months" :key="idx" class="flex-1">
-              <!-- Days of week -->
-              <div class="grid grid-cols-7 gap-1 mb-2">
-                <div v-for="day in dayNames" :key="day" class="text-center text-xs font-semibold text-text-muted">{{ day }}</div>
-              </div>
-              <!-- Days -->
-              <div class="grid grid-cols-7 gap-1">
-                <button
-                  type="button"
-                  v-for="(day, i) in getDaysForMonth(month)"
-                  :key="i"
-                  @click="day && selectDate(day as number, month)"
-                  :disabled="!day"
-                  :class="{
-                    'bg-primary-500 text-white rounded font-semibold': day && (isSelectedDate(day as number, month) === 'start' || isSelectedDate(day as number, month) === 'end'),
-                    'bg-primary-500/20 text-text-primary': day && isBetweenDates(day as number, month),
-                    'text-text-muted cursor-not-allowed': !day,
-                    'text-text-primary hover:bg-white/[0.05]': day && !isBetweenDates(day as number, month) && !isSelectedDate(day as number, month),
-                  }"
-                  class="h-8 flex items-center justify-center text-sm rounded transition-colors"
-                >
-                  {{ day }}
-                </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Bottom bar -->
-      <div class="flex items-center justify-between border-t border-border p-4 bg-white/[0.02] rounded-b-[10px]">
-        <span v-if="selectedStart && selectedEnd" class="text-sm text-text-secondary">
-          {{ formatDisplayDate(formatDateString(selectedStart)) }} - {{ formatDisplayDate(formatDateString(selectedEnd)) }}
-        </span>
-        <span v-else class="text-sm text-text-muted">Select date range</span>
-        <div class="flex gap-2">
-          <button type="button" @click="clearRange" class="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors">Clear</button>
-          <button type="button" @click="applyRange" class="px-4 py-2 text-sm gradient-brand text-white rounded-[9px] transition-opacity hover:opacity-90 font-semibold">Apply</button>
+        <div class="flex items-center justify-between border-t border-border p-4 bg-surface-hover rounded-b-[10px]">
+          <span v-if="pickedLabel" class="text-sm text-text-secondary">{{ pickedLabel }}</span>
+          <span v-else class="text-sm text-text-muted">{{ t('ui.uiDateRangePicker.selectDateRange') }}</span>
+          <div class="flex gap-2">
+            <button type="button" data-testid="date-range-clear" :class="dateActionClasses" class="px-4 py-2" @click="clearRange">{{ t('shared.clear') }}</button>
+            <button
+              type="button"
+              data-testid="date-range-apply"
+              class="px-4 py-2 text-sm gradient-brand text-white rounded-[9px] transition-opacity hover:opacity-90 font-semibold"
+              @click="applyRange"
+            >
+              {{ t('shared.apply') }}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
     </Teleport>
   </div>
 </template>

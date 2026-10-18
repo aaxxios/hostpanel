@@ -1,0 +1,91 @@
+<template>
+  <UiAccent :color="color">
+    <!-- Features -->
+    <section v-if="features.length > 0" class="py-16 bg-ui-surface" data-testid="trial-features">
+      <UiContainer>
+        <div class="mx-auto max-w-4xl">
+          <UiHeading :level="2" class="text-center mb-10">{{ $t('trial.featuresTitle', { product: name }) }}</UiHeading>
+          <UiGrid cols="1" gap="md" class="md:grid-cols-2">
+            <UiCard
+              v-for="(feature, index) in features"
+              :key="index"
+              v-motion
+              :initial="{ opacity: 0, x: -20 }"
+              :visible-once="{ opacity: 1, x: 0, transition: { delay: index * 60, duration: 300 } }"
+              padding="sm"
+              class="flex items-center gap-3"
+            >
+              <CheckCircle :size="18" :stroke-width="2" :class="[accent.text, 'flex-shrink-0']" />
+              <span class="text-sm text-gray-700 dark:text-gray-300">{{ feature }}</span>
+            </UiCard>
+          </UiGrid>
+        </div>
+      </UiContainer>
+    </section>
+
+    <!-- Perks -->
+    <section class="py-16" data-testid="trial-perks">
+      <UiContainer>
+        <div class="mx-auto max-w-4xl">
+          <UiGrid cols="1" gap="lg" class="md:grid-cols-3">
+            <UiCard
+              v-for="(perk, index) in perks"
+              :key="perk.key"
+              v-motion
+              :initial="{ opacity: 0, y: 20 }"
+              :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 400 } }"
+              class="text-center"
+              :data-testid="`trial-perk-${perk.key}`"
+            >
+              <component :is="perk.icon" :size="32" :stroke-width="2" :class="[accent.text, 'mx-auto mb-3']" />
+              <UiText weight="semibold" class="mb-1">{{ $t(`trial.perks.${perk.key}.title`) }}</UiText>
+              <UiText size="sm" tone="subtle">{{ $t(`trial.perks.${perk.key}.desc`) }}</UiText>
+            </UiCard>
+          </UiGrid>
+
+          <div class="mt-12 text-center">
+            <UiAccentButton :href="trialUrl" size="lg" class="px-10 py-4 font-bold" data-testid="trial-cta-bottom">
+              <Rocket :size="20" :stroke-width="2" />
+              {{ $t('trial.cta') }}
+            </UiAccentButton>
+            <UiText size="sm" tone="subtle" class="mt-3">{{ $t('trial.noCc') }}</UiText>
+          </div>
+        </div>
+      </UiContainer>
+    </section>
+  </UiAccent>
+</template>
+
+<script setup lang="ts">
+/**
+ * Body of the trial page: the product's feature lines, the three trial perks and the closing
+ * trial call to action, painted in the product's own accent colour.
+ */
+import { CheckCircle, Clock, CreditCard, Headphones, Rocket } from 'lucide-vue-next'
+import { TrialPerk } from '~/types/trialperk'
+import { ACCENT_CLASSES } from '~/utils/ui/accent'
+
+/** Props of TrialDetails. */
+interface Props {
+  /** Display name of the product. */
+  name: string
+  /** Accent colour of the product, as a hex string. */
+  color: string
+  /** Where the trial call to action leads. */
+  trialUrl: string
+  /** Feature lines of the product; the section is hidden when there are none. */
+  features: string[]
+}
+
+defineProps<Props>()
+
+/** Accent classes the body reads (the colour itself is set by the surrounding UiAccent). */
+const accent = ACCENT_CLASSES
+
+/** The perks in display order, each with the icon that stands for it. */
+const perks = [
+  { key: TrialPerk.NoCc, icon: CreditCard },
+  { key: TrialPerk.Duration, icon: Clock },
+  { key: TrialPerk.Support, icon: Headphones },
+]
+</script>

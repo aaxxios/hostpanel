@@ -2,16 +2,15 @@
  * Endpoints for getting help — support tickets under `/api/portal/client/tickets`, and the
  * public contact form at `/api/contact`.
  *
- * Two naming shapes, as elsewhere in `composables/apis/`: `load*` returns the `useApi()`
- * handle for a server-rendered read, `fetch*` / verb-named functions return a plain `Promise`
- * for a one-shot call. Nothing here is cached or held.
+ * Every function returns a plain `Promise`. Nothing here is cached or held.
  *
  * @module composables/apis/useSupportApi
  */
 
-import { apiFetch, useApi } from '~/composables/useApi'
+import { apiFetch } from '~/composables/useApi'
 import type { ContactMessage } from '~/types/contactmessage'
 import type { NewTicket } from '~/types/newticket'
+import type { SupportDepartment } from '~/types/supportdepartment'
 import type { TicketThread } from '~/types/ticketthread'
 
 /**
@@ -19,26 +18,28 @@ import type { TicketThread } from '~/types/ticketthread'
  *
  * @returns The support endpoint functions.
  */
-export function useSupportApi() {
+export const useSupportApi = () => {
   /**
    * Reads one ticket with its whole reply thread.
    *
-   * @param id - Ticket id; a getter so the page re-reads when the route changes.
-   * @returns The `useApi()` handle for the ticket.
+   * @param id - Ticket id.
+   * @returns The ticket.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadTicket = (id: () => string) =>
-    useApi<TicketThread>(() => `/api/portal/client/tickets/${id()}`)
+  const fetchTicket = (id: string): Promise<TicketThread> =>
+    apiFetch<TicketThread>(`/api/portal/client/tickets/${id}`)
 
   /**
-   * Server-rendered read of the departments a ticket can be routed to.
+   * Reads the departments a ticket can be routed to.
    *
    * Under `/api/portal/public`, but it belongs to this file rather than to `useCatalogApi`:
    * the list only exists to fill the ticket form's department picker.
    *
-   * @returns The `useApi()` handle for the department list, defaulting to an empty list.
+   * @returns The departments.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadDepartments = <T>() =>
-    useApi<T[]>('/api/portal/public/departments', { default: () => [] })
+  const fetchDepartments = (): Promise<SupportDepartment[]> =>
+    apiFetch<SupportDepartment[]>('/api/portal/public/departments')
 
   /**
    * Opens a support ticket.
@@ -79,5 +80,5 @@ export function useSupportApi() {
   const sendContactMessage = (message: ContactMessage): Promise<unknown> =>
     apiFetch('/api/contact', { method: 'POST', body: message })
 
-  return { loadTicket, loadDepartments, createTicket, replyToTicket, sendContactMessage }
+  return { fetchTicket, fetchDepartments, createTicket, replyToTicket, sendContactMessage }
 }

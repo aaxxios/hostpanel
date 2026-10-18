@@ -1,8 +1,22 @@
-import type { PlanCard } from '~/templates/aurora/types'
-import type { NovaPlan } from '~/templates/nova/types'
+/**
+ * Pricing derivations for nova's plan cards: amounts, yearly saving and the popular badge.
+ *
+ * @module templates/nova/pricing
+ */
+
+import type { PlanCard } from '~/types/plancard'
+import type { NovaPlan } from '~/templates/nova/types/novaplan'
+
+/** A plan that has a usable monthly price, as the popular-badge rule ranks it. */
+interface PricedPlan {
+  /** The plan's id. */
+  id: number
+  /** Its monthly amount. */
+  amount: number
+}
 
 /**
- * Reads the amount back out of a price `usePortalPlans` has already formatted.
+ * Reads the amount back out of a price `stores/catalog.ts` `planCards` has already formatted.
  *
  * The composable returns `${prefix}${value.toFixed(2)}${suffix}` and keeps the
  * raw number to itself, so a template that needs to compare two prices has only
@@ -18,10 +32,14 @@ import type { NovaPlan } from '~/templates/nova/types'
  * @returns The amount, or null when the string carries no usable price.
  */
 export const parseAmount = (formatted: string | undefined | null): number | null => {
-  if (!formatted) return null
+  if (!formatted) {
+    return null
+  }
 
   const match = /\d+(?:\.\d+)?/.exec(formatted)
-  if (!match) return null
+  if (!match) {
+    return null
+  }
 
   const value = Number(match[0])
   return Number.isFinite(value) && value >= 0 ? value : null
@@ -47,7 +65,9 @@ export const yearlyDiscountPercent = (
   const monthly = parseAmount(priceMonthly)
   const annual = parseAmount(priceAnnual)
 
-  if (monthly === null || annual === null || monthly <= 0) return null
+  if (monthly === null || annual === null || monthly <= 0) {
+    return null
+  }
 
   const percent = Math.round((1 - annual / monthly) * 100)
   return percent > 0 ? percent : null
@@ -77,14 +97,20 @@ export const popularPlanId = (plans: readonly PlanCard[]): number | null => {
   const priced = plans
     .filter(plan => !plan.isFree)
     .map(plan => ({ id: plan.id, amount: parseAmount(plan.priceMonthly) }))
-    .filter((entry): entry is { id: number, amount: number } => entry.amount !== null)
+    .filter((entry): entry is PricedPlan => entry.amount !== null)
     .sort((a, b) => a.amount - b.amount || a.id - b.id)
 
   // Below three plans there is no middle to point at: with two, the badge would
   // land on the cheaper one and read as a recommendation to spend less.
-  if (priced.length < 3) return null
+  if (priced.length < 3) {
+    return null
+  }
 
-  const middle = priced[Math.floor((priced.length - 1) / 2)]!
+  // At least three entries exist (guard above) and the index is inside [0, length), so the lookup is defined.
+  const middle = priced[Math.floor((priced.length - 1) / 2)]
+  if (!middle) {
+    return null
+  }
   const tied = priced.filter(entry => entry.amount === middle.amount).length > 1
 
   return tied ? null : middle.id
@@ -93,7 +119,7 @@ export const popularPlanId = (plans: readonly PlanCard[]): number | null => {
 /**
  * Turns the plans the page fetched into the shape the pricing cards render.
  *
- * @param plans Plans as `usePortalPlans` returned them, in display order.
+ * @param plans Plans as `planCards` returned them, in display order.
  * @returns The same plans, in the same order, each carrying its badge and
  *   discount. An empty input gives an empty result; the section handles that.
  */

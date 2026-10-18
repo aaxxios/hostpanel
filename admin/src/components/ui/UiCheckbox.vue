@@ -1,24 +1,35 @@
 <script setup lang="ts">
 /**
- * Custom dark-themed checkbox matching the admin panel design.
- * Replaces native <input type="checkbox"> whose appearance cannot be themed.
- * Unchecked: dark surface with border. Checked: primary-500 fill with white checkmark.
+ * Themed checkbox.
+ *
+ * Replaces the native `<input type="checkbox">`, whose appearance cannot be themed. Unchecked it is
+ * a field-coloured box with a border; checked it fills with the primary colour and shows a tick.
+ * It is a `role="checkbox"` button, so it stays keyboard- and screen-reader-operable. Give it an
+ * `aria-label` (or wrap it in a `UiLabel`) so it has a name.
  */
 
+/** Props for UiCheckbox. */
 const props = withDefaults(defineProps<{
+  /** Checked state (two-way bound with `v-model`). */
   modelValue: boolean
+  /** Blocks interaction and dims the box. */
   disabled?: boolean
 }>(), {
   disabled: false,
 })
 
 const emit = defineEmits<{
+  /** Emitted with the flipped state when the user toggles the box. */
   'update:modelValue': [value: boolean]
+  /** Emitted after `update:modelValue`, for callers that only need to know something changed. */
   change: []
 }>()
 
-function toggle(): void {
-  if (props.disabled) return
+/** Flips the state unless the checkbox is disabled. */
+const toggle = (): void => {
+  if (props.disabled) {
+    return
+  }
   emit('update:modelValue', !props.modelValue)
   emit('change')
 }
@@ -30,13 +41,10 @@ function toggle(): void {
     role="checkbox"
     :aria-checked="modelValue"
     :disabled="disabled"
-    class="w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors focus:outline-none focus:ring-1 focus:ring-primary-500/20"
-    :class="[
-      modelValue
-        ? 'bg-primary-500 border-primary-500'
-        : 'bg-white/[0.04] border-border hover:border-text-muted',
-      disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
-    ]"
+    class="w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+    :class="modelValue
+      ? 'bg-primary-500 border-primary-500'
+      : 'bg-surface-field border-border hover:border-text-muted'"
     @click="toggle"
   >
     <svg

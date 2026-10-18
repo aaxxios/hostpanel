@@ -1,0 +1,62 @@
+/**
+ * Unit tests for `LayoutDemoBanner`: hidden outside a demo; inside one it shows the label, the
+ * countdown to the next reset and the data-resets note.
+ *
+ * @module tests/components/layout/LayoutDemoBanner.test
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { mountWithKit } from '~/tests/helpers/mountWithKit'
+import LayoutDemoBanner from '~/components/layout/LayoutDemoBanner.vue'
+import { useDemoStore } from '~/stores/demo'
+
+/** The moment the fake clock is frozen at. */
+const NOW = new Date('2030-01-01T00:00:00Z')
+
+beforeEach(() => {
+  vi.useFakeTimers()
+  vi.setSystemTime(NOW)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+/**
+ * Mounts the banner with the demo store in the given state.
+ *
+ * @param state - Fields to put on the store before mounting.
+ * @returns The wrapper.
+ */
+const mountBanner = (state: { enabled: boolean, nextResetAt: string | null }) => {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  const store = useDemoStore()
+  store.enabled = state.enabled
+  store.nextResetAt = state.nextResetAt
+  return mountWithKit(LayoutDemoBanner, { pinia })
+}
+
+describe('LayoutDemoBanner', () => {
+  it('renders nothing outside a demo', () => {
+    const wrapper = mountBanner({ enabled: false, nextResetAt: null })
+
+    expect(wrapper.find('[data-testid="demo-banner"]').exists()).toBe(false)
+  })
+
+  it('shows the label, the time to reset and the note in a demo', () => {
+    const wrapper = mountBanner({ enabled: true, nextResetAt: '2030-01-01T02:15:00Z' })
+
+    expect(wrapper.find('[data-testid="demo-banner-label"]').text()).toBe('demo.label')
+    expect(wrapper.find('[data-testid="demo-banner-reset"]').text()).toBe('demo.resetsIn')
+    expect(wrapper.find('[data-testid="demo-banner-note"]').text()).toBe('demo.note')
+  })
+
+  it('omits the reset line when no reset is scheduled', () => {
+    const wrapper = mountBanner({ enabled: true, nextResetAt: null })
+
+    expect(wrapper.find('[data-testid="demo-banner"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="demo-banner-reset"]').exists()).toBe(false)
+  })
+})

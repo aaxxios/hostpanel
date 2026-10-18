@@ -3,9 +3,10 @@
     "products": "Products",
     "hosting": "Hosting",
     "domains": "Domains",
-    "faq": "FAQ",
-    "getStarted": "Get Started",
     "clientArea": "Client Area",
-    "contact": "Contact"
+    "hostingDesc": "Shared, VPS and dedicated plans",
+    "domainsDesc": "Search & register domain names",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   }
 }

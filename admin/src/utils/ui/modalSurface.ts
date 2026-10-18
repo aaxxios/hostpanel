@@ -1,0 +1,76 @@
+/**
+ * Behaviour shared by the modal surfaces (`UiDialog`, `UiDrawer`): close on Escape, keep Tab inside,
+ * move focus in when opened and give it back to the opener when closed.
+ */
+import { nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
+import type { Ref } from 'vue'
+import { focusFirst, trapFocus } from '@/utils/ui/focusTrap'
+import { lockScroll, unlockScroll } from '@/utils/ui/scrollLock'
+
+/**
+ * Wires a modal surface's keyboard and focus behaviour.
+ *
+ * @param panel - The surface element (the dialog or drawer panel).
+ * @param isOpen - Whether the surface is currently shown.
+ * @param close - Called when the user presses Escape.
+ * @returns The `keydown` handler to bind on the surface.
+ */
+export const useModalSurface = (
+  panel: Ref<HTMLElement | null>,
+  isOpen: () => boolean,
+  close: () => void,
+): ((event: KeyboardEvent) => void) => {
+  let opener: HTMLElement | null = null
+  /** Whether this surface currently holds the page scroll lock. */
+  let locked = false
+
+  /** Remembers the focused element and moves focus into the panel once it is rendered. */
+  const enter = async (): Promise<void> => {
+    if (!locked) {
+      lockScroll()
+      locked = true
+    }
+    opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    await nextTick()
+    if (panel.value !== null) {
+      focusFirst(panel.value)
+    }
+  }
+
+  /** Gives focus back to the element that opened the surface. */
+  const leave = (): void => {
+    if (locked) {
+      unlockScroll()
+      locked = false
+    }
+    opener?.focus()
+    opener = null
+  }
+
+  onMounted(() => {
+    if (isOpen()) {
+      void enter()
+    }
+  })
+
+  watch(isOpen, (open) => {
+    if (open) {
+      void enter()
+    } else {
+      leave()
+    }
+  })
+
+  onBeforeUnmount(leave)
+
+  return (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      event.stopPropagation()
+      close()
+      return
+    }
+    if (panel.value !== null) {
+      trapFocus(panel.value, event)
+    }
+  }
+}

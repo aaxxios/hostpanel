@@ -1,3 +1,9 @@
+/**
+ * Tailwind configuration: dark mode by class, the brand colour scales and the content globs.
+ *
+ * @module tailwind.config
+ */
+
 import type { Config } from 'tailwindcss'
 import plugin from 'tailwindcss/plugin'
 
@@ -67,6 +73,34 @@ export default <Partial<Config>>{
         // aurora template design tokens. Each holds a complete colour value,
         // several of them rgba, so Tailwind's opacity modifier cannot decompose
         // them: use border-line, never border-line/50.
+        // Kit surfaces (components/ui): a white or dark panel for cards/tables/dialogs and a
+        // slightly different one for floating menus. Values live in assets/css/ui.css so the
+        // light/dark switch is one place.
+        ui: {
+          surface: 'var(--ui-surface)',
+          popover: 'var(--ui-popover)',
+          // The marketing page background (light grey / near-black) and the raised panel that
+          // sits on it (white / slightly lighter near-black), so a section never carries a hex.
+          page: 'var(--ui-page)',
+          raised: 'var(--ui-raised)',
+        },
+        // classic template surfaces (values in assets/css/templates/classic.css). `r g b`
+        // triplets, so the opacity modifier works: bg-classic-surface/95.
+        classic: {
+          page: 'rgb(var(--classic-page) / <alpha-value>)',
+          surface: 'rgb(var(--classic-surface) / <alpha-value>)',
+          footer: 'rgb(var(--classic-footer) / <alpha-value>)',
+          'summary-from': 'rgb(var(--classic-summary-from) / <alpha-value>)',
+          'summary-to': 'rgb(var(--classic-summary-to) / <alpha-value>)',
+        },
+        // Third-party channel brand colours used by the floating contact actions.
+        channel: {
+          whatsapp: '#25D366',
+          telegram: '#0088cc',
+          chat: '#06b6d4',
+        },
+        // Text on an aurora tile gradient: always near-black, whatever the colour mode.
+        'tile-ink': '#08090F',
         page: 'var(--page)',
         tx: 'var(--tx)',
         tx2: 'var(--tx2)',
@@ -113,9 +147,53 @@ export default <Partial<Config>>{
         brand: 'linear-gradient(135deg, rgb(var(--brand-accent-500, 93 63 255)), rgb(var(--brand-primary-400, 0 209 255)))',
         glow1: 'radial-gradient(closest-side, var(--glow1), transparent)',
         glow2: 'radial-gradient(closest-side, var(--glow2), transparent)',
+        // A radial fade driven by the from/via/to stops of the element, e.g. the vignette of a hero.
+        'gradient-radial': 'radial-gradient(circle at center, var(--tw-gradient-stops))',
+        // Aurora service and app tiles: fixed two-stop gradients named for the hues they blend,
+        // constant across colour modes (they are marks, not surfaces).
+        'tile-sky': 'linear-gradient(135deg, #7DE3FF, #5D3FFF)',
+        'tile-lilac': 'linear-gradient(135deg, #B9A6FF, #5D3FFF)',
+        'tile-mint': 'linear-gradient(135deg, #38E8A0, #00D1FF)',
+        'tile-pink': 'linear-gradient(135deg, #FF9CE0, #B9A6FF)',
+        'tile-cyan': 'linear-gradient(135deg, #00D1FF, #38E8A0)',
+        'tile-indigo': 'linear-gradient(135deg, #5D3FFF, #00D1FF)',
+        'tile-ice': 'linear-gradient(135deg, #7DE3FF, #B9A6FF)',
+        'tile-rose': 'linear-gradient(135deg, #FF9CE0, #5D3FFF)',
       },
       boxShadow: {
         panel: 'var(--sh)',
+        'glow-whatsapp': '0 4px 20px rgba(37, 211, 102, 0.5)',
+        'glow-telegram': '0 4px 20px rgba(0, 136, 204, 0.5)',
+        'glow-chat': '0 4px 24px rgba(6, 182, 212, 0.5)',
+      },
+      // Marketing motion. `float`, `blob` and `gradient` already exist in assets/styles/animations.css;
+      // these are the ones that used to live in a scoped <style> of a single section.
+      keyframes: {
+        sheen: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(100%)' } },
+        marquee: { '0%': { transform: 'translateX(0)' }, '100%': { transform: 'translateX(-50%)' } },
+        'ken-burns': { '0%, 100%': { transform: 'scale(1)' }, '50%': { transform: 'scale(1.1)' } },
+        flare: {
+          '0%': { transform: 'translate(-50%, -50%) rotate(0deg) scale(1)', opacity: '0' },
+          '50%': { opacity: '0.5' },
+          '100%': { transform: 'translate(50%, 50%) rotate(45deg) scale(2)', opacity: '0' },
+        },
+        'scroll-hint': {
+          '0%, 100%': { transform: 'translateY(0)', opacity: '1' },
+          '50%': { transform: 'translateY(15px)', opacity: '0.2' },
+        },
+        'float-particle': {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '33%': { transform: 'translate(30px, -20px)' },
+          '66%': { transform: 'translate(-20px, 40px)' },
+        },
+      },
+      animation: {
+        sheen: 'sheen 3s linear infinite',
+        marquee: 'marquee 30s linear infinite',
+        'ken-burns': 'ken-burns 20s ease-in-out infinite',
+        flare: 'flare 1.5s ease-out infinite',
+        'scroll-hint': 'scroll-hint 2s ease-in-out infinite',
+        'float-particle': 'float-particle 10s ease-in-out infinite',
       },
       fontFamily: {
         // Each family reads the operator's typeface from :root first (see
@@ -124,7 +202,7 @@ export default <Partial<Config>>{
         // body families and --font-heading the display ones.
         sans: ['var(--font-body, "Inter Variable", Inter, system-ui, sans-serif)'],
         aurora: ['var(--font-body, "Noto Sans Armenian", system-ui, sans-serif)'],
-        display: ['var(--font-heading, "Noto Serif Armenian", serif)'],
+        display: ['var(--font-heading, "Inter Variable", Inter, "Noto Sans Armenian", system-ui, sans-serif)'],
         // nova is Latin-first, but Inter carries no Armenian coverage, so the
         // hy locale would fall through to whatever the system picked. Noto Sans
         // Armenian sits behind it to cover those glyphs.

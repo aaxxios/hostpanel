@@ -2,9 +2,6 @@
  * An order, its detail and one line on it.
  */
 
-import type { Domain } from './domain'
-import type { Invoice } from './invoice'
-import type { Product } from './product'
 
 /** DTO for order list items in admin view. */
 export interface OrderListItem {
@@ -17,7 +14,7 @@ export interface OrderListItem {
   /** Client display name. */
   clientName: string
   /** Current order status. */
-  status: 'Pending' | 'Active' | 'Cancelled' | 'Fraud'
+  status: OrderStatus
   /** Payment gateway module name. */
   paymentMethod: string
   /** Total order amount. */
@@ -61,5 +58,30 @@ export interface OrderItemDetail {
   /** Recurring amount. */
   recurringAmount: number
   /** Item status. */
-  status: 'Pending' | 'Active' | 'Cancelled'
+  status: OrderItemStatus
+}
+
+/** Filter and paging of the order list. */
+export interface OrderFilter {
+  /** Page, 1-based. */
+  page: number
+  /** Items per page. */
+  pageSize: number
+  /** Status to keep; null or empty for all. */
+  status?: string | null
+}
+
+/** Status of an order, exactly as the API sends it. */
+export enum OrderStatus {
+  Pending = 'Pending',
+  Active = 'Active',
+  Cancelled = 'Cancelled',
+  Fraud = 'Fraud',
+}
+
+/** Status of one line on an order, exactly as the API sends it. */
+export enum OrderItemStatus {
+  Pending = 'Pending',
+  Active = 'Active',
+  Cancelled = 'Cancelled',
 }

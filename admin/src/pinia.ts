@@ -1,3 +1,4 @@
+/** The shared Pinia instance. */
 import { createPinia } from 'pinia'
 
 /** Shared Pinia instance used by both the app and the router guard. */

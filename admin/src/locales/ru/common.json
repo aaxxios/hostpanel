@@ -1,0 +1,12 @@
+{
+  "loading": "Загрузка...",
+  "save": "Сохранить",
+  "saving": "Сохранение…",
+  "signOut": "Выйти",
+  "admin": "Админ",
+  "notifications": "Уведомления",
+  "toggleSidebar": "Показать/скрыть меню",
+  "viewAllNotifications": "Смотреть все уведомления",
+  "newCount": "{count} новых",
+  "noNotifications": "Нет уведомлений"
+}

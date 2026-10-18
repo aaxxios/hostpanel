@@ -1,0 +1,44 @@
+/**
+ * Tests for the gateway log store: a load fills the page and the total, and a refusal lands in
+ * the store instead of a view.
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { useGatewayLogStore } from '@/stores/gatewayLog'
+import { json, problem, stubFetch } from '../helpers/fetch'
+
+/** No filters. */
+const NO_FILTERS = { from: '', to: '', gateway: '', debugData: '', result: '' } as const
+
+beforeEach(() => {
+  setActivePinia(createPinia())
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('gatewayLogStore', () => {
+  it('fetchPage fills the entries and the total', async () => {
+    stubFetch(json({ items: [{ id: 'tx-1' }], totalCount: 7, page: 1, pageSize: 20 }))
+    const store = useGatewayLogStore()
+
+    await store.fetchPage(NO_FILTERS, 1, 20)
+
+    expect(store.entries).toEqual([{ id: 'tx-1' }])
+    expect(store.totalCount).toBe(7)
+    expect(store.error).toBeNull()
+    expect(store.loading).toBe(false)
+  })
+
+  it('fetchPage keeps the sentence of a refusal', async () => {
+    stubFetch(problem('Page size must be between 1 and 100.'))
+    const store = useGatewayLogStore()
+
+    await store.fetchPage(NO_FILTERS, 1, 500)
+
+    expect(store.error).toBe('Page size must be between 1 and 100.')
+    expect(store.entries).toEqual([])
+  })
+})

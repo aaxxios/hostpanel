@@ -1,0 +1,86 @@
+/**
+ * Tests for `GET /api/portal/auth/sso/authorize`: it starts the authorization-code flow with PKCE,
+ * stores the verifier, state and return path in short-lived httpOnly cookies, and redirects to the SSO.
+ *
+ * @module tests/server/api/portal/auth/sso/authorize.get.test
+ */
+
+import { createHash } from 'node:crypto'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { makeEvent, setRuntimeConfig, startBackend } from '../../../../../helpers/bffHarness'
+import type { RouteModule } from '../../../../../helpers/bffHarness'
+import type { StubServer } from '../../../../../helpers/stubServer'
+
+/** The stub standing in for the SSO (the route only redirects to it). */
+let backend: StubServer
+
+/** The route under test. */
+let route: RouteModule
+
+beforeEach(async () => {
+  backend = await startBackend()
+  setRuntimeConfig({
+    ssoClientId: 'client',
+    ssoCallbackUrl: 'https://portal.test/api/portal/auth/sso/callback',
+    public: { ssoPublicUrl: 'https://sso.test' },
+  })
+  route = await import('~/server/api/portal/auth/sso/authorize.get')
+})
+
+afterEach(async () => {
+  await backend.close()
+})
+
+describe('GET /api/portal/auth/sso/authorize', () => {
+  it('redirects to the SSO authorize endpoint with a PKCE challenge that matches the stored verifier', async () => {
+    const event = makeEvent()
+
+    await route.default(event)
+
+    const target = new URL(event.redirectedTo ?? '')
+    expect(target.origin + target.pathname).toBe('https://sso.test/connect/authorize')
+    expect(target.searchParams.get('client_id')).toBe('client')
+    expect(target.searchParams.get('response_type')).toBe('code')
+    expect(target.searchParams.get('redirect_uri')).toBe('https://portal.test/api/portal/auth/sso/callback')
+    expect(target.searchParams.get('code_challenge_method')).toBe('S256')
+    expect(target.searchParams.get('state')).toBe(event.written['oauth_state']?.value)
+    const verifier = event.written['pkce_verifier']?.value ?? ''
+    expect(target.searchParams.get('code_challenge')).toBe(createHash('sha256').update(verifier).digest('base64url'))
+    expect(event.written['pkce_verifier']?.options).toMatchObject({ httpOnly: true, maxAge: 300 })
+  })
+
+  it('adds the prompt parameter when the query carries one', async () => {
+    const event = makeEvent({ query: { prompt: 'none' } })
+
+    await route.default(event)
+
+    expect(new URL(event.redirectedTo ?? '').searchParams.get('prompt')).toBe('none')
+  })
+
+  it('remembers a local returnTo path', async () => {
+    const event = makeEvent({ query: { returnTo: '/client/invoices' } })
+
+    await route.default(event)
+
+    expect(event.written['post_login_redirect']?.value).toBe('/client/invoices')
+  })
+
+  it('falls back to the referer path when no returnTo is given', async () => {
+    const event = makeEvent({ headers: { referer: 'https://portal.test/client/tickets?x=1' } })
+
+    await route.default(event)
+
+    expect(event.written['post_login_redirect']?.value).toBe('/client/tickets')
+  })
+
+  it('refuses to remember an api path or an off-site address as the return path', async () => {
+    const api = makeEvent({ query: { returnTo: '/api/portal/x' } })
+    const offSite = makeEvent({ query: { returnTo: 'https://evil.test/x' } })
+
+    await route.default(api)
+    await route.default(offSite)
+
+    expect(api.written['post_login_redirect']).toBeUndefined()
+    expect(offSite.written['post_login_redirect']).toBeUndefined()
+  })
+})

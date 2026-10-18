@@ -6,7 +6,7 @@
  * configured billing currencies. `CurrencyDto` is `(string Code, string Name, string Symbol)`
  * and that is the whole of it.
  *
- * This file used to declare `id`, `code`, `prefix` and `suffix`, a WHMCS currencies row. Three
+ * This file used to declare `id`, `code`, `prefix` and `suffix`, a legacy currencies row. Three
  * of those four fields have never been sent, and `composables/useCurrency.ts` was built on them
  * — it looked up `c.id` and read `c.prefix`, so its `prefixFor()` returned `''` for every input
  * it was ever given. That composable had no callers and has been deleted rather than repaired:

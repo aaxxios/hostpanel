@@ -1,15 +1,18 @@
-﻿namespace Innovayse.Inecobank.Tests;
-
 using FluentAssertions;
 using Innovayse.Providers.Inecobank;
 using Innovayse.SDK.Plugins;
+using Innovayse.SDK.Plugins.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
+namespace Innovayse.Inecobank.Tests;
 /// <summary>Tests for <see cref="InecobankPaymentGateway"/> config handling and status mapping.</summary>
 public class InecobankPaymentGatewayTests
 {
+    /// <summary>Builds a configuration holding valid gateway settings.</summary>
+    /// <param name="overrides">Settings that replace or add to the defaults.</param>
+    /// <returns>The configuration.</returns>
     private static IConfiguration BuildConfig(Dictionary<string, string?>? overrides = null)
     {
         var values = new Dictionary<string, string?>
@@ -18,10 +21,17 @@ public class InecobankPaymentGatewayTests
             ["integration:inecobank:username"] = "merchant-api",
             ["integration:inecobank:password"] = "secret-pw",
         };
-        foreach (var (k, v) in overrides ?? []) values[k] = v;
+        foreach (var (k, v) in overrides ?? [])
+        {
+            values[k] = v;
+        }
+
         return new ConfigurationBuilder().AddInMemoryCollection(values).Build();
     }
 
+    /// <summary>Builds a gateway wired to a fake handler.</summary>
+    /// <param name="configOverrides">Settings that replace or add to the defaults.</param>
+    /// <returns>The gateway and the handler whose responses and requests the test controls.</returns>
     private static (InecobankPaymentGateway Gateway, FakeHttpMessageHandler Http) CreateGateway(
         Dictionary<string, string?>? configOverrides = null)
     {
@@ -33,6 +43,7 @@ public class InecobankPaymentGatewayTests
         return (gateway, handler);
     }
 
+    /// <summary>Create payment async, uses configured currency defaults.</summary>
     [Fact]
     public async Task CreatePaymentAsync_UsesConfiguredCurrencyDefaults()
     {
@@ -47,6 +58,7 @@ public class InecobankPaymentGatewayTests
         http.Requests[0].Body.Should().Contain("currency=051").And.Contain("language=hy");
     }
 
+    /// <summary>Currency code, defaults to051 amd.</summary>
     [Fact]
     public void CurrencyCode_DefaultsTo051Amd()
     {
@@ -55,6 +67,7 @@ public class InecobankPaymentGatewayTests
         gateway.CurrencyCode.Should().Be("051");
     }
 
+    /// <summary>Currency code, uses configured value.</summary>
     [Fact]
     public void CurrencyCode_UsesConfiguredValue()
     {
@@ -63,6 +76,7 @@ public class InecobankPaymentGatewayTests
         gateway.CurrencyCode.Should().Be("840");
     }
 
+    /// <summary>Create payment async, missing required config, throws.</summary>
     [Fact]
     public async Task CreatePaymentAsync_MissingRequiredConfig_Throws()
     {
@@ -74,6 +88,9 @@ public class InecobankPaymentGatewayTests
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
+    /// <summary>Get status async, maps order status.</summary>
+    /// <param name="orderStatus">The gateway order status number.</param>
+    /// <param name="expected">The payment state it should map to.</param>
     [Theory]
     [InlineData(2, GatewayPaymentState.Paid)]
     [InlineData(0, GatewayPaymentState.Pending)]
@@ -90,9 +107,13 @@ public class InecobankPaymentGatewayTests
         var status = await gateway.GetStatusAsync("gw-1", CancellationToken.None);
 
         status.State.Should().Be(expected);
-        if (expected == GatewayPaymentState.Paid) status.TransactionId.Should().Be("ref-1");
+        if (expected == GatewayPaymentState.Paid)
+        {
+            status.TransactionId.Should().Be("ref-1");
+        }
     }
 
+    /// <summary>Get status async, unknown order, error code6, is declined, not thrown.</summary>
     [Fact]
     public async Task GetStatusAsync_UnknownOrder_ErrorCode6_IsDeclined_NotThrown()
     {
@@ -104,6 +125,7 @@ public class InecobankPaymentGatewayTests
         status.State.Should().Be(GatewayPaymentState.Declined);
     }
 
+    /// <summary>Get status async, access denied, error code5, throws.</summary>
     [Fact]
     public async Task GetStatusAsync_AccessDenied_ErrorCode5_Throws()
     {
@@ -115,6 +137,7 @@ public class InecobankPaymentGatewayTests
         (await act.Should().ThrowAsync<InecobankApiException>()).Which.ErrorCode.Should().Be(5);
     }
 
+    /// <summary>Get status async, paid without auth ref num, falls back to gateway order id.</summary>
     [Fact]
     public async Task GetStatusAsync_PaidWithoutAuthRefNum_FallsBackToGatewayOrderId()
     {
@@ -126,6 +149,7 @@ public class InecobankPaymentGatewayTests
         status.TransactionId.Should().Be("gw-9");
     }
 
+    /// <summary>Refund async, returns gateway order id as reference.</summary>
     [Fact]
     public async Task RefundAsync_ReturnsGatewayOrderIdAsReference()
     {

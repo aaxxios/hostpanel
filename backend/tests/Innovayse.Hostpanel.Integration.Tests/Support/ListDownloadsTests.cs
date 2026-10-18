@@ -1,0 +1,35 @@
+using System.Net;
+using FluentAssertions;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Xunit;
+
+namespace Innovayse.Hostpanel.Integration.Tests.Support;
+
+/// <summary>
+/// <c>GET /api/downloads</c>: an admin can list downloads, and the list is closed to a caller
+/// with no credential.
+/// </summary>
+/// <remarks>Split out of the deleted <c>DownloadsEndpointTests</c>.</remarks>
+/// <param name="factory">The shared API + PostgreSQL host.</param>
+public sealed class ListDownloadsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+{
+    /// <summary>An admin can list downloads.</summary>
+    [Fact]
+    public async Task AdminCanListDownloadsAsync()
+    {
+        var client = await SupportTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.GetAsync("/api/downloads");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>The download list is closed to a caller with no credential.</summary>
+    [Fact]
+    public async Task ListIsClosedToAnonymousCallersAsync()
+    {
+        var response = await factory.CreateClient().GetAsync("/api/downloads");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+}

@@ -14,6 +14,9 @@
 @import '@fontsource/jetbrains-mono/500.css';
 @import './templates/aurora.css';
 @import './templates/nova.css';
+@import './templates/classic.css';
+@import './ui.css';
+@import './marketing.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -96,5 +99,48 @@
     -ms-overflow-style: none !important;
     scrollbar-width: none !important;
     -webkit-overflow-scrolling: touch;
+  }
+}
+
+/*
+ * Decorative background patterns (grid lines and dots). The line colours are variables so the
+ * pattern stays subtle in both colour modes: light ink on the light surface, white on the dark
+ * one. The sizes are fixed classes because a utility name must be a literal to be emitted.
+ */
+:root {
+  --pattern-line: rgba(15, 23, 42, 0.05);
+  --pattern-dot: rgba(15, 23, 42, 0.08);
+  --pattern-dot-strong: rgba(15, 23, 42, 0.1);
+}
+
+.dark {
+  --pattern-line: rgba(255, 255, 255, 0.1);
+  --pattern-dot: rgba(255, 255, 255, 0.2);
+  --pattern-dot-strong: rgba(255, 255, 255, 0.3);
+}
+
+@layer components {
+  .pattern-grid-50,
+  .pattern-grid-60,
+  .pattern-grid-70,
+  .pattern-grid-80 {
+    background-image:
+      linear-gradient(var(--pattern-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--pattern-line) 1px, transparent 1px);
+  }
+
+  .pattern-grid-50 { background-size: 50px 50px; }
+  .pattern-grid-60 { background-size: 60px 60px; }
+  .pattern-grid-70 { background-size: 70px 70px; }
+  .pattern-grid-80 { background-size: 80px 80px; }
+
+  .pattern-dots-20 {
+    background-image: radial-gradient(circle, var(--pattern-dot-strong) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .pattern-dots-30 {
+    background-image: radial-gradient(circle, var(--pattern-dot) 1px, transparent 1px);
+    background-size: 30px 30px;
   }
 }
