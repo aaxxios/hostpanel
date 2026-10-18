@@ -121,6 +121,10 @@ internal static class UsersTestSeeds
             builder.UseSetting("Sso:ClientId", "hostpanel");
             builder.UseSetting("Sso:ServiceKey", "test-service-key");
 
+            // Required whenever Auth:Mode is not local (BackchannelLogoutOptionsValidator), so an SSO host
+            // refuses to boot without it.
+            builder.UseSetting("BackchannelLogout:Key", "test-backchannel-key");
+
             builder.ConfigureTestServices(services =>
             {
                 services.AddScoped<IIdentityProvider>(_ => new FakeIdentityProvider(knownAccount));
