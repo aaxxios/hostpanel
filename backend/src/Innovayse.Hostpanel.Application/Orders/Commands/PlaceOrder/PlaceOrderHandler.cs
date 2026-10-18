@@ -44,6 +44,9 @@ public sealed class PlaceOrderHandler
     /// <summary>The currency the ordering client is billed in, stamped on the order's invoice.</summary>
     private readonly IPayerCurrencyResolver _payerCurrency;
 
+    /// <summary>Saves a signed-in caller's client record once, whichever writer gets there first.</summary>
+    private readonly IClientRecordStore _clientRecords;
+
     /// <summary>
     /// Logs the precise reason a line item's price could not be resolved -- which TLD, which
     /// currency mismatch -- since the code the caller receives is deliberately generic.
@@ -57,6 +60,7 @@ public sealed class PlaceOrderHandler
     /// <param name="bus">Wolverine message bus for invoking payment-method and TLD pricing queries.</param>
     /// <param name="caller">Who is ordering, and from where; the command says neither, and must not.</param>
     /// <param name="payerCurrency">The currency the ordering client is billed in, stamped on the order's invoice.</param>
+    /// <param name="clientRecords">Saves a signed-in caller's client record once, whichever writer gets there first.</param>
     /// <param name="logger">Logs the precise reason a line item's price could not be resolved.</param>
     public PlaceOrderHandler(
         IHostpanelDbContext context,
@@ -65,6 +69,7 @@ public sealed class PlaceOrderHandler
         IMessageBus bus,
         ICurrentUserService caller,
         IPayerCurrencyResolver payerCurrency,
+        IClientRecordStore clientRecords,
         ILogger<PlaceOrderHandler> logger)
     {
         _context = context;
@@ -73,6 +78,7 @@ public sealed class PlaceOrderHandler
         _bus = bus;
         _caller = caller;
         _payerCurrency = payerCurrency;
+        _clientRecords = clientRecords;
         _logger = logger;
     }
 
@@ -124,6 +130,14 @@ public sealed class PlaceOrderHandler
             if (created.IsFailure)
             {
                 return Result<PlaceOrderResultDto>.FailureCode(created.ErrorCode!);
+            }
+
+            if (created.Value is null)
+            {
+                // The registration handler saved this caller's client record between our lookup
+                // and our insert. Start over: the lookup now finds it, so the order is priced and
+                // billed in that client's currency exactly as for any returning client.
+                return await HandleAsync(cmd, ct);
             }
 
             clientId = created.Value;
@@ -279,13 +293,14 @@ public sealed class PlaceOrderHandler
     /// <param name="currencyCode">The currency the new record is billed in, already checked to be on offer.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// The new client's ID, or <see cref="HostpanelErrorCodes.ORDER_GUEST_DETAILS_REQUIRED"/> when
+    /// The new client's ID, <see langword="null"/> when a signed-in caller's record was saved by
+    /// another writer first, or <see cref="HostpanelErrorCodes.ORDER_GUEST_DETAILS_REQUIRED"/> when
     /// an anonymous caller's registration fields are missing (the validator already requires these
     /// of an anonymous caller, so this is a defensive answer for a command that reached the
     /// handler some other way), or <c>USER_PROVISIONING_NOT_ALLOWED_CREATE_ACCOUNT</c> where an
     /// SSO owns the accounts.
     /// </returns>
-    private async Task<Result<int>> CreateClientAsync(PlaceOrderCommand cmd, string currencyCode, CancellationToken ct)
+    private async Task<Result<int?>> CreateClientAsync(PlaceOrderCommand cmd, string currencyCode, CancellationToken ct)
     {
         // A caller the credential names but who has no client record yet is registered against
         // that credential, which is what used to happen when the controller resolved this.
@@ -305,14 +320,14 @@ public sealed class PlaceOrderHandler
         // dispatched the command without going through it.
         if (string.IsNullOrWhiteSpace(cmd.Email) || string.IsNullOrWhiteSpace(cmd.Password))
         {
-            return Result<int>.FailureCode(HostpanelErrorCodes.ORDER_GUEST_DETAILS_REQUIRED);
+            return Result<int?>.FailureCode(HostpanelErrorCodes.ORDER_GUEST_DETAILS_REQUIRED);
         }
 
         var created = await _provisioning.CreateAsync(
             cmd.Email!, cmd.Password!, cmd.FirstName, cmd.LastName, ct);
         if (created.IsFailure)
         {
-            return Result<int>.FailureCode(created.ErrorCode!);
+            return Result<int?>.FailureCode(created.ErrorCode!);
         }
 
         var userId = created.Value!;
@@ -323,7 +338,7 @@ public sealed class PlaceOrderHandler
         _context.Clients.Add(newClient);
         await _context.SaveChangesAsync(ct);
 
-        return Result.Success(newClient.Id);
+        return Result.Success<int?>(newClient.Id);
     }
 
     /// <summary>
@@ -380,8 +395,12 @@ public sealed class PlaceOrderHandler
     /// <param name="cmd">The order being placed.</param>
     /// <param name="currencyCode">The currency the new row is billed in, already checked to be on offer.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The new client's ID.</returns>
-    private async Task<int> CreateClientForCallerAsync(
+    /// <returns>
+    /// The new client's ID, or <see langword="null"/> when another writer saved this user's record
+    /// first -- the registration handler runs on the bus after the register call returns, so a
+    /// caller who orders at once can reach this before it has.
+    /// </returns>
+    private async Task<int?> CreateClientForCallerAsync(
         string subject, PlaceOrderCommand cmd, string currencyCode, CancellationToken ct)
     {
         var (credentialFirst, credentialLast) = SplitDisplayName(_caller.UserName);
@@ -396,10 +415,9 @@ public sealed class PlaceOrderHandler
         // guest's, because the caller is choosing at the same checkout.
         client.SetCurrency(currencyCode);
 
-        _context.Clients.Add(client);
-        await _context.SaveChangesAsync(ct);
+        var (saved, created) = await _clientRecords.AddOrGetAsync(client, ct);
 
-        return client.Id;
+        return created ? saved.Id : null;
     }
 
     /// <summary>Returns the first of two values that is neither null nor blank.</summary>

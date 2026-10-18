@@ -219,7 +219,8 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
             items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        // The body rides along as the reason: a bare 500 says nothing about which side failed.
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
     }
 
     /// <summary>A checkout naming a product id nothing in the catalogue carries is refused.</summary>
