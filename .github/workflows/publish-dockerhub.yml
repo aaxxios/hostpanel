@@ -4,6 +4,10 @@ name: Publish to Docker Hub
 # in the tag: api-<version>, client-<version>, admin-<version> and the moving api-latest, client-latest,
 # admin-latest. Multi-arch (linux/amd64, linux/arm64); the version has no leading v.
 #
+# Each platform is built on a native runner (QEMU emulation hung the client's arm64
+# `yarn build`): every component x platform job pushes by digest, then a merge job per component
+# stitches the digests into the <component>-<version> and <component>-latest manifests.
+#
 # Images are public, so they are built with AUTH_MODE=local: Innovayse.Auth lives in a private
 # registry and no credential is passed. Both frontends take every deployment value from the
 # environment at start, so only the API image has a build arg.
@@ -27,38 +31,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
-    name: Publish hostpanel-${{ matrix.name }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: api
-            dockerfile: backend/Dockerfile
-            context: backend
-            target: prod
-            build_args: AUTH_MODE=local
-          - name: client
-            dockerfile: client/Dockerfile
-            context: client
-            target: prod
-            build_args: ""
-          - name: admin
-            dockerfile: admin/Dockerfile
-            # The Dockerfile copies admin/ and docker/nginx/admin.conf, so it builds from the repo root.
-            context: .
-            target: prod
-            build_args: ""
-    env:
-      NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+  prepare:
+    name: Resolve the version and licence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.meta_in.outputs.version }}
+      licenses: ${{ steps.meta_in.outputs.licenses }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Resolve the version and licence
         id: meta_in
         env:
+          NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
           INPUT_VERSION: ${{ inputs.version }}
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
@@ -82,7 +68,112 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "licenses=AGPL-3.0-or-later" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-qemu-action@v3
+  build:
+    name: Build hostpanel-${{ matrix.name }} (${{ matrix.platform }})
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        name: [api, client, admin]
+        platform: [linux/amd64, linux/arm64]
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch: arm64
+          - name: api
+            dockerfile: backend/Dockerfile
+            context: backend
+            target: prod
+            build_args: AUTH_MODE=local
+          - name: client
+            dockerfile: client/Dockerfile
+            context: client
+            target: prod
+            build_args: ""
+          - name: admin
+            dockerfile: admin/Dockerfile
+            # The Dockerfile copies admin/ and docker/nginx/admin.conf, so it builds from the repo root.
+            context: .
+            target: prod
+            build_args: ""
+    env:
+      NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.NAMESPACE }}/hostpanel
+          labels: |
+            org.opencontainers.image.title=hostpanel-${{ matrix.name }}
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
+            org.opencontainers.image.licenses=${{ needs.prepare.outputs.licenses }}
+            org.opencontainers.image.source=https://github.com/innovayse/hostpanel
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          build-args: ${{ matrix.build_args }}
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.NAMESPACE }}/hostpanel,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.name }}-${{ matrix.arch }}
+          cache-to: type=gha,scope=${{ matrix.name }}-${{ matrix.arch }},mode=max
+
+      - name: Export the digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p "${RUNNER_TEMP}/digests"
+          touch "${RUNNER_TEMP}/digests/${DIGEST#sha256:}"
+
+      - name: Upload the digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.name }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Publish hostpanel-${{ matrix.name }}
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        name: [api, client, admin]
+    env:
+      NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-${{ matrix.name }}-*
+          merge-multiple: true
+
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
@@ -96,27 +187,21 @@ jobs:
         with:
           images: ${{ env.NAMESPACE }}/hostpanel
           tags: |
-            type=raw,value=${{ matrix.name }}-${{ steps.meta_in.outputs.version }}
+            type=raw,value=${{ matrix.name }}-${{ needs.prepare.outputs.version }}
             type=raw,value=${{ matrix.name }}-latest
-          labels: |
-            org.opencontainers.image.title=hostpanel-${{ matrix.name }}
-            org.opencontainers.image.version=${{ steps.meta_in.outputs.version }}
-            org.opencontainers.image.licenses=${{ steps.meta_in.outputs.licenses }}
-            org.opencontainers.image.source=https://github.com/innovayse/hostpanel
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          target: ${{ matrix.target }}
-          build-args: ${{ matrix.build_args }}
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,scope=${{ matrix.name }},mode=max
+      - name: Create the multi-platform manifests
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          set -eu
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf "${NAMESPACE}/hostpanel@sha256:%s " *)
+
+      - name: Inspect the result
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: docker buildx imagetools inspect "${NAMESPACE}/hostpanel:${{ matrix.name }}-${VERSION}"
 
       - name: Sync the Docker Hub README
         if: matrix.name == 'api'
