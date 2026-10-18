@@ -49,7 +49,7 @@ jobs:
   # The Integration suite starts a PostgreSQL container and a full API host for every test class
   # (about 430 of them), so one testhost running all of it outlives any sensible job limit and
   # holds memory the whole time. It is split by top-level test folder into four shards that run
-  # in parallel, mirroring backend:test:integration:a/b in .gitlab-ci.yml (which uses two). Every
+  # in parallel, mirroring backend:test:integration:a-d in .gitlab-ci.yml (which runs them one at a time). Every
   # folder under Integration.Tests belongs to exactly one shard; a new folder must be added to
   # one of them or its tests run nowhere. (Fixtures/ holds fakes only, no tests.)
   integration:

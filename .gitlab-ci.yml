@@ -76,7 +76,7 @@ stages: [test, build, deploy]
     # and a dump beside it. Costs nothing on a passing run.
     #
     # The solution is no longer tested in one `dotnet test`: the Integration suite is split
-    # into two jobs by test namespace (see backend:test:integration:a/b below), because one
+    # into four jobs by test namespace (see backend:test:integration:a-d below), because one
     # host running the whole suite held the EF model plus a Postgres container for every
     # test and exhausted the runner's memory. Each job names its projects in TEST_PROJECTS
     # (folders under tests/) and, optionally, a --filter in TEST_FILTER.
@@ -204,30 +204,52 @@ backend:test:
     - if: $CI_SERVER_HOST == "gitlab.com"
       changes: [backend/**/*]
 
-# The Integration suite, in two shards that run in parallel. Every top-level folder of
+# The Integration suite, in four shards that run ONE AT A TIME. Every top-level folder of
 # Integration.Tests belongs to exactly one shard; a new folder must be added to one of
-# them or its tests run nowhere. (Fixtures/ holds fakes only, no tests.)
-backend:test:integration:a:
+# them or its tests run nowhere. (Fixtures/ holds fakes only, no tests.) The split is the
+# same as the four shards of .github/workflows/ci.yml.
+#
+# One testhost grows to several gigabytes (the EF model, a Postgres container and a full API
+# host per test class) and the builder has 12 GB shared with other products' pipelines. With two
+# half-suite shards running together the kernel OOM-killed the testhost every time ("Test host
+# process crashed", or a 500/timeout in whichever test was in flight). A quarter of the suite
+# per host, one host at a time (resource_group), plus a bounded glibc arena count, keeps each
+# host far below that.
+.test-integration:
   extends: .test-dotnet
+  resource_group: hostpanel-integration
   variables:
     SERVICE: backend
     TEST_PROJECTS: Innovayse.Hostpanel.Integration.Tests
-    TEST_FILTER: >-
-      FullyQualifiedName~Integration.Tests.Admin.|FullyQualifiedName~Integration.Tests.Adapters.|FullyQualifiedName~Integration.Tests.Audit.|FullyQualifiedName~Integration.Tests.Auth.|FullyQualifiedName~Integration.Tests.Billing.|FullyQualifiedName~Integration.Tests.Clients.|FullyQualifiedName~Integration.Tests.Common.|FullyQualifiedName~Integration.Tests.Demo.|FullyQualifiedName~Integration.Tests.Domains.|FullyQualifiedName~Integration.Tests.Health.|FullyQualifiedName~Integration.Tests.Identity.
+    # Keeps glibc from giving every thread its own arena; the testhost runs many.
+    MALLOC_ARENA_MAX: "2"
   rules:
     - if: $CI_SERVER_HOST == "gitlab.com"
       changes: [backend/**/*]
 
-backend:test:integration:b:
-  extends: .test-dotnet
+backend:test:integration:a:
+  extends: .test-integration
   variables:
-    SERVICE: backend
-    TEST_PROJECTS: Innovayse.Hostpanel.Integration.Tests
     TEST_FILTER: >-
-      FullyQualifiedName~Integration.Tests.Migration.|FullyQualifiedName~Integration.Tests.Notifications.|FullyQualifiedName~Integration.Tests.Orders.|FullyQualifiedName~Integration.Tests.Persistence.|FullyQualifiedName~Integration.Tests.Products.|FullyQualifiedName~Integration.Tests.Provisioning.|FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Security.|FullyQualifiedName~Integration.Tests.Services.|FullyQualifiedName~Integration.Tests.Shared.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Support.
-  rules:
-    - if: $CI_SERVER_HOST == "gitlab.com"
-      changes: [backend/**/*]
+      FullyQualifiedName~Integration.Tests.Adapters.|FullyQualifiedName~Integration.Tests.Admin.|FullyQualifiedName~Integration.Tests.Audit.|FullyQualifiedName~Integration.Tests.Auth.|FullyQualifiedName~Integration.Tests.Clients.|FullyQualifiedName~Integration.Tests.Common.|FullyQualifiedName~Integration.Tests.Demo.|FullyQualifiedName~Integration.Tests.Health.|FullyQualifiedName~Integration.Tests.Identity.|FullyQualifiedName~Integration.Tests.Security.|FullyQualifiedName~Integration.Tests.Shared.
+
+backend:test:integration:b:
+  extends: .test-integration
+  variables:
+    TEST_FILTER: >-
+      FullyQualifiedName~Integration.Tests.Billing.|FullyQualifiedName~Integration.Tests.Domains.
+
+backend:test:integration:c:
+  extends: .test-integration
+  variables:
+    TEST_FILTER: >-
+      FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Support.
+
+backend:test:integration:d:
+  extends: .test-integration
+  variables:
+    TEST_FILTER: >-
+      FullyQualifiedName~Integration.Tests.Migration.|FullyQualifiedName~Integration.Tests.Notifications.|FullyQualifiedName~Integration.Tests.Orders.|FullyQualifiedName~Integration.Tests.Persistence.|FullyQualifiedName~Integration.Tests.Products.|FullyQualifiedName~Integration.Tests.Provisioning.|FullyQualifiedName~Integration.Tests.Services.
 
 backend:build:api:prod:
   extends: .build-image
