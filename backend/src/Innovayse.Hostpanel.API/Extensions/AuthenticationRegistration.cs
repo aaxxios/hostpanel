@@ -34,7 +34,7 @@ public static class AuthenticationRegistration
     /// </remarks>
     internal static readonly string SsoCookieScheme =
 #if INNOVAYSE_SSO
-        global::Innovayse.Auth.CookieSessionHandler.SchemeName;
+        global::Innovayse.Auth.Authentication.CookieSessionHandler.SchemeName;
 #else
         "InnovayseSsoUnavailable";
 #endif

@@ -2,11 +2,26 @@
 #   deployed host: shared + prod + platform + demo     laptop: shared + prod + demo
 # Goes LAST in the chain so its project name wins. Everything stateful is renamed (project, containers,
 # volumes) and the demo gets its own broker, redis and mail catcher, so nothing here can read or write
-# production data. Services find each other by the hostpanel-demo-* container names: on the shared
-# innovayse_network the service names (hostpanel-db, ...) would also resolve to production's containers.
+# production data.
+#
+# Networks. The demo must never resolve to production, and production never to the demo:
+#   - `default` is a demo-private bridge (it replaces the platform overlay's attachment to innovayse_network),
+#     so the database, broker, redis and mailhog are reachable only from inside the demo.
+#   - `edge` is innovayse_network. Only the three edge-facing services join it, and each is its own
+#     compose service named hostpanel-demo-*: compose always adds the SERVICE name as an alias on every
+#     network, so a service still called hostpanel-api would answer to production's name there and Docker's
+#     DNS would round-robin prod traffic into the demo. The original hostpanel-api/-client/-admin are parked.
 # The API runs in demo mode: fake payment, registrar and provisioning adapters, mail to the catcher,
 # a scheduled data reset. Needs AUTH_MODE=local and a database of its own (POSTGRES_DB).
 name: hostpanel-demo
+
+networks:
+  # Replaces (not merges with) the platform overlay's external innovayse_network.
+  default: !override
+    name: hostpanel-demo_default
+  edge:
+    name: innovayse_network
+    external: true
 
 volumes:
   pgdata:
@@ -19,21 +34,25 @@ volumes:
 services:
   hostpanel-db:
     container_name: hostpanel-demo-db
+    networks: !override [default]
 
   # shared.yml defines the broker and redis; the platform overlay parks them for production's own.
   # The demo runs private ones, so the parking is lifted.
   hostpanel-rabbitmq:
     container_name: hostpanel-demo-rabbitmq
     profiles: !reset []
+    networks: !override [default]
 
   hostpanel-redis:
     container_name: hostpanel-demo-redis
     profiles: !reset []
+    networks: !override [default]
 
   # Mail catcher: every message the demo sends lands here and goes no further.
   hostpanel-mailhog:
     container_name: hostpanel-demo-mailhog
     image: mailhog/mailhog
+    networks: !override [default]
     ports:
       - "127.0.0.1:${DEMO_MAILHOG_UI_HOST_PORT}:8025"
     deploy:
@@ -43,15 +62,33 @@ services:
           memory: 256M
     restart: unless-stopped
 
+  # prod.yml's services are parked: they would carry the production service names onto innovayse_network.
+  # The demo's own copies below extend them.
   hostpanel-api:
+    profiles: ["disabled"]
+
+  hostpanel-client:
+    profiles: ["disabled"]
+
+  hostpanel-admin:
+    profiles: ["disabled"]
+
+  hostpanel-demo-api:
+    extends:
+      file: docker-compose.prod.yml
+      service: hostpanel-api
     container_name: hostpanel-demo-api
+    networks: !override
+      default: {}
+      edge:
+        aliases: [hostpanel-demo-api]
     ports:
       - "127.0.0.1:${DEMO_API_HOST_PORT}:${API_PORT}"
     environment:
       ConnectionStrings__DefaultConnection: "Host=hostpanel-demo-db;Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
       Auth__RedisConnection: hostpanel-demo-redis:${DEMO_REDIS_PORT}
       RabbitMQ__Host: hostpanel-demo-rabbitmq
-      # Mail goes to the catcher: host, port and credentials override together (the platform overlay sets them too).
+      # Mail goes to the catcher: host, port and credentials override together.
       Smtp__Host: hostpanel-demo-mailhog
       Smtp__Port: ${DEMO_SMTP_PORT}
       Smtp__Username: ""
@@ -76,17 +113,35 @@ services:
       hostpanel-mailhog:
         condition: service_started
 
-  hostpanel-client:
+  hostpanel-demo-client:
+    extends:
+      file: docker-compose.prod.yml
+      service: hostpanel-client
     container_name: hostpanel-demo-client
+    networks: !override
+      default: {}
+      edge:
+        aliases: [hostpanel-demo-client]
     ports:
       - "127.0.0.1:${DEMO_CLIENT_HOST_PORT}:3000"
     environment:
       NUXT_API_URL: http://hostpanel-demo-api:${API_PORT}
+    depends_on: !override
+      - hostpanel-demo-api
 
-  hostpanel-admin:
+  hostpanel-demo-admin:
+    extends:
+      file: docker-compose.prod.yml
+      service: hostpanel-admin
     container_name: hostpanel-demo-admin
+    networks: !override
+      default: {}
+      edge:
+        aliases: [hostpanel-demo-admin]
     ports:
       - "127.0.0.1:${DEMO_ADMIN_HOST_PORT}:80"
+    depends_on: !override
+      - hostpanel-demo-api
 
   # The bundled edge proxy is never part of the demo: the host's proxy (or the published ports) fronts it.
   hostpanel-nginx:

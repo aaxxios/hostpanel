@@ -77,7 +77,12 @@ and the variable `DOCKERHUB_NAMESPACE`. The GitLab `publish:dockerhub` job is a 
 mode. It goes last in the chain, renames the project to `hostpanel-demo`, and gives every stateful
 piece a name of its own (`hostpanel-demo-db`, `-rabbitmq`, `-redis`, `-mailhog`, `-api`, `-client`,
 `-admin`; volumes `hostpanel-demo_*`), so it can share a server with production without touching
-its data. Services reach each other by those container names. The overlay publishes the api, client,
+its data. Services reach each other by those container names, over a demo-private network
+(`hostpanel-demo_default`): the db, broker, redis and mailhog are on it alone. Only the api, client and admin
+also join `innovayse_network`, as compose services named `hostpanel-demo-api`, `-client` and `-admin` (the
+production ones are parked in this overlay): compose adds the service name as an alias on every network, so
+a service still named `hostpanel-api` would be round-robined with production's. Never rename them back.
+The overlay publishes the api, client,
 admin and mailhog UI on the `DEMO_*_HOST_PORT` ports, bound to `127.0.0.1` only (the edge proxy reaches them by name), and never starts the bundled nginx.
 
 Set the `# Demo` block of `.env.example` (copy to `docker/.env`, `AUTH_MODE=local`, a database of its
@@ -92,3 +97,7 @@ On a deployed host add `-f docker/docker-compose.platform.yml` before the demo f
 CI job does). Demo mode (`Demo__Enabled`) swaps the payment, registrar and provisioning integrations for
 fakes, delivers all mail to mailhog (UI on `DEMO_MAILHOG_UI_HOST_PORT`), seeds the two demo accounts and
 resets the data every `DEMO_RESET_INTERVAL_HOURS` hours.
+
+**The demo needs its own `DEPLOY_DIR`.** `deploy:demo` runs `git checkout -f`; in production's directory that
+would rewrite the compose files under the running production stack. The job uses
+`/home/innovayse-server/www/hostpanel-demo` and creates it (`git init`, then a fetch of the pipeline's commit) when missing.
