@@ -12,12 +12,9 @@
     "checkFailed": "Domain check failed. Please try again.",
     "tldNotSupported": "This TLD is not available for registration",
     "alreadyInCart": "Already in Cart",
-    "currencyMismatch": "This domain is priced in a currency you're not currently billed in.",
     "tabRegister": "Register",
     "tabTransfer": "Transfer",
-    "transferPlaceholder": "Enter domain to transfer (e.g. mysite.com)",
     "transferBtn": "Add to Cart",
-    "transferNow": "Transfer Now",
     "takenTransfer": "Transfer this domain instead",
     "transferNote": "* Excludes certain TLDs and recently renewed domains",
     "transferFormTitle": "Single domain transfer",
@@ -35,7 +32,6 @@
     },
     "pricing": {
       "title": "Domain Pricing",
-      "subtitle": "Competitive prices on all popular domain extensions",
       "extension": "Domain",
       "register": "New Price",
       "renew": "Renewal",
@@ -54,10 +50,8 @@
         "other": "Other"
       },
       "noResults": "No extensions found in this category.",
-      "showAll": "Show All {count} Extensions",
-      "showLess": "Show Less",
-      "action": "Action",
-      "registerNow": "Register Now"
+      "registerNow": "Register Now",
+      "notAvailable": "N/A"
     },
     "promoHostingTitle": "Add Web Hosting",
     "promoHostingSubtitle": "Choose from a range of web hosting packages",
@@ -66,6 +60,9 @@
     "promoTransferTitle": "Transfer your domain to us",
     "promoTransferDesc": "Transfer now to extend your domain by 1 year!*",
     "promoTransferBtn": "Transfer a domain",
-    "promoTransferNote": "* Excludes certain TLDs and recently renewed domains"
+    "promoTransferNote": "* Excludes certain TLDs and recently renewed domains",
+    "transferEppPlaceholder": "EPP code / Auth code",
+    "transferDomainPlaceholder": "example.com",
+    "years": "{n} Year | {n} Years"
   }
 }

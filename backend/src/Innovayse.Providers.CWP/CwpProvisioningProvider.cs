@@ -1,9 +1,8 @@
-namespace Innovayse.Providers.CWP;
-
 using Innovayse.SDK.Base;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
+namespace Innovayse.Providers.CWP;
 /// <summary>
 /// Provisioning provider plugin for CentOS Web Panel (CWP).
 /// Registered as a keyed <c>IProvisioningPlugin</c> under the key "innovayse-cwp".

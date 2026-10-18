@@ -1,23 +1,48 @@
 <template>
   <!-- Knowledgebase article list row -->
-  <NuxtLink
+  <UiLink
     :to="localePath(`/knowledgebase/${article.id}`)"
-    class="flex items-start gap-3 px-5 py-4 bg-white/5 hover:bg-white/8 transition-colors group"
+    tone="inherit"
+    :underline="false"
+    :testid="`kb-article-${article.id}`"
+    class="group flex items-start gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/5"
   >
-    <FileText :size="16" :stroke-width="2" class="text-primary-400 mt-0.5 flex-shrink-0" />
-    <div class="min-w-0">
-      <div class="text-sm font-medium text-primary-400 group-hover:text-primary-300 transition-colors truncate">
+    <FileText :size="16" :stroke-width="2" class="mt-0.5 flex-shrink-0 text-primary-600 dark:text-primary-400" />
+    <UiStack gap="none" class="min-w-0">
+      <UiText
+        as="span"
+        size="sm"
+        weight="medium"
+        tone="primary"
+        truncate
+        class="block transition-colors group-hover:text-primary-700 dark:group-hover:text-primary-300"
+        data-testid="kb-article-title"
+      >
         {{ article.title }}
-      </div>
-      <div v-if="article.excerpt" class="text-xs text-gray-500 mt-0.5 line-clamp-1">
+      </UiText>
+      <UiText
+        v-if="article.excerpt"
+        as="span"
+        size="xs"
+        tone="subtle"
+        class="mt-0.5 line-clamp-1 block"
+        data-testid="kb-article-excerpt"
+      >
         {{ article.excerpt }}…
-      </div>
-    </div>
-    <div v-if="article.views" class="ml-auto text-xs text-gray-600 flex-shrink-0 flex items-center gap-1">
+      </UiText>
+    </UiStack>
+    <UiText
+      v-if="article.views"
+      as="span"
+      size="xs"
+      tone="subtle"
+      class="ml-auto flex flex-shrink-0 items-center gap-1"
+      data-testid="kb-article-views"
+    >
       <Eye :size="12" :stroke-width="2" />
       {{ article.views }}
-    </div>
-  </NuxtLink>
+    </UiText>
+  </UiLink>
 </template>
 
 <script setup lang="ts">
@@ -28,15 +53,26 @@
 
 import { FileText, Eye } from 'lucide-vue-next'
 
-/** Article data prop */
-defineProps<{
-  article: {
-    id: string | number
-    title: string
-    excerpt?: string
-    views?: number
-  }
-}>()
+/** The article the row shows. */
+interface ArticleSummary {
+  /** Article id; the row links to `/knowledgebase/<id>`. */
+  id: string | number
+  /** Headline. */
+  title: string
+  /** Short extract of the body. */
+  excerpt?: string
+  /** How many times the article was read. */
+  views?: number
+}
 
+/** Props of ArticleRow. */
+interface Props {
+  /** Article data. */
+  article: ArticleSummary
+}
+
+defineProps<Props>()
+
+/** Localised path builder from the i18n module. */
 const localePath = useLocalePath()
 </script>

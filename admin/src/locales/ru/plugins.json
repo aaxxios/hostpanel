@@ -1,0 +1,32 @@
+{
+  "pluginCard": {
+    "pendingRestart": "Ожидает перезапуска",
+    "categoryByAuthor": "{category} · автор: {author}",
+    "removing": "Удаление…",
+    "remove": "Удалить"
+  },
+  "pluginUploader": {
+    "dropYourPlugin": "Перетащите плагин",
+    "here": "сюда",
+    "zip": ".zip",
+    "orClickToBrowseFiles": "или нажмите, чтобы выбрать файл",
+    "valueKbReadyToInstall": "{value} КБ · готово к установке",
+    "installPlugin": "Установить плагин"
+  },
+  "restartBanner": {
+    "restartRequired": "Требуется перезапуск",
+    "pluginChangesWillTakeEffect": "Изменения плагинов вступят в силу после перезапуска сервера.",
+    "restarting": "Перезапуск…",
+    "restartServer": "Перезапустить сервер"
+  },
+  "plugins": {
+    "pluginManager": "Менеджер плагинов",
+    "installAndManageProviderPlugins": "Установка плагинов провайдеров и управление ими",
+    "lengthInstalled": "· установлено: {length}",
+    "noPluginsInstalledYet": "Плагины пока не установлены",
+    "uploadA": "Загрузите",
+    "fileAboveToGetStarted": "файл выше, чтобы начать",
+    "zip": ".zip",
+    "installedPlugins": "Установленные плагины"
+  }
+}

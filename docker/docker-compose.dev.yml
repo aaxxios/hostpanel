@@ -1,0 +1,267 @@
+# Dev stack over docker-compose.shared.yml: applications on their dev targets over bind mounts.
+name: hostpanel
+
+services:
+  hostpanel-db:
+    ports:
+      - "${POSTGRES_HOST_PORT}:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  hostpanel-rabbitmq:
+    ports:
+      - "${RABBITMQ_HOST_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_HOST_PORT}:15672"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  hostpanel-redis:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # Dev-only mail catcher; kept out of the shared set so a server never runs it.
+  hostpanel-mailhog:
+    container_name: hostpanel-mailhog
+    image: mailhog/mailhog
+    ports:
+      - "${MAILHOG_SMTP_HOST_PORT}:1025"
+      - "${MAILHOG_UI_HOST_PORT}:8025"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 256M
+
+  hostpanel-api:
+    container_name: hostpanel-api
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: dev
+      args:
+        NuGetPackageSourceCredentials_innovayse: ${NUGET_INNOVAYSE_CREDENTIALS}
+    ports:
+      - "${API_HOST_PORT}:${API_PORT}"
+    volumes:
+      - ../backend:/app
+      - backend_bin:/app/src/Innovayse.Hostpanel.API/bin
+      - backend_obj:/app/src/Innovayse.Hostpanel.API/obj
+      - backend_packages:/root/.nuget/packages
+      # Testcontainers for the integration suite run from inside this container. Dev only.
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ASPNETCORE_HTTP_PORTS: ${API_PORT}
+      AllowedHosts: ${ALLOWED_HOSTS:?ALLOWED_HOSTS must be set}
+      DOTNET_USE_POLLING_FILE_WATCHER: 1
+      DOTNET_NUGET_SIGNATURE_VERIFICATION: "false"
+
+      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+
+      Auth__RedisConnection: ${REDIS_CONNECTION}
+
+      RabbitMQ__Host: ${RABBITMQ_HOST}
+      RabbitMQ__Port: ${RABBITMQ_PORT}
+      RabbitMQ__User: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+
+      Smtp__Host: ${SMTP_HOST}
+      Smtp__Port: ${SMTP_PORT}
+      Smtp__Username: ${SMTP_USERNAME}
+      Smtp__Password: ${SMTP_PASSWORD}
+      Smtp__From__Address: ${SMTP_FROM}
+      Smtp__From__Name: ${SMTP_FROM_NAME}
+      Smtp__Encryption: ${SMTP_ENCRYPTION}
+      Notifications__ContactEmail: ${EMAIL_TO}
+      Telegram__BotToken: ${TELEGRAM_BOT_TOKEN}
+      Telegram__ChatId: ${TELEGRAM_CHAT_ID}
+
+      Jwt__Secret: ${JWT_SECRET:?JWT_SECRET is required}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Session__AccessTokenMinutes: ${SESSION_ACCESS_TOKEN_MINUTES}
+      Session__MaxSessionMinutes: ${SESSION_MAX_MINUTES}
+      EncryptionKey: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      Auth__Mode: ${AUTH_MODE}
+      Auth__AppName: hostpanel
+      Auth__Authority: ${SSO_URL}
+      Auth__PublicAuthority: ${SSO_PUBLIC_URL}
+      Auth__ClientId: ${SSO_CLIENT_ID}
+      Auth__ClientSecret: ${CLIENT_HOSTPANEL_SECRET}
+
+      Sso__Authority: ${SSO_URL}
+      Sso__ClientId: ${SSO_CLIENT_ID}
+      Sso__ServiceKey: ${SSO_SERVICE_KEY}
+
+      Cors__AllowedOrigins__0: ${CORS_CLIENT_ORIGIN}
+      Cors__AllowedOrigins__1: ${CORS_ADMIN_ORIGIN}
+      Cors__AllowedOrigins__2: ${PANEL_DEV_ORIGIN}
+      Cors__AllowedOrigins__3: ${CORS_STAGE_ORIGIN}
+      # Where mailed staff links (email verification) land; a bare top-level key, not a section.
+      AdminBaseUrl: ${CORS_ADMIN_ORIGIN}
+      # Where mailed client links (verification, password reset, invoices) land.
+      ClientBaseUrl: ${CORS_CLIENT_ORIGIN}
+
+      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+      NUGET_AUDIT: "false"
+      NuGetPackageSourceCredentials_innovayse: ${NUGET_INNOVAYSE_CREDENTIALS}
+      BackchannelLogout__Key: ${HOSTPANEL_BACKCHANNEL_LOGOUT_KEY}
+    healthcheck:
+      # `localhost`, not 127.0.0.1: AllowedHosts (ALLOWED_HOSTS) lists names, so the host filter answers
+      # 400 to a literal loopback IP and the container stayed unhealthy while serving. A GET to
+      # /dev/null, not --spider: that sends HEAD, which the GET-only /health route refuses.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:${API_PORT}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      hostpanel-db:
+        condition: service_healthy
+      hostpanel-rabbitmq:
+        condition: service_healthy
+      hostpanel-mailhog:
+        condition: service_started
+      hostpanel-redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+
+  hostpanel-client:
+    container_name: hostpanel-client
+    build:
+      context: ../client
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "${CLIENT_HOST_PORT}:3000"
+    volumes:
+      - ../client:/app
+      - client_node_modules:/app/node_modules
+      # Off the bind mount: thousands of small rewrites per compile are ~100x slower across the Windows mount.
+      - client_nuxt:/app/.nuxt
+      - client_output:/app/.output
+    environment:
+      AUTH_MODE: ${AUTH_MODE}
+      # Nuxt reads these two at runtime; AUTH_MODE alone only reaches nuxt.config at startup,
+      # which is why a local-mode dev stack still rendered the SSO sign-in.
+      NUXT_AUTH_MODE: ${AUTH_MODE}
+      NUXT_PUBLIC_AUTH_MODE: ${AUTH_MODE}
+
+      SSO_URL: ${SSO_URL}
+      SSO_PUBLIC_URL: ${SSO_PUBLIC_URL}
+      SSO_CLIENT_ID: ${SSO_CLIENT_ID}
+      SSO_CLIENT_SECRET: ${SSO_CLIENT_SECRET}
+      SSO_CALLBACK_URL: ${SSO_CALLBACK_URL}
+
+      API_URL: http://hostpanel-api:${API_PORT}
+      NUXT_PUBLIC_BASE_URL: ${NUXT_PUBLIC_BASE_URL}
+      NUXT_PUBLIC_MAIN_URL: ${MAIN_APP_URL}
+      NUXT_PUBLIC_TASKS_URL: ${NUXT_PUBLIC_TASKS_URL}
+      NUXT_PUBLIC_ERP_URL: ${NUXT_PUBLIC_ERP_URL}
+      NUXT_PUBLIC_SHEETS_URL: ${NUXT_PUBLIC_SHEETS_URL}
+      NUXT_PUBLIC_EMAIL_URL: ${NUXT_PUBLIC_EMAIL_URL}
+      NUXT_PUBLIC_DRIVE_URL: ${NUXT_PUBLIC_DRIVE_URL}
+      NUXT_PUBLIC_PORTAL_TEMPLATE: ${NUXT_PUBLIC_PORTAL_TEMPLATE}
+      NUXT_PUBLIC_PORTAL_APPS_ENABLED: ${NUXT_PUBLIC_PORTAL_APPS_ENABLED}
+      NUXT_PUBLIC_PORTAL_CONTACT_EMAIL: ${NUXT_PUBLIC_PORTAL_CONTACT_EMAIL}
+      NUXT_PUBLIC_PORTAL_SOCIAL_TWITTER: ${NUXT_PUBLIC_PORTAL_SOCIAL_TWITTER}
+      NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN: ${NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN}
+      NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK: ${NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK}
+      NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL: ${NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL}
+      NUXT_PUBLIC_PORTAL_SITE_NAME: ${NUXT_PUBLIC_PORTAL_SITE_NAME}
+      NUXT_PUBLIC_PORTAL_SITE_TAGLINE: ${NUXT_PUBLIC_PORTAL_SITE_TAGLINE}
+      NUXT_PUBLIC_PORTAL_THEME_DEFAULT: ${NUXT_PUBLIC_PORTAL_THEME_DEFAULT}
+      NUXT_PUBLIC_PORTAL_THEME_USER_TOGGLE: ${NUXT_PUBLIC_PORTAL_THEME_USER_TOGGLE}
+      NUXT_PUBLIC_PORTAL_LOGO: ${NUXT_PUBLIC_PORTAL_LOGO}
+      NUXT_PUBLIC_PORTAL_LOGO_DARK: ${NUXT_PUBLIC_PORTAL_LOGO_DARK}
+      NUXT_PUBLIC_PORTAL_LOGO_MARK: ${NUXT_PUBLIC_PORTAL_LOGO_MARK}
+      NUXT_PUBLIC_PORTAL_FAVICON: ${NUXT_PUBLIC_PORTAL_FAVICON}
+      NUXT_PUBLIC_PORTAL_BRAND_PRIMARY: ${NUXT_PUBLIC_PORTAL_BRAND_PRIMARY}
+      NUXT_PUBLIC_PORTAL_BRAND_ACCENT: ${NUXT_PUBLIC_PORTAL_BRAND_ACCENT}
+      NUXT_PUBLIC_PORTAL_BRAND_FONT_HEADING: ${NUXT_PUBLIC_PORTAL_BRAND_FONT_HEADING}
+      NUXT_PUBLIC_PORTAL_BRAND_FONT_BODY: ${NUXT_PUBLIC_PORTAL_BRAND_FONT_BODY}
+      NUXT_PUBLIC_PORTAL_GTM_ID: ${NUXT_PUBLIC_PORTAL_GTM_ID}
+      NUXT_PUBLIC_PORTAL_CHAT_BASE_URL: ${NUXT_PUBLIC_PORTAL_CHAT_BASE_URL}
+      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN}
+      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_RU: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_RU}
+      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_HY: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_HY}
+      BILLING_PORTAL_URL: ${BILLING_PORTAL_URL}
+      NUXT_MAIN_API_URL: ${NUXT_MAIN_API_URL}
+
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      - hostpanel-api
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+
+  hostpanel-admin:
+    container_name: hostpanel-admin
+    build:
+      context: ..
+      dockerfile: admin/Dockerfile
+      target: dev
+    ports:
+      - "${ADMIN_HOST_PORT}:5173"
+    volumes:
+      - ../admin:/app
+      - admin_node_modules:/app/node_modules
+    environment:
+      VITE_API_BASE: /api
+
+      API_PROXY_TARGET: http://hostpanel-api:${API_PORT}
+      CHOKIDAR_USEPOLLING: "true"
+    healthcheck:
+      # A port probe, like the client: rendering the SPA shell as a liveness check took ~40s on the
+      # dev bind mount while Vite transformed it, well past the 5s timeout.
+      test: ["CMD", "nc", "-z", "127.0.0.1", "5173"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - hostpanel-api
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1536M
+
+volumes:
+  client_node_modules:
+    name: hostpanel_client_node_modules
+  client_nuxt:
+    name: hostpanel_client_nuxt
+  client_output:
+    name: hostpanel_client_output
+  admin_node_modules:
+    name: hostpanel_admin_node_modules
+  backend_bin:
+    name: hostpanel_backend_bin
+  backend_obj:
+    name: hostpanel_backend_obj
+  backend_packages:
+    name: hostpanel_backend_packages

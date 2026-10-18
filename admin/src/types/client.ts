@@ -2,12 +2,9 @@
  * A client account: the list row, the full record, and the two rollups its screens show.
  */
 
-import type { Contact } from './contact'
-import type { Domain } from './domain'
-import type { EmailLog } from './emaillog'
-import type { Invoice, InvoiceStatusCount } from './invoice'
-import type { Product } from './product'
-import type { Ticket } from './ticket'
+import type { Contact } from '@/types/contact'
+import type { EmailLog } from '@/types/emaillog'
+import type { InvoiceStatusCount } from '@/types/invoice'
 
 /** Summary DTO returned by the clients list endpoint. */
 export interface ClientListItem {
@@ -143,4 +140,36 @@ export interface ClientTicketStats {
   openedThisYear: number
   /** Tickets opened in the previous calendar year. */
   openedLastYear: number
+}
+
+/** Filter parameters for the clients list endpoint. */
+export interface ClientFilters {
+  /** Name/company search term. */
+  search?: string
+  /** Email partial match. */
+  email?: string
+  /** Phone partial match. */
+  phone?: string
+  /** Status filter (Active, Inactive, Suspended, Closed). */
+  status?: string
+}
+
+/** Currency row of the admin currency configuration, as the client pickers read it. */
+export interface ConfiguredCurrency {
+  /** ISO 4217 code. */
+  code: string
+  /** Text shown before an amount. */
+  prefix: string
+  /** Text shown after an amount. */
+  suffix: string
+  /** Whether the operator enabled the currency. */
+  isEnabled: boolean
+}
+
+/** Status of a client account, exactly as the API sends it. */
+export enum ClientStatus {
+  Active = 'Active',
+  Inactive = 'Inactive',
+  Suspended = 'Suspended',
+  Closed = 'Closed',
 }

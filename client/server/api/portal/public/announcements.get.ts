@@ -7,14 +7,15 @@
  * (`[Authorize(Roles = Roles.Admin)]`), so every signed-in customer got 403 and an empty card
  * while admins saw content — which is why it went unnoticed. It now calls the client-facing
  * `/announcements/published`, whose projection has no `isPublished` flag and never contains a
- * draft. The `limitnum` parameter was WHMCS's spelling and no controller here ever read it; the
+ * draft. The `limitnum` parameter was the billing portal's spelling and no controller here ever read it; the
  * backend pages with `page`/`pageSize`.
  *
  * The response is flattened to the `{ id, title, date }` shape the card renders, so the page
  * does not have to know about the backend's paging envelope.
  */
 
-import type { AnnouncementSummary, PublishedAnnouncementPage } from '~/types/announcement'
+import type { AnnouncementSummary } from '~/types/announcementsummary'
+import type { PublishedAnnouncementPage } from '~/types/publishedannouncementpage'
 
 export default defineEventHandler(async (event): Promise<AnnouncementSummary[]> => {
   const result = await internalApiCall<PublishedAnnouncementPage>(

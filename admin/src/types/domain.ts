@@ -3,7 +3,6 @@
  * forwarding rules and renewal reminders.
  */
 
-import type { Product } from './product'
 
 /** Represents a domain registration. */
 export interface Domain {
@@ -160,3 +159,99 @@ export interface DomainReminderItem {
   /** ISO 8601 sent timestamp. */
   sentAt: string
 }
+
+/** Filter and paging of the domain list. */
+export interface DomainFilter {
+  /** Page, 1-based. */
+  page: number
+  /** Items per page. */
+  pageSize: number
+  /** Name search term; empty for none. */
+  search?: string
+  /** Keep only this client's domains. */
+  clientId?: number | string
+}
+
+/** Body of a domain save: the editable fields of the detail page. */
+export interface UpdateDomainPayload {
+  /** One-time registration cost. */
+  firstPaymentAmount: number
+  /** Recurring renewal amount. */
+  recurringAmount: number
+  /** Payment method label. */
+  paymentMethod: string | null
+  /** Applied promotion code. */
+  promotionCode: string | null
+  /** External subscription reference. */
+  subscriptionId: string | null
+  /** Free-text admin notes. */
+  adminNotes: string | null
+  /** ISO 8601 expiry date. */
+  expiresAt: string | null
+  /** ISO 8601 next due date. */
+  nextDueDate: string | null
+  /** Registration period in years. */
+  registrationPeriod: number
+  /** Lifecycle status. */
+  status: string
+  /** Nameserver hostnames, empty ones dropped. */
+  nameservers: string[]
+}
+
+/** WHOIS registrant contact fields, keyed by the field name the API expects. */
+export type DomainContactPayload = Record<string, string>
+
+/** Body that adds or replaces a DNS record. */
+export interface DnsRecordPayload {
+  /** Record type (A, MX, ...). */
+  type: string
+  /** Host label. */
+  host: string
+  /** Record value. */
+  value: string
+  /** Time-to-live in seconds. */
+  ttl: number
+  /** Priority (MX/SRV only), null otherwise. */
+  priority: number | null
+}
+
+/** Body that adds or replaces an email forwarding rule. */
+export interface ForwardingRulePayload {
+  /** Source alias. */
+  source: string
+  /** Destination email address. */
+  destination: string
+  /** Whether the rule is active; omitted to keep the current state. */
+  isActive?: boolean
+}
+
+/** A boolean switch of a domain feature (auto-renew, lock, privacy, DNS, forwarding). */
+export interface DomainToggle {
+  /** Whether the feature is turned on. */
+  enabled: boolean
+}
+
+/** Status of a domain registration, exactly as the API sends it. */
+export enum DomainStatus {
+  Active = 'Active',
+  PendingRegistration = 'PendingRegistration',
+  PendingTransfer = 'PendingTransfer',
+  Expired = 'Expired',
+  Redemption = 'Redemption',
+  Transferred = 'Transferred',
+  Cancelled = 'Cancelled',
+}
+
+/** Closed set of DNS record types a domain's zone can hold. */
+export const DnsRecordType = {
+  A: 'A',
+  Aaaa: 'AAAA',
+  Cname: 'CNAME',
+  Mx: 'MX',
+  Txt: 'TXT',
+  Ns: 'NS',
+  Srv: 'SRV',
+} as const
+
+/** One of the DNS record types. */
+export type DnsRecordType = (typeof DnsRecordType)[keyof typeof DnsRecordType]

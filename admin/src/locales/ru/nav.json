@@ -1,0 +1,53 @@
+{
+  "dashboard": "Панель управления",
+  "clients": "Клиенты",
+  "clientsChildren": {
+    "view": "Просмотр/поиск клиентов",
+    "users": "Управление пользователями",
+    "sharedHostings": "Общий хостинг",
+    "addons": "Дополнения к услугам",
+    "domainRegistrations": "Регистрации доменов",
+    "cancellations": "Заявки на отмену",
+    "affiliates": "Управление партнёрами"
+  },
+  "billing": "Биллинг",
+  "billingChildren": {
+    "transactions": "Список транзакций",
+    "invoices": "Счета",
+    "billableItems": "Оплачиваемые позиции",
+    "quotes": "Коммерческие предложения",
+    "offlineCc": "Оффлайн-обработка карт",
+    "disputes": "Споры",
+    "gatewayLog": "Лог платёжного шлюза"
+  },
+  "reports": "Отчёты",
+  "orders": "Заказы",
+  "domains": "Домены",
+  "support": "Поддержка",
+  "supportChildren": {
+    "overview": "Обзор поддержки",
+    "tickets": "Тикеты поддержки",
+    "newTicket": "Открыть новый тикет",
+    "predefinedReplies": "Готовые ответы",
+    "announcements": "Объявления",
+    "downloads": "Загрузки",
+    "knowledgebase": "База знаний",
+    "networkIssues": "Сетевые проблемы"
+  },
+  "plugins": "Плагины",
+  "pluginManager": "Менеджер плагинов",
+  "servers": "Серверы",
+  "integrations": "Интеграции",
+  "migration": "Миграция",
+  "settings": "Настройки",
+  "settingsChildren": {
+    "general": "Общее",
+    "products": "Продукты",
+    "tldPricing": "Цены на TLD",
+    "slides": "Слайды",
+    "emailTemplates": "Шаблоны писем",
+    "gateways": "Платёжные шлюзы",
+    "currencies": "Валюты"
+  },
+  "servicesTitle": "Услуги"
+}

@@ -1,21 +1,26 @@
 <template>
-  <div class="space-y-4">
-    <label class="block text-sm font-bold text-white/70 uppercase tracking-wider mb-2">Card Details</label>
-    <div ref="cardElementRef"
-         class="p-4 rounded-2xl bg-white/5 border border-white/10 min-h-[44px] transition-colors"
-         :class="{ 'border-red-500/50': cardError, 'border-cyan-500/30': cardReady && !cardError }" />
-    <p v-if="cardError" class="text-sm text-red-400">{{ cardError }}</p>
-  </div>
+  <UiField :label="t('checkout.cardDetails')" :error="cardError" data-testid="stripe-card-field">
+    <UiWidgetFrame
+      ref="frameRef"
+      :ready="cardReady"
+      :invalid="Boolean(cardError)"
+      data-testid="stripe-card-frame"
+    />
+  </UiField>
 </template>
 
 <script setup lang="ts">
 /**
- * Stripe card input form component.
+ * Card input form component.
  *
- * Mounts a Stripe Elements card element and exposes a {@link confirmPayment}
+ * Mounts the payment provider's card element and exposes a {@link confirmPayment}
  * method for parent components to trigger payment confirmation with a client secret.
  */
 import type { Stripe, StripeCardElement } from '@stripe/stripe-js'
+import { buildStripeCardStyle } from '~/utils/stripeCardStyle'
+
+/** Translates a key in the active language. */
+const { t } = useI18n()
 
 /** Whether the Stripe card element is fully mounted and ready for input. */
 const cardReady = ref(false)
@@ -23,8 +28,17 @@ const cardReady = ref(false)
 /** Validation error message from the card element, or empty string when valid. */
 const cardError = ref('')
 
-/** Template ref for the DOM element where Stripe Elements mounts the card input. */
-const cardElementRef = ref<HTMLDivElement | null>(null)
+/** What the widget frame exposes. */
+interface WidgetFrameHandle {
+  /** The DOM node Stripe Elements mounts the card input into. */
+  el: HTMLDivElement | null
+}
+
+/** The frame component, whose exposed `el` is the mount point of the card input. */
+const frameRef = ref<WidgetFrameHandle | null>(null)
+
+/** Whether the page is in dark mode; the card element's inner text colours follow it. */
+const { isDark } = useAppColorMode()
 
 /** Cached Stripe.js instance used for payment confirmation. */
 let stripeInstance: Stripe | null = null
@@ -34,32 +48,22 @@ let cardElement: StripeCardElement | null = null
 
 /**
  * Initializes the Stripe card element on mount.
- * Creates the Elements instance, applies dark theme styling, and
+ * Creates the Elements instance, applies the colour-mode styling, and
  * attaches event listeners for readiness and validation errors.
  */
 onMounted(async () => {
   const { getStripe } = useStripe()
   stripeInstance = await getStripe()
 
-  if (!stripeInstance || !cardElementRef.value) return
+  const mountPoint = frameRef.value?.el
+  if (!stripeInstance || !mountPoint) {
+    return
+  }
 
   const elements = stripeInstance.elements()
-  cardElement = elements.create('card', {
-    style: {
-      base: {
-        color: '#ffffff',
-        fontFamily: '"Inter", system-ui, sans-serif',
-        fontSize: '16px',
-        '::placeholder': { color: '#6b7280' },
-      },
-      invalid: {
-        color: '#f87171',
-        iconColor: '#f87171',
-      },
-    },
-  })
+  cardElement = elements.create('card', { style: buildStripeCardStyle(isDark.value) })
 
-  cardElement.mount(cardElementRef.value)
+  cardElement.mount(mountPoint)
 
   cardElement.on('ready', () => {
     cardReady.value = true
@@ -68,6 +72,11 @@ onMounted(async () => {
   cardElement.on('change', (event) => {
     cardError.value = event.error?.message ?? ''
   })
+})
+
+/** Restyles the mounted card element when the visitor toggles the colour mode. */
+watch(isDark, (dark) => {
+  cardElement?.update({ style: buildStripeCardStyle(dark) })
 })
 
 /**
@@ -85,11 +94,11 @@ onBeforeUnmount(() => {
  *
  * @param clientSecret - The Stripe PaymentIntent client secret from the backend.
  * @returns The confirmed PaymentIntent object with at least its id.
- * @throws Error if Stripe is not initialized or if the payment fails.
+ * @throws Error if the payment provider is not initialized or if the payment fails.
  */
-async function confirmPayment(clientSecret: string): Promise<{ id: string }> {
+const confirmPayment = async (clientSecret: string): Promise<{ id: string }> => {
   if (!stripeInstance || !cardElement) {
-    throw new Error('Stripe is not initialized')
+    throw new Error(t('checkout.card.notInitialized'))
   }
 
   const { error, paymentIntent } = await stripeInstance.confirmCardPayment(clientSecret, {
@@ -97,11 +106,11 @@ async function confirmPayment(clientSecret: string): Promise<{ id: string }> {
   })
 
   if (error) {
-    throw new Error(error.message ?? 'Payment failed')
+    throw new Error(error.message ?? t('checkout.card.failed'))
   }
 
   if (!paymentIntent) {
-    throw new Error('No payment intent returned')
+    throw new Error(t('checkout.card.noIntent'))
   }
 
   return { id: paymentIntent.id }

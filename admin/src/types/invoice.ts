@@ -5,9 +5,6 @@
  * transaction settles one, and the count is what a screen renders above a list of them.
  */
 
-import type { Gateway } from './gateway'
-import type { PagedResult } from './pagedresult'
-import type { Transaction } from './transaction'
 
 /** Single line item on an invoice. */
 export interface InvoiceItem {
@@ -117,4 +114,153 @@ export interface InvoiceStatusCount {
   count: number
   /** Sum of totals for invoices in this status. */
   total: number
+}
+
+/** Filters the invoice list endpoints accept; an empty value is left off the request. */
+export interface InvoiceFilters {
+  /** Status filter, e.g. `Unpaid`. */
+  status?: string
+  /** Start date filter (ISO 8601). */
+  from?: string
+  /** End date filter (ISO 8601). */
+  to?: string
+}
+
+/** One line of a new invoice. */
+export interface InvoiceItemInput {
+  /** Human-readable charge description. */
+  description: string
+  /** Price per unit. */
+  unitPrice: number
+  /** Number of units. */
+  quantity: number
+}
+
+/** Body of `POST /billing`. */
+export interface CreateInvoicePayload {
+  /** The client to invoice. */
+  clientId: number
+  /** ISO 8601 due date. */
+  dueDate: string
+  /** Line items to include. */
+  items: InvoiceItemInput[]
+  /** True to create as draft, false to create unpaid. */
+  isDraft: boolean
+}
+
+/**
+ * One entry of `PUT /billing/{id}/items`, mirroring the API UpdateItemEntryRequest:
+ * `id` is null for a new line, and `isDeleted` removes an existing one.
+ */
+export interface InvoiceItemUpdate extends InvoiceItemInput {
+  /** Existing line item id; null for a new line. */
+  id: number | null
+  /** When true, the line is removed from the invoice. */
+  isDeleted: boolean
+}
+
+/** Body of `PUT /billing/{id}/options`. */
+export interface InvoiceOptionsPayload {
+  /** ISO 8601 invoice date. */
+  invoiceDate: string
+  /** ISO 8601 due date. */
+  dueDate: string
+  /** Payment method label. */
+  paymentMethod: string
+  /** Tax rate percentage. */
+  taxRate: number
+}
+
+/** Body of `POST /billing/{id}/payment`. */
+export interface InvoicePaymentPayload {
+  /** ISO 8601 payment date. */
+  date: string
+  /** Payment gateway used. */
+  gateway: string
+  /** Gateway transaction reference. */
+  transactionId: string
+  /** Amount paid. */
+  amount: number
+  /** Gateway fees, when any. */
+  fees?: number
+  /** Admin notes, when any. */
+  notes?: string
+}
+
+/** Body of `POST /billing/{id}/refund`. */
+export interface InvoiceRefundPayload {
+  /** Reference of the payment being refunded. */
+  transactionId: string
+  /** Amount to refund. */
+  amount: number
+  /** Kind of refund the API understands. */
+  refundType: string
+  /** Gateway the refund goes through. */
+  gateway: string
+  /** Reference of the refund itself, when the gateway issued one. */
+  refundTransactionId?: string
+  /** Admin notes, when any. */
+  notes?: string
+}
+
+/** Identifier the API answers a create or duplicate with. */
+export interface CreatedId {
+  /** The new record id. */
+  id: number
+}
+
+/** Status of an invoice, exactly as the API sends it. */
+export enum InvoiceStatus {
+  Draft = 'Draft',
+  Unpaid = 'Unpaid',
+  Paid = 'Paid',
+  Overdue = 'Overdue',
+  Cancelled = 'Cancelled',
+  Refunded = 'Refunded',
+  Collections = 'Collections',
+  PaymentPending = 'PaymentPending',
+}
+
+/** Kinds of transaction recorded against an invoice. */
+export enum InvoiceTransactionType {
+  Payment = 'Payment',
+  Refund = 'Refund',
+  Credit = 'Credit',
+}
+
+/** Refund kinds the API understands. */
+export enum InvoiceRefundType {
+  Gateway = 'Gateway',
+  Manual = 'Manual',
+  CreditBalance = 'CreditBalance',
+}
+
+/** Actions `POST /billing/bulk` applies to several invoices at once. */
+export enum InvoiceBulkAction {
+  MarkPaid = 'MarkPaid',
+  MarkUnpaid = 'MarkUnpaid',
+  MarkCancelled = 'MarkCancelled',
+  Duplicate = 'Duplicate',
+  Delete = 'Delete',
+}
+
+/** Closed set of ways an invoice detail screen is opened (the route action). */
+export const InvoiceOpenAction = {
+  /** Read-only view. */
+  View: 'view',
+  /** Editable. */
+  Edit: 'edit',
+} as const
+
+/** One of the {@link InvoiceOpenAction} values. */
+export type InvoiceOpenAction = (typeof InvoiceOpenAction)[keyof typeof InvoiceOpenAction]
+
+/** Tabs of the invoice detail screen. */
+export enum InvoiceTab {
+  Summary = 'summary',
+  Payment = 'payment',
+  Options = 'options',
+  Credit = 'credit',
+  Refund = 'refund',
+  Notes = 'notes',
 }

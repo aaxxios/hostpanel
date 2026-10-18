@@ -1,0 +1,519 @@
+[
+  {
+    "path": "/setup",
+    "meta": {
+      "setup": true
+    },
+    "component": "SetupView.vue"
+  },
+  {
+    "path": "/verify-email",
+    "meta": {
+      "public": true
+    },
+    "component": "VerifyEmailView.vue"
+  },
+  {
+    "path": "/login",
+    "meta": {
+      "public": true
+    },
+    "component": "LoginView.vue"
+  },
+  {
+    "path": "/",
+    "meta": {
+      "requiresAuth": true
+    },
+    "component": "AppLayout.vue",
+    "children": [
+      {
+        "path": "",
+        "redirect": "/dashboard"
+      },
+      {
+        "path": "dashboard",
+        "component": "DashboardView.vue"
+      },
+      {
+        "path": "notifications",
+        "component": "NotificationsView.vue"
+      },
+      {
+        "path": "clients",
+        "component": "ClientsListView.vue"
+      },
+      {
+        "path": "clients/add",
+        "component": "AddClientView.vue"
+      },
+      {
+        "path": "clients/users",
+        "component": "ManageUsersView.vue"
+      },
+      {
+        "path": "clients/shared-hostings",
+        "component": "ServicesListView.vue"
+      },
+      {
+        "path": "clients/addons",
+        "component": "ServiceAddonsView.vue"
+      },
+      {
+        "path": "clients/domain-registrations",
+        "component": "DomainRegistrationsView.vue"
+      },
+      {
+        "path": "clients/cancellations",
+        "component": "CancellationRequestsView.vue"
+      },
+      {
+        "path": "clients/affiliates",
+        "component": "ManageAffiliatesView.vue"
+      },
+      {
+        "path": "clients/:id",
+        "component": "ClientLayout.vue",
+        "children": [
+          {
+            "path": "",
+            "redirect": "function"
+          },
+          {
+            "path": "summary",
+            "component": "ClientSummaryView.vue"
+          },
+          {
+            "path": "profile",
+            "component": "ClientProfileView.vue"
+          },
+          {
+            "path": "services",
+            "component": "ClientServicesListView.vue"
+          },
+          {
+            "path": "services/:serviceId",
+            "component": "ClientServiceDetailView.vue"
+          },
+          {
+            "path": "users",
+            "component": "ClientUsersView.vue"
+          },
+          {
+            "path": "contacts",
+            "component": "ClientContactsView.vue"
+          },
+          {
+            "path": "billable-items",
+            "component": "ClientBillableItemsView.vue"
+          },
+          {
+            "path": "invoices",
+            "component": "ClientInvoicesView.vue"
+          },
+          {
+            "path": "quotes",
+            "component": "ClientQuotesView.vue"
+          },
+          {
+            "path": "transactions",
+            "component": "ClientTransactionsView.vue"
+          },
+          {
+            "path": "tickets",
+            "component": "ClientTicketsView.vue"
+          },
+          {
+            "path": "tickets/new",
+            "component": "ClientOpenTicketView.vue"
+          },
+          {
+            "path": "tickets/:ticketId",
+            "component": "ClientTicketDetailView.vue"
+          },
+          {
+            "path": "emails",
+            "component": "ClientEmailsView.vue"
+          },
+          {
+            "path": "log",
+            "component": "ClientLogView.vue"
+          },
+          {
+            "path": "domains",
+            "component": "ClientDomainsListView.vue"
+          },
+          {
+            "path": "domains/:domainId",
+            "component": "ClientDomainDetailView.vue"
+          }
+        ]
+      },
+      {
+        "path": "billing",
+        "children": [
+          {
+            "path": "",
+            "redirect": "invoices"
+          },
+          {
+            "path": "invoices",
+            "component": "InvoicesListView.vue"
+          },
+          {
+            "path": "invoices/:id/:action",
+            "component": "InvoiceDetailView.vue"
+          },
+          {
+            "path": ":id",
+            "component": "InvoiceDetailView.vue"
+          },
+          {
+            "path": "billable-items",
+            "component": "BillableItemsView.vue"
+          },
+          {
+            "path": "billable-items/add",
+            "component": "AddBillableItemView.vue"
+          },
+          {
+            "path": "quotes",
+            "component": "QuotesListView.vue"
+          },
+          {
+            "path": "quotes/add",
+            "component": "AddQuoteView.vue"
+          },
+          {
+            "path": "quotes/new",
+            "component": "QuoteDetailView.vue"
+          },
+          {
+            "path": "quotes/:id",
+            "component": "QuoteDetailView.vue"
+          },
+          {
+            "path": "offline-cc",
+            "component": "OfflineCCView.vue"
+          },
+          {
+            "path": "disputes",
+            "component": "DisputesView.vue"
+          },
+          {
+            "path": "gateway-log",
+            "component": "GatewayLogView.vue"
+          },
+          {
+            "path": "transactions",
+            "component": "TransactionsListView.vue"
+          },
+          {
+            "path": "add-transaction",
+            "component": "AddTransactionView.vue"
+          },
+          {
+            "path": "transactions/:id/edit",
+            "component": "EditTransactionView.vue"
+          }
+        ]
+      },
+      {
+        "path": "reports",
+        "component": "ReportsLayout.vue",
+        "children": [
+          {
+            "path": "",
+            "redirect": "/reports/daily-performance"
+          },
+          {
+            "path": "aging-invoices",
+            "component": "AgingInvoicesView.vue"
+          },
+          {
+            "path": "annual-income",
+            "component": "AnnualIncomeView.vue"
+          },
+          {
+            "path": "client-statement",
+            "component": "ClientStatementView.vue"
+          },
+          {
+            "path": "clients",
+            "component": "ClientsReportView.vue"
+          },
+          {
+            "path": "clients-by-country",
+            "component": "ClientsByCountryView.vue"
+          },
+          {
+            "path": "credits-reviewer",
+            "component": "CreditsReviewerView.vue"
+          },
+          {
+            "path": "customer-retention",
+            "component": "CustomerRetentionView.vue"
+          },
+          {
+            "path": "daily-performance",
+            "component": "DailyPerformanceView.vue"
+          },
+          {
+            "path": "direct-debit",
+            "component": "DirectDebitView.vue"
+          },
+          {
+            "path": "disk-usage",
+            "component": "DiskUsageView.vue"
+          },
+          {
+            "path": "domain-renewal-emails",
+            "component": "DomainRenewalEmailsView.vue"
+          },
+          {
+            "path": "domains",
+            "component": "DomainsReportView.vue"
+          },
+          {
+            "path": "income-forecast",
+            "component": "IncomeForecastView.vue"
+          },
+          {
+            "path": "income-by-product",
+            "component": "IncomeByProductView.vue"
+          },
+          {
+            "path": "invoices",
+            "component": "InvoicesReportView.vue"
+          },
+          {
+            "path": "monthly-orders",
+            "component": "MonthlyOrdersView.vue"
+          },
+          {
+            "path": "monthly-transactions",
+            "component": "MonthlyTransactionsView.vue"
+          },
+          {
+            "path": "new-customers",
+            "component": "NewCustomersView.vue"
+          },
+          {
+            "path": "pdf-batch",
+            "component": "PdfBatchView.vue"
+          },
+          {
+            "path": "product-suspensions",
+            "component": "ProductSuspensionsView.vue"
+          },
+          {
+            "path": "promotions",
+            "component": "PromotionsView.vue"
+          },
+          {
+            "path": "sales-tax",
+            "component": "SalesTaxView.vue"
+          },
+          {
+            "path": "server-revenue-forecasts",
+            "component": "ServerRevenueForecastsView.vue"
+          },
+          {
+            "path": "services",
+            "component": "ServicesReportView.vue"
+          },
+          {
+            "path": "smarty-compatibility",
+            "component": "SmartyCompatibilityView.vue"
+          },
+          {
+            "path": "ssl-monitoring",
+            "component": "SslMonitoringView.vue"
+          },
+          {
+            "path": "support-ticket-replies",
+            "component": "SupportTicketsReportView.vue"
+          },
+          {
+            "path": "ticket-feedback-comments",
+            "component": "TicketFeedbackCommentsView.vue"
+          },
+          {
+            "path": "ticket-feedback-scores",
+            "component": "TicketFeedbackScoresView.vue"
+          },
+          {
+            "path": "ticket-ratings-reviewer",
+            "component": "TicketRatingsReviewerView.vue"
+          },
+          {
+            "path": "ticket-tags",
+            "component": "TicketTagsView.vue"
+          },
+          {
+            "path": "top-clients",
+            "component": "TopClientsView.vue"
+          },
+          {
+            "path": "transactions",
+            "component": "TransactionsReportView.vue"
+          },
+          {
+            "path": "vat-moss",
+            "component": "VatMossView.vue"
+          }
+        ]
+      },
+      {
+        "path": "orders",
+        "component": "OrdersListView.vue"
+      },
+      {
+        "path": "orders/:id",
+        "component": "OrderDetailView.vue"
+      },
+      {
+        "path": "services",
+        "component": "ServicesListView.vue"
+      },
+      {
+        "path": "domains",
+        "component": "DomainsListView.vue"
+      },
+      {
+        "path": "support",
+        "redirect": "/support/overview"
+      },
+      {
+        "path": "support/overview",
+        "component": "SupportOverviewView.vue"
+      },
+      {
+        "path": "support/tickets",
+        "component": "SupportTicketsView.vue"
+      },
+      {
+        "path": "support/tickets/new",
+        "component": "SupportOpenTicketView.vue"
+      },
+      {
+        "path": "support/tickets/:id",
+        "component": "SupportTicketDetailView.vue"
+      },
+      {
+        "path": "support/predefined-replies",
+        "component": "PredefinedRepliesView.vue"
+      },
+      {
+        "path": "support/announcements",
+        "component": "AnnouncementsListView.vue"
+      },
+      {
+        "path": "support/announcements/new",
+        "component": "AnnouncementFormView.vue"
+      },
+      {
+        "path": "support/announcements/:id/edit",
+        "component": "AnnouncementFormView.vue"
+      },
+      {
+        "path": "support/downloads",
+        "component": "DownloadsView.vue"
+      },
+      {
+        "path": "support/knowledgebase",
+        "component": "KnowledgebaseView.vue"
+      },
+      {
+        "path": "support/network-issues",
+        "component": "NetworkIssuesView.vue"
+      },
+      {
+        "path": "support/network-issues/new",
+        "component": "NetworkIssueFormView.vue"
+      },
+      {
+        "path": "support/network-issues/:id/edit",
+        "component": "NetworkIssueFormView.vue"
+      },
+      {
+        "path": "plugins",
+        "component": "PluginsView.vue"
+      },
+      {
+        "path": "servers",
+        "component": "ServersView.vue"
+      },
+      {
+        "path": "integrations/:slug/configure",
+        "component": "IntegrationDetailView.vue"
+      },
+      {
+        "path": "migration",
+        "component": "MigrationView.vue"
+      },
+      {
+        "path": "integrations",
+        "component": "IntegrationsLayout.vue",
+        "children": [
+          {
+            "path": "",
+            "redirect": "/integrations/payments"
+          },
+          {
+            "path": ":category",
+            "component": "IntegrationsView.vue"
+          }
+        ]
+      },
+      {
+        "path": "settings",
+        "component": "SystemSettingsView.vue"
+      },
+      {
+        "path": "settings/email-templates",
+        "component": "EmailTemplatesView.vue"
+      },
+      {
+        "path": "settings/products",
+        "component": "ProductsView.vue"
+      },
+      {
+        "path": "settings/slides",
+        "component": "SlidesView.vue"
+      },
+      {
+        "path": "settings/slides/create",
+        "component": "SlideFormView.vue"
+      },
+      {
+        "path": "settings/slides/:id/edit",
+        "component": "SlideFormView.vue"
+      },
+      {
+        "path": "settings/tld-pricing",
+        "component": "TldConfigsView.vue"
+      },
+      {
+        "path": "settings/tld-pricing/create",
+        "component": "TldConfigFormView.vue"
+      },
+      {
+        "path": "settings/tld-pricing/:id/edit",
+        "component": "TldConfigFormView.vue"
+      },
+      {
+        "path": "settings/gateways",
+        "redirect": "/integrations/payments"
+      },
+      {
+        "path": "settings/currencies",
+        "component": "CurrenciesView.vue"
+      }
+    ]
+  },
+  {
+    "path": "/:pathMatch(.*)*",
+    "redirect": "/login"
+  }
+]

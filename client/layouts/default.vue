@@ -1,12 +1,15 @@
 <template>
-  <div class="min-h-dvh flex flex-col bg-page">
+  <UiStack gap="none" class="min-h-dvh bg-page" data-testid="default-layout">
+    <!-- Demo-mode notice; renders nothing outside a demo -->
+    <LayoutDemoBanner />
+
     <!-- Header supplied by the active template -->
     <component :is="header" />
 
     <!-- Main content -->
-    <main class="flex-1">
+    <UiStack as="main" gap="none" class="flex-1">
       <slot />
-    </main>
+    </UiStack>
 
     <!-- Footer supplied by the active template -->
     <component :is="footer" />
@@ -14,9 +17,12 @@
     <!-- Floating Action Button (Telegram / WhatsApp / Live Chat) -->
     <UiFloatingActions />
 
+    <!-- Consent bar: public site only, never on the auth pages (they use no layout) -->
+    <UiCookieBanner />
+
     <!-- Cart Drawer (Side panel) -->
     <LayoutCartDrawer />
-  </div>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
@@ -24,10 +30,15 @@
  * Default layout with the active template's header and footer.
  * Applied to all pages unless a custom layout is specified.
  */
+import { TemplateSlot } from '~/types/templateslot'
+
 const { name, slot } = useTemplate()
 
-const header = slot('header')
-const footer = slot('footer')
+/** The active template's header component. */
+const header = slot(TemplateSlot.Header)
+
+/** The active template's footer component. */
+const footer = slot(TemplateSlot.Footer)
 
 // Stamps the active template on <html> so global CSS can scope to it. The body
 // surface is the reason: aurora follows the theme tokens, classic keeps its

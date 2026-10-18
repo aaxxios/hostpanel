@@ -5,7 +5,7 @@
  * In SSO mode: identity (name, email, 2FA) comes from SSO's own /api/account/profile --
  * that is where sign-in and 2FA actually live, so it is the one source of truth for both.
  * Billing fields (company, address, payment method, language, email preferences) still
- * come from the WHMCS-style C# backend /clients/me, the same record `PUT` (below) writes
+ * come from the legacy-style C# backend /clients/me, the same record `PUT` (below) writes
  * to -- without this, a real sso-mode client's edits would save but never read back.
  * A staff/admin identity with no linked client record (checked via /clients/me 400/404)
  * gets identity fields only, with billing fields left at their empty defaults.
@@ -20,19 +20,27 @@
  * which is why every amount in the portal rendered without a symbol in production. There is
  * no prefix or suffix anywhere in the API, so the two symbol fields are gone rather than
  * emptied: `utils/formatCurrency.ts` places the symbol from the code itself.
+ *
+ * @module server/api/portal/client/me.get
  */
+
+import { AuthMode } from '~/types/authmode'
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
-  const authMode = config.authMode as string ?? 'sso'
+  const authMode = config.authMode as string ?? AuthMode.Sso
 
-  if (authMode === 'sso') {
+  if (authMode === AuthMode.Sso) {
     const accessToken = getCookie(event, 'auth_token')
-    if (!accessToken) throw createError({ statusCode: 401 })
+    if (!accessToken) {
+      throw createError({ statusCode: 401 })
+    }
 
     const res = await fetch(`${config.ssoUrl}/api/account/profile`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
-    if (!res.ok) throw createError({ statusCode: res.status })
+    if (!res.ok) {
+      throw createError({ statusCode: res.status })
+    }
     const identity = await res.json() as Record<string, unknown>
 
     const billing = await internalApiCall<Record<string, unknown>>(event, '/clients/me')

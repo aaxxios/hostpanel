@@ -45,6 +45,7 @@
 import type { MaybeRefOrGetter, MultiWatchSources } from 'vue'
 import type { AsyncData, UseFetchOptions } from 'nuxt/app'
 import type { FetchError } from 'ofetch'
+import { LANGUAGE_HEADER, resolveLanguage } from '~/utils/transportLanguage'
 
 /**
  * The key list `useFetch` uses to describe a picked subset of a response.
@@ -86,6 +87,29 @@ export interface UseApiOptions<T> extends Omit<UseFetchOptions<T>, 'key' | 'quer
   default?: () => T
 }
 
+/** The option that selects {@link UseApi}'s first overload. */
+interface WithDefault<T> {
+  /** Factory for the value held before the first response and after a failure. */
+  default: () => T
+}
+
+/** The i18n instance as far as {@link apiFetch} reads it. */
+interface LocaleHolder {
+  /** The active locale. */
+  locale: {
+    /** The locale code, e.g. `hy`. */
+    value: string
+  }
+}
+
+/** The parts of a thrown error that carry an HTTP status, under either name. */
+interface ThrownStatus {
+  /** H3-style status. */
+  statusCode?: number
+  /** ofetch-style status. */
+  status?: number
+}
+
 /** The two shapes {@link useApi} answers in — see the module note for why they are separate. */
 interface UseApi {
   /**
@@ -96,7 +120,7 @@ interface UseApi {
    * @param options - Fetch options, including the `default` factory that makes this overload apply.
    * @returns The `useFetch` handle, with `data` typed as `T` rather than `T | undefined`.
    */
-  <T>(url: MaybeRefOrGetter<string>, options: UseApiOptions<T> & { default: () => T }): AsyncData<T, FetchError | undefined>
+  <T>(url: MaybeRefOrGetter<string>, options: UseApiOptions<T> & WithDefault<T>): AsyncData<T, FetchError | undefined>
 
   /**
    * Reads an endpoint whose data is absent until the response arrives.
@@ -132,7 +156,9 @@ const request = <T>(
 
   const { query, watch: watchOpts, default: defaultFn, headers: extraHeaders, ...restOptions } = options
 
+  /** The endpoint address, re-read whenever a reactive `url` changes. */
   const resolvedUrl = computed(() => toValue(url))
+  /** The query parameters, re-read whenever a reactive `query` changes; empty when none were given. */
   const resolvedQuery = computed(() => toValue(query) ?? {})
 
   const key = `api:${locale.value}:${toValue(url)}:${JSON.stringify(toValue(query) ?? {})}`
@@ -150,12 +176,12 @@ const request = <T>(
   // resolve while `T` is still a type parameter — so `default: () => T` matches neither
   // overload and the whole call falls back to an unresolved `DataT`. That is the failure this
   // module's note describes. Pinning `_ResT = T` lets both the option and the result reduce.
-  return useFetch<T, FetchError, string, 'get', T, T, KeysOf<T>, T | undefined>(resolvedUrl, {
+  return useFetch<T, FetchError, string, 'get', string, string, T, T, KeysOf<T>, T | undefined>(resolvedUrl, {
     ...restOptions,
     key,
     query: resolvedQuery,
     headers: computed(() => ({
-      'x-locale': locale.value,
+      [LANGUAGE_HEADER]: resolveLanguage(locale.value),
       ...(extraHeaders as Record<string, string> | undefined ?? {})
     })),
     default: defaultFn,
@@ -166,7 +192,7 @@ const request = <T>(
 /**
  * SSR-aware API composable wrapping `useFetch` with locale-aware caching.
  *
- * Adds an `x-locale` header and a cache key carrying the active locale, so two languages do
+ * Adds the `X-Language` header (the backend answers its sentences in that language) and a cache key carrying the active locale, so two languages do
  * not share one cached response, and re-fetches when the locale or the query changes.
  *
  * The two overloads differ only in whether `data` can be `undefined`, and `request` above
@@ -193,24 +219,34 @@ export const apiFetch = async <T = unknown>(
 ): Promise<T> => {
   let locale = 'en'
   try {
-    locale = (useNuxtApp().$i18n as { locale: { value: string } }).locale.value
+    locale = (useNuxtApp().$i18n as LocaleHolder).locale.value
   }
   catch {
     // No Nuxt instance — a unit test, or a call from outside a render. `en` is the right answer.
   }
 
+  // During SSR a bare `$fetch` calls the server route without the visitor's cookies, so a
+  // store action run from `useAsyncData` would read the signed-out answer; `useRequestFetch`
+  // forwards them, which is what `useFetch` (and so `useApi`) already does.
+  //
+  // The browser branch reads `globalThis.$fetch` at call time on purpose. A bare `$fetch` used as a
+  // value is bound once, when the module loads, to the original function -- before the
+  // `csrf-header` plugin replaces the global -- so every state-changing call went out without
+  // `X-Requested-With` and the server refused it with 403.
+  const fetcher = (import.meta.server ? useRequestFetch() : globalThis.$fetch) as typeof $fetch
+
   try {
-    return await $fetch<T>(url, {
+    return await fetcher<T>(url, {
       ...opts,
       headers: {
-        'x-locale': locale,
+        [LANGUAGE_HEADER]: resolveLanguage(locale),
         ...(opts.headers as Record<string, string> | undefined ?? {})
       }
     })
   }
   catch (err: unknown) {
-    const statusCode = (err as { statusCode?: number })?.statusCode
-      ?? (err as { status?: number })?.status
+    const statusCode = (err as ThrownStatus)?.statusCode
+      ?? (err as ThrownStatus)?.status
 
     if (statusCode === 401) {
       const nuxtApp = useNuxtApp()

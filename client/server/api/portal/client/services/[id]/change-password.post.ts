@@ -3,15 +3,22 @@
  * Changes the hosting account password via the C# backend.
  *
  * Body: { password: string }
+ *
+ * @module server/api/portal/client/services/[id]/change-password.post
  */
-export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id')
-  if (!id) throw createError({ statusCode: 400, statusMessage: 'Service ID is required' })
 
-  const body = await readBody<{ password?: string }>(event)
-  if (!body?.password || body.password.length < 8) {
-    throw createError({ statusCode: 400, statusMessage: 'Password must be at least 8 characters' })
-  }
+/** Body this route accepts. */
+interface ChangePasswordBody {
+  /** The new hosting account password. */
+  password?: string
+}
+
+export default defineEventHandler(async (event) => {
+  const id = requireRouteParam(event, 'id')
+
+  // No length check here: the backend validates the new password (`ChangePasswordValidator`,
+  // minimum 8) and answers 400 `VALIDATION_ERROR` with the rule's sentence in the reader's language.
+  const body = await readBody<ChangePasswordBody>(event)
 
   return await internalApiCall<Record<string, unknown>>(event, `/me/services/${id}/change-password`, {
     method: 'POST',

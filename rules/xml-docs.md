@@ -49,7 +49,7 @@ public decimal Total { get; private set; }
 ### Record (Command / DTO)
 ```csharp
 /// <summary>Command to create a new invoice for a client.</summary>
-/// <param name="ClientId">The WHMCS-equivalent client identifier.</param>
+/// <param name="ClientId">The client identifier.</param>
 /// <param name="Items">Line items to include on the invoice.</param>
 public record CreateInvoiceCommand(int ClientId, List<InvoiceItemDto> Items);
 ```
@@ -68,14 +68,14 @@ private void RecalculateTotal()
 
 ### Interface
 ```csharp
-/// <summary>Abstraction over a payment gateway provider (Stripe, PayPal, etc.).</summary>
+/// <summary>Abstraction over a payment gateway provider (card processor, wallet, etc.).</summary>
 public interface IPaymentGateway
 {
     /// <summary>Charges the client's default payment method.</summary>
     /// <param name="request">Charge details including amount and currency.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the transaction ID and status.</returns>
-    Task<PaymentResult> ChargeAsync(ChargeRequest request, CancellationToken ct);
+    Task<PaymentResult> ChargeAsync(ChargeInstruction request, CancellationToken ct);
 }
 ```
 

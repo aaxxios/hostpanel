@@ -3,15 +3,11 @@
     "makePayment": "Make Payment",
     "invoiceNum": "Invoice #{id}",
     "paymentMethod": "Payment Method",
-    "payByCardInecobank": "Pay by card (Inecobank)",
     "enterCardBelow": "Enter New Card Information Below",
     "newCard": "Enter New Card Information",
     "cardNumber": "Card Number",
     "expiryDate": "Expiry Date",
     "cvv": "CVV/CVC2",
-    "whereIsFindThis": "Where do I find this?",
-    "billingAddress": "Billing Address",
-    "addNewBillingAddress": "Add new billing address",
     "cardDescription": "Card Description",
     "cardDescriptionPlaceholder": "Enter a name for this card (Optional)",
     "submitPayment": "Submit Payment",
@@ -21,7 +17,10 @@
     "alreadyPaid": "This invoice has already been paid.",
     "viewInvoice": "View Invoice",
     "paymentSuccess": "Payment processed successfully!",
-    "paymentFailed": "Payment failed. Please try again.",
-    "securityNotice": "Any data you enter here is submitted securely and is encrypted to reduce the risk of fraud"
+    "securityNotice": "Any data you enter here is submitted securely and is encrypted to reduce the risk of fraud",
+    "payByCardHosted": "Pay by card",
+    "cardNumberPlaceholder": "1234 1234 1234 1234",
+    "expiryPlaceholder": "MM / YY",
+    "cvvPlaceholder": "CVC"
   }
 }

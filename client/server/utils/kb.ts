@@ -3,32 +3,19 @@
  * `server/api/portal/knowledgebase/`.
  *
  * The C# backend answers `KbArticleDto` -- `{ id, title, content, category, isPublished }` --
- * while the public pages read the WHMCS-shaped `KbArticle` (`body`, `excerpt`). One mapping
+ * while the public pages read the legacy-shaped `KbArticle` (`body`, `excerpt`). One mapping
  * lives here rather than three copies in the routes, so a field added on either side is
  * changed once.
  *
  * @module server/utils/kb
  */
 
+import type { BackendKbArticle } from '~/types/backendkbarticle'
 import type { KbArticle } from '~/types/kbarticle'
 import type { KbCategory } from '~/types/kbcategory'
 
 /** How many characters of plain text a list row's excerpt carries. */
 const EXCERPT_LENGTH = 140
-
-/** One published article exactly as `GET /api/knowledgebase` returns it. */
-export interface BackendKbArticle {
-  /** Article primary key. */
-  id: number
-  /** Article title. */
-  title: string
-  /** Full article body as HTML. */
-  content: string
-  /** Category name -- categories have no id of their own in this backend. */
-  category: string
-  /** Whether the article is visible to clients. The public list returns only `true`. */
-  isPublished: boolean
-}
 
 /**
  * Reduces an article body to the plain-text lead-in a list row shows.
@@ -80,7 +67,9 @@ export const toKbCategories = (articles: BackendKbArticle[]): KbCategory[] => {
 
   for (const article of articles) {
     const name = (article.category ?? '').trim()
-    if (!name) continue
+    if (!name) {
+      continue
+    }
     counts.set(name, (counts.get(name) ?? 0) + 1)
   }
 

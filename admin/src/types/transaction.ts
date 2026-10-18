@@ -2,8 +2,7 @@
  * A payment transaction and the paged envelope it arrives in.
  */
 
-import type { Gateway } from './gateway'
-import type { PagedResult } from './pagedresult'
+import type { PagedResult } from '@/types/pagedresult'
 
 /** Client-level financial ledger entry. */
 export interface Transaction {
@@ -46,3 +45,81 @@ export interface TransactionsResult {
   /** Calculated balance: TotalIn - TotalOut - TotalFees. */
   balance: number
 }
+
+/** Fields every transaction body carries. */
+export interface TransactionFields {
+  /** ISO 8601 transaction date. */
+  date: string
+  /** Human-readable description. */
+  description: string
+  /** External gateway transaction reference. */
+  transactionId: string
+  /** Linked invoice identifier, if any. */
+  invoiceId: number | null
+  /** Payment method used. */
+  paymentMethod: string
+  /** Amount received. */
+  amountIn: number
+  /** Amount sent out. */
+  amountOut: number
+  /** Gateway fees. */
+  fees: number
+}
+
+/** Body of `POST /transactions` from the billing ledger. */
+export interface CreateTransactionPayload extends TransactionFields {
+  /** The client the transaction belongs to. */
+  clientId: number
+  /** Whether the amount is added to the client credit balance. */
+  addToCredit: boolean
+}
+
+/** Body of `POST /transactions` from a client profile. */
+export interface CreateClientTransactionPayload extends TransactionFields {
+  /** The client the transaction belongs to. */
+  clientId: number
+  /** Whether the amount is added to the client credit balance. */
+  addedToCredit: boolean
+}
+
+/** Body of `PUT /transactions/{id}`. */
+export type UpdateTransactionPayload = TransactionFields
+
+/** What the add and edit transaction forms hold while the operator types. */
+export interface TransactionFormValues {
+  /** Transaction date (ISO day), null until picked. */
+  date: string | null
+  /** Id of the client the transaction belongs to, as the client picker holds it. */
+  clientId: string
+  /** External gateway transaction reference. */
+  transactionId: string
+  /** Payment method used. */
+  paymentMethod: string
+  /** What the transaction is for. */
+  description: string
+  /** Amount received. */
+  amountIn: number
+  /** Amount sent out. */
+  amountOut: number
+  /** Gateway fees. */
+  fees: number
+  /** Linked invoice ids, comma separated; only the first is sent. */
+  invoiceIds: string
+  /** Whether the amount is added to the client credit balance. */
+  addToCredit: boolean
+}
+
+/** Closed set of payment methods a ledger transaction or domain can name, as the API stores them. */
+export const PaymentMethod = {
+  /** Paid through Stripe. */
+  Stripe: 'Stripe',
+  /** Paid through PayPal. */
+  PayPal: 'PayPal',
+  /** Paid by credit or debit card. */
+  Card: 'Credit/Debit Card',
+  /** Paid by bank transfer. */
+  BankTransfer: 'Bank Transfer',
+} as const
+
+/** One of the payment methods. */
+export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod]

@@ -1,0 +1,14 @@
+{
+  "title": "Панель управления",
+  "subtitle": "С возвращением — вот что сейчас происходит",
+  "live": "В реальном времени",
+  "loadingMetrics": "Загрузка показателей…",
+  "stats": {
+    "totalRevenue": "Общий доход",
+    "monthlyRevenue": "Доход за месяц",
+    "activeServices": "Активные услуги",
+    "overdueInvoices": "Просроченные счета",
+    "openTickets": "Открытые тикеты",
+    "totalClients": "Всего клиентов"
+  }
+}

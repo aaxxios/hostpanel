@@ -1,128 +1,70 @@
 <template>
-  <!-- Full viewport, pinned to viewport — prevents any browser-level scroll -->
-  <div class="fixed inset-0 overflow-hidden bg-gray-50 dark:bg-[#0a0a0f] flex flex-col">
+  <div class="fixed inset-0 flex flex-col overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white" data-testid="client-layout">
+    <!-- Demo-mode notice; renders nothing outside a demo -->
+    <LayoutDemoBanner />
 
-    <!-- Unified top bar (mobile + desktop) — one header, no duplicate mount IDs -->
-    <header class="flex-shrink-0 flex items-center justify-between px-4 lg:px-8 py-3 lg:py-4 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#0d0d12] z-30">
+    <!-- Full viewport, pinned to the viewport so the browser itself never scrolls -->
+    <ClientLayoutTopBar
+      :full-name="store.fullName"
+      :widget-user="widgetUser"
+      :sidebar-open="sidebarOpen"
+      @toggle-sidebar="sidebarOpen = !sidebarOpen"
+    />
 
-      <!-- Left: logo on mobile / welcome text on desktop -->
-      <div class="min-w-0 mr-3">
-        <NuxtLink to="/" class="lg:hidden text-gray-900 dark:text-white font-bold text-lg">Innovayse</NuxtLink>
-        <div class="hidden lg:block text-gray-500 dark:text-gray-400 text-sm truncate">
-          {{ $t('client.nav.welcomeBack') }}
-          <span class="text-gray-900 dark:text-white font-medium">{{ store.fullName }}</span>
-        </div>
-      </div>
-
-      <!-- Right: controls -->
-      <div class="flex items-center gap-2 lg:gap-3 flex-shrink-0">
-        <!-- Desktop-only: theme toggle, language switcher, app launcher -->
-        <div class="hidden lg:flex items-center gap-3">
-          <UiThemeToggle />
-          <UiLanguageSwitcher />
-          <!-- data-user hands the signed-in person to the widget so its launcher appends
-               ?authuser= to every tile from the first paint, instead of only after its own
-               profile round-trip. The widget reads it from either mount; this is the one
-               present at every width. -->
-          <div id="inno-launcher-mount" :data-user="widgetUser" />
-        </div>
-        <!-- Account popup: always visible (mobile needs account switching too) -->
-        <div id="inno-account-mount" :data-user="widgetUser" />
-        <!-- Hamburger: mobile only -->
-        <button
-          class="lg:hidden p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-          @click="sidebarOpen = !sidebarOpen"
-        >
-          <Menu v-if="!sidebarOpen" :size="22" :stroke-width="2" />
-          <X v-else :size="22" :stroke-width="2" />
-        </button>
-      </div>
-    </header>
-
-    <!-- Body row: sidebar + main — fills remaining height, no overflow -->
+    <!-- Body row: sidebar + main, fills the remaining height -->
     <div class="flex flex-1 overflow-hidden">
-
-      <!-- Sidebar
-           Mobile: fixed overlay (slides in/out)
-           Desktop: normal flex child, fills height, internal scroll -->
-      <aside
-        class="fixed inset-y-0 left-0 z-20 w-64 flex flex-col bg-white dark:bg-[#0d0d12] border-r border-gray-200 dark:border-white/10 transition-transform duration-300 lg:relative lg:z-auto lg:inset-y-auto lg:translate-x-0 lg:flex-shrink-0"
-        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-      >
-        <!-- Logo -->
-        <div class="px-6 py-5 border-b border-gray-200 dark:border-white/10 flex items-center justify-between flex-shrink-0">
-          <NuxtLink to="/" class="flex items-center gap-2">
-            <span class="text-gray-900 dark:text-white font-bold text-lg">Innovayse</span>
-          </NuxtLink>
-          <button class="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white" @click="sidebarOpen = false">
-            <X :size="18" :stroke-width="2" />
-          </button>
-        </div>
-
-        <!-- Navigation — scrollable if nav items overflow -->
-        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <NuxtLink
-            v-for="item in visibleNavItems"
-            :key="item.to"
-            :to="item.to"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group"
-            :class="isActive(item.to)
-              ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'"
-            @click="sidebarOpen = false"
-          >
-            <component
-              :is="item.icon"
-              :size="18"
-              :stroke-width="2"
-              :class="isActive(item.to) ? 'text-cyan-600 dark:text-cyan-400' : 'text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300'"
-            />
-            {{ item.label }}
-          </NuxtLink>
-        </nav>
-
-        <!-- Logout — always at bottom -->
-        <div class="px-3 py-3 flex-shrink-0 border-t border-gray-100 dark:border-white/5">
-          <button
-            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-200"
-            @click="handleLogout"
-          >
-            <LogOut :size="18" :stroke-width="2" />
-            {{ $t('client.nav.signOut') }}
-          </button>
-        </div>
-      </aside>
+      <ClientLayoutSidebar
+        :items="visibleNavItems"
+        :open="sidebarOpen"
+        @close="sidebarOpen = false"
+        @sign-out="handleLogout"
+      />
 
       <!-- Mobile overlay backdrop -->
-      <Transition name="fade">
+      <Transition
+        enter-active-class="transition-opacity duration-200 ease-out"
+        leave-active-class="transition-opacity duration-200 ease-in"
+        enter-from-class="opacity-0"
+        leave-to-class="opacity-0"
+      >
         <div
           v-if="sidebarOpen"
           class="fixed inset-0 z-10 bg-black/50 lg:hidden"
+          data-testid="client-sidebar-backdrop"
           @click="sidebarOpen = false"
         />
       </Transition>
 
-      <!-- Main — only this scrolls -->
-      <main class="flex-1 min-w-0 overflow-y-auto flex flex-col">
+      <!-- Main: only this scrolls -->
+      <main class="flex min-w-0 flex-1 flex-col overflow-y-auto">
         <div class="p-6 lg:p-8">
+          <ClientVerifyEmailBanner class="mb-6" />
           <Suspense>
             <template #default>
               <slot />
             </template>
             <template #fallback>
-              <div class="flex items-center justify-center min-h-[40dvh]">
-                <div class="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
-              </div>
+              <UiSkeleton shape="block" class="min-h-[40dvh]" />
             </template>
           </Suspense>
         </div>
       </main>
-
     </div>
+
+    <!-- Consent bar; its spacer shrinks the scrolling area so the bar never covers content -->
+    <UiCookieBanner />
   </div>
 </template>
 
 <script setup lang="ts">
+/**
+ * Layout of the signed-in client area: top bar, permission-filtered sidebar and the scrolling
+ * page slot.
+ *
+ * The chrome itself lives in `components/client/layout/`; this file owns what spans it: which
+ * links the visitor may see, whether the mobile drawer is open, how the platform widget is told
+ * who is signed in, and signing out.
+ */
 import {
   LayoutDashboard,
   Server,
@@ -131,34 +73,67 @@ import {
   MessageSquare,
   UserCog,
   Megaphone,
-  BookOpen,
-  LogOut,
-  Menu,
-  X
+  BookOpen
 } from 'lucide-vue-next'
-import { useClientStore } from '~/stores/client'
-import { useAuthApi } from '~/composables/apis/useAuthApi'
 import { Permission } from '~/composables/usePermissions'
+import { useAuthStore } from '~/stores/auth'
+import { useClientStore } from '~/stores/client'
+import type { ClientNavItem } from '~/types/clientnavitem'
 
-const route = useRoute()
+/** How often the widget script is polled for, in milliseconds, until it has loaded. */
+const WIDGET_POLL_MS = 200
+
+/** How many polls to make before giving up on the widget script. */
+const WIDGET_POLL_ATTEMPTS = 50
+
+/** Delay before the first poll, giving the mounts time to render, in milliseconds. */
+const WIDGET_FIRST_POLL_MS = 50
+
+/** The platform widget's global, when its script has loaded. */
+interface InnoWidgetWindow extends Window {
+  /** Re-scans the page for the widget mount points. */
+  InnoWidget?: { reinit: () => void }
+}
+
+/** A sidebar link and the permission needed to see it. */
+interface NavEntry extends ClientNavItem {
+  /** Permission flag the visitor needs; {@link Permission.None} for everyone. */
+  permission: number
+}
+
+/** Translator for the strings this file builds itself. */
 const { t } = useI18n()
-const { logout } = useAuthStore()
-
-/** The signed-in person in the widget's own shape — `{ firstName, lastName, email }`. */
-const widgetUser = computed(() => {
-  const u = store.user
-  if (!u?.email) return undefined
-  return JSON.stringify({ email: u.email, firstName: u.firstname, lastName: u.lastname })
-})
-const { hasPermission } = usePermissions()
+/** Auth store; owns the requests, in-flight flags and refusal sentences this file renders. */
+const authStore = useAuthStore()
+/** Client store: the signed-in person and their services, invoices, domains and tickets. */
 const store = useClientStore()
-const config = useRuntimeConfig()
+/** Permission check for the signed-in person. */
+const { hasPermission } = usePermissions()
 
+/** Whether the mobile sidebar drawer is open. */
 const sidebarOpen = ref(false)
 
-function widgetReinit() {
-  const w = window as unknown as { InnoWidget?: { reinit: () => void } }
-  if (w.InnoWidget?.reinit) w.InnoWidget.reinit()
+/** The signed-in person in the widget's own shape: `{ firstName, lastName, email }`. */
+const widgetUser = computed(() => {
+  const user = store.user
+  if (!user?.email) {
+    return undefined
+  }
+  return JSON.stringify({ email: user.email, firstName: user.firstname, lastName: user.lastname })
+})
+
+/**
+ * Asks the platform widget to re-scan the page for its mount points, when it has loaded.
+ *
+ * @returns True when the widget was present and re-initialised.
+ */
+const reinitWidget = (): boolean => {
+  const widget = (window as InnoWidgetWindow).InnoWidget
+  if (!widget?.reinit) {
+    return false
+  }
+  widget.reinit()
+  return true
 }
 
 onMounted(async () => {
@@ -166,90 +141,55 @@ onMounted(async () => {
   // and the flag read here answered "not loaded yet" for a request that was already on the
   // wire — which is how the same page load asked for the identity more than once.
   await store.fetchUser()
-  // Reinit widget after Vue renders the mount points.
-  // Poll until InnoWidget is available (script may still be loading with async).
+  // Reinit the widget after Vue renders the mount points. Poll until it is available: its
+  // script may still be loading, because it is included with `async`.
   await nextTick()
   let attempts = 0
-  const tryReinit = () => {
-    const w = window as unknown as { InnoWidget?: { reinit: () => void } }
-    if (w.InnoWidget?.reinit) {
-      w.InnoWidget.reinit()
-    } else if (attempts++ < 50) {
-      setTimeout(tryReinit, 200)
+  /**
+   * One poll: re-initialises the widget, or schedules the next poll while attempts remain.
+   *
+   * @returns Nothing.
+   */
+  const tryReinit = (): void => {
+    if (!reinitWidget() && attempts++ < WIDGET_POLL_ATTEMPTS) {
+      setTimeout(tryReinit, WIDGET_POLL_MS)
     }
   }
-  setTimeout(tryReinit, 50)
+  setTimeout(tryReinit, WIDGET_FIRST_POLL_MS)
 })
 
-// Vue may re-render the layout after reactive state changes, replacing mount point divs.
-// Reinit the widget if the account button was wiped.
+// Vue may re-render the layout after reactive state changes, replacing the mount-point
+// elements. Reinit the widget if the account button was wiped.
 onUpdated(() => {
   if (!document.getElementById('inno-account-btn')) {
-    widgetReinit()
+    reinitWidget()
   }
 })
 
-const navItems = computed(() => [
+/** Every sidebar link with the permission that unlocks it. */
+const navItems = computed<NavEntry[]>(() => [
   { to: '/client/dashboard', label: t('client.nav.dashboard'), icon: LayoutDashboard, permission: Permission.None },
-  { to: '/client/services',  label: t('client.nav.services'),  icon: Server,          permission: Permission.ViewProductsServices },
-  { to: '/client/domains',   label: t('client.nav.domains'),   icon: Globe,           permission: Permission.ViewDomains },
-  { to: '/client/invoices',  label: t('client.nav.invoices'),  icon: FileText,        permission: Permission.ViewPayInvoices },
-  { to: '/client/tickets',      label: t('client.nav.support'),        icon: MessageSquare, permission: Permission.ViewOpenSupportTickets },
-  { to: '/announcements',       label: t('announcements.title'),       icon: Megaphone,     permission: Permission.None },
-  { to: '/knowledgebase',       label: t('kb.title'),                  icon: BookOpen,      permission: Permission.None },
-  { to: '/client/account',      label: t('client.nav.account'),        icon: UserCog,       permission: Permission.None }
+  { to: '/client/services', label: t('client.nav.services'), icon: Server, permission: Permission.ViewProductsServices },
+  { to: '/client/domains', label: t('client.nav.domains'), icon: Globe, permission: Permission.ViewDomains },
+  { to: '/client/invoices', label: t('client.nav.invoices'), icon: FileText, permission: Permission.ViewPayInvoices },
+  { to: '/client/tickets', label: t('client.nav.support'), icon: MessageSquare, permission: Permission.ViewOpenSupportTickets },
+  { to: '/announcements', label: t('announcements.title'), icon: Megaphone, permission: Permission.None },
+  { to: '/knowledgebase', label: t('kb.title'), icon: BookOpen, permission: Permission.None },
+  { to: '/client/account', label: t('client.nav.account'), icon: UserCog, permission: Permission.None }
 ])
 
 /** Nav items filtered by the current user's permissions. */
 const visibleNavItems = computed(() =>
-  navItems.value.filter(item => hasPermission(item.permission))
+  navItems.value.filter((item) => hasPermission(item.permission))
 )
 
-function isActive(path: string) {
-  return route.path === path || route.path.startsWith(path + '/')
-}
-
-async function handleLogout() {
-  const authMode = config.public.authMode as string
-
-  if (authMode === 'sso') {
-    // Clear cookies + fire backchannel logout (fire-and-forget is fine)
-    // Through the auth API composable rather than a bare fetch: it is the layer that owns
-    // the URL, and `apiFetch` beneath it carries the locale header and routes a 401 through
-    // the global auth guard — both of which the raw `$fetch` here silently bypassed.
-    // `credentials` is not passed: the path is same-origin, so cookies go by default.
-    try {
-      await useAuthApi().logout()
-    } catch { /* ignore — clear session regardless */ }
-    store.reset()
-    // Navigate browser to SSO endsession (required to clear SSO session cookie at sso.innovayse.local)
-    const ssoPublicUrl = (config.public.ssoPublicUrl as string) || 'http://sso.innovayse.local'
-    window.location.href = `${ssoPublicUrl}/connect/endsession?post_logout_redirect_uri=${encodeURIComponent(window.location.origin)}`
-  } else {
-    await logout()
-    store.reset()
-    navigateTo('/client/login')
-  }
+/**
+ * Signs the person out through the auth store, which ends the session here and, under SSO,
+ * hands the browser to the identity provider's end-session page.
+ *
+ * @returns Nothing.
+ */
+const handleLogout = async (): Promise<void> => {
+  await authStore.signOut()
 }
 </script>
-
-<style>
-/* Account panel responsive width on small screens */
-@media (max-width: 639px) {
-  #inno-account-panel {
-    @apply right-[-4px];
-    width: calc(100vw - 16px);
-  }
-}
-</style>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

@@ -1,8 +1,3 @@
-import type { Component } from 'vue'
-import { templates } from '~/templates/registry'
-import { resolveTemplateName } from '~/templates/types'
-import type { TemplateName, TemplateSlot } from '~/templates/types'
-
 /**
  * Resolves components for the active portal template.
  *
@@ -12,7 +7,17 @@ import type { TemplateName, TemplateSlot } from '~/templates/types'
  * indexable markup.
  *
  * @returns The active template name and a resolver for its slots.
+ *
+ * @module composables/useTemplate
  */
+
+import type { Component } from 'vue'
+import { templates } from '~/templates/registry'
+import { resolveTemplateName } from '~/templates/types'
+import type { TemplateName } from '~/types/templatename'
+import type { TemplateSlot } from '~/types/templateslot'
+
+/** Binds the operator's template choice to the registry of slot loaders. */
 export const useTemplate = () => {
   const { get } = usePortalSettings()
 

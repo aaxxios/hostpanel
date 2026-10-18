@@ -1,63 +1,56 @@
 <template>
-  <div class="min-h-dvh bg-[#0a0a0f] flex items-center justify-center px-4 py-16 relative overflow-hidden">
-    <div class="absolute inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/30 rounded-full blur-[120px] animate-blob" />
-      <div class="absolute inset-0" style="background: radial-gradient(circle at center, transparent 40%, #0a0a0f 100%)" />
-    </div>
+  <ClientAuthShell :show-logo="false">
+    <UiText v-if="status === EmailConfirmationStatus.Pending" tone="muted" size="sm" class="text-center" data-testid="confirm-pending">
+      {{ $t('client.confirmEmail.confirming') }}
+    </UiText>
 
-    <div class="w-full max-w-md relative z-10">
-      <div class="p-8 rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 text-center">
-        <div v-if="status === 'loading'" class="text-gray-400 text-sm">Confirming your email...</div>
-        <div v-else-if="status === 'success'">
-          <div class="text-green-400 text-sm mb-4">Email confirmed! You can now sign in.</div>
-          <NuxtLink to="/client/login" class="text-primary-400 hover:text-primary-300 transition-colors font-medium">Sign in</NuxtLink>
-        </div>
-        <div v-else>
-          <div class="text-red-400 text-sm mb-4">{{ message }}</div>
-          <NuxtLink to="/client/register" class="text-primary-400 hover:text-primary-300 transition-colors font-medium">Back to register</NuxtLink>
-        </div>
-      </div>
-    </div>
-  </div>
+    <ClientOutcomePanel
+      v-else-if="status === EmailConfirmationStatus.Confirmed"
+      :icon="CheckCircle"
+      tone="success"
+      :title="$t('client.confirmEmail.confirmed')"
+      data-testid="confirm-success"
+    >
+      <UiLink to="/client/login" :underline="false" testid="confirm-signin" class="font-medium">
+        {{ $t('client.confirmEmail.signIn') }}
+      </UiLink>
+    </ClientOutcomePanel>
+
+    <ClientOutcomePanel
+      v-else
+      :icon="AlertCircle"
+      tone="danger"
+      :title="message"
+      data-testid="confirm-failed"
+    >
+      <UiLink to="/client/register" :underline="false" testid="confirm-register" class="font-medium">
+        {{ $t('client.confirmEmail.backToRegister') }}
+      </UiLink>
+    </ClientOutcomePanel>
+  </ClientAuthShell>
 </template>
 
 <script setup lang="ts">
 /**
- * Email confirmation landing page — reads the address and token out of the link and posts
- * them, then reports what the backend said.
+ * Email confirmation landing page: reads the address and token out of the link and hands them to
+ * the auth store, then renders the status and sentence the store holds.
  */
-import { useAuthApi } from '~/composables/apis/useAuthApi'
-import { apiErrorMessage } from '~/utils/apiError'
+import { AlertCircle, CheckCircle } from 'lucide-vue-next'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '~/stores/auth'
+import { EmailConfirmationStatus } from '~/types/emailconfirmationstatus'
 
 definePageMeta({ layout: false })
 
+/** The current route, read for its query and path. */
 const route = useRoute()
-const { confirmEmail } = useAuthApi()
+/** Auth store; owns the requests, in-flight flags and refusal sentences this file renders. */
+const authStore = useAuthStore()
 
-/** Which of the three panels the page shows. */
-const status = ref<'loading' | 'success' | 'error'>('loading')
-
-/** Failure sentence, empty while loading or on success. */
-const message = ref('')
+/** Which of the three panels the page shows, and the failure sentence, both owned by the store. */
+const { confirmStatus: status, confirmError: message } = storeToRefs(authStore)
 
 onMounted(async () => {
-  const email = route.query.email as string
-  const token = route.query.token as string
-
-  // A link with nothing in it is the one guard that is allowed before a request is possible;
-  // everything else below is worded by the API rather than by this page.
-  if (!email || !token) {
-    status.value = 'error'
-    message.value = 'Invalid confirmation link.'
-    return
-  }
-
-  try {
-    await confirmEmail(email, token)
-    status.value = 'success'
-  } catch (err: unknown) {
-    status.value = 'error'
-    message.value = apiErrorMessage(err)
-  }
+  await authStore.confirmEmail(route.query.email as string, route.query.token as string)
 })
 </script>

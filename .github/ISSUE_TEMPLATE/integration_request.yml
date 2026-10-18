@@ -17,7 +17,7 @@ body:
     id: name
     attributes:
       label: Provider name and website
-      placeholder: "e.g. ResellerClub, https://www.resellerclub.com"
+      placeholder: "e.g. Example Registrar, https://registrar.example.com"
     validations:
       required: true
   - type: input

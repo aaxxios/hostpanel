@@ -1,5 +1,15 @@
 /** The kinds of event the admin notification feed can surface. */
-export type ActivityEventType = 'ClientRegistered' | 'InvoiceOverdue' | 'DomainExpiring'
+export const ActivityEventType = {
+  /** A new client signed up. */
+  ClientRegistered: 'ClientRegistered',
+  /** An invoice passed its due date unpaid. */
+  InvoiceOverdue: 'InvoiceOverdue',
+  /** A domain is close to its expiry date. */
+  DomainExpiring: 'DomainExpiring',
+} as const
+
+/** One of the {@link ActivityEventType} values. */
+export type ActivityEventType = (typeof ActivityEventType)[keyof typeof ActivityEventType]
 
 /** A single event in the admin notification feed. */
 export interface ActivityEvent {

@@ -1,5 +1,7 @@
+/** Country and phone-code options built from the geo atlas, shared by the client forms. */
 import { computed } from 'vue'
-import { CountriesAtlas } from '@innovayse/geo-atlas'
+import CountriesData from '@innovayse/geo-atlas/lite'
+import { translate } from '@/lib/translate'
 
 /**
  * Provides geo-atlas based country and phone code options for UiSelect dropdowns.
@@ -7,13 +9,13 @@ import { CountriesAtlas } from '@innovayse/geo-atlas'
  *
  * @returns Country options, phone code options, and phone code resolver.
  */
-export function useGeoOptions() {
-  /** All countries from geo-atlas. */
-  const geoCountries = CountriesAtlas.getCountries()
+export const useGeoOptions = () => {
+  /** All countries from geo-atlas. The `/lite` entry carries only the country list; the root entry would bundle the multi-megabyte per-country state and city data this app never reads. */
+  const geoCountries = CountriesData.getCountries()
 
   /** Country options for the UiSelect dropdown, sourced from geo-atlas. */
   const countryOptions = computed<{ value: string; label: string; displayLabel: string }[]>(() =>
-    [{ value: '', label: 'Select country', displayLabel: 'Select country' },
+    [{ value: '', label: translate('ui.selectCountry'), displayLabel: translate('ui.selectCountry') },
      ...geoCountries.filter(c => c.iso2).map(c => ({
        value: String(c.iso2),
        label: `${c.emoji ?? ''} ${c.name}`,
@@ -39,7 +41,7 @@ export function useGeoOptions() {
    * @param countryIso2 - The ISO2 country code.
    * @returns The phone code string (e.g. "+1"), defaults to "+1" if not found.
    */
-  function resolvePhoneCode(countryIso2: string): string {
+  const resolvePhoneCode = (countryIso2: string): string => {
     const c = geoCountries.find(g => g.iso2 === countryIso2)
     return c?.phone ? `+${c.phone}` : '+1'
   }
@@ -50,14 +52,16 @@ export function useGeoOptions() {
    * @param phone - Full phone string (e.g. "+1 5551234567").
    * @returns Object with countryIso2 and number.
    */
-  function parsePhone(phone: string): { countryIso2: string; number: string } {
+  const parsePhone = (phone: string): { countryIso2: string; number: string } => {
     const match = phone.match(/^(\+\d+)\s+(.+)$/)
     if (match) {
       const code = match[1]
       const found = geoCountries.find(g => g.phone && `+${g.phone}` === code)
       // Group 2 is mandatory in the regex above, so it is always present; falling back to
       // the whole phone string keeps the same shape as the unmatched return below.
-      if (found?.iso2) return { countryIso2: String(found.iso2), number: match[2] ?? phone }
+      if (found?.iso2) {
+        return { countryIso2: String(found.iso2), number: match[2] ?? phone }
+      }
     }
     return { countryIso2: 'US', number: phone }
   }

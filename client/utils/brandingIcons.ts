@@ -10,12 +10,16 @@
  * `UPLOADED_ICON_SET` here produces no error anywhere** — the tags are emitted, the browser
  * requests them, the proxy answers 404, and the tab silently keeps the previous icon. If you
  * touch one side, touch both.
+ *
+ * @module utils/brandingIcons
  */
+
+import { BrandingIconRel } from '~/types/brandingiconrel'
 
 /** One icon the storefront links, and how it is linked. */
 export interface BrandingIcon {
   /** Value for the tag's `rel` attribute. */
-  rel: string
+  rel: BrandingIconRel
   /** Absolute-from-root URL of the file. */
   href: string
   /** Media type, so the browser can skip formats it cannot render. */
@@ -33,17 +37,27 @@ export interface BrandingIcon {
  */
 const UPLOADS_PREFIX = '/uploads/branding/'
 
+/** One file the backend generates beside an uploaded favicon. */
+interface UploadedIconFile {
+  /** File name inside the upload's directory. */
+  file: string
+  /** Value for the tag's `rel` attribute. */
+  rel: BrandingIconRel
+  /** `WxH` for the `sizes` attribute. */
+  sizes?: string
+}
+
 /**
  * The files generated beside an uploaded favicon, and the tag each becomes.
  *
  * Mirrors the backend's `_faviconSet`, minus the sizes no tag references.
  */
-const UPLOADED_ICON_SET: readonly { file: string, rel: string, sizes?: string }[] = [
-  { file: 'favicon-16x16.png', rel: 'icon', sizes: '16x16' },
-  { file: 'favicon-32x32.png', rel: 'icon', sizes: '32x32' },
-  { file: 'apple-touch-icon.png', rel: 'apple-touch-icon', sizes: '180x180' },
-  { file: 'icon-192.png', rel: 'icon', sizes: '192x192' },
-  { file: 'icon-512.png', rel: 'icon', sizes: '512x512' },
+const UPLOADED_ICON_SET: readonly UploadedIconFile[] = [
+  { file: 'favicon-16x16.png', rel: BrandingIconRel.Icon, sizes: '16x16' },
+  { file: 'favicon-32x32.png', rel: BrandingIconRel.Icon, sizes: '32x32' },
+  { file: 'apple-touch-icon.png', rel: BrandingIconRel.AppleTouchIcon, sizes: '180x180' },
+  { file: 'icon-192.png', rel: BrandingIconRel.Icon, sizes: '192x192' },
+  { file: 'icon-512.png', rel: BrandingIconRel.Icon, sizes: '512x512' },
 ]
 
 /**
@@ -62,12 +76,12 @@ const UPLOADED_ICON_SET: readonly { file: string, rel: string, sizes?: string }[
  * seeing the built-in mark and had no way to tell why.
  */
 const BUILT_IN_ICONS: BrandingIcon[] = [
-  { rel: 'icon', href: '/favicon.ico', type: 'image/x-icon' },
-  { rel: 'icon', href: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
-  { rel: 'icon', href: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
-  { rel: 'apple-touch-icon', href: '/apple-touch-icon.png', type: 'image/png', sizes: '180x180' },
-  { rel: 'icon', href: '/icon-192.png', type: 'image/png', sizes: '192x192' },
-  { rel: 'icon', href: '/icon-512.png', type: 'image/png', sizes: '512x512' },
+  { rel: BrandingIconRel.Icon, href: '/favicon.ico', type: 'image/x-icon' },
+  { rel: BrandingIconRel.Icon, href: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
+  { rel: BrandingIconRel.Icon, href: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+  { rel: BrandingIconRel.AppleTouchIcon, href: '/apple-touch-icon.png', type: 'image/png', sizes: '180x180' },
+  { rel: BrandingIconRel.Icon, href: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+  { rel: BrandingIconRel.Icon, href: '/icon-512.png', type: 'image/png', sizes: '512x512' },
 ]
 
 /**
@@ -83,7 +97,9 @@ const BUILT_IN_ICONS: BrandingIcon[] = [
  * @returns True when the URL names a file inside a generated icon directory.
  */
 export const isUploadedBranding = (url: string): boolean => {
-  if (!url.startsWith(UPLOADS_PREFIX)) return false
+  if (!url.startsWith(UPLOADS_PREFIX)) {
+    return false
+  }
 
   // kind/id/file is three segments; a legacy flat upload is one.
   return url.slice(UPLOADS_PREFIX.length).split('/').length >= 3
@@ -99,12 +115,14 @@ export const isUploadedBranding = (url: string): boolean => {
  *   exist. The full set for an upload.
  */
 export const brandingIcons = (faviconUrl: string): BrandingIcon[] => {
-  if (!faviconUrl) return BUILT_IN_ICONS
+  if (!faviconUrl) {
+    return BUILT_IN_ICONS
+  }
 
   if (!isUploadedBranding(faviconUrl)) {
     // Someone else's file. It may be an .ico, an .svg or a .png — the browser will work it
     // out, and declaring a type we have not checked would be worse than declaring none.
-    return [{ rel: 'icon', href: faviconUrl, type: '' }]
+    return [{ rel: BrandingIconRel.Icon, href: faviconUrl, type: '' }]
   }
 
   const directory = faviconUrl.slice(0, faviconUrl.lastIndexOf('/') + 1)

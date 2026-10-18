@@ -1,10 +1,11 @@
-﻿namespace Innovayse.Providers.Inecobank;
-
+using Innovayse.Providers.Inecobank.Enums;
 using Innovayse.SDK.Base;
 using Innovayse.SDK.Plugins;
+using Innovayse.SDK.Plugins.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
+namespace Innovayse.Providers.Inecobank;
 /// <summary>
 /// Inecobank (Armenian Card) hosted-payment-page gateway plugin.
 /// Configured from the admin Integrations page via <c>integration:inecobank:*</c> settings.
@@ -25,6 +26,7 @@ public sealed class InecobankPaymentGateway : PaymentGatewayBase, IPaymentPlugin
     /// </summary>
     private const string ApiPathSegment = "/payment/rest";
 
+    /// <summary>Error code the gateway answers with for an order id it never registered.</summary>
     private const int UnregisteredOrderIdErrorCode = 6;
 
     /// <summary>

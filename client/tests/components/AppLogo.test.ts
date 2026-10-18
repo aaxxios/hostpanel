@@ -1,0 +1,44 @@
+/**
+ * Unit tests for AppLogo: the bundled wordmark pair, an operator upload with and without a dark
+ * variant, and the always-dark surface.
+ */
+import { beforeEach, describe, expect, it } from 'vitest'
+import { mountWithKit } from '~/tests/helpers/mountWithKit'
+import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
+import AppLogo from '~/components/AppLogo.vue'
+import { LogoSurface } from '~/utils/appLogo'
+
+describe('AppLogo', () => {
+  beforeEach(() => {
+    stubTemplateGlobals()
+  })
+
+  it('renders both bundled wordmarks, swapped by the dark variant, when nothing is uploaded', () => {
+    const wrapper = mountWithKit(AppLogo)
+
+    expect(wrapper.find('[data-testid="app-logo-light"]').classes()).toContain('dark:hidden')
+    expect(wrapper.find('[data-testid="app-logo-dark"]').classes()).toContain('dark:block')
+  })
+
+  it('renders the uploads as plain images swapped by the dark variant', () => {
+    stubTemplateGlobals({ logo: '/api/uploads/light.png', logoDark: '/api/uploads/dark.png' })
+    const wrapper = mountWithKit(AppLogo)
+
+    expect(wrapper.find('[data-testid="app-logo-light"]').attributes('src')).toBe('/api/uploads/light.png')
+    expect(wrapper.find('[data-testid="app-logo-light"]').classes()).toContain('dark:hidden')
+    expect(wrapper.find('[data-testid="app-logo-dark"]').attributes('src')).toBe('/api/uploads/dark.png')
+  })
+
+  it('renders only the dark-background wordmark on an always-dark surface', () => {
+    const wrapper = mountWithKit(AppLogo, { props: { surface: LogoSurface.Dark } })
+
+    expect(wrapper.find('[data-testid="app-logo-light"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="app-logo-dark"]').exists()).toBe(true)
+  })
+
+  it('passes the image classes to every image', () => {
+    const wrapper = mountWithKit(AppLogo, { props: { imgClass: 'h-8' } })
+
+    expect(wrapper.findAll('img').every((img) => img.classes().includes('h-8'))).toBe(true)
+  })
+})

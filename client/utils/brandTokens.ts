@@ -15,9 +15,13 @@ import { fontStack } from '~/utils/brandFonts'
 
 /** The raw setting values the tokens are built from; each may be empty. */
 export interface BrandSettings {
+  /** The primary brand colour, `#rrggbb` or empty. */
   primary: string
+  /** The accent colour, `#rrggbb` or empty. */
   accent: string
+  /** The heading typeface name, or empty. */
   fontHeading: string
+  /** The body typeface name, or empty. */
   fontBody: string
 }
 
@@ -39,7 +43,7 @@ const channels = (hex: string): string => (hexToRgb(hex) ?? [0, 0, 0]).join(' ')
  * @param s The settings.
  * @returns A complete CSS rule, or `''`.
  */
-export function brandTokensCss(s: BrandSettings): string {
+export const brandTokensCss = (s: BrandSettings): string => {
   const parts: string[] = []
 
   const primary = hexToRgb(s.primary) ? s.primary.toLowerCase() : ''
@@ -65,8 +69,12 @@ export function brandTokensCss(s: BrandSettings): string {
 
   const heading = fontStack(s.fontHeading)
   const body = fontStack(s.fontBody)
-  if (heading) parts.push(`--font-heading:${heading}`)
-  if (body) parts.push(`--font-body:${body}`)
+  if (heading) {
+    parts.push(`--font-heading:${heading}`)
+  }
+  if (body) {
+    parts.push(`--font-body:${body}`)
+  }
 
   return parts.length ? `:root{${parts.join(';')}}` : ''
 }

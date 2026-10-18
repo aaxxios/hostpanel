@@ -27,3 +27,13 @@ export interface PredefinedReply {
   /** Category name, if resolved. */
   categoryName: string | null
 }
+
+/** Body that creates or replaces a predefined reply. */
+export interface PredefinedReplyPayload {
+  /** Reply display name. */
+  name: string
+  /** Reply content body. */
+  content: string
+  /** Category the reply files under. */
+  categoryId: number
+}

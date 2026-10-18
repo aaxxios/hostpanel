@@ -1,10 +1,10 @@
 /**
  * GET /api/portal/client/domains/:id/whois
- * Returns WHOIS contact information for a domain via the C# backend.
+ * Returns the registry's WHOIS record of a domain (registrar, registrant, createdAt, expiresAt)
+ * via the C# backend, forwarded as is.
  */
 export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id')
-  if (!id) throw createError({ statusCode: 400, statusMessage: 'Domain ID is required' })
+  const id = requireRouteParam(event, 'id')
 
   return await internalApiCall<Record<string, unknown>>(event, `/me/domains/${id}/whois`)
 })

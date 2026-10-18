@@ -1,0 +1,129 @@
+/**
+ * Endpoints behind the support store: tickets, their replies, departments and the overview.
+ *
+ * No state lives here; every function rejects with an `ApiError` carrying the problem+json body.
+ */
+
+import { buildQuery, useApi } from '@/composables/useApi'
+import type { Department } from '@/types/department'
+import type { PagedResult } from '@/types/pagedresult'
+import type { SupportOverviewPeriod, SupportOverviewStats } from '@/types/supportoverviewstats'
+import type {
+  CreateTicketPayload,
+  Ticket,
+  TicketBulkPayload,
+  TicketFilter,
+  TicketListItem,
+  TicketReplyPayload,
+  UpdateTicketPayload,
+} from '@/types/ticket'
+
+/**
+ * Endpoint functions for `/tickets`.
+ *
+ * @returns One typed function per endpoint.
+ */
+export const useSupportApi = () => {
+  const { request } = useApi()
+
+  /**
+   * Lists tickets, one page.
+   *
+   * @param filter - Page, page size, status and subject search.
+   * @returns The page of ticket rows and the total count.
+   */
+  const listTickets = (filter: TicketFilter): Promise<PagedResult<TicketListItem>> =>
+    request<PagedResult<TicketListItem>>(
+      `/tickets${buildQuery({
+        page: filter.page,
+        pageSize: filter.pageSize,
+        status: filter.status,
+        search: filter.search,
+      })}`,
+    )
+
+  /**
+   * Reads one ticket with its replies.
+   *
+   * @param id - Ticket id.
+   * @returns The ticket.
+   */
+  const getTicket = (id: number | string): Promise<Ticket> => request<Ticket>(`/tickets/${id}`)
+
+  /**
+   * Reads the support overview figures.
+   *
+   * @param period - The reporting period.
+   * @returns The figures for the period.
+   */
+  const getOverview = (period: SupportOverviewPeriod): Promise<SupportOverviewStats> =>
+    request<SupportOverviewStats>(`/tickets/overview${buildQuery({ period })}`)
+
+  /**
+   * Lists the support departments.
+   *
+   * @returns Every department.
+   */
+  const listDepartments = (): Promise<Department[]> => request<Department[]>('/tickets/departments')
+
+  /**
+   * Opens a ticket on behalf of a client.
+   *
+   * @param payload - Client, subject, message, department and priority.
+   * @returns The new ticket's id.
+   */
+  const createTicket = (payload: CreateTicketPayload): Promise<number> =>
+    request<number>('/tickets', { method: 'POST', body: JSON.stringify(payload) })
+
+  /**
+   * Changes a ticket's metadata.
+   *
+   * @param id - Ticket id.
+   * @param payload - The members to change.
+   * @returns Nothing.
+   */
+  const updateTicket = (id: number | string, payload: UpdateTicketPayload): Promise<void> =>
+    request<void>(`/tickets/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+
+  /**
+   * Deletes a ticket.
+   *
+   * @param id - Ticket id.
+   * @returns Nothing.
+   */
+  const deleteTicket = (id: number | string): Promise<void> =>
+    request<void>(`/tickets/${id}`, { method: 'DELETE' })
+
+  /**
+   * Adds a staff reply.
+   *
+   * @param id - Ticket id.
+   * @param payload - Reply body.
+   * @returns Nothing.
+   */
+  const replyToTicket = (id: number | string, payload: TicketReplyPayload): Promise<void> =>
+    request<void>(`/tickets/${id}/reply`, { method: 'POST', body: JSON.stringify(payload) })
+
+  /**
+   * Flips a ticket's flagged state.
+   *
+   * @param id - Ticket id.
+   * @returns Nothing.
+   */
+  const toggleFlag = (id: number | string): Promise<void> =>
+    request<void>(`/tickets/${id}/toggle-flag`, { method: 'POST' })
+
+  /**
+   * Runs one action on several tickets.
+   *
+   * @param payload - The ticket ids and the action.
+   * @returns Nothing.
+   */
+  const bulkAction = (payload: TicketBulkPayload): Promise<void> =>
+    request<void>('/tickets/bulk', { method: 'POST', body: JSON.stringify(payload) })
+
+  return {
+    listTickets, getTicket, getOverview, listDepartments,
+    createTicket, updateTicket, deleteTicket, replyToTicket, toggleFlag, bulkAction,
+  }
+}

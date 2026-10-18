@@ -14,6 +14,8 @@ workflow:
     # change to this file on a real pipeline, which is the only way to verify one, and
     # it only builds when somebody deliberately pushes that name.
     - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"   # throwaway verification branch
+    # A version tag (v1.2.3) gets a pipeline of its own, holding only publish:dockerhub.
+    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
 
 stages: [test, build, deploy]
 
@@ -72,7 +74,20 @@ stages: [test, build, deploy]
     #
     # The flag makes the host write a sequence file naming the test in flight when it died,
     # and a dump beside it. Costs nothing on a passing run.
-    - dotnet test --nologo -m:1 --blame-crash
+    #
+    # The solution is no longer tested in one `dotnet test`: the Integration suite is split
+    # into two jobs by test namespace (see backend:test:integration:a/b below), because one
+    # host running the whole suite held the EF model plus a Postgres container for every
+    # test and exhausted the runner's memory. Each job names its projects in TEST_PROJECTS
+    # (folders under tests/) and, optionally, a --filter in TEST_FILTER.
+    - |
+      for project in $TEST_PROJECTS; do
+        if [ -n "$TEST_FILTER" ]; then
+          dotnet test "tests/$project" --nologo -m:1 --blame-crash --filter "$TEST_FILTER" || exit 1
+        else
+          dotnet test "tests/$project" --nologo -m:1 --blame-crash || exit 1
+        fi
+      done
 
 .test-node-yarn:
   stage: test
@@ -82,8 +97,18 @@ stages: [test, build, deploy]
     - cd "$SERVICE"
     - corepack enable && corepack prepare yarn@1.22.22 --activate
     - yarn install --frozen-lockfile
-    - yarn test
+    - yarn lint
+    # Blocking: locale parity, unused keys and undefined literal keys fail the pipeline.
+    - yarn lint:i18n
+    # Blocking: every conformance metric (raw tags, jsdoc, braces, placeholders, test ids ...) is zero.
+    - yarn audit:conformance --strict
+    - yarn typecheck
+    - yarn test --maxWorkers=2
     - yarn build
+  # The production build is what the e2e job serves (`node .output/server/index.mjs`).
+  artifacts:
+    expire_in: 1 day
+    paths: [client/.output/]
 
 .test-node-npm:
   stage: test
@@ -133,22 +158,21 @@ stages: [test, build, deploy]
     # really is the branch.
     - git fetch --prune origin
     - git checkout -B "$CI_COMMIT_BRANCH" "origin/$CI_COMMIT_BRANCH"
-    # docker-compose.platform.yml joins the shared innovayse_network — without it
-    # the containers are unreachable by name from the reverse proxy.
-    - docker compose -f docker-compose.prod.yml -f docker-compose.platform.yml pull
-    # Build them. The note above says this job builds these three images, and it did
-    # not: the script pulled and brought them up, and since neither compose file gives
-    # them an `image:`, `up -d` reused whatever was already on the host. Staging ran a
-    # three-day-old API off an image nobody had replaced, through deploys that all
-    # reported success — the same failure the checkout sync above was written to stop,
-    # one step further along.
-    - docker compose -f docker-compose.prod.yml -f docker-compose.platform.yml build hostpanel-api hostpanel-client admin
+    # docker-compose.platform.yml joins the shared innovayse_network - without it
+    # the containers are unreachable by name from the reverse proxy. The chain is
+    # shared + prod + platform, the same set every deployed tier runs. Compose reads
+    # docker/.env (the host's values) because the files sit in docker/.
+    #
+    # Staging has no CI-built image for the develop branch, so the three application
+    # images are built here from the synced checkout and tagged hostpanel/<svc>:stage
+    # (prod.yml carries both `image:` and `build:`); only the infrastructure images are pulled.
+    - export IMAGE_TAG=stage
+    - docker compose -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml pull --ignore-buildable
+    - docker compose -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml build hostpanel-api hostpanel-client hostpanel-admin
     # Services named one by one to leave nginx out. It publishes 80 and 443, which
     # on this host belong to the shared Nginx Proxy Manager that fronts every
-    # Innovayse product — so it can never bind, and `up -d` fails the whole deploy
-    # on it. Inside the workspace this product is reached through that proxy; its
-    # own nginx is for a standalone deployment.
-    - docker compose -f docker-compose.prod.yml -f docker-compose.platform.yml up -d hostpanel-db hostpanel-api hostpanel-client admin
+    # Innovayse product - so it can never bind. The platform overlay parks it too.
+    - docker compose -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml up -d hostpanel-db hostpanel-api hostpanel-client hostpanel-admin
   # This job has no `image:`, so it is the shell executor: the login above writes
   # the runner user's real ~/.docker/config.json on the staging host, and nothing
   # took it away again. CI_JOB_TOKEN dies with the job, but the entry stayed, and
@@ -165,18 +189,49 @@ stages: [test, build, deploy]
     # job added later that forgets to.
     - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "develop" && $DEPLOY_STAGING == "true"
 
-# ── backend (Innovayse.API, .NET) ──────────────────────────────────────────────
+# ── backend (Innovayse.Hostpanel.API, .NET) ──────────────────────────────────────────────
 
 backend:test:
   extends: .test-dotnet
-  variables: { SERVICE: backend }
+  variables:
+    SERVICE: backend
+    TEST_PROJECTS: >-
+      Innovayse.Hostpanel.Domain.Tests
+      Innovayse.Hostpanel.Architecture.Tests
+      Innovayse.CWP.Tests
+      Innovayse.Inecobank.Tests
+  rules:
+    - if: $CI_SERVER_HOST == "gitlab.com"
+      changes: [backend/**/*]
+
+# The Integration suite, in two shards that run in parallel. Every top-level folder of
+# Integration.Tests belongs to exactly one shard; a new folder must be added to one of
+# them or its tests run nowhere. (Fixtures/ holds fakes only, no tests.)
+backend:test:integration:a:
+  extends: .test-dotnet
+  variables:
+    SERVICE: backend
+    TEST_PROJECTS: Innovayse.Hostpanel.Integration.Tests
+    TEST_FILTER: >-
+      FullyQualifiedName~Integration.Tests.Admin.|FullyQualifiedName~Integration.Tests.Adapters.|FullyQualifiedName~Integration.Tests.Audit.|FullyQualifiedName~Integration.Tests.Auth.|FullyQualifiedName~Integration.Tests.Billing.|FullyQualifiedName~Integration.Tests.Clients.|FullyQualifiedName~Integration.Tests.Common.|FullyQualifiedName~Integration.Tests.Demo.|FullyQualifiedName~Integration.Tests.Domains.|FullyQualifiedName~Integration.Tests.Health.|FullyQualifiedName~Integration.Tests.Identity.
+  rules:
+    - if: $CI_SERVER_HOST == "gitlab.com"
+      changes: [backend/**/*]
+
+backend:test:integration:b:
+  extends: .test-dotnet
+  variables:
+    SERVICE: backend
+    TEST_PROJECTS: Innovayse.Hostpanel.Integration.Tests
+    TEST_FILTER: >-
+      FullyQualifiedName~Integration.Tests.Migration.|FullyQualifiedName~Integration.Tests.Notifications.|FullyQualifiedName~Integration.Tests.Orders.|FullyQualifiedName~Integration.Tests.Persistence.|FullyQualifiedName~Integration.Tests.Products.|FullyQualifiedName~Integration.Tests.Provisioning.|FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Security.|FullyQualifiedName~Integration.Tests.Services.|FullyQualifiedName~Integration.Tests.Shared.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Support.
   rules:
     - if: $CI_SERVER_HOST == "gitlab.com"
       changes: [backend/**/*]
 
 backend:build:api:prod:
   extends: .build-image
-  variables: { SERVICE: api, DOCKERFILE: docker/api.Dockerfile, BUILD_CONTEXT: ., IMAGE_TARGET: prod, TAG: latest }
+  variables: { SERVICE: api, DOCKERFILE: backend/Dockerfile, BUILD_CONTEXT: backend, IMAGE_TARGET: prod, TAG: latest }
   rules:
     - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
       changes: [backend/**/*]
@@ -185,12 +240,12 @@ backend:build:api:prod:
 
 backend:build:api:dev:
   extends: .build-image
-  variables: { SERVICE: api, DOCKERFILE: docker/api.Dockerfile, BUILD_CONTEXT: ., IMAGE_TARGET: dev, TAG: dev }
+  variables: { SERVICE: api, DOCKERFILE: backend/Dockerfile, BUILD_CONTEXT: backend, IMAGE_TARGET: dev, TAG: dev }
   rules:
     - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
-      changes: [docker/**/*]
+      changes: [backend/Dockerfile]
     - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
-      changes: [docker/**/*]
+      changes: [backend/Dockerfile]
 
 # ── client (Nuxt frontend, yarn) ────────────────────────────────────────────────
 
@@ -201,9 +256,30 @@ client:test:
     - if: $CI_SERVER_HOST == "gitlab.com"
       changes: [client/**/*]
 
+# Playwright against the production build of client:test, with the stub backend
+# (client/e2e/support/stub-backend.mjs) standing in for the API. The image tag follows
+# @playwright/test in client/package.json.
+client:e2e:
+  stage: test
+  tags: [builder]
+  image: mcr.microsoft.com/playwright:v1.62.1-noble
+  needs: [client:test]
+  script:
+    - cd client
+    - corepack enable && corepack prepare yarn@1.22.22 --activate
+    - yarn install --frozen-lockfile
+    - yarn e2e
+  artifacts:
+    when: on_failure
+    expire_in: 3 days
+    paths: [client/test-results/, client/e2e-results.xml]
+  rules:
+    - if: $CI_SERVER_HOST == "gitlab.com"
+      changes: [client/**/*]
+
 client:build:prod:
   extends: .build-image
-  variables: { SERVICE: client, DOCKERFILE: docker/client.Dockerfile, BUILD_CONTEXT: ., IMAGE_TARGET: prod, TAG: latest }
+  variables: { SERVICE: client, DOCKERFILE: client/Dockerfile, BUILD_CONTEXT: client, IMAGE_TARGET: prod, TAG: latest }
   rules:
     - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
       changes: [client/**/*]
@@ -212,25 +288,51 @@ client:build:prod:
 
 client:build:dev:
   extends: .build-image
-  variables: { SERVICE: client, DOCKERFILE: docker/client.Dockerfile, BUILD_CONTEXT: ., IMAGE_TARGET: dev, TAG: dev }
+  variables: { SERVICE: client, DOCKERFILE: client/Dockerfile, BUILD_CONTEXT: client, IMAGE_TARGET: dev, TAG: dev }
   rules:
     - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
-      changes: [docker/**/*]
+      changes: [client/Dockerfile]
     - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
-      changes: [docker/**/*]
+      changes: [client/Dockerfile]
 
 # ── admin (Vue/Vite, npm) ────────────────────────────────────────────────────
 
+# Every gate the admin has, in the order a failure is cheapest to read: lint (non-fixing),
+# i18n catalogues, the real typecheck (-b --force), unit tests, then the production build.
 admin:test:
-  extends: .test-node-npm
-  variables: { SERVICE: admin }
+  stage: test
+  tags: [builder]
+  image: node:22
+  script:
+    - cd admin
+    - npm ci
+    - npm run lint:ci
+    - npm run lint:i18n
+    - npm run typecheck
+    - npm test -- --maxWorkers=2
+    - npm run build-only
+  rules:
+    - if: $CI_SERVER_HOST == "gitlab.com"
+      changes: [admin/**/*]
+
+# Playwright flows against `vite preview`; the API is stubbed with page.route, so no backend runs.
+# The image tag must match the @playwright/test version pinned in admin/package.json.
+admin:e2e:
+  stage: test
+  tags: [builder]
+  image: mcr.microsoft.com/playwright:v1.56.0-noble
+  needs: [admin:test]
+  script:
+    - cd admin
+    - npm ci
+    - npm run e2e
   rules:
     - if: $CI_SERVER_HOST == "gitlab.com"
       changes: [admin/**/*]
 
 admin:build:prod:
   extends: .build-image
-  variables: { SERVICE: admin, DOCKERFILE: docker/admin.Dockerfile, BUILD_CONTEXT: ., IMAGE_TARGET: prod, TAG: latest }
+  variables: { SERVICE: admin, DOCKERFILE: admin/Dockerfile, BUILD_CONTEXT: ., IMAGE_TARGET: prod, TAG: latest }
   rules:
     - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
       changes: [admin/**/*]
@@ -239,12 +341,12 @@ admin:build:prod:
 
 admin:build:dev:
   extends: .build-image
-  variables: { SERVICE: admin, DOCKERFILE: docker/admin.Dockerfile, BUILD_CONTEXT: ., IMAGE_TARGET: dev, TAG: dev }
+  variables: { SERVICE: admin, DOCKERFILE: admin/Dockerfile, BUILD_CONTEXT: ., IMAGE_TARGET: dev, TAG: dev }
   rules:
     - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
-      changes: [docker/**/*]
+      changes: [admin/Dockerfile, docker/nginx/admin.conf]
     - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
-      changes: [docker/**/*]
+      changes: [admin/Dockerfile, docker/nginx/admin.conf]
 
 # ── deploy ───────────────────────────────────────────────────────────────────
 
@@ -252,16 +354,16 @@ deploy:staging:
   extends: .deploy-staging
   variables:
     DEPLOY_DIR: /home/innovayse/www/innovayse-workspace/hostpanel
-    # Which tier the API believes it is running on. docker-compose.yml passes
-    # ${ASPNETCORE_ENVIRONMENT:-Development} through to it — the default is right for
-    # a laptop, and it was what a deployed host inherited too unless someone had
+    # Which tier the API believes it is running on. docker/docker-compose.dev.yml passes
+    # ${ASPNETCORE_ENVIRONMENT} through to it — the laptop .env sets Development, and
+    # a deployed host inherited that too unless someone had
     # remembered to write the variable into that host's .env by hand. An API left on
     # Development serves developer exception pages, and it is also what makes an
     # absent EncryptionKey allowed rather than fatal, so server credentials and
     # client-service passwords go to the database in plain text. Setting it per tier
     # here is what makes it true of the deployment rather than of one file on one
     # machine.
-    ASPNETCORE_ENVIRONMENT: Staging
+    ASPNETCORE_ENVIRONMENT: Production
   environment: { name: staging/hostpanel }
   rules:
     # Staging deploys are off: that host filled its disk and this job fails in get_sources,
@@ -277,6 +379,102 @@ deploy:staging:
     - job: admin:build:prod
       optional: true
 
+# ── demo ─────────────────────────────────────────────────────────────────────
+# A second copy of the stack in demo mode (fake payment, registrar and provisioning adapters, mail to
+# its own mailhog, periodic data reset) on ProdServer, beside production. The chain is
+# shared + prod + platform + demo and the project is pinned to hostpanel-demo (-p), so containers,
+# volumes, broker, redis and the database are the demo's own and prod data is never touched.
+# Manual, like production. Images are built here from the checkout and tagged :demo, so prod's
+# :latest is never overwritten.
+#
+# CI/CD variables (scope demo/hostpanel). The job's environment wins over docker/.env on the host,
+# so the demo's own values never leak into, or from, production's .env:
+#   DEMO_ENABLED, DEMO_RESET_INTERVAL_HOURS, DEMO_ADMIN_EMAIL, DEMO_ADMIN_PASSWORD (required),
+#   DEMO_CLIENT_EMAIL, DEMO_CLIENT_PASSWORD (required), DEMO_SMTP_PORT, DEMO_REDIS_PORT,
+#   DEMO_API_HOST_PORT, DEMO_CLIENT_HOST_PORT, DEMO_ADMIN_HOST_PORT, DEMO_MAILHOG_UI_HOST_PORT,
+#   DEMO_ADMIN_BASE_URL and DEMO_CLIENT_BASE_URL (both required: the bases of the links the demo mail carries),
+# plus the demo's own DOMAIN, ADMIN_DOMAIN, ALLOWED_HOSTS and POSTGRES_DB, with AUTH_MODE=local.
+deploy:demo:
+  extends: .deploy-staging
+  tags: [prod]
+  variables:
+    DEPLOY_DIR: /home/innovayse-server/www/innovayse-workspace/hostpanel
+    COMPOSE_FILES: -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml -f docker/docker-compose.demo.yml
+    IMAGE_TAG: demo
+    # Demo behaviour comes from Demo__Enabled, not from the environment name.
+    ASPNETCORE_ENVIRONMENT: Production
+  script:
+    - git -C "$DEPLOY_DIR" fetch "$CI_REPOSITORY_URL" "$CI_COMMIT_SHA"
+    - git -C "$DEPLOY_DIR" checkout -f "$CI_COMMIT_SHA"
+    - cd "$DEPLOY_DIR"
+    - docker compose -p hostpanel-demo $COMPOSE_FILES pull --ignore-buildable
+    - docker compose -p hostpanel-demo $COMPOSE_FILES build hostpanel-api hostpanel-client hostpanel-admin
+    # Services named one by one: nginx is parked, and the demo's broker, redis and mailhog come with the api.
+    - docker compose -p hostpanel-demo $COMPOSE_FILES up -d hostpanel-db hostpanel-api hostpanel-client hostpanel-admin
+  environment: { name: demo/hostpanel }
+  when: manual
+  allow_failure: true
+  needs: []
+  rules:
+    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
+    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
+
+# ── Docker Hub (public images for self-hosters) ───────────────────────────────
+# Runs only on a version tag (vMAJOR.MINOR.PATCH) and only when somebody plays it. Builds the
+# prod target of the three Dockerfiles for linux/amd64 + linux/arm64 and pushes
+# $DOCKERHUB_NAMESPACE/hostpanel:{api,client,admin}-<version without the v> and :{api,client,admin}-latest.
+#
+# Runner: multi-arch needs buildx plus QEMU emulation (a privileged binfmt install), and this
+# project has no runner that can build outside the `builder` one. The job therefore carries the
+# `builder` tag; if that runner is not privileged / has no Docker socket, the job stays pending
+# until such a runner is registered, exactly like the build:* jobs above.
+#
+# CI/CD variables (Settings > CI/CD > Variables; nothing is stored in this file):
+#   DOCKERHUB_NAMESPACE  Docker Hub user or organisation   (plain, protected)
+#   DOCKERHUB_USERNAME   Docker Hub login                  (plain, protected)
+#   DOCKERHUB_TOKEN      Docker Hub access token, write    (masked, protected)
+# Protected variables are exposed only on protected refs, so `v*` must be a protected tag.
+#
+# Images are public, so they are built with AUTH_MODE=local: Innovayse.Auth lives in a private
+# registry and no credential is passed. Both frontends take every deployment value from the environment at start (ADMIN_BASE_URL_PATH for the admin base path), so the image carries no build args.
+# NOTE: the GitHub workflow .github/workflows/publish-dockerhub.yml is the primary publisher of
+# these images. This job is a manual fallback only; do not run it for a tag GitHub already published.
+publish:dockerhub:
+  stage: build
+  tags: [builder]
+  image: docker:27
+  needs: []
+  variables:
+    GIT_DEPTH: "1"
+  before_script:
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+    - docker run --privileged --rm tonistiigi/binfmt --install arm64,amd64
+    - docker buildx create --name hub --driver docker-container --use
+    - docker buildx inspect --bootstrap
+  script:
+    - |
+      set -eu
+      : "${DOCKERHUB_NAMESPACE:?DOCKERHUB_NAMESPACE must be set}"
+      VERSION="${CI_COMMIT_TAG#v}"
+      # The licence label is read from LICENSE, not typed in here, so it cannot drift from it.
+      if grep -q "GNU AFFERO GENERAL PUBLIC LICENSE" LICENSE; then LICENSES="AGPL-3.0-or-later"; else echo "ERROR: LICENSE is not the AGPL text, set the SPDX id for it"; exit 1; fi
+      # name | Dockerfile | context | extra build args
+      for entry in         "api|backend/Dockerfile|backend|--build-arg AUTH_MODE=local"         "client|client/Dockerfile|client|"         "admin|admin/Dockerfile|.|"; do
+        name="${entry%%|*}"; rest="${entry#*|}"
+        dockerfile="${rest%%|*}"; rest="${rest#*|}"
+        context="${rest%%|*}"; args="${rest#*|}"
+        image="$DOCKERHUB_NAMESPACE/hostpanel"
+        # $args is intentionally unquoted: it holds zero or more --build-arg words.
+        docker buildx build --platform linux/amd64,linux/arm64 --target prod           -f "$dockerfile" $args           --label "org.opencontainers.image.source=https://github.com/innovayse/hostpanel"           --label "org.opencontainers.image.version=$VERSION"           --label "org.opencontainers.image.revision=$CI_COMMIT_SHA"           --label "org.opencontainers.image.licenses=$LICENSES"           --label "org.opencontainers.image.title=hostpanel-$name"           -t "$image:$name-$VERSION" -t "$image:$name-latest" --push "$context"
+      done
+  after_script:
+    - docker logout || true
+  when: manual
+  allow_failure: false
+  rules:
+    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+      when: manual
+
 # ── production ───────────────────────────────────────────────────────────────
 # ProdServer (10.0.0.4) serves host.innovayse.com. Unlike staging it does not
 # consume registry images at all: inspecting the api container reports a bare
@@ -285,7 +483,7 @@ deploy:staging:
 # build jobs require a `builder` runner, which this project does not have, and
 # waiting on them would leave the deploy permanently pending.
 #
-# The three -f files are the exact set the running containers were created with.
+# The three -f files (docker/) are the exact set the running containers were created with.
 # Composing with fewer would silently redefine the project. To read either fact
 # off a running host, find the container by its Compose labels rather than by
 # name — the name carries the project, which is just the deploy directory:
@@ -297,7 +495,9 @@ deploy:prod:
   variables:
     GIT_STRATEGY: none
     DEPLOY_DIR: /home/innovayse-server/www/innovayse-workspace/hostpanel
-    COMPOSE_FILES: -f docker-compose.prod.yml -f docker-compose.prodserver.yml -f docker-compose.platform.yml
+    COMPOSE_FILES: -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml
+    # The tag backend:build:*:prod / client:build:prod / admin:build:prod pushed from main.
+    IMAGE_TAG: latest
     # See the note on deploy:staging above.
     ASPNETCORE_ENVIRONMENT: Production
     # This job builds the API image on the production host, so the Innovayse.Auth
@@ -320,7 +520,7 @@ deploy:prod:
     - mkdir -p "$DEPLOY_DIR/backups"
     - >
       docker exec hostpanel-db sh -lc
-      'pg_dump -U "$POSTGRES_USER" -d "${POSTGRES_DB:-hostpanel}" -Fc'
+      'pg_dump -U "$POSTGRES_USER" -d "${POSTGRES_DB}" -Fc'
       > "$DEPLOY_DIR/backups/hostpanel-$(date -u +%Y%m%dT%H%M%SZ)-${CI_COMMIT_SHORT_SHA}.dump"
     - ls -1t "$DEPLOY_DIR"/backups/hostpanel-*.dump | tail -n +11 | xargs -r rm --
     - ls -lh "$DEPLOY_DIR"/backups/ | tail -3
@@ -331,8 +531,8 @@ deploy:prod:
     # admin is included now as well. It was left out, so ProdServer kept serving the
     # admin panel from whatever image was built the last time someone ran compose by
     # hand, and a deploy could not replace that container at all.
-    - docker compose $COMPOSE_FILES build hostpanel-api hostpanel-client admin
-    - docker compose $COMPOSE_FILES up -d hostpanel-api hostpanel-client admin
+    - docker compose $COMPOSE_FILES build hostpanel-api hostpanel-client hostpanel-admin
+    - docker compose $COMPOSE_FILES up -d hostpanel-api hostpanel-client hostpanel-admin
     # `up -d` above does not necessarily put a rebuilt image into service. Compose
     # decides whether to recreate by comparing the service's *configuration*, and every
     # built service here is `build:`-only with no `image:` key -- so the tag compose
@@ -346,7 +546,7 @@ deploy:prod:
     # even when nothing changed. Compare the image the container was created from
     # against the one its tag points at now, and recreate only where they differ.
     - |
-      for svc in hostpanel-api hostpanel-client admin; do
+      for svc in hostpanel-api hostpanel-client hostpanel-admin; do
         cid=$(docker compose $COMPOSE_FILES ps -q "$svc")
         if [ -z "$cid" ]; then echo "ERROR: $svc is not running after up -d"; exit 1; fi
         tag=$(docker inspect "$cid" --format '{{.Config.Image}}')

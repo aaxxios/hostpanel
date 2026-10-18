@@ -1,13 +1,13 @@
-namespace Innovayse.Inecobank.Tests;
-
 using System.Net;
 using FluentAssertions;
 using Innovayse.Providers.Inecobank;
 using Innovayse.SDK.Plugins;
+using Innovayse.SDK.Plugins.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
+namespace Innovayse.Inecobank.Tests;
 /// <summary>
 /// Tests for the response shapes the live Inecobank gateway actually returns, as opposed to the
 /// ones its merchant manual documents.

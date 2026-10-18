@@ -1,15 +1,15 @@
 {
   "hero": {
-    "badge": "Welcome to the future of digital innovation",
-    "title": "Innovate.\nCreate.\nElevate.",
-    "subtitle": "Full-cycle digital agency delivering cutting-edge solutions in Development, SEO, PPC & SaaS products",
+    "badge": "Hosting, domains and servers in one place",
+    "title": "Host.\nManage.\nGrow.",
+    "subtitle": "Web hosting, domains, servers and billing in one client portal, backed by 24/7 support",
     "scroll": "Scroll to explore",
     "cta": {
-      "primary": "Start Your Project",
-      "secondary": "View Our Work"
+      "primary": "Get Started",
+      "secondary": "View Plans"
     },
     "stats": {
-      "projects": "Projects",
+      "projects": "Sites Hosted",
       "years": "Years",
       "team": "Team Members",
       "clients": "Happy Clients"

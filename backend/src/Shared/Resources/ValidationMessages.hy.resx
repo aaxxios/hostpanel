@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ValidationFailed" xml:space="preserve">
+    <value>Վավերացումը ձախողվեց</value>
+  </data>
+  <data name="ValidationErrorsOccurred" xml:space="preserve">
+    <value>Առաջացել է վավերացման մեկ կամ մի քանի սխալ։</value>
+  </data>
+  <data name="Unauthorized" xml:space="preserve">
+    <value>Մուտքը թույլատրված չէ</value>
+  </data>
+  <data name="UnauthorizedDetail" xml:space="preserve">
+    <value>Դուք իրավունք չունեք կատարելու այս գործողությունը։</value>
+  </data>
+  <data name="ResourceNotFound" xml:space="preserve">
+    <value>Ռեսուրսը չի գտնվել</value>
+  </data>
+  <data name="ResourceNotFoundDetail" xml:space="preserve">
+    <value>Պահանջված ռեսուրսը չի գտնվել։</value>
+  </data>
+  <data name="InternalServerError" xml:space="preserve">
+    <value>Սերվերի ներքին սխալ</value>
+  </data>
+  <data name="UnexpectedErrorOccurred" xml:space="preserve">
+    <value>Տեղի է ունեցել անսպասելի սխալ։ Խնդրում ենք փորձել ավելի ուշ։</value>
+  </data>
+  <data name="BusinessRuleViolation" xml:space="preserve">
+    <value>Բիզնես կանոնի խախտում</value>
+  </data>
+  <data name="BusinessRuleViolationDetail" xml:space="preserve">
+    <value>Հարցումը խախտում է բիզնես կանոնը։</value>
+  </data>
+  <data name="ConcurrencyConflict" xml:space="preserve">
+    <value>Զուգահեռ փոփոխության հակասություն</value>
+  </data>
+  <data name="ConcurrencyConflictDetail" xml:space="preserve">
+    <value>Ինչ-որ մեկն արդեն պահպանել է այս գրառման փոփոխությունը։ Թարմացրեք այն և կրկին փորձեք։</value>
+  </data>
+  <data name="InvalidRequestBody" xml:space="preserve">
+    <value>Հարցման անվավեր մարմին</value>
+  </data>
+  <data name="InvalidRequestBodyDetail" xml:space="preserve">
+    <value>Հարցման մարմինը հնարավոր չէ կարդալ։ Ստուգեք դրա ձևաչափը։</value>
+  </data>
+  <data name="InvalidDecimalValue" xml:space="preserve">
+    <value>«{0}» արժեքը վավեր թիվ չէ։</value>
+  </data>
+  <data name="Forbidden" xml:space="preserve">
+    <value>Մուտքը արգելված է</value>
+  </data>
+  <data name="ForbiddenDetail" xml:space="preserve">
+    <value>Դուք իրավունք չունեք կատարելու այս գործողությունը։</value>
+  </data>
+  <data name="InvalidFieldValue" xml:space="preserve">
+    <value>Այս արժեքը վավեր չէ։</value>
+  </data>
+  <data name="RateLimited" xml:space="preserve">
+    <value>Հարցումները ուղարկվում են չափազանց հաճախ։ Խնդրում ենք մի փոքր սպասել և կրկնել փորձը։</value>
+    <comment>RATE_LIMITED. Wording reused from client/locales/*/error.json -&gt; error.rateLimited.</comment>
+  </data>
+</root>

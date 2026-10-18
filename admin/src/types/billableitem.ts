@@ -2,8 +2,7 @@
  * A billable item and the paged envelope it arrives in.
  */
 
-import type { Invoice } from './invoice'
-import type { PagedResult } from './pagedresult'
+import type { PagedResult } from '@/types/pagedresult'
 
 /**
  * A billable item that can be invoiced to a client.
@@ -74,3 +73,63 @@ export interface BillableItemsResult {
   /** Paginated invoiced items. */
   invoicedItems: PagedResult<BillableItem>
 }
+
+/** Body of `POST /billing/billable-items`. */
+export interface CreateBillableItemPayload {
+  /** The client the item is billed to. */
+  clientId: number
+  /** Charge description. */
+  description: string
+  /** Charge amount. */
+  amount: number
+  /** ISO 4217 currency code. */
+  currency: string
+  /** Item type: `OneTime` or `Recurring`. */
+  type: string
+  /** Recurrence period, for recurring items. */
+  recurringPeriod?: string
+  /** ISO 8601 next due date, for recurring items. */
+  nextDueDate?: string
+}
+
+/** A service offered in a billable-item dropdown. */
+export interface ServiceOption {
+  /** Service id. */
+  value: number
+  /** Product name shown to the operator. */
+  label: string
+}
+
+/** Kinds of billable item the API knows. */
+export enum BillableItemType {
+  OneTime = 'OneTime',
+  Recurring = 'Recurring',
+}
+
+/** Closed set of ways a billable item is invoiced, as the API sends them. */
+export const BillableInvoiceAction = {
+  /** Not invoiced for now. */
+  DontInvoice: 'DontInvoice',
+  /** Invoiced on the next cron run. */
+  InvoiceOnNextCron: 'InvoiceOnNextCron',
+  /** Added to the client's next invoice. */
+  AddToNextInvoice: 'AddToNextInvoice',
+  /** Invoiced as normal for the due date. */
+  InvoiceForDueDate: 'InvoiceForDueDate',
+  /** Invoiced again on a recurring period. */
+  Recur: 'Recur',
+} as const
+
+/** One of the billable-item invoice actions. */
+export type BillableInvoiceAction = (typeof BillableInvoiceAction)[keyof typeof BillableInvoiceAction]
+
+/** Closed set of units a recurring billable item repeats in, as the API sends them. */
+export const RecurrencePeriod = {
+  Days: 'Days',
+  Weeks: 'Weeks',
+  Months: 'Months',
+  Years: 'Years',
+} as const
+
+/** One of the recurrence periods. */
+export type RecurrencePeriod = (typeof RecurrencePeriod)[keyof typeof RecurrencePeriod]

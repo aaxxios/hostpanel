@@ -2,21 +2,21 @@
  * Endpoints under `/api/portal/public` — the catalogue and the reference data the storefront
  * renders before anybody signs in.
  *
- * Two naming shapes, as elsewhere in `composables/apis/`: `load*` returns the `useApi()`
- * handle for a server-rendered read, `fetch*` returns a plain `Promise` for a one-shot call.
- * Every page reading this area is public and has to be indexable, so most of it is `load*`.
- * Nothing here is cached or held — `useApi()`'s own key-based dedup is the only caching.
+ * Every function returns a plain `Promise` through `apiFetch`, which is what lets
+ * `stores/catalog.ts` call them from a store action — including the action a server-rendered
+ * page wraps in `useAsyncData`. Nothing here is cached or held: the store keeps the state.
  *
  * @module composables/apis/useCatalogApi
  */
 
-import { apiFetch, useApi } from '~/composables/useApi'
+import { apiFetch } from '~/composables/useApi'
 import type { CountryOption } from '~/types/countryoption'
 import type { DomainCheckResult } from '~/types/domaincheckresult'
 import type { PortalCurrency } from '~/types/portalcurrency'
 import type { PortalProduct } from '~/types/portalproduct'
 import type { PortalProductQuery } from '~/types/portalproductquery'
 import type { ProductFeature } from '~/types/productfeature'
+import type { SlidePublic } from '~/types/slidepublic'
 import type { TldPricing } from '~/types/tldpricing'
 
 /**
@@ -24,76 +24,56 @@ import type { TldPricing } from '~/types/tldpricing'
  *
  * @returns The catalogue endpoint functions.
  */
-export function useCatalogApi() {
+export const useCatalogApi = () => {
   /**
-   * Server-rendered read of the product catalogue.
-   *
-   * @param query - Reactive filters; re-reads whenever they change, as `useApi()` watches them.
-   * @returns The `useApi()` handle for the product list, defaulting to an empty list so a
-   * page never has to guard against `null` before the first response arrives.
-   */
-  const loadProducts = (query: () => PortalProductQuery) =>
-    useApi<PortalProduct[]>('/api/portal/public/products', {
-      query: () => query() as Record<string, unknown>,
-      default: () => []
-    })
-
-  /**
-   * One-shot read of the product catalogue, for an event handler rather than a page load.
+   * Reads the product catalogue.
    *
    * @param query - Filters to apply. Omit for the whole catalogue.
    * @returns The matching products.
    * @throws Whatever `apiFetch` throws.
    */
-  const fetchProducts = <T>(query?: PortalProductQuery): Promise<T[]> =>
+  const fetchProducts = <T = PortalProduct>(query?: PortalProductQuery): Promise<T[]> =>
     apiFetch<T[]>('/api/portal/public/products', { query })
 
   /**
-   * Server-rendered read of the specification lines behind the plan comparison table.
+   * Reads the specification lines behind the plan comparison table.
    *
    * @param groupId - Product group whose plans are being compared.
-   * @returns The `useApi()` handle for the specification lines.
+   * @returns The specification lines.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadProductFeatures = (groupId: number) =>
-    useApi<ProductFeature[]>('/api/portal/public/product-features', {
-      query: () => ({ gid: groupId }),
-      default: () => []
-    })
+  const fetchProductFeatures = (groupId: number): Promise<ProductFeature[]> =>
+    apiFetch<ProductFeature[]>('/api/portal/public/product-features', { query: { gid: groupId } })
 
   /**
-   * Read of the billing currencies.
+   * Reads the billing currencies.
    *
-   * @param server - False to skip this during SSR. The currency list only decorates amounts
-   * that are themselves client-side, so the storefront does not pay for it on every render.
-   * @returns The `useApi()` handle for the currency list.
+   * @returns The currency list.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadCurrencies = (server = true) =>
-    useApi<PortalCurrency[]>('/api/portal/public/currencies', { server, default: () => [] })
+  const fetchCurrencies = (): Promise<PortalCurrency[]> =>
+    apiFetch<PortalCurrency[]>('/api/portal/public/currencies')
 
   /**
-   * Server-rendered read of the TLD price table.
+   * Reads the TLD price table.
    *
-   * @param currency - ISO 4217 code to quote prices in — the payer's currency, never the
-   * page's language. Omit to take the backend's default. A getter so the table re-reads once
-   * the payer's currency resolves (it is not known synchronously on first render).
-   * @returns The `useApi()` handle for the price table.
+   * @param currency - ISO 4217 code to quote prices in — the payer's currency, never the page's
+   * language. Omit to take the backend's default.
+   * @returns The price table.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadTldPricing = (currency?: () => string | undefined) =>
-    useApi<TldPricing>('/api/portal/public/tld-pricing', {
-      query: () => (currency?.() ? { currency: currency() } : {})
-    })
+  const fetchTldPricing = (currency?: string): Promise<TldPricing> =>
+    apiFetch<TldPricing>('/api/portal/public/tld-pricing', { query: currency ? { currency } : {} })
 
   /**
-   * Server-rendered read of the marketing slides on the home page.
+   * Reads the marketing slides on the home page.
    *
-   * @param lang - Locale to return slide copy in; a getter so it re-reads on a locale switch.
-   * @returns The `useApi()` handle for the slides, defaulting to an empty list.
+   * @param lang - Locale to return slide copy in.
+   * @returns The slides.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadSlides = <T>(lang: () => string) =>
-    useApi<T[]>('/api/portal/public/slides', {
-      query: () => ({ lang: lang() }),
-      default: () => []
-    })
+  const fetchSlides = (lang: string): Promise<SlidePublic[]> =>
+    apiFetch<SlidePublic[]>('/api/portal/public/slides', { query: { lang } })
 
   /**
    * Asks whether one domain is available.
@@ -112,21 +92,21 @@ export function useCatalogApi() {
     })
 
   /**
-   * Server-rendered read of the country list the address forms offer.
+   * Reads the country list the address forms offer.
    *
-   * @returns The `useApi()` handle for the country options, defaulting to an empty list.
+   * @returns The country options.
+   * @throws Whatever `apiFetch` throws.
    */
-  const loadCountries = () =>
-    useApi<CountryOption[]>('/api/portal/public/countries', { default: () => [] })
+  const fetchCountries = (): Promise<CountryOption[]> =>
+    apiFetch<CountryOption[]>('/api/portal/public/countries')
 
   return {
-    loadProducts,
     fetchProducts,
-    loadProductFeatures,
-    loadCurrencies,
-    loadCountries,
-    loadTldPricing,
-    loadSlides,
+    fetchProductFeatures,
+    fetchCurrencies,
+    fetchCountries,
+    fetchTldPricing,
+    fetchSlides,
     checkDomain
   }
 }

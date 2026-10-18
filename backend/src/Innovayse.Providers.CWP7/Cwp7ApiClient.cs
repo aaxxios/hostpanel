@@ -1,15 +1,14 @@
-namespace Innovayse.Providers.CWP7;
-
 using System.Net.Http.Json;
 using Innovayse.Providers.CWP7.Models;
 using Innovayse.SDK.Plugins;
 using Microsoft.Extensions.Logging;
 
+namespace Innovayse.Providers.CWP7;
 /// <summary>
 /// HTTP client wrapper for the Control Web Panel 7 (CWP7) REST API.
 /// Sends form-encoded POST requests to /v1/account and related endpoints.
 /// </summary>
-internal sealed class Cwp7ApiClient : ICwp7ApiClient
+internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
 {
     /// <summary>Default CWP7 API port when not specified in configuration.</summary>
     private const int DefaultPort = 2304;

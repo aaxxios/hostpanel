@@ -47,13 +47,13 @@ export default defineEventHandler(async (event) => {
     || path.includes('\\')
     || segments.some(s => s === '' || s === '.' || s === '..')
   ) {
-    throw createError({ statusCode: 400, statusMessage: 'Bad branding path' })
+    throw createError({ statusCode: 400 })
   }
 
   const extension = path.slice(path.lastIndexOf('.')).toLowerCase()
   const contentType = ALLOWED_TYPES[extension]
   if (!contentType) {
-    throw createError({ statusCode: 404, statusMessage: 'Not a branding image' })
+    throw createError({ statusCode: 404 })
   }
 
   const config = useRuntimeConfig()
@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
   } catch {
     // A missing file is a 404 here too. Nothing upstream is worth quoting: the caller is a
     // browser fetching an icon, and the only useful answer is "there is no such icon".
-    throw createError({ statusCode: 404, statusMessage: 'Branding image not found' })
+    throw createError({ statusCode: 404 })
   }
 
   setResponseHeaders(event, {

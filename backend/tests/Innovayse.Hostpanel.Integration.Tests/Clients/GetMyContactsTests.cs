@@ -1,0 +1,72 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Infrastructure.Persistence;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+
+namespace Innovayse.Hostpanel.Integration.Tests.Clients;
+
+/// <summary><c>GET /api/clients/me/contacts</c>: the authenticated client lists the contacts on their own account.</summary>
+/// <param name="factory">The shared API + PostgreSQL host.</param>
+public sealed class GetMyContactsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+{
+    /// <summary>A new account has no contacts, and a contact added to it is listed.</summary>
+    [Fact]
+    public async Task GetMyContactsListsTheOwnContacts()
+    {
+        var (client, _, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "get-my-contacts");
+        var empty = await client.GetFromJsonAsync<JsonElement>("/api/clients/me/contacts");
+        empty.GetArrayLength().Should().Be(0);
+        (await client.PostAsJsonAsync("/api/clients/me/contacts", ClientsTestSeeds.ContactBody("Listed")))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var listed = await client.GetFromJsonAsync<JsonElement>("/api/clients/me/contacts");
+
+        listed.GetArrayLength().Should().Be(1);
+    }
+
+    /// <summary>A caller with the Client role but no client row answers 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>.</summary>
+    [Fact]
+    public async Task GetMyContactsWithNoClientRowRefusesNotFound()
+    {
+        var (client, clientId, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "get-my-contacts-orphaned");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Clients.Where(c => c.Id == clientId).ExecuteDeleteAsync();
+        }
+
+        var response = await client.GetAsync("/api/clients/me/contacts");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_PROFILE_NOT_FOUND);
+    }
+
+    /// <summary>The route is not for anonymous callers.</summary>
+    [Fact]
+    public async Task GetMyContactsRefusesAnonymous()
+    {
+        var response = await factory.CreateClient().GetAsync("/api/clients/me/contacts");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>An admin, who is not a client, is refused with 403.</summary>
+    [Fact]
+    public async Task GetMyContactsRefusesAnAdmin()
+    {
+        var client = factory.CreateClient();
+        var token = await factory.GetAdminTokenAsync();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.GetAsync("/api/clients/me/contacts");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+}

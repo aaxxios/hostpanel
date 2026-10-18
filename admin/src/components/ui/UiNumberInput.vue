@@ -1,20 +1,21 @@
 <script setup lang="ts">
 /**
- * Custom dark-themed number input with styled increment/decrement buttons.
- * Replaces native <input type="number"> whose spinner arrows cannot be themed.
- * Matches the UiSelect / UiDatePicker visual language.
+ * Themed number input with increment/decrement buttons.
+ *
+ * Replaces `<input type="number">`, whose spinner arrows cannot be themed. Emits a clamped number.
+ * `data-testid` and classes land on the root element.
  */
 import { computed } from 'vue'
 
+/** Props for UiNumberInput. */
 const props = withDefaults(defineProps<{
   /**
    * Current value.
    *
-   * `null` and `''` both mean "no value yet" and are what the callers actually hold —
-   * `ServerFormModal`'s optional `maxAccounts` is `number | null`, and `DnsRecordsTable`
-   * seeds its priority fields with `''`. The component's arithmetic coerces both to 0, which
-   * is the behaviour those screens have always had; narrowing this to `number` would mean
-   * changing how they represent "unset", which is a separate change.
+   * `null` and `''` both mean "no value yet" and are what the callers actually hold:
+   * `ServerFormModal`'s optional `maxAccounts` is `number | null`, and `DnsRecordsTable` seeds its
+   * priority fields with `''`. The arithmetic coerces both to 0, which is the behaviour those
+   * screens have always had; narrowing this to `number` would change how they represent "unset".
    */
   modelValue: number | string | null
   /** Minimum allowed value. */
@@ -23,7 +24,7 @@ const props = withDefaults(defineProps<{
   max?: number
   /** Step amount for increment/decrement buttons. */
   step?: number
-  /** Placeholder text. */
+  /** Hint shown while the field is empty. */
   placeholder?: string
   /** Disables the input. */
   disabled?: boolean
@@ -41,66 +42,72 @@ const emit = defineEmits<{
 }>()
 
 /**
- * {@link modelValue} as a number.
+ * The model as a number.
  *
- * `Number()` reproduces exactly the coercion the arithmetic below already performed on the
- * `null` and `''` a caller may hold: both become 0, a numeric string becomes its number, and
- * anything else becomes `NaN` — the same results as `props.modelValue - props.step` gave.
+ * `Number()` reproduces the coercion the arithmetic below always performed on the `null` and `''`
+ * a caller may hold: both become 0, a numeric string becomes its number, anything else is `NaN`.
  */
-const numericValue = computed(() => Number(props.modelValue))
+const numericValue = computed<number>(() => Number(props.modelValue))
 
 /** Whether decrement is allowed. */
-const canDecrement = computed(() => props.min === undefined || numericValue.value - props.step >= props.min)
+const canDecrement = computed<boolean>(() => props.min === undefined || numericValue.value - props.step >= props.min)
 
 /** Whether increment is allowed. */
-const canIncrement = computed(() => props.max === undefined || numericValue.value + props.step <= props.max)
-
-/**
- * Updates the value from direct input.
- *
- * @param e - The input event.
- */
-function onInput(e: Event): void {
-  const raw = (e.target as HTMLInputElement).value
-  const num = parseFloat(raw)
-  if (!isNaN(num)) {
-    emit('update:modelValue', clamp(num))
-  }
-}
-
-/** Decrements the value by step. */
-function decrement(): void {
-  if (!canDecrement.value || props.disabled) return
-  emit('update:modelValue', clamp(round(numericValue.value - props.step)))
-}
-
-/** Increments the value by step. */
-function increment(): void {
-  if (!canIncrement.value || props.disabled) return
-  emit('update:modelValue', clamp(round(numericValue.value + props.step)))
-}
+const canIncrement = computed<boolean>(() => props.max === undefined || numericValue.value + props.step <= props.max)
 
 /**
  * Clamps a value to the min/max range.
  *
  * @param v - Value to clamp.
- * @returns Clamped value.
+ * @returns The clamped value.
  */
-function clamp(v: number): number {
-  if (props.min !== undefined && v < props.min) return props.min
-  if (props.max !== undefined && v > props.max) return props.max
+const clamp = (v: number): number => {
+  if (props.min !== undefined && v < props.min) {
+    return props.min
+  }
+  if (props.max !== undefined && v > props.max) {
+    return props.max
+  }
   return v
 }
 
 /**
- * Rounds to avoid floating point drift.
+ * Rounds to the step's precision (at least two decimals) to avoid floating point drift.
  *
  * @param v - Value to round.
- * @returns Rounded value.
+ * @returns The rounded value.
  */
-function round(v: number): number {
+const round = (v: number): number => {
   const decimals = (props.step.toString().split('.')[1] || '').length
   return parseFloat(v.toFixed(Math.max(decimals, 2)))
+}
+
+/**
+ * Updates the model from typed input.
+ *
+ * @param e - The input event.
+ */
+const onInput = (e: Event): void => {
+  const num = parseFloat((e.target as HTMLInputElement).value)
+  if (!isNaN(num)) {
+    emit('update:modelValue', clamp(num))
+  }
+}
+
+/** Decrements the value by one step. */
+const decrement = (): void => {
+  if (!canDecrement.value || props.disabled) {
+    return
+  }
+  emit('update:modelValue', clamp(round(numericValue.value - props.step)))
+}
+
+/** Increments the value by one step. */
+const increment = (): void => {
+  if (!canIncrement.value || props.disabled) {
+    return
+  }
+  emit('update:modelValue', clamp(round(numericValue.value + props.step)))
 }
 </script>
 
@@ -112,20 +119,22 @@ function round(v: number): number {
       :value="modelValue"
       :placeholder="placeholder"
       :disabled="disabled"
-      class="w-full bg-white/[0.04] border border-border rounded-[10px] pl-3 pr-8 py-2 text-[0.82rem] text-text-primary focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/10 transition-colors [appearance:textfield]"
+      class="w-full bg-surface-field border border-border rounded-[10px] pl-3 pr-8 py-2 text-[0.82rem] text-text-primary placeholder:text-text-muted outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/10 transition-colors [appearance:textfield]"
       @input="onInput"
       @blur="emit('update:modelValue', clamp(numericValue))"
-    />
+    >
     <!-- Spinner buttons -->
     <div class="absolute right-0 top-0 bottom-0 flex flex-col w-6 border-l border-border">
       <button
         type="button"
         tabindex="-1"
+        aria-hidden="true"
+        data-testid="number-increment"
         :disabled="disabled || !canIncrement"
         class="flex-1 flex items-center justify-center bg-surface-elevated text-text-muted hover:bg-primary-500 hover:text-white transition-colors rounded-tr-[10px] disabled:opacity-30 disabled:cursor-not-allowed"
         @mousedown.prevent="increment"
       >
-        <svg class="w-2.5 h-2.5" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="w-2.5 h-2.5" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="1 5 5 1 9 5" />
         </svg>
       </button>
@@ -133,11 +142,13 @@ function round(v: number): number {
       <button
         type="button"
         tabindex="-1"
+        aria-hidden="true"
+        data-testid="number-decrement"
         :disabled="disabled || !canDecrement"
         class="flex-1 flex items-center justify-center bg-surface-elevated text-text-muted hover:bg-primary-500 hover:text-white transition-colors rounded-br-[10px] disabled:opacity-30 disabled:cursor-not-allowed"
         @mousedown.prevent="decrement"
       >
-        <svg class="w-2.5 h-2.5" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="w-2.5 h-2.5" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="1 1 5 5 9 1" />
         </svg>
       </button>

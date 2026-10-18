@@ -1,459 +1,86 @@
 <template>
-  <div>
-    <!-- Breadcrumb -->
-    <nav class="flex items-center gap-2 text-sm text-gray-500 mb-8">
-      <NuxtLink :to="localePath('/client/invoices')" class="hover:text-white transition-colors">
-        {{ $t('client.invoices.title') }}
-      </NuxtLink>
-      <span>/</span>
-      <NuxtLink :to="localePath(`/client/invoices/${invoiceId}`)" class="hover:text-white transition-colors">
-        {{ $t('invoicePay.invoiceNum', { id: invoiceId }) }}
-      </NuxtLink>
-      <span>/</span>
-      <span class="text-white">{{ $t('invoicePay.makePayment') }}</span>
-    </nav>
+  <UiStack gap="lg">
+    <UiBreadcrumbs :items="crumbs" container-class="mb-0" />
 
-    <!-- Loading -->
-    <div v-if="pending" class="grid md:grid-cols-[1fr_380px] gap-8">
-      <div class="space-y-4">
-        <div v-for="i in 4" :key="i" class="h-14 rounded-xl bg-white/5 animate-pulse" />
-      </div>
-      <div class="h-80 rounded-2xl bg-white/5 animate-pulse" />
-    </div>
+    <UiSplit v-if="pending" ratio="start-wide">
+      <template #start>
+        <UiStack>
+          <UiSkeleton v-for="i in 4" :key="i" shape="block" class="h-14" />
+        </UiStack>
+      </template>
+      <template #end>
+        <UiSkeleton shape="block" class="h-80" />
+      </template>
+    </UiSplit>
 
-    <!-- Error -->
-    <div v-else-if="!invoice" class="text-center py-20">
-      <AlertCircle :size="48" :stroke-width="1.5" class="text-red-400 mx-auto mb-4" />
-      <p class="text-gray-400">{{ $t('client.invoices.notFound') }}</p>
-    </div>
+    <UiEmptyState v-else-if="!invoice" :icon="AlertCircle" :title="$t('client.invoices.notFound')" />
 
-    <!-- Already paid -->
-    <div v-else-if="invoice.status === 'Paid'" class="text-center py-20">
-      <CheckCircle :size="48" :stroke-width="1.5" class="text-green-400 mx-auto mb-4" />
-      <h2 class="text-xl font-bold text-white mb-2">{{ $t('invoicePay.alreadyPaid') }}</h2>
-      <NuxtLink :to="localePath(`/client/invoices/${invoiceId}`)" class="text-cyan-400 hover:underline text-sm">
-        {{ $t('invoicePay.viewInvoice') }}
-      </NuxtLink>
-    </div>
+    <UiEmptyState
+      v-else-if="invoice.status === InvoiceStatus.Paid"
+      :icon="CheckCircle"
+      :title="$t('invoicePay.alreadyPaid')"
+      data-testid="invoice-already-paid"
+    >
+      <UiButton :to="invoicePath" variant="subtle" data-testid="invoice-view">{{ $t('invoicePay.viewInvoice') }}</UiButton>
+    </UiEmptyState>
 
-    <!-- Payment layout -->
-    <div v-else class="grid md:grid-cols-[1fr_380px] gap-8 items-start">
+    <UiSplit v-else ratio="start-wide">
+      <template #start>
+        <ClientInvoicesPayPanel :invoice-id="invoiceId" />
+      </template>
+      <template #end>
+        <ClientInvoicesPaySummary :invoice="invoice" />
+      </template>
+    </UiSplit>
 
-      <!-- LEFT: Make Payment -->
-      <div class="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
-        <!-- Header -->
-        <div class="px-6 py-5 border-b border-white/10">
-          <h1 class="text-xl font-bold text-white">{{ $t('invoicePay.makePayment') }}</h1>
-        </div>
-
-        <div class="p-6 space-y-6">
-          <!-- Success message -->
-          <div v-if="paySuccess" class="flex items-start gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400">
-            <CheckCircle :size="20" :stroke-width="2" class="flex-shrink-0 mt-0.5" />
-            <div>
-              <div class="font-semibold">{{ $t('invoicePay.paymentSuccess') }}</div>
-              <NuxtLink :to="localePath(`/client/invoices/${invoiceId}`)" class="text-sm underline mt-1 block">
-                {{ $t('invoicePay.viewInvoice') }}
-              </NuxtLink>
-            </div>
-          </div>
-
-          <!-- Error message -->
-          <div v-if="payError" class="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
-            <AlertCircle :size="20" :stroke-width="2" class="flex-shrink-0 mt-0.5" />
-            <span class="text-sm">{{ payError }}</span>
-          </div>
-
-          <template v-if="!paySuccess">
-            <!-- Payment Method label — suppressed entirely when nothing is selectable, so the
-                 row is not rendered as an empty box beside its label. -->
-            <div v-if="hasSelectableMethod" class="grid grid-cols-[180px_1fr] gap-4 items-start">
-              <label class="text-sm text-gray-400 pt-1">{{ $t('invoicePay.paymentMethod') }}</label>
-              <div>
-                <!-- Saved cards -->
-                <div v-if="savedMethods.length > 0" class="space-y-2 mb-4">
-                  <label
-                    v-for="method in savedMethods"
-                    :key="method.id"
-                    class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors"
-                    :class="selectedMethodId === method.id
-                      ? 'border-cyan-500/50 bg-cyan-500/5'
-                      : 'border-white/10 hover:border-white/20'"
-                  >
-                    <div
-                      class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                      :class="selectedMethodId === method.id ? 'border-cyan-400' : 'border-gray-600'"
-                    >
-                      <div v-if="selectedMethodId === method.id" class="w-2.5 h-2.5 rounded-full bg-cyan-400" />
-                    </div>
-                    <CreditCard :size="16" :stroke-width="2" class="text-gray-400" />
-                    <span class="text-sm text-white">
-                      {{ method.card_type }} •••• {{ method.card_last_four }}
-                      <span class="text-gray-500 ml-2">{{ method.card_expiry }}</span>
-                    </span>
-                    <input v-model="selectedMethodId" type="radio" :value="method.id" class="sr-only" />
-                  </label>
-                  <!-- New card option — hidden when there is no WHMCS page to hand off to. -->
-                  <label
-                    v-if="canUseNewCard"
-                    class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors"
-                    :class="selectedMethodId === 'new'
-                      ? 'border-cyan-500/50 bg-cyan-500/5'
-                      : 'border-white/10 hover:border-white/20'"
-                  >
-                    <div
-                      class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                      :class="selectedMethodId === 'new' ? 'border-cyan-400' : 'border-gray-600'"
-                    >
-                      <div v-if="selectedMethodId === 'new'" class="w-2.5 h-2.5 rounded-full bg-cyan-400" />
-                    </div>
-                    <Plus :size="16" :stroke-width="2" class="text-gray-400" />
-                    <span class="text-sm text-white">{{ $t('invoicePay.newCard') }}</span>
-                    <input v-model="selectedMethodId" type="radio" value="new" class="sr-only" />
-                  </label>
-                </div>
-
-                <!-- No saved methods — only announces the card form when that form leads
-                     somewhere, i.e. when the WHMCS hand-off exists. -->
-                <div v-else-if="canUseNewCard" class="flex items-center gap-2 p-3 rounded-xl border border-cyan-500/30 bg-cyan-500/5">
-                  <div class="w-5 h-5 rounded-full border-2 border-cyan-400 flex items-center justify-center">
-                    <div class="w-2.5 h-2.5 rounded-full bg-cyan-400" />
-                  </div>
-                  <span class="text-sm text-white">{{ $t('invoicePay.enterCardBelow') }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Hosted-gateway payment (e.g. Inecobank) -->
-            <button
-              v-if="hostedGatewayModule"
-              type="button"
-              :disabled="submitting"
-              class="w-full mb-4 px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-primary-600 text-white font-bold text-sm disabled:opacity-50"
-              @click="payWithHostedGateway"
-            >
-              {{ $t('invoicePay.payByCardInecobank') }}
-            </button>
-
-            <!-- New card form. These fields are only a prelude to the WHMCS hand-off, so
-                 without that hand-off the form is not shown — collecting a card number that
-                 goes nowhere would be worse than not asking. -->
-            <template v-if="showNewCardForm">
-              <!-- Card Number -->
-              <div class="grid grid-cols-[180px_1fr] gap-4 items-center">
-                <label class="text-sm text-gray-400">{{ $t('invoicePay.cardNumber') }}</label>
-                <input
-                  v-model="cardNumber"
-                  type="text"
-                  inputmode="numeric"
-                  maxlength="19"
-                  placeholder="1234 1234 1234 1234"
-                  class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 text-sm"
-                  @input="formatCardNumber"
-                />
-              </div>
-
-              <!-- Expiry -->
-              <div class="grid grid-cols-[180px_1fr] gap-4 items-center">
-                <label class="text-sm text-gray-400">{{ $t('invoicePay.expiryDate') }}</label>
-                <input
-                  v-model="expiryDate"
-                  type="text"
-                  inputmode="numeric"
-                  maxlength="5"
-                  placeholder="MM / YY"
-                  class="w-40 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 text-sm"
-                  @input="formatExpiry"
-                />
-              </div>
-
-              <!-- CVV -->
-              <div class="grid grid-cols-[180px_1fr] gap-4 items-center">
-                <label class="text-sm text-gray-400">{{ $t('invoicePay.cvv') }}</label>
-                <div class="flex items-center gap-4">
-                  <input
-                    v-model="cvv"
-                    type="text"
-                    inputmode="numeric"
-                    maxlength="4"
-                    placeholder="CVC"
-                    class="w-24 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 text-sm"
-                  />
-                  <button class="text-cyan-400 text-sm hover:underline" @click.prevent>
-                    {{ $t('invoicePay.whereIsFindThis') }}
-                  </button>
-                </div>
-              </div>
-
-              <!-- Card Description -->
-              <div class="grid grid-cols-[180px_1fr] gap-4 items-center">
-                <label class="text-sm text-gray-400">{{ $t('invoicePay.cardDescription') }}</label>
-                <input
-                  v-model="cardDescription"
-                  type="text"
-                  :placeholder="$t('invoicePay.cardDescriptionPlaceholder')"
-                  class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 text-sm"
-                />
-              </div>
-            </template>
-
-            <!-- Submit — only when a method is actually selected. -->
-            <div v-if="selectedMethodId !== null" class="grid grid-cols-[180px_1fr] gap-4 items-center">
-              <div />
-              <button
-                class="px-8 py-3 rounded-xl font-bold text-white transition-all duration-200 hover:scale-[1.02] flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-primary-600 hover:from-cyan-500 hover:to-primary-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                :disabled="submitting"
-                @click="submitPayment"
-              >
-                <Loader2 v-if="submitting" :size="18" :stroke-width="2" class="animate-spin" />
-                <CreditCard v-else :size="18" :stroke-width="2" />
-                {{ submitting ? $t('invoicePay.processing') : $t('invoicePay.submitPayment') }}
-              </button>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- RIGHT: Invoice Summary -->
-      <div class="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
-        <div class="px-6 py-5 border-b border-white/10 text-center">
-          <h2 class="text-xl font-bold text-white">{{ $t('invoicePay.invoiceNum', { id: invoiceId }) }}</h2>
-        </div>
-
-        <div class="p-6">
-          <!-- Line items table -->
-          <div class="mb-4">
-            <div class="grid grid-cols-[1fr_auto] gap-4 pb-2 border-b border-white/10 mb-3">
-              <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">{{ $t('client.invoices.colDescription') }}</span>
-              <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest text-right">{{ $t('client.invoices.colAmount') }}</span>
-            </div>
-            <div
-              v-for="item in invoice.items"
-              :key="item.id"
-              class="grid grid-cols-[1fr_auto] gap-4 py-2 border-b border-white/5"
-            >
-              <span class="text-sm text-gray-300">{{ item.description }}</span>
-              <span class="text-sm text-white font-medium text-right">{{ money(item.amount) }}</span>
-            </div>
-          </div>
-
-          <!-- Totals -->
-          <div class="space-y-2 pt-2">
-            <div class="grid grid-cols-[1fr_auto] gap-4">
-              <span class="text-sm font-semibold text-gray-400">{{ $t('client.invoices.subtotal') }}</span>
-              <span class="text-sm font-semibold text-white">{{ money(invoice.subTotal) }}</span>
-            </div>
-            <div class="grid grid-cols-[1fr_auto] gap-4">
-              <span class="text-sm text-gray-500">{{ $t('client.invoices.creditApplied') }}</span>
-              <span class="text-sm text-gray-400">{{ money(invoice.credit) }}</span>
-            </div>
-            <div class="grid grid-cols-[1fr_auto] gap-4 pt-2 border-t border-white/10">
-              <span class="text-sm font-bold text-white">{{ $t('client.invoices.total') }}</span>
-              <span class="text-sm font-bold text-white">{{ money(invoice.total) }}</span>
-            </div>
-          </div>
-
-          <!-- Payments to date / Balance -->
-          <div class="mt-6 space-y-2">
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-400">{{ $t('invoicePay.paymentsToDate') }}</span>
-              <span class="text-white">{{ money(received) }}</span>
-            </div>
-          </div>
-
-          <!-- Balance Due -->
-          <div class="mt-4 p-4 rounded-xl bg-green-500/10 border border-green-500/20 flex justify-between items-center">
-            <span class="font-bold text-white">{{ $t('invoicePay.balanceDue') }}</span>
-            <span class="font-bold text-green-400 text-lg">{{ money(outstanding) }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Security notice -->
-    <div class="mt-6 flex items-center gap-2 px-4 py-3 rounded-xl bg-yellow-500/5 border border-yellow-500/15 text-yellow-400/80 text-xs">
-      <Lock :size="14" :stroke-width="2" class="flex-shrink-0" />
-      {{ $t('invoicePay.securityNotice') }}
-    </div>
-  </div>
+    <UiAlert variant="warning" :icon-size="14" data-testid="invoice-pay-security">{{ $t('invoicePay.securityNotice') }}</UiAlert>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
-import { AlertCircle, CheckCircle, CreditCard, Plus, Lock, Loader2 } from 'lucide-vue-next'
-import { useBillingApi } from '~/composables/apis/useBillingApi'
-import type { ClientInvoice } from '~/types/clientinvoice'
-import type { PaymentMethod } from '~/types/payment'
-import { apiErrorMessage } from '~/utils/apiError'
-import { formatCurrency } from '~/utils/formatCurrency'
-import { balanceDue, paymentsToDate } from '~/utils/invoice'
+/**
+ * Invoice payment page: the payment form beside the invoice recap. The invoice, the saved
+ * payment methods and the available gateways are read through the invoice payment store, which
+ * also owns the in-flight flag, the success flag and the refusal sentence.
+ */
+import { AlertCircle, CheckCircle } from 'lucide-vue-next'
+import { useInvoicePaymentStore } from '~/stores/invoicepayment'
+import { InvoiceStatus } from '~/types/invoicestatus'
 
 definePageMeta({ layout: 'client', middleware: 'client-auth' })
 
-const route = useRoute()
-const localePath = useLocalePath()
+/** Translates a key into the active locale. */
 const { t } = useI18n()
-const config = useRuntimeConfig()
+/** The current route; its params name the record shown. */
+const route = useRoute()
+/** Prefixes a path with the active locale. */
+const localePath = useLocalePath()
 
-/**
- * Base URL of the WHMCS instance this deployment fronts, or an empty string.
- *
- * Empty is a legitimate configuration — a deployment that runs no WHMCS, or one where
- * `WHMCS_URL` has not been set yet — so every link built from it must be guarded.
- */
-const whmcsUrl = config.public.whmcsUrl
-
+/** The id of the invoice being paid. */
 const invoiceId = route.params.id as string
 
-// Fetch invoice + saved payment methods in parallel
-// Straight from the API composables rather than through a store: this page reads these once
-// and owns the results alone, which is the named exception to component -> store -> api.
-const billing = useBillingApi()
-const [{ data: invoiceData, pending }, { data: methodsData }] = await Promise.all([
-  billing.loadInvoice(() => invoiceId),
-  billing.loadPaymentMethods()
-])
+/** The invoice payment store; reset so a previous visit's success or error does not linger. */
+const paymentStore = useInvoicePaymentStore()
+paymentStore.reset()
 
-const invoice = computed<ClientInvoice | null>(() => invoiceData.value ?? null)
-const savedMethods = computed<PaymentMethod[]>(() => methodsData.value ?? [])
-
-// Hosted-gateway availability — the backend lists 'stripe' and 'bank_transfer' plus every
-// enabled/configured payment plugin. Pick the first plugin-backed one (not a fixed module id,
-// so a second gateway plugin doesn't get silently ignored here).
-const { data: gatewayMethods } = await billing.loadGatewayMethods()
-const hostedGatewayModule = computed(() =>
-  (gatewayMethods.value ?? [])
-    .find(m => m.module !== PAYMENT_MODULE_STRIPE && m.module !== PAYMENT_MODULE_BANK_TRANSFER)?.module ?? null)
-
-/**
- * Formats one amount on this invoice in the invoice's own billing currency.
- *
- * Every figure on this page was previously interpolated between a literal `$` and a literal
- * ` USD` — a hardcoded symbol *and* a hardcoded currency name, on the screen where the customer
- * authorises a payment, in a portal that also bills in drams and roubles. The replacement read
- * `currencycode` / `currencyprefix` / `currencysuffix` off the invoice, which `InvoiceDto` did
- * not carry, then read the account's currency — which is wrong for the same reason described
- * on `pages/client/invoices/[id].vue`: an invoice's currency is fixed at creation and is not
- * always the account's *current* one. `InvoiceDto.Currency` (Plan §3) is the authority.
- *
- * @param amount - The amount the API sent for this figure.
- * @returns The formatted amount, or an em dash when there is no figure.
- */
-const money = (amount: string | number | null | undefined): string =>
-  formatCurrency(amount, { code: invoice.value?.currency })
-
-/** How much has actually been received against this invoice — see `utils/invoice.ts`. */
-const received = computed(() => paymentsToDate(invoice.value?.transactions))
-
-/** What is still owed: the total less everything received. */
-const outstanding = computed(() => balanceDue(invoice.value))
-
-/**
- * Whether paying with a card that is not already saved is possible at all.
- *
- * That path is a hand-off to WHMCS's PCI-compliant hosted card page, so it exists only when
- * this deployment has a WHMCS instance. With no `whmcsUrl` the redirect would navigate the
- * person away from this page to a 404 on the portal's own origin, mid-checkout, losing the
- * payment page entirely — so the option is not offered rather than offered and broken.
- */
-const canUseNewCard = computed(() => Boolean(whmcsUrl))
-
-// Payment form state
-//
-// `null` means no payment method is selectable: no card is saved and the new-card hand-off is
-// unavailable. Paying via a hosted gateway plugin is a separate button and is unaffected.
-// `string`, not `number`: a saved method's id is a Stripe PaymentMethod id (`pm_1AbC...`), as
-// `types/payment.ts` has always said. Typed `number` here, the initialiser below silently
-// widened to `string | null` and the radio inputs bound ids this ref claimed it could not hold.
-const selectedMethodId = ref<string | 'new' | null>(
-  savedMethods.value[0]?.id ?? (canUseNewCard.value ? 'new' : null)
+// Invoice, saved payment methods and gateways are read in parallel. The first plugin-backed
+// gateway (not a fixed module id) is the hosted one, so a second gateway plugin is not ignored.
+/** Loading flag of the data this page reads. */
+const { pending } = await useAsyncData(
+  `client-invoice-pay-${invoiceId}`,
+  () => Promise.all([paymentStore.loadInvoice(invoiceId), paymentStore.loadPaymentOptions()])
 )
-const cardNumber = ref('')
-const expiryDate = ref('')
-const cvv = ref('')
-const cardDescription = ref('')
-const submitting = ref(false)
-const paySuccess = ref(false)
-const payError = ref('')
 
-/** Whether the card-entry form should render — it only ever feeds the WHMCS hand-off. */
-const showNewCardForm = computed(() => canUseNewCard.value && selectedMethodId.value === 'new')
+/** The invoice being paid; null until loaded or after a failed read. */
+const invoice = computed(() => paymentStore.invoice)
 
-/**
- * Whether this page offers any card-based way to pay.
- *
- * False leaves the hosted-gateway button (if a gateway plugin is enabled) as the only route;
- * with neither, the invoice cannot be paid from this page at all.
- */
-const hasSelectableMethod = computed(() => savedMethods.value.length > 0 || canUseNewCard.value)
+/** The invoice's own page. */
+const invoicePath = computed(() => localePath(`/client/invoices/${invoiceId}`))
 
-function formatCardNumber(e: Event) {
-  const input = e.target as HTMLInputElement
-  const v = input.value.replace(/\D/g, '').slice(0, 16)
-  cardNumber.value = v.replace(/(.{4})/g, '$1 ').trim()
-}
-
-function formatExpiry(e: Event) {
-  const input = e.target as HTMLInputElement
-  const v = input.value.replace(/\D/g, '').slice(0, 4)
-  if (v.length >= 3) expiryDate.value = v.slice(0, 2) + ' / ' + v.slice(2)
-  else expiryDate.value = v
-}
-
-/**
- * Pays the invoice with the selected method.
- *
- * A saved card is charged through the API. "New card" instead hands off to WHMCS's hosted
- * card page, which navigates the browser away — so it is only ever taken when
- * {@link canUseNewCard} holds. The guards here are a second line of defence: the option is
- * already not rendered when it cannot work.
- */
-const submitPayment = async () => {
-  payError.value = ''
-
-  // Nothing selectable — the submit button is not rendered in this state.
-  if (selectedMethodId.value === null) return
-
-  // If new card entry → redirect to WHMCS for PCI-compliant card processing.
-  if (selectedMethodId.value === 'new') {
-    if (!canUseNewCard.value) return
-    window.location.href = `${whmcsUrl}/index.php?rp=/invoice/${invoiceId}/pay`
-    return
-  }
-
-  submitting.value = true
-  try {
-    await billing.payInvoice(invoiceId, selectedMethodId.value)
-    paySuccess.value = true
-  } catch (err: unknown) {
-    // The API's own wording, through the one shared reader in `utils/apiError.ts`;
-    // the local key is only the no-answer fallback.
-    payError.value = apiErrorMessage(err) || t('invoicePay.paymentFailed')
-  } finally {
-    submitting.value = false
-  }
-}
-
-/** Starts a hosted-gateway payment (whichever plugin is enabled) and redirects the browser to the bank. */
-async function payWithHostedGateway() {
-  if (!hostedGatewayModule.value) return
-  payError.value = ''
-  submitting.value = true
-  try {
-    const returnUrl = new URL(
-      localePath(`/payment/result?invoice=${invoiceId}`),
-      window.location.origin,
-    ).toString()
-    const { redirectUrl } = await billing.startInvoiceGatewayPayment(
-      invoiceId,
-      hostedGatewayModule.value as string,
-      returnUrl
-    )
-    window.location.href = redirectUrl
-  } catch (err: unknown) {
-    // The API's own wording, through the one shared reader in `utils/apiError.ts`;
-    // the local key is only the no-answer fallback.
-    payError.value = apiErrorMessage(err) || t('invoicePay.paymentFailed')
-    submitting.value = false
-  }
-}
+/** The breadcrumb trail: invoices, this invoice, the payment step. */
+const crumbs = computed(() => [
+  { label: t('client.invoices.title'), to: localePath('/client/invoices') },
+  { label: t('invoicePay.invoiceNum', { id: invoiceId }), to: invoicePath.value },
+  { label: t('invoicePay.makePayment') },
+])
 </script>

@@ -13,7 +13,7 @@ export interface PaymentMethod {
   description: string
   /** Gateway name shown when there is no description */
   gateway_name: string
-  /** WHMCS sub-contact this card's billing address is assigned to, if any */
+  /** Legacy sub-contact this card's billing address is assigned to, if any */
   contact_id?: number
   /** Last four digits of the card or account number */
   card_last_four?: string | null

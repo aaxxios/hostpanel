@@ -1,10 +1,48 @@
+/** Route table and navigation guard of the admin SPA. */
+import type { Component } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
-import { authMiddleware } from '../middleware/auth'
-import { REPORTS } from '../modules/reports/reports'
+import { authMiddleware } from '@/middleware/auth'
+import { getRuntimeConfig } from '@/lib/runtimeConfig'
+import { REPORTS } from '@/lib/reports'
 
+/** Every view and layout as a lazy loader, keyed by its path relative to this file; Vite splits each into its own chunk. */
+const loaders = import.meta.glob<{ default: Component }>(['../views/*.vue', '../layouts/*.vue'])
+
+/**
+ * Looks up the lazy loader of one routed file.
+ *
+ * @param file - Path under `src/`, such as `views/LoginView.vue` or `layouts/AppLayout.vue`.
+ * @returns The dynamic-import function vue-router calls on first visit.
+ * @throws When no such file exists, so a typo fails when the table is built rather than on navigation.
+ */
+const lazy = (file: string): (() => Promise<{ default: Component }>) => {
+  const loader = loaders[`../${file}`]
+  if (!loader) {
+    throw new Error(`Unknown routed file: ${file}`)
+  }
+  return loader
+}
+
+/**
+ * Sends a bare client URL to its summary tab.
+ *
+ * @param to - The requested location.
+ * @param to.path - Its path.
+ * @returns The same path with `/summary` appended.
+ */
+const clientSummaryRedirect = (to: { path: string }): { path: string } => ({ path: `${to.path.replace(/\/$/, '')}/summary` })
+
+/**
+ * Every navigation starts at the top of the page.
+ *
+ * @returns The scroll position to restore.
+ */
+const scrollToTop = (): { top: number } => ({ top: 0 })
+
+/** The application router; every screen is a lazy view under the authenticated layout. */
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  scrollBehavior: () => ({ top: 0 }),
+  history: createWebHistory(getRuntimeConfig().basePath),
+  scrollBehavior: scrollToTop,
   routes: [
     {
       // Not `public: true`. The guard judges this route on its own terms — setup still
@@ -12,131 +50,134 @@ const router = createRouter({
       // would bounce the operator to /dashboard the moment registration signed them in,
       // before they had claimed the Admin role.
       path: '/setup',
-      component: () => import('../modules/auth/views/SetupView.vue'),
+      component: lazy('views/SetupView.vue'),
       meta: { setup: true },
     },
     {
       path: '/verify-email',
-      component: () => import('../modules/auth/views/VerifyEmailView.vue'),
+      component: lazy('views/VerifyEmailView.vue'),
       meta: { public: true },
     },
     {
       path: '/login',
-      component: () => import('../modules/auth/views/LoginView.vue'),
+      component: lazy('views/LoginView.vue'),
       meta: { public: true },
     },
     // /auth/callback is gone with the browser-side code exchange: the SSO returns to
     // /api/auth/callback, which the API answers using the client secret.
     {
       path: '/',
-      component: () => import('../components/layout/Layout.vue'),
+      component: lazy('layouts/AppLayout.vue'),
       meta: { requiresAuth: true },
       children: [
         { path: '', redirect: '/dashboard' },
-        { path: 'dashboard', component: () => import('../modules/dashboard/views/DashboardView.vue') },
-        { path: 'notifications', component: () => import('../modules/dashboard/views/NotificationsView.vue') },
-        { path: 'clients', component: () => import('../modules/clients/views/ClientsListView.vue') },
-        { path: 'clients/add', component: () => import('../modules/clients/views/AddClientView.vue') },
-        { path: 'clients/users', component: () => import('../modules/clients/views/ManageUsersView.vue') },
-        { path: 'clients/shared-hostings', component: () => import('../modules/services/views/ServicesListView.vue') },
-        { path: 'clients/addons', component: () => import('../modules/clients/views/ServiceAddonsView.vue') },
-        { path: 'clients/domain-registrations', component: () => import('../modules/clients/views/DomainRegistrationsView.vue') },
-        { path: 'clients/cancellations', component: () => import('../modules/clients/views/CancellationRequestsView.vue') },
-        { path: 'clients/affiliates', component: () => import('../modules/clients/views/ManageAffiliatesView.vue') },
+        { path: 'dashboard', component: lazy('views/DashboardView.vue') },
+        { path: 'notifications', component: lazy('views/NotificationsView.vue') },
+        { path: 'clients', component: lazy('views/ClientsListView.vue') },
+        { path: 'clients/add', component: lazy('views/AddClientView.vue') },
+        { path: 'clients/users', component: lazy('views/ManageUsersView.vue') },
+        { path: 'clients/shared-hostings', component: lazy('views/ServicesListView.vue') },
+        { path: 'clients/addons', component: lazy('views/ServiceAddonsView.vue') },
+        { path: 'clients/domain-registrations', component: lazy('views/DomainRegistrationsView.vue') },
+        { path: 'clients/cancellations', component: lazy('views/CancellationRequestsView.vue') },
+        { path: 'clients/affiliates', component: lazy('views/ManageAffiliatesView.vue') },
         {
           path: 'clients/:id',
-          component: () => import('../modules/clients/views/ClientLayout.vue'),
+          component: lazy('layouts/ClientLayout.vue'),
           children: [
-            { path: '', redirect: to => ({ path: `${to.path.replace(/\/$/, '')}/summary` }) },
-            { path: 'summary', component: () => import('../modules/clients/views/ClientSummaryView.vue') },
-            { path: 'profile', component: () => import('../modules/clients/views/ClientProfileView.vue') },
-            { path: 'services', component: () => import('../modules/clients/views/ClientServicesListView.vue') },
-            { path: 'services/:serviceId', component: () => import('../modules/clients/views/ClientServiceDetailView.vue') },
-            { path: 'users', component: () => import('../modules/clients/views/ClientUsersView.vue') },
-            { path: 'contacts', component: () => import('../modules/clients/views/ClientContactsView.vue') },
-            { path: 'billable-items', component: () => import('../modules/clients/views/ClientBillableItemsView.vue') },
-            { path: 'invoices', component: () => import('../modules/clients/views/ClientInvoicesView.vue') },
-            { path: 'quotes', component: () => import('../modules/clients/views/ClientQuotesView.vue') },
-            { path: 'transactions', component: () => import('../modules/clients/views/ClientTransactionsView.vue') },
-            { path: 'tickets', component: () => import('../modules/clients/views/ClientTicketsView.vue') },
-            { path: 'tickets/new', component: () => import('../modules/clients/views/ClientOpenTicketView.vue') },
-            { path: 'tickets/:ticketId', component: () => import('../modules/clients/views/ClientTicketDetailView.vue') },
-            { path: 'emails', component: () => import('../modules/clients/views/ClientEmailsView.vue') },
-            { path: 'log', component: () => import('../modules/clients/views/ClientLogView.vue') },
-            { path: 'domains', component: () => import('../modules/clients/views/ClientDomainsListView.vue') },
-            { path: 'domains/:domainId', component: () => import('../modules/clients/views/ClientDomainDetailView.vue') },
+            { path: '', redirect: clientSummaryRedirect },
+            { path: 'summary', component: lazy('views/ClientSummaryView.vue') },
+            { path: 'profile', component: lazy('views/ClientProfileView.vue') },
+            { path: 'services', component: lazy('views/ClientServicesListView.vue') },
+            { path: 'services/:serviceId', component: lazy('views/ClientServiceDetailView.vue') },
+            { path: 'users', component: lazy('views/ClientUsersView.vue') },
+            { path: 'contacts', component: lazy('views/ClientContactsView.vue') },
+            { path: 'billable-items', component: lazy('views/ClientBillableItemsView.vue') },
+            { path: 'invoices', component: lazy('views/ClientInvoicesView.vue') },
+            { path: 'quotes', component: lazy('views/ClientQuotesView.vue') },
+            { path: 'transactions', component: lazy('views/ClientTransactionsView.vue') },
+            { path: 'tickets', component: lazy('views/ClientTicketsView.vue') },
+            { path: 'tickets/new', component: lazy('views/ClientOpenTicketView.vue') },
+            { path: 'tickets/:ticketId', component: lazy('views/ClientTicketDetailView.vue') },
+            { path: 'emails', component: lazy('views/ClientEmailsView.vue') },
+            { path: 'log', component: lazy('views/ClientLogView.vue') },
+            { path: 'domains', component: lazy('views/ClientDomainsListView.vue') },
+            { path: 'domains/:domainId', component: lazy('views/ClientDomainDetailView.vue') },
           ],
         },
         {
           path: 'billing',
           children: [
             { path: '', redirect: 'invoices' },
-            { path: 'invoices', component: () => import('../modules/billing/views/InvoicesListView.vue') },
-            { path: 'invoices/:id/:action', component: () => import('../modules/billing/views/InvoiceDetailView.vue') },
-            { path: ':id', component: () => import('../modules/billing/views/InvoiceDetailView.vue') },
-            { path: 'billable-items', component: () => import('../modules/billing/views/BillableItemsView.vue') },
-            { path: 'billable-items/add', component: () => import('../modules/billing/views/AddBillableItemView.vue') },
-            { path: 'quotes', component: () => import('../modules/billing/views/QuotesListView.vue') },
-            { path: 'quotes/add', component: () => import('../modules/billing/views/AddQuoteView.vue') },
-            { path: 'quotes/new', component: () => import('../modules/billing/views/QuoteDetailView.vue') },
-            { path: 'quotes/:id', component: () => import('../modules/billing/views/QuoteDetailView.vue') },
-            { path: 'offline-cc', component: () => import('../modules/billing/views/OfflineCCView.vue') },
-            { path: 'disputes', component: () => import('../modules/billing/views/DisputesView.vue') },
-            { path: 'gateway-log', component: () => import('../modules/billing/views/GatewayLogView.vue') },
-            { path: 'transactions', component: () => import('../modules/billing/views/TransactionsListView.vue') },
-            { path: 'add-transaction', component: () => import('../modules/billing/views/AddTransactionView.vue') },
-            { path: 'transactions/:id/edit', component: () => import('../modules/billing/views/EditTransactionView.vue') },
+            { path: 'invoices', component: lazy('views/InvoicesListView.vue') },
+            { path: 'invoices/:id/:action', component: lazy('views/InvoiceDetailView.vue') },
+            { path: ':id', component: lazy('views/InvoiceDetailView.vue') },
+            { path: 'billable-items', component: lazy('views/BillableItemsView.vue') },
+            { path: 'billable-items/add', component: lazy('views/AddBillableItemView.vue') },
+            { path: 'quotes', component: lazy('views/QuotesListView.vue') },
+            { path: 'quotes/add', component: lazy('views/AddQuoteView.vue') },
+            { path: 'quotes/new', component: lazy('views/QuoteDetailView.vue') },
+            { path: 'quotes/:id', component: lazy('views/QuoteDetailView.vue') },
+            { path: 'offline-cc', component: lazy('views/OfflineCCView.vue') },
+            { path: 'disputes', component: lazy('views/DisputesView.vue') },
+            { path: 'gateway-log', component: lazy('views/GatewayLogView.vue') },
+            { path: 'transactions', component: lazy('views/TransactionsListView.vue') },
+            { path: 'add-transaction', component: lazy('views/AddTransactionView.vue') },
+            { path: 'transactions/:id/edit', component: lazy('views/EditTransactionView.vue') },
           ],
         },
         {
           path: 'reports',
-          component: () => import('../modules/reports/ReportsLayout.vue'),
+          component: lazy('layouts/ReportsLayout.vue'),
           children: [
             { path: '', redirect: '/reports/daily-performance' },
+            /** One route per catalogued report. */
             ...REPORTS.map(r => ({ path: r.slug, component: r.component })),
           ],
         },
-        { path: 'orders', component: () => import('../modules/orders/views/OrdersListView.vue') },
-        { path: 'orders/:id', component: () => import('../modules/orders/views/OrderDetailView.vue') },
-        { path: 'services', component: () => import('../modules/services/views/ServicesListView.vue') },
-        { path: 'domains', component: () => import('../modules/domains/views/DomainsListView.vue') },
+        { path: 'orders', component: lazy('views/OrdersListView.vue') },
+        { path: 'orders/:id', component: lazy('views/OrderDetailView.vue') },
+        { path: 'services', component: lazy('views/ServicesListView.vue') },
+        { path: 'domains', component: lazy('views/DomainsListView.vue') },
         { path: 'support', redirect: '/support/overview' },
-        { path: 'support/overview', component: () => import('../modules/support/views/SupportOverviewView.vue') },
-        { path: 'support/tickets', component: () => import('../modules/support/views/SupportTicketsView.vue') },
-        { path: 'support/tickets/new', component: () => import('../modules/support/views/SupportOpenTicketView.vue') },
-        { path: 'support/tickets/:id', component: () => import('../modules/support/views/SupportTicketDetailView.vue') },
-        { path: 'support/predefined-replies', component: () => import('../modules/support/views/PredefinedRepliesView.vue') },
-        { path: 'support/announcements', component: () => import('../modules/support/views/AnnouncementsListView.vue') },
-        { path: 'support/announcements/new', component: () => import('../modules/support/views/AnnouncementFormView.vue') },
-        { path: 'support/announcements/:id/edit', component: () => import('../modules/support/views/AnnouncementFormView.vue') },
-        { path: 'support/downloads', component: () => import('../modules/support/views/DownloadsView.vue') },
-        { path: 'support/knowledgebase', component: () => import('../modules/support/views/KnowledgebaseView.vue') },
-        { path: 'support/network-issues', component: () => import('../modules/support/views/NetworkIssuesView.vue') },
-        { path: 'support/network-issues/new', component: () => import('../modules/support/views/NetworkIssueFormView.vue') },
-        { path: 'support/network-issues/:id/edit', component: () => import('../modules/support/views/NetworkIssueFormView.vue') },
-        { path: 'plugins', component: () => import('../modules/plugins/views/PluginsView.vue') },
-        { path: 'servers', component: () => import('../modules/servers/views/ServersView.vue') },
-        { path: 'integrations/:slug/configure', component: () => import('../modules/integrations/views/IntegrationDetailView.vue') },
-        { path: 'migration', component: () => import('../modules/migration/views/MigrationView.vue') },
+        { path: 'support/overview', component: lazy('views/SupportOverviewView.vue') },
+        { path: 'support/tickets', component: lazy('views/SupportTicketsView.vue') },
+        { path: 'support/tickets/new', component: lazy('views/SupportOpenTicketView.vue') },
+        { path: 'support/tickets/:id', component: lazy('views/SupportTicketDetailView.vue') },
+        { path: 'support/predefined-replies', component: lazy('views/PredefinedRepliesView.vue') },
+        { path: 'support/announcements', component: lazy('views/AnnouncementsListView.vue') },
+        { path: 'support/announcements/new', component: lazy('views/AnnouncementFormView.vue') },
+        { path: 'support/announcements/:id/edit', component: lazy('views/AnnouncementFormView.vue') },
+        { path: 'support/downloads', component: lazy('views/DownloadsView.vue') },
+        { path: 'support/knowledgebase', component: lazy('views/KnowledgebaseView.vue') },
+        { path: 'support/network-issues', component: lazy('views/NetworkIssuesView.vue') },
+        { path: 'support/network-issues/new', component: lazy('views/NetworkIssueFormView.vue') },
+        { path: 'support/network-issues/:id/edit', component: lazy('views/NetworkIssueFormView.vue') },
+        { path: 'plugins', component: lazy('views/PluginsView.vue') },
+        { path: 'servers', component: lazy('views/ServersView.vue') },
+        { path: 'integrations/:slug/configure', component: lazy('views/IntegrationDetailView.vue') },
+        { path: 'migration', component: lazy('views/MigrationView.vue') },
         {
           path: 'integrations',
-          component: () => import('../modules/integrations/IntegrationsLayout.vue'),
+          component: lazy('layouts/IntegrationsLayout.vue'),
           children: [
             { path: '', redirect: '/integrations/payments' },
-            { path: ':category', component: () => import('../modules/integrations/views/IntegrationsView.vue') },
+            { path: ':category', component: lazy('views/IntegrationsView.vue') },
           ],
         },
-        { path: 'settings', component: () => import('../modules/settings/views/SystemSettingsView.vue') },
-        { path: 'settings/email-templates', component: () => import('../modules/settings/views/EmailTemplatesView.vue') },
-        { path: 'settings/products', component: () => import('../modules/settings/views/ProductsView.vue') },
-        { path: 'settings/slides', component: () => import('../modules/settings/views/SlidesView.vue') },
-        { path: 'settings/slides/create', component: () => import('../modules/settings/views/SlideFormView.vue') },
-        { path: 'settings/slides/:id/edit', component: () => import('../modules/settings/views/SlideFormView.vue') },
-        { path: 'settings/tld-pricing', component: () => import('../modules/settings/views/TldConfigsView.vue') },
-        { path: 'settings/tld-pricing/create', component: () => import('../modules/settings/views/TldConfigFormView.vue') },
-        { path: 'settings/tld-pricing/:id/edit', component: () => import('../modules/settings/views/TldConfigFormView.vue') },
-        { path: 'settings/gateways', component: () => import('../modules/settings/views/GatewaysView.vue') },
-        { path: 'settings/currencies', component: () => import('../modules/settings/views/CurrenciesView.vue') },
+        { path: 'settings', component: lazy('views/SystemSettingsView.vue') },
+        { path: 'settings/email-templates', component: lazy('views/EmailTemplatesView.vue') },
+        { path: 'settings/products', component: lazy('views/ProductsView.vue') },
+        { path: 'settings/slides', component: lazy('views/SlidesView.vue') },
+        { path: 'settings/slides/create', component: lazy('views/SlideFormView.vue') },
+        { path: 'settings/slides/:id/edit', component: lazy('views/SlideFormView.vue') },
+        { path: 'settings/tld-pricing', component: lazy('views/TldConfigsView.vue') },
+        { path: 'settings/tld-pricing/create', component: lazy('views/TldConfigFormView.vue') },
+        { path: 'settings/tld-pricing/:id/edit', component: lazy('views/TldConfigFormView.vue') },
+        // The old gateways table read an endpoint that never existed; payment gateways are configured
+        // under Integrations, so a bookmark to the old address goes there.
+        { path: 'settings/gateways', redirect: '/integrations/payments' },
+        { path: 'settings/currencies', component: lazy('views/CurrenciesView.vue') },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/login' },

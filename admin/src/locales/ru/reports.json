@@ -1,0 +1,302 @@
+{
+  "reportComingSoon": {
+    "comingSoon": "Скоро",
+    "thisReportIsUnderDevelopment": "Этот отчёт находится в разработке."
+  },
+  "reportTimestamp": {
+    "reportGeneratedOnTimestamp": "Отчёт сформирован: {timestamp}"
+  },
+  "agingInvoices": {
+    "agingInvoices": "Просроченные счета",
+    "aSummaryOfOutstandingInvoices": "Сводка по неоплаченным счетам с разбивкой по периодам просрочки",
+    "period": "Период",
+    "curAmount": "Сумма ({cur})"
+  },
+  "annualIncome": {
+    "annualIncomeReport": "Годовой отчёт о доходах",
+    "totalIncomePerMonthFor": "Общий доход по месяцам за выбранный год",
+    "income": "Доход"
+  },
+  "clientsByCountry": {
+    "clientsByCountry": "Клиенты по странам",
+    "thisReportShowsTheTotal": "Этот отчёт показывает общее число активных услуг по странам, а также общее число активных уникальных клиентов по странам в таблице ниже.",
+    "top10Countries": "Топ-10 стран",
+    "clearSelection": "Сбросить выбор",
+    "activeClients": "Активные клиенты",
+    "totalClients": "Всего клиентов:",
+    "mapHint": "Наведите на точку, чтобы увидеть город."
+  },
+  "clientsReport": {
+    "thisReportCanBeUsed": "Этот отчёт позволяет сформировать пользовательский экспорт клиентов, применив до 5 фильтров. Экспорт в CSV доступен через меню «Инструменты» справа.",
+    "creationDateRange": "Период создания",
+    "totalcountClientSFound": "Найдено клиентов: {totalCount}",
+    "noClientsFoundClickFilter": "Клиенты не найдены. Нажмите «Фильтр», чтобы загрузить результаты."
+  },
+  "clientStatement": {
+    "clientAccountRegisterBalance": "Баланс счёта клиента",
+    "thisReportProvidesAStatement": "Этот отчёт содержит выписку по счетам отдельных клиентов.",
+    "selectClient": "Выберите клиента",
+    "previousBalance": "Предыдущий баланс:",
+    "noEntriesForThisPeriod": "За этот период записей нет.",
+    "endingBalance": "Конечный баланс:",
+    "debit": "Дебет"
+  },
+  "creditsReviewer": {
+    "creditsReviewer": "Проверка кредитов",
+    "thisReportAllowsYouTo": "Этот отчёт позволяет просмотреть все кредиты, выданные клиентам между двумя указанными датами.",
+    "allClients": "Все клиенты",
+    "minAmount": "Мин. сумма",
+    "maxAmount": "Макс. сумма",
+    "creditsFoundTotal": "кредитов найдено — итого:",
+    "creditId": "ID кредита",
+    "clientId": "ID клиента",
+    "adminUser": "Администратор",
+    "noCreditsFoundForThis": "За этот период кредиты не найдены."
+  },
+  "customerRetention": {
+    "averageCustomerRetentionTime": "Среднее время удержания клиентов",
+    "thisReportCalculatesAndProvides": "Этот отчёт вычисляет средний срок жизни продуктов, услуг, дополнений и доменов — то есть количество дней между датой регистрации и датой завершения. Средние значения показаны по продуктам и связанным периодам оплаты, в днях и в годах/месяцах активности.",
+    "includeActiveProductsServicesAssuming": "Включить активные продукты и услуги (считая, что они завершатся в следующую дату оплаты) в расчёт среднего времени удержания",
+    "productCount": "Количество продуктов",
+    "averageDaysActive": "Среднее число активных дней",
+    "averageYearsMonthsActive": "Средняя активность (годы/месяцы)",
+    "noDataFound": "Данные не найдены."
+  },
+  "dailyPerformance": {
+    "dailyPerformance": "Ежедневная эффективность",
+    "overviewOfDailyActivityMetrics": "Обзор ежедневных показателей активности",
+    "noDataFound": "Данные не найдены.",
+    "completedOrders": "Выполненные заказы",
+    "newInvoices": "Новые счета",
+    "paidInvoices": "Оплаченные счета",
+    "openedTickets": "Открытые тикеты",
+    "ticketReplies": "Ответы на тикеты",
+    "cancellationRequests": "Запросы на отмену"
+  },
+  "directDebit": {
+    "directDebitProcessing": "Обработка прямого дебета",
+    "thisReportDisplaysAllUnpaid": "Этот отчёт показывает все неоплаченные счета со способом оплаты «прямой дебет» и сохранённые банковские реквизиты их владельцев, готовые к обработке.",
+    "subtotal": "Подытог",
+    "tax": "Налог",
+    "credit": "Кредит",
+    "bankName": "Название банка",
+    "bankAccountType": "Тип банковского счёта",
+    "bankCode": "Код банка",
+    "bankAccountNumber": "Номер банковского счёта"
+  },
+  "diskUsage": {
+    "diskSpaceBandwidthUsageSummary": "Сводка по дисковому пространству и трафику",
+    "thisReportShowsTheDisk": "Этот отчёт показывает статистику использования дискового пространства и трафика хостинг-аккаунтов.",
+    "diskSpaceUsageStatsLast": "Статистика использования диска обновлена: {value}",
+    "noDataYetClickUpdate": "Данных пока нет — нажмите «Обновить», чтобы получить их с серверов.",
+    "updating": "Обновление…",
+    "updateNow": "Обновить",
+    "clientNameDomain": "Клиент / домен",
+    "diskUsage": "Использование диска",
+    "diskLimit": "Лимит диска",
+    "used": "% использовано",
+    "bwUsage": "Использование трафика",
+    "bwLimit": "Лимит трафика",
+    "noAccountsOnThisServer": "На этом сервере нет аккаунтов.",
+    "noData": "Данные не найдены. Нажмите «Обновить», чтобы получить статистику с ваших хостинг-серверов."
+  },
+  "domainRenewalEmails": {
+    "domainRenewalReminderEmails": "Письма-напоминания о продлении доменов",
+    "thisReportCanBeUsed": "Этот отчёт позволяет сформировать пользовательский экспорт писем-напоминаний о продлении доменов.",
+    "optional": "Необязательно",
+    "dateSent": "Дата отправки",
+    "reminder": "Напоминание",
+    "recipients": "Получатели",
+    "sent": "Отправлено"
+  },
+  "domainsReport": {
+    "thisReportCanBeUsed": "Этот отчёт позволяет сформировать пользовательский экспорт доменов, применив до 5 фильтров. Экспорт в CSV доступен через меню «Инструменты» справа.",
+    "registrationDateRange": "Период регистрации",
+    "nextDueDateRange": "Период следующей оплаты",
+    "expiryDateRange": "Период истечения",
+    "totalcountDomainSFound": "Найдено доменов: {totalCount}",
+    "noDomainsFound": "Домены не найдены.",
+    "regType": "Тип регистрации",
+    "userId": "ID пользователя",
+    "orderId": "ID заказа"
+  },
+  "incomeByProduct": {
+    "thisReportGivesABreakdown": "Этот отчёт показывает разбивку дохода по продуктам/услугам, оплаченного в выбранном месяце."
+  },
+  "incomeForecast": {
+    "incomeForecast": "Прогноз доходов",
+    "projectedIncomeBasedOnRecurring": "Прогнозируемый доход на основе повторяющихся периодов оплаты",
+    "cumulativeForecast": "Накопительный прогноз",
+    "monthly": "Ежемесячно",
+    "quarterly": "Ежеквартально",
+    "semiAnnual": "Раз в полгода",
+    "annual": "Ежегодно"
+  },
+  "invoicesReport": {
+    "thisReportCanBeUsed": "Этот отчёт позволяет сформировать пользовательский экспорт счетов, применив до 5 фильтров.",
+    "creationDate": "Дата создания",
+    "totalcountInvoiceSFound": "Найдено счетов: {totalCount}",
+    "userId": "ID пользователя",
+    "invoiceNumber": "Номер счёта",
+    "tax2": "Налог 2",
+    "taxRate2": "Ставка налога 2"
+  },
+  "monthlyOrders": {
+    "thisReportGivesABreakdown": "Этот отчёт показывает количество проданных единиц каждого продукта по месяцам.",
+    "unitsSold": "Продано единиц"
+  },
+  "monthlyTransactions": {
+    "thisReportProvidesASummary": "Этот отчёт содержит сводку ежедневных платёжных транзакций за выбранный месяц. Показатель «Расход» включает как расходные транзакции, так и возвраты.",
+    "noTransactionsFoundForThis": "Транзакции за этот месяц не найдены."
+  },
+  "newCustomers": {
+    "newCustomers": "Новые клиенты",
+    "monthlyNewSignupsAndOrder": "Ежемесячные новые регистрации и активность заказов",
+    "newSignups": "Новые регистрации",
+    "ordersPlaced": "Размещено заказов",
+    "ordersCompleted": "Выполнено заказов"
+  },
+  "pdfBatch": {
+    "pdfBatch": "Пакет PDF"
+  },
+  "productSuspensions": {
+    "productSuspensions": "Приостановки продуктов",
+    "thisReportAllowsYouTo": "Этот отчёт позволяет просмотреть все приостановленные продукты и указанные причины их приостановки.",
+    "serviceId": "ID услуги",
+    "suspendReason": "Причина приостановки"
+  },
+  "promotions": {
+    "promotions": "Акции"
+  },
+  "salesTax": {
+    "salesTaxLiability": "Обязательства по налогу с продаж",
+    "thisReportShowsSalesTax": "Этот отчёт показывает обязательства по налогу с продаж за выбранный период.",
+    "chooseCurrency": "Выберите валюту",
+    "invoicesFound": "Найдено счетов",
+    "totalInvoiced": "Всего выставлено:",
+    "taxLevel1Liability": "Обязательства по налогу уровня 1:",
+    "taxLevel2Liability": "Обязательства по налогу уровня 2:",
+    "tax": "Налог",
+    "credit": "Кредит",
+    "noInvoicesFoundForThis": "За этот период счета не найдены.",
+    "thisReportExcludesInvoicesThat": "Этот отчёт не включает счета, влияющие на кредитный баланс клиента, поскольку этот доход учитывается и отражается при его применении к счетам за продукты/услуги."
+  },
+  "serverRevenueForecasts": {
+    "serverRevenueForecasts": "Прогноз доходов по серверам"
+  },
+  "servicesReport": {
+    "services": "Услуги",
+    "thisReportCanBeUsed": "Этот отчёт позволяет сформировать пользовательский экспорт услуг, применив до 5 фильтров. Экспорт в CSV доступен через меню «Инструменты» справа.",
+    "terminationDate": "Дата завершения",
+    "totalcountServiceSFound": "Найдено услуг: {totalCount}",
+    "noServicesFound": "Услуги не найдены.",
+    "userId": "ID пользователя",
+    "productId": "ID продукта",
+    "terminatedAt": "Дата завершения"
+  },
+  "smartyCompatibility": {
+    "smartyCompatibility": "Совместимость со Smarty"
+  },
+  "sslMonitoring": {
+    "sslCertificateMonitoring": "Мониторинг SSL-сертификатов",
+    "displaysAListOfDomains": "Показывает список доменов и статус их SSL, если он доступен.",
+    "hideInactiveDomains": "Скрыть неактивные домены",
+    "showInactiveDomains": "Показать неактивные домены",
+    "reValidating": "Повторная проверка...",
+    "reValidateSslStatus": "Перепроверить статус SSL",
+    "issuer": "Издатель",
+    "expiry": "Срок действия",
+    "lastUpdate": "Последнее обновление",
+    "valid": "Действителен",
+    "noSsl": "Нет SSL"
+  },
+  "supportTicketsReport": {
+    "thisReportShowsABreakdown": "Этот отчёт показывает разбивку обработанных тикетов поддержки по администраторам за выбранный месяц.",
+    "admin": "Администратор"
+  },
+  "ticketFeedbackComments": {
+    "ticketFeedbackComments": "Комментарии клиентов к тикетам",
+    "thisReportAllowsYouTo": "Этот отчёт позволяет просмотреть комментарии, оставленные клиентами.",
+    "staffName": "Имя сотрудника",
+    "ticketId": "ID тикета",
+    "feedbackLeft": "Оставлен отзыв",
+    "rating": "Оценка",
+    "comments": "Комментарии"
+  },
+  "ticketFeedbackScores": {
+    "ticketFeedbackScores": "Оценки по тикетам",
+    "thisReportProvidesASummary": "Этот отчёт содержит сводку оценок по каждому сотруднику за выбранный период.",
+    "staffName": "Имя сотрудника",
+    "totalRatings": "Всего оценок",
+    "averageRating": "Средняя оценка"
+  },
+  "ticketRatingsReviewer": {
+    "supportTicketRatingsReviewer": "Проверка оценок тикетов поддержки",
+    "thisReportIsShowingAll": "Этот отчёт показывает все ответы по тикетам с оценкой 1 за выбранный период для проверки.",
+    "rating": "Оценка",
+    "ticket": "Тикет №",
+    "admin": "Администратор",
+    "ratingAtLeast": "{rating}+"
+  },
+  "ticketTags": {
+    "ticketTagsOverview": "Обзор тегов тикетов",
+    "thisReportProvidesAnOverview": "Этот отчёт содержит обзор тегов, назначенных тикетам за выбранный период.",
+    "tag": "Тег",
+    "count": "Количество"
+  },
+  "topClients": {
+    "top10ClientsByIncome": "Топ-10 клиентов по доходу",
+    "thisReportShowsThe10": "Этот отчёт показывает 10 клиентов с наибольшим чистым доходом по введённым транзакциям.",
+    "noData": "Нет данных",
+    "denotesConvertedToDefaultCurrency": "* означает пересчёт в валюту по умолчанию"
+  },
+  "transactionsReport": {
+    "thisReportCanBeUsed": "Этот отчёт позволяет сформировать пользовательский экспорт транзакций, применив до 5 фильтров.",
+    "totalcountTransactionSFound": "Найдено транзакций: {totalCount}",
+    "noTransactionsFound": "Транзакции не найдены.",
+    "userId": "ID пользователя"
+  },
+  "vatMoss": {
+    "vatMossSettlementData": "Данные для расчётов по VAT MOSS",
+    "thisReportProvidesTheInformation": "Этот отчёт содержит информацию, необходимую для подачи декларации VATMOSS. Уточните в налоговом органе, как загрузить данные в портал MOSS.",
+    "selectQuarter": "Выберите квартал",
+    "countryName": "Название страны",
+    "countryCode": "Код страны",
+    "vatRate": "Ставка НДС",
+    "numberOfInvoices": "Количество счетов",
+    "totalValueInvoicedExclVat": "Общая сумма выставленных счетов (без НДС)",
+    "totalVatCollected": "Всего собрано НДС",
+    "totals": "Итого",
+    "ifACountryDoesNot": "* Если страны нет в отчёте, значит, в выбранном периоде НДС с клиентов этой страны не взимался.",
+    "isleOfManGbAnd": "Остров Мэн (GB) и Монако (FR) указаны в этом отчёте как заморские территории ЕС соответствующих стран и должны быть включены в данные, предоставляемые налоговым органам.",
+    "quarter1": "Январь – март",
+    "quarter2": "Апрель – июнь",
+    "quarter3": "Июль – сентябрь",
+    "quarter4": "Октябрь – декабрь",
+    "quarterOption": "{year} Q{quarter} - {months}"
+  },
+  "titles": {
+    "reports": {
+      "clientStatement": "Выписка по клиенту",
+      "customerRetentionTime": "Время удержания клиентов",
+      "diskUsageSummary": "Сводка по использованию диска",
+      "domainRenewalEmails": "Письма о продлении доменов",
+      "incomeByProduct": "Доход по продуктам",
+      "monthlyOrders": "Заказы по месяцам",
+      "monthlyTransactions": "Транзакции по месяцам",
+      "promotionsUsage": "Использование акций",
+      "supportTicketReplies": "Ответы на тикеты поддержки",
+      "ticketRatingsReviewer": "Проверка оценок тикетов",
+      "ticketTags": "Теги тикетов",
+      "vatMoss": "VAT MOSS"
+    },
+    "incomeByProductFor": "Доход по продуктам за {month} {year}",
+    "salesByProductFor": "Продажи по продуктам за {month} {year}",
+    "monthlyTransactionsFor": "Отчёт о транзакциях за {month} {year}",
+    "supportTicketRepliesFor": "Ответы на тикеты поддержки за {month} {year}"
+  },
+  "common": {
+    "years": "{count} г.",
+    "clientCount": "{count} клиент | {count} клиентов"
+  }
+}

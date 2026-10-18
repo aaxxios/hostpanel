@@ -1,12 +1,20 @@
 /**
  * POST /api/portal/order/:id/create-payment-intent
  * Creates a Stripe PaymentIntent via the C# backend.
+ *
+ * @module server/api/portal/order/[id]/create-payment-intent.post
  */
-export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id')
-  if (!id) throw createError({ statusCode: 400, statusMessage: 'Order ID is required' })
 
-  return await internalApiCall<{ clientSecret: string }>(event, `/orders/${id}/create-payment-intent`, {
+/** What the backend answers a PaymentIntent creation with. */
+interface PaymentIntentResult {
+  /** Client secret the browser hands to Stripe to confirm the payment. */
+  clientSecret: string
+}
+
+export default defineEventHandler(async (event) => {
+  const id = requireRouteParam(event, 'id')
+
+  return await internalApiCall<PaymentIntentResult>(event, `/orders/${id}/create-payment-intent`, {
     method: 'POST',
   })
 })

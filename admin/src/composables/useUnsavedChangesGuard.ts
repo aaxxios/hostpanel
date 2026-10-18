@@ -1,3 +1,4 @@
+/** Composable that parks a route change while the reader decides about unsaved edits. */
 import { ref, type Ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 
@@ -27,7 +28,7 @@ export interface UnsavedChangesGuard {
  *
  * @example
  * const guard = useUnsavedChangesGuard(() => isDirty.value && !saving.value)
- * // <UiConfirmModal v-if="guard.pending.value" @confirm="guard.confirmLeave" @close="guard.cancelLeave" />
+ * // <UiDialog variant="confirm" v-if="guard.pending.value" @confirm="guard.confirmLeave" @close="guard.cancelLeave" />
  */
 export const useUnsavedChangesGuard = (isDirty: () => boolean): UnsavedChangesGuard => {
   const pending = ref(false)
@@ -40,7 +41,9 @@ export const useUnsavedChangesGuard = (isDirty: () => boolean): UnsavedChangesGu
   let resolveLeave: ((leave: boolean) => void) | null = null
 
   onBeforeRouteLeave(() => {
-    if (!isDirty()) return true
+    if (!isDirty()) {
+      return true
+    }
 
     pending.value = true
     return new Promise<boolean>((resolve) => {
@@ -48,16 +51,34 @@ export const useUnsavedChangesGuard = (isDirty: () => boolean): UnsavedChangesGu
     })
   })
 
-  /** Closes the question and releases the parked navigation with the reader's answer. */
+  /**
+   * Closes the question and releases the parked navigation with the reader's answer.
+   *
+   * @param leave - True to let the navigation proceed, false to cancel it.
+   */
   const answer = (leave: boolean): void => {
     pending.value = false
     resolveLeave?.(leave)
     resolveLeave = null
   }
 
+  /**
+   * Lets the parked navigation proceed.
+   */
+  const confirmLeave = (): void => {
+    answer(true)
+  }
+
+  /**
+   * Cancels the parked navigation.
+   */
+  const cancelLeave = (): void => {
+    answer(false)
+  }
+
   return {
     pending,
-    confirmLeave: () => answer(true),
-    cancelLeave: () => answer(false),
+    confirmLeave,
+    cancelLeave,
   }
 }

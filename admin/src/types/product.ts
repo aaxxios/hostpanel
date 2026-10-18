@@ -2,7 +2,6 @@
  * A sellable product, the group it sits in, and the payloads that create or update one.
  */
 
-import type { Domain } from './domain'
 
 /** Represents a product/plan available for purchase. */
 export interface Product {

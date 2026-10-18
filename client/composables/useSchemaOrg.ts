@@ -1,10 +1,57 @@
 /**
  * Schema.org structured data composable
  * Provides JSON-LD markup for SEO
+ *
+ * @module composables/useSchemaOrg
  */
 
-import { useHead } from '#app'
+import { APP_LOCALES } from '~/constants/appLocales'
 
+/** A service as the service schema describes it. */
+interface SchemaService {
+  /** Service name. */
+  name: string
+  /** Short description. */
+  description: string
+  /** Address of the service page, absolute or site-relative. */
+  url: string
+  /** Kind of service, e.g. `Web Hosting`. */
+  serviceType: string
+}
+
+/** A software product as the product schema describes it. */
+interface SchemaProduct {
+  /** Product name. */
+  name: string
+  /** Short description. */
+  description: string
+  /** Address of the product page, absolute or site-relative. */
+  url: string
+  /** Product image. */
+  image?: string
+}
+
+/** One step of a breadcrumb trail. */
+interface SchemaBreadcrumb {
+  /** Label of the step. */
+  name: string
+  /** Address of the step, absolute or site-relative. */
+  url: string
+}
+
+/** One question and its answer. */
+interface SchemaFaq {
+  /** The question. */
+  question: string
+  /** The answer. */
+  answer: string
+}
+
+/**
+ * Builds the JSON-LD documents of the public site and injects them into the head.
+ *
+ * @returns The base URL and one builder per schema type, plus the injector.
+ */
 export const useSchemaOrg = () => {
   const config = useRuntimeConfig()
   const baseUrl = config.public.baseUrl || 'https://yourdomain.com'
@@ -28,7 +75,7 @@ export const useSchemaOrg = () => {
         '@type': 'ImageObject',
         url: `${baseUrl}/logo.png`
       },
-      description: siteTagline.value || 'Full-cycle digital agency specializing in web development, SEO, PPC advertising, and SaaS products',
+      description: siteTagline.value || 'Web hosting, domains and servers with online billing and a client portal',
       foundingDate: '2016',
       contactPoint: {
         '@type': 'ContactPoint',
@@ -104,23 +151,18 @@ export const useSchemaOrg = () => {
       '@id': `${baseUrl}/#website`,
       url: baseUrl,
       name: siteName.value,
-      description: siteTagline.value || 'Full-cycle digital agency - Web Development, SEO, PPC, SaaS',
+      description: siteTagline.value || 'Web hosting, domains and servers with online billing and a client portal',
       publisher: {
         '@id': `${baseUrl}/#organization`
       },
-      inLanguage: ['en', 'ru', 'hy']
+      inLanguage: [...APP_LOCALES]
     }
   }
 
   /**
    * Service schema
    */
-  const serviceSchema = (service: {
-    name: string
-    description: string
-    url: string
-    serviceType: string
-  }) => {
+  const serviceSchema = (service: SchemaService) => {
     return {
       '@context': 'https://schema.org',
       '@type': 'Service',
@@ -141,12 +183,7 @@ export const useSchemaOrg = () => {
   /**
    * Product schema (for SaaS products)
    */
-  const productSchema = (product: {
-    name: string
-    description: string
-    url: string
-    image?: string
-  }) => {
+  const productSchema = (product: SchemaProduct) => {
     return {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
@@ -176,7 +213,7 @@ export const useSchemaOrg = () => {
   /**
    * BreadcrumbList schema
    */
-  const breadcrumbSchema = (items: Array<{ name: string; url: string }>) => {
+  const breadcrumbSchema = (items: SchemaBreadcrumb[]) => {
     return {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
@@ -192,7 +229,7 @@ export const useSchemaOrg = () => {
   /**
    * FAQ schema
    */
-  const faqSchema = (faqs: Array<{ question: string; answer: string }>) => {
+  const faqSchema = (faqs: SchemaFaq[]) => {
     return {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',

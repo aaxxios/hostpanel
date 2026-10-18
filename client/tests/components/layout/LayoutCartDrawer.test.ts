@@ -1,0 +1,143 @@
+/**
+ * Unit tests for CartDrawer: closed and empty states, the listed lines and total, the notice for
+ * lines left in another currency, removing, clearing and the way on to checkout.
+ */
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
+import { flushPromises } from '@vue/test-utils'
+import { mountWithKit } from '~/tests/helpers/mountWithKit'
+import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
+import CartDrawer from '~/components/layout/LayoutCartDrawer.vue'
+import { useCartStore } from '~/stores/cart'
+import type { CartItem } from '~/types/cartitem'
+import type { BillingCurrency } from '~/types/currency'
+
+/** The currencies the stood-in currency endpoint answers with. */
+const currencies: BillingCurrency[] = [
+  { code: 'USD', numeric: '840', prefix: '$', suffix: '', decimals: 2, isBase: true },
+  { code: 'AMD', numeric: '051', prefix: '', suffix: ' AMD', decimals: 0, isBase: false },
+]
+
+vi.mock('~/composables/apis/useCurrencyApi', () => ({
+  /**
+   * Stands in for the currency API composable so the store runs without transport.
+   *
+   * @returns Only the endpoint the drawer's store reaches for.
+   */
+  useCurrencyApi: () => ({ loadBillingCurrencies: () => Promise.resolve(currencies) })
+}))
+
+/** Router stand-in shared by the component and the assertions. */
+const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() }
+
+/**
+ * Builds a hosting cart line.
+ *
+ * @param pid Product id.
+ * @param amount Price of the line.
+ * @param currency Currency the line is priced in.
+ * @returns The line.
+ */
+const line = (pid: number, amount: number, currency = 'USD'): CartItem => ({
+  pid,
+  name: `Plan ${pid}`,
+  billingcycle: 'monthly',
+  cycleLabel: 'Monthly',
+  amount,
+  currency,
+})
+
+/**
+ * Mounts the drawer open, with the given lines in the cart, and waits for the currencies.
+ *
+ * @param items Lines to put in the cart.
+ * @returns The wrapper.
+ */
+const mountOpen = async (items: CartItem[] = []) => {
+  const wrapper = mountWithKit(CartDrawer)
+  const cart = useCartStore()
+  cart.items = items
+  cart.isOpen = true
+  await flushPromises()
+  await nextTick()
+  return wrapper
+}
+
+describe('CartDrawer', () => {
+  beforeEach(() => {
+    stubPublicPageRuntime()
+    vi.stubGlobal('useRouter', () => router)
+    router.push.mockClear()
+    window.localStorage.clear()
+  })
+
+  it('renders nothing while the cart is closed', () => {
+    const wrapper = mountWithKit(CartDrawer)
+
+    expect(wrapper.find('[data-testid="ui-drawer"]').exists()).toBe(false)
+  })
+
+  it('shows the empty state with a way to the hosting plans', async () => {
+    const wrapper = await mountOpen()
+
+    expect(wrapper.find('[data-testid="cart-drawer-empty"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="cart-drawer-checkout"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="cart-drawer-browse"]').trigger('click')
+
+    expect(router.push).toHaveBeenCalledWith('/en/hosting')
+    expect(useCartStore().isOpen).toBe(false)
+  })
+
+  it('lists the lines in the payer currency with their prices and the total', async () => {
+    const wrapper = await mountOpen([line(1, 5), line(2, 7.5)])
+
+    expect(wrapper.findAll('[data-testid="cart-drawer-item"]')).toHaveLength(2)
+    const prices = wrapper.findAll('[data-testid="cart-drawer-item-price"]').map((price) => price.text())
+    expect(prices[0]).toContain('5.00')
+    expect(prices[1]).toContain('7.50')
+    expect(wrapper.find('[data-testid="cart-drawer-total"]').text()).toContain('12.50')
+    expect(wrapper.find('[data-testid="cart-drawer-count"]').text()).toContain('2')
+  })
+
+  it('leaves a line priced in another currency out of the list and the total, with a notice', async () => {
+    const wrapper = await mountOpen([line(1, 5), line(2, 2000, 'AMD')])
+
+    expect(wrapper.findAll('[data-testid="cart-drawer-item"]')).toHaveLength(1)
+    expect(wrapper.find('[data-testid="cart-drawer-stale"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="cart-drawer-total"]').text()).toContain('5.00')
+  })
+
+  it('removes a line from its remove button', async () => {
+    const wrapper = await mountOpen([line(1, 5), line(2, 7)])
+
+    await wrapper.get('[data-testid="cart-drawer-remove"]').trigger('click')
+
+    expect(useCartStore().items.map((item) => item.pid)).toEqual([2])
+  })
+
+  it('empties the cart from the clear button', async () => {
+    const wrapper = await mountOpen([line(1, 5), line(2, 7)])
+
+    await wrapper.find('[data-testid="cart-drawer-clear"]').trigger('click')
+
+    expect(useCartStore().items).toEqual([])
+  })
+
+  it('closes and goes to the checkout', async () => {
+    const wrapper = await mountOpen([line(1, 5)])
+
+    await wrapper.find('[data-testid="cart-drawer-checkout"]').trigger('click')
+
+    expect(router.push).toHaveBeenCalledWith('/en/checkout')
+    expect(useCartStore().isOpen).toBe(false)
+  })
+
+  it('closes from the drawer close button', async () => {
+    const wrapper = await mountOpen([line(1, 5)])
+
+    await wrapper.find('[data-testid="ui-drawer-close"]').trigger('click')
+
+    expect(useCartStore().isOpen).toBe(false)
+  })
+})

@@ -1,40 +1,37 @@
 <template>
-  <section class="relative px-[clamp(20px,5vw,48px)] pb-[clamp(56px,8vw,84px)]">
-    <h2 class="mb-2 font-display text-[clamp(25px,3.6vw,36px)] font-bold -tracking-[0.02em] text-tx">
+  <UiStack as="section" gap="none" data-testid="tld-table" class="relative pb-[clamp(56px,8vw,84px)]">
+    <UiHeading :level="2" size="bare" :class="[BLOCK_TITLE_CLASS, 'mb-2']">
       {{ t('aurora.tldTable.title') }}
-    </h2>
-    <p class="mb-7 text-base text-mut">{{ t('aurora.tldTable.lead') }}</p>
+    </UiHeading>
+    <UiText tone="inherit" class="mb-7 text-mut">{{ t('aurora.tldTable.lead') }}</UiText>
 
-
-    <div class="overflow-x-auto rounded-[18px] border border-line bg-surf">
-      <table class="w-full min-w-[640px] border-collapse">
-        <thead>
-          <tr class="border-b border-line text-left text-[13px] uppercase tracking-[0.06em] text-mut2">
-            <th class="px-[22px] py-4 font-normal">{{ t('aurora.tldTable.zone') }}</th>
-            <th class="px-[22px] py-4 font-normal">{{ t('aurora.tldTable.register') }}</th>
-            <th class="px-[22px] py-4 font-normal">{{ t('aurora.tldTable.renew') }}</th>
-            <th class="px-[22px] py-4 font-normal">{{ t('aurora.tldTable.transfer') }}</th>
-            <th class="px-[22px] py-4 font-normal">{{ t('aurora.tldTable.note') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in visibleRows" :key="row.tld" class="border-b border-line last:border-0">
-            <td class="px-[22px] py-[15px] font-mono text-base text-tx">{{ row.tld }}</td>
-            <td class="px-[22px] py-[15px] text-[15px] font-semibold text-tx">{{ row.register }}</td>
-            <td class="px-[22px] py-[15px] text-[15px] text-tx2">{{ row.renew }}</td>
-            <td class="px-[22px] py-[15px] text-[15px] text-tx2">{{ row.transfer }}</td>
-            <!-- The registrar's own category tag; the design's editorial note has no field behind it. -->
-            <td class="px-[22px] py-[15px] text-[13px] text-ac1">{{ row.categories[0] ?? '' }}</td>
-          </tr>
-          <tr v-if="visibleRows.length === 0">
-            <td colspan="5" class="px-[22px] py-8 text-center text-[15px] text-mut2">
-              {{ t('aurora.tldTable.empty') }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+    <UiTable scrollable>
+      <UiTableHead>
+        <UiTableRow :hoverable="false">
+          <UiTableTh>{{ t('aurora.tldTable.zone') }}</UiTableTh>
+          <UiTableTh>{{ t('aurora.tldTable.register') }}</UiTableTh>
+          <UiTableTh>{{ t('aurora.tldTable.renew') }}</UiTableTh>
+          <UiTableTh>{{ t('aurora.tldTable.transfer') }}</UiTableTh>
+          <UiTableTh>{{ t('aurora.tldTable.note') }}</UiTableTh>
+        </UiTableRow>
+      </UiTableHead>
+      <UiTableBody>
+        <UiTableRow v-for="row in visibleRows" :key="row.tld" :data-testid="`tld-row-${row.tld}`">
+          <UiTableTd class="font-mono text-base text-tx">{{ row.tld }}</UiTableTd>
+          <UiTableTd class="font-semibold text-tx">{{ row.register }}</UiTableTd>
+          <UiTableTd class="text-tx2">{{ row.renew }}</UiTableTd>
+          <UiTableTd class="text-tx2">{{ row.transfer }}</UiTableTd>
+          <!-- The registrar's own category tag; the design's editorial note has no field behind it. -->
+          <UiTableTd class="text-ac1">{{ row.categories[0] ?? '' }}</UiTableTd>
+        </UiTableRow>
+        <UiTableRow v-if="visibleRows.length === 0" :hoverable="false">
+          <UiTableTd :colspan="5" align="center" class="py-8 text-mut2" data-testid="tld-empty">
+            {{ t('aurora.tldTable.empty') }}
+          </UiTableTd>
+        </UiTableRow>
+      </UiTableBody>
+    </UiTable>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
@@ -46,17 +43,22 @@
  * the search bar above, because it narrows the results list as well as this
  * table; the selection arrives here as a prop.
  */
-import { ALL_CATEGORY } from '~/templates/aurora/types'
+import { ALL_CATEGORY } from '~/templates/aurora/types/allcategory'
+import { BLOCK_TITLE_CLASS } from '~/templates/aurora/typography'
 import type { TldPriceRow } from '~/types/tldpricerow'
 
+/** Props with their defaults applied. */
 const props = withDefaults(defineProps<{
+  /** Every priced extension. */
   rows?: TldPriceRow[]
   /** Selected category, or ALL_CATEGORY for the unfiltered view. */
   active?: string
 }>(), { rows: () => [], active: ALL_CATEGORY })
 
+/** Translator for the active locale. */
 const { t } = useI18n()
 
+/** The rows in the selected category. */
 const visibleRows = computed(() =>
   props.active === ALL_CATEGORY
     ? props.rows

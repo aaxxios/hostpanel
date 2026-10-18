@@ -19,7 +19,10 @@
 
 import { defineStore } from 'pinia'
 import type { CartItem } from '~/types/cartitem'
+import { CartItemType } from '~/types/cartitemtype'
+import type { DomainOrderAction } from '~/types/domainorderaction'
 
+/** localStorage key the cart is persisted under. */
 const STORAGE_KEY = 'innovayse_cart'
 
 /**
@@ -33,7 +36,7 @@ const STORAGE_KEY = 'innovayse_cart'
  * @param item - The parsed localStorage entry.
  * @returns True when the item predates `amount`/`currency` and must be dropped.
  */
-function isLegacyItem(item: unknown): boolean {
+const isLegacyItem = (item: unknown): boolean => {
   return typeof item !== 'object' || item === null ||
     typeof (item as { amount?: unknown }).amount !== 'number' ||
     typeof (item as { currency?: unknown }).currency !== 'string'
@@ -43,6 +46,11 @@ function isLegacyItem(item: unknown): boolean {
 // Store
 // ---------------------------------------------------------------------------
 
+/**
+ * Central store for the shopping cart: its items, their currency-aware totals and persistence.
+ *
+ * @returns The cart state and the actions that change it.
+ */
 export const useCartStore = defineStore('cart', {
   state: () => ({
     items: [] as CartItem[],
@@ -64,8 +72,8 @@ export const useCartStore = defineStore('cart', {
       state.items.some(i => i.pid === pid && i.billingcycle === billingcycle),
 
     /** Check if a domain + action combo is already in cart */
-    hasDomainItem: (state) => (domain: string, action: string): boolean =>
-      state.items.some(i => i.itemType === 'domain' && i.domain === domain && i.domainAction === action),
+    hasDomainItem: (state) => (domain: string, action: DomainOrderAction): boolean =>
+      state.items.some(i => i.itemType === CartItemType.Domain && i.domain === domain && i.domainAction === action),
 
     /**
      * Items priced in `payerCode`, ready to sum and display.
@@ -106,13 +114,19 @@ export const useCartStore = defineStore('cart', {
      * see {@link isLegacyItem} — since their stored price can no longer be trusted or shown.
      */
     init() {
-      if (!import.meta.client) return
+      if (!import.meta.client) {
+        return
+      }
       try {
         const saved = localStorage.getItem(STORAGE_KEY)
-        if (!saved) return
+        if (!saved) {
+          return
+        }
         const parsed = JSON.parse(saved) as unknown[]
         this.items = parsed.filter(i => !isLegacyItem(i)) as CartItem[]
-        if (this.items.length !== parsed.length) this._save()
+        if (this.items.length !== parsed.length) {
+          this._save()
+        }
       } catch {
         // ignore corrupt storage
       }
@@ -120,7 +134,9 @@ export const useCartStore = defineStore('cart', {
 
     /** Persist current items to localStorage */
     _save() {
-      if (!import.meta.client) return
+      if (!import.meta.client) {
+        return
+      }
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items))
       } catch {
@@ -136,8 +152,8 @@ export const useCartStore = defineStore('cart', {
      * @param item - Cart item to add
      */
     addItem(item: CartItem) {
-      const isDuplicate = item.itemType === 'domain'
-        ? this.hasDomainItem(item.domain!, item.domainAction!)
+      const isDuplicate = item.itemType === CartItemType.Domain && item.domain !== undefined && item.domainAction !== undefined
+        ? this.hasDomainItem(item.domain, item.domainAction)
         : this.hasItem(item.pid, item.billingcycle)
 
       if (!isDuplicate) {
@@ -165,7 +181,7 @@ export const useCartStore = defineStore('cart', {
      * @param domain - Domain name (for domain items)
      * @param domainAction - Domain action (for domain items)
      */
-    removeItem(pid: number, domain?: string, domainAction?: string) {
+    removeItem(pid: number, domain?: string, domainAction?: DomainOrderAction) {
       if (domain && domainAction) {
         this.items = this.items.filter(
           i => !(i.domain === domain && i.domainAction === domainAction))

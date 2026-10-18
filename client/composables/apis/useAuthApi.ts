@@ -10,6 +10,7 @@
 
 import { apiFetch } from '~/composables/useApi'
 import type { ClientUser } from '~/types/clientuser'
+import type { EmailVerifiedStatus } from '~/types/emailverifiedstatus'
 import type { LoginResult } from '~/types/loginresult'
 import type { RegisterPayload } from '~/types/registerpayload'
 
@@ -18,7 +19,7 @@ import type { RegisterPayload } from '~/types/registerpayload'
  *
  * @returns The authentication endpoint functions.
  */
-export function useAuthApi() {
+export const useAuthApi = () => {
   /**
    * Signs in with email and password.
    *
@@ -116,6 +117,24 @@ export function useAuthApi() {
     apiFetch('/api/portal/auth/confirm-email', { method: 'POST', body: { email, token } })
 
   /**
+   * Reads whether the signed-in account's email address is confirmed.
+   *
+   * @returns The three-valued answer; only an explicit `false` means unconfirmed.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const fetchEmailVerified = (): Promise<EmailVerifiedStatus> =>
+    apiFetch<EmailVerifiedStatus>('/api/portal/auth/email-verified')
+
+  /**
+   * Asks for the verification mail again, for the signed-in account.
+   *
+   * @returns Nothing.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const resendVerification = (): Promise<unknown> =>
+    apiFetch('/api/portal/auth/resend-verification', { method: 'POST' })
+
+  /**
    * Accepts a client invitation on behalf of whoever is signed in.
    *
    * No password travels with it. The backend command carries a token and nothing else and
@@ -169,6 +188,8 @@ export function useAuthApi() {
     requestPasswordReset,
     resetPassword,
     confirmEmail,
+    fetchEmailVerified,
+    resendVerification,
     acceptInvite,
     setupTwoFactor,
     enableTwoFactor,

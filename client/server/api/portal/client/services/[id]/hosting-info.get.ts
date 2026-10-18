@@ -8,34 +8,24 @@
  * SSL panels on the service page with it. `services/[id]/index.get.ts` already reads the list
  * and picks the row out of it for the same reason; the list is client-scoped by the credential,
  * so an id belonging to somebody else simply is not in it.
+ *
+ * @module server/api/portal/client/services/[id]/hosting-info.get
  */
+
 import dns from 'node:dns/promises'
 import tls from 'node:tls'
+import type { HostingInfo } from '~/types/hostinginfo'
 
-export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id')
-  if (!id) throw createError({ statusCode: 400, statusMessage: 'Service ID is required' })
+/** The certificate summary the service page renders; null when no certificate could be read. */
+type SslInfo = HostingInfo['ssl']
 
-  const services = await internalApiCall<Array<{ id: number, domain?: string }>>(event, '/me/services')
-  const service = services.find(s => String(s.id) === id)
-
-  if (!service) {
-    throw createError({ statusCode: 404, statusMessage: 'Service not found' })
-  }
-
-  const domain = service.domain
-  if (!domain) {
-    return { nameservers: [], ssl: null }
-  }
-
-  // Run DNS and SSL checks in parallel
-  const [nameservers, ssl] = await Promise.all([
-    resolveNameservers(domain),
-    checkSsl(domain),
-  ])
-
-  return { nameservers, ssl }
-})
+/** The members of a service row this route reads. */
+interface ServiceRow {
+  /** Service primary key. */
+  id: number
+  /** The service's domain, when it has one. */
+  domain?: string
+}
 
 /**
  * Resolves nameservers for a given domain.
@@ -43,7 +33,7 @@ export default defineEventHandler(async (event) => {
  * @param domain - Domain name to look up
  * @returns Sorted list of nameserver hostnames, empty on failure
  */
-async function resolveNameservers(domain: string): Promise<string[]> {
+const resolveNameservers = async (domain: string): Promise<string[]> => {
   try {
     const ns = await dns.resolveNs(domain)
     return ns.sort()
@@ -53,17 +43,25 @@ async function resolveNameservers(domain: string): Promise<string[]> {
 }
 
 /**
+ * Formats a Date as DD/MM/YYYY string.
+ *
+ * @param d - Date to format
+ * @returns Formatted date string
+ */
+const formatDate = (d: Date): string => {
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
+  return `${day}/${month}/${year}`
+}
+
+/**
  * Checks TLS certificate validity for a domain on port 443.
  *
  * @param domain - Domain name to connect to
  * @returns Certificate info object, or null on failure
  */
-async function checkSsl(domain: string): Promise<{
-  valid: boolean
-  issuer: string
-  startDate: string
-  expiryDate: string
-} | null> {
+const checkSsl = (domain: string): Promise<SslInfo> => {
   return new Promise((resolve) => {
     const socket = tls.connect(
       { host: domain, port: 443, servername: domain, timeout: 5000 },
@@ -108,15 +106,27 @@ async function checkSsl(domain: string): Promise<{
   })
 }
 
-/**
- * Formats a Date as DD/MM/YYYY string.
- *
- * @param d - Date to format
- * @returns Formatted date string
- */
-function formatDate(d: Date): string {
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const year = d.getFullYear()
-  return `${day}/${month}/${year}`
-}
+export default defineEventHandler(async (event) => {
+  const id = requireRouteParam(event, 'id')
+
+  const services = await internalApiCall<ServiceRow[]>(event, '/me/services')
+  const service = services.find(s => String(s.id) === id)
+
+  if (!service) {
+    // The backend has no single-service read, so this refusal is the BFF's own: a code, no sentence.
+    throw createError({ statusCode: 404, data: { code: 'SERVICE_NOT_FOUND' } })
+  }
+
+  const domain = service.domain
+  if (!domain) {
+    return { nameservers: [], ssl: null }
+  }
+
+  // Run DNS and SSL checks in parallel
+  const [nameservers, ssl] = await Promise.all([
+    resolveNameservers(domain),
+    checkSsl(domain),
+  ])
+
+  return { nameservers, ssl }
+})

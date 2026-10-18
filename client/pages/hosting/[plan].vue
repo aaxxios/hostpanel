@@ -1,252 +1,108 @@
 <template>
-  <div>
-    <!-- Hero Section -->
-    <section class="relative py-12 md:py-28 bg-[#0a0a0f] overflow-hidden">
-      <div class="absolute inset-0 pointer-events-none">
-        <div class="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-transparent to-secondary-500/10" />
-        <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/20 rounded-full blur-[150px] animate-blob" />
-        <div class="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-secondary-500/20 rounded-full blur-[140px] animate-blob animation-delay-2000" />
-        <div class="absolute inset-0 opacity-[0.02]">
-          <div style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 60px 60px;" class="w-full h-full" />
-        </div>
-        <div class="absolute top-1/4 left-1/3 w-2 h-2 bg-primary-400/60 rounded-full animate-float" style="animation-delay: 0.5s;" />
-        <div class="absolute bottom-1/3 right-1/4 w-3 h-3 bg-secondary-400/50 rounded-full animate-float" style="animation-delay: 1.5s;" />
-      </div>
-      <div class="absolute top-0 right-0 w-48 h-48 border-r-2 border-t-2 border-secondary-500/30 pointer-events-none" />
-      <div class="absolute bottom-0 left-0 w-48 h-48 border-l-2 border-b-2 border-primary-500/30 pointer-events-none" />
+  <UiStack gap="none" data-testid="hosting-plan-page">
+    <CatalogHostingPlanHero
+      :pending="pending"
+      :plan="currentPlan"
+      :summary="planSummary"
+      :price="planPrice"
+      :in-cart="inCart"
+      @order="addToCart"
+    />
 
-      <div class="container-custom relative z-10">
-        <!-- Back -->
-        <NuxtLink
-          :to="localePath('/hosting')"
-          class="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-10"
-        >
-          <ArrowLeft :size="16" :stroke-width="2" />
-          {{ $t('hosting.backToPlans') }}
-        </NuxtLink>
-
-        <!-- Loading -->
-        <div v-if="pending" class="space-y-4">
-          <div class="h-8 w-48 rounded-lg bg-white/5 animate-pulse" />
-          <div class="h-16 w-80 rounded-xl bg-white/5 animate-pulse" />
-          <div class="h-5 w-96 rounded-lg bg-white/5 animate-pulse" />
-          <div class="h-14 w-40 rounded-xl bg-white/5 animate-pulse mt-4" />
-        </div>
-
-        <!-- Not found -->
-        <div v-else-if="!currentPlan" class="text-center py-20">
-          <AlertCircle :size="48" :stroke-width="2" class="text-red-400 mx-auto mb-4" />
-          <p class="text-gray-400 mb-4">{{ $t('hosting.planNotFound') }}</p>
-          <NuxtLink :to="localePath('/hosting')" class="text-primary-400 hover:text-primary-300 transition-colors">
-            {{ $t('hosting.viewAllPlans') }}
-          </NuxtLink>
-        </div>
-
-        <!-- Plan hero -->
-        <div
-          v-else
-          v-motion
-          :initial="{ opacity: 0, y: 30 }"
-          :enter="{ opacity: 1, y: 0, transition: { duration: 600 } }"
-        >
-          <!-- Popular badge -->
-          <div v-if="currentPlan.is_featured === 'on'" class="mb-4">
-            <span class="inline-block px-4 py-1.5 bg-primary-500/20 text-primary-400 text-xs font-bold rounded-full uppercase tracking-wider border border-primary-500/30">
-              {{ $t('hosting.mostPopular') }}
-            </span>
-          </div>
-
-          <!--
-            No tagline line here: `ProductDto` has no headline/tagline field, so the paragraph
-            this replaced never rendered for any plan. Restoring it needs a backend field.
-          -->
-
-          <!-- Name -->
-          <h1 class="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight">
-            {{ currentPlan.name }}
-          </h1>
-
-          <!--
-            Summary parsed out of `description`, not the `shortdescription` this replaced —
-            that field does not exist, so the copy the catalogue does send never appeared here.
-            Interpolated rather than `v-html`: the raw field is operator-authored HTML that no
-            layer sanitises, and `parseDescription` has already stripped its tags.
-          -->
-          <p v-if="planSummary" class="text-gray-400 text-lg mb-8 max-w-2xl">
-            {{ planSummary }}
-          </p>
-
-          <!-- Price + CTA -->
-          <div class="flex flex-wrap items-end gap-6">
-            <div class="flex items-baseline gap-1.5">
-              <div class="text-5xl font-bold text-white">{{ getPlanPrice(currentPlan) }}</div>
-              <div class="text-gray-500 text-sm">{{ $t('hosting.perMonthFull') }}</div>
-            </div>
-            <button
-              type="button"
-              class="px-8 py-4 rounded-xl font-bold text-on-primary text-lg bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-primary-500/30 flex items-center gap-2"
-              @click="handleAddToCart"
-            >
-              <ShoppingCart :size="20" :stroke-width="2" />
-              {{ cart.hasItem(currentPlan.pid, selectedCycle) ? $t('hosting.inCart') : $t('hosting.orderNow') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Content Section -->
-    <section v-if="currentPlan" class="py-8 md:py-20 bg-[#0d0d12] relative overflow-hidden">
-      <div class="absolute inset-0 pointer-events-none">
-        <div class="absolute inset-0 bg-gradient-to-r from-secondary-500/5 via-transparent to-primary-500/5" />
-        <div class="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-primary-500/10 rounded-full blur-[130px] animate-blob animation-delay-4000" />
-        <div class="absolute bottom-1/4 right-1/4 w-[350px] h-[350px] bg-secondary-500/12 rounded-full blur-[120px] animate-blob" />
-        <div class="absolute top-0 left-1/3 w-px h-full bg-gradient-to-b from-transparent via-primary-500/10 to-transparent" />
-        <div class="absolute top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-secondary-500/10 to-transparent" />
-        <div class="absolute inset-0 opacity-[0.015]">
-          <div style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 60px 60px;" class="w-full h-full" />
-        </div>
-      </div>
-      <div class="absolute top-0 right-0 w-48 h-48 border-r-2 border-t-2 border-secondary-500/25 pointer-events-none" />
-      <div class="absolute bottom-0 left-0 w-48 h-48 border-l-2 border-b-2 border-primary-500/25 pointer-events-none" />
-
-      <div class="container-custom relative z-10 max-w-4xl mx-auto space-y-6">
-
-        <!-- Billing cycles -->
-        <UiCard
-          v-if="hasPricing"
-          v-motion
-          :initial="{ opacity: 0, y: 24 }"
-          :visibleOnce="{ opacity: 1, y: 0, transition: { duration: 500 } }"
-          :title="$t('hosting.billingCycles')"
-        >
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <div
-              v-for="cycle in billingCycles"
-              :key="cycle.key"
-              class="p-3 rounded-xl border text-center cursor-pointer transition-all duration-200"
-              :class="selectedCycle === cycle.key
-                ? 'border-primary-500 bg-primary-500/10 text-on-primary'
-                : 'border-white/10 text-gray-400 hover:border-white/20 hover:text-on-primary'"
-              @click="selectedCycle = cycle.key"
-            >
-              <div class="text-xs font-semibold">{{ cycle.label }}</div>
-              <div class="text-base font-bold mt-1">{{ cycle.price }}</div>
-            </div>
-          </div>
-        </UiCard>
-
-        <!-- Features -->
-        <UiCard
-          v-if="planFeatures.length"
-          v-motion
-          :initial="{ opacity: 0, y: 24 }"
-          :visibleOnce="{ opacity: 1, y: 0, transition: { delay: 100, duration: 500 } }"
-          padding="xl"
-        >
-          <h2 class="text-xl font-bold text-white mb-6">{{ $t('hosting.includedFeatures') }}</h2>
-          <ul class="grid md:grid-cols-2 gap-3">
-            <li
-              v-for="(feature, index) in planFeatures"
-              :key="feature"
-              v-motion
-              :initial="{ opacity: 0, x: -10 }"
-              :visibleOnce="{ opacity: 1, x: 0, transition: { delay: index * 50, duration: 400 } }"
-              class="flex items-center gap-3"
-            >
-              <CheckCircle :size="16" :stroke-width="2" class="text-primary-400 flex-shrink-0" />
-              <span class="text-gray-300 text-sm">{{ feature }}</span>
-            </li>
-          </ul>
-        </UiCard>
-
-        <!-- Bottom CTA -->
-        <div
-          v-motion
-          :initial="{ opacity: 0, y: 20 }"
-          :visibleOnce="{ opacity: 1, y: 0, transition: { delay: 200, duration: 500 } }"
-          class="text-center pt-4"
-        >
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 px-10 py-4 rounded-xl font-bold text-on-primary text-lg bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-primary-500/30"
-            @click="handleAddToCart"
-          >
-            <ShoppingCart :size="20" :stroke-width="2" />
-            {{ cart.hasItem(currentPlan.pid, selectedCycle) ? $t('hosting.inCart') : $t('hosting.orderNow') }}
-          </button>
-          <p class="text-gray-500 text-sm mt-3">
-            <Lock :size="12" :stroke-width="2" class="inline mr-1" />
-            {{ $t('cart.secureCheckout') }}
-          </p>
-        </div>
-      </div>
-    </section>
-  </div>
+    <CatalogHostingPlanDetails
+      v-if="currentPlan"
+      v-model:selected-cycle="selectedCycle"
+      :cycles="cycleOptions"
+      :features="planFeatures"
+      :in-cart="inCart"
+      @order="addToCart"
+    />
+  </UiStack>
 </template>
 
 <script setup lang="ts">
-import { ArrowLeft, AlertCircle, CheckCircle, ShoppingCart, Lock } from 'lucide-vue-next'
+/**
+ * Hosting plan page - one plan with its price, billing cycles and included features.
+ * Route: /hosting/[plan]
+ *
+ * The plan is found among the hosting products by id, slug or normalised name. The page owns the
+ * data, the selected cycle, the cart and the head; `CatalogHostingPlanHero` and
+ * `CatalogHostingPlanDetails` only render what they are given.
+ */
+import { PRICING_CYCLES, PRICING_CYCLE_I18N_KEY } from '~/constants/pricingCycle'
+import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
 import { useCartStore } from '~/stores/cart'
+import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
-import { useCatalogApi } from '~/composables/apis/useCatalogApi'
-import { formatMoney } from '~/utils/formatMoney'
+import { PricingCycle } from '~/types/pricingcycle'
 import type { PortalProduct } from '~/types/portalproduct'
+import type { PricingCycleOption } from '~/types/pricingcycleoption'
+import { parseDescription } from '~/utils/catalogGroups'
+import { formatMoney } from '~/utils/formatMoney'
+import { cycleAmount } from '~/utils/productFamilies'
+import { buildSeoLinks } from '~/utils/seoLinks'
 
-const { t: $t, locale } = useI18n()
+/** Billing cycle label of a plan the catalogue declares free of charge. */
+const FREE_CYCLE = 'free'
+
+/** Translation helpers and the active language. */
+const { t, locale } = useI18n()
+
+/** Site name the operator set; the brand is the fallback. */
+const { name: siteName } = useSiteIdentity()
+/** The current route. */
 const route = useRoute()
-const localePath = useLocalePath()
+/** The cart: its lines, totals and persistence. */
 const cart = useCartStore()
+/** The payer's currency and the currencies prices can be shown in. */
 const currencyStore = useCurrencyStore()
+/** The catalogue: products, plans, slides and TLD prices. */
+const catalogStore = useCatalogStore()
+
 onMounted(() => {
   currencyStore.init()
   currencyStore.load()
 })
 
-/** The payer's currency to format and price with — never chosen by the page's language. */
+/** The payer's currency to format and price with, never chosen by the page's language. */
 const payerCurrency = computed(() => currencyStore.moneyCurrencyFor(currencyStore.payerCode))
 
-// Straight from the API composable rather than through a store: this page fetches once and
-// owns the result alone, which is the named exception to component -> store -> api. A store
-// would also cost the SSR dedup and the locale re-fetch that `useApi()` gives for free, and
-// this page is server-rendered and indexed.
-// `currency` is passed the same way `usePortalPlans.ts` passes it — the payer's currency, so
-// the getter re-reads and the request re-fetches once `payerCode` resolves or changes.
-const { data: plans, pending } = await useCatalogApi().loadProducts(
-  () => ({ gid: 1, currency: currencyStore.payerCode ?? undefined })
-)
+/** Which products the page reads: the hosting group. */
+const hostingFilter = { gid: HOSTING_GROUP_ID }
 
-/** The billing cycle the visitor has chosen; the backend prices only these two. */
-type CycleKey = 'monthly' | 'annual'
-const selectedCycle = ref<CycleKey>('monthly')
-
-/** Maps the API's cycle key to the `hosting.cycles.*` i18n key — spelled differently. */
-const cycleI18nKey: Record<CycleKey, string> = { monthly: 'monthly', annual: 'annually' }
-
-function planSlug(name: string): string {
-  const clean = (name || '')
-    .replace(/Businnes/g, 'Business')
-    .replace(/businnes/g, 'business')
-  return clean.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-}
-
-const currentPlan = computed(() => {
-  if (!plans.value) return null
-  const param = String(route.params.plan)
-  return (plans.value as any[]).find(
-    (p: any) => String(p.pid) === param || p.slug === param || planSlug(p.name) === param
-  ) ?? null
+/** Whether the catalogue read is still running. */
+const { pending } = await useAsyncData('hosting:plan-products', () => catalogStore.loadProducts(hostingFilter), {
+  watch: [() => currencyStore.payerCode, locale],
 })
 
+/** Every hosting plan, in the payer's currency. */
+const plans = computed(() => catalogStore.productsFor(hostingFilter))
+
+/** The billing cycle the visitor has chosen; the backend prices only these two. */
+const selectedCycle = ref<PricingCycle>(PricingCycle.Monthly)
+
 /**
- * Summary paragraph and feature lines parsed out of the plan's `description`.
+ * Normalises a plan name to the slug its address uses ("Businnes Plus" becomes "business-plus").
  *
- * Split on newlines this used to be, which is wrong for this catalogue: the copy is HTML
- * (`✔ 600 MB Disk Space <br />`, `<strong>…</strong>`), so a raw split printed the markup
- * inside the feature list and merged a whole prose paragraph into a single "feature".
- * `parseDescription` (utils/whmcs.ts, auto-imported) unwraps the tags, splits the leading
- * prose off as `summary`, and strips the bullet markers.
+ * @param name The plan name.
+ * @returns The slug.
  */
+const slugOf = (name: string): string =>
+  (name || '')
+    .replace(/Businnes/g, 'Business')
+    .replace(/businnes/g, 'business')
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+
+/** The address parameter of the page. */
+const planParam = computed(() => String(route.params.plan))
+
+/** The plan the address names, or null when there is none. */
+const currentPlan = computed<PortalProduct | null>(() =>
+  plans.value.find((plan) => String(plan.pid) === planParam.value || plan.slug === planParam.value || slugOf(plan.name) === planParam.value) ?? null)
+
+/** Summary paragraph and feature lines parsed out of the plan's description (the copy is HTML). */
 const parsedPlan = computed(() => parseDescription(currentPlan.value?.description || ''))
 
 /** Leading prose of the plan description; empty for plans whose copy is bullets only. */
@@ -255,111 +111,88 @@ const planSummary = computed(() => parsedPlan.value.summary)
 /** Bullet lines of the plan description, markers stripped. */
 const planFeatures = computed(() => parsedPlan.value.features)
 
-/**
- * The plan's price for one cycle, in the caller's own currency, as the API sent it.
- *
- * @param plan - The plan.
- * @param key - The billing cycle.
- * @returns The amount, or null when the plan carries no price for that cycle.
- */
-function cycleAmount(plan: PortalProduct, key: CycleKey): number | null {
-  return plan.pricing?.[key] ?? null
-}
-
-function getPlanPrice(plan: PortalProduct): string {
-  const amount = cycleAmount(plan, selectedCycle.value) ?? cycleAmount(plan, 'monthly')
-  if (amount === null) return $t('hosting.custom')
-  return formatMoney(amount, payerCurrency.value)
-}
-
-function handleAddToCart() {
-  if (!currentPlan.value || !currencyStore.payerCode) return
+/** The headline price: the selected cycle's, else the monthly one, else "custom". */
+const planPrice = computed(() => {
   const plan = currentPlan.value
+  const amount = plan ? (cycleAmount(plan.pricing, selectedCycle.value) ?? cycleAmount(plan.pricing, PricingCycle.Monthly)) : null
+  return amount === null ? t('hosting.custom') : formatMoney(amount, payerCurrency.value)
+})
 
-  // Determine best cycle: if the selected one is priced, use it; otherwise fall back to
-  // monthly, and finally to a "free" plan the name itself declares.
-  let amount = cycleAmount(plan, selectedCycle.value) ?? cycleAmount(plan, 'monthly')
-  let finalCycle: string = selectedCycle.value
-
-  if (amount === null) {
-    if (plan.name.toLowerCase().includes('free')) {
-      finalCycle = 'free'
-      amount = 0
-    } else {
-      return
-    }
+/** The cycles the current plan is priced for, labelled and formatted. */
+const cycleOptions = computed<PricingCycleOption[]>(() => {
+  const plan = currentPlan.value
+  if (!plan?.pricing) {
+    return []
   }
-
-  cart.addItem({
-    pid: plan.pid!,
-    name: plan.name,
-    billingcycle: finalCycle,
-    cycleLabel: finalCycle === 'free' ? $t('hosting.cycles.free') : $t(`hosting.cycles.${cycleI18nKey[finalCycle as CycleKey]}`),
-    amount,
-    currency: currencyStore.payerCode
-  })
-}
-
-const billingCycles = computed(() => {
-  const plan = currentPlan.value
-  if (!plan?.pricing) return []
-
-  const cycleKeys: readonly CycleKey[] = ['monthly', 'annual']
-  return cycleKeys
-    .filter(key => cycleAmount(plan, key) !== null)
-    .map(key => ({
-      key,
-      label: $t(`hosting.cycles.${cycleI18nKey[key]}`),
-      price: formatMoney(cycleAmount(plan, key), payerCurrency.value)
+  return PRICING_CYCLES
+    .filter((cycle) => cycleAmount(plan.pricing, cycle) !== null)
+    .map((cycle) => ({
+      cycle,
+      label: t(`hosting.cycles.${PRICING_CYCLE_I18N_KEY[cycle]}`),
+      price: formatMoney(cycleAmount(plan.pricing, cycle), payerCurrency.value),
     }))
 })
 
-const hasPricing = computed(() => billingCycles.value.length > 0)
-
-// Auto-select first available cycle
-watch(billingCycles, (cycles) => {
-  const first = cycles[0]
-  if (first && !cycles.find(c => c.key === selectedCycle.value)) {
-    selectedCycle.value = first.key
+watch(cycleOptions, (options) => {
+  const first = options[0]
+  if (first && !options.some((option) => option.cycle === selectedCycle.value)) {
+    selectedCycle.value = first.cycle
   }
 }, { immediate: true })
 
-// Dynamic SEO based on plan name
-const planSlugParam = computed(() => String(route.params.plan))
+/** Whether the current plan is already in the cart for the selected cycle. */
+const inCart = computed(() => (currentPlan.value ? cart.hasItem(currentPlan.value.pid as number, selectedCycle.value) : false))
+
+/**
+ * Adds the current plan to the cart.
+ *
+ * The selected cycle is used when it is priced, otherwise the monthly one, and a plan whose name
+ * declares it free is added at no charge.
+ */
+const addToCart = (): void => {
+  const plan = currentPlan.value
+  if (!plan || !currencyStore.payerCode) {
+    return
+  }
+
+  let amount = cycleAmount(plan.pricing, selectedCycle.value) ?? cycleAmount(plan.pricing, PricingCycle.Monthly)
+  let billingCycle: string = selectedCycle.value
+  if (amount === null) {
+    if (!plan.name.toLowerCase().includes('free')) {
+      return
+    }
+    billingCycle = FREE_CYCLE
+    amount = 0
+  }
+
+  cart.addItem({
+    pid: plan.pid as number,
+    name: plan.name,
+    billingcycle: billingCycle,
+    cycleLabel: billingCycle === FREE_CYCLE
+      ? t('hosting.cycles.free')
+      : t(`hosting.cycles.${PRICING_CYCLE_I18N_KEY[selectedCycle.value]}`),
+    amount,
+    currency: currencyStore.payerCode,
+  })
+}
 
 useSeoMeta({
-  title: () => currentPlan.value
-    ? `${currentPlan.value.name} - Web Hosting Plan | Innovayse`
-    : $t('seo.hostingPlan.title'),
-  description: () => planSummary.value || $t('seo.hostingPlan.description'),
-  keywords: $t('seo.hostingPlan.keywords'),
-  ogTitle: () => currentPlan.value
-    ? `${currentPlan.value.name} - Web Hosting Plan | Innovayse`
-    : $t('seo.hostingPlan.title'),
-  ogDescription: () => planSummary.value || $t('seo.hostingPlan.description'),
+  title: () => currentPlan.value ? t('seo.hostingPlan.named', { name: currentPlan.value.name, site: siteName.value }) : t('seo.hostingPlan.title'),
+  description: () => planSummary.value || t('seo.hostingPlan.description'),
+  ogTitle: () => currentPlan.value ? t('seo.hostingPlan.named', { name: currentPlan.value.name, site: siteName.value }) : t('seo.hostingPlan.title'),
+  ogDescription: () => planSummary.value || t('seo.hostingPlan.description'),
   ogType: 'website',
   twitterCard: 'summary_large_image',
-  twitterTitle: () => currentPlan.value
-    ? `${currentPlan.value.name} | Innovayse`
-    : $t('seo.hostingPlan.title'),
-  twitterDescription: () => planSummary.value || $t('seo.hostingPlan.description')
+  twitterTitle: () => currentPlan.value ? `${currentPlan.value.name} | ${siteName.value}` : t('seo.hostingPlan.title'),
+  twitterDescription: () => planSummary.value || t('seo.hostingPlan.description'),
 })
 
-const config = useRuntimeConfig()
-const _baseUrl = config.public.baseUrl || 'https://innovayse.com'
+/** Public site address the canonical links are built from. */
+const baseUrl = useRuntimeConfig().public.baseUrl
 
 useHead(() => ({
-  link: [
-    {
-      rel: 'canonical',
-      href: locale.value === 'en'
-        ? `${_baseUrl}/hosting/${planSlugParam.value}`
-        : `${_baseUrl}/${locale.value}/hosting/${planSlugParam.value}`
-    },
-    { rel: 'alternate', hreflang: 'en', href: `${_baseUrl}/hosting/${planSlugParam.value}` },
-    { rel: 'alternate', hreflang: 'ru', href: `${_baseUrl}/ru/hosting/${planSlugParam.value}` },
-    { rel: 'alternate', hreflang: 'hy', href: `${_baseUrl}/hy/hosting/${planSlugParam.value}` },
-    { rel: 'alternate', hreflang: 'x-default', href: `${_baseUrl}/hosting/${planSlugParam.value}` }
-  ]
+  link: buildSeoLinks(baseUrl, `/hosting/${planParam.value}`, locale.value),
+  meta: [{ name: 'keywords', content: t('seo.hostingPlan.keywords') }],
 }))
 </script>

@@ -4,14 +4,14 @@
  * The C# backend only has a list endpoint, so we fetch all and filter.
  */
 export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id')
-  if (!id) throw createError({ statusCode: 400, statusMessage: 'Service ID is required' })
+  const id = requireRouteParam(event, 'id')
 
   const services = await internalApiCall<Record<string, unknown>[]>(event, '/me/services')
   const s = services.find((svc) => String(svc.id) === id)
 
   if (!s) {
-    throw createError({ statusCode: 404, statusMessage: 'Service not found' })
+    // The backend has no single-service read, so this refusal is the BFF's own: a code, no sentence.
+    throw createError({ statusCode: 404, data: { code: 'SERVICE_NOT_FOUND' } })
   }
 
   return {

@@ -1,0 +1,71 @@
+/**
+ * Unit tests for ServiceSidebar: the panel entries, the conditional entries and the events.
+ */
+import { describe, expect, it } from 'vitest'
+import { mountClient } from '~/tests/helpers/mountClient'
+import ServiceSidebar from '~/components/client/services/ServiceSidebar.vue'
+import type { ServiceDetail } from '~/types/servicedetail'
+import { ServiceStatus } from '~/types/servicestatus'
+import { ServiceTab } from '~/types/servicetab'
+
+/**
+ * Builds a service for the menu.
+ *
+ * @param overrides - Fields to set.
+ * @returns A service.
+ */
+const service = (overrides: Partial<ServiceDetail> = {}): ServiceDetail => ({
+  id: 4, status: ServiceStatus.Active, serverhostname: 'srv1.example.net', ...overrides
+} as ServiceDetail)
+
+/**
+ * Mounts the menu with defaults.
+ *
+ * @param props - Props to override.
+ * @returns The wrapper.
+ */
+const mountSidebar = (props: Record<string, unknown> = {}) =>
+  mountClient(ServiceSidebar, { props: { service: service(), serviceId: '4', activeTab: ServiceTab.Overview, ssoLoading: false, ssoError: '', ...props } })
+
+describe('ServiceSidebar', () => {
+  it('marks the active panel', () => {
+    const wrapper = mountSidebar({ activeTab: ServiceTab.Password })
+
+    expect(wrapper.find('[data-testid="service-tab-password"]').classes()).toContain('font-medium')
+    expect(wrapper.find('[data-testid="service-tab-overview"]').classes()).not.toContain('bg-primary-50')
+  })
+
+  it('emits the panel that was clicked', async () => {
+    const wrapper = mountSidebar()
+
+    await wrapper.find('[data-testid="service-tab-cancel"]').trigger('click')
+
+    expect(wrapper.emitted('update:activeTab')).toEqual([[ServiceTab.Cancel]])
+  })
+
+  it('links to a new ticket and, while pending, to the setup', () => {
+    const active = mountSidebar()
+    const pending = mountSidebar({ service: service({ status: ServiceStatus.Pending }) })
+
+    expect(active.find('[data-testid="service-open-ticket"]').attributes('href')).toBe('/client/tickets/new')
+    expect(active.find('[data-testid="service-nav-setup"]').exists()).toBe(false)
+    expect(pending.find('[data-testid="service-nav-setup"]').attributes('href')).toBe('/client/services/4/setup')
+  })
+
+  it('offers the quick links only with a known server', () => {
+    const known = mountSidebar()
+    const unknown = mountSidebar({ service: service({ serverhostname: '' }) })
+
+    expect(known.find('[data-testid="service-link-webmail"]').attributes('href')).toBe('https://srv1.example.net:2096')
+    expect(unknown.find('[data-testid="service-link-cpanel"]').exists()).toBe(false)
+  })
+
+  it('asks for the control panel and shows a sign-in failure', async () => {
+    const wrapper = mountSidebar({ ssoError: 'No answer' })
+
+    await wrapper.find('[data-testid="service-link-cpanel"]').trigger('click')
+
+    expect(wrapper.emitted('cpanel')).toHaveLength(1)
+    expect(wrapper.find('[data-testid="service-sso-error"]').text()).toBe('No answer')
+  })
+})

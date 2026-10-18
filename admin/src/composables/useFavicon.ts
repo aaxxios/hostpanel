@@ -12,7 +12,7 @@
  */
 
 import { watch } from 'vue'
-import { useBrandingStore } from '../stores/useBrandingStore'
+import { useBrandingStore } from '@/stores/branding'
 
 /** Marks the tags this module owns, so a second run replaces rather than accumulates. */
 const OWNED = 'data-branding-favicon'
@@ -24,7 +24,9 @@ const OWNED = 'data-branding-favicon'
  * leaves `index.html`'s built-in links untouched.
  */
 const applyFavicon = (url: string): void => {
-  if (!url) return
+  if (!url) {
+    return
+  }
 
   document.head.querySelectorAll('link[rel~="icon"]').forEach(el => el.remove())
 

@@ -5,30 +5,68 @@
  * Displays over page content (not the sidebar) with a message to check inbox.
  * Automatically hides when emailVerified becomes true.
  */
-import { useAuthStore } from '../../modules/auth/stores/authStore'
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useAuthStore } from '@/stores/auth'
+import UiAlert from '@/components/ui/UiAlert.vue'
+import UiButton from '@/components/ui/UiButton.vue'
+import UiCard from '@/components/ui/UiCard.vue'
+import UiHeading from '@/components/ui/UiHeading.vue'
+import UiStack from '@/components/ui/UiStack.vue'
+import UiText from '@/components/ui/UiText.vue'
 
+/** Translation function. */
+const { t } = useI18n()
+
+/** Auth store: whether the account's email is verified. */
 const authStore = useAuthStore()
+
+/** True while the resend request is in flight. */
+const resending = ref(false)
+
+/** True once the API accepted a resend, so the banner can confirm it. */
+const resent = ref(false)
+
+/** Asks the store to mail the verification link again and records the outcome. */
+const resend = async (): Promise<void> => {
+  resending.value = true
+  resent.value = await authStore.resendVerification()
+  resending.value = false
+}
 </script>
 
 <template>
-  <div
+  <UiStack
     v-if="authStore.emailVerified === false"
-    class="absolute inset-0 z-20 flex items-center justify-center bg-surface-base/80 backdrop-blur-sm"
+    align="center"
+    justify="center"
+    class="absolute inset-0 z-20 bg-surface-base/80 backdrop-blur-sm"
+    data-testid="email-verification-banner"
   >
-    <div class="max-w-md mx-4 bg-surface-card border border-white/[0.06] rounded-2xl p-8 shadow-2xl text-center">
-      <div class="w-14 h-14 mx-auto mb-5 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-          <polyline points="22,6 12,13 2,6"/>
-        </svg>
-      </div>
-      <h2 class="font-display text-lg font-bold text-text-primary mb-2">Verify Your Email</h2>
-      <p class="text-sm text-text-secondary mb-4">
-        Please check your inbox and click the verification link to activate your admin account. You won't be able to use the admin panel until your email is verified.
-      </p>
-      <p class="text-xs text-text-muted">
-        Didn't receive the email? Check your spam folder.
-      </p>
-    </div>
-  </div>
+    <UiCard padding="lg" elevated class="mx-4 max-w-md text-center">
+      <UiStack gap="sm">
+        <UiHeading :level="2" variant="section">{{ t('layout.emailVerificationBanner.verifyYourEmail') }}</UiHeading>
+        <UiText tone="secondary" size="lg">
+          {{ t('layout.emailVerificationBanner.pleaseCheckYourInboxAnd') }}
+        </UiText>
+        <UiText tone="muted" size="sm">
+          {{ t('layout.emailVerificationBanner.didnTReceiveTheEmail') }}
+        </UiText>
+        <UiAlert v-if="resent" variant="success" data-testid="email-verification-resent">
+          {{ t('layout.emailVerificationBanner.resent') }}
+        </UiAlert>
+        <UiAlert v-else-if="authStore.error" variant="error" data-testid="email-verification-error">
+          {{ authStore.error }}
+        </UiAlert>
+        <UiButton
+          variant="secondary"
+          :loading="resending"
+          data-testid="email-verification-resend"
+          @click="resend"
+        >
+          {{ t('layout.emailVerificationBanner.resend') }}
+        </UiButton>
+      </UiStack>
+    </UiCard>
+  </UiStack>
 </template>

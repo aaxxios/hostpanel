@@ -1,0 +1,171 @@
+# Prod stack over docker-compose.shared.yml: application images by ${IMAGE_TAG}. Each service also has a
+# build: block so a host that builds in place gets the same image name.
+name: hostpanel
+
+services:
+  hostpanel-api:
+    container_name: hostpanel-api
+    image: registry.gitlab.com/innovayse/innovayse-workspace/hostpanel/api:${IMAGE_TAG}
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: prod
+      args:
+        NuGetPackageSourceCredentials_innovayse: ${NUGET_INNOVAYSE_CREDENTIALS}
+        AUTH_MODE: ${AUTH_MODE}
+    environment:
+      # Workstation GC with a 75% heap cap so one API cannot take a shared host down.
+      DOTNET_gcServer: "0"
+      DOTNET_GCConserveMemory: "5"
+      DOTNET_GCHeapHardLimitPercent: "75"
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ASPNETCORE_HTTP_PORTS: ${API_PORT}
+      AllowedHosts: ${ALLOWED_HOSTS:?ALLOWED_HOSTS must be set}
+
+      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+
+      Auth__RedisConnection: ${REDIS_CONNECTION}
+
+      RabbitMQ__Host: ${RABBITMQ_HOST}
+      RabbitMQ__Port: ${RABBITMQ_PORT}
+      RabbitMQ__User: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+
+      Smtp__Host: ${SMTP_HOST}
+      Smtp__Port: ${SMTP_PORT}
+      Smtp__Username: ${SMTP_USERNAME}
+      Smtp__Password: ${SMTP_PASSWORD}
+      Smtp__Encryption: ${SMTP_ENCRYPTION}
+      Smtp__From__Address: ${SMTP_FROM}
+      Smtp__From__Name: ${SMTP_FROM_NAME}
+      Notifications__ContactEmail: ${EMAIL_TO}
+      Telegram__BotToken: ${TELEGRAM_BOT_TOKEN}
+      Telegram__ChatId: ${TELEGRAM_CHAT_ID}
+
+      Jwt__Secret: ${JWT_SECRET:?JWT_SECRET is required}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Session__AccessTokenMinutes: ${SESSION_ACCESS_TOKEN_MINUTES}
+      Session__MaxSessionMinutes: ${SESSION_MAX_MINUTES}
+      EncryptionKey: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      Auth__Mode: ${AUTH_MODE}
+      Auth__AppName: hostpanel
+      Auth__Authority: ${SSO_URL}
+      Auth__PublicAuthority: ${SSO_PUBLIC_URL}
+      Auth__ClientId: ${SSO_CLIENT_ID}
+      Auth__ClientSecret: ${CLIENT_HOSTPANEL_SECRET}
+      BackchannelLogout__Key: ${HOSTPANEL_BACKCHANNEL_LOGOUT_KEY}
+
+      Sso__Authority: ${SSO_URL}
+      Sso__ClientId: ${SSO_CLIENT_ID}
+      Sso__ServiceKey: ${SSO_SERVICE_KEY}
+
+      Cors__AllowedOrigins__0: https://${DOMAIN}
+      Cors__AllowedOrigins__1: https://${ADMIN_DOMAIN}
+      # Where mailed staff links (email verification) land; a bare top-level key, not a section.
+      AdminBaseUrl: ${ADMIN_BASE_URL:?ADMIN_BASE_URL must be set}
+      # Where mailed client links (verification, password reset, invoices) land; a bare top-level key.
+      ClientBaseUrl: ${CLIENT_BASE_URL:?CLIENT_BASE_URL must be set}
+    volumes:
+      # Operator-uploaded branding lives in the web root; without a volume every deploy erases it.
+      - hostpanel_branding:/app/wwwroot/uploads/branding
+    depends_on:
+      hostpanel-db:
+        condition: service_healthy
+      hostpanel-rabbitmq:
+        condition: service_healthy
+      hostpanel-redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  hostpanel-client:
+    container_name: hostpanel-client
+    image: registry.gitlab.com/innovayse/innovayse-workspace/hostpanel/client:${IMAGE_TAG}
+    build:
+      context: ../client
+      dockerfile: Dockerfile
+      target: prod
+    environment:
+      # Nitro freezes runtimeConfig at build time: only NUXT_* names override it at runtime.
+      NUXT_API_URL: http://hostpanel-api:${API_PORT}
+      NUXT_PUBLIC_BASE_URL: https://${DOMAIN}
+      # nuxt-site-config's canonical origin (sitemap, og:url), read at runtime.
+      NUXT_PUBLIC_SITE_URL: https://${DOMAIN}
+      NUXT_PUBLIC_MAIN_URL: ${MAIN_APP_URL}
+      NUXT_SSO_URL: ${SSO_URL}
+      NUXT_PUBLIC_SSO_PUBLIC_URL: ${SSO_PUBLIC_URL}
+      NUXT_SSO_CALLBACK_URL: https://${DOMAIN}/api/portal/auth/sso/callback
+      NUXT_MAIN_API_URL: ${NUXT_MAIN_API_URL}
+      NUXT_PUBLIC_AUTH_MODE: ${AUTH_MODE}
+      NUXT_PUBLIC_PORTAL_TEMPLATE: ${NUXT_PUBLIC_PORTAL_TEMPLATE}
+      NUXT_PUBLIC_PORTAL_APPS_ENABLED: ${NUXT_PUBLIC_PORTAL_APPS_ENABLED}
+      NUXT_PUBLIC_PORTAL_CONTACT_EMAIL: ${NUXT_PUBLIC_PORTAL_CONTACT_EMAIL}
+      NUXT_PUBLIC_PORTAL_SOCIAL_TWITTER: ${NUXT_PUBLIC_PORTAL_SOCIAL_TWITTER}
+      NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN: ${NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN}
+      NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK: ${NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK}
+      NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL: ${NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL}
+      NUXT_PUBLIC_PORTAL_SITE_NAME: ${NUXT_PUBLIC_PORTAL_SITE_NAME}
+      NUXT_PUBLIC_PORTAL_SITE_TAGLINE: ${NUXT_PUBLIC_PORTAL_SITE_TAGLINE}
+      NUXT_PUBLIC_PORTAL_THEME_DEFAULT: ${NUXT_PUBLIC_PORTAL_THEME_DEFAULT}
+      NUXT_PUBLIC_PORTAL_THEME_USER_TOGGLE: ${NUXT_PUBLIC_PORTAL_THEME_USER_TOGGLE}
+      NUXT_PUBLIC_PORTAL_LOGO: ${NUXT_PUBLIC_PORTAL_LOGO}
+      NUXT_PUBLIC_PORTAL_LOGO_DARK: ${NUXT_PUBLIC_PORTAL_LOGO_DARK}
+      NUXT_PUBLIC_PORTAL_LOGO_MARK: ${NUXT_PUBLIC_PORTAL_LOGO_MARK}
+      NUXT_PUBLIC_PORTAL_FAVICON: ${NUXT_PUBLIC_PORTAL_FAVICON}
+      NUXT_PUBLIC_PORTAL_BRAND_PRIMARY: ${NUXT_PUBLIC_PORTAL_BRAND_PRIMARY}
+      NUXT_PUBLIC_PORTAL_BRAND_ACCENT: ${NUXT_PUBLIC_PORTAL_BRAND_ACCENT}
+      NUXT_PUBLIC_PORTAL_BRAND_FONT_HEADING: ${NUXT_PUBLIC_PORTAL_BRAND_FONT_HEADING}
+      NUXT_PUBLIC_PORTAL_BRAND_FONT_BODY: ${NUXT_PUBLIC_PORTAL_BRAND_FONT_BODY}
+      NUXT_PUBLIC_PORTAL_GTM_ID: ${NUXT_PUBLIC_PORTAL_GTM_ID}
+      NUXT_PUBLIC_PORTAL_CHAT_BASE_URL: ${NUXT_PUBLIC_PORTAL_CHAT_BASE_URL}
+      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN}
+      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_RU: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_RU}
+      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_HY: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_HY}
+      NUXT_PUBLIC_TASKS_URL: ${NUXT_PUBLIC_TASKS_URL}
+      NUXT_PUBLIC_ERP_URL: ${NUXT_PUBLIC_ERP_URL}
+      NUXT_PUBLIC_SHEETS_URL: ${NUXT_PUBLIC_SHEETS_URL}
+      NUXT_PUBLIC_EMAIL_URL: ${NUXT_PUBLIC_EMAIL_URL}
+      NUXT_PUBLIC_DRIVE_URL: ${NUXT_PUBLIC_DRIVE_URL}
+      NUXT_PUBLIC_BILLING_PORTAL_URL: ${BILLING_PORTAL_URL}
+      NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+
+      NUXT_SSO_CLIENT_ID: ${SSO_CLIENT_ID}
+      NUXT_SSO_CLIENT_SECRET: ${SSO_CLIENT_SECRET}
+      NUXT_AUTH_MODE: ${AUTH_MODE}
+    depends_on:
+      - hostpanel-api
+    restart: unless-stopped
+
+  hostpanel-admin:
+    container_name: hostpanel-admin
+    image: registry.gitlab.com/innovayse/innovayse-workspace/hostpanel/admin:${IMAGE_TAG}
+    build:
+      context: ..
+      dockerfile: admin/Dockerfile
+      target: prod
+    environment:
+      # Read at container start: nginx entrypoint writes config.js and <base href> from it.
+      ADMIN_BASE_URL_PATH: ${ADMIN_BASE_URL_PATH}
+    depends_on:
+      - hostpanel-api
+    restart: unless-stopped
+
+  hostpanel-nginx:
+    build:
+      context: ./nginx
+    ports:
+      - "${NGINX_HTTP_PORT}:80"
+      - "${NGINX_HTTPS_PORT}:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+      API_PORT: ${API_PORT}
+    depends_on:
+      - hostpanel-api
+      - hostpanel-client
+      - hostpanel-admin
+    restart: unless-stopped
+
+volumes:
+  hostpanel_branding:
+    name: hostpanel_hostpanel_branding

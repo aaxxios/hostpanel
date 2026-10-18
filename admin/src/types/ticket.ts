@@ -1,8 +1,50 @@
 /**
- * A support ticket, its list row and one reply in its thread.
+ * A support ticket, its list row and one reply in its thread, plus the closed value sets the
+ * API speaks for tickets (status, priority, bulk action, list filter).
  */
 
-import type { Department } from './department'
+/** Lifecycle status of a ticket, as the API names it. */
+export enum TicketStatus {
+  /** Open and awaiting staff response. */
+  Open = 'Open',
+  /** Staff replied, awaiting the client. */
+  AwaitingReply = 'AwaitingReply',
+  /** Answered by staff. */
+  Answered = 'Answered',
+  /** Closed. */
+  Closed = 'Closed',
+}
+
+/** Priority label of a ticket, as the API names it. */
+export enum TicketPriority {
+  /** Not urgent. */
+  Low = 'Low',
+  /** Standard. */
+  Medium = 'Medium',
+  /** Urgent or critical. */
+  High = 'High',
+}
+
+/** One action the tickets list can run on several tickets at once. */
+export enum TicketBulkAction {
+  /** Close the tickets. */
+  Close = 'close',
+  /** Delete the tickets permanently. */
+  Delete = 'delete',
+  /** Flag the tickets. */
+  Flag = 'flag',
+  /** Remove the flag from the tickets. */
+  Unflag = 'unflag',
+}
+
+/** The one list filter that is not a status: the tickets staff flagged. */
+export enum TicketFlagFilter {
+  /** Only flagged tickets. */
+  Flagged = 'flagged',
+}
+
+/** What the tickets list can be narrowed to: a status or the flagged set. */
+export type TicketListFilter = TicketStatus | TicketFlagFilter
 
 /** DTO representing a support ticket reply. */
 export interface TicketReply {
@@ -28,10 +70,10 @@ export interface Ticket {
   subject: string
   /** Initial message body. */
   message: string
-  /** Current lifecycle status (Open, AwaitingReply, Answered, Closed). */
-  status: string
-  /** Priority level (Low, Medium, High). */
-  priority: string
+  /** Current lifecycle status. */
+  status: TicketStatus
+  /** Priority level. */
+  priority: TicketPriority
   /** Department FK, if assigned. */
   departmentId: number | null
   /** Department name, if assigned. */
@@ -52,10 +94,10 @@ export interface TicketListItem {
   id: number
   /** Ticket subject line. */
   subject: string
-  /** Current lifecycle status as a string. */
-  status: string
-  /** Priority level as a string. */
-  priority: string
+  /** Current lifecycle status. */
+  status: TicketStatus
+  /** Priority level. */
+  priority: TicketPriority
   /** ISO 8601 creation timestamp. */
   createdAt: string
   /** Total number of replies. */
@@ -68,4 +110,56 @@ export interface TicketListItem {
   isFlagged: boolean
   /** FK to the client who opened the ticket. */
   clientId: number
+}
+
+/** Filter and paging of the ticket list. */
+export interface TicketFilter {
+  /** Page, 1-based. */
+  page: number
+  /** Items per page. */
+  pageSize: number
+  /** Status or flag filter to keep; null for all active tickets. */
+  status?: TicketListFilter | null
+  /** Subject search term; empty for none. */
+  search?: string
+}
+
+/** Body of a ticket opened by staff on behalf of a client. */
+export interface CreateTicketPayload {
+  /** Client the ticket is opened for. */
+  clientId: number
+  /** Subject line. */
+  subject: string
+  /** First message. */
+  message: string
+  /** Department that receives the ticket; `null` when none is chosen, which the API refuses. */
+  departmentId: number | null
+  /** Priority label. */
+  priority: TicketPriority
+}
+
+/** Body of a ticket metadata change; only the members present are changed. */
+export interface UpdateTicketPayload {
+  /** New lifecycle status. */
+  status?: TicketStatus
+  /** New priority label. */
+  priority?: TicketPriority
+  /** New department. */
+  departmentId?: number
+  /** Staff member the ticket is assigned to. */
+  assignedToStaffId?: number
+}
+
+/** Body of a staff reply to a ticket; the author is the signed-in staff member, resolved server-side. */
+export interface TicketReplyPayload {
+  /** Reply body. */
+  message: string
+}
+
+/** Body of a bulk action on tickets. */
+export interface TicketBulkPayload {
+  /** Tickets the action applies to. */
+  ticketIds: number[]
+  /** The action to run on them. */
+  action: TicketBulkAction
 }

@@ -11,6 +11,8 @@
  * @module utils/formatMoney
  */
 
+import { EMPTY_AMOUNT } from '~/utils/formatCurrency'
+
 /** The formatting is a fixed number of decimal places wrapped in the operator's own symbols. */
 export interface MoneyCurrency {
   /** ISO 4217 alpha code, e.g. `AMD`. Not used for formatting — kept for callers that log it. */
@@ -22,6 +24,20 @@ export interface MoneyCurrency {
   /** Decimal places to show, e.g. `2` for USD, `0` for AMD. */
   decimals: number
 }
+
+/**
+ * Formats just the grouped digits of an amount, without any currency symbol, at a fixed number
+ * of decimal places. For markup that renders the symbol separately (a smaller superscript, say).
+ *
+ * @param amount - The numeric amount.
+ * @param decimals - Decimal places to show.
+ * @returns The grouped digits in the default locale.
+ */
+export const formatMoneyDigits = (amount: number, decimals: number): string =>
+  new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }).format(amount)
 
 /**
  * Formats a money amount in a specific configured currency.
@@ -41,12 +57,9 @@ export const formatMoney = (
   amount: number | null | undefined,
   currency: MoneyCurrency
 ): string => {
-  if (amount === null || amount === undefined || !Number.isFinite(amount)) return '—'
+  if (amount === null || amount === undefined || !Number.isFinite(amount)) {
+    return EMPTY_AMOUNT
+  }
 
-  const grouped = new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: currency.decimals,
-    maximumFractionDigits: currency.decimals
-  }).format(amount)
-
-  return `${currency.prefix ?? ''}${grouped}${currency.suffix ?? ''}`
+  return `${currency.prefix ?? ''}${formatMoneyDigits(amount, currency.decimals)}${currency.suffix ?? ''}`
 }

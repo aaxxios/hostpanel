@@ -1,9 +1,10 @@
+/** Application entry: creates the app and installs the store, router and i18n. */
 import { createApp } from 'vue'
-import { pinia } from './pinia'
-import App from './App.vue'
-import router from './router'
-import { i18n } from './i18n'
-import './assets/main.css'
+import { pinia } from '@/pinia'
+import App from '@/App.vue'
+import router from '@/router'
+import { i18n } from '@/i18n'
+import '@/assets/main.css'
 
 // Nothing is restored from browser storage here any more, in either mode. Local-mode
 // sessions used to need a token read back out of sessionStorage before the router's

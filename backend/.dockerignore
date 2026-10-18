@@ -1,0 +1,10 @@
+# Build context of backend/Dockerfile (backend/): host build output and tooling state stay out.
+**/bin
+**/obj
+**/.git
+**/.logs
+**/.pids
+**/.codegraph
+**/.gitnexus
+**/.claude
+**/wg0.conf

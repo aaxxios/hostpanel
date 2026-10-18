@@ -1,68 +1,41 @@
 <template>
-  <div>
-    <div class="mb-6 flex items-center justify-between gap-4 flex-wrap">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $t('client.domains.title') }}</h1>
-        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{{ $t('client.domains.subtitle') }}</p>
-      </div>
-      <NuxtLink
-        to="/domains"
-        class="px-5 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium hover:bg-cyan-500/20 transition-colors flex items-center gap-2"
-      >
-        <Plus :size="16" :stroke-width="2" />
-        {{ $t('client.domains.registerNew') }}
-      </NuxtLink>
-    </div>
+  <UiStack gap="lg">
+    <UiPageHeader :title="$t('client.domains.title')" :description="$t('client.domains.subtitle')" :icon="Globe" class="!mb-0">
+      <template #actions>
+        <UiButton to="/domains" variant="outline" data-testid="domains-register-new">
+          <Plus :size="16" :stroke-width="2" class="mr-2" />
+          {{ $t('client.domains.registerNew') }}
+        </UiButton>
+      </template>
+    </UiPageHeader>
 
-    <!-- Filter tabs -->
-    <UiTabs
-      :tabs="tabs.map(t => ({ value: t.key, label: t.label, badge: t.count }))"
-      v-model="activeTab"
-      class="mb-6"
-    />
+    <UiTabs v-model="activeTab" :tabs="tabs" />
 
-    <!-- Loading -->
-    <div v-if="store.domainsLoading" class="space-y-3">
-      <div v-for="i in 4" :key="i" class="h-20 rounded-xl bg-white/5 border border-white/10 animate-pulse" />
-    </div>
+    <UiStack v-if="store.domainsLoading" gap="sm">
+      <UiSkeleton v-for="i in 4" :key="i" shape="block" class="h-20" />
+    </UiStack>
 
     <!-- Not a customer account. Checked before the failure branch: this is a state the
          API reported, not a fault, and it carries its own explanation and a way out. -->
     <ClientNoProfileNotice v-else-if="store.clientProfileMissing" />
 
     <!-- Failed. Checked before the list, which a failure otherwise renders as the toolbar
-         above an empty state — a search box over "no domains" rather than a reason. -->
-    <UiAlert v-else-if="store.domainsError" variant="error">{{ store.domainsError }}</UiAlert>
+         above an empty state -- a search box over "no domains" rather than a reason. -->
+    <UiAlert v-else-if="store.domainsError" variant="error" data-testid="domains-error">{{ store.domainsError }}</UiAlert>
 
     <template v-else>
-      <!-- Toolbar -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
+      <UiStack direction="row" align="center" justify="between" wrap>
+        <UiText size="sm" tone="muted">
           {{ $t('ui.pagination.showing', { from: pageFrom, to: pageTo, total: filtered.length }) }}
-        </p>
-        <UiSearchInput
-          v-model="search"
-          :placeholder="$t('client.domains.search')"
-          class="sm:w-64"
-          @update:model-value="page = 1"
-        />
-      </div>
+        </UiText>
+        <UiSearchInput v-model="search" :placeholder="$t('client.domains.search')" class="sm:w-64" testid="domains-search" />
+      </UiStack>
 
-      <!-- Empty -->
-      <div v-if="!filtered.length" class="text-center py-20">
-        <Globe :size="48" :stroke-width="2" class="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-        <p class="text-gray-500 dark:text-gray-400 mb-4">{{ $t('client.domains.empty') }}</p>
-        <NuxtLink
-          v-if="!search"
-          to="/domains"
-          class="px-6 py-2.5 rounded-xl bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-400 transition-colors"
-        >
-          {{ $t('client.domains.searchDomains') }}
-        </NuxtLink>
-      </div>
+      <UiEmptyState v-if="!filtered.length" :icon="Globe" :title="$t('client.domains.empty')">
+        <UiButton v-if="!search" to="/domains" data-testid="domains-search-domains">{{ $t('client.domains.searchDomains') }}</UiButton>
+      </UiEmptyState>
 
-      <!-- Domains table -->
-      <UiTable v-else>
+      <UiTable v-else data-testid="domains-table">
         <UiTableHead>
           <UiTableRow :hoverable="false">
             <UiTableTh>{{ $t('client.domains.colDomain') }}</UiTableTh>
@@ -73,115 +46,105 @@
           </UiTableRow>
         </UiTableHead>
         <UiTableBody>
-          <UiTableRow
-            v-for="domain in paged"
-            :key="domain.id"
-            group
-          >
+          <UiTableRow v-for="domain in paged" :key="domain.id" group :data-testid="`domain-row-${domain.id}`">
             <UiTableTd>
-              <div class="flex items-center gap-3">
+              <UiStack direction="row" align="center" gap="sm">
                 <Globe :size="16" :stroke-width="2" class="text-primary-400 flex-shrink-0" />
-                <span class="text-gray-900 dark:text-white font-medium text-sm">{{ domain.name }}</span>
-              </div>
+                <UiText as="span" size="sm" weight="medium">{{ domain.name }}</UiText>
+              </UiStack>
             </UiTableTd>
-            <UiTableTd class="text-gray-500 dark:text-gray-400 hidden lg:table-cell text-sm">{{ formatDate(domain.registeredAt) }}</UiTableTd>
+            <UiTableTd class="hidden lg:table-cell">
+              <UiText as="span" size="sm" tone="subtle">{{ formatDate(domain.registeredAt) }}</UiText>
+            </UiTableTd>
             <UiTableTd class="hidden md:table-cell">
-              <div class="text-sm" :class="isExpiringSoon(domain.expiresAt) ? 'text-orange-400 font-medium' : 'text-gray-500 dark:text-gray-400'">
+              <UiText as="span" size="sm" :tone="isExpiringSoon(domain.expiresAt) ? 'danger' : 'subtle'">
                 {{ formatDate(domain.expiresAt) }}
-                <span v-if="isExpiringSoon(domain.expiresAt)" class="ml-2 text-xs text-orange-400">({{ $t('client.domains.expiringSoon') }})</span>
-              </div>
+              </UiText>
+              <UiBadge v-if="isExpiringSoon(domain.expiresAt)" variant="warning" size="sm" class="ml-2">{{ $t('client.domains.expiringSoon') }}</UiBadge>
             </UiTableTd>
             <UiTableTd align="center">
               <ClientStatusBadge :status="domain.status" />
             </UiTableTd>
             <UiTableTd align="right">
-              <NuxtLink
-                :to="`/client/domains/${domain.id}`"
-                class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 text-xs hover:border-cyan-500/30 hover:text-gray-900 dark:hover:text-white transition-all"
-              >
+              <UiButton :to="`/client/domains/${domain.id}`" variant="subtle" size="sm" :data-testid="`domain-manage-${domain.id}`">
                 {{ $t('client.domains.manage') }}
-              </NuxtLink>
+              </UiButton>
             </UiTableTd>
           </UiTableRow>
         </UiTableBody>
       </UiTable>
 
-      <UiPagination
-        v-if="filtered.length > 0"
-        v-model="page"
-        v-model:per-page="perPage"
-        :total-pages="totalPages"
-      />
+      <UiPagination v-if="filtered.length > 0" v-model="page" v-model:per-page="perPage" :total-pages="totalPages" />
     </template>
-  </div>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
+/**
+ * Domain list: filter tabs (all / active / expired), a search box and a paged table of the
+ * client's domains, each row linking to the domain. Loading, missing-profile and failure states
+ * come from the client store.
+ */
 import { Globe, Plus } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
-import { EMPTY_DATE, formatDate } from '~/utils/formatDate'
+import { DomainStatus } from '~/types/domainstatus'
+import { ListFilter } from '~/types/listfilter'
+import { isExpiringSoon } from '~/utils/domainExpiry'
+import { formatDate } from '~/utils/formatDate'
 
 definePageMeta({ layout: 'client', middleware: 'client-auth' })
 
+/** Translates a key into the active locale. */
 const { t } = useI18n()
+
+/** The client store that owns the domain list and its loading and failure state. */
 const store = useClientStore()
 
 await useAsyncData('client-domains', () => store.fetchDomains())
 
-// ── Filters ───────────────────────────────────────────────────────────────────
-const activeTab = ref('all')
-const search    = ref('')
-const page      = ref(1)
-const perPage   = ref(10)
+/** The active filter tab, a `ListFilter` value (a string so the tab bar can v-model it). */
+const activeTab = ref<string>(ListFilter.All)
 
-watch([activeTab, search], () => { page.value = 1 })
+/** The search text. */
+const search = ref('')
 
+/** The current page, 1-based. */
+const page = ref(1)
+
+/** Rows per page. */
+const perPage = ref(10)
+
+// A new filter or search starts again from the first page.
+watch([activeTab, search, perPage], () => { page.value = 1 })
+
+/** The filter tabs, each with the number of domains it holds. */
 const tabs = computed(() => [
-  { key: 'all',     label: t('client.domains.tabAll'),     count: store.domains.length },
-  { key: 'Active',  label: t('client.domains.tabActive'),  count: store.domains.filter(d => d.status === 'Active').length },
-  { key: 'Expired', label: t('client.domains.tabExpired'), count: store.domains.filter(d => d.status === 'Expired').length }
+  { value: ListFilter.All, label: t('client.domains.tabAll'), badge: store.domains.length },
+  { value: ListFilter.Current, label: t('client.domains.tabActive'), badge: store.domains.filter((domain) => domain.status === DomainStatus.Active).length },
+  { value: ListFilter.Finished, label: t('client.domains.tabExpired'), badge: store.domains.filter((domain) => domain.status === DomainStatus.Expired).length },
 ])
 
+/** The domains the active tab and the search text leave. */
 const filtered = computed(() => {
-  let list = activeTab.value === 'all'
-    ? store.domains
-    : store.domains.filter(d => d.status === activeTab.value)
-  const q = search.value.trim().toLowerCase()
-  if (q) list = list.filter(d => d.name.toLowerCase().includes(q))
-  return list
+  let list = store.domains
+  if (activeTab.value === ListFilter.Current) {
+    list = list.filter((domain) => domain.status === DomainStatus.Active)
+  } else if (activeTab.value === ListFilter.Finished) {
+    list = list.filter((domain) => domain.status === DomainStatus.Expired)
+  }
+  const query = search.value.trim().toLowerCase()
+  return query ? list.filter((domain) => domain.name.toLowerCase().includes(query)) : list
 })
 
+/** Number of pages the filtered list needs. */
 const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / perPage.value)))
-const paged      = computed(() => filtered.value.slice((page.value - 1) * perPage.value, page.value * perPage.value))
-const pageFrom   = computed(() => filtered.value.length === 0 ? 0 : (page.value - 1) * perPage.value + 1)
-const pageTo     = computed(() => Math.min(page.value * perPage.value, filtered.value.length))
 
-/**
- * Checks whether the given value denotes a real date rather than a zero sentinel.
- *
- * Kept only for {@link isExpiringSoon}, which does arithmetic rather than display. The local
- * display wrapper that used to sit beside this is gone: it called `toLocaleDateString()` with
- * no locale, which formats in the *browser's* language rather than the one the visitor chose
- * in the portal, so an Armenian customer on an English machine read English dates.
- *
- * @param d - Date string as the API sent it.
- * @returns True when the value parses and is not a zero-date sentinel.
- */
-const isValidDate = (d: string): boolean => formatDate(d) !== EMPTY_DATE
+/** The rows of the current page. */
+const paged = computed(() => filtered.value.slice((page.value - 1) * perPage.value, page.value * perPage.value))
 
-/**
- * Checks whether a domain expires within the next 30 days.
- *
- * Instant arithmetic, deliberately not routed through `formatDate`: "within 30 days" is a
- * question about elapsed time, where the calendar-day reading `formatDate` gives is the wrong
- * tool.
- *
- * @param expiryDate - ISO 8601 expiration date string.
- * @returns True if the domain expires within 30 days.
- */
-const isExpiringSoon = (expiryDate: string): boolean => {
-  if (!isValidDate(expiryDate)) return false
-  const daysLeft = (new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  return daysLeft >= 0 && daysLeft <= 30
-}
+/** 1-based index of the first row shown, 0 when there is none. */
+const pageFrom = computed(() => (filtered.value.length === 0 ? 0 : (page.value - 1) * perPage.value + 1))
+
+/** 1-based index of the last row shown. */
+const pageTo = computed(() => Math.min(page.value * perPage.value, filtered.value.length))
 </script>

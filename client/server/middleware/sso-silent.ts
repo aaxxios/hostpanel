@@ -8,11 +8,19 @@
  * SSO responds:
  *   - Active session  → issues code → callback sets authed → back to same page (logged in, no flash)
  *   - No session      → login_required error → callback clears flag → page renders as guest
+ *
+ * @module server/middleware/sso-silent
  */
+
+import { AuthMode } from '~/types/authmode'
+
+/** Sends a signed-out page navigation through one silent SSO probe. */
 export default defineEventHandler((event) => {
   // Local-auth mode has its own login flow (client-auth.ts middleware) — never applicable to SSO.
   const config = useRuntimeConfig(event)
-  if (config.authMode !== 'sso') return
+  if (config.authMode !== AuthMode.Sso) {
+    return
+  }
 
   // Only intercept page navigations (not API calls, assets, etc.)
   const url = event.path ?? ''
@@ -21,12 +29,16 @@ export default defineEventHandler((event) => {
     url.startsWith('/_nuxt/') ||
     url.startsWith('/__nuxt') ||
     url.includes('.')
-  ) return
+  ) {
+    return
+  }
 
   const authed = getCookie(event, 'authed')
   const silentTried = getCookie(event, 'sso_silent_tried')
 
-  if (authed || silentTried) return
+  if (authed || silentTried) {
+    return
+  }
 
   // Store the current URL to return to after silent SSO
   setCookie(event, 'sso_silent_return', url || '/', {

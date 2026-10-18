@@ -26,7 +26,7 @@ set -eu
 CONTAINER="${1:-hostpanel-db}"
 
 docker exec -i "$CONTAINER" sh -lc \
-  'psql -U "$POSTGRES_USER" -d "${POSTGRES_DB:-hostpanel}" -X -q -f -' <<'SQL'
+  'psql -U "$POSTGRES_USER" -d "${POSTGRES_DB}" -X -q -f -' <<'SQL'
 SELECT
   count(*)                                                                          AS client_rows,
   count(*) FILTER (WHERE c."UserId" IN (SELECT "Id" FROM "AspNetUsers"))             AS owner_is_a_local_id,

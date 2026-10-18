@@ -1,105 +1,109 @@
 <template>
-  <div class="min-h-[60dvh] flex items-center justify-center px-4">
-    <div class="text-center max-w-md w-full">
-      <!-- Success icon -->
-      <div class="mx-auto w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mb-6">
-        <CheckCircle :size="48" class="text-green-500" />
-      </div>
+  <UiStack align="center" justify="center" class="min-h-[60dvh] px-4" data-testid="order-success">
+    <UiStack gap="lg" class="w-full max-w-md">
+      <ClientOutcomePanel
+        :icon="CheckCircle"
+        tone="success"
+        :heading-level="UiHeadingLevel.H1"
+        :title="$t('checkout.success.title')"
+        :message="$t('checkout.success.description')"
+      />
 
-      <h1 class="text-2xl font-bold text-white mb-2">{{ $t('checkout.success.title') }}</h1>
-      <p class="text-gray-400 mb-8">{{ $t('checkout.success.description') }}</p>
+      <!-- Order details -->
+      <UiCard padding="md" data-testid="order-success-details">
+        <UiStack gap="sm">
+          <ClientSummaryRow :label="$t('checkout.success.orderNumber')" :value="orderNumber" testid="order-success-number" />
+          <ClientSummaryRow :label="$t('checkout.success.status')">
+            <UiBadge variant="success" rounded>{{ $t('checkout.success.paid') }}</UiBadge>
+          </ClientSummaryRow>
+          <ClientSummaryRow :label="$t('checkout.success.amount')" :value="amount" testid="order-success-amount" />
+          <ClientSummaryRow v-if="domainName" :label="$t('checkout.success.domain')" :value="domainName" testid="order-success-domain" />
+          <ClientSummaryRow v-if="domainAction" :label="$t('checkout.success.action')" testid="order-success-action">
+            <UiBadge :variant="domainAction === DomainOrderAction.Register ? 'success' : 'info'" rounded>
+              {{ domainAction === DomainOrderAction.Register ? $t('checkout.success.registration') : $t('checkout.success.transfer') }}
+            </UiBadge>
+          </ClientSummaryRow>
+        </UiStack>
+      </UiCard>
 
-      <!-- Order details card -->
-      <div class="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 text-left">
-        <div class="flex justify-between items-center mb-3">
-          <span class="text-sm text-gray-400">{{ $t('checkout.success.orderNumber') }}</span>
-          <span class="text-sm font-bold text-white">{{ orderNumber }}</span>
-        </div>
-        <div class="flex justify-between items-center mb-3">
-          <span class="text-sm text-gray-400">{{ $t('checkout.success.status') }}</span>
-          <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-500/20 text-green-400">
-            {{ $t('checkout.success.paid') }}
-          </span>
-        </div>
-        <div class="flex justify-between items-center">
-          <span class="text-sm text-gray-400">{{ $t('checkout.success.amount') }}</span>
-          <span class="text-sm font-bold text-white">{{ amount }}</span>
-        </div>
-        <div v-if="domainName" class="flex justify-between items-center mt-3 pt-3 border-t border-white/5">
-          <span class="text-sm text-gray-400">Domain</span>
-          <span class="text-sm font-bold text-white">{{ domainName }}</span>
-        </div>
-        <div v-if="domainAction" class="flex justify-between items-center mt-2">
-          <span class="text-sm text-gray-400">Action</span>
-          <span class="px-2.5 py-0.5 rounded-full text-xs font-bold"
-                :class="domainAction === 'register' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'">
-            {{ domainAction === 'register' ? 'Registration' : 'Transfer' }}
-          </span>
-        </div>
-      </div>
-
-      <!-- CTA buttons -->
-      <div class="space-y-3">
-        <NuxtLink
+      <!-- Where to go next -->
+      <UiStack gap="sm">
+        <UiButton
           v-if="domainName"
           :to="localePath('/client/domains')"
-          class="block w-full py-3 px-6 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold text-center hover:from-green-500 hover:to-emerald-500 transition-all"
+          size="lg"
+          full-width
+          data-testid="order-success-manage-domain"
         >
-          Manage Your Domain
-        </NuxtLink>
-        <NuxtLink
-          :to="localePath('/client/services')"
-          class="block w-full py-3 px-6 rounded-2xl bg-gradient-to-r from-cyan-600 to-primary-600 text-white font-bold text-center hover:from-cyan-500 hover:to-primary-500 transition-all"
-          @click="forceRefreshServices"
-        >
+          {{ $t('checkout.success.manageDomain') }}
+        </UiButton>
+        <UiButton size="lg" full-width data-testid="order-success-setup-service" @click="openServices">
           {{ $t('checkout.success.setupService') }}
-        </NuxtLink>
-        <NuxtLink
+        </UiButton>
+        <UiButton
           :to="localePath('/client/invoices')"
-          class="block w-full py-3 px-6 rounded-2xl bg-white/5 border border-white/10 text-white font-semibold text-center hover:bg-white/10 transition-colors"
+          variant="subtle"
+          size="lg"
+          full-width
+          data-testid="order-success-invoices"
         >
           {{ $t('checkout.success.viewInvoices') }}
-        </NuxtLink>
-      </div>
-    </div>
-  </div>
+        </UiButton>
+      </UiStack>
+    </UiStack>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
 /**
- * Payment success page shown after a successful Stripe checkout.
- * Displays order confirmation and links to services setup.
+ * Payment success page shown after a successful checkout: the order confirmation and links on to
+ * the service setup, the domain and the invoices.
  */
 import { CheckCircle } from 'lucide-vue-next'
+import { useClientStore } from '~/stores/client'
+import { DomainOrderAction } from '~/types/domainorderaction'
+import { UiHeadingLevel } from '~/utils/ui/enums'
 
 definePageMeta({ middleware: 'client-auth' })
 
-const { t: $t } = useI18n()
+/** Amounts the checkout writes when nothing was charged; shown as a dash. */
+const ZERO_AMOUNTS = ['0', '0.00', '$0.00']
+
+/** What the page shows where a value is missing. */
+const DASH = '—'
+
+/** Prefixes a path with the active locale. */
 const localePath = useLocalePath()
+/** The current route, read for its query and path. */
 const route = useRoute()
+/** Client store: the signed-in person and their services, invoices, domains and tickets. */
 const store = useClientStore()
 
 /** Order number from query params. */
-const orderNumber = computed(() => (route.query.order as string) || '—')
+const orderNumber = computed(() => (route.query.order as string) || DASH)
 
-/** Formatted amount from query params; shows dash when zero or missing. */
+/** Formatted amount from query params; a dash when zero or missing. */
 const amount = computed(() => {
   const raw = (route.query.amount as string) || ''
-  if (!raw || raw === '0' || raw === '0.00' || raw === '$0.00') return '—'
-  return raw
+  return !raw || ZERO_AMOUNTS.includes(raw) ? DASH : raw
 })
 
 /** Domain name from query params (set when a domain was purchased). */
 const domainName = computed(() => (route.query.domain as string) || null)
 
-/** Domain action from query params ("register" or "transfer"). */
-const domainAction = computed(() => (route.query.action as string) || null)
+/** Domain action from query params, when a domain was registered or transferred. */
+const domainAction = computed(() => (route.query.action as DomainOrderAction) || null)
 
 /**
- * Forces a fresh fetch of services before navigating.
- * Clears the loaded flag so the services page re-fetches.
+ * Loads the services afresh, then opens the services page.
+ *
+ * The order just created one, so the list the store cached before checkout is stale and the
+ * services page would otherwise show it without the new service.
+ *
+ * @returns Nothing.
  */
-function forceRefreshServices() {
-  store.servicesLoaded = false
+const openServices = async (): Promise<void> => {
+  await store.fetchServices(true)
+  await navigateTo(localePath('/client/services'))
 }
 </script>

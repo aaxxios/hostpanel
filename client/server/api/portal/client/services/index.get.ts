@@ -1,7 +1,7 @@
 /**
  * GET /api/portal/client/services
  * Returns all services for the authenticated client from the C# backend,
- * mapped to the WHMCS-style field names the frontend expects.
+ * mapped to the legacy-style field names the frontend expects.
  */
 export default defineEventHandler(async (event) => {
   const services = await internalApiCall<Record<string, unknown>[]>(event, '/me/services')

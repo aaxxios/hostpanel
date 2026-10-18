@@ -1,25 +1,39 @@
 /**
  * PUT /api/portal/client/me
  * Updates the authenticated client's profile via the C# backend.
+ *
+ * @module server/api/portal/client/me.put
  */
 
 /**
- * The account form's own field names, as the page posts them. They are the WHMCS-era
+ * The account form's own field names, as the page posts them. They are the legacy
  * names the client area was built against, not the backend's, so nothing here binds by
  * accident -- every one of them is mapped below.
  */
 interface AccountFormBody {
+  /** First name. */
   firstname?: string
+  /** Last name. */
   lastname?: string
+  /** Company name. */
   companyname?: string
+  /** Email address. */
   email?: string
+  /** Phone number. */
   phonenumber?: string
+  /** Street address. */
   address1?: string
+  /** Second address line. */
   address2?: string
+  /** City. */
   city?: string
+  /** State or region. */
   state?: string
+  /** Postal code. */
   postcode?: string
+  /** Country code. */
   country?: string
+  /** Default payment method. */
   paymentmethod?: string
   /**
    * Posted by the Language dropdown, as one of the codes in `LocaleOptions.SupportedLocales`
@@ -27,6 +41,7 @@ interface AccountFormBody {
    * account row, under `AUTH_MODE=local` where this deployment owns that row.
    */
   language?: string
+  /** Notification preferences by area (general, invoice, support, product, domain, affiliate). */
   emailprefs?: Record<string, boolean>
 }
 
@@ -40,6 +55,7 @@ interface AccountFormBody {
 const pick = <T>(posted: T | undefined, current: T | undefined): T | undefined =>
   posted !== undefined ? posted : current
 
+/** Merges the posted fields into the stored record and writes the whole record back. */
 export default defineEventHandler(async (event) => {
   const body = await readBody<AccountFormBody>(event)
 

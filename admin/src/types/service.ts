@@ -2,8 +2,6 @@
  * A provisioned service in its three depths, plus a pending cancellation against one.
  */
 
-import type { Domain } from './domain'
-import type { Product } from './product'
 
 /** Represents a hosted service (hosting, VPS, etc.). */
 export interface Service {
@@ -130,4 +128,115 @@ export interface CancellationRequestItem {
   status: string
   /** ISO 8601 creation date. */
   createdAt: string
+}
+
+/** Filter and paging of the service list. */
+export interface ServiceFilter {
+  /** Page, 1-based. */
+  page: number
+  /** Items per page. */
+  pageSize: number
+  /** Keep only this client's services. */
+  clientId?: number | string
+}
+
+/** Body of a service save: the editable fields of the detail page. */
+export interface UpdateServicePayload {
+  /** Primary domain of the service. */
+  domain: string | null
+  /** Dedicated IP address. */
+  dedicatedIp: string | null
+  /** Hosting account username. */
+  username: string | null
+  /** Hosting account password. */
+  password: string | null
+  /** Reference on the provisioning server. */
+  provisioningRef: string | null
+  /** Recurring amount. */
+  recurringAmount: number
+  /** First payment amount. */
+  firstPaymentAmount: number
+  /** ISO 8601 next renewal date. */
+  nextRenewalAt: string | null
+  /** ISO 8601 creation date. */
+  createdAt: string | null
+  /** ISO 8601 termination date. */
+  terminatedAt: string | null
+  /** Billing cycle label. */
+  billingCycle: string
+  /** Payment method label. */
+  paymentMethod: string | null
+  /** Applied promotion code. */
+  promotionCode: string | null
+  /** External subscription reference. */
+  subscriptionId: string | null
+  /** Whether auto-suspend is overridden. */
+  overrideAutoSuspend: boolean
+  /** ISO 8601 date the override lasts until. */
+  suspendUntil: string | null
+  /** Whether the service terminates at the end of the cycle. */
+  autoTerminateEndOfCycle: boolean
+  /** Reason recorded for the automatic termination. */
+  autoTerminateReason: string | null
+  /** Free-text admin notes. */
+  adminNotes: string | null
+  /** Lifecycle status. */
+  status: string
+  /** Quantity. */
+  quantity: number
+  /** Server the service runs on. */
+  serverId: number | null
+  /** Product the service is of. */
+  productId: number | null
+}
+
+/** Body of the suspend and terminate provisioning commands. */
+export interface ProvisioningReasonPayload {
+  /** Reason recorded with the command. */
+  reason: string
+}
+
+/** Status of a hosted service, exactly as the API sends it. */
+export enum ServiceStatus {
+  Active = 'Active',
+  Pending = 'Pending',
+  Suspended = 'Suspended',
+  Terminated = 'Terminated',
+}
+
+/** Closed set of billing cycles a service can renew on, as the API sends them. */
+export const BillingCycle = {
+  /** Never billed. */
+  Free: 'free',
+  /** Every month. */
+  Monthly: 'monthly',
+  /** Every three months. */
+  Quarterly: 'quarterly',
+  /** Every six months. */
+  SemiAnnual: 'semi-annual',
+  /** Every year. */
+  Annual: 'annual',
+  /** Every two years. */
+  Biennial: 'biennial',
+  /** Every three years. */
+  Triennial: 'triennial',
+} as const
+
+/** One of the billing cycles. */
+export type BillingCycle = (typeof BillingCycle)[keyof typeof BillingCycle]
+
+/** How a cancellation request ends the service, exactly as the API sends it. */
+export enum CancellationType {
+  /** The service stops at once. */
+  Immediate = 'Immediate',
+  /** The service runs until the end of the paid period. */
+  EndOfBillingPeriod = 'EndOfBillingPeriod',
+}
+
+/** Where a cancellation request stands, exactly as the API sends it. */
+export enum CancellationStatus {
+  /** Waiting for the operator. */
+  Open = 'Open',
+  /** Handled. */
+  Closed = 'Closed',
 }

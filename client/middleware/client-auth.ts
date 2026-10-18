@@ -2,30 +2,27 @@
  * Client area route middleware
  *
  * Protects all /client/* routes except /client/login and /client/register.
- * Uses the `whmcs_authed` cookie (non-httpOnly) which is readable on both
+ * Uses the `authed` cookie (non-httpOnly) which is readable on both
  * server and client, avoiding SSR/hydration mismatches.
  *
  * Applied via `definePageMeta({ middleware: 'client-auth' })` on each page.
  */
+
+import { CLIENT_DASHBOARD_PATH } from '~/constants/clientRoutes'
+import { AuthMode } from '~/types/authmode'
+import { isPublicClientPath, loginPathWithReturn } from '~/utils/returnPath'
 export default defineNuxtRouteMiddleware((to) => {
   // useCookie works on server (reads from request headers) AND client (document.cookie)
-  // whmcs_authed is non-httpOnly so it's accessible in both environments
+  // authed is non-httpOnly so it's accessible in both environments
   const authed = useCookie('authed')
 
-  const publicRoutes = [
-    '/client/login',
-    '/client/register',
-    '/client/forgot-password',
-    '/client/reset-password',
-    '/client/confirm-email',
-  ]
-  const isPublic = publicRoutes.some(r => to.path === r || to.path.startsWith(r + '/'))
+  const isPublic = isPublicClientPath(to.path)
 
   const config = useRuntimeConfig()
 
   // Not logged in
   if (!authed.value) {
-    if (config.public.authMode === 'sso') {
+    if (config.public.authMode === AuthMode.Sso) {
       // SSO mode: always go straight to SSO (skips "Continue with Innovayse" page).
       // The SSO decides: show login (no session) or chooser (has accounts).
       if (to.path !== '/api/portal/auth/sso/authorize') {
@@ -34,13 +31,13 @@ export default defineNuxtRouteMiddleware((to) => {
       }
     } else if (!isPublic) {
       // Local mode: redirect to login page
-      return navigateTo(`/client/login?redirect=${encodeURIComponent(to.fullPath)}`)
+      return navigateTo(loginPathWithReturn(to.fullPath))
     }
     return
   }
 
   // Already logged in + trying to access login/register → redirect to dashboard
   if (isPublic) {
-    return navigateTo('/client/dashboard')
+    return navigateTo(CLIENT_DASHBOARD_PATH)
   }
 })

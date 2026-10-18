@@ -54,6 +54,7 @@ import { enUS } from 'date-fns/locale/en-US'
 import { hy } from 'date-fns/locale/hy'
 import { ru } from 'date-fns/locale/ru'
 import type { Locale } from 'date-fns'
+import type { AppWithI18n } from '~/types/appwithi18n'
 
 /**
  * What a date renders as when there is nothing to render.
@@ -76,7 +77,7 @@ const DATE_LOCALES: Record<string, Locale> = { en: enUS, ru, hy }
 /**
  * Leading `YYYY-MM-DD` of an ISO-8601 value, whether or not a time follows it.
  *
- * Matches both shapes the API sends: the bare `2026-09-08` a WHMCS-derived field carries, and
+ * Matches both shapes the API sends: the bare `2026-09-08` a legacy-derived field carries, and
  * the `2026-09-08T08:19:37.756135+00:00` a .NET `DateTimeOffset` serialises to.
  */
 const ISO_CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})/
@@ -84,7 +85,7 @@ const ISO_CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})/
 /**
  * Zero-ish dates that mean "unset" rather than a year in antiquity.
  *
- * `0000-00-00` is MySQL's absent date and reaches the portal through the WHMCS-shaped fields;
+ * `0000-00-00` is MySQL's absent date and reaches the portal through the legacy-shaped fields;
  * `0001-01-01` is `default(DateTime)` serialised. Both already had `startsWith` guards
  * scattered across `pages/client/dashboard.vue` and `pages/client/domains/index.vue`; the
  * check lives here now so a new call site inherits it instead of re-deriving it.
@@ -98,13 +99,15 @@ const UNSET_YEARS = ['0000', '0001']
  * @returns The caller's locale, else the locale of the request currently rendering, else `en`.
  */
 const resolveLocale = (locale?: string): string => {
-  if (locale) return locale
+  if (locale) {
+    return locale
+  }
 
   try {
     // `useNuxtApp()` is scoped to the running request during SSR, so this is per-visitor and
     // not shared state. It throws when there is no Nuxt instance — a unit test, or a call from
     // outside a render — which is exactly when `en` is the right answer.
-    const i18n = (useNuxtApp() as { $i18n?: { locale?: { value?: string } } }).$i18n
+    const i18n = (useNuxtApp() as AppWithI18n).$i18n
     return i18n?.locale?.value ?? 'en'
   }
   catch {
@@ -120,7 +123,7 @@ const resolveLocale = (locale?: string): string => {
  * @returns The date-fns locale, defaulting to `enUS`.
  */
 const dateLocale = (locale?: string): Locale =>
-  DATE_LOCALES[resolveLocale(locale).split('-')[0]!] ?? enUS
+  DATE_LOCALES[resolveLocale(locale).split('-')[0] ?? 'en'] ?? enUS
 
 /**
  * Parses a value the API sent into a `Date`, or `null` when it does not denote one.
@@ -132,19 +135,25 @@ const dateLocale = (locale?: string): Locale =>
  * @returns The parsed date, or `null` for an absent, sentinel or unparseable value.
  */
 const toDate = (value: string | number | Date | null | undefined, calendarOnly: boolean): Date | null => {
-  if (value === null || value === undefined || value === '') return null
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
 
   if (typeof value === 'string') {
     const day = ISO_CALENDAR_DAY.exec(value)
-    if (day && UNSET_YEARS.includes(day[1]!)) return null
+    if (day && UNSET_YEARS.includes(day[1] ?? '')) {
+      return null
+    }
 
     // The string already names the day the backend meant. Building local midnight from those
     // three numbers is the whole timezone fix: no instant is constructed, so no zone can move
     // the answer.
-    if (day && calendarOnly) return new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3]))
+    if (day && calendarOnly) {
+      return new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3]))
+    }
 
     const parsed = parseISO(value)
-    // `parseISO` answers Invalid Date rather than throwing, and a non-ISO string — a WHMCS
+    // `parseISO` answers Invalid Date rather than throwing, and a non-ISO string — a legacy
     // free-text field, say — lands here.
     return isValid(parsed) ? parsed : null
   }

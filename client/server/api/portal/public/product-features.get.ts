@@ -8,13 +8,19 @@
  * A backend without the endpoint — one running an older build than this client —
  * yields an empty list rather than an error, because the comparison table is an
  * addition to the plans page and must not be able to take the page down with it.
+ *
+ * @module server/api/portal/public/product-features.get
  */
 export default defineCachedEventHandler(async (event) => {
   const query = getQuery(event)
   const params = new URLSearchParams()
 
-  if (query.gid) params.set('groupId', String(query.gid))
-  if (query.pid) params.set('productId', String(query.pid))
+  if (query.gid) {
+    params.set('groupId', String(query.gid))
+  }
+  if (query.pid) {
+    params.set('productId', String(query.pid))
+  }
 
   const qs = params.toString()
 

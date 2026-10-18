@@ -1,8 +1,15 @@
-import type { Service } from '~/types/service'
+/**
+ * Static marketing content for the public pages: statistics, products, projects,
+ * testimonials, FAQ entries, the timeline, team stats, partners and process steps.
+ *
+ * @module lib/data
+ */
+
 import type { Product } from '~/types/product'
 import type { Project } from '~/types/project'
 import type { Testimonial } from '~/types/testimonial'
 import type { FAQ } from '~/types/faq'
+import { FaqCategory } from '~/types/faqcategory'
 import type { TimelineEvent } from '~/types/timelineevent'
 import type { TeamStats } from '~/types/teamstats'
 import type { Partner } from '~/types/partner'
@@ -17,98 +24,6 @@ export const teamStats: TeamStats = {
   teamSize: 50,
   clients: 120
 }
-
-/**
- * Services offered by Innovayse
- * Displayed in Services section and Services page
- */
-export const services: Service[] = [
-  {
-    id: 'web-development',
-    icon: 'code-braces',
-    category: 'development',
-    branchKeys: ['corporate', 'ecommerce', 'webapp', 'landing', 'cms'],
-    branchIcons: {
-      corporate: 'mdi:briefcase',
-      ecommerce: 'mdi:cart',
-      webapp: 'mdi:application',
-      landing: 'mdi:rocket-launch',
-      cms: 'mdi:folder-multiple'
-    },
-    link: '/services#development'
-  },
-  {
-    id: 'mobile-development',
-    icon: 'cellphone',
-    category: 'development',
-    branchKeys: ['ios', 'android', 'crossplatform', 'pwa'],
-    branchIcons: {
-      ios: 'mdi:apple',
-      android: 'mdi:android',
-      crossplatform: 'mdi:devices',
-      pwa: 'mdi:earth'
-    },
-    link: '/services#development'
-  },
-  {
-    id: 'technical-seo',
-    icon: 'magnify',
-    category: 'seo',
-    branchKeys: ['audit', 'vitals', 'schema', 'crawl'],
-    branchIcons: {
-      audit: 'mdi:wrench',
-      vitals: 'mdi:gauge',
-      schema: 'mdi:code-tags',
-      crawl: 'mdi:bug'
-    },
-    link: '/services#seo'
-  },
-  {
-    id: 'content-seo',
-    icon: 'file-document',
-    category: 'seo',
-    branchKeys: ['keyword', 'strategy', 'onpage', 'linkbuilding', 'local', 'ecommerce', 'international'],
-    branchIcons: {
-      keyword: 'mdi:magnify',
-      strategy: 'mdi:strategy',
-      onpage: 'mdi:file-document',
-      linkbuilding: 'mdi:link-variant',
-      local: 'mdi:map-marker',
-      ecommerce: 'mdi:shopping',
-      international: 'mdi:earth'
-    },
-    link: '/services#seo'
-  },
-  {
-    id: 'google-ads',
-    icon: 'target',
-    category: 'ppc',
-    branchKeys: ['search', 'display', 'social', 'shopping', 'video', 'remarketing', 'app'],
-    branchIcons: {
-      search: 'mdi:magnify',
-      display: 'mdi:image',
-      social: 'mdi:account-group',
-      shopping: 'mdi:cart',
-      video: 'mdi:video',
-      remarketing: 'mdi:refresh',
-      app: 'mdi:cellphone'
-    },
-    link: '/services#ppc'
-  },
-  {
-    id: 'yandex-direct',
-    icon: 'flash',
-    category: 'ppc',
-    branchKeys: ['search', 'yan', 'retargeting', 'smart'],
-    branchIcons: {
-      search: 'mdi:magnify',
-      yan: 'mdi:image',
-      retargeting: 'mdi:arrow-u-left-top',
-      smart: 'mdi:star-four-points'
-    },
-    link: '/services#ppc'
-  }
-]
 
 /**
  * SaaS products developed by Innovayse
@@ -299,21 +214,16 @@ export const testimonials: Testimonial[] = [
  * Text content (question, answer) loaded from i18n locale files
  */
 export const faqs: FAQ[] = [
-  { id: 'faq-1', category: 'general' },
-  { id: 'faq-2', category: 'general' },
-  { id: 'faq-3', category: 'general' },
-  { id: 'faq-4', category: 'general' },
-  { id: 'faq-5', category: 'general' },
-  { id: 'faq-6', category: 'development' },
-  { id: 'faq-7', category: 'development' },
-  { id: 'faq-8', category: 'development' },
-  { id: 'faq-9', category: 'development' },
-  { id: 'faq-10', category: 'seo' },
-  { id: 'faq-11', category: 'seo' },
-  { id: 'faq-12', category: 'seo' },
-  { id: 'faq-13', category: 'seo' },
-  { id: 'faq-14', category: 'products' },
-  { id: 'faq-15', category: 'products' }
+  { id: 'faq-1', category: FaqCategory.General },
+  { id: 'faq-2', category: FaqCategory.General },
+  { id: 'faq-3', category: FaqCategory.General },
+  { id: 'faq-4', category: FaqCategory.General },
+  { id: 'faq-5', category: FaqCategory.General },
+  { id: 'faq-6', category: FaqCategory.Products },
+  { id: 'faq-7', category: FaqCategory.Products },
+  { id: 'faq-8', category: FaqCategory.Products },
+  { id: 'faq-9', category: FaqCategory.Products },
+  { id: 'faq-10', category: FaqCategory.Products }
 ]
 
 /**

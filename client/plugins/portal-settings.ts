@@ -11,13 +11,17 @@
  * Named so `plugins/color-mode.ts` can declare it as a dependency: plugins run in
  * file-name order otherwise, and `color-mode` sorts before `portal-settings`, which
  * would resolve the operator's default against an empty map.
+ *
+ * @module plugins/portal-settings
  */
 export default defineNuxtPlugin({
   name: 'portal-settings',
   async setup() {
     const settings = useState<Record<string, string>>('portalSettings', () => ({}))
 
-    if (Object.keys(settings.value).length > 0) return
+    if (Object.keys(settings.value).length > 0) {
+      return
+    }
 
     try {
       settings.value = await $fetch<Record<string, string>>('/api/portal/public/settings')

@@ -23,11 +23,20 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Moq" />
     <PackageReference Include="FluentAssertions" />
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The stub server hosts Kestrel, so the test assembly needs the ASP.NET Core shared framework. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Using Include="Microsoft.AspNetCore.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- One stub HTTP server for every adapter test project: linked, not copied. -->
+    <Compile Include="..\Innovayse.Hostpanel.Integration.Tests\Fixtures\StubHttpServer.cs" Link="Fixtures\StubHttpServer.cs" />
+    <Compile Include="..\Innovayse.Hostpanel.Integration.Tests\Fixtures\StubReply.cs" Link="Fixtures\StubReply.cs" />
+    <Compile Include="..\Innovayse.Hostpanel.Integration.Tests\Fixtures\RecordedCall.cs" Link="Fixtures\RecordedCall.cs" />
     <ProjectReference Include="..\..\src\Innovayse.Providers.CWP\Innovayse.Providers.CWP.csproj" />
   </ItemGroup>
 </Project>

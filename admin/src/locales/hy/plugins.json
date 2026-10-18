@@ -1,0 +1,32 @@
+{
+  "pluginCard": {
+    "pendingRestart": "Սպասում է վերագործարկման",
+    "categoryByAuthor": "{category} · հեղինակ՝ {author}",
+    "removing": "Հեռացվում է…",
+    "remove": "Հեռացնել"
+  },
+  "pluginUploader": {
+    "dropYourPlugin": "Քաշեք ձեր պլագինը",
+    "here": "այստեղ",
+    "zip": ".zip",
+    "orClickToBrowseFiles": "կամ սեղմեք՝ ֆայլ ընտրելու համար",
+    "valueKbReadyToInstall": "{value} ԿԲ · պատրաստ է տեղադրման",
+    "installPlugin": "Տեղադրել պլագին"
+  },
+  "restartBanner": {
+    "restartRequired": "Անհրաժեշտ է վերագործարկում",
+    "pluginChangesWillTakeEffect": "Պլագինների փոփոխությունները ուժի մեջ կմտնեն սերվերի վերագործարկումից հետո։",
+    "restarting": "Վերագործարկվում է…",
+    "restartServer": "Վերագործարկել սերվերը"
+  },
+  "plugins": {
+    "pluginManager": "Պլագինների կառավարիչ",
+    "installAndManageProviderPlugins": "Պրովայդեր պլագինների տեղադրում և կառավարում",
+    "lengthInstalled": "· տեղադրված՝ {length}",
+    "noPluginsInstalledYet": "Պլագիններ դեռ տեղադրված չեն",
+    "uploadA": "Վերբեռնեք",
+    "fileAboveToGetStarted": "ֆայլ վերևում՝ սկսելու համար",
+    "zip": ".zip",
+    "installedPlugins": "Տեղադրված պլագիններ"
+  }
+}

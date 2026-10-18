@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Innovayse.Hostpanel.Shared</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SharedKernel\Innovayse.Hostpanel.SharedKernel.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Result, middleware and the base controller are ASP.NET Core and Wolverine shapes; the
+         framework reference is what makes ControllerBase and RequestDelegate visible. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="WolverineFx" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <!-- MigrationBuilder for the concurrent-index extensions (Extensions/MigrationBuilderExtensions). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <!-- Only for ProblemDetailsAuthEventsExtensions, which post-configures the Bearer scheme
+         registered inside Innovayse.Auth so a 401/403 carries a body instead of an empty one. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+  </ItemGroup>
+</Project>

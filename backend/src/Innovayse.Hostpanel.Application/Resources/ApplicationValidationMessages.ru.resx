@@ -1,0 +1,1099 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    Russian error messages.
+    A key omitted here falls back to the neutral file, so the messages that are still
+    English are deliberately absent rather than copied in untranslated.
+  -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="InvoiceNotFound" xml:space="preserve">
+    <value>Такого счёта нет.</value>
+    <comment>INVOICE_NOT_FOUND.</comment>
+  </data>
+  <data name="DomainNotFound" xml:space="preserve">
+    <value>Такого домена нет.</value>
+    <comment>DOMAIN_NOT_FOUND.</comment>
+  </data>
+  <data name="InternalError" xml:space="preserve">
+    <value>Произошла непредвиденная ошибка.</value>
+    <comment>INTERNAL_ERROR. The last-resort sentence; deliberately says nothing about what failed.</comment>
+  </data>
+  <data name="InvitationTokenInvalid" xml:space="preserve">
+    <value>Неверный или истёкший токен приглашения.</value>
+    <comment>AcceptInvitationHandler.</comment>
+  </data>
+  <data name="InvitationExpired" xml:space="preserve">
+    <value>Срок действия этого приглашения истёк.</value>
+    <comment>AcceptInvitationHandler.</comment>
+  </data>
+  <data name="InvitationAlreadyAccepted" xml:space="preserve">
+    <value>Это приглашение уже принято.</value>
+    <comment>AcceptInvitationHandler.</comment>
+  </data>
+  <data name="AccountOwnerNotFound" xml:space="preserve">
+    <value>Владелец этого аккаунта не найден.</value>
+    <comment>InviteUserToClientHandler.</comment>
+  </data>
+  <data name="CannotInviteAccountOwner" xml:space="preserve">
+    <value>Владельца аккаунта нельзя пригласить как дополнительного пользователя.</value>
+    <comment>InviteUserToClientHandler.</comment>
+  </data>
+  <data name="UserAlreadyLinked" xml:space="preserve">
+    <value>Пользователь с адресом «{0}» уже привязан к этому аккаунту.</value>
+    <comment>InviteUserToClientHandler. {0} is the email address that was submitted.</comment>
+  </data>
+  <data name="InvitationAlreadyPending" xml:space="preserve">
+    <value>Для «{0}» уже есть непринятое приглашение для этого аккаунта.</value>
+    <comment>InviteUserToClientHandler. {0} is the email address that was submitted.</comment>
+  </data>
+  <data name="InvalidPermissionsValue" xml:space="preserve">
+    <value>Недопустимое значение прав доступа: {0}.</value>
+    <comment>InviteUserToClientHandler. {0} is the value that was submitted.</comment>
+  </data>
+  <data name="NoSavedPaymentMethods" xml:space="preserve">
+    <value>У этого аккаунта нет сохранённых способов оплаты.</value>
+    <comment>RemovePaymentMethodHandler and SetDefaultPaymentMethodHandler.</comment>
+  </data>
+  <data name="PaymentMethodNotOwned" xml:space="preserve">
+    <value>Этот способ оплаты не принадлежит этому аккаунту.</value>
+    <comment>RemovePaymentMethodHandler and SetDefaultPaymentMethodHandler.</comment>
+  </data>
+  <data name="SetAsDefaultMustBeTrue" xml:space="preserve">
+    <value>Данные карты изменить нельзя. Удалите её и добавьте новую.</value>
+    <comment>SetDefaultPaymentMethodValidator. The only update this endpoint accepts is making a card the default.</comment>
+  </data>
+  <data name="ContactEmailInvalid" xml:space="preserve">
+    <value>Укажите корректный адрес электронной почты.</value>
+    <comment>SendContactMessageHandler.</comment>
+  </data>
+  <data name="ContactFieldRequired" xml:space="preserve">
+    <value>Поле «{0}» обязательно.</value>
+    <comment>SendContactMessageHandler. {0} is the localised field label.</comment>
+  </data>
+  <data name="ContactFieldTooLong" xml:space="preserve">
+    <value>Поле «{0}» должно содержать не более {1} символов.</value>
+    <comment>SendContactMessageHandler. {0} is the localised field label, {1} the limit.</comment>
+  </data>
+  <data name="ContactFieldName" xml:space="preserve">
+    <value>Имя</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ContactFieldEmail" xml:space="preserve">
+    <value>Электронная почта</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ContactFieldMessage" xml:space="preserve">
+    <value>Сообщение</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ContactFieldPhone" xml:space="preserve">
+    <value>Телефон</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ContactFieldService" xml:space="preserve">
+    <value>Услуга</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ContactFieldSubmittedAt" xml:space="preserve">
+    <value>Время отправки</value>
+    <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
+  </data>
+  <data name="ValidationFailed" xml:space="preserve">
+    <value>Одно или несколько полей запроса не приняты.</value>
+    <comment>ExceptionMiddleware, for a message the Wolverine FluentValidation middleware refused. One sentence for every field failure on purpose: the per-field messages are English literals in the validators and are logged, not sent.</comment>
+  </data>
+  <data name="InvalidFilterValue" xml:space="preserve">
+    <value>Недопустимое значение фильтра: {0}.</value>
+    <comment>GetMigrationLogsValidator. {0} is the value submitted for the action or entity-type filter.</comment>
+  </data>
+  <data name="MigrationJobIdInvalid" xml:space="preserve">
+    <value>Укажите корректное задание миграции.</value>
+  </data>
+  <data name="MigrationSelectionRequired" xml:space="preserve">
+    <value>Выберите, какие данные экспортировать.</value>
+  </data>
+  <data name="MigrationSourceUrlRequired" xml:space="preserve">
+    <value>Введите адрес исходной системы.</value>
+  </data>
+  <data name="MigrationSourceUrlInvalid" xml:space="preserve">
+    <value>Введите корректный абсолютный URL-адрес.</value>
+  </data>
+<data name="CurrencyCodeInvalid" xml:space="preserve">
+    <value>Код валюты должен быть трёхбуквенным кодом ISO 4217.</value>
+  </data>
+<data name="TwoFactorCodeInvalid" xml:space="preserve">
+    <value>Введите шестизначный код из приложения-аутентификатора.</value>
+  </data>
+<data name="CurrencyNumericInvalid" xml:space="preserve">
+    <value>Числовой код валюты должен быть трёхзначным кодом ISO 4217.</value>
+  </data>
+<data name="CurrencyAffixInvalid" xml:space="preserve">
+    <value>Префикс и суффикс валюты обязательны и могут содержать не более {0} символов.</value>
+  </data>
+<data name="CurrencyDecimalsInvalid" xml:space="preserve">
+    <value>Число знаков после запятой должно быть от 0 до {0}.</value>
+  </data>
+<data name="CurrencyRateInvalid" xml:space="preserve">
+    <value>Курс к базовой валюте должен быть больше нуля.</value>
+  </data>
+<data name="CurrenciesRequired" xml:space="preserve">
+    <value>Укажите хотя бы одну валюту для обновления.</value>
+  </data>
+<data name="InvoiceIdInvalid" xml:space="preserve">
+    <value>Укажите корректный счёт.</value>
+  </data>
+<data name="InvoiceClientIdInvalid" xml:space="preserve">
+    <value>Укажите корректного клиента для выставления счёта.</value>
+  </data>
+<data name="InvoiceDueDateInPast" xml:space="preserve">
+    <value>Срок оплаты не может быть в прошлом.</value>
+  </data>
+<data name="InvoiceItemsRequired" xml:space="preserve">
+    <value>Добавьте хотя бы одну позицию.</value>
+  </data>
+<data name="InvoiceItemDescriptionInvalid" xml:space="preserve">
+    <value>Позиции нужно описание длиной не более {0} символов.</value>
+  </data>
+<data name="InvoiceItemUnitPriceInvalid" xml:space="preserve">
+    <value>Цена за единицу позиции не может быть отрицательной.</value>
+  </data>
+<data name="InvoiceItemQuantityInvalid" xml:space="preserve">
+    <value>Количество позиции должно быть не менее 1.</value>
+  </data>
+<data name="InvoiceNotesTooLong" xml:space="preserve">
+    <value>Заметки могут содержать не более {0} символов.</value>
+  </data>
+<data name="InvoiceTaxRateInvalid" xml:space="preserve">
+    <value>Ставка налога должна быть от 0 до 100.</value>
+  </data>
+<data name="InvoicePaymentMethodTooLong" xml:space="preserve">
+    <value>Способ оплаты может содержать не более {0} символов.</value>
+  </data>
+<data name="QuoteIdInvalid" xml:space="preserve">
+    <value>Укажите корректную смету.</value>
+  </data>
+<data name="QuoteClientIdInvalid" xml:space="preserve">
+    <value>Укажите корректного клиента для сметы.</value>
+  </data>
+<data name="QuoteSubjectInvalid" xml:space="preserve">
+    <value>Тема сметы не должна превышать {0} символов.</value>
+  </data>
+<data name="QuoteStageInvalid" xml:space="preserve">
+    <value>Укажите корректный этап сметы.</value>
+  </data>
+<data name="QuoteItemsRequired" xml:space="preserve">
+    <value>Добавьте хотя бы одну позицию.</value>
+  </data>
+<data name="QuoteItemDescriptionInvalid" xml:space="preserve">
+    <value>Описание позиции не должно превышать {0} символов.</value>
+  </data>
+<data name="QuoteItemUnitPriceInvalid" xml:space="preserve">
+    <value>Цена за единицу позиции не может быть отрицательной.</value>
+  </data>
+<data name="QuoteItemQuantityInvalid" xml:space="preserve">
+    <value>Количество позиции должно быть не менее 1.</value>
+  </data>
+<data name="QuoteItemDiscountInvalid" xml:space="preserve">
+    <value>Скидка позиции должна быть от 0 до 100.</value>
+  </data>
+<data name="BillableItemIdInvalid" xml:space="preserve">
+    <value>Укажите корректную позицию начисления.</value>
+  </data>
+<data name="BillableItemClientIdInvalid" xml:space="preserve">
+    <value>Укажите корректного клиента для начисления.</value>
+  </data>
+<data name="BillableItemDescriptionInvalid" xml:space="preserve">
+    <value>Описание позиции начисления не должно превышать {0} символов.</value>
+  </data>
+<data name="BillableItemAmountInvalid" xml:space="preserve">
+    <value>Сумма позиции начисления не может быть отрицательной.</value>
+  </data>
+<data name="BillableItemCurrencyInvalid" xml:space="preserve">
+    <value>Код валюты должен быть трёхбуквенным кодом ISO 4217.</value>
+  </data>
+<data name="BillableItemTypeInvalid" xml:space="preserve">
+    <value>Тип должен быть OneTime или Recurring.</value>
+  </data>
+<data name="BillableItemRecurringPeriodRequired" xml:space="preserve">
+    <value>Укажите период повторения для регулярной позиции.</value>
+  </data>
+<data name="InvoiceSelectedItemsRequired" xml:space="preserve">
+    <value>Укажите хотя бы одну позицию начисления для выставления счёта.</value>
+  </data>
+<data name="TimeBillingEntriesRequired" xml:space="preserve">
+    <value>Добавьте хотя бы одну запись времени.</value>
+  </data>
+<data name="TimeBillingDescriptionInvalid" xml:space="preserve">
+    <value>Описание записи времени не должно превышать {0} символов.</value>
+  </data>
+<data name="TimeBillingHoursInvalid" xml:space="preserve">
+    <value>Количество часов записи времени должно быть больше нуля.</value>
+  </data>
+<data name="TimeBillingRateInvalid" xml:space="preserve">
+    <value>Ставка записи времени не может быть отрицательной.</value>
+  </data>
+<data name="TransactionClientIdInvalid" xml:space="preserve">
+    <value>Укажите действительного клиента для транзакции.</value>
+  </data>
+<data name="TransactionDescriptionInvalid" xml:space="preserve">
+    <value>Описание транзакции не должно превышать {0} символов.</value>
+  </data>
+<data name="TransactionPaymentMethodInvalid" xml:space="preserve">
+    <value>Укажите использованный способ оплаты.</value>
+  </data>
+<data name="TransactionAmountInInvalid" xml:space="preserve">
+    <value>Зачисленная сумма не может быть отрицательной.</value>
+  </data>
+<data name="TransactionAmountOutInvalid" xml:space="preserve">
+    <value>Списанная сумма не может быть отрицательной.</value>
+  </data>
+<data name="TransactionFeesInvalid" xml:space="preserve">
+    <value>Комиссия не может быть отрицательной.</value>
+  </data>
+<data name="TransactionAmountRequired" xml:space="preserve">
+    <value>Хотя бы одна из сумм — зачисление или списание — должна быть больше нуля.</value>
+  </data>
+<data name="TransactionIdInvalid" xml:space="preserve">
+    <value>Укажите действительную транзакцию.</value>
+  </data>
+<data name="InvoicePaymentGatewayInvalid" xml:space="preserve">
+    <value>Укажите использованный платёжный шлюз, не более {0} символов.</value>
+  </data>
+<data name="InvoicePaymentTransactionIdInvalid" xml:space="preserve">
+    <value>Укажите внешний идентификатор транзакции, не более {0} символов.</value>
+  </data>
+<data name="InvoicePaymentAmountInvalid" xml:space="preserve">
+    <value>Сумма платежа должна быть больше нуля.</value>
+  </data>
+<data name="InvoicePaymentNotesInvalid" xml:space="preserve">
+    <value>Примечания не должны превышать {0} символов.</value>
+  </data>
+<data name="InvoiceCreditAmountInvalid" xml:space="preserve">
+    <value>Сумма кредита должна быть больше нуля.</value>
+  </data>
+<data name="InvoiceRefundAmountInvalid" xml:space="preserve">
+    <value>Сумма возврата не может быть отрицательной; ноль означает возврат всей исходной транзакции.</value>
+  </data>
+<data name="InvoiceRefundTypeInvalid" xml:space="preserve">
+    <value>Тип возврата должен быть Gateway, Manual или CreditBalance.</value>
+  </data>
+<data name="InvoiceRefundGatewayInvalid" xml:space="preserve">
+    <value>Укажите платёжный шлюз для возврата через шлюз или вручную.</value>
+  </data>
+<data name="InvoiceRefundGatewayMaxLengthInvalid" xml:space="preserve">
+    <value>Название шлюза не должно превышать {0} символов.</value>
+  </data>
+<data name="InvoiceRefundTransactionIdRequiredInvalid" xml:space="preserve">
+    <value>Укажите внешний идентификатор возврата для ручного возврата.</value>
+  </data>
+<data name="InvoiceRefundNotesInvalid" xml:space="preserve">
+    <value>Примечания не должны превышать {0} символов.</value>
+  </data>
+<data name="BulkInvoiceActionIdsRequired" xml:space="preserve">
+    <value>Укажите хотя бы один счёт для действия.</value>
+  </data>
+<data name="BulkInvoiceActionIdInvalid" xml:space="preserve">
+    <value>Каждый идентификатор счёта должен быть действительным.</value>
+  </data>
+<data name="BulkInvoiceActionNameInvalid" xml:space="preserve">
+    <value>Действие должно быть одним из: MarkPaid, MarkUnpaid, MarkCancelled, Duplicate, Delete.</value>
+  </data>
+<data name="TicketIdInvalid" xml:space="preserve">
+    <value>Идентификатор тикета должен быть положительным числом.</value>
+  </data>
+<data name="TicketClientIdInvalid" xml:space="preserve">
+    <value>Идентификатор клиента должен быть положительным числом.</value>
+  </data>
+<data name="TicketDepartmentIdInvalid" xml:space="preserve">
+    <value>Идентификатор отдела должен быть положительным числом.</value>
+  </data>
+<data name="TicketDepartmentRequired" xml:space="preserve">
+    <value>Выберите отдел.</value>
+  </data>
+<data name="TicketStaffIdInvalid" xml:space="preserve">
+    <value>Идентификатор сотрудника должен быть положительным числом.</value>
+  </data>
+<data name="TicketSubjectRequired" xml:space="preserve">
+    <value>Тема обязательна и не должна превышать 255 символов.</value>
+  </data>
+<data name="TicketMessageRequired" xml:space="preserve">
+    <value>Сообщение обязательно.</value>
+  </data>
+<data name="TicketPriorityInvalid" xml:space="preserve">
+    <value>Приоритет должен быть одним из: Low, Medium, High.</value>
+  </data>
+<data name="TicketStatusInvalid" xml:space="preserve">
+    <value>Статус должен быть одним из: Open, AwaitingReply, Answered, Closed.</value>
+  </data>
+<data name="TicketTagRequired" xml:space="preserve">
+    <value>Тег обязателен и не должен превышать 64 символа.</value>
+  </data>
+<data name="TicketIdsRequired" xml:space="preserve">
+    <value>Требуется хотя бы один идентификатор тикета.</value>
+  </data>
+<data name="TicketBulkActionInvalid" xml:space="preserve">
+    <value>Действие должно быть одним из: close, delete, flag, unflag.</value>
+  </data>
+<data name="TicketRatingInvalid" xml:space="preserve">
+    <value>Оценка должна быть от 1 до 10.</value>
+  </data>
+<data name="TicketFeedbackLeftByRequired" xml:space="preserve">
+    <value>Имя оставившего отзыв обязательно.</value>
+  </data>
+  <data name="DomainClientIdRequired" xml:space="preserve">
+    <value>ID клиента должен быть положительным числом.</value>
+  </data>
+  <data name="DomainNameRequired" xml:space="preserve">
+    <value>Имя домена должно быть корректным полным доменным именем (например, 'example.com').</value>
+  </data>
+  <data name="DomainYearsRange" xml:space="preserve">
+    <value>Количество лет должно быть от 1 до 10.</value>
+  </data>
+  <data name="DomainIdRequired" xml:space="preserve">
+    <value>ID домена должен быть положительным числом.</value>
+  </data>
+  <data name="DomainEppCodeRequired" xml:space="preserve">
+    <value>Код EPP/авторизации должен содержать не менее 6 символов.</value>
+  </data>
+  <data name="DomainStatusInvalid" xml:space="preserve">
+    <value>Статус должен быть одним из: PendingRegistration, PendingTransfer, Active, Expired, Redemption, Transferred, Cancelled.</value>
+  </data>
+  <data name="DomainPageRequired" xml:space="preserve">
+    <value>Номер страницы должен быть не меньше 1.</value>
+  </data>
+  <data name="DomainPageSizeRange" xml:space="preserve">
+    <value>Размер страницы должен быть от 1 до 100.</value>
+  </data>
+  <data name="GatewayLogPageRequired" xml:space="preserve">
+    <value>Номер страницы должен быть не меньше 1.</value>
+  </data>
+  <data name="GatewayLogPageSizeRange" xml:space="preserve">
+    <value>Размер страницы должен быть от 1 до 100.</value>
+  </data>
+  <data name="TicketPeriodRequired" xml:space="preserve">
+    <value>Период обязателен.</value>
+  </data>
+  <data name="KbArticleIdInvalid" xml:space="preserve">
+    <value>Идентификатор статьи должен быть положительным числом.</value>
+  </data>
+  <data name="KbArticleTitleRequired" xml:space="preserve">
+    <value>Заголовок обязателен.</value>
+  </data>
+  <data name="KbArticleContentRequired" xml:space="preserve">
+    <value>Содержимое обязательно.</value>
+  </data>
+  <data name="KbArticleCategoryRequired" xml:space="preserve">
+    <value>Категория обязательна.</value>
+  </data>
+  <data name="KbCategoryIdInvalid" xml:space="preserve">
+    <value>Идентификатор категории должен быть положительным числом.</value>
+  </data>
+  <data name="KbCategoryNameRequired" xml:space="preserve">
+    <value>Название обязательно.</value>
+  </data>
+  <data name="KbCategoryDescriptionRequired" xml:space="preserve">
+    <value>Описание обязательно.</value>
+  </data>
+  <data name="KbCategoryParentIdInvalid" xml:space="preserve">
+    <value>Идентификатор родительской категории должен быть положительным числом.</value>
+  </data>
+  <data name="AnnouncementIdInvalid" xml:space="preserve">
+    <value>Идентификатор объявления должен быть положительным числом.</value>
+  </data>
+  <data name="AnnouncementTitleRequired" xml:space="preserve">
+    <value>Заголовок обязателен.</value>
+  </data>
+  <data name="AnnouncementContentRequired" xml:space="preserve">
+    <value>Содержимое обязательно.</value>
+  </data>
+  <data name="NetworkIssueIdInvalid" xml:space="preserve">
+    <value>Идентификатор сетевой проблемы должен быть положительным числом.</value>
+  </data>
+  <data name="NetworkIssueTitleRequired" xml:space="preserve">
+    <value>Заголовок обязателен.</value>
+  </data>
+  <data name="NetworkIssueTypeInvalid" xml:space="preserve">
+    <value>Тип должен быть одним из: Server, Other.</value>
+  </data>
+  <data name="NetworkIssuePriorityInvalid" xml:space="preserve">
+    <value>Приоритет должен быть одним из: Low, Medium, High, Critical.</value>
+  </data>
+  <data name="NetworkIssueStatusInvalid" xml:space="preserve">
+    <value>Статус должен быть одним из: Reported, Investigating, Scheduled, Resolved.</value>
+  </data>
+  <data name="NetworkIssueDescriptionRequired" xml:space="preserve">
+    <value>Описание обязательно.</value>
+  </data>
+  <data name="DnsRecordIdRequired" xml:space="preserve">
+    <value>ID DNS-записи должен быть положительным числом.</value>
+  </data>
+  <data name="DnsHostRequired" xml:space="preserve">
+    <value>Хост записи обязателен.</value>
+  </data>
+  <data name="DnsValueRequired" xml:space="preserve">
+    <value>Значение записи обязательно.</value>
+  </data>
+  <data name="DnsTtlPositive" xml:space="preserve">
+    <value>TTL должен быть больше 0.</value>
+  </data>
+  <data name="DnsPriorityRequiredForMxSrv" xml:space="preserve">
+    <value>Для записей MX и SRV приоритет должен быть больше 0.</value>
+  </data>
+  <data name="EmailForwardingRuleIdRequired" xml:space="preserve">
+    <value>ID правила пересылки почты должен быть положительным числом.</value>
+  </data>
+  <data name="EmailForwardingSourceRequired" xml:space="preserve">
+    <value>Исходный алиас обязателен.</value>
+  </data>
+  <data name="EmailForwardingDestinationRequired" xml:space="preserve">
+    <value>Адрес получателя обязателен.</value>
+  </data>
+  <data name="EmailForwardingDestinationInvalid" xml:space="preserve">
+    <value>Адрес получателя должен быть действительным email-адресом.</value>
+  </data>
+  <data name="TldConfigIdRequired" xml:space="preserve">
+    <value>ID конфигурации домена верхнего уровня должен быть положительным числом.</value>
+  </data>
+  <data name="TldExtensionRequired" xml:space="preserve">
+    <value>Требуется указать расширение домена верхнего уровня.</value>
+  </data>
+  <data name="TldRegistrarModuleRequired" xml:space="preserve">
+    <value>Требуется указать модуль регистратора.</value>
+  </data>
+  <data name="TldCurrencyInvalid" xml:space="preserve">
+    <value>Код валюты должен состоять из 3 букв.</value>
+  </data>
+  <data name="TldSellCurrencyInvalid" xml:space="preserve">
+    <value>Код валюты продажи должен состоять из 3 букв.</value>
+  </data>
+  <data name="TldSortOrderInvalid" xml:space="preserve">
+    <value>Порядок сортировки не может быть отрицательным.</value>
+  </data>
+  <data name="DomainNameserversMinimumTwo" xml:space="preserve">
+    <value>Требуется как минимум 2 сервера имён.</value>
+  </data>
+  <data name="DomainContactRequired" xml:space="preserve">
+    <value>Необходимо указать контактные данные владельца.</value>
+  </data>
+  <data name="DomainContactFirstNameRequired" xml:space="preserve">
+    <value>Имя владельца обязательно.</value>
+  </data>
+  <data name="DomainContactLastNameRequired" xml:space="preserve">
+    <value>Фамилия владельца обязательна.</value>
+  </data>
+  <data name="DomainContactEmailRequired" xml:space="preserve">
+    <value>Адрес электронной почты владельца обязателен.</value>
+  </data>
+  <data name="DomainContactEmailInvalid" xml:space="preserve">
+    <value>Адрес электронной почты владельца должен быть корректным.</value>
+  </data>
+  <data name="DomainContactPhoneRequired" xml:space="preserve">
+    <value>Номер телефона владельца обязателен.</value>
+  </data>
+  <data name="DomainContactAddress1Required" xml:space="preserve">
+    <value>Адрес владельца обязателен.</value>
+  </data>
+  <data name="DomainContactCityRequired" xml:space="preserve">
+    <value>Город владельца обязателен.</value>
+  </data>
+  <data name="DomainContactStateRequired" xml:space="preserve">
+    <value>Область или регион владельца обязательны.</value>
+  </data>
+  <data name="DomainContactPostalCodeRequired" xml:space="preserve">
+    <value>Почтовый индекс владельца обязателен.</value>
+  </data>
+  <data name="DomainContactCountryRequired" xml:space="preserve">
+    <value>Код страны владельца обязателен.</value>
+  </data>
+  <data name="OrderIdInvalid" xml:space="preserve">
+    <value>Идентификатор заказа должен быть больше нуля.</value>
+  </data>
+  <data name="PlaceOrderPaymentMethodRequired" xml:space="preserve">
+    <value>Выберите способ оплаты.</value>
+  </data>
+  <data name="PlaceOrderItemsRequired" xml:space="preserve">
+    <value>Добавьте в заказ хотя бы один товар.</value>
+  </data>
+  <data name="PlaceOrderItemProductIdInvalid" xml:space="preserve">
+    <value>Для каждой позиции нужен корректный товар.</value>
+  </data>
+  <data name="PlaceOrderItemBillingCycleInvalid" xml:space="preserve">
+    <value>Период оплаты должен быть 'monthly', 'annual' или 'annually'.</value>
+  </data>
+  <data name="PlaceOrderGuestFirstNameRequired" xml:space="preserve">
+    <value>Для оформления заказа без входа в аккаунт нужно указать имя.</value>
+  </data>
+  <data name="PlaceOrderGuestLastNameRequired" xml:space="preserve">
+    <value>Для оформления заказа без входа в аккаунт нужно указать фамилию.</value>
+  </data>
+  <data name="PlaceOrderGuestEmailRequired" xml:space="preserve">
+    <value>Для оформления заказа без входа в аккаунт нужен корректный email.</value>
+  </data>
+  <data name="PlaceOrderGuestPasswordRequired" xml:space="preserve">
+    <value>Для оформления заказа без входа в аккаунт нужен пароль.</value>
+  </data>
+  <data name="GatewayModuleRequired" xml:space="preserve">
+    <value>Выберите платёжный шлюз.</value>
+  </data>
+  <data name="ReturnUrlRequired" xml:space="preserve">
+    <value>Необходим адрес возврата.</value>
+  </data>
+  <data name="PaymentIntentIdRequired" xml:space="preserve">
+    <value>Необходим идентификатор платёжного намерения.</value>
+  </data>
+  <data name="InvitationTokenRequired" xml:space="preserve">
+    <value>Необходим токен приглашения.</value>
+  </data>
+  <data name="ClientIdInvalid" xml:space="preserve">
+    <value>Идентификатор клиента должен быть положительным числом.</value>
+  </data>
+  <data name="ClientContactFirstNameInvalid" xml:space="preserve">
+    <value>Имя обязательно и не должно превышать 100 символов.</value>
+  </data>
+  <data name="ClientContactLastNameInvalid" xml:space="preserve">
+    <value>Фамилия обязательна и не должна превышать 100 символов.</value>
+  </data>
+  <data name="ClientContactCompanyNameInvalid" xml:space="preserve">
+    <value>Название компании не должно превышать 200 символов.</value>
+  </data>
+  <data name="ClientContactEmailInvalid" xml:space="preserve">
+    <value>Требуется корректный адрес электронной почты.</value>
+  </data>
+  <data name="ClientContactPhoneInvalid" xml:space="preserve">
+    <value>Телефон не должен превышать 50 символов.</value>
+  </data>
+  <data name="ClientContactTypeInvalid" xml:space="preserve">
+    <value>Нераспознанный тип контакта.</value>
+  </data>
+  <data name="ClientContactStreetInvalid" xml:space="preserve">
+    <value>Улица не должна превышать 200 символов.</value>
+  </data>
+  <data name="ClientContactAddress2Invalid" xml:space="preserve">
+    <value>Вторая строка адреса не должна превышать 200 символов.</value>
+  </data>
+  <data name="ClientContactCityInvalid" xml:space="preserve">
+    <value>Город не должен превышать 100 символов.</value>
+  </data>
+  <data name="ClientContactStateInvalid" xml:space="preserve">
+    <value>Область или регион не должен превышать 100 символов.</value>
+  </data>
+  <data name="ClientContactPostCodeInvalid" xml:space="preserve">
+    <value>Почтовый индекс не должен превышать 20 символов.</value>
+  </data>
+  <data name="ClientContactCountryInvalid" xml:space="preserve">
+    <value>Страна должна быть 2-символьным кодом ISO 3166-1 alpha-2.</value>
+  </data>
+  <data name="ClientContactIdInvalid" xml:space="preserve">
+    <value>Идентификатор контакта должен быть положительным числом.</value>
+  </data>
+  <data name="ClientUserIdRequired" xml:space="preserve">
+    <value>Требуется идентификатор пользователя.</value>
+  </data>
+  <data name="ClientPermissionsInvalid" xml:space="preserve">
+    <value>Значение прав доступа не является допустимой комбинацией известных флагов.</value>
+  </data>
+  <data name="ClientNewUserEmailInvalid" xml:space="preserve">
+    <value>Требуется корректный адрес электронной почты.</value>
+  </data>
+  <data name="ClientNewUserPasswordInvalid" xml:space="preserve">
+    <value>Требуется пароль не короче {0} символов.</value>
+  </data>
+  <data name="ClientFirstNameInvalid" xml:space="preserve">
+    <value>Имя обязательно и не должно превышать 100 символов.</value>
+  </data>
+  <data name="ClientLastNameInvalid" xml:space="preserve">
+    <value>Фамилия обязательна и не должна превышать 100 символов.</value>
+  </data>
+  <data name="ClientCompanyNameInvalid" xml:space="preserve">
+    <value>Название компании не должно превышать 200 символов.</value>
+  </data>
+  <data name="ClientPhoneInvalid" xml:space="preserve">
+    <value>Телефон не должен превышать 50 символов.</value>
+  </data>
+  <data name="ClientCountryInvalid" xml:space="preserve">
+    <value>Страна должна быть 2-символьным кодом ISO 3166-1 alpha-2.</value>
+  </data>
+  <data name="ClientCurrencyInvalid" xml:space="preserve">
+    <value>Валюта должна быть 3-символьным кодом ISO 4217.</value>
+  </data>
+  <data name="ClientAdminNotesInvalid" xml:space="preserve">
+    <value>Заметки администратора не должны превышать 2000 символов.</value>
+  </data>
+  <data name="ClientPaymentMethodInvalid" xml:space="preserve">
+    <value>Способ оплаты не должен превышать 50 символов.</value>
+  </data>
+  <data name="ClientBillingContactInvalid" xml:space="preserve">
+    <value>Платёжный контакт не должен превышать 256 символов.</value>
+  </data>
+  <data name="ClientStreetInvalid" xml:space="preserve">
+    <value>Улица не должна превышать 200 символов.</value>
+  </data>
+  <data name="ClientCityInvalid" xml:space="preserve">
+    <value>Город не должен превышать 100 символов.</value>
+  </data>
+  <data name="ClientStateInvalid" xml:space="preserve">
+    <value>Область или регион не должен превышать 100 символов.</value>
+  </data>
+  <data name="ClientPostCodeInvalid" xml:space="preserve">
+    <value>Почтовый индекс не должен превышать 20 символов.</value>
+  </data>
+  <data name="ClientLanguageInvalid" xml:space="preserve">
+    <value>Язык должен быть одним из поддерживаемых языков этого развёртывания.</value>
+  </data>
+  <data name="ClientStatusInvalid" xml:space="preserve">
+    <value>Статус должен быть одним из: Active, Inactive, Suspended, Closed.</value>
+  </data>
+  <data name="ClientInviteEmailInvalid" xml:space="preserve">
+    <value>Требуется корректный адрес электронной почты.</value>
+  </data>
+  <data name="ClientInviteFirstNameInvalid" xml:space="preserve">
+    <value>Имя обязательно и не должно превышать 100 символов.</value>
+  </data>
+  <data name="ClientInviteLastNameInvalid" xml:space="preserve">
+    <value>Фамилия обязательна и не должна превышать 100 символов.</value>
+  </data>
+  <data name="ClientNewOwnerUserIdRequired" xml:space="preserve">
+    <value>Требуется идентификатор нового владельца.</value>
+  </data>
+  <data name="DepartmentNameRequired" xml:space="preserve">
+    <value>Требуется название отдела.</value>
+  </data>
+  <data name="DepartmentEmailInvalid" xml:space="preserve">
+    <value>Укажите корректный email отдела.</value>
+  </data>
+  <data name="DepartmentIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор отдела.</value>
+  </data>
+  <data name="DownloadIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор файла.</value>
+  </data>
+  <data name="DownloadTitleRequired" xml:space="preserve">
+    <value>Требуется название файла для скачивания.</value>
+  </data>
+  <data name="DownloadCategoryIdInvalid" xml:space="preserve">
+    <value>Выберите корректную категорию загрузок.</value>
+  </data>
+  <data name="DownloadCategoryNameRequired" xml:space="preserve">
+    <value>Требуется название категории.</value>
+  </data>
+  <data name="DownloadCategoryDescriptionInvalid" xml:space="preserve">
+    <value>Описание категории слишком длинное.</value>
+  </data>
+  <data name="PredefinedReplyIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор готового ответа.</value>
+  </data>
+  <data name="PredefinedReplyNameRequired" xml:space="preserve">
+    <value>Требуется название ответа.</value>
+  </data>
+  <data name="PredefinedReplyContentRequired" xml:space="preserve">
+    <value>Требуется текст ответа.</value>
+  </data>
+  <data name="PredefinedReplyCategoryIdInvalid" xml:space="preserve">
+    <value>Выберите корректную категорию готовых ответов.</value>
+  </data>
+  <data name="PredefinedReplyCategoryNameRequired" xml:space="preserve">
+    <value>Требуется название категории.</value>
+  </data>
+  <data name="SearchTermRequired" xml:space="preserve">
+    <value>Требуется поисковый запрос.</value>
+  </data>
+  <data name="ServiceIdInvalid" xml:space="preserve">
+    <value>Укажите корректную услугу.</value>
+  </data>
+  <data name="CancellationTypeInvalid" xml:space="preserve">
+    <value>Тип должен быть 'Immediate' или 'EndOfBillingPeriod'.</value>
+  </data>
+  <data name="CancellationRequestIdInvalid" xml:space="preserve">
+    <value>Укажите корректный запрос на отмену.</value>
+  </data>
+  <data name="OrderServiceClientIdInvalid" xml:space="preserve">
+    <value>Укажите корректного клиента.</value>
+  </data>
+  <data name="OrderServiceProductIdInvalid" xml:space="preserve">
+    <value>Укажите корректный продукт.</value>
+  </data>
+  <data name="OrderServiceBillingCycleInvalid" xml:space="preserve">
+    <value>Цикл оплаты должен быть 'monthly', 'annual' или 'annually'.</value>
+  </data>
+  <data name="OrderServiceAmountInvalid" xml:space="preserve">
+    <value>Сумма не может быть отрицательной.</value>
+  </data>
+  <data name="ServiceDomainRequired" xml:space="preserve">
+    <value>Требуется домен.</value>
+  </data>
+  <data name="ServiceDomainInvalid" xml:space="preserve">
+    <value>Введите корректный домен, например example.com.</value>
+  </data>
+  <data name="ServiceUsernameRequired" xml:space="preserve">
+    <value>Требуется имя пользователя.</value>
+  </data>
+  <data name="ServiceUsernameInvalid" xml:space="preserve">
+    <value>Имя пользователя должно начинаться с буквы, содержать только строчные буквы и цифры и быть от 3 до 8 символов.</value>
+  </data>
+  <data name="ServicePasswordRequired" xml:space="preserve">
+    <value>Требуется пароль.</value>
+  </data>
+  <data name="ServicePasswordInvalid" xml:space="preserve">
+    <value>Пароль должен содержать не менее 8 символов.</value>
+  </data>
+  <data name="ServicePackageRequired" xml:space="preserve">
+    <value>Требуется тарифный план хостинга.</value>
+  </data>
+  <data name="SuspendReasonRequired" xml:space="preserve">
+    <value>Требуется причина приостановки.</value>
+  </data>
+  <data name="TerminateReasonRequired" xml:space="preserve">
+    <value>Требуется причина прекращения.</value>
+  </data>
+  <data name="ServicePageInvalid" xml:space="preserve">
+    <value>Номер страницы должен быть не меньше 1.</value>
+  </data>
+  <data name="ServicePageSizeInvalid" xml:space="preserve">
+    <value>Размер страницы должен быть от 1 до 100.</value>
+  </data>
+  <data name="ServiceClientIdFilterInvalid" xml:space="preserve">
+    <value>Укажите корректного клиента для фильтрации.</value>
+  </data>
+  <data name="UpdateServiceDomainInvalid" xml:space="preserve">
+    <value>Домен не может быть длиннее 253 символов.</value>
+  </data>
+  <data name="UpdateServiceDedicatedIpInvalid" xml:space="preserve">
+    <value>Выделенный IP не может быть длиннее 45 символов.</value>
+  </data>
+  <data name="UpdateServiceUsernameInvalid" xml:space="preserve">
+    <value>Имя пользователя не может быть длиннее 100 символов.</value>
+  </data>
+  <data name="UpdateServicePasswordInvalid" xml:space="preserve">
+    <value>Пароль не может быть длиннее 256 символов.</value>
+  </data>
+  <data name="UpdateServiceBillingCycleInvalid" xml:space="preserve">
+    <value>Цикл оплаты обязателен и не может быть длиннее 20 символов.</value>
+  </data>
+  <data name="UpdateServiceRecurringAmountInvalid" xml:space="preserve">
+    <value>Сумма периодического платежа не может быть отрицательной.</value>
+  </data>
+  <data name="UpdateServicePaymentMethodInvalid" xml:space="preserve">
+    <value>Способ оплаты не может быть длиннее 50 символов.</value>
+  </data>
+  <data name="UpdateServiceSubscriptionIdInvalid" xml:space="preserve">
+    <value>Ссылка на подписку не может быть длиннее 256 символов.</value>
+  </data>
+  <data name="UpdateServiceAutoTerminateReasonInvalid" xml:space="preserve">
+    <value>Причина автоматического расторжения не может быть длиннее 2000 символов.</value>
+  </data>
+  <data name="UpdateServiceAdminNotesInvalid" xml:space="preserve">
+    <value>Заметки администратора не могут быть длиннее 2000 символов.</value>
+  </data>
+  <data name="UpdateServiceProvisioningRefInvalid" xml:space="preserve">
+    <value>Ссылка на развёртывание не может быть длиннее 256 символов.</value>
+  </data>
+  <data name="UpdateServiceFirstPaymentAmountInvalid" xml:space="preserve">
+    <value>Сумма первого платежа не может быть отрицательной.</value>
+  </data>
+  <data name="UpdateServicePromotionCodeInvalid" xml:space="preserve">
+    <value>Промокод не может быть длиннее 50 символов.</value>
+  </data>
+  <data name="UpdateServiceStatusInvalid" xml:space="preserve">
+    <value>Статус должен быть одним из: Pending, Active, Suspended, Terminated.</value>
+  </data>
+  <data name="UpdateServiceQuantityInvalid" xml:space="preserve">
+    <value>Количество должно быть не меньше 1.</value>
+  </data>
+  <data name="UpdateServiceProductIdInvalid" xml:space="preserve">
+    <value>Укажите корректный продукт.</value>
+  </data>
+  <data name="UpdateServiceServerIdInvalid" xml:space="preserve">
+    <value>Укажите корректный сервер.</value>
+  </data>
+  <data name="EmailTemplateSlugRequired" xml:space="preserve">
+    <value>Требуется слаг шаблона.</value>
+  </data>
+  <data name="EmailTemplateSubjectRequired" xml:space="preserve">
+    <value>Требуется тема шаблона.</value>
+  </data>
+  <data name="EmailTemplateBodyRequired" xml:space="preserve">
+    <value>Требуется текст шаблона.</value>
+  </data>
+  <data name="EmailTemplateDescriptionInvalid" xml:space="preserve">
+    <value>Описание не должно превышать 500 символов.</value>
+  </data>
+  <data name="EmailTemplateIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор шаблона письма.</value>
+  </data>
+  <data name="EmailLogIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор записи журнала писем.</value>
+  </data>
+  <data name="SendEmailToInvalid" xml:space="preserve">
+    <value>Укажите корректный email адрес получателя.</value>
+  </data>
+  <data name="SendEmailTemplateSlugRequired" xml:space="preserve">
+    <value>Укажите шаблон для отправки.</value>
+  </data>
+  <data name="ProductGroupIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор группы продуктов.</value>
+  </data>
+  <data name="ProductGroupNameRequired" xml:space="preserve">
+    <value>Группе продуктов требуется название.</value>
+  </data>
+  <data name="ProductGroupNameTooLong" xml:space="preserve">
+    <value>Название группы не должно превышать {0} символов.</value>
+  </data>
+  <data name="ProductGroupDescriptionTooLong" xml:space="preserve">
+    <value>Описание не должно превышать {0} символов.</value>
+  </data>
+  <data name="ProductIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор продукта.</value>
+  </data>
+  <data name="ProductNameRequired" xml:space="preserve">
+    <value>Продукту требуется название.</value>
+  </data>
+  <data name="ProductNameTooLong" xml:space="preserve">
+    <value>Название продукта не должно превышать {0} символов.</value>
+  </data>
+  <data name="ProductDescriptionTooLong" xml:space="preserve">
+    <value>Описание не должно превышать {0} символов.</value>
+  </data>
+  <data name="ProductPackageNameTooLong" xml:space="preserve">
+    <value>Название пакета не должно превышать {0} символов.</value>
+  </data>
+  <data name="ProductPriceRequired" xml:space="preserve">
+    <value>Новому продукту требуется хотя бы одна цена.</value>
+  </data>
+  <data name="ProductPriceCurrencyInvalid" xml:space="preserve">
+    <value>Код валюты должен быть трёхбуквенным кодом ISO 4217.</value>
+  </data>
+  <data name="ProductPriceAmountInvalid" xml:space="preserve">
+    <value>Цена не может быть отрицательной.</value>
+  </data>
+  <data name="ProductFeatureIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор строки характеристик.</value>
+  </data>
+  <data name="ProductFeatureLabelRequired" xml:space="preserve">
+    <value>Строке характеристик требуется метка.</value>
+  </data>
+  <data name="ProductFeatureLabelTooLong" xml:space="preserve">
+    <value>Метка не должна превышать {0} символов.</value>
+  </data>
+  <data name="ProductFeatureValueRequired" xml:space="preserve">
+    <value>Строке характеристик требуется значение.</value>
+  </data>
+  <data name="ProductFeatureValueTooLong" xml:space="preserve">
+    <value>Значение не должно превышать {0} символов.</value>
+  </data>
+  <data name="ProductFeatureSortOrderInvalid" xml:space="preserve">
+    <value>Порядок сортировки не может быть отрицательным.</value>
+  </data>
+  <data name="SlideIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор слайда.</value>
+  </data>
+  <data name="SlideIconNameRequired" xml:space="preserve">
+    <value>Слайду требуется значок.</value>
+  </data>
+  <data name="SlideBrandColorRequired" xml:space="preserve">
+    <value>Слайду требуется фирменный цвет.</value>
+  </data>
+  <data name="SlideImageUrlRequired" xml:space="preserve">
+    <value>Слайду требуется изображение.</value>
+  </data>
+  <data name="SlideDemoUrlTooLong" xml:space="preserve">
+    <value>Ссылка на демо не должна превышать {0} символов.</value>
+  </data>
+  <data name="SlideLearnMoreUrlTooLong" xml:space="preserve">
+    <value>Ссылка «подробнее» не должна превышать {0} символов.</value>
+  </data>
+  <data name="SlideSortOrderInvalid" xml:space="preserve">
+    <value>Порядок сортировки не может быть отрицательным.</value>
+  </data>
+  <data name="SlideTargetAudienceInvalid" xml:space="preserve">
+    <value>Выберите известную целевую аудиторию.</value>
+  </data>
+  <data name="SlideTranslationLocaleRequired" xml:space="preserve">
+    <value>Каждому переводу требуется локаль.</value>
+  </data>
+  <data name="SlideTranslationTitleRequired" xml:space="preserve">
+    <value>Каждому переводу требуется заголовок.</value>
+  </data>
+  <data name="SlideImageRequired" xml:space="preserve">
+    <value>Выберите файл для загрузки.</value>
+  </data>
+  <data name="ServerNameRequired" xml:space="preserve">
+    <value>Требуется указать имя сервера.</value>
+  </data>
+  <data name="ServerNameTooLong" xml:space="preserve">
+    <value>Имя сервера не должно превышать {0} символов.</value>
+  </data>
+  <data name="ServerHostnameRequired" xml:space="preserve">
+    <value>Требуется указать имя хоста.</value>
+  </data>
+  <data name="ServerHostnameTooLong" xml:space="preserve">
+    <value>Имя хоста не должно превышать {0} символов.</value>
+  </data>
+  <data name="ServerUsernameRequired" xml:space="preserve">
+    <value>Требуется указать имя пользователя.</value>
+  </data>
+  <data name="ServerUsernameTooLong" xml:space="preserve">
+    <value>Имя пользователя не должно превышать {0} символов.</value>
+  </data>
+  <data name="ServerMonthlyCostInvalid" xml:space="preserve">
+    <value>Месячная стоимость не может быть отрицательной.</value>
+  </data>
+  <data name="ServerMaxAccountsInvalid" xml:space="preserve">
+    <value>Если указано, максимальное число аккаунтов должно быть больше нуля.</value>
+  </data>
+  <data name="ServerIdInvalid" xml:space="preserve">
+    <value>Это недопустимый идентификатор сервера.</value>
+  </data>
+  <data name="ServerGroupNameRequired" xml:space="preserve">
+    <value>Требуется указать имя группы.</value>
+  </data>
+  <data name="ServerGroupNameTooLong" xml:space="preserve">
+    <value>Имя группы не должно превышать {0} символов.</value>
+  </data>
+  <data name="ServerGroupIdInvalid" xml:space="preserve">
+    <value>Это недопустимый идентификатор группы серверов.</value>
+  </data>
+  <data name="PluginZipRequired" xml:space="preserve">
+    <value>Выберите архив плагина для загрузки.</value>
+  </data>
+  <data name="PluginIdRequired" xml:space="preserve">
+    <value>Требуется указать идентификатор плагина.</value>
+  </data>
+  <data name="IntegrationSlugRequired" xml:space="preserve">
+    <value>Требуется указать слаг интеграции.</value>
+  </data>
+  <data name="IntegrationConfigRequired" xml:space="preserve">
+    <value>Требуются поля конфигурации.</value>
+  </data>
+  <data name="UserIdRequired" xml:space="preserve">
+    <value>Требуется идентификатор пользователя.</value>
+  </data>
+  <data name="UserFirstNameInvalid" xml:space="preserve">
+    <value>Имя обязательно и не должно превышать 100 символов.</value>
+  </data>
+  <data name="UserLastNameInvalid" xml:space="preserve">
+    <value>Фамилия обязательна и не должна превышать 100 символов.</value>
+  </data>
+  <data name="UserEmailInvalid" xml:space="preserve">
+    <value>Требуется корректный адрес электронной почты не длиннее 256 символов.</value>
+  </data>
+  <data name="UserPasswordRequired" xml:space="preserve">
+    <value>Требуется пароль.</value>
+  </data>
+  <data name="UserPasswordTooShort" xml:space="preserve">
+    <value>Пароль должен содержать не менее 8 символов.</value>
+  </data>
+  <data name="SettingIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор настройки.</value>
+  </data>
+  <data name="BrandingKindInvalid" xml:space="preserve">
+    <value>Тип должен быть 'logo', 'logodark', 'logomark' или 'favicon'.</value>
+  </data>
+  <data name="BrandingImageRequired" xml:space="preserve">
+    <value>Требуется файл изображения.</value>
+  </data>
+  <data name="ActivityLogClientIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор клиента.</value>
+  </data>
+  <data name="ReportDateRangeInvalid" xml:space="preserve">
+    <value>Дата окончания не может быть раньше даты начала.</value>
+  </data>
+  <data name="ReportMonthInvalid" xml:space="preserve">
+    <value>Месяц должен быть от 1 до 12.</value>
+  </data>
+  <data name="ReportClientIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор клиента.</value>
+  </data>
+  <data name="ReportPageRequired" xml:space="preserve">
+    <value>Номер страницы должен быть не меньше 1.</value>
+  </data>
+  <data name="ReportPageSizeRange" xml:space="preserve">
+    <value>Размер страницы должен быть от 1 до 200.</value>
+  </data>
+  <data name="ReportQuarterInvalid" xml:space="preserve">
+    <value>Квартал должен быть от 1 до 4.</value>
+  </data>
+  <data name="ReportTakeInvalid" xml:space="preserve">
+    <value>Количество должно быть от 1 до 100.</value>
+  </data>
+  <data name="BackchannelLogoutEmailInvalid" xml:space="preserve">
+    <value>Требуется корректный адрес электронной почты.</value>
+  </data>
+  <data name="SignInEmailRequired" xml:space="preserve">
+    <value>Необходимо указать адрес электронной почты.</value>
+  </data>
+  <data name="SignInPasswordRequired" xml:space="preserve">
+    <value>Необходимо указать пароль.</value>
+  </data>
+  <data name="SlideIconNameTooLong" xml:space="preserve">
+    <value>Название значка не должно превышать {0} символов.</value>
+  </data>
+  <data name="SlideBrandColorTooLong" xml:space="preserve">
+    <value>Фирменный цвет не должен превышать {0} символов.</value>
+  </data>
+  <data name="SlideImageUrlTooLong" xml:space="preserve">
+    <value>Ссылка на изображение не должна превышать {0} символов.</value>
+  </data>
+  <data name="SlideTranslationLocaleTooLong" xml:space="preserve">
+    <value>Локаль перевода не должна превышать {0} символов.</value>
+  </data>
+  <data name="SlideTranslationTitleTooLong" xml:space="preserve">
+    <value>Заголовок перевода не должен превышать {0} символов.</value>
+  </data>
+</root>

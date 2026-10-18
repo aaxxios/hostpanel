@@ -1,39 +1,44 @@
-namespace Innovayse.CWP.Tests;
-
 using System.Net;
-using System.Text;
 using FluentAssertions;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Providers.CWP;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using Moq.Protected;
 using Xunit;
 
-/// <summary>Unit tests for <see cref="CwpApiClient"/> using a mocked HTTP message handler.</summary>
-public sealed class CwpApiClientTests
+namespace Innovayse.CWP.Tests;
+/// <summary>Unit tests for <see cref="CwpApiClient"/> against a stub CWP HTTP server.</summary>
+public sealed class CwpApiClientTests : IAsyncLifetime
 {
+    /// <summary>The loopback server standing in for the CWP host; started per test class instance.</summary>
+    private StubHttpServer cwp = null!;
+
+    /// <summary>Gets the stub server address without the trailing slash, as the client expects a base URL.</summary>
+    private string BaseUrl => cwp.BaseAddress.ToString().TrimEnd('/');
+
+    /// <summary>Starts the stub CWP server before each test.</summary>
+    /// <returns>A task that completes when the server listens.</returns>
+    public async Task InitializeAsync()
+    {
+        cwp = await StubHttpServer.StartAsync();
+    }
+
+    /// <summary>Stops the stub CWP server after each test.</summary>
+    /// <returns>A task that completes when the server is down.</returns>
+    public async Task DisposeAsync()
+    {
+        await cwp.DisposeAsync();
+    }
+
     /// <summary>
-    /// Creates a <see cref="CwpApiClient"/> wired to a mock handler that returns the given JSON body.
+    /// Creates a <see cref="CwpApiClient"/> aimed at the stub server, which answers the given JSON body over real HTTP.
     /// </summary>
     /// <param name="responseBody">JSON string to return as the HTTP response body.</param>
     /// <param name="statusCode">HTTP status code to return. Default 200 OK.</param>
-    /// <returns>Configured <see cref="CwpApiClient"/> pointing to "cwp.test:2031".</returns>
-    private static CwpApiClient BuildClient(string responseBody, HttpStatusCode statusCode = HttpStatusCode.OK)
+    /// <returns>The configured <see cref="CwpApiClient"/>.</returns>
+    private CwpApiClient BuildClient(string responseBody, HttpStatusCode statusCode = HttpStatusCode.OK)
     {
-        var mockHandler = new Mock<HttpMessageHandler>();
-        mockHandler
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(statusCode)
-            {
-                Content = new StringContent(responseBody, Encoding.UTF8, "application/json"),
-            });
-
-        var http = new HttpClient(mockHandler.Object);
-        return new CwpApiClient(http, NullLogger<CwpApiClient>.Instance);
+        cwp.Enqueue(statusCode, responseBody);
+        return new CwpApiClient(new HttpClient(), NullLogger<CwpApiClient>.Instance);
     }
 
     /// <summary>CreateAccountAsync should return IsSuccess=true when CWP responds with status "OK".</summary>
@@ -43,7 +48,7 @@ public sealed class CwpApiClientTests
         var client = BuildClient("""{ "status": "OK", "msj": "Account created." }""");
 
         var result = await client.CreateAccountAsync(
-            "https://cwp.test:2304", "test-key", "example.com", "testuser", "pass123", "default", "test@example.com",
+            BaseUrl, "test-key", "example.com", "testuser", "pass123", "default", "test@example.com",
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -57,7 +62,7 @@ public sealed class CwpApiClientTests
         var client = BuildClient("""{ "status": "Error", "msj": "User already exists." }""");
 
         var result = await client.CreateAccountAsync(
-            "https://cwp.test:2304", "test-key", "example.com", "testuser", "pass123", "default", "test@example.com",
+            BaseUrl, "test-key", "example.com", "testuser", "pass123", "default", "test@example.com",
             CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
@@ -70,7 +75,7 @@ public sealed class CwpApiClientTests
     {
         var client = BuildClient("""{ "status": "OK", "msj": "Account suspended." }""");
 
-        var result = await client.SuspendAccountAsync("https://cwp.test:2304", "test-key", "testuser", CancellationToken.None);
+        var result = await client.SuspendAccountAsync(BaseUrl, "test-key", "testuser", CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -81,7 +86,7 @@ public sealed class CwpApiClientTests
     {
         var client = BuildClient("""{ "status": "OK", "msj": "Account unsuspended." }""");
 
-        var result = await client.UnsuspendAccountAsync("https://cwp.test:2304", "test-key", "testuser", CancellationToken.None);
+        var result = await client.UnsuspendAccountAsync(BaseUrl, "test-key", "testuser", CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -92,7 +97,7 @@ public sealed class CwpApiClientTests
     {
         var client = BuildClient("""{ "status": "OK", "msj": "Account deleted." }""");
 
-        var result = await client.TerminateAccountAsync("https://cwp.test:2304", "test-key", "testuser", CancellationToken.None);
+        var result = await client.TerminateAccountAsync(BaseUrl, "test-key", "testuser", CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -104,7 +109,7 @@ public sealed class CwpApiClientTests
         var client = BuildClient("Internal Server Error", HttpStatusCode.InternalServerError);
 
         var act = () => client.CreateAccountAsync(
-            "https://cwp.test:2304", "test-key", "example.com", "testuser", "pass123", "default", "test@example.com",
+            BaseUrl, "test-key", "example.com", "testuser", "pass123", "default", "test@example.com",
             CancellationToken.None);
 
         await act.Should().ThrowAsync<HttpRequestException>();

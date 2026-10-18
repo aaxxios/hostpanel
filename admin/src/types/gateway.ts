@@ -1,14 +1,14 @@
-/**
- * Represents a payment gateway configuration.
- * @deprecated Use IntegrationDto from the integrations module instead.
- */
-export interface Gateway {
-  /** Unique gateway identifier. */
-  id: number
-  /** Gateway name (e.g. Stripe, PayPal). */
-  name: string
-  /** Whether this gateway is currently enabled. */
-  isEnabled: boolean
-  /** Display order in checkout. */
-  displayOrder: number
-}
+/** Closed set of payment gateways an invoice or transaction can name, as the API sends them. */
+export const PaymentGateway = {
+  /** No gateway chosen. */
+  None: 'None',
+  /** Paid by bank transfer. */
+  BankTransfer: 'BankTransfer',
+  /** Paid through Stripe. */
+  Stripe: 'Stripe',
+  /** Paid through PayPal. */
+  PayPal: 'PayPal',
+} as const
+
+/** One of the payment gateways. */
+export type PaymentGateway = (typeof PaymentGateway)[keyof typeof PaymentGateway]

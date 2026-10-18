@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: 💬 Ask on Discord
+    url: https://discord.gg/NfqTkyTgD
+    about: Chat with the community and the maintainers.
   - name: ❓ Question or help with setup
     url: https://github.com/innovayse/hostpanel/discussions/categories/q-a
     about: Ask in Discussions, where the answer helps the next person too.

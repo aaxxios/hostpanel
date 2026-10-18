@@ -1,48 +1,54 @@
 # admin
 
-This template should help get you started developing with Vue 3 in Vite.
+The Hostpanel operator back office: Vue 3.5 + Vite + TypeScript (strict) + Pinia + vue-i18n
+(en, ru, hy) + Tailwind 4. The rules it follows are in `../rules/project.md` ("The admin's shape")
+and the workspace `rules/frontend.md`.
 
-## Recommended IDE Setup
+## Layout
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+```
+src/
+  views/            <Page>View.vue — routed screens (read a store, call its actions)
+  layouts/          routed shells
+  components/ui/    the kit every screen is composed from (Ui*)
+  components/<area>/ screen-specific parts composed from the kit
+  stores/           <area>.ts — Pinia; the only callers of composables/apis
+  composables/      useApi.ts (the only transport), apis/use<Area>Api.ts, use*.ts
+  types/            one file per concept
+  lib/              pure helpers (errorHandler, runAction, format, money, tones, ...)
+  utils/ui/         TypeScript the kit shares
+  middleware/       the router guard
+  locales/          <lang>/<area>.json — one file per area, all three languages together
+tests/              vitest, mirrors src/
+e2e/                Playwright flows (API stubbed with page.route), fixtures/ and support/
+scripts/            lint-i18n.ts, audit.mjs
+eslint.config.ts   flat config; exports strictRules (the house rules) and the local require-placeholder rule
+```
 
-## Recommended Browser Setup
-
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
+## Setup
 
 ```sh
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+## Checks (all run in CI, in this order)
 
 ```sh
-npm run build
+npm run lint:ci       # oxlint + ESLint, non-fixing (npm run lint fixes locally)
+npm run lint:i18n     # catalogues: missing / extra / unused / unknown keys
+npm run typecheck     # vue-tsc -b --force
+npm test -- --maxWorkers=2
+npm run build-only
+npm run e2e           # Playwright against vite preview; needs the Playwright browsers
+npm run audit         # conformance counters, all zero
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+## Adding a screen
 
-```sh
-npm run lint
-```
+1. A view in `src/views/`, composed from `components/ui/` only, with a `placeholder` on every
+   input and a `data-testid` on every interactive element.
+2. State in `src/stores/<area>.ts`, requests in `src/composables/apis/use<Area>Api.ts`; the view
+   never calls the API composable.
+3. Every sentence as `t('area.key')` in `src/locales/{en,ru,hy}/<area>.json`.
+4. A test under `tests/` (the coverage-shape test fails without one) and, for a flow, a spec in `e2e/`.

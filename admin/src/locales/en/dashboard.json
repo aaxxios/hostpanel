@@ -1,0 +1,14 @@
+{
+  "title": "Dashboard",
+  "subtitle": "Welcome back — here's what's happening",
+  "live": "Live",
+  "loadingMetrics": "Loading metrics…",
+  "stats": {
+    "totalRevenue": "Total Revenue",
+    "monthlyRevenue": "Monthly Revenue",
+    "activeServices": "Active Services",
+    "overdueInvoices": "Overdue Invoices",
+    "openTickets": "Open Tickets",
+    "totalClients": "Total Clients"
+  }
+}

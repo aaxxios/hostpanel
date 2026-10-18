@@ -1,0 +1,16 @@
+{
+  "permissionLabels": {
+    "modifyMasterAccountProfile": "Изменение профиля основного аккаунта",
+    "viewManageContacts": "Просмотр контактов и управление ими",
+    "viewProductsServices": "Просмотр продуктов и услуг",
+    "viewModifyProductPasswords": "Просмотр и изменение паролей продуктов",
+    "viewDomains": "Просмотр доменов",
+    "manageDomainSettings": "Управление настройками доменов",
+    "viewPayInvoices": "Просмотр и оплата счетов",
+    "viewAcceptQuotes": "Просмотр и принятие предложений",
+    "viewOpenSupportTickets": "Просмотр и создание тикетов поддержки",
+    "viewManageAffiliateAccount": "Просмотр партнёрского аккаунта и управление им",
+    "viewEmails": "Просмотр писем",
+    "placeNewOrdersUpgradesCancellations": "Оформление заказов, улучшений и отмен"
+  }
+}

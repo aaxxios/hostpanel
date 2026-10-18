@@ -32,7 +32,7 @@
       <_Parameter1>Innovayse.CWP.Tests</_Parameter1>
     </AssemblyAttribute>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-      <_Parameter1>Innovayse.Infrastructure</_Parameter1>
+      <_Parameter1>Innovayse.Hostpanel.Infrastructure</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
 </Project>

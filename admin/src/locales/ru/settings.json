@@ -1,0 +1,350 @@
+{
+  "systemSettings": "Системные настройки",
+  "table": {
+    "key": "Ключ",
+    "value": "Значение",
+    "description": "Описание",
+    "noSettings": "Настройки не найдены."
+  },
+  "siteIdentity": {
+    "title": "Идентичность сайта",
+    "description": "Как витрина называет себя. Название попадает в заголовок браузера, превью в соцсетях, alt-текст логотипа и структурированные данные; слоган — описание страницы по умолчанию.",
+    "name": {
+      "label": "Название сайта",
+      "hint": "Пусто — встроенное название"
+    },
+    "tagline": {
+      "label": "Слоган",
+      "hint": "Одна строка, описание страницы по умолчанию"
+    }
+  },
+  "portalAppearance": {
+    "title": "Оформление портала",
+    "description": "Какой шаблон использует публичная витрина и в какой цветовой теме посетитель её открывает. Изменения вступают в силу при следующей загрузке страницы.",
+    "template": "Шаблон",
+    "notSeeded": "Настройка {key} ещё не заполнена (seed), поэтому изменить её здесь нельзя. Пока она не создана, портал использует переменную окружения {env}.",
+    "templates": {
+      "aurora": {
+        "label": "Aurora",
+        "hint": "Текущий шаблон по умолчанию — тёмная/светлая тема, армянская типографика"
+      },
+      "nova": {
+        "label": "Nova",
+        "hint": "Редакционная вёрстка с бирюзовой палитрой — тёмная/светлая"
+      },
+      "classic": {
+        "label": "Classic",
+        "hint": "Оригинальный дизайн витрины"
+      }
+    },
+    "themeDefault": "Тема по умолчанию",
+    "themeDefaultHint": "Для посетителя, который ещё не выбирал. Собственный выбор посетителя запоминается в cookie.",
+    "themeModes": {
+      "light": "Светлая",
+      "dark": "Тёмная",
+      "system": "Как на устройстве посетителя"
+    },
+    "userToggle": "Разрешить посетителям переключать тему",
+    "userToggleHint": "Выключено — кнопка солнце/луна в шапке скрыта."
+  },
+  "branding": {
+    "title": "Брендинг",
+    "description": "Логотипы витрины и иконка вкладки браузера. Изменения вступают в силу при следующей загрузке страницы.",
+    "pasteUrl": "Или вставьте URL изображения...",
+    "logo": {
+      "label": "Логотип (светлый фон)",
+      "hint": "JPEG, PNG, WebP — до 5МБ"
+    },
+    "logoDark": {
+      "label": "Логотип (тёмный фон)",
+      "hint": "Пусто — используется светлый логотип"
+    },
+    "logoMark": {
+      "label": "Знак (квадратная иконка)",
+      "hint": "Для компактных шапок и страниц входа; пусто — встроенный знак"
+    },
+    "favicon": {
+      "label": "Favicon",
+      "hint": "PNG, SVG, ICO — до 5МБ"
+    },
+    "remove": "Удалить изображение"
+  },
+  "brandColors": {
+    "title": "Цвета бренда",
+    "description": "Два цвета, из которых витрина выводит всю палитру — кнопки, ссылки, акценты и письма. Пусто — у каждого шаблона свои цвета.",
+    "primary": {
+      "label": "Основной",
+      "hint": "Кнопки, ссылки и акценты. Одиннадцать оттенков ниже выводятся из него."
+    },
+    "accent": {
+      "label": "Акцентный",
+      "hint": "Градиенты, бейджи и второстепенные акценты."
+    },
+    "reset": "Сбросить",
+    "previewButton": "Кнопка",
+    "previewLink": "Ссылка",
+    "contrastOk": "Белый текст на этом цвете: {ratio}:1 — соответствует WCAG AA.",
+    "contrastDark": "Белый текст на этом цвете: {ratio}:1 — слишком низко, кнопки получат тёмный текст.",
+    "contrastLow": "Белый текст на этом цвете: {ratio}:1 — ниже WCAG AA для мелкого текста; для кнопок достаточно."
+  },
+  "typography": {
+    "title": "Типографика",
+    "description": "Шрифты витрины. Все встроены; ничего не загружается с внешних сервисов.",
+    "heading": "Заголовки",
+    "body": "Основной текст",
+    "templateDefault": "По умолчанию шаблона",
+    "sampleBody": "Домены, хостинг и почта в одном аккаунте, и живой человек на другом конце каждого тикета.",
+    "fonts": {
+      "inter": "Inter",
+      "notoSansArmenian": "Noto Sans Armenian",
+      "notoSerifArmenian": "Noto Serif Armenian",
+      "system": "Системный (устройства)"
+    },
+    "sampleHy": "Ձեր ամբողջ թվային ենթակառուցվածքը",
+    "sampleRu": "Вся ваша цифровая инфраструктура",
+    "sampleEn": "Your whole digital infrastructure"
+  },
+  "trackingChat": {
+    "title": "Аналитика и чат",
+    "description": "Сторонние сервисы, к которым обращается витрина. Ничего не загружается, пока не настроено здесь.",
+    "gtm": {
+      "label": "Контейнер Google Tag Manager",
+      "hint": "Загружается только после того, как посетитель принял все cookie. Пусто — тег не загружается."
+    },
+    "chat": {
+      "title": "Онлайн-чат",
+      "baseUrl": "Сервер чата",
+      "baseUrlHint": "https://chat.example.com",
+      "token": "Website token",
+      "tokenHint": "Из настроек inbox в чате",
+      "tokenRu": "Токен для русскоязычных",
+      "tokenHy": "Токен для армяноязычных",
+      "tokenLocaleHint": "Необязательно; пусто — используется основной",
+      "hint": "Виджет появляется, только когда заданы провайдер, сервер и токен."
+    },
+    "provider": {
+      "label": "Провайдер",
+      "off": "Выключен",
+      "chatwoot": "Chatwoot",
+      "innochat": "Innochat"
+    }
+  },
+  "productFeatures": {
+    "specification": "Спецификация",
+    "shownInTheStorefrontS": "Показывается в таблице сравнения тарифов на витрине для",
+    "nothingSpecifiedYetTheComparison": "Пока ничего не указано. Таблица сравнения остаётся скрытой, пока хотя бы у одного тарифа не появится строка.",
+    "disk": "Диск",
+    "10Gb": "10 ГБ",
+    "removeLine": "Удалить строку",
+    "feature": "Характеристика",
+    "adding": "Добавление…",
+    "add": "Добавить",
+    "plansLineUpByFeature": "Тарифы сопоставляются по названию характеристики, поэтому пишите его одинаково во всех продуктах: «Диск» и «Дисковое пространство» станут двумя разными строками. В пределах одного продукта название можно использовать только один раз; повторное использование отклоняется, а не сохраняется там, где оно никогда не отобразится."
+  },
+  "productForm": {
+    "editProduct": "Редактировать продукт",
+    "createNewProduct": "Создать новый продукт",
+    "productType": "Тип продукта",
+    "productGroup": "Группа продуктов",
+    "selectAGroup": "Выберите группу",
+    "eGStarterHosting": "например, Стартовый хостинг",
+    "slugUrl": "Slug (URL)",
+    "eGStarterHosting2": "например, starter-hosting",
+    "autoGeneratedFromNameEdit": "Создаётся автоматически из названия. Измените, чтобы переопределить.",
+    "packageName": "Название пакета",
+    "eGStarterProBusiness": "например, starter, pro, business",
+    "hostingPackageNameUsedFor": "Название хостинг-пакета для провижининга сервера. Необязательно.",
+    "serverGroup": "Группа серверов",
+    "noneAutoSelectByModule": "Нет (автовыбор по модулю)",
+    "assignToAServerGroup": "Назначьте группу серверов для провижининга с балансировкой нагрузки. Необязательно.",
+    "briefProductDescription": "Краткое описание продукта...",
+    "pricing": "Цены",
+    "monthly": "Ежемесячно",
+    "annual": "Ежегодно",
+    "base": "Базовая",
+    "aBlankCycleLeavesThe": "Пустой период делает продукт недоступным для продажи на этом периоде в этой валюте.",
+    "hideThisProductFromThe": "Скрыть этот продукт из формы заказа",
+    "createProduct": "Создать продукт",
+    "sharedHosting": "Общий хостинг",
+    "dedicated": "Выделенный",
+    "other": "Другое",
+    "vps": "VPS"
+  },
+  "currencies": {
+    "loadingCurrencies": "Загрузка валют..."
+  },
+  "emailTemplates": {
+    "emailTemplates": "Шаблоны писем",
+    "noTemplatesFound": "Шаблоны не найдены."
+  },
+  "products": {
+    "products": "Продукты",
+    "manageHostingPlansAndServices": "Управление тарифами хостинга и услугами, доступными для покупки",
+    "createProduct": "Создать продукт",
+    "loadingProducts": "Загрузка продуктов...",
+    "group": "Группа",
+    "monthly": "Ежемесячно",
+    "annual": "Ежегодно",
+    "editSpecification": "Редактировать спецификацию",
+    "editProduct": "Редактировать продукт",
+    "noProductsFoundCreateYour": "Продукты не найдены. Создайте первый продукт, чтобы начать.",
+    "typeSharedHosting": "Общий хостинг",
+    "typeDedicated": "Выделенный",
+    "typeDomain": "Домен",
+    "typeOther": "Другое",
+    "typeVps": "VPS",
+    "typeSsl": "SSL"
+  },
+  "slideForm": {
+    "slides": "Слайды",
+    "loadingSlideData": "Загрузка данных слайда...",
+    "generalSettings": "Общие настройки",
+    "icon": "Значок",
+    "orTypeMdiIconName": "Или введите имя значка MDI (например, cloud-check)",
+    "brandColor": "Фирменный цвет",
+    "image": "Изображение",
+    "slidePreview": "Предпросмотр слайда",
+    "removeImage": "Удалить изображение",
+    "jpegPngWebpSvgMax": "JPEG, PNG, WebP, SVG — не более 5 МБ",
+    "orPasteImageUrl": "Или вставьте URL изображения...",
+    "demoUrl": "URL демо",
+    "demoUrlPlaceholder": "https://demo.example.com",
+    "optionalTryDemoButtonLink": "Необязательная ссылка для кнопки «Попробовать демо» на слайде",
+    "learnMoreUrl": "URL «Подробнее»",
+    "productsExampleOrHttpsExample": "/products/example или https://example.com",
+    "optionalSecondaryLinkShownAs": "Необязательная дополнительная ссылка «Подробнее» на слайде",
+    "linkedProduct": "Связанный продукт",
+    "sortOrder": "Порядок сортировки",
+    "showThisSlideToVisitors": "Показывать этот слайд посетителям",
+    "targetAudience": "Целевая аудитория",
+    "visibleFrom": "Виден с",
+    "noStartDate": "Без даты начала",
+    "visibleUntil": "Виден до",
+    "noEndDate": "Без даты окончания",
+    "translations": "Переводы",
+    "slideTitle": "Заголовок слайда",
+    "tagline": "Слоган",
+    "shortSubtitle": "Короткий подзаголовок",
+    "slideBodyText": "Основной текст слайда...",
+    "features": "Особенности",
+    "removeFeature": "Удалить особенность",
+    "addFeature": "Добавить особенность",
+    "ctaText": "Текст кнопки",
+    "getStarted": "Начать",
+    "ctaUrl": "URL кнопки",
+    "createSlide": "Создать слайд",
+    "unsavedChanges": "Несохранённые изменения",
+    "youHaveUnsavedChangesAre": "У вас есть несохранённые изменения. Вы уверены, что хотите уйти?",
+    "leave": "Уйти",
+    "all": "Все",
+    "guest": "Гость",
+    "authenticated": "Авторизованный",
+    "hosting": "Хостинг",
+    "globe": "Глобус",
+    "analytics": "Аналитика",
+    "education": "Образование",
+    "property": "Недвижимость",
+    "eCommerce": "Электронная коммерция",
+    "restaurant": "Ресторан",
+    "launch": "Запуск",
+    "security": "Безопасность",
+    "premium": "Премиум",
+    "mobile": "Мобильные",
+    "design": "Дизайн",
+    "finance": "Финансы",
+    "media": "Медиа",
+    "health": "Здоровье",
+    "pageTitleEdit": "Редактирование слайда",
+    "pageTitleCreate": "Создание слайда",
+    "featureNumber": "Особенность {number}",
+    "locales": {
+      "en": "Английский",
+      "ru": "Русский",
+      "hy": "Армянский"
+    },
+    "notFound": "Слайд №{id} не найден.",
+    "ai": "ИИ"
+  },
+  "slides": {
+    "slides": "Слайды",
+    "manageHomepageHeroSlidesDrag": "Управление слайдами главной страницы — перетаскивайте для изменения порядка",
+    "savingOrder": "Сохранение порядка...",
+    "addSlide": "Добавить слайд",
+    "loadingSlides": "Загрузка слайдов...",
+    "image": "Изображение",
+    "audience": "Аудитория",
+    "visibility": "Видимость",
+    "slide": "Слайд",
+    "editSlide": "Редактировать слайд",
+    "deleteSlide": "Удалить слайд",
+    "noSlidesFoundAddYour": "Слайды не найдены. Добавьте первый слайд, чтобы начать.",
+    "deleteSlide2": "Удалить слайд",
+    "always": "Всегда",
+    "from": "С {date}",
+    "until": "До {date}",
+    "slideNumber": "Слайд №{id}",
+    "deleteMessage": "Удалить «{title}»? Это действие нельзя отменить."
+  },
+  "tldConfigForm": {
+    "tldPricing": "Цены на TLD",
+    "loadingTldConfiguration": "Загрузка настроек TLD...",
+    "generalSettings": "Общие настройки",
+    "tld": "TLD",
+    "domainExtensionWithoutTheDot": "Доменное расширение без точки (например, «com», «net», «am»)",
+    "registrarProvider": "Провайдер-регистратор",
+    "costCurrency": "Валюта себестоимости",
+    "currencyUsedByTheRegistrar": "Валюта, в которой регистратор указывает себестоимость",
+    "sellCurrency": "Валюта продажи",
+    "currencyShownToClientsFor": "Валюта, в которой введены цены продажи; клиенты с другой валютой платят сумму, пересчитанную по сохранённым курсам",
+    "makeThisTldAvailableFor": "Сделать этот TLD доступным для покупки",
+    "sortOrder": "Порядок сортировки",
+    "popularBusinessTech": "популярные, бизнес, технологии",
+    "commaSeparatedCategoryTagsFor": "Теги категорий через запятую для фильтрации",
+    "registrationPricing": "Цены на регистрацию",
+    "period": "Период",
+    "costCostsymbol": "Себестоимость ({costSymbol})",
+    "sellSellsymbol": "Продажа ({sellSymbol})",
+    "margin": "Маржа",
+    "years": "Лет",
+    "transferPricing": "Цены на перенос",
+    "renewalPricing": "Цены на продление",
+    "createTld": "Создать TLD",
+    "unsavedChanges": "Несохранённые изменения",
+    "youHaveUnsavedChangesAre": "У вас есть несохранённые изменения. Вы уверены, что хотите уйти?",
+    "leave": "Уйти",
+    "tldIsRequired": "Требуется TLD.",
+    "addTld": "Добавить TLD",
+    "editTld": "Изменить TLD",
+    "notFound": "Конфигурация TLD №{id} не найдена."
+  },
+  "tldConfigs": {
+    "tldPricing": "Цены на TLD",
+    "configureDomainExtensionPricingAnd": "Настройка цен и провайдеров доменных расширений",
+    "importing": "Импорт...",
+    "import": "Импорт",
+    "nameAm": "Name.am",
+    "namecheap": "Namecheap",
+    "syncing": "Синхронизация...",
+    "syncPrices": "Синхронизировать цены",
+    "addTld": "Добавить TLD",
+    "searchTlds": "Поиск TLD...",
+    "loadingTldConfigurations": "Загрузка настроек TLD...",
+    "tld": "TLD",
+    "provider": "Провайдер",
+    "cost1yr": "Себестоимость (1 год)",
+    "sell1yr": "Продажа (1 год)",
+    "margin": "Маржа",
+    "lastSynced": "Последняя синхронизация",
+    "editTld": "Редактировать TLD",
+    "deleteTld": "Удалить TLD",
+    "noTldConfigurationsFoundAdd": "Настройки TLD не найдены. Добавьте первый TLD или импортируйте у провайдера.",
+    "showingValueValue2OfLength": "Показано {value}–{value2} из {length} TLD",
+    "deleteTldConfiguration": "Удалить настройки TLD",
+    "allProviders": "Все провайдеры",
+    "allStatus": "Все статусы",
+    "priceSyncComplete": "Синхронизация цен завершена.",
+    "deleteMessage": "Удалить конфигурацию TLD «.{tld}»? Это действие нельзя отменить.",
+    "importComplete": "Импорт завершён: добавлено {imported}, обновлено {updated}.",
+    "never": "Никогда"
+  }
+}

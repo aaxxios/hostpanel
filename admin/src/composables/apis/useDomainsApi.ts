@@ -1,0 +1,220 @@
+/**
+ * Endpoints behind the domains store: the registration list, one domain's detail and every
+ * change made to it (fields, registrar commands, DNS records, email forwarding).
+ *
+ * No state lives here; every function rejects with an `ApiError` carrying the problem+json body.
+ */
+
+import { buildQuery, useApi } from '@/composables/useApi'
+import type {
+  DnsRecordPayload,
+  DomainContactPayload,
+  DomainDetail,
+  DomainFilter,
+  DomainRegistration,
+  DomainToggle,
+  ForwardingRulePayload,
+  UpdateDomainPayload,
+} from '@/types/domain'
+import type { PagedResult } from '@/types/pagedresult'
+
+/**
+ * Endpoint functions for `/domains`.
+ *
+ * @returns One typed function per endpoint.
+ */
+export const useDomainsApi = () => {
+  const { request } = useApi()
+
+  /**
+   * Lists domain registrations, one page.
+   *
+   * @param filter - Page, page size, name search and owning client.
+   * @returns The page and the total count.
+   */
+  const listDomains = (filter: DomainFilter): Promise<PagedResult<DomainRegistration>> =>
+    request<PagedResult<DomainRegistration>>(
+      `/domains${buildQuery({
+        clientId: filter.clientId,
+        page: filter.page,
+        pageSize: filter.pageSize,
+        search: filter.search,
+      })}`,
+    )
+
+  /**
+   * Reads one domain with its nameservers, DNS records and forwarding rules.
+   *
+   * @param id - Domain id.
+   * @returns The domain detail.
+   */
+  const getDomain = (id: number | string): Promise<DomainDetail> => request<DomainDetail>(`/domains/${id}`)
+
+  /**
+   * Saves the editable fields of a domain.
+   *
+   * @param id - Domain id.
+   * @param payload - The editable fields.
+   * @returns Nothing.
+   */
+  const updateDomain = (id: number | string, payload: UpdateDomainPayload): Promise<void> =>
+    request<void>(`/domains/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+
+  /**
+   * Sends the register command to the registrar.
+   *
+   * @param id - Domain id.
+   * @returns Nothing.
+   */
+  const registerDomain = (id: number | string): Promise<void> =>
+    request<void>(`/domains/${id}/register`, { method: 'POST' })
+
+  /**
+   * Renews a domain for more years.
+   *
+   * @param id - Domain id.
+   * @param years - Number of years to add.
+   * @returns Nothing.
+   */
+  const renewDomain = (id: number | string, years: number): Promise<void> =>
+    request<void>(`/domains/${id}/renew`, { method: 'POST', body: JSON.stringify({ years }) })
+
+  /**
+   * Turns auto-renew on or off.
+   *
+   * @param id - Domain id.
+   * @param toggle - The wanted state.
+   * @returns Nothing.
+   */
+  const setAutoRenew = (id: number | string, toggle: DomainToggle): Promise<void> =>
+    request<void>(`/domains/${id}/auto-renew`, { method: 'PUT', body: JSON.stringify(toggle) })
+
+  /**
+   * Turns WHOIS privacy on or off.
+   *
+   * @param id - Domain id.
+   * @param toggle - The wanted state.
+   * @returns Nothing.
+   */
+  const setWhoisPrivacy = (id: number | string, toggle: DomainToggle): Promise<void> =>
+    request<void>(`/domains/${id}/whois-privacy`, { method: 'PUT', body: JSON.stringify(toggle) })
+
+  /**
+   * Turns the registrar lock on or off.
+   *
+   * @param id - Domain id.
+   * @param toggle - The wanted state.
+   * @returns Nothing.
+   */
+  const setLock = (id: number | string, toggle: DomainToggle): Promise<void> =>
+    request<void>(`/domains/${id}/lock`, { method: 'PUT', body: JSON.stringify(toggle) })
+
+  /**
+   * Turns DNS management on or off.
+   *
+   * @param id - Domain id.
+   * @param toggle - The wanted state.
+   * @returns Nothing.
+   */
+  const setDnsManagement = (id: number | string, toggle: DomainToggle): Promise<void> =>
+    request<void>(`/domains/${id}/dns-management`, { method: 'PUT', body: JSON.stringify(toggle) })
+
+  /**
+   * Turns email forwarding on or off.
+   *
+   * @param id - Domain id.
+   * @param toggle - The wanted state.
+   * @returns Nothing.
+   */
+  const setEmailForwarding = (id: number | string, toggle: DomainToggle): Promise<void> =>
+    request<void>(`/domains/${id}/email-forwarding-toggle`, { method: 'PUT', body: JSON.stringify(toggle) })
+
+  /**
+   * Changes the WHOIS registrant contact.
+   *
+   * @param id - Domain id.
+   * @param contact - The contact fields.
+   * @returns Nothing.
+   */
+  const modifyContact = (id: number | string, contact: DomainContactPayload): Promise<void> =>
+    request<void>(`/domains/${id}/modify-contact`, { method: 'POST', body: JSON.stringify(contact) })
+
+  /**
+   * Starts an outgoing transfer and reads back the EPP code.
+   *
+   * @param id - Domain id.
+   * @returns The EPP authorization code.
+   */
+  const initiateOutgoingTransfer = (id: number | string): Promise<{ eppCode: string }> =>
+    request<{ eppCode: string }>(`/domains/${id}/initiate-outgoing-transfer`, { method: 'POST' })
+
+  /**
+   * Adds a DNS record.
+   *
+   * @param id - Domain id.
+   * @param payload - The record.
+   * @returns Nothing.
+   */
+  const addDnsRecord = (id: number | string, payload: DnsRecordPayload): Promise<void> =>
+    request<void>(`/domains/${id}/dns`, { method: 'POST', body: JSON.stringify(payload) })
+
+  /**
+   * Replaces a DNS record.
+   *
+   * @param id - Domain id.
+   * @param recordId - Record id.
+   * @param payload - The record.
+   * @returns Nothing.
+   */
+  const updateDnsRecord = (id: number | string, recordId: number, payload: DnsRecordPayload): Promise<void> =>
+    request<void>(`/domains/${id}/dns/${recordId}`, { method: 'PUT', body: JSON.stringify(payload) })
+
+  /**
+   * Deletes a DNS record.
+   *
+   * @param id - Domain id.
+   * @param recordId - Record id.
+   * @returns Nothing.
+   */
+  const deleteDnsRecord = (id: number | string, recordId: number): Promise<void> =>
+    request<void>(`/domains/${id}/dns/${recordId}`, { method: 'DELETE' })
+
+  /**
+   * Adds an email forwarding rule.
+   *
+   * @param id - Domain id.
+   * @param payload - Source alias and destination address.
+   * @returns Nothing.
+   */
+  const addForwardingRule = (id: number | string, payload: ForwardingRulePayload): Promise<void> =>
+    request<void>(`/domains/${id}/email-forwarding`, { method: 'POST', body: JSON.stringify(payload) })
+
+  /**
+   * Replaces an email forwarding rule.
+   *
+   * @param id - Domain id.
+   * @param ruleId - Rule id.
+   * @param payload - Source, destination and active flag.
+   * @returns Nothing.
+   */
+  const updateForwardingRule = (id: number | string, ruleId: number, payload: ForwardingRulePayload): Promise<void> =>
+    request<void>(`/domains/${id}/email-forwarding/${ruleId}`, { method: 'PUT', body: JSON.stringify(payload) })
+
+  /**
+   * Deletes an email forwarding rule.
+   *
+   * @param id - Domain id.
+   * @param ruleId - Rule id.
+   * @returns Nothing.
+   */
+  const deleteForwardingRule = (id: number | string, ruleId: number): Promise<void> =>
+    request<void>(`/domains/${id}/email-forwarding/${ruleId}`, { method: 'DELETE' })
+
+  return {
+    listDomains, getDomain, updateDomain, registerDomain, renewDomain,
+    setAutoRenew, setWhoisPrivacy, setLock, setDnsManagement, setEmailForwarding,
+    modifyContact, initiateOutgoingTransfer,
+    addDnsRecord, updateDnsRecord, deleteDnsRecord,
+    addForwardingRule, updateForwardingRule, deleteForwardingRule,
+  }
+}

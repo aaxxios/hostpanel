@@ -1,7 +1,6 @@
-namespace Innovayse.Inecobank.Tests;
-
 using Microsoft.Extensions.Logging;
 
+namespace Innovayse.Inecobank.Tests;
 /// <summary>
 /// <see cref="ILogger"/> implementation that records every formatted message and scope it
 /// receives, without asserting on them itself — used to prove sensitive values (merchant

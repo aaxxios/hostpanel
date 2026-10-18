@@ -1,0 +1,211 @@
+/**
+ * Tests for `stores/invoicepayment.ts`.
+ *
+ * The store, not the payment page, owns the in-flight flag, the success flag and the refusal
+ * sentence, so these assertions pin the contract the page renders from.
+ *
+ * @module tests/stores/invoicepayment.test
+ */
+
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { ref } from 'vue'
+
+/** The mocked saved-method payment call, re-created for every test. */
+const payInvoiceMock = vi.fn()
+
+/** The mocked hosted-gateway start call, re-created for every test. */
+const startGatewayMock = vi.fn()
+
+/** The mocked invoice read. */
+const fetchInvoiceMock = vi.fn()
+
+/** The mocked saved-methods read. */
+const fetchPaymentMethodsMock = vi.fn()
+
+/** The mocked gateway-list read. */
+const fetchGatewayMethodsMock = vi.fn()
+
+/** The mocked gateway settlement call. */
+const completeGatewayMock = vi.fn()
+
+vi.stubGlobal('ref', ref)
+
+vi.mock('~/composables/apis/useBillingApi', () => ({
+  /**
+   * Stands in for the real API composable so the store runs without transport.
+   *
+   * @returns Only the endpoints the tests reach for.
+   */
+  useBillingApi: () => ({
+    payInvoice: payInvoiceMock,
+    startInvoiceGatewayPayment: startGatewayMock,
+    fetchInvoice: fetchInvoiceMock,
+    fetchPaymentMethods: fetchPaymentMethodsMock,
+    fetchGatewayMethods: fetchGatewayMethodsMock,
+    completeGatewayPayment: completeGatewayMock
+  })
+}))
+
+const { useInvoicePaymentStore } = await import('~/stores/invoicepayment')
+const { ActionOutcome } = await import('~/types/actionoutcome')
+
+describe('useInvoicePaymentStore.payWithSavedMethod', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    payInvoiceMock.mockReset()
+  })
+
+  it('reports Succeeded, sets paySuccess and releases the in-flight flag', async () => {
+    payInvoiceMock.mockResolvedValue({})
+    const store = useInvoicePaymentStore()
+
+    const outcome = await store.payWithSavedMethod('7', 'pm_1')
+
+    expect(outcome).toBe(ActionOutcome.Succeeded)
+    expect(payInvoiceMock).toHaveBeenCalledWith('7', 'pm_1')
+    expect(store.paySuccess).toBe(true)
+    expect(store.submitting).toBe(false)
+    expect(store.error).toBe('')
+  })
+
+  it('reports Failed and keeps the refusal sentence as state', async () => {
+    payInvoiceMock.mockRejectedValue({ data: { detail: 'Card declined.' } })
+    const store = useInvoicePaymentStore()
+
+    const outcome = await store.payWithSavedMethod('7', 'pm_1')
+
+    expect(outcome).toBe(ActionOutcome.Failed)
+    expect(store.paySuccess).toBe(false)
+    expect(store.submitting).toBe(false)
+    expect(store.error).not.toBe('')
+  })
+})
+
+describe('useInvoicePaymentStore.startGatewayPayment', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    startGatewayMock.mockReset()
+  })
+
+  it('returns the gateway address and stays in flight while the browser leaves', async () => {
+    startGatewayMock.mockResolvedValue({ redirectUrl: 'https://bank.example/pay' })
+    const store = useInvoicePaymentStore()
+
+    const url = await store.startGatewayPayment('7', 'gw', 'https://app.example/result')
+
+    expect(url).toBe('https://bank.example/pay')
+    expect(startGatewayMock).toHaveBeenCalledWith('7', 'gw', 'https://app.example/result')
+    expect(store.submitting).toBe(true)
+  })
+
+  it('returns null, keeps the sentence and releases the flag on failure', async () => {
+    startGatewayMock.mockRejectedValue(new Error('down'))
+    const store = useInvoicePaymentStore()
+
+    const url = await store.startGatewayPayment('7', 'gw', 'https://app.example/result')
+
+    expect(url).toBeNull()
+    expect(store.submitting).toBe(false)
+    expect(store.error).not.toBe('')
+  })
+
+  it('reset clears every flag and the sentence', async () => {
+    startGatewayMock.mockRejectedValue(new Error('down'))
+    const store = useInvoicePaymentStore()
+    await store.startGatewayPayment('7', 'gw', 'https://app.example/result')
+
+    store.reset()
+
+    expect(store.error).toBe('')
+    expect(store.paySuccess).toBe(false)
+    expect(store.submitting).toBe(false)
+  })
+})
+
+describe('useInvoicePaymentStore reads', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fetchInvoiceMock.mockReset()
+    fetchPaymentMethodsMock.mockReset()
+    fetchGatewayMethodsMock.mockReset()
+    completeGatewayMock.mockReset()
+  })
+
+  it('keeps the invoice, and the API sentence with no invoice when the read is refused', async () => {
+    fetchInvoiceMock.mockResolvedValueOnce({ id: 7, total: '10.00' }).mockRejectedValueOnce({ data: { detail: 'No such invoice.' } })
+    const store = useInvoicePaymentStore()
+
+    expect(await store.loadInvoice('7')).toMatchObject({ id: 7 })
+    expect(store.invoiceError).toBe('')
+
+    expect(await store.loadInvoice('8')).toBeNull()
+    expect(store.invoice).toBeNull()
+    expect(store.invoiceError).toBe('No such invoice.')
+    expect(store.invoiceLoading).toBe(false)
+  })
+
+  it('reads the saved and hosted methods, and picks the first plugin-backed gateway', async () => {
+    fetchPaymentMethodsMock.mockResolvedValue([{ id: 'pm_1' }])
+    fetchGatewayMethodsMock.mockResolvedValue([
+      { module: 'stripe', displayName: 'Card' },
+      { module: 'bank_transfer', displayName: 'Bank' },
+      { module: 'inecobank', displayName: 'Inecobank' }
+    ])
+    const store = useInvoicePaymentStore()
+
+    await store.loadPaymentOptions()
+
+    expect(store.savedMethods).toHaveLength(1)
+    expect(store.hostedGatewayModule).toBe('inecobank')
+  })
+
+  it('has no hosted gateway when only the built-ins are offered', async () => {
+    fetchPaymentMethodsMock.mockResolvedValue([])
+    fetchGatewayMethodsMock.mockResolvedValue([{ module: 'stripe', displayName: 'Card' }])
+    const store = useInvoicePaymentStore()
+
+    await store.loadPaymentOptions()
+
+    expect(store.hostedGatewayModule).toBeNull()
+  })
+
+  it('leaves a list empty when its read fails and keeps the other', async () => {
+    fetchPaymentMethodsMock.mockRejectedValue(new Error('down'))
+    fetchGatewayMethodsMock.mockResolvedValue([{ module: 'inecobank', displayName: 'I' }])
+    const store = useInvoicePaymentStore()
+
+    await store.loadPaymentOptions()
+
+    expect(store.savedMethods).toEqual([])
+    expect(store.hostedGatewayModule).toBe('inecobank')
+  })
+})
+
+describe('useInvoicePaymentStore.verifyGatewayPayment', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    completeGatewayMock.mockReset()
+  })
+
+  it.each([
+    ['paid', 'paid'],
+    ['pending', 'pending'],
+    ['declined', 'declined']
+  ])('reports the bank word %s as the state %s', async (word, expected) => {
+    completeGatewayMock.mockResolvedValue({ state: word })
+
+    const state = await useInvoicePaymentStore().verifyGatewayPayment('order', '42', 'tok')
+
+    expect(state).toBe(expected)
+    expect(completeGatewayMock).toHaveBeenCalledWith('order', '42', 'tok')
+  })
+
+  it('reports Unknown, never Declined, when no answer could be had', async () => {
+    completeGatewayMock.mockRejectedValue(new Error('timeout'))
+
+    const state = await useInvoicePaymentStore().verifyGatewayPayment('invoice', '7')
+
+    expect(state).toBe('unknown')
+  })
+})

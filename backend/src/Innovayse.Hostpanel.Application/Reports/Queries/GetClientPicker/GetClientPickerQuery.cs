@@ -1,0 +1,4 @@
+namespace Innovayse.Hostpanel.Application.Reports.Queries.GetClientPicker;
+
+/// <summary>Query for the lightweight client list the report filters use in their dropdowns.</summary>
+public sealed record GetClientPickerQuery;
