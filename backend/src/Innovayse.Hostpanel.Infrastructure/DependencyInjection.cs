@@ -146,6 +146,7 @@ public static class DependencyInjection
         services.AddScoped<IHostpanelDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IClientRecordStore, ClientRecordStore>();
 
         // Storefront branding uploads. Both ports are stateless, so they are registered as
         // singletons: the processor holds only the ceilings it was configured with, and the
