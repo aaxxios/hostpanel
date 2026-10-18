@@ -78,7 +78,7 @@ mode. It goes last in the chain, renames the project to `hostpanel-demo`, and gi
 piece a name of its own (`hostpanel-demo-db`, `-rabbitmq`, `-redis`, `-mailhog`, `-api`, `-client`,
 `-admin`; volumes `hostpanel-demo_*`), so it can share a server with production without touching
 its data. Services reach each other by those container names. The overlay publishes the api, client,
-admin and mailhog UI on the `DEMO_*_HOST_PORT` ports and never starts the bundled nginx.
+admin and mailhog UI on the `DEMO_*_HOST_PORT` ports, bound to `127.0.0.1` only (the edge proxy reaches them by name), and never starts the bundled nginx.
 
 Set the `# Demo` block of `.env.example` (copy to `docker/.env`, `AUTH_MODE=local`, a database of its
 own in `POSTGRES_DB`; `DEMO_ADMIN_PASSWORD`, `DEMO_CLIENT_PASSWORD`, `DEMO_ADMIN_BASE_URL` and `DEMO_CLIENT_BASE_URL` are required), then from the
