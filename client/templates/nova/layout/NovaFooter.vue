@@ -5,11 +5,7 @@
       <div class="grid gap-10 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
         <div>
           <UiStack direction="row" align="center" gap="sm">
-            <span
-              class="grid h-8 w-8 place-items-center rounded-lg bg-[linear-gradient(135deg,var(--n-brand),var(--n-accent))] text-[15px] font-extrabold text-nova-on-accent"
-              aria-hidden="true"
-            >{{ BRAND_INITIAL }}</span>
-            <span class="text-base font-bold">{{ BRAND_NAME }}</span>
+            <AppLogoLockup img-class="h-8 w-auto max-w-[120px]" mark-class="h-8 w-8" name-class="text-base font-bold" />
           </UiStack>
           <UiText size="inherit" tone="inherit" class="mt-4 max-w-[320px] text-[15px] leading-relaxed text-nova-muted">
             {{ t('nova.footer.tagline') }}
@@ -118,15 +114,13 @@
  *
  * Live chat is not repeated here: the layout already mounts UiFloatingActions.
  */
+import AppLogoLockup from '~/components/AppLogoLockup.vue'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { TELEGRAM_LINK_BASE } from '~/constants/contactChannel'
 import { FOOTER_COLUMNS } from '~/templates/nova/content'
 
 /** Name the footer signs with: the operator's site name. */
 const { name: BRAND_NAME } = useSiteIdentity()
-
-/** Letter drawn in the footer mark. */
-const BRAND_INITIAL = 'i'
 
 /** Translator for the copy. */
 const { t } = useI18n()

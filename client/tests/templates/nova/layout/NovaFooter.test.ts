@@ -55,6 +55,14 @@ describe('NovaFooter', () => {
     expect(link.attributes('rel')).toContain('noopener')
   })
 
+  it('draws the bundled cube mark beside the site name when no logo is uploaded', () => {
+    stubTemplateGlobals({ siteName: 'Acme Host' })
+    const wrapper = mountWithKit(NovaFooter)
+
+    expect(wrapper.find('[data-testid="app-logo-mark"]').attributes('src')).toContain('/favicon.svg')
+    expect(wrapper.find('[data-testid="app-logo-name"]').text()).toBe('Acme Host')
+  })
+
   it('shows the tax id only when set', () => {
     stubTemplateGlobals({ settings: { 'portal.legal.tax_id': 'TIN-1' } })
 

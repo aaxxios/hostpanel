@@ -92,4 +92,14 @@ describe('AuroraFooter', () => {
     expect(text.match(/Acme Host/g)).toHaveLength(2)
     expect(text).not.toContain('Innovayse')
   })
+
+  it('draws the bundled cube mark when no logo is uploaded, and the upload once there is one', () => {
+    stubAuroraGlobals()
+    expect(mountWithKit(AuroraFooter).find('[data-testid="app-logo-mark"]').attributes('src')).toContain('/favicon.svg')
+
+    stubAuroraGlobals({ logo: '/api/uploads/logo.png' })
+    const wrapper = mountWithKit(AuroraFooter)
+    expect(wrapper.find('[data-testid="app-logo-light"]').attributes('src')).toBe('/api/uploads/logo.png')
+    expect(wrapper.find('[data-testid="app-logo-mark"]').exists()).toBe(false)
+  })
 })
