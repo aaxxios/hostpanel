@@ -6,8 +6,8 @@
  * @module tests/layouts/client.test
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { mountClient } from '~/tests/helpers/mountClient'
@@ -41,6 +41,7 @@ const { default: ClientLayout } = await import('~/layouts/client.vue')
 const { default: LayoutDemoBanner } = await import('~/components/layout/LayoutDemoBanner.vue')
 const { Permission, usePermissions } = await import('~/composables/usePermissions')
 const { useAuthStore } = await import('~/stores/auth')
+const { useClientStore } = await import('~/stores/client')
 
 /** The theme and language controls need runtime services this test does not provide. */
 const STUBS = { UiThemeToggle: true, UiLanguageSwitcher: true, UiCookieBanner: { template: '<div data-testid="cookie-banner" />' } }
@@ -48,10 +49,14 @@ const STUBS = { UiThemeToggle: true, UiLanguageSwitcher: true, UiCookieBanner: {
 /** The signed-in person the identity call answers with. */
 const ME = { firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com', permissions: Permission.All }
 
+// Unmounting releases the drawer's scroll lock and key listener between tests.
+enableAutoUnmount(afterEach)
+
 beforeEach(() => {
   stubAuthRuntime()
   vi.stubGlobal('usePermissions', usePermissions)
   vi.stubGlobal('useAuthStore', useAuthStore)
+  vi.stubGlobal('useClientStore', useClientStore)
   vi.stubGlobal('storeToRefs', storeToRefs)
   fetchMe.mockReset()
   fetchMe.mockResolvedValue(ME)
@@ -107,10 +112,10 @@ describe('client layout', () => {
     expect(user).toEqual({ email: 'ada@example.com', firstName: 'Ada', lastName: 'Lovelace' })
   })
 
-  it('shows every link to a person with all permissions', async () => {
+  it('shows every link to a person with all permissions, without the auth store ever loading its user', async () => {
     const wrapper = await mountLayout()
-    useAuthStore().user = { ...ME } as never
-    await nextTick()
+
+    expect(useAuthStore().user).toBeNull()
 
     for (const id of ['dashboard', 'services', 'domains', 'invoices', 'tickets', 'account']) {
       expect(wrapper.find(`[data-testid="nav-client-${id}"]`).exists()).toBe(true)
@@ -121,7 +126,7 @@ describe('client layout', () => {
 
   it('hides the sections a person has no permission for', async () => {
     const wrapper = await mountLayout()
-    useAuthStore().user = { ...ME, permissions: Permission.ViewDomains } as never
+    useClientStore().user = { ...ME, permissions: Permission.ViewDomains } as never
     await nextTick()
 
     expect(wrapper.find('[data-testid="nav-client-domains"]').exists()).toBe(true)
@@ -140,6 +145,37 @@ describe('client layout', () => {
 
     await wrapper.find('[data-testid="client-sidebar-backdrop"]').trigger('click')
     expect(wrapper.find('[data-testid="client-sidebar"]').classes()).toContain('-translate-x-full')
+  })
+
+  it('opens one drawer below the top bar, with a single brand and close control', async () => {
+    const wrapper = await mountLayout()
+    await wrapper.find('[data-testid="client-menu-toggle"]').trigger('click')
+
+    const classes = wrapper.find('[data-testid="client-sidebar"]').classes()
+    expect(classes).toContain('absolute')
+    expect(classes).not.toContain('fixed')
+    expect(wrapper.find('[data-testid="client-sidebar-backdrop"]').classes()).toContain('absolute')
+    expect(wrapper.find('[data-testid="client-sidebar-brand"]').element.parentElement?.classList.contains('hidden')).toBe(true)
+    expect(wrapper.find('[data-testid="client-sidebar-close"]').exists()).toBe(false)
+  })
+
+  it('closes the drawer on Escape, locks the page scroll while open and returns focus to the menu button', async () => {
+    const wrapper = mountClient(ClientLayout, { slots: { default: 'page content' }, stubs: STUBS, components: { LayoutDemoBanner }, attachToBody: true })
+    await flushPromises()
+    const toggle = wrapper.find('[data-testid="client-menu-toggle"]')
+    ;(toggle.element as HTMLElement).focus()
+
+    await toggle.trigger('click')
+    await flushPromises()
+    expect(document.body.classList.contains('overflow-hidden')).toBe(true)
+    expect(wrapper.find('[data-testid="client-sidebar"]').element.contains(document.activeElement)).toBe(true)
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="client-sidebar"]').classes()).toContain('-translate-x-full')
+    expect(document.body.classList.contains('overflow-hidden')).toBe(false)
+    expect(document.activeElement).toBe(toggle.element)
   })
 
   it('closes the drawer when a link is followed', async () => {
