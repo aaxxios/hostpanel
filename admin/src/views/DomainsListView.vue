@@ -8,6 +8,7 @@
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -32,13 +33,17 @@ import { formatPrice } from '@/lib/money'
 import { domainStatusTone, statusLabel } from '@/lib/tones'
 import { useDomainsStore } from '@/stores/domains'
 import { UiTone } from '@/utils/ui/tone'
+import { SEARCH_DEBOUNCE_MS } from '@/lib/limits'
+import { ClientSection, clientItemPath, clientPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
-const store = useDomainsStore()
 
-/** How long typing must pause before the search is sent, in milliseconds. */
-const SEARCH_DEBOUNCE_MS = 350
+/** Fallback text for fields the API leaves unresolved. */
+
+const { clientLabel } = useFallbackLabels()
+
+const store = useDomainsStore()
 
 /** Debounce timer handle for the search input. */
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -131,15 +136,15 @@ onUnmounted(() => {
             <UiTableCell>
               <UiLink
                 variant="link"
-                :to="`/clients/${domain.clientId}/domains/${domain.id}`"
+                :to="clientItemPath(domain.clientId, ClientSection.Domains, domain.id)"
                 :data-testid="`domains-name-${domain.id}`"
               >
                 {{ domain.name }}
               </UiLink>
             </UiTableCell>
             <UiTableCell>
-              <UiLink variant="link" :to="`/clients/${domain.clientId}`" :data-testid="`domains-client-${domain.id}`">
-                {{ domain.clientName }}
+              <UiLink variant="link" :to="clientPath(domain.clientId)" :data-testid="`domains-client-${domain.id}`">
+                {{ clientLabel(domain.clientName, domain.clientId) }}
               </UiLink>
             </UiTableCell>
             <UiTableCell>
@@ -156,7 +161,7 @@ onUnmounted(() => {
             </UiTableCell>
             <UiTableCell align="right">
               <UiLink
-                :to="`/clients/${domain.clientId}/domains/${domain.id}`"
+                :to="clientItemPath(domain.clientId, ClientSection.Domains, domain.id)"
                 variant="ghost"
                 size="sm"
                 :title="t('domains.domainsList.viewDomainDetails')"

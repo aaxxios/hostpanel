@@ -9,6 +9,7 @@
  * flow runs in every storefront template, since each has its own header.
  */
 import { expect, test } from './support/test'
+import { PortalSettingKey } from '../constants/portalSettingKey'
 import { PLAN } from './support/fixtures.mjs'
 import { resetStub, setPortalSetting, signIn, waitForHydration } from './support/helpers'
 
@@ -26,7 +27,7 @@ for (const [template, pricesTestId] of Object.entries(TEMPLATES)) {
   test.describe(`${template} template`, () => {
     test.beforeEach(async ({ request }) => {
       await resetStub(request)
-      await setPortalSetting(request, 'portal.template', template)
+      await setPortalSetting(request, PortalSettingKey.Template, template)
     })
 
     test.afterEach(async ({ request }) => {

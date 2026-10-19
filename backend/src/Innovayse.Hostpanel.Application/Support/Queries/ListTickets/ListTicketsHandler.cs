@@ -7,6 +7,7 @@ using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Support.Queries.ListTickets;
 
 /// <summary>
@@ -35,7 +36,7 @@ public sealed class ListTicketsHandler
         ArgumentNullException.ThrowIfNull(query);
 
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
         var flaggedOnly = string.Equals(query.Status, "flagged", StringComparison.OrdinalIgnoreCase);
         TicketStatus? statusFilter = null;

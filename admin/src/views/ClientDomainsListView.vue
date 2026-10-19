@@ -26,6 +26,8 @@ import UiTableRow from '@/components/ui/UiTableRow.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
+import { ClientSection, clientItemPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -54,7 +56,7 @@ const error = computed(() => store.error)
 const page = ref(1)
 
 /** Items per page. */
-const pageSize = ref(20)
+const pageSize = ref(DEFAULT_PAGE_SIZE)
 
 /** Total number of matching items across all pages. */
 const totalCount = ref(0)
@@ -90,7 +92,7 @@ const goToPage = (p: number): void => {
  * @returns Nothing.
  */
 const viewDomain = (domainId: number): void => {
-  router.push(`/clients/${clientId.value}/domains/${domainId}`)
+  router.push(clientItemPath(clientId.value, ClientSection.Domains, domainId))
 }
 
 onMounted(() => fetchDomains())

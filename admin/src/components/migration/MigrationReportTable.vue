@@ -25,6 +25,7 @@ import UiTableCell from '@/components/ui/UiTableCell.vue'
 import UiTableHead from '@/components/ui/UiTableHead.vue'
 import UiTableHeader from '@/components/ui/UiTableHeader.vue'
 import UiTableRow from '@/components/ui/UiTableRow.vue'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 /** Translation function and the active locale (for time formatting). */
 const { t, locale } = useI18n()
@@ -37,9 +38,6 @@ const props = defineProps<{
 
 /** Migration store: owns the log request and its refusal sentence. */
 const store = useMigrationStore()
-
-/** Rows per page. */
-const PAGE_SIZE = 20
 
 /** Rows of the current page. */
 const items = ref<MigrationLogEntry[]>([])
@@ -100,7 +98,7 @@ const load = async (): Promise<void> => {
     action: filterAction.value || undefined,
     entityType: filterEntityType.value || undefined,
     page: page.value,
-    pageSize: PAGE_SIZE,
+    pageSize: DEFAULT_PAGE_SIZE,
   })
   loading.value = false
   if (result) {
@@ -184,11 +182,11 @@ watch(page, () => {
       </UiTable>
 
       <!-- Pagination -->
-      <UiStack v-if="totalCount > PAGE_SIZE" direction="row" align="center" justify="between">
+      <UiStack v-if="totalCount > DEFAULT_PAGE_SIZE" direction="row" align="center" justify="between">
         <UiPagination
           v-model:page="page"
           :total="totalCount"
-          :page-size="PAGE_SIZE"
+          :page-size="DEFAULT_PAGE_SIZE"
           testid="migration-report-pagination"
         />
       </UiStack>

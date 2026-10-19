@@ -10,6 +10,7 @@ import { reactive, ref } from 'vue'
 import { useTransactionsApi } from '@/composables/apis/useTransactionsApi'
 import { runAction } from '@/lib/runAction'
 import type { CreateTransactionPayload, Transaction, UpdateTransactionPayload } from '@/types/transaction'
+import { LEDGER_PAGE_SIZE } from '@/lib/limits'
 
 /** Lists, creates, edits and deletes ledger transactions with their summary totals. */
 export const useTransactionsStore = defineStore('billingTransactions', () => {
@@ -37,7 +38,7 @@ export const useTransactionsStore = defineStore('billingTransactions', () => {
   const page = ref(1)
 
   /** Items per page. */
-  const pageSize = ref(25)
+  const pageSize = ref(LEDGER_PAGE_SIZE)
 
   /** Financial summary totals of the whole ledger. */
   const summary = reactive({ totalIn: 0, totalOut: 0, totalFees: 0, balance: 0 })
@@ -75,7 +76,7 @@ export const useTransactionsStore = defineStore('billingTransactions', () => {
    * @param ps - Items per page.
    * @returns Promise that resolves when data is loaded.
    */
-  const fetchAll = async (p = 1, ps = 25): Promise<void> => {
+  const fetchAll = async (p = 1, ps = LEDGER_PAGE_SIZE): Promise<void> => {
     page.value = p
     pageSize.value = ps
     const result = await run(() => api.list(p, ps))

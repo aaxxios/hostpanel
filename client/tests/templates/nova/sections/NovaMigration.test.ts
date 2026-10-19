@@ -25,7 +25,7 @@ describe('NovaMigration', () => {
   })
 
   it('shows the free badge when the setting is true', () => {
-    stubTemplateGlobals({ settings: { [MIGRATION_FREE_SETTING[0]]: 'true' } })
+    stubTemplateGlobals({ settings: { [MIGRATION_FREE_SETTING]: 'true' } })
 
     expect(mountWithKit(NovaMigration).text()).toContain('nova.migration.free')
   })

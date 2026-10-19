@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Domain.Support;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,13 +17,15 @@ namespace Innovayse.Hostpanel.Application.Support.Seeding;
 /// </summary>
 public static class DefaultDepartmentsSeeder
 {
-    /// <summary>The departments created on a fresh install. Editable afterwards in the admin UI.</summary>
-    private static readonly (string Name, string Email)[] Defaults =
+    /// <summary>Builds the departments created on a fresh install. Editable afterwards in the admin UI.</summary>
+    /// <param name="options">The configured contact addresses.</param>
+    /// <returns>Name and contact address per department.</returns>
+    private static (string Name, string Email)[] DefaultsFor(DefaultDepartmentsOptions options) =>
     [
-        ("Technical Support", "support@innovayse.com"),
-        ("Billing",           "billing@innovayse.com"),
-        ("Sales",             "sales@innovayse.com"),
-        ("General",           "hello@innovayse.com"),
+        ("Technical Support", options.SupportEmail),
+        ("Billing",           options.BillingEmail),
+        ("Sales",             options.SalesEmail),
+        ("General",           options.GeneralEmail),
     ];
 
     /// <summary>
@@ -32,13 +35,17 @@ public static class DefaultDepartmentsSeeder
     /// </summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="uow">Unit of work for persisting the new departments.</param>
+    /// <param name="options">The configured contact addresses for the new departments.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The number of departments created.</returns>
     public static async Task<int> EnsureSeededAsync(
         IHostpanelDbContext context,
         IUnitOfWork uow,
+        DefaultDepartmentsOptions options,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         // Was IDepartmentRepository.ListAllAsync -- read-only, so no tracking is needed.
         var hasAny = await context.Departments.AsNoTracking().AnyAsync(ct);
         if (hasAny)
@@ -46,12 +53,13 @@ public static class DefaultDepartmentsSeeder
             return 0;
         }
 
-        foreach (var (name, email) in Defaults)
+        var defaults = DefaultsFor(options);
+        foreach (var (name, email) in defaults)
         {
             context.Departments.Add(Department.Create(name, email));
         }
 
         await uow.SaveChangesAsync(ct);
-        return Defaults.Length;
+        return defaults.Length;
     }
 }

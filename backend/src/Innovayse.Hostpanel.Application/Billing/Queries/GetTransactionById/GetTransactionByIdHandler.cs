@@ -40,7 +40,7 @@ public sealed class GetTransactionByIdHandler
             .FirstOrDefaultAsync(c => c.Id == t.ClientId, ct);
         var clientName = client is not null
             ? $"{client.FirstName} {client.LastName}".Trim()
-            : $"Client #{t.ClientId}";
+            : null;
 
         return Result<TransactionDto>.Success(new TransactionDto(
             t.Id, t.ClientId, clientName, t.Date, t.Description, t.TransactionId,

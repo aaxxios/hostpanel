@@ -53,6 +53,7 @@
  * flag and the refusal sentence belong to the invoice payment store; this component only renders
  * them and calls its actions.
  */
+import { clientInvoicePath } from '~/constants/clientRoutes'
 import { CreditCard } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { NEW_CARD } from '~/constants/payMethod'
@@ -86,7 +87,7 @@ const paymentStore = useInvoicePaymentStore()
 const { submitting, paySuccess, error: payError, savedMethods, hostedGatewayModule } = storeToRefs(paymentStore)
 
 /** The invoice's own page. */
-const invoicePath = computed(() => localePath(`/client/invoices/${props.invoiceId}`))
+const invoicePath = computed(() => localePath(clientInvoicePath(props.invoiceId)))
 
 /**
  * Whether paying with a card that is not saved is possible at all.

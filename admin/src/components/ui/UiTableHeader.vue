@@ -9,8 +9,8 @@
  */
 import { computed, inject } from 'vue'
 import { UI_TABLE_CONTEXT, UiTableDensity } from '@/utils/ui/injection'
-import { alignClasses, headerDensityClasses } from '@/utils/ui/table'
-import type { UiAlign, UiSortDirection } from '@/utils/ui/table'
+import { alignClasses, headerDensityClasses, UiSortDirection } from '@/utils/ui/table'
+import type { UiAlign } from '@/utils/ui/table'
 
 /** Props for UiTableHeader. */
 const props = withDefaults(defineProps<{
@@ -25,7 +25,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   align: undefined,
   sortable: false,
-  direction: 'none',
+  direction: UiSortDirection.None,
   sortTestid: undefined,
 })
 
@@ -45,10 +45,10 @@ const classes = computed<string[]>(() => [
 
 /** Arrow glyph of the current order. */
 const arrow = computed<string>(() => {
-  if (props.direction === 'ascending') {
+  if (props.direction === UiSortDirection.Ascending) {
     return '▲'
   }
-  return props.direction === 'descending' ? '▼' : '↕'
+  return props.direction === UiSortDirection.Descending ? '▼' : '↕'
 })
 </script>
 

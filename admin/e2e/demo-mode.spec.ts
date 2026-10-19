@@ -4,6 +4,7 @@
  *
  * The API is stubbed at the network layer (`support/stubApi.ts`).
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { fieldOf } from './support/locators'
 import { json, stubApi } from './support/stubApi'
@@ -16,7 +17,7 @@ const demoOn = {
 }
 
 test('the login screen prefills the published demo Admin account', async ({ page }) => {
-  await stubApi(page, { routes: [json('GET', '/api/public/demo', demoOn)] })
+  await stubApi(page, { routes: [json(HttpMethod.Get, '/api/public/demo', demoOn)] })
 
   await page.goto('/login')
   await page.getByTestId('demo-login-use').click()
@@ -26,7 +27,7 @@ test('the login screen prefills the published demo Admin account', async ({ page
 })
 
 test('the banner shows the label and the countdown once signed in', async ({ page }) => {
-  await stubApi(page, { signedIn: true, routes: [json('GET', '/api/public/demo', demoOn)] })
+  await stubApi(page, { signedIn: true, routes: [json(HttpMethod.Get, '/api/public/demo', demoOn)] })
 
   await page.goto('/dashboard')
 

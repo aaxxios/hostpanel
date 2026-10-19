@@ -42,6 +42,6 @@ public sealed class DownloadMigrationPluginHandler
         using var ms = new MemoryStream();
         ZipFile.CreateFromDirectory(pluginDir, ms, CompressionLevel.Optimal, includeBaseDirectory: false);
 
-        return Task.FromResult(Result<FileDownloadDto>.Success(new FileDownloadDto(ms.ToArray(), "application/zip", "innovayse-migration.zip")));
+        return Task.FromResult(Result<FileDownloadDto>.Success(new FileDownloadDto(ms.ToArray(), System.Net.Mime.MediaTypeNames.Application.Zip, "innovayse-migration.zip")));
     }
 }

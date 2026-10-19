@@ -6,6 +6,7 @@
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -35,11 +36,15 @@ import { useBillableItemsStore } from '@/stores/billableItems'
 import { pageSlice } from '@/lib/paging'
 import { BillableItemType } from '@/types/billableitem'
 import type { BillableItem } from '@/types/billableitem'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
+import { AppRoute } from '@/lib/routes'
 
 const { t } = useI18n()
 
-/** Rows per page. */
-const PAGE_SIZE = 20
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { clientLabel } = useFallbackLabels()
 
 /** What the status filter can single out. */
 const ItemStatus = {
@@ -130,7 +135,7 @@ const filteredItems = computed<BillableItem[]>(() =>
 
 /** The page of filtered items on show. */
 const pageItems = computed<BillableItem[]>(() =>
-  pageSlice(filteredItems.value, page.value, PAGE_SIZE),
+  pageSlice(filteredItems.value, page.value, DEFAULT_PAGE_SIZE),
 )
 
 /** True when every row on the page is ticked (and there is at least one). */
@@ -191,7 +196,7 @@ onMounted(() => {
         <UiButton variant="secondary" data-testid="billing-billable-items-filter-toggle" @click="filtersOpen = !filtersOpen">
           {{ filtersOpen ? t('shared.hideFilters') : t('shared.searchFilter') }}
         </UiButton>
-        <UiLink to="/billing/billable-items/add" variant="primary" data-testid="billing-billable-items-add">
+        <UiLink :to="AppRoute.BillingBillableItemsAdd" variant="primary" data-testid="billing-billable-items-add">
           {{ t('shared.addItem') }}
         </UiLink>
       </template>
@@ -277,7 +282,7 @@ onMounted(() => {
               />
             </UiTableCell>
             <UiTableCell muted>{{ item.id }}</UiTableCell>
-            <UiTableCell>{{ item.clientName }}</UiTableCell>
+            <UiTableCell>{{ clientLabel(item.clientName, item.clientId) }}</UiTableCell>
             <UiTableCell>{{ item.description }}</UiTableCell>
             <UiTableCell>{{ item.currency }} {{ item.amount.toFixed(2) }}</UiTableCell>
             <UiTableCell muted>{{ item.type }}</UiTableCell>
@@ -297,7 +302,7 @@ onMounted(() => {
     <UiPagination
       v-model:page="page"
       :total="filteredItems.length"
-      :page-size="PAGE_SIZE"
+      :page-size="DEFAULT_PAGE_SIZE"
       testid="billing-billable-items-pagination"
     />
 
@@ -314,7 +319,7 @@ onMounted(() => {
       variant="confirm"
       :open="deleteOpen"
       :title="t('billing.billableItems.deleteItems')"
-      :message="t('billing.billableItems.deleteItemsMessage', { count: selectedIds.length })"
+      :message="t('billing.billableItems.deleteItemsMessage', { count: selectedIds.length }, selectedIds.length)"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="store.loading"

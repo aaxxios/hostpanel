@@ -16,7 +16,7 @@ const domain = {
   clientId: 9,
   clientName: 'Grace Hopper',
   name: 'example.com',
-  regPeriod: '1 Year',
+  regPeriodYears: 1,
   registrar: null,
   recurringAmount: 12.99,
   priceCurrency: 'USD',

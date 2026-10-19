@@ -6,12 +6,14 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ReportQueryPage from '@/components/reports/ReportQueryPage.vue'
+import { reportApiPath } from '@/lib/apiPaths'
 import type { FieldOption } from '@/components/ui/UiAdvancedFilters.vue'
 import { useQueryReport } from '@/composables/useQueryReport'
 import { ReportCellFormat } from '@/types/reportcolumn'
 import type { ReportColumn } from '@/types/reportcolumn'
 import type { ReportDomainRow } from '@/types/reportdomainrow'
 import type { ReportQueryConfig, ReportQueryRange } from '@/types/reportquery'
+import { REPORT_PAGE_SIZE } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -54,9 +56,9 @@ const filterFields = computed<FieldOption[]>(() => [
 
 /** What the report is. */
 const config: ReportQueryConfig = {
-  path: '/reports/domains',
+  path: reportApiPath('domains'),
   serverFields: ['status', 'registrar'],
-  pageSize: 50,
+  pageSize: REPORT_PAGE_SIZE,
 }
 
 const report = useQueryReport<ReportDomainRow>(config, { columns, ranges })

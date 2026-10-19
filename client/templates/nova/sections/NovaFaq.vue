@@ -1,20 +1,20 @@
 <template>
-  <UiSection v-if="FAQ_ITEMS.length" padding="lg" class="border-b border-nova-border">
+  <UiSection v-if="faqs.length" padding="lg" class="border-b border-nova-border">
     <NovaSectionHeader :eyebrow="t('nova.faq.eyebrow')" :title="t('nova.faq.title')" />
 
     <!-- Native disclosure on purpose: see the script header. -->
     <UiStack gap="sm" class="mt-9">
       <details
-        v-for="item in FAQ_ITEMS"
-        :key="item.key"
+        v-for="item in faqs"
+        :key="item.id"
         class="group rounded-2xl border border-nova-border bg-nova-surface px-5"
-        :data-testid="`nova-faq-${item.key}`"
+        :data-testid="`nova-faq-${item.id}`"
       >
         <summary
           class="flex min-h-[56px] cursor-pointer list-none items-center justify-between gap-4 py-4 text-[16px] font-semibold text-nova-ink marker:content-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nova-brand"
         >
           <UiHeading :level="3" size="bare" class="min-w-0 text-[16px] font-semibold">
-            {{ t(item.questionKey) }}
+            {{ item.question }}
           </UiHeading>
           <Icon
             name="lucide:chevron-down"
@@ -23,7 +23,7 @@
           />
         </summary>
         <UiText size="inherit" tone="inherit" class="pb-5 text-[15px] leading-[1.7] text-nova-muted">
-          {{ t(item.answerKey) }}
+          {{ item.answer }}
         </UiText>
       </details>
     </UiStack>
@@ -39,11 +39,21 @@
  * expanded state, and already works before hydration — three things a hand-rolled
  * accordion has to reimplement and usually gets partly wrong. The headings and
  * answers inside it are kit text; the chevron is the only thing scripted, and it
- * is scripted in CSS.
+ * is scripted in CSS. The questions come from the storefront store (`GET /api/public/faqs`); with
+ * none the section renders nothing.
  */
 import NovaSectionHeader from '~/templates/nova/sections/NovaSectionHeader.vue'
-import { FAQ_ITEMS } from '~/templates/nova/content'
+import { useStorefrontStore } from '~/stores/storefront'
 
-/** Translator for the questions and answers. */
-const { t } = useI18n()
+/** Translator for the section copy, and the active language. */
+const { t, locale } = useI18n()
+
+/** The storefront content: testimonials, partners, projects and FAQs. */
+const storefront = useStorefrontStore()
+
+// Not awaited: Nuxt still holds the server render for it, and the section stays synchronous.
+useAsyncData('storefront:faqs', () => storefront.loadFaqs(), { watch: [locale] })
+
+/** The questions, in display order. */
+const faqs = computed(() => storefront.faqs)
 </script>

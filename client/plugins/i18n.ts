@@ -4,22 +4,25 @@
  */
 import { APP_LOCALES } from '~/constants/appLocales'
 
-export default defineNuxtPlugin(async ({ $i18n }) => {
-  const locales = APP_LOCALES
-  const modules = ['common', 'nav', 'hero', 'products', 'contact', 'faq', 'cta', 'whychooseus', 'team', 'partners', 'process', 'testimonials', 'footer', 'terms', 'privacy', 'whatsapp', 'error', 'cookieBanner', 'cookiePolicy', 'refundPolicy', 'aup', 'seo', 'domains', 'hosting', 'cart', 'checkout', 'client', 'configure', 'announcements', 'invoicePay', 'knowledgebase', 'trial', 'aurora', 'nova', 'paymentResult', 'demo']
+/** Locale files merged into one message set per locale. */
+const MODULES = ['common', 'nav', 'hero', 'products', 'contact', 'faq', 'cta', 'whychooseus', 'team', 'partners', 'process', 'testimonials', 'footer', 'terms', 'privacy', 'whatsapp', 'error', 'cookieBanner', 'cookiePolicy', 'refundPolicy', 'aup', 'seo', 'domains', 'hosting', 'cart', 'checkout', 'client', 'configure', 'announcements', 'invoicePay', 'knowledgebase', 'trial', 'aurora', 'nova', 'paymentResult', 'demo']
 
-  for (const locale of locales) {
-    const messages: Record<string, unknown> = {}
+export default defineNuxtPlugin({
+  name: 'i18n-messages',
+  async setup({ $i18n }) {
+    for (const locale of APP_LOCALES) {
+      const messages: Record<string, unknown> = {}
 
-    for (const module of modules) {
-      try {
-        const data = await import(`~/locales/${locale}/${module}.json`)
-        Object.assign(messages, data.default || data)
-      } catch {
-        // Silently skip missing locale files
+      for (const module of MODULES) {
+        try {
+          const data = await import(`~/locales/${locale}/${module}.json`)
+          Object.assign(messages, data.default || data)
+        } catch {
+          // Silently skip missing locale files
+        }
       }
-    }
 
-    $i18n.setLocaleMessage(locale, messages)
-  }
+      $i18n.setLocaleMessage(locale, messages)
+    }
+  },
 })

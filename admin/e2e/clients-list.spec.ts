@@ -2,6 +2,7 @@
  * Clients list flow: the name filter is sent to the API as `search` and narrows the table, and
  * the pagination control asks the API for the page it was clicked to.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { ada, clientsPage, grace } from './fixtures/clients'
 import type { ClientListItem } from '../src/types/client'
@@ -14,7 +15,7 @@ test('searching by name sends the filter and shows only the matching client', as
     signedIn: true,
     routes: [
       {
-        method: 'GET',
+        method: HttpMethod.Get,
         path: '/api/clients',
         respond: (call) => {
           const term = new URLSearchParams(call.search).get('search')?.toLowerCase() ?? ''
@@ -34,7 +35,7 @@ test('searching by name sends the filter and shows only the matching client', as
   await expect(page.getByTestId('client-row')).toHaveCount(1)
   await expect(page.getByTestId('client-row')).toContainText(grace.email)
   await expect(page.getByTestId('client-row')).not.toContainText(ada.email)
-  expect(api.callsTo('GET', '/api/clients').at(-1)?.search).toContain('search=Grace')
+  expect(api.callsTo(HttpMethod.Get, '/api/clients').at(-1)?.search).toContain('search=Grace')
 })
 
 test('the pagination control loads the page that was clicked', async ({ page }) => {
@@ -61,7 +62,7 @@ test('the pagination control loads the page that was clicked', async ({ page }) 
     signedIn: true,
     routes: [
       {
-        method: 'GET',
+        method: HttpMethod.Get,
         path: '/api/clients',
         respond: (call) => ({ body: pageOf(Number(new URLSearchParams(call.search).get('page') ?? 1)) }),
       },
@@ -74,14 +75,14 @@ test('the pagination control loads the page that was clicked', async ({ page }) 
   await page.getByTestId('clients-list-pagination-page-2').click()
 
   await expect(page.getByTestId('client-row').first()).toContainText('client21@example.test')
-  expect(api.callsTo('GET', '/api/clients').at(-1)?.search).toContain('page=2')
+  expect(api.callsTo(HttpMethod.Get, '/api/clients').at(-1)?.search).toContain('page=2')
 })
 
 test('a refused load shows the API sentence', async ({ page }) => {
   const sentence = 'You are not allowed to list clients.'
   await stubApi(page, {
     signedIn: true,
-    routes: [json('GET', '/api/clients', { type: 'FORBIDDEN', title: 'Forbidden', status: 403, detail: sentence }, 403)],
+    routes: [json(HttpMethod.Get, '/api/clients', { type: 'FORBIDDEN', title: 'Forbidden', status: 403, detail: sentence }, 403)],
   })
 
   await page.goto('/clients')

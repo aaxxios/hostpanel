@@ -14,6 +14,7 @@ import UiImage from '@/components/ui/UiImage.vue'
 import UiLink from '@/components/ui/UiLink.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { integrationConfigurePath } from '@/lib/routes'
 
 /** Translation function. */
 const { t } = useI18n()
@@ -29,7 +30,7 @@ const meta = INTEGRATION_META[props.integration.slug as IntegrationSlug]
 </script>
 
 <template>
-  <UiLink :to="`/integrations/${integration.slug}/configure`" class="block" :data-testid="`integration-card-${integration.slug}`">
+  <UiLink :to="integrationConfigurePath(integration.slug)" class="block" :data-testid="`integration-card-${integration.slug}`">
     <UiCard padding="md" class="h-full">
       <UiStack gap="md" class="h-full">
         <UiStack direction="row" align="start" justify="between">

@@ -5,6 +5,8 @@
 import { describe, expect, it } from 'vitest'
 import { PricingCycle } from '~/types/pricingcycle'
 import type { PortalProduct } from '~/types/portalproduct'
+import type { PortalProductGroup } from '~/types/portalproductgroup'
+import { familyColor } from '~/utils/catalogGroups'
 import type { ProductFamily } from '~/types/productfamily'
 import { buildPricingRows, buildProductFamilies, cycleAmount, findProductDetail, firstOfferedPrice } from '~/utils/productFamilies'
 
@@ -25,9 +27,29 @@ const product = (overrides: Partial<PortalProduct> & Pick<PortalProduct, 'id' | 
 /** Formats an amount the way the tests expect to read it. */
 const dollars = (amount: number): string => `$${amount}`
 
+/**
+ * Builds a catalogue group.
+ *
+ * @param id Group id.
+ * @param name Group name.
+ * @param overrides Fields that differ from the defaults.
+ * @returns The group.
+ */
+const group = (id: number, name: string, overrides: Partial<PortalProductGroup> = {}): PortalProductGroup => ({
+  id,
+  name,
+  description: null,
+  isActive: true,
+  productCount: 1,
+  ...overrides,
+})
+
+/** The groups the fixtures below belong to. */
+const groups: PortalProductGroup[] = [group(3, 'Alpha Suite', { productCount: 3 }), group(4, 'Beta Kit'), group(5, 'Gamma Tool')]
+
 /** A family group: the parent that names it and two plans. */
 const learnGroup: PortalProduct[] = [
-  product({ id: 10, groupId: 3, name: 'SmartLearn System', slug: 'smartlearn-system', description: 'Learn online<br />✔ Courses<br />✔ Exams' }),
+  product({ id: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', description: 'Learn online<br />✔ Courses<br />✔ Exams' }),
   product({ id: 11, groupId: 3, name: 'Starter', slug: 'starter', description: '✔ One site', pricing: { monthly: 10, annual: 100 } }),
   product({ id: 12, groupId: 3, name: 'Pro', slug: 'pro', description: '✔ Two sites', pricing: { monthly: null, annual: 200 } }),
 ]
@@ -70,17 +92,18 @@ describe('buildPricingRows', () => {
 
 describe('buildProductFamilies', () => {
   it('builds one family per group, priced by its sub-plans and named by its parent', () => {
-    const families = buildProductFamilies(learnGroup, dollars, 'USD')
+    const families = buildProductFamilies(groups, learnGroup, dollars, 'USD')
 
     expect(families).toHaveLength(1)
-    expect(families[0]).toMatchObject({ id: 'smartlearn-system', gid: 3, tagline: '', description: 'Learn online' })
+    expect(families[0]).toMatchObject({ id: 'alpha-suite', gid: 3, tagline: '', description: 'Learn online' })
     expect(families[0]?.pricing.map((row) => row.pid)).toEqual([11, 12])
     expect(families[0]?.features).toEqual(expect.arrayContaining(['Courses', 'Exams', 'One site', 'Two sites']))
   })
 
   it('prices a group that has only its parent by the parent alone', () => {
     const families = buildProductFamilies(
-      [product({ id: 20, groupId: 4, name: 'PropSystem Pro', slug: 'propsystem-pro', pricing: { monthly: 7, annual: null } })],
+      groups,
+      [product({ id: 20, groupId: 4, name: 'Beta Kit', slug: 'beta-kit', pricing: { monthly: 7, annual: null } })],
       dollars,
       'USD',
     )
@@ -95,44 +118,71 @@ describe('buildProductFamilies', () => {
       tagline: 'Tag', description: 'Desc', features: [], pricing: [],
     }
 
-    const families = buildProductFamilies(learnGroup, dollars, 'USD', [leading])
+    const families = buildProductFamilies(groups, learnGroup, dollars, 'USD', [leading])
 
-    expect(families.map((family) => family.id)).toEqual(['domains', 'smartlearn-system'])
+    expect(families.map((family) => family.id)).toEqual(['domains', 'alpha-suite'])
+  })
+
+  it('leaves out an inactive group, an empty group and a group with no products in the list', () => {
+    const families = buildProductFamilies(
+      [group(3, 'Alpha Suite'), group(4, 'Beta Kit', { isActive: false }), group(5, 'Gamma Tool', { productCount: 0 }), group(6, 'Delta Pack')],
+      [...learnGroup, product({ id: 60, groupId: 4, name: 'Hidden', slug: 'hidden' }), product({ id: 61, groupId: 5, name: 'Stray' })],
+      dollars,
+      'USD',
+    )
+
+    expect(families.map((family) => family.id)).toEqual(['alpha-suite'])
+  })
+
+  it('prices every product of a group whose name matches none of them', () => {
+    const families = buildProductFamilies(
+      [group(7, 'Epsilon Line')],
+      [product({ id: 70, groupId: 7, name: 'Basic', pricing: { monthly: 4, annual: null } }), product({ id: 71, groupId: 7, name: 'Plus', pricing: { monthly: 8, annual: null } })],
+      dollars,
+      'USD',
+    )
+
+    expect(families[0]).toMatchObject({ id: 'epsilon-line', gid: 7, learnMoreUrl: '/products/epsilon-line' })
+    expect(families[0]?.pricing.map((row) => row.pid)).toEqual([70, 71])
   })
 
   it('caps the aggregated feature list at six lines', () => {
     const many = product({
-      id: 30, groupId: 5, name: 'ShopKit Pro', slug: 'shopkit-pro',
+      id: 30, groupId: 5, name: 'Gamma Tool', slug: 'gamma-tool',
       description: ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'].map((word) => `✔ ${word}`).join('<br />'),
     })
 
-    expect(buildProductFamilies([many], dollars, 'USD')[0]?.features).toHaveLength(6)
+    expect(buildProductFamilies(groups, [many], dollars, 'USD')[0]?.features).toHaveLength(6)
   })
 })
 
 describe('findProductDetail', () => {
   it('finds a product by its slug and shapes its plans', () => {
-    const detail = findProductDetail(learnGroup, 'smartlearn-system')
+    const detail = findProductDetail(groups, learnGroup, 'alpha-suite')
 
-    expect(detail).toMatchObject({ id: 'smartlearn-system', name: 'SmartLearn System', color: '#8b5cf6', description: 'Learn online' })
+    expect(detail).toMatchObject({ id: 'alpha-suite', name: 'Alpha Suite', color: familyColor('alpha-suite'), description: 'Learn online' })
     expect(detail?.plans.map((plan) => plan.tier)).toEqual(['Starter', 'Pro'])
     expect(detail?.plans[0]?.pricing).toEqual({ monthly: 10, annual: 100 })
   })
 
   it('falls back to the first product of the family group when the slug differs', () => {
-    const detail = findProductDetail([product({ id: 40, groupId: 3, name: 'Odd name', slug: 'odd' })], 'smartlearn-system')
+    const detail = findProductDetail(groups, [product({ id: 40, groupId: 3, name: 'Odd name', slug: 'odd' })], 'alpha-suite')
 
-    expect(detail?.id).toBe('smartlearn-system')
+    expect(detail?.id).toBe('alpha-suite')
     expect(detail?.name).toBe('Odd name')
   })
 
   it('answers null when nothing matches', () => {
-    expect(findProductDetail(learnGroup, 'no-such-product')).toBeNull()
-    expect(findProductDetail([], 'smartlearn-system')).toBeNull()
+    expect(findProductDetail(groups, learnGroup, 'no-such-product')).toBeNull()
+    expect(findProductDetail(groups, [], 'alpha-suite')).toBeNull()
   })
 
   it('ignores products that are not in a family group', () => {
-    expect(findProductDetail([product({ id: 50, groupId: 99, name: 'Stray', slug: 'stray' })], 'stray')).toBeNull()
+    expect(findProductDetail(groups, [product({ id: 50, groupId: 99, name: 'Stray', slug: 'stray' })], 'stray')).toBeNull()
+  })
+
+  it('does not match a family whose group is switched off', () => {
+    expect(findProductDetail([group(3, 'Alpha Suite', { isActive: false })], learnGroup, 'alpha-suite')).toBeNull()
   })
 })
 

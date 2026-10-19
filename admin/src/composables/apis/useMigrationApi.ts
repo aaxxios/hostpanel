@@ -11,6 +11,8 @@ import type {
   MigrationLogPage,
   MigrationLogQuery,
 } from '@/types/migration'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/admin/migrations`.
@@ -25,7 +27,7 @@ export const useMigrationApi = () => {
    *
    * @returns Every job.
    */
-  const listJobs = (): Promise<MigrationJob[]> => request<MigrationJob[]>('/admin/migrations')
+  const listJobs = (): Promise<MigrationJob[]> => request<MigrationJob[]>(ApiPath.AdminMigrations)
 
   /**
    * Reads one job.
@@ -34,7 +36,7 @@ export const useMigrationApi = () => {
    * @returns The job with its progress.
    */
   const getJob = (id: number): Promise<MigrationJob> =>
-    request<MigrationJob>(`/admin/migrations/${id}`)
+    request<MigrationJob>(`${ApiPath.AdminMigrations}/${id}`)
 
   /**
    * Creates a job.
@@ -43,7 +45,7 @@ export const useMigrationApi = () => {
    * @returns The created job.
    */
   const createJob = (payload: CreateMigrationJobPayload): Promise<MigrationJob> =>
-    request<MigrationJob>('/admin/migrations', { method: 'POST', body: JSON.stringify(payload) })
+    request<MigrationJob>(ApiPath.AdminMigrations, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Deletes a job.
@@ -52,7 +54,7 @@ export const useMigrationApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const deleteJob = (id: number): Promise<void> =>
-    request<void>(`/admin/migrations/${id}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.AdminMigrations}/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Probes the source plugin connection of a job.
@@ -61,7 +63,7 @@ export const useMigrationApi = () => {
    * @returns The job with its refreshed connection state.
    */
   const testJobConnection = (id: number): Promise<MigrationJob> =>
-    request<MigrationJob>(`/admin/migrations/${id}/test-connection`, { method: 'POST' })
+    request<MigrationJob>(`${ApiPath.AdminMigrations}/${id}/test-connection`, { method: HttpMethod.Post })
 
   /**
    * Starts the import of a job.
@@ -70,7 +72,7 @@ export const useMigrationApi = () => {
    * @returns The job in its new state.
    */
   const startJob = (id: number): Promise<MigrationJob> =>
-    request<MigrationJob>(`/admin/migrations/${id}/start`, { method: 'POST' })
+    request<MigrationJob>(`${ApiPath.AdminMigrations}/${id}/start`, { method: HttpMethod.Post })
 
   /**
    * Reads one page of a job's import log.
@@ -81,7 +83,7 @@ export const useMigrationApi = () => {
    */
   const getJobLogs = (id: number, query: MigrationLogQuery = {}): Promise<MigrationLogPage> =>
     request<MigrationLogPage>(
-      `/admin/migrations/${id}/logs${buildQuery({
+      `${ApiPath.AdminMigrations}/${id}/logs${buildQuery({
         action: query.action,
         entityType: query.entityType,
         page: query.page ?? 1,

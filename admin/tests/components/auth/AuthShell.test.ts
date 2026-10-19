@@ -17,7 +17,7 @@ describe('AuthShell', () => {
     expect(wrapper.get('[data-testid="auth-title"]').text()).toBe('Admin Panel')
     expect(wrapper.text()).toContain('Sign in please')
     expect(wrapper.get('[data-testid="inner"]').text()).toBe('Body')
-    expect(wrapper.text()).toContain('Innovayse')
+    expect(wrapper.text()).toContain('Hostpanel')
   })
 
   it('omits the subtitle when none is given', () => {

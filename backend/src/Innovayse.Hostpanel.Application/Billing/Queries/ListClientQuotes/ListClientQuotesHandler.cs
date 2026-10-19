@@ -32,7 +32,7 @@ public sealed class ListClientQuotesHandler
         ArgumentNullException.ThrowIfNull(query);
 
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
         var ordered = _context.Quotes
             .AsNoTracking()
@@ -48,7 +48,7 @@ public sealed class ListClientQuotesHandler
             .AsNoTracking()
             .Where(c => c.Id == query.ClientId)
             .Select(c => c.FirstName + " " + c.LastName)
-            .FirstOrDefaultAsync(ct) ?? "Unknown";
+            .FirstOrDefaultAsync(ct);
 
         var dtos = items.Select(q => q with { ClientName = clientName }).ToList();
 

@@ -19,9 +19,11 @@ import type {
   InvoicePaymentPayload,
   InvoiceRefundPayload,
 } from '@/types/invoice'
+import { LEDGER_PAGE_SIZE } from '@/lib/limits'
+import { CurrencyCode } from '@/types/currency'
 
 /** Currency a gateway capture is requested in; the API has no per-invoice choice yet. */
-const CAPTURE_CURRENCY = 'USD'
+const CAPTURE_CURRENCY = CurrencyCode.Usd
 
 /** Loads, creates and changes invoices for the admin billing screens. */
 export const useBillingStore = defineStore('billing', () => {
@@ -92,7 +94,7 @@ export const useBillingStore = defineStore('billing', () => {
    * @param to - Optional end date filter (ISO 8601).
    * @returns Promise that resolves when data is loaded.
    */
-  const fetchAll = async (page = 1, pageSize = 25, status = '', from = '', to = ''): Promise<void> => {
+  const fetchAll = async (page = 1, pageSize = LEDGER_PAGE_SIZE, status = '', from = '', to = ''): Promise<void> => {
     const result = await run(() => api.list(page, pageSize, { status, from, to }))
     if (result.ok) {
       invoices.value = result.value.items
@@ -127,7 +129,7 @@ export const useBillingStore = defineStore('billing', () => {
   const fetchClientInvoices = async (
     clientId: number | string,
     page = 1,
-    pageSize = 25,
+    pageSize = LEDGER_PAGE_SIZE,
     status = '',
     from = '',
     to = '',

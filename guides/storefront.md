@@ -127,8 +127,15 @@ until it is re-saved in **Admin → Settings → Email Templates**.
 
 Related operator settings, all optional and hidden when empty:
 `portal.contact.whatsapp`, `portal.contact.telegram`, `portal.contact.email`,
-`portal.contact.phone`, `portal.chat.provider`, `portal.newsletter.action_url`,
-`portal.legal.tax_id`, and `portal.social.{facebook,instagram,linkedin,youtube}`.
+`portal.contact.phone`, `portal.contact.address`, `portal.contact.map_url` (https only),
+`portal.stats.clients`, `portal.stats.uptime`, `portal.stats.regions`, `portal.hero.badge`,
+`portal.chat.provider`, `portal.newsletter.action_url`,
+`portal.legal.tax_id`, `portal.social.{facebook,instagram,twitter,linkedin,youtube}`, and the
+support hours `portal.contact.hours` with their zone `portal.contact.timezone`.
+
+The nova template states a hardware or commercial claim only when the operator switches it on
+(`true`; empty or `false` hides it): `portal.features.{backups,storage,caching,cdn,firewall,malware}`
+and `portal.migration.free`. The uptime line in its trust bar prints `portal.stats.uptime`.
 
 The header app launcher is off unless `portal.apps.enabled` is `true`, because
 the apps it links to only exist in a deployment that runs them. Each entry then

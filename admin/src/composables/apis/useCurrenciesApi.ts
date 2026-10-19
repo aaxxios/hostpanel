@@ -7,6 +7,8 @@
 
 import { useApi } from '@/composables/useApi'
 import type { CurrencyDto, UpdateExchangeRatesResult, UpsertCurrencyPayload } from '@/types/currency'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/admin/currencies`.
@@ -21,7 +23,7 @@ export const useCurrenciesApi = () => {
    *
    * @returns Every configured currency.
    */
-  const listCurrencies = (): Promise<CurrencyDto[]> => request<CurrencyDto[]>('/admin/currencies')
+  const listCurrencies = (): Promise<CurrencyDto[]> => request<CurrencyDto[]>(ApiPath.AdminCurrencies)
 
   /**
    * Creates the currency under the code, or rewrites the one already stored there.
@@ -31,7 +33,7 @@ export const useCurrenciesApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const upsertCurrency = (code: string, payload: UpsertCurrencyPayload): Promise<void> =>
-    request<void>(`/admin/currencies/${code}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.AdminCurrencies}/${code}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Makes the currency the base.
@@ -40,7 +42,7 @@ export const useCurrenciesApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const makeBaseCurrency = (code: string): Promise<void> =>
-    request<void>(`/admin/currencies/${code}/make-base`, { method: 'POST' })
+    request<void>(`${ApiPath.AdminCurrencies}/${code}/make-base`, { method: HttpMethod.Post })
 
   /**
    * Refreshes every non-base rate from the exchange-rate source.
@@ -48,7 +50,7 @@ export const useCurrenciesApi = () => {
    * @returns Which codes were updated and which the source did not quote.
    */
   const updateExchangeRates = (): Promise<UpdateExchangeRatesResult> =>
-    request<UpdateExchangeRatesResult>('/admin/currencies/update-rates', { method: 'POST' })
+    request<UpdateExchangeRatesResult>(`${ApiPath.AdminCurrencies}/update-rates`, { method: HttpMethod.Post })
 
   /**
    * Recomputes every product's prices in the given currencies from their base prices.
@@ -57,8 +59,8 @@ export const useCurrenciesApi = () => {
    * @returns How many price rows were written.
    */
   const updateProductPrices = (codes: string[]): Promise<number> =>
-    request<number>('/admin/currencies/update-product-prices', {
-      method: 'POST',
+    request<number>(`${ApiPath.AdminCurrencies}/update-product-prices`, {
+      method: HttpMethod.Post,
       body: JSON.stringify({ currencies: codes }),
     })
 

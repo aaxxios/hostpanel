@@ -1096,4 +1096,109 @@
   <data name="SlideTranslationTitleTooLong" xml:space="preserve">
     <value>Заголовок перевода не должен превышать {0} символов.</value>
   </data>
+  <data name="ContentIdInvalid" xml:space="preserve">
+    <value>Укажите корректный идентификатор.</value>
+  </data>
+  <data name="ContentSortOrderInvalid" xml:space="preserve">
+    <value>Порядок отображения не может быть отрицательным.</value>
+  </data>
+  <data name="ContentTranslationsRequired" xml:space="preserve">
+    <value>Укажите хотя бы один перевод.</value>
+  </data>
+  <data name="ContentTranslationLocaleInvalid" xml:space="preserve">
+    <value>Перевод можно указать только для поддерживаемого языка: en, ru или hy.</value>
+  </data>
+  <data name="ContentUrlTooLong" xml:space="preserve">
+    <value>Ссылка может содержать не более {0} символов.</value>
+  </data>
+  <data name="ContentUrlInvalid" xml:space="preserve">
+    <value>Ссылка должна начинаться с https://, http:// или /.</value>
+  </data>
+  <data name="ContentImageRequired" xml:space="preserve">
+    <value>Выберите файл изображения для загрузки.</value>
+  </data>
+  <data name="TestimonialNameRequired" xml:space="preserve">
+    <value>Укажите имя клиента.</value>
+  </data>
+  <data name="TestimonialNameTooLong" xml:space="preserve">
+    <value>Имя может содержать не более {0} символов.</value>
+  </data>
+  <data name="TestimonialCompanyTooLong" xml:space="preserve">
+    <value>Название компании может содержать не более {0} символов.</value>
+  </data>
+  <data name="TestimonialRatingInvalid" xml:space="preserve">
+    <value>Оценка должна быть от 1 до 5.</value>
+  </data>
+  <data name="TestimonialRoleTooLong" xml:space="preserve">
+    <value>Должность может содержать не более {0} символов.</value>
+  </data>
+  <data name="TestimonialQuoteRequired" xml:space="preserve">
+    <value>Введите текст отзыва.</value>
+  </data>
+  <data name="TestimonialQuoteTooLong" xml:space="preserve">
+    <value>Отзыв может содержать не более {0} символов.</value>
+  </data>
+  <data name="PartnerNameRequired" xml:space="preserve">
+    <value>Укажите название партнёра.</value>
+  </data>
+  <data name="PartnerNameTooLong" xml:space="preserve">
+    <value>Название может содержать не более {0} символов.</value>
+  </data>
+  <data name="ProjectSlugRequired" xml:space="preserve">
+    <value>Укажите идентификатор проекта для адреса.</value>
+  </data>
+  <data name="ProjectSlugTooLong" xml:space="preserve">
+    <value>Идентификатор может содержать не более {0} символов.</value>
+  </data>
+  <data name="ProjectSlugInvalid" xml:space="preserve">
+    <value>Идентификатор может содержать только строчные латинские буквы, цифры и одиночные дефисы.</value>
+  </data>
+  <data name="ProjectImageUrlsRequired" xml:space="preserve">
+    <value>Передайте список изображений, пустой, если изображений нет.</value>
+  </data>
+  <data name="ProjectImagesTooMany" xml:space="preserve">
+    <value>У проекта может быть не более {0} изображений.</value>
+  </data>
+  <data name="ProjectTitleRequired" xml:space="preserve">
+    <value>Укажите название проекта.</value>
+  </data>
+  <data name="ProjectTitleTooLong" xml:space="preserve">
+    <value>Название может содержать не более {0} символов.</value>
+  </data>
+  <data name="ProjectSummaryTooLong" xml:space="preserve">
+    <value>Краткое описание может содержать не более {0} символов.</value>
+  </data>
+  <data name="ProjectDescriptionTooLong" xml:space="preserve">
+    <value>Описание может содержать не более {0} символов.</value>
+  </data>
+  <data name="FaqCategoryInvalid" xml:space="preserve">
+    <value>Выберите корректную категорию.</value>
+  </data>
+  <data name="FaqQuestionRequired" xml:space="preserve">
+    <value>Введите вопрос.</value>
+  </data>
+  <data name="FaqQuestionTooLong" xml:space="preserve">
+    <value>Вопрос может содержать не более {0} символов.</value>
+  </data>
+  <data name="FaqAnswerRequired" xml:space="preserve">
+    <value>Введите ответ.</value>
+  </data>
+  <data name="FaqAnswerTooLong" xml:space="preserve">
+    <value>Ответ может содержать не более {0} символов.</value>
+  </data>
+  <data name="ContentOrderItemsRequired" xml:space="preserve">
+    <value>Передайте список идентификаторов и позиций.</value>
+  </data>
+  <data name="ClientServiceNotFound" xml:space="preserve">
+    <value>Услуга {0} не найдена.</value>
+  </data>
+  <data name="ServiceNoProvisioningReference" xml:space="preserve">
+    <value>У услуги {0} нет ссылки на подключение.</value>
+  </data>
+  <data name="ServiceNoServerAssigned" xml:space="preserve">
+    <value>Для услуги {0} не назначен сервер.</value>
+  </data>
+  <data name="ServiceNotProvisioned" xml:space="preserve">
+    <value>Услуга {0} ещё не подключена.</value>
+  </data>
 </root>

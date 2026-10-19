@@ -11,6 +11,7 @@
  * @module composables/useTemplate
  */
 
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import type { Component } from 'vue'
 import { templates } from '~/templates/registry'
 import { resolveTemplateName } from '~/templates/types'
@@ -26,7 +27,7 @@ export const useTemplate = () => {
   // a typo in the admin field, a template dropped in a later release — back
   // into the default rather than leaving the site with nothing to render.
   const name = computed<TemplateName>(() =>
-    resolveTemplateName(get('portal.template', 'portalTemplate')))
+    resolveTemplateName(get(PortalSettingKey.Template, 'portalTemplate')))
 
   /**
    * Resolves one slot of the active template.

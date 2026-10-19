@@ -21,6 +21,7 @@ import { UiAlignItems } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
 import { UiTone } from '@/utils/ui/tone'
+import { SEARCH_DEBOUNCE_MS } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -48,9 +49,6 @@ const emit = defineEmits<{
   /** Emitted when the reader types, so the parent can drop a stale error. */
   typing: []
 }>()
-
-/** Debounce before a search is sent, in milliseconds. */
-const SEARCH_DEBOUNCE_MS = 300
 
 /** Most hits shown. */
 const MAX_RESULTS = 5

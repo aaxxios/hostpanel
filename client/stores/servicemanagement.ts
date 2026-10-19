@@ -21,6 +21,7 @@ import type { ServiceDetail } from '~/types/servicedetail'
 import type { ServiceInvoice } from '~/types/serviceinvoice'
 import type { ServiceInvoices } from '~/types/serviceinvoices'
 import { apiErrorMessage } from '~/lib/errorHandler'
+import { controlPanelUrl } from '~/utils/controlPanel'
 
 /**
  * Service-management state for the service pages.
@@ -266,6 +267,26 @@ export const useServiceManagementStore = defineStore('serviceManagement', () => 
   }
 
   /**
+   * Opens a service's control panel in a new tab: through single sign-on when the API gives an
+   * address, else the panel's plain sign-in page on the service's server. The one place this
+   * choice is made, so every button that opens the panel behaves the same.
+   *
+   * @param serviceId - Service id.
+   * @param hostname - The service's server host name; empty when the server is not known.
+   * @returns Nothing; a failed single sign-in leaves its sentence in {@link ssoError}.
+   */
+  const openControlPanel = async (serviceId: string, hostname?: string): Promise<void> => {
+    const url = await fetchCpanelUrl(serviceId)
+    if (url) {
+      window.open(url, '_blank', 'noopener')
+      return
+    }
+    if (hostname) {
+      window.open(controlPanelUrl(hostname), '_blank', 'noopener')
+    }
+  }
+
+  /**
    * Completes first-time setup on a newly provisioned service.
    *
    * On success the cached service list is marked stale so list pages refetch.
@@ -321,6 +342,7 @@ export const useServiceManagementStore = defineStore('serviceManagement', () => 
     cancelService,
     loadInvoices,
     fetchCpanelUrl,
+    openControlPanel,
     setUpService
   }
 })

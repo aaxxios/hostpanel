@@ -1,5 +1,5 @@
 <template>
-  <section class="py-20 bg-ui-surface relative overflow-hidden" data-testid="sections-faq">
+  <section v-if="faqs.length" class="py-20 bg-ui-surface relative overflow-hidden" data-testid="sections-faq">
     <!-- Background -->
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-primary-500/5 dark:to-secondary-500/5" />
@@ -28,7 +28,7 @@
           v-for="category in categories"
           :key="category.value"
           :variant="activeCategory === category.value ? 'primary' : 'subtle'"
-          :data-testid="`faq-category-${category.value}`"
+          :data-testid="`faq-category-${category.slug}`"
           @click="activeCategory = category.value"
         >
           {{ category.label }}
@@ -84,13 +84,15 @@
 /**
  * FAQ section with category filtering.
  *
- * The questions come from `lib/data.ts` (id and category) and the locale files (text). Choosing a
+ * The questions come from the storefront store (`GET /api/portal/public/faqs`, localised by the API); with
+ * none the section renders nothing. Choosing a
  * category reloads the list and opens its first question; before any choice every question is
  * closed. With a `limit` the section is a preview that links to the full FAQ page.
  */
 import { ArrowRight, MessageCircle, MessageSquare } from 'lucide-vue-next'
-import { faqs as rawFaqs } from '~/lib/data'
+import { useStorefrontStore } from '~/stores/storefront'
 import { FaqCategory } from '~/types/faqcategory'
+import { faqCategorySlug } from '~/utils/faqCategory'
 
 /** Props of SectionsFAQ. */
 interface Props {
@@ -116,16 +118,29 @@ const ALL_CATEGORIES = 'all'
 type CategoryChoice = FaqCategory | typeof ALL_CATEGORIES
 
 /** Translation helpers and the active language. */
-const { t } = useI18n()
+const { t, locale } = useI18n()
 /** Prefixes a path with the active language. */
 const localePath = useLocalePath()
 
-/** The tabs: all, then one per topic. */
+/** The storefront content: testimonials, partners, projects and FAQs. */
+const storefront = useStorefrontStore()
+
+// Not awaited: Nuxt still holds the server render for it, and the section stays synchronous.
+useAsyncData('storefront:faqs', () => storefront.loadFaqs(), { watch: [locale] })
+
+/** Every question, in display order. */
+const faqs = computed(() => storefront.faqs)
+
+/** The tabs: all, then one per topic; `slug` spells the locale key and the test id. */
 const categories = computed(() =>
-  [ALL_CATEGORIES, ...Object.values(FaqCategory)].map((value) => ({
-    value: value as CategoryChoice,
-    label: t(`faq.categories.${value}`),
-  })))
+  ([ALL_CATEGORIES, ...Object.values(FaqCategory)] satisfies CategoryChoice[]).map((value) => {
+    const slug = value === ALL_CATEGORIES ? ALL_CATEGORIES : faqCategorySlug(value)
+    return {
+      value,
+      slug,
+      label: t(`faq.categories.${slug}`),
+    }
+  }))
 
 /** The category chosen in the tabs. */
 const activeCategory = ref<CategoryChoice>(ALL_CATEGORIES)
@@ -139,13 +154,13 @@ watch(activeCategory, () => {
 
 /** The questions of the active category, cut to `limit` when one is set, with their translated text. */
 const accordionItems = computed(() => {
-  let result = rawFaqs.filter((faq) => activeCategory.value === ALL_CATEGORIES || faq.category === activeCategory.value)
+  let result = faqs.value.filter((faq) => activeCategory.value === ALL_CATEGORIES || faq.category === activeCategory.value)
   if (props.limit) {
     result = result.slice(0, props.limit)
   }
   return result.map((faq) => ({
-    title: t(`faq.items.${faq.id}.question`),
-    content: t(`faq.items.${faq.id}.answer`),
+    title: faq.question,
+    content: faq.answer,
   }))
 })
 </script>

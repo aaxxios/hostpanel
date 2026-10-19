@@ -28,7 +28,7 @@ export interface BillableItem {
    * Only the admin-wide list (`/billing/billable-items`) carries it; the client-scoped
    * endpoint does not, which is why it is optional.
    */
-  clientName?: string
+  clientName?: string | null
   /** Charge description. */
   description: string
   /** Charge amount. */

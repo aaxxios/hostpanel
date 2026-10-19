@@ -9,6 +9,7 @@
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { ActivityLog, ActivityLogFilters } from '@/types/activitylog'
 import type { EmailLog } from '@/types/emaillog'
+import { ApiPath } from '@/lib/apiPaths'
 
 /** The paged envelope both history endpoints answer with. */
 interface HistoryPage<T> {
@@ -41,7 +42,7 @@ export const useClientHistoryApi = () => {
     pageSize: number,
     filters: ActivityLogFilters = {},
   ): Promise<HistoryPage<ActivityLog>> =>
-    request<HistoryPage<ActivityLog>>(`/clients/${clientId}/activity-logs${buildQuery({ page, pageSize, ...filters })}`)
+    request<HistoryPage<ActivityLog>>(`${ApiPath.Clients}/${clientId}/activity-logs${buildQuery({ page, pageSize, ...filters })}`)
 
   /**
    * Lists the e-mails sent to a client.
@@ -52,7 +53,7 @@ export const useClientHistoryApi = () => {
    * @returns One page of entries.
    */
   const emailLogs = (clientId: number, page: number, pageSize: number): Promise<HistoryPage<EmailLog>> =>
-    request<HistoryPage<EmailLog>>(`/admin/email-logs/client/${clientId}${buildQuery({ page, pageSize })}`)
+    request<HistoryPage<EmailLog>>(`${ApiPath.AdminEmailLogs}/client/${clientId}${buildQuery({ page, pageSize })}`)
 
   return { activityLogs, emailLogs }
 }

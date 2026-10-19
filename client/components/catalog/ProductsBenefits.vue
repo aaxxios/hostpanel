@@ -77,9 +77,12 @@ import { CheckCircle, Infinity as InfinityIcon, ShieldCheck } from 'lucide-vue-n
 /** Translation helpers and the active language. */
 const { t } = useI18n()
 
+/** Operator-set site name that the copy interpolates as `{site}`. */
+const { name: siteName } = useSiteIdentity()
+
 /** The four platform benefits, in display order. */
 const benefits = computed(() => [
-  { key: 'whiteLabel', icon: 'mdi:palette', title: t('products.benefits.whiteLabel.title'), description: t('products.benefits.whiteLabel.description') },
+  { key: 'whiteLabel', icon: 'mdi:palette', title: t('products.benefits.whiteLabel.title'), description: t('products.benefits.whiteLabel.description', { site: siteName.value }) },
   { key: 'support', icon: 'mdi:headset', title: t('products.benefits.support.title'), description: t('products.benefits.support.description') },
   { key: 'updates', icon: 'mdi:refresh', title: t('products.benefits.updates.title'), description: t('products.benefits.updates.description') },
   { key: 'api', icon: 'mdi:code-tags', title: t('products.benefits.api.title'), description: t('products.benefits.api.description') },

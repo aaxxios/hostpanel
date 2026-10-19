@@ -20,6 +20,7 @@
  * @module server/utils/client-session
  */
 
+import { SessionCookie } from '~/constants/sessionCookie'
 import type { ClientSession } from '~/types/clientsession'
 
 /**
@@ -30,7 +31,7 @@ import type { ClientSession } from '~/types/clientsession'
  * @throws H3Error 401 if the cookie is absent, unparseable, or missing `id`
  */
 export const requireClientSession = (event: Parameters<typeof getCookie>[0]): ClientSession => {
-  const raw = getCookie(event, 'client_session')
+  const raw = getCookie(event, SessionCookie.ClientSession)
 
   if (!raw) {
     throw createError({ statusCode: 401 })

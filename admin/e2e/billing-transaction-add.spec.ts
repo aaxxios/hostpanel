@@ -3,6 +3,7 @@
  * and lands on the transactions ledger, which shows the new entry; a refusal shows the API's
  * sentence and keeps the form.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { clientsPage } from './fixtures/clients'
 import { ledgerAfterAdd, ledgerEmpty, newTransaction } from './fixtures/transactions'
@@ -16,10 +17,10 @@ test('adding a transaction posts it and returns to the ledger', async ({ page })
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/clients', clientsPage),
-      { method: 'GET', path: '/api/transactions', respond: () => ({ body: created ? ledgerAfterAdd : ledgerEmpty }) },
+      json(HttpMethod.Get, '/api/clients', clientsPage),
+      { method: HttpMethod.Get, path: '/api/transactions', respond: () => ({ body: created ? ledgerAfterAdd : ledgerEmpty }) },
       {
-        method: 'POST',
+        method: HttpMethod.Post,
         path: '/api/transactions',
         respond: () => {
           created = true
@@ -41,7 +42,7 @@ test('adding a transaction posts it and returns to the ledger', async ({ page })
 
   await page.waitForURL('**/billing/transactions')
   await expect(page.getByTestId('billing-transactions-table')).toContainText(newTransaction.description)
-  expect(api.callsTo('POST', '/api/transactions')[0]?.body).toMatchObject({
+  expect(api.callsTo(HttpMethod.Post, '/api/transactions')[0]?.body).toMatchObject({
     clientId: newTransaction.clientId,
     amountIn: newTransaction.amountIn,
     description: newTransaction.description,
@@ -53,8 +54,8 @@ test('a refused transaction shows the API sentence and stays on the form', async
   await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/clients', clientsPage),
-      json('POST', '/api/transactions', { type: 'VALIDATION_ERROR', title: 'Validation failed', status: 400, detail: sentence }, 400),
+      json(HttpMethod.Get, '/api/clients', clientsPage),
+      json(HttpMethod.Post, '/api/transactions', { type: 'VALIDATION_ERROR', title: 'Validation failed', status: 400, detail: sentence }, 400),
     ],
   })
 

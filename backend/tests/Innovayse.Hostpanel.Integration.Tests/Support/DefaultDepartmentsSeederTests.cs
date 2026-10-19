@@ -1,10 +1,12 @@
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Application.Support.Seeding;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
@@ -39,9 +41,10 @@ public sealed class DefaultDepartmentsSeederTests(IntegrationTestFactory factory
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var options = scope.ServiceProvider.GetRequiredService<IOptions<DefaultDepartmentsOptions>>().Value;
         await ClearDepartmentsAsync(context);
 
-        var created = await DefaultDepartmentsSeeder.EnsureSeededAsync(context, uow);
+        var created = await DefaultDepartmentsSeeder.EnsureSeededAsync(context, uow, options);
 
         Assert.Equal(4, created);
         var names = await context.Departments.AsNoTracking().Select(d => d.Name).ToListAsync();
@@ -60,14 +63,39 @@ public sealed class DefaultDepartmentsSeederTests(IntegrationTestFactory factory
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var options = scope.ServiceProvider.GetRequiredService<IOptions<DefaultDepartmentsOptions>>().Value;
         await ClearDepartmentsAsync(context);
         context.Departments.Add(Department.Create("Renamed Support Desk", "renamed@example.test"));
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var created = await DefaultDepartmentsSeeder.EnsureSeededAsync(context, uow);
+        var created = await DefaultDepartmentsSeeder.EnsureSeededAsync(context, uow, options);
 
         Assert.Equal(0, created);
         var department = await context.Departments.AsNoTracking().SingleAsync();
         Assert.Equal("Renamed Support Desk", department.Name);
+    }
+
+    /// <summary>The configured addresses, not built-in literals, become the departments' contact emails.</summary>
+    [Fact]
+    public async Task EnsureSeededAsync_ConfiguredAddresses_AreUsedAsDepartmentEmailsAsync()
+    {
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        await ClearDepartmentsAsync(context);
+        var options = new DefaultDepartmentsOptions
+        {
+            SupportEmail = "tech@example.test",
+            BillingEmail = "money@example.test",
+            SalesEmail = "buy@example.test",
+            GeneralEmail = "info@example.test",
+        };
+
+        await DefaultDepartmentsSeeder.EnsureSeededAsync(context, uow, options);
+
+        var emails = await context.Departments.AsNoTracking().Select(d => d.Email).ToListAsync();
+        Assert.Equal(
+            new[] { "tech@example.test", "money@example.test", "buy@example.test", "info@example.test" }.OrderBy(e => e),
+            emails.OrderBy(e => e));
     }
 }

@@ -8,6 +8,8 @@
 
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { ClientUserItem, UserSearchHit } from '@/types/clientuser'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for the users of a client.
@@ -24,7 +26,7 @@ export const useClientUsersApi = () => {
    * @returns The linked users.
    */
   const list = (clientId: string): Promise<ClientUserItem[]> =>
-    request<ClientUserItem[]>(`/clients/${clientId}/users`)
+    request<ClientUserItem[]>(`${ApiPath.Clients}/${clientId}/users`)
 
   /**
    * Searches Identity users for the add-user panel.
@@ -34,7 +36,7 @@ export const useClientUsersApi = () => {
    * @returns The matching users, wrapped in the paged envelope.
    */
   const search = (term: string, pageSize: number): Promise<{ items: UserSearchHit[] }> =>
-    request<{ items: UserSearchHit[] }>(`/admin/users${buildQuery({ search: term, pageSize, page: 1 })}`)
+    request<{ items: UserSearchHit[] }>(`${ApiPath.AdminUsers}${buildQuery({ search: term, pageSize, page: 1 })}`)
 
   /**
    * Links an existing user to the client.
@@ -45,7 +47,7 @@ export const useClientUsersApi = () => {
    * @returns Nothing.
    */
   const add = (clientId: string, userId: string, permissions: number): Promise<void> =>
-    request<void>(`/clients/${clientId}/users`, { method: 'POST', body: JSON.stringify({ memberUserId: userId, permissions }) })
+    request<void>(`${ApiPath.Clients}/${clientId}/users`, { method: HttpMethod.Post, body: JSON.stringify({ memberUserId: userId, permissions }) })
 
   /**
    * Invites a new user by email and links them to the client.
@@ -55,7 +57,7 @@ export const useClientUsersApi = () => {
    * @returns Nothing.
    */
   const invite = (clientId: string, payload: Record<string, unknown>): Promise<void> =>
-    request<void>(`/clients/${clientId}/users/invite`, { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Clients}/${clientId}/users/invite`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Replaces a non-owner user permissions.
@@ -66,8 +68,8 @@ export const useClientUsersApi = () => {
    * @returns Nothing.
    */
   const updatePermissions = (clientId: string, userId: string, permissions: number): Promise<void> =>
-    request<void>(`/clients/${clientId}/users/${userId}/permissions`, {
-      method: 'PUT',
+    request<void>(`${ApiPath.Clients}/${clientId}/users/${userId}/permissions`, {
+      method: HttpMethod.Put,
       body: JSON.stringify({ permissions }),
     })
 
@@ -79,7 +81,7 @@ export const useClientUsersApi = () => {
    * @returns Nothing.
    */
   const makeOwner = (clientId: string, userId: string): Promise<void> =>
-    request<void>(`/clients/${clientId}/users/${userId}/make-owner`, { method: 'POST' })
+    request<void>(`${ApiPath.Clients}/${clientId}/users/${userId}/make-owner`, { method: HttpMethod.Post })
 
   /**
    * Unlinks a user from the client.
@@ -89,7 +91,7 @@ export const useClientUsersApi = () => {
    * @returns Nothing.
    */
   const remove = (clientId: string, userId: string): Promise<void> =>
-    request<void>(`/clients/${clientId}/users/${userId}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.Clients}/${clientId}/users/${userId}`, { method: HttpMethod.Delete })
 
   return { list, search, add, invite, updatePermissions, makeOwner, remove }
 }

@@ -5,7 +5,7 @@ name: hostpanel
 services:
   hostpanel-api:
     container_name: hostpanel-api
-    image: registry.gitlab.com/innovayse/innovayse-workspace/hostpanel/api:${IMAGE_TAG}
+    image: ${IMAGE_REGISTRY:?IMAGE_REGISTRY must be set}/api:${IMAGE_TAG}
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -15,9 +15,9 @@ services:
         AUTH_MODE: ${AUTH_MODE}
     environment:
       # Workstation GC with a 75% heap cap so one API cannot take a shared host down.
-      DOTNET_gcServer: "0"
-      DOTNET_GCConserveMemory: "5"
-      DOTNET_GCHeapHardLimitPercent: "75"
+      DOTNET_gcServer: ${API_GC_SERVER:?API_GC_SERVER must be set}
+      DOTNET_GCConserveMemory: ${API_GC_CONSERVE_MEMORY:?API_GC_CONSERVE_MEMORY must be set}
+      DOTNET_GCHeapHardLimitPercent: ${API_GC_HEAP_HARD_LIMIT_PERCENT:?API_GC_HEAP_HARD_LIMIT_PERCENT must be set}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ASPNETCORE_HTTP_PORTS: ${API_PORT}
       AllowedHosts: ${ALLOWED_HOSTS:?ALLOWED_HOSTS must be set}
@@ -39,6 +39,10 @@ services:
       Smtp__From__Address: ${SMTP_FROM}
       Smtp__From__Name: ${SMTP_FROM_NAME}
       Notifications__ContactEmail: ${EMAIL_TO}
+      DefaultDepartments__SupportEmail: ${DEPARTMENT_SUPPORT_EMAIL:?DEPARTMENT_SUPPORT_EMAIL must be set}
+      DefaultDepartments__BillingEmail: ${DEPARTMENT_BILLING_EMAIL:?DEPARTMENT_BILLING_EMAIL must be set}
+      DefaultDepartments__SalesEmail: ${DEPARTMENT_SALES_EMAIL:?DEPARTMENT_SALES_EMAIL must be set}
+      DefaultDepartments__GeneralEmail: ${DEPARTMENT_GENERAL_EMAIL:?DEPARTMENT_GENERAL_EMAIL must be set}
       Telegram__BotToken: ${TELEGRAM_BOT_TOKEN}
       Telegram__ChatId: ${TELEGRAM_CHAT_ID}
 
@@ -49,7 +53,7 @@ services:
       Session__MaxSessionMinutes: ${SESSION_MAX_MINUTES}
       EncryptionKey: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       Auth__Mode: ${AUTH_MODE}
-      Auth__AppName: hostpanel
+      Auth__AppName: ${AUTH_APP_NAME:?AUTH_APP_NAME must be set}
       Auth__Authority: ${SSO_URL}
       Auth__PublicAuthority: ${SSO_PUBLIC_URL}
       Auth__ClientId: ${SSO_CLIENT_ID}
@@ -60,7 +64,7 @@ services:
       Sso__ClientId: ${SSO_CLIENT_ID}
       Sso__ServiceKey: ${SSO_SERVICE_KEY}
 
-      Cors__AllowedOrigins__0: https://${DOMAIN}
+      Cors__AllowedOrigins__0: ${CLIENT_BASE_URL:?CLIENT_BASE_URL must be set}
       Cors__AllowedOrigins__1: https://${ADMIN_DOMAIN}
       # Where mailed staff links (email verification) land; a bare top-level key, not a section.
       AdminBaseUrl: ${ADMIN_BASE_URL:?ADMIN_BASE_URL must be set}
@@ -80,21 +84,22 @@ services:
 
   hostpanel-client:
     container_name: hostpanel-client
-    image: registry.gitlab.com/innovayse/innovayse-workspace/hostpanel/client:${IMAGE_TAG}
+    image: ${IMAGE_REGISTRY:?IMAGE_REGISTRY must be set}/client:${IMAGE_TAG}
     build:
       context: ../client
       dockerfile: Dockerfile
       target: prod
     environment:
       # Nitro freezes runtimeConfig at build time: only NUXT_* names override it at runtime.
+      NITRO_PORT: ${CLIENT_PORT:?CLIENT_PORT must be set}
       NUXT_API_URL: http://hostpanel-api:${API_PORT}
-      NUXT_PUBLIC_BASE_URL: https://${DOMAIN}
+      NUXT_PUBLIC_BASE_URL: ${CLIENT_BASE_URL:?CLIENT_BASE_URL must be set}
       # nuxt-site-config's canonical origin (sitemap, og:url), read at runtime.
-      NUXT_PUBLIC_SITE_URL: https://${DOMAIN}
+      NUXT_PUBLIC_SITE_URL: ${CLIENT_BASE_URL:?CLIENT_BASE_URL must be set}
       NUXT_PUBLIC_MAIN_URL: ${MAIN_APP_URL}
       NUXT_SSO_URL: ${SSO_URL}
       NUXT_PUBLIC_SSO_PUBLIC_URL: ${SSO_PUBLIC_URL}
-      NUXT_SSO_CALLBACK_URL: https://${DOMAIN}/api/portal/auth/sso/callback
+      NUXT_SSO_CALLBACK_URL: ${CLIENT_BASE_URL:?CLIENT_BASE_URL must be set}/api/portal/auth/sso/callback
       NUXT_MAIN_API_URL: ${NUXT_MAIN_API_URL}
       NUXT_PUBLIC_AUTH_MODE: ${AUTH_MODE}
       NUXT_PUBLIC_PORTAL_TEMPLATE: ${NUXT_PUBLIC_PORTAL_TEMPLATE}
@@ -104,6 +109,12 @@ services:
       NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN: ${NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN}
       NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK: ${NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK}
       NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL: ${NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL}
+      NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS: ${NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS}
+      NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL: ${NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL}
+      NUXT_PUBLIC_PORTAL_STATS_CLIENTS: ${NUXT_PUBLIC_PORTAL_STATS_CLIENTS}
+      NUXT_PUBLIC_PORTAL_STATS_UPTIME: ${NUXT_PUBLIC_PORTAL_STATS_UPTIME}
+      NUXT_PUBLIC_PORTAL_STATS_REGIONS: ${NUXT_PUBLIC_PORTAL_STATS_REGIONS}
+      NUXT_PUBLIC_PORTAL_HERO_BADGE: ${NUXT_PUBLIC_PORTAL_HERO_BADGE}
       NUXT_PUBLIC_PORTAL_SITE_NAME: ${NUXT_PUBLIC_PORTAL_SITE_NAME}
       NUXT_PUBLIC_PORTAL_SITE_TAGLINE: ${NUXT_PUBLIC_PORTAL_SITE_TAGLINE}
       NUXT_PUBLIC_PORTAL_THEME_DEFAULT: ${NUXT_PUBLIC_PORTAL_THEME_DEFAULT}
@@ -138,7 +149,7 @@ services:
 
   hostpanel-admin:
     container_name: hostpanel-admin
-    image: registry.gitlab.com/innovayse/innovayse-workspace/hostpanel/admin:${IMAGE_TAG}
+    image: ${IMAGE_REGISTRY:?IMAGE_REGISTRY must be set}/admin:${IMAGE_TAG}
     build:
       context: ..
       dockerfile: admin/Dockerfile
@@ -153,6 +164,8 @@ services:
   hostpanel-nginx:
     build:
       context: ./nginx
+      args:
+        NGINX_IMAGE: ${NGINX_IMAGE:?NGINX_IMAGE must be set}
     ports:
       - "${NGINX_HTTP_PORT}:80"
       - "${NGINX_HTTPS_PORT}:443"
@@ -160,6 +173,9 @@ services:
       DOMAIN: ${DOMAIN}
       ADMIN_DOMAIN: ${ADMIN_DOMAIN}
       API_PORT: ${API_PORT}
+      CLIENT_PORT: ${CLIENT_PORT:?CLIENT_PORT must be set}
+      EDGE_MAX_BODY_SIZE: ${EDGE_MAX_BODY_SIZE:?EDGE_MAX_BODY_SIZE must be set}
+      EDGE_ADMIN_MAX_BODY_SIZE: ${EDGE_ADMIN_MAX_BODY_SIZE:?EDGE_ADMIN_MAX_BODY_SIZE must be set}
     depends_on:
       - hostpanel-api
       - hostpanel-client

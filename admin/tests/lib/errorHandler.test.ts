@@ -6,6 +6,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { ApiError } from '@/composables/useApi'
 import { setLocale } from '@/i18n'
+import { MessageLanguage } from '@/locales/messages'
 import { errorCode, errorSentence, fieldErrors } from '@/lib/errorHandler'
 
 /** A representative `ErrorResponse` body. */
@@ -19,7 +20,7 @@ const problem = {
 }
 
 afterEach(() => {
-  setLocale('en')
+  setLocale(MessageLanguage.En)
 })
 
 describe('errorSentence', () => {
@@ -48,7 +49,7 @@ describe('errorSentence', () => {
   })
 
   it('answers the no-answer sentence in the active language', () => {
-    setLocale('ru')
+    setLocale(MessageLanguage.Ru)
 
     expect(errorSentence(new TypeError('offline'))).toBe(
       'Не удалось связаться с сервером. Проверьте соединение и повторите попытку.',

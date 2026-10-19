@@ -11,9 +11,10 @@ import { reactive, ref } from 'vue'
 import { useTransactionsApi } from '@/composables/apis/useTransactionsApi'
 import { runAction } from '@/lib/runAction'
 import type { CreateClientTransactionPayload, Transaction } from '@/types/transaction'
+import { LEDGER_PAGE_SIZE } from '@/lib/limits'
 
 /** Lists, creates and deletes the transactions of a client. */
-export const useTransactionsStore = defineStore('clientTransactions', () => {
+export const useClientTransactionsStore = defineStore('clientTransactions', () => {
   const api = useTransactionsApi()
 
   /** Loaded transactions for the current client. */
@@ -51,7 +52,7 @@ export const useTransactionsStore = defineStore('clientTransactions', () => {
    * @param pageSize - Items per page.
    * @returns Promise that resolves when data is loaded.
    */
-  const fetchByClient = async (clientId: number | string, page = 1, pageSize = 25): Promise<void> => {
+  const fetchByClient = async (clientId: number | string, page = 1, pageSize = LEDGER_PAGE_SIZE): Promise<void> => {
     loading.value = true
     const result = await runAction(error, () => api.listByClient(clientId, page, pageSize))
     loading.value = false

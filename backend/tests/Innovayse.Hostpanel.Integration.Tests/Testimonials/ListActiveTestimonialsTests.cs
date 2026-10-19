@@ -1,0 +1,90 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Xunit;
+
+namespace Innovayse.Hostpanel.Integration.Tests.Testimonials;
+
+/// <summary>
+/// Integration tests for the <c>ListActiveTestimonials</c> use case — <c>GET /api/public/testimonials</c>, the public
+/// storefront feed. Anonymous: the storefront needs it before anyone has signed in.
+/// </summary>
+/// <param name="factory">The shared API + PostgreSQL host.</param>
+public sealed class ListActiveTestimonialsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+{
+    /// <summary>The feed is publicly accessible without authentication.</summary>
+    [Fact]
+    public async Task PublicList_ReturnsOk_WithoutAuth()
+    {
+        var response = await StorefrontContentTestSeeds.GetPublicAsync(factory, "/api/public/testimonials");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>The feed carries the contract's flat shape and leaves out admin-only members.</summary>
+    [Fact]
+    public async Task PublicList_ReturnsTheFlatContractShape()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+        var id = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/testimonials", StorefrontContentTestSeeds.TestimonialBody(sortOrder: 3));
+
+        var response = await StorefrontContentTestSeeds.GetPublicAsync(factory, "/api/public/testimonials", "en");
+        var list = await response.Content.ReadFromJsonAsync<JsonElement[]>();
+
+        var item = list!.Single(x => x.GetProperty("id").GetInt32() == id);
+        item.GetProperty("sortOrder").GetInt32().Should().Be(3);
+        item.GetProperty("quote").GetString().Should().Be("English quote");
+        item.TryGetProperty("translations", out _).Should().BeFalse();
+        item.GetProperty("name").GetString().Should().Be("Ann Client");
+        item.GetProperty("rating").GetInt32().Should().Be(5);
+        item.TryGetProperty("isActive", out _).Should().BeFalse();
+    }
+
+    /// <summary>The feed excludes an inactive record and orders the rest by sort order.</summary>
+    [Fact]
+    public async Task PublicList_ExcludesInactive_AndOrdersBySortOrder()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+        var second = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/testimonials", StorefrontContentTestSeeds.TestimonialBody(sortOrder: 60));
+        var first = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/testimonials", StorefrontContentTestSeeds.TestimonialBody(sortOrder: 50));
+        var inactive = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/testimonials", StorefrontContentTestSeeds.TestimonialBody(sortOrder: 55, isActive: false));
+
+        var response = await StorefrontContentTestSeeds.GetPublicAsync(factory, "/api/public/testimonials");
+        var list = await response.Content.ReadFromJsonAsync<JsonElement[]>();
+
+        var ids = list!.Select(x => x.GetProperty("id").GetInt32()).ToList();
+        ids.Should().NotContain(inactive);
+        ids.IndexOf(first).Should().BeLessThan(ids.IndexOf(second));
+    }
+
+    /// <summary>The feed resolves the requested locale over the default when both are stored.</summary>
+    [Fact]
+    public async Task PublicList_ResolvesTheRequestedLocale()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+        var id = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/testimonials", StorefrontContentTestSeeds.TestimonialBody());
+
+        var response = await StorefrontContentTestSeeds.GetPublicAsync(factory, "/api/public/testimonials", "hy");
+        var list = await response.Content.ReadFromJsonAsync<JsonElement[]>();
+
+        list!.Single(x => x.GetProperty("id").GetInt32() == id)
+            .GetProperty("quote").GetString().Should().Be("Armenian quote");
+    }
+
+    /// <summary>A locale with no stored translation falls back to the default locale.</summary>
+    [Fact]
+    public async Task PublicList_FallsBackToTheDefaultLocale()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+        var id = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/testimonials", StorefrontContentTestSeeds.TestimonialBody());
+
+        var response = await StorefrontContentTestSeeds.GetPublicAsync(factory, "/api/public/testimonials", "ru");
+        var list = await response.Content.ReadFromJsonAsync<JsonElement[]>();
+
+        list!.Single(x => x.GetProperty("id").GetInt32() == id)
+            .GetProperty("quote").GetString().Should().Be("English quote");
+    }
+}

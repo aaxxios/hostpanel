@@ -1,11 +1,11 @@
 using Innovayse.Hostpanel.Domain.Billing;
-
 using Innovayse.Hostpanel.Domain.Billing.Enums;
+
 namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <summary>DTO for a single row in paginated invoice lists (no line items).</summary>
 /// <param name="Id">Invoice primary key.</param>
 /// <param name="ClientId">FK to the owning client.</param>
-/// <param name="ClientName">Full name of the owning client.</param>
+/// <param name="ClientName">Full name of the owning client. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="Status">Current lifecycle status.</param>
 /// <param name="DueDate">Payment due date (UTC).</param>
 /// <param name="CreatedAt">Creation timestamp (UTC).</param>
@@ -18,7 +18,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 public record InvoiceListItemDto(
     int Id,
     int ClientId,
-    string ClientName,
+    string? ClientName,
     InvoiceStatus Status,
     DateTimeOffset DueDate,
     DateTimeOffset CreatedAt,

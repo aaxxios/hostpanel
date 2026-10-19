@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import SectionsProcess from '~/components/sections/SectionsProcess.vue'
 import MarketingSectionHeader from '~/components/marketing/MarketingSectionHeader.vue'
-import { processSteps } from '~/lib/data'
+import { PROCESS_STEPS as processSteps } from '~/constants/processStep'
 
 /** Mounts the section. */
 const mountProcess = () => mountWithKit(SectionsProcess, { components: { MarketingSectionHeader } })

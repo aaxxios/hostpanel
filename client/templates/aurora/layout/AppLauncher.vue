@@ -56,6 +56,9 @@
  * `tint` string (a CSS gradient) is not used here because it could only be applied through an
  * inline style.
  */
+
+import { PortalAppId } from '~/types/portalappid'
+
 const { t } = useI18n()
 /** Apps the deployment offers; empty hides the launcher. */
 const { apps } = usePortalApps()
@@ -64,15 +67,15 @@ const { apps } = usePortalApps()
 const open = ref(false)
 
 /** Tile gradient token per known app id; an app this map does not know gets the brand gradient. */
-const TILE_CLASSES: Readonly<Record<string, string>> = {
-  account: 'bg-tile-sky',
-  tasks: 'bg-tile-mint',
-  erp: 'bg-tile-lilac',
-  hostpanel: 'bg-tile-pink',
-  sheets: 'bg-tile-cyan',
-  mail: 'bg-tile-indigo',
-  docs: 'bg-tile-ice',
-  calendar: 'bg-tile-rose',
+const TILE_CLASSES: Readonly<Record<PortalAppId, string>> = {
+  [PortalAppId.Account]: 'bg-tile-sky',
+  [PortalAppId.Tasks]: 'bg-tile-mint',
+  [PortalAppId.Erp]: 'bg-tile-lilac',
+  [PortalAppId.Hostpanel]: 'bg-tile-pink',
+  [PortalAppId.Sheets]: 'bg-tile-cyan',
+  [PortalAppId.Mail]: 'bg-tile-indigo',
+  [PortalAppId.Docs]: 'bg-tile-ice',
+  [PortalAppId.Calendar]: 'bg-tile-rose',
 }
 
 /**
@@ -81,5 +84,5 @@ const TILE_CLASSES: Readonly<Record<string, string>> = {
  * @param appId - Id of the app, as `usePortalApps` lists it.
  * @returns A literal `bg-tile-*` class, or the brand gradient for an unknown id.
  */
-const tileClass = (appId: string): string => TILE_CLASSES[appId] ?? 'bg-brand'
+const tileClass = (appId: PortalAppId): string => TILE_CLASSES[appId] ?? 'bg-brand'
 </script>

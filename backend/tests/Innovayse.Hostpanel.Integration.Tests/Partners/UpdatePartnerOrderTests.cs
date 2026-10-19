@@ -1,0 +1,78 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using FluentAssertions;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Xunit;
+
+namespace Innovayse.Hostpanel.Integration.Tests.Partners;
+
+/// <summary>
+/// Integration tests for the <c>UpdatePartnerOrder</c> use case — <c>PUT /api/admin/partners/order</c>.
+/// </summary>
+/// <param name="factory">The shared API + PostgreSQL host.</param>
+public sealed class UpdatePartnerOrderTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+{
+    /// <summary>The listed ids take their new positions and the public feed follows the new order.</summary>
+    [Fact]
+    public async Task Reorder_MovesTheListedRecords()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+        var first = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/partners", StorefrontContentTestSeeds.PartnerBody(sortOrder: 70));
+        var second = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/partners", StorefrontContentTestSeeds.PartnerBody(sortOrder: 80));
+
+        var response = await client.PutAsJsonAsync("/api/admin/partners/order", new
+        {
+            items = new[] { new { id = first, sortOrder = 90 }, new { id = second, sortOrder = 75 } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var feed = await (await StorefrontContentTestSeeds.GetPublicAsync(factory, "/api/public/partners"))
+            .Content.ReadFromJsonAsync<JsonElement[]>();
+        var ids = feed!.Select(x => x.GetProperty("id").GetInt32()).ToList();
+        ids.IndexOf(second).Should().BeLessThan(ids.IndexOf(first));
+    }
+
+    /// <summary>An id that names no record is skipped without failing the rest.</summary>
+    [Fact]
+    public async Task Reorder_UnknownId_IsSkipped()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+        var id = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/partners", StorefrontContentTestSeeds.PartnerBody(sortOrder: 70));
+
+        var response = await client.PutAsJsonAsync("/api/admin/partners/order", new
+        {
+            items = new[] { new { id = 2147483000, sortOrder = 1 }, new { id, sortOrder = 5 } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var fetched = await client.GetFromJsonAsync<JsonElement>($"/api/admin/partners/{id}");
+        fetched.GetProperty("sortOrder").GetInt32().Should().Be(5);
+    }
+
+    /// <summary>A negative sort order is refused as a validation failure.</summary>
+    [Fact]
+    public async Task Reorder_NegativeSortOrder_Refuses()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PutAsJsonAsync("/api/admin/partners/order", new
+        {
+            items = new[] { new { id = 1, sortOrder = -1 } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>The route is not for anonymous callers.</summary>
+    [Fact]
+    public async Task Reorder_RefusesAnonymous()
+    {
+        var response = await factory.CreateClient().PutAsJsonAsync("/api/admin/partners/order", new
+        {
+            items = new[] { new { id = 1, sortOrder = 1 } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+}

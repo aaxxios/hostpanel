@@ -19,6 +19,7 @@
 
 import { useClientStore } from '~/stores/client'
 import { isPrivateClientPath, loginPathWithReturn } from '~/utils/returnPath'
+import { SessionCookie } from '~/constants/sessionCookie'
 
 /** Provides `$handleAuthExpired` in the browser; a no-op on the server. */
 export default defineNuxtPlugin(() => {
@@ -41,7 +42,7 @@ export default defineNuxtPlugin(() => {
           // Store may not be initialized
         }
 
-        const authedCookie = useCookie('authed')
+        const authedCookie = useCookie(SessionCookie.Authed)
         authedCookie.value = null
 
         // Only a page that needs a session is left behind. A 401 on a public page is either a

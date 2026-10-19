@@ -33,6 +33,7 @@ import { pageCount } from '@/lib/paging'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiTableDensity } from '@/utils/ui/injection'
 import type { UiTabItem } from '@/utils/ui/tabs'
+import { AppRoute, editPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -136,7 +137,7 @@ onMounted(() => {
     >
       <template #actions>
         <UiLink
-          to="/support/network-issues/new"
+          :to="AppRoute.SupportNetworkIssuesNew"
           :variant="UiButtonVariant.Primary"
           data-testid="network-issues-create"
         >
@@ -198,7 +199,7 @@ onMounted(() => {
             <UiTableCell muted>{{ formatDateTimeCompact(issue.endDate) }}</UiTableCell>
             <UiTableCell align="right">
               <SupportRowActions
-                :edit-to="`/support/network-issues/${issue.id}/edit`"
+                :edit-to="editPath(AppRoute.SupportNetworkIssues, issue.id)"
                 :testid-prefix="`network-issues-${issue.id}`"
                 @delete="deleteTarget = issue.id"
               />

@@ -9,6 +9,7 @@
  * Root app component: global structured data, the favicon set and the site identity
  * metas. Third-party scripts live in plugins, driven by the operator's settings.
  */
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { BrandingIconRel } from '~/types/brandingiconrel'
 import { resolveLanguage } from '~/utils/transportLanguage'
 
@@ -33,7 +34,7 @@ injectSchema([
 const { get: getPortalSetting } = usePortalSettings()
 
 /** Operator-uploaded favicon, admin-managed with an environment fallback. Empty keeps nuxt.config's static default. */
-const faviconUrl = computed(() => getPortalSetting('portal.favicon', 'portalFavicon'))
+const faviconUrl = computed(() => getPortalSetting(PortalSettingKey.Favicon, 'portalFavicon'))
 
 /**
  * Every `<link rel="icon">` the page emits, built-in defaults included.

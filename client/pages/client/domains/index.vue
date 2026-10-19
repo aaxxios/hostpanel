@@ -66,7 +66,7 @@
               <ClientStatusBadge :status="domain.status" />
             </UiTableTd>
             <UiTableTd align="right">
-              <UiButton :to="`/client/domains/${domain.id}`" variant="subtle" size="sm" :data-testid="`domain-manage-${domain.id}`">
+              <UiButton :to="clientDomainPath(domain.id)" variant="subtle" size="sm" :data-testid="`domain-manage-${domain.id}`">
                 {{ $t('client.domains.manage') }}
               </UiButton>
             </UiTableTd>
@@ -85,7 +85,9 @@
  * client's domains, each row linking to the domain. Loading, missing-profile and failure states
  * come from the client store.
  */
+import { clientDomainPath } from '~/constants/clientRoutes'
 import { Globe, Plus } from 'lucide-vue-next'
+import { DEFAULT_PAGE_SIZE } from '~/constants/uiDefaults'
 import { useClientStore } from '~/stores/client'
 import { DomainStatus } from '~/types/domainstatus'
 import { ListFilter } from '~/types/listfilter'
@@ -112,7 +114,7 @@ const search = ref('')
 const page = ref(1)
 
 /** Rows per page. */
-const perPage = ref(10)
+const perPage = ref(DEFAULT_PAGE_SIZE)
 
 // A new filter or search starts again from the first page.
 watch([activeTab, search, perPage], () => { page.value = 1 })

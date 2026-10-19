@@ -45,6 +45,8 @@ import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiLabelVariant, UiTextSize, UiTextTone } from '@/utils/ui/text'
 import { UiTone } from '@/utils/ui/tone'
+import { LEDGER_PAGE_SIZE } from '@/lib/limits'
+import { invoicePath } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -67,7 +69,7 @@ const clientId = computed(() => route.params.id as string)
 const page = ref(1)
 
 /** Items per page. */
-const pageSize = ref(25)
+const pageSize = ref(LEDGER_PAGE_SIZE)
 
 /** Status filter value. */
 const filterStatus = ref('')
@@ -271,7 +273,7 @@ const handleCreate = async (): Promise<void> => {
   creating.value = false
   if (id) {
     showCreateForm.value = false
-    router.push(`/billing/${id}`)
+    router.push(invoicePath(id))
   }
 }
 
@@ -315,7 +317,7 @@ const executeDelete = async (): Promise<void> => {
  * @returns Nothing.
  */
 const openInvoice = (id: number, mode: InvoiceOpenAction): void => {
-  router.push(`/billing/${id}?mode=${mode}`)
+  router.push(`${invoicePath(id)}?mode=${mode}`)
 }
 
 onMounted(() => fetchInvoices())
@@ -589,7 +591,7 @@ onMounted(() => fetchInvoices())
       v-if="showBulkConfirmModal"
       variant="confirm"
       :title="t('clients.clientInvoices.confirmBulkAction')"
-      :message="t('clients.clientInvoices.confirmBulkApply', { action: bulkActionLabel, count: selectedIds.size })"
+      :message="t('clients.clientInvoices.confirmBulkApply', { action: bulkActionLabel, count: selectedIds.size }, selectedIds.size)"
       :confirm-label="bulkActionLabel"
       :loading-label="t('shared.processing')"
       :loading="store.loading"

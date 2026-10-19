@@ -11,8 +11,8 @@ export interface OrderListItem {
   orderNumber: string
   /** FK to the owning client. */
   clientId: number
-  /** Client display name. */
-  clientName: string
+  /** Client display name; null when unresolved. */
+  clientName: string | null
   /** Current order status. */
   status: OrderStatus
   /** Payment gateway module name. */

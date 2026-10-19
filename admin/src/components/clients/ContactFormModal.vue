@@ -294,7 +294,7 @@ onMounted(() => {
                 v-model="email"
                 type="email"
                 :invalid="invalid"
-                placeholder="contact@example.com"
+                :placeholder="t('shared.examples.email')"
                 data-testid="clients-contact-email"
                 @input="errors.email = ''"
               />

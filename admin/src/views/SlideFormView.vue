@@ -40,8 +40,10 @@ import { useSettingsStore } from '@/stores/settings'
 import { useSlidesStore } from '@/stores/slides'
 import type { CreateSlidePayload, SlideTranslation, UpdateSlidePayload } from '@/types/slide'
 import { SlideAudience } from '@/types/slideaudience'
-import { SlideLocale } from '@/types/slidelocale'
+import { MessageLanguage } from '@/locales/messages'
 import type { UiTabItem } from '@/utils/ui/tabs'
+import { AppRoute } from '@/lib/routes'
+import { ILLUSTRATION_ACCEPT } from '@/lib/mimeTypes'
 
 const { t } = useI18n()
 
@@ -112,16 +114,16 @@ const pageTitle = computed<string>(() => (isEditMode.value ? t('settings.slideFo
 
 /** The trail above the form. */
 const breadcrumb = computed(() => [
-  { label: t('shared.settings'), to: '/settings' },
-  { label: t('settings.slideForm.slides'), to: '/settings/slides' },
+  { label: t('shared.settings'), to: AppRoute.Settings },
+  { label: t('settings.slideForm.slides'), to: AppRoute.SettingsSlides },
   { label: pageTitle.value },
 ])
 
 /** The translation tabs, one per locale. */
 const localeTabs = computed<UiTabItem[]>(() => [
-  { value: SlideLocale.En, label: t('settings.slideForm.locales.en'), testid: 'slide-form-tab-en' },
-  { value: SlideLocale.Ru, label: t('settings.slideForm.locales.ru'), testid: 'slide-form-tab-ru' },
-  { value: SlideLocale.Hy, label: t('settings.slideForm.locales.hy'), testid: 'slide-form-tab-hy' },
+  { value: MessageLanguage.En, label: t('settings.slideForm.locales.en'), testid: 'slide-form-tab-en' },
+  { value: MessageLanguage.Ru, label: t('settings.slideForm.locales.ru'), testid: 'slide-form-tab-ru' },
+  { value: MessageLanguage.Hy, label: t('settings.slideForm.locales.hy'), testid: 'slide-form-tab-hy' },
 ])
 
 /** True while loading existing slide data in edit mode. */
@@ -176,7 +178,7 @@ const uploading = ref(false)
 const uploadError = ref<string | null>(null)
 
 /** Currently active translation tab locale. */
-const activeLocale = ref<SlideLocale>(SlideLocale.En)
+const activeLocale = ref<MessageLanguage>(MessageLanguage.En)
 
 /**
  * Creates a blank translation form object.
@@ -197,10 +199,10 @@ const createEmptyTranslation = (): TranslationForm => ({
  * enum: `Object.fromEntries` produces a string index signature, which cannot prove every locale is
  * present, so adding a locale to the enum fails to compile here until its tab is initialised too.
  */
-const translations = reactive<Record<SlideLocale, TranslationForm>>({
-  [SlideLocale.En]: createEmptyTranslation(),
-  [SlideLocale.Ru]: createEmptyTranslation(),
-  [SlideLocale.Hy]: createEmptyTranslation(),
+const translations = reactive<Record<MessageLanguage, TranslationForm>>({
+  [MessageLanguage.En]: createEmptyTranslation(),
+  [MessageLanguage.Ru]: createEmptyTranslation(),
+  [MessageLanguage.Hy]: createEmptyTranslation(),
 })
 
 /** Whether a linked product is selected. */
@@ -221,7 +223,7 @@ const leaveGuard = useUnsavedChangesGuard(() => isDirty.value && !saving.value)
  * @param value - The tab value the strip reported.
  */
 const selectLocale = (value: string): void => {
-  const locale = enumValueOf(SlideLocale, value)
+  const locale = enumValueOf(MessageLanguage, value)
   if (locale !== null) {
     activeLocale.value = locale
   }
@@ -302,11 +304,11 @@ onMounted(async () => {
   visibleFrom.value = slide.visibleFrom ? new Date(slide.visibleFrom) : null
   visibleUntil.value = slide.visibleUntil ? new Date(slide.visibleUntil) : null
 
-  for (const locale of Object.values(SlideLocale)) {
+  for (const locale of Object.values(MessageLanguage)) {
     translations[locale] = createEmptyTranslation()
   }
   for (const stored of slide.translations) {
-    const locale = enumValueOf(SlideLocale, stored.locale)
+    const locale = enumValueOf(MessageLanguage, stored.locale)
     if (locale !== null) {
       translations[locale] = {
         title: stored.title,
@@ -328,7 +330,7 @@ onMounted(async () => {
  *
  * @param locale - The locale to add the feature to.
  */
-const addFeature = (locale: SlideLocale): void => {
+const addFeature = (locale: MessageLanguage): void => {
   translations[locale].features.push('')
 }
 
@@ -338,7 +340,7 @@ const addFeature = (locale: SlideLocale): void => {
  * @param locale - The locale to remove the feature from.
  * @param index - The index of the feature to remove.
  */
-const removeFeature = (locale: SlideLocale, index: number): void => {
+const removeFeature = (locale: MessageLanguage, index: number): void => {
   translations[locale].features.splice(index, 1)
 }
 
@@ -349,7 +351,7 @@ const removeFeature = (locale: SlideLocale, index: number): void => {
  */
 const collectTranslations = (): SlideTranslation[] => {
   const collected: SlideTranslation[] = []
-  for (const locale of Object.values(SlideLocale)) {
+  for (const locale of Object.values(MessageLanguage)) {
     const form = translations[locale]
     if (form.title.trim()) {
       const features = form.features.filter((f) => f.trim())
@@ -399,7 +401,7 @@ const handleSave = async (): Promise<void> => {
 
   if (saved) {
     isDirty.value = false
-    void router.push('/settings/slides')
+    void router.push(AppRoute.SettingsSlides)
   } else {
     saveError.value = slidesStore.actionError
   }
@@ -407,7 +409,7 @@ const handleSave = async (): Promise<void> => {
 
 /** Navigates back to the slides list; the unsaved-changes guard asks first if needed. */
 const handleCancel = (): void => {
-  void router.push('/settings/slides')
+  void router.push(AppRoute.SettingsSlides)
 }
 </script>
 
@@ -462,7 +464,7 @@ const handleCancel = (): void => {
             <UiInput
               v-model="brandColor"
               type="color"
-              placeholder="#06b6d4"
+              :placeholder="t('shared.examples.colorHex')"
               :aria-label="t('settings.slideForm.brandColor')"
               data-testid="slide-form-brand-color"
               class="h-10 w-12 cursor-pointer"
@@ -470,7 +472,7 @@ const handleCancel = (): void => {
             <UiInput
               v-model="brandColor"
               type="text"
-              placeholder="#06b6d4"
+              :placeholder="t('shared.examples.colorHex')"
               data-testid="slide-form-brand-color-hex"
               class="flex-1 font-mono"
             />
@@ -507,7 +509,7 @@ const handleCancel = (): void => {
 
             <UiStack gap="sm" class="min-w-56 flex-1">
               <UiUploadZone
-                accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                :accept="ILLUSTRATION_ACCEPT"
                 :uploading="uploading"
                 :hint="t('settings.slideForm.jpegPngWebpSvgMax')"
                 input-testid="slide-form-image-file"
@@ -715,7 +717,7 @@ const handleCancel = (): void => {
                 :id="id"
                 v-model="translations[activeLocale].ctaUrl"
                 type="text"
-                placeholder="/order/product"
+                :placeholder="t('shared.examples.internalPath')"
                 data-testid="slide-form-cta-url"
               />
             </template>

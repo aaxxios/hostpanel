@@ -34,6 +34,7 @@ import UiTextarea from '@/components/ui/UiTextarea.vue'
 import UiToggle from '@/components/ui/UiToggle.vue'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiLabelVariant } from '@/utils/ui/text'
+import { AppRoute } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -202,7 +203,7 @@ const statusOptions = CLIENT_STATUS_OPTIONS
  * @returns Nothing.
  */
 const goBack = (): void => {
-  router.push('/clients')
+  router.push(AppRoute.Clients)
 }
 
 /**
@@ -240,7 +241,7 @@ const handleSubmit = async (): Promise<void> => {
   const created = await store.createClient(payload)
   saving.value = false
   if (created) {
-    router.push('/clients')
+    router.push(AppRoute.Clients)
   } else {
     saveError.value = store.saveError
   }
@@ -319,7 +320,7 @@ onMounted(() => {
                       v-model="email"
                       type="email"
                       :invalid="invalid"
-                      placeholder="client@example.com"
+                      :placeholder="t('shared.examples.email')"
                       data-testid="add-client-email"
                     />
                   </template>
@@ -460,7 +461,7 @@ onMounted(() => {
                       :id="id"
                       v-model="state"
                       type="text"
-                      placeholder="NY"
+                      :placeholder="t('shared.examples.state')"
                       data-testid="add-client-state"
                     />
                   </template>
@@ -471,7 +472,7 @@ onMounted(() => {
                       :id="id"
                       v-model="postCode"
                       type="text"
-                      placeholder="10001"
+                      :placeholder="t('shared.examples.postalCode')"
                       data-testid="add-client-postcode"
                     />
                   </template>

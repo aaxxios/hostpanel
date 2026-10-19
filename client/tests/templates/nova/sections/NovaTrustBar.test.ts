@@ -4,7 +4,8 @@
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import TrustBar from '~/templates/nova/sections/NovaTrustBar.vue'
-import { TRUST_ITEMS, TRUST_UPTIME_SETTING } from '~/templates/nova/content'
+import { PortalSettingKey } from '~/constants/portalSettingKey'
+import { TRUST_ITEMS } from '~/templates/nova/content'
 import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
 
 describe('TrustBar', () => {
@@ -16,7 +17,7 @@ describe('TrustBar', () => {
   })
 
   it('prints the operator figure verbatim when set', () => {
-    stubTemplateGlobals({ settings: { [TRUST_UPTIME_SETTING[0]]: '99.9%' } })
+    stubTemplateGlobals({ settings: { [PortalSettingKey.StatsUptime]: '99.9%' } })
     const wrapper = mountWithKit(TrustBar)
 
     expect(wrapper.find('strong').text()).toBe('99.9%')

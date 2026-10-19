@@ -1,5 +1,6 @@
 /**
- * Product group ids the storefront reads by name.
+ * The one product group id the storefront reads by name. Every other group is read from the
+ * catalogue's group list (`stores/catalog.ts`).
  *
  * @module constants/catalogGroup
  */

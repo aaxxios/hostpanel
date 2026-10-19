@@ -48,7 +48,7 @@ export const registeredDomain: DomainRegistration = {
   clientId: 8,
   clientName: 'Grace Hopper',
   name: 'compiler.example.test',
-  regPeriod: '1 Year',
+  regPeriodYears: 1,
   registrar: null,
   recurringAmount: 12.99,
   priceCurrency: 'USD',

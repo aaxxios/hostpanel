@@ -20,7 +20,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Common.Enums;
 /// </para>
 /// <para>
 /// The route segment is the member name lower-cased (<c>logo</c>, <c>favicon</c>,
-/// <c>logodark</c>, <c>logomark</c>); the storage directory is the same string.
+/// <c>logodark</c>, <c>logomark</c>, <c>content</c>); the storage directory is the same string.
 /// </para>
 /// </remarks>
 public enum BrandingKind
@@ -36,4 +36,10 @@ public enum BrandingKind
 
     /// <summary>The square icon-only logo for compact headers and sign-in pages. One rendition.</summary>
     LogoMark = 3,
+
+    /// <summary>
+    /// A storefront content picture: a client avatar, a partner logo or a project screenshot. Processed like
+    /// a logo (one rendition, aspect ratio preserved) and stored under its own directory.
+    /// </summary>
+    Content = 4,
 }

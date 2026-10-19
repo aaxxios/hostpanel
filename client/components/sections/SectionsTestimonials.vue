@@ -1,5 +1,5 @@
 <template>
-  <section class="py-20 bg-ui-page relative overflow-hidden" data-testid="sections-testimonials">
+  <section v-if="testimonials.length" class="py-20 bg-ui-page relative overflow-hidden" data-testid="sections-testimonials">
     <!-- Background decorations -->
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-r from-primary-500/5 via-transparent to-primary-500/5 dark:to-secondary-500/5" />
@@ -26,12 +26,12 @@
             :modules="modules"
             :slides-per-view="1"
             :space-between="30"
-            :loop="true"
-            :autoplay="{ delay: 5000, disableOnInteraction: false, pauseOnMouseEnter: true }"
+            :loop="testimonials.length > 1"
+            :autoplay="{ delay: TESTIMONIAL_AUTOPLAY_MS, disableOnInteraction: false, pauseOnMouseEnter: true }"
             :pagination="{ clickable: true }"
             class="testimonials-swiper"
           >
-            <SwiperSlide v-for="(testimonial, index) in displayedTestimonials" :key="testimonial.id">
+            <SwiperSlide v-for="(testimonial, index) in testimonials" :key="testimonial.id">
               <UiCard
                 padding="none"
                 :class="[GRADIENTS[index % GRADIENTS.length], 'relative overflow-hidden']"
@@ -44,7 +44,7 @@
                   <!-- Rating -->
                   <div class="flex items-center gap-1 mb-6">
                     <Star
-                      v-for="(delay, star) in STAR_DELAYS"
+                      v-for="(delay, star) in STAR_DELAYS.slice(0, testimonial.rating)"
                       :key="star"
                       :size="20"
                       :stroke-width="2"
@@ -58,7 +58,7 @@
                     <Quote :size="64" :stroke-width="2" />
                   </div>
 
-                  <UiText class="relative text-lg md:text-xl mb-8 leading-relaxed italic text-gray-800 dark:text-white/90">"{{ testimonial.text }}"</UiText>
+                  <UiText class="relative text-lg md:text-xl mb-8 leading-relaxed italic text-gray-800 dark:text-white/90">"{{ testimonial.quote }}"</UiText>
 
                   <!-- Author -->
                   <div class="flex items-center justify-between">
@@ -72,13 +72,13 @@
 
                       <div>
                         <div class="font-semibold text-gray-900 dark:text-white">{{ testimonial.name }}</div>
-                        <div class="text-sm text-gray-700 dark:text-gray-300">{{ testimonial.position }}</div>
-                        <div class="text-sm text-primary-700 dark:text-secondary-400">{{ testimonial.company }}</div>
+                        <div v-if="testimonial.role" class="text-sm text-gray-700 dark:text-gray-300">{{ testimonial.role }}</div>
+                        <div v-if="testimonial.company" class="text-sm text-primary-700 dark:text-secondary-400">{{ testimonial.company }}</div>
                       </div>
                     </div>
 
                     <!-- Company badge -->
-                    <span class="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-white/10 backdrop-blur-sm rounded-lg border border-gray-300 dark:border-white/20 hover:border-primary-500/50 transition-colors duration-300">
+                    <span v-if="testimonial.company" class="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-white/10 backdrop-blur-sm rounded-lg border border-gray-300 dark:border-white/20 hover:border-primary-500/50 transition-colors duration-300">
                       <Building2 :size="18" :stroke-width="2" class="text-gray-700 dark:text-gray-300" />
                       <span class="text-sm text-gray-700 dark:text-gray-300">{{ testimonial.company }}</span>
                     </span>
@@ -95,31 +95,6 @@
 
         <UiText size="sm" tone="subtle" class="text-center mt-6">{{ $t('testimonials.hint') }}</UiText>
       </div>
-
-      <!-- Stats row -->
-      <UiGrid cols="4" gap="md" class="sm:gap-6 mt-12 sm:mt-14 md:mt-16 max-w-4xl mx-auto md:grid-cols-4">
-        <UiCard
-          v-for="(stat, index) in testimonialStats"
-          :key="stat.label"
-          v-motion
-          :initial="{ opacity: 0, y: 30 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 400 } }"
-          padding="sm"
-          class="relative text-center group hover:border-primary-500/30 dark:hover:border-secondary-500/30 hover:-translate-y-1 transition-all duration-300 min-w-0"
-          :data-testid="`testimonial-stat-${index}`"
-        >
-          <UiDecor class="inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary-500/10 to-primary-500/10 dark:to-secondary-500/10" />
-
-          <div class="relative">
-            <div class="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary-400 to-primary-400 dark:to-secondary-400 bg-clip-text text-transparent mb-1.5 sm:mb-2 group-hover:scale-110 transition-transform duration-300 break-words">
-              {{ stat.value }}
-            </div>
-            <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 break-words leading-tight">{{ stat.label }}</div>
-          </div>
-
-          <UiDecor class="bottom-0 right-0 w-10 h-10 border-r-2 border-b-2 border-primary-500/50 dark:border-secondary-500/50 rounded-br-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </UiCard>
-      </UiGrid>
     </UiContainer>
 
     <!-- Section corner decorations -->
@@ -130,18 +105,19 @@
 
 <script setup lang="ts">
 /**
- * Testimonials carousel (Swiper) with a row of client figures underneath.
+ * Testimonials carousel (Swiper).
  *
- * The quotes come from lib/data.ts (author, company) and the locale files (text, position). Each
- * card sits on a dark gradient in dark mode and on the plain surface in light mode, so the quote
- * text is always readable.
+ * The quotes come from the storefront store (`GET /api/portal/public/testimonials`, localised by the API);
+ * with none the section renders nothing. Each card sits on a dark gradient in dark mode and on
+ * the plain surface in light mode, so the quote text is always readable.
  */
 import { Building2, Quote, Star } from 'lucide-vue-next'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Autoplay, Pagination } from 'swiper/modules'
+import { TESTIMONIAL_AUTOPLAY_MS } from '~/constants/uiDefaults'
 import 'swiper/css'
 import 'swiper/css/pagination'
-import { testimonials } from '~/lib/data'
+import { useStorefrontStore } from '~/stores/storefront'
 import { getInitials } from '~/utils/design'
 
 /** Swiper modules the carousel uses. */
@@ -160,21 +136,15 @@ const GRADIENTS = [
 /** Pulse delay of each of the five rating stars. */
 const STAR_DELAYS = ['[animation-delay:0.1s]', '[animation-delay:0.2s]', '[animation-delay:0.3s]', '[animation-delay:0.4s]', '[animation-delay:0.5s]']
 
-/** Translation helpers and the active language. */
-const { t } = useI18n()
+/** The active language; the quotes are re-read when it changes. */
+const { locale } = useI18n()
 
-/** The testimonials with their translated text and position. */
-const displayedTestimonials = computed(() => testimonials.map((testimonial) => ({
-  ...testimonial,
-  text: t(`testimonials.items.${testimonial.id}.text`),
-  position: t(`testimonials.items.${testimonial.id}.position`),
-})))
+/** The storefront content: testimonials, partners, projects and FAQs. */
+const storefront = useStorefrontStore()
 
-/** The four client figures under the carousel. */
-const testimonialStats = computed(() => [
-  { value: '98%', label: t('testimonials.stats.satisfaction') },
-  { value: '150+', label: t('testimonials.stats.projects') },
-  { value: '50+', label: t('testimonials.stats.clients') },
-  { value: '4.9', label: t('testimonials.stats.rating') },
-])
+// Not awaited: Nuxt still holds the server render for it, and the section stays synchronous.
+useAsyncData('storefront:testimonials', () => storefront.loadTestimonials(), { watch: [locale] })
+
+/** The testimonials to show, in display order. */
+const testimonials = computed(() => storefront.testimonials)
 </script>

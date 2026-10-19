@@ -1,0 +1,70 @@
+/**
+ * The `portal.*` settings the unauthenticated storefront endpoint may expose.
+ *
+ * An explicit list on purpose: deriving it from every `PortalSettingKey` would publish any key
+ * added to that enum later, secret or not. A key is published only by being named here, and
+ * `tests/constants/publicPortalSettingKeys.test.ts` pins the list to the backend's
+ * `PortalSettingKeys.Public` set.
+ *
+ * @module constants/publicPortalSettingKeys
+ */
+
+import { PortalSettingKey } from './portalSettingKey'
+
+/** The only setting keys `GET /api/portal/public/settings` will ever return. */
+export const PUBLIC_PORTAL_SETTING_KEYS: readonly PortalSettingKey[] = [
+  PortalSettingKey.Template,
+  PortalSettingKey.SiteName,
+  PortalSettingKey.SiteTagline,
+  PortalSettingKey.ThemeDefault,
+  PortalSettingKey.ThemeUserToggle,
+  PortalSettingKey.Logo,
+  PortalSettingKey.LogoDark,
+  PortalSettingKey.LogoMark,
+  PortalSettingKey.Favicon,
+  PortalSettingKey.BrandPrimary,
+  PortalSettingKey.BrandAccent,
+  PortalSettingKey.BrandFontHeading,
+  PortalSettingKey.BrandFontBody,
+  PortalSettingKey.AnalyticsGtmId,
+  PortalSettingKey.ChatBaseUrl,
+  PortalSettingKey.ChatWebsiteToken,
+  PortalSettingKey.ChatWebsiteTokenRu,
+  PortalSettingKey.ChatWebsiteTokenHy,
+  PortalSettingKey.ChatProvider,
+  PortalSettingKey.ContactWhatsapp,
+  PortalSettingKey.ContactTelegram,
+  PortalSettingKey.ContactEmail,
+  PortalSettingKey.ContactPhone,
+  PortalSettingKey.ContactAddress,
+  PortalSettingKey.ContactHours,
+  PortalSettingKey.ContactTimezone,
+  PortalSettingKey.ContactMapUrl,
+  PortalSettingKey.NewsletterActionUrl,
+  PortalSettingKey.SocialFacebook,
+  PortalSettingKey.SocialInstagram,
+  PortalSettingKey.SocialTwitter,
+  PortalSettingKey.SocialLinkedin,
+  PortalSettingKey.SocialYoutube,
+  PortalSettingKey.StatsClients,
+  PortalSettingKey.StatsUptime,
+  PortalSettingKey.StatsRegions,
+  PortalSettingKey.HeroBadge,
+  PortalSettingKey.LegalTaxId,
+  PortalSettingKey.AppsEnabled,
+  PortalSettingKey.AppsAccount,
+  PortalSettingKey.AppsTasks,
+  PortalSettingKey.AppsErp,
+  PortalSettingKey.AppsHostpanel,
+  PortalSettingKey.AppsSheets,
+  PortalSettingKey.AppsMail,
+  PortalSettingKey.AppsDocs,
+  PortalSettingKey.AppsCalendar,
+  PortalSettingKey.FeaturesBackups,
+  PortalSettingKey.FeaturesStorage,
+  PortalSettingKey.FeaturesCaching,
+  PortalSettingKey.FeaturesCdn,
+  PortalSettingKey.FeaturesFirewall,
+  PortalSettingKey.FeaturesMalware,
+  PortalSettingKey.MigrationFree
+]

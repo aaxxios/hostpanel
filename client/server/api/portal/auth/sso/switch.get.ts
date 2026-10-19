@@ -10,16 +10,24 @@
  */
 
 import { randomBytes, createHash } from 'node:crypto'
+import { CLIENT_AREA_PATH, SSO_AUTHORIZE_PATH } from '~/constants/clientRoutes'
+import { SessionCookie } from '~/constants/sessionCookie'
+import { SSO_FLOW_COOKIE_MAX_AGE } from '~/server/utils/auth-cookie'
+import { requireSsoSetting } from '~/server/utils/requireSsoSetting'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const query = getQuery(event)
   const sub = query.sub as string | undefined
-  const redirectTo = (query.redirect as string | undefined) || '/client'
+  const redirectTo = (query.redirect as string | undefined) || CLIENT_AREA_PATH
 
   if (!sub) {
-    return sendRedirect(event, '/api/portal/auth/sso/authorize', 302)
+    return sendRedirect(event, SSO_AUTHORIZE_PATH, 302)
   }
+
+  // Fail closed before any cookie is set: an unconfigured SSO has nowhere to send the browser.
+  const ssoPublicUrl = requireSsoSetting(config.public.ssoPublicUrl)
+  const redirectUri = requireSsoSetting(config.ssoCallbackUrl)
 
   // Generate PKCE
   const codeVerifier = randomBytes(32).toString('base64url')
@@ -27,32 +35,31 @@ export default defineEventHandler(async (event) => {
     .update(codeVerifier)
     .digest('base64url')
 
-  setCookie(event, 'pkce_verifier', codeVerifier, {
+  setCookie(event, SessionCookie.PkceVerifier, codeVerifier, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 5,
+    maxAge: SSO_FLOW_COOKIE_MAX_AGE,
     path: '/',
   })
 
   const state = randomBytes(16).toString('hex')
-  setCookie(event, 'oauth_state', state, {
+  setCookie(event, SessionCookie.OauthState, state, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 5,
+    maxAge: SSO_FLOW_COOKIE_MAX_AGE,
     path: '/',
   })
 
-  setCookie(event, 'post_login_redirect', redirectTo, {
+  setCookie(event, SessionCookie.PostLoginRedirect, redirectTo, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 5,
+    maxAge: SSO_FLOW_COOKIE_MAX_AGE,
     path: '/',
   })
 
-  const redirectUri = config.ssoCallbackUrl
   const oidcParams = new URLSearchParams({
     client_id: config.ssoClientId,
     response_type: 'code',
@@ -64,8 +71,7 @@ export default defineEventHandler(async (event) => {
   })
   const oidcReturnUrl = `/connect/authorize?${oidcParams}`
 
-  // Redirect to sso.innovayse.local/switch-init — runs same-origin so sso_remembered cookie is sent
-  const ssoPublicUrl = (config.public.ssoPublicUrl as string) || 'http://sso.innovayse.local'
+  // Redirect to the SSO's switch-init page — runs same-origin so the sso_remembered cookie is sent
   const switchInitUrl = `${ssoPublicUrl}/switch-init?sub=${encodeURIComponent(sub)}&returnUrl=${encodeURIComponent(oidcReturnUrl)}`
   return sendRedirect(event, switchInitUrl, 302)
 })

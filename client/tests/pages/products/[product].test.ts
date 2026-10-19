@@ -13,9 +13,10 @@ import MarketingSectionHeader from '~/components/marketing/MarketingSectionHeade
 import { useCartStore } from '~/stores/cart'
 import type { BillingCurrency } from '~/types/currency'
 import type { PortalProduct } from '~/types/portalproduct'
+import type { PortalProductGroup } from '~/types/portalproductgroup'
 
 /** The mocked catalogue endpoints, re-created for every test. */
-const api = { fetchProducts: vi.fn() }
+const api = { fetchProducts: vi.fn(), fetchProductGroups: vi.fn() }
 
 /** The currency the stood-in currency endpoint answers with. */
 const usd: BillingCurrency = { code: 'USD', numeric: '840', prefix: '$', suffix: '', decimals: 2, isBase: true }
@@ -38,9 +39,12 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
   useCurrencyApi: () => ({ loadBillingCurrencies: () => Promise.resolve([usd]) }),
 }))
 
+/** The family's group. */
+const groups: PortalProductGroup[] = [{ id: 3, name: 'Alpha Suite', isActive: true, productCount: 3 }]
+
 /** A family with a parent and two plans. */
 const catalogue: PortalProduct[] = [
-  { id: 10, pid: 10, groupId: 3, name: 'SmartLearn System', slug: 'smartlearn-system', description: 'Learn online<br />✔ Courses' },
+  { id: 10, pid: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', description: 'Learn online<br />✔ Courses' },
   { id: 11, pid: 11, groupId: 3, name: 'Starter', slug: 'starter', description: '✔ One site', pricing: { monthly: 10, annual: 100 } },
   { id: 12, pid: 12, groupId: 3, name: 'Pro', slug: 'pro', description: '✔ Two sites', pricing: { monthly: 20, annual: null } },
 ]
@@ -54,7 +58,7 @@ let spies: ReturnType<typeof stubPublicPageRuntime>
  * @param product The `product` route parameter.
  * @returns The wrapper.
  */
-const mountProduct = async (product = 'smartlearn-system') => {
+const mountProduct = async (product = 'alpha-suite') => {
   spies = stubPublicPageRuntime({ params: { product } })
   const wrapper = await mountPage(ProductPage, { components: { CatalogProductDetail, SectionsCTA, MarketingSectionHeader }, stubs: { 'i18n-t': true } })
   await flushPromises()
@@ -65,6 +69,8 @@ describe('product detail page', () => {
   beforeEach(() => {
     api.fetchProducts.mockReset()
     api.fetchProducts.mockResolvedValue(catalogue)
+    api.fetchProductGroups.mockReset()
+    api.fetchProductGroups.mockResolvedValue(groups)
     window.localStorage.clear()
     vi.stubGlobal('open', vi.fn())
     vi.stubGlobal('useRuntimeConfig', () => ({ public: { baseUrl: 'https://panel.test' } }))
@@ -81,7 +87,7 @@ describe('product detail page', () => {
   it('shows the product named by the address with its plans and their monthly prices', async () => {
     const wrapper = await mountProduct()
 
-    expect(wrapper.find('[data-testid="product-name"]').text()).toBe('SmartLearn System')
+    expect(wrapper.find('[data-testid="product-name"]').text()).toBe('Alpha Suite')
     expect(wrapper.find('[data-testid="product-plan-11"] [data-testid="product-plan-price"]').text()).toContain('10.00')
     expect(wrapper.find('[data-testid="product-plan-12"] [data-testid="product-plan-price"]').text()).toContain('20.00')
   })

@@ -118,7 +118,18 @@ const installAutoImports = (): void => {
   })
 
   /** `useSiteIdentity` stand-in: the operator-set name falls back to the brand, no tagline. */
-  define('useSiteIdentity', () => ({ name: vue.ref('Innovayse'), tagline: vue.ref('') }))
+  define('useSiteIdentity', () => ({ name: vue.ref('Hostpanel'), tagline: vue.ref('') }))
+
+  /** `useContactDetails` stand-in: nothing configured, so every contact row is hidden. */
+  define('useContactDetails', () => ({
+    email: vue.ref(''),
+    phone: vue.ref(''),
+    phoneLink: vue.ref(''),
+    telegramUrl: vue.ref(''),
+    whatsappUrl: vue.ref(''),
+    address: vue.ref(''),
+    mapUrl: vue.ref(''),
+  }))
 
   /** `useContactHours` stand-in: no working hours set, so the contact page shows no hours row. */
   define('useContactHours', () => ({ workingHours: vue.ref('') }))

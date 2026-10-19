@@ -31,7 +31,7 @@ const { t } = useI18n()
         <UiStack direction="row" align="center" gap="sm">
           <UiImage src="/logo.svg" alt="" class="w-9 h-9" />
           <UiText tone="primary" size="lg" class="font-display font-bold">
-            {{ t('shared.innovayse') }}
+            {{ t('shared.productName') }}
           </UiText>
         </UiStack>
         <UiStack gap="xs">

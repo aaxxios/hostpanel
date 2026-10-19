@@ -7,28 +7,38 @@
  * default slot: pass the server's sentence, never compose one.
  */
 import { computed } from 'vue'
-import { toneAlertClasses } from '@/utils/ui/tone'
-import type { UiTone } from '@/utils/ui/tone'
+import { toneAlertClasses, UiTone } from '@/utils/ui/tone'
+
+/** The older name of the `danger` tone, still accepted as a variant. */
+const ERROR_ALIAS = 'error'
 
 /** Alert variants: every tone, plus `error` kept as an alias of `danger`. */
-type UiAlertVariant = UiTone | 'error'
+type UiAlertVariant = UiTone | typeof ERROR_ALIAS
+
+/** Live-region roles an alert announces itself with. */
+const AlertRole = {
+  /** Interrupts the reader. */
+  Alert: 'alert',
+  /** Waits for the reader to pause. */
+  Status: 'status',
+} as const
 
 /** Props for UiAlert. */
 const props = withDefaults(defineProps<{
   /** Visual variant controlling colours. */
   variant?: UiAlertVariant
 }>(), {
-  variant: 'warning',
+  variant: UiTone.Warning,
 })
 
 /** The tone the variant resolves to. */
-const tone = computed<UiTone>(() => (props.variant === 'error' ? 'danger' : props.variant))
+const tone = computed<UiTone>(() => (props.variant === ERROR_ALIAS ? UiTone.Danger : props.variant))
 
 /** Colour classes of the tone. */
 const toneClasses = computed<string>(() => toneAlertClasses[tone.value])
 
 /** Live-region role: assertive for danger and warning, polite otherwise. */
-const role = computed<'alert' | 'status'>(() => (tone.value === 'danger' || tone.value === 'warning' ? 'alert' : 'status'))
+const role = computed<(typeof AlertRole)[keyof typeof AlertRole]>(() => (tone.value === UiTone.Danger || tone.value === UiTone.Warning ? AlertRole.Alert : AlertRole.Status))
 
 /** Triangle outline used for the warning variant. */
 const WARNING_PATH = 'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z'
@@ -37,7 +47,7 @@ const WARNING_PATH = 'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13
 const CIRCLE_PATH = 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z'
 
 /** Outline path of the variant's icon. */
-const iconPath = computed<string>(() => (tone.value === 'warning' ? WARNING_PATH : CIRCLE_PATH))
+const iconPath = computed<string>(() => (tone.value === UiTone.Warning ? WARNING_PATH : CIRCLE_PATH))
 </script>
 
 <template>

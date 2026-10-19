@@ -8,6 +8,7 @@ using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Wolverine;
+
 namespace Innovayse.Hostpanel.Application.Domains.Commands.AutoRenewDomains;
 
 /// <summary>
@@ -16,6 +17,9 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.AutoRenewDomains;
 /// </summary>
 public sealed class AutoRenewDomainsHandler
 {
+    /// <summary>How far ahead of expiry a domain becomes eligible for auto-renewal.</summary>
+    private static readonly TimeSpan RenewalLookahead = TimeSpan.FromDays(30);
+
     /// <summary>The data context the auto-renew-due domains are read from.</summary>
     private readonly IHostpanelDbContext _context;
 
@@ -44,7 +48,7 @@ public sealed class AutoRenewDomainsHandler
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task HandleAsync(AutoRenewDomainsCommand cmd, CancellationToken ct)
     {
-        var threshold = DateTimeOffset.UtcNow.AddDays(30);
+        var threshold = DateTimeOffset.UtcNow.Add(RenewalLookahead);
         var domains = await _context.Domains
             .IncludeChildren()
             .Where(x => x.AutoRenew && x.ExpiresAt < threshold && x.Status == DomainStatus.Active)

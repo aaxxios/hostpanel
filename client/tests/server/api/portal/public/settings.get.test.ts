@@ -43,6 +43,20 @@ describe('GET /api/portal/public/settings', () => {
     expect(backend.requests[0]?.headers['x-language']).toBe('ru')
   })
 
+  it('serves the operator-managed twitter, hours, feature and migration settings', async () => {
+    const keys = [
+      'portal.social.twitter',
+      'portal.contact.hours',
+      'portal.contact.timezone',
+      'portal.features.backups',
+      'portal.features.malware',
+      'portal.migration.free',
+    ]
+    backend.respondWith(() => ({ body: keys.map(key => ({ key, value: 'x' })) }))
+
+    expect(Object.keys(await route.default(makeEvent()) as Record<string, string>)).toEqual(keys)
+  })
+
   it('answers an empty object when the backend sends nothing', async () => {
     backend.respondWith(() => ({ body: null }))
 

@@ -11,6 +11,9 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.InvoiceSelectedItems;
 /// </summary>
 public sealed class InvoiceSelectedItemsHandler
 {
+    /// <summary>How long after creation an invoice for selected items falls due.</summary>
+    private static readonly TimeSpan PaymentTerm = TimeSpan.FromDays(14);
+
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
@@ -61,7 +64,7 @@ public sealed class InvoiceSelectedItemsHandler
 
         var currency = (await _payerCurrency.ForClientAsync(cmd.ClientId, ct)).Code;
         var invoice = Invoice.CreateForBillableItems(
-            cmd.ClientId, DateTimeOffset.UtcNow.AddDays(14), currency, items);
+            cmd.ClientId, DateTimeOffset.UtcNow.Add(PaymentTerm), currency, items);
 
         _context.Invoices.Add(invoice);
         await _context.SaveChangesAsync(ct);

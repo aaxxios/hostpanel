@@ -2,6 +2,7 @@
  * Support content flows: publishing an announcement posts its title, body and flag and returns to
  * the list, and adding a knowledgebase category posts it and shows it in the category grid.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import type { Announcement } from '../src/types/announcement'
 import type { KbCategory } from '../src/types/kbarticle'
@@ -16,12 +17,12 @@ test('publishing an announcement posts it and returns to the list', async ({ pag
     signedIn: true,
     routes: [
       {
-        method: 'GET',
+        method: HttpMethod.Get,
         path: '/api/announcements',
         respond: () => ({ body: { items: stored, totalCount: stored.length, page: 1, pageSize: 20 } }),
       },
       {
-        method: 'POST',
+        method: HttpMethod.Post,
         path: '/api/announcements',
         respond: (call) => {
           const sent = call.body as { title: string; content: string; isPublished: boolean }
@@ -40,7 +41,7 @@ test('publishing an announcement posts it and returns to the list', async ({ pag
 
   await page.waitForURL('**/support/announcements')
   await expect(page.getByTestId('announcements-row-1')).toContainText('Scheduled maintenance')
-  expect(api.callsTo('POST', '/api/announcements')[0]?.body).toEqual({
+  expect(api.callsTo(HttpMethod.Post, '/api/announcements')[0]?.body).toEqual({
     title: 'Scheduled maintenance',
     content: 'The panel is read-only on Sunday night.',
     isPublished: true,
@@ -53,10 +54,10 @@ test('adding a knowledgebase category posts it and shows it in the grid', async 
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      { method: 'GET', path: '/api/admin/knowledgebase/categories', respond: () => ({ body: stored }) },
-      json('GET', '/api/admin/knowledgebase', []),
+      { method: HttpMethod.Get, path: '/api/admin/knowledgebase/categories', respond: () => ({ body: stored }) },
+      json(HttpMethod.Get, '/api/admin/knowledgebase', []),
       {
-        method: 'POST',
+        method: HttpMethod.Post,
         path: '/api/admin/knowledgebase/categories',
         respond: (call) => {
           const sent = call.body as { name: string; description: string; isHidden: boolean }
@@ -75,7 +76,7 @@ test('adding a knowledgebase category posts it and shows it in the grid', async 
   await page.getByTestId('knowledgebase-category-add').click()
 
   await expect(page.getByTestId('knowledgebase-category-5')).toContainText('Getting started')
-  expect(api.callsTo('POST', '/api/admin/knowledgebase/categories')[0]?.body).toEqual({
+  expect(api.callsTo(HttpMethod.Post, '/api/admin/knowledgebase/categories')[0]?.body).toEqual({
     name: 'Getting started',
     description: 'First steps with the panel',
     isHidden: false,
@@ -86,7 +87,7 @@ test('a refused announcement save shows the API sentence and stays on the form',
   const sentence = 'An announcement with this title already exists.'
   await stubApi(page, {
     signedIn: true,
-    routes: [json('POST', '/api/announcements', { type: 'CONFLICT', title: 'Conflict', status: 409, detail: sentence }, 409)],
+    routes: [json(HttpMethod.Post, '/api/announcements', { type: 'CONFLICT', title: 'Conflict', status: 409, detail: sentence }, 409)],
   })
 
   await page.goto('/support/announcements/new')

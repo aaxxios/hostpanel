@@ -23,6 +23,7 @@ import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiToggle from '@/components/ui/UiToggle.vue'
 import { PortalTemplate, PortalThemeMode } from '@/types/portalappearance'
+import { SettingEnv, SettingKey, SettingToggle } from '@/types/setting'
 import type { Setting } from '@/types/setting'
 
 const { t } = useI18n()
@@ -55,13 +56,13 @@ const THEME_MODES = [
 ]
 
 /** Settings key of the template. */
-const TEMPLATE_KEY = 'portal.template'
+const TEMPLATE_KEY = SettingKey.Template
 
 /** Settings key of the default colour mode. */
-const THEME_KEY = 'portal.theme.default'
+const THEME_KEY = SettingKey.ThemeDefault
 
 /** Settings key of the visitor's light/dark switch. */
-const TOGGLE_KEY = 'portal.theme.user_toggle'
+const TOGGLE_KEY = SettingKey.ThemeUserToggle
 
 /** The settings list as a ref, which is what the draft composable watches. */
 const settings = toRef(props, 'settings')
@@ -73,7 +74,7 @@ const templateDraft = useSettingDraft(settings, TEMPLATE_KEY, PortalTemplate.Aur
 const themeDraft = useSettingDraft(settings, THEME_KEY, PortalThemeMode.Dark)
 
 /** Draft of the visitor-switch row. */
-const toggleDraft = useSettingDraft(settings, TOGGLE_KEY, 'true')
+const toggleDraft = useSettingDraft(settings, TOGGLE_KEY, SettingToggle.On)
 
 /** The switch's view of the boolean setting: only the literal `false` is off. */
 const toggleEnabled = computed<boolean>({
@@ -82,14 +83,14 @@ const toggleEnabled = computed<boolean>({
    *
    * @returns False only for the literal `false`.
    */
-  get: () => toggleDraft.value.value !== 'false',
+  get: () => toggleDraft.value.value !== SettingToggle.Off,
   /**
    * Writes the switch back as the string the API stores.
    *
    * @param on - Whether the switch is now on.
    */
   set: (on: boolean) => {
-    toggleDraft.value.value = on ? 'true' : 'false'
+    toggleDraft.value.value = on ? SettingToggle.On : SettingToggle.Off
   },
 })
 
@@ -103,11 +104,14 @@ const templateHint = computed<string>(() => {
 })
 
 /** Keys the seeder has not created yet, so the operator knows why a control is missing. */
-const missingKeys = computed<string[]>(() => [
-  [TEMPLATE_KEY, templateDraft.setting.value],
-  [THEME_KEY, themeDraft.setting.value],
-  [TOGGLE_KEY, toggleDraft.setting.value],
-].filter(([, row]) => !row).map(([key]) => key as string))
+const missingKeys = computed<SettingKey[]>(() => {
+  const rows: [SettingKey, Setting | undefined][] = [
+    [TEMPLATE_KEY, templateDraft.setting.value],
+    [THEME_KEY, themeDraft.setting.value],
+    [TOGGLE_KEY, toggleDraft.setting.value],
+  ]
+  return rows.filter(([, row]) => !row).map(([key]) => key)
+})
 </script>
 
 <template>
@@ -119,7 +123,7 @@ const missingKeys = computed<string[]>(() => [
       v-for="key in missingKeys"
       :key="key"
       :setting-key="key"
-      env-name="NUXT_PUBLIC_PORTAL_TEMPLATE"
+      :env-name="SettingEnv[key]"
     />
 
     <!-- Template -->

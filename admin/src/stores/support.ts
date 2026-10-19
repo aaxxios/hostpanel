@@ -18,6 +18,7 @@ import type {
   TicketListItem,
   UpdateTicketPayload,
 } from '@/types/ticket'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 /**
  * Paginated ticket listing with status/search filters, overview stats, create/update/delete,
@@ -54,7 +55,7 @@ export const useSupportStore = defineStore('support', () => {
   const page = ref(1)
 
   /** Items per page. */
-  const pageSize = ref(20)
+  const pageSize = ref(DEFAULT_PAGE_SIZE)
 
   /** Active status filter (null = all). */
   const statusFilter = ref<TicketListFilter | null>(null)

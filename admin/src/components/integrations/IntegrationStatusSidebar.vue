@@ -14,12 +14,10 @@ import UiCard from '@/components/ui/UiCard.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { MS_PER_SECOND } from '@/lib/limits'
 
 /** Translation function and the active locale (for time wording). */
 const { t, locale } = useI18n()
-
-/** Milliseconds in a second, to show a round trip of a second or more in seconds. */
-const MS_PER_SECOND = 1000
 
 /** Props for IntegrationStatusSidebar. */
 const props = defineProps<{
@@ -29,7 +27,7 @@ const props = defineProps<{
   testResult: IntegrationTestResult | null
   /** True while a connection test is in flight. */
   testing?: boolean
-  /** Host the integration talks to (e.g. "pg.inecoecom.am"), when it has one. */
+  /** Host the integration talks to (e.g. "gateway.example.com"), when it has one. */
   endpointHost?: string
   /** Optional hint text shown in a callout box. */
   hint?: string

@@ -1,4 +1,5 @@
 using FluentValidation;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
@@ -9,7 +10,7 @@ namespace Innovayse.Hostpanel.Application.Reports.Queries.GetDomainsReport;
 public sealed class GetDomainsReportValidator : LocalizedValidator<GetDomainsReportQuery>
 {
     /// <summary>Largest page size an admin report may ask for.</summary>
-    private const int MaxPageSize = 200;
+    private const int MaxPageSize = PagingLimits.MaxReportPageSize;
 
     /// <summary>Initializes validator with localization service.</summary>
     /// <param name="localizer">String localizer for validation messages.</param>

@@ -18,7 +18,7 @@
   },
   "inecobank": {
     "shortDescription": "Ընդունեք հայկական բանկային քարտեր Inecobank-ի տեղակայված վճարման էջի միջոցով։",
-    "fieldGateway_url": "Դարպասի բազային URL (օրինակ՝ https://pg.inecoecom.am)",
+    "fieldGateway_url": "Դարպասի բազային URL (օրինակ՝ https://gateway.example.com)",
     "fieldUsername": "API օգտանուն",
     "fieldPassword": "API գաղտնաբառ",
     "fieldCurrency": "Արժույթ (ISO 4217 թվային կոդ, լռելյայն՝ 051)",

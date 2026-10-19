@@ -4,17 +4,21 @@ using Innovayse.Hostpanel.Domain.Auth;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Domains;
+using Innovayse.Hostpanel.Domain.Faqs;
 using Innovayse.Hostpanel.Domain.Hosting;
 using Innovayse.Hostpanel.Domain.Migration;
 using Innovayse.Hostpanel.Domain.Notifications;
 using Innovayse.Hostpanel.Domain.Orders;
+using Innovayse.Hostpanel.Domain.Partners;
 using Innovayse.Hostpanel.Domain.Products;
+using Innovayse.Hostpanel.Domain.Projects;
 using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Domain.Slides;
 using Innovayse.Hostpanel.Domain.Ssl;
 using Innovayse.Hostpanel.Domain.Support;
+using Innovayse.Hostpanel.Domain.Testimonials;
 using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -183,6 +187,30 @@ public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbConte
 
     /// <summary>Gets the slide per-locale translations table.</summary>
     public DbSet<SlideTranslation> SlideTranslations => Set<SlideTranslation>();
+
+    /// <summary>Gets the storefront client testimonials table.</summary>
+    public DbSet<Testimonial> Testimonials => Set<Testimonial>();
+
+    /// <summary>Gets the per-locale translations of the storefront client testimonials.</summary>
+    public DbSet<TestimonialTranslation> TestimonialTranslations => Set<TestimonialTranslation>();
+
+    /// <summary>Gets the storefront partners table.</summary>
+    public DbSet<Partner> Partners => Set<Partner>();
+
+    /// <summary>Gets the per-locale translations of the storefront partners.</summary>
+    public DbSet<PartnerTranslation> PartnerTranslations => Set<PartnerTranslation>();
+
+    /// <summary>Gets the storefront portfolio projects table.</summary>
+    public DbSet<Project> Projects => Set<Project>();
+
+    /// <summary>Gets the per-locale translations of the storefront portfolio projects.</summary>
+    public DbSet<ProjectTranslation> ProjectTranslations => Set<ProjectTranslation>();
+
+    /// <summary>Gets the storefront frequently asked questions table.</summary>
+    public DbSet<Faq> Faqs => Set<Faq>();
+
+    /// <summary>Gets the per-locale translations of the storefront frequently asked questions.</summary>
+    public DbSet<FaqTranslation> FaqTranslations => Set<FaqTranslation>();
 
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)

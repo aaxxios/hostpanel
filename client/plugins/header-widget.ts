@@ -16,6 +16,7 @@
  * @module plugins/header-widget
  */
 
+import { HEADER_WIDGET_CACHE_BUST, HEADER_WIDGET_PATH } from '~/constants/headerWidget'
 import { AuthMode } from '~/types/authmode'
 
 export default defineNuxtPlugin(() => {
@@ -32,9 +33,7 @@ export default defineNuxtPlugin(() => {
   }
 
   useHead({
-    // `?v=` is a ONE-TIME cache bust shared with the other products. Do not bump it per
-    // widget release: the portal used to serve /widget/header.js behind `expires 1y` +
-    // `immutable`, and this token is what reaches browsers still holding that entry.
-    script: [{ src: `${mainUrl}/widget/header.js?v=20260918`, defer: true }]
+    // The cache-bust token is explained where it is defined; it is deliberately not bumped per release.
+    script: [{ src: `${mainUrl}${HEADER_WIDGET_PATH}?v=${HEADER_WIDGET_CACHE_BUST}`, defer: true }]
   })
 })

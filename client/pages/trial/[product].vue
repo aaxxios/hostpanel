@@ -21,15 +21,15 @@
  * Free-trial page of one product.
  * Route: /trial/[product]
  *
- * The page reads the product's catalogue group through the catalogue store (in the payer's
- * currency, like every other caller, so the cache key is shared), takes the product's visual
- * config from `productConfig` and hands both to the trial components. It owns the head only.
+ * The page reads the catalogue's product groups and family products through the catalogue store
+ * (in the payer's currency, like every other caller, so the cache key is shared), takes the
+ * product's visual config from its group (`familyConfig`) and hands both to the trial components. It owns the head only.
  */
 import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
-import { parseDescription, productConfig, productGidToKey } from '~/utils/catalogGroups'
+import { FAMILY_ICON, familyConfig, familyKey, parseDescription } from '~/utils/catalogGroups'
 
-/** Accent colour of a product the config table does not know. */
+/** Accent colour of a product that matches no catalogue group. */
 const UNKNOWN_PRODUCT_COLOR = '#6366f1'
 
 /** The current route. */
@@ -46,30 +46,27 @@ onMounted(() => {
   currencyStore.load()
 })
 
-/** Route param, e.g. `smartlearn-system`. */
+/** Route param, e.g. `alpha-suite`. */
 const productSlug = route.params.product as string
 
-/** Display name, icon, accent colour and catalogue page of the product. */
-const config = computed(() => productConfig[productSlug] ?? {
-  name: productSlug,
-  icon: 'cube',
-  color: UNKNOWN_PRODUCT_COLOR,
-  learnMoreUrl: '/products',
-  demoUrl: undefined,
-})
+/** The catalogue group the route names, when it is a known family. */
+const group = computed(() => catalogStore.familyGroups.find((candidate) => familyKey(candidate) === productSlug))
 
-/** The catalogue group the product belongs to, when it is a known family. */
-const trialGid = Object.entries(productGidToKey).find(([, key]) => key === productSlug)?.[0]
-
-/** Which products the page reads: the product's own group. */
-const trialFilter = { gid: trialGid ? Number(trialGid) : undefined }
-
-await useAsyncData(`trial:${productSlug}`, () => catalogStore.loadProducts(trialFilter), {
+await useAsyncData(`trial:${productSlug}`, () => catalogStore.loadFamilies(), {
   watch: [() => currencyStore.payerCode, locale],
 })
 
-/** `ProductDto` has no pay type or order URL, so the first product stands in for the trial plan. */
-const trialPlan = computed(() => catalogStore.productsFor(trialFilter)[0])
+/** Display name, icon, accent colour and catalogue page of the product. */
+const config = computed(() => (group.value ? familyConfig(group.value) : {
+  name: productSlug,
+  icon: FAMILY_ICON,
+  color: UNKNOWN_PRODUCT_COLOR,
+  learnMoreUrl: '/products',
+  demoUrl: undefined,
+}))
+
+/** `ProductDto` has no pay type or order URL, so the group's first product stands in for the trial plan. */
+const trialPlan = computed(() => catalogStore.familyProducts.find((product) => Number(product.groupId) === group.value?.id))
 
 /** Where the trial call to action leads: always the family's own page. */
 const trialUrl = computed(() => config.value.learnMoreUrl)

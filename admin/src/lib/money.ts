@@ -38,6 +38,9 @@ export const ReportCurrency = {
 /** One of the report currencies. */
 export type ReportCurrency = (typeof ReportCurrency)[keyof typeof ReportCurrency]
 
+/** Locale whose digit grouping and symbols currency amounts are printed in, whatever the interface language. */
+const MONEY_FORMAT_LOCALE = 'en-US'
+
 /**
  * Multiplier applied to a USD-denominated figure to restate it in the given currency. The rates
  * are fixed values, exactly as they were in each report screen; naming the closed set of
@@ -167,7 +170,7 @@ export const formatReportAmount = (
  */
 export const formatCurrencyCode = (amount: number, code: string): string => {
   try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(amount)
+    return new Intl.NumberFormat(MONEY_FORMAT_LOCALE, { style: 'currency', currency: code }).format(amount)
   } catch {
     // An unknown or malformed code makes Intl throw; show the plain number with the code.
     return `${amount.toFixed(2)} ${code}`

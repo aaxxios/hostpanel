@@ -35,6 +35,9 @@ const acceptInviteMock = vi.fn()
 /** The mocked registration call. */
 const registerMock = vi.fn()
 
+/** The mocked sign-out call. */
+const logoutMock = vi.fn()
+
 /** The mocked password-reset call. */
 const resetPasswordMock = vi.fn()
 
@@ -57,7 +60,8 @@ vi.mock('~/composables/apis/useAuthApi', () => ({
     requestPasswordReset: requestPasswordResetMock,
     acceptInvite: acceptInviteMock,
     register: registerMock,
-    resetPassword: resetPasswordMock
+    resetPassword: resetPasswordMock,
+    logout: logoutMock
   })
 }))
 
@@ -419,5 +423,35 @@ describe('useAuthStore.resetPassword', () => {
     expect(store.resetError).toBe('Too short.')
     expect(store.fieldErrors).toEqual({ newPassword: 'Too short.' })
     expect(store.resetting).toBe(false)
+  })
+})
+
+describe('useAuthStore.signOut', () => {
+  /** Spy standing in for the auto-imported navigation helper. */
+  const navigate = vi.fn()
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    logoutMock.mockReset().mockResolvedValue(undefined)
+    navigate.mockReset()
+    vi.stubGlobal('navigateTo', navigate)
+  })
+
+  it('leaves through the local sign-in page under SSO when no SSO address is configured', async () => {
+    vi.stubGlobal('useRuntimeConfig', () => ({ public: { authMode: 'sso', ssoPublicUrl: '' } }))
+    const store = useAuthStore()
+
+    await store.signOut()
+
+    expect(navigate).toHaveBeenCalledWith('/client/login')
+  })
+
+  it('leaves through the local sign-in page in local mode', async () => {
+    vi.stubGlobal('useRuntimeConfig', () => ({ public: { authMode: 'local', ssoPublicUrl: 'https://sso.test' } }))
+    const store = useAuthStore()
+
+    await store.signOut()
+
+    expect(navigate).toHaveBeenCalledWith('/client/login')
   })
 })

@@ -50,15 +50,14 @@ export default defineNuxtConfig({
     // from the bank. Development runs with `ssr: false` globally (see the note at the top
     // of this file), so this can only ever be caught against a production build.
     '/payment/**': { ssr: false, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
-    // The live-chat SDK (app.vue, chat.innovayse.com) draws its launcher bubble in
-    // *this* page and points the inbox icon at a root-relative `/brand-assets/...`, so
-    // the icon was requested from this origin, 404'd into the Vue Router, and left a
-    // broken bubble plus a router warning on every public page. Proxy the path to the
-    // chat host the widget is configured against — the same rule innovayse-main carries
-    // — so the icon stays whatever is set there instead of a copy here that would drift.
-    // Caching is whatever the chat host sends; a `headers` override here would be dead
-    // config, since a proxied response keeps the upstream's.
-    '/brand-assets/**': { proxy: 'https://chat.innovayse.com/brand-assets/**' },
+    // The live-chat SDK (plugins/live-chat.ts) draws its launcher bubble in *this* page and
+    // points the inbox icon at a root-relative `/brand-assets/...`, which would 404 into the
+    // Vue Router. When the operator names a chat server (NUXT_PUBLIC_PORTAL_CHAT_BASE_URL) the
+    // path is proxied to it; with none configured there is no chat widget and no rule, so no
+    // host is ever assumed. Route rules are fixed at build time, hence the environment value.
+    ...(process.env.NUXT_PUBLIC_PORTAL_CHAT_BASE_URL
+      ? { '/brand-assets/**': { proxy: `${process.env.NUXT_PUBLIC_PORTAL_CHAT_BASE_URL.replace(/\/+$/, '')}/brand-assets/**` } }
+      : {}),
   },
 
   nitro: {
@@ -132,7 +131,9 @@ export default defineNuxtConfig({
     ssoUrl: process.env.SSO_URL || 'http://sso-api:8080',
     ssoClientId: process.env.SSO_CLIENT_ID || 'hostpanel',
     ssoClientSecret: process.env.SSO_CLIENT_SECRET || '',
-    ssoCallbackUrl: process.env.SSO_CALLBACK_URL || 'http://panel.innovayse.local/api/portal/auth/sso/callback',
+    // Empty (no development host baked in) unless configured: SSO sign-in cannot work without it, and a
+    // silent default would ship to production. Set SSO_CALLBACK_URL to the portal's callback address.
+    ssoCallbackUrl: process.env.SSO_CALLBACK_URL || '',
     // Internal URL of the main portal, used for backchannel logout delegation; empty skips the call
     mainApiUrl: process.env.NUXT_MAIN_API_URL || '',
 
@@ -140,12 +141,15 @@ export default defineNuxtConfig({
     public: {
       authMode: process.env.AUTH_MODE || 'sso',
       baseUrl: process.env.NUXT_PUBLIC_BASE_URL || '',
-      ssoPublicUrl: process.env.SSO_PUBLIC_URL || 'http://sso.innovayse.local',
-      tasksUrl: process.env.NUXT_PUBLIC_TASKS_URL || 'http://tasks.innovayse.local',
-      erpUrl: process.env.NUXT_PUBLIC_ERP_URL || 'http://erp.innovayse.local',
-      sheetsUrl: process.env.NUXT_PUBLIC_SHEETS_URL || 'http://sheets.innovayse.local',
-      emailUrl: process.env.NUXT_PUBLIC_EMAIL_URL || 'http://email.innovayse.local',
-      driveUrl: process.env.NUXT_PUBLIC_DRIVE_URL || 'http://drive.innovayse.local',
+      // The sibling-product addresses below default to empty: a development host baked in here would
+      // silently survive into production. Empty hides the launcher entry / skips the widget, and the
+      // SSO public address must be set for an SSO install.
+      ssoPublicUrl: process.env.SSO_PUBLIC_URL || '',
+      tasksUrl: process.env.NUXT_PUBLIC_TASKS_URL || '',
+      erpUrl: process.env.NUXT_PUBLIC_ERP_URL || '',
+      sheetsUrl: process.env.NUXT_PUBLIC_SHEETS_URL || '',
+      emailUrl: process.env.NUXT_PUBLIC_EMAIL_URL || '',
+      driveUrl: process.env.NUXT_PUBLIC_DRIVE_URL || '',
       // Address of the billing-portal install this panel hands visitors off to (card
       // management, invoice payment, domain transfer). An address only — the legacy billing
       // API credentials are the C# backend's and deliberately absent here. Empty
@@ -160,7 +164,7 @@ export default defineNuxtConfig({
       // secret key is the backend's. Overridden at runtime with
       // NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY — empty leaves the card form uninitialised.
       stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
-      mainUrl: process.env.NUXT_PUBLIC_MAIN_URL || 'http://app.innovayse.local',
+      mainUrl: process.env.NUXT_PUBLIC_MAIN_URL || '',
       // Active portal template. Phase 4 lets an admin override this from settings;
       // until then it is the only switch. Unknown values fall back to 'aurora'.
       portalTemplate: process.env.NUXT_PUBLIC_PORTAL_TEMPLATE || 'aurora',
@@ -216,6 +220,14 @@ export default defineNuxtConfig({
       // Support working hours and their time zone, shown on the contact page; each is hidden when empty.
       portalContactHours: process.env.NUXT_PUBLIC_PORTAL_CONTACT_HOURS || '',
       portalContactTimezone: process.env.NUXT_PUBLIC_PORTAL_CONTACT_TIMEZONE || '',
+      // Office address and an https map embed address for the contact page and footer; each is hidden when empty.
+      portalContactAddress: process.env.NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS || '',
+      portalContactMapUrl: process.env.NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL || '',
+      // Home hero figures and badge; each is hidden when empty.
+      portalStatsClients: process.env.NUXT_PUBLIC_PORTAL_STATS_CLIENTS || '',
+      portalStatsUptime: process.env.NUXT_PUBLIC_PORTAL_STATS_UPTIME || '',
+      portalStatsRegions: process.env.NUXT_PUBLIC_PORTAL_STATS_REGIONS || '',
+      portalHeroBadge: process.env.NUXT_PUBLIC_PORTAL_HERO_BADGE || '',
       portalLegalTaxId: process.env.NUXT_PUBLIC_PORTAL_LEGAL_TAX_ID || '',
     }
   },
@@ -261,6 +273,8 @@ export default defineNuxtConfig({
       priority: 0.7,
       lastmod: new Date().toISOString()
     },
+    // The product family pages come from the catalogue at request time, never from a fixed list.
+    sources: ['/api/sitemap/products'],
     urls: async () => {
       // The module accepts only these priorities and change frequencies, so the list is typed
       // rather than left to widen to `number`.
@@ -284,12 +298,6 @@ export default defineNuxtConfig({
         { loc: '/refund-policy', changefreq: 'yearly' as const, priority: 0.3 },
         { loc: '/acceptable-use', changefreq: 'yearly' as const, priority: 0.3 }
       ]
-
-      // Individual product pages (SaaS families)
-      const productSlugs = ['smartlearn-system', 'propsystem-pro', 'shopkit-pro', 'metricskit-pro', 'quickbite', 'elpida-ai', 'taskero']
-      productSlugs.forEach(slug => {
-        routes.push({ loc: `/products/${slug}`, changefreq: 'weekly' as const, priority: 0.8 })
-      })
 
       return routes
     }

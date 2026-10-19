@@ -118,6 +118,8 @@
  *
  * Live chat is not repeated here: the layout already mounts UiFloatingActions.
  */
+import { PortalSettingKey } from '~/constants/portalSettingKey'
+import { TELEGRAM_LINK_BASE } from '~/constants/contactChannel'
 import { FOOTER_COLUMNS } from '~/templates/nova/content'
 
 /** Name the footer signs with: the operator's site name. */
@@ -137,27 +139,27 @@ const { get } = usePortalSettings()
 const year = new Date().getFullYear()
 
 /** Operator contact email; empty hides the entry. */
-const contactEmail = computed(() => get('portal.contact.email', 'portalContactEmail'))
+const contactEmail = computed(() => get(PortalSettingKey.ContactEmail, 'portalContactEmail'))
 /** Operator contact phone; empty hides the entry. */
-const phone = computed(() => get('portal.contact.phone', 'portalContactPhone'))
+const phone = computed(() => get(PortalSettingKey.ContactPhone, 'portalContactPhone'))
 /** Operator tax id; empty hides the entry. */
-const taxId = computed(() => get('portal.legal.tax_id', 'portalLegalTaxId'))
+const taxId = computed(() => get(PortalSettingKey.LegalTaxId, 'portalLegalTaxId'))
 
 /** `tel:` accepts digits and a leading plus; everything else is presentation. */
 const phoneHref = computed(() => phone.value.replace(/[^0-9+]/g, ''))
 
 /** Telegram is stored as a handle rather than a URL — the chat actions need it that way. */
 const telegramUrl = computed(() => {
-  const handle = get('portal.contact.telegram', 'portalTelegram')
-  return handle ? `https://t.me/${handle}` : ''
+  const handle = get(PortalSettingKey.ContactTelegram, 'portalTelegram')
+  return handle ? `${TELEGRAM_LINK_BASE}${handle}` : ''
 })
 
 /** The social profiles the operator configured, in display order. */
 const socials = computed(() => [
-  { key: 'facebook', icon: 'lucide:facebook', name: 'Facebook', url: get('portal.social.facebook', 'portalSocialFacebook') },
-  { key: 'instagram', icon: 'lucide:instagram', name: 'Instagram', url: get('portal.social.instagram', 'portalSocialInstagram') },
-  { key: 'linkedin', icon: 'lucide:linkedin', name: 'LinkedIn', url: get('portal.social.linkedin', 'portalSocialLinkedin') },
+  { key: 'facebook', icon: 'lucide:facebook', name: 'Facebook', url: get(PortalSettingKey.SocialFacebook, 'portalSocialFacebook') },
+  { key: 'instagram', icon: 'lucide:instagram', name: 'Instagram', url: get(PortalSettingKey.SocialInstagram, 'portalSocialInstagram') },
+  { key: 'linkedin', icon: 'lucide:linkedin', name: 'LinkedIn', url: get(PortalSettingKey.SocialLinkedin, 'portalSocialLinkedin') },
   { key: 'telegram', icon: 'lucide:send', name: 'Telegram', url: telegramUrl.value },
-  { key: 'youtube', icon: 'lucide:youtube', name: 'YouTube', url: get('portal.social.youtube', 'portalSocialYoutube') },
+  { key: 'youtube', icon: 'lucide:youtube', name: 'YouTube', url: get(PortalSettingKey.SocialYoutube, 'portalSocialYoutube') },
 ].filter(entry => entry.url))
 </script>

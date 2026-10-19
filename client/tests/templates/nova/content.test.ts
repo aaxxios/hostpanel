@@ -2,14 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   COMPARISON_LABEL_ORDER,
   DASHBOARD_ROWS,
-  FAQ_ITEMS,
   FOOTER_COLUMNS,
   HERO_BENEFITS,
   MIGRATION_STEPS,
   NAV_ITEMS,
   PERFORMANCE_FEATURES,
   SECURITY_FEATURES,
-  TESTIMONIALS,
   TRUST_ITEMS,
   USE_CASES,
   WHY_FEATURES,
@@ -76,7 +74,6 @@ describe('nova content', () => {
     const entries = [
       ...allFeatures.map(f => [f.key, f.titleKey] as const),
       ...USE_CASES.map(u => [u.key, u.titleKey] as const),
-      ...FAQ_ITEMS.map(f => [f.key, f.questionKey] as const),
       ...MIGRATION_STEPS.map(s => [s.key, s.titleKey] as const),
       ...DASHBOARD_ROWS.map(r => [r.key, r.labelKey] as const),
     ]
@@ -85,10 +82,6 @@ describe('nova content', () => {
       expect(key.length, i18nKey).toBeGreaterThan(0)
       expect(i18nKey, key).toMatch(/^nova\./)
     }
-  })
-
-  it('ships no testimonials, because nothing serves any and none may be invented', () => {
-    expect(TESTIMONIALS).toEqual([])
   })
 
   it('gates every claim about the operator\'s own hardware behind a setting', () => {
@@ -115,6 +108,7 @@ describe('nova content', () => {
 })
 
 describe('orderComparisonRows', () => {
+  /** Builds a comparison row that has a label and no values. */
   const row = (label: string): ComparisonRow => ({ label, values: [] })
 
   it('sorts the familiar lines into the order they read best in', () => {

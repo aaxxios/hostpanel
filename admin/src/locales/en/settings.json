@@ -18,6 +18,50 @@
       "hint": "One line, used as the default page description"
     }
   },
+  "storefrontContent": {
+    "title": "Storefront",
+    "description": "The figures, the hero badge and the contact details the storefront shows. The site name and tagline are in the identity card above.",
+    "statsClients": {
+      "label": "Clients figure",
+      "hint": "e.g. 5,000+"
+    },
+    "statsUptime": {
+      "label": "Uptime figure",
+      "hint": "e.g. 99.9%"
+    },
+    "statsRegions": {
+      "label": "Regions figure",
+      "hint": "e.g. 12"
+    },
+    "heroBadge": {
+      "label": "Hero badge",
+      "hint": "Short line above the hero heading"
+    },
+    "contactEmail": {
+      "label": "Contact email",
+      "hint": "support@example.com"
+    },
+    "contactPhone": {
+      "label": "Contact phone",
+      "hint": "+1 555 000 0000"
+    },
+    "contactWhatsapp": {
+      "label": "WhatsApp number",
+      "hint": "+1 555 000 0000"
+    },
+    "contactTelegram": {
+      "label": "Telegram handle",
+      "hint": "@example"
+    },
+    "contactAddress": {
+      "label": "Address",
+      "hint": "Street, city, country"
+    },
+    "contactMapUrl": {
+      "label": "Map URL",
+      "hint": "https://maps.example.com/..."
+    }
+  },
   "portalAppearance": {
     "title": "Portal appearance",
     "description": "Which template the public storefront renders and which colour mode a visitor starts in. Changes take effect on the next page load.",

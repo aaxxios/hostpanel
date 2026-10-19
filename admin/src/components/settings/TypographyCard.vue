@@ -20,6 +20,7 @@ import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { BRAND_FONT_OPTIONS, previewClass } from '@/lib/brandFonts'
+import { SettingEnv, SettingKey } from '@/types/setting'
 import type { Setting } from '@/types/setting'
 
 const { t } = useI18n()
@@ -41,15 +42,15 @@ const emit = defineEmits<{
 const settings = toRef(props, 'settings')
 
 /** Draft of the heading face. */
-const heading = useSettingDraft(settings, 'portal.brand.font_heading')
+const heading = useSettingDraft(settings, SettingKey.BrandFontHeading)
 
 /** Draft of the body face. */
-const body = useSettingDraft(settings, 'portal.brand.font_body')
+const body = useSettingDraft(settings, SettingKey.BrandFontBody)
 
 /** The two selects, saved separately like every other control on the page. */
 const FIELDS = [
-  { key: 'portal.brand.font_heading', env: 'NUXT_PUBLIC_PORTAL_BRAND_FONT_HEADING', testid: 'heading', labelKey: 'settings.typography.heading', draft: heading },
-  { key: 'portal.brand.font_body', env: 'NUXT_PUBLIC_PORTAL_BRAND_FONT_BODY', testid: 'body', labelKey: 'settings.typography.body', draft: body },
+  { key: SettingKey.BrandFontHeading, env: SettingEnv[SettingKey.BrandFontHeading], testid: 'heading', labelKey: 'settings.typography.heading', draft: heading },
+  { key: SettingKey.BrandFontBody, env: SettingEnv[SettingKey.BrandFontBody], testid: 'body', labelKey: 'settings.typography.body', draft: body },
 ]
 
 /** Sample lines, one per storefront language. */

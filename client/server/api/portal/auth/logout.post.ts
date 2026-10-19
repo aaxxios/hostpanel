@@ -8,11 +8,12 @@
  * 3. Clears all auth cookies.
  */
 import { clearAllAuthCookies } from '~/server/utils/api'
+import { SessionCookie } from '~/constants/sessionCookie'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
-  const refreshToken = getCookie(event, 'refresh_token')
-  const authToken = getCookie(event, 'auth_token')
+  const refreshToken = getCookie(event, SessionCookie.RefreshToken)
+  const authToken = getCookie(event, SessionCookie.AuthToken)
 
   // 1. Revoke refresh token on hostpanel backend
   try {

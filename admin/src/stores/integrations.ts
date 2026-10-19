@@ -10,8 +10,8 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useIntegrationsApi } from '@/composables/apis/useIntegrationsApi'
 import { runAction } from '@/lib/runAction'
+import { IntegrationCategory, IntegrationCategoryName } from '@/types/integration'
 import type {
-  IntegrationCategory,
   IntegrationConfigPayload,
   IntegrationDetailDto,
   IntegrationDto,
@@ -20,11 +20,11 @@ import type {
 
 /** Maps backend category strings to frontend IntegrationCategory keys. */
 const CATEGORY_MAP: Record<string, IntegrationCategory> = {
-  'Payment Gateways': 'payments',
-  'Domain Registrars': 'registrars',
-  'Hosting / Provisioning': 'provisioning',
-  'Email / SMTP': 'email',
-  'Fraud Protection': 'fraud',
+  [IntegrationCategoryName.PaymentGateways]: IntegrationCategory.Payments,
+  [IntegrationCategoryName.DomainRegistrars]: IntegrationCategory.Registrars,
+  [IntegrationCategoryName.Provisioning]: IntegrationCategory.Provisioning,
+  [IntegrationCategoryName.Email]: IntegrationCategory.Email,
+  [IntegrationCategoryName.FraudProtection]: IntegrationCategory.Fraud,
 }
 
 /**

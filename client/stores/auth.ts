@@ -15,6 +15,7 @@
  * @module stores/auth
  */
 
+import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
 import { defineStore } from 'pinia'
 import { useAuthApi } from '~/composables/apis/useAuthApi'
 import { useClientStore } from '~/stores/client'
@@ -29,6 +30,7 @@ import { SignInOutcome } from '~/types/signinoutcome'
 import { PortalErrorCode, apiErrorCode, apiErrorMessage, apiFieldErrors } from '~/lib/errorHandler'
 import { translate } from '~/utils/translate'
 import { AuthMode } from '~/types/authmode'
+import { SessionCookie } from '~/constants/sessionCookie'
 
 /**
  * Central store for the signed-in identity.
@@ -45,7 +47,7 @@ export const useAuthStore = defineStore('auth', () => {
    * Readable auth flag cookie. Set to "1" on login, deleted on logout.
    * Not httpOnly so middleware and client JS can both read it.
    */
-  const authedCookie = useCookie<string | null>('authed', { readonly: true })
+  const authedCookie = useCookie<string | null>(SessionCookie.Authed, { readonly: true })
 
   /** True when the user is logged in (checks the readable flag cookie). */
   const isLoggedIn = computed(() => !!(authedCookie.value || user.value))
@@ -419,11 +421,16 @@ export const useAuthStore = defineStore('auth', () => {
     useClientStore().reset()
 
     if ((config.public.authMode as string) !== AuthMode.Sso) {
-      await navigateTo('/client/login')
+      await navigateTo(CLIENT_LOGIN_PATH)
       return
     }
 
-    const ssoPublicUrl = config.public.ssoPublicUrl as string
+    const ssoPublicUrl = config.public.ssoPublicUrl as string | undefined
+    // Without an SSO address there is no end-session endpoint to build; leave through the local sign-in.
+    if (!ssoPublicUrl) {
+      await navigateTo(CLIENT_LOGIN_PATH)
+      return
+    }
     const returnTo = encodeURIComponent(window.location.origin)
     window.location.href = `${ssoPublicUrl}/connect/endsession?post_logout_redirect_uri=${returnTo}`
   }

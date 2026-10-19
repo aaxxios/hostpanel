@@ -31,7 +31,8 @@
  * stand behind — with the single exception of the uptime figure, which is the
  * operator's to publish and stays hidden until they do.
  */
-import { TRUST_ITEMS, TRUST_UPTIME_SETTING } from '~/templates/nova/content'
+import { PortalSettingKey } from '~/constants/portalSettingKey'
+import { TRUST_ITEMS } from '~/templates/nova/content'
 import { useVisibleFeatures } from '~/templates/nova/features'
 
 /** Translator for the copy. */
@@ -42,5 +43,5 @@ const { get } = usePortalSettings()
 /** The trust lines this install may state. */
 const items = useVisibleFeatures(TRUST_ITEMS)
 /** The operator's published uptime figure; empty hides the line. */
-const uptime = computed(() => get(TRUST_UPTIME_SETTING[0], TRUST_UPTIME_SETTING[1]))
+const uptime = computed(() => get(PortalSettingKey.StatsUptime, 'portalStatsUptime'))
 </script>

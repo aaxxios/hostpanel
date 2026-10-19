@@ -10,9 +10,7 @@ import { ref } from 'vue'
 import { useBillableItemsApi } from '@/composables/apis/useBillableItemsApi'
 import { runAction } from '@/lib/runAction'
 import type { BillableItem, CreateBillableItemPayload } from '@/types/billableitem'
-
-/** Page size of the billable items list. */
-const PAGE_SIZE = 100
+import { LOOKUP_PAGE_SIZE } from '@/lib/limits'
 
 /** Loads, creates and deletes billable items across all clients. */
 export const useBillableItemsStore = defineStore('billableItems', () => {
@@ -38,7 +36,7 @@ export const useBillableItemsStore = defineStore('billableItems', () => {
    */
   const fetchAll = async (type?: string): Promise<void> => {
     loading.value = true
-    const result = await runAction(error, () => api.list(1, PAGE_SIZE, type), fieldErrors)
+    const result = await runAction(error, () => api.list(1, LOOKUP_PAGE_SIZE, type), fieldErrors)
     loading.value = false
     if (result.ok) {
       items.value = result.value.items

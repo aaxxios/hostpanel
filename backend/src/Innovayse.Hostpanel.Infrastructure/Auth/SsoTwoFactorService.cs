@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
@@ -90,8 +91,8 @@ public sealed class SsoTwoFactorService : ITwoFactorService
     {
         StringValues header = _httpContextAccessor.HttpContext?.Request.Headers.Authorization ?? StringValues.Empty;
         var value = header.ToString();
-        return value.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-            ? value["Bearer ".Length..]
+        return value.StartsWith(BearerScheme.HeaderPrefix, StringComparison.OrdinalIgnoreCase)
+            ? value[BearerScheme.HeaderPrefix.Length..]
             : null;
     }
 }

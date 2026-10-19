@@ -34,13 +34,12 @@ import { pageCount } from '@/lib/paging'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiTableDensity } from '@/utils/ui/injection'
 import { UiSize } from '@/utils/ui/size'
+import { SEARCH_DEBOUNCE_MS } from '@/lib/limits'
+import { AppRoute, supportTicketPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
 const store = useSupportStore()
-
-/** Delay between the last keystroke in the search box and the reload, in milliseconds. */
-const SEARCH_DEBOUNCE_MS = 300
 
 /** Number of columns of the table (width of the status row). */
 const COLUMN_COUNT = 7
@@ -202,7 +201,7 @@ onMounted(() => {
     >
       <template #actions>
         <UiLink
-          to="/support/tickets/new"
+          :to="AppRoute.SupportTicketsNew"
           :variant="UiButtonVariant.Primary"
           data-testid="support-tickets-open-new"
         >
@@ -311,7 +310,7 @@ onMounted(() => {
             </UiTableCell>
             <UiTableCell>
               <UiLink
-                :to="`/support/tickets/${ticket.id}`"
+                :to="supportTicketPath(ticket.id)"
                 :variant="UiButtonVariant.Link"
                 :data-testid="`support-tickets-open-${ticket.id}`"
               >

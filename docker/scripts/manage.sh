@@ -20,9 +20,9 @@
 #   --native            Run natively without Docker
 #
 # Services:
-#   api       C# ASP.NET Core backend  (port 5148)
-#   client    Nuxt 4 client portal     (port 3000)
-#   admin     Vue 3 admin panel        (port 5173)
+#   api       C# ASP.NET Core backend  (port API_PORT in docker/.env)
+#   client    Nuxt 4 client portal     (port CLIENT_PORT in docker/.env)
+#   admin     Vue 3 admin panel        (Vite dev server)
 #   all       All services (default)
 # =============================================================================
 
@@ -35,6 +35,13 @@ CLIENT="$ROOT/client"
 ADMIN="$ROOT/admin"
 LOGS_DIR="$ROOT/.logs"
 PIDS_DIR="$ROOT/.pids"
+# Every port, database name and credential below comes from here, never from a literal in this script.
+ENV_FILE="$ROOT/docker/.env"
+# Where the services answer on this machine.
+LOCAL_HOST="localhost"
+# The admin's Vite dev server port: Vite's own default, not a docker/.env key (the dev compose file maps
+# ADMIN_HOST_PORT onto it).
+ADMIN_DEV_PORT=5173
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -51,6 +58,22 @@ success() { echo -e "${GREEN}[ok]${NC}    $*"; }
 warn()    { echo -e "${YELLOW}[warn]${NC}  $*"; }
 error()   { echo -e "${RED}[error]${NC} $*" >&2; }
 header()  { echo -e "\n${BOLD}${CYAN}$*${NC}"; }
+
+# Prints the value of KEY in docker/.env and fails when the file or the key is missing or empty.
+# The file is read, not sourced: values such as ALLOWED_HOSTS hold characters the shell would act on.
+need_env() {
+    local line
+    if [[ ! -f "$ENV_FILE" ]]; then
+        error "$ENV_FILE not found - copy docker/.env.example to docker/.env"
+        exit 1
+    fi
+    line="$(grep -E "^$1=" "$ENV_FILE" | tail -n 1 | tr -d '\r' || true)"
+    if [[ -z "${line#*=}" ]]; then
+        error "$1 is not set in $ENV_FILE"
+        exit 1
+    fi
+    printf '%s' "${line#*=}"
+}
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
 NATIVE=false
@@ -235,7 +258,8 @@ native_start_api() {
         warn "api is already running (pid $(read_pid api))"
         return
     fi
-    local stale
+    local stale api_port
+    api_port="$(need_env API_PORT)" || exit 1
     stale=$(pgrep -f "Innovayse.Hostpanel.API" 2>/dev/null || true)
     if [[ -n "$stale" ]]; then
         warn "Killing stale API process(es): $stale"
@@ -243,16 +267,16 @@ native_start_api() {
         sleep 1
     fi
     local port_pid
-    port_pid=$(netstat -ano 2>/dev/null | grep ":5148 " | grep "LISTENING" | awk '{print $NF}' | head -1 || true)
+    port_pid=$(netstat -ano 2>/dev/null | grep ":${api_port} " | grep "LISTENING" | awk '{print $NF}' | head -1 || true)
     if [[ -n "$port_pid" ]]; then
-        warn "Port 5148 in use by PID $port_pid — killing it"
+        warn "Port ${api_port} in use by PID $port_pid — killing it"
         taskkill //F //PID "$port_pid" 2>/dev/null || kill -9 "$port_pid" 2>/dev/null || true
         sleep 1
     fi
-    info "Starting C# API on http://localhost:5148 ..."
+    info "Starting C# API on http://${LOCAL_HOST}:${api_port} ..."
     cd "$BACKEND"
     dotnet run --no-launch-profile \
-        --urls "http://localhost:5148" \
+        --urls "http://${LOCAL_HOST}:${api_port}" \
         > "$LOGS_DIR/api.log" 2>&1 &
     save_pid "api" $!
     success "api started (pid $!) — logs: .logs/api.log"
@@ -263,9 +287,11 @@ native_start_client() {
         warn "client is already running (pid $(read_pid client))"
         return
     fi
-    info "Starting Nuxt client on http://localhost:3000 ..."
+    local client_port
+    client_port="$(need_env CLIENT_PORT)" || exit 1
+    info "Starting Nuxt client on http://${LOCAL_HOST}:${client_port} ..."
     cd "$CLIENT"
-    npm run dev > "$LOGS_DIR/client.log" 2>&1 &
+    NITRO_PORT="$client_port" npm run dev > "$LOGS_DIR/client.log" 2>&1 &
     save_pid "client" $!
     success "client started (pid $!) — logs: .logs/client.log"
 }
@@ -275,7 +301,7 @@ native_start_admin() {
         warn "admin is already running (pid $(read_pid admin))"
         return
     fi
-    info "Starting Vue admin on http://localhost:5173 ..."
+    info "Starting Vue admin on http://${LOCAL_HOST}:${ADMIN_DEV_PORT} ..."
     cd "$ADMIN"
     npm run dev > "$LOGS_DIR/admin.log" 2>&1 &
     save_pid "admin" $!
@@ -325,7 +351,10 @@ native_status() {
 
     echo ""
     info "Checking ports..."
-    for port in 5148 3000 5173; do
+    local api_port client_port
+    api_port="$(need_env API_PORT)" || exit 1
+    client_port="$(need_env CLIENT_PORT)" || exit 1
+    for port in "$api_port" "$client_port" "$ADMIN_DEV_PORT"; do
         local result
         result=$(netstat -ano 2>/dev/null | grep ":${port} " | grep "LISTENING" | awk '{print $5}' | head -1 || true)
         if [[ -n "$result" ]]; then
@@ -412,7 +441,11 @@ native_db() {
             ;;
         psql)
             info "Connecting to the database..."
-            psql -h localhost -U "${POSTGRES_USER:?POSTGRES_USER must be set}" -d "${POSTGRES_DB:?POSTGRES_DB must be set}"
+            local pg_port pg_user pg_db
+            pg_port="$(need_env POSTGRES_PORT)" || exit 1
+            pg_user="${db_user}" || exit 1
+            pg_db="${db_name}" || exit 1
+            psql -h "$LOCAL_HOST" -p "$pg_port" -U "$pg_user" -d "$pg_db"
             ;;
         *)
             error "Unknown db action: $action"
@@ -435,24 +468,45 @@ native_test() {
 # =============================================================================
 
 show_info() {
+    # Every port comes from docker/.env: the published host ports for the Docker stack, the in-container
+    # ones for a native run (which has no published mapping).
+    local api_port client_port admin_port db_port db_name db_user mailhog_port rabbit_port
+    if [[ "$NATIVE" == true ]]; then
+        api_port="$(need_env API_PORT)" || exit 1
+        client_port="$(need_env CLIENT_PORT)" || exit 1
+        admin_port="$ADMIN_DEV_PORT"
+        db_port="$(need_env POSTGRES_PORT)" || exit 1
+    else
+        api_port="$(need_env API_HOST_PORT)" || exit 1
+        client_port="$(need_env CLIENT_HOST_PORT)" || exit 1
+        admin_port="$(need_env ADMIN_HOST_PORT)" || exit 1
+        db_port="$(need_env POSTGRES_HOST_PORT)" || exit 1
+    fi
+    db_name="${db_name}" || exit 1
+    db_user="${db_user}" || exit 1
+    if [[ "$NATIVE" != true ]]; then
+        mailhog_port="${mailhog_port}" || exit 1
+        rabbit_port="${rabbit_port}" || exit 1
+    fi
     header "Innovayse — URLs & Credentials"
     echo ""
     echo -e "${BOLD}Services${NC}"
-    echo -e "  ${CYAN}API${NC}          http://localhost:5148"
-    echo -e "  ${CYAN}API Docs${NC}     http://localhost:5148/scalar/v1"
-    echo -e "  ${CYAN}Client${NC}       http://localhost:3000"
-    echo -e "  ${CYAN}Admin${NC}        http://localhost:5173"
-    echo -e "  ${CYAN}MailHog${NC}      http://localhost:8025"
-    echo -e "  ${CYAN}RabbitMQ${NC}     http://localhost:15672"
+    echo -e "  ${CYAN}API${NC}          http://${LOCAL_HOST}:${api_port}"
+    echo -e "  ${CYAN}API Docs${NC}     http://${LOCAL_HOST}:${api_port}/scalar/v1"
+    echo -e "  ${CYAN}Client${NC}       http://${LOCAL_HOST}:${client_port}"
+    echo -e "  ${CYAN}Admin${NC}        http://${LOCAL_HOST}:${admin_port}"
+    if [[ "$NATIVE" != true ]]; then
+        echo -e "  ${CYAN}MailHog${NC}      http://${LOCAL_HOST}:${mailhog_port}"
+        echo -e "  ${CYAN}RabbitMQ${NC}     http://${LOCAL_HOST}:${rabbit_port}"
+    fi
     echo ""
     echo -e "${BOLD}Credentials${NC}"
-    echo -e "  ${YELLOW}Admin${NC}    admin@innovayse.com  /  Admin123!"
-    echo -e "  ${YELLOW}Client${NC}   test@example.com     /  Password123!"
+    echo -e "  ${YELLOW}Admin, Client${NC}    seeded by DevDataSeeder (see its source for the dev logins)"
     echo ""
     echo -e "${BOLD}Database (PostgreSQL)${NC}"
-    echo -e "  Host      localhost:5432"
-    echo -e "  Database  innovayse_dev"
-    echo -e "  User      postgres"
+    echo -e "  Host      ${LOCAL_HOST}:${db_port}"
+    echo -e "  Database  ${db_name}"
+    echo -e "  User      ${db_user}"
     echo -e "  Password  (from .env)"
     echo ""
     echo -e "  ${CYAN}psql${NC}  →  ./docker/scripts/manage.sh db psql"

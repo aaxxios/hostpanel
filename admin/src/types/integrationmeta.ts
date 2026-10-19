@@ -1,4 +1,9 @@
-import { IntegrationFieldType } from '@/types/integration'
+/**
+ * Display metadata of the integrations screen: the category sections and the catalogue of integrations
+ * (label, logo and settings fields) the admin renders.
+ */
+
+import { IntegrationEncryption, IntegrationFieldType, IntegrationMode, IntegrationYesNo } from '@/types/integration'
 import type { IntegrationMeta, IntegrationSlug, IntegrationCategory } from '@/types/integration'
 import { translate } from '@/lib/translate'
 import { publicAssetUrl } from '@/lib/runtimeConfig'
@@ -43,7 +48,7 @@ export const INTEGRATION_META: Record<IntegrationSlug, IntegrationMeta> = {
       { key: 'secretKey', get label() { return translate('integrationMeta.stripe.fieldSecretKey') }, type: IntegrationFieldType.Password },
       { key: 'publishableKey', get label() { return translate('integrationMeta.stripe.fieldPublishableKey') }, type: IntegrationFieldType.Text },
       { key: 'webhookSecret', get label() { return translate('integrationMeta.stripe.fieldWebhookSecret') }, type: IntegrationFieldType.Password },
-      { key: 'mode', get label() { return translate('integrationMeta.stripe.fieldMode') }, type: IntegrationFieldType.Select, options: ['Live', 'Test'] },
+      { key: 'mode', get label() { return translate('integrationMeta.stripe.fieldMode') }, type: IntegrationFieldType.Select, options: [IntegrationMode.Live, IntegrationMode.Test] },
     ],
   },
   paypal: {
@@ -55,7 +60,7 @@ export const INTEGRATION_META: Record<IntegrationSlug, IntegrationMeta> = {
     fields: [
       { key: 'clientId', get label() { return translate('reports.creditsReviewer.clientId') }, type: IntegrationFieldType.Text },
       { key: 'clientSecret', get label() { return translate('integrationMeta.paypal.fieldClientSecret') }, type: IntegrationFieldType.Password },
-      { key: 'mode', get label() { return translate('integrationMeta.stripe.fieldMode') }, type: IntegrationFieldType.Select, options: ['Live', 'Sandbox'] },
+      { key: 'mode', get label() { return translate('integrationMeta.stripe.fieldMode') }, type: IntegrationFieldType.Select, options: [IntegrationMode.Live, IntegrationMode.Sandbox] },
     ],
   },
   'bank-transfer': {
@@ -195,7 +200,7 @@ export const INTEGRATION_META: Record<IntegrationSlug, IntegrationMeta> = {
       { key: 'ns1_ip', get label() { return translate('integrationMeta.cwp7.fieldNs1_ip') }, type: IntegrationFieldType.Text },
       { key: 'ns2', get label() { return translate('integrationMeta.cwp7.fieldNs2') }, type: IntegrationFieldType.Text },
       { key: 'ns2_ip', get label() { return translate('integrationMeta.cwp7.fieldNs2_ip') }, type: IntegrationFieldType.Text },
-      { key: 'secure', get label() { return translate('integrationMeta.cwp7.fieldSecure') }, type: IntegrationFieldType.Select, options: ['Yes', 'No'] },
+      { key: 'secure', get label() { return translate('integrationMeta.cwp7.fieldSecure') }, type: IntegrationFieldType.Select, options: [IntegrationYesNo.Yes, IntegrationYesNo.No] },
     ],
   },
   smtp: {
@@ -210,7 +215,7 @@ export const INTEGRATION_META: Record<IntegrationSlug, IntegrationMeta> = {
       { key: 'username', get label() { return translate('shared.username') }, type: IntegrationFieldType.Text },
       { key: 'password', get label() { return translate('shared.password') }, type: IntegrationFieldType.Password },
       { key: 'fromAddress', get label() { return translate('integrationMeta.smtp.fieldFromAddress') }, type: IntegrationFieldType.Text },
-      { key: 'encryption', get label() { return translate('integrationMeta.smtp.fieldEncryption') }, type: IntegrationFieldType.Select, options: ['TLS', 'SSL', 'None'] },
+      { key: 'encryption', get label() { return translate('integrationMeta.smtp.fieldEncryption') }, type: IntegrationFieldType.Select, options: [IntegrationEncryption.Tls, IntegrationEncryption.Ssl, IntegrationEncryption.None] },
     ],
   },
   maxmind: {

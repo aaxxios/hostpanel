@@ -2,6 +2,7 @@
  * Slides flow: the list shows each slide's title, deleting asks first and removes the slide, and
  * leaving the slide form with unsaved edits asks whether to stay or leave.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { welcomeSlide } from './fixtures/slides'
 import type { Slide } from '../src/types/slide'
@@ -14,9 +15,9 @@ test('deleting a slide asks first and then removes it from the list', async ({ p
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      { method: 'GET', path: '/api/admin/slides', respond: () => ({ body: stored }) },
+      { method: HttpMethod.Get, path: '/api/admin/slides', respond: () => ({ body: stored }) },
       {
-        method: 'DELETE',
+        method: HttpMethod.Delete,
         path: `/api/admin/slides/${welcomeSlide.id}`,
         respond: () => {
           stored.splice(0, stored.length)
@@ -30,17 +31,17 @@ test('deleting a slide asks first and then removes it from the list', async ({ p
   await expect(page.getByTestId(`slide-row-${welcomeSlide.id}`)).toContainText('Welcome')
 
   await page.getByTestId(`slide-delete-${welcomeSlide.id}`).click()
-  expect(api.callsTo('DELETE', `/api/admin/slides/${welcomeSlide.id}`)).toHaveLength(0)
+  expect(api.callsTo(HttpMethod.Delete, `/api/admin/slides/${welcomeSlide.id}`)).toHaveLength(0)
   await page.getByTestId('dialog-confirm').click()
 
   await expect(page.getByTestId(`slide-row-${welcomeSlide.id}`)).toHaveCount(0)
-  expect(api.callsTo('DELETE', `/api/admin/slides/${welcomeSlide.id}`)).toHaveLength(1)
+  expect(api.callsTo(HttpMethod.Delete, `/api/admin/slides/${welcomeSlide.id}`)).toHaveLength(1)
 })
 
 test('leaving the slide form with unsaved edits asks first, and staying keeps the form', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
-    routes: [json('GET', '/api/products', []), json('GET', '/api/products/groups', []), json('GET', '/api/admin/slides', [])],
+    routes: [json(HttpMethod.Get, '/api/products', []), json(HttpMethod.Get, '/api/products/groups', []), json(HttpMethod.Get, '/api/admin/slides', [])],
   })
 
   await page.goto('/settings/slides/create')
@@ -63,7 +64,7 @@ test('leaving the slide form with unsaved edits asks first, and staying keeps th
 test('a clean slide form leaves without asking', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
-    routes: [json('GET', '/api/products', []), json('GET', '/api/products/groups', []), json('GET', '/api/admin/slides', [])],
+    routes: [json(HttpMethod.Get, '/api/products', []), json(HttpMethod.Get, '/api/products/groups', []), json(HttpMethod.Get, '/api/admin/slides', [])],
   })
 
   await page.goto('/settings/slides/create')

@@ -1,7 +1,7 @@
 <template>
   <UiCard data-testid="dashboard-services">
     <UiCardHeader :title="$t('client.dashboard.activeServices')">
-      <UiButton size="sm" variant="subtle" to="/client/services" data-testid="dashboard-services-all">
+      <UiButton size="sm" variant="subtle" :to="CLIENT_SERVICES_PATH" data-testid="dashboard-services-all">
         {{ $t('client.dashboard.myServices') }}
         <ArrowRight :size="12" :stroke-width="2" class="ml-1.5" />
       </UiButton>
@@ -20,13 +20,13 @@
       <ClientDashboardListRow
         v-for="service in store.services.slice(0, 4)"
         :key="service.id"
-        :to="service.username ? `/client/services/${service.id}` : `/client/services/${service.id}/setup`"
+        :to="service.username ? clientServicePath(service.id) : clientServiceSetupPath(service.id)"
         :testid="`dashboard-service-${service.id}`"
       >
         <UiStack direction="row" align="center" gap="sm" class="min-w-0">
           <Server :size="16" :stroke-width="2" class="flex-shrink-0 text-primary-600 dark:text-primary-400" />
           <div class="min-w-0">
-            <UiText size="sm" weight="medium" truncate>{{ service.name }}</UiText>
+            <UiText size="sm" weight="medium" truncate>{{ productNameOrFallback($t, service.name, service.id) }}</UiText>
             <UiText size="xs" tone="subtle" truncate>{{ service.domain || $t('client.dashboard.noDomain') }}</UiText>
           </div>
         </UiStack>
@@ -55,11 +55,13 @@
  * The dashboard's "Active Services" card: the first four services with their status, a
  * control-panel shortcut for active ones and a setup badge for those not yet provisioned.
  */
+import { CLIENT_SERVICES_PATH, clientServicePath, clientServiceSetupPath } from '~/constants/clientRoutes'
 import { ArrowRight, Loader, Monitor, Server } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
 import { useServiceManagementStore } from '~/stores/servicemanagement'
 import type { ClientService } from '~/types/clientservice'
 import { ServiceStatus } from '~/types/servicestatus'
+import { productNameOrFallback } from '~/utils/displayFallback'
 
 /** Client store: the signed-in person and their services, invoices, domains and tickets. */
 const store = useClientStore()
@@ -79,13 +81,7 @@ const loginToCpanel = async (service: ClientService): Promise<void> => {
   }
   ssoLoading.value = service.id
   try {
-    const url = await useServiceManagementStore().fetchCpanelUrl(String(service.id))
-    if (url) {
-      window.open(url, '_blank', 'noopener')
-    } else if (service.serverhostname) {
-      // Fallback: open the plain control-panel login page when single sign-on fails.
-      window.open(`https://${service.serverhostname}:2083`, '_blank', 'noopener')
-    }
+    await useServiceManagementStore().openControlPanel(String(service.id), service.serverhostname)
   } finally {
     ssoLoading.value = null
   }

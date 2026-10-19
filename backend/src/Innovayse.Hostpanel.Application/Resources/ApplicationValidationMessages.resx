@@ -1112,4 +1112,97 @@
   <data name="SlideTranslationTitleTooLong" xml:space="preserve">
     <value>Keep the translation title within {0} characters.</value>
   </data>
+  <data name="ContentIdInvalid" xml:space="preserve">
+    <value>Provide a valid id.</value>
+  </data>
+  <data name="ContentSortOrderInvalid" xml:space="preserve">
+    <value>The display order cannot be negative.</value>
+  </data>
+  <data name="ContentTranslationsRequired" xml:space="preserve">
+    <value>Provide at least one translation.</value>
+  </data>
+  <data name="ContentTranslationLocaleInvalid" xml:space="preserve">
+    <value>A translation can only be given for a supported language: en, ru or hy.</value>
+  </data>
+  <data name="ContentUrlTooLong" xml:space="preserve">
+    <value>A link can be at most {0} characters.</value>
+  </data>
+  <data name="ContentUrlInvalid" xml:space="preserve">
+    <value>A link must start with https://, http:// or /.</value>
+  </data>
+  <data name="ContentImageRequired" xml:space="preserve">
+    <value>Choose an image file to upload.</value>
+  </data>
+  <data name="TestimonialNameRequired" xml:space="preserve">
+    <value>Enter the client's name.</value>
+  </data>
+  <data name="TestimonialNameTooLong" xml:space="preserve">
+    <value>The name can be at most {0} characters.</value>
+  </data>
+  <data name="TestimonialCompanyTooLong" xml:space="preserve">
+    <value>The company name can be at most {0} characters.</value>
+  </data>
+  <data name="TestimonialRatingInvalid" xml:space="preserve">
+    <value>The rating must be between 1 and 5.</value>
+  </data>
+  <data name="TestimonialRoleTooLong" xml:space="preserve">
+    <value>The role can be at most {0} characters.</value>
+  </data>
+  <data name="TestimonialQuoteRequired" xml:space="preserve">
+    <value>Enter the testimonial text.</value>
+  </data>
+  <data name="TestimonialQuoteTooLong" xml:space="preserve">
+    <value>The testimonial can be at most {0} characters.</value>
+  </data>
+  <data name="PartnerNameRequired" xml:space="preserve">
+    <value>Enter the partner's name.</value>
+  </data>
+  <data name="PartnerNameTooLong" xml:space="preserve">
+    <value>The name can be at most {0} characters.</value>
+  </data>
+  <data name="ProjectSlugRequired" xml:space="preserve">
+    <value>Enter the project's slug.</value>
+  </data>
+  <data name="ProjectSlugTooLong" xml:space="preserve">
+    <value>The slug can be at most {0} characters.</value>
+  </data>
+  <data name="ProjectSlugInvalid" xml:space="preserve">
+    <value>The slug can only contain lowercase letters, digits and single hyphens.</value>
+  </data>
+  <data name="ProjectImageUrlsRequired" xml:space="preserve">
+    <value>Provide the image list, empty if there are no images.</value>
+  </data>
+  <data name="ProjectImagesTooMany" xml:space="preserve">
+    <value>A project can have at most {0} images.</value>
+  </data>
+  <data name="ProjectTitleRequired" xml:space="preserve">
+    <value>Enter the project's title.</value>
+  </data>
+  <data name="ProjectTitleTooLong" xml:space="preserve">
+    <value>The title can be at most {0} characters.</value>
+  </data>
+  <data name="ProjectSummaryTooLong" xml:space="preserve">
+    <value>The summary can be at most {0} characters.</value>
+  </data>
+  <data name="ProjectDescriptionTooLong" xml:space="preserve">
+    <value>The description can be at most {0} characters.</value>
+  </data>
+  <data name="FaqCategoryInvalid" xml:space="preserve">
+    <value>Choose a valid category.</value>
+  </data>
+  <data name="FaqQuestionRequired" xml:space="preserve">
+    <value>Enter the question.</value>
+  </data>
+  <data name="FaqQuestionTooLong" xml:space="preserve">
+    <value>The question can be at most {0} characters.</value>
+  </data>
+  <data name="FaqAnswerRequired" xml:space="preserve">
+    <value>Enter the answer.</value>
+  </data>
+  <data name="FaqAnswerTooLong" xml:space="preserve">
+    <value>The answer can be at most {0} characters.</value>
+  </data>
+  <data name="ContentOrderItemsRequired" xml:space="preserve">
+    <value>Provide the list of ids and positions to apply.</value>
+  </data>
 </root>

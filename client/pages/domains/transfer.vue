@@ -9,6 +9,8 @@
  * Collects the domain name and the authorization code and hands the visitor on to the signed-in
  * transfer flow with both in the query string; `DomainsTransfer` only renders the form.
  */
+import { CLIENT_DOMAIN_TRANSFER_PATH } from '~/constants/clientRoutes'
+
 const { t } = useI18n()
 
 /** Site name the operator set; the brand is the fallback. */
@@ -35,7 +37,7 @@ const goTransfer = (): void => {
   if (epp) {
     params.set('eppcode', epp)
   }
-  navigateTo(localePath(`/client/domains/transfer?${params.toString()}`))
+  navigateTo(localePath(`${CLIENT_DOMAIN_TRANSFER_PATH}?${params.toString()}`))
 }
 
 useSeo({

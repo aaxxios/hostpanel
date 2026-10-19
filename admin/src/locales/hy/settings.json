@@ -18,6 +18,50 @@
       "hint": "Մեկ տող, էջի լռելյայն նկարագրություն"
     }
   },
+  "storefrontContent": {
+    "title": "Հանրային կայք",
+    "description": "Թվերը, գլխավոր բաժնի նշանն ու կոնտակտային տվյալները, որոնք ցուցադրում է հանրային կայքը։ Կայքի անվանումն ու կարգախոսը վերևի նույնականացման քարտում են։",
+    "statsClients": {
+      "label": "Հաճախորդների թիվը",
+      "hint": "Օրինակ՝ 5 000+"
+    },
+    "statsUptime": {
+      "label": "Հասանելիություն",
+      "hint": "Օրինակ՝ 99,9%"
+    },
+    "statsRegions": {
+      "label": "Տարածաշրջանների թիվը",
+      "hint": "Օրինակ՝ 12"
+    },
+    "heroBadge": {
+      "label": "Գլխավոր բաժնի նշան",
+      "hint": "Կարճ տող վերնագրի վերևում"
+    },
+    "contactEmail": {
+      "label": "Կոնտակտային email",
+      "hint": "support@example.com"
+    },
+    "contactPhone": {
+      "label": "Կոնտակտային հեռախոս",
+      "hint": "+1 555 000 0000"
+    },
+    "contactWhatsapp": {
+      "label": "WhatsApp համար",
+      "hint": "+1 555 000 0000"
+    },
+    "contactTelegram": {
+      "label": "Telegram-ի անունը",
+      "hint": "@example"
+    },
+    "contactAddress": {
+      "label": "Հասցե",
+      "hint": "Փողոց, քաղաք, երկիր"
+    },
+    "contactMapUrl": {
+      "label": "Քարտեզի հղում",
+      "hint": "https://maps.example.com/..."
+    }
+  },
   "portalAppearance": {
     "title": "Պորտալի տեսք",
     "description": "Ո՛ր ձևանմուշն է կիրառում հանրային կայքը և ո՛ր գունային ռեժիմով է այցելուն այն բացում։ Փոփոխությունները կիրառվում են հաջորդ էջի բեռնումից։",
@@ -108,7 +152,7 @@
     "title": "Վերլուծություն և չաթ",
     "description": "Երրորդ կողմի ծառայություններ, որոնց կայքը դիմում է։ Ոչինչ չի բեռնվում, մինչև այստեղ չկարգավորվի։",
     "gtm": {
-      "label": "Google Tag Manager container",
+      "label": "Google Tag Manager-ի կոնտեյներ",
       "hint": "Բեռնվում է միայն, երբ այցելուն ընդունում է բոլոր cookie-ները։ Դատարկ — tag չի բեռնվում։"
     },
     "chat": {
@@ -123,7 +167,7 @@
       "hint": "Widget-ը երևում է միայն, երբ provider-ը, սերվերը և token-ը երեքն էլ նշված են։"
     },
     "provider": {
-      "label": "Provider",
+      "label": "Պրովայդեր",
       "off": "Անջատված",
       "chatwoot": "Chatwoot",
       "innochat": "Innochat"

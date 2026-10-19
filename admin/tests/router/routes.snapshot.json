@@ -509,6 +509,54 @@
       {
         "path": "settings/currencies",
         "component": "CurrenciesView.vue"
+      },
+      {
+        "path": "storefront/testimonials",
+        "component": "TestimonialsView.vue"
+      },
+      {
+        "path": "storefront/testimonials/create",
+        "component": "TestimonialFormView.vue"
+      },
+      {
+        "path": "storefront/testimonials/:id/edit",
+        "component": "TestimonialFormView.vue"
+      },
+      {
+        "path": "storefront/partners",
+        "component": "PartnersView.vue"
+      },
+      {
+        "path": "storefront/partners/create",
+        "component": "PartnerFormView.vue"
+      },
+      {
+        "path": "storefront/partners/:id/edit",
+        "component": "PartnerFormView.vue"
+      },
+      {
+        "path": "storefront/projects",
+        "component": "ProjectsView.vue"
+      },
+      {
+        "path": "storefront/projects/create",
+        "component": "ProjectFormView.vue"
+      },
+      {
+        "path": "storefront/projects/:id/edit",
+        "component": "ProjectFormView.vue"
+      },
+      {
+        "path": "storefront/faqs",
+        "component": "FaqsView.vue"
+      },
+      {
+        "path": "storefront/faqs/create",
+        "component": "FaqFormView.vue"
+      },
+      {
+        "path": "storefront/faqs/:id/edit",
+        "component": "FaqFormView.vue"
       }
     ]
   },

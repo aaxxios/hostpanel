@@ -1,11 +1,11 @@
 using Innovayse.Hostpanel.Domain.Billing;
-
 using Innovayse.Hostpanel.Domain.Billing.Enums;
+
 namespace Innovayse.Hostpanel.Application.Billing.Queries.GetQuote;
 /// <summary>DTO for a full quote with line items (admin detail view).</summary>
 /// <param name="Id">Quote primary key.</param>
 /// <param name="ClientId">FK to the owning client.</param>
-/// <param name="ClientName">Full name of the owning client.</param>
+/// <param name="ClientName">Full name of the owning client. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="Subject">Quote subject/title.</param>
 /// <param name="Stage">Current lifecycle stage.</param>
 /// <param name="DateCreated">Creation timestamp (UTC).</param>
@@ -20,7 +20,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.GetQuote;
 public sealed record QuoteDto(
     int Id,
     int ClientId,
-    string ClientName,
+    string? ClientName,
     string Subject,
     QuoteStage Stage,
     DateTimeOffset DateCreated,

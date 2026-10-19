@@ -7,9 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Storefront content: testimonials, partners, projects and FAQs, with English, Russian and Armenian translations, served from `/api/public/{testimonials,partners,projects,faqs}`.
+- Admin pages under "Storefront content" to create, edit and order the storefront content.
+- Storefront content ships empty: operators enter testimonials, partners, projects and FAQs in the admin; the repository carries no site content.
+- Demo mode seeds a fixed, maximal sample data set that is reset on schedule.
+
+### Changed
+
+- Hero stats and badge, contact channels and the site name are read from settings (`portal.stats.*`, `portal.hero.badge`, `portal.contact.*`, `portal.site.name`); sections with no content are hidden.
+- The demo site name is "Hostpanel Demo".
+- The fallback site name is "Hostpanel"; no operator brand is hard-coded.
+- Innovayse.Auth is upgraded to 3.1.0.
+
+### Removed
+
+- The previous operator's sample storefront content.
+
 ### Fixed
 
 - A signed-in caller's first order no longer fails with a server error when it races the client record created on registration; the record is now saved once and the order continues with it.
+- Focus styling follows `:focus-visible`.
+- The billing toggle is fixed.
+- Order numbers are issued from a database sequence.
+
+### Security
+
+- The demo runs on its own network and cannot reach production services.
 
 ## [0.3.1] - 2026-10-18
 

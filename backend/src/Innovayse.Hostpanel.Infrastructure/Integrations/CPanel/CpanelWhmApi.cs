@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Innovayse.Hostpanel.Infrastructure.Resilience;
 
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.CPanel;
 /// <summary>
@@ -9,6 +10,9 @@ namespace Innovayse.Hostpanel.Infrastructure.Integrations.CPanel;
 /// </summary>
 public sealed class CpanelWhmApi
 {
+    /// <summary>The port WHM's JSON API listens on over TLS.</summary>
+    private const int WhmPort = 2087;
+
     /// <summary>The HTTP client already pointed at one WHM server and carrying its credentials.</summary>
     private readonly HttpClient _http;
 
@@ -25,9 +29,9 @@ public sealed class CpanelWhmApi
     public static CpanelWhmApi Create(string hostname, string username, string apiToken, IHttpClientFactory factory)
     {
         var http = factory.CreateClient();
-        http.BaseAddress = new Uri($"https://{hostname}:2087");
+        http.BaseAddress = new Uri($"https://{hostname}:{WhmPort}");
         http.DefaultRequestHeaders.Add("Authorization", $"whm {username}:{apiToken}");
-        http.Timeout = TimeSpan.FromSeconds(30);
+        http.Timeout = HttpBackstopTimeouts.Whm;
         return new CpanelWhmApi(http);
     }
 
@@ -40,11 +44,11 @@ public sealed class CpanelWhmApi
     public static CpanelWhmApi CreateWithHash(string hostname, string username, string accessHash, IHttpClientFactory factory)
     {
         var http = factory.CreateClient();
-        http.BaseAddress = new Uri($"https://{hostname}:2087");
+        http.BaseAddress = new Uri($"https://{hostname}:{WhmPort}");
         // WHM access hash auth — strip whitespace from hash
         var cleanHash = accessHash.Replace("\n", "").Replace("\r", "").Trim();
         http.DefaultRequestHeaders.Add("Authorization", $"WHM {username}:{cleanHash}");
-        http.Timeout = TimeSpan.FromSeconds(30);
+        http.Timeout = HttpBackstopTimeouts.Whm;
         return new CpanelWhmApi(http);
     }
 

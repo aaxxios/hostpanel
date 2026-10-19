@@ -17,9 +17,7 @@ import type {
   MigrationLogPage,
   MigrationLogQuery,
 } from '@/types/migration'
-
-/** How often a running job is re-read, in milliseconds. */
-const POLL_INTERVAL_MS = 2000
+import { POLL_INTERVAL_MS } from '@/lib/limits'
 
 /** Holds migration jobs and drives their lifecycle from the admin panel. */
 export const useMigrationStore = defineStore('migration', () => {

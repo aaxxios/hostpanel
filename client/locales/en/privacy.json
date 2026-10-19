@@ -2,7 +2,7 @@
   "privacy": {
     "badge": "Privacy & Transparency",
     "title": "Privacy Policy",
-    "subtitle": "At Innovayse, we value your trust. This policy explains how we handle your data across our hosting, domain and client portal services.",
+    "subtitle": "At {site}, we value your trust. This policy explains how we handle your data across our hosting, domain and client portal services.",
     "lastUpdated": "Last updated",
     "sections": {
       "collection": {
@@ -21,7 +21,7 @@
       "usage": {
         "title": "How We Use Your Data",
         "content": {
-          "0": "Innovayse uses your personal and technical data to ensure reliable service delivery and platform stability:"
+          "0": "{site} uses your personal and technical data to ensure reliable service delivery and platform stability:"
         },
         "list": {
           "0": "Provisioning and renewing the hosting, domain and server services you have ordered.",
@@ -55,7 +55,7 @@
       "rights": {
         "title": "Your Rights & Control",
         "content": {
-          "0": "You have full control over your data stored with Innovayse. You may request:"
+          "0": "You have full control over your data stored with {site}. You may request:"
         },
         "list": {
           "0": "A complete record of all personal data we hold about you.",
@@ -87,7 +87,7 @@
     },
     "contact": {
       "title": "Privacy Concerns?",
-      "description": "Our Data Protection Team is ready to assist you with any questions regarding your information at Innovayse.",
+      "description": "Our Data Protection Team is ready to assist you with any questions regarding your information at {site}.",
       "link": "Get in Touch"
     }
   }

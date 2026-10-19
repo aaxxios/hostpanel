@@ -7,6 +7,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -30,8 +31,14 @@ import { Icon } from '@/lib/icons'
 import { cancellationStatusLabel, cancellationStatusTone, cancellationTypeLabel, cancellationTypeTone } from '@/lib/tones'
 import { useCancellationRequestsStore } from '@/stores/cancellationRequests'
 import { UiTone } from '@/utils/ui/tone'
+import { clientPath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { clientLabel, orUnknown } = useFallbackLabels()
 
 /** Cancellation requests store: the page, its paging and the load state. */
 const store = useCancellationRequestsStore()
@@ -132,10 +139,10 @@ onMounted(() => store.fetchAll())
             :data-testid="`cancellations-row-${item.id}`"
           >
             <UiTableCell muted>{{ formatDate(item.createdAt) }}</UiTableCell>
-            <UiTableCell>{{ item.serviceName }}</UiTableCell>
+            <UiTableCell>{{ orUnknown(item.serviceName) }}</UiTableCell>
             <UiTableCell>
-              <UiLink variant="link" :to="`/clients/${item.clientId}`" :data-testid="`cancellations-client-${item.id}`">
-                {{ item.clientName }}
+              <UiLink variant="link" :to="clientPath(item.clientId)" :data-testid="`cancellations-client-${item.id}`">
+                {{ clientLabel(item.clientName, item.clientId) }}
               </UiLink>
             </UiTableCell>
             <UiTableCell>

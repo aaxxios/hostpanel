@@ -184,7 +184,7 @@ const handleUpdatePrices = async (): Promise<void> => {
   updatingPrices.value = true
   const written = await store.updateProductPrices(selectedPriceCurrencies.value)
   if (written !== null) {
-    banner.show(t('currencies.toasts.pricesUpdated', { count: written }), false)
+    banner.show(t('currencies.toasts.pricesUpdated', { count: written }, written), false)
   } else if (store.actionError) {
     banner.show(store.actionError, true)
   }

@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Application.Admin.Seeding;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Application.Support.Seeding;
 using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
@@ -39,6 +40,9 @@ internal sealed class DemoDataManager : IDemoDataManager
     /// <summary>The demo switch and the published accounts.</summary>
     private readonly IOptions<DemoOptions> _options;
 
+    /// <summary>The configured contact addresses of the default support departments.</summary>
+    private readonly IOptions<DefaultDepartmentsOptions> _departmentOptions;
+
     /// <summary>Structured logger.</summary>
     private readonly ILogger<DemoDataManager> _logger;
 
@@ -48,6 +52,7 @@ internal sealed class DemoDataManager : IDemoDataManager
     /// <param name="eventGate">Discards the domain events the seeded rows would raise.</param>
     /// <param name="unitOfWork">Unit of work the shared deployment seeders save through.</param>
     /// <param name="options">The demo switch and the published accounts.</param>
+    /// <param name="departmentOptions">The configured contact addresses of the default support departments.</param>
     /// <param name="logger">Structured logger.</param>
     public DemoDataManager(
         AppDbContext db,
@@ -55,6 +60,7 @@ internal sealed class DemoDataManager : IDemoDataManager
         IDomainEventGate eventGate,
         IUnitOfWork unitOfWork,
         IOptions<DemoOptions> options,
+        IOptions<DefaultDepartmentsOptions> departmentOptions,
         ILogger<DemoDataManager> logger)
     {
         _db = db;
@@ -62,6 +68,7 @@ internal sealed class DemoDataManager : IDemoDataManager
         _eventGate = eventGate;
         _unitOfWork = unitOfWork;
         _options = options;
+        _departmentOptions = departmentOptions;
         _logger = logger;
     }
 
@@ -109,14 +116,28 @@ internal sealed class DemoDataManager : IDemoDataManager
     {
         // The two deployment-wide seeders every environment runs; both are idempotent and a reset
         // has just emptied the tables they fill.
-        await DefaultDepartmentsSeeder.EnsureSeededAsync(_db, _unitOfWork, ct);
+        await DefaultDepartmentsSeeder.EnsureSeededAsync(_db, _unitOfWork, _departmentOptions.Value, ct);
         await PortalSettingsSeeder.EnsureSeededAsync(_db, _unitOfWork, ct);
+
+        // One anchor for the whole run, so every date in every seeder is counted from the same day.
+        var today = DemoAnchor.Today();
 
         await new DemoCatalogueSeeder(_db).SeedAsync(ct);
         var demoClientId = await new DemoPeopleSeeder(_db, _users, _options.Value).SeedAsync(ct);
-        await new DemoBillingSeeder(_db).SeedAsync(ct);
-        await new DemoSupportSeeder(_db).SeedAsync(demoClientId, ct);
-        await new DemoServerSeeder(_db).SeedAsync(ct);
+        await new DemoServerSeeder(_db, today).SeedAsync(ct);
+        await new DemoServiceSeeder(_db, today).SeedAsync(ct);
+        await new DemoDomainSeeder(_db, today).SeedAsync(ct);
+        await new DemoBillingSeeder(_db, today).SeedAsync(ct);
+        await new DemoSalesSeeder(_db, today).SeedAsync(ct);
+        await new DemoSupportSeeder(_db, today).SeedAsync(demoClientId, ct);
+        await new DemoContentSeeder(_db, today).SeedAsync(ct);
+        await new DemoLogSeeder(_db).SeedAsync(ct);
+
+        // After the shared seeder created its empty rows at the top of this method.
+        await new DemoPortalSettingsSeeder(_db).SeedAsync(ct);
+
+        // The hook the storefront content (testimonials, partners, projects, FAQs) is filled through.
+        await new DemoStorefrontSeeder(_db).SeedAsync(ct);
     }
 
     /// <summary>Empties every mapped table except the kept identity role tables and the tables the migrations seed through <c>HasData</c> (email templates among them), which nothing would restore.</summary>

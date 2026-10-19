@@ -13,7 +13,7 @@ import { TrialPerk } from '~/types/trialperk'
  * @returns The wrapper.
  */
 const mountDetails = (features: string[] = ['Boards', 'Reports']) =>
-  mountWithKit(TrialDetails, { props: { name: 'Taskero', color: '#10b981', trialUrl: '/products/taskero', features } })
+  mountWithKit(TrialDetails, { props: { name: 'Gamma Tool', color: '#10b981', trialUrl: '/products/gamma-tool', features } })
 
 describe('TrialDetails', () => {
   it('lists the product features', () => {
@@ -40,7 +40,7 @@ describe('TrialDetails', () => {
   it('offers the trial again at the bottom', () => {
     const cta = mountDetails().find('[data-testid="trial-cta-bottom"]')
 
-    expect(cta.attributes('href')).toBe('/products/taskero')
+    expect(cta.attributes('href')).toBe('/products/gamma-tool')
     expect(cta.attributes('target')).toBe('_blank')
   })
 })

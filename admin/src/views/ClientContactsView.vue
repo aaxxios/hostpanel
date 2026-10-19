@@ -27,11 +27,9 @@ import { UiAlign } from '@/utils/ui/table'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
+import { NOTICE_VISIBLE_MS } from '@/lib/limits'
 
 const { t } = useI18n()
-
-/** How long the success banner stays, in milliseconds. */
-const SUCCESS_BANNER_MS = 3000
 
 /** Current route, source of the client id. */
 const route = useRoute()
@@ -74,7 +72,7 @@ const showSuccess = (message: string): void => {
   clearTimeout(successTimer)
   successTimer = setTimeout(() => {
     contactSuccess.value = null
-  }, SUCCESS_BANNER_MS)
+  }, NOTICE_VISIBLE_MS)
 }
 
 /**

@@ -4,6 +4,7 @@
  * @module plugins/color-mode
  */
 
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { COLOR_MODE_COOKIE, SYSTEM_MODE_BOOTSTRAP, parseColorMode } from '~/utils/colorMode'
 import { ColorMode } from '~/types/colormode'
 import { ColorModeSystem } from '~/types/colormodesystem'
@@ -76,7 +77,9 @@ export default defineNuxtPlugin({
       })
     }
 
-    const template = computed(() => resolveTemplateName(get('portal.template', 'portalTemplate')))
+    /** The active storefront template, which decides the page colours. */
+    const template = computed(() => resolveTemplateName(get(PortalSettingKey.Template, 'portalTemplate')))
+    /** The browser chrome colour for the active template and the applied colour mode. */
     const themeColor = computed(() => PAGE_COLORS[template.value][applied.value ?? ColorMode.Dark])
 
     useHead({

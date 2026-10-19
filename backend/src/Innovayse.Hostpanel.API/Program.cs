@@ -16,6 +16,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 using Serilog;
+using Innovayse.Hostpanel.API.Auth;
+using Innovayse.Hostpanel.Application.Admin.Seeding;
+using Innovayse.Hostpanel.Application.Auth.Seeding;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Support.Seeding;
+using Innovayse.Hostpanel.Shared.Constants;
+using Innovayse.Hostpanel.Shared.Localization;
+using Innovayse.Hostpanel.Shared.Middleware;
+using Innovayse.Hostpanel.Shared.Settings;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -30,7 +39,7 @@ try
     builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
     // Serilog — skip in Testing environment to avoid ReloadableLogger.Freeze() conflicts
-    if (!builder.Environment.IsEnvironment("Testing"))
+    if (!builder.Environment.IsEnvironment(EnvironmentNames.Testing))
     {
         builder.Host.UseSerilog((ctx, services, config) =>
             config.ReadFrom.Configuration(ctx.Configuration)
@@ -73,7 +82,7 @@ try
     // simply stopped following the code, with nothing in the log to say so. Nobody
     // was going to notice until a migration was missing. The SSO has always migrated
     // this way; hostpanel is the one that did not.
-    if (!app.Environment.IsEnvironment("Testing"))
+    if (!app.Environment.IsEnvironment(EnvironmentNames.Testing))
     {
         using var migrScope = app.Services.CreateScope();
         var dbCtx = migrScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -81,7 +90,7 @@ try
     }
 
     // Seed roles — skip in Testing environment (migrations run after host starts via factory)
-    if (!app.Environment.IsEnvironment("Testing"))
+    if (!app.Environment.IsEnvironment(EnvironmentNames.Testing))
     {
         using var scope = app.Services.CreateScope();
 
@@ -119,16 +128,18 @@ try
 
         // Support departments — every environment, for the same reason as the roles
         // above: the ticket form cannot be submitted without at least one.
-        await Innovayse.Hostpanel.Application.Support.Seeding.DefaultDepartmentsSeeder.EnsureSeededAsync(
-            scope.ServiceProvider.GetRequiredService<Innovayse.Hostpanel.Application.Common.Interfaces.IHostpanelDbContext>(),
-            scope.ServiceProvider.GetRequiredService<Innovayse.Hostpanel.Application.Common.Interfaces.IUnitOfWork>());
+        await DefaultDepartmentsSeeder.EnsureSeededAsync(
+            scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(),
+            scope.ServiceProvider.GetRequiredService<IUnitOfWork>(),
+            scope.ServiceProvider
+                .GetRequiredService<IOptions<DefaultDepartmentsOptions>>().Value);
 
         // Storefront settings — also every environment. SettingsController can update
         // an existing key but cannot create one, so a key that was never seeded is a
         // key no operator can ever set from the admin panel.
-        await Innovayse.Hostpanel.Application.Admin.Seeding.PortalSettingsSeeder.EnsureSeededAsync(
-            scope.ServiceProvider.GetRequiredService<Innovayse.Hostpanel.Application.Common.Interfaces.IHostpanelDbContext>(),
-            scope.ServiceProvider.GetRequiredService<Innovayse.Hostpanel.Application.Common.Interfaces.IUnitOfWork>());
+        await PortalSettingsSeeder.EnsureSeededAsync(
+            scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(),
+            scope.ServiceProvider.GetRequiredService<IUnitOfWork>());
 
         // Dev seed — populate test data in Development. Local mode only: the seeder
         // creates its people through Identity's UserManager, which an SSO-owned
@@ -139,15 +150,15 @@ try
         // development one: both would create clients, and the demo's idempotency keys on its own rows.
         // Reading .Value here also validates Demo:* now, so a half-configured demo stops the start
         // with the key named rather than failing on the first request.
-        if (app.Services.GetRequiredService<IOptions<Innovayse.Hostpanel.Shared.Settings.DemoOptions>>().Value.Enabled)
+        if (app.Services.GetRequiredService<IOptions<DemoOptions>>().Value.Enabled)
         {
             await scope.ServiceProvider
-                .GetRequiredService<Innovayse.Hostpanel.Application.Common.Interfaces.IDemoDataManager>()
+                .GetRequiredService<IDemoDataManager>()
                 .SeedAsync(CancellationToken.None);
         }
         else if (app.Environment.IsDevelopment() && isLocalMode)
         {
-            var seeder = ActivatorUtilities.CreateInstance<Innovayse.Hostpanel.Infrastructure.Persistence.DevDataSeeder>(scope.ServiceProvider);
+            var seeder = ActivatorUtilities.CreateInstance<DevDataSeeder>(scope.ServiceProvider);
             await seeder.SeedAsync();
         }
 
@@ -169,10 +180,10 @@ try
         // operator provisioned, and that path is in production use.
         if (isLocalMode)
         {
-            var setupToken = await Innovayse.Hostpanel.Application.Auth.Seeding.SetupTokenSeeder.EnsureIssuedAsync(
-                scope.ServiceProvider.GetRequiredService<Innovayse.Hostpanel.Application.Common.Interfaces.IHostpanelDbContext>(),
-                scope.ServiceProvider.GetRequiredService<Innovayse.Hostpanel.Application.Common.Interfaces.ISubjectRoleStore>(),
-                scope.ServiceProvider.GetRequiredService<Innovayse.Hostpanel.Application.Common.Interfaces.IUnitOfWork>());
+            var setupToken = await SetupTokenSeeder.EnsureIssuedAsync(
+                scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(),
+                scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>(),
+                scope.ServiceProvider.GetRequiredService<IUnitOfWork>());
 
             if (setupToken is not null)
             {
@@ -194,7 +205,7 @@ try
         }
     }
 
-    if (!app.Environment.IsEnvironment("Testing"))
+    if (!app.Environment.IsEnvironment(EnvironmentNames.Testing))
     {
         app.UseSerilogRequestLogging();
     }
@@ -216,7 +227,7 @@ try
         .AddSupportedCultures([.. LocaleOptions.SupportedLocales])
         .AddSupportedUICultures([.. LocaleOptions.SupportedLocales]);
     localizationOptions.RequestCultureProviders.Insert(
-        0, new Innovayse.Hostpanel.Shared.Localization.XLanguageRequestCultureProvider());
+        0, new XLanguageRequestCultureProvider());
     app.UseRequestLocalization(localizationOptions);
 
     // Reference order (innovayse-ai's Program.cs, which Shared/Middleware/ was copied from file
@@ -224,9 +235,9 @@ try
     // exception handler. The trace id has to exist before anything downstream might fault, and
     // the leak guard's header sweep has to be registered before the exception handler's own
     // response write, so a fault answered here is swept the same as every other response.
-    app.UseMiddleware<Innovayse.Hostpanel.Shared.Middleware.TraceIdMiddleware>();
-    app.UseMiddleware<Innovayse.Hostpanel.Shared.Middleware.ProviderLeakGuardMiddleware>();
-    app.UseMiddleware<Innovayse.Hostpanel.Shared.Middleware.ExceptionHandlingMiddleware>();
+    app.UseMiddleware<TraceIdMiddleware>();
+    app.UseMiddleware<ProviderLeakGuardMiddleware>();
+    app.UseMiddleware<ExceptionHandlingMiddleware>();
 
     // Forwarded headers first, in BOTH modes, and above everything that reads the request's
     // origin. Two things depend on it: Request.Scheme, which is otherwise Kestrel's view of the
@@ -280,13 +291,13 @@ try
         // header is CSRF-safe on its own, and that stopped being the whole story the moment the
         // local session moved into a cookie. It examines only requests that actually present
         // that cookie, so bearer callers and anonymous webhooks are untouched.
-        app.UseMiddleware<Innovayse.Hostpanel.API.Auth.LocalSessionCsrfMiddleware>();
+        app.UseMiddleware<LocalSessionCsrfMiddleware>();
 
         app.UseAuthentication();
 
         // Sliding renewal of the local session; needs the authenticated User, so it follows
         // authentication. Local mode only: the SSO branch above is unchanged.
-        app.UseMiddleware<Innovayse.Hostpanel.API.Auth.LocalSessionRenewalMiddleware>();
+        app.UseMiddleware<LocalSessionRenewalMiddleware>();
 
         // Between authentication and authorisation, which is where it belongs: User is populated,
         // so the per-subject partition works, and a request that authorisation is about to refuse

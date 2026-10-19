@@ -1,7 +1,7 @@
 using Innovayse.Hostpanel.Application.Admin.Common;
+using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
-using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 
 namespace Innovayse.Hostpanel.Application.Admin.Commands.UploadBrandingImage;
 
@@ -53,21 +53,19 @@ public sealed class UploadBrandingImageHandler
         UploadBrandingImageCommand command,
         CancellationToken ct)
     {
-        var kind = Enum.Parse<BrandingKind>(command.Kind, ignoreCase: true);
-
         // 400 (BRANDING_IMAGE_INVALID) or 413 (BRANDING_IMAGE_TOO_LARGE): the processor logs the
         // precise cause -- which signature failed, which ceiling was hit -- and keeps it out of
         // the body, so probing the endpoint teaches nothing about the checks it runs.
         using var buffer = new MemoryStream();
         await command.Content.CopyToAsync(buffer, ct);
         var source = new BrandingSource(buffer.ToArray(), command.FileName);
-        var rendered = await _processor.RenderAsync(source, kind, ct);
+        var rendered = await _processor.RenderAsync(source, command.Kind, ct);
         if (rendered.IsFailure)
         {
             return Result<BrandingUploadResultDto>.FailureCode(rendered.ErrorCode!);
         }
 
-        var assets = await _storage.SaveAsync(kind, rendered.Value!, ct);
+        var assets = await _storage.SaveAsync(command.Kind, rendered.Value!, ct);
 
         // The processor's contract guarantees exactly one Primary, and the storage contract
         // guarantees the order is preserved -- so this is a lookup, not a search that might fail.

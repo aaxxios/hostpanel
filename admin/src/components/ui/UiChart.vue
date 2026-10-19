@@ -26,8 +26,8 @@ import {
   Tooltip,
 } from 'chart.js'
 import type { ChartConfiguration, ChartType, TooltipItem } from 'chart.js'
-import { paletteColor, readChartTheme } from '@/utils/ui/chart'
-import type { UiChartHeight, UiChartSeries, UiChartType } from '@/utils/ui/chart'
+import { paletteColor, readChartTheme, UiChartType } from '@/utils/ui/chart'
+import type { UiChartHeight, UiChartSeries } from '@/utils/ui/chart'
 
 Chart.register(
   ArcElement,
@@ -95,7 +95,7 @@ const isEmpty = computed<boolean>(() =>
 )
 
 /** Whether the chart is a circular kind. */
-const isCircular = computed<boolean>(() => props.type === 'pie' || props.type === 'doughnut')
+const isCircular = computed<boolean>(() => props.type === UiChartType.Pie || props.type === UiChartType.Doughnut)
 
 /**
  * Formats a number with the caller's formatter, or as-is.
@@ -129,7 +129,7 @@ const buildConfig = (): ChartConfiguration => {
           data: s.data,
           backgroundColor: color,
           borderColor: color,
-          borderRadius: props.type === 'bar' ? 6 : 0,
+          borderRadius: props.type === UiChartType.Bar ? 6 : 0,
           tension: 0.35,
           fill: false,
         }

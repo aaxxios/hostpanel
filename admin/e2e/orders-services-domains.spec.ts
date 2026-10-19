@@ -2,6 +2,7 @@
  * Orders, services and domains lists: each renders the page the API returned with a link to the
  * owning client, a pending order can be accepted, and a refused load shows the API's sentence.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { domainsPage, hostingService, ordersPage, pendingOrder, registeredDomain, servicesPage } from './fixtures/orders'
 import type { OrderListItem } from '../src/types/order'
@@ -15,16 +16,16 @@ test('accepting a pending order posts the command and reloads the list', async (
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      { method: 'GET', path: '/api/orders', respond: () => ({ body: { ...ordersPage, items: [stored] } }) },
+      { method: HttpMethod.Get, path: '/api/orders', respond: () => ({ body: { ...ordersPage, items: [stored] } }) },
       {
-        method: 'POST',
+        method: HttpMethod.Post,
         path: `/api/orders/${pendingOrder.id}/accept`,
         respond: () => {
           stored.status = OrderStatus.Active
           return { status: 204 }
         },
       },
-      { method: 'GET', path: `/api/orders/${pendingOrder.id}`, respond: () => ({ body: { ...stored, invoiceStatus: null, ipAddress: null, items: [] } }) },
+      { method: HttpMethod.Get, path: `/api/orders/${pendingOrder.id}`, respond: () => ({ body: { ...stored, invoiceStatus: null, ipAddress: null, items: [] } }) },
     ],
   })
 
@@ -36,7 +37,7 @@ test('accepting a pending order posts the command and reloads the list', async (
 
   // An active order no longer offers accept or cancel.
   await expect(page.getByTestId(`orders-accept-${pendingOrder.id}`)).toHaveCount(0)
-  expect(api.callsTo('POST', `/api/orders/${pendingOrder.id}/accept`)).toHaveLength(1)
+  expect(api.callsTo(HttpMethod.Post, `/api/orders/${pendingOrder.id}/accept`)).toHaveLength(1)
 })
 
 test('a refused accept shows the API sentence and keeps the order pending', async ({ page }) => {
@@ -44,8 +45,8 @@ test('a refused accept shows the API sentence and keeps the order pending', asyn
   await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/orders', ordersPage),
-      json('POST', `/api/orders/${pendingOrder.id}/accept`, { type: 'CONFLICT', title: 'Conflict', status: 409, detail: sentence }, 409),
+      json(HttpMethod.Get, '/api/orders', ordersPage),
+      json(HttpMethod.Post, `/api/orders/${pendingOrder.id}/accept`, { type: 'CONFLICT', title: 'Conflict', status: 409, detail: sentence }, 409),
     ],
   })
 
@@ -57,7 +58,7 @@ test('a refused accept shows the API sentence and keeps the order pending', asyn
 })
 
 test('the services list links each service to its client', async ({ page }) => {
-  await stubApi(page, { signedIn: true, routes: [json('GET', '/api/services', servicesPage)] })
+  await stubApi(page, { signedIn: true, routes: [json(HttpMethod.Get, '/api/services', servicesPage)] })
 
   await page.goto('/services')
 
@@ -66,7 +67,7 @@ test('the services list links each service to its client', async ({ page }) => {
 })
 
 test('the domains list opens a domain under its client', async ({ page }) => {
-  await stubApi(page, { signedIn: true, routes: [json('GET', '/api/domains', domainsPage)] })
+  await stubApi(page, { signedIn: true, routes: [json(HttpMethod.Get, '/api/domains', domainsPage)] })
 
   await page.goto('/domains')
 
@@ -80,7 +81,7 @@ test('the domains list opens a domain under its client', async ({ page }) => {
 test('an empty services list shows the empty state', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
-    routes: [json('GET', '/api/services', { items: [], totalCount: 0, page: 1, pageSize: 20 })],
+    routes: [json(HttpMethod.Get, '/api/services', { items: [], totalCount: 0, page: 1, pageSize: 20 })],
   })
 
   await page.goto('/services')

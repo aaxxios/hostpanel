@@ -7,5 +7,10 @@
     "resent": "Verification email sent."
   },
   "menu": "Menu",
-  "navigation": "Main navigation"
+  "navigation": "Main navigation",
+  "localeLabels": {
+    "en": "EN",
+    "hy": "ՀՅ",
+    "ru": "РУ"
+  }
 }

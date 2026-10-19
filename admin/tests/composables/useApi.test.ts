@@ -4,6 +4,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { i18n } from '@/i18n'
+import { MessageLanguage } from '@/locales/messages'
 import { buildQuery, useApi } from '@/composables/useApi'
 import { json } from '../helpers/fetch'
 
@@ -28,14 +29,14 @@ const sentHeaders = (mock: ReturnType<typeof stubFetch>): Record<string, string>
   (mock.mock.calls[0] as unknown as [string, RequestInit])[1].headers as Record<string, string>
 
 afterEach(() => {
-  i18n.global.locale.value = 'en'
+  i18n.global.locale.value = MessageLanguage.En
   vi.unstubAllGlobals()
 })
 
 describe('useApi language header', () => {
   it('sends X-Language from the current locale on a request', async () => {
     const mock = stubFetch()
-    i18n.global.locale.value = 'ru'
+    i18n.global.locale.value = MessageLanguage.Ru
 
     await useApi().request('/admin/dashboard/stats')
 
@@ -44,7 +45,7 @@ describe('useApi language header', () => {
 
   it('follows a locale switch on the next request', async () => {
     const mock = stubFetch()
-    i18n.global.locale.value = 'hy'
+    i18n.global.locale.value = MessageLanguage.Hy
 
     await useApi().request('/admin/dashboard/stats')
 
@@ -53,7 +54,7 @@ describe('useApi language header', () => {
 
   it('sends X-Language on an upload', async () => {
     const mock = stubFetch()
-    i18n.global.locale.value = 'ru'
+    i18n.global.locale.value = MessageLanguage.Ru
 
     await useApi().upload('/admin/slides/upload-image', new File(['x'], 'a.png'))
 

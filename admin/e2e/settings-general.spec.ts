@@ -2,6 +2,7 @@
  * System settings flow: editing a raw setting reveals its Save button and PUTs the new value, and
  * a refusal shows the API's validation sentence while the draft stays on screen.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { fieldOf } from './support/locators'
 import { json, stubApi } from './support/stubApi'
@@ -17,9 +18,9 @@ test('editing a setting saves the new value', async ({ page }) => {
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      { method: 'GET', path: '/api/admin/settings', respond: () => ({ body: stored }) },
+      { method: HttpMethod.Get, path: '/api/admin/settings', respond: () => ({ body: stored }) },
       {
-        method: 'PUT',
+        method: HttpMethod.Put,
         path: `/api/admin/settings/${timezone.id}`,
         respond: (call) => {
           const row = stored[0]
@@ -40,7 +41,7 @@ test('editing a setting saves the new value', async ({ page }) => {
 
   await expect(page.getByTestId(`setting-save-${timezone.id}`)).toHaveCount(0)
   await expect(fieldOf(page, `setting-value-${timezone.id}`)).toHaveValue('Asia/Yerevan')
-  expect(api.callsTo('PUT', `/api/admin/settings/${timezone.id}`)[0]?.body).toEqual({ value: 'Asia/Yerevan' })
+  expect(api.callsTo(HttpMethod.Put, `/api/admin/settings/${timezone.id}`)[0]?.body).toEqual({ value: 'Asia/Yerevan' })
 })
 
 test('a refused save shows the API sentence and keeps the draft', async ({ page }) => {
@@ -48,9 +49,9 @@ test('a refused save shows the API sentence and keeps the draft', async ({ page 
   await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/admin/settings', [timezone]),
+      json(HttpMethod.Get, '/api/admin/settings', [timezone]),
       json(
-        'PUT',
+        HttpMethod.Put,
         `/api/admin/settings/${timezone.id}`,
         { type: 'VALIDATION_ERROR', title: 'Validation failed', status: 400, detail: sentence },
         400,

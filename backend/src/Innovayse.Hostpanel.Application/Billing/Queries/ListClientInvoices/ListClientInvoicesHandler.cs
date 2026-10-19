@@ -31,7 +31,7 @@ public sealed class ListClientInvoicesHandler
         ArgumentNullException.ThrowIfNull(query);
 
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
         var filtered = _context.Invoices.AsNoTracking().Where(x => x.ClientId == query.ClientId);
 
@@ -61,7 +61,7 @@ public sealed class ListClientInvoicesHandler
             .AsNoTracking()
             .Where(c => c.Id == query.ClientId)
             .Select(c => (c.FirstName + " " + c.LastName).Trim())
-            .FirstOrDefaultAsync(ct) ?? $"Client #{query.ClientId}";
+            .FirstOrDefaultAsync(ct);
 
         var dtos = items.Select(inv => inv with { ClientName = clientName }).ToList();
 

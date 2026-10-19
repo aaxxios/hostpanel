@@ -18,8 +18,10 @@ import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiUploadZone from '@/components/ui/UiUploadZone.vue'
 import { useSettingsStore } from '@/stores/settings'
+import { SettingKey } from '@/types/setting'
 import type { Setting } from '@/types/setting'
 import { BrandingImageKind } from '@/types/upload'
+import { FAVICON_ACCEPT, LOGO_ACCEPT } from '@/lib/mimeTypes'
 
 const { t } = useI18n()
 
@@ -61,13 +63,10 @@ interface BrandingField {
   previewBg: string
 }
 
-/** MIME types accepted for the logos. */
-const LOGO_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/bmp'
-
 /** The four images the card manages. */
 const FIELDS: BrandingField[] = [
   {
-    key: 'portal.logo',
+    key: SettingKey.Logo,
     kind: BrandingImageKind.Logo,
     labelKey: 'settings.branding.logo.label',
     hintKey: 'settings.branding.logo.hint',
@@ -76,7 +75,7 @@ const FIELDS: BrandingField[] = [
     previewBg: 'bg-white',
   },
   {
-    key: 'portal.logo.dark',
+    key: SettingKey.LogoDark,
     kind: BrandingImageKind.LogoDark,
     labelKey: 'settings.branding.logoDark.label',
     hintKey: 'settings.branding.logoDark.hint',
@@ -85,7 +84,7 @@ const FIELDS: BrandingField[] = [
     previewBg: 'bg-neutral-900',
   },
   {
-    key: 'portal.logo.mark',
+    key: SettingKey.LogoMark,
     kind: BrandingImageKind.LogoMark,
     labelKey: 'settings.branding.logoMark.label',
     hintKey: 'settings.branding.logoMark.hint',
@@ -94,11 +93,11 @@ const FIELDS: BrandingField[] = [
     previewBg: 'bg-neutral-900',
   },
   {
-    key: 'portal.favicon',
+    key: SettingKey.Favicon,
     kind: BrandingImageKind.Favicon,
     labelKey: 'settings.branding.favicon.label',
     hintKey: 'settings.branding.favicon.hint',
-    accept: 'image/png,image/jpeg,image/webp',
+    accept: FAVICON_ACCEPT,
     previewClass: 'w-10 h-10',
     previewBg: 'bg-neutral-900',
   },

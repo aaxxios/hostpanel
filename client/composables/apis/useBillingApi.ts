@@ -11,6 +11,7 @@ import { apiFetch } from '~/composables/useApi'
 import type { ClientInvoice } from '~/types/clientinvoice'
 import type { GatewayMethod } from '~/types/gatewaymethod'
 import type { PaymentMethod } from '~/types/payment'
+import { PaymentTarget } from '~/types/paymenttarget'
 
 /**
  * The billing surface, one function per endpoint.
@@ -174,24 +175,24 @@ export const useBillingApi = () => {
    *
    * @param target - Whether the payment was raised against an order or an invoice.
    * @param id - The order or invoice id.
-   * @param paymentToken - The order's payment token. Required when `target` is `'order'`; ignored
+   * @param paymentToken - The order's payment token. Required when `target` is `PaymentTarget.Order`; ignored
    * for an invoice, which is authorised by the caller's own credential.
    * @returns What the bank said the payment did.
    * @throws Whatever `apiFetch` throws — the caller must not read a failure here as a
    * declined payment; the money may well have moved.
    */
   const completeGatewayPayment = (
-    target: 'order' | 'invoice',
+    target: PaymentTarget,
     id: string | number,
     paymentToken?: string
   ): Promise<{ state: 'paid' | 'pending' | 'declined' }> =>
     apiFetch<{ state: 'paid' | 'pending' | 'declined' }>(
-      target === 'order'
+      target === PaymentTarget.Order
         ? `/api/portal/order/${id}/gateway-payment/complete`
         : `/api/portal/client/invoices/${id}/gateway-payment/complete`,
       // Only the order endpoint reads a token; the invoice one is behind the client's own
       // credential and is sent an empty body, exactly as before.
-      { method: 'POST', body: target === 'order' ? { paymentToken } : {} }
+      { method: 'POST', body: target === PaymentTarget.Order ? { paymentToken } : {} }
     )
 
   /**

@@ -27,6 +27,8 @@ import UiTableHead from '@/components/ui/UiTableHead.vue'
 import UiTableHeader from '@/components/ui/UiTableHeader.vue'
 import UiTableRow from '@/components/ui/UiTableRow.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { NOTICE_VISIBLE_MS } from '@/lib/limits'
+import { AppRoute } from '@/lib/routes'
 
 /** Translation function and the active locale (for date formatting). */
 const { t, locale } = useI18n()
@@ -36,9 +38,6 @@ const router = useRouter()
 
 /** Users store: the paged list, the detail and the refusal sentences. */
 const store = useUsersStore()
-
-/** How long a success message stays on screen, in milliseconds. */
-const SUCCESS_VISIBLE_MS = 3000
 
 /** Search input value. */
 const search = ref('')
@@ -85,7 +84,7 @@ const showSuccess = (message: string): void => {
   }
   successTimer.value = setTimeout(() => {
     actionSuccess.value = null
-  }, SUCCESS_VISIBLE_MS)
+  }, NOTICE_VISIBLE_MS)
 }
 
 /** Applies the search filter, starting from the first page. */
@@ -240,7 +239,7 @@ onUnmounted(() => {
       :subtitle="t('clients.manageUsers.viewAndManageUserAccounts')"
     >
       <template #actions>
-        <UiButton variant="primary" data-testid="users-add-client" @click="router.push('/clients/add')">
+        <UiButton variant="primary" data-testid="users-add-client" @click="router.push(AppRoute.ClientsAdd)">
           {{ t('clients.manageUsers.addClient') }}
         </UiButton>
       </template>

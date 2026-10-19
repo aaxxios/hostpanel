@@ -56,12 +56,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404 })
   }
 
-  const config = useRuntimeConfig()
-
   let body: Buffer
   try {
     const raw = await $fetch<ArrayBuffer>(`/uploads/branding/${path}`, {
-      baseURL: config.apiUrl,
+      baseURL: getApiUrl(),
       responseType: 'arrayBuffer',
     })
 

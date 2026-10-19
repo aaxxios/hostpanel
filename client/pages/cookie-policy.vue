@@ -13,7 +13,6 @@
  * Explains how the portal uses cookies. Owns the copy keys and the SEO tags; the layout of the
  * document is `LegalDocument`.
  */
-import { CONTACT_EMAIL } from '~/constants/contactInfo'
 import { LEGAL_LAST_UPDATED } from '~/constants/legalUpdated'
 import type { LegalCard } from '~/types/legalcard'
 import type { LegalSection } from '~/types/legalsection'
@@ -23,6 +22,9 @@ const { t, tm } = useI18n()
 
 /** Operator-set site name that the SEO copy interpolates as `{site}`. */
 const { name: siteName } = useSiteIdentity()
+
+/** The operator's contact email; the contact section links to it only when it is set. */
+const { email: contactEmail } = useContactDetails()
 
 /** The types of cookie, each with a name and what it is for. */
 const cookieTypes = computed(() => tm('cookiePolicy.sections.typesOfCookies.types') as LegalCard[])
@@ -35,7 +37,7 @@ const sections = computed<LegalSection[]>(() => [
   {
     id: 'introduction',
     title: t('cookiePolicy.sections.introduction.title'),
-    paragraphs: [t('cookiePolicy.sections.introduction.content')]
+    paragraphs: [t('cookiePolicy.sections.introduction.content', { site: siteName.value })]
   },
   {
     id: 'whatAreCookies',
@@ -68,7 +70,7 @@ const sections = computed<LegalSection[]>(() => [
     id: 'contact',
     title: t('cookiePolicy.sections.contact.title'),
     paragraphs: [t('cookiePolicy.sections.contact.content')],
-    link: { label: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` }
+    link: contactEmail.value ? { label: contactEmail.value, href: `mailto:${contactEmail.value}` } : undefined
   }
 ])
 

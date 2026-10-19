@@ -4,13 +4,24 @@
 # volumes) and the demo gets its own broker, redis and mail catcher, so nothing here can read or write
 # production data.
 #
-# Networks. The demo must never resolve to production, and production never to the demo:
+# Networks. The demo must see NOTHING of production, at the network level:
 #   - `default` is a demo-private bridge (it replaces the platform overlay's attachment to innovayse_network),
-#     so the database, broker, redis and mailhog are reachable only from inside the demo.
-#   - `edge` is innovayse_network. Only the three edge-facing services join it, and each is its own
-#     compose service named hostpanel-demo-*: compose always adds the SERVICE name as an alias on every
-#     network, so a service still called hostpanel-api would answer to production's name there and Docker's
-#     DNS would round-robin prod traffic into the demo. The original hostpanel-api/-client/-admin are parked.
+#     so the database, broker, redis and mailhog are reachable only from inside the demo. It is deliberately
+#     not `internal: true`: mailhog publishes its UI port on the host, which Docker cannot do from an
+#     internal-only network. Nothing production-side is on it, so it reaches no production container anyway.
+#   - `edge` is the dedicated external network hostpanel_demo_edge, NOT innovayse_network. Only the edge proxy
+#     (innovayse-edge, which is on both networks) and the three edge-facing demo services are on it. The demo
+#     therefore cannot resolve or route to any production container (hostpanel-db, main-client, sso-api, ...);
+#     the one production-side peer it can address is the proxy itself, which routes by Host header.
+#     Create it once per host:  docker network create --subnet 172.29.0.0/16 hostpanel_demo_edge  (deploy:demo does,
+#     idempotently). The subnet is fixed because the edge proxy denies it on every production host (nginx.conf,
+#     `deny 172.29.0.0/16`), so a demo container cannot reach production by sending a production Host header.
+#     Each of the three is its own compose service named hostpanel-demo-*: compose always adds the SERVICE name
+#     as an alias on every network, so keeping the names unique stops a hostpanel-api alias from ever
+#     existing next to production's. The original hostpanel-api/-client/-admin are parked.
+#   - Outbound: the demo needs no external service (fake adapters, mail to mailhog). The db, broker, redis and
+#     mailhog are on the private bridge only; the api, client and admin keep the ordinary bridge egress of
+#     hostpanel_demo_edge. To cut that too, create the edge network with --internal and drop the host ports.
 # The API runs in demo mode: fake payment, registrar and provisioning adapters, mail to the catcher,
 # a scheduled data reset. Needs AUTH_MODE=local and a database of its own (POSTGRES_DB).
 name: hostpanel-demo
@@ -19,8 +30,9 @@ networks:
   # Replaces (not merges with) the platform overlay's external innovayse_network.
   default: !override
     name: hostpanel-demo_default
+  # Created by hand or by deploy:demo; it must exist before `up`. Never innovayse_network.
   edge:
-    name: innovayse_network
+    name: hostpanel_demo_edge
     external: true
 
 volumes:
@@ -51,18 +63,18 @@ services:
   # Mail catcher: every message the demo sends lands here and goes no further.
   hostpanel-mailhog:
     container_name: hostpanel-demo-mailhog
-    image: mailhog/mailhog
+    image: ${MAILHOG_IMAGE:?MAILHOG_IMAGE must be set}
     networks: !override [default]
     ports:
-      - "127.0.0.1:${DEMO_MAILHOG_UI_HOST_PORT}:8025"
+      - "${DEMO_PUBLISH_ADDRESS:?DEMO_PUBLISH_ADDRESS must be set}:${DEMO_MAILHOG_UI_HOST_PORT}:8025"
     deploy:
       resources:
         limits:
-          cpus: '0.2'
-          memory: 256M
+          cpus: '${MAILHOG_CPUS:?MAILHOG_CPUS must be set}'
+          memory: ${MAILHOG_MEMORY:?MAILHOG_MEMORY must be set}
     restart: unless-stopped
 
-  # prod.yml's services are parked: they would carry the production service names onto innovayse_network.
+  # prod.yml's services are parked: they would carry the production service names onto the demo's networks.
   # The demo's own copies below extend them.
   hostpanel-api:
     profiles: ["disabled"]
@@ -83,7 +95,7 @@ services:
       edge:
         aliases: [hostpanel-demo-api]
     ports:
-      - "127.0.0.1:${DEMO_API_HOST_PORT}:${API_PORT}"
+      - "${DEMO_PUBLISH_ADDRESS:?DEMO_PUBLISH_ADDRESS must be set}:${DEMO_API_HOST_PORT}:${API_PORT}"
     environment:
       ConnectionStrings__DefaultConnection: "Host=hostpanel-demo-db;Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
       Auth__RedisConnection: hostpanel-demo-redis:${DEMO_REDIS_PORT}
@@ -93,8 +105,9 @@ services:
       Smtp__Port: ${DEMO_SMTP_PORT}
       Smtp__Username: ""
       Smtp__Password: ""
-      Smtp__Encryption: none
+      Smtp__Encryption: ${DEMO_SMTP_ENCRYPTION:?DEMO_SMTP_ENCRYPTION must be set}
       # The demo admin has its own address; production's would send demo mail links to the live panel.
+      Cors__AllowedOrigins__0: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
       AdminBaseUrl: ${DEMO_ADMIN_BASE_URL:?DEMO_ADMIN_BASE_URL must be set}
       ClientBaseUrl: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
       Demo__Enabled: ${DEMO_ENABLED}
@@ -123,9 +136,13 @@ services:
       edge:
         aliases: [hostpanel-demo-client]
     ports:
-      - "127.0.0.1:${DEMO_CLIENT_HOST_PORT}:3000"
+      - "${DEMO_PUBLISH_ADDRESS:?DEMO_PUBLISH_ADDRESS must be set}:${DEMO_CLIENT_HOST_PORT}:${CLIENT_PORT:?CLIENT_PORT must be set}"
     environment:
       NUXT_API_URL: http://hostpanel-demo-api:${API_PORT}
+      # The demo's own public address, not production's CLIENT_BASE_URL.
+      NUXT_PUBLIC_BASE_URL: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
+      NUXT_PUBLIC_SITE_URL: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
+      NUXT_SSO_CALLBACK_URL: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}/api/portal/auth/sso/callback
     depends_on: !override
       - hostpanel-demo-api
 
@@ -139,7 +156,7 @@ services:
       edge:
         aliases: [hostpanel-demo-admin]
     ports:
-      - "127.0.0.1:${DEMO_ADMIN_HOST_PORT}:80"
+      - "${DEMO_PUBLISH_ADDRESS:?DEMO_PUBLISH_ADDRESS must be set}:${DEMO_ADMIN_HOST_PORT}:80"
     depends_on: !override
       - hostpanel-demo-api
 

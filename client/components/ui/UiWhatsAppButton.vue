@@ -4,7 +4,7 @@
     <!-- Telegram Button -->
     <a
       v-if="telegramHandle"
-      :href="`https://t.me/${telegramHandle}`"
+      :href="`${TELEGRAM_LINK_BASE}${telegramHandle}`"
       target="_blank"
       rel="noopener noreferrer"
       class="group relative"
@@ -48,7 +48,7 @@
     <!-- WhatsApp Button -->
     <a
       v-if="phoneNumber"
-      :href="`https://wa.me/${phoneNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(defaultMessage)}`"
+      :href="`${WHATSAPP_LINK_BASE}${phoneNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(defaultMessage)}`"
       target="_blank"
       rel="noopener noreferrer"
       class="group relative"
@@ -99,6 +99,8 @@
  * contacts; a channel with no value is not rendered. The glow and brand colours are theme tokens
  * (`channel-*`, `shadow-glow-*`), and the pulse is Tailwind's `animate-ping`.
  */
+import { PortalSettingKey } from '~/constants/portalSettingKey'
+import { TELEGRAM_LINK_BASE, WHATSAPP_LINK_BASE } from '~/constants/contactChannel'
 import { computed } from 'vue'
 import { Send, MessageCircle } from 'lucide-vue-next'
 
@@ -108,10 +110,10 @@ const { t } = useI18n()
 const { get: getContactSetting } = usePortalSettings()
 
 /** WhatsApp number in international format; empty hides the button. */
-const phoneNumber = computed(() => getContactSetting('portal.contact.whatsapp', 'portalWhatsapp'))
+const phoneNumber = computed(() => getContactSetting(PortalSettingKey.ContactWhatsapp, 'portalWhatsapp'))
 
 /** Telegram handle; empty hides the button. */
-const telegramHandle = computed(() => getContactSetting('portal.contact.telegram', 'portalTelegram'))
+const telegramHandle = computed(() => getContactSetting(PortalSettingKey.ContactTelegram, 'portalTelegram'))
 
 /** Message pre-filled when WhatsApp opens. */
 const defaultMessage = computed(() => t('whatsapp.defaultMessage'))

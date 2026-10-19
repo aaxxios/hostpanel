@@ -7,6 +7,7 @@
  */
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -29,8 +30,14 @@ import { capitalize, formatDate } from '@/lib/format'
 import { formatPrice } from '@/lib/money'
 import { serviceStatusTone, statusLabel } from '@/lib/tones'
 import { useServicesStore } from '@/stores/services'
+import { clientPath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { clientLabel, productLabel } = useFallbackLabels()
 
 const store = useServicesStore()
 
@@ -87,11 +94,11 @@ onMounted(() => store.fetchAll())
             :data-testid="`services-row-${service.id}`"
           >
             <UiTableCell muted>{{ service.id }}</UiTableCell>
-            <UiTableCell>{{ service.productName }}</UiTableCell>
+            <UiTableCell>{{ productLabel(service.productName) }}</UiTableCell>
             <UiTableCell>{{ service.domain ?? '—' }}</UiTableCell>
             <UiTableCell>
-              <UiLink variant="link" :to="`/clients/${service.clientId}`" :data-testid="`services-client-${service.id}`">
-                {{ service.clientName }}
+              <UiLink variant="link" :to="clientPath(service.clientId)" :data-testid="`services-client-${service.id}`">
+                {{ clientLabel(service.clientName, service.clientId) }}
               </UiLink>
             </UiTableCell>
             <UiTableCell>{{ formatPrice(service.price, service.priceCurrency) }}</UiTableCell>

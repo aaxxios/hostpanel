@@ -17,9 +17,10 @@ name: Mirror to GitLab
 # to run a staging pipeline from at all.
 #
 # GITLAB_MIRROR_TOKEN is a GitLab *project* access token (write_repository only,
-# Maintainer role, scoped to innovayse/hostpanel) — not the broad personal token
+# Maintainer role, scoped to the mirror project) — not the broad personal token
 # used elsewhere in this infra, so a leaked secret here can only push to this one
-# repo, nothing else on the account.
+# repo, nothing else on the account. The mirror itself is the repository variable
+# GITLAB_MIRROR_URL: host and path of the GitLab project, without a scheme.
 on:
   push:
     branches: [main, develop]
@@ -39,6 +40,8 @@ jobs:
           # Push to the branch the event came from, not a hardcoded main, or a
           # develop push would land on GitLab's main and deploy staging code to
           # the production branch.
-          git push "https://project-access-token:${GITLAB_MIRROR_TOKEN}@gitlab.com/innovayse/hostpanel.git" "HEAD:${GITHUB_REF_NAME}"
+          : "${GITLAB_MIRROR_URL:?GITLAB_MIRROR_URL must be set as a repository variable}"
+          git push "https://project-access-token:${GITLAB_MIRROR_TOKEN}@${GITLAB_MIRROR_URL}" "HEAD:${GITHUB_REF_NAME}"
         env:
           GITLAB_MIRROR_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+          GITLAB_MIRROR_URL: ${{ vars.GITLAB_MIRROR_URL }}

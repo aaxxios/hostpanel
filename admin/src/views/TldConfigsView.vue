@@ -39,6 +39,8 @@ import { RegistrarModule } from '@/types/registrarmodule'
 import type { TldConfigListItem } from '@/types/tldconfig'
 import { TldStatusFilter } from '@/types/tldstatusfilter'
 import type { UiTone } from '@/utils/ui/tone'
+import { DEFAULT_PAGE_SIZE, SEARCH_DEBOUNCE_MS } from '@/lib/limits'
+import { AppRoute, createPath, editPath } from '@/lib/routes'
 
 const { t, locale } = useI18n()
 
@@ -50,12 +52,6 @@ const store = useTldConfigsStore()
 
 /** The result banner for import and sync. */
 const banner = useResultBanner()
-
-/** Number of items displayed per page. */
-const PAGE_SIZE = 20
-
-/** How long typing in the search box pauses before the list goes back to page one, in milliseconds. */
-const SEARCH_DEBOUNCE_MS = 350
 
 /** Local search model bound to the input. */
 const searchInput = ref('')
@@ -137,13 +133,13 @@ const filteredConfigs = computed<TldConfigListItem[]>(() => {
 })
 
 /** Subset of the filtered configs for the current page. */
-const paginatedConfigs = computed<TldConfigListItem[]>(() => pageSlice(filteredConfigs.value, currentPage.value, PAGE_SIZE))
+const paginatedConfigs = computed<TldConfigListItem[]>(() => pageSlice(filteredConfigs.value, currentPage.value, DEFAULT_PAGE_SIZE))
 
 /** First row number on the current page, for the "Showing x to y of n" line. */
-const firstShown = computed<number>(() => pageFirstRow(currentPage.value, PAGE_SIZE))
+const firstShown = computed<number>(() => pageFirstRow(currentPage.value, DEFAULT_PAGE_SIZE))
 
 /** Last row number on the current page. */
-const lastShown = computed<number>(() => pageLastRow(currentPage.value, PAGE_SIZE, filteredConfigs.value.length))
+const lastShown = computed<number>(() => pageLastRow(currentPage.value, DEFAULT_PAGE_SIZE, filteredConfigs.value.length))
 
 /** Sends the list back to page one once the operator pauses typing. */
 const handleSearch = (): void => {
@@ -157,7 +153,7 @@ const handleSearch = (): void => {
 
 /** Navigates to the create TLD config page. */
 const navigateCreate = (): void => {
-  void router.push('/settings/tld-pricing/create')
+  void router.push(createPath(AppRoute.SettingsTldPricing))
 }
 
 /**
@@ -166,7 +162,7 @@ const navigateCreate = (): void => {
  * @param item - The TLD config to edit.
  */
 const navigateEdit = (item: TldConfigListItem): void => {
-  void router.push(`/settings/tld-pricing/${item.id}/edit`)
+  void router.push(editPath(AppRoute.SettingsTldPricing, item.id))
 }
 
 /**
@@ -411,7 +407,7 @@ watch(statusFilter, () => {
 
     <!-- Pagination -->
     <UiStack
-      v-if="filteredConfigs.length > PAGE_SIZE"
+      v-if="filteredConfigs.length > DEFAULT_PAGE_SIZE"
       direction="row"
       align="center"
       justify="between"
@@ -423,7 +419,7 @@ watch(statusFilter, () => {
       <UiPagination
         v-model:page="currentPage"
         :total="filteredConfigs.length"
-        :page-size="PAGE_SIZE"
+        :page-size="DEFAULT_PAGE_SIZE"
         testid="tld-configs-pagination"
       />
     </UiStack>

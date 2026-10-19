@@ -1,18 +1,21 @@
 /**
- * Partner - represents a partner/client company
- * Used in Partners section
+ * Partner type - one partner company served by `GET /api/public/partners`.
+ *
+ * @module types/partner
+ */
+
+/**
+ * A partner as the storefront receives it, already localised by the API.
  */
 export interface Partner {
-  /** Unique identifier */
-  id: string
-  /** Company name */
+  /** Partner identifier. */
+  id: number
+  /** The partner's name in the request language. */
   name: string
-  /** Phosphor icon name */
-  icon: string
-  /** Partner website URL */
-  url?: string
-  /** Brief description of what the company does */
-  description?: string
-  /** Industry/sector */
-  industry?: string
+  /** URL of the partner's logo image, or null. */
+  logoUrl: string | null
+  /** The partner's website, or null. */
+  url: string | null
+  /** Display order, ascending. */
+  sortOrder: number
 }

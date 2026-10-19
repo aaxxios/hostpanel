@@ -86,7 +86,7 @@ export const useClientBillableItemsStore = defineStore('clientBillableItems', ()
     /** Throwaway error ref: the failure is deliberately not surfaced. */
     const quiet = ref<string | null>(null)
     const result = await runAction(quiet, () => api.listServices(clientId))
-    return result.ok ? result.value.items.map(s => ({ value: s.id, label: s.productName })) : []
+    return result.ok ? result.value.items.map(s => ({ value: s.id, label: s.productName ?? `#${s.id}` })) : []
   }
 
   /**

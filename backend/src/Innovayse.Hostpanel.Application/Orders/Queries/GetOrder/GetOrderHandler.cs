@@ -3,6 +3,7 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Orders.Queries.GetOrder;
 
 /// <summary>
@@ -41,7 +42,7 @@ public sealed class GetOrderHandler
         var client = await _context.Clients
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == order.ClientId, ct);
-        var clientName = client is not null ? $"{client.FirstName} {client.LastName}" : "Unknown";
+        var clientName = client is not null ? $"{client.FirstName} {client.LastName}" : null;
 
         string? invoiceStatus = null;
         if (order.InvoiceId.HasValue)

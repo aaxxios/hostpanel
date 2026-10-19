@@ -10,6 +10,7 @@ import { useI18n } from 'vue-i18n'
 import { INTEGRATION_META } from '@/types/integrationmeta'
 import type { FieldDefinitionDto, IntegrationConfigPayload, IntegrationDetailDto, IntegrationSlug } from '@/types/integration'
 import { IntegrationFieldType } from '@/types/integration'
+import { SettingToggle } from '@/types/setting'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiField from '@/components/ui/UiField.vue'
@@ -47,12 +48,6 @@ const emit = defineEmits<{
 
 /** Static metadata for this integration (logo and tile colour). */
 const meta = INTEGRATION_META[props.integration.slug as IntegrationSlug]
-
-/** Value a boolean field holds when it is on. */
-const TOGGLE_ON = 'true'
-
-/** Value a boolean field holds when it is off. */
-const TOGGLE_OFF = 'false'
 
 /** Local copy of config values the admin is editing. */
 const localConfig = ref<Record<string, string>>({ ...props.integration.config })
@@ -96,7 +91,7 @@ const optionsOf = (field: FieldDefinitionDto): { value: string; label: string }[
  * @param on - The new state.
  */
 const setToggle = (key: string, on: boolean): void => {
-  localConfig.value[key] = on ? TOGGLE_ON : TOGGLE_OFF
+  localConfig.value[key] = on ? SettingToggle.On : SettingToggle.Off
 }
 
 /** Builds and emits the save payload. */
@@ -160,12 +155,12 @@ const handleSave = (): void => {
               <!-- Boolean fields are kept as the strings "true" / "false" -->
               <UiLabel v-else-if="field.type === IntegrationFieldType.Toggle" variant="inline">
                 <UiToggle
-                  :model-value="localConfig[field.key] === TOGGLE_ON"
+                  :model-value="localConfig[field.key] === SettingToggle.On"
                   :data-testid="`integration-field-${field.key}`"
                   @update:model-value="setToggle(field.key, $event)"
                 />
-                <UiText :tone="localConfig[field.key] === TOGGLE_ON ? 'success' : 'muted'" size="sm" class="font-semibold">
-                  {{ localConfig[field.key] === TOGGLE_ON ? t('shared.enabled') : t('shared.disabled') }}
+                <UiText :tone="localConfig[field.key] === SettingToggle.On ? 'success' : 'muted'" size="sm" class="font-semibold">
+                  {{ localConfig[field.key] === SettingToggle.On ? t('shared.enabled') : t('shared.disabled') }}
                 </UiText>
               </UiLabel>
 

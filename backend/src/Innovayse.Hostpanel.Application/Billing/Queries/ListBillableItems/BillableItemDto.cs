@@ -4,7 +4,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.ListBillableItems;
 /// <summary>DTO for a billable item in admin lists with client name.</summary>
 /// <param name="Id">BillableItem primary key.</param>
 /// <param name="ClientId">FK to the owning client.</param>
-/// <param name="ClientName">Full name of the owning client.</param>
+/// <param name="ClientName">Full name of the owning client. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="Description">Human-readable description.</param>
 /// <param name="Amount">Unit price.</param>
 /// <param name="Currency">Currency code.</param>
@@ -17,7 +17,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.ListBillableItems;
 public sealed record BillableItemDto(
     int Id,
     int ClientId,
-    string ClientName,
+    string? ClientName,
     string Description,
     decimal Amount,
     string Currency,

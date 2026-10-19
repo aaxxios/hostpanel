@@ -7,7 +7,7 @@
     <!-- Left: logo on mobile, welcome text on desktop -->
     <div class="mr-3 min-w-0">
       <UiLink to="/" tone="inherit" :underline="false" testid="client-topbar-brand" class="text-lg font-bold lg:hidden">
-        {{ $t('client.nav.brand') }}
+        {{ $t('client.nav.brand', { site: siteName }) }}
       </UiLink>
       <UiText as="span" size="sm" tone="muted" truncate class="hidden lg:block">
         {{ $t('client.nav.welcomeBack') }}
@@ -58,6 +58,9 @@ interface Props {
   /** Whether the mobile sidebar is open, so the button shows a cross. */
   sidebarOpen: boolean
 }
+
+/** Operator-set site name shown as the brand. */
+const { name: siteName } = useSiteIdentity()
 
 withDefaults(defineProps<Props>(), {
   widgetUser: undefined

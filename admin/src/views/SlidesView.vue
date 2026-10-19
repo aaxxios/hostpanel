@@ -31,6 +31,7 @@ import { useSlidesStore } from '@/stores/slides'
 import type { Slide } from '@/types/slide'
 import { SlideAudience } from '@/types/slideaudience'
 import type { UiTone } from '@/utils/ui/tone'
+import { AppRoute, createPath, editPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -97,7 +98,7 @@ const audienceLabel = (audience: string): string => {
 
 /** Navigates to the create slide page. */
 const navigateCreate = (): void => {
-  void router.push('/settings/slides/create')
+  void router.push(createPath(AppRoute.SettingsSlides))
 }
 
 /**
@@ -106,7 +107,7 @@ const navigateCreate = (): void => {
  * @param slide - The slide to edit.
  */
 const navigateEdit = (slide: Slide): void => {
-  void router.push(`/settings/slides/${slide.id}/edit`)
+  void router.push(editPath(AppRoute.SettingsSlides, slide.id))
 }
 
 /**

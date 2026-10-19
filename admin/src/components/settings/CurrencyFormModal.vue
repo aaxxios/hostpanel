@@ -20,6 +20,7 @@ import UiText from '@/components/ui/UiText.vue'
 import UiToggle from '@/components/ui/UiToggle.vue'
 import { formatAffixed } from '@/lib/money'
 import type { CurrencyDto, UpsertCurrencyPayload } from '@/types/currency'
+import { CURRENCY_CODE_LENGTH, CURRENCY_MAX_DECIMALS, EXCHANGE_RATE_STEP } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -118,7 +119,7 @@ const handleSubmit = (): void => {
             :disabled="isEditMode"
             :invalid="invalid"
             :aria-describedby="describedby"
-            maxlength="3"
+            :maxlength="CURRENCY_CODE_LENGTH"
             :placeholder="t('currencies.form.code.placeholder')"
             data-testid="currency-form-code"
             class="uppercase"
@@ -134,7 +135,7 @@ const handleSubmit = (): void => {
             required
             :invalid="invalid"
             :aria-describedby="describedby"
-            maxlength="3"
+            :maxlength="CURRENCY_CODE_LENGTH"
             :placeholder="t('currencies.form.numeric.placeholder')"
             data-testid="currency-form-numeric"
           />
@@ -176,7 +177,7 @@ const handleSubmit = (): void => {
         <UiNumberInput
           v-model="decimals"
           :min="0"
-          :max="4"
+          :max="CURRENCY_MAX_DECIMALS"
           :step="1"
           placeholder="2"
           data-testid="currency-form-decimals"
@@ -190,7 +191,7 @@ const handleSubmit = (): void => {
         <UiNumberInput
           v-model="rateToBase"
           :min="0"
-          :step="0.00000001"
+          :step="EXCHANGE_RATE_STEP"
           :disabled="isBase"
           placeholder="1"
           data-testid="currency-form-rate"

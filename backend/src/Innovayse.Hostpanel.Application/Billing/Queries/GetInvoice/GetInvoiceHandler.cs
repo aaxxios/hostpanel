@@ -45,7 +45,7 @@ public sealed class GetInvoiceHandler
             .AsNoTracking()
             .Where(c => c.Id == invoice.ClientId)
             .Select(c => c.FirstName + " " + c.LastName)
-            .FirstOrDefaultAsync(ct) ?? $"Client #{invoice.ClientId}";
+            .FirstOrDefaultAsync(ct);
 
         return Result<InvoiceDto>.Success(InvoiceMapper.MapToDto(invoice, clientName));
     }

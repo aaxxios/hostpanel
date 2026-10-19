@@ -17,6 +17,7 @@
  * @module plugins/brand-tokens
  */
 
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { brandTokensCss } from '~/utils/brandTokens'
 
 export default defineNuxtPlugin({
@@ -25,11 +26,12 @@ export default defineNuxtPlugin({
   setup() {
     const { get } = usePortalSettings()
 
+    /** The brand stylesheet built from the operator's colour and font settings; empty when none is set. */
     const css = computed(() => brandTokensCss({
-      primary: get('portal.brand.primary', 'portalBrandPrimary'),
-      accent: get('portal.brand.accent', 'portalBrandAccent'),
-      fontHeading: get('portal.brand.font_heading', 'portalBrandFontHeading'),
-      fontBody: get('portal.brand.font_body', 'portalBrandFontBody'),
+      primary: get(PortalSettingKey.BrandPrimary, 'portalBrandPrimary'),
+      accent: get(PortalSettingKey.BrandAccent, 'portalBrandAccent'),
+      fontHeading: get(PortalSettingKey.BrandFontHeading, 'portalBrandFontHeading'),
+      fontBody: get(PortalSettingKey.BrandFontBody, 'portalBrandFontBody'),
     }))
 
     useHead({

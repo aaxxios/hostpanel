@@ -10,11 +10,11 @@
 
 import { UiAlertVariant, UiSize, UiTone } from './enums'
 
-/** Focus ring used by every focusable kit control (keyboard focus only would hide it on click). */
-export const FOCUS_RING = 'focus:outline-none focus:ring-2 focus:ring-primary-500/50'
+/** Focus ring used by every focusable kit control; `focus-visible` so a mouse click or a programmatic focus draws nothing. */
+export const FOCUS_RING = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent'
 
 /** Focus ring that also offsets from the surface, for filled buttons. */
-export const FOCUS_RING_OFFSET = 'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'
+export const FOCUS_RING_OFFSET = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500'
 
 /** Soft badge / chip colours per tone, light and dark. */
 export const BADGE_TONE_CLASSES: Record<UiTone, string> = {
@@ -108,12 +108,12 @@ export const fieldStateClasses = (state: { error?: boolean; disabled?: boolean; 
   const frame = 'block w-full border rounded-lg transition-all duration-200 text-gray-900 dark:text-white'
   let look: string
   if (state.error) {
-    look = 'border-red-400 dark:border-red-500/50 focus:border-red-500 focus:ring-red-500/50 bg-red-50 dark:bg-red-500/5'
+    look = 'border-red-400 dark:border-red-500/50 focus-visible:border-red-500 focus-visible:ring-red-500/50 bg-red-50 dark:bg-red-500/5'
   } else if (state.open) {
     look = 'border-primary-500 ring-2 ring-primary-500/50 bg-white dark:bg-white/5'
   } else {
-    look = 'border-gray-300 dark:border-gray-700 focus:border-primary-500 focus:ring-primary-500/50 bg-white dark:bg-white/5 hover:border-gray-400 dark:hover:border-gray-600'
+    look = 'border-gray-300 dark:border-gray-700 focus-visible:border-primary-500 focus-visible:ring-primary-500/50 bg-white dark:bg-white/5 hover:border-gray-400 dark:hover:border-gray-600'
   }
   const disabled = state.disabled ? 'bg-gray-100 dark:bg-gray-800/50 cursor-not-allowed opacity-60' : ''
-  return [frame, 'focus:outline-none focus:ring-2', look, disabled].filter(Boolean).join(' ')
+  return [frame, 'focus:outline-none focus-visible:ring-2', look, disabled].filter(Boolean).join(' ')
 }

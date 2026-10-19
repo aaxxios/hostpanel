@@ -2,6 +2,7 @@
  * Support flow: a staff member answers a ticket; the reply is posted as JSON, the form clears
  * and the thread shows the reply once the ticket has been re-read.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { departments, openTicket } from './fixtures/support'
 import type { Ticket } from '../src/types/ticket'
@@ -19,10 +20,10 @@ test('replying to a ticket posts the message and shows it in the thread', async 
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/tickets/departments', departments),
-      { method: 'GET', path: `/api/tickets/${openTicket.id}`, respond: () => ({ body: stored }) },
+      json(HttpMethod.Get, '/api/tickets/departments', departments),
+      { method: HttpMethod.Get, path: `/api/tickets/${openTicket.id}`, respond: () => ({ body: stored }) },
       {
-        method: 'POST',
+        method: HttpMethod.Post,
         path: `/api/tickets/${openTicket.id}/reply`,
         respond: (call) => {
           const sent = call.body as { message: string }
@@ -53,6 +54,6 @@ test('replying to a ticket posts the message and shows it in the thread', async 
   await expect(reply).toContainText(author)
   await expect(fieldOf(page, 'ticket-reply-message')).toHaveValue('')
 
-  const [sent] = api.callsTo('POST', `/api/tickets/${openTicket.id}/reply`)
+  const [sent] = api.callsTo(HttpMethod.Post, `/api/tickets/${openTicket.id}/reply`)
   expect(sent?.body).toEqual({ message })
 })

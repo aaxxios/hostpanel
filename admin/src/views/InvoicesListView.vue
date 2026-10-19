@@ -5,6 +5,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -37,11 +38,15 @@ import { formatUsdPlain } from '@/lib/money'
 import { useBillingStore } from '@/stores/billing'
 import { pageFirstRow, pageLastRow } from '@/lib/paging'
 import { InvoiceBulkAction, InvoiceStatus } from '@/types/invoice'
+import { LEDGER_PAGE_SIZE } from '@/lib/limits'
+import { invoiceEditPath, invoiceViewPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
-/** Invoices per page. */
-const PAGE_SIZE = 25
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { clientLabel } = useFallbackLabels()
 
 const store = useBillingStore()
 
@@ -82,10 +87,10 @@ const allSelected = computed<boolean>(
 )
 
 /** First row number on the page, for the record count. */
-const firstShown = computed<number>(() => pageFirstRow(page.value, PAGE_SIZE))
+const firstShown = computed<number>(() => pageFirstRow(page.value, LEDGER_PAGE_SIZE))
 
 /** Last row number on the page, for the record count. */
-const lastShown = computed<number>(() => pageLastRow(page.value, PAGE_SIZE, store.totalCount))
+const lastShown = computed<number>(() => pageLastRow(page.value, LEDGER_PAGE_SIZE, store.totalCount))
 
 /**
  * Loads a page with the applied filters.
@@ -96,7 +101,7 @@ const load = async (next: number): Promise<void> => {
   page.value = next
   await store.fetchAll(
     next,
-    PAGE_SIZE,
+    LEDGER_PAGE_SIZE,
     appliedStatus.value,
     appliedRange.value?.[0] ?? '',
     appliedRange.value?.[1] ?? '',
@@ -273,7 +278,7 @@ onMounted(() => load(1))
               />
             </UiTableCell>
             <UiTableCell muted>#{{ invoice.id }}</UiTableCell>
-            <UiTableCell>{{ invoice.clientName }}</UiTableCell>
+            <UiTableCell>{{ clientLabel(invoice.clientName, invoice.clientId) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(invoice.createdAt) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(invoice.dueDate) }}</UiTableCell>
             <UiTableCell>{{ formatUsdPlain(invoice.total) }}</UiTableCell>
@@ -286,7 +291,7 @@ onMounted(() => load(1))
                 <UiLink
                   variant="ghost"
                   size="sm"
-                  :to="`/billing/invoices/${invoice.id}/view`"
+                  :to="invoiceViewPath(invoice.id)"
                   :aria-label="t('shared.view')"
                   :data-testid="`billing-invoice-view-${invoice.id}`"
                 >
@@ -295,7 +300,7 @@ onMounted(() => load(1))
                 <UiLink
                   variant="ghost"
                   size="sm"
-                  :to="`/billing/invoices/${invoice.id}/edit`"
+                  :to="invoiceEditPath(invoice.id)"
                   :aria-label="t('shared.edit')"
                   :data-testid="`billing-invoice-edit-${invoice.id}`"
                 >
@@ -322,7 +327,7 @@ onMounted(() => load(1))
     <UiPagination
       :page="page"
       :total="store.totalCount"
-      :page-size="PAGE_SIZE"
+      :page-size="LEDGER_PAGE_SIZE"
       testid="billing-invoices-pagination"
       @update:page="load"
     />
@@ -344,7 +349,7 @@ onMounted(() => load(1))
       variant="confirm"
       :open="bulkDeleteOpen"
       :title="t('billing.invoicesList.deleteInvoices')"
-      :message="t('billing.invoicesList.deleteInvoicesMessage', { count: store.selectedIds.length })"
+      :message="t('billing.invoicesList.deleteInvoicesMessage', { count: store.selectedIds.length }, store.selectedIds.length)"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="store.loading"

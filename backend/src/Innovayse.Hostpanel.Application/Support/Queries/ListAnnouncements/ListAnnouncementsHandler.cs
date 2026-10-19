@@ -30,7 +30,7 @@ public sealed class ListAnnouncementsHandler
         ArgumentNullException.ThrowIfNull(query);
 
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
         var baseQuery = _context.Announcements.AsNoTracking().OrderByDescending(a => a.CreatedAt);
 

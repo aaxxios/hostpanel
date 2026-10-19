@@ -12,12 +12,12 @@ import type { ProductPlan } from '~/types/productplan'
 
 /** The product the tests render. */
 const product: ProductDetailData = {
-  id: 'smartlearn-system',
+  id: 'alpha-suite',
   pid: 10,
-  name: 'SmartLearn System',
+  name: 'Alpha Suite',
   icon: 'school',
   color: '#8b5cf6',
-  learnMoreUrl: '/products/smartlearn-system',
+  learnMoreUrl: '/products/alpha-suite',
   description: 'Learn online',
   features: ['Courses', 'Exams'],
   plans: [
@@ -55,7 +55,7 @@ describe('ProductDetail', () => {
     const wrapper = mountDetail()
 
     expect(wrapper.find('[data-testid="product-name"]').element.tagName).toBe('H1')
-    expect(wrapper.find('[data-testid="product-name"]').text()).toBe('SmartLearn System')
+    expect(wrapper.find('[data-testid="product-name"]').text()).toBe('Alpha Suite')
     expect(wrapper.find('[data-testid="product-description"]').text()).toBe('Learn online')
     expect(wrapper.text()).toContain('Courses')
     expect(wrapper.text()).toContain('Exams')

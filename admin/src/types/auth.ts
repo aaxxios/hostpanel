@@ -30,7 +30,7 @@ export const SignInResult = {
 
 /** Body of `GET /api/auth/mode`. */
 export interface AuthModeResponse {
-  /** 'local' when this deployment owns its own accounts, 'sso' when Innovayse SSO does. */
+  /** 'local' when this deployment owns its own accounts, 'sso' when single sign-on does. */
   mode: AuthMode
 }
 

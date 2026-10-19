@@ -26,6 +26,9 @@ const emit = defineEmits<{
   'update:modelValue': [value: number]
 }>()
 
+/** Delay between repeated steps while a stepper is held, in milliseconds. */
+const HOLD_REPEAT_MS = 100
+
 /** Interval id while a stepper is held. */
 let holdInterval: ReturnType<typeof setInterval> | null = null
 
@@ -65,14 +68,14 @@ const stopHold = (): void => {
 const startIncrement = (): void => {
   stopHold()
   increment()
-  holdInterval = setInterval(increment, 100)
+  holdInterval = setInterval(increment, HOLD_REPEAT_MS)
 }
 
 /** Steps down once, then keeps stepping while held. */
 const startDecrement = (): void => {
   stopHold()
   decrement()
-  holdInterval = setInterval(decrement, 100)
+  holdInterval = setInterval(decrement, HOLD_REPEAT_MS)
 }
 
 /**

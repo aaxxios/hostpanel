@@ -49,5 +49,12 @@
     "gateways": "Платёжные шлюзы",
     "currencies": "Валюты"
   },
+  "storefront": "Контент витрины",
+  "storefrontChildren": {
+    "testimonials": "Отзывы",
+    "partners": "Партнёры",
+    "projects": "Проекты",
+    "faqs": "Вопросы и ответы"
+  },
   "servicesTitle": "Услуги"
 }

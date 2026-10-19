@@ -64,7 +64,7 @@ defineEmits<{
 
 /** Class list of the input. */
 const inputClasses = computed(() => [
-  'w-full pl-8 pr-7 rounded-lg border bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border-gray-200 dark:border-white/10 focus:border-primary-500/50 transition-all duration-200',
+  'w-full pl-8 pr-7 rounded-lg border bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border-gray-200 dark:border-white/10 focus-visible:border-primary-500/50 transition-all duration-200',
   FOCUS_RING,
   props.size === UiSize.Md ? 'py-2 text-base' : 'py-1.5 text-sm',
 ].join(' '))

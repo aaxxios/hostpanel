@@ -1,4 +1,3 @@
-using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Migration.Importers.Enums;
 using Innovayse.Hostpanel.Application.Migration.Importers.Records;
@@ -8,6 +7,7 @@ using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Application.Migration.Importers;
 
 /// <summary>
@@ -76,7 +76,9 @@ public sealed class TicketRepliesImporter(
 
                     ticket.AddReply(
                         string.IsNullOrWhiteSpace(rec.Message) ? "(no message)" : rec.Message,
-                        string.IsNullOrWhiteSpace(rec.AuthorName) ? "Unknown" : rec.AuthorName,
+                        // TicketReply.AuthorName is NOT NULL and defaults to empty, so a missing author is stored as the
+                        // empty string -- a neutral value, never display text. The frontend renders its own fallback.
+                        string.IsNullOrWhiteSpace(rec.AuthorName) ? string.Empty : rec.AuthorName,
                         rec.IsStaffReply);
 
                     await uow.SaveChangesAsync(ct);

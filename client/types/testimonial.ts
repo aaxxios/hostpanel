@@ -1,17 +1,27 @@
 /**
- * Testimonial type - represents a client review
- * Used in Testimonials carousel
- * Text content (text, position) loaded from i18n locale files
+ * Testimonial type - one client review served by `GET /api/public/testimonials`.
+ *
+ * @module types/testimonial
+ */
+
+/**
+ * A client review as the storefront receives it, already localised by the API.
  */
 export interface Testimonial {
-  /** Unique identifier - used as key for i18n lookup */
-  id: string
-  /** Client name */
+  /** Testimonial identifier. */
+  id: number
+  /** The client's display name. */
   name: string
-  /** Company name */
-  company: string
-  /** Avatar image URL */
-  avatar: string
-  /** Rating from 1-5 */
+  /** The client's company, or null. */
+  company: string | null
+  /** The client's job title in the request language, or null. */
+  role: string | null
+  /** URL of the client's avatar image, or null. */
+  avatarUrl: string | null
+  /** The testimonial text in the request language. */
+  quote: string
+  /** Star rating, from 1 to 5. */
   rating: number
+  /** Display order, ascending. */
+  sortOrder: number
 }

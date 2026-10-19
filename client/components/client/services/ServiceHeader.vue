@@ -3,7 +3,7 @@
     <UiStack direction="row" align="center">
       <UiTile :icon="Server" tone="primary" size="xl" />
       <UiStack gap="none">
-        <UiHeading :level="1" size="subsection">{{ service.name }}</UiHeading>
+        <UiHeading :level="1" size="subsection">{{ productNameOrFallback($t, service.name, service.id) }}</UiHeading>
         <UiText size="sm" tone="muted">{{ service.domain || service.groupname }}</UiText>
       </UiStack>
     </UiStack>
@@ -33,6 +33,7 @@ import { computed } from 'vue'
 import { Monitor, Server } from 'lucide-vue-next'
 import type { ServiceDetail } from '~/types/servicedetail'
 import { ServiceStatus } from '~/types/servicestatus'
+import { productNameOrFallback } from '~/utils/displayFallback'
 
 /** Props of ServiceHeader. */
 interface Props {

@@ -10,6 +10,8 @@ import type { ClientTicketStats } from '@/types/client'
 import type { Department } from '@/types/department'
 import type { PagedResult } from '@/types/pagedresult'
 import type { CreateTicketPayload, Ticket, TicketListItem, UpdateTicketPayload } from '@/types/ticket'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for the tickets of a client.
@@ -29,7 +31,7 @@ export const useClientTicketsApi = () => {
    * @returns One page of tickets.
    */
   const list = (clientId: number | string, page: number, pageSize: number, search?: string): Promise<PagedResult<TicketListItem>> =>
-    request<PagedResult<TicketListItem>>(`/tickets/client/${clientId}${buildQuery({ page, pageSize, search })}`)
+    request<PagedResult<TicketListItem>>(`${ApiPath.TicketsClient}/${clientId}${buildQuery({ page, pageSize, search })}`)
 
   /**
    * Loads the ticket statistics of a client.
@@ -38,7 +40,7 @@ export const useClientTicketsApi = () => {
    * @returns The summary-card figures.
    */
   const stats = (clientId: number | string): Promise<ClientTicketStats> =>
-    request<ClientTicketStats>(`/tickets/client/${clientId}/stats`)
+    request<ClientTicketStats>(`${ApiPath.TicketsClient}/${clientId}/stats`)
 
   /**
    * Loads one ticket with its replies.
@@ -46,14 +48,14 @@ export const useClientTicketsApi = () => {
    * @param id - The ticket id.
    * @returns The ticket.
    */
-  const get = (id: number | string): Promise<Ticket> => request<Ticket>(`/tickets/${id}`)
+  const get = (id: number | string): Promise<Ticket> => request<Ticket>(`${ApiPath.Tickets}/${id}`)
 
   /**
    * Loads the support departments.
    *
    * @returns The departments.
    */
-  const departments = (): Promise<Department[]> => request<Department[]>('/tickets/departments')
+  const departments = (): Promise<Department[]> => request<Department[]>(ApiPath.TicketsDepartments)
 
   /**
    * Opens a ticket on behalf of a client.
@@ -62,7 +64,7 @@ export const useClientTicketsApi = () => {
    * @returns The new ticket id.
    */
   const create = (payload: CreateTicketPayload): Promise<number> =>
-    request<number>('/tickets', { method: 'POST', body: JSON.stringify(payload) })
+    request<number>(ApiPath.Tickets, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Updates ticket metadata.
@@ -72,7 +74,7 @@ export const useClientTicketsApi = () => {
    * @returns Nothing.
    */
   const update = (id: number | string, payload: UpdateTicketPayload): Promise<void> =>
-    request<void>(`/tickets/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Tickets}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes a ticket.
@@ -80,7 +82,7 @@ export const useClientTicketsApi = () => {
    * @param id - The ticket id.
    * @returns Nothing.
    */
-  const remove = (id: number | string): Promise<void> => request<void>(`/tickets/${id}`, { method: 'DELETE' })
+  const remove = (id: number | string): Promise<void> => request<void>(`${ApiPath.Tickets}/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Adds a staff reply to a ticket.
@@ -90,7 +92,7 @@ export const useClientTicketsApi = () => {
    * @returns Nothing.
    */
   const reply = (id: number | string, message: string): Promise<void> =>
-    request<void>(`/tickets/${id}/reply`, { method: 'POST', body: JSON.stringify({ message }) })
+    request<void>(`${ApiPath.Tickets}/${id}/reply`, { method: HttpMethod.Post, body: JSON.stringify({ message }) })
 
   return { list, stats, get, departments, create, update, remove, reply }
 }

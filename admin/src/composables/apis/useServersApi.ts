@@ -12,6 +12,8 @@ import type {
   ServerPayload,
   TestConnectionResultDto,
 } from '@/types/server'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/admin/servers` and `/admin/server-groups`.
@@ -26,7 +28,7 @@ export const useServersApi = () => {
    *
    * @returns Every server.
    */
-  const listServers = (): Promise<ServerDto[]> => request<ServerDto[]>('/admin/servers')
+  const listServers = (): Promise<ServerDto[]> => request<ServerDto[]>(ApiPath.AdminServers)
 
   /**
    * Creates a server.
@@ -35,7 +37,7 @@ export const useServersApi = () => {
    * @returns Nothing the caller needs.
    */
   const createServer = (payload: ServerPayload): Promise<void> =>
-    request<void>('/admin/servers', { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(ApiPath.AdminServers, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Updates a server.
@@ -45,7 +47,7 @@ export const useServersApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const updateServer = (id: number, payload: ServerPayload): Promise<void> =>
-    request<void>(`/admin/servers/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.AdminServers}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes a server.
@@ -54,7 +56,7 @@ export const useServersApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const deleteServer = (id: number): Promise<void> =>
-    request<void>(`/admin/servers/${id}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.AdminServers}/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Probes a server's connection.
@@ -63,7 +65,7 @@ export const useServersApi = () => {
    * @returns The probe result.
    */
   const testServerConnection = (id: number): Promise<TestConnectionResultDto> =>
-    request<TestConnectionResultDto>(`/admin/servers/${id}/test-connection`, { method: 'POST' })
+    request<TestConnectionResultDto>(`${ApiPath.AdminServers}/${id}/test-connection`, { method: HttpMethod.Post })
 
   /**
    * Lists the server groups with their servers.
@@ -71,7 +73,7 @@ export const useServersApi = () => {
    * @returns Every group.
    */
   const listServerGroups = (): Promise<ServerGroupDto[]> =>
-    request<ServerGroupDto[]>('/admin/server-groups')
+    request<ServerGroupDto[]>(ApiPath.AdminServerGroups)
 
   /**
    * Creates a server group.
@@ -80,7 +82,7 @@ export const useServersApi = () => {
    * @returns Nothing the caller needs.
    */
   const createServerGroup = (payload: ServerGroupPayload): Promise<void> =>
-    request<void>('/admin/server-groups', { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(ApiPath.AdminServerGroups, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Updates a server group.
@@ -90,7 +92,7 @@ export const useServersApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const updateServerGroup = (id: number, payload: ServerGroupPayload): Promise<void> =>
-    request<void>(`/admin/server-groups/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.AdminServerGroups}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes a server group.
@@ -99,7 +101,7 @@ export const useServersApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const deleteServerGroup = (id: number): Promise<void> =>
-    request<void>(`/admin/server-groups/${id}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.AdminServerGroups}/${id}`, { method: HttpMethod.Delete })
 
   return {
     listServers,

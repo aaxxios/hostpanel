@@ -6,6 +6,8 @@
  * unit-testable on a plain element.
  */
 
+import { Key } from './keys'
+
 /** Selector matching every element a user can tab to. */
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -42,7 +44,7 @@ export const focusFirst = (root: HTMLElement): void => {
  * @param event - The keydown event; only `Tab` is handled.
  */
 export const trapFocus = (root: HTMLElement, event: KeyboardEvent): void => {
-  if (event.key !== 'Tab') {
+  if (event.key !== Key.Tab) {
     return
   }
   const items = focusableWithin(root)

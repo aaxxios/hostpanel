@@ -65,10 +65,10 @@
 <script setup lang="ts">
 /**
  * Process section showing the work methodology.
- * The steps (id, icon, order) come from lib/data.ts; their text from the locale files.
+ * The steps (id, icon, order) come from constants/processStep.ts; their text from the locale files.
  */
 import { ArrowRight } from 'lucide-vue-next'
-import { processSteps as rawProcessSteps } from '~/lib/data'
+import { PROCESS_STEPS } from '~/constants/processStep'
 
 /** Glow under the step number, alternating between two hues (literal classes, so Tailwind emits them). */
 const SHADOWS = ['shadow-purple-500/25', 'shadow-sky-500/25']
@@ -77,7 +77,7 @@ const SHADOWS = ['shadow-purple-500/25', 'shadow-sky-500/25']
 const { t } = useI18n()
 
 /** The steps with their translated title and description. */
-const processSteps = computed(() => rawProcessSteps.map((step) => ({
+const processSteps = computed(() => PROCESS_STEPS.map((step) => ({
   ...step,
   title: t(`process.steps.${step.id}.title`),
   description: t(`process.steps.${step.id}.description`),

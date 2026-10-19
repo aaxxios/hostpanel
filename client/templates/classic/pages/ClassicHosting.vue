@@ -41,7 +41,7 @@
         <template v-else>
           <!-- Billing cycle tabs -->
           <UiStack direction="row" justify="center" gap="none" class="sticky top-20 z-40 py-4 mb-16 md:mb-20 px-4">
-            <UiCard padding="none" class="flex items-center gap-1 p-1 bg-white/80 dark:bg-classic-page/80 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] max-w-full overflow-x-auto no-scrollbar scroll-smooth">
+            <UiCard padding="none" class="flex items-center gap-1 p-1 bg-white/80 dark:bg-classic-page/80 backdrop-blur-xl shadow-drop-bar max-w-full overflow-x-auto no-scrollbar scroll-smooth">
               <UiButton
                 v-for="cycle in availableCycles"
                 :key="cycle.key"
@@ -65,7 +65,7 @@
               padding="none"
               :initial="{ opacity: 0, scale: 0.95 }"
               :visible-once="{ opacity: 1, scale: 1, transition: { duration: 600 } }"
-              class="relative overflow-hidden rounded-[2.5rem] border-cyan-500/30 dark:border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-classic-surface to-primary-500/10 backdrop-blur-md p-8 md:p-12 shadow-[0_0_80px_rgba(6,182,212,0.15)]"
+              class="relative overflow-hidden rounded-[2.5rem] border-cyan-500/30 dark:border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-classic-surface to-primary-500/10 backdrop-blur-md p-8 md:p-12 shadow-halo-cyan-lg"
             >
               <UiStack align="center" justify="between" gap="xl" class="relative z-10 lg:flex-row">
                 <UiStack gap="none" class="flex-1 text-center lg:text-left">
@@ -135,9 +135,9 @@
               <UiCard
                 padding="none"
                 class="relative h-full p-8 rounded-[2.5rem] transition-all duration-500 flex flex-col overflow-hidden group/card bg-white/[0.01] border-gray-200 dark:border-white/5"
-                :class="{ 'border-cyan-500/40 dark:border-cyan-500/40 bg-cyan-500/[0.03] shadow-[0_0_60px_rgba(6,182,212,0.1)]': plan.is_featured === 'on' }"
+                :class="{ 'border-cyan-500/40 dark:border-cyan-500/40 bg-cyan-500/[0.03] shadow-halo-cyan-md': isFeatured(plan) }"
               >
-                <UiStack v-if="plan.is_featured === 'on'" gap="none" class="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+                <UiStack v-if="isFeatured(plan)" gap="none" class="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
                   <UiText as="span" size="xs" tone="inherit" weight="bold" class="px-5 py-1.5 bg-gradient-to-r from-cyan-500 to-primary-500 text-white text-[10px] font-black rounded-full shadow-xl shadow-cyan-500/30 uppercase tracking-widest">
                     {{ $t('hosting.mostPopular') }}
                   </UiText>
@@ -240,7 +240,7 @@ data-testid="classic-hosting-plan-select"
               padding="none"
               :initial="{ opacity: 0, y: 40 }"
               :visible-once="{ opacity: 1, y: 0, transition: { duration: 700 } }"
-              class="relative rounded-3xl md:rounded-[3rem] border-primary-500/30 dark:border-primary-500/30 bg-gradient-to-br from-primary-500/10 via-classic-surface to-cyan-500/10 backdrop-blur-md p-8 md:p-12 shadow-[0_0_100px_rgba(139,92,246,0.15)]"
+              class="relative rounded-3xl md:rounded-[3rem] border-primary-500/30 dark:border-primary-500/30 bg-gradient-to-br from-primary-500/10 via-classic-surface to-cyan-500/10 backdrop-blur-md p-8 md:p-12 shadow-halo-violet"
             >
               <UiStack align="center" justify="between" gap="xl" class="relative z-10 lg:flex-row">
                 <UiStack gap="none" class="flex-1 text-center lg:text-left">
@@ -318,7 +318,7 @@ data-testid="classic-hosting-plan-select"
                           {{ $t('hosting.comparison.feature') }}
                         </UiStack>
                       </UiTableTh>
-                      <UiTableTh v-for="plan in orderedPlans" :key="plan.pid" align="center" class="!p-4 md:!p-8 relative group/col min-w-[120px]">
+                      <UiTableTh v-for="plan in plans" :key="plan.pid" align="center" class="!p-4 md:!p-8 relative group/col min-w-[120px]">
                         <UiStack gap="none" class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-500 to-primary-500 scale-x-0 group-hover/col:scale-x-100 transition-transform duration-500" />
                         <UiText size="xs" weight="bold" class="md:text-sm mb-2 group-hover/col:text-cyan-700 dark:group-hover/col:text-cyan-400 transition-colors uppercase tracking-widest leading-tight">
                           {{ formatPlanName(plan.name) }}
@@ -330,32 +330,23 @@ data-testid="classic-hosting-plan-select"
                     </UiTableRow>
                   </UiTableHead>
                   <UiTableBody>
-                    <UiTableRow v-for="row in comparisonRows" :key="row.feature" group class="hover:bg-white/[0.03]">
-                      <UiTableTd class="!p-4 md:!p-6 !text-[10px] md:!text-sm text-gray-600 dark:text-gray-400 font-bold sticky left-0 bg-classic-surface/95 backdrop-blur-xl z-20 border-r border-gray-200 dark:border-white/5 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                        <UiStack direction="row" align="center" gap="sm">
-                          <UiStack direction="row" align="center" justify="center" gap="none" class="hidden md:flex w-8 h-8 rounded-lg bg-white dark:bg-white/5 border border-gray-200 dark:border-white/5 group-hover:border-cyan-500/30 group-hover:bg-cyan-500/5 transition-all">
-                            <component :is="row.icon" :size="14" class="text-cyan-400/60 group-hover:text-cyan-700 dark:group-hover:text-cyan-400" />
-                          </UiStack>
-                          <UiText as="span" tone="inherit" size="inherit" class="whitespace-nowrap">{{ row.label }}</UiText>
-                        </UiStack>
+                    <!-- What each plan includes, exactly as the operator wrote it in the catalogue. -->
+                    <UiTableRow group class="hover:bg-white/[0.03]">
+                      <UiTableTd class="!p-4 md:!p-6 !text-[10px] md:!text-sm text-gray-600 dark:text-gray-400 font-bold sticky left-0 bg-classic-surface/95 backdrop-blur-xl z-20 border-r border-gray-200 dark:border-white/5 align-top group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                        <UiText as="span" tone="inherit" size="inherit" class="whitespace-nowrap">{{ $t('hosting.comparison.includes') }}</UiText>
                       </UiTableTd>
-                      <UiTableTd v-for="plan in orderedPlans" :key="plan.pid" align="center" class="!p-4 md:!p-6 !text-[10px] md:!text-sm text-gray-500 relative group-hover:text-gray-700 dark:group-hover:text-gray-200">
-                        <UiStack v-if="row.kind === ComparisonValueKind.Check" direction="row" align="center" justify="center" gap="none">
-                          <UiStack v-if="checkValue(plan, row.feature)" direction="row" align="center" justify="center" gap="none" class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-green-500/10 border border-green-500/20">
-                            <Check :size="14" class="text-green-600 dark:text-green-400" />
-                          </UiStack>
-                          <UiText v-else as="span" tone="inherit" class="text-gray-800 opacity-20 font-mono">{{ NO_VALUE }}</UiText>
-                        </UiStack>
-                        <UiText v-else as="span" tone="inherit" size="inherit" weight="bold" class="tabular-nums tracking-wide">
-                          {{ rawValue(plan, row.feature) }}
-                        </UiText>
+                      <UiTableTd v-for="plan in plans" :key="plan.pid" align="center" class="!p-4 md:!p-6 !text-[10px] md:!text-sm text-gray-500 align-top relative group-hover:text-gray-700 dark:group-hover:text-gray-200" data-testid="classic-hosting-compare-features">
+                        <UiList v-if="planFeatures(plan).length" list-style="bare">
+                          <UiListItem v-for="feature in planFeatures(plan)" :key="feature" :icon="Check">{{ feature }}</UiListItem>
+                        </UiList>
+                        <UiText v-else as="span" tone="inherit" class="text-gray-800 opacity-20 font-mono">{{ NO_VALUE }}</UiText>
                       </UiTableTd>
                     </UiTableRow>
 
                     <!-- Bottom action row -->
                     <UiTableRow :hoverable="false">
                       <UiTableTd class="!p-4 md:!p-8 sticky left-0 bg-classic-surface/95 backdrop-blur-xl z-20 border-r border-gray-200 dark:border-white/5" />
-                      <UiTableTd v-for="plan in orderedPlans" :key="plan.pid" align="center" class="!p-4 md:!p-8 bg-white/[0.01]">
+                      <UiTableTd v-for="plan in plans" :key="plan.pid" align="center" class="!p-4 md:!p-8 bg-white/[0.01]">
                         <UiButton
                           :variant="cart.hasItem(plan.pid, selectedCycle) ? 'subtle' : 'outline'"
                           size="sm"
@@ -389,17 +380,13 @@ data-testid="classic-hosting-plan-select"
 <script setup lang="ts">
 /**
  * ClassicHosting - the classic template's hosting page: hero, billing-cycle tabs, the free plan,
- * the plan grid, the agency plan and the comparison table.
+ * the plan grid, the agency plan and the comparison table, whose cells are each plan's own
+ * catalogue feature lines.
  *
  * The catalogue is read through the catalogue store in the payer's own currency; prices are
  * formatted as sent, never converted. Cart actions go to the cart store.
  */
-import type { Component } from 'vue'
-import {
-  Server, CheckCircle, AlertCircle, ShoppingCart,
-  Check, ArrowRight, HardDrive, Zap, Globe,
-  Mail, Database, ShieldCheck, History, Headphones
-} from 'lucide-vue-next'
+import { Server, CheckCircle, AlertCircle, ShoppingCart, Check, ArrowRight } from 'lucide-vue-next'
 import { useCartStore } from '~/stores/cart'
 import { useCurrencyStore } from '~/stores/currency'
 import { useCatalogStore } from '~/stores/catalog'
@@ -408,46 +395,25 @@ import { PRICING_CYCLES, PRICING_CYCLE_I18N_KEY } from '~/constants/pricingCycle
 import { formatMoney, formatMoneyDigits } from '~/utils/formatMoney'
 import { cycleAmount } from '~/utils/productFamilies'
 import { parseDescription } from '~/utils/catalogGroups'
+import { isFreePlan } from '~/utils/isFreePlan'
 import { UiHeadingLevel } from '~/utils/ui/enums'
-import { ComparisonFeature } from '~/types/comparisonfeature'
-import { ComparisonValueKind } from '~/types/comparisonvaluekind'
 import type { HostingPlan } from '~/types/hostingplan'
+import { FeaturedFlag } from '~/types/featuredflag'
 import { PricingCycle } from '~/types/pricingcycle'
-import { AppLocale } from '~/types/applocale'
 
-/** One row of the comparison table. */
-interface ComparisonTableRow {
-  /** Which specification the row compares. */
-  feature: ComparisonFeature
-  /** Translated row label. */
-  label: string
-  /** Icon shown before the label. */
-  icon: Component
-  /** Whether cells show a value or a tick. */
-  kind: ComparisonValueKind
-}
-
-/** A cell value in {@link PLAN_DATA}: text, a flag, or the marker for "unlimited". */
-type PlanDataValue = string | boolean
-
-/** Marker in {@link PLAN_DATA} for "no limit"; translated when rendered. */
-const UNLIMITED = 'unlimited'
-
-/** Shown where a plan has no value for a row. */
+/** Shown in a comparison cell for a plan that lists no features. */
 const NO_VALUE = '—'
 
-/** Plan names in the order the comparison table lists them. */
-const PLAN_ORDER = ['free', 'starter', 'webmaster', 'business', 'pro', 'agency']
+/** Fragment of a plan name that marks the agency plan; the catalogue has no flag for it. */
+const AGENCY_NAME_MARKER = 'agency'
 
-/** What each plan includes, keyed by the plan's cleaned-up name. */
-const PLAN_DATA: Record<string, Partial<Record<ComparisonFeature, PlanDataValue>>> = {
-  free: { websites: '1', databases: '1', email: '2', bandwidth: '5 GB', storage: '600 MB', backups: false },
-  starter: { websites: '1', databases: '5', email: '10', bandwidth: '50 GB', storage: '5 GB', backups: true },
-  webmaster: { websites: '3', databases: '10', email: '100', bandwidth: '400 GB', storage: '20 GB', backups: true },
-  business: { websites: '10', databases: '20', email: UNLIMITED, bandwidth: UNLIMITED, storage: '20 GB', backups: true },
-  pro: { websites: UNLIMITED, databases: UNLIMITED, email: UNLIMITED, bandwidth: UNLIMITED, storage: '50 GB', backups: true },
-  agency: { websites: UNLIMITED, databases: UNLIMITED, email: UNLIMITED, bandwidth: UNLIMITED, storage: UNLIMITED, backups: true }
-}
+/**
+ * Whether the operator flagged the plan as the featured one.
+ *
+ * @param plan - The plan.
+ * @returns True for a featured plan.
+ */
+const isFeatured = (plan: HostingPlan): boolean => plan.is_featured === FeaturedFlag.On
 
 /** Translate function and the active locale. */
 const { t, locale } = useI18n()
@@ -492,46 +458,22 @@ const error = computed(() => catalogStore.error)
 /** All hosting plans. */
 const plans = computed<HostingPlan[]>(() => catalogStore.productsFor(hostingFilter) as HostingPlan[])
 
-/** The free plan, shown in its own banner. */
-const freePlan = computed(() => plans.value.find(p => p.name.toLowerCase().includes('free')))
+/**
+ * Whether a plan is the agency one.
+ *
+ * @param plan - The plan.
+ * @returns True when its name carries the agency marker.
+ */
+const isAgencyPlan = (plan: HostingPlan): boolean => plan.name.toLowerCase().includes(AGENCY_NAME_MARKER)
+
+/** The free plan, shown in its own banner; free means a zero price, as in the catalogue store. */
+const freePlan = computed(() => plans.value.find(p => isFreePlan(p.pricing)))
 
 /** The agency plan, shown in its own banner. */
-const agencyPlan = computed(() => plans.value.find(p => p.name.toLowerCase().includes('agency')))
+const agencyPlan = computed(() => plans.value.find(p => !isFreePlan(p.pricing) && isAgencyPlan(p)))
 
 /** Every plan that is neither the free nor the agency one - the grid. */
-const otherPlans = computed(() => plans.value.filter(p => !p.name.toLowerCase().includes('free') && !p.name.toLowerCase().includes('agency')))
-
-/**
- * Reduces a plan name to the lowercase letters the order and data tables are keyed by, and fixes
- * the operator's misspelling of "business".
- *
- * @param name - The plan name.
- * @returns The cleaned name.
- */
-const cleanName = (name: string): string =>
-  name.toLowerCase().replace(/[^a-z]/g, '').replace(/businnes|busines/g, 'business')
-
-/** Plans in the order the comparison table lists them. */
-const orderedPlans = computed(() =>
-  [...plans.value].sort((a, b) => {
-    const nameA = cleanName(a.name)
-    const nameB = cleanName(b.name)
-    const ai = PLAN_ORDER.findIndex(o => nameA.includes(o))
-    const bi = PLAN_ORDER.findIndex(o => nameB.includes(o))
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
-  }))
-
-/** Rows of the comparison table. */
-const comparisonRows = computed<ComparisonTableRow[]>(() => [
-  { feature: ComparisonFeature.Storage, label: t('hosting.comparison.storage'), icon: HardDrive, kind: ComparisonValueKind.Dynamic },
-  { feature: ComparisonFeature.Bandwidth, label: t('hosting.comparison.bandwidth'), icon: Zap, kind: ComparisonValueKind.Dynamic },
-  { feature: ComparisonFeature.Websites, label: t('hosting.comparison.websites'), icon: Globe, kind: ComparisonValueKind.Dynamic },
-  { feature: ComparisonFeature.Email, label: t('hosting.comparison.email'), icon: Mail, kind: ComparisonValueKind.Dynamic },
-  { feature: ComparisonFeature.Databases, label: t('hosting.comparison.databases'), icon: Database, kind: ComparisonValueKind.Dynamic },
-  { feature: ComparisonFeature.FreeSsl, label: t('hosting.comparison.freeSsl'), icon: ShieldCheck, kind: ComparisonValueKind.Check },
-  { feature: ComparisonFeature.Backups, label: t('hosting.comparison.backups'), icon: History, kind: ComparisonValueKind.Dynamic },
-  { feature: ComparisonFeature.Support, label: t('hosting.comparison.support'), icon: Headphones, kind: ComparisonValueKind.Check }
-])
+const otherPlans = computed(() => plans.value.filter(p => !isFreePlan(p.pricing) && !isAgencyPlan(p)))
 
 /** The billing cycle the prices are shown for. */
 const selectedCycle = ref<PricingCycle>(PricingCycle.Monthly)
@@ -560,41 +502,6 @@ const availableCycles = computed(() =>
     .map(key => ({ key, label: cycleLabel(key) })))
 
 /**
- * Whether a plan ticks a check-style comparison row.
- *
- * @param plan - The plan.
- * @param feature - The row's feature.
- * @returns True when the description mentions it (support is always on).
- */
-const checkValue = (plan: HostingPlan, feature: ComparisonFeature): boolean => {
-  const desc = (plan.description || '').toLowerCase()
-  if (feature === ComparisonFeature.FreeSsl) {
-    return desc.includes('ssl') || desc.includes('security') || desc.includes('սերտիֆիկատ')
-  }
-  return feature === ComparisonFeature.Support
-}
-
-/**
- * The text a value row shows for a plan.
- *
- * @param plan - The plan.
- * @param feature - The row's feature.
- * @returns The value, or a dash when the plan has none.
- */
-const rawValue = (plan: HostingPlan, feature: ComparisonFeature): string => {
-  const name = cleanName(plan.name)
-  const planKey = Object.keys(PLAN_DATA).find(k => name.includes(k))
-  const value = planKey ? PLAN_DATA[planKey]?.[feature] : undefined
-  if (value === undefined) {
-    return NO_VALUE
-  }
-  if (feature === ComparisonFeature.Backups) {
-    return value ? t('hosting.comparison.daily') : NO_VALUE
-  }
-  return value === UNLIMITED ? t('hosting.comparison.unlimited') : String(value)
-}
-
-/**
  * Formats just the grouped digits of an amount - no currency symbol - for markup that renders
  * the symbol separately at a different size. Decimal count comes from the payer's own
  * currency configuration, never a locale guess.
@@ -621,20 +528,6 @@ const planCycles = (plan: HostingPlan): Array<{ key: PricingCycle; price: string
     .map(key => ({ key, price: formatMoney(planPrice(plan, key), payerCurrency.value) }))
 
 /**
- * Normalises a plan description before it is parsed.
- *
- * The Armenian catalogue copy spells "webmaster" with a form the operator asked to be shown
- * differently; the substitution has to happen on the raw text, before any splitting.
- *
- * @param plan - The plan whose description is being read.
- * @returns The description with locale-specific wording applied.
- */
-const planDescription = (plan: HostingPlan): string => {
-  const desc = plan.description || ''
-  return locale.value === AppLocale.Hy ? desc.replace(/վեբ-մաստեր/g, 'վեբ-վարպետ') : desc
-}
-
-/**
  * Leading prose of a plan's description.
  *
  * `ProductDto` sends no `shortdescription`; the copy sits at the head of `description`.
@@ -642,7 +535,7 @@ const planDescription = (plan: HostingPlan): string => {
  * @param plan - The plan being rendered.
  * @returns The summary sentence, or `''` for a plan whose copy is bullets only.
  */
-const planSummary = (plan: HostingPlan): string => parseDescription(planDescription(plan)).summary
+const planSummary = (plan: HostingPlan): string => parseDescription(plan.description || '').summary
 
 /**
  * Feature lines of a plan's description.
@@ -653,7 +546,7 @@ const planSummary = (plan: HostingPlan): string => parseDescription(planDescript
  * @param plan - The plan being rendered.
  * @returns The feature lines, markers stripped.
  */
-const planFeatures = (plan: HostingPlan): string[] => parseDescription(planDescription(plan)).features
+const planFeatures = (plan: HostingPlan): string[] => parseDescription(plan.description || '').features
 
 /**
  * Fixes the operator's misspelling of "business" in a plan name.

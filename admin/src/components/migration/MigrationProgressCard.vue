@@ -23,6 +23,7 @@ import UiHeading from '@/components/ui/UiHeading.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiStatTile from '@/components/ui/UiStatTile.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { NOTICE_VISIBLE_MS } from '@/lib/limits'
 
 /** Translation function. */
 const { t } = useI18n()
@@ -35,9 +36,6 @@ const props = defineProps<{
 
 /** Migration store: owns the connection check and the import start. */
 const store = useMigrationStore()
-
-/** How long the connection-check result stays visible, in milliseconds. */
-const CHECK_RESULT_VISIBLE_MS = 3000
 
 /** True while the connection check is in flight. */
 const checking = ref(false)
@@ -63,7 +61,7 @@ const checkConnection = async (): Promise<void> => {
   checking.value = false
   checkResultTimer.value = setTimeout(() => {
     checkReachable.value = null
-  }, CHECK_RESULT_VISIBLE_MS)
+  }, NOTICE_VISIBLE_MS)
 }
 
 /** Starts the import and follows the job until it finishes. */

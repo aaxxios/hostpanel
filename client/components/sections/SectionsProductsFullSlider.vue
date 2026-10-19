@@ -6,8 +6,9 @@
       <template #fallback>
         <div class="absolute inset-0">
           <NuxtImg
-            :src="firstSlide?.image || FALLBACK_IMAGE"
-            :alt="firstSlide?.name || SITE_NAME"
+            v-if="firstSlide?.image"
+            :src="firstSlide.image"
+            :alt="firstSlide.name || SITE_NAME"
             width="1920"
             height="1080"
             format="webp"
@@ -200,9 +201,6 @@ import 'swiper/css/navigation'
 import 'swiper/css/pagination'
 import { useCatalogStore } from '~/stores/catalog'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'
-
-/** Image shown by the server-rendered first slide when the slide has none. */
-const FALLBACK_IMAGE = '/images/products/hosting.jpg'
 
 /** Alt text of that image when there is no slide at all: the operator's site name. */
 const { name: SITE_NAME } = useSiteIdentity()

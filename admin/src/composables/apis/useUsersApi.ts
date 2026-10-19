@@ -8,6 +8,8 @@
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { PagedResult } from '@/types/pagedresult'
 import type { UpdateUserPayload, UserDetail, UserListItem } from '@/types/useraccount'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for admin user management.
@@ -26,7 +28,7 @@ export const useUsersApi = () => {
    * @returns One page of users.
    */
   const list = (page: number, pageSize: number, search?: string): Promise<PagedResult<UserListItem>> =>
-    request<PagedResult<UserListItem>>(`/admin/users${buildQuery({ page, pageSize, search })}`)
+    request<PagedResult<UserListItem>>(`${ApiPath.AdminUsers}${buildQuery({ page, pageSize, search })}`)
 
   /**
    * Loads one user with the linked client accounts.
@@ -34,7 +36,7 @@ export const useUsersApi = () => {
    * @param id - Identity user id.
    * @returns The user detail.
    */
-  const get = (id: string): Promise<UserDetail> => request<UserDetail>(`/admin/users/${id}`)
+  const get = (id: string): Promise<UserDetail> => request<UserDetail>(`${ApiPath.AdminUsers}/${id}`)
 
   /**
    * Updates a user profile.
@@ -44,7 +46,7 @@ export const useUsersApi = () => {
    * @returns Nothing.
    */
   const update = (id: string, payload: UpdateUserPayload): Promise<void> =>
-    request<void>(`/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.AdminUsers}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes a user; client records are preserved.
@@ -52,7 +54,7 @@ export const useUsersApi = () => {
    * @param id - Identity user id.
    * @returns Nothing.
    */
-  const remove = (id: string): Promise<void> => request<void>(`/admin/users/${id}`, { method: 'DELETE' })
+  const remove = (id: string): Promise<void> => request<void>(`${ApiPath.AdminUsers}/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Sends a password reset email to the user.
@@ -61,7 +63,7 @@ export const useUsersApi = () => {
    * @returns Nothing.
    */
   const sendPasswordReset = (id: string): Promise<void> =>
-    request<void>(`/admin/users/${id}/reset-password`, { method: 'POST' })
+    request<void>(`${ApiPath.AdminUsers}/${id}/reset-password`, { method: HttpMethod.Post })
 
   /**
    * Sets a new password for the user.
@@ -71,7 +73,7 @@ export const useUsersApi = () => {
    * @returns Nothing.
    */
   const changePassword = (id: string, password: string): Promise<void> =>
-    request<void>(`/admin/users/${id}/change-password`, { method: 'POST', body: JSON.stringify({ password }) })
+    request<void>(`${ApiPath.AdminUsers}/${id}/change-password`, { method: HttpMethod.Post, body: JSON.stringify({ password }) })
 
   return { list, get, update, remove, sendPasswordReset, changePassword }
 }

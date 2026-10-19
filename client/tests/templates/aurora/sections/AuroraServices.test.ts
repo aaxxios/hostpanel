@@ -11,7 +11,7 @@ describe('AuroraServices', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(AuroraServices)
 
-    for (const tag of ['Host', 'VPS', 'DNS', 'Bill']) {
+    for (const tag of ['hosting', 'servers', 'domains', 'billing']) {
       expect(wrapper.find(`[data-testid="service-card-${tag}"]`).exists()).toBe(true)
     }
     expect(wrapper.text()).toContain('aurora.services.domainsBody')
@@ -20,7 +20,7 @@ describe('AuroraServices', () => {
   it('paints each tile from a gradient token, never an inline style', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(AuroraServices)
-    const tile = wrapper.find('[data-testid="service-card-Host"]').find('.place-items-center')
+    const tile = wrapper.find('[data-testid="service-card-hosting"]').find('.place-items-center')
 
     expect(tile.classes()).toContain('bg-tile-sky')
     expect(wrapper.html()).not.toContain(' style=')

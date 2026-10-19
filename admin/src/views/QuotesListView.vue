@@ -5,6 +5,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -35,8 +36,14 @@ import { formatDate } from '@/lib/format'
 import { formatUsdPlain } from '@/lib/money'
 import { useQuotesStore } from '@/stores/quotes'
 import type { QuoteListItem } from '@/types/quote'
+import { AppRoute, quotePath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { clientLabel } = useFallbackLabels()
 
 /** Whether a quote's validity date is still ahead. */
 const ValidityPeriod = {
@@ -130,7 +137,7 @@ onMounted(() => {
         <UiButton variant="secondary" data-testid="billing-quotes-filter-toggle" @click="filtersOpen = !filtersOpen">
           {{ filtersOpen ? t('shared.hideFilters') : t('shared.searchFilter') }}
         </UiButton>
-        <UiLink to="/billing/quotes/add" variant="primary" data-testid="billing-quotes-create">
+        <UiLink :to="AppRoute.BillingQuotesAdd" variant="primary" data-testid="billing-quotes-create">
           <UiIcon :markup="Icon.Add" size="sm" />
           {{ t('billing.quotesList.createQuote') }}
         </UiLink>
@@ -202,11 +209,11 @@ onMounted(() => {
         <UiTableBody divided>
           <UiTableRow v-for="quote in shownQuotes" :key="quote.id" hoverable>
             <UiTableCell muted>
-              <UiLink :to="`/billing/quotes/${quote.id}`" variant="link" :data-testid="`billing-quote-open-${quote.id}`">
+              <UiLink :to="quotePath(quote.id)" variant="link" :data-testid="`billing-quote-open-${quote.id}`">
                 {{ quote.id }}
               </UiLink>
             </UiTableCell>
-            <UiTableCell>{{ quote.clientName }}</UiTableCell>
+            <UiTableCell>{{ clientLabel(quote.clientName, quote.clientId) }}</UiTableCell>
             <UiTableCell>{{ quote.subject }}</UiTableCell>
             <UiTableCell>
               <UiBadge :tone="quoteStageTone(quote.stage)">{{ quote.stage }}</UiBadge>

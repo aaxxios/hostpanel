@@ -12,17 +12,12 @@
 import { PRICING_CYCLES } from '~/constants/pricingCycle'
 import { PricingCycle } from '~/types/pricingcycle'
 import type { PortalProduct } from '~/types/portalproduct'
+import type { PortalProductGroup } from '~/types/portalproductgroup'
 import type { PortalProductPricing } from '~/types/portalproductpricing'
 import type { ProductDetail } from '~/types/productdetail'
 import type { ProductFamily } from '~/types/productfamily'
 import type { ProductPricingRow } from '~/types/productpricingrow'
-import { nameToKey, parseDescription, productConfig, productGidToKey, productGids } from '~/utils/catalogGroups'
-
-/** Visual config of a family the config table does not know. */
-const UNKNOWN_FAMILY_ICON = 'cube'
-
-/** Accent of a family the config table does not know. */
-const UNKNOWN_FAMILY_COLOR = '#6366f1'
+import { familyConfig, familyKey, isFamilyGroup, nameToKey, parseDescription } from '~/utils/catalogGroups'
 
 /** How many feature lines a family card aggregates from its plans. */
 const FAMILY_FEATURE_LIMIT = 6
@@ -91,13 +86,22 @@ export const buildPricingRows = (plans: PortalProduct[], format: MoneyFormatter,
   })
 
 /**
+ * The key a product answers to in an address: its slug, or its normalised name when it has none.
+ *
+ * @param product The catalogue product.
+ * @returns The key.
+ */
+const productKeyOf = (product: PortalProduct): string => product.slug?.trim() || nameToKey(product.name)
+
+/**
  * Groups the catalogue into one entry per product family.
  *
- * Each group in `productGids` becomes a family named by its parent product (the one whose slug is
- * the family key) and priced by its sub-plans; a group with no sub-plans is priced by the parent
- * alone, and a group with no products is left out. The card's feature list is the unique feature
- * lines of every plan in the group.
+ * Each family group becomes a family named by its group and its parent product (the one whose slug
+ * or name is the family key, when there is one) and priced by its other plans; a group whose only
+ * product is the parent is priced by the parent alone, and a group with no products is left out.
+ * The card's feature list is the unique feature lines of every plan in the group.
  *
+ * @param groups The catalogue's product groups.
  * @param raw Every product the catalogue returned for the family groups.
  * @param format Formats an amount in the payer's currency.
  * @param payerCode The payer's currency code; empty while it is still resolving.
@@ -105,18 +109,18 @@ export const buildPricingRows = (plans: PortalProduct[], format: MoneyFormatter,
  * @returns The families, `leading` first.
  */
 export const buildProductFamilies = (
+  groups: PortalProductGroup[],
   raw: PortalProduct[],
   format: MoneyFormatter,
   payerCode: string | null,
   leading: ProductFamily[] = [],
 ): ProductFamily[] => {
   const items: ProductFamily[] = [...leading]
-  for (const gid of productGids) {
-    const key = productGidToKey[gid] ?? ''
-    const config = productConfig[key] ?? { name: key, icon: UNKNOWN_FAMILY_ICON, color: UNKNOWN_FAMILY_COLOR, learnMoreUrl: '' }
-    const inGroup = raw.filter((product) => Number(product.groupId) === gid)
-    const parent = inGroup.find((product) => product.slug?.trim() === key)
-    const subPlans = inGroup.filter((product) => product.slug?.trim() !== key)
+  for (const group of groups.filter(isFamilyGroup)) {
+    const key = familyKey(group)
+    const inGroup = raw.filter((product) => Number(product.groupId) === group.id)
+    const parent = inGroup.find((product) => productKeyOf(product) === key)
+    const subPlans = inGroup.filter((product) => product !== parent)
     // With no sub-plans the parent product is the single plan.
     const plans = subPlans.length > 0 ? subPlans : (parent ? [parent] : [])
     if (plans.length === 0) {
@@ -132,8 +136,8 @@ export const buildProductFamilies = (
 
     items.push({
       id: key,
-      gid,
-      ...config,
+      gid: group.id,
+      ...familyConfig(group),
       // A family has no tagline: the catalogue endpoint sends none. Only the static domains card
       // carries one, and it comes from the locale files.
       tagline: '',
@@ -148,34 +152,37 @@ export const buildProductFamilies = (
 /**
  * Finds the product a detail page is about and shapes it.
  *
- * The product is matched by its slug (or its normalised name), then by the family key of its
- * group; its plans are the other products of the same group.
+ * The product is matched by its slug (or its normalised name), then by the family key of a group;
+ * its plans are the other products of the same group.
  *
+ * @param groups The catalogue's product groups.
  * @param list The catalogue products of the family groups.
- * @param productId The route parameter, e.g. `smartlearn-system`.
+ * @param productId The route parameter, e.g. `alpha-suite`.
  * @returns The product, or null when no product matches.
  */
-export const findProductDetail = (list: PortalProduct[], productId: string): ProductDetail | null => {
-  const inFamilies = list.filter((product) => productGids.includes(Number(product.groupId)))
+export const findProductDetail = (groups: PortalProductGroup[], list: PortalProduct[], productId: string): ProductDetail | null => {
+  const families = groups.filter(isFamilyGroup)
+  const inFamilies = list.filter((product) => families.some((group) => group.id === Number(product.groupId)))
 
-  let found = inFamilies.find((product) => (product.slug?.trim() || nameToKey(product.name)) === productId)
+  let found = inFamilies.find((product) => productKeyOf(product) === productId)
   if (!found) {
-    const targetGid = Number(Object.entries(productGidToKey).find(([, value]) => value === productId)?.[0] ?? 0)
-    if (targetGid) {
+    const targetGroup = families.find((group) => familyKey(group) === productId)
+    if (targetGroup) {
       // `ProductDto` has no featured flag, so the first product of the group is the one shown.
-      found = inFamilies.find((product) => Number(product.groupId) === targetGid)
+      found = inFamilies.find((product) => Number(product.groupId) === targetGroup.id)
     }
   }
-  if (!found) {
+  const group = found ? families.find((candidate) => candidate.id === Number(found?.groupId)) : undefined
+  if (!found || !group) {
     return null
   }
 
-  const key = productGidToKey[Number(found.groupId)] ?? found.slug?.trim() ?? nameToKey(found.name)
-  const config = productConfig[key] ?? { name: key, icon: UNKNOWN_FAMILY_ICON, color: UNKNOWN_FAMILY_COLOR, demoUrl: '', learnMoreUrl: '' }
+  const key = familyKey(group)
+  const config = familyConfig(group)
   const { summary, features } = parseDescription(found.description || '')
 
   const plans = inFamilies
-    .filter((product) => Number(product.groupId) === Number(found.groupId) && product.slug?.trim() !== key)
+    .filter((product) => Number(product.groupId) === group.id && productKeyOf(product) !== key)
     .map((plan) => ({
       pid: plan.pid as number,
       tier: plan.name,

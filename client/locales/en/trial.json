@@ -1,20 +1,20 @@
 {
   "trial": {
-    "badge": "30-Day Free Trial",
+    "badge": "Free Trial",
     "title": "Try {product} Free",
-    "subtitle": "No credit card required. Get full access for 30 days and see why teams love it.",
+    "subtitle": "Get full access and see why teams love it.",
     "cta": "Start Free Trial",
     "learnMore": "Learn More",
-    "noCc": "No credit card required. Cancel anytime.",
+    "noCc": "Start your trial today.",
     "featuresTitle": "Everything in {product}",
     "perks": {
       "noCc": {
-        "title": "No Credit Card",
-        "desc": "Start instantly, no payment info needed"
+        "title": "Quick Start",
+        "desc": "Start right away"
       },
       "duration": {
-        "title": "30-Day Trial",
-        "desc": "Full access for a full month"
+        "title": "Trial Period",
+        "desc": "Full access during your trial"
       },
       "support": {
         "title": "Full Support",
@@ -23,7 +23,7 @@
     },
     "seo": {
       "title": "Start Free Trial — {product}",
-      "description": "Try {product} free for 30 days. No credit card required."
+      "description": "Try {product} free."
     }
   }
 }

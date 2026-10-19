@@ -26,7 +26,7 @@
         </UiHeading>
 
         <UiText size="inherit" tone="inherit" class="mt-5 max-w-[560px] text-[17px] leading-[1.7] text-nova-muted">
-          {{ t('nova.hero.lead') }}
+          {{ t('nova.hero.lead', { site: siteName }) }}
         </UiText>
 
         <UiStack direction="row" wrap gap="sm" class="mt-8">
@@ -72,6 +72,9 @@ import { useVisibleFeatures } from '~/templates/nova/features'
 
 /** Translator for the copy. */
 const { t } = useI18n()
+
+/** Operator-set site name that the copy interpolates as `{site}`. */
+const { name: siteName } = useSiteIdentity()
 /** Prefixes a route with the active locale. */
 const localePath = useLocalePath()
 /** The benefits this install may state. */

@@ -116,3 +116,16 @@ describe('GET /api/portal/auth/sso/callback', () => {
     expect(error).toMatchObject({ statusCode: 401, data: { code: 'TOKEN_EXCHANGE_FAILED' } })
   })
 })
+
+describe('GET /api/portal/auth/sso/callback when the SSO address is not configured', () => {
+  it('refuses with 503 and calls no token endpoint when the callback address is empty', async () => {
+    setRuntimeConfig({ ssoCallbackUrl: '' })
+    const event = makeEvent({ query: { code: 'c1', state: 'st' }, cookies: flowCookies })
+
+    const error = await refusal(() => route.default(event))
+
+    expect(error).toMatchObject({ statusCode: 503, data: { code: 'SSO_NOT_CONFIGURED' } })
+    expect(event.redirectedTo).toBeUndefined()
+    expect(backend.requests).toHaveLength(0)
+  })
+})

@@ -4,6 +4,7 @@ using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Orders;
 using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.NameAm;
 /// <summary>
 /// Implements <see cref="IRegistrarProvider"/> using the Name.am JSON REST API.
@@ -11,6 +12,9 @@ namespace Innovayse.Hostpanel.Infrastructure.Integrations.NameAm;
 /// </summary>
 public sealed class NameAmRegistrarProvider : IRegistrarProvider
 {
+    /// <summary>The <c>status</c> value Name.am reports for a domain that is live.</summary>
+    private const string ActiveDomainStatus = "active";
+
     /// <summary>The client this class uses.</summary>
     private readonly NameAmClient _client;
 
@@ -428,7 +432,7 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
             status = statusEl.GetString() ?? string.Empty;
         }
 
-        if (!string.Equals(status, "active", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(status, ActiveDomainStatus, StringComparison.OrdinalIgnoreCase))
         {
             _logger.LogInformation(
                 "Domain {DomainName} found in Name.am but status is '{Status}' — not yet active",

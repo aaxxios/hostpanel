@@ -10,8 +10,8 @@ import { flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { mountClient } from '~/tests/helpers/mountClient'
 
-/** The mocked single-sign-on call, re-created for every test. */
-const fetchCpanelUrl = vi.fn()
+/** The mocked open-control-panel action, re-created for every test. */
+const openControlPanel = vi.fn()
 
 vi.mock('~/stores/servicemanagement', () => ({
   /**
@@ -19,7 +19,7 @@ vi.mock('~/stores/servicemanagement', () => ({
    *
    * @returns Only the action the card calls.
    */
-  useServiceManagementStore: () => ({ fetchCpanelUrl })
+  useServiceManagementStore: () => ({ openControlPanel })
 }))
 
 const { default: ServicesCard } = await import('~/components/client/dashboard/ServicesCard.vue')
@@ -32,7 +32,7 @@ const ACTIVE = { id: 1, name: 'Starter', domain: 'a.test', username: 'ada', stat
 const PENDING = { id: 2, name: 'Pro', domain: '', username: '', status: 'Pending', serverhostname: '' }
 
 beforeEach(() => {
-  fetchCpanelUrl.mockReset()
+  openControlPanel.mockReset()
 })
 
 afterEach(() => {
@@ -91,9 +91,8 @@ describe('ClientDashboardServicesCard', () => {
     expect(wrapper.find('[data-testid="dashboard-service-cpanel-3"]').exists()).toBe(false)
   })
 
-  it('opens the single-sign-on address in a new tab', async () => {
-    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
-    fetchCpanelUrl.mockResolvedValue('https://sso.test/login')
+  it('asks the store to open the control panel of the clicked service with its host', async () => {
+    openControlPanel.mockResolvedValue(undefined)
     const wrapper = mountClient(ServicesCard)
     useClientStore().services = [ACTIVE] as never
     await nextTick()
@@ -101,20 +100,6 @@ describe('ClientDashboardServicesCard', () => {
     await wrapper.find('[data-testid="dashboard-service-cpanel-1"]').trigger('click')
     await flushPromises()
 
-    expect(fetchCpanelUrl).toHaveBeenCalledWith('1')
-    expect(open).toHaveBeenCalledWith('https://sso.test/login', '_blank', 'noopener')
-  })
-
-  it('falls back to the plain control-panel login when single sign-on gives no address', async () => {
-    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
-    fetchCpanelUrl.mockResolvedValue(null)
-    const wrapper = mountClient(ServicesCard)
-    useClientStore().services = [ACTIVE] as never
-    await nextTick()
-
-    await wrapper.find('[data-testid="dashboard-service-cpanel-1"]').trigger('click')
-    await flushPromises()
-
-    expect(open).toHaveBeenCalledWith('https://srv.test:2083', '_blank', 'noopener')
+    expect(openControlPanel).toHaveBeenCalledWith('1', 'srv.test')
   })
 })

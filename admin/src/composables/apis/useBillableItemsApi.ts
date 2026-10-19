@@ -10,6 +10,9 @@ import { buildQuery, useApi } from '@/composables/useApi'
 import type { BillableItem, BillableItemsResult, CreateBillableItemPayload } from '@/types/billableitem'
 import type { PagedResult } from '@/types/pagedresult'
 import type { ServiceListItem } from '@/types/service'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
+import { LOOKUP_PAGE_SIZE } from '@/lib/limits'
 
 /**
  * Endpoint functions for billable items.
@@ -28,7 +31,7 @@ export const useBillableItemsApi = () => {
    * @returns One page of items.
    */
   const list = (page: number, pageSize: number, type?: string): Promise<PagedResult<BillableItem>> =>
-    request<PagedResult<BillableItem>>(`/billing/billable-items${buildQuery({ page, pageSize, type })}`)
+    request<PagedResult<BillableItem>>(`${ApiPath.BillingBillableItems}${buildQuery({ page, pageSize, type })}`)
 
   /**
    * Creates a billable item.
@@ -37,7 +40,7 @@ export const useBillableItemsApi = () => {
    * @returns Nothing.
    */
   const create = (payload: CreateBillableItemPayload): Promise<void> =>
-    request<void>('/billing/billable-items', { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(ApiPath.BillingBillableItems, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Deletes a billable item.
@@ -45,7 +48,7 @@ export const useBillableItemsApi = () => {
    * @param id - The item id.
    * @returns Nothing.
    */
-  const remove = (id: number): Promise<void> => request<void>(`/billing/billable-items/${id}`, { method: 'DELETE' })
+  const remove = (id: number): Promise<void> => request<void>(`${ApiPath.BillingBillableItems}/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Loads a client uninvoiced items and one page of invoiced items.
@@ -61,7 +64,7 @@ export const useBillableItemsApi = () => {
     invoicedPageSize: number,
   ): Promise<BillableItemsResult> =>
     request<BillableItemsResult>(
-      `/clients/${clientId}/billable-items${buildQuery({ invoicedPage, invoicedPageSize })}`,
+      `${ApiPath.Clients}/${clientId}/billable-items${buildQuery({ invoicedPage, invoicedPageSize })}`,
     )
 
   /**
@@ -72,8 +75,8 @@ export const useBillableItemsApi = () => {
    * @returns Nothing.
    */
   const invoiceSelected = (clientId: string, billableItemIds: number[]): Promise<void> =>
-    request<void>(`/clients/${clientId}/billable-items/invoice-selected`, {
-      method: 'POST',
+    request<void>(`${ApiPath.Clients}/${clientId}/billable-items/invoice-selected`, {
+      method: HttpMethod.Post,
       body: JSON.stringify({ billableItemIds }),
     })
 
@@ -85,7 +88,7 @@ export const useBillableItemsApi = () => {
    * @returns Nothing.
    */
   const removeForClient = (clientId: string, id: number): Promise<void> =>
-    request<void>(`/clients/${clientId}/billable-items/${id}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.Clients}/${clientId}/billable-items/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Lists a client services for the item dropdowns.
@@ -94,7 +97,7 @@ export const useBillableItemsApi = () => {
    * @returns One page of services (up to 100).
    */
   const listServices = (clientId: string): Promise<PagedResult<ServiceListItem>> =>
-    request<PagedResult<ServiceListItem>>(`/services${buildQuery({ clientId, pageSize: 100 })}`)
+    request<PagedResult<ServiceListItem>>(`${ApiPath.Services}${buildQuery({ clientId, pageSize: LOOKUP_PAGE_SIZE })}`)
 
   /**
    * Adds one billable item to a client.
@@ -104,7 +107,7 @@ export const useBillableItemsApi = () => {
    * @returns Nothing.
    */
   const addForClient = (clientId: string, payload: Record<string, unknown>): Promise<void> =>
-    request<void>(`/clients/${clientId}/billable-items`, { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Clients}/${clientId}/billable-items`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Adds time-billing entries to a client.
@@ -114,8 +117,8 @@ export const useBillableItemsApi = () => {
    * @returns Nothing.
    */
   const addTimeBilling = (clientId: string, entries: Record<string, unknown>[]): Promise<void> =>
-    request<void>(`/clients/${clientId}/billable-items/time-billing`, {
-      method: 'POST',
+    request<void>(`${ApiPath.Clients}/${clientId}/billable-items/time-billing`, {
+      method: HttpMethod.Post,
       body: JSON.stringify({ entries }),
     })
 

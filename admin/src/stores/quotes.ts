@@ -12,6 +12,7 @@ import { useQuotesApi } from '@/composables/apis/useQuotesApi'
 import { runAction } from '@/lib/runAction'
 import { translate } from '@/lib/translate'
 import type { CreateQuotePayload, Quote, QuoteListItem, UpdateQuotePayload } from '@/types/quote'
+import { LEDGER_PAGE_SIZE } from '@/lib/limits'
 
 /** Loads, creates and changes quotes for the admin billing screens. */
 export const useQuotesStore = defineStore('quotes', () => {
@@ -24,7 +25,7 @@ export const useQuotesStore = defineStore('quotes', () => {
   const totalCount = ref(0)
 
   /** Page size for global quotes. */
-  const pageSize = ref(25)
+  const pageSize = ref(LEDGER_PAGE_SIZE)
 
   /** Client-scoped quotes list. */
   const clientQuotes = ref<QuoteListItem[]>([])
@@ -83,7 +84,7 @@ export const useQuotesStore = defineStore('quotes', () => {
    * @param size - Items per page.
    * @returns Promise that resolves when data is loaded.
    */
-  const fetchClientQuotes = async (clientId: number | string, page = 1, size = 25): Promise<void> => {
+  const fetchClientQuotes = async (clientId: number | string, page = 1, size = LEDGER_PAGE_SIZE): Promise<void> => {
     const result = await run(() => api.listByClient(clientId, page, size))
     if (result.ok) {
       clientQuotes.value = result.value.items

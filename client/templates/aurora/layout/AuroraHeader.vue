@@ -51,7 +51,7 @@
           tone="inherit"
           :underline="false"
           :testid="`nav-${link.key}`"
-          class="hover:text-ac1"
+          class="rounded-lg px-2 py-1 hover:text-ac1"
           :class="active === link.key ? 'font-semibold text-tx' : 'font-normal'"
         >
           {{ link.label }}

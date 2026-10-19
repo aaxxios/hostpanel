@@ -29,14 +29,13 @@ import { toIsoDay } from '@/lib/format'
 import { useQuotesStore } from '@/stores/quotes'
 import { QuoteStage } from '@/types/quote'
 import type { QuoteItemUpdate } from '@/types/quote'
+import { MS_PER_DAY } from '@/lib/limits'
+import { AppRoute, quotePath } from '@/lib/routes'
 
 const { t } = useI18n()
 
 /** Days between today and the default validity date of a new quote. */
 const DEFAULT_VALIDITY_DAYS = 30
-
-/** Milliseconds in a day. */
-const DAY_MS = 24 * 60 * 60 * 1000
 
 const route = useRoute()
 const router = useRouter()
@@ -53,7 +52,7 @@ const subject = ref('')
 const stage = ref<string>(QuoteStage.Draft)
 
 /** Valid-until date (ISO day). */
-const validUntil = ref<string | null>(toIsoDay(new Date(Date.now() + DEFAULT_VALIDITY_DAYS * DAY_MS)))
+const validUntil = ref<string | null>(toIsoDay(new Date(Date.now() + DEFAULT_VALIDITY_DAYS * MS_PER_DAY)))
 
 /** The quote lines, starting with one blank line. */
 const items = ref<QuoteItemUpdate[]>([{ quantity: 1, description: '', unitPrice: 0, discountPercent: 0, taxed: false }])
@@ -83,7 +82,7 @@ const submit = async (): Promise<void> => {
     items: items.value,
   })
   if (id !== null) {
-    await router.push(`/billing/quotes/${id}`)
+    await router.push(quotePath(id))
   }
 }
 
@@ -173,7 +172,7 @@ onMounted(() => {
         <UiButton type="submit" variant="primary" :loading="store.loading" data-testid="billing-add-quote-submit">
           {{ t('billing.addQuote.createQuote') }}
         </UiButton>
-        <UiLink to="/billing/quotes" variant="ghost" data-testid="billing-add-quote-cancel">
+        <UiLink :to="AppRoute.BillingQuotes" variant="ghost" data-testid="billing-add-quote-cancel">
           {{ t('shared.cancel') }}
         </UiLink>
       </UiStack>

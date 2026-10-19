@@ -1167,6 +1167,71 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.ToTable("tld_configs", (string)null);
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Faqs.Faq", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("SortOrder");
+
+                    b.ToTable("faqs", (string)null);
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Faqs.FaqTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Answer")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("FaqId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FaqId", "Locale")
+                        .IsUnique();
+
+                    b.ToTable("faq_translations", (string)null);
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Hosting.DiskUsageStat", b =>
                 {
                     b.Property<int>("Id")
@@ -1808,6 +1873,69 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.ToTable("OrderItems", (string)null);
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Partners.Partner", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("SortOrder");
+
+                    b.ToTable("partners", (string)null);
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Partners.PartnerTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("PartnerId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartnerId", "Locale")
+                        .IsUnique();
+
+                    b.ToTable("partner_translations", (string)null);
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Products.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -1952,6 +2080,85 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("product_prices", (string)null);
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Projects.Project", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.PrimitiveCollection<string[]>("ImageUrls")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.HasIndex("SortOrder");
+
+                    b.ToTable("projects", (string)null);
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Projects.ProjectTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "Locale")
+                        .IsUnique();
+
+                    b.ToTable("project_translations", (string)null);
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Servers.Server", b =>
@@ -2851,6 +3058,81 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.ToTable("ticket_tags", (string)null);
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Testimonials.Testimonial", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Company")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("SortOrder");
+
+                    b.ToTable("testimonials", (string)null);
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Testimonials.TestimonialTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Quote")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("TestimonialId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TestimonialId", "Locale")
+                        .IsUnique();
+
+                    b.ToTable("testimonial_translations", (string)null);
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Infrastructure.Auth.AppUser", b =>
                 {
                     b.Property<string>("Id")
@@ -3154,11 +3436,29 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Faqs.FaqTranslation", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Faqs.Faq", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("FaqId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Orders.OrderItem", b =>
                 {
                     b.HasOne("Innovayse.Hostpanel.Domain.Orders.Order", null)
                         .WithMany("Items")
                         .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Partners.PartnerTranslation", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Partners.Partner", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("PartnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -3186,6 +3486,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasOne("Innovayse.Hostpanel.Domain.Products.Product", null)
                         .WithMany("Prices")
                         .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Projects.ProjectTranslation", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Projects.Project", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -3230,6 +3539,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasOne("Innovayse.Hostpanel.Domain.Support.Ticket", null)
                         .WithMany("Tags")
                         .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Testimonials.TestimonialTranslation", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Testimonials.Testimonial", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("TestimonialId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -3315,9 +3633,19 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Navigation("Reminders");
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Faqs.Faq", b =>
+                {
+                    b.Navigation("Translations");
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Orders.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Partners.Partner", b =>
+                {
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Products.Product", b =>
@@ -3328,6 +3656,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Products.ProductGroup", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Projects.Project", b =>
+                {
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Servers.ServerGroup", b =>
@@ -3345,6 +3678,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Navigation("Replies");
 
                     b.Navigation("Tags");
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Testimonials.Testimonial", b =>
+                {
+                    b.Navigation("Translations");
                 });
 #pragma warning restore 612, 618
         }

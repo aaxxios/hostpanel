@@ -88,5 +88,8 @@
   "fillType": {
     "leastFull": "Добавлять на наименее загруженный сервер",
     "fillUntilFull": "Заполнять активный сервер до предела, затем переключаться"
+  },
+  "moduleLabels": {
+    "wordPressHosting": "Innovayse WordPress Hosting"
   }
 }

@@ -32,11 +32,11 @@ beforeEach(() => {
 
 describe('header-widget plugin', () => {
   it('adds the deferred widget script from the configured portal', async () => {
-    await runPlugin('https://innovayse.com')
+    await runPlugin('https://main.example.test')
 
     const head = useHeadMock.mock.calls[0]![0] as { script: Array<{ src: string, defer: boolean }> }
     expect(head.script).toHaveLength(1)
-    expect(head.script[0]!.src.startsWith('https://innovayse.com/widget/header.js?v=')).toBe(true)
+    expect(head.script[0]!.src.startsWith('https://main.example.test/widget/header.js?v=')).toBe(true)
     expect(head.script[0]!.defer).toBe(true)
   })
 
@@ -53,7 +53,7 @@ describe('header-widget plugin', () => {
   })
 
   it('adds nothing under local auth, where there is no SSO for the widget to reach', async () => {
-    await runPlugin('https://innovayse.com', 'local')
+    await runPlugin('https://main.example.test', 'local')
 
     expect(useHeadMock).not.toHaveBeenCalled()
   })

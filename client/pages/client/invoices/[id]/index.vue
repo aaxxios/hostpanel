@@ -1,6 +1,6 @@
 <template>
   <UiStack gap="lg">
-    <UiBackLink to="/client/invoices" :label="$t('client.invoices.backTo')" testid="invoice-back" />
+    <UiBackLink :to="CLIENT_INVOICES_PATH" :label="$t('client.invoices.backTo')" testid="invoice-back" />
 
     <UiStack v-if="pending">
       <UiSkeleton shape="block" class="h-32" />
@@ -90,6 +90,7 @@
  * One invoice: header with status and a pay button while money is owed, the line items with
  * totals, and a reminder banner. The invoice is read through the invoice payment store.
  */
+import { CLIENT_INVOICES_PATH, clientInvoicePayPath } from '~/constants/clientRoutes'
 import { AlertCircle, CreditCard } from 'lucide-vue-next'
 import { useInvoicePaymentStore } from '~/stores/invoicepayment'
 import { formatCurrency } from '~/utils/formatCurrency'
@@ -119,7 +120,7 @@ const invoice = computed(() => paymentStore.invoice)
 const error = computed(() => paymentStore.invoiceError)
 
 /** The payment page of this invoice. */
-const payPath = computed(() => localePath(`/client/invoices/${String(route.params.id)}/pay`))
+const payPath = computed(() => localePath(clientInvoicePayPath(String(route.params.id))))
 
 /**
  * Formats one amount on this invoice in the invoice's own billing currency.

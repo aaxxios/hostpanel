@@ -5,6 +5,8 @@ using System.Text.Json;
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Infrastructure.Integrations.NameAm.Settings;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
+using Innovayse.Hostpanel.Shared.Constants;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -147,7 +149,7 @@ public sealed class NameAmClient
 
         using var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
-            Content = new StringContent(json, Encoding.UTF8, "application/json"),
+            Content = new StringContent(json, Encoding.UTF8, System.Net.Mime.MediaTypeNames.Application.Json),
         };
         SetAuthHeader(request);
 
@@ -160,7 +162,7 @@ public sealed class NameAmClient
 
             using var retryRequest = new HttpRequestMessage(HttpMethod.Post, url)
             {
-                Content = new StringContent(json, Encoding.UTF8, "application/json"),
+                Content = new StringContent(json, Encoding.UTF8, System.Net.Mime.MediaTypeNames.Application.Json),
             };
             SetAuthHeader(retryRequest);
 
@@ -192,7 +194,7 @@ public sealed class NameAmClient
 
         using var request = new HttpRequestMessage(HttpMethod.Put, url)
         {
-            Content = new StringContent(json, Encoding.UTF8, "application/json"),
+            Content = new StringContent(json, Encoding.UTF8, System.Net.Mime.MediaTypeNames.Application.Json),
         };
         SetAuthHeader(request);
 
@@ -205,7 +207,7 @@ public sealed class NameAmClient
 
             using var retryRequest = new HttpRequestMessage(HttpMethod.Put, url)
             {
-                Content = new StringContent(json, Encoding.UTF8, "application/json"),
+                Content = new StringContent(json, Encoding.UTF8, System.Net.Mime.MediaTypeNames.Application.Json),
             };
             SetAuthHeader(retryRequest);
 
@@ -257,7 +259,7 @@ public sealed class NameAmClient
 
             using var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
-                Content = new StringContent(json, Encoding.UTF8, "application/json"),
+                Content = new StringContent(json, Encoding.UTF8, System.Net.Mime.MediaTypeNames.Application.Json),
             };
 
             using var response = await _http.SendAsync(request, ct);
@@ -273,8 +275,8 @@ public sealed class NameAmClient
             }
 
             // The API returns "Bearer eyJ..." — strip the "Bearer " prefix if present.
-            _accessToken = accessToken.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-                ? accessToken["Bearer ".Length..]
+            _accessToken = accessToken.StartsWith(BearerScheme.HeaderPrefix, StringComparison.OrdinalIgnoreCase)
+                ? accessToken[BearerScheme.HeaderPrefix.Length..]
                 : accessToken;
 
             _logger.LogInformation("Successfully authenticated with Name.am API");
@@ -293,7 +295,7 @@ public sealed class NameAmClient
     {
         if (_accessToken is not null)
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+            request.Headers.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, _accessToken);
         }
     }
 

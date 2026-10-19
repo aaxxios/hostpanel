@@ -10,6 +10,7 @@ import { ref } from 'vue'
 import { useCancellationRequestsApi } from '@/composables/apis/useCancellationRequestsApi'
 import { runAction } from '@/lib/runAction'
 import type { CancellationRequestItem } from '@/types/service'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 /** Lists and deletes service cancellation requests. */
 export const useCancellationRequestsStore = defineStore('cancellationRequests', () => {
@@ -22,7 +23,7 @@ export const useCancellationRequestsStore = defineStore('cancellationRequests', 
   const page = ref(1)
 
   /** Items per page. */
-  const pageSize = ref(20)
+  const pageSize = ref(DEFAULT_PAGE_SIZE)
 
   /** Total number of matching items. */
   const totalCount = ref(0)

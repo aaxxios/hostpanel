@@ -29,7 +29,7 @@ public static class PolicyRegistration
             {
                 // Accept tokens from either SSO or local JWT scheme
                 opts.DefaultPolicy = new AuthorizationPolicyBuilder(
-                    JwtBearerDefaults.AuthenticationScheme, "LocalJwt",
+                    JwtBearerDefaults.AuthenticationScheme, Innovayse.Hostpanel.Shared.Constants.LocalJwtScheme.Name,
                     AuthenticationRegistration.SsoCookieScheme)
                     .RequireAuthenticatedUser()
                     .Build();
@@ -43,7 +43,7 @@ public static class PolicyRegistration
                 {
                     if (!isLocalMode)
                     {
-                        p.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, "LocalJwt",
+                        p.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, Innovayse.Hostpanel.Shared.Constants.LocalJwtScheme.Name,
                             AuthenticationRegistration.SsoCookieScheme);
                     }
 

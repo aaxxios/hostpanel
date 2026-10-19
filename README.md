@@ -41,9 +41,10 @@ your own machine and extend.
 | Hosting provisioning | Products and services, orders, automatic account creation, suspension and termination on your servers |
 | Support tickets | Client tickets, predefined replies, announcements, network issues |
 | Knowledge base | Public articles for the storefront, managed from the admin panel |
+| Storefront content | Testimonials, partners, projects and FAQs in English, Russian and Armenian, managed from the admin panel; empty sections are hidden |
 | Client portal | Order, pay invoices, manage services and domains, open tickets; three switchable storefront designs, brandable without code |
 | Admin panel | Clients, orders, products, gateways, integrations, e-mail templates, plugins, reports, audit log |
-| Demo mode | Fake payments, registrar and provisioning, caught mail and a scheduled data reset |
+| Demo mode | Fake payments, registrar and provisioning, caught mail, fixed sample data reset on a schedule, on a network isolated from production |
 | Languages | English, Russian and Armenian in both the portal and the admin panel |
 | Plugin SDK | `Innovayse.SDK` for your own payment, registrar and provisioning providers |
 | Data import | Importers for moving clients and data from another billing system |
@@ -138,9 +139,22 @@ docker compose -p hostpanel-demo -f docker/docker-compose.shared.yml -f docker/d
 ```
 
 The API runs with `Demo__Enabled`: the adapters are fakes, outgoing mail goes to the demo inbox, and the database is
-re-seeded every `DEMO_RESET_INTERVAL_HOURS` hours with the accounts from `DEMO_ADMIN_*` and `DEMO_CLIENT_*`. It uses its
-own `hostpanel-demo-*` containers and volumes, so it never touches a production stack on the same host. See
-[docker/README.md](docker/README.md). A public instance is at [hostpanel.innovayse.com](https://hostpanel.innovayse.com).
+re-seeded every `DEMO_RESET_INTERVAL_HOURS` hours with the accounts from `DEMO_ADMIN_*` and `DEMO_CLIENT_*`. The seed is
+fixed and deterministic: the same sample data on every reset, rich enough to show every feature, and the site name is
+`Hostpanel Demo`. It uses its own `hostpanel-demo-*` containers, volumes and a private network, and its three public-facing services sit on the dedicated external network `hostpanel_demo_edge` (create it once: `docker network create --subnet 172.29.0.0/16 hostpanel_demo_edge`), never `innovayse_network`, so it cannot reach a
+production stack on the same host. See [docker/README.md](docker/README.md). A public instance is at
+[hostpanel.innovayse.com](https://hostpanel.innovayse.com).
+
+## Storefront content
+
+Testimonials, partners, projects and FAQs are rows in the database, not files in the code. Manage them in the admin
+panel under **Storefront content**, each with English, Russian and Armenian translations. The public site reads them from
+`/api/public/testimonials`, `/api/public/partners`, `/api/public/projects` and `/api/public/faqs`, and hides any section
+that has no entries.
+
+The rest of the storefront text is settings: the hero stats and badge come from `portal.stats.*` and `portal.hero.badge`,
+the contact channels from `portal.contact.*`, and the site name from `portal.site.name`. A production install receives the
+previous static content once, through a one-time import; the demo does not run it and keeps its own fixed seed.
 
 ## Configuration
 
@@ -156,7 +170,7 @@ Copy `docker/.env.example` to `docker/.env`; the file documents every variable. 
 | `POSTGRES_PASSWORD`, `RABBITMQ_PASSWORD` | Database and broker passwords |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_ENCRYPTION`, `SMTP_FROM` | Outgoing mail; `SMTP_ENCRYPTION` is `tls`, `ssl` or `none` and is never guessed from the port |
 | `IMAGE_TAG`, `DOCKERHUB_NAMESPACE` | Which published images `docker-compose.hub.yml` runs |
-| `NUXT_PUBLIC_PORTAL_*` | Storefront template, name, logo and colours, see [guides/storefront.md](guides/storefront.md) |
+| `NUXT_PUBLIC_PORTAL_*` | Storefront template, name, logo and colours (the name falls back to `Hostpanel`; no operator brand is built in), see [guides/storefront.md](guides/storefront.md) |
 
 ## Run from source
 
@@ -180,7 +194,7 @@ docker compose -f docker-compose.shared.yml -f docker-compose.dev.yml logs -f ho
 | API docs (Scalar) | http://localhost:5149/scalar |
 | Dev mail inbox | http://localhost:8027 |
 
-In Development the API seeds an admin `admin@hostpanel.com` / `Admin123!` and sample clients such as `customer@hostpanel.com`.
+In Development the API seeds an admin `admin@example.test` / `Admin123!` and sample clients such as `customer@example.test`.
 Every compose stack (shared, dev, prod, platform, demo, hub) is described in [docker/README.md](docker/README.md).
 
 **Without Docker** you need the .NET 9 SDK, Node.js 22+, yarn and PostgreSQL 17:

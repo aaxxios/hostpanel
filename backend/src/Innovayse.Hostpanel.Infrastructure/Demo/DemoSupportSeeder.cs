@@ -6,28 +6,100 @@ using Microsoft.EntityFrameworkCore;
 namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>
-/// Seeds the support side: a knowledge base with categories and published articles, tickets
-/// (including a multi-message thread on the demo client), and announcements. Departments are
-/// seeded for every deployment elsewhere; this seeder only files tickets into them.
+/// Seeds the support side: an extra department, predefined reply categories with canned replies, a knowledge
+/// base of categories and articles, twenty tickets in every status the entity can reach with multi-message
+/// threads, tags, flags and feedback, nine announcements and the network issues the status page lists. The
+/// default departments are seeded for every deployment elsewhere; this seeder only adds to and files into them.
 /// </summary>
 internal sealed class DemoSupportSeeder
 {
+    /// <summary>How many tickets are seeded.</summary>
+    private const int TicketCount = 20;
+
+    /// <summary>The name of the department the demo adds to the default ones.</summary>
+    private const string ExtraDepartment = "Abuse and Security";
+
+    /// <summary>The name staff replies are signed with.</summary>
+    private const string AgentName = "Support Team";
+
+    /// <summary>The tags put on tickets, rotated.</summary>
+    private static readonly string[] TagNames = ["billing", "urgent", "dns", "ssl", "migration", "vps", "email", "refund"];
+
+    /// <summary>The subjects and opening messages of the tickets, in order; the first three belong to the demo client.</summary>
+    private static readonly (string Subject, string Message)[] TicketTopics =
+    [
+        ("My site is loading slowly since yesterday", "The pages of my site have taken several seconds to load since yesterday evening. I have not changed anything on my side. Could you take a look?"),
+        ("Question about the invoice for last month", "Could you tell me why the invoice for last month includes a domain renewal line?"),
+        ("Please add an extra mailbox to my plan", "We hired a new colleague and need one more mailbox on our domain. What is the quickest way to add it?"),
+        ("Need help pointing my domain to an external service", "I need to add a CNAME record for a third-party service and I am not sure which values to use."),
+        ("Request to upgrade to a VPS", "I would like to move from shared hosting to a VPS. What are the steps and the new monthly price?"),
+        ("Certificate warning on my site", "Visitors see a security warning on my site since this morning. Please check the certificate."),
+        ("Email is bouncing for one recipient", "Messages to one customer come back as undeliverable. Other recipients are fine."),
+        ("Restore a file deleted by mistake", "I removed a folder from my account this morning and would like it restored from last night's backup."),
+        ("Transfer a domain from another provider", "I started a transfer yesterday and have not received any confirmation. Can you check the status?"),
+        ("Charged twice for the same service", "My card statement shows two charges for the same hosting renewal. Please look into it."),
+        ("How do I enable two-factor sign-in?", "I cannot find the setting for two-factor sign-in in my account. Where is it?"),
+        ("Server unreachable from my office", "My dedicated server answers from home but not from the office network. Could a firewall rule be blocking us?"),
+        ("Change the billing contact", "Our accountant has changed. Please send invoices to the new address from now on."),
+        ("Increase the disk quota", "My account is close to its disk limit. What are the options for more space?"),
+        ("Reverse DNS for my mail server", "Our outgoing mail is flagged because the reverse DNS does not match. Can you set it for our address?"),
+        ("Website shows a database error", "Since an update this afternoon the site shows a database connection error."),
+        ("Cancel auto-renew for an old domain", "We no longer need one of our domains. Please turn off auto-renew for it."),
+        ("Quote for a managed migration", "We plan to move twelve sites from another host. Could you quote a managed migration?"),
+        ("Abuse report received about my account", "I received a notice that a site on my account sent spam. I believe it was hacked. What should I do?"),
+        ("Slow response from the control panel", "The control panel takes a long time to open in the evening. Is there a known issue?"),
+    ];
+
+    /// <summary>What staff say in a thread, in turn.</summary>
+    private static readonly string[] StaffReplies =
+    [
+        "Thank you for contacting us. We are looking into this and will get back to you shortly.",
+        "We found the cause and have applied a fix on our side. Please check again and tell us what you see.",
+        "Our guide in the knowledge base shows the steps. If anything is unclear, reply here and we will walk you through it.",
+        "We have made the change you asked for. It can take a few minutes to take effect.",
+        "Glad it helps. We will keep an eye on the account for the next few days.",
+    ];
+
+    /// <summary>What customers say in a thread, in turn.</summary>
+    private static readonly string[] ClientReplies =
+    [
+        "Thanks, that is much faster now. Is there anything I should change so this does not come back?",
+        "I tried that and it works for the main page but not for the second one. Any idea?",
+        "Perfect, thank you. That was exactly what I needed.",
+    ];
+
     /// <summary>The data context the rows are added to and saved through.</summary>
     private readonly AppDbContext _db;
 
+    /// <summary>The anchor dates are measured from.</summary>
+    private readonly DateTimeOffset _today;
+
     /// <summary>Creates the seeder.</summary>
     /// <param name="db">The data context the rows are added to and saved through.</param>
-    public DemoSupportSeeder(AppDbContext db)
+    /// <param name="today">The anchor dates are measured from.</param>
+    public DemoSupportSeeder(AppDbContext db, DateTimeOffset today)
     {
         _db = db;
+        _today = today;
     }
 
-    /// <summary>Seeds the knowledge base, tickets and announcements that are not there yet.</summary>
-    /// <param name="demoClientId">The published demo client, who owns the sample ticket thread.</param>
+    /// <summary>Seeds the support data that is not there yet.</summary>
+    /// <param name="demoClientId">The published demo client, who owns the first sample ticket threads.</param>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
     public async Task SeedAsync(int demoClientId, CancellationToken ct)
     {
+        if (!await _db.Departments.AnyAsync(d => d.Name == ExtraDepartment, ct))
+        {
+            _db.Departments.Add(Department.Create(ExtraDepartment, "abuse@demo.example"));
+            await _db.SaveChangesAsync(ct);
+        }
+
+        if (!await _db.PredefinedReplyCategories.AnyAsync(ct))
+        {
+            await SeedPredefinedRepliesAsync(ct);
+        }
+
         if (!await _db.KbArticles.AnyAsync(ct))
         {
             await SeedKnowledgeBaseAsync(ct);
@@ -42,9 +114,62 @@ internal sealed class DemoSupportSeeder
         {
             await SeedAnnouncementsAsync(ct);
         }
+
+        if (!await _db.NetworkIssues.AnyAsync(ct))
+        {
+            await SeedNetworkIssuesAsync(ct);
+        }
     }
 
-    /// <summary>Seeds knowledge base categories and published articles.</summary>
+    /// <summary>Seeds four reply categories with three canned replies each.</summary>
+    /// <param name="ct">Cancels the save.</param>
+    /// <returns>A task that completes once the rows are saved.</returns>
+    private async Task SeedPredefinedRepliesAsync(CancellationToken ct)
+    {
+        (string Category, (string Name, string Content)[] Replies)[] catalogue =
+        [
+            ("General",
+            [
+                ("Greeting", "Hello, thank you for contacting us. How can we help you today?"),
+                ("More information needed", "Could you send us a few more details, such as the domain name and when the problem started?"),
+                ("Closing a resolved ticket", "We are glad we could help. We will close this ticket; reply at any time to reopen it."),
+            ]),
+            ("Billing",
+            [
+                ("Invoice explained", "Each invoice lists the service, the billing period and the due date. The line you ask about is the renewal of your service."),
+                ("Payment received", "We have received your payment and applied it to the invoice. A receipt is available in your billing area."),
+                ("Refund processed", "Your refund has been issued to the original payment method and should arrive within five business days."),
+            ]),
+            ("Technical",
+            [
+                ("Clear the cache", "Please clear your browser cache and any caching plugin on your site, then check the page again."),
+                ("DNS propagation", "DNS changes can take up to 48 hours to reach every network. Please check again later."),
+                ("Restore from backup", "We have restored the requested files from last night's backup. Please confirm that everything is in place."),
+            ]),
+            ("Sales",
+            [
+                ("Plan comparison", "Our plans differ in storage, number of sites and support level. We recommend the one that fits your traffic with room to grow."),
+                ("Upgrade steps", "You can upgrade from the service page. The new plan starts at once and the difference is billed pro rata."),
+                ("Migration offer", "We can migrate your sites for you at no extra charge on annual plans."),
+            ]),
+        ];
+
+        foreach (var (category, replies) in catalogue)
+        {
+            var created = PredefinedReplyCategory.Create(category);
+            _db.PredefinedReplyCategories.Add(created);
+            await _db.SaveChangesAsync(ct);
+
+            foreach (var (name, content) in replies)
+            {
+                _db.PredefinedReplies.Add(PredefinedReply.Create(name, content, created.Id));
+            }
+        }
+
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Seeds knowledge base categories and articles, all published but one draft.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
     private async Task SeedKnowledgeBaseAsync(CancellationToken ct)
@@ -56,6 +181,8 @@ internal sealed class DemoSupportSeeder
             ("Domains", "Domain registration, DNS management and transfers."),
             ("Hosting", "Shared hosting, VPS and server management."),
             ("Security", "SSL certificates, two-factor sign-in and account safety."),
+            ("Email", "Mailboxes, forwarding and deliverability."),
+            ("Troubleshooting", "Fixes for the problems customers meet most often."),
         ];
 
         foreach (var (name, description) in categories)
@@ -67,49 +194,44 @@ internal sealed class DemoSupportSeeder
 
         (string Title, string Content, string Category)[] articles =
         [
-            ("How to sign in to the client portal",
-             "Open the client portal, enter your email and password, and press Sign in. If two-factor sign-in is on, you will also be asked for the six-digit code from your authenticator app.",
-             "Getting Started"),
-            ("How to turn on two-factor sign-in",
-             "Open Account, find the Security section and choose Enable. Scan the QR code with an authenticator app, then type the six-digit code to confirm.",
-             "Getting Started"),
-            ("How to pay an invoice",
-             "Open Billing, pick the invoice and press Pay now. You can pay by card or follow the bank transfer instructions shown on the invoice.",
-             "Billing & Payments"),
-            ("Understanding your invoice",
-             "Each invoice lists what you are billed for, the due date and the total. An invoice marked Overdue has passed its due date without payment.",
-             "Billing & Payments"),
-            ("How to register a domain",
-             "Open Domains and press Register. Search for the name you want, add it to the cart and complete the order. Most domains are active within minutes.",
-             "Domains"),
-            ("How to update your DNS records",
-             "Open the domain, choose DNS management and use the Add record form for A, CNAME, MX or TXT entries. Changes can take up to 48 hours to spread.",
-             "Domains"),
-            ("Choosing a hosting plan",
-             "Starter Hosting suits a single small site. Business Hosting suits growing businesses. Pro Hosting is for busy sites and agencies running many projects.",
-             "Hosting"),
-            ("How to upgrade your hosting plan",
-             "Open the service and press Upgrade, or ask support through a ticket. Upgrades are applied within one business day and billed pro rata.",
-             "Hosting"),
-            ("How an SSL certificate protects your site",
-             "A certificate encrypts the connection between your visitors and your server, protects what they type and builds trust. Every hosting plan includes a free certificate.",
-             "Security"),
-            ("Keeping your account secure",
-             "Use a strong, unique password and turn on two-factor sign-in. Never share your credentials. If you suspect misuse, change your password at once and contact support.",
-             "Security"),
+            ("How to sign in to the client portal", "Open the client portal, enter your email and password, and press Sign in. If two-factor sign-in is on, you will also be asked for the six-digit code from your authenticator app.", "Getting Started"),
+            ("How to turn on two-factor sign-in", "Open Account, find the Security section and choose Enable. Scan the QR code with an authenticator app, then type the six-digit code to confirm.", "Getting Started"),
+            ("Your first hour with a new service", "After an order is accepted the service is set up within minutes. Open the service page to see the sign-in details and the next steps.", "Getting Started"),
+            ("How to pay an invoice", "Open Billing, pick the invoice and press Pay now. You can pay by card or follow the bank transfer instructions shown on the invoice.", "Billing & Payments"),
+            ("Understanding your invoice", "Each invoice lists what you are billed for, the due date and the total. An invoice marked Overdue has passed its due date without payment.", "Billing & Payments"),
+            ("How credit works", "Credit on your account is used automatically against your next invoice. You can add credit from the Billing page at any time.", "Billing & Payments"),
+            ("How to register a domain", "Open Domains and press Register. Search for the name you want, add it to the cart and complete the order. Most domains are active within minutes.", "Domains"),
+            ("How to update your DNS records", "Open the domain, choose DNS management and use the Add record form for A, CNAME, MX or TXT entries. Changes can take up to 48 hours to spread.", "Domains"),
+            ("How to transfer a domain to us", "Unlock the domain at your current provider, copy its authorisation code and start the transfer from Domains. The transfer takes up to seven days.", "Domains"),
+            ("Choosing a hosting plan", "Starter Hosting suits a single small site. Business Hosting suits growing businesses. Pro Hosting is for busy sites and agencies running many projects.", "Hosting"),
+            ("How to upgrade your hosting plan", "Open the service and press Upgrade, or ask support through a ticket. Upgrades are applied within one business day and billed pro rata.", "Hosting"),
+            ("Moving from shared hosting to a VPS", "A VPS gives you dedicated resources and full control. Order the plan, tell support which sites to move, and we migrate them for you.", "Hosting"),
+            ("How an SSL certificate protects your site", "A certificate encrypts the connection between your visitors and your server, protects what they type and builds trust. Every hosting plan includes a free certificate.", "Security"),
+            ("Keeping your account secure", "Use a strong, unique password and turn on two-factor sign-in. Never share your credentials. If you suspect misuse, change your password at once and contact support.", "Security"),
+            ("How to set up a mailbox", "Open the email service, choose Add mailbox, pick a name and password, and use the settings shown to connect your mail app.", "Email"),
+            ("Forwarding mail to another address", "Open the domain, choose Email forwarding and add a rule from the address you want to the address that should receive the mail.", "Email"),
+            ("My site shows an error page", "Clear your cache first, then check that the domain points to the right server. If the error persists, send us the exact message and the time you saw it.", "Troubleshooting"),
+            ("Draft: planned maintenance checklist", "This article is being written and is not yet visible to customers.", "Troubleshooting"),
         ];
 
         foreach (var (title, content, category) in articles)
         {
             var article = KbArticle.Create(title, content, category);
-            article.Publish();
+            if (!title.StartsWith("Draft:", StringComparison.Ordinal))
+            {
+                article.Publish();
+            }
+
             _db.KbArticles.Add(article);
         }
 
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Seeds tickets: an open thread and a closed one on the demo client, and a few for other clients.</summary>
+    /// <summary>
+    /// Seeds tickets: the first three on the demo client, the rest spread over the other customers. Each follows one of
+    /// five thread shapes (unanswered, answered, a back-and-forth, resolved with feedback, closed after one answer).
+    /// </summary>
     /// <param name="demoClientId">The published demo client.</param>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
@@ -117,48 +239,50 @@ internal sealed class DemoSupportSeeder
     {
         var departments = await _db.Departments.OrderBy(d => d.Id).ToListAsync(ct);
         var otherClients = await _db.Clients.Where(c => c.Id != demoClientId).OrderBy(c => c.Id).ToListAsync(ct);
-        if (departments.Count == 0)
+        if (departments.Count == 0 || otherClients.Count == 0)
         {
             return;
         }
 
-        const string agent = "Support Team";
-
-        var thread = Ticket.Create(
-            demoClientId,
-            "My site is loading slowly since yesterday",
-            "Hello, the pages of my site have taken several seconds to load since yesterday evening. I have not changed anything on my side. Could you take a look?",
-            departments[0].Id,
-            TicketPriority.High);
-        thread.AddReply("Thanks for reporting this. We found a heavy background job on your account and have paused it. Please check the site again and tell us what you see.", agent, true);
-        thread.AddReply("It is much faster now, thank you. Is there anything I should change so this does not come back?", "Demo Client", false);
-        thread.AddReply("Glad it helps. We recommend turning on page caching from the hosting panel; our guide in the knowledge base shows how. We will keep an eye on the account for the next few days.", agent, true);
-        _db.Tickets.Add(thread);
-
-        var closed = Ticket.Create(
-            demoClientId,
-            "Question about the invoice for last month",
-            "Could you tell me why the invoice for last month includes a domain renewal line?",
-            departments[Math.Min(1, departments.Count - 1)].Id,
-            TicketPriority.Medium);
-        closed.AddReply("The line is the yearly renewal of your domain, billed 30 days before expiry. You can turn auto-renew off under Domains if you prefer to renew by hand.", agent, true);
-        closed.Close();
-        _db.Tickets.Add(closed);
-
-        (string Subject, string Message, TicketPriority Priority)[] others =
-        [
-            ("Need help pointing my domain to an external service", "I need to add a CNAME record for a third-party service and I am not sure which values to use.", TicketPriority.Low),
-            ("Request to upgrade to a VPS", "I would like to move from shared hosting to a VPS. What are the steps and the new monthly price?", TicketPriority.Medium),
-            ("Certificate warning on my site", "Visitors see a security warning on my site since this morning. Please check the certificate.", TicketPriority.High),
-        ];
-
-        for (var i = 0; i < others.Length && otherClients.Count > 0; i++)
+        var priorities = new[] { TicketPriority.High, TicketPriority.Medium, TicketPriority.Low };
+        for (var n = 0; n < TicketCount; n++)
         {
-            var (subject, message, priority) = others[i];
-            var ticket = Ticket.Create(otherClients[i % otherClients.Count].Id, subject, message, departments[i % departments.Count].Id, priority);
-            if (i != 2)
+            var (subject, message) = TicketTopics[n];
+            var clientId = n < 3 ? demoClientId : otherClients[(n - 3) % otherClients.Count].Id;
+            var ticket = Ticket.Create(clientId, subject, message, departments[n % departments.Count].Id, priorities[n % priorities.Length]);
+
+            var shape = n % 5;
+            if (shape >= 1)
             {
-                ticket.AddReply("Thank you for contacting us. We are looking into this and will get back to you shortly.", agent, true);
+                ticket.AddReply(StaffReplies[n % StaffReplies.Length], AgentName, true);
+            }
+
+            if (shape is 2 or 3)
+            {
+                ticket.AddReply(ClientReplies[n % ClientReplies.Length], "Customer", false);
+                ticket.AddReply(StaffReplies[(n + 2) % StaffReplies.Length], AgentName, true);
+            }
+
+            if (shape == 2)
+            {
+                ticket.AddReply(ClientReplies[(n + 1) % ClientReplies.Length], "Customer", false);
+            }
+
+            if (shape is 3 or 4)
+            {
+                ticket.Close();
+                ticket.LeaveFeedback(6 + (n % 5), shape == 3 ? "Quick and helpful, thank you." : null, "Customer");
+            }
+
+            ticket.AddTag(TagNames[n % TagNames.Length]);
+            if (n % 3 == 0)
+            {
+                ticket.AddTag(TagNames[(n + 3) % TagNames.Length]);
+            }
+
+            if (n % 6 == 0)
+            {
+                ticket.ToggleFlag();
             }
 
             _db.Tickets.Add(ticket);
@@ -167,24 +291,61 @@ internal sealed class DemoSupportSeeder
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Seeds published announcements.</summary>
+    /// <summary>Seeds nine announcements, the last of them an unpublished draft.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
     private async Task SeedAnnouncementsAsync(CancellationToken ct)
     {
-        (string Title, string Content)[] announcements =
+        (string Title, string Content, bool Published)[] announcements =
         [
-            ("Welcome to the demo",
-             "This is a public demo. Explore the admin panel and the client portal freely; the data is reset on a schedule shown on the sign-in page."),
-            ("Scheduled maintenance",
-             "We will perform routine maintenance on the shared hosting servers this weekend between 02:00 and 04:00 UTC. Sites may be briefly unavailable."),
-            ("New: two-factor sign-in",
-             "You can now protect your account with two-factor sign-in. Open Account, then Security, to turn it on in under a minute."),
+            ("Welcome to the demo", "This is a public demo. Explore the admin panel and the client portal freely; the data is reset on a schedule shown on the sign-in page.", true),
+            ("Scheduled maintenance", "We will perform routine maintenance on the shared hosting servers this weekend between 02:00 and 04:00 UTC. Sites may be briefly unavailable.", true),
+            ("New: two-factor sign-in", "You can now protect your account with two-factor sign-in. Open Account, then Security, to turn it on in under a minute.", true),
+            ("Faster NVMe storage on every VPS", "All virtual servers now run on NVMe storage at no extra cost. Existing servers are moved automatically during the next maintenance window.", true),
+            ("Pay in drams", "Customers in supported regions can now see prices and pay invoices in drams. Change your billing currency from your account if you have no invoices yet.", true),
+            ("New data centre location", "Our Helsinki data centre is open for dedicated servers. Choose it when you order.", true),
+            ("Improved spam protection for email", "Every mailbox now has a stronger spam filter. No action is needed.", true),
+            ("Holiday support hours", "Our support team answers with a short delay over the holidays. Urgent issues are still handled around the clock.", true),
+            ("Upcoming: new client area", "We are preparing a redesigned client area. This note is a draft and is not yet shown to customers.", false),
         ];
 
-        foreach (var (title, content) in announcements)
+        foreach (var (title, content, published) in announcements)
         {
-            _db.Announcements.Add(Announcement.Create(title, content, true));
+            _db.Announcements.Add(Announcement.Create(title, content, published));
+        }
+
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Seeds six network issues in every status: reported, under investigation, scheduled and resolved.</summary>
+    /// <param name="ct">Cancels the save.</param>
+    /// <returns>A task that completes once the rows are saved.</returns>
+    private async Task SeedNetworkIssuesAsync(CancellationToken ct)
+    {
+        (string Title, NetworkIssueType Type, string? Server, NetworkIssuePriority Priority, NetworkIssueStatus Status, int StartedDaysAgo, string Description)[] issues =
+        [
+            ("Packet loss on the Frankfurt uplink", NetworkIssueType.Server, "Shared EU-01", NetworkIssuePriority.High, NetworkIssueStatus.Investigating, 0, "<p>Some customers see slow loading. Our engineers are checking the upstream link.</p>"),
+            ("Planned switch replacement", NetworkIssueType.Other, null, NetworkIssuePriority.Medium, NetworkIssueStatus.Scheduled, -3, "<p>We replace a core switch this weekend. Expect up to ten minutes of interruption.</p>"),
+            ("Control panel login errors", NetworkIssueType.Server, "VPS EU-01", NetworkIssuePriority.Low, NetworkIssueStatus.Reported, 1, "<p>A few users could not sign in to the control panel. We are collecting reports.</p>"),
+            ("Mail delivery delays", NetworkIssueType.Other, null, NetworkIssuePriority.Medium, NetworkIssueStatus.Resolved, 9, "<p>Outgoing mail was delayed by up to an hour. The queue has been cleared.</p>"),
+            ("Disk failure on a storage node", NetworkIssueType.Server, "Dedicated EU-01", NetworkIssuePriority.Critical, NetworkIssueStatus.Resolved, 21, "<p>A failed disk was replaced and the array rebuilt. No data was lost.</p>"),
+            ("DNS resolver slowdown", NetworkIssueType.Other, null, NetworkIssuePriority.High, NetworkIssueStatus.Resolved, 40, "<p>Name resolution was slow for about two hours. A resolver was restarted and monitoring added.</p>"),
+        ];
+
+        foreach (var (title, type, server, priority, status, startedDaysAgo, description) in issues)
+        {
+            var start = _today.AddDays(-startedDaysAgo);
+            var issue = NetworkIssue.Create(title, type, server, priority, start, description);
+            if (status == NetworkIssueStatus.Resolved)
+            {
+                issue.Resolve();
+            }
+            else if (status != NetworkIssueStatus.Reported)
+            {
+                issue.Update(title, type, server, priority, status, start, null, description);
+            }
+
+            _db.NetworkIssues.Add(issue);
         }
 
         await _db.SaveChangesAsync(ct);

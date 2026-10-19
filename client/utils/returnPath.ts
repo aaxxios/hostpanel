@@ -11,7 +11,7 @@
  */
 
 import { APP_LOCALES, DEFAULT_APP_LOCALE } from '~/constants/appLocales'
-import { CLIENT_DASHBOARD_PATH, CLIENT_LOGIN_PATH, CLIENT_PUBLIC_ROUTES, CLIENT_REDIRECT_QUERY } from '~/constants/clientRoutes'
+import { CLIENT_AREA_PATH, CLIENT_DASHBOARD_PATH, CLIENT_LOGIN_PATH, CLIENT_PUBLIC_ROUTES, CLIENT_REDIRECT_QUERY } from '~/constants/clientRoutes'
 
 /**
  * Whether a string holds a control character, which has no business in a path and can smuggle a
@@ -67,7 +67,7 @@ export const isPublicClientPath = (path: string): boolean => {
  */
 export const isPrivateClientPath = (path: string): boolean => {
   const pathname = withoutLocalePrefix(path.split(/[?#]/)[0] ?? '')
-  return (pathname === '/client' || pathname.startsWith('/client/')) && !isPublicClientPath(path)
+  return (pathname === CLIENT_AREA_PATH || pathname.startsWith(`${CLIENT_AREA_PATH}/`)) && !isPublicClientPath(path)
 }
 
 /**

@@ -38,12 +38,24 @@ describe('useSchemaOrg', () => {
     vi.unstubAllGlobals()
   })
 
-  it('exposes the configured base URL and falls back when none is set', () => {
+  it('exposes the configured base URL and invents no host when none is set', () => {
     stubRuntime()
     expect(useSchemaOrg().baseUrl).toBe(BASE)
 
     stubRuntime({}, '')
-    expect(useSchemaOrg().baseUrl).toBe('https://yourdomain.com')
+    expect(useSchemaOrg().baseUrl).toBe('')
+  })
+
+  it('publishes no offer, rating or served area the operator never stated', () => {
+    stubRuntime()
+    const { productSchema, serviceSchema } = useSchemaOrg()
+
+    const product = productSchema({ name: 'P', description: 'd', url: '/p' })
+    const service = serviceSchema({ name: 'S', description: 'd', url: '/s', serviceType: 'Hosting' })
+
+    expect(product).not.toHaveProperty('offers')
+    expect(product).not.toHaveProperty('aggregateRating')
+    expect(service).not.toHaveProperty('areaServed')
   })
 
   it('names the organisation after the operator and uses their tagline when set', () => {
@@ -57,10 +69,49 @@ describe('useSchemaOrg', () => {
     expect(schema['@id']).toBe(`${BASE}/#organization`)
   })
 
-  it('builds sameAs from the operator contact channels and omits unset ones', () => {
-    stubRuntime({ 'portal.contact.telegram': 'acme', 'portal.contact.whatsapp': '' })
+  it('omits the description when the operator set no tagline', () => {
+    stubRuntime()
 
-    expect(useSchemaOrg().organizationSchema().sameAs).toEqual(['https://t.me/acme'])
+    const schema = useSchemaOrg()
+
+    expect(schema.organizationSchema()).not.toHaveProperty('description')
+    expect(schema.websiteSchema()).not.toHaveProperty('description')
+  })
+
+  it('builds sameAs and the contact fields from the operator settings', () => {
+    stubRuntime()
+    vi.stubGlobal('useContactDetails', () => ({
+      email: ref('hello@acme.test'),
+      phone: ref('+1 555 0100'),
+      telegramUrl: ref('https://t.me/acme'),
+      whatsappUrl: ref(''),
+      address: ref('1 Example Street'),
+    }))
+
+    const schema = useSchemaOrg().organizationSchema()
+
+    expect(schema.sameAs).toEqual(['https://t.me/acme'])
+    expect(schema.email).toBe('hello@acme.test')
+    expect(schema.contactPoint?.telephone).toBe('+1 555 0100')
+    expect(schema.address?.streetAddress).toBe('1 Example Street')
+  })
+
+  it('omits every operator field that is not set and publishes no invented facts', () => {
+    stubRuntime()
+    vi.stubGlobal('useContactDetails', () => ({
+      email: ref(''), phone: ref(''), telegramUrl: ref(''), whatsappUrl: ref(''), address: ref(''),
+    }))
+
+    const schema = useSchemaOrg().organizationSchema() as Record<string, unknown>
+    const business = useSchemaOrg().localBusinessSchema() as Record<string, unknown>
+
+    expect(schema.sameAs).toEqual([])
+    for (const key of ['email', 'contactPoint', 'address', 'foundingDate']) {
+      expect(schema).not.toHaveProperty(key)
+    }
+    for (const key of ['telephone', 'email', 'address', 'geo', 'aggregateRating', 'openingHoursSpecification']) {
+      expect(business).not.toHaveProperty(key)
+    }
   })
 
   it('links the website schema to the organisation and lists every language', () => {

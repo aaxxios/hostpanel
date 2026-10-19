@@ -165,6 +165,21 @@ export default <Partial<Config>>{
         'glow-whatsapp': '0 4px 20px rgba(37, 211, 102, 0.5)',
         'glow-telegram': '0 4px 20px rgba(0, 136, 204, 0.5)',
         'glow-chat': '0 4px 24px rgba(6, 182, 212, 0.5)',
+        // Status dots follow the operator's brand colours (fallback: today's literals).
+        'dot-primary': '0 0 10px rgb(var(--brand-primary-500, 14 165 233) / 0.5)',
+        'dot-secondary': '0 0 10px rgb(var(--brand-accent-500, 139 92 246) / 0.5)',
+        'dot-cyan': '0 0 10px rgb(6 182 212 / 0.5)',
+        // Cyan halos around featured classic-template panels, smallest to widest.
+        'halo-cyan-sm': '0 0 20px rgb(6 182 212 / 0.15)',
+        'halo-cyan-md': '0 0 60px rgb(6 182 212 / 0.1)',
+        'halo-cyan-lg': '0 0 80px rgb(6 182 212 / 0.15)',
+        'halo-violet': '0 0 100px rgb(139 92 246 / 0.15)',
+        // Dark drop shadows: a round badge, a glass panel, a floating bar, and the two nova cards.
+        'drop-badge': '0 0 30px rgb(0 0 0 / 0.5)',
+        'drop-glass': '0 0 50px rgb(0 0 0 / 0.5)',
+        'drop-bar': '0 20px 50px rgb(0 0 0 / 0.5)',
+        'nova-window': '0 28px 60px -30px rgb(0 0 0 / 0.55)',
+        'nova-card': '0 24px 50px -30px rgb(0 0 0 / 0.5)',
       },
       // Marketing motion. `float`, `blob` and `gradient` already exist in assets/styles/animations.css;
       // these are the ones that used to live in a scoped <style> of a single section.

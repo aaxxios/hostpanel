@@ -1,12 +1,13 @@
 using Innovayse.Hostpanel.Domain.Services.Enums;
+
 namespace Innovayse.Hostpanel.Application.Services.Queries.ListCancellationRequests;
 
 /// <summary>DTO representing a cancellation request with enriched service and client data.</summary>
 /// <param name="Id">Primary key of the cancellation request.</param>
 /// <param name="ServiceId">FK to the client service being cancelled.</param>
-/// <param name="ServiceName">Product name from the linked service.</param>
+/// <param name="ServiceName">Product name from the linked service. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="ClientId">FK to the owning client.</param>
-/// <param name="ClientName">Full name of the owning client.</param>
+/// <param name="ClientName">Full name of the owning client. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="Type">
 /// The <see cref="Innovayse.Hostpanel.Domain.Services.Enums.CancellationType"/> member name -- <c>Immediate</c>
 /// or <c>EndOfBillingPeriod</c>. A machine-readable value, not display text: the caller owns the
@@ -21,9 +22,9 @@ namespace Innovayse.Hostpanel.Application.Services.Queries.ListCancellationReque
 public record CancellationRequestDto(
     int Id,
     int ServiceId,
-    string ServiceName,
+    string? ServiceName,
     int ClientId,
-    string ClientName,
+    string? ClientName,
     string Type,
     string? Reason,
     string Status,

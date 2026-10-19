@@ -3,6 +3,7 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Services.Queries.GetService;
 
 /// <summary>Returns a single enriched client service for admin detail views.</summary>
@@ -42,7 +43,7 @@ public sealed class GetServiceHandler
 
         var clientName = client is not null
             ? $"{client.FirstName} {client.LastName}"
-            : "Unknown";
+            : null;
 
         string? serverName = null;
         string? serverHostname = null;
@@ -61,7 +62,7 @@ public sealed class GetServiceHandler
             svc.ClientId,
             clientName,
             svc.ProductId,
-            product?.Name ?? "Unknown",
+            product?.Name,
             svc.Domain,
             svc.DedicatedIp,
             svc.Username,

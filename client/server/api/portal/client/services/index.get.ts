@@ -11,8 +11,9 @@ export default defineEventHandler(async (event) => {
     clientid: 0,
     pid: s.productId,
     regdate: '',
-    name: s.productName,
-    translated_name: s.productName,
+    // Null stays null: the page renders the fallback sentence in the visitor's language.
+    name: s.productName ?? null,
+    translated_name: s.productName ?? null,
     groupname: '',
     domain: s.domain ?? '',
     dedicatedip: '',

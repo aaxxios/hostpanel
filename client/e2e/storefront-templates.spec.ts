@@ -7,6 +7,7 @@
  * classic has its own) with the summary and the total.
  */
 import { expect, test } from './support/test'
+import { PortalSettingKey } from '../constants/portalSettingKey'
 import { PLAN } from './support/fixtures.mjs'
 import { resetStub, setPortalSetting, waitForHydration } from './support/helpers'
 
@@ -28,7 +29,7 @@ for (const { name, home } of TEMPLATES) {
 
     test('the home page renders in this design', async ({ page, request }) => {
       await resetStub(request)
-      await setPortalSetting(request, 'portal.template', name)
+      await setPortalSetting(request, PortalSettingKey.Template, name)
 
       await page.goto('/')
       await waitForHydration(page)
@@ -38,7 +39,7 @@ for (const { name, home } of TEMPLATES) {
 
     test('a cart reaches the checkout summary and total', async ({ page, request }) => {
       await resetStub(request)
-      await setPortalSetting(request, 'portal.template', name)
+      await setPortalSetting(request, PortalSettingKey.Template, name)
       await page.addInitScript(([key, item]) => {
         window.localStorage.setItem(key as string, JSON.stringify([item]))
       }, [CART_KEY, {
