@@ -41,21 +41,14 @@
         <template v-else>
           <!-- Billing cycle tabs -->
           <UiStack direction="row" justify="center" gap="none" class="sticky top-20 z-40 py-4 mb-16 md:mb-20 px-4">
-            <UiCard padding="none" class="flex items-center gap-1 p-1 bg-white/80 dark:bg-classic-page/80 backdrop-blur-xl shadow-drop-bar max-w-full overflow-x-auto no-scrollbar scroll-smooth">
-              <UiButton
-                v-for="cycle in availableCycles"
-                :key="cycle.key"
-                :variant="selectedCycle === cycle.key ? 'primary' : 'ghost'"
-                class="px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold duration-300 whitespace-nowrap"
-                :class="selectedCycle === cycle.key
-                  ? 'bg-gradient-to-r from-cyan-500 to-primary-500 shadow-lg shadow-cyan-500/20 scale-105 z-10'
-                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
-                :data-testid="`classic-hosting-cycle-${cycle.key}`"
-                @click="selectedCycle = cycle.key"
-              >
-                {{ cycle.label }}
-              </UiButton>
-            </UiCard>
+            <UiSegmentedControl
+              v-model="selectedCycle"
+              :options="cycleOptions"
+              :label="t('hosting.billingCycles')"
+              size="sm"
+              testid="classic-hosting-cycles"
+              class="max-w-full overflow-x-auto no-scrollbar shadow-drop-bar backdrop-blur-xl"
+            />
           </UiStack>
 
           <!-- Free hosting -->
@@ -398,6 +391,7 @@ import { parseDescription } from '~/utils/catalogGroups'
 import { isFreePlan } from '~/utils/isFreePlan'
 import { UiHeadingLevel } from '~/utils/ui/enums'
 import type { HostingPlan } from '~/types/hostingplan'
+import type { SegmentedOption } from '~/types/segmentedoption'
 import { FeaturedFlag } from '~/types/featuredflag'
 import { PricingCycle } from '~/types/pricingcycle'
 
@@ -496,10 +490,10 @@ const cycleLabel = (cycle: PricingCycle): string =>
  */
 const planPrice = (plan: HostingPlan, cycle: PricingCycle): number | null => cycleAmount(plan.pricing, cycle)
 
-/** Cycles at least one plan is priced in - the tabs. */
-const availableCycles = computed(() =>
+/** Cycles at least one plan is priced in - the segments of the cycle switch. */
+const cycleOptions = computed<SegmentedOption<PricingCycle>[]>(() =>
   PRICING_CYCLES.filter(key => plans.value.some(p => planPrice(p, key) !== null))
-    .map(key => ({ key, label: cycleLabel(key) })))
+    .map(key => ({ value: key, label: cycleLabel(key), testid: `classic-hosting-cycle-${key}` })))
 
 /**
  * Formats just the grouped digits of an amount - no currency symbol - for markup that renders

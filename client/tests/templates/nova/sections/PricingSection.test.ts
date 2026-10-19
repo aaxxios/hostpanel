@@ -37,21 +37,23 @@ describe('PricingSection', () => {
     expect(wrapper.find('[data-testid="nova-plans-empty"]').text()).toContain('nova.plans.empty')
   })
 
-  it('marks the selected billing period as pressed', () => {
+  it('marks the selected billing period as checked', () => {
     const monthly = mountWithKit(PricingSection, { props: { yearly: false } })
     const yearly = mountWithKit(PricingSection, { props: { yearly: true } })
 
-    expect(monthly.find('[data-testid="nova-billing-monthly"]').attributes('aria-pressed')).toBe('true')
-    expect(yearly.find('[data-testid="nova-billing-yearly"]').attributes('aria-pressed')).toBe('true')
+    expect(monthly.find('[data-testid="nova-billing-monthly"]').attributes('aria-checked')).toBe('true')
+    expect(yearly.find('[data-testid="nova-billing-yearly"]').attributes('aria-checked')).toBe('true')
   })
 
   it('reports the chosen period upward', async () => {
-    const wrapper = mountWithKit(PricingSection, { props: { yearly: false } })
+    const monthly = mountWithKit(PricingSection, { props: { yearly: false } })
+    const yearly = mountWithKit(PricingSection, { props: { yearly: true } })
 
-    await wrapper.find('[data-testid="nova-billing-yearly"]').trigger('click')
-    await wrapper.find('[data-testid="nova-billing-monthly"]').trigger('click')
+    await monthly.find('[data-testid="nova-billing-yearly"]').trigger('click')
+    await yearly.find('[data-testid="nova-billing-monthly"]').trigger('click')
 
-    expect(wrapper.emitted('update:yearly')).toEqual([[true], [false]])
+    expect(monthly.emitted('update:yearly')).toEqual([[true]])
+    expect(yearly.emitted('update:yearly')).toEqual([[false]])
   })
 
   it('leaves the heading out when the page supplies its own', () => {
