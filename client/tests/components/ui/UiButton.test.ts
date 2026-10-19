@@ -85,4 +85,11 @@ describe('UiButton', () => {
     expect(wrapper.classes()).not.toContain('px-4')
     expect(wrapper.classes().some(name => name.startsWith('bg-'))).toBe(false)
   })
+
+  it('does not animate the outline, so a mouse press never flashes one', () => {
+    const classes = mountWithKit(UiButton, { slots: { default: 'Go' } }).find('button').classes()
+
+    expect(classes).toContain('transition')
+    expect(classes).not.toContain('transition-all')
+  })
 })
