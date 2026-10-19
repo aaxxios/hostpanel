@@ -34,6 +34,13 @@
   --glow1: rgba(93, 63, 255, 0.35);
   --glow2: rgba(0, 209, 255, 0.18);
   --sh: 0 34px 70px -24px rgba(0, 0, 0, 0.85);
+  /* The brand gradient behind every filled button and active toggle segment: the accent
+     into a light tint of the primary, dark text (--brand-on-tint) on top. */
+  --brand-grad: linear-gradient(135deg, rgb(var(--brand-accent-500, 93 63 255)), rgb(var(--brand-primary-400, 0 209 255)));
+  /* The closing call-to-action card: a brand-tinted wash that fades to the surface. */
+  --cta-card: linear-gradient(135deg, rgb(var(--brand-accent-500, 93 63 255) / 0.3), rgb(var(--brand-primary-500, 0 150 255) / 0.12) 55%, rgba(255, 255, 255, 0.02));
+  /* The tinted chip behind a trust-bar icon. */
+  --chip-bg: rgba(255, 255, 255, 0.06);
 }
 
 :root.light {
@@ -59,6 +66,12 @@
   --glow1: rgba(62, 123, 250, 0.18);
   --glow2: rgba(14, 165, 233, 0.12);
   --sh: 0 24px 50px -22px rgba(20, 22, 42, 0.28);
+  /* Light mode builds the gradient from the 600 shades: saturated enough to read as the brand
+     on a white page, dark enough for white text (the light 400 tint the dark theme uses
+     washes out here). Both ends fall back to the template's own violet and blue. */
+  --brand-grad: linear-gradient(135deg, rgb(var(--brand-accent-600, 93 63 255)), rgb(var(--brand-primary-600, 2 132 199)));
+  --cta-card: linear-gradient(135deg, rgb(var(--brand-accent-100, 233 228 255)), #ffffff 50%, rgb(var(--brand-primary-100, 214 238 255)));
+  --chip-bg: rgb(var(--brand-primary-500, 14 165 233) / 0.1);
   /* The brand gradient is saturated in light mode; white text reads on it where the
      operator-computed near-black does not. :root.light outranks the injected :root rule. */
   --brand-on-tint: 255 255 255;

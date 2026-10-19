@@ -117,6 +117,7 @@ export default <Partial<Config>>{
         acbg: 'var(--ac-bg)',
         ok: 'var(--ok)',
         danger: 'var(--danger)',
+        chip: 'var(--chip-bg)',
 
         // nova template design tokens. Prefixed --n-* and scoped to .tpl-nova
         // (and html[data-template='nova']) so they cannot collide with the
@@ -142,9 +143,12 @@ export default <Partial<Config>>{
         card: 'var(--card)',
         'card-hi': 'var(--card-hi)',
         'hero-grad': 'var(--hero-grad)',
-        // Constant across both colour modes — the brand mark, not a theme token. Reads the
-        // operator's accent and primary, falling back to the original purple → cyan.
-        brand: 'linear-gradient(135deg, rgb(var(--brand-accent-500, 93 63 255)), rgb(var(--brand-primary-400, 0 209 255)))',
+        // The brand gradient, defined per colour mode in assets/css/templates/aurora.css: light
+        // tints on the dark theme, the saturated 600 shades on the light one. Reads the operator's
+        // accent and primary, falling back to the original purple → blue.
+        brand: 'var(--brand-grad)',
+        // The closing call-to-action card wash, also per colour mode.
+        'cta-card': 'var(--cta-card)',
         glow1: 'radial-gradient(closest-side, var(--glow1), transparent)',
         glow2: 'radial-gradient(closest-side, var(--glow2), transparent)',
         // A radial fade driven by the from/via/to stops of the element, e.g. the vignette of a hero.

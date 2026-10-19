@@ -22,4 +22,20 @@ describe('AuroraCta', () => {
     expect(wrapper.find('[data-testid="cta-primary"]').attributes('href')).toBe('/contact')
     expect(wrapper.find('[data-testid="cta-secondary"]').attributes('href')).toBe('/hosting')
   })
+
+  it('paints the card with the brand-tinted wash, a dot pattern and two glows', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(AuroraCta)
+
+    expect(wrapper.find('[data-testid="aurora-cta"]').classes()).toEqual(expect.arrayContaining(['bg-cta-card', 'overflow-hidden']))
+    expect(wrapper.find('[data-testid="cta-pattern"]').classes()).toContain('pattern-dots-20')
+    expect(wrapper.findAll('[data-testid="ui-decor"]').length).toBe(2)
+  })
+
+  it('keeps the brand gradient on the primary button', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(AuroraCta)
+
+    expect(wrapper.find('[data-testid="cta-primary"]').classes()).toContain('bg-brand')
+  })
 })

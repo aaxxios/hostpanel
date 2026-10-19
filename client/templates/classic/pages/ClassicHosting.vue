@@ -201,7 +201,7 @@
                     variant="outline"
                     full-width
                     class="!rounded-2xl !h-12 font-black uppercase tracking-widest !text-xs transition-all shadow-xl hover:shadow-cyan-500/20"
-                    :class="cart.hasItem(plan.pid, selectedCycle) ? '!bg-green-500/20 !text-green-400 !border-green-500/40' : '!border-white/10 hover:!border-cyan-500/50'"
+                    :class="cart.hasItem(plan.pid, selectedCycle) ? '!bg-green-500/20 !text-green-700 dark:!text-green-400 !border-green-500/40' : '!border-gray-200 dark:!border-white/10 hover:!border-cyan-500/50'"
                     data-testid="classic-hosting-add"
                     @click="addToCart(plan)"
                   >
@@ -304,7 +304,7 @@ data-testid="classic-hosting-plan-select"
               <UiStack gap="none" class="overflow-x-auto no-scrollbar scroll-smooth">
                 <UiTable class="min-w-[320px] md:min-w-[1100px] border-0 rounded-none bg-transparent">
                   <UiTableHead>
-                    <UiTableRow :hoverable="false" class="bg-white/[0.03]">
+                    <UiTableRow :hoverable="false" class="bg-gray-50 dark:bg-white/[0.03]">
                       <UiTableTh class="!p-4 md:!p-8 !text-[10px] md:!text-xs font-black sticky left-0 bg-classic-page z-30 min-w-[140px] md:min-w-[280px]">
                         <UiStack direction="row" align="center" gap="xs">
                           <Server :size="16" class="text-cyan-700 dark:text-cyan-400" />
