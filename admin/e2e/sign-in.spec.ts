@@ -50,3 +50,27 @@ test('correct credentials sign in and open the dashboard', async ({ page }) => {
   expect(login?.body).toEqual({ email: validCredentials.email, password: validCredentials.password })
   expect(login?.search).toBe('')
 })
+
+test('a deep link opened while signed out is opened after signing in', async ({ page }) => {
+  await stubApi(page)
+
+  await page.goto('/billing/invoices')
+  await page.waitForURL('**/login?redirect=*')
+
+  await fieldOf(page, 'login-email').fill(validCredentials.email)
+  await fieldOf(page, 'login-password').fill(validCredentials.password)
+  await page.getByTestId('login-submit').click()
+
+  await page.waitForURL('**/billing/invoices')
+})
+
+test('an external redirect target is ignored and sign-in lands on the dashboard', async ({ page }) => {
+  await stubApi(page)
+
+  await page.goto('/login?redirect=//evil.example')
+  await fieldOf(page, 'login-email').fill(validCredentials.email)
+  await fieldOf(page, 'login-password').fill(validCredentials.password)
+  await page.getByTestId('login-submit').click()
+
+  await page.waitForURL('**/dashboard')
+})

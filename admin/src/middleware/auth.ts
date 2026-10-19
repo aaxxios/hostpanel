@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import { AuthMode } from '@/types/auth'
 import { pinia } from '@/pinia'
 import { AppRoute } from '@/lib/routes'
+import { REDIRECT_QUERY_PARAM, loginLocationFor, safeRedirectTarget } from '@/lib/redirectTarget'
 
 /**
  * Auth middleware — decides, per navigation, whether a route may be entered.
@@ -46,14 +47,15 @@ export const authMiddleware = async (
     return true
   }
 
-  // Authenticated user trying to access /login → redirect to dashboard
+  // A signed-in user on a public page (the sign-in screen, or the page an SSO round trip returns
+  // to) goes where they were originally heading, if that target is a safe in-app path.
   if (to.meta.public && auth.isAuthenticated) {
-    return AppRoute.Dashboard
+    return safeRedirectTarget(to.query[REDIRECT_QUERY_PARAM]) ?? AppRoute.Dashboard
   }
 
-  // Protected route without valid session → redirect to login
+  // Protected route without a valid session → sign in first, remembering the full requested path
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return AppRoute.Login
+    return loginLocationFor(to.fullPath)
   }
 
   return true

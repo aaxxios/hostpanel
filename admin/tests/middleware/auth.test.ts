@@ -15,9 +15,15 @@ import { stubRoutes } from '../helpers/routes'
  * Builds the minimal route object the guard reads.
  *
  * @param meta - The route's `meta`.
+ * @param fullPath - The route's full path.
+ * @param query - The route's parsed query.
  * @returns A route cast to the router type.
  */
-const route = (meta: Record<string, unknown>): RouteLocationNormalized => ({ meta }) as unknown as RouteLocationNormalized
+const route = (
+  meta: Record<string, unknown>,
+  fullPath = '/',
+  query: Record<string, unknown> = {},
+): RouteLocationNormalized => ({ meta, fullPath, query }) as unknown as RouteLocationNormalized
 
 /**
  * Stubs the three session endpoints the guard triggers.
@@ -51,7 +57,7 @@ describe('authMiddleware', () => {
   it('sends an anonymous visitor of a protected route to /login', async () => {
     stubSession({ mode: 'local', setup: false, signedIn: false })
 
-    expect(await authMiddleware(route({ requiresAuth: true }))).toBe('/login')
+    expect(await authMiddleware(route({ requiresAuth: true }, '/dashboard'))).toBe('/login?redirect=%2Fdashboard')
   })
 
   it('lets a signed-in user into a protected route', async () => {
@@ -59,6 +65,29 @@ describe('authMiddleware', () => {
 
     expect(await authMiddleware(route({ requiresAuth: true }))).toBe(true)
   })
+
+  it('passes the requested full path to /login as the redirect query', async () => {
+    stubSession({ mode: 'local', setup: false, signedIn: false })
+
+    expect(await authMiddleware(route({ requiresAuth: true }, '/clients/1/summary?tab=x')))
+      .toBe('/login?redirect=%2Fclients%2F1%2Fsummary%3Ftab%3Dx')
+  })
+
+  it('sends a signed-in user on a public page to the safe redirect target', async () => {
+    stubSession({ mode: 'local', setup: false, signedIn: true })
+
+    expect(await authMiddleware(route({ public: true }, '/login', { redirect: '/clients/1/summary' })))
+      .toBe('/clients/1/summary')
+  })
+
+  it.each(['//evil.example', 'https://evil.example', '/login', ['/a', '/b']])(
+    'ignores the unsafe redirect %j and lands on the dashboard',
+    async (redirect) => {
+      stubSession({ mode: 'local', setup: false, signedIn: true })
+
+      expect(await authMiddleware(route({ public: true }, '/login', { redirect }))).toBe('/dashboard')
+    },
+  )
 
   it('keeps a signed-in user off a public page', async () => {
     stubSession({ mode: 'local', setup: false, signedIn: true })
