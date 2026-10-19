@@ -7,8 +7,13 @@
     <ClientLayoutTopBar
       :full-name="store.fullName"
       :widget-user="widgetUser"
+      :first-name="store.user?.firstname"
+      :last-name="store.user?.lastname"
+      :email="store.user?.email"
+      :nav-items="visibleNavItems"
       :sidebar-open="sidebarOpen"
       @toggle-sidebar="sidebarOpen = !sidebarOpen"
+      @sign-out="handleLogout"
     />
 
     <!-- Body row: sidebar + main, fills the remaining height. Positioned, so the mobile drawer and
@@ -81,6 +86,7 @@ import { Permission } from '~/composables/usePermissions'
 import { useAuthStore } from '~/stores/auth'
 import { useClientStore } from '~/stores/client'
 import type { ClientNavItem } from '~/types/clientnavitem'
+import { useHeaderWidget } from '~/composables/useHeaderWidget'
 
 /** How often the widget script is polled for, in milliseconds, until it has loaded. */
 const WIDGET_POLL_MS = 200
@@ -111,6 +117,9 @@ const authStore = useAuthStore()
 const store = useClientStore()
 /** Permission check for the signed-in person. */
 const { hasPermission } = usePermissions()
+
+/** Whether the platform widget is served here; without it nothing is polled for and the top bar draws its own account menu. */
+const { enabled: widgetEnabled } = useHeaderWidget()
 
 /** Whether the mobile sidebar drawer is open. */
 const sidebarOpen = ref(false)
@@ -167,7 +176,7 @@ onMounted(async () => {
     }
   }
   // The layout may have been left while the identity was loading; onBeforeUnmount has already run then.
-  if (unmounted) {
+  if (unmounted || !widgetEnabled.value) {
     return
   }
   widgetPoll = setTimeout(tryReinit, WIDGET_FIRST_POLL_MS)
@@ -182,7 +191,7 @@ onBeforeUnmount(() => {
 // Vue may re-render the layout after reactive state changes, replacing the mount-point
 // elements. Reinit the widget if the account button was wiped.
 onUpdated(() => {
-  if (!document.getElementById('inno-account-btn')) {
+  if (widgetEnabled.value && !document.getElementById('inno-account-btn')) {
     reinitWidget()
   }
 })

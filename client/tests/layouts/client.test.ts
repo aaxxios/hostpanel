@@ -52,8 +52,11 @@ const ME = { firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com', p
 // Unmounting releases the drawer's scroll lock and key listener between tests.
 enableAutoUnmount(afterEach)
 
+/** Runtime configuration of a deployment that is served the platform shell's widget. */
+const SHELL_CONFIG = { authMode: 'sso', mainUrl: 'https://main.example.test' }
+
 beforeEach(() => {
-  stubAuthRuntime()
+  stubAuthRuntime({ publicConfig: SHELL_CONFIG })
   vi.stubGlobal('usePermissions', usePermissions)
   vi.stubGlobal('useAuthStore', useAuthStore)
   vi.stubGlobal('useClientStore', useClientStore)
@@ -241,6 +244,59 @@ describe('client layout', () => {
       expect(vi.getTimerCount()).toBe(0)
     } finally {
       vi.useRealTimers()
+    }
+  })
+})
+
+describe('client layout without the platform widget', () => {
+  beforeEach(() => {
+    stubAuthRuntime({ publicConfig: { authMode: 'local', mainUrl: '' } })
+  })
+
+  it('draws its own account menu with the initials of the signed-in person instead of an empty mount', async () => {
+    const wrapper = await mountLayout()
+
+    expect(wrapper.find('#inno-account-mount').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="client-account-trigger"]').text()).toBe('AL')
+  })
+
+  it('offers the name, the e-mail and the permitted links in the menu', async () => {
+    const wrapper = await mountLayout()
+    useClientStore().user = { ...ME, permissions: Permission.ViewDomains } as never
+    await nextTick()
+    await wrapper.find('[data-testid="client-account-trigger"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="client-account-name"]').text()).toBe('Ada Lovelace')
+    expect(wrapper.find('[data-testid="client-account-email"]').text()).toBe('ada@example.com')
+    expect(wrapper.find('[data-testid="client-account-link-/client/domains"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="client-account-link-/client/invoices"]').exists()).toBe(false)
+  })
+
+  it('signs out from the menu', async () => {
+    const wrapper = await mountLayout()
+    await wrapper.find('[data-testid="client-account-trigger"]').trigger('click')
+
+    await wrapper.find('[data-testid="client-account-sign-out"]').trigger('click')
+    await flushPromises()
+
+    expect(logout).toHaveBeenCalledTimes(1)
+    expect(navigateTo).toHaveBeenCalledWith('/client/login')
+  })
+
+  it('does not poll for a widget that is never loaded', async () => {
+    vi.useFakeTimers()
+    const reinit = vi.fn()
+    Object.assign(window, { InnoWidget: { reinit } })
+    try {
+      await mountLayout()
+
+      // Long enough for the first poll (50 ms) and several more (200 ms apart) had there been one.
+      vi.advanceTimersByTime(1000)
+
+      expect(reinit).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+      Reflect.deleteProperty(window, 'InnoWidget')
     }
   })
 })

@@ -25,10 +25,20 @@
              ?authuser= to every tile from the first paint, instead of only after its own
              profile round-trip. The widget reads it from either mount; this is the one
              present at every width. -->
-        <div id="inno-launcher-mount" :data-user="widgetUser" />
+        <div v-if="widgetEnabled" id="inno-launcher-mount" :data-user="widgetUser" />
       </div>
-      <!-- Account popup: always visible, mobile needs account switching too -->
-      <div id="inno-account-mount" :data-user="widgetUser" />
+      <!-- Account control: always visible, mobile needs account switching too. The platform widget
+           fills the mount where the shell serves it; everywhere else the local menu is drawn, so
+           the header is never left without an avatar. -->
+      <div v-if="widgetEnabled" id="inno-account-mount" :data-user="widgetUser" />
+      <ClientLayoutAccountMenu
+        v-else
+        :first-name="firstName"
+        :last-name="lastName"
+        :email="email"
+        :items="navItems"
+        @sign-out="$emit('signOut')"
+      />
       <!-- Hamburger: mobile only -->
       <UiIconButton
         :icon="sidebarOpen ? X : Menu"
@@ -48,11 +58,21 @@
  * mounts and the mobile menu button.
  */
 import { Menu, X } from 'lucide-vue-next'
+import type { ClientNavItem } from '~/types/clientnavitem'
+import { useHeaderWidget } from '~/composables/useHeaderWidget'
 
 /** Props of ClientLayoutTopBar. */
 interface Props {
   /** Full name of the signed-in person. */
   fullName: string
+  /** Given name, for the local account menu; empty while the profile loads. */
+  firstName?: string
+  /** Family name, for the local account menu; empty while the profile loads. */
+  lastName?: string
+  /** E-mail address, for the local account menu; empty while the profile loads. */
+  email?: string
+  /** Links of the local account menu, already filtered by the person's permissions. */
+  navItems?: ClientNavItem[]
   /** The person in the widget's own JSON shape, or undefined while the profile loads. */
   widgetUser?: string
   /** Whether the mobile sidebar is open, so the button shows a cross. */
@@ -62,7 +82,14 @@ interface Props {
 /** Operator-set site name shown as the brand. */
 const { name: siteName } = useSiteIdentity()
 
+/** Whether the platform widget fills the mounts here, or the local account menu is drawn instead. */
+const { enabled: widgetEnabled } = useHeaderWidget()
+
 withDefaults(defineProps<Props>(), {
+  firstName: '',
+  lastName: '',
+  email: '',
+  navItems: () => [],
   widgetUser: undefined
 })
 
@@ -70,5 +97,7 @@ withDefaults(defineProps<Props>(), {
 defineEmits<{
   /** The mobile menu button was pressed. */
   toggleSidebar: []
+  /** The person chose Sign out in the local account menu. */
+  signOut: []
 }>()
 </script>

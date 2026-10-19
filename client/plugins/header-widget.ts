@@ -17,18 +17,13 @@
  */
 
 import { HEADER_WIDGET_CACHE_BUST, HEADER_WIDGET_PATH } from '~/constants/headerWidget'
-import { AuthMode } from '~/types/authmode'
+import { isHeaderWidgetEnabled } from '~/utils/headerWidget'
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
-  if (config.public.authMode !== AuthMode.Sso) {
-    return
-  }
-
   const mainUrl = config.public.mainUrl as string
-  // The dev default is a host that exists only on a developer's machine; a stock install
-  // with no portal must not request a script from it on every page.
-  if (!mainUrl || /\.local(:\d+)?\/?$/.test(mainUrl)) {
+  // The same rule the headers use to choose between this widget and their own account menu.
+  if (!isHeaderWidgetEnabled(config.public.authMode as string | undefined, mainUrl)) {
     return
   }
 
