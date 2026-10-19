@@ -174,7 +174,7 @@ data-testid="layout-header-trigger"
                 @click="toggleMobileGroup(CLIENT_AREA_GROUP)"
               >
                 <UiStack direction="row" align="center" gap="xs" as="span">
-                  <UiAvatar :first-name="user?.firstname ?? ''" size="sm" />
+                  <UiAvatar :first-name="user?.firstname ?? ''" :last-name="user?.lastname ?? ''" :email="user?.email ?? ''" size="sm" />
                   {{ user?.firstname ?? $t('nav.clientArea') }}
                 </UiStack>
                 <ChevronDown

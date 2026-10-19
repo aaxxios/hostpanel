@@ -4,7 +4,10 @@
     class="grid flex-shrink-0 place-items-center rounded-full bg-primary-500/20 font-bold uppercase leading-none text-primary-400 select-none"
     :title="label || undefined"
     aria-hidden="true"
-  >{{ initials }}</span>
+  >
+    <User v-if="!initials" :size="iconSize" :stroke-width="2" />
+    <template v-else>{{ initials }}</template>
+  </span>
 </template>
 
 <script setup lang="ts">
@@ -18,6 +21,7 @@
  * accessible label.
  */
 import { computed } from 'vue'
+import { User } from 'lucide-vue-next'
 import { UiAvatarSize } from '~/utils/ui/enums'
 
 /** Props of UiAvatar. */
@@ -47,9 +51,9 @@ const label = computed(() =>
 /**
  * One or two initials.
  *
- * Falls back through name, then e-mail, then `?` rather than rendering an empty circle: the
- * avatar appears the moment the session is known, which is before the profile request that
- * carries the name has come back.
+ * Falls back through name, then e-mail, then an empty string, which the template draws as a
+ * person glyph: the avatar appears the moment the session is known, which is before the profile
+ * request that carries the name has come back, and a literal `?` there read as a broken account.
  */
 const initials = computed(() => {
   const first = props.firstName.trim().charAt(0)
@@ -58,8 +62,11 @@ const initials = computed(() => {
   if (first) {
     return `${first}${last}`
   }
-  return props.email.trim().charAt(0) || '?'
+  return props.email.trim().charAt(0)
 })
+
+/** Pixel size of the person glyph shown while no name or e-mail is known. */
+const iconSize = computed(() => (props.size === UiAvatarSize.Sm ? 14 : 18))
 
 /** Diameter and type size for the chosen `size`. */
 const sizeClasses = computed(() =>

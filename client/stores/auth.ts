@@ -29,6 +29,7 @@ import { InviteOutcome } from '~/types/inviteoutcome'
 import { SignInOutcome } from '~/types/signinoutcome'
 import { PortalErrorCode, apiErrorCode, apiErrorMessage, apiFieldErrors } from '~/lib/errorHandler'
 import { translate } from '~/utils/translate'
+import { asClientUser } from '~/utils/asClientUser'
 import { AuthMode } from '~/types/authmode'
 import { SessionCookie } from '~/constants/sessionCookie'
 
@@ -94,7 +95,7 @@ export const useAuthStore = defineStore('auth', () => {
     if ('twoFactorRequired' in data) {
       return data
     }
-    user.value = data
+    user.value = asClientUser(data)
     return data
   }
 
@@ -320,7 +321,7 @@ export const useAuthStore = defineStore('auth', () => {
    */
   const loginWithTwoFactor = async (pendingToken: string, code: string): Promise<ClientUser> => {
     const data = await api.loginWithTwoFactor(pendingToken, code)
-    user.value = data
+    user.value = asClientUser(data)
     return data
   }
 

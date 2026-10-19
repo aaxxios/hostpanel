@@ -1,5 +1,5 @@
 /**
- * Unit tests for UiAvatar: initials from the name, the e-mail and question-mark fallbacks, the
+ * Unit tests for UiAvatar: initials from the name, the e-mail and person-glyph fallbacks, the
  * hover title, the sizes and that the circle is hidden from assistive technology.
  */
 import { describe, expect, it } from 'vitest'
@@ -28,10 +28,11 @@ describe('UiAvatar', () => {
     expect(wrapper.attributes('title')).toBe('jane@example.com')
   })
 
-  it('falls back to a question mark when nothing is known', () => {
+  it('draws a person glyph, never a question mark, when nothing is known', () => {
     const wrapper = mountWithKit(UiAvatar)
 
-    expect(wrapper.text()).toBe('?')
+    expect(wrapper.text()).toBe('')
+    expect(wrapper.find('svg').exists()).toBe(true)
     expect(wrapper.attributes('title')).toBeUndefined()
   })
 
