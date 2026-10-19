@@ -137,6 +137,9 @@ const reinitWidget = (): boolean => {
   return true
 }
 
+/** The pending widget poll, so leaving the layout can cancel it before it fires on a torn-down page. */
+let widgetPoll: ReturnType<typeof setTimeout> | undefined
+
 onMounted(async () => {
   // No `userLoaded` check: the store is the one authority on whether this needs a request,
   // and the flag read here answered "not loaded yet" for a request that was already on the
@@ -153,10 +156,15 @@ onMounted(async () => {
    */
   const tryReinit = (): void => {
     if (!reinitWidget() && attempts++ < WIDGET_POLL_ATTEMPTS) {
-      setTimeout(tryReinit, WIDGET_POLL_MS)
+      widgetPoll = setTimeout(tryReinit, WIDGET_POLL_MS)
     }
   }
-  setTimeout(tryReinit, WIDGET_FIRST_POLL_MS)
+  widgetPoll = setTimeout(tryReinit, WIDGET_FIRST_POLL_MS)
+})
+
+// A poll still waiting when the layout goes away would look for the widget on a page that no longer exists.
+onBeforeUnmount(() => {
+  clearTimeout(widgetPoll)
 })
 
 // Vue may re-render the layout after reactive state changes, replacing the mount-point

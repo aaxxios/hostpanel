@@ -6,8 +6,9 @@
  * @module tests/layouts/client.test
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
+import type { VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { mountClient } from '~/tests/helpers/mountClient'
@@ -59,6 +60,15 @@ beforeEach(() => {
   logout.mockResolvedValue({})
 })
 
+/** Every layout a test mounted; each is unmounted afterwards so its widget poll never outlives the test. */
+const mounted: VueWrapper[] = []
+
+afterEach(() => {
+  mounted.splice(0).forEach((wrapper) => {
+    wrapper.unmount()
+  })
+})
+
 /**
  * Mounts the layout with a page in its slot and waits for the identity fetch.
  *
@@ -66,6 +76,7 @@ beforeEach(() => {
  */
 const mountLayout = async () => {
   const wrapper = mountClient(ClientLayout, { slots: { default: 'page content' }, stubs: STUBS, components: { LayoutDemoBanner } })
+  mounted.push(wrapper)
   await flushPromises()
   return wrapper
 }
@@ -170,5 +181,23 @@ describe('client layout', () => {
 
     expect(reinit).toHaveBeenCalled()
     Reflect.deleteProperty(window, 'InnoWidget')
+  })
+
+  it('stops looking for the platform widget once the layout is gone', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = await mountLayout()
+      wrapper.unmount()
+      mounted.splice(mounted.indexOf(wrapper), 1)
+      const reinit = vi.fn()
+      Object.assign(window, { InnoWidget: { reinit } })
+
+      vi.runAllTimers()
+
+      expect(reinit).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+      Reflect.deleteProperty(window, 'InnoWidget')
+    }
   })
 })
