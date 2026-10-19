@@ -204,7 +204,9 @@ folder per use case under `Application/<Feature>/{Commands,Queries}/<UseCase>/`.
   reset. Seed text names no outside product.
 - **Seed.** The demo seed is fixed and deterministic: `DemoCatalogueSeeder`, `DemoPeopleSeeder` and `DemoClientProfile`
   produce the same sample data on every reset, and it is maximal, with every table populated enough to show each
-  feature. The site name is `Hostpanel Demo`.
+  feature. The site name is `Hostpanel Demo`. The storefront contact is the one operator-set exception: optional
+  `Demo__ContactEmail` / `Demo__ContactPhone` (`DEMO_CONTACT_*`) replace the fictional `.example` / `+1 555 0100` pair
+  on every seed and reset; they are display only, and demo mail still goes to mailhog.
 - **Network.** The demo's services sit on a demo-private network and join `innovayse_network` only under their
   `hostpanel-demo-*` names, so the demo cannot reach production's services. See the configuration section below.
 - **Deploy scope.** The demo is deployed through GitLab scope `demo/hostpanel`, with its own `DEPLOY_DIR`.

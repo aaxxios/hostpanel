@@ -40,6 +40,12 @@ public sealed class DemoOptionsValidator : IValidateOptions<DemoOptions>
         CheckPassword(failures, nameof(DemoOptions.AdminPassword), options.AdminPassword);
         CheckPassword(failures, nameof(DemoOptions.ClientPassword), options.ClientPassword);
 
+        // Optional, so only a value that is set is checked: empty keeps the seed's fictional address.
+        if (!string.IsNullOrWhiteSpace(options.ContactEmail) && !options.ContactEmail.Contains('@', StringComparison.Ordinal))
+        {
+            failures.Add($"{DemoOptions.SectionName}:{nameof(DemoOptions.ContactEmail)} must be an email address when set (set Demo__{nameof(DemoOptions.ContactEmail)} or leave it empty).");
+        }
+
         if (!string.IsNullOrWhiteSpace(options.AdminEmail)
             && string.Equals(options.AdminEmail, options.ClientEmail, StringComparison.OrdinalIgnoreCase))
         {

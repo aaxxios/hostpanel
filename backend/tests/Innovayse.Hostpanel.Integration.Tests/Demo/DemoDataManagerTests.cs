@@ -230,7 +230,8 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory) : IClas
 
         var settings = await db.Settings.ToDictionaryAsync(s => s.Key, s => s.Value);
         settings[PortalSettingKeys.SiteName].Should().Be("Hostpanel Demo");
-        settings[PortalSettingKeys.ContactEmail].Should().Be("demo@hostpanel-demo.example");
+        settings[PortalSettingKeys.ContactEmail].Should().Be(DemoPortalSettingsSeeder.DefaultContactEmail, "no contact email is configured");
+        settings[PortalSettingKeys.ContactPhone].Should().Be(DemoPortalSettingsSeeder.DefaultContactPhone, "no contact phone is configured");
         settings[PortalSettingKeys.SiteTagline].Should().NotBeNullOrEmpty();
         settings[PortalSettingKeys.ContactHours].Should().NotBeNullOrEmpty("the contact page shows its hours row");
         settings[PortalSettingKeys.StatsClients].Should().NotBeNullOrEmpty("the hero shows its figures");
@@ -279,5 +280,29 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory) : IClas
 
         (await db.Currencies.CountAsync()).Should().Be(currenciesBefore);
         (await db.Domains.CountAsync()).Should().Be(domainsBefore);
+    }
+
+    /// <summary>A configured contact pair replaces the fictional one on the storefront, and a later seed keeps it.</summary>
+    [Fact]
+    public async Task ConfiguredContact_IsWhatThePortalShowsAsync()
+    {
+        var host = DemoTestHost.Enabled(factory).WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("Demo:ContactEmail", "contact@demo.example");
+            builder.UseSetting("Demo:ContactPhone", "+1 555 0199");
+        });
+        await ResetAsync(host);
+
+        using (var scope = host.Services.CreateScope())
+        {
+            // A plain seed over existing rows (what a restart runs) must still write the configured values.
+            await scope.ServiceProvider.GetRequiredService<IDemoDataManager>().SeedAsync(CancellationToken.None);
+        }
+
+        using var readScope = host.Services.CreateScope();
+        var db = readScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var settings = await db.Settings.ToDictionaryAsync(s => s.Key, s => s.Value);
+        settings[PortalSettingKeys.ContactEmail].Should().Be("contact@demo.example");
+        settings[PortalSettingKeys.ContactPhone].Should().Be("+1 555 0199");
     }
 }

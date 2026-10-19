@@ -134,7 +134,7 @@ internal sealed class DemoDataManager : IDemoDataManager
         await new DemoLogSeeder(_db).SeedAsync(ct);
 
         // After the shared seeder created its empty rows at the top of this method.
-        await new DemoPortalSettingsSeeder(_db).SeedAsync(ct);
+        await new DemoPortalSettingsSeeder(_db, _options.Value).SeedAsync(ct);
 
         // The hook the storefront content (testimonials, partners, projects, FAQs) is filled through.
         await new DemoStorefrontSeeder(_db).SeedAsync(ct);
