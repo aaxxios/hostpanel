@@ -1,6 +1,6 @@
 /**
  * Mount tests for AppTopbar: page title from the route, the notification badge and drawer, the
- * language select, the hamburger event, and the account actions.
+ * language select, the theme select, the hamburger event, and the account actions.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
@@ -8,6 +8,10 @@ import AppTopbar from '@/components/layout/AppTopbar.vue'
 import { stubRoutes } from '../../helpers/routes'
 import { json } from '../../helpers/fetch'
 import { mountView } from '../../helpers/mount'
+import { pickOption, selectText } from '../../helpers/select'
+import { resetThemeDocument, stubSchemeQuery } from '../../helpers/theme'
+import { THEME_STORAGE_KEY } from '@/lib/themeBoot'
+import { AdminTheme } from '@/types/admintheme'
 
 /** Two events of the notification feed. */
 const events = [
@@ -72,5 +76,21 @@ describe('AppTopbar', () => {
     expect(wrapper.find('[data-testid="topbar-locale"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="topbar-settings"]').attributes('href')).toBe('/settings')
     expect(wrapper.find('[data-testid="topbar-sign-out"]').exists()).toBe(true)
+  })
+
+  it('switches the theme from the theme select and remembers it', async () => {
+    resetThemeDocument()
+    stubSchemeQuery(false)
+    const wrapper = await mountBar('/dashboard')
+
+    expect(selectText(wrapper, 'topbar-theme')).toBe('System')
+    await pickOption(wrapper, 'topbar-theme', 'Light')
+
+    expect(selectText(wrapper, 'topbar-theme')).toBe('Light')
+    expect(document.documentElement.classList.contains('light')).toBe(true)
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe(AdminTheme.Light)
+
+    await pickOption(wrapper, 'topbar-theme', 'Dark')
+    expect(document.documentElement.classList.contains('light')).toBe(false)
   })
 })

@@ -2,7 +2,7 @@
 /**
  * Admin top navigation bar.
  *
- * Shows the current page title, the language switch, the notification feed (in a side drawer), the
+ * Shows the current page title, the theme and language switches, the notification feed (in a side drawer), the
  * signed-in account and the sign-out action. On mobile it emits `toggle-sidebar` to open the
  * navigation drawer.
  */
@@ -15,6 +15,8 @@ import { activityEventLink } from '@/lib/activityEventLink'
 import { formatRelativeFromNow } from '@/lib/format'
 import { useActivityStore } from '@/stores/activity'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
+import { AdminTheme } from '@/types/admintheme'
 import type { ActivityEvent } from '@/types/activityevent'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -50,6 +52,28 @@ const auth = useAuthStore()
 
 /** Activity store: the notification feed. */
 const activity = useActivityStore()
+
+/** Theme store: the operator's light/dark/system choice. */
+const theme = useThemeStore()
+
+/** Options of the theme select, one per {@link AdminTheme}. */
+const themeOptions = computed(() => [
+  { value: AdminTheme.Light, label: t('layout.theme.light') },
+  { value: AdminTheme.Dark, label: t('layout.theme.dark') },
+  { value: AdminTheme.System, label: t('layout.theme.system') },
+])
+
+/**
+ * Applies the theme the operator picked, when it is one the panel knows.
+ *
+ * @param value - The value picked in the select.
+ */
+const chooseTheme = (value: string): void => {
+  const chosen = Object.values(AdminTheme).find(known => known === value)
+  if (chosen !== undefined) {
+    theme.setTheme(chosen)
+  }
+}
 
 /** Hamburger glyph. */
 const MENU_MARKUP = '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>'
@@ -179,8 +203,17 @@ onMounted(() => {
       <UiHeading :level="2" variant="card" data-testid="topbar-title">{{ pageTitle }}</UiHeading>
     </UiStack>
 
-    <!-- Right: language + notifications + account -->
+    <!-- Right: theme + language + notifications + account -->
     <UiStack direction="row" align="center" gap="sm">
+      <UiSelect
+        :model-value="theme.choice"
+        :options="themeOptions"
+        :placeholder="t('layout.theme.label')"
+        :aria-label="t('layout.theme.label')"
+        class="w-28"
+        data-testid="topbar-theme"
+        @update:model-value="chooseTheme"
+      />
       <UiSelect
         :model-value="locale"
         :options="localeOptions"
