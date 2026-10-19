@@ -29,7 +29,13 @@ test('clicking a link leaves no focus outline or ring', async ({ page }) => {
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await page.mouse.down()
   await expect(back).toBeFocused()
-  const style = await back.evaluate(el => ({ outline: getComputedStyle(el).outlineStyle, shadow: getComputedStyle(el).boxShadow }))
+  // Tailwind's `outline-none` is `2px solid transparent` (kept for forced-colours mode), so
+  // "no outline" means none or an invisible one, not the style keyword alone.
+  const style = await back.evaluate(el => {
+    const css = getComputedStyle(el)
+    const invisible = css.outlineStyle === 'none' || css.outlineColor === 'rgba(0, 0, 0, 0)' || css.outlineColor === 'transparent'
+    return { outline: invisible ? 'none' : css.outlineStyle, shadow: css.boxShadow }
+  })
   await page.mouse.up()
   expect(style.outline).toBe('none')
   expect(style.shadow).toBe('none')
