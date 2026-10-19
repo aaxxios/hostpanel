@@ -26,15 +26,12 @@
         testid="nova-nav-logo"
         class="flex shrink-0 items-center gap-2.5 text-nova-ink"
       >
-        <!-- Both wordmarks, swapped by the dark: variant — see useBrandLogo for why not one mode-aware src. -->
-        <AppLogo v-if="logoLight" img-class="h-9 w-auto max-w-[120px] object-contain" />
-        <template v-else>
-          <span
-            class="grid h-9 w-9 place-items-center rounded-xl bg-[linear-gradient(135deg,var(--n-brand),var(--n-accent))] text-[17px] font-extrabold text-nova-on-accent"
-            aria-hidden="true"
-          >{{ siteName.charAt(0).toLowerCase() }}</span>
-          <span class="text-lg font-bold tracking-tight">{{ siteName }}</span>
-        </template>
+        <!-- The operator's upload when there is one, otherwise the cube mark and the site name. -->
+        <AppLogoLockup
+          img-class="h-9 w-auto max-w-[120px] object-contain"
+          mark-class="h-9 w-9"
+          name-class="text-lg font-bold tracking-tight"
+        />
       </UiLink>
 
       <!--
@@ -220,6 +217,7 @@
  * `role="dialog"` or hide the rest of the page from assistive technology.
  */
 import type { ComponentPublicInstance } from 'vue'
+import AppLogoLockup from '~/components/AppLogoLockup.vue'
 import NovaCta from '~/templates/nova/sections/NovaCta.vue'
 import { NAV_ITEMS } from '~/templates/nova/content'
 import { useCartStore } from '~/stores/cart'
@@ -255,14 +253,6 @@ const { signInHref } = useAuthMode()
 
 /** Whether the mobile panel is open. */
 const menuOpen = ref(false)
-
-/**
- * Operator-uploaded logo, as `AppLogo` renders it for the current colour mode.
- * Empty renders the built-in mark and wordmark instead.
- */
-const { light: logoLight } = useBrandLogo()
-/** The operator's site name, used for the built-in mark and wordmark. */
-const { name: siteName } = useSiteIdentity()
 
 /** The open panel, searched for focusable entries. */
 const menuRef = ref<HTMLElement | null>(null)

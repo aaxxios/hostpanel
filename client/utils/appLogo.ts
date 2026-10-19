@@ -20,6 +20,9 @@ export const STATIC_LOGO_LIGHT = '/logo.svg'
 /** The bundled wordmark for dark backgrounds (light text). */
 export const STATIC_LOGO_DARK = '/logo-dark.svg'
 
+/** The bundled square mark (the cube), drawn beside the site name when no logo is uploaded. */
+export const STATIC_LOGO_MARK = '/favicon.svg'
+
 /** What `AppLogo` renders. */
 export interface AppLogoPlan {
   /** Wordmark URL for light backgrounds; `''` when the surface is always dark. */

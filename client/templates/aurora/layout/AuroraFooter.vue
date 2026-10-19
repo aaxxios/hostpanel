@@ -7,9 +7,8 @@
     <UiContainer>
       <UiGrid cols="auto" gap="xl">
         <UiStack gap="none" class="min-w-0">
-          <UiStack direction="row" align="center" gap="sm">
-            <UiTile class="bg-brand font-extrabold text-on-tint" aria-hidden="true">i</UiTile>
-            <UiText as="span" size="lg" weight="bold" tone="inherit" class="text-tx">{{ siteName }}</UiText>
+          <UiStack direction="row" align="center" gap="sm" class="text-tx">
+            <AppLogoLockup img-class="h-[34px] w-auto max-w-[140px]" mark-class="h-9 w-9" name-class="text-lg font-bold" />
           </UiStack>
           <UiText tone="inherit" class="mt-4 max-w-[300px] leading-relaxed text-mut2">
             {{ t('aurora.footer.tagline') }}
@@ -125,6 +124,7 @@
  * shows a subscribe button that goes nowhere. Live chat is not duplicated here —
  * the layout already mounts UiFloatingActions.
  */
+import AppLogoLockup from '~/components/AppLogoLockup.vue'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { TELEGRAM_LINK_BASE } from '~/constants/contactChannel'
 
@@ -133,7 +133,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 /** Reads an operator setting by its key. */
 const { get } = usePortalSettings()
-/** The operator's site name, shown beside the mark and in the copyright line. */
+/** The operator's site name, shown in the copyright line. */
 const { name: siteName } = useSiteIdentity()
 
 /** Subscribe endpoint of the newsletter provider; empty hides the block. */

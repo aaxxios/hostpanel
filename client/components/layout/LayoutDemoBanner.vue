@@ -1,11 +1,24 @@
 <template>
-  <UiAlert v-if="demo.enabled" variant="info" class="rounded-none border-x-0 border-t-0" data-testid="demo-banner">
-    <UiStack direction="row" gap="sm" wrap>
-      <UiBadge variant="primary" data-testid="demo-banner-label">{{ $t('demo.label') }}</UiBadge>
-      <UiText v-if="resetText" as="span" size="sm" data-testid="demo-banner-reset">{{ resetText }}</UiText>
-      <UiText as="span" size="sm" tone="muted" data-testid="demo-banner-note">{{ $t('demo.note') }}</UiText>
-    </UiStack>
-  </UiAlert>
+  <!--
+    A full-width band whose content sits in the same UiContainer as the header, so the pill and
+    the text line up with the logo instead of starting at the viewport edge.
+  -->
+  <UiStack
+    v-if="demo.enabled"
+    gap="none"
+    role="status"
+    class="w-full border-b py-2"
+    :class="tone.wrap"
+    data-testid="demo-banner"
+  >
+    <UiContainer data-testid="demo-banner-container">
+      <UiStack direction="row" align="center" gap="none" wrap class="min-w-0 gap-x-3 gap-y-1">
+        <UiBadge variant="primary" class="shrink-0" data-testid="demo-banner-label">{{ $t('demo.label') }}</UiBadge>
+        <UiText v-if="resetText" as="span" size="sm" tone="inherit" :class="tone.title" data-testid="demo-banner-reset">{{ resetText }}</UiText>
+        <UiText as="span" size="sm" tone="inherit" class="min-w-0 break-words" :class="tone.body" data-testid="demo-banner-note">{{ $t('demo.note') }}</UiText>
+      </UiStack>
+    </UiContainer>
+  </UiStack>
 </template>
 
 <script setup lang="ts">
@@ -14,6 +27,11 @@
  * left until the next data reset, and the note that data resets. Renders nothing otherwise.
  */
 import { useDemoStore } from '~/stores/demo'
+import { UiAlertVariant } from '~/utils/ui/enums'
+import { ALERT_TONE_CLASSES } from '~/utils/ui/tones'
+
+/** The info palette the banner shares with UiAlert, applied to a full-width band. */
+const tone = ALERT_TONE_CLASSES[UiAlertVariant.Info]
 
 /** How often the countdown is recomputed, in milliseconds. */
 const TICK_MS = 30_000
