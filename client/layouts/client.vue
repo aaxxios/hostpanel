@@ -11,8 +11,9 @@
       @toggle-sidebar="sidebarOpen = !sidebarOpen"
     />
 
-    <!-- Body row: sidebar + main, fills the remaining height -->
-    <div class="flex flex-1 overflow-hidden">
+    <!-- Body row: sidebar + main, fills the remaining height. Positioned, so the mobile drawer and
+         its backdrop cover this row only and leave the banner and top bar (with the X) visible. -->
+    <div class="relative flex flex-1 overflow-hidden">
       <ClientLayoutSidebar
         :items="visibleNavItems"
         :open="sidebarOpen"
@@ -29,7 +30,7 @@
       >
         <div
           v-if="sidebarOpen"
-          class="fixed inset-0 z-10 bg-black/50 lg:hidden"
+          class="absolute inset-0 z-10 bg-black/50 lg:hidden"
           data-testid="client-sidebar-backdrop"
           @click="sidebarOpen = false"
         />
