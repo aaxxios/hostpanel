@@ -39,7 +39,7 @@
     },
     "contactEmail": {
       "label": "Կոնտակտային email",
-      "hint": "support@example.com"
+      "hint": "support{'@'}example.com"
     },
     "contactPhone": {
       "label": "Կոնտակտային հեռախոս",
@@ -51,7 +51,7 @@
     },
     "contactTelegram": {
       "label": "Telegram-ի անունը",
-      "hint": "@example"
+      "hint": "{'@'}example"
     },
     "contactAddress": {
       "label": "Հասցե",

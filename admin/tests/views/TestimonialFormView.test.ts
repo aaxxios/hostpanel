@@ -92,7 +92,7 @@ describe('TestimonialFormView', () => {
     await vi.waitFor(() => {
       expect(requestsOf(mock)).toContain('PUT /admin/testimonials/3')
     })
-    expect(bodyOf(mock, 'PUT').translations).toEqual({ en: { quote: 'Great' }, ru: { quote: 'Отлично' } })
+    expect(bodyOf(mock, 'PUT').translations).toEqual({ en: { role: 'CTO', quote: 'Great' }, ru: { role: '', quote: 'Отлично' } })
   })
 
   it('says when the testimonial being edited does not exist', async () => {

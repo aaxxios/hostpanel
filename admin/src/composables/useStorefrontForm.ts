@@ -50,7 +50,7 @@ export interface StorefrontForm {
   saveError: Ref<string | null>
   /** True when the form has edits not yet saved. */
   isDirty: Ref<boolean>
-  /** Saves the form and returns to the list on success. */
+  /** Saves the form and, on success, resolves once the list is shown again. */
   save: () => Promise<void>
   /** Returns to the list; the unsaved-changes guard asks first when needed. */
   cancel: () => void
@@ -123,7 +123,7 @@ export const useStorefrontForm = <TItem extends StorefrontEntity, TPayload>(
     saving.value = false
     if (saved) {
       isDirty.value = false
-      void router.push(options.listPath)
+      await router.push(options.listPath)
     } else {
       saveError.value = options.store.actionError
     }
