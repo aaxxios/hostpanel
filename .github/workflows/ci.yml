@@ -131,4 +131,8 @@ jobs:
           cache: npm
           cache-dependency-path: admin/package-lock.json
       - run: npm ci
+      # The same lint the GitLab admin:test job runs; build alone never lints, so a lint-only
+      # failure used to reach main unnoticed.
+      - run: npm run lint:ci
+      - run: npm run lint:i18n
       - run: npm run build
