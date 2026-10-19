@@ -229,6 +229,8 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory) : IClas
         settings[PortalSettingKeys.SiteName].Should().Be("Hostpanel Demo");
         settings[PortalSettingKeys.ContactEmail].Should().Be("demo@hostpanel-demo.example");
         settings[PortalSettingKeys.SiteTagline].Should().NotBeNullOrEmpty();
+        settings[PortalSettingKeys.BrandPrimary].Should().BeEmpty("the demo shows the template's own palette");
+        settings[PortalSettingKeys.BrandAccent].Should().BeEmpty("the demo shows the template's own palette");
 
         var slides = await db.Slides.Include(s => s.Translations).ToListAsync();
         slides.Should().HaveCountGreaterThanOrEqualTo(5);
