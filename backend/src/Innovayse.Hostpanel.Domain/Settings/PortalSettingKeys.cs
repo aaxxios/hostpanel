@@ -189,6 +189,15 @@ public static class PortalSettingKeys
     /// <summary>Whether the free-migration badge is shown: <c>true</c> or <c>false</c>.</summary>
     public const string MigrationFree = "portal.migration.free";
 
+    /// <summary>The company story shown on the About page, in English and for any language without its own text.</summary>
+    public const string AboutText = "portal.about.text";
+
+    /// <summary>The company story for Russian visitors.</summary>
+    public const string AboutTextRu = "portal.about.text.ru";
+
+    /// <summary>The company story for Armenian visitors.</summary>
+    public const string AboutTextHy = "portal.about.text.hy";
+
     /// <summary>The template names the storefront can render. Mirrors <c>client/templates/types.ts</c>.</summary>
     public static readonly IReadOnlySet<string> TemplateNames =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "aurora", "nova", "classic" };
@@ -338,6 +347,9 @@ public static class PortalSettingKeys
         (FeaturesFirewall,    "",       "Show the firewall claim on the nova template: true or false. Empty hides it."),
         (FeaturesMalware,     "",       "Show the malware-scanning claim on the nova template: true or false. Empty hides it."),
         (MigrationFree,       "",       "Show the free-migration badge on the nova template: true or false. Empty hides it."),
+        (AboutText,           "",       "Company story on the About page; a blank line starts a new paragraph. Empty hides the page."),
+        (AboutTextRu,         "",       "Company story for Russian visitors. Empty uses the default text."),
+        (AboutTextHy,         "",       "Company story for Armenian visitors. Empty uses the default text."),
     ];
 
     /// <summary>

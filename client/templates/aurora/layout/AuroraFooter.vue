@@ -187,9 +187,9 @@ const emailInvalid = computed(() =>
 const columns = computed(() => [
   {
     title: t('aurora.footer.company'),
-    // No /about route exists in this portal — the company link points at contact.
+    // /about tells the operator's story, or sends the visitor on to contact when none is set.
     links: [
-      { label: t('aurora.footer.about'), to: localePath('/contact') },
+      { label: t('aurora.footer.about'), to: localePath('/about') },
       { label: t('aurora.footer.blog'), to: localePath('/knowledgebase') },
       { label: t('aurora.footer.contact'), to: localePath('/contact') },
     ],

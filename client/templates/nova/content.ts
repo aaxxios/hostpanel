@@ -266,8 +266,8 @@ export interface FooterColumn {
 /**
  * Footer columns.
  *
- * Only routes this portal has. There is no `/about`, so the company column
- * points at contact, the same call aurora's footer made for the same reason.
+ * Only routes this portal has. `/about` tells the operator's story, or sends the
+ * visitor on to contact when none is set, the same link aurora's footer uses.
  */
 export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   {
@@ -300,7 +300,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     key: 'company',
     titleKey: 'nova.footer.company',
     links: [
-      { key: 'about', labelKey: 'nova.footer.about', to: '/contact' },
+      { key: 'about', labelKey: 'nova.footer.about', to: '/about' },
       { key: 'contact', labelKey: 'nova.footer.contact', to: '/contact' },
       { key: 'announcements', labelKey: 'nova.footer.announcements', to: '/announcements' },
     ],

@@ -11,6 +11,9 @@ import { PUBLIC_PORTAL_SETTING_KEYS } from '~/constants/publicPortalSettingKeys'
 
 /** The backend's `PortalSettingKeys.Public` set, copied by hand from `PortalSettingKeys.cs`. */
 const BACKEND_PUBLIC_KEYS: readonly string[] = [
+  'portal.about.text',
+  'portal.about.text.hy',
+  'portal.about.text.ru',
   'portal.analytics.gtm_id',
   'portal.apps.account',
   'portal.apps.calendar',
