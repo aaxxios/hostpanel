@@ -34,3 +34,39 @@ describe('aurora tokens', () => {
     expect(light).toContain('--brand-on-tint: 255 255 255')
   })
 })
+
+/** The Tailwind configuration source, where the primary ramp's fallback literals live. */
+const tailwind = readFileSync(resolve(__dirname, '../../../../tailwind.config.ts'), 'utf8')
+
+/**
+ * Reads the fallback literal of a brand variable.
+ *
+ * @param source - The stylesheet or configuration text.
+ * @param name - The variable name without its leading dashes.
+ * @returns The first `r g b` fallback written for it, or an empty string.
+ */
+const fallbackOf = (source: string, name: string): string =>
+  new RegExp(`--${name},\s*(\d+ \d+ \d+)`).exec(source)?.[1] ?? ''
+
+describe('aurora fallbacks agree with the Tailwind ramp', () => {
+  it.each(['brand-primary-500', 'brand-primary-600', 'brand-accent-700'])('uses one literal for %s', (name) => {
+    const expected = fallbackOf(tailwind, name)
+
+    expect(expected).not.toBe('')
+    expect(fallbackOf(css, name)).toBe(expected)
+  })
+
+  it('keeps white on primary-500 and primary-600 text above 4.5:1 by fallback', () => {
+    /** Relative luminance of an `r g b` string. */
+    const lum = (rgb: string): number => {
+      const [r = 0, g = 0, b = 0] = rgb.split(' ').map((v) => {
+        const c = Number(v) / 255
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+      })
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    for (const name of ['brand-primary-500', 'brand-primary-600', 'brand-accent-700']) {
+      expect(1.05 / (lum(fallbackOf(tailwind, name)) + 0.05)).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+})

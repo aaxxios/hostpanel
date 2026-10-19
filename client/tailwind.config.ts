@@ -45,11 +45,15 @@ export default <Partial<Config>>{
           200: 'rgb(var(--brand-primary-200, 186 230 253) / <alpha-value>)',
           300: 'rgb(var(--brand-primary-300, 125 211 252) / <alpha-value>)',
           400: 'rgb(var(--brand-primary-400, 56 189 248) / <alpha-value>)',
-          500: 'rgb(var(--brand-primary-500, 14 165 233) / <alpha-value>)',
-          600: 'rgb(var(--brand-primary-600, 2 132 199) / <alpha-value>)',
-          700: 'rgb(var(--brand-primary-700, 3 105 161) / <alpha-value>)',
-          800: 'rgb(var(--brand-primary-800, 7 89 133) / <alpha-value>)',
-          900: 'rgb(var(--brand-primary-900, 12 74 110) / <alpha-value>)',
+          // 500 and up are the contrast-safe fallbacks: white on 500 is 4.9:1, and 600 / 700 as
+          // text on white are 5.9:1 / 7.6:1 (the sky ramp's own 500 and 600 were 2.8:1 and 4.1:1).
+          // aurora.css repeats the 500 and 600 literals; tests/assets/css/templates/aurora.test.ts
+          // fails when the two drift.
+          500: 'rgb(var(--brand-primary-500, 2 119 182) / <alpha-value>)',
+          600: 'rgb(var(--brand-primary-600, 3 105 161) / <alpha-value>)',
+          700: 'rgb(var(--brand-primary-700, 7 89 133) / <alpha-value>)',
+          800: 'rgb(var(--brand-primary-800, 12 74 110) / <alpha-value>)',
+          900: 'rgb(var(--brand-primary-900, 10 62 94) / <alpha-value>)',
           950: 'rgb(var(--brand-primary-950, 8 47 73) / <alpha-value>)',
         },
         // Text on a filled primary (buttons in classic and the shared components) and on
@@ -170,7 +174,7 @@ export default <Partial<Config>>{
         'glow-telegram': '0 4px 20px rgba(0, 136, 204, 0.5)',
         'glow-chat': '0 4px 24px rgba(6, 182, 212, 0.5)',
         // Status dots follow the operator's brand colours (fallback: today's literals).
-        'dot-primary': '0 0 10px rgb(var(--brand-primary-500, 14 165 233) / 0.5)',
+        'dot-primary': '0 0 10px rgb(var(--brand-primary-500, 2 119 182) / 0.5)',
         'dot-secondary': '0 0 10px rgb(var(--brand-accent-500, 139 92 246) / 0.5)',
         'dot-cyan': '0 0 10px rgb(6 182 212 / 0.5)',
         // Cyan halos around featured classic-template panels, smallest to widest.
