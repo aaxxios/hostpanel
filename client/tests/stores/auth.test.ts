@@ -99,6 +99,16 @@ describe('useAuthStore.signIn', () => {
     expect(store.user).toMatchObject({ id: 1 })
   })
 
+  it('does not store the { success: true } acknowledgement as the account, so the profile is fetched later', async () => {
+    loginMock.mockResolvedValue({ success: true })
+    const store = useAuthStore()
+
+    const outcome = await store.signIn('ada@example.com', 'pw')
+
+    expect(outcome).toBe(SignInOutcome.SignedIn)
+    expect(store.user).toBeNull()
+  })
+
   it('keeps the API sentence as error and reports Failed when the credentials are refused', async () => {
     loginMock.mockRejectedValue({ data: { detail: 'Wrong email or password.' } })
     const store = useAuthStore()

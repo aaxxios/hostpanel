@@ -9,14 +9,19 @@ import { ref } from 'vue'
 import { Permission, usePermissions } from '~/composables/usePermissions'
 
 /**
- * Stubs the auth store with a user holding the given permissions.
+ * Stubs the auth and client stores: the client store holds the user, the auth store holds
+ * `authPermissions` (nobody by default).
  *
- * @param permissions The user's permission integer; `null` stands for nobody signed in.
+ * @param permissions The client store user's permission integer; `null` stands for nobody loaded.
+ * @param authPermissions The auth store user's permission integer; `null` stands for nobody.
  */
-const stubUser = (permissions: number | null): void => {
-  /** The signed-in user the store exposes. */
+const stubUser = (permissions: number | null, authPermissions: number | null = null): void => {
+  /** The user the client store exposes. */
   const user = ref(permissions === null ? null : { permissions })
-  vi.stubGlobal('useAuthStore', () => ({ user }))
+  /** The user the auth store exposes. */
+  const authUser = ref(authPermissions === null ? null : { permissions: authPermissions })
+  vi.stubGlobal('useAuthStore', () => ({ user: authUser }))
+  vi.stubGlobal('useClientStore', () => ({ user }))
   vi.stubGlobal('storeToRefs', (store: unknown) => store)
 }
 
@@ -75,5 +80,17 @@ describe('usePermissions', () => {
 
     expect(hasAllPermissions(Permission.ViewDomains)).toBe(true)
     expect(hasAllPermissions(Permission.ViewDomains | Permission.ViewEmails)).toBe(false)
+  })
+
+  it('reads the client store even when the auth store never loaded its user', () => {
+    stubUser(Permission.ViewDomains, null)
+
+    expect(usePermissions().hasPermission(Permission.ViewDomains)).toBe(true)
+  })
+
+  it('falls back to the auth store user while the client store has none', () => {
+    stubUser(null, Permission.ViewPayInvoices)
+
+    expect(usePermissions().hasPermission(Permission.ViewPayInvoices)).toBe(true)
   })
 })

@@ -18,9 +18,8 @@ import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { activityEventLink } from '@/lib/activityEventLink'
 import { formatRelativeFromNow } from '@/lib/format'
-import { Icon } from '@/lib/icons'
+import { ACTIVITY_EVENT_LOOK } from '@/lib/activityEventLook'
 import { useActivityStore } from '@/stores/activity'
-import { ActivityEventType } from '@/types/activityevent'
 
 const { t, locale } = useI18n()
 
@@ -29,13 +28,6 @@ const activity = useActivityStore()
 
 /** How many events the full page asks for (the bell previews fewer). */
 const FEED_LIMIT = 50
-
-/** Icon markup and colour class per event type, so the list reads at a glance. */
-const EVENT_LOOK: Record<ActivityEventType, { icon: string; color: string }> = {
-  [ActivityEventType.ClientRegistered]: { icon: Icon.Users, color: 'text-status-green' },
-  [ActivityEventType.InvoiceOverdue]: { icon: Icon.Alert, color: 'text-status-red' },
-  [ActivityEventType.DomainExpiring]: { icon: Icon.Globe, color: 'text-status-yellow' },
-}
 
 onMounted(() => activity.fetchActivity(FEED_LIMIT))
 </script>
@@ -66,7 +58,7 @@ onMounted(() => activity.fetchActivity(FEED_LIMIT))
         class="flex items-start gap-3 px-4 py-3.5 border-b border-border last:border-0 hover:bg-surface-hover transition-colors"
         :data-testid="`notification-${index}`"
       >
-        <UiIcon :markup="EVENT_LOOK[event.type].icon" size="sm" :class="EVENT_LOOK[event.type].color" />
+        <UiIcon :markup="ACTIVITY_EVENT_LOOK[event.type].icon" size="sm" :class="ACTIVITY_EVENT_LOOK[event.type].color" />
         <UiStack gap="xs">
           <UiText>{{ event.message }}</UiText>
           <UiText tone="muted" size="xs">{{ formatRelativeFromNow(event.occurredAt, locale) }}</UiText>

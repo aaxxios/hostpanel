@@ -1,6 +1,8 @@
 {
   "title": "Dashboard",
   "subtitle": "Welcome back — here's what's happening",
+  "recentActivity": "Recent activity",
+  "quickLinks": "Quick links",
   "live": "Live",
   "loadingMetrics": "Loading metrics…",
   "stats": {

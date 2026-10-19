@@ -5,7 +5,8 @@
  * @module tests/components/client/layout/Sidebar.test
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount } from '@vue/test-utils'
 import { Globe, Server } from 'lucide-vue-next'
 import { mountClient } from '~/tests/helpers/mountClient'
 import Sidebar from '~/components/client/layout/Sidebar.vue'
@@ -24,6 +25,9 @@ const ITEMS = [
 const routeAt = (path: string): void => {
   vi.stubGlobal('useRoute', () => ({ params: {}, query: {}, path, fullPath: path, meta: {} }))
 }
+
+// Unmounting releases the drawer's scroll lock and key listener between tests.
+enableAutoUnmount(afterEach)
 
 describe('ClientLayoutSidebar', () => {
   it('renders one link per item', () => {
@@ -58,12 +62,12 @@ describe('ClientLayoutSidebar', () => {
     expect(closed.find('[data-testid="client-sidebar"]').classes()).toContain('-translate-x-full')
   })
 
-  it('emits close when a link is followed and when the close button is pressed', async () => {
+  it('emits close when a link is followed and when Escape is pressed while open', async () => {
     routeAt('/')
     const wrapper = mountClient(Sidebar, { props: { items: ITEMS, open: true } })
 
     await wrapper.find('[data-testid="nav-client-services"]').trigger('click')
-    await wrapper.find('[data-testid="client-sidebar-close"]').trigger('click')
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
 
     expect(wrapper.emitted('close')).toHaveLength(2)
   })

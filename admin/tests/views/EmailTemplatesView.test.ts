@@ -14,7 +14,7 @@ afterEach(() => {
 
 describe('EmailTemplatesView', () => {
   it('lists the templates', async () => {
-    stubRoutes({ 'GET /api/admin/email-templates': () => json([{ id: 3, name: 'Welcome', subject: 'Hello', body: '' }]) })
+    stubRoutes({ 'GET /api/admin/email-templates': () => json([{ id: 3, slug: 'Welcome', subject: 'Hello', body: '', description: null, isActive: true }]) })
     const wrapper = await mountRoutedSettled(EmailTemplatesView, '/settings/email-templates')
 
     expect(wrapper.get('[data-testid="email-templates-row-3"]').text()).toContain('Welcome')

@@ -79,7 +79,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <UiStack gap="none" class="h-full w-full">
+  <UiStack gap="md" class="h-full w-full">
     <UiStack v-if="store.loading && !store.current" :align="UiAlignItems.Center" data-testid="client-layout-loading">
       <UiSkeleton :lines="2" />
       <UiText :tone="UiTextTone.Secondary">{{ t('clients.clientLayout.loadingClient') }}</UiText>

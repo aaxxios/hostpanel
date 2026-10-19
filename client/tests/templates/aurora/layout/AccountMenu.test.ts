@@ -39,6 +39,25 @@ describe('AccountMenu', () => {
     expect(wrapper.findAll('[role="menuitem"]')).toHaveLength(6)
   })
 
+  it('gives every row an icon and a left-aligned label row, sign out included', async () => {
+    stubAuroraGlobals({ user: USER })
+    const wrapper = mountWithKit(AccountMenu)
+    await wrapper.find('[data-testid="account-menu-trigger"]').trigger('click')
+
+    for (const item of wrapper.findAll('[role="menuitem"]')) {
+      expect(item.find('svg').exists()).toBe(true)
+      expect(item.find('.w-full').exists()).toBe(true)
+    }
+    expect(wrapper.find('[data-testid="account-menu-sign-out"]').classes()).toEqual(expect.arrayContaining(['text-danger', 'hover:bg-acbg']))
+  })
+
+  it('shows the customer initials in the trigger once the profile is known', () => {
+    stubAuroraGlobals({ user: USER })
+    const wrapper = mountWithKit(AccountMenu)
+
+    expect(wrapper.find('[data-testid="account-menu-trigger"]').text()).toBe('AL')
+  })
+
   it('falls back to the generic client-area label before the profile arrives', async () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(AccountMenu)
