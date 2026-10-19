@@ -15,6 +15,7 @@
  */
 
 import { BrandingIconRel } from '~/types/brandingiconrel'
+import type { HeadIconLink } from '~/types/headiconlink'
 
 /** One icon the storefront links, and how it is linked. */
 export interface BrandingIcon {
@@ -140,4 +141,36 @@ export const brandingIcons = (faviconUrl: string): BrandingIcon[] => {
     type: 'image/png',
     sizes: icon.sizes,
   }))
+}
+
+/**
+ * Turns one branding icon into the `<link>` shape `useHead` accepts.
+ *
+ * unhead types links as a union keyed by `rel`, so each `rel` is built in its own branch: an
+ * object whose `rel` is still the whole enum would match none of unhead's members. Empty
+ * `type`/`sizes` are dropped rather than emitted as empty attributes.
+ *
+ * @param icon One icon from {@link brandingIcons}.
+ * @returns The head link for that icon.
+ */
+export const toHeadIconLink = (icon: BrandingIcon): HeadIconLink => {
+  if (icon.rel === BrandingIconRel.MaskIcon) {
+    // Only the built-in silhouette is a mask icon, and it always carries its tint.
+    return { rel: icon.rel, href: icon.href, color: icon.color ?? '' }
+  }
+
+  /** The optional attributes, present only when they hold a value. */
+  const attributes = {
+    href: icon.href,
+    ...(icon.type ? { type: icon.type } : {}),
+    ...(icon.sizes ? { sizes: icon.sizes } : {})
+  }
+
+  // Same body as the favicon return below, but a separate branch: it narrows `rel` to one
+  // value, which is what makes the object match exactly one member of the union.
+  if (icon.rel === BrandingIconRel.AppleTouchIcon) {
+    return { rel: icon.rel, ...attributes }
+  }
+
+  return { rel: icon.rel, ...attributes }
 }
