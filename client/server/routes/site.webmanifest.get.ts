@@ -84,8 +84,8 @@ export default defineEventHandler(async (event) => {
     name: 'Hostpanel',
     short_name: 'Hostpanel',
     icons,
-    theme_color: '#0ea5e9',
-    background_color: '#1e3a5f',
+    theme_color: '#0B0B14',
+    background_color: '#0B0B14',
     display: 'standalone',
   }
 })

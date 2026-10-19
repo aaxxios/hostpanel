@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="logo.svg" alt="HostPanel" height="64">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="logo.svg">
+    <img src="logo.svg" alt="Hostpanel" height="64">
+  </picture>
 </p>
 
 <h1 align="center">HostPanel</h1>

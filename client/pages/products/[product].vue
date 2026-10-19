@@ -48,6 +48,7 @@ import type { ProductPlan } from '~/types/productplan'
 import { formatMoney } from '~/utils/formatMoney'
 import { findProductDetail } from '~/utils/productFamilies'
 import { buildSeoLinks, localizedUrl } from '~/utils/seoLinks'
+import { shareImageMeta } from '~/utils/shareImage'
 
 /** Translation helpers and the active language. */
 const { t, locale } = useI18n()
@@ -217,13 +218,12 @@ watchEffect(() => {
     description: metaDescription,
     ogTitle: fullTitle,
     ogDescription: metaDescription,
-    ogImage: `${baseUrl}/og-image.jpg`,
+    ...shareImageMeta(baseUrl, fullTitle),
     ogType: 'website',
     ogUrl: productCanonical.value,
     twitterCard: 'summary_large_image',
     twitterTitle: fullTitle,
     twitterDescription: metaDescription,
-    twitterImage: `${baseUrl}/og-image.jpg`,
   })
 
   injectSchema([

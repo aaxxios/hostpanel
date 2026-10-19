@@ -69,10 +69,12 @@ describe('AppSidebar', () => {
     expect(wrapper.emitted('navigate')).toHaveLength(1)
   })
 
-  it('falls back to the dark-background logo, since the sidebar is dark', async () => {
+  it('renders the built-in wordmark for each theme', async () => {
     const wrapper = await mountSidebar('/dashboard')
 
-    expect(wrapper.find('img[src="/logo-dark.svg"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="brand-logo-dark"]').attributes('src')).toBe('/logo-dark.svg')
+    expect(wrapper.get('[data-testid="brand-logo-light"]').attributes('src')).toBe('/logo.svg')
+    expect(wrapper.get('[data-testid="brand-logo-dark"]').attributes('alt')).toBe('Hostpanel')
   })
 
   it('offers sign-out', async () => {

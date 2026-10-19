@@ -7,5 +7,7 @@ export enum BrandingIconRel {
   /** A browser tab, shortcut or Android home-screen icon. */
   Icon = 'icon',
   /** The icon iOS puts on a home screen. */
-  AppleTouchIcon = 'apple-touch-icon'
+  AppleTouchIcon = 'apple-touch-icon',
+  /** The single-colour silhouette Safari shows for a pinned tab. */
+  MaskIcon = 'mask-icon'
 }

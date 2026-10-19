@@ -11,11 +11,10 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useBrandingStore } from '@/stores/branding'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
-import UiImage from '@/components/ui/UiImage.vue'
+import BrandLogo from '@/components/layout/BrandLogo.vue'
 import UiLink from '@/components/ui/UiLink.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
@@ -58,23 +57,6 @@ const router = useRouter()
 
 /** Current route, to mark the active item. */
 const route = useRoute()
-
-/**
- * The operator's logo for this dark sidebar, falling back to the built-in mark.
- *
- * The panel used to hardcode /logo.svg, so a white-labelled deployment showed the
- * shipped mark through its whole back office while the storefront showed the
- * operator's. It then read `portal.logo` alone — the *light-background* variant —
- * and drew a logo made for white paper onto this dark panel. The store now picks the
- * dark-background variant first, the way the storefront does in its dark theme.
- */
-const branding = useBrandingStore()
-
-/**
- * Source of the logo image. The built-in fallback is the dark-background mark: `/logo.svg`
- * draws "host" in near-black for white paper, which vanished into this dark panel.
- */
-const logoSrc = computed<string>(() => branding.logoOnDarkUrl || '/logo-dark.svg')
 
 /** Set of expanded parent item routes (keyed by `to`, stable across locales). */
 const expanded = ref<Set<string>>(new Set())
@@ -273,7 +255,8 @@ const isExpanded = (item: NavItem): boolean => {
   <aside class="flex h-full min-h-0 w-[220px] shrink-0 flex-col border-r border-border bg-surface-panel" data-testid="app-sidebar">
     <!-- Logo -->
     <UiStack direction="row" align="center" gap="none" class="border-b border-border px-5 py-[18px]">
-      <UiImage :src="logoSrc" alt="" class="h-7 w-auto" />
+      <!-- The wordmark for the active theme; the operator's upload when there is one. -->
+      <BrandLogo img-class="h-7 w-auto" />
     </UiStack>
 
     <!-- Nav links -->
