@@ -117,4 +117,44 @@ public sealed class DemoServiceRegistrationTests
 
         act.Should().Throw<OptionsValidationException>().WithMessage($"*{missingKey.Split(':')[1]}*");
     }
+
+    /// <summary>The optional contact pair binds from the <c>Demo</c> section (<c>Demo__ContactEmail</c> / <c>Demo__ContactPhone</c> in env).</summary>
+    [Fact]
+    public void WhenEnabled_TheContactPairBinds()
+    {
+        var settings = ValidSettings();
+        settings["Demo:ContactEmail"] = "contact@demo.example";
+        settings["Demo:ContactPhone"] = "+1 555 0199";
+        var (_, provider) = Build(settings);
+
+        var options = provider.GetRequiredService<IOptions<DemoOptions>>().Value;
+
+        options.ContactEmail.Should().Be("contact@demo.example");
+        options.ContactPhone.Should().Be("+1 555 0199");
+    }
+
+    /// <summary>Unset, the contact pair is empty and startup is not refused: the seed keeps its fictional contact.</summary>
+    [Fact]
+    public void WhenEnabled_WithoutTheContactPair_TheOptionsAreValid()
+    {
+        var (_, provider) = Build(ValidSettings());
+
+        var options = provider.GetRequiredService<IOptions<DemoOptions>>().Value;
+
+        options.ContactEmail.Should().BeNull();
+        options.ContactPhone.Should().BeNull();
+    }
+
+    /// <summary>A contact email that is set but is not an address refuses startup by name.</summary>
+    [Fact]
+    public void WhenEnabled_WithAMalformedContactEmail_TheOptionsAreRefused()
+    {
+        var settings = ValidSettings();
+        settings["Demo:ContactEmail"] = "not-an-address";
+        var (_, provider) = Build(settings);
+
+        var act = () => provider.GetRequiredService<IOptions<DemoOptions>>().Value;
+
+        act.Should().Throw<OptionsValidationException>().WithMessage("*ContactEmail*");
+    }
 }

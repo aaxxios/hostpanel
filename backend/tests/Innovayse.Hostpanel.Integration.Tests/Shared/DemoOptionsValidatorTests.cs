@@ -164,4 +164,48 @@ public sealed class DemoOptionsValidatorTests
             .And.Contain(nameof(DemoOptions.AdminPassword))
             .And.Contain(nameof(DemoOptions.ClientPassword));
     }
+
+    /// <summary>The optional contact pair: empty or a real address passes.</summary>
+    /// <param name="email">The configured contact email.</param>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("contact@demo.example")]
+    public void Enabled_WithAnEmptyOrValidContactEmail_IsValid(string? email)
+    {
+        var options = new DemoOptions
+        {
+            Enabled = true,
+            ResetIntervalHours = 6,
+            AdminEmail = "admin@demo.example",
+            AdminPassword = "Admin-Pass-1",
+            ClientEmail = "client@demo.example",
+            ClientPassword = "Client-Pass-1",
+            ContactEmail = email,
+            ContactPhone = "+1 555 0199",
+        };
+
+        _validator.Validate(null, options).Succeeded.Should().BeTrue();
+    }
+
+    /// <summary>A contact email that is set but is not an address is refused by name.</summary>
+    [Fact]
+    public void Enabled_WithAMalformedContactEmail_IsRefused()
+    {
+        var options = new DemoOptions
+        {
+            Enabled = true,
+            ResetIntervalHours = 6,
+            AdminEmail = "admin@demo.example",
+            AdminPassword = "Admin-Pass-1",
+            ClientEmail = "client@demo.example",
+            ClientPassword = "Client-Pass-1",
+            ContactEmail = "not-an-address",
+        };
+
+        var result = _validator.Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().ContainSingle().Which.Should().Contain(nameof(DemoOptions.ContactEmail));
+    }
 }

@@ -116,6 +116,10 @@ services:
       Demo__AdminPassword: ${DEMO_ADMIN_PASSWORD:?DEMO_ADMIN_PASSWORD must be set}
       Demo__ClientEmail: ${DEMO_CLIENT_EMAIL}
       Demo__ClientPassword: ${DEMO_CLIENT_PASSWORD:?DEMO_CLIENT_PASSWORD must be set}
+      # Optional: the contact shown on the storefront; empty keeps the seed's fictional pair. Display only,
+      # mail still goes to the demo's mailhog (Smtp__Host above).
+      Demo__ContactEmail: ${DEMO_CONTACT_EMAIL}
+      Demo__ContactPhone: ${DEMO_CONTACT_PHONE}
     depends_on: !override
       hostpanel-db:
         condition: service_healthy
