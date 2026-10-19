@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>
-/// Gives the storefront's portal settings the demo's identity and a neutral theme. The shared portal-settings
+/// Gives the storefront's portal settings the demo's identity and the template's own palette. The shared portal-settings
 /// seeder only creates empty rows (an operator's choices must survive a restart), so this runs after it and
 /// writes the demo's values through the entity's update method. The demo is reset on a schedule, so its values
 /// are meant to be restored, unlike a real deployment's.
@@ -21,8 +21,10 @@ internal sealed class DemoPortalSettingsSeeder
         (PortalSettingKeys.ContactPhone, "+1 555 0100"),
         (PortalSettingKeys.ThemeDefault, "light"),
         (PortalSettingKeys.ThemeUserToggle, "true"),
-        (PortalSettingKeys.BrandPrimary, "#475569"),
-        (PortalSettingKeys.BrandAccent, "#64748b"),
+        // Empty brand colours make the brand-tokens plugin emit no colour scale, so the template renders its own
+        // palette; a seeded colour would replace the gradient on every primary button with that colour.
+        (PortalSettingKeys.BrandPrimary, string.Empty),
+        (PortalSettingKeys.BrandAccent, string.Empty),
         (PortalSettingKeys.BrandFontHeading, "inter"),
         (PortalSettingKeys.BrandFontBody, "inter"),
     ];
