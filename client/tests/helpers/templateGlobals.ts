@@ -40,7 +40,7 @@ export const stubTemplateGlobals = (options: TemplateGlobalsOptions = {}): void 
   vi.stubGlobal('useLocalePath', () => (path: string) => path)
   vi.stubGlobal('useSwitchLocalePath', () => (code: string) => `/${code}`)
   vi.stubGlobal('usePortalSettings', () => ({ get: (key: string) => settings[key] ?? '' }))
-  vi.stubGlobal('useAppColorMode', () => ({ isDark: ref(true), userToggleEnabled: ref(true), toggle: vi.fn() }))
+  vi.stubGlobal('useAppColorMode', () => ({ isDark: ref(true), applied: ref('dark'), userToggleEnabled: ref(true), toggle: vi.fn() }))
   vi.stubGlobal('useAuthMode', () => ({ signInHref: ref('/client/login') }))
   vi.stubGlobal('useBrandLogo', () => ({
     light: ref(options.logo ?? ''),
