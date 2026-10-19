@@ -207,4 +207,21 @@ describe('client layout', () => {
     expect(reinit).toHaveBeenCalled()
     Reflect.deleteProperty(window, 'InnoWidget')
   })
+
+  it('stops looking for the platform widget once the layout is gone', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = await mountLayout()
+      wrapper.unmount()
+      const reinit = vi.fn()
+      Object.assign(window, { InnoWidget: { reinit } })
+
+      vi.runAllTimers()
+
+      expect(reinit).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+      Reflect.deleteProperty(window, 'InnoWidget')
+    }
+  })
 })
