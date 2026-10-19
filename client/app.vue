@@ -10,7 +10,7 @@
  * metas. Third-party scripts live in plugins, driven by the operator's settings.
  */
 import { PortalSettingKey } from '~/constants/portalSettingKey'
-import { BrandingIconRel } from '~/types/brandingiconrel'
+import type { HeadIconLink } from '~/types/headiconlink'
 import { resolveLanguage } from '~/utils/transportLanguage'
 
 /** Active UI locale; drives the `lang` attribute on `<html>`. */
@@ -48,23 +48,16 @@ const faviconUrl = computed(() => getPortalSetting(PortalSettingKey.Favicon, 'po
  * Kept as a `computed` rather than an inline arrow so the dependency on the settings state
  * is explicit; both forms work with `useHead`.
  */
-const faviconLinks = computed(() => brandingIcons(faviconUrl.value).map((icon) => {
-  const attributes = {
-    href: icon.href,
-    ...(icon.type ? { type: icon.type } : {}),
-    ...(icon.sizes ? { sizes: icon.sizes } : {}),
-    ...(icon.color ? { color: icon.color } : {})
-  }
-  // unhead types a link as a union keyed on its literal `rel`, so each relation is built as its
-  // own literal-typed object; a bare string-enum member (or a union of both) is not assignable.
-  if (icon.rel === BrandingIconRel.AppleTouchIcon) {
-    return { rel: 'apple-touch-icon' as const, ...attributes }
-  }
-  if (icon.rel === BrandingIconRel.MaskIcon) {
-    return { rel: 'mask-icon' as const, ...attributes }
-  }
-  return { rel: 'icon' as const, ...attributes }
-}))
+const faviconLinks = computed((): HeadIconLink[] => brandingIcons(faviconUrl.value).map((icon) => ({
+  // unhead's link `rel` takes any string; widening the enum to `string` keeps every element the
+  // same type, so the array is not inferred as a union of literal-`rel` objects that unhead's
+  // discriminated link type rejects.
+  rel: String(icon.rel),
+  href: icon.href,
+  ...(icon.type ? { type: icon.type } : {}),
+  ...(icon.sizes ? { sizes: icon.sizes } : {}),
+  ...(icon.color ? { color: icon.color } : {})
+})))
 
 /**
  * The operator's site name and tagline. `og:site_name` and `author` used to be static
