@@ -114,4 +114,10 @@ export enum PortalSettingKey {
   FeaturesMalware = 'portal.features.malware',
   /** Free migration offer switch. */
   MigrationFree = 'portal.migration.free',
+  /** Company story on the About page, default language. */
+  AboutText = 'portal.about.text',
+  /** Company story for Russian visitors. */
+  AboutTextRu = 'portal.about.text.ru',
+  /** Company story for Armenian visitors. */
+  AboutTextHy = 'portal.about.text.hy',
 }

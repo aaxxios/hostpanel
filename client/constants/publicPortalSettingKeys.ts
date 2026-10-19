@@ -66,5 +66,8 @@ export const PUBLIC_PORTAL_SETTING_KEYS: readonly PortalSettingKey[] = [
   PortalSettingKey.FeaturesCdn,
   PortalSettingKey.FeaturesFirewall,
   PortalSettingKey.FeaturesMalware,
-  PortalSettingKey.MigrationFree
+  PortalSettingKey.MigrationFree,
+  PortalSettingKey.AboutText,
+  PortalSettingKey.AboutTextRu,
+  PortalSettingKey.AboutTextHy
 ]

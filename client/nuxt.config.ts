@@ -229,6 +229,10 @@ export default defineNuxtConfig({
       portalStatsRegions: process.env.NUXT_PUBLIC_PORTAL_STATS_REGIONS || '',
       portalHeroBadge: process.env.NUXT_PUBLIC_PORTAL_HERO_BADGE || '',
       portalLegalTaxId: process.env.NUXT_PUBLIC_PORTAL_LEGAL_TAX_ID || '',
+      // Company story on the About page, per language with the first as the fallback; empty sends visitors to contact.
+      portalAboutText: process.env.NUXT_PUBLIC_PORTAL_ABOUT_TEXT || '',
+      portalAboutTextRu: process.env.NUXT_PUBLIC_PORTAL_ABOUT_TEXT_RU || '',
+      portalAboutTextHy: process.env.NUXT_PUBLIC_PORTAL_ABOUT_TEXT_HY || '',
     }
   },
 
@@ -409,4 +413,4 @@ export default defineNuxtConfig({
       ]
     }
   }
-})
+})

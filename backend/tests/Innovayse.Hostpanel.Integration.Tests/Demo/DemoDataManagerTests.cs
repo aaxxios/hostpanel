@@ -223,12 +223,19 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory) : IClas
         (await db.Invitations.CountAsync(i => i.ClientId == demoClient.Id && i.AcceptedAt == null)).Should().Be(2);
         (await db.ClientServices.CountAsync(s => s.ClientId == demoClient.Id)).Should().BeGreaterThan(0);
         (await db.Domains.CountAsync(d => d.ClientId == demoClient.Id)).Should().BeGreaterThan(0);
+
+        // The client area lists mail by the account's sign-in address, so the demo client's history is not empty.
+        (await db.EmailLogs.CountAsync(l => l.To == DemoTestHost.ClientEmail)).Should().BeGreaterThan(0);
         (await db.SubjectRoles.Select(r => r.Role).Distinct().ToListAsync()).Should().Contain(["Admin", "Reseller", "Client"]);
 
         var settings = await db.Settings.ToDictionaryAsync(s => s.Key, s => s.Value);
         settings[PortalSettingKeys.SiteName].Should().Be("Hostpanel Demo");
         settings[PortalSettingKeys.ContactEmail].Should().Be("demo@hostpanel-demo.example");
         settings[PortalSettingKeys.SiteTagline].Should().NotBeNullOrEmpty();
+        settings[PortalSettingKeys.ContactHours].Should().NotBeNullOrEmpty("the contact page shows its hours row");
+        settings[PortalSettingKeys.StatsClients].Should().NotBeNullOrEmpty("the hero shows its figures");
+        new[] { PortalSettingKeys.AboutText, PortalSettingKeys.AboutTextRu, PortalSettingKeys.AboutTextHy }
+            .Should().OnlyContain(k => settings[k].Length > 0, "the About page has a story in every language");
         settings[PortalSettingKeys.BrandPrimary].Should().BeEmpty("the demo shows the template's own palette");
         settings[PortalSettingKeys.BrandAccent].Should().BeEmpty("the demo shows the template's own palette");
 
