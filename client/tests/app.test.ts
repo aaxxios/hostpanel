@@ -8,6 +8,7 @@ import { defineComponent, h, ref, unref } from 'vue'
 import type { Ref } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import App from '~/app.vue'
+import { toHeadIconLink } from '~/utils/brandingIcons'
 
 /** Spy for `useHead`, to read the language and the icon links the app puts on the document. */
 const useHead = vi.fn()
@@ -68,6 +69,8 @@ const stubComposables = (options: { locale?: string, tagline?: string, favicon?:
   vi.stubGlobal('useHead', useHead)
   vi.stubGlobal('useSeoMeta', useSeoMeta)
   vi.stubGlobal('brandingIcons', brandingIcons)
+  // The real mapper, not a spy: the expected links below are what it produces.
+  vi.stubGlobal('toHeadIconLink', toHeadIconLink)
   return { locale, siteName }
 }
 
