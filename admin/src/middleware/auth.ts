@@ -22,18 +22,15 @@ export const authMiddleware = async (
 ): Promise<string | boolean> => {
   const auth = useAuthStore(pinia)
 
-  // Which mode this deployment runs, and whether anyone holds Admin yet. Both are
-  // anonymous, both are needed before /setup can be judged, and both are asked once per
-  // page load rather than per navigation.
-  if (auth.mode === null) {
-    await auth.loadMode()
-  }
-
-  // Whether a session exists is a question only the server can answer in either mode —
-  // the credential is an httpOnly cookie the page cannot read.
-  if (auth.user === null) {
-    await auth.fetchMe()
-  }
+  // Which mode this deployment runs, whether anyone holds Admin yet, and whether a session exists.
+  // The three are independent questions only the server can answer (the session credential is an
+  // httpOnly cookie the page cannot read), so they go out together: asking them one after the other
+  // cost a full round trip each before the first screen could open. All are asked once per page
+  // load rather than per navigation; afterwards the guard reads the store and makes no request.
+  await Promise.all([
+    auth.mode === null ? auth.loadMode() : Promise.resolve(),
+    auth.user === null ? auth.fetchMe() : Promise.resolve(),
+  ])
 
   // The first-run screen. It creates the very first local account, so it is meaningful
   // only while nobody holds Admin and only where this deployment owns its own accounts.

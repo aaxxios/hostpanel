@@ -30,4 +30,24 @@ describe('docker/nginx/admin.conf', () => {
     expect(publicFolders).toContain('integrations')
     expect(existsSync(join(ADMIN_ROOT, 'src', 'views', 'IntegrationsView.vue'))).toBe(true)
   })
+
+  it('compresses the text bundle, also for requests that arrive through the edge proxy', () => {
+    expect(CONFIG).toMatch(/^\s*gzip on;$/m)
+    expect(CONFIG).toMatch(/^\s*gzip_proxied any;$/m)
+    expect(CONFIG).toMatch(/gzip_types[^;]*application\/javascript/)
+  })
+
+  it('lets the browser keep content-hashed assets for good and revalidate the shell', () => {
+    const assets = CONFIG.slice(CONFIG.indexOf('location /assets/'))
+    const shell = CONFIG.slice(CONFIG.indexOf('location = /index.html'))
+
+    expect(assets).toContain('Cache-Control "public, max-age=31536000, immutable"')
+    expect(shell).toContain('Cache-Control "no-cache"')
+  })
+
+  it('answers a missing asset with a 404, never with the HTML shell', () => {
+    const assets = CONFIG.slice(CONFIG.indexOf('location /assets/'), CONFIG.indexOf('}', CONFIG.indexOf('location /assets/')))
+
+    expect(assets).not.toContain('try_files')
+  })
 })

@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RouteRecordRaw } from 'vue-router'
 import router from '@/router'
+import { originalLoader, viewLoader } from '@/lib/lazyView'
 import expected from './routes.snapshot.json'
 
 /** One snapshotted route. */
@@ -53,8 +54,12 @@ const describeRoutes = (routes: readonly RouteRecordRaw[]): RouteSnapshot[] => {
     if (route.redirect !== undefined) {
       entry.redirect = typeof route.redirect === 'function' ? 'function' : String(route.redirect)
     }
-    if ('component' in route && typeof route.component === 'function') {
-      entry.component = basenameOf(route.component as () => unknown)
+    if ('component' in route && route.component) {
+      // A layout is a plain loader; a view is an async component whose loader the registry keeps.
+      const loader = typeof route.component === 'function' ? originalLoader(route.component as () => Promise<unknown>) : viewLoader(route.component)
+      if (loader !== undefined) {
+        entry.component = basenameOf(loader as () => unknown)
+      }
     }
     if (route.children) {
       entry.children = describeRoutes(route.children)

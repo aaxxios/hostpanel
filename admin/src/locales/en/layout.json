@@ -8,6 +8,8 @@
   },
   "menu": "Menu",
   "navigation": "Main navigation",
+  "viewLoadFailed": "This page could not be loaded. Check your connection and try again.",
+  "reload": "Reload",
   "localeLabels": {
     "en": "EN",
     "hy": "ՀՅ",
