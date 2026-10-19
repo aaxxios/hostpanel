@@ -20,7 +20,7 @@ const mountRoot = () =>
   }))
 
 beforeEach(() => {
-  document.head.innerHTML = '<link rel="icon" href="/built-in.svg">'
+  document.head.innerHTML = '<link rel="icon" href="/built-in.svg"><link rel="mask-icon" href="/built-in-mask.svg">'
 })
 
 afterEach(() => {
@@ -38,6 +38,7 @@ describe('useFavicon', () => {
     const links = document.head.querySelectorAll('link[rel~="icon"]')
     expect(links).toHaveLength(1)
     expect(links[0]?.getAttribute('href')).toBe('/custom.png')
+    expect(document.head.querySelector('link[rel="mask-icon"]')).toBeNull()
   })
 
   it('leaves the built-in links alone when no favicon is configured', async () => {

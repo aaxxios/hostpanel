@@ -54,6 +54,13 @@ export const useBrandingStore = defineStore('branding', () => {
    */
   const logoOnDarkUrl = computed(() => logoDarkUrl.value || logoUrl.value)
 
+  /**
+   * The logo to draw on the panel's light surfaces: the light variant when set, else the
+   * dark one, so an operator who uploaded a single logo sees it in both themes. Empty means
+   * "use the built-in wordmark".
+   */
+  const logoOnLightUrl = computed(() => logoUrl.value || logoDarkUrl.value)
+
   /** Operator's favicon URL; empty string means "leave index.html's links alone". */
   const faviconUrl = ref('')
 
@@ -86,5 +93,5 @@ export const useBrandingStore = defineStore('branding', () => {
     faviconUrl.value = rows.find(r => r.key === FAVICON_KEY)?.value?.trim() ?? ''
   }
 
-  return { logoUrl, logoDarkUrl, logoOnDarkUrl, faviconUrl, loaded, load }
+  return { logoUrl, logoDarkUrl, logoOnDarkUrl, logoOnLightUrl, faviconUrl, loaded, load }
 })

@@ -20,6 +20,14 @@ describe('AppLogo', () => {
     expect(wrapper.find('[data-testid="app-logo-dark"]').classes()).toContain('dark:block')
   })
 
+  it('points the light theme at logo.svg and the dark theme at logo-dark.svg by default', () => {
+    const wrapper = mountWithKit(AppLogo)
+
+    expect(wrapper.get('[data-testid="app-logo-light"]').attributes('src')).toContain('/logo.svg')
+    expect(wrapper.get('[data-testid="app-logo-dark"]').attributes('src')).toContain('/logo-dark.svg')
+    expect(wrapper.get('[data-testid="app-logo-dark"]').classes()).toEqual(expect.arrayContaining(['hidden', 'dark:block']))
+  })
+
   it('renders the uploads as plain images swapped by the dark variant', () => {
     stubTemplateGlobals({ logo: '/api/uploads/light.png', logoDark: '/api/uploads/dark.png' })
     const wrapper = mountWithKit(AppLogo)

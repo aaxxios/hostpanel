@@ -32,6 +32,7 @@ const stubRuntime = (locale = 'en', routePath = '/hosting'): void => {
   vi.stubGlobal('useRoute', () => ({ path: routePath }))
   vi.stubGlobal('useSeoMeta', useSeoMeta)
   vi.stubGlobal('useHead', useHead)
+  vi.stubGlobal('useSiteIdentity', () => ({ name: ref('Site') }))
 }
 
 /**
@@ -108,7 +109,14 @@ describe('useSeo', () => {
   it('uses the default share image unless the page supplies one', () => {
     stubRuntime()
     useSeo({})
-    expect(metaSet()).toMatchObject({ ogImage: `${BASE}/og-image.jpg`, twitterImage: `${BASE}/og-image.jpg` })
+    expect(metaSet()).toMatchObject({
+      ogImage: `${BASE}/og-image.jpg`,
+      twitterImage: `${BASE}/og-image.jpg`,
+      ogImageWidth: 1200,
+      ogImageHeight: 630,
+      ogImageType: 'image/jpeg',
+      ogImageAlt: 'Site',
+    })
 
     useSeoMeta.mockClear()
     useSeo({ image: '/img/x.png' })

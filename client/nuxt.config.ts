@@ -363,7 +363,12 @@ export default defineNuxtConfig({
         { property: 'og:type', content: 'website' },
         { property: 'og:title', content: 'Web Hosting, Domains and Servers' },
         { property: 'og:description', content: 'Hosting, domains and servers with online billing and a client portal' },
+        // Fallback only: useSeo() and the product page replace it with an absolute URL built
+        // from the configured site URL, which is not known when this file is built.
         { property: 'og:image', content: '/og-image.jpg' },
+        { property: 'og:image:type', content: 'image/jpeg' },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
         { property: 'og:locale', content: 'en_US' },
         { property: 'og:locale:alternate', content: 'ru_RU' },
         { property: 'og:locale:alternate', content: 'hy_AM' },
@@ -377,7 +382,12 @@ export default defineNuxtConfig({
 
         // Additional SEO
         { name: 'format-detection', content: 'telephone=no' },
-        { name: 'theme-color', content: '#0ea5e9' }
+        // theme-color is NOT here: plugins/color-mode.ts writes it per template and mode.
+
+        // Windows start-screen tile; browserconfig.xml carries the same tile for older Edge.
+        { name: 'msapplication-TileImage', content: '/mstile-150x150.png' },
+        { name: 'msapplication-TileColor', content: '#0B0B14' },
+        { name: 'msapplication-config', content: '/browserconfig.xml' }
       ],
       // The portal header widget's <script> is NOT here: process.env is read at build time,
       // so it would bake the builder's URL into the image. plugins/header-widget.ts adds it

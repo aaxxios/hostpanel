@@ -28,6 +28,16 @@ describe('brandingStore', () => {
     expect(store.logoUrl).toBe('/l.png')
     expect(store.faviconUrl).toBe('/f.ico')
     expect(store.logoOnDarkUrl).toBe('/l.png')
+    expect(store.logoOnLightUrl).toBe('/l.png')
+  })
+
+  it('load uses a lone dark logo on light surfaces too', async () => {
+    stubFetch(json([{ key: 'portal.logo.dark', value: '/d.png' }]))
+    const store = useBrandingStore()
+
+    await store.load()
+    expect(store.logoOnLightUrl).toBe('/d.png')
+    expect(store.logoOnDarkUrl).toBe('/d.png')
   })
 
   it('load prefers the dark logo on dark surfaces', async () => {

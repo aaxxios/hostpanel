@@ -26,6 +26,8 @@ export interface BrandingIcon {
   type: string
   /** `WxH` for the `sizes` attribute; omitted for a link that takes no size. */
   sizes?: string
+  /** Tint for a `mask-icon` silhouette; omitted for every other link. */
+  color?: string
 }
 
 /**
@@ -63,11 +65,11 @@ const UPLOADED_ICON_SET: readonly UploadedIconFile[] = [
 /**
  * The icons a fresh install serves, straight out of `public/`.
  *
- * All eight exist on disk. Until recently only the two favicons did, while `nuxt.config`
+ * All of them exist on disk. Until recently only the two favicons did, while `nuxt.config`
  * still advertised `/apple-touch-icon.png` and the web manifest still listed both
  * `android-chrome-*.png` -- so every install shipped an iOS icon and a PWA install prompt
- * pointing at 404s. The six PNGs were rasterised from `favicon.svg`, which is why they
- * match the mark exactly; regenerate them from it if the mark ever changes.
+ * pointing at 404s. The PNGs are rendered from the brand kit in `docs/brand/` (the mark and
+ * the app tile); regenerate them from it if the mark ever changes.
  *
  * These used to live in `nuxt.config.ts`. They were moved here because two places emitting
  * `<link rel="icon">` is one too many: unhead only dedupes link tags that carry a matching
@@ -77,11 +79,16 @@ const UPLOADED_ICON_SET: readonly UploadedIconFile[] = [
  */
 const BUILT_IN_ICONS: BrandingIcon[] = [
   { rel: BrandingIconRel.Icon, href: '/favicon.ico', type: 'image/x-icon' },
+  // The vector mark, for browsers that render it crisply at any tab size.
+  { rel: BrandingIconRel.Icon, href: '/favicon.svg', type: 'image/svg+xml' },
   { rel: BrandingIconRel.Icon, href: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
   { rel: BrandingIconRel.Icon, href: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+  { rel: BrandingIconRel.Icon, href: '/favicon-96x96.png', type: 'image/png', sizes: '96x96' },
   { rel: BrandingIconRel.AppleTouchIcon, href: '/apple-touch-icon.png', type: 'image/png', sizes: '180x180' },
   { rel: BrandingIconRel.Icon, href: '/icon-192.png', type: 'image/png', sizes: '192x192' },
   { rel: BrandingIconRel.Icon, href: '/icon-512.png', type: 'image/png', sizes: '512x512' },
+  // Built-in only: an upload has no silhouette, so a pinned tab must not keep showing this one.
+  { rel: BrandingIconRel.MaskIcon, href: '/safari-pinned-tab.svg', type: '', color: '#5E8EF3' },
 ]
 
 /**
