@@ -11,8 +11,33 @@ export const REDIRECT_QUERY_PARAM = 'redirect'
 /** Origin used only to resolve a candidate path; never navigated to. */
 const PROBE_ORIGIN = 'http://redirect-probe.invalid'
 
-/** Matches any ASCII control character or backslash, which browsers may normalise into a `/`. */
-const UNSAFE_CHARACTERS = /[\u0000-\u001f\u007f\\]/
+/** First character code above the ASCII control range (everything below it is a control character). */
+const FIRST_PRINTABLE_CODE = 0x20
+
+/** Character code of DEL, the one control character outside the contiguous low range. */
+const DELETE_CODE = 0x7f
+
+/** Character code of the backslash, which browsers may normalise into a `/`. */
+const BACKSLASH_CODE = 0x5c
+
+/**
+ * Tells whether a string holds an ASCII control character or a backslash.
+ *
+ * Done with a char-code loop rather than a pattern, so no control characters appear in a regular
+ * expression.
+ *
+ * @param value - Candidate string.
+ * @returns True when any character is unsafe in a redirect target.
+ */
+const hasUnsafeCharacter = (value: string): boolean => {
+  for (let index = 0; index < value.length; index++) {
+    const code = value.charCodeAt(index)
+    if (code < FIRST_PRINTABLE_CODE || code === DELETE_CODE || code === BACKSLASH_CODE) {
+      return true
+    }
+  }
+  return false
+}
 
 /** Screens a sign-in must never bounce back to, or the visitor would loop. */
 const EXCLUDED_PATHS: readonly string[] = [AppRoute.Login, AppRoute.Setup]
@@ -31,7 +56,7 @@ export const safeRedirectTarget = (value: unknown): string | null => {
   if (typeof value !== 'string') {
     return null
   }
-  if (!value.startsWith('/') || value.startsWith('//') || UNSAFE_CHARACTERS.test(value)) {
+  if (!value.startsWith('/') || value.startsWith('//') || hasUnsafeCharacter(value)) {
     return null
   }
 

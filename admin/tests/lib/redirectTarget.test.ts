@@ -11,6 +11,8 @@ describe('safeRedirectTarget', () => {
     '/clients?page=2&q=a%20b',
     '/billing/invoices#top',
     '/dashboard',
+    '/a b',
+    '/café',
   ])('accepts the in-app path %s', (value) => {
     expect(safeRedirectTarget(value)).toBe(value)
   })
@@ -26,6 +28,9 @@ describe('safeRedirectTarget', () => {
     ['leading backslash', '\\/evil.example'],
     ['tab inside', '/\t/evil.example'],
     ['newline inside', '/a\nb'],
+    ['NUL character', '/a' + String.fromCharCode(0) + 'b'],
+    ['unit separator (0x1f)', '/a' + String.fromCharCode(0x1f) + 'b'],
+    ['DEL character', '/a' + String.fromCharCode(0x7f) + 'b'],
     ['empty', ''],
     ['login screen', '/login'],
     ['login with query', '/login?redirect=%2Fclients'],
