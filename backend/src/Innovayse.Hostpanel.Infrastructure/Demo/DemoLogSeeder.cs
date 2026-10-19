@@ -91,13 +91,23 @@ internal sealed class DemoLogSeeder
 
         if (!await _db.EmailLogs.AnyAsync(ct))
         {
+            // The client area and the admin's client tab find a customer's mail by the account's sign-in address,
+            // so each log line is addressed to that address; a made-up one would leave both lists empty.
+            var userIds = clients.Select(c => c.UserId).ToList();
+            var addresses = await _db.Users
+                .Where(u => userIds.Contains(u.Id) && u.Email != null)
+                .ToDictionaryAsync(u => u.Id, u => u.Email!, ct);
+
             for (var n = 0; n < EmailCount; n++)
             {
                 var client = clients[n % clients.Count];
                 var (subject, body) = Emails[n % Emails.Length];
                 var failed = n % FailureEvery == FailureEvery - 1;
+                var to = addresses.TryGetValue(client.UserId, out var address)
+                    ? address
+                    : $"{DemoSites.LabelOf(client)}@demo.example";
                 _db.EmailLogs.Add(EmailLog.Create(
-                    $"{DemoSites.LabelOf(client)}@demo.example", subject, body, !failed,
+                    to, subject, body, !failed,
                     failed ? "Recipient mailbox unavailable." : null));
             }
         }

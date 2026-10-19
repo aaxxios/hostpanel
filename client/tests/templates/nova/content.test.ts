@@ -26,6 +26,7 @@ const ROUTES = [
   '/domains/transfer',
   '/products',
   '/contact',
+  '/about',
   '/knowledgebase',
   '/faq',
   '/announcements',

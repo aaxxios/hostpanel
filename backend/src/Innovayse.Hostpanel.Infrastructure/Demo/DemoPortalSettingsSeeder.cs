@@ -12,6 +12,27 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// </summary>
 internal sealed class DemoPortalSettingsSeeder
 {
+    /// <summary>The fictional company story shown on the demo's About page, in English.</summary>
+    private const string AboutEn =
+        "Hostpanel Demo is a fictional hosting company that exists only to show what this panel can do.\n\n"
+        + "Its sample customers run shops, studios and small agencies on shared hosting, virtual servers and dedicated machines, "
+        + "and every one of them, like every domain and invoice you see here, is made up.\n\n"
+        + "Explore freely: the data is reset on a schedule, so nothing you change here lasts.";
+
+    /// <summary>The fictional company story in Russian.</summary>
+    private const string AboutRu =
+        "Hostpanel Demo — вымышленная хостинг-компания, которая существует только для того, чтобы показать возможности этой панели.\n\n"
+        + "Её клиенты-примеры ведут магазины, студии и небольшие агентства на виртуальном хостинге, VPS и выделенных серверах, "
+        + "и все они, как и каждый домен и счёт здесь, придуманы.\n\n"
+        + "Исследуйте свободно: данные сбрасываются по расписанию, поэтому ваши изменения не сохраняются.";
+
+    /// <summary>The fictional company story in Armenian.</summary>
+    private const string AboutHy =
+        "Hostpanel Demo-ն հորինված հոսթինգ ընկերություն է, որը գոյություն ունի միայն այս վահանակի հնարավորությունները ցույց տալու համար։\n\n"
+        + "Նրա օրինակային հաճախորդները խանութներ, ստուդիաներ և փոքր գործակալություններ են վարում ընդհանուր հոսթինգի, VPS-ի և նվիրված սերվերների վրա, "
+        + "և նրանք բոլորը, ինչպես այստեղ յուրաքանչյուր դոմեյն և հաշիվ, հորինված են։\n\n"
+        + "Ազատ ուսումնասիրեք․ տվյալները վերականգնվում են ժամանակացույցով, ուստի ձեր փոփոխությունները չեն պահպանվում։";
+
     /// <summary>The values the demo sets, by setting key.</summary>
     private static readonly (string Key, string Value)[] Values =
     [
@@ -27,6 +48,25 @@ internal sealed class DemoPortalSettingsSeeder
         (PortalSettingKeys.BrandAccent, string.Empty),
         (PortalSettingKeys.BrandFontHeading, "inter"),
         (PortalSettingKeys.BrandFontBody, "inter"),
+        // The storefront hides every row whose setting is empty, so the demo fills each one with a fictional value
+        // to show the contact page, the hero figures, the nova claims and the About page complete.
+        (PortalSettingKeys.ContactAddress, "15 Example Street, Northvale 00001"),
+        (PortalSettingKeys.ContactHours, "Mon-Fri 09:00-18:00"),
+        (PortalSettingKeys.ContactTimezone, "UTC"),
+        (PortalSettingKeys.LegalTaxId, "DEMO-000-0000"),
+        (PortalSettingKeys.StatsClients, "1,200+"),
+        (PortalSettingKeys.StatsUptime, "99.9%"),
+        (PortalSettingKeys.StatsRegions, "Europe, North America, Asia"),
+        (PortalSettingKeys.FeaturesBackups, "true"),
+        (PortalSettingKeys.FeaturesStorage, "true"),
+        (PortalSettingKeys.FeaturesCaching, "true"),
+        (PortalSettingKeys.FeaturesCdn, "true"),
+        (PortalSettingKeys.FeaturesFirewall, "true"),
+        (PortalSettingKeys.FeaturesMalware, "true"),
+        (PortalSettingKeys.MigrationFree, "true"),
+        (PortalSettingKeys.AboutText, AboutEn),
+        (PortalSettingKeys.AboutTextRu, AboutRu),
+        (PortalSettingKeys.AboutTextHy, AboutHy),
     ];
 
     /// <summary>The data context the settings are read and saved through.</summary>

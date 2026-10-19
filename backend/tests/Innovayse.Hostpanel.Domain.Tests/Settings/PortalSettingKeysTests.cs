@@ -114,7 +114,7 @@ public class PortalSettingKeysTests
         }
     }
 
-    /// <summary>The social, hours and nova switch keys are seeded empty and public; the switches accept only booleans.</summary>
+    /// <summary>The social, hours, About and nova switch keys are seeded empty and public; the switches accept only booleans.</summary>
     [Fact]
     public void StorefrontExtras_AreSeededEmptyAndPublic()
     {
@@ -133,6 +133,9 @@ public class PortalSettingKeysTests
             PortalSettingKeys.SocialTwitter,
             PortalSettingKeys.ContactHours,
             PortalSettingKeys.ContactTimezone,
+            PortalSettingKeys.AboutText,
+            PortalSettingKeys.AboutTextRu,
+            PortalSettingKeys.AboutTextHy,
             .. switches,
         ];
 
