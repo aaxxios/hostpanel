@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Notifications.Common;
 using Innovayse.Hostpanel.Application.Notifications.Extensions;
@@ -11,10 +12,10 @@ namespace Innovayse.Hostpanel.Application.Notifications.Queries.ListEmailLogs;
 public sealed class ListEmailLogsHandler
 {
     /// <summary>Fewest items a page may hold, however the caller asked.</summary>
-    private const int MinPageSize = 1;
+    private const int MinPageSize = PagingLimits.MinPageSize;
 
     /// <summary>Most items a page may hold, however the caller asked.</summary>
-    private const int MaxPageSize = 100;
+    private const int MaxPageSize = PagingLimits.MaxPageSize;
 
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;

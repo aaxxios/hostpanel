@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest'
 import { UiAlertVariant, UiSize, UiTone } from '~/utils/ui/enums'
 import {
   ALERT_TONE_CLASSES,
+  FOCUS_RING,
+  FOCUS_RING_OFFSET,
   BADGE_TONE_CLASSES,
   BUTTON_SIZE_CLASSES,
   CONTROL_SIZE_CLASSES,
@@ -45,8 +47,9 @@ describe('fieldStateClasses', () => {
     const classes = fieldStateClasses({})
 
     expect(classes).toContain('border-gray-300')
-    expect(classes).toContain('focus:ring-primary-500/50')
+    expect(classes).toContain('focus-visible:ring-primary-500/50')
     expect(classes).not.toContain('opacity-60')
+    expect(classes).not.toMatch(/(^|\s)focus:(ring|border)/)
   })
 
   it('uses the error look', () => {
@@ -72,5 +75,14 @@ describe('fieldStateClasses', () => {
 
     expect(classes).toContain('opacity-60')
     expect(classes).toContain('cursor-not-allowed')
+  })
+})
+
+describe('focus rings', () => {
+  it('draw only on keyboard focus: focus-visible, never a plain focus ring', () => {
+    for (const ring of [FOCUS_RING, FOCUS_RING_OFFSET]) {
+      expect(ring).toContain('focus-visible:ring-2')
+      expect(ring).not.toMatch(/(^|\s)focus:ring/)
+    }
   })
 })

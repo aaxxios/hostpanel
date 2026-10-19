@@ -22,6 +22,7 @@
  * renders and reports what the visitor clicked.
  */
 import { APP_LOCALES } from '~/constants/appLocales'
+import { SCHEMA_ORG_CONTEXT } from '~/constants/schemaOrg'
 import { useCartStore } from '~/stores/cart'
 import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
@@ -66,7 +67,7 @@ const { organizationSchema, injectSchema } = useSchemaOrg()
 injectSchema([
   organizationSchema(),
   {
-    '@context': 'https://schema.org',
+    '@context': SCHEMA_ORG_CONTEXT,
     '@type': 'CollectionPage',
     '@id': `${baseUrl}/domains#domainspage`,
     url: `${baseUrl}/domains`,

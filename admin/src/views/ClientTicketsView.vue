@@ -32,11 +32,10 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
 import { UiTone } from '@/utils/ui/tone'
+import { DEFAULT_PAGE_SIZE, SEARCH_DEBOUNCE_MS } from '@/lib/limits'
+import { ClientSection, clientItemPath, clientTicketNewPath } from '@/lib/routes'
 
 const { t } = useI18n()
-
-/** Debounce before a typed search is sent, in milliseconds. */
-const SEARCH_DEBOUNCE_MS = 300
 
 /** Current route, source of the client id. */
 const route = useRoute()
@@ -51,7 +50,7 @@ const clientId = computed(() => route.params.id as string)
 const page = ref(1)
 
 /** Items per page. */
-const pageSize = ref(20)
+const pageSize = ref(DEFAULT_PAGE_SIZE)
 
 /** Search term for subject filtering. */
 const search = ref('')
@@ -107,7 +106,7 @@ onBeforeUnmount(() => {
     <UiStack direction="row" :justify="UiJustify.Between" :align="UiAlignItems.Center">
       <UiHeading :level="1" variant="card">{{ t('clients.clientTickets.tickets') }}</UiHeading>
       <UiLink
-        :to="`/clients/${clientId}/tickets/new`"
+        :to="clientTicketNewPath(clientId)"
         :variant="UiButtonVariant.Primary"
         data-testid="client-tickets-new"
       >
@@ -181,7 +180,7 @@ onBeforeUnmount(() => {
               <UiTableCell muted>{{ ticket.departmentName ?? '—' }}</UiTableCell>
               <UiTableCell>
                 <UiLink
-                  :to="`/clients/${clientId}/tickets/${ticket.id}`"
+                  :to="clientItemPath(clientId, ClientSection.Tickets, ticket.id)"
                   :variant="UiButtonVariant.Link"
                   :data-testid="`client-tickets-open-${ticket.id}`"
                 >

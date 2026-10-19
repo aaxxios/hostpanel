@@ -1,11 +1,13 @@
 /**
  * Endpoints behind the slides store: homepage slide CRUD and ordering.
  *
- * No state lives here; every function rejects with an `ApiError` carrying the problem+json body.
- * The image upload is in `useUploadApi`.
+ * The transport is the shared storefront endpoint set; this file only gives the slide payload
+ * types and the slide-named functions the store calls. The image upload is in `useUploadApi`.
+ * Every function rejects with an `ApiError` carrying the problem+json body.
  */
 
-import { useApi } from '@/composables/useApi'
+import { useStorefrontApi } from '@/composables/apis/useStorefrontApi'
+import { ApiPath } from '@/lib/apiPaths'
 import type { CreateSlidePayload, Slide, SlideOrderItem, UpdateSlidePayload } from '@/types/slide'
 
 /**
@@ -14,42 +16,7 @@ import type { CreateSlidePayload, Slide, SlideOrderItem, UpdateSlidePayload } fr
  * @returns One typed function per endpoint.
  */
 export const useSlidesApi = () => {
-  const { request } = useApi()
-
-  /**
-   * Lists every slide.
-   *
-   * @returns Every slide with its translations.
-   */
-  const listSlides = (): Promise<Slide[]> => request<Slide[]>('/admin/slides')
-
-  /**
-   * Creates a slide.
-   *
-   * @param payload - Slide data with translations.
-   * @returns The new slide's id.
-   */
-  const createSlide = (payload: CreateSlidePayload): Promise<number> =>
-    request<number>('/admin/slides', { method: 'POST', body: JSON.stringify(payload) })
-
-  /**
-   * Updates a slide.
-   *
-   * @param id - Slide id.
-   * @param payload - Updated slide data.
-   * @returns Nothing; the API answers 204.
-   */
-  const updateSlide = (id: number, payload: UpdateSlidePayload): Promise<void> =>
-    request<void>(`/admin/slides/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
-
-  /**
-   * Deletes a slide.
-   *
-   * @param id - Slide id.
-   * @returns Nothing; the API answers 204.
-   */
-  const deleteSlide = (id: number): Promise<void> =>
-    request<void>(`/admin/slides/${id}`, { method: 'DELETE' })
+  const api = useStorefrontApi<Slide, CreateSlidePayload, UpdateSlidePayload>(ApiPath.AdminSlides)
 
   /**
    * Saves the display order of several slides.
@@ -57,8 +24,13 @@ export const useSlidesApi = () => {
    * @param items - Slide id and new sort order pairs.
    * @returns Nothing; the API answers 204.
    */
-  const updateSlideOrder = (items: SlideOrderItem[]): Promise<void> =>
-    request<void>('/admin/slides/order', { method: 'PUT', body: JSON.stringify({ items }) })
+  const updateSlideOrder = (items: SlideOrderItem[]): Promise<void> => api.reorder(items)
 
-  return { listSlides, createSlide, updateSlide, deleteSlide, updateSlideOrder }
+  return {
+    listSlides: api.list,
+    createSlide: api.create,
+    updateSlide: api.update,
+    deleteSlide: api.remove,
+    updateSlideOrder,
+  }
 }

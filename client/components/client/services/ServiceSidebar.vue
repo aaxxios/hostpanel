@@ -14,12 +14,12 @@
     </UiNavGroup>
 
     <UiNavGroup :title="$t('client.services.sectionActions')" :icon="Zap">
-      <UiNavItem to="/client/tickets/new" :icon="MessageSquare" testid="service-open-ticket">
+      <UiNavItem :to="CLIENT_TICKET_NEW_PATH" :icon="MessageSquare" testid="service-open-ticket">
         {{ $t('client.services.actionOpenTicket') }}
       </UiNavItem>
       <UiNavItem
         v-if="service.status === ServiceStatus.Pending"
-        :to="`/client/services/${serviceId}/setup`"
+        :to="clientServiceSetupPath(serviceId)"
         :icon="Zap"
         tone="warning"
         testid="service-nav-setup"
@@ -32,7 +32,7 @@
       <UiNavItem :icon="Monitor" :loading="ssoLoading" testid="service-link-cpanel" @click="emit('cpanel')">
         {{ $t('client.services.linkCpanel') }}
       </UiNavItem>
-      <UiNavItem :href="`https://${service.serverhostname}:2096`" :icon="Mail" testid="service-link-webmail">
+      <UiNavItem :href="webmailUrl" :icon="Mail" testid="service-link-webmail">
         {{ $t('client.services.linkWebmail') }}
       </UiNavItem>
       <!-- Automatic sign-in failed; the panel's own login form was opened instead. -->
@@ -49,9 +49,11 @@
  */
 import { computed } from 'vue'
 import { KeyRound, LayoutGrid, Link2, Mail, MessageSquare, Monitor, Settings, XCircle, Zap } from 'lucide-vue-next'
+import { CLIENT_TICKET_NEW_PATH, clientServiceSetupPath } from '~/constants/clientRoutes'
 import type { ServiceDetail } from '~/types/servicedetail'
 import { ServiceStatus } from '~/types/servicestatus'
 import { ServiceTab } from '~/types/servicetab'
+import { webmailUrl as buildWebmailUrl } from '~/utils/controlPanel'
 
 /** Translates a key into the active locale. */
 const { t } = useI18n()
@@ -70,7 +72,8 @@ interface Props {
   ssoError: string
 }
 
-defineProps<Props>()
+/** The props, read by the webmail address. */
+const props = defineProps<Props>()
 
 /** Events the component raises. */
 const emit = defineEmits<{
@@ -79,6 +82,9 @@ const emit = defineEmits<{
   /** The reader asked to sign in to the control panel. */
   cpanel: []
 }>()
+
+/** Address of the service's webmail, on its own server. */
+const webmailUrl = computed(() => buildWebmailUrl(props.service.serverhostname))
 
 /** The panels the menu switches between. */
 const tabs = computed(() => [

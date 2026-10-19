@@ -293,7 +293,7 @@ const confirmDelete = async (): Promise<void> => {
                 <UiInput
                   v-model="draftTtl"
                   type="text"
-                  placeholder="3600"
+                  :placeholder="DEFAULT_TTL"
                   data-testid="clients-dns-draft-ttl"
                 />
               </UiTableCell>

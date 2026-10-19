@@ -27,6 +27,12 @@ describe('ServiceCard', () => {
     expect(wrapper.text()).toContain('example.com')
   })
 
+  it('shows the product fallback when the backend sent no product name', () => {
+    const wrapper = mountClient(ServiceCard, { props: { service: service({ name: null }), currency: {} } })
+
+    expect(wrapper.text()).toContain('fallback.product')
+  })
+
   it('links a service without a control-panel account to its setup wizard and flags it', () => {
     const wrapper = mountClient(ServiceCard, { props: { service: service({ username: '' }), currency: {} } })
 

@@ -150,6 +150,40 @@ describe('useServiceManagementStore', () => {
     expect(store.ssoError).not.toBe('')
   })
 
+  it('openControlPanel opens the single-sign-on address', async () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    api.fetchCpanelSsoUrl.mockResolvedValue({ url: 'https://panel.example/sso' })
+    const store = useServiceManagementStore()
+
+    await store.openControlPanel('3', 'srv.test')
+
+    expect(open).toHaveBeenCalledWith('https://panel.example/sso', '_blank', 'noopener')
+    open.mockRestore()
+  })
+
+  it('openControlPanel falls back to the plain panel login on the server host', async () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    api.fetchCpanelSsoUrl.mockRejectedValue(new Error('no'))
+    const store = useServiceManagementStore()
+
+    await store.openControlPanel('3', 'srv.test')
+
+    expect(open).toHaveBeenCalledWith('https://srv.test:2083', '_blank', 'noopener')
+    expect(store.ssoError).not.toBe('')
+    open.mockRestore()
+  })
+
+  it('openControlPanel opens nothing when sign-in fails and the host is unknown', async () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    api.fetchCpanelSsoUrl.mockRejectedValue(new Error('no'))
+    const store = useServiceManagementStore()
+
+    await store.openControlPanel('3', '')
+
+    expect(open).not.toHaveBeenCalled()
+    open.mockRestore()
+  })
+
   it('setUpService marks the service list stale on success', async () => {
     api.setUpService.mockResolvedValue({})
     const store = useServiceManagementStore()

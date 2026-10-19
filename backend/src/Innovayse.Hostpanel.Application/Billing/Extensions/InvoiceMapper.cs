@@ -13,9 +13,9 @@ public static class InvoiceMapper
 {
     /// <summary>Maps a domain invoice to a full DTO.</summary>
     /// <param name="invoice">The domain invoice.</param>
-    /// <param name="clientName">Display name of the owning client. Empty when the caller has no name to give.</param>
+    /// <param name="clientName">Display name of the owning client. <c>null</c> when the caller has no name to give.</param>
     /// <returns>The mapped DTO.</returns>
-    public static InvoiceDto MapToDto(Invoice invoice, string clientName = "") =>
+    public static InvoiceDto MapToDto(Invoice invoice, string? clientName = null) =>
         new(
             invoice.Id,
             invoice.ClientId,

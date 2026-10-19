@@ -31,6 +31,7 @@ import { emptyPriceMap, fromApiMap, toNonZeroMap } from '@/lib/tldPricing'
 import { useTldConfigsStore } from '@/stores/tldConfigs'
 import { RegistrarModule } from '@/types/registrarmodule'
 import type { CreateTldConfigPayload, UpdateTldConfigPayload } from '@/types/tldconfig'
+import { AppRoute } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -51,8 +52,8 @@ const pageTitle = computed<string>(() => (isEditMode.value ? t('settings.tldConf
 
 /** The trail above the form. */
 const breadcrumb = computed(() => [
-  { label: t('shared.settings'), to: '/settings' },
-  { label: t('settings.tldConfigForm.tldPricing'), to: '/settings/tld-pricing' },
+  { label: t('shared.settings'), to: AppRoute.Settings },
+  { label: t('settings.tldConfigForm.tldPricing'), to: AppRoute.SettingsTldPricing },
   { label: pageTitle.value },
 ])
 
@@ -230,7 +231,7 @@ const handleSave = async (): Promise<void> => {
 
   if (saved) {
     isDirty.value = false
-    void router.push('/settings/tld-pricing')
+    void router.push(AppRoute.SettingsTldPricing)
   } else {
     saveError.value = store.actionError
   }
@@ -238,7 +239,7 @@ const handleSave = async (): Promise<void> => {
 
 /** Navigates back to the TLD pricing list; the unsaved-changes guard asks first if needed. */
 const handleCancel = (): void => {
-  void router.push('/settings/tld-pricing')
+  void router.push(AppRoute.SettingsTldPricing)
 }
 </script>
 
@@ -264,7 +265,7 @@ const handleCancel = (): void => {
                   :id="id"
                   :model-value="tld"
                   type="text"
-                  placeholder="com"
+                  :placeholder="t('shared.examples.tld')"
                   :disabled="isEditMode"
                   :aria-describedby="describedby"
                   data-testid="tld-config-form-tld"

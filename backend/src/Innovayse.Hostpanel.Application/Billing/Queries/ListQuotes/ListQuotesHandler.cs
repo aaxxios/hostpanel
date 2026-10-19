@@ -32,7 +32,7 @@ public sealed class ListQuotesHandler
         ArgumentNullException.ThrowIfNull(query);
 
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
         var ordered = _context.Quotes.AsNoTracking().OrderByDescending(x => x.CreatedAt);
         var total = await ordered.CountAsync(ct);
@@ -49,7 +49,7 @@ public sealed class ListQuotesHandler
             .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
 
         var dtos = items
-            .Select(q => q with { ClientName = clientMap.TryGetValue(q.ClientId, out var name) ? name : "Unknown" })
+            .Select(q => q with { ClientName = clientMap.TryGetValue(q.ClientId, out var name) ? name : null })
             .ToList();
 
         return Result<PagedResult<QuoteListItemDto>>.Success(

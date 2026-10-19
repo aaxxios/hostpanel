@@ -8,13 +8,13 @@
         </UiHeading>
       </UiStack>
 
-      <UiCard tone="bare" padding="none" data-testid="billing-toggle" class="rounded-full border-line2 p-1.5">
-        <UiStack direction="row" align="center" gap="sm">
+      <UiCard tone="bare" padding="none" data-testid="billing-toggle" :class="TOGGLE_TRACK">
+        <UiStack direction="row" align="center" gap="xs">
           <UiButton
             variant="bare"
             data-testid="billing-monthly"
             :aria-pressed="!yearly"
-            :class="[yearly ? PILL_IDLE : PILL_ACTIVE, 'px-[18px] py-2.5 text-sm font-semibold']"
+            :class="[TOGGLE_SEGMENT, yearly ? TOGGLE_IDLE : TOGGLE_ACTIVE]"
             @click="emit('update:yearly', false)"
           >
             {{ t('aurora.plans.monthly') }}
@@ -23,7 +23,7 @@
             variant="bare"
             data-testid="billing-yearly"
             :aria-pressed="yearly"
-            :class="[yearly ? PILL_ACTIVE : PILL_IDLE, 'px-[18px] py-2.5 text-sm font-semibold']"
+            :class="[TOGGLE_SEGMENT, yearly ? TOGGLE_ACTIVE : TOGGLE_IDLE]"
             @click="emit('update:yearly', true)"
           >
             {{ t('aurora.plans.yearly') }}
@@ -171,7 +171,7 @@
  * Presentation only — plans and their formatted prices arrive as props, and the
  * billing-period toggle is reported upward rather than owned here.
  */
-import { BRAND_BUTTON, LINE_BUTTON, PILL_ACTIVE, PILL_IDLE } from '~/templates/aurora/buttons'
+import { BRAND_BUTTON, LINE_BUTTON, TOGGLE_ACTIVE, TOGGLE_IDLE, TOGGLE_SEGMENT, TOGGLE_TRACK } from '~/templates/aurora/buttons'
 import { EYEBROW_CLASS, SECTION_TITLE_CLASS } from '~/templates/aurora/typography'
 import type { PlanCard } from '~/types/plancard'
 

@@ -586,4 +586,40 @@
   <data name="BACKCHANNEL_LOGOUT_UNAUTHORIZED" xml:space="preserve">
     <value>Ելքի բանալին բացակայում է կամ սխալ է։</value>
   </data>
+  <data name="TESTIMONIAL_NOT_FOUND" xml:space="preserve">
+    <value>Այդպիսի կարծիք չկա։</value>
+  </data>
+  <data name="PARTNER_NOT_FOUND" xml:space="preserve">
+    <value>Այդպիսի գործընկեր չկա։</value>
+  </data>
+  <data name="PROJECT_NOT_FOUND" xml:space="preserve">
+    <value>Այդպիսի նախագիծ չկա։</value>
+  </data>
+  <data name="FAQ_NOT_FOUND" xml:space="preserve">
+    <value>Այդպիսի հարց չկա։</value>
+  </data>
+  <data name="PROJECT_SLUG_EXISTS" xml:space="preserve">
+    <value>Այս նույնացուցիչը արդեն օգտագործվում է մեկ այլ նախագծում։ Ընտրեք այլ նույնացուցիչ։</value>
+  </data>
+  <data name="FAQ_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>Հարցի դասավորության համարը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="PARTNER_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>Գործընկերի դասավորության համարը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="PROJECT_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>Նախագծի դասավորության համարը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="PROJECT_SLUG_REQUIRED" xml:space="preserve">
+    <value>Նախագծին անհրաժեշտ է նույնացուցիչ (slug)։</value>
+  </data>
+  <data name="TESTIMONIAL_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>Կարծիքի դասավորության համարը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="TESTIMONIAL_NAME_REQUIRED" xml:space="preserve">
+    <value>Կարծիքին անհրաժեշտ է անուն։</value>
+  </data>
+  <data name="TESTIMONIAL_RATING_OUT_OF_RANGE" xml:space="preserve">
+    <value>Գնահատականը պետք է լինի 1-ից 5։</value>
+  </data>
 </root>

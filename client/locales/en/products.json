@@ -11,9 +11,9 @@
         "bookDemo": "Book a Demo"
       },
       "trustBadges": {
-        "soc2": "SOC 2 Compliant",
-        "encryption": "256-bit Encryption",
-        "uptime": "99.9% Uptime SLA"
+        "soc2": "Security focused",
+        "encryption": "Encrypted connections",
+        "uptime": "Reliable uptime"
       }
     },
     "products": {
@@ -39,7 +39,7 @@
       },
       "popular": "⭐ Most Popular",
       "guarantee": {
-        "title": "30-day money-back guarantee",
+        "title": "Refund policy",
         "subtitle": "No questions asked"
       },
       "cta": {
@@ -51,7 +51,7 @@
       "title": "Compare Plans",
       "headline": "Find Your {perfectMatch}",
       "perfectMatchHighlight": "Perfect Match",
-      "subtitle": "All plans include 14-day free trial • No credit card required",
+      "subtitle": "Compare the plans and pick the one that fits",
       "headers": {
         "product": "Product",
         "starter": "Starter",
@@ -69,11 +69,11 @@
       "subtitle": "Everything you need to launch and scale your SaaS business",
       "whiteLabel": {
         "title": "White-label",
-        "description": "Full customization with your branding. Remove all traces of Innovayse."
+        "description": "Full customization with your branding. Remove all traces of {site}."
       },
       "support": {
-        "title": "24/7 Support",
-        "description": "Expert support team ready to help. Priority support for Pro+ plans."
+        "title": "Expert Support",
+        "description": "Expert support team ready to help."
       },
       "updates": {
         "title": "Free Updates",
@@ -85,12 +85,12 @@
       },
       "additional": {
         "trial": {
-          "title": "14-day Free Trial",
-          "description": "No credit card required"
+          "title": "Trial Access",
+          "description": "Try before you commit"
         },
         "guarantee": {
-          "title": "Money-back Guarantee",
-          "description": "30 days, no questions asked"
+          "title": "Refund Policy",
+          "description": "See our refund terms"
         },
         "lifetime": {
           "title": "Lifetime Updates",
@@ -100,7 +100,7 @@
     },
     "testimonials": {
       "title": "Loved by {thousands}",
-      "thousandsHighlight": "Thousands",
+      "thousandsHighlight": "Our Customers",
       "subtitle": "Real results from real customers"
     },
     "notFound": "Product Not Found",

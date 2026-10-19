@@ -8,6 +8,9 @@
  * @module server/api/portal/auth/2fa-login.post
  */
 
+import { SessionCookie } from '~/constants/sessionCookie'
+import { ACCESS_TOKEN_FALLBACK_MAX_AGE, AUTHED_FLAG_MAX_AGE } from '~/server/utils/auth-cookie'
+
 /** What the backend answers a completed two-factor sign-in with. */
 interface TwoFactorLoginResult {
   /** Access token stored in the httpOnly `auth_token` cookie. */
@@ -28,18 +31,18 @@ export default defineEventHandler(async (event) => {
     { method: 'POST', body, anonymous: true }
   )
 
-  setCookie(event, 'auth_token', response.accessToken, {
+  setCookie(event, SessionCookie.AuthToken, response.accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: response.expiresIn ?? 900,
+    maxAge: response.expiresIn ?? ACCESS_TOKEN_FALLBACK_MAX_AGE,
     path: '/',
   })
-  setCookie(event, 'authed', '1', {
+  setCookie(event, SessionCookie.Authed, '1', {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: AUTHED_FLAG_MAX_AGE,
     path: '/',
   })
 

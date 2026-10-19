@@ -25,6 +25,7 @@ import UiTextarea from '@/components/ui/UiTextarea.vue'
 import { Icon } from '@/lib/icons'
 import { formatUsdPlain } from '@/lib/money'
 import type { QuoteItemUpdate } from '@/types/quote'
+import { MAX_PERCENT } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -39,7 +40,7 @@ const lines = defineModel<QuoteItemUpdate[]>({ required: true })
  */
 const lineTotal = (line: QuoteItemUpdate): number => {
   const base = line.quantity * line.unitPrice
-  return base - base * (line.discountPercent / 100)
+  return base - base * (line.discountPercent / MAX_PERCENT)
 }
 
 /** Sum of every line total (this is also the total due: quotes carry no separate tax line here). */
@@ -124,7 +125,7 @@ const removeLine = (index: number): void => {
                 :model-value="line.discountPercent"
                 :step="1"
                 :min="0"
-                :max="100"
+                :max="MAX_PERCENT"
                 placeholder="0"
                 @update:model-value="patch(index, { discountPercent: $event })"
               />

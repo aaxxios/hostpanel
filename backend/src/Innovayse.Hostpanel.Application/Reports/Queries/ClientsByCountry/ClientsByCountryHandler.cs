@@ -45,7 +45,7 @@ public sealed class ClientsByCountryHandler
         IReadOnlyList<ClientsByCountryDto> rows = counts
             .OrderByDescending(x => x.Count)
             .Select(x => new ClientsByCountryDto(
-                Country: string.IsNullOrWhiteSpace(x.Country) ? "Unknown" : x.Country!,
+                Country: string.IsNullOrWhiteSpace(x.Country) ? null : x.Country,
                 ClientCount: x.Count,
                 TotalRevenue: revenue.FirstOrDefault(r => r.Country == x.Country)?.Total ?? 0m))
             .ToList();

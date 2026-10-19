@@ -586,4 +586,40 @@
   <data name="BACKCHANNEL_LOGOUT_UNAUTHORIZED" xml:space="preserve">
     <value>The sign-out key is missing or wrong.</value>
   </data>
+  <data name="TESTIMONIAL_NOT_FOUND" xml:space="preserve">
+    <value>No such testimonial.</value>
+  </data>
+  <data name="PARTNER_NOT_FOUND" xml:space="preserve">
+    <value>No such partner.</value>
+  </data>
+  <data name="PROJECT_NOT_FOUND" xml:space="preserve">
+    <value>No such project.</value>
+  </data>
+  <data name="FAQ_NOT_FOUND" xml:space="preserve">
+    <value>No such question.</value>
+  </data>
+  <data name="PROJECT_SLUG_EXISTS" xml:space="preserve">
+    <value>Another project already uses that slug. Choose a different one.</value>
+  </data>
+  <data name="FAQ_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>The sort order of a question cannot be negative.</value>
+  </data>
+  <data name="PARTNER_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>The sort order of a partner cannot be negative.</value>
+  </data>
+  <data name="PROJECT_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>The sort order of a project cannot be negative.</value>
+  </data>
+  <data name="PROJECT_SLUG_REQUIRED" xml:space="preserve">
+    <value>A project needs an identifier (slug).</value>
+  </data>
+  <data name="TESTIMONIAL_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>The sort order of a testimonial cannot be negative.</value>
+  </data>
+  <data name="TESTIMONIAL_NAME_REQUIRED" xml:space="preserve">
+    <value>A testimonial needs a name.</value>
+  </data>
+  <data name="TESTIMONIAL_RATING_OUT_OF_RANGE" xml:space="preserve">
+    <value>The rating must be from 1 to 5.</value>
+  </data>
 </root>

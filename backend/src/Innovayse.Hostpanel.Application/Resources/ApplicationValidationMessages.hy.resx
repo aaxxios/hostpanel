@@ -1060,4 +1060,145 @@
   <data name="SlideTranslationTitleTooLong" xml:space="preserve">
     <value>Թարգմանության վերնագիրը չպետք է գերազանցի {0} նիշը։</value>
   </data>
+  <data name="ContentIdInvalid" xml:space="preserve">
+    <value>Նշեք վավեր նույնացուցիչ։</value>
+  </data>
+  <data name="ContentSortOrderInvalid" xml:space="preserve">
+    <value>Ցուցադրման կարգը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="ContentTranslationsRequired" xml:space="preserve">
+    <value>Նշեք առնվազն մեկ թարգմանություն։</value>
+  </data>
+  <data name="ContentTranslationLocaleInvalid" xml:space="preserve">
+    <value>Թարգմանություն կարելի է նշել միայն աջակցվող լեզվով՝ en, ru կամ hy։</value>
+  </data>
+  <data name="ContentUrlTooLong" xml:space="preserve">
+    <value>Հղումը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="ContentUrlInvalid" xml:space="preserve">
+    <value>Հղումը պետք է սկսվի https://, http:// կամ / նշանով։</value>
+  </data>
+  <data name="ContentImageRequired" xml:space="preserve">
+    <value>Ընտրեք վերբեռնվող պատկերի ֆայլը։</value>
+  </data>
+  <data name="TestimonialNameRequired" xml:space="preserve">
+    <value>Նշեք հաճախորդի անունը։</value>
+  </data>
+  <data name="TestimonialNameTooLong" xml:space="preserve">
+    <value>Անունը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="TestimonialCompanyTooLong" xml:space="preserve">
+    <value>Ընկերության անվանումը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="TestimonialRatingInvalid" xml:space="preserve">
+    <value>Գնահատականը պետք է լինի 1-ից 5։</value>
+  </data>
+  <data name="TestimonialRoleTooLong" xml:space="preserve">
+    <value>Պաշտոնը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="TestimonialQuoteRequired" xml:space="preserve">
+    <value>Մուտքագրեք կարծիքի տեքստը։</value>
+  </data>
+  <data name="TestimonialQuoteTooLong" xml:space="preserve">
+    <value>Կարծիքը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="PartnerNameRequired" xml:space="preserve">
+    <value>Նշեք գործընկերոջ անվանումը։</value>
+  </data>
+  <data name="PartnerNameTooLong" xml:space="preserve">
+    <value>Անվանումը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="ProjectSlugRequired" xml:space="preserve">
+    <value>Նշեք նախագծի նույնացուցիչը հասցեի համար։</value>
+  </data>
+  <data name="ProjectSlugTooLong" xml:space="preserve">
+    <value>Նույնացուցիչը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="ProjectSlugInvalid" xml:space="preserve">
+    <value>Նույնացուցիչը կարող է պարունակել միայն փոքրատառ լատինատառեր, թվեր և միայնակ գծիկներ։</value>
+  </data>
+  <data name="ProjectImageUrlsRequired" xml:space="preserve">
+    <value>Փոխանցեք պատկերների ցանկը, դատարկ՝ եթե պատկերներ չկան։</value>
+  </data>
+  <data name="ProjectImagesTooMany" xml:space="preserve">
+    <value>Նախագիծը կարող է ունենալ առավելագույնը {0} պատկեր։</value>
+  </data>
+  <data name="ProjectTitleRequired" xml:space="preserve">
+    <value>Նշեք նախագծի անվանումը։</value>
+  </data>
+  <data name="ProjectTitleTooLong" xml:space="preserve">
+    <value>Անվանումը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="ProjectSummaryTooLong" xml:space="preserve">
+    <value>Համառոտ նկարագրությունը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="ProjectDescriptionTooLong" xml:space="preserve">
+    <value>Նկարագրությունը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="FaqCategoryInvalid" xml:space="preserve">
+    <value>Ընտրեք վավեր կատեգորիա։</value>
+  </data>
+  <data name="FaqQuestionRequired" xml:space="preserve">
+    <value>Մուտքագրեք հարցը։</value>
+  </data>
+  <data name="FaqQuestionTooLong" xml:space="preserve">
+    <value>Հարցը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="FaqAnswerRequired" xml:space="preserve">
+    <value>Մուտքագրեք պատասխանը։</value>
+  </data>
+  <data name="FaqAnswerTooLong" xml:space="preserve">
+    <value>Պատասխանը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="ContentOrderItemsRequired" xml:space="preserve">
+    <value>Փոխանցեք նույնացուցիչների և դիրքերի ցանկը։</value>
+  </data>
+  <data name="ClientServiceNotFound" xml:space="preserve">
+    <value>Ծառայություն {0}-ը չի գտնվել։</value>
+  </data>
+  <data name="ServiceNoProvisioningReference" xml:space="preserve">
+    <value>Ծառայություն {0}-ը չունի տրամադրման հղում։</value>
+  </data>
+  <data name="ServiceNoServerAssigned" xml:space="preserve">
+    <value>Ծառայություն {0}-ին սերվեր չի նշանակվել։</value>
+  </data>
+  <data name="ServiceNotProvisioned" xml:space="preserve">
+    <value>Ծառայություն {0}-ը դեռ չի տրամադրվել։</value>
+  </data>
+  <data name="OrderIdInvalid" xml:space="preserve">
+    <value>Պատվերի նույնացուցիչը պետք է մեծ լինի զրոյից։</value>
+  </data>
+  <data name="PlaceOrderPaymentMethodRequired" xml:space="preserve">
+    <value>Ընտրեք վճարման եղանակը։</value>
+  </data>
+  <data name="PlaceOrderItemsRequired" xml:space="preserve">
+    <value>Ավելացրեք պատվերում առնվազն մեկ ապրանք։</value>
+  </data>
+  <data name="PlaceOrderItemProductIdInvalid" xml:space="preserve">
+    <value>Յուրաքանչյուր ապրանք պետք է ունենա ճիշտ արտադրանք։</value>
+  </data>
+  <data name="PlaceOrderItemBillingCycleInvalid" xml:space="preserve">
+    <value>Հաշվարկային ժամանակաշրջանը պետք է լինի «monthly», «annual» կամ «annually»։</value>
+  </data>
+  <data name="PlaceOrderGuestFirstNameRequired" xml:space="preserve">
+    <value>Հյուրի ռեժիմով պատվիրելու համար անհրաժեշտ է անունը։</value>
+  </data>
+  <data name="PlaceOrderGuestLastNameRequired" xml:space="preserve">
+    <value>Հյուրի ռեժիմով պատվիրելու համար անհրաժեշտ է ազգանունը։</value>
+  </data>
+  <data name="PlaceOrderGuestEmailRequired" xml:space="preserve">
+    <value>Հյուրի ռեժիմով պատվիրելու համար անհրաժեշտ է վավեր էլ. հասցե։</value>
+  </data>
+  <data name="PlaceOrderGuestPasswordRequired" xml:space="preserve">
+    <value>Հյուրի ռեժիմով պատվիրելու համար անհրաժեշտ է գաղտնաբառ։</value>
+  </data>
+  <data name="GatewayModuleRequired" xml:space="preserve">
+    <value>Ընտրեք վճարային դարպասը։</value>
+  </data>
+  <data name="ReturnUrlRequired" xml:space="preserve">
+    <value>Վերադարձի հղումը պարտադիր է։</value>
+  </data>
+  <data name="PaymentIntentIdRequired" xml:space="preserve">
+    <value>Վճարման մտադրության նույնացուցիչը պարտադիր է։</value>
+  </data>
 </root>

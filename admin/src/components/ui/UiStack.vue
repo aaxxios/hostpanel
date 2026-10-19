@@ -5,8 +5,8 @@
  * Replaces hand-written `flex flex-col gap-4` wrappers so spacing comes from one scale.
  */
 import { computed } from 'vue'
-import { alignItemsClasses, gapClasses, justifyClasses } from '@/utils/ui/layout'
-import type { UiAlignItems, UiDirection, UiGap, UiJustify } from '@/utils/ui/layout'
+import { alignItemsClasses, gapClasses, justifyClasses, UiDirection } from '@/utils/ui/layout'
+import type { UiAlignItems, UiGap, UiJustify } from '@/utils/ui/layout'
 
 /** Props for UiStack. */
 const props = withDefaults(defineProps<{
@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<{
   /** Lets a row wrap onto several lines. */
   wrap?: boolean
 }>(), {
-  direction: 'column',
+  direction: UiDirection.Column,
   gap: 'md',
   align: 'stretch',
   justify: 'start',
@@ -30,7 +30,7 @@ const props = withDefaults(defineProps<{
 
 /** Layout classes. */
 const classes = computed<string[]>(() => [
-  props.direction === 'row' ? 'flex-row' : 'flex-col',
+  props.direction === UiDirection.Row ? 'flex-row' : 'flex-col',
   gapClasses[props.gap],
   alignItemsClasses[props.align],
   justifyClasses[props.justify],

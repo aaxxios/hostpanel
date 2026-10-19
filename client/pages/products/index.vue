@@ -15,15 +15,15 @@
  *
  * The page reads the catalogue through the catalogue store (prices are in the payer's currency, so
  * the read runs again when the payer's currency or the language changes), groups it into
- * families with `buildProductFamilies`, and hands the result to the catalogue components. It owns
+ * families (one per catalogue product group) with `buildProductFamilies`, and hands the result to the catalogue components. It owns
  * the head (title, canonical, hreflang, schema.org) and nothing visual.
  */
 import { APP_LOCALES } from '~/constants/appLocales'
+import { SCHEMA_ORG_CONTEXT } from '~/constants/schemaOrg'
 import { useCartStore } from '~/stores/cart'
 import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
 import { formatMoney } from '~/utils/formatMoney'
-import { productGids } from '~/utils/catalogGroups'
 import { buildProductFamilies } from '~/utils/productFamilies'
 import type { ProductFamily } from '~/types/productfamily'
 import { SeoPageType } from '~/types/seopagetype'
@@ -49,10 +49,7 @@ onMounted(() => {
 /** The payer's currency to format prices with, never chosen by the page's language. */
 const payerCurrency = computed(() => currencyStore.moneyCurrencyFor(currencyStore.payerCode))
 
-/** Which products the page reads: hosting plus every SaaS group. */
-const catalogFilter = { gids: productGids.join(',') }
-
-await useAsyncData('products:families', () => catalogStore.loadProducts(catalogFilter), {
+await useAsyncData('products:families', () => catalogStore.loadFamilies(), {
   watch: [() => currencyStore.payerCode, locale],
 })
 
@@ -74,7 +71,8 @@ const domainsFamily = computed<ProductFamily>(() => ({
 /** The domains card followed by one family per catalogue group. */
 const products = computed<ProductFamily[]>(() =>
   buildProductFamilies(
-    catalogStore.productsFor(catalogFilter),
+    catalogStore.familyGroups,
+    catalogStore.familyProducts,
     (amount) => formatMoney(amount, payerCurrency.value),
     currencyStore.payerCode,
     [domainsFamily.value],
@@ -94,7 +92,7 @@ const { organizationSchema: productsOrgSchema, injectSchema: productsInjectSchem
 productsInjectSchema([
   productsOrgSchema(),
   {
-    '@context': 'https://schema.org',
+    '@context': SCHEMA_ORG_CONTEXT,
     '@type': 'CollectionPage',
     '@id': `${productsBaseUrl}/products#productspage`,
     url: `${productsBaseUrl}/products`,

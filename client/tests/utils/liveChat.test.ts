@@ -45,7 +45,7 @@ interface FakeScript {
  * Modelled on what the real bundle at the chat host actually does: it defines
  * `window.innochatSDK`, and `run()` starts the widget, which some time later
  * defines `window.$innochat` and fires `innochat:ready`. Nothing here knows
- * about Chatwoot, which is the point — the bundle this application loads does
+ * about the underlying engine, which is the point — the bundle this application loads does
  * not either.
  *
  * The delay is why `fireReady` is separate rather than being called from inside
@@ -69,6 +69,7 @@ const installSdk = (win: FakeWindow) => {
     }),
   }
 
+  /** Calls every listener registered for the widget's ready event. */
   const fireReady = () => {
     for (const listener of win.__listeners[LIVE_CHAT_READY_EVENT] ?? []) {
       listener()
@@ -134,7 +135,7 @@ describe('buildLiveChatLoader', () => {
 
     script.onload()
 
-    // This is the assertion the old loader failed. It looked for a Chatwoot
+    // This is the assertion the old loader failed. It looked for the engine's
     // global the Innochat bundle never defines, returned early, and left the
     // page with a chat button wired to an API that was never created.
     expect(win.innochatSDK?.run).toHaveBeenCalledWith({

@@ -7,6 +7,8 @@
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { NetworkIssue, NetworkIssueFilter, NetworkIssuePayload } from '@/types/networkissue'
 import type { PagedResult } from '@/types/pagedresult'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/network-issues`.
@@ -24,7 +26,7 @@ export const useNetworkIssuesApi = () => {
    */
   const listNetworkIssues = (filter: NetworkIssueFilter): Promise<PagedResult<NetworkIssue>> =>
     request<PagedResult<NetworkIssue>>(
-      `/network-issues${buildQuery({ page: filter.page, pageSize: filter.pageSize, status: filter.status })}`,
+      `${ApiPath.NetworkIssues}${buildQuery({ page: filter.page, pageSize: filter.pageSize, status: filter.status })}`,
     )
 
   /**
@@ -34,7 +36,7 @@ export const useNetworkIssuesApi = () => {
    * @returns The issue.
    */
   const getNetworkIssue = (id: number | string): Promise<NetworkIssue> =>
-    request<NetworkIssue>(`/network-issues/${id}`)
+    request<NetworkIssue>(`${ApiPath.NetworkIssues}/${id}`)
 
   /**
    * Creates a network issue.
@@ -43,7 +45,7 @@ export const useNetworkIssuesApi = () => {
    * @returns The new issue's id.
    */
   const createNetworkIssue = (payload: NetworkIssuePayload): Promise<number> =>
-    request<number>('/network-issues', { method: 'POST', body: JSON.stringify(payload) })
+    request<number>(ApiPath.NetworkIssues, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Replaces a network issue.
@@ -53,7 +55,7 @@ export const useNetworkIssuesApi = () => {
    * @returns Nothing.
    */
   const updateNetworkIssue = (id: number | string, payload: NetworkIssuePayload): Promise<void> =>
-    request<void>(`/network-issues/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.NetworkIssues}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes a network issue.
@@ -62,7 +64,7 @@ export const useNetworkIssuesApi = () => {
    * @returns Nothing.
    */
   const deleteNetworkIssue = (id: number | string): Promise<void> =>
-    request<void>(`/network-issues/${id}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.NetworkIssues}/${id}`, { method: HttpMethod.Delete })
 
   return { listNetworkIssues, getNetworkIssue, createNetworkIssue, updateNetworkIssue, deleteNetworkIssue }
 }

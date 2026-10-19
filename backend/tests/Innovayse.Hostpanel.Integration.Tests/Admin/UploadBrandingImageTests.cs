@@ -119,6 +119,24 @@ public sealed class UploadBrandingImageTests(IntegrationTestFactory factory) : I
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    /// <summary>
+    /// A numeric kind binds to the enum but names no member, so the validator refuses it before it can
+    /// become a storage directory.
+    /// </summary>
+    [Fact]
+    public async Task NumericKindOutsideTheEnum_RefusesAsValidationFailureAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        using var content = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(TinyPng);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        content.Add(fileContent, "file", "logo.png");
+
+        var response = await client.PostAsync("/api/admin/settings/branding/7", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     /// <summary>A caller with only the Client role is refused with 403.</summary>
     [Fact]
     public async Task IsClosedToTheClientRoleAsync()

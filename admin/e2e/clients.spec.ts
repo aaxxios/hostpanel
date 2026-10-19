@@ -2,6 +2,7 @@
  * Clients flow: the list renders the page the API returned, opening a row loads that client
  * into the client layout, and the sidebar's Profile entry shows the record in the edit form.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { adaDetail, clientsPage } from './fixtures/clients'
 import { fieldOf } from './support/locators'
@@ -11,8 +12,8 @@ test('the clients list opens a client and its profile shows the stored record', 
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/clients', clientsPage),
-      json('GET', '/api/clients/7', adaDetail),
+      json(HttpMethod.Get, '/api/clients', clientsPage),
+      json(HttpMethod.Get, '/api/clients/7', adaDetail),
     ],
   })
 
@@ -31,6 +32,6 @@ test('the clients list opens a client and its profile shows the stored record', 
   await expect(fieldOf(page, 'client-profile-first-name')).toHaveValue(adaDetail.firstName)
 
   // The list asked for the first page; the layout asked for exactly the client that was clicked.
-  expect(api.callsTo('GET', '/api/clients')[0]?.search).toContain('page=1')
-  expect(api.callsTo('GET', '/api/clients/7').length).toBeGreaterThan(0)
+  expect(api.callsTo(HttpMethod.Get, '/api/clients')[0]?.search).toContain('page=1')
+  expect(api.callsTo(HttpMethod.Get, '/api/clients/7').length).toBeGreaterThan(0)
 })

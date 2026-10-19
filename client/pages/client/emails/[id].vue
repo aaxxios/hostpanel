@@ -1,6 +1,6 @@
 <template>
   <UiStack gap="lg">
-    <UiBackLink to="/client/emails" :label="$t('client.emails.backTo')" testid="email-back" />
+    <UiBackLink :to="CLIENT_EMAILS_PATH" :label="$t('client.emails.backTo')" testid="email-back" />
 
     <UiStack v-if="pending">
       <UiSkeleton class="h-8 w-2/3" shape="block" />
@@ -28,6 +28,7 @@
  * in a sandboxed frame because it is untrusted markup. The message is read through the client
  * store.
  */
+import { CLIENT_EMAILS_PATH } from '~/constants/clientRoutes'
 import { AlertCircle } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
 import { formatDateTime } from '~/utils/formatDate'

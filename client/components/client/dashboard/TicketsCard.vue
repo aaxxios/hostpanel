@@ -1,7 +1,7 @@
 <template>
   <UiCard data-testid="dashboard-tickets">
     <UiCardHeader :title="$t('client.dashboard.recentTickets')">
-      <UiButton size="sm" variant="primary" to="/client/tickets/new" data-testid="dashboard-ticket-new">
+      <UiButton size="sm" variant="primary" :to="CLIENT_TICKET_NEW_PATH" data-testid="dashboard-ticket-new">
         <Plus :size="12" :stroke-width="2" class="mr-1" />
         {{ $t('client.dashboard.openNewTicket') }}
       </UiButton>
@@ -13,7 +13,7 @@
 
     <UiStack v-else-if="!store.tickets.length" align="center" gap="xs" class="py-6" data-testid="dashboard-tickets-empty">
       <UiText size="sm" tone="muted">{{ $t('client.dashboard.noTickets') }}</UiText>
-      <UiButton size="sm" variant="ghost" to="/client/tickets/new" data-testid="dashboard-ticket-open">
+      <UiButton size="sm" variant="ghost" :to="CLIENT_TICKET_NEW_PATH" data-testid="dashboard-ticket-open">
         {{ $t('client.dashboard.openTicketLink') }}
       </UiButton>
     </UiStack>
@@ -22,7 +22,7 @@
       <ClientDashboardListRow
         v-for="ticket in store.tickets.slice(0, 4)"
         :key="ticket.id"
-        :to="`/client/tickets/${ticket.id}`"
+        :to="clientTicketPath(ticket.id)"
         :testid="`dashboard-ticket-${ticket.id}`"
       >
         <div class="min-w-0 flex-1">
@@ -40,6 +40,7 @@
  * The dashboard's "Recent Tickets" card: the latest four support tickets with their status, or
  * an invitation to open the first one.
  */
+import { CLIENT_TICKET_NEW_PATH, clientTicketPath } from '~/constants/clientRoutes'
 import { Plus } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
 

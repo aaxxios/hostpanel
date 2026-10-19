@@ -39,6 +39,8 @@ import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
 import { UiTone } from '@/utils/ui/tone'
+import { Key } from '@/utils/ui/keys'
+import { AppRoute, clientPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -128,7 +130,7 @@ const clearFilters = (): void => {
  * @returns Nothing.
  */
 const onKeydown = (e: KeyboardEvent): void => {
-  if (e.key === 'Enter') {
+  if (e.key === Key.Enter) {
     applyFilters()
   }
 }
@@ -151,7 +153,7 @@ const goToPage = (p: number): void => {
  * @returns Nothing.
  */
 const openClient = (id: number): void => {
-  router.push(`/clients/${id}`)
+  router.push(clientPath(id))
 }
 
 onMounted(() => store.fetchAll())
@@ -162,7 +164,7 @@ onMounted(() => store.fetchAll())
     <UiPageHeader :title="t('shared.clients')" :subtitle="t('clients.clientsList.manageYourClientAccounts')">
       <template #actions>
         <UiLink
-          to="/clients/add"
+          :to="AppRoute.ClientsAdd"
           :variant="UiButtonVariant.Primary"
           data-testid="clients-list-add"
         >

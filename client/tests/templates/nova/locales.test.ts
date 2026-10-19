@@ -3,7 +3,6 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   DASHBOARD_ROWS,
-  FAQ_ITEMS,
   FOOTER_COLUMNS,
   HERO_BENEFITS,
   MIGRATION_STEPS,
@@ -58,7 +57,6 @@ const referenced = [
   ...[...HERO_BENEFITS, ...TRUST_ITEMS, ...WHY_FEATURES, ...PERFORMANCE_FEATURES, ...SECURITY_FEATURES]
     .flatMap(feature => [feature.titleKey, ...(feature.bodyKey ? [feature.bodyKey] : [])]),
   ...USE_CASES.flatMap(useCase => [useCase.titleKey, useCase.bodyKey]),
-  ...FAQ_ITEMS.flatMap(item => [item.questionKey, item.answerKey]),
   ...MIGRATION_STEPS.flatMap(step => [step.titleKey, step.bodyKey]),
   ...DASHBOARD_ROWS.flatMap(row => [row.labelKey, row.valueKey]),
 ]

@@ -3,6 +3,7 @@ using Innovayse.Auth;
 #endif
 using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.Infrastructure.Auth.Settings;
+using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -86,7 +87,7 @@ public static class AuthenticationRegistration
                         ValidIssuer = jwtOptions.Issuer,
                         ValidAudience = jwtOptions.Audience,
                         RoleClaimType = System.Security.Claims.ClaimTypes.Role,
-                        NameClaimType = "sub",
+                        NameClaimType = Innovayse.Hostpanel.Shared.Constants.JwtClaims.Sub,
                     };
 
                     // Local mode had no Events at all, so nothing here ever read subject_roles —
@@ -139,23 +140,23 @@ public static class AuthenticationRegistration
                     opts.TokenValidationParameters = new TokenValidationParameters
                     {
                         RoleClaimType = System.Security.Claims.ClaimTypes.Role,
-                        NameClaimType = "sub",
+                        NameClaimType = Innovayse.Hostpanel.Shared.Constants.JwtClaims.Sub,
                         ValidateAudience = false,
                     };
                     // If the JWT was issued by our local server, forward to LocalJwt scheme
                     opts.ForwardDefaultSelector = context =>
                     {
                         var auth = context.Request.Headers.Authorization.FirstOrDefault();
-                        if (auth?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true)
+                        if (auth?.StartsWith(BearerScheme.HeaderPrefix, StringComparison.OrdinalIgnoreCase) == true)
                         {
-                            var token = auth["Bearer ".Length..];
+                            var token = auth[BearerScheme.HeaderPrefix.Length..];
                             try
                             {
                                 var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
                                 var jwt = handler.ReadJwtToken(token);
                                 if (jwt.Issuer == localJwtIssuer)
                                 {
-                                    return "LocalJwt";
+                                    return Innovayse.Hostpanel.Shared.Constants.LocalJwtScheme.Name;
                                 }
                             }
                             catch { /* not a valid JWT — let default scheme handle */ }
@@ -175,7 +176,7 @@ public static class AuthenticationRegistration
                         OnTokenValidated = Innovayse.Hostpanel.API.Auth.SubjectRoleClaimsEnricher.OnTokenValidated(),
                     };
                 })
-                .AddJwtBearer("LocalJwt", opts =>
+                .AddJwtBearer(Innovayse.Hostpanel.Shared.Constants.LocalJwtScheme.Name, opts =>
                 {
                     opts.RequireHttpsMetadata = false;
                     opts.TokenValidationParameters = new TokenValidationParameters
@@ -186,7 +187,7 @@ public static class AuthenticationRegistration
                         ValidIssuer = jwtOptions.Issuer,
                         ValidAudience = jwtOptions.Audience,
                         RoleClaimType = System.Security.Claims.ClaimTypes.Role,
-                        NameClaimType = "sub",
+                        NameClaimType = Innovayse.Hostpanel.Shared.Constants.JwtClaims.Sub,
                     };
 
                     // Same merge as the SSO scheme above. This one had no Events either, and the
@@ -244,7 +245,7 @@ public static class AuthenticationRegistration
                 {
                     opts.ForwardDefaultSelector = context =>
                         context.Request.Headers.Authorization.FirstOrDefault()
-                            ?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
+                            ?.StartsWith(BearerScheme.HeaderPrefix, StringComparison.OrdinalIgnoreCase) == true
                                 // The bearer handler has its own selector that sends locally
                                 // issued tokens on to LocalJwt, so this only has to choose
                                 // between "a token" and "a cookie".

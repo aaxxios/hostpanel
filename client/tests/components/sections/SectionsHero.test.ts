@@ -1,16 +1,34 @@
 /**
- * Unit tests for SectionsHero: the headline, the calls to action, the counters that run up on load
- * and on hover, and the scroll hint.
+ * Unit tests for SectionsHero: the headline, the calls to action, the operator-set figures (hidden
+ * while empty, counted up on load and on hover when they are plain numbers) and the scroll hint.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, reactive } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import SectionsHero from '~/components/sections/SectionsHero.vue'
-import { teamStats } from '~/lib/data'
+import { PortalSettingKey } from '~/constants/portalSettingKey'
+
+/**
+ * Stands in for the operator settings the hero reads.
+ *
+ * @param settings Setting values by key; a key that is absent reads as empty.
+ */
+const stubSettings = (settings: Record<string, string>): void => {
+  vi.stubGlobal('usePortalSettings', () => ({ get: (key: string) => settings[key] ?? '' }))
+}
+
+/** All three figures set: a counted one with a sign, a decimal one and a plain number. */
+const ALL_FIGURES: Record<string, string> = {
+  [PortalSettingKey.StatsClients]: '150+',
+  [PortalSettingKey.StatsUptime]: '99.9%',
+  [PortalSettingKey.StatsRegions]: '3',
+}
 
 describe('SectionsHero', () => {
   beforeEach(() => {
     stubPublicPageRuntime()
+    stubSettings(ALL_FIGURES)
     vi.useFakeTimers()
   })
 
@@ -34,16 +52,45 @@ describe('SectionsHero', () => {
     expect(wrapper.find('[data-testid="hero-secondary"]').attributes('href')).toBe('/en/hosting')
   })
 
-  it('starts every counter at zero and runs them up to the company figures after a moment', async () => {
+  it('captions each configured figure with its own label', () => {
+    const wrapper = mountWithKit(SectionsHero)
+
+    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain('hero.stats.clients')
+    expect(wrapper.find('[data-testid="hero-stat-1"]').text()).toContain('hero.stats.uptime')
+    expect(wrapper.find('[data-testid="hero-stat-2"]').text()).toContain('hero.stats.regions')
+  })
+
+  it('starts a countable figure at zero and runs it up to the configured value after a moment', async () => {
     const wrapper = mountWithKit(SectionsHero)
     expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain('0+')
 
     await vi.advanceTimersByTimeAsync(800 + 2500)
 
-    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain(`${teamStats.projects}+`)
-    expect(wrapper.find('[data-testid="hero-stat-1"]').text()).toContain(`${teamStats.years}`)
-    expect(wrapper.find('[data-testid="hero-stat-2"]').text()).toContain(`${teamStats.teamSize}+`)
-    expect(wrapper.find('[data-testid="hero-stat-3"]').text()).toContain(`${teamStats.clients}+`)
+    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain('150+')
+    expect(wrapper.find('[data-testid="hero-stat-2"]').text()).toContain('3')
+  })
+
+  it('shows a figure that is not a plain number exactly as the operator wrote it', async () => {
+    const wrapper = mountWithKit(SectionsHero)
+    expect(wrapper.find('[data-testid="hero-stat-1"]').text()).toContain('99.9%')
+
+    await vi.advanceTimersByTimeAsync(800 + 2500)
+
+    expect(wrapper.find('[data-testid="hero-stat-1"]').text()).toContain('99.9%')
+  })
+
+  it('leaves out a figure whose setting is empty and hides the block when none is set', () => {
+    stubSettings({ [PortalSettingKey.StatsUptime]: '99.9%' })
+    const partial = mountWithKit(SectionsHero)
+
+    expect(partial.findAll('[data-testid^="hero-stat-"]')).toHaveLength(1)
+    expect(partial.find('[data-testid="hero-stat-0"]').text()).toContain('hero.stats.uptime')
+    expect(partial.text()).not.toContain('hero.stats.clients')
+
+    stubSettings({})
+    const none = mountWithKit(SectionsHero)
+
+    expect(none.find('[data-testid="hero-stats"]').exists()).toBe(false)
   })
 
   it('runs a counter up from hover without waiting for the load animation', async () => {
@@ -52,7 +99,7 @@ describe('SectionsHero', () => {
     await wrapper.find('[data-testid="hero-stat-0"]').trigger('mouseenter')
     await vi.advanceTimersByTimeAsync(2000)
 
-    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain(`${teamStats.projects}+`)
+    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain('150+')
   })
 
   it('scrolls down by one screen from the scroll hint', async () => {
@@ -73,5 +120,20 @@ describe('SectionsHero', () => {
     wrapper.unmount()
 
     expect(clear).toHaveBeenCalled()
+  })
+
+  it('re-initialises the counters when the figures arrive after the first render', async () => {
+    const settings = reactive<Record<string, string>>({})
+    vi.stubGlobal('usePortalSettings', () => ({ get: (key: string) => settings[key] ?? '' }))
+    const wrapper = mountWithKit(SectionsHero)
+    expect(wrapper.find('[data-testid="hero-stats"]').exists()).toBe(false)
+
+    Object.assign(settings, ALL_FIGURES)
+    await nextTick()
+    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).not.toContain('undefined')
+
+    await vi.advanceTimersByTimeAsync(800 + 2500)
+    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain('150+')
+    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).not.toContain('undefined')
   })
 })

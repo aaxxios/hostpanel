@@ -58,6 +58,14 @@ describe('GET /api/portal/client/services', () => {
     expect(result[0]).toMatchObject({ domain: '', recurringamount: '0.00', billingcycle: '', nextduedate: '', status: 'Active', username: 'provisioned' })
   })
 
+  it('keeps a null product name null for the page to word', async () => {
+    backend.respondWith(() => ({ body: [{ id: 1, productId: 2, productName: null }] }))
+
+    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>[]
+
+    expect(result[0]).toMatchObject({ name: null, translated_name: null })
+  })
+
   it('answers an empty list for a client without services', async () => {
     backend.respondWith(() => ({ body: [] }))
 

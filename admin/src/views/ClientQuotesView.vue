@@ -31,6 +31,8 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { LEDGER_PAGE_SIZE } from '@/lib/limits'
+import { quoteAddPath, quotePath } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -50,7 +52,7 @@ const clientId = computed(() => route.params.id as string)
 const page = ref(1)
 
 /** Items per page. */
-const pageSize = ref(25)
+const pageSize = ref(LEDGER_PAGE_SIZE)
 
 /** Quote ID pending deletion. */
 const deleteTargetId = ref<number | null>(null)
@@ -110,7 +112,7 @@ const executeDelete = async (): Promise<void> => {
  * @returns Nothing.
  */
 const createQuote = (): void => {
-  router.push(`/billing/quotes/add?clientId=${clientId.value}`)
+  router.push(quoteAddPath(clientId.value))
 }
 
 /**
@@ -120,7 +122,7 @@ const createQuote = (): void => {
  * @returns Nothing.
  */
 const editQuote = (id: number): void => {
-  router.push(`/billing/quotes/${id}`)
+  router.push(quotePath(id))
 }
 
 onMounted(() => fetchQuotes())

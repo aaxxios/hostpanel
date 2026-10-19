@@ -2,11 +2,11 @@
   <LegalDocument
     :badge="t('privacy.badge')"
     :title="t('privacy.title')"
-    :subtitle="t('privacy.subtitle')"
+    :subtitle="t('privacy.subtitle', { site: siteName })"
     :meta="lastUpdatedLine"
     :sections="sections"
     :contact-title="t('privacy.contact.title')"
-    :contact-description="t('privacy.contact.description')"
+    :contact-description="t('privacy.contact.description', { site: siteName })"
     :contact-link="t('privacy.contact.link')"
   />
 </template>
@@ -44,7 +44,7 @@ const sections = computed<LegalSection[]>(() => SECTION_DEFINITIONS.map(section 
   id: section.id,
   icon: section.icon,
   title: t(`privacy.sections.${section.id}.title`),
-  paragraphs: Array.from({ length: section.paragraphs }, (_, index) => t(`privacy.sections.${section.id}.content.${index}`)),
+  paragraphs: Array.from({ length: section.paragraphs }, (_, index) => t(`privacy.sections.${section.id}.content.${index}`, { site: siteName.value })),
   items: Array.from({ length: section.listCount }, (_, index) => t(`privacy.sections.${section.id}.list.${index}`))
 })))
 

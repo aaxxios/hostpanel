@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.API.Auth;
 
@@ -26,7 +27,7 @@ public sealed class LocalSessionRenewalMiddleware
     private const string LogoutPath = "/api/auth/logout";
 
     /// <summary>Scheme prefix of an <c>Authorization</c> header.</summary>
-    private const string BearerPrefix = "Bearer ";
+    private const string BearerPrefix = BearerScheme.HeaderPrefix;
 
     /// <summary>The next middleware in the pipeline.</summary>
     private readonly RequestDelegate _next;

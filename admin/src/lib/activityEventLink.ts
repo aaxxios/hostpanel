@@ -1,5 +1,10 @@
+/**
+ * Maps a notification-feed activity event to the admin screen it opens.
+ */
+
 import { ActivityEventType } from '@/types/activityevent'
 import type { ActivityEvent } from '@/types/activityevent'
+import { AppRoute, clientPath, invoicePath } from '@/lib/routes'
 
 /**
  * Resolves where a notification-feed item should navigate to.
@@ -15,10 +20,10 @@ import type { ActivityEvent } from '@/types/activityevent'
 export const activityEventLink = (event: ActivityEvent): string => {
   switch (event.type) {
     case ActivityEventType.ClientRegistered:
-      return `/clients/${event.entityId}`
+      return clientPath(event.entityId)
     case ActivityEventType.InvoiceOverdue:
-      return `/billing/${event.entityId}`
+      return invoicePath(event.entityId)
     case ActivityEventType.DomainExpiring:
-      return '/domains'
+      return AppRoute.Domains
   }
 }

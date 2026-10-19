@@ -7,6 +7,11 @@
  * @module server/api/portal/auth/sso/callback.get
  */
 
+import { CLIENT_DASHBOARD_PATH } from '~/constants/clientRoutes'
+import { SessionCookie } from '~/constants/sessionCookie'
+import { ACCESS_TOKEN_FALLBACK_MAX_AGE, AUTHED_FLAG_MAX_AGE, REFRESH_TOKEN_MAX_AGE } from '~/server/utils/auth-cookie'
+import { requireSsoSetting } from '~/server/utils/requireSsoSetting'
+
 /** The SSO token endpoint's reply (OAuth field names, as the standard spells them). */
 interface SsoTokenResponse {
   /** Access token for the portal session. */
@@ -36,6 +41,8 @@ interface TokenExchangeFailureBody {
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const query = getQuery(event)
+  // Fail closed: the token exchange sends the callback address as `redirect_uri`, so an empty one can never succeed.
+  const redirectUri = requireSsoSetting(config.ssoCallbackUrl)
 
   // Silent SSO (prompt=none) returned an error — not logged in, go back to homepage.
   // `sso_silent_tried` is deliberately left in place: it is the loop guard, and clearing
@@ -43,10 +50,10 @@ export default defineEventHandler(async (event) => {
   // carries a short TTL of its own, so a later visit still gets a fresh session probe.
   const error = query.error as string | undefined
   if (error) {
-    deleteCookie(event, 'pkce_verifier', { path: '/' })
-    deleteCookie(event, 'oauth_state', { path: '/' })
-    const returnTo = getCookie(event, 'sso_silent_return') || '/'
-    deleteCookie(event, 'sso_silent_return', { path: '/' })
+    deleteCookie(event, SessionCookie.PkceVerifier, { path: '/' })
+    deleteCookie(event, SessionCookie.OauthState, { path: '/' })
+    const returnTo = getCookie(event, SessionCookie.SsoSilentReturn) || '/'
+    deleteCookie(event, SessionCookie.SsoSilentReturn, { path: '/' })
     return sendRedirect(event, returnTo, 302)
   }
 
@@ -56,20 +63,20 @@ export default defineEventHandler(async (event) => {
   }
 
   // Validate state to prevent CSRF
-  const storedState = getCookie(event, 'oauth_state')
+  const storedState = getCookie(event, SessionCookie.OauthState)
   const returnedState = query.state as string | undefined
   if (!storedState || storedState !== returnedState) {
     throw createError({ statusCode: 400, data: { code: 'OAUTH_STATE_INVALID' } })
   }
-  deleteCookie(event, 'oauth_state', { path: '/' })
+  deleteCookie(event, SessionCookie.OauthState, { path: '/' })
 
-  const codeVerifier = getCookie(event, 'pkce_verifier')
+  const codeVerifier = getCookie(event, SessionCookie.PkceVerifier)
   if (!codeVerifier) {
     throw createError({ statusCode: 400, data: { code: 'OAUTH_VERIFIER_MISSING' } })
   }
 
   // Clear the PKCE cookie immediately
-  deleteCookie(event, 'pkce_verifier', { path: '/' })
+  deleteCookie(event, SessionCookie.PkceVerifier, { path: '/' })
 
   // Exchange code for tokens (server-to-server, uses internal SSO URL)
   let tokenResponse: SsoTokenResponse
@@ -87,7 +94,7 @@ export default defineEventHandler(async (event) => {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: config.ssoCallbackUrl,
+        redirect_uri: redirectUri,
         client_id: config.ssoClientId,
         client_secret: config.ssoClientSecret,
         code_verifier: codeVerifier,
@@ -107,17 +114,17 @@ export default defineEventHandler(async (event) => {
   const { access_token, refresh_token, expires_in } = tokenResponse
 
   // Store access token in httpOnly cookie
-  setCookie(event, 'auth_token', access_token, {
+  setCookie(event, SessionCookie.AuthToken, access_token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: expires_in ?? 60 * 15,
+    maxAge: expires_in ?? ACCESS_TOKEN_FALLBACK_MAX_AGE,
     path: '/',
   })
 
   // Store refresh token if provided
   if (refresh_token) {
-    setCookie(event, 'refresh_token', refresh_token, {
+    setCookie(event, SessionCookie.RefreshToken, refresh_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -127,11 +134,11 @@ export default defineEventHandler(async (event) => {
   }
 
   // Non-httpOnly flag for client-side middleware
-  setCookie(event, 'authed', '1', {
+  setCookie(event, SessionCookie.Authed, '1', {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: AUTHED_FLAG_MAX_AGE,
     path: '/',
   })
 
@@ -148,14 +155,14 @@ export default defineEventHandler(async (event) => {
   // already sitting in browsers.
 
   // If came from silent SSO on a public page — return there (now logged in)
-  deleteCookie(event, 'sso_silent_tried', { path: '/' })
-  const silentReturn = getCookie(event, 'sso_silent_return')
-  deleteCookie(event, 'sso_silent_return', { path: '/' })
+  deleteCookie(event, SessionCookie.SsoSilentTried, { path: '/' })
+  const silentReturn = getCookie(event, SessionCookie.SsoSilentReturn)
+  deleteCookie(event, SessionCookie.SsoSilentReturn, { path: '/' })
 
   // post_login_redirect set by authorize.get.ts — return to the page user was on
   // (e.g. "Add another account" should bring back to current page, not dashboard)
-  const postLoginRedirect = getCookie(event, 'post_login_redirect')
-  deleteCookie(event, 'post_login_redirect', { path: '/' })
+  const postLoginRedirect = getCookie(event, SessionCookie.PostLoginRedirect)
+  deleteCookie(event, SessionCookie.PostLoginRedirect, { path: '/' })
 
-  return sendRedirect(event, silentReturn || postLoginRedirect || '/client/dashboard', 302)
+  return sendRedirect(event, silentReturn || postLoginRedirect || CLIENT_DASHBOARD_PATH, 302)
 })

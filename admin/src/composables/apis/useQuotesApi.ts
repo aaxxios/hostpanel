@@ -9,6 +9,8 @@
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { PagedResult } from '@/types/pagedresult'
 import type { CreateQuotePayload, Quote, QuoteListItem, UpdateQuotePayload } from '@/types/quote'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for quotes.
@@ -26,7 +28,7 @@ export const useQuotesApi = () => {
    * @returns One page of quotes.
    */
   const list = (page: number, pageSize: number): Promise<PagedResult<QuoteListItem>> =>
-    request<PagedResult<QuoteListItem>>(`/billing/quotes${buildQuery({ page, pageSize })}`)
+    request<PagedResult<QuoteListItem>>(`${ApiPath.BillingQuotes}${buildQuery({ page, pageSize })}`)
 
   /**
    * Lists the quotes of one client.
@@ -37,7 +39,7 @@ export const useQuotesApi = () => {
    * @returns One page of quotes.
    */
   const listByClient = (clientId: number | string, page: number, pageSize: number): Promise<PagedResult<QuoteListItem>> =>
-    request<PagedResult<QuoteListItem>>(`/billing/quotes/client/${clientId}${buildQuery({ page, pageSize })}`)
+    request<PagedResult<QuoteListItem>>(`${ApiPath.BillingQuotes}/client/${clientId}${buildQuery({ page, pageSize })}`)
 
   /**
    * Loads one quote with its lines.
@@ -45,7 +47,7 @@ export const useQuotesApi = () => {
    * @param id - The quote id.
    * @returns The quote.
    */
-  const get = (id: number): Promise<Quote> => request<Quote>(`/quotes/${id}`)
+  const get = (id: number): Promise<Quote> => request<Quote>(`${ApiPath.Quotes}/${id}`)
 
   /**
    * Creates a quote.
@@ -54,7 +56,7 @@ export const useQuotesApi = () => {
    * @returns The new quote id.
    */
   const create = (payload: CreateQuotePayload): Promise<number> =>
-    request<number>('/billing/quotes', { method: 'POST', body: JSON.stringify(payload) })
+    request<number>(ApiPath.BillingQuotes, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Updates a quote.
@@ -64,7 +66,7 @@ export const useQuotesApi = () => {
    * @returns Nothing.
    */
   const update = (id: number, payload: UpdateQuotePayload): Promise<void> =>
-    request<void>(`/quotes/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Quotes}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Duplicates a quote.
@@ -72,7 +74,7 @@ export const useQuotesApi = () => {
    * @param id - The quote id.
    * @returns The new quote id.
    */
-  const duplicate = (id: number): Promise<number> => request<number>(`/quotes/${id}/duplicate`, { method: 'POST' })
+  const duplicate = (id: number): Promise<number> => request<number>(`${ApiPath.Quotes}/${id}/duplicate`, { method: HttpMethod.Post })
 
   /**
    * Converts a quote to an invoice.
@@ -81,7 +83,7 @@ export const useQuotesApi = () => {
    * @returns The new invoice id.
    */
   const convertToInvoice = (id: number): Promise<number> =>
-    request<number>(`/quotes/${id}/convert-to-invoice`, { method: 'POST' })
+    request<number>(`${ApiPath.Quotes}/${id}/convert-to-invoice`, { method: HttpMethod.Post })
 
   /**
    * Deletes a quote.
@@ -89,7 +91,7 @@ export const useQuotesApi = () => {
    * @param id - The quote id.
    * @returns Nothing.
    */
-  const remove = (id: number): Promise<void> => request<void>(`/quotes/${id}`, { method: 'DELETE' })
+  const remove = (id: number): Promise<void> => request<void>(`${ApiPath.Quotes}/${id}`, { method: HttpMethod.Delete })
 
   return { list, listByClient, get, create, update, duplicate, convertToInvoice, remove }
 }

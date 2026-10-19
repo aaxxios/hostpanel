@@ -83,7 +83,7 @@ const editing = ref(false)
 /**
  * Whether this deployment owns the account the language is stored on.
  *
- * Under `AUTH_MODE=sso` the SSO owns the person and so their chosen language: hostpanel can
+ * Under `AUTH_MODE=sso` the SSO owns the person and so their chosen language: this portal can
  * neither read one back nor write one. The field is therefore not offered at all rather than
  * shown as a control whose value never changes.
  */

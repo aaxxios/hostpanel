@@ -7,6 +7,9 @@
  * Profile entry point: the details live in the account page's details tab, so this route only
  * forwards there.
  */
+import { clientAccountTabPath } from '~/constants/clientRoutes'
+import { AccountTab } from '~/types/accounttab'
+
 definePageMeta({ layout: 'client', middleware: 'client-auth' })
-await navigateTo('/client/account?tab=details', { replace: true })
+await navigateTo(clientAccountTabPath(AccountTab.Details), { replace: true })
 </script>

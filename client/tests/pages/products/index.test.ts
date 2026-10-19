@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { mountPage, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import type { PublicPageSpies } from '~/tests/helpers/publicPage'
+import { testimonialFixture } from '~/tests/helpers/storefrontFixtures'
 import ProductsPage from '~/pages/products/index.vue'
 import CatalogProductsHero from '~/components/catalog/ProductsHero.vue'
 import CatalogProductFamilyGrid from '~/components/catalog/ProductFamilyGrid.vue'
@@ -16,9 +17,10 @@ import MarketingSectionHeader from '~/components/marketing/MarketingSectionHeade
 import SectionsCTA from '~/components/sections/SectionsCTA.vue'
 import type { BillingCurrency } from '~/types/currency'
 import type { PortalProduct } from '~/types/portalproduct'
+import type { PortalProductGroup } from '~/types/portalproductgroup'
 
 /** The mocked catalogue endpoints, re-created for every test. */
-const api = { fetchProducts: vi.fn() }
+const api = { fetchProducts: vi.fn(), fetchProductGroups: vi.fn() }
 
 /** The currency the stood-in currency endpoint answers with. */
 const usd: BillingCurrency = { code: 'USD', numeric: '840', prefix: '$', suffix: '', decimals: 2, isBase: true }
@@ -32,6 +34,18 @@ vi.mock('~/composables/apis/useCatalogApi', () => ({
   useCatalogApi: () => api,
 }))
 
+/** The mocked storefront endpoints, so the testimonials block has quotes to show. */
+const storefrontApi = { fetchPartners: vi.fn(), fetchTestimonials: vi.fn(), fetchProjects: vi.fn(), fetchFaqs: vi.fn() }
+
+vi.mock('~/composables/apis/useStorefrontApi', () => ({
+  /**
+   * Stands in for the storefront API composable so the store runs without transport.
+   *
+   * @returns The mocked endpoints.
+   */
+  useStorefrontApi: () => storefrontApi,
+}))
+
 vi.mock('~/composables/apis/useCurrencyApi', () => ({
   /**
    * Stands in for the currency API composable.
@@ -41,9 +55,15 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
   useCurrencyApi: () => ({ loadBillingCurrencies: () => Promise.resolve([usd]) }),
 }))
 
+/** The groups: one family with products and one that is empty. */
+const groups: PortalProductGroup[] = [
+  { id: 3, name: 'Alpha Suite', isActive: true, productCount: 3 },
+  { id: 4, name: 'Beta Kit', isActive: true, productCount: 0 },
+]
+
 /** A SaaS family: its parent and two plans, one of them priced. */
 const catalogue: PortalProduct[] = [
-  { id: 10, pid: 10, groupId: 3, name: 'SmartLearn System', slug: 'smartlearn-system', description: 'Learn online<br />✔ Courses' },
+  { id: 10, pid: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', description: 'Learn online<br />✔ Courses' },
   { id: 11, pid: 11, groupId: 3, name: 'Starter', slug: 'starter', description: '✔ One site', pricing: { monthly: 10, annual: 100 } },
   { id: 12, pid: 12, groupId: 3, name: 'Pro', slug: 'pro', description: '✔ Two sites', pricing: { monthly: 20, annual: 200 } },
 ]
@@ -74,26 +94,30 @@ describe('products page', () => {
     spies = stubPublicPageRuntime()
     api.fetchProducts.mockReset()
     api.fetchProducts.mockResolvedValue(catalogue)
+    api.fetchProductGroups.mockReset()
+    api.fetchProductGroups.mockResolvedValue(groups)
+    storefrontApi.fetchTestimonials.mockReset()
+    storefrontApi.fetchTestimonials.mockResolvedValue([1, 2, 3].map(id => testimonialFixture(id)))
     window.localStorage.clear()
   })
 
-  it('reads every family group, and again in the payer currency once it resolves', async () => {
+  it('reads the products of the family groups only, and again in the payer currency once it resolves', async () => {
     await mountProducts()
 
-    expect(api.fetchProducts).toHaveBeenCalledWith(expect.objectContaining({ gids: '1,3,4,5,6,7,8,9' }))
+    expect(api.fetchProducts).toHaveBeenCalledWith(expect.objectContaining({ gids: '3' }))
   })
 
   it('puts the static domains card first, then one card per catalogue family', async () => {
     const wrapper = await mountProducts()
 
     const cards = wrapper.findAll('[data-testid^="product-card-"]').map((card) => card.attributes('data-testid'))
-    expect(cards).toEqual(['product-card-domains', 'product-card-smartlearn-system'])
+    expect(cards).toEqual(['product-card-domains', 'product-card-alpha-suite'])
   })
 
   it('lists a family with priced plans in the comparison table, in the payer currency', async () => {
     const wrapper = await mountProducts()
 
-    const row = wrapper.find('[data-testid="comparison-row-smartlearn-system"]')
+    const row = wrapper.find('[data-testid="comparison-row-alpha-suite"]')
     expect(row.exists()).toBe(true)
     expect(row.text()).toContain('10.00')
     expect(wrapper.find('[data-testid="comparison-row-domains"]').exists()).toBe(false)

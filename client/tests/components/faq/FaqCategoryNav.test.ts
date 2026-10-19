@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import FaqCategoryNav from '~/components/faq/FaqCategoryNav.vue'
 import { FaqCategory } from '~/types/faqcategory'
+import { faqCategorySlug } from '~/utils/faqCategory'
 
 describe('FaqCategoryNav', () => {
   beforeEach(() => {
@@ -15,9 +16,10 @@ describe('FaqCategoryNav', () => {
   it.each(Object.values(FaqCategory))('links to the %s topic page', (category) => {
     const wrapper = mountWithKit(FaqCategoryNav)
 
-    const link = wrapper.find(`[data-testid="faq-category-${category}"]`)
-    expect(link.attributes('href')).toBe(`/en/faq/${category}`)
-    expect(link.text()).toBe(`faq.categories.${category}`)
+    const slug = faqCategorySlug(category)
+    const link = wrapper.find(`[data-testid="faq-category-${slug}"]`)
+    expect(link.attributes('href')).toBe(`/en/faq/${slug}`)
+    expect(link.text()).toBe(`faq.categories.${slug}`)
   })
 
   it('has no "All" link by default', () => {

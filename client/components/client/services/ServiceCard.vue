@@ -1,11 +1,11 @@
 <template>
-  <UiLinkCard :to="service.username ? `/client/services/${service.id}` : `/client/services/${service.id}/setup`" :highlight="!service.username" :testid="`service-card-${service.id}`">
+  <UiLinkCard :to="service.username ? clientServicePath(service.id) : clientServiceSetupPath(service.id)" :highlight="!service.username" :testid="`service-card-${service.id}`">
     <UiStack direction="row" justify="between" align="start" class="mb-3">
       <UiStack direction="row" align="center" gap="sm" class="min-w-0">
         <UiTile size="lg" :icon="Server" tone="primary" />
         <UiStack gap="none" class="min-w-0">
           <UiText as="h3" size="sm" weight="semibold" truncate class="group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-            {{ service.name }}
+            {{ productNameOrFallback($t, service.name, service.id) }}
           </UiText>
           <UiText as="span" size="xs" tone="subtle" truncate>{{ service.domain || service.groupname }}</UiText>
         </UiStack>
@@ -43,9 +43,11 @@
  * due date, recurring amount and a disk-usage bar. The whole card links to the service, or to
  * its setup wizard while it has no control-panel account yet.
  */
+import { clientServicePath, clientServiceSetupPath } from '~/constants/clientRoutes'
 import { Server } from 'lucide-vue-next'
 import type { ClientService } from '~/types/clientservice'
 import type { CurrencyInfo } from '~/utils/formatCurrency'
+import { productNameOrFallback } from '~/utils/displayFallback'
 import { formatCurrency } from '~/utils/formatCurrency'
 import { formatDate } from '~/utils/formatDate'
 import { hasUsageLimit } from '~/utils/serviceUsage'

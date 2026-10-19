@@ -48,18 +48,18 @@ describe('resolveAppUrl', () => {
 
 describe('withAccountHandoff', () => {
   it('names the signed-in account on a cross-origin app URL', () => {
-    expect(withAccountHandoff('https://sheets.innovayse.com', 'a@innovayse.com'))
-      .toBe('https://sheets.innovayse.com/?authuser=a%40innovayse.com')
+    expect(withAccountHandoff('https://sheets.example.test', 'a@example.test'))
+      .toBe('https://sheets.example.test/?authuser=a%40example.test')
   })
 
   it('replaces rather than repeats an authuser already there', () => {
-    expect(withAccountHandoff('https://docs.innovayse.com/?authuser=old@x.com', 'new@x.com'))
-      .toBe('https://docs.innovayse.com/?authuser=new%40x.com')
+    expect(withAccountHandoff('https://docs.example.test/?authuser=old@x.com', 'new@x.com'))
+      .toBe('https://docs.example.test/?authuser=new%40x.com')
   })
 
   it('leaves the URL alone with nobody signed in, or when it is not an absolute URL', () => {
-    expect(withAccountHandoff('https://sheets.innovayse.com', undefined)).toBe('https://sheets.innovayse.com')
-    expect(withAccountHandoff('/client', 'a@innovayse.com')).toBe('/client')
-    expect(withAccountHandoff('not a url', 'a@innovayse.com')).toBe('not a url')
+    expect(withAccountHandoff('https://sheets.example.test', undefined)).toBe('https://sheets.example.test')
+    expect(withAccountHandoff('/client', 'a@example.test')).toBe('/client')
+    expect(withAccountHandoff('not a url', 'a@example.test')).toBe('not a url')
   })
 })

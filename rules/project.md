@@ -52,6 +52,10 @@ memory. What remains is short:
   `sso` mode (including the ones that answer 404 on purpose). Converting it is its own reviewed
   change, after the login flow is re-verified end to end. `HealthController` is **not** an
   exception: it derives from `BaseApiController` with `[AllowAnonymous]`.
+- **Anonymous public storefront feeds.** `/api/public/{faqs,partners,projects,testimonials}` (like `/api/public/slides` and
+  `/api/public/demo` before them) are `[AllowAnonymous]` read-only queries: the storefront renders them before anyone has
+  signed in, so they cannot carry the usual `[Authorize]` on every action. They stay on `BaseApiController`, dispatch one
+  query, return only active, already-localised records and never expose an admin field; writes remain behind `Policies.Admin`.
 - **Handler and validator naming is `<UseCase>Handler` / `<UseCase>Validator`; the product rule wins over
   workspace `cqrs.md`.** Use-case names are unique across modules (`SuspendHostedAccount` in Provisioning,
   `SuspendService` in Services), and a DTO two use cases share lives once in `<Module>/Common/` (one
@@ -198,6 +202,12 @@ folder per use case under `Application/<Feature>/{Commands,Queries}/<UseCase>/`.
   `ResetDemoDataCommand` truncates every table except the identity roles and reseeds in one
   transaction every `ResetIntervalHours`; `GET /api/public/demo` publishes the accounts and the next
   reset. Seed text names no outside product.
+- **Seed.** The demo seed is fixed and deterministic: `DemoCatalogueSeeder`, `DemoPeopleSeeder` and `DemoClientProfile`
+  produce the same sample data on every reset, and it is maximal, with every table populated enough to show each
+  feature. The site name is `Hostpanel Demo`.
+- **Network.** The demo's services sit on a demo-private network and join `innovayse_network` only under their
+  `hostpanel-demo-*` names, so the demo cannot reach production's services. See the configuration section below.
+- **Deploy scope.** The demo is deployed through GitLab scope `demo/hostpanel`, with its own `DEPLOY_DIR`.
 
 ## Stack
 
@@ -332,12 +342,21 @@ Its own nginx exists for a standalone install.
 - **Demo mode (`Demo__Enabled`).** Set through `DEMO_*` env in `docker/docker-compose.demo.yml`, an overlay
   placed last in the chain (`shared` + `prod` + `platform` + `demo`, project `hostpanel-demo`). It swaps the
   payment, registrar and provisioning adapters for fakes, sends mail to the demo's own mailhog and resets
-  data every `Demo__ResetIntervalHours`. Everything stateful is `hostpanel-demo-*` so it can sit beside prod; its db, broker, redis and mailhog live on a demo-private network and only the api, client and admin (compose services `hostpanel-demo-*`, the names the edge proxy uses) also join the dedicated external network `hostpanel_demo_edge`, **never** `innovayse_network`, so the demo can neither resolve nor reach any production container (the edge proxy `innovayse-edge` is the one production-side container on both networks; `deploy:demo` creates the network when missing, with the **fixed subnet 172.29.0.0/16**, which the edge's `nginx.conf` denies on every host except the two demo ones, so a demo container cannot reach production by sending a production `Host` header; the subnet lives in `deploy:demo`, `edge-proxy/nginx.conf` and `docker/README.md`, and changes in all three together); `deploy:demo` uses its own `DEPLOY_DIR` (`/home/innovayse-server/www/hostpanel-demo`), never prod's;
+  data every `Demo__ResetIntervalHours`. Everything stateful is `hostpanel-demo-*` so it can sit beside prod; its db, broker, redis and mailhog live on a demo-private network and only the api, client and admin (compose services `hostpanel-demo-*`, the names the edge proxy uses) also join the dedicated external network `hostpanel_demo_edge`, **never** `innovayse_network`, so the demo can neither resolve nor reach any production container (the edge proxy `innovayse-edge` is the one production-side container on both networks; `deploy:demo` creates the network when missing, with the **fixed subnet 172.29.0.0/16**, which the edge's `nginx.conf` denies on every host except the two demo ones, so a demo container cannot reach production by sending a production `Host` header; the subnet lives in `deploy:demo`, `edge-proxy/nginx.conf` and `docker/README.md`, and changes in all three together); `deploy:demo` uses its own `DEPLOY_DIR` (a CI/CD variable scoped to `demo/hostpanel`), never prod's;
   the demo passwords are `:?`-required like any secret. Deployed by the manual `deploy:demo` job; it needs
   `AUTH_MODE=local`. Fake adapters live behind the existing ports, never in a code path guarded by a literal.
 - **Settings bind into a sealed `*Options` class naming its own `SectionName`** —
   `BillingOptions`, `CPanelOptions`, `NamecheapOptions`, `NameAmOptions`, `StripeOptions`, each
   in an `Options/` folder inside the feature or integration that owns it.
+
+## Storefront content — in the database, not in the code
+
+Testimonials, partners, projects and FAQs are rows in the database, each with English, Russian and Armenian
+translations, managed in the admin under **Storefront content**. The public endpoints are
+`/api/public/{testimonials,partners,projects,faqs}`. The hero stats and badge read `portal.stats.*` and
+`portal.hero.badge`; the contact channels read `portal.contact.*`; the site name reads `portal.site.name`. The
+client hides any section that is empty, so an empty table is a valid state, not an error. Production runs a
+one-time import of the previous static content; the demo does not, because its seed is fixed.
 
 ## The frontend: three templates, one live header, and one env-var trap
 
@@ -405,7 +424,7 @@ same fallback chain; `logo` is the mode-aware pick for browser-only code; and `a
 `portal.site.name`, because the logo *is* the site name and the `alt=""` the headers shipped
 with told a screen reader the brand was decorative. The rule itself is
 `client/utils/brandLogo.ts`, unit-tested. `useSiteIdentity()` is the only source of the site
-name; the literal `Innovayse` survives as its fallback and in the locale copy, and nowhere else
+name; the literal `Hostpanel` survives as its fallback and in the locale copy, and nowhere else
 in a `.vue` or `.ts` file.
 
 **Every colour a template ships is a `var()` with the template's literal as its fallback —
@@ -603,7 +622,7 @@ OOM-killed on every attempt. The shards (the same split as `.github/workflows/ci
 `backend:test:integration:a` to `:d`, share a `resource_group` so only one runs at a time, and split
 by namespace with `--filter "FullyQualifiedName~Integration.Tests.<Ns>."`: A is Adapters, Admin,
 Audit, Auth, Clients, Common, Demo, Health, Identity, Security, Shared; B is Billing, Domains; C is
-Reports, Slides, Support; D is Migration, Notifications, Orders, Persistence, Products,
+Reports, Slides, Support, Faqs, Partners, Projects, Testimonials; D is Migration, Notifications, Orders, Persistence, Products,
 Provisioning, Services. **A new top-level folder in `Integration.Tests/` must be added to one
 shard in `.gitlab-ci.yml` and in `ci.yml`, or its tests run nowhere.**
 

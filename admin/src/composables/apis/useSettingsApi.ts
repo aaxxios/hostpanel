@@ -10,6 +10,8 @@ import { buildQuery, useApi } from '@/composables/useApi'
 import type { EmailTemplate } from '@/types/emailtemplate'
 import type { CreateProductPayload, Product, ProductGroup, UpdateProductPayload } from '@/types/product'
 import type { Setting } from '@/types/setting'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for settings, email templates and products.
@@ -24,7 +26,7 @@ export const useSettingsApi = () => {
    *
    * @returns Every setting row.
    */
-  const listSettings = (): Promise<Setting[]> => request<Setting[]>('/admin/settings')
+  const listSettings = (): Promise<Setting[]> => request<Setting[]>(ApiPath.AdminSettings)
 
   /**
    * Writes one setting's value; the API updates by id and never creates.
@@ -34,7 +36,7 @@ export const useSettingsApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const updateSetting = (id: number, value: string): Promise<void> =>
-    request<void>(`/admin/settings/${id}`, { method: 'PUT', body: JSON.stringify({ value }) })
+    request<void>(`${ApiPath.AdminSettings}/${id}`, { method: HttpMethod.Put, body: JSON.stringify({ value }) })
 
   /**
    * Lists the email templates.
@@ -42,7 +44,7 @@ export const useSettingsApi = () => {
    * @returns Every template.
    */
   const listEmailTemplates = (): Promise<EmailTemplate[]> =>
-    request<EmailTemplate[]>('/admin/email-templates')
+    request<EmailTemplate[]>(ApiPath.AdminEmailTemplates)
 
   /**
    * Lists every product, inactive and unsellable ones included.
@@ -50,7 +52,7 @@ export const useSettingsApi = () => {
    * @returns Every product.
    */
   const listProducts = (): Promise<Product[]> =>
-    request<Product[]>(`/products${buildQuery({ activeOnly: false, includeUnsellable: true })}`)
+    request<Product[]>(`${ApiPath.Products}${buildQuery({ activeOnly: false, includeUnsellable: true })}`)
 
   /**
    * Lists every product group, inactive ones included.
@@ -58,7 +60,7 @@ export const useSettingsApi = () => {
    * @returns Every group.
    */
   const listProductGroups = (): Promise<ProductGroup[]> =>
-    request<ProductGroup[]>(`/products/groups${buildQuery({ activeOnly: false })}`)
+    request<ProductGroup[]>(`${ApiPath.Products}/groups${buildQuery({ activeOnly: false })}`)
 
   /**
    * Creates a product.
@@ -67,7 +69,7 @@ export const useSettingsApi = () => {
    * @returns The new product id.
    */
   const createProduct = (payload: CreateProductPayload): Promise<number> =>
-    request<number>('/products', { method: 'POST', body: JSON.stringify(payload) })
+    request<number>(ApiPath.Products, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Updates a product; the id travels in the body as well as the path.
@@ -77,7 +79,7 @@ export const useSettingsApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const updateProduct = (id: number, payload: UpdateProductPayload): Promise<void> =>
-    request<void>(`/products/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...payload }) })
+    request<void>(`${ApiPath.Products}/${id}`, { method: HttpMethod.Put, body: JSON.stringify({ id, ...payload }) })
 
   return {
     listSettings,

@@ -2,13 +2,28 @@
  * Tests for the FAQ landing page: the hero with a link to every topic, the full list of
  * questions, and the structured data for search engines.
  */
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { mountPage, registerPageComponents, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import type { PublicPageSpies } from '~/tests/helpers/publicPage'
 import FaqCategoryNav from '~/components/faq/FaqCategoryNav.vue'
-import { faqs } from '~/lib/data'
+import { faqFixture } from '~/tests/helpers/storefrontFixtures'
 import Page from '~/pages/faq/index.vue'
+
+/** The mocked storefront endpoints, re-created for every test. */
+const api = { fetchPartners: vi.fn(), fetchTestimonials: vi.fn(), fetchProjects: vi.fn(), fetchFaqs: vi.fn() }
+
+vi.mock('~/composables/apis/useStorefrontApi', () => ({
+  /**
+   * Stands in for the storefront API composable so the store runs without transport.
+   *
+   * @returns The mocked endpoints.
+   */
+  useStorefrontApi: () => api,
+}))
+
+/** Two questions the API serves. */
+const FAQS = [faqFixture(1), faqFixture(2)]
 
 /** Stands in for the FAQ list section, recording the props it was given. */
 const SectionsFaqStub = defineComponent({
@@ -27,6 +42,8 @@ let spies: PublicPageSpies
 describe('pages/faq/index', () => {
   beforeEach(() => {
     spies = stubPublicPageRuntime()
+    api.fetchFaqs.mockReset()
+    api.fetchFaqs.mockResolvedValue(FAQS)
     registerPageComponents({ FaqCategoryNav, SectionsFAQ: SectionsFaqStub })
   })
 
@@ -60,8 +77,17 @@ describe('pages/faq/index', () => {
 
     expect(spies.injectSchema).toHaveBeenCalledTimes(1)
     const schema = spies.injectSchema.mock.calls[0]?.[0] as { items: Array<{ question: string }> }
-    expect(schema.items).toHaveLength(faqs.length)
-    expect(schema.items[0]?.question).toBe(`faq.items.${faqs[0]?.id}.question`)
+    expect(schema.items).toHaveLength(FAQS.length)
+    expect(schema.items[0]?.question).toBe('Example question 1?')
+  })
+
+  it('publishes no questions in the structured data when there are none', async () => {
+    api.fetchFaqs.mockResolvedValue([])
+
+    await mountPage(Page)
+
+    const schema = spies.injectSchema.mock.calls[0]?.[0] as { items: unknown[] }
+    expect(schema.items).toEqual([])
   })
 
   it('sets the page tags for /faq', async () => {

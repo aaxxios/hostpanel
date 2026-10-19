@@ -10,6 +10,7 @@ import { ref } from 'vue'
 import { useOrdersApi } from '@/composables/apis/useOrdersApi'
 import { runAction } from '@/lib/runAction'
 import type { OrderDetail, OrderListItem } from '@/types/order'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 /** Loads and changes orders. */
 export const useOrdersStore = defineStore('orders', () => {
@@ -25,7 +26,7 @@ export const useOrdersStore = defineStore('orders', () => {
   const page = ref(1)
 
   /** Items per page. */
-  const pageSize = ref(20)
+  const pageSize = ref(DEFAULT_PAGE_SIZE)
 
   /** Total number of matching items across all pages. */
   const totalCount = ref(0)

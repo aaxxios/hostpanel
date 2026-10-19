@@ -22,8 +22,8 @@ export interface QuoteListItem {
   id: number
   /** Associated client identifier. */
   clientId: number
-  /** Display name of the owning client. */
-  clientName: string
+  /** Display name of the owning client; null when unresolved. */
+  clientName: string | null
   /** Quote subject line. */
   subject: string
   /** ISO 8601 creation date. */
@@ -60,6 +60,8 @@ export interface Quote {
   id: number
   /** Associated client identifier. */
   clientId: number
+  /** Display name of the owning client; null when unresolved. */
+  clientName?: string | null
   /** Quote subject line. */
   subject: string
   /** Current stage of the quote. */

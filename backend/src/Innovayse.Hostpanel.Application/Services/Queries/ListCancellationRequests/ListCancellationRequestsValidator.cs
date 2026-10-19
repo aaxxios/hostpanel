@@ -1,4 +1,5 @@
 using FluentValidation;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
@@ -8,7 +9,7 @@ namespace Innovayse.Hostpanel.Application.Services.Queries.ListCancellationReque
 public sealed class ListCancellationRequestsValidator : LocalizedValidator<ListCancellationRequestsQuery>
 {
     /// <summary>Most rows a page may hold.</summary>
-    private const int MaxPageSize = 100;
+    private const int MaxPageSize = PagingLimits.MaxPageSize;
 
     /// <summary>Initializes validator with localization service.</summary>
     /// <param name="localizer">String localizer for validation messages.</param>

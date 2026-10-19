@@ -32,6 +32,21 @@ COMPOSE_FILE="docker-compose.hub.yml"
 HEALTH_ATTEMPTS=60
 HEALTH_INTERVAL=5
 
+# The installer's own choices, named once. Everything else a new .env holds is the value in .env.example
+# (DOCKERHUB_NAMESPACE, the edge ports for TLS mode, the image versions ...), read from the downloaded
+# template rather than repeated here.
+INSTALL_DIR_DEFAULT="/opt/hostpanel"
+# --no-tls: the ports caddy takes so it never collides with the TLS proxy that owns 80 and 443.
+PLAIN_HTTP_PORT=8080
+PLAIN_HTTPS_PORT=8443
+# Database name, and the postgres and rabbitmq user, of a fresh install (the template's are dev values).
+SERVICE_ROLE="hostpanel"
+# The relay the operator is expected to configure: submission port and its encryption.
+SMTP_RELAY_PORT=587
+SMTP_RELAY_ENCRYPTION="tls"
+# Compose service (and container) name of the API.
+API_SERVICE="hostpanel-api"
+
 # ── Output helpers ────────────────────────────────────────────────────────────
 if [ -t 1 ]; then
   RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'
@@ -170,17 +185,19 @@ collect_answers() {
 }
 
 # Writes the edge settings for the chosen TLS mode. $1 file
-# on : caddy owns 80/443 and gets the certificates. off: caddy serves plain HTTP on 8080 (443 is
-# parked on 8443) so it never collides with the proxy that already owns 80 and 443 on this host.
+# on : caddy owns the template's ports (80/443) and gets the certificates. off: caddy serves plain HTTP
+# on PLAIN_HTTP_PORT (443 is parked on PLAIN_HTTPS_PORT) so it never collides with the proxy that
+# already owns 80 and 443 on this host.
 set_env_edge() {
+  local template="${INSTALL_DIR}/.env.example"
   if [ "$TLS" = "off" ]; then
     set_env "$1" EDGE_SCHEME "http://"
-    set_env "$1" EDGE_HTTP_PORT 8080
-    set_env "$1" EDGE_HTTPS_PORT 8443
+    set_env "$1" EDGE_HTTP_PORT "$PLAIN_HTTP_PORT"
+    set_env "$1" EDGE_HTTPS_PORT "$PLAIN_HTTPS_PORT"
   else
-    set_env "$1" EDGE_SCHEME "https://"
-    set_env "$1" EDGE_HTTP_PORT 80
-    set_env "$1" EDGE_HTTPS_PORT 443
+    set_env "$1" EDGE_SCHEME "$(get_env "$template" EDGE_SCHEME)"
+    set_env "$1" EDGE_HTTP_PORT "$(get_env "$template" EDGE_HTTP_PORT)"
+    set_env "$1" EDGE_HTTPS_PORT "$(get_env "$template" EDGE_HTTPS_PORT)"
   fi
 }
 
@@ -195,7 +212,6 @@ create_env() {
 
   set_env "$env" ASPNETCORE_ENVIRONMENT Production
   set_env "$env" AUTH_MODE local
-  set_env "$env" DOCKERHUB_NAMESPACE innovayse
   set_env "$env" IMAGE_TAG "$IMAGE_TAG"
 
   set_env "$env" DOMAIN "$DOMAIN"
@@ -205,12 +221,12 @@ create_env() {
   set_env "$env" NUXT_PUBLIC_BASE_URL "https://${DOMAIN}"
   set_env "$env" ADMIN_BASE_URL "https://${ADMIN_DOMAIN}"
   set_env "$env" CLIENT_BASE_URL "https://${DOMAIN}"
-  set_env "$env" ALLOWED_HOSTS "${DOMAIN};${ADMIN_DOMAIN};hostpanel-api;localhost"
+  set_env "$env" ALLOWED_HOSTS "${DOMAIN};${ADMIN_DOMAIN};${API_SERVICE};localhost"
 
-  set_env "$env" POSTGRES_USER hostpanel
-  set_env "$env" POSTGRES_DB hostpanel
+  set_env "$env" POSTGRES_USER "$SERVICE_ROLE"
+  set_env "$env" POSTGRES_DB "$SERVICE_ROLE"
   set_env "$env" POSTGRES_PASSWORD "$(rand_hex 24)"
-  set_env "$env" RABBITMQ_USER hostpanel
+  set_env "$env" RABBITMQ_USER "$SERVICE_ROLE"
   set_env "$env" RABBITMQ_PASSWORD "$(rand_hex 24)"
 
   set_env "$env" JWT_SECRET "$(rand_hex 32)"
@@ -221,8 +237,8 @@ create_env() {
   # Mail: the bundled example points at a dev catcher that does not exist in this stack.
   # The operator fills in a real relay afterwards; until then the API starts but cannot send.
   set_env "$env" SMTP_HOST ""
-  set_env "$env" SMTP_PORT 587
-  set_env "$env" SMTP_ENCRYPTION tls
+  set_env "$env" SMTP_PORT "$SMTP_RELAY_PORT"
+  set_env "$env" SMTP_ENCRYPTION "$SMTP_RELAY_ENCRYPTION"
   set_env "$env" SMTP_FROM "$ADMIN_EMAIL"
   set_env "$env" SMTP_FROM_NAME "$DOMAIN"
   set_env "$env" EMAIL_TO "$ADMIN_EMAIL"
@@ -270,20 +286,20 @@ wait_for_api() {
   port="$(get_env "${INSTALL_DIR}/.env" API_PORT)"
   info "Waiting for the API to become healthy (first start applies the database migrations)"
   for _ in $(seq 1 "$HEALTH_ATTEMPTS"); do
-    if compose exec -T hostpanel-api wget -q -O /dev/null "http://127.0.0.1:${port}/health" >/dev/null 2>&1; then
+    if compose exec -T "$API_SERVICE" wget -q -O /dev/null "http://127.0.0.1:${port}/health" >/dev/null 2>&1; then
       success "API is healthy"
       return 0
     fi
     sleep "$HEALTH_INTERVAL"
   done
   warn "The API did not become healthy in $((HEALTH_ATTEMPTS * HEALTH_INTERVAL))s."
-  warn "Look at it with:  cd ${INSTALL_DIR} && docker compose -f ${COMPOSE_FILE} logs hostpanel-api"
+  warn "Look at it with:  cd ${INSTALL_DIR} && docker compose -f ${COMPOSE_FILE} logs ${API_SERVICE}"
   return 1
 }
 
 # Prints the one-time first-admin setup token the API logs while nobody holds the Admin role.
 read_setup_token() {
-  compose logs --no-color hostpanel-api 2>/dev/null \
+  compose logs --no-color "$API_SERVICE" 2>/dev/null \
     | sed -n 's/.*paste this setup token when it asks for one: //p' \
     | tail -n 1 | tr -d '"\r' | sed 's/[[:space:]]*$//' || true
 }
@@ -318,11 +334,11 @@ print_summary() {
     printf '     and stops working once setup is done):\n\n'
     printf '       %s%s%s\n\n' "$BOLD" "$token" "$NC"
     printf '  Lost it? It is repeated in the API log until setup completes:\n'
-    printf '       cd %s && docker compose -f %s logs hostpanel-api | grep "setup token"\n\n' "$INSTALL_DIR" "$COMPOSE_FILE"
+    printf '       cd %s && docker compose -f %s logs %s | grep "setup token"\n\n' "$INSTALL_DIR" "$COMPOSE_FILE" "$API_SERVICE"
   else
     printf '  No setup token is outstanding: an administrator already exists, so sign in at\n'
     printf '  https://%s. If this is a fresh install, read the log for the token:\n' "$admin_domain"
-    printf '       cd %s && docker compose -f %s logs hostpanel-api | grep "setup token"\n\n' "$INSTALL_DIR" "$COMPOSE_FILE"
+    printf '       cd %s && docker compose -f %s logs %s | grep "setup token"\n\n' "$INSTALL_DIR" "$COMPOSE_FILE" "$API_SERVICE"
   fi
 
   printf '%sNext%s: set a real SMTP relay in %s/.env (SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD), then\n' "$BOLD" "$NC" "$INSTALL_DIR"
@@ -335,7 +351,7 @@ print_summary() {
 # Entry point. The whole script is a function called on the last line, so under `curl | bash`
 # bash has read it completely before anything runs and a truncated download runs nothing.
 main() {
-  INSTALL_DIR="${HOSTPANEL_DIR:-/opt/hostpanel}"
+  INSTALL_DIR="${HOSTPANEL_DIR:-$INSTALL_DIR_DEFAULT}"
   HOSTPANEL_VERSION="${HOSTPANEL_VERSION:-}"
   TLS_ASKED="${HOSTPANEL_TLS:-}"
 

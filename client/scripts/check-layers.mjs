@@ -5,7 +5,9 @@
  * layer rule from `rules/frontend.md` is also enforced by reading the source:
  *  - a `.vue` file never calls `useApi`, `apiFetch`, `$fetch`, `useFetch`, an api composable, the
  *    error-sentence helper, and holds no `catch`;
- *  - a store never uses `useApi` or `$fetch`.
+ *  - a store never uses `useApi` or `$fetch`;
+ *  - no source file spells a client-area path (`'/client/...'`) as a string literal -- paths come
+ *    from `constants/clientRoutes.ts` (constants and the `client*Path` helpers).
  *
  * Every `.vue` file and every store of the client is checked (tests and e2e are not source).
  * Exits 1 with one line per hit.
@@ -34,6 +36,20 @@ const STORE_FORBIDDEN = [
   { pattern: /\buseApi\s*\(/, what: 'useApi call' },
   { pattern: /\$fetch\s*\(/, what: '$fetch call' },
 ]
+
+/** A string literal that starts a client-area path: `'/client`, `"/client` or `` `/client ``. */
+const CLIENT_PATH_LITERAL = /['"`]\/client(?:\/|['"`?])/
+
+/** The files allowed to spell client paths: the route table itself and the route-rule glob in the config. */
+const CLIENT_PATH_ALLOWED = new Set(['constants/clientRoutes.ts', 'nuxt.config.ts'])
+
+/**
+ * Whether a line is only a comment, where paths are prose rather than code.
+ *
+ * @param {string} line Source line.
+ * @returns {boolean} True for a JSDoc, block or line comment, or an HTML comment.
+ */
+const isCommentLine = (line) => /^(?:\*|\/\/|\/\*|<!--)/.test(line.trim())
 
 /**
  * Lists source files under a directory.
@@ -69,6 +85,9 @@ for (const file of walk(ROOT)) {
       if (pattern.test(line)) {
         hits.push(`${rel}:${index + 1}  ${what}: ${line.trim()}`)
       }
+    }
+    if (!CLIENT_PATH_ALLOWED.has(rel) && !isCommentLine(line) && CLIENT_PATH_LITERAL.test(line)) {
+      hits.push(`${rel}:${index + 1}  client path literal (use constants/clientRoutes): ${line.trim()}`)
     }
   })
 }

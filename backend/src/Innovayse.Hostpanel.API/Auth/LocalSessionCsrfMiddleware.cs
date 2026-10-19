@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.Net.Http.Headers;
 
 namespace Innovayse.Hostpanel.API.Auth;
 /// <summary>
@@ -79,7 +80,7 @@ public sealed class LocalSessionCsrfMiddleware
             // admin panel or has been made to send a request the admin panel never sends, and
             // in both cases the only reader is somebody with the response in front of them.
             context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-            context.Response.ContentType = "application/json";
+            context.Response.ContentType = System.Net.Mime.MediaTypeNames.Application.Json;
             await context.Response.WriteAsync(JsonSerializer.Serialize(new
             {
                 error = $"A state-changing request authenticated by session cookie must send the {RequestedWithHeader} header.",
@@ -99,7 +100,7 @@ public sealed class LocalSessionCsrfMiddleware
     private static bool RequiresHeader(HttpRequest request) =>
         !SafeMethods.Contains(request.Method)
         && request.Cookies.ContainsKey(LocalSessionCookie.Name)
-        && !request.Headers.ContainsKey("Authorization");
+        && !request.Headers.ContainsKey(HeaderNames.Authorization);
 
     /// <summary>
     /// Whether the request carries the expected header.

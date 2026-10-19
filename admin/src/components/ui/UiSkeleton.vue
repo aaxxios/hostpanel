@@ -7,7 +7,7 @@
  * `aria-busy` on the container.
  */
 import { computed } from 'vue'
-import type { UiSkeletonShape } from '@/utils/ui/skeleton'
+import { UiSkeletonShape } from '@/utils/ui/skeleton'
 
 /** Props for UiSkeleton. */
 const props = withDefaults(defineProps<{
@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<{
   /** Number of text lines (for `text` only). */
   lines?: number
 }>(), {
-  shape: 'text',
+  shape: UiSkeletonShape.Text,
   lines: 1,
 })
 
@@ -28,7 +28,7 @@ const shapeClasses: Record<UiSkeletonShape, string> = {
 }
 
 /** Indexes of the lines to draw. */
-const rows = computed<number[]>(() => Array.from({ length: props.shape === 'text' ? Math.max(1, props.lines) : 1 }, (_, i) => i))
+const rows = computed<number[]>(() => Array.from({ length: props.shape === UiSkeletonShape.Text ? Math.max(1, props.lines) : 1 }, (_, i) => i))
 
 /**
  * Tells whether a line is the last of several, which is drawn shorter.
@@ -36,7 +36,7 @@ const rows = computed<number[]>(() => Array.from({ length: props.shape === 'text
  * @param index - Zero-based line index.
  * @returns True for the final line of a multi-line placeholder.
  */
-const isShortLine = (index: number): boolean => props.shape === 'text' && props.lines > 1 && index === rows.value.length - 1
+const isShortLine = (index: number): boolean => props.shape === UiSkeletonShape.Text && props.lines > 1 && index === rows.value.length - 1
 
 /**
  * Width class of one placeholder: circles keep their intrinsic size, a final text line is shorter.
@@ -45,7 +45,7 @@ const isShortLine = (index: number): boolean => props.shape === 'text' && props.
  * @returns A Tailwind width class, or an empty string for a circle.
  */
 const widthClass = (index: number): string => {
-  if (props.shape === 'circle') {
+  if (props.shape === UiSkeletonShape.Circle) {
     return ''
   }
   return isShortLine(index) ? 'w-2/3' : 'w-full'

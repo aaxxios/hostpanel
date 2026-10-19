@@ -34,7 +34,23 @@ describe('GET /api/portal/auth/sso/profile', () => {
     expect(backend.requests[0]?.url).toBe('/api/account/profile')
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
     expect(result).toMatchObject({ sub: 'u-1', ssoSub: 'u-1', email: 'a@b.test' })
-    expect((result['menuItems'] as { url: string }[]).map(item => item.url)).toContain('/client/dashboard')
+    const menu = result['menuItems'] as { url: string, labelKey: string, label: string, icon: string }[]
+    expect(menu.map(item => item.url)).toContain('/client/dashboard')
+    expect(menu[0]).toMatchObject({ labelKey: 'client.nav.dashboard', label: 'Dashboard', icon: 'dashboard' })
+  })
+
+  it.each([
+    ['en', 'My Services'],
+    ['ru', 'Мои услуги'],
+    ['hy', 'Իմ ծառայությունները']
+  ])('labels the menu in the X-Language of the request (%s)', async (language, services) => {
+    backend.respondWith(() => ({ body: { sub: 'u-1' } }))
+
+    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' }, headers: { 'x-language': language } })) as Record<string, unknown>
+
+    const menu = result['menuItems'] as { label: string, icon: string }[]
+    expect(menu[1]).toMatchObject({ label: services, icon: 'services' })
+    expect(menu.map(item => item.icon)).toEqual(['dashboard', 'services', 'domains', 'invoices', 'support'])
   })
 
   it('reads the subject from the token when the profile omits it', async () => {

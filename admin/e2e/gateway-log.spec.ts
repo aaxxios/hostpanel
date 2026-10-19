@@ -1,6 +1,7 @@
 /**
  * Gateway log flow: the screen lists what the API returns and sends the debug filter on search.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { gatewayLogPage } from './fixtures/gatewayLog'
 import { json, stubApi } from './support/stubApi'
@@ -8,7 +9,7 @@ import { json, stubApi } from './support/stubApi'
 test('the gateway log lists the API entries and filters by debug text', async ({ page }) => {
   const api = await stubApi(page, {
     signedIn: true,
-    routes: [json('GET', '/api/gateway-logs', gatewayLogPage)],
+    routes: [json(HttpMethod.Get, '/api/gateway-logs', gatewayLogPage)],
   })
 
   await page.goto('/billing/gateway-log')
@@ -20,6 +21,6 @@ test('the gateway log lists the API entries and filters by debug text', async ({
   await page.getByTestId('billing-gateway-log-debug').fill('ref-4')
   await page.getByTestId('billing-gateway-log-search').click()
 
-  await expect.poll(() => api.callsTo('GET', '/api/gateway-logs').length).toBeGreaterThan(1)
-  expect(api.callsTo('GET', '/api/gateway-logs').at(-1)?.search).toContain('debugData=ref-4')
+  await expect.poll(() => api.callsTo(HttpMethod.Get, '/api/gateway-logs').length).toBeGreaterThan(1)
+  expect(api.callsTo(HttpMethod.Get, '/api/gateway-logs').at(-1)?.search).toContain('debugData=ref-4')
 })

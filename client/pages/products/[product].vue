@@ -45,7 +45,6 @@ import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
 import { PricingCycle } from '~/types/pricingcycle'
 import type { ProductPlan } from '~/types/productplan'
-import { productGids } from '~/utils/catalogGroups'
 import { formatMoney } from '~/utils/formatMoney'
 import { findProductDetail } from '~/utils/productFamilies'
 import { buildSeoLinks, localizedUrl } from '~/utils/seoLinks'
@@ -71,18 +70,15 @@ const catalogStore = useCatalogStore()
 /** Public site address the canonical and schema URLs are built from. */
 const baseUrl = useRuntimeConfig().public.baseUrl
 
-/** Route param, e.g. `smartlearn-system`. */
+/** Route param, e.g. `alpha-suite`. */
 const productId = route.params.product as string
 
-/** Which products the page reads: every SaaS group in one request. */
-const catalogFilter = { gids: productGids.join(',') }
-
-await useAsyncData('products:families', () => catalogStore.loadProducts(catalogFilter), {
+await useAsyncData('products:families', () => catalogStore.loadFamilies(), {
   watch: [() => currencyStore.payerCode, locale],
 })
 
 /** The product the route names, shaped for the page; null when no product matches. */
-const productData = computed(() => findProductDetail(catalogStore.productsFor(catalogFilter), productId))
+const productData = computed(() => findProductDetail(catalogStore.familyGroups, catalogStore.familyProducts, productId))
 
 /** The cycles at least one plan is priced for. */
 const availableCycles = computed<PricingCycle[]>(() =>

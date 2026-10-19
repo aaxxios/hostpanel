@@ -28,6 +28,7 @@ import { pageCount } from '@/lib/paging'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiTableDensity } from '@/utils/ui/injection'
 import { UiTone } from '@/utils/ui/tone'
+import { AppRoute, editPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -84,7 +85,7 @@ onMounted(() => {
     >
       <template #actions>
         <UiLink
-          to="/support/announcements/new"
+          :to="AppRoute.SupportAnnouncementsNew"
           :variant="UiButtonVariant.Primary"
           data-testid="announcements-add"
         >
@@ -136,7 +137,7 @@ onMounted(() => {
             </UiTableCell>
             <UiTableCell align="right">
               <SupportRowActions
-                :edit-to="`/support/announcements/${announcement.id}/edit`"
+                :edit-to="editPath(AppRoute.SupportAnnouncements, announcement.id)"
                 :testid-prefix="`announcements-${announcement.id}`"
                 @delete="deleteTarget = announcement.id"
               />

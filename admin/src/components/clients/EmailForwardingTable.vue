@@ -240,7 +240,7 @@ const confirmDelete = async (): Promise<void> => {
                 <UiInput
                   v-model="draftSource"
                   type="text"
-                  placeholder="info@"
+                  :placeholder="t('shared.examples.emailLocalPart')"
                   data-testid="clients-forwarding-draft-source"
                 />
               </UiTableCell>
@@ -248,7 +248,7 @@ const confirmDelete = async (): Promise<void> => {
                 <UiInput
                   v-model="draftDestination"
                   type="text"
-                  placeholder="user@example.com"
+                  :placeholder="t('shared.examples.email')"
                   data-testid="clients-forwarding-draft-destination"
                 />
               </UiTableCell>

@@ -22,6 +22,7 @@
  * @module composables/useBrandLogo
  */
 
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { pickBrandLogo, pickBrandMark, resolveBrandLogos } from '~/utils/brandLogo'
 
 /** Reads the operator's logo settings and binds them to the colour mode. */
@@ -32,9 +33,9 @@ export const useBrandLogo = () => {
 
   /** The three uploaded images, each empty when not set. */
   const sources = computed(() => ({
-    light: get('portal.logo', 'portalLogo'),
-    dark: get('portal.logo.dark', 'portalLogoDark'),
-    mark: get('portal.logo.mark', 'portalLogoMark'),
+    light: get(PortalSettingKey.Logo, 'portalLogo'),
+    dark: get(PortalSettingKey.LogoDark, 'portalLogoDark'),
+    mark: get(PortalSettingKey.LogoMark, 'portalLogoMark'),
   }))
 
   /** Both wordmarks with their fallbacks. */

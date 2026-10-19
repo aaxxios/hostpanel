@@ -26,6 +26,7 @@ import UiLink from '@/components/ui/UiLink.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { AppRoute } from '@/lib/routes'
 
 /** Translation function. */
 const { t } = useI18n()
@@ -59,12 +60,12 @@ const stateTone = (server: ServerDto): UiTone => {
 
 /** Navigates to the servers page with CWP7 module pre-selected. */
 const goToCreateServer = (): void => {
-  void router.push({ path: '/servers', query: { create: ServerModule.Cwp7 } })
+  void router.push({ path: AppRoute.Servers, query: { create: ServerModule.Cwp7 } })
 }
 
 /** Navigates to the product creation page. */
 const goToCreateProduct = (): void => {
-  void router.push({ path: '/settings/products', query: { create: 'true', module: ServerModule.Cwp7 } })
+  void router.push({ path: AppRoute.SettingsProducts, query: { create: 'true', module: ServerModule.Cwp7 } })
 }
 
 /** Loads the servers. */
@@ -98,7 +99,7 @@ onMounted(() => {
             </UiStack>
             <UiStack gap="xs">
               <UiText tone="muted" size="sm">{{ t('integrations.cwp7Integration.developer') }}</UiText>
-              <UiText tone="primary" size="sm" class="font-medium">{{ t('shared.innovayse') }}</UiText>
+              <UiText tone="primary" size="sm" class="font-medium">{{ t('shared.productName') }}</UiText>
             </UiStack>
           </UiGrid>
         </UiStack>
@@ -149,7 +150,7 @@ onMounted(() => {
 
       <!-- Server cards -->
       <UiGrid v-else :columns="3" gap="md" data-testid="cwp7-servers">
-        <UiLink v-for="server in cwp7Servers" :key="server.id" to="/servers" class="block" :data-testid="`cwp7-server-${server.id}`">
+        <UiLink v-for="server in cwp7Servers" :key="server.id" :to="AppRoute.Servers" class="block" :data-testid="`cwp7-server-${server.id}`">
           <UiCard padding="md" class="h-full">
             <UiStack gap="sm">
               <UiStack direction="row" align="center" gap="sm">

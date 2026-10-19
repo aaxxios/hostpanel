@@ -88,10 +88,10 @@
           </UiMagnetic>
         </div>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 lg:gap-12 relative">
+        <!-- Stats: only the figures the operator configured -->
+        <div v-if="stats.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-8 lg:gap-12 relative" data-testid="hero-stats">
           <div
-            v-for="(stat, index) in STATS"
+            v-for="(stat, index) in stats"
             :key="stat.labelKey"
             v-motion
             :initial="{ opacity: 0, y: 40 }"
@@ -108,7 +108,7 @@
               <div
                 :class="[stat.gradient, 'text-4xl sm:text-5xl lg:text-7xl font-black mb-3 bg-gradient-to-br bg-clip-text text-transparent transition-all duration-500 group-hover:scale-110 drop-shadow-sm tabular-nums']"
               >
-                {{ values[index] }}{{ stat.suffix }}
+                {{ displayedValue(index) }}
               </div>
 
               <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-bold uppercase tracking-[0.2em] group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
@@ -149,18 +149,19 @@
 
 <script setup lang="ts">
 /**
- * Hero of the home page: badge, animated headline, the two calls to action, four counters that
- * run up when hovered (and once on load) and a scroll hint.
+ * Hero of the home page: badge, animated headline, the two calls to action, up to three headline
+ * figures and a scroll hint. The figures are operator settings (`portal.stats.*`), each hidden while
+ * empty; a figure that is a whole number counts up when hovered (and once on load).
  */
 import { ArrowRight, PlayCircle } from 'lucide-vue-next'
-import { teamStats } from '~/lib/data'
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 
-/** Counter definition of one stat. */
+/** Presentation of one headline figure; its value is an operator setting. */
 interface StatDefinition {
-  /** Where the counter stops. */
-  target: number
-  /** Text after the number. */
-  suffix: string
+  /** Setting that holds the figure. */
+  settingKey: PortalSettingKey
+  /** Runtime-config fallback of the setting. */
+  envKey: string
   /** Locale key of the caption. */
   labelKey: string
   /** Gradient classes of the number. */
@@ -169,13 +170,25 @@ interface StatDefinition {
   bar: string
 }
 
-/** The four stats, each with its own gradient (literal classes, so Tailwind emits them). */
-const STATS: StatDefinition[] = [
-  { target: teamStats.projects, suffix: '+', labelKey: 'hero.stats.projects', gradient: 'from-sky-500 to-violet-500', bar: 'bg-sky-500' },
-  { target: teamStats.years, suffix: '', labelKey: 'hero.stats.years', gradient: 'from-violet-500 to-cyan-500', bar: 'bg-violet-500' },
-  { target: teamStats.teamSize, suffix: '+', labelKey: 'hero.stats.team', gradient: 'from-cyan-500 to-sky-500', bar: 'bg-cyan-500' },
-  { target: teamStats.clients, suffix: '+', labelKey: 'hero.stats.clients', gradient: 'from-indigo-600 to-violet-500', bar: 'bg-indigo-600' },
+/** One figure the operator configured, ready to render. */
+interface Stat extends StatDefinition {
+  /** The figure as the operator wrote it. */
+  value: string
+  /** Where the counter stops; null when the figure is not a plain number and is shown as written. */
+  target: number | null
+  /** Text after the counted number. */
+  suffix: string
+}
+
+/** The headline figures, each with its own gradient (literal classes, so Tailwind emits them). */
+const STAT_DEFINITIONS: StatDefinition[] = [
+  { settingKey: PortalSettingKey.StatsClients, envKey: 'portalStatsClients', labelKey: 'hero.stats.clients', gradient: 'from-sky-500 to-violet-500', bar: 'bg-sky-500' },
+  { settingKey: PortalSettingKey.StatsUptime, envKey: 'portalStatsUptime', labelKey: 'hero.stats.uptime', gradient: 'from-violet-500 to-cyan-500', bar: 'bg-violet-500' },
+  { settingKey: PortalSettingKey.StatsRegions, envKey: 'portalStatsRegions', labelKey: 'hero.stats.regions', gradient: 'from-cyan-500 to-sky-500', bar: 'bg-cyan-500' },
 ]
+
+/** A figure that is a whole number optionally followed by a sign or unit (`150+`); anything else is shown as written. */
+const COUNTABLE_FIGURE = /^(\d+)([^\d.,\s].*)?$/
 
 /** Animation delay of each headline line, so the gradient sweeps line after line. */
 const GRADIENT_DELAYS = ['[animation-delay:0s]', '[animation-delay:0.5s]', '[animation-delay:1s]', '[animation-delay:1.5s]']
@@ -207,36 +220,63 @@ const COUNTER_START_DELAY = 800
 
 /** Translation helpers and the active language. */
 const { t } = useI18n()
+/** Operator settings, with their runtime-config fallbacks. */
+const { get } = usePortalSettings()
 /** Prefixes a path with the active language. */
 const localePath = useLocalePath()
 
 /** The headline split into its lines. */
 const titleLines = computed(() => t('hero.title').split('\n'))
 
-/** The number each counter currently shows. */
-const values = ref<number[]>(STATS.map(() => 0))
+/** The figures the operator configured; one that is empty is left out. */
+const stats = computed<Stat[]>(() => STAT_DEFINITIONS.flatMap((definition) => {
+  const value = get(definition.settingKey, definition.envKey)
+  if (value === '') {
+    return []
+  }
+  const match = COUNTABLE_FIGURE.exec(value)
+  return [{ ...definition, value, target: match ? Number(match[1]) : null, suffix: match?.[2] ?? '' }]
+}))
+
+/** The number each counter currently shows; re-initialised whenever {@link stats} changes. */
+const values = ref<number[]>(stats.value.map(() => 0))
 
 /** Running counter timers by stat index: a running counter is not restarted, and all stop when the section goes away. */
 const timers = new Map<number, ReturnType<typeof setInterval>>()
 
 /**
- * Runs one counter up to its target.
+ * The text a stat shows right now: the running counter for a countable figure, the figure as written otherwise.
  *
- * @param index Index of the stat in {@link STATS}.
+ * @param index Index of the stat in {@link stats}.
+ * @returns The text.
+ */
+const displayedValue = (index: number): string => {
+  const stat = stats.value[index]
+  if (!stat) {
+    return ''
+  }
+  return stat.target === null ? stat.value : `${values.value[index]}${stat.suffix}`
+}
+
+/**
+ * Runs one counter up to its target; a figure that is not a plain number has nothing to count.
+ *
+ * @param index Index of the stat in {@link stats}.
  */
 const startStatCounter = (index: number): void => {
-  const stat = STATS[index]
-  if (!stat || timers.has(index) || values.value[index] === stat.target) {
+  const stat = stats.value[index]
+  if (!stat || stat.target === null || timers.has(index) || values.value[index] === stat.target) {
     return
   }
+  const target = stat.target
 
   let current = 0
-  const stepTime = Math.max(10, Math.floor(COUNTER_DURATION / stat.target))
+  const stepTime = Math.max(10, Math.floor(COUNTER_DURATION / Math.max(target, 1)))
   const timer = setInterval(() => {
     current += 1
     values.value[index] = current
-    if (current >= stat.target) {
-      values.value[index] = stat.target
+    if (current >= target) {
+      values.value[index] = target
       clearInterval(timer)
       timers.delete(index)
     }
@@ -244,16 +284,33 @@ const startStatCounter = (index: number): void => {
   timers.set(index, timer)
 }
 
+/** Whether the start delay has passed, so counters whose figures change later start at once. */
+const countersStarted = ref(false)
+
+/** Stops every running counter. */
+const stopCounters = (): void => {
+  timers.forEach(timer => clearInterval(timer))
+  timers.clear()
+}
+
+// The settings can arrive or change after the first render; `values` must follow the figures or
+// a stat would read an index that was never initialised ("undefined+").
+watch(stats, (next) => {
+  stopCounters()
+  values.value = next.map(() => 0)
+  if (countersStarted.value) {
+    next.forEach((_, index) => startStatCounter(index))
+  }
+})
+
 onMounted(() => {
   setTimeout(() => {
-    STATS.forEach((_, index) => startStatCounter(index))
+    countersStarted.value = true
+    stats.value.forEach((_, index) => startStatCounter(index))
   }, COUNTER_START_DELAY)
 })
 
-onBeforeUnmount(() => {
-  timers.forEach((timer) => clearInterval(timer))
-  timers.clear()
-})
+onBeforeUnmount(stopCounters)
 
 /** Scrolls the page down by one screen. */
 const scrollToNextSection = (): void => {

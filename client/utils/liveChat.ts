@@ -2,13 +2,13 @@
  * Live chat widget integration.
  *
  * The provider is Innochat, self-hosted at the operator's own chat host. It is
- * built from Chatwoot and keeps Chatwoot's DOM class names — `.woot-widget-holder`
- * is still what the widget mounts into — but its SDK is rebranded all the way
- * down and exposes none of Chatwoot's globals. Everything the page talks to is
- * named here rather than spelled out at each call site, because the two sets
- * differ by one word and the wrong one fails silently: `window.$chatwoot?.toggle()`
- * on a page running Innochat is a no-op with no error, which is exactly how this
- * went unnoticed.
+ * built on an open-source chat engine and keeps that engine's DOM class names —
+ * `.woot-widget-holder` is still what the widget mounts into — but its SDK is
+ * rebranded all the way down and exposes none of the engine's globals. Everything
+ * the page talks to is named here rather than spelled out at each call site,
+ * because the two sets differ by one word and the wrong one fails silently: calling
+ * the engine's global on a page running Innochat is a no-op with no error, which
+ * is exactly how this went unnoticed.
  */
 import type { LiveChatApi } from '~/types/livechatapi'
 import type { LiveChatLoaderOptions } from '~/types/livechatloaderoptions'
@@ -26,7 +26,7 @@ export const LIVE_CHAT_API_GLOBAL = '$innochat'
 /** Event the SDK fires on `window` when the widget is ready to be called. */
 export const LIVE_CHAT_READY_EVENT = 'innochat:ready'
 
-/** Class the widget's container carries — inherited from Chatwoot, still emitted. */
+/** Class the widget's container carries — inherited from the underlying engine, still emitted. */
 export const LIVE_CHAT_HOLDER_SELECTOR = '.woot-widget-holder'
 
 /** Path of the SDK bundle under the chat host. */

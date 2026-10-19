@@ -49,5 +49,12 @@
     "gateways": "Վճարային համակարգեր",
     "currencies": "Արժույթներ"
   },
+  "storefront": "Հանրային կայքի բովանդակություն",
+  "storefrontChildren": {
+    "testimonials": "Կարծիքներ",
+    "partners": "Գործընկերներ",
+    "projects": "Նախագծեր",
+    "faqs": "Հարցեր և պատասխաններ"
+  },
   "servicesTitle": "Ծառայություններ"
 }

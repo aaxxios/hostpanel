@@ -15,6 +15,7 @@ import UiLink from '@/components/ui/UiLink.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { AppRoute } from '@/lib/routes'
 
 /** Translation function. */
 const { t } = useI18n()
@@ -70,7 +71,7 @@ onMounted(async () => {
         {{ t('auth.verifyEmail.yourEmailHasBeenSuccessfully') }}
       </UiText>
       <UiLink
-        to="/login"
+        :to="AppRoute.Login"
         variant="primary"
         size="lg"
         class="w-full"
@@ -85,7 +86,7 @@ onMounted(async () => {
       <UiAlert variant="error" data-testid="verify-email-error">
         {{ error }}
       </UiAlert>
-      <UiLink to="/login" variant="link" data-testid="verify-email-back-login">
+      <UiLink :to="AppRoute.Login" variant="link" data-testid="verify-email-back-login">
         {{ t('auth.verifyEmail.backToLogin') }}
       </UiLink>
     </UiStack>

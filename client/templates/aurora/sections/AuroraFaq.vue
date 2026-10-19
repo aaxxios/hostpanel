@@ -1,5 +1,5 @@
 <template>
-  <UiSection id="faq" padding="lg" :contained="false" class="relative border-t border-line">
+  <UiSection v-if="entries.length" id="faq" padding="lg" :contained="false" class="relative border-t border-line">
     <UiSplit ratio="equal" gap="xl">
       <template #start>
         <UiHeading :level="2" size="bare" :class="BLOCK_TITLE_CLASS">
@@ -15,32 +15,23 @@
 </template>
 
 <script setup lang="ts">
-/** aurora FAQ accordion. Answers stay in the DOM so they remain indexable. */
+/**
+ * aurora FAQ accordion. The questions come from the storefront store
+ * (`GET /api/public/faqs`); with none the section renders nothing. Answers stay in the DOM so
+ * they remain indexable.
+ */
 import { BLOCK_TITLE_CLASS } from '~/templates/aurora/typography'
+import { useStorefrontStore } from '~/stores/storefront'
 
-/** One question and its answer, read from the locale messages. */
-interface FaqItem {
-  /** The question. */
-  q: string
-  /** The answer. */
-  a: string
-}
+/** Translator and the active language. */
+const { t, locale } = useI18n()
 
-/** Translator for the active locale. */
-const { t, tm, rt } = useI18n()
+/** The storefront content: testimonials, partners, projects and FAQs. */
+const storefront = useStorefrontStore()
 
-/** Questions and answers of the active locale. */
-const items = computed<FaqItem[]>(() => {
-  const raw = tm('aurora.faq.items') as unknown[]
-  if (!Array.isArray(raw)) {
-    return []
-  }
-  return raw.map((entry) => {
-    const row = entry as Record<string, unknown>
-    return { q: rt(row.q as string), a: rt(row.a as string) }
-  })
-})
+// Not awaited: Nuxt still holds the server render for it, and the section stays synchronous.
+useAsyncData('storefront:faqs', () => storefront.loadFaqs(), { watch: [locale] })
 
-/** The same entries in the shape the accordion takes. */
-const entries = computed(() => items.value.map(item => ({ title: item.q, content: item.a })))
+/** The questions in the shape the accordion takes. */
+const entries = computed(() => storefront.faqs.map(faq => ({ title: faq.question, content: faq.answer })))
 </script>

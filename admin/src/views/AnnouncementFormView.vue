@@ -21,6 +21,7 @@ import UiTextarea from '@/components/ui/UiTextarea.vue'
 import { toDateInputValue } from '@/lib/format'
 import { useAnnouncementsStore } from '@/stores/announcements'
 import { UiButtonVariant } from '@/utils/ui/button'
+import { AppRoute } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -107,7 +108,7 @@ const handleSave = async (): Promise<void> => {
   saving.value = false
 
   if (saved) {
-    router.push('/support/announcements')
+    router.push(AppRoute.SupportAnnouncements)
   }
 }
 
@@ -121,7 +122,7 @@ onMounted(() => {
 <template>
   <UiStack>
     <UiStack direction="row" gap="sm" align="center">
-      <UiLink to="/support/announcements" :variant="UiButtonVariant.Link" data-testid="announcement-form-breadcrumb">
+      <UiLink :to="AppRoute.SupportAnnouncements" :variant="UiButtonVariant.Link" data-testid="announcement-form-breadcrumb">
         {{ t('shared.announcements') }}
       </UiLink>
       <UiText tone="muted" size="md">/</UiText>
@@ -177,7 +178,7 @@ onMounted(() => {
             {{ saving ? t('shared.saving') : isEditMode ? t('support.announcementForm.updateAnnouncement') : t('support.announcementForm.saveAnnouncement') }}
           </UiButton>
           <UiLink
-            to="/support/announcements"
+            :to="AppRoute.SupportAnnouncements"
             :variant="UiButtonVariant.Secondary"
             data-testid="announcement-form-cancel"
           >

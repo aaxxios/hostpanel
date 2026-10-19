@@ -14,6 +14,7 @@ import type { CountryOption } from '~/types/countryoption'
 import type { DomainCheckResult } from '~/types/domaincheckresult'
 import type { PortalCurrency } from '~/types/portalcurrency'
 import type { PortalProduct } from '~/types/portalproduct'
+import type { PortalProductGroup } from '~/types/portalproductgroup'
 import type { PortalProductQuery } from '~/types/portalproductquery'
 import type { ProductFeature } from '~/types/productfeature'
 import type { SlidePublic } from '~/types/slidepublic'
@@ -34,6 +35,15 @@ export const useCatalogApi = () => {
    */
   const fetchProducts = <T = PortalProduct>(query?: PortalProductQuery): Promise<T[]> =>
     apiFetch<T[]>('/api/portal/public/products', { query })
+
+  /**
+   * Reads the product groups the storefront shows as product families.
+   *
+   * @returns The groups.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const fetchProductGroups = (): Promise<PortalProductGroup[]> =>
+    apiFetch<PortalProductGroup[]>('/api/portal/public/product-groups')
 
   /**
    * Reads the specification lines behind the plan comparison table.
@@ -102,6 +112,7 @@ export const useCatalogApi = () => {
 
   return {
     fetchProducts,
+    fetchProductGroups,
     fetchProductFeatures,
     fetchCurrencies,
     fetchCountries,

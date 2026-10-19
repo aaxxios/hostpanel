@@ -6,6 +6,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import SupportTicketStatusBadge from '@/components/support/SupportTicketStatusBadge.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
@@ -32,8 +33,14 @@ import { Icon } from '@/lib/icons'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiSize } from '@/utils/ui/size'
 import { UiTone } from '@/utils/ui/tone'
+import { AppRoute } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { orUnknown } = useFallbackLabels()
 
 const route = useRoute()
 const router = useRouter()
@@ -134,7 +141,7 @@ const handleReply = async (): Promise<void> => {
 const handleDelete = async (): Promise<void> => {
   showDeleteDialog.value = false
   if (await store.deleteTicket(ticketId.value)) {
-    router.push('/support/tickets')
+    router.push(AppRoute.SupportTickets)
   }
 }
 
@@ -159,7 +166,7 @@ onMounted(() => {
       <UiStack direction="row" justify="between" align="center" wrap>
         <UiStack direction="row" align="center" wrap>
           <UiLink
-            to="/support/tickets"
+            :to="AppRoute.SupportTickets"
             :variant="UiButtonVariant.Secondary"
             :size="UiSize.Sm"
             data-testid="ticket-back"
@@ -287,7 +294,7 @@ onMounted(() => {
             <UiStack gap="sm">
               <UiStack direction="row" justify="between">
                 <UiStack direction="row" gap="sm" align="center">
-                  <UiText tone="primary" size="md">{{ reply.authorName }}</UiText>
+                  <UiText tone="primary" size="md">{{ orUnknown(reply.authorName) }}</UiText>
                   <UiBadge v-if="reply.isStaffReply" :tone="UiTone.Primary" small>
                     {{ t('support.supportTicketDetail.staff') }}
                   </UiBadge>

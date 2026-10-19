@@ -26,6 +26,7 @@ using Innovayse.Hostpanel.Infrastructure.Persistence;
 using Innovayse.Hostpanel.Infrastructure.Plugins;
 using Innovayse.Hostpanel.Infrastructure.Provisioning;
 using Innovayse.Hostpanel.Infrastructure.Registrar;
+using Innovayse.Hostpanel.Infrastructure.Resilience;
 using Innovayse.Hostpanel.Infrastructure.Resilience.Extensions;
 using Innovayse.Hostpanel.Infrastructure.Resilience.Settings;
 using Innovayse.Hostpanel.Infrastructure.Security;
@@ -37,6 +38,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 using IProvisioningProvider = Innovayse.Hostpanel.Application.Common.Interfaces.IProvisioningProvider;
 
 namespace Innovayse.Hostpanel.Infrastructure;
@@ -368,9 +370,9 @@ public static class DependencyInjection
 
             // Kept as the outer backstop only. The resilience pipeline below decides in 45s and
             // 55s; this catches a pipeline that was configured wrong, nothing else.
-            httpClient.Timeout = TimeSpan.FromSeconds(60);
+            httpClient.Timeout = HttpBackstopTimeouts.CPanel;
             httpClient.DefaultRequestHeaders.Add(
-                "Authorization",
+                HeaderNames.Authorization,
                 $"WHM {settings.Username}:{settings.ApiToken}");
         })
             // No retry stage, and the HTTP method is no guide: WHM's JSON API v1 is addressed
@@ -453,7 +455,7 @@ public static class DependencyInjection
         {
             // Outer backstop only. The pipeline below decides in 15s and 40s; this catches a
             // pipeline that was configured wrong, nothing else.
-            client.Timeout = TimeSpan.FromSeconds(60);
+            client.Timeout = HttpBackstopTimeouts.Inecobank;
         })
             .AddInecobankResilience();
 
@@ -475,18 +477,21 @@ public static class DependencyInjection
         services.AddOptions<TelegramOptions>()
             .Bind(configuration.GetSection(TelegramOptions.SectionName))
             .Validate(
+                o => Uri.TryCreate(o.ApiUrl, UriKind.Absolute, out _) && o.ApiUrl.EndsWith('/'),
+                $"{TelegramOptions.SectionName}:{nameof(TelegramOptions.ApiUrl)} must be an absolute URL ending in a slash.")
+            .Validate(
                 o => o.IsUsable,
                 $"{TelegramOptions.SectionName} is partly configured: BotToken and ChatId must "
                     + "either both be set or the whole section left unset.")
             .ValidateOnStart();
-        services.AddHttpClient<IContactNotifier, TelegramContactNotifier>(client =>
+        services.AddHttpClient<IContactNotifier, TelegramContactNotifier>((sp, client) =>
         {
-            client.BaseAddress = new Uri("https://api.telegram.org/");
+            client.BaseAddress = new Uri(sp.GetRequiredService<IOptions<TelegramOptions>>().Value.ApiUrl);
 
             // Short on purpose. This call sits between a delivered enquiry and the visitor's
             // answer, so a Telegram that is merely slow must not hold the response open. Now the
             // outer backstop for a pipeline that decides in 8s and 9s.
-            client.Timeout = TimeSpan.FromSeconds(10);
+            client.Timeout = HttpBackstopTimeouts.Telegram;
         })
             // No retry stage. sendMessage is a POST with no idempotency key, so a repeat after a
             // lost response posts the enquiry to the operator's chat twice -- and the mail has
@@ -551,7 +556,7 @@ public static class DependencyInjection
         // address, so one dead node would open it for every healthy one.
         services.AddHttpClient<Innovayse.SDK.Plugins.IHostingPanelApiClient, Innovayse.Providers.CWP.CwpApiClient>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(15);
+            client.Timeout = HttpBackstopTimeouts.Cwp;
         })
             .AddNoRetryResilience(o => o.Cwp);
         // Named twin of the typed registration above, for the same reason the CWP7 pair exists:
@@ -561,7 +566,7 @@ public static class DependencyInjection
         // with no timeout and outside the no-retry pipeline.
         services.AddHttpClient(Innovayse.Providers.CWP.CwpApiClient.HttpClientName, client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(15);
+            client.Timeout = HttpBackstopTimeouts.Cwp;
         })
             .AddNoRetryResilience(o => o.Cwp);
 
@@ -569,14 +574,14 @@ public static class DependencyInjection
         // Both registrations carry the same profile for the same two reasons as CWP above; the
         // named one is what ProvisioningProviderFactory resolves per server, so leaving it out
         // would have left the provisioning path -- the one that matters most -- uncovered.
-        services.AddHttpClient("Cwp7", client =>
+        services.AddHttpClient(HttpClientNames.Cwp7, client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(120);
+            client.Timeout = HttpBackstopTimeouts.Cwp7;
         })
             .AddNoRetryResilience(o => o.Cwp7);
         services.AddHttpClient<Innovayse.SDK.Plugins.IHostingPanelV7ApiClient, Innovayse.Providers.CWP7.Cwp7ApiClient>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(120);
+            client.Timeout = HttpBackstopTimeouts.Cwp7;
         })
             .AddNoRetryResilience(o => o.Cwp7);
 
@@ -607,9 +612,9 @@ public static class DependencyInjection
         // read and nothing on the far side is created or spent. Retrying everything is therefore
         // correct here. No breaker -- the source URL is a per-job argument, so one bad install
         // would fail jobs against every other.
-        services.AddHttpClient("migration", client =>
+        services.AddHttpClient(HttpClientNames.Migration, client =>
         {
-            client.Timeout = TimeSpan.FromMinutes(5);
+            client.Timeout = HttpBackstopTimeouts.Migration;
         })
             .AddReadOnlyResilience(o => o.Migration);
 
@@ -627,7 +632,7 @@ public static class DependencyInjection
         // transfers or renews a domain and bills for it.
         services.AddHttpClient<NameAmClient>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(30);
+            client.Timeout = HttpBackstopTimeouts.Registrar;
         })
             .AddNameAmResilience();
         services.AddOptions<NameAmOptions>()
@@ -645,7 +650,7 @@ public static class DependencyInjection
         // repeats only the lookups; anything it does not recognise counts as a write.
         services.AddHttpClient<NamecheapClient>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(30);
+            client.Timeout = HttpBackstopTimeouts.Registrar;
         })
             .AddNamecheapResilience();
         services.AddOptions<NamecheapOptions>()

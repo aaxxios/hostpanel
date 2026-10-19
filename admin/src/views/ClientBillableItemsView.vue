@@ -34,6 +34,7 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -68,7 +69,7 @@ const uninvoicedTotal = ref(0)
 const invoicedPage = ref(1)
 
 /** Invoiced items per page. */
-const invoicedPageSize = ref(20)
+const invoicedPageSize = ref(DEFAULT_PAGE_SIZE)
 
 /** Total number of invoiced items across all pages. */
 const invoicedTotalCount = ref(0)
@@ -439,7 +440,7 @@ onMounted(() => fetchBillableItems())
       :title="t('clients.clientBillableItems.confirmDelete')"
       :message="pendingDeleteId !== null
         ? t('clients.clientBillableItems.areYouSureYouWant2')
-        : t('clients.clientBillableItems.confirmDeleteSelected', { count: selectedIds.size })"
+        : t('clients.clientBillableItems.confirmDeleteSelected', { count: selectedIds.size }, selectedIds.size)"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="deleting"

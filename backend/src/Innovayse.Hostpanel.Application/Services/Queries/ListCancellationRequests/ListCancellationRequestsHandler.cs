@@ -44,9 +44,9 @@ public sealed class ListCancellationRequestsHandler
             var service = await _context.ClientServices
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == req.ServiceId, ct);
-            var productName = "Unknown";
+            string? productName = null;
             var clientId = 0;
-            var clientName = "Unknown";
+            string? clientName = null;
 
             if (service is not null)
             {
@@ -56,7 +56,7 @@ public sealed class ListCancellationRequestsHandler
                 var product = await _context.Products
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.Id == service.ProductId, ct);
-                productName = product?.Name ?? "Unknown";
+                productName = product?.Name;
 
                 // Was IClientRepository.FindByIdAsync -- read-only, so no tracking is needed.
                 var client = await _context.Clients
@@ -64,7 +64,7 @@ public sealed class ListCancellationRequestsHandler
                     .FirstOrDefaultAsync(c => c.Id == service.ClientId, ct);
                 clientName = client is not null
                     ? $"{client.FirstName} {client.LastName}"
-                    : "Unknown";
+                    : null;
             }
 
             dtos.Add(new CancellationRequestDto(

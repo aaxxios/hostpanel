@@ -3,9 +3,11 @@ using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
 using Innovayse.Hostpanel.Infrastructure.Integrations.CPanel;
 using Innovayse.Hostpanel.Infrastructure.Provisioning.Settings;
+using Innovayse.Hostpanel.Infrastructure.Resilience;
 using Innovayse.Providers.CWP7;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 namespace Innovayse.Hostpanel.Infrastructure.Provisioning;
 /// <summary>
 /// Creates <see cref="IProvisioningProvider"/> instances configured for a specific server.
@@ -85,7 +87,7 @@ public sealed class ProvisioningProviderFactory : IProvisioningProviderFactory
         var host = $"https://{server.Hostname}:{DefaultCwp7Port}";
         var serverIp = server.IpAddress ?? server.Hostname;
 
-        var httpClient = _httpClientFactory.CreateClient("Cwp7");
+        var httpClient = _httpClientFactory.CreateClient(HttpClientNames.Cwp7);
 
         var client = new Cwp7ApiClient(httpClient, _loggerFactory.CreateLogger<Cwp7ApiClient>());
 

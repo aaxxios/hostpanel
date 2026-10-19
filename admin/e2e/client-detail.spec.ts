@@ -2,6 +2,7 @@
  * Client detail flow: the summary page loads its rollups, and editing the profile saves the
  * changed field, re-reads the record and confirms the save.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { adaDetail } from './fixtures/clients'
 import { emptyClientSummary } from './fixtures/clientSummary'
@@ -13,11 +14,11 @@ test('the summary page shows the client and its rollups', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/clients/7', adaDetail),
-      json('GET', '/api/clients/7/summary', emptyClientSummary),
-      json('GET', '/api/services', { items: [], totalCount: 0, page: 1, pageSize: 5 }),
-      json('GET', '/api/domains', { items: [], totalCount: 0, page: 1, pageSize: 5 }),
-      json('GET', '/api/billing/quotes/client/7', { items: [], totalCount: 0, page: 1, pageSize: 5 }),
+      json(HttpMethod.Get, '/api/clients/7', adaDetail),
+      json(HttpMethod.Get, '/api/clients/7/summary', emptyClientSummary),
+      json(HttpMethod.Get, '/api/services', { items: [], totalCount: 0, page: 1, pageSize: 5 }),
+      json(HttpMethod.Get, '/api/domains', { items: [], totalCount: 0, page: 1, pageSize: 5 }),
+      json(HttpMethod.Get, '/api/billing/quotes/client/7', { items: [], totalCount: 0, page: 1, pageSize: 5 }),
     ],
   })
 
@@ -35,17 +36,17 @@ test('editing the profile saves the new value and confirms it', async ({ page })
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      { method: 'GET', path: '/api/clients/7', respond: () => ({ body: stored }) },
+      { method: HttpMethod.Get, path: '/api/clients/7', respond: () => ({ body: stored }) },
       {
-        method: 'PUT',
+        method: HttpMethod.Put,
         path: '/api/clients/7',
         respond: (call) => {
           Object.assign(stored, call.body)
           return { status: 204 }
         },
       },
-      json('GET', '/api/admin/currencies', []),
-      json('GET', '/api/reference/countries', []),
+      json(HttpMethod.Get, '/api/admin/currencies', []),
+      json(HttpMethod.Get, '/api/reference/countries', []),
     ],
   })
 
@@ -57,5 +58,5 @@ test('editing the profile saves the new value and confirms it', async ({ page })
 
   await expect(page.getByTestId('client-profile-saved')).toBeVisible()
   await expect(page.getByTestId('client-header-name')).toHaveText(`Augusta ${adaDetail.lastName}`)
-  expect(api.callsTo('PUT', '/api/clients/7')[0]?.body).toMatchObject({ firstName: 'Augusta', lastName: adaDetail.lastName })
+  expect(api.callsTo(HttpMethod.Put, '/api/clients/7')[0]?.body).toMatchObject({ firstName: 'Augusta', lastName: adaDetail.lastName })
 })

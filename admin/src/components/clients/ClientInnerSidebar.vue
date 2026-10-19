@@ -8,6 +8,7 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import UiSidebar from '@/components/ui/UiSidebar.vue'
 import type { UiSidebarItem } from '@/utils/ui/sidebar'
+import { ClientSection, clientSectionPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -54,21 +55,21 @@ const ICONS: Record<(typeof ClientNavKey)[keyof typeof ClientNavKey], string> = 
   log: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /><line x1="9" y1="12" x2="15" y2="12" /><line x1="9" y1="16" x2="13" y2="16" />',
 }
 
-/** Path suffix per entry key (the route segment under `/clients/:id/`). */
-const SEGMENTS: Record<(typeof ClientNavKey)[keyof typeof ClientNavKey], string> = {
-  summary: 'summary',
-  profile: 'profile',
-  services: 'services',
-  domains: 'domains',
-  users: 'users',
-  contacts: 'contacts',
-  billable: 'billable-items',
-  invoices: 'invoices',
-  quotes: 'quotes',
-  transactions: 'transactions',
-  tickets: 'tickets',
-  emails: 'emails',
-  log: 'log',
+/** Client section per entry key (the route segment under `/clients/:id/`). */
+const SEGMENTS: Record<(typeof ClientNavKey)[keyof typeof ClientNavKey], ClientSection> = {
+  summary: ClientSection.Summary,
+  profile: ClientSection.Profile,
+  services: ClientSection.Services,
+  domains: ClientSection.Domains,
+  users: ClientSection.Users,
+  contacts: ClientSection.Contacts,
+  billable: ClientSection.BillableItems,
+  invoices: ClientSection.Invoices,
+  quotes: ClientSection.Quotes,
+  transactions: ClientSection.Transactions,
+  tickets: ClientSection.Tickets,
+  emails: ClientSection.Emails,
+  log: ClientSection.Log,
 }
 
 /**
@@ -81,7 +82,7 @@ const SEGMENTS: Record<(typeof ClientNavKey)[keyof typeof ClientNavKey], string>
 const entry = (key: (typeof ClientNavKey)[keyof typeof ClientNavKey], label: string): UiSidebarItem => ({
   key,
   label,
-  to: `/clients/${props.clientId}/${SEGMENTS[key]}`,
+  to: clientSectionPath(props.clientId, SEGMENTS[key]),
   icon: ICONS[key],
 })
 

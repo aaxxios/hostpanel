@@ -9,7 +9,7 @@ export interface ReportServiceRow {
   /** Product id. */
   productId: number
   /** Product name. */
-  productName: string
+  productName: string | null
   /** Domain of the service, when it has one. */
   domain: string | null
   /** Billing cycle. */

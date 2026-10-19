@@ -11,7 +11,7 @@
     <!-- Logo -->
     <div class="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-6 py-5 dark:border-white/10">
       <UiLink to="/" tone="inherit" :underline="false" testid="client-sidebar-brand" class="text-lg font-bold">
-        {{ $t('client.nav.brand') }}
+        {{ $t('client.nav.brand', { site: siteName }) }}
       </UiLink>
       <UiIconButton
         :icon="X"
@@ -61,6 +61,9 @@ interface Props {
 }
 
 defineProps<Props>()
+
+/** Operator-set site name shown as the brand. */
+const { name: siteName } = useSiteIdentity()
 
 /** Events of ClientLayoutSidebar. */
 defineEmits<{

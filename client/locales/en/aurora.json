@@ -12,20 +12,19 @@
       "menu": "Menu"
     },
     "hero": {
-      "badge": "99.98% uptime · Armenian and European servers",
       "titleLine1": "Your whole",
       "titleLine2": "digital",
       "titleAccent": "infrastructure",
       "lead": "Domains, hosting, servers and billing in one client portal. Register a domain in minutes and manage everything from one panel.",
       "ctaPrimary": "Check a domain",
       "ctaSecondary": "Talk to a specialist",
-      "statDomains": "domains managed",
-      "statProjects": "sites hosted",
-      "statSupport": "support in Armenian"
+      "statClients": "clients",
+      "statUptime": "uptime",
+      "statRegions": "regions"
     },
     "domainSearch": {
       "title": "Find your domain",
-      "placeholder": "innovayse",
+      "placeholder": "example",
       "cta": "Search",
       "available": "available",
       "taken": "taken",
@@ -39,9 +38,8 @@
     },
     "trust": {
       "ssl": "SSL secured",
-      "refund": "30-day money back",
-      "noHidden": "No hidden fees",
-      "paymentLabel": "We accept:"
+      "refund": "Refund policy",
+      "noHidden": "No hidden fees"
     },
     "plans": {
       "eyebrow": "Hosting",
@@ -54,8 +52,8 @@
       "includedTitle": "Included in every plan",
       "included1": "Free SSL certificate",
       "included2": "Daily backups",
-      "included3": "Free migration",
-      "included4": "24/7 support",
+      "included3": "Migration assistance",
+      "included4": "Support included",
       "empty": "Plans are temporarily unavailable.",
       "freeBadge": "Start for free",
       "freeForever": "Free forever"
@@ -63,12 +61,16 @@
     "services": {
       "eyebrow": "Services",
       "title": "From the domain to the server",
+      "hostingTag": "Host",
       "hostingTitle": "Web hosting",
-      "hostingBody": "NVMe web hosting with free SSL, daily backups and free migration.",
+      "hostingBody": "Web hosting with SSL, daily backups and migration assistance.",
+      "serversTag": "VPS",
       "serversTitle": "VPS and servers",
       "serversBody": "Virtual and dedicated servers with full root access and monitoring.",
+      "domainsTag": "DNS",
       "domainsTitle": "Domains and DNS",
       "domainsBody": "Register, transfer and renew domains, with DNS and WHOIS privacy managed in the panel.",
+      "billingTag": "Bill",
       "billingTitle": "Billing and client portal",
       "billingBody": "Invoices, payments, renewals and support tickets in one account."
     },
@@ -83,65 +85,25 @@
       "step3Title": "Activation",
       "step3Body": "Your service is provisioned automatically and the login details arrive by email.",
       "step4Title": "Manage and get support",
-      "step4Body": "Manage services, domains and invoices in the client portal; support is there 24/7."
+      "step4Body": "Manage services, domains and invoices in the client portal; reach support whenever you need it."
     },
     "testimonials": {
       "eyebrow": "Clients",
       "title": "What they say about us",
       "prev": "Previous",
-      "next": "Next",
-      "items": [
-        {
-          "quote": "The migration happened overnight with no downtime. Our API now responds twice as fast.",
-          "author": "Kelpie AI",
-          "role": "Product team"
-        },
-        {
-          "quote": "Renewals and invoices are all in one portal, so nothing expires unnoticed.",
-          "author": "UK Voshozhdenie",
-          "role": "Marketing"
-        },
-        {
-          "quote": "Domains, hosting and mail now live under one account, which saves us hours every month.",
-          "author": "Eduzdrav",
-          "role": "Digital direction"
-        },
-        {
-          "quote": "Traffic tripled in peak season and the server held without a single interruption.",
-          "author": "IrtekPro",
-          "role": "Operations"
-        }
-      ]
+      "next": "Next"
     },
     "faq": {
-      "title": "Frequently asked questions",
-      "items": [
-        {
-          "q": "How long does domain registration take?",
-          "a": ".am and .հայ domains activate within 30 minutes; international zones are almost instant."
-        },
-        {
-          "q": "Can I move my existing site?",
-          "a": "Yes. Migration is free on all annual plans, including databases and mail."
-        },
-        {
-          "q": "What does support include?",
-          "a": "24/7 support in Armenian, Russian and English by chat and phone, plus server monitoring."
-        },
-        {
-          "q": "Can I change my plan later?",
-          "a": "Yes. You can upgrade your plan from the client portal at any time."
-        }
-      ]
+      "title": "Frequently asked questions"
     },
     "cta": {
       "title": "Let's start with your project",
-      "lead": "A free 20-minute consultation on choosing a domain, hosting and a server.",
+      "lead": "A consultation on choosing a domain, hosting and a server.",
       "primary": "Book a call",
       "secondary": "See the plans"
     },
     "footer": {
-      "tagline": "Hosting, domains and servers under one roof. Yerevan, Armenia.",
+      "tagline": "Hosting, domains and servers under one roof.",
       "newsletterTitle": "Newsletter",
       "newsletterPlaceholder": "you{'@'}email.com",
       "newsletterCta": "Subscribe",
@@ -164,7 +126,7 @@
     "hostingPage": {
       "eyebrow": "Hosting",
       "title": "Choose your plan",
-      "lead": "NVMe servers, free SSL and migration, 30-day money back."
+      "lead": "Web hosting with SSL, backups and migration assistance."
     },
     "domainsPage": {
       "eyebrow": "Domains",
@@ -184,7 +146,7 @@
     },
     "checkout": {
       "helpTitle": "Need help?",
-      "helpBody": "Our support is here 24/7",
+      "helpBody": "Reach our support whenever you need it",
       "helpCta": "Contact us"
     },
     "apps": {

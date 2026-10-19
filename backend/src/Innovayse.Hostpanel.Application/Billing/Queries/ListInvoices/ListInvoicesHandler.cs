@@ -7,6 +7,7 @@ using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Billing.Queries.ListInvoices;
 
 /// <summary>Returns a paginated, optionally filtered list of all invoices for admin consumption.</summary>
@@ -32,7 +33,7 @@ public sealed class ListInvoicesHandler
         ArgumentNullException.ThrowIfNull(query);
 
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
         InvoiceStatus? status = null;
         if (!string.IsNullOrEmpty(query.Status) && Enum.TryParse<InvoiceStatus>(query.Status, out var parsed))
@@ -74,7 +75,7 @@ public sealed class ListInvoicesHandler
         var dtos = items
             .Select(inv => inv with
             {
-                ClientName = clientMap.TryGetValue(inv.ClientId, out var name) ? name : $"Client #{inv.ClientId}",
+                ClientName = clientMap.TryGetValue(inv.ClientId, out var name) ? name : null,
             })
             .ToList();
 

@@ -18,7 +18,7 @@
   },
   "inecobank": {
     "shortDescription": "Accept Armenian bank cards through Inecobank's hosted payment page.",
-    "fieldGateway_url": "Gateway base URL (e.g. https://pg.inecoecom.am)",
+    "fieldGateway_url": "Gateway base URL (e.g. https://gateway.example.com)",
     "fieldUsername": "API Username",
     "fieldPassword": "API Password",
     "fieldCurrency": "Currency (ISO 4217 numeric, default 051)",

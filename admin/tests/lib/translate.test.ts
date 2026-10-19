@@ -5,11 +5,12 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { setLocale } from '@/i18n'
+import { MessageLanguage } from '@/locales/messages'
 import { translate, translateOrRaw } from '@/lib/translate'
 
 describe('translate', () => {
   afterEach(() => {
-    setLocale('en')
+    setLocale(MessageLanguage.En)
   })
 
   it('resolves a key in the active language', () => {
@@ -17,11 +18,11 @@ describe('translate', () => {
   })
 
   it('follows a language switch made after the module was loaded', () => {
-    setLocale('ru')
+    setLocale(MessageLanguage.Ru)
 
     expect(translate('errors.noAnswer')).toBe('Не удалось связаться с сервером. Проверьте соединение и повторите попытку.')
 
-    setLocale('hy')
+    setLocale(MessageLanguage.Hy)
 
     expect(translate('errors.noAnswer')).toBe('Չհաջողվեց կապվել սերվերի հետ։ Ստուգեք կապը և փորձեք կրկին։')
   })
@@ -33,11 +34,11 @@ describe('translate', () => {
 
 describe('translateOrRaw', () => {
   afterEach(() => {
-    setLocale('en')
+    setLocale(MessageLanguage.En)
   })
 
   it('translates a known identifier', () => {
-    setLocale('ru')
+    setLocale(MessageLanguage.Ru)
 
     expect(translateOrRaw('ticketStatus.AwaitingReply', 'AwaitingReply')).toBe('Ожидает ответа')
   })

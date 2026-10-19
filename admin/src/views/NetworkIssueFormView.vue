@@ -24,6 +24,7 @@ import { toDateInputValue, toIsoDay } from '@/lib/format'
 import { useNetworkIssuesStore } from '@/stores/networkIssues'
 import { NetworkIssuePriority, NetworkIssueStatus, NetworkIssueType } from '@/types/networkissue'
 import { UiButtonVariant } from '@/utils/ui/button'
+import { AppRoute } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -152,7 +153,7 @@ const handleSave = async (): Promise<void> => {
   saving.value = false
 
   if (saved) {
-    router.push('/support/network-issues')
+    router.push(AppRoute.SupportNetworkIssues)
   }
 }
 
@@ -166,7 +167,7 @@ onMounted(() => {
 <template>
   <UiStack>
     <UiStack direction="row" gap="sm" align="center">
-      <UiLink to="/support/network-issues" :variant="UiButtonVariant.Link" data-testid="network-issue-form-breadcrumb">
+      <UiLink :to="AppRoute.SupportNetworkIssues" :variant="UiButtonVariant.Link" data-testid="network-issue-form-breadcrumb">
         {{ t('shared.networkIssues') }}
       </UiLink>
       <UiText tone="muted" size="md">/</UiText>
@@ -266,7 +267,7 @@ onMounted(() => {
             {{ saving ? t('shared.saving') : isEditMode ? t('support.networkIssueForm.updateIssue') : t('support.networkIssueForm.createIssue') }}
           </UiButton>
           <UiLink
-            to="/support/network-issues"
+            :to="AppRoute.SupportNetworkIssues"
             :variant="UiButtonVariant.Secondary"
             data-testid="network-issue-form-cancel"
           >

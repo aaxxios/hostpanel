@@ -1,5 +1,5 @@
 /**
- * Unit tests for TrustBar: the three guarantees and the accepted payment methods.
+ * Unit tests for TrustBar: the three guarantees.
  */
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
@@ -16,11 +16,10 @@ describe('TrustBar', () => {
     expect(text).toContain('aurora.trust.noHidden')
   })
 
-  it('lists the four payment brands untranslated', () => {
+  it('names no payment brand', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(TrustBar)
-    const brands = wrapper.findAll('[data-testid="trust-payment"]').map((chip) => chip.text())
 
-    expect(brands).toEqual(['VISA', 'Mastercard', 'PayPal', 'Idram'])
+    expect(wrapper.find('[data-testid="trust-payment"]').exists()).toBe(false)
   })
 })

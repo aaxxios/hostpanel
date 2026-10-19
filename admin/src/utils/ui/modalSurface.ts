@@ -6,6 +6,7 @@ import { nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
 import type { Ref } from 'vue'
 import { focusFirst, trapFocus } from '@/utils/ui/focusTrap'
 import { lockScroll, unlockScroll } from '@/utils/ui/scrollLock'
+import { Key } from './keys'
 
 /**
  * Wires a modal surface's keyboard and focus behaviour.
@@ -64,7 +65,7 @@ export const useModalSurface = (
   onBeforeUnmount(leave)
 
   return (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') {
+    if (event.key === Key.Escape) {
       event.stopPropagation()
       close()
       return

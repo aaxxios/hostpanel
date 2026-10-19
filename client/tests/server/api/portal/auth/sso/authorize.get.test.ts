@@ -7,7 +7,7 @@
 
 import { createHash } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, setRuntimeConfig, startBackend } from '../../../../../helpers/bffHarness'
+import { makeEvent, setRuntimeConfig, startBackend, refusal } from '../../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../../helpers/stubServer'
 
@@ -82,5 +82,28 @@ describe('GET /api/portal/auth/sso/authorize', () => {
 
     expect(api.written['post_login_redirect']).toBeUndefined()
     expect(offSite.written['post_login_redirect']).toBeUndefined()
+  })
+})
+
+describe('GET /api/portal/auth/sso/authorize when the SSO address is not configured', () => {
+  it('refuses with 503 and sets no cookie when the public SSO address is empty', async () => {
+    setRuntimeConfig({ ssoCallbackUrl: 'https://portal.test/api/portal/auth/sso/callback', public: { ssoPublicUrl: '' } })
+    const event = makeEvent()
+
+    const error = await refusal(() => route.default(event))
+
+    expect(error).toMatchObject({ statusCode: 503, data: { code: 'SSO_NOT_CONFIGURED' } })
+    expect(event.redirectedTo).toBeUndefined()
+    expect(event.written).toEqual({})
+  })
+
+  it('refuses with 503 when the callback address is empty', async () => {
+    setRuntimeConfig({ ssoCallbackUrl: '', public: { ssoPublicUrl: 'https://sso.test' } })
+    const event = makeEvent()
+
+    const error = await refusal(() => route.default(event))
+
+    expect(error).toMatchObject({ statusCode: 503, data: { code: 'SSO_NOT_CONFIGURED' } })
+    expect(event.redirectedTo).toBeUndefined()
   })
 })

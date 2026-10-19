@@ -28,6 +28,9 @@ namespace Innovayse.Hostpanel.Infrastructure.Auth;
 /// </remarks>
 public sealed class SsoSessionClaimsTransformation : IClaimsTransformation
 {
+    /// <summary>Marker claim type recording that a principal already went through this transformation.</summary>
+    private const string MappedClaimType = "hostpanel:mapped";
+
     /// <summary>The roles this class uses.</summary>
     private readonly ISubjectRoleStore _roles;
 
@@ -48,12 +51,12 @@ public sealed class SsoSessionClaimsTransformation : IClaimsTransformation
         }
 
         // Already mapped on a previous middleware pass of the same request.
-        if (identity.HasClaim(c => c.Type == "hostpanel:mapped"))
+        if (identity.HasClaim(c => c.Type == MappedClaimType))
         {
             return principal;
         }
 
-        var subject = principal.FindFirst("sub")?.Value;
+        var subject = principal.FindFirst(Innovayse.Hostpanel.Shared.Constants.JwtClaims.Sub)?.Value;
         if (subject is null)
         {
             return principal;
@@ -64,7 +67,7 @@ public sealed class SsoSessionClaimsTransformation : IClaimsTransformation
             identity.AddClaim(new Claim(ClaimTypes.Role, role));
         }
 
-        identity.AddClaim(new Claim("hostpanel:mapped", "1"));
+        identity.AddClaim(new Claim(MappedClaimType, "1"));
         return principal;
     }
 }

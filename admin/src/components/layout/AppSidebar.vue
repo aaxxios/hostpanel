@@ -19,6 +19,7 @@ import UiImage from '@/components/ui/UiImage.vue'
 import UiLink from '@/components/ui/UiLink.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { AppRoute } from '@/lib/routes'
 
 /** A sub-menu child item. */
 interface NavChild {
@@ -87,88 +88,98 @@ const SIGN_OUT_MARKUP = '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5
 /** Top-level navigation items with SVG path icons. */
 const navItems: NavItem[] = [
   {
-    to: '/dashboard', labelKey: 'nav.dashboard',
+    to: AppRoute.Dashboard, labelKey: 'nav.dashboard',
     icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
   },
   {
-    to: '/clients', labelKey: 'nav.clients',
+    to: AppRoute.Clients, labelKey: 'nav.clients',
     icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm12 2v2m0 0v2m0-2h2m-2 0h-2',
     children: [
-      { to: '/clients', labelKey: 'nav.clientsChildren.view' },
-      { to: '/clients/users', labelKey: 'nav.clientsChildren.users' },
-      { to: '/clients/shared-hostings', labelKey: 'nav.clientsChildren.sharedHostings' },
-      { to: '/clients/addons', labelKey: 'nav.clientsChildren.addons' },
-      { to: '/clients/domain-registrations', labelKey: 'nav.clientsChildren.domainRegistrations' },
-      { to: '/clients/cancellations', labelKey: 'nav.clientsChildren.cancellations' },
-      { to: '/clients/affiliates', labelKey: 'nav.clientsChildren.affiliates' },
+      { to: AppRoute.Clients, labelKey: 'nav.clientsChildren.view' },
+      { to: AppRoute.ClientsUsers, labelKey: 'nav.clientsChildren.users' },
+      { to: AppRoute.ClientsSharedHostings, labelKey: 'nav.clientsChildren.sharedHostings' },
+      { to: AppRoute.ClientsAddons, labelKey: 'nav.clientsChildren.addons' },
+      { to: AppRoute.ClientsDomainRegistrations, labelKey: 'nav.clientsChildren.domainRegistrations' },
+      { to: AppRoute.ClientsCancellations, labelKey: 'nav.clientsChildren.cancellations' },
+      { to: AppRoute.ClientsAffiliates, labelKey: 'nav.clientsChildren.affiliates' },
     ],
   },
   {
-    to: '/billing', labelKey: 'nav.billing',
+    to: AppRoute.Billing, labelKey: 'nav.billing',
     icon: 'M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z',
     children: [
-      { to: '/billing/transactions', labelKey: 'nav.billingChildren.transactions' },
-      { to: '/billing/invoices', labelKey: 'nav.billingChildren.invoices' },
-      { to: '/billing/billable-items', labelKey: 'nav.billingChildren.billableItems' },
-      { to: '/billing/quotes', labelKey: 'nav.billingChildren.quotes' },
-      { to: '/billing/offline-cc', labelKey: 'nav.billingChildren.offlineCc' },
-      { to: '/billing/disputes', labelKey: 'nav.billingChildren.disputes' },
-      { to: '/billing/gateway-log', labelKey: 'nav.billingChildren.gatewayLog' },
+      { to: AppRoute.BillingTransactions, labelKey: 'nav.billingChildren.transactions' },
+      { to: AppRoute.BillingInvoices, labelKey: 'nav.billingChildren.invoices' },
+      { to: AppRoute.BillingBillableItems, labelKey: 'nav.billingChildren.billableItems' },
+      { to: AppRoute.BillingQuotes, labelKey: 'nav.billingChildren.quotes' },
+      { to: AppRoute.BillingOfflineCc, labelKey: 'nav.billingChildren.offlineCc' },
+      { to: AppRoute.BillingDisputes, labelKey: 'nav.billingChildren.disputes' },
+      { to: AppRoute.BillingGatewayLog, labelKey: 'nav.billingChildren.gatewayLog' },
     ],
   },
   {
-    to: '/reports', labelKey: 'nav.reports',
+    to: AppRoute.Reports, labelKey: 'nav.reports',
     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
   },
   {
-    to: '/orders', labelKey: 'nav.orders',
+    to: AppRoute.Orders, labelKey: 'nav.orders',
     icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 7h6m-6 4h4',
   },
   {
-    to: '/domains', labelKey: 'nav.domains',
+    to: AppRoute.Domains, labelKey: 'nav.domains',
     icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9',
   },
   {
-    to: '/support', labelKey: 'nav.support',
+    to: AppRoute.Support, labelKey: 'nav.support',
     icon: 'M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z',
     children: [
-      { to: '/support/overview', labelKey: 'nav.supportChildren.overview' },
-      { to: '/support/tickets', labelKey: 'nav.supportChildren.tickets' },
-      { to: '/support/tickets/new', labelKey: 'nav.supportChildren.newTicket' },
-      { to: '/support/predefined-replies', labelKey: 'nav.supportChildren.predefinedReplies' },
-      { to: '/support/announcements', labelKey: 'nav.supportChildren.announcements' },
-      { to: '/support/downloads', labelKey: 'nav.supportChildren.downloads' },
-      { to: '/support/knowledgebase', labelKey: 'nav.supportChildren.knowledgebase' },
-      { to: '/support/network-issues', labelKey: 'nav.supportChildren.networkIssues' },
+      { to: AppRoute.SupportOverview, labelKey: 'nav.supportChildren.overview' },
+      { to: AppRoute.SupportTickets, labelKey: 'nav.supportChildren.tickets' },
+      { to: AppRoute.SupportTicketsNew, labelKey: 'nav.supportChildren.newTicket' },
+      { to: AppRoute.SupportPredefinedReplies, labelKey: 'nav.supportChildren.predefinedReplies' },
+      { to: AppRoute.SupportAnnouncements, labelKey: 'nav.supportChildren.announcements' },
+      { to: AppRoute.SupportDownloads, labelKey: 'nav.supportChildren.downloads' },
+      { to: AppRoute.SupportKnowledgebase, labelKey: 'nav.supportChildren.knowledgebase' },
+      { to: AppRoute.SupportNetworkIssues, labelKey: 'nav.supportChildren.networkIssues' },
     ],
   },
   {
-    to: '/plugins', labelKey: 'nav.plugins',
+    to: AppRoute.Plugins, labelKey: 'nav.plugins',
     icon: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4',
   },
   {
-    to: '/servers', labelKey: 'nav.servers',
+    to: AppRoute.Servers, labelKey: 'nav.servers',
     icon: 'M5 12H3a2 2 0 00-2 2v4a2 2 0 002 2h18a2 2 0 002-2v-4a2 2 0 00-2-2h-2M5 12V8a2 2 0 012-2h10a2 2 0 012 2v4M5 12h14M8 20h.01M12 20h.01M16 20h.01',
   },
   {
-    to: '/integrations', labelKey: 'nav.integrations',
+    to: AppRoute.Integrations, labelKey: 'nav.integrations',
     icon: 'M13 10V3L4 14h7v7l9-11h-7z',
   },
   {
-    to: '/migration', labelKey: 'nav.migration',
+    to: AppRoute.Migration, labelKey: 'nav.migration',
     icon: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
   },
   {
-    to: '/settings', labelKey: 'nav.settings',
+    to: AppRoute.Storefront, labelKey: 'nav.storefront',
+    icon: 'M3 9l1-5h16l1 5M3 9v11h18V9M3 9h18M9 20v-6h6v6',
+    children: [
+      { to: AppRoute.StorefrontTestimonials, labelKey: 'nav.storefrontChildren.testimonials' },
+      { to: AppRoute.StorefrontPartners, labelKey: 'nav.storefrontChildren.partners' },
+      { to: AppRoute.StorefrontProjects, labelKey: 'nav.storefrontChildren.projects' },
+      { to: AppRoute.StorefrontFaqs, labelKey: 'nav.storefrontChildren.faqs' },
+    ],
+  },
+  {
+    to: AppRoute.Settings, labelKey: 'nav.settings',
     icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
     children: [
-      { to: '/settings', labelKey: 'nav.settingsChildren.general' },
-      { to: '/settings/products', labelKey: 'nav.settingsChildren.products' },
-      { to: '/settings/tld-pricing', labelKey: 'nav.settingsChildren.tldPricing' },
-      { to: '/settings/slides', labelKey: 'nav.settingsChildren.slides' },
-      { to: '/settings/email-templates', labelKey: 'nav.settingsChildren.emailTemplates' },
-      { to: '/integrations/payments', labelKey: 'nav.settingsChildren.gateways' },
-      { to: '/settings/currencies', labelKey: 'nav.settingsChildren.currencies' },
+      { to: AppRoute.Settings, labelKey: 'nav.settingsChildren.general' },
+      { to: AppRoute.SettingsProducts, labelKey: 'nav.settingsChildren.products' },
+      { to: AppRoute.SettingsTldPricing, labelKey: 'nav.settingsChildren.tldPricing' },
+      { to: AppRoute.SettingsSlides, labelKey: 'nav.settingsChildren.slides' },
+      { to: AppRoute.SettingsEmailTemplates, labelKey: 'nav.settingsChildren.emailTemplates' },
+      { to: AppRoute.IntegrationsPayments, labelKey: 'nav.settingsChildren.gateways' },
+      { to: AppRoute.SettingsCurrencies, labelKey: 'nav.settingsChildren.currencies' },
     ],
   },
 ]
@@ -199,7 +210,7 @@ const testidOf = (to: string): string => `nav-${to.replace(/^\//, '').replaceAll
  */
 const handleLogout = async (): Promise<void> => {
   await authStore.logout()
-  await router.push('/login')
+  await router.push(AppRoute.Login)
 }
 
 /**
@@ -209,7 +220,7 @@ const handleLogout = async (): Promise<void> => {
  * @returns True if the current route matches.
  */
 const isActive = (item: NavItem): boolean => {
-  if (item.to !== '/dashboard' && route.path.startsWith(item.to)) {
+  if (item.to !== AppRoute.Dashboard && route.path.startsWith(item.to)) {
     return true
   }
   return route.path === item.to
@@ -222,7 +233,7 @@ const isActive = (item: NavItem): boolean => {
  * @returns True if the current route matches exactly.
  */
 const isChildActive = (to: string): boolean => {
-  if (to === '/clients' || to === '/settings') {
+  if (to === AppRoute.Clients || to === AppRoute.Settings) {
     return route.path === to
   }
   return route.path.startsWith(to)

@@ -1,7 +1,7 @@
 <template>
   <UiCard v-if="renewResult" data-testid="domain-renew-success">
     <UiEmptyState :icon="CheckCircle" :title="$t('client.domains.renewOrderPlaced')" :description="$t('client.domains.renewOrderDesc')">
-      <UiButton :to="`/client/invoices/${renewResult.invoiceId}`" data-testid="domain-renew-pay">
+      <UiButton :to="clientInvoicePath(renewResult.invoiceId)" data-testid="domain-renew-pay">
         <CreditCard :size="14" :stroke-width="2" class="mr-2" />
         {{ $t('client.domains.renewPayInvoice') }}
       </UiButton>
@@ -65,6 +65,7 @@
  * once the order is placed it shows a link to the invoice. The saved payment methods are read on
  * first need; the order, its in-flight flag and the API's refusal belong to the domains store.
  */
+import { clientInvoicePath } from '~/constants/clientRoutes'
 import { computed, onMounted, ref } from 'vue'
 import { CheckCircle, CreditCard, RefreshCw } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'

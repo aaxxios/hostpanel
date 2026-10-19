@@ -14,8 +14,8 @@ export interface ServiceDetail {
   pid: number
   /** Registration date. */
   regdate: string
-  /** Product name. */
-  name: string
+  /** Product name; null when the backend could not resolve it (render with `productNameOrFallback`). */
+  name: string | null
   /** Product group name. */
   groupname: string
   /** Primary domain. */

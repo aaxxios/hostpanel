@@ -17,7 +17,7 @@ import UiText from '@/components/ui/UiText.vue'
 import { toneSolidClasses } from '@/utils/ui/tone'
 import type { UiTone } from '@/utils/ui/tone'
 import { useModalSurface } from '@/utils/ui/modalSurface'
-import type { UiDialogVariant, UiDialogSize } from '@/utils/ui/dialog'
+import { UiDialogSize, UiDialogVariant } from '@/utils/ui/dialog'
 
 const { t } = useI18n()
 
@@ -45,14 +45,14 @@ const props = withDefaults(defineProps<{
   closeOnBackdrop?: boolean
 }>(), {
   open: true,
-  variant: 'plain',
+  variant: UiDialogVariant.Plain,
   title: undefined,
   message: undefined,
   confirmLabel: undefined,
   loadingLabel: undefined,
   loading: false,
   tone: 'primary',
-  size: 'sm',
+  size: UiDialogSize.Sm,
   closeOnBackdrop: true,
 })
 
@@ -138,12 +138,12 @@ const onBackdrop = (): void => {
           </UiIconButton>
         </div>
         <div class="flex-1 min-h-0 overflow-y-auto px-6 py-2 flex flex-col gap-4" data-testid="dialog-body">
-          <UiText v-if="variant === 'confirm' && message" tone="secondary" size="md">
+          <UiText v-if="variant === UiDialogVariant.Confirm && message" tone="secondary" size="md">
             {{ message }}
           </UiText>
           <slot />
         </div>
-        <div v-if="variant === 'confirm'" class="flex justify-end gap-2 px-6 pt-4 pb-6 shrink-0">
+        <div v-if="variant === UiDialogVariant.Confirm" class="flex justify-end gap-2 px-6 pt-4 pb-6 shrink-0">
           <UiButton variant="secondary" data-testid="dialog-cancel" @click="close">
             {{ t('shared.cancel') }}
           </UiButton>

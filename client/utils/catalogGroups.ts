@@ -5,24 +5,7 @@
  */
 
 import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
-
-/** All product group IDs shown on /products (hosting + SaaS) */
-export const productGids = [HOSTING_GROUP_ID, 3, 4, 5, 6, 7, 8, 9]
-
-/** Group IDs for SaaS-only families (no hosting) */
-export const saasGids = productGids.filter((gid) => gid !== HOSTING_GROUP_ID)
-
-/** Maps gid → config key (slug). Gids match catalog product groups. */
-export const productGidToKey: Record<number, string> = {
-  [HOSTING_GROUP_ID]: 'web-hosting',
-  3: 'smartlearn-system',
-  4: 'propsystem-pro',
-  5: 'shopkit-pro',
-  6: 'metricskit-pro',
-  7: 'quickbite',
-  8: 'kelpie-ai',
-  9: 'taskero'
-}
+import type { PortalProductGroup } from '~/types/portalproductgroup'
 
 /** Visual and meta config of one product family. */
 export interface ProductFamilyConfig {
@@ -38,16 +21,82 @@ export interface ProductFamilyConfig {
   learnMoreUrl: string
 }
 
-/** Visual + meta config for each product family, keyed by slug */
-export const productConfig: Record<string, ProductFamilyConfig> = {
-  'web-hosting':       { name: 'Web Hosting',       icon: 'cloud-check',           color: '#0ea5e9',                                             learnMoreUrl: '/hosting' },
-  'smartlearn-system': { name: 'SmartLearn System', icon: 'school',                color: '#8b5cf6', demoUrl: '#',       learnMoreUrl: '/products/smartlearn-system' },
-  'propsystem-pro':    { name: 'PropSystem Pro',    icon: 'office-building',       color: '#06b6d4', demoUrl: '#',       learnMoreUrl: '/products/propsystem-pro' },
-  'shopkit-pro':       { name: 'ShopKit Pro',       icon: 'cart',                  color: '#f59e0b', demoUrl: '#',      learnMoreUrl: '/products/shopkit-pro' },
-  'metricskit-pro':    { name: 'MetricsKit Pro',    icon: 'chart-bar',             color: '#ec4899', demoUrl: '#',       learnMoreUrl: '/products/metricskit-pro' },
-  'quickbite':         { name: 'QuickBite',         icon: 'silverware-fork-knife', color: '#ef4444', demoUrl: '#', learnMoreUrl: '/products/quickbite' },
-  'kelpie-ai':         { name: 'Kelpie AI',         icon: 'brain',                 color: '#7c3aed', demoUrl: 'https://kelpie-ai.ai',               learnMoreUrl: '/products/kelpie-ai' },
-  'taskero':           { name: 'Taskero',           icon: 'view-dashboard',        color: '#10b981', demoUrl: '#',   learnMoreUrl: '/products/taskero' }
+/** Key of the hosting family, which has its own page rather than a `/products/<key>` one. */
+export const HOSTING_FAMILY_KEY = 'web-hosting'
+
+/** Icon of a family; the catalogue stores none, so every catalogue family shares this one. */
+export const FAMILY_ICON = 'cube'
+
+/** Icon of the hosting family. */
+export const HOSTING_FAMILY_ICON = 'cloud-check'
+
+/** Accent of the hosting family. */
+export const HOSTING_FAMILY_COLOR = '#0ea5e9'
+
+/** Page of the hosting family. */
+export const HOSTING_FAMILY_URL = '/hosting'
+
+/** Accents a catalogue family is painted in; the catalogue stores no colour, so one is picked by key. */
+export const FAMILY_COLORS: readonly string[] = ['#8b5cf6', '#06b6d4', '#f59e0b', '#ec4899', '#ef4444', '#10b981']
+
+/**
+ * Normalize a name to a slug key: "Alpha Suite" → "alpha-suite".
+ *
+ * @param name The display name.
+ * @returns The slug.
+ */
+export const nameToKey = (name: string): string => {
+  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+}
+
+/**
+ * Whether the storefront shows a group as a product family: it is active and holds a product.
+ *
+ * @param group The catalogue group.
+ * @returns True when it is a family.
+ */
+export const isFamilyGroup = (group: PortalProductGroup): boolean => group.isActive && group.productCount > 0
+
+/**
+ * The key (slug) of a family: the hosting family has a fixed one, every other family is named by
+ * its group, so a group the operator adds gets a page with no code change.
+ *
+ * @param group The catalogue group.
+ * @returns The key, used in `/products/<key>`.
+ */
+export const familyKey = (group: PortalProductGroup): string => {
+  if (group.id === HOSTING_GROUP_ID) {
+    return HOSTING_FAMILY_KEY
+  }
+  return nameToKey(group.name) || `group-${group.id}`
+}
+
+/**
+ * Picks a family's accent from {@link FAMILY_COLORS}, the same one on every render.
+ *
+ * @param key The family key.
+ * @returns A `#rrggbb` colour.
+ */
+export const familyColor = (key: string): string => {
+  let sum = 0
+  for (const char of key) {
+    sum += char.charCodeAt(0)
+  }
+  return FAMILY_COLORS[sum % FAMILY_COLORS.length] ?? HOSTING_FAMILY_COLOR
+}
+
+/**
+ * The look and links of a family, derived from its group: only hosting has a look of its own.
+ *
+ * @param group The catalogue group.
+ * @returns The family's config.
+ */
+export const familyConfig = (group: PortalProductGroup): ProductFamilyConfig => {
+  const key = familyKey(group)
+  if (group.id === HOSTING_GROUP_ID) {
+    return { name: group.name, icon: HOSTING_FAMILY_ICON, color: HOSTING_FAMILY_COLOR, learnMoreUrl: HOSTING_FAMILY_URL }
+  }
+  return { name: group.name, icon: FAMILY_ICON, color: familyColor(key), learnMoreUrl: `/products/${key}` }
 }
 
 /*
@@ -71,16 +120,6 @@ export const productConfig: Record<string, ProductFamilyConfig> = {
  * parameter still means something. Making product copy translatable is a backend change —
  * a `ProductTranslation` entity alongside `SlideTranslation` — not a frontend one.
  */
-
-/**
- * Normalize a product name to a slug key: "SmartLearn System" → "smartlearn-system".
- *
- * @param name The product's display name.
- * @returns The slug.
- */
-export const nameToKey = (name: string): string => {
-  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-}
 
 /** The HTML entities a legacy description may contain, by name or code. */
 const ENTITIES: Record<string, string> = {

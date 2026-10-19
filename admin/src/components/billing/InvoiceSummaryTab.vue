@@ -6,6 +6,7 @@
  */
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import InvoiceItemsSection from '@/components/billing/InvoiceItemsSection.vue'
 import InvoiceTransactionsSection from '@/components/billing/InvoiceTransactionsSection.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
@@ -23,8 +24,14 @@ import { useBillingStore } from '@/stores/billing'
 import { InvoiceBulkAction, InvoiceTransactionType, InvoiceStatus } from '@/types/invoice'
 import type { Invoice } from '@/types/invoice'
 import { UiTextTone } from '@/utils/ui/text'
+import { ClientSection, clientSectionPath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { clientLabel } = useFallbackLabels()
 
 const props = defineProps<{
   /** The invoice to display. */
@@ -168,10 +175,10 @@ const markPaid = (): Promise<void> =>
         <UiStack gap="sm">
           <UiStack direction="row" gap="md" align="center" wrap>
             <UiText tone="muted" size="md">{{ t('shared.clientName') }}</UiText>
-            <UiText tone="primary" size="md" data-testid="billing-invoice-client-name">{{ invoice.clientName }}</UiText>
+            <UiText tone="primary" size="md" data-testid="billing-invoice-client-name">{{ clientLabel(invoice.clientName, invoice.clientId) }}</UiText>
             <UiLink
               variant="link"
-              :to="`/clients/${invoice.clientId}/invoices`"
+              :to="clientSectionPath(invoice.clientId, ClientSection.Invoices)"
               data-testid="billing-invoice-client-invoices"
             >
               {{ t('billing.invoiceSummaryTab.viewInvoices') }}

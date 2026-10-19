@@ -1,0 +1,78 @@
+/**
+ * Tests for StorefrontFormShell: the breadcrumb, the slot, the loading and error states, the
+ * Cancel / Save events and the question asked when leaving with unsaved edits.
+ */
+import { describe, expect, it, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
+import StorefrontFormShell from '@/components/storefront/StorefrontFormShell.vue'
+import { mountScreen } from '../../helpers/mount'
+
+/** Props every mount starts from. */
+const baseProps = {
+  breadcrumb: [{ label: 'Widgets', to: '/widgets' }, { label: 'Create widget' }],
+  testid: 'widget',
+  loadingLabel: 'Loading widget...',
+  saveLabel: 'Create widget',
+  loading: false,
+  saving: false,
+  dirty: false,
+  error: null,
+}
+
+/**
+ * Builds a host that renders the shell with a body in its slot.
+ *
+ * @param overrides - Props to change.
+ * @returns The host component.
+ */
+const hostWith = (overrides: Record<string, unknown> = {}) =>
+  defineComponent({
+    setup: () => () => h(StorefrontFormShell, { ...baseProps, ...overrides }, { default: () => h('p', { 'data-testid': 'body' }, 'Fields') }),
+  })
+
+describe('StorefrontFormShell', () => {
+  it('draws the trail, the body and the save button label', async () => {
+    const { wrapper } = await mountScreen(hostWith())
+
+    expect(wrapper.get('[data-testid="settings-breadcrumb"]').text()).toContain('Create widget')
+    expect(wrapper.get('[data-testid="body"]').text()).toBe('Fields')
+    expect(wrapper.get('[data-testid="settings-form-save"]').text()).toBe('Create widget')
+  })
+
+  it('shows the loading caption instead of the body', async () => {
+    const { wrapper } = await mountScreen(hostWith({ loading: true }))
+
+    expect(wrapper.text()).toContain('Loading widget...')
+    expect(wrapper.find('[data-testid="body"]').exists()).toBe(false)
+  })
+
+  it('shows the error banner', async () => {
+    const { wrapper } = await mountScreen(hostWith({ error: 'Name taken.' }))
+
+    expect(wrapper.get('[data-testid="widget-form-error"]').text()).toBe('Name taken.')
+  })
+
+  it('emits save and cancel from the footer', async () => {
+    const { wrapper } = await mountScreen(hostWith())
+    const shell = wrapper.findComponent(StorefrontFormShell)
+
+    await wrapper.get('[data-testid="settings-form-save"]').trigger('click')
+    await wrapper.get('[data-testid="settings-form-cancel"]').trigger('click')
+
+    expect(shell.emitted('save')).toHaveLength(1)
+    expect(shell.emitted('cancel')).toHaveLength(1)
+  })
+
+  it('asks before leaving a dirty form and lets a clean one go', async () => {
+    const dirty = await mountScreen(hostWith({ dirty: true }), {}, '/widgets/new', '/widgets/new')
+    void dirty.router.push('/elsewhere')
+    await vi.waitFor(() => {
+      expect(dirty.wrapper.find('[data-testid="dialog-confirm"]').exists()).toBe(true)
+    })
+    expect(dirty.router.currentRoute.value.path).toBe('/widgets/new')
+
+    const clean = await mountScreen(hostWith(), {}, '/widgets/new', '/widgets/new')
+    await clean.router.push('/elsewhere')
+    expect(clean.router.currentRoute.value.path).toBe('/elsewhere')
+  })
+})

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Orders;
 
 /// <summary>
@@ -20,7 +21,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Orders;
 public sealed class StartOrderGatewayPaymentTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>An origin the test host's CORS configuration allows a payer to be returned to.</summary>
-    private const string AllowedReturnUrl = "https://host.innovayse.com/payment/result";
+    private const string AllowedReturnUrl = "https://client.test/payment/result";
 
     /// <summary>Builds a host whose payment plugins come from <paramref name="resolver"/>.</summary>
     /// <param name="resolver">The fake resolver the host should resolve plugins through.</param>

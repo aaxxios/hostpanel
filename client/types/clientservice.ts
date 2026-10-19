@@ -8,8 +8,8 @@ export interface ClientService {
   pid: number
   /** Registration date of the service. */
   regdate: string
-  /** Product name as configured. */
-  name: string
+  /** Product name as configured; null when the backend could not resolve it (render with `productNameOrFallback`). */
+  name: string | null
   /** Product name in the requested locale, when the backend has one. */
   translated_name?: string
   /** Product group the product belongs to. */

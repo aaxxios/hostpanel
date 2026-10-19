@@ -63,15 +63,15 @@ services:
   # Mail catcher: every message the demo sends lands here and goes no further.
   hostpanel-mailhog:
     container_name: hostpanel-demo-mailhog
-    image: mailhog/mailhog
+    image: ${MAILHOG_IMAGE:?MAILHOG_IMAGE must be set}
     networks: !override [default]
     ports:
-      - "127.0.0.1:${DEMO_MAILHOG_UI_HOST_PORT}:8025"
+      - "${DEMO_PUBLISH_ADDRESS:?DEMO_PUBLISH_ADDRESS must be set}:${DEMO_MAILHOG_UI_HOST_PORT}:8025"
     deploy:
       resources:
         limits:
-          cpus: '0.2'
-          memory: 256M
+          cpus: '${MAILHOG_CPUS:?MAILHOG_CPUS must be set}'
+          memory: ${MAILHOG_MEMORY:?MAILHOG_MEMORY must be set}
     restart: unless-stopped
 
   # prod.yml's services are parked: they would carry the production service names onto the demo's networks.
@@ -95,7 +95,7 @@ services:
       edge:
         aliases: [hostpanel-demo-api]
     ports:
-      - "127.0.0.1:${DEMO_API_HOST_PORT}:${API_PORT}"
+      - "${DEMO_PUBLISH_ADDRESS:?DEMO_PUBLISH_ADDRESS must be set}:${DEMO_API_HOST_PORT}:${API_PORT}"
     environment:
       ConnectionStrings__DefaultConnection: "Host=hostpanel-demo-db;Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
       Auth__RedisConnection: hostpanel-demo-redis:${DEMO_REDIS_PORT}
@@ -105,8 +105,9 @@ services:
       Smtp__Port: ${DEMO_SMTP_PORT}
       Smtp__Username: ""
       Smtp__Password: ""
-      Smtp__Encryption: none
+      Smtp__Encryption: ${DEMO_SMTP_ENCRYPTION:?DEMO_SMTP_ENCRYPTION must be set}
       # The demo admin has its own address; production's would send demo mail links to the live panel.
+      Cors__AllowedOrigins__0: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
       AdminBaseUrl: ${DEMO_ADMIN_BASE_URL:?DEMO_ADMIN_BASE_URL must be set}
       ClientBaseUrl: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
       Demo__Enabled: ${DEMO_ENABLED}
@@ -135,9 +136,13 @@ services:
       edge:
         aliases: [hostpanel-demo-client]
     ports:
-      - "127.0.0.1:${DEMO_CLIENT_HOST_PORT}:3000"
+      - "${DEMO_PUBLISH_ADDRESS:?DEMO_PUBLISH_ADDRESS must be set}:${DEMO_CLIENT_HOST_PORT}:${CLIENT_PORT:?CLIENT_PORT must be set}"
     environment:
       NUXT_API_URL: http://hostpanel-demo-api:${API_PORT}
+      # The demo's own public address, not production's CLIENT_BASE_URL.
+      NUXT_PUBLIC_BASE_URL: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
+      NUXT_PUBLIC_SITE_URL: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
+      NUXT_SSO_CALLBACK_URL: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}/api/portal/auth/sso/callback
     depends_on: !override
       - hostpanel-demo-api
 
@@ -151,7 +156,7 @@ services:
       edge:
         aliases: [hostpanel-demo-admin]
     ports:
-      - "127.0.0.1:${DEMO_ADMIN_HOST_PORT}:80"
+      - "${DEMO_PUBLISH_ADDRESS:?DEMO_PUBLISH_ADDRESS must be set}:${DEMO_ADMIN_HOST_PORT}:80"
     depends_on: !override
       - hostpanel-demo-api
 

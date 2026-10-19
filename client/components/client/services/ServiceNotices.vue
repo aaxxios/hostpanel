@@ -16,7 +16,7 @@
   >
     {{ $t('client.services.setupRequiredNotice') }}
     <template #action>
-      <UiButton :to="`/client/services/${serviceId}/setup`" size="sm" class="shrink-0" data-testid="service-complete-setup">
+      <UiButton :to="clientServiceSetupPath(serviceId)" size="sm" class="shrink-0" data-testid="service-complete-setup">
         <Zap :size="14" class="mr-1.5" />
         {{ $t('client.services.completeSetup') }}
       </UiButton>
@@ -29,6 +29,7 @@
  * ServiceNotices - the banners above the service detail: a pending cancellation (with its type
  * when the API named a known one) and a "setup required" call to action for a pending service.
  */
+import { clientServiceSetupPath } from '~/constants/clientRoutes'
 import { computed } from 'vue'
 import { Zap } from 'lucide-vue-next'
 import { CancellationType } from '~/types/cancellationtype'

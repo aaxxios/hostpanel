@@ -4,7 +4,7 @@ export interface TicketReply {
   id: number
   /** The reply body. */
   message: string
-  /** Display name of who wrote it. */
+  /** Display name of who wrote it; may be an empty string (render with `nameOrUnknown`). */
   authorName: string
   /** Whether a member of staff wrote it. */
   isStaffReply: boolean

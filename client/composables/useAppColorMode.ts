@@ -4,6 +4,7 @@
  * @module composables/useAppColorMode
  */
 
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import {
   COLOR_MODE_COOKIE,
   COLOR_MODE_COOKIE_MAX_AGE,
@@ -42,11 +43,11 @@ export const useAppColorMode = () => {
 
   /** The operator's default, narrowed. */
   const operatorDefault = computed<ColorModeSetting>(() =>
-    parseColorModeSetting(get('portal.theme.default', 'portalThemeDefault', DEFAULT_COLOR_MODE_SETTING)))
+    parseColorModeSetting(get(PortalSettingKey.ThemeDefault, 'portalThemeDefault', DEFAULT_COLOR_MODE_SETTING)))
 
   /** Whether the sun/moon switch is rendered at all. */
   const userToggleEnabled = computed(() =>
-    isUserToggleEnabled(get('portal.theme.user_toggle', 'portalThemeUserToggle', 'true')))
+    isUserToggleEnabled(get(PortalSettingKey.ThemeUserToggle, 'portalThemeUserToggle', 'true')))
 
   /**
    * Whether the visitor has made a choice of their own. Shared state rather than the

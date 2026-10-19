@@ -1,5 +1,5 @@
 <template>
-  <section class="py-10 sm:py-16 bg-ui-page relative overflow-hidden" data-testid="sections-partners">
+  <section v-if="partners.length" class="py-10 sm:py-16 bg-ui-page relative overflow-hidden" data-testid="sections-partners">
     <!-- Background -->
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent" />
@@ -29,7 +29,7 @@
         <!-- Scrolling logos (the list is doubled so the loop has no gap) -->
         <div class="flex animate-marquee hover:[animation-play-state:paused] py-4">
           <div
-            v-for="(partner, index) in loopedClients"
+            v-for="(partner, index) in loopedPartners"
             :key="index"
             class="flex-shrink-0 mx-3 sm:mx-6 flex items-center justify-center"
           >
@@ -39,36 +39,20 @@
               :data-testid="`partner-${partner.id}`"
             >
               <div class="flex items-center gap-2">
-                <Icon :name="partner.icon" class="text-xl sm:text-2xl text-gray-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-300 flex-shrink-0" />
+                <UiImage
+                  v-if="partner.logoUrl"
+                  :src="partner.logoUrl"
+                  :alt="partner.name"
+                  unoptimised
+                  class="h-6 sm:h-8 w-auto flex-shrink-0"
+                  :testid="`partner-logo-${partner.id}`"
+                />
                 <span class="text-sm sm:text-base font-semibold text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-300 whitespace-nowrap">{{ partner.name }}</span>
               </div>
             </UiCard>
           </div>
         </div>
       </div>
-
-      <!-- Stats bar -->
-      <UiGrid cols="4" gap="sm" class="mt-8 sm:mt-12 md:grid-cols-4 sm:gap-6">
-        <UiCard
-          v-for="(stat, index) in partnerStats"
-          :key="stat.label"
-          v-motion
-          :initial="{ opacity: 0, y: 30 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 400 } }"
-          padding="sm"
-          class="relative text-center group hover:border-primary-500/30 hover:-translate-y-1 transition-all duration-300"
-          :data-testid="`partner-stat-${index}`"
-        >
-          <UiDecor class="inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary-500/10 to-primary-500/10 dark:to-secondary-500/10" />
-
-          <div class="relative">
-            <div class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:scale-110 transition-transform duration-300">{{ stat.value }}</div>
-            <div class="text-xs text-gray-500 uppercase tracking-wider">{{ stat.label }}</div>
-          </div>
-
-          <UiDecor class="top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-primary-500/40 rounded-tr-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </UiCard>
-      </UiGrid>
     </UiContainer>
 
     <!-- Decorative corner accents -->
@@ -79,22 +63,24 @@
 
 <script setup lang="ts">
 /**
- * Partners section: a marquee of client names and a bar of company figures.
- * Uses the client list from lib/data.ts.
+ * Partners section: a marquee of partner logos and names. The partners come from the storefront
+ * store (`GET /api/portal/public/partners`, localised by the API); with none the section renders
+ * nothing.
  */
-import { clients } from '~/lib/data'
+import { useStorefrontStore } from '~/stores/storefront'
 
-/** Translation helpers and the active language. */
-const { t } = useI18n()
+/** The active language; the partners are re-read when it changes. */
+const { locale } = useI18n()
 
-/** The clients twice over, so the marquee loops without a gap. */
-const loopedClients = [...clients, ...clients]
+/** The storefront content: testimonials, partners, projects and FAQs. */
+const storefront = useStorefrontStore()
 
-/** The four company figures under the marquee. */
-const partnerStats = computed(() => [
-  { value: '50+', label: t('clients.stats.clients') },
-  { value: '15+', label: t('clients.stats.countries') },
-  { value: '$10M+', label: t('clients.stats.revenue') },
-  { value: '99%', label: t('clients.stats.retention') },
-])
+// Not awaited: Nuxt still holds the server render for it, and the section stays synchronous.
+useAsyncData('storefront:partners', () => storefront.loadPartners(), { watch: [locale] })
+
+/** The partners to show, in display order. */
+const partners = computed(() => storefront.partners)
+
+/** The partners twice over, so the marquee loops without a gap. */
+const loopedPartners = computed(() => [...partners.value, ...partners.value])
 </script>

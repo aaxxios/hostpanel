@@ -83,6 +83,7 @@ describe('pages/contact', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   it('sets the page tags and publishes the contact-page structured data', async () => {
@@ -120,30 +121,54 @@ describe('pages/contact', () => {
     expect(hidden.find('[data-testid="contact-hours"]').exists()).toBe(false)
   })
 
-  it('links the contact details to mail, phone and the two messengers', async () => {
+  it('links the operator-configured contact details to mail, phone and the two messengers', async () => {
+    vi.stubGlobal('useContactDetails', () => ({
+      email: ref('hello@acme.test'),
+      phone: ref('+1 555 010 200'),
+      phoneLink: ref('+1555010200'),
+      telegramUrl: ref('https://t.me/acme'),
+      whatsappUrl: ref('https://wa.me/1555010200'),
+      address: ref('1 Example Street\nSpringfield'),
+      mapUrl: ref('https://maps.example.test/embed?ll=1,2'),
+    }))
     const wrapper = await mountPage(Page)
 
-    expect(wrapper.find('[data-testid="contact-email-link"]').attributes('href')).toBe('mailto:contact@innovayse.com')
-    expect(wrapper.find('[data-testid="contact-phone-link"]').attributes('href')).toBe('tel:+37433731673')
-    expect(wrapper.find('[data-testid="contact-telegram"]').attributes('href')).toBe('https://t.me/innovayse')
+    expect(wrapper.find('[data-testid="contact-email-link"]').attributes('href')).toBe('mailto:hello@acme.test')
+    expect(wrapper.find('[data-testid="contact-phone-link"]').attributes('href')).toBe('tel:+1555010200')
+    expect(wrapper.find('[data-testid="contact-telegram"]').attributes('href')).toBe('https://t.me/acme')
     expect(wrapper.find('[data-testid="contact-telegram"]').attributes('target')).toBe('_blank')
-    expect(wrapper.find('[data-testid="contact-whatsapp"]').attributes('href')).toBe('https://wa.me/37433731673')
+    expect(wrapper.find('[data-testid="contact-whatsapp"]').attributes('href')).toBe('https://wa.me/1555010200')
+    expect(wrapper.find('[data-testid="contact-address"]').text()).toContain('1 Example Street')
+    expect(wrapper.find('[data-testid="contact-map"] iframe').attributes('src')).toContain('theme=light')
+    expect(wrapper.find('[data-testid="contact-map"] iframe').attributes('title')).toBe('contact.map.title')
+  })
+
+  it('makes the map follow the colour mode', async () => {
+    vi.stubGlobal('useContactDetails', () => ({
+      email: ref(''), phone: ref(''), phoneLink: ref(''), telegramUrl: ref(''), whatsappUrl: ref(''),
+      address: ref(''), mapUrl: ref('https://maps.example.test/embed?ll=1,2'),
+    }))
+    stubPublicPageRuntime({ dark: true })
+    const dark = await mountPage(Page)
+
+    expect(dark.find('[data-testid="contact-map"] iframe').attributes('src')).toContain('theme=dark')
+  })
+
+  it('hides every contact item the operator has not configured', async () => {
+    const wrapper = await mountPage(Page)
+
+    expect(wrapper.find('[data-testid="contact-email-link"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contact-phone-link"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contact-telegram"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contact-whatsapp"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contact-map"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contact-office"]').exists()).toBe(false)
   })
 
   it('links the consent text to the localised privacy page', async () => {
     const wrapper = await mountPage(Page)
 
     expect(wrapper.find('[data-testid="contact-privacy-link"]').attributes('href')).toBe('/en/privacy')
-  })
-
-  it('embeds a titled map that follows the colour mode', async () => {
-    const light = await mountPage(Page)
-    expect(light.find('[data-testid="contact-map"] iframe').attributes('title')).toBe('contact.map.title')
-    expect(light.find('[data-testid="contact-map"] iframe').attributes('src')).toContain('theme=light')
-
-    stubPublicPageRuntime({ dark: true })
-    const dark = await mountPage(Page)
-    expect(dark.find('[data-testid="contact-map"] iframe').attributes('src')).toContain('theme=dark')
   })
 
   it('refuses a submit without consent before any request', async () => {

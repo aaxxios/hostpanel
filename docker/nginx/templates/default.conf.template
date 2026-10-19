@@ -6,7 +6,7 @@ upstream api_backend {
 }
 
 upstream client_frontend {
-    server hostpanel-client:3000;
+    server hostpanel-client:${CLIENT_PORT};
 }
 
 upstream admin_frontend {
@@ -25,7 +25,7 @@ server {
     listen 80;
     server_name ${DOMAIN};
 
-    client_max_body_size 50m;
+    client_max_body_size ${EDGE_MAX_BODY_SIZE};
 
     # API requests
     location /api/ {
@@ -77,6 +77,8 @@ server {
 server {
     listen 80;
     server_name ${ADMIN_DOMAIN};
+
+    client_max_body_size ${EDGE_ADMIN_MAX_BODY_SIZE};
 
     # Operator-uploaded branding: the logo, the favicon and the icon set generated from
     # them. Served here on BOTH origins on purpose. The setting rows store root-relative

@@ -24,6 +24,7 @@ import UiTextarea from '@/components/ui/UiTextarea.vue'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
+import { ClientSection, clientItemPath, clientSectionPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -81,7 +82,7 @@ const handleSubmit = async (): Promise<void> => {
   })
 
   if (newId) {
-    router.push(`/clients/${clientId.value}/tickets/${newId}`)
+    router.push(clientItemPath(clientId.value, ClientSection.Tickets, newId))
   }
 }
 
@@ -94,7 +95,7 @@ onMounted(() => {
   <UiStack>
     <UiStack direction="row" :align="UiAlignItems.Center">
       <UiLink
-        :to="`/clients/${clientId}/tickets`"
+        :to="clientSectionPath(clientId, ClientSection.Tickets)"
         :variant="UiButtonVariant.Secondary"
         data-testid="client-open-ticket-back"
       >

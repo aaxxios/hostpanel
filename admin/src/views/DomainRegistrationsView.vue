@@ -7,6 +7,7 @@
  */
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -29,8 +30,14 @@ import { Icon } from '@/lib/icons'
 import { formatPrice } from '@/lib/money'
 import { domainStatusTone, statusLabel } from '@/lib/tones'
 import { useDomainsStore } from '@/stores/domains'
+import { clientPath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { clientLabel, yearsLabel } = useFallbackLabels()
 
 /** Domains store: the page, its paging and the load state. */
 const store = useDomainsStore()
@@ -96,13 +103,13 @@ onMounted(() => store.fetchAll())
             <UiTableCell>
               <UiLink
                 variant="link"
-                :to="`/clients/${domain.clientId}`"
+                :to="clientPath(domain.clientId)"
                 :data-testid="`domain-registrations-client-${domain.id}`"
               >
-                {{ domain.clientName }}
+                {{ clientLabel(domain.clientName, domain.clientId) }}
               </UiLink>
             </UiTableCell>
-            <UiTableCell>{{ domain.regPeriod }}</UiTableCell>
+            <UiTableCell>{{ yearsLabel(domain.regPeriodYears) }}</UiTableCell>
             <UiTableCell>{{ domain.registrar ?? '—' }}</UiTableCell>
             <UiTableCell>{{ formatPrice(domain.recurringAmount, domain.priceCurrency) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(domain.nextDueDate) }}</UiTableCell>

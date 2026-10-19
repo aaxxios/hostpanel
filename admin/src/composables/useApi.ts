@@ -22,6 +22,9 @@
  */
 
 import { i18n } from '@/i18n'
+import { API_BASE } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
+import { MimeType } from '@/types/http'
 
 /**
  * Builds the `X-Language` header from the active i18n locale, the only header the API reads
@@ -125,10 +128,10 @@ export const useApi = () => {
    * travels on the error so the caller can read the server's own wording.
    */
   const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
-    const response = await fetch(`/api${endpoint}`, {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': MimeType.Json,
         ...CSRF_HEADER,
         ...languageHeader(),
         ...(options.headers as Record<string, string> | undefined),
@@ -175,8 +178,8 @@ export const useApi = () => {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await fetch(`/api${endpoint}`, {
-      method: 'POST',
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method: HttpMethod.Post,
       body: formData,
       headers: { ...CSRF_HEADER, ...languageHeader() },
     })

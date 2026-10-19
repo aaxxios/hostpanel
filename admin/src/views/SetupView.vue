@@ -41,6 +41,7 @@ import UiForm from '@/components/ui/UiForm.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { AppRoute } from '@/lib/routes'
 
 /** Translation function. */
 const { t } = useI18n()
@@ -140,7 +141,7 @@ const handleClaimAdmin = async (): Promise<void> => {
   }
 
   setupToken.value = ''
-  await router.push('/dashboard')
+  await router.push(AppRoute.Dashboard)
 }
 
 /** Resumes at the claim step when a session already exists. */

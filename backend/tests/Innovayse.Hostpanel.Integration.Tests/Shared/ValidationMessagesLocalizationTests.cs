@@ -39,10 +39,14 @@ public sealed class ValidationMessagesLocalizationTests
     private const string Armenian = "hy";
 
     /// <summary>
-    /// A key that is present in the neutral file and deliberately absent from <c>ru</c> and
-    /// <c>hy</c> -- one of the still-untranslated service messages. Used to pin the fallback.
+    /// A language tag no resource file is shipped for. Every key resolves through the culture
+    /// fallback to the neutral (English) file, which is what pins the fallback now that
+    /// <c>ru</c> and <c>hy</c> carry every key.
     /// </summary>
-    private const string UntranslatedKey = "ServiceNotProvisioned";
+    private const string LocaleWithoutTranslations = "de";
+
+    /// <summary>A key of the neutral file whose English sentence takes the service ID.</summary>
+    private const string FallbackKey = "ServiceNotProvisioned";
 
     /// <summary>
     /// Builds the localizer the API resolves, without a web host.
@@ -158,17 +162,18 @@ public sealed class ValidationMessagesLocalizationTests
     }
 
     /// <summary>
-    /// A key the translators have not reached yet falls back to English rather than to the key
-    /// name. This is the behaviour that lets the still-untranslated admin messages ship.
+    /// A caller whose language has no translations falls back to English rather than to the key
+    /// name. This is the behaviour that lets a key ship before its translations do.
     /// </summary>
     [Fact]
-    public void UntranslatedKeyFallsBackToEnglish()
+    public void LocaleWithoutTranslationsFallsBackToEnglish()
     {
-        var english = Resolve<ApplicationValidationMessages>("en", UntranslatedKey, 42);
-        var armenian = Resolve<ApplicationValidationMessages>(Armenian, UntranslatedKey, 42);
+        var english = Resolve<ApplicationValidationMessages>("en", FallbackKey, 42);
+        var fallback = Resolve<ApplicationValidationMessages>(LocaleWithoutTranslations, FallbackKey, 42);
 
-        Assert.Equal(english, armenian);
-        Assert.Contains("42", armenian, StringComparison.Ordinal);
+        Assert.Equal(english, fallback);
+        Assert.NotEqual(FallbackKey, fallback);
+        Assert.Contains("42", fallback, StringComparison.Ordinal);
     }
 
     /// <summary>

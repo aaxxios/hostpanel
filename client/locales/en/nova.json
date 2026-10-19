@@ -18,12 +18,12 @@
     "hero": {
       "badge": "Hosting, domains and email in one account",
       "title": "Fast, secure hosting built for your website",
-      "lead": "Innovayse gives you the server, the domain and the control panel in one place. Accounts are provisioned automatically, billing is transparent, and there is a real person on the other end of every ticket.",
+      "lead": "{site} gives you the server, the domain and the control panel in one place. Accounts are provisioned automatically, billing is transparent, and there is a real person on the other end of every ticket.",
       "ctaPrimary": "Get Started",
       "ctaSecondary": "View Plans",
       "benefitSsl": "Free SSL certificate",
       "benefitBackups": "Automatic backups",
-      "benefitSupport": "24/7 support",
+      "benefitSupport": "Support included",
       "benefitScale": "Upgrade at any time"
     },
     "trust": {
@@ -31,7 +31,7 @@
       "infrastructure": "Secure infrastructure",
       "ssl": "Free SSL",
       "backups": "Automatic backups",
-      "support": "24/7 support",
+      "support": "Support included",
       "uptimeLabel": "uptime"
     },
     "plans": {
@@ -60,8 +60,8 @@
       "absent": "Not included"
     },
     "why": {
-      "eyebrow": "Why Innovayse",
-      "title": "Why choose Innovayse?",
+      "eyebrow": "Why {site}",
+      "title": "Why choose {site}?",
       "lead": "One account for the whole stack, and no surprises in it.",
       "performanceTitle": "Fast performance",
       "performanceBody": "Accounts are placed on servers your provider chooses and sizes, so a busy site is not sharing with the whole catalogue.",
@@ -73,8 +73,8 @@
       "automationBody": "Orders are provisioned by the platform the moment payment clears — no waiting for someone to set your account up by hand.",
       "developersTitle": "Developer friendly",
       "developersBody": "Full control-panel access, databases you create yourself, and a documented API behind the whole platform.",
-      "supportTitle": "24/7 support",
-      "supportBody": "Tickets are answered around the clock, in English, Russian or Armenian, by people who can see your account."
+      "supportTitle": "Real support",
+      "supportBody": "Tickets are answered by people who can see your account."
     },
     "performance": {
       "eyebrow": "Performance",
@@ -131,7 +131,7 @@
     },
     "migration": {
       "eyebrow": "Migration",
-      "title": "Move your website to Innovayse",
+      "title": "Move your website to {site}",
       "lead": "You do not have to rebuild anything. Send us what you have and we will move it, then tell you before we switch anything over.",
       "free": "Free migration",
       "cta": "Start a migration",
@@ -166,25 +166,7 @@
     },
     "faq": {
       "eyebrow": "FAQ",
-      "title": "Questions people ask before signing up",
-      "whatQ": "What is web hosting?",
-      "whatA": "Web hosting is space on a server that is connected to the internet all the time. Your site's files and database live there, and the server answers when somebody types your domain into a browser.",
-      "whichQ": "Which hosting plan should I choose?",
-      "whichA": "Start from the number of sites you are running and the space they need today. Everything on the plans is listed above, and you can move to a larger plan later without moving your site again.",
-      "migrateQ": "Can I migrate my existing website?",
-      "migrateA": "Yes. Open a ticket with your current host's details, or send an archive of the files and database, and we will move it and check it before the DNS changes.",
-      "sslQ": "Is SSL included?",
-      "sslA": "Yes. Every site is served over HTTPS and the certificate is issued and renewed for you — there is nothing to buy separately.",
-      "backupsQ": "Are backups included?",
-      "backupsA": "Backups are part of the hosting plans your provider offers; the exact schedule and retention are listed on the plan you choose.",
-      "wordpressQ": "Can I host WordPress?",
-      "wordpressA": "Yes. The plans provide PHP, MySQL databases and the control-panel access WordPress needs, and the certificate is already in place when you install it.",
-      "upgradeQ": "Can I upgrade my plan?",
-      "upgradeA": "Yes, from the client area. Your account, your domain and your data stay where they are — only the resources behind them change.",
-      "expiresQ": "What happens when my subscription expires?",
-      "expiresA": "You are invoiced before the renewal date and reminded if it goes unpaid. The account is suspended before anything is removed, so there is time to renew without losing data.",
-      "contactQ": "How can I contact support?",
-      "contactA": "Open a ticket from the client area at any hour. If you are not a customer yet, use the contact page and you will reach the same team."
+      "title": "Questions people ask before signing up"
     },
     "finalCta": {
       "title": "Ready to launch your website?",

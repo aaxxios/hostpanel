@@ -1,12 +1,14 @@
 /**
- * Unit tests for SectionsTestimonials: one slide per testimonial with its author, the readable
- * light-mode card, and the row of client figures. The carousel library is stood in for.
+ * Unit tests for SectionsTestimonials: one slide per testimonial read from the storefront store
+ * with its author, the readable light-mode card, and the section hiding itself when there are
+ * none. The carousel library is stood in for.
  */
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
+import { testimonialFixture } from '~/tests/helpers/storefrontFixtures'
 import SectionsTestimonials from '~/components/sections/SectionsTestimonials.vue'
 import MarketingSectionHeader from '~/components/marketing/MarketingSectionHeader.vue'
-import { testimonials } from '~/lib/data'
 
 vi.mock('swiper/vue', async () => {
   const { defineComponent, h } = await import('vue')
@@ -21,39 +23,87 @@ vi.mock('swiper/modules', () => ({ Autoplay: {}, Pagination: {} }))
 vi.mock('swiper/css', () => ({}))
 vi.mock('swiper/css/pagination', () => ({}))
 
-/** Mounts the section. */
-const mountSection = () => mountWithKit(SectionsTestimonials, { components: { MarketingSectionHeader } })
+/** The mocked storefront endpoints, re-created for every test. */
+const api = { fetchPartners: vi.fn(), fetchTestimonials: vi.fn(), fetchProjects: vi.fn(), fetchFaqs: vi.fn() }
+
+vi.mock('~/composables/apis/useStorefrontApi', () => ({
+  /**
+   * Stands in for the storefront API composable so the store runs without transport.
+   *
+   * @returns The mocked endpoints.
+   */
+  useStorefrontApi: () => api,
+}))
+
+/**
+ * Mounts the section and lets the testimonials load.
+ *
+ * @returns The wrapper.
+ */
+const mountSection = async () => {
+  const wrapper = mountWithKit(SectionsTestimonials, { components: { MarketingSectionHeader } })
+  await flushPromises()
+  return wrapper
+}
 
 describe('SectionsTestimonials', () => {
-  it('renders a slide per testimonial with its quote, author and company', () => {
-    const wrapper = mountSection()
-
-    const first = testimonials[0]
-    const slide = wrapper.find(`[data-testid="testimonial-${first?.id}"]`)
-    expect(wrapper.findAll('[data-testid^="testimonial-testimonial"]')).toHaveLength(testimonials.length)
-    expect(slide.text()).toContain(`testimonials.items.${first?.id}.text`)
-    expect(slide.text()).toContain(first?.name)
-    expect(slide.text()).toContain(first?.company)
+  beforeEach(() => {
+    api.fetchTestimonials.mockReset()
+    api.fetchTestimonials.mockResolvedValue([
+      testimonialFixture(1),
+      testimonialFixture(2, { role: null, company: null, rating: 3 }),
+    ])
   })
 
-  it('shows the author initials in the avatar', () => {
-    const wrapper = mountSection()
+  it('renders a slide per testimonial with its quote, author, role and company', async () => {
+    const wrapper = await mountSection()
 
-    expect(wrapper.find(`[data-testid="testimonial-${testimonials[0]?.id}"]`).text()).toContain('SJ')
+    const slide = wrapper.find('[data-testid="testimonial-1"]')
+    expect(wrapper.findAll('[data-testid^="testimonial-"]')).toHaveLength(2)
+    expect(slide.text()).toContain('Example quote 1.')
+    expect(slide.text()).toContain('Example Person 1')
+    expect(slide.text()).toContain('Founder')
+    expect(slide.text()).toContain('Example Co')
   })
 
-  it('puts the gradient on dark mode only, so the quote stays readable on the light surface', () => {
-    const slide = mountSection().find(`[data-testid="testimonial-${testimonials[0]?.id}"]`)
+  it('omits the role and company lines of a testimonial that has neither', async () => {
+    const wrapper = await mountSection()
+
+    const text = wrapper.find('[data-testid="testimonial-2"]').text()
+    expect(text).toContain('Example Person 2')
+    expect(text).not.toContain('Founder')
+    expect(text).not.toContain('Example Co')
+  })
+
+  it('shows the author initials in the avatar', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('[data-testid="testimonial-1"]').text()).toContain('EP')
+  })
+
+  it('draws as many stars as the rating', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('[data-testid="testimonial-1"]').findAll('svg.animate-pulse')).toHaveLength(5)
+    expect(wrapper.find('[data-testid="testimonial-2"]').findAll('svg.animate-pulse')).toHaveLength(3)
+  })
+
+  it('puts the gradient on dark mode only, so the quote stays readable on the light surface', async () => {
+    const slide = (await mountSection()).find('[data-testid="testimonial-1"]')
 
     expect(slide.classes().some((name) => name.startsWith('dark:from-'))).toBe(true)
     expect(slide.classes().some((name) => name === 'bg-gradient-to-br')).toBe(false)
   })
 
-  it('shows the four client figures and the swipe hint', () => {
-    const wrapper = mountSection()
+  it('shows the swipe hint', async () => {
+    expect((await mountSection()).text()).toContain('testimonials.hint')
+  })
 
-    expect(wrapper.find('[data-testid="testimonial-stat-0"]').text()).toContain('98%')
-    expect(wrapper.find('[data-testid="testimonial-stat-3"]').text()).toContain('4.9')
-    expect(wrapper.text()).toContain('testimonials.hint')
+  it('renders nothing when there are no testimonials', async () => {
+    api.fetchTestimonials.mockResolvedValue([])
+
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('[data-testid="sections-testimonials"]').exists()).toBe(false)
   })
 })

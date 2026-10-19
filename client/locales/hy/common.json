@@ -42,6 +42,10 @@
     "retry": "Կրկնել",
     "breadcrumb": "Նավիգացիոն շղթա"
   },
+  "fallback": {
+    "unknown": "Անհայտ",
+    "product": "Ապրանք №{id}"
+  },
   "errors": {
     "noAnswer": "Չհաջողվեց կապվել սերվերի հետ։"
   }

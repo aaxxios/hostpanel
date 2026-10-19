@@ -6,8 +6,10 @@
  * and add only the verb and the response type. Every function rejects with an `ApiError`.
  */
 
+import { API_BASE } from '@/lib/apiPaths'
 import { useApi } from '@/composables/useApi'
 import type { ReportClientOption } from '@/types/reportclientoption'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/api/reports/*`.
@@ -31,7 +33,7 @@ export const useReportsApi = () => {
    * @param path - Report endpoint path, including its query string.
    * @returns The refreshed report data.
    */
-  const refreshReport = <T>(path: string): Promise<T> => request<T>(path, { method: 'POST' })
+  const refreshReport = <T>(path: string): Promise<T> => request<T>(path, { method: HttpMethod.Post })
 
   /**
    * Reads the clients the report pickers offer.
@@ -50,7 +52,7 @@ export const useReportsApi = () => {
    * @param path - Export endpoint path, including its query string.
    * @returns The address to open.
    */
-  const exportUrl = (path: string): string => `/api${path}`
+  const exportUrl = (path: string): string => `${API_BASE}${path}`
 
   return { fetchReport, refreshReport, fetchClientPicker, exportUrl }
 }

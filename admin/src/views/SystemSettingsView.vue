@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * System settings view — the storefront's identity, appearance and branding cards, then the
+ * System settings view — the storefront's identity, content, appearance and branding cards, then the
  * key-value list of every other global setting.
  *
  * Only the first load replaces the page with a loading state: every save re-fetches the list, and
@@ -14,6 +14,7 @@ import BrandingCard from '@/components/settings/BrandingCard.vue'
 import PortalAppearanceCard from '@/components/settings/PortalAppearanceCard.vue'
 import SettingsLoading from '@/components/settings/SettingsLoading.vue'
 import SiteIdentityCard from '@/components/settings/SiteIdentityCard.vue'
+import StorefrontContentCard from '@/components/settings/StorefrontContentCard.vue'
 import TrackingChatCard from '@/components/settings/TrackingChatCard.vue'
 import TypographyCard from '@/components/settings/TypographyCard.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
@@ -116,6 +117,7 @@ const saveRow = async (setting: Setting): Promise<void> => {
 
       <!-- Identity first: the name is the first thing an operator sets, and everything below renders it. -->
       <SiteIdentityCard :settings="store.settings" :saving="saving" @save="onSave" />
+      <StorefrontContentCard :settings="store.settings" :saving="saving" @save="onSave" />
       <PortalAppearanceCard :settings="store.settings" :saving="saving" @save="onSave" />
       <BrandColorsCard :settings="store.settings" :saving="saving" @save="onSave" />
       <TypographyCard :settings="store.settings" :saving="saving" @save="onSave" />

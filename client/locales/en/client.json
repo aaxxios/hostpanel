@@ -15,7 +15,7 @@
       "signOut": "Sign Out",
       "welcomeBack": "Welcome back,",
       "account": "Account",
-      "brand": "Innovayse",
+      "brand": "{site}",
       "toggleMenu": "Toggle menu"
     },
     "login": {
@@ -26,7 +26,7 @@
       "submitting": "Signing in…",
       "noAccount": "Don't have an account?",
       "forgotPassword": "Forgot your password?",
-      "continueWithInnovayse": "Continue with Innovayse",
+      "continueWithSso": "Continue with single sign-on",
       "twoFactorRequired": "Two-factor authentication required.",
       "twoFactorPrompt": "Enter the 6-digit code from your authenticator app to finish signing in.",
       "twoFactorLabel": "Authentication code",
@@ -344,7 +344,7 @@
       "pendingRegistrationTitle": "Domain Registration in Progress",
       "pendingRegistrationDesc": "Your domain has been ordered and is being registered. This usually completes within a few minutes. You'll be able to manage it once it's active.",
       "pendingTransferTitle": "Domain Transfer in Progress",
-      "pendingTransferDesc": "Your domain transfer has been initiated. Transfers can take up to 5–7 days to complete. You'll be able to manage it once the transfer is confirmed.",
+      "pendingTransferDesc": "Your domain transfer has been initiated. Transfers can take several days to complete. You'll be able to manage it once the transfer is confirmed.",
       "unlockWarningTitle": "Domain Currently Unlocked!",
       "unlockWarningDesc": "You should enable the registrar lock unless you are transferring the domain.",
       "fieldDomain": "Domain",
@@ -412,7 +412,7 @@
         "state": "Greater London",
         "postalCode": "SW1A 1AA",
         "country": "GB",
-        "phone": "+44 20 7946 0000"
+        "phone": "+1 555 0100"
       }
     },
     "invoices": {
@@ -498,7 +498,7 @@
         "lastName": "Doe",
         "companyName": "Company name",
         "email": "you{'@'}example.com",
-        "phone": "+1 555 000 0000",
+        "phone": "+1 555 0100",
         "address1": "Street and number",
         "address2": "Apartment, suite, etc.",
         "city": "City",
@@ -608,7 +608,7 @@
       "viewDomains": "View Domains",
       "title": "Transfer a Domain",
       "subtitle": "Transfer your domain to us and get 1 year renewal included.",
-      "infoNote": "To transfer a domain you will need to provide the EPP/authorization code from your current registrar. The transfer process typically takes 5–7 days.",
+      "infoNote": "To transfer a domain you will need to provide the EPP/authorization code from your current registrar. The transfer process can take several days.",
       "domainLabel": "Domain Name",
       "eppLabel": "EPP / Auth Code",
       "periodLabel": "Transfer Period",

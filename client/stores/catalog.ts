@@ -23,10 +23,11 @@ import type { PlanCard } from '~/types/plancard'
 import type { CatalogFilter } from '~/types/catalogfilter'
 import type { CountryOption } from '~/types/countryoption'
 import type { PortalProduct } from '~/types/portalproduct'
+import type { PortalProductGroup } from '~/types/portalproductgroup'
 import type { ProductFeature } from '~/types/productfeature'
 import type { SlidePublic } from '~/types/slidepublic'
 import type { TldPricing } from '~/types/tldpricing'
-import { parseDescription } from '~/utils/catalogGroups'
+import { isFamilyGroup, parseDescription } from '~/utils/catalogGroups'
 import { formatMoney } from '~/utils/formatMoney'
 
 /**
@@ -40,6 +41,9 @@ export const useCatalogStore = defineStore('catalog', () => {
 
   /** Product lists already read, keyed by {@link productKey} (filter + currency). */
   const productsByKey = ref<Record<string, PortalProduct[]>>({})
+
+  /** The catalogue's product groups; empty until {@link loadProductGroups}. */
+  const productGroups = ref<PortalProductGroup[]>([])
 
   /** Specification lines already read, keyed by product group id. */
   const featuresByGroup = ref<Record<number, ProductFeature[]>>({})
@@ -185,6 +189,44 @@ export const useCatalogStore = defineStore('catalog', () => {
     })
 
   /**
+   * The groups the storefront shows as product families: active and holding at least one product,
+   * hosting first and the rest in the order the API sent them.
+   */
+  const familyGroups = computed(() =>
+    productGroups.value
+      .filter(isFamilyGroup)
+      .sort((a, b) => Number(b.id === HOSTING_GROUP_ID) - Number(a.id === HOSTING_GROUP_ID)))
+
+  /** The filter that selects the products of every family group; empty gids while there is none. */
+  const familyFilter = computed<CatalogFilter>(() => ({ gids: familyGroups.value.map(group => group.id).join(',') }))
+
+  /** The products of every family group, in the payer's currency; empty until {@link loadFamilies}. */
+  const familyProducts = computed(() => (familyFilter.value.gids ? productsFor(familyFilter.value) : []))
+
+  /**
+   * Reads the product groups and keeps them.
+   *
+   * @returns The groups; empty after a failure ({@link error} holds the sentence).
+   */
+  const loadProductGroups = async (): Promise<PortalProductGroup[]> => {
+    productGroups.value = await guarded(() => api.fetchProductGroups(), [] as PortalProductGroup[])
+    return productGroups.value
+  }
+
+  /**
+   * Reads the product groups, then the products of every family group.
+   *
+   * The second read is skipped while there is no family group: an empty `gids` filter would ask
+   * the endpoint for the whole catalogue.
+   *
+   * @returns The family products; empty when there is no family or a read failed.
+   */
+  const loadFamilies = async (): Promise<PortalProduct[]> => {
+    await loadProductGroups()
+    return familyFilter.value.gids ? loadProducts(familyFilter.value) : []
+  }
+
+  /**
    * Reads the specification lines of a product group and keeps them.
    *
    * @param groupId - Product group whose plans are compared.
@@ -239,6 +281,9 @@ export const useCatalogStore = defineStore('catalog', () => {
   }
 
   return {
+    productGroups,
+    familyGroups,
+    familyProducts,
     productsByKey,
     featuresByGroup,
     slides,
@@ -247,6 +292,8 @@ export const useCatalogStore = defineStore('catalog', () => {
     loading,
     error,
     loadProducts,
+    loadProductGroups,
+    loadFamilies,
     productsFor,
     hostingPlans,
     domainProductId,

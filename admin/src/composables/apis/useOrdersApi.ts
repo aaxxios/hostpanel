@@ -7,6 +7,8 @@
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { OrderDetail, OrderFilter, OrderListItem } from '@/types/order'
 import type { PagedResult } from '@/types/pagedresult'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/orders`.
@@ -24,7 +26,7 @@ export const useOrdersApi = () => {
    */
   const listOrders = (filter: OrderFilter): Promise<PagedResult<OrderListItem>> =>
     request<PagedResult<OrderListItem>>(
-      `/orders${buildQuery({ page: filter.page, pageSize: filter.pageSize, status: filter.status })}`,
+      `${ApiPath.Orders}${buildQuery({ page: filter.page, pageSize: filter.pageSize, status: filter.status })}`,
     )
 
   /**
@@ -33,7 +35,7 @@ export const useOrdersApi = () => {
    * @param id - Order id.
    * @returns The order detail.
    */
-  const getOrder = (id: number): Promise<OrderDetail> => request<OrderDetail>(`/orders/${id}`)
+  const getOrder = (id: number): Promise<OrderDetail> => request<OrderDetail>(`${ApiPath.Orders}/${id}`)
 
   /**
    * Accepts a pending order.
@@ -41,7 +43,7 @@ export const useOrdersApi = () => {
    * @param id - Order id.
    * @returns Nothing.
    */
-  const acceptOrder = (id: number): Promise<void> => request<void>(`/orders/${id}/accept`, { method: 'POST' })
+  const acceptOrder = (id: number): Promise<void> => request<void>(`${ApiPath.Orders}/${id}/accept`, { method: HttpMethod.Post })
 
   /**
    * Cancels a pending order.
@@ -49,7 +51,7 @@ export const useOrdersApi = () => {
    * @param id - Order id.
    * @returns Nothing.
    */
-  const cancelOrder = (id: number): Promise<void> => request<void>(`/orders/${id}/cancel`, { method: 'POST' })
+  const cancelOrder = (id: number): Promise<void> => request<void>(`${ApiPath.Orders}/${id}/cancel`, { method: HttpMethod.Post })
 
   /**
    * Deletes an order.
@@ -57,7 +59,7 @@ export const useOrdersApi = () => {
    * @param id - Order id.
    * @returns Nothing.
    */
-  const deleteOrder = (id: number): Promise<void> => request<void>(`/orders/${id}`, { method: 'DELETE' })
+  const deleteOrder = (id: number): Promise<void> => request<void>(`${ApiPath.Orders}/${id}`, { method: HttpMethod.Delete })
 
   return { listOrders, getOrder, acceptOrder, cancelOrder, deleteOrder }
 }

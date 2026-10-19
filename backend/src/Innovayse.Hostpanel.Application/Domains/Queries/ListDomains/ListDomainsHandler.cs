@@ -61,9 +61,9 @@ public sealed class ListDomainsHandler
             .Select(d => new DomainRegistrationDto(
                 d.Id,
                 d.ClientId,
-                clients.GetValueOrDefault(d.ClientId, "Unknown"),
+                clients.GetValueOrDefault(d.ClientId),
                 d.Name,
-                FormatRegPeriod(d.RegistrationPeriod),
+                d.RegistrationPeriod,
                 d.Registrar,
                 d.RecurringAmount,
                 d.PriceCurrency,
@@ -76,10 +76,4 @@ public sealed class ListDomainsHandler
         var page = new PagedResult<DomainRegistrationDto>(dtos, totalCount, query.Page, query.PageSize);
         return Result.Success(page);
     }
-
-    /// <summary>Formats registration period years as a label.</summary>
-    /// <param name="years">Number of years.</param>
-    /// <returns>Label like "1 Year" or "2 Years".</returns>
-    private static string FormatRegPeriod(int years) =>
-        years <= 0 ? "N/A" : years == 1 ? "1 Year" : $"{years} Years";
 }

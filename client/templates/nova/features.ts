@@ -4,6 +4,7 @@
  * @module templates/nova/features
  */
 
+import { SETTING_ON } from '~/constants/settingValue'
 import type { Feature } from '~/templates/nova/types/feature'
 
 /**
@@ -11,8 +12,8 @@ import type { Feature } from '~/templates/nova/types/feature'
  *
  * A {@link Feature} without `requiresSetting` is always shown: those lines
  * describe what the platform itself does, and they are true of every install.
- * A feature that names a setting appears only once an operator has filled that
- * setting in, because the thing it claims — NVMe disks, a CDN, a malware
+ * A feature that names a setting appears only once an operator has switched that
+ * setting on (`true`), because the thing it claims — NVMe disks, a CDN, a malware
  * scanner, a backup schedule — belongs to their servers and is invisible from
  * here. The alternative was to print them regardless, which is how a hosting
  * page ends up advertising hardware nobody bought.
@@ -32,7 +33,7 @@ export const useVisibleFeatures = (features: readonly Feature[]) => {
       return true
     }
 
-    const [key, envKey] = feature.requiresSetting
-    return get(key, envKey).length > 0
+    // Settings only: these claims have no environment fallback to read.
+    return get(feature.requiresSetting, '') === SETTING_ON
   }))
 }

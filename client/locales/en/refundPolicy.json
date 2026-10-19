@@ -2,13 +2,13 @@
   "refundPolicy": {
     "badge": "Financial Transparency",
     "title": "Refund & Cancellation",
-    "subtitle": "Clear rules for service cancellations and refund requests for Innovayse hosting, domain and server services.",
+    "subtitle": "Clear rules for service cancellations and refund requests for {site} hosting, domain and server services.",
     "lastUpdated": "Last updated",
     "sections": {
       "general": {
         "title": "General Principles",
         "content": {
-          "0": "At Innovayse, we strive to ensure complete satisfaction with our services. However, due to the digital nature of hosting and domain services, specific refund rules apply to different categories of services."
+          "0": "At {site}, we strive to ensure complete satisfaction with our services. However, due to the digital nature of hosting and domain services, specific refund rules apply to different categories of services."
         }
       },
       "subscriptions": {
@@ -16,7 +16,7 @@
         "content": {
           "0": "For recurring hosting and service subscriptions:",
           "1": "Monthly subscriptions can be cancelled at any time. Refunds are not provided for partial months already billed. Upon cancellation, access remains active until the end of the current billing cycle.",
-          "2": "Yearly subscriptions: Refund requests made within 14 days of the initial purchase are eligible for a full refund. After 14 days, refunds are handled on a case-by-case basis at our discretion."
+          "2": "Yearly subscriptions: Refund requests are reviewed under the refund terms in force at the time of purchase, on a case-by-case basis at our discretion."
         }
       },
       "domains": {
@@ -31,7 +31,7 @@
       "hosting": {
         "title": "Hosting Services",
         "content": {
-          "0": "Innovayse hosting services follow a '30-Day Money-Back Guarantee' for new accounts. This excludes domain registration fees, which are non-refundable under industry standards.",
+          "0": "{site} hosting services for new accounts follow the refund terms published at the time of purchase. This excludes domain registration fees, which are non-refundable under industry standards.",
           "1": "Renewal fees for hosting services are non-refundable once the new billing cycle starts."
         }
       },

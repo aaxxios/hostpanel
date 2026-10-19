@@ -39,6 +39,7 @@ import type { PortalProduct } from '~/types/portalproduct'
 import type { PricingCycleOption } from '~/types/pricingcycleoption'
 import { parseDescription } from '~/utils/catalogGroups'
 import { formatMoney } from '~/utils/formatMoney'
+import { isFreePlan } from '~/utils/isFreePlan'
 import { cycleAmount } from '~/utils/productFamilies'
 import { buildSeoLinks } from '~/utils/seoLinks'
 
@@ -146,8 +147,8 @@ const inCart = computed(() => (currentPlan.value ? cart.hasItem(currentPlan.valu
 /**
  * Adds the current plan to the cart.
  *
- * The selected cycle is used when it is priced, otherwise the monthly one, and a plan whose name
- * declares it free is added at no charge.
+ * The selected cycle is used when it is priced, otherwise the monthly one, and a free plan (zero monthly
+ * price, as in the catalogue store) is always added at no charge on the free cycle.
  */
 const addToCart = (): void => {
   const plan = currentPlan.value
@@ -157,12 +158,12 @@ const addToCart = (): void => {
 
   let amount = cycleAmount(plan.pricing, selectedCycle.value) ?? cycleAmount(plan.pricing, PricingCycle.Monthly)
   let billingCycle: string = selectedCycle.value
-  if (amount === null) {
-    if (!plan.name.toLowerCase().includes('free')) {
-      return
-    }
+  if (isFreePlan(plan.pricing)) {
     billingCycle = FREE_CYCLE
     amount = 0
+  }
+  if (amount === null) {
+    return
   }
 
   cart.addItem({

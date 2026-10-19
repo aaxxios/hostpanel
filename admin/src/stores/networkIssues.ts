@@ -10,6 +10,7 @@ import { useNetworkIssuesApi } from '@/composables/apis/useNetworkIssuesApi'
 import { runAction } from '@/lib/runAction'
 import { NetworkIssueTab } from '@/types/networkissue'
 import type { NetworkIssue, NetworkIssuePayload } from '@/types/networkissue'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 /** Paginated, status-filtered listing and CRUD of network issues. */
 export const useNetworkIssuesStore = defineStore('networkIssues', () => {
@@ -40,7 +41,7 @@ export const useNetworkIssuesStore = defineStore('networkIssues', () => {
   const page = ref(1)
 
   /** Items per page. */
-  const pageSize = ref(20)
+  const pageSize = ref(DEFAULT_PAGE_SIZE)
 
   /**
    * Loads one page of network issues for the active status filter.

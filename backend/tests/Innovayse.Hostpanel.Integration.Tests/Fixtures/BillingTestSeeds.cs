@@ -26,7 +26,7 @@ public static class BillingTestSeeds
     public const int NoSuchId = 999_999_999;
 
     /// <summary>An origin the test host's CORS configuration allows a payer to be returned to.</summary>
-    public const string AllowedReturnUrl = "https://host.innovayse.com/payment/result";
+    public const string AllowedReturnUrl = "https://client.test/payment/result";
 
     /// <summary>Builds a client carrying the seeded admin's bearer token.</summary>
     /// <param name="factory">The factory whose admin credentials to mint a token from.</param>

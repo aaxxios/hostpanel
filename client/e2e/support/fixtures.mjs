@@ -72,6 +72,15 @@ export const DOMAIN_PRODUCT = {
 /** Every product the catalogue endpoint serves. */
 export const PRODUCTS = [PLAN, PLAN_PRO, DOMAIN_PRODUCT]
 
+/**
+ * The catalogue's product groups as `GET /api/products/groups` serves them. The hosting group is a
+ * product family; the domain group is switched off, so no family page lists the domain product.
+ */
+export const PRODUCT_GROUPS = [
+  { id: 1, name: 'Web Hosting', description: null, isActive: true, productCount: 2 },
+  { id: 9, name: 'E2E Domain Registration', description: null, isActive: false, productCount: 1 },
+]
+
 /** The enabled billing currencies: USD is the base one, so a guest is priced in it until they pick AMD. */
 export const CURRENCIES = [
   { code: 'USD', numeric: '840', prefix: '$', suffix: '', decimals: 2, isBase: true },
@@ -519,7 +528,7 @@ export const REGISTRANT_CONTACT = {
   lastName: 'Registrant',
   organization: null,
   email: 'registrant@e2e.test',
-  phone: '+37400000001',
+  phone: '+15550100001',
   address1: '1 Registry Street',
   address2: null,
   city: 'Yerevan',
@@ -542,4 +551,26 @@ export const DEMO_RESET_IN_MS = 150 * 60 * 1000
 export const DEMO_ACCOUNTS = [
   { role: 'Admin', email: 'admin@demo.test', password: 'demo-admin-pass' },
   { role: 'Client', email: 'client@demo.test', password: 'demo-client-pass' },
+]
+
+/** Questions the public FAQ feed serves; the topic is spelled by its enum name, as the API does. */
+export const FAQS = [
+  { id: 1, category: 'General', question: 'Example question one?', answer: 'Example answer one.', sortOrder: 1 },
+  { id: 2, category: 'General', question: 'Example question two?', answer: 'Example answer two.', sortOrder: 2 },
+  { id: 3, category: 'Products', question: 'Example question three?', answer: 'Example answer three.', sortOrder: 3 },
+]
+
+/** Testimonials the public feed serves. */
+export const TESTIMONIALS = [
+  { id: 1, name: 'Example Person', company: 'Example Co', role: 'Founder', avatarUrl: null, quote: 'Example quote.', rating: 5, sortOrder: 1 },
+]
+
+/** Partners the public feed serves. */
+export const PARTNERS = [
+  { id: 1, name: 'Example Co', logoUrl: null, url: 'https://example.test', sortOrder: 1 },
+]
+
+/** Projects the public feed serves. */
+export const PROJECTS = [
+  { id: 1, slug: 'example-project', title: 'Example project', summary: null, description: null, imageUrls: [], url: 'https://example.test', sortOrder: 1 },
 ]

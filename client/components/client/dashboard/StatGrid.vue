@@ -26,6 +26,7 @@
  */
 import { FileText, Globe, MessageSquare, Server } from 'lucide-vue-next'
 import type { Component } from 'vue'
+import { CLIENT_DOMAINS_PATH, CLIENT_INVOICES_PATH, CLIENT_SERVICES_PATH, CLIENT_TICKETS_PATH } from '~/constants/clientRoutes'
 import { useClientStore } from '~/stores/client'
 import { DashboardStat } from '~/types/dashboardstat'
 import { UiTone } from '~/utils/ui/enums'
@@ -67,7 +68,7 @@ const stats = computed<StatTile[]>(() => [
     value: store.activeServiceCount,
     icon: Server,
     tone: UiTone.Info,
-    to: '/client/services'
+    to: CLIENT_SERVICES_PATH
   },
   {
     key: DashboardStat.Domains,
@@ -75,7 +76,7 @@ const stats = computed<StatTile[]>(() => [
     value: store.domains.length,
     icon: Globe,
     tone: UiTone.Primary,
-    to: '/client/domains'
+    to: CLIENT_DOMAINS_PATH
   },
   {
     key: DashboardStat.Invoices,
@@ -84,7 +85,7 @@ const stats = computed<StatTile[]>(() => [
     icon: FileText,
     tone: store.unpaidCount > 0 ? UiTone.Warning : UiTone.Default,
     hint: store.unpaidCount > 0 ? t('client.dashboard.statActionRequired') : undefined,
-    to: '/client/invoices'
+    to: CLIENT_INVOICES_PATH
   },
   {
     key: DashboardStat.Tickets,
@@ -92,7 +93,7 @@ const stats = computed<StatTile[]>(() => [
     value: store.openTicketCount,
     icon: MessageSquare,
     tone: UiTone.Secondary,
-    to: '/client/tickets'
+    to: CLIENT_TICKETS_PATH
   }
 ])
 </script>

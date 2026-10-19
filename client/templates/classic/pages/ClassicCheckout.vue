@@ -96,7 +96,7 @@
                   <Info :size="16" class="text-cyan-700 dark:text-cyan-400 shrink-0" />
                   <UiText size="sm" tone="muted">
                     {{ $t('checkout.guestNotice') }}
-                    <UiLink :to="localePath('/client/login')" tone="inherit" class="text-cyan-700 dark:text-cyan-400 font-bold hover:underline ml-1" :underline="false" data-testid="checkout-sign-in">
+                    <UiLink :to="localePath(CLIENT_LOGIN_PATH)" tone="inherit" class="text-cyan-700 dark:text-cyan-400 font-bold hover:underline ml-1" :underline="false" data-testid="checkout-sign-in">
                       {{ $t('checkout.signIn') }}
                     </UiLink>
                   </UiText>
@@ -182,7 +182,7 @@
                   padding="sm"
                   class="cursor-pointer transition-all duration-300"
                   :class="selectedMethod === method.module
-                    ? 'border-cyan-500/60 dark:border-cyan-500/60 bg-cyan-500/10 dark:bg-cyan-500/10 shadow-[0_0_20px_rgba(6,182,212,0.15)]'
+                    ? 'border-cyan-500/60 dark:border-cyan-500/60 bg-cyan-500/10 dark:bg-cyan-500/10 shadow-halo-cyan-sm'
                     : 'hover:border-gray-300 dark:hover:border-white/20'"
                   :data-testid="`checkout-method-${method.module}`"
                   @click="selectedMethod = method.module"
@@ -331,6 +331,7 @@ import {
   CreditCard, ShoppingCart, Server, CheckCircle, User,
   Lock, ShieldCheck, Info, Receipt, HelpCircle
 } from 'lucide-vue-next'
+import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
 import { PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
 import { UiHeadingLevel } from '~/utils/ui/enums'
 import { useCheckoutPage } from '~/composables/useCheckoutPage'

@@ -45,6 +45,7 @@
 import type { MaybeRefOrGetter, MultiWatchSources } from 'vue'
 import type { AsyncData, UseFetchOptions } from 'nuxt/app'
 import type { FetchError } from 'ofetch'
+import { DEFAULT_APP_LOCALE } from '~/constants/appLocales'
 import { LANGUAGE_HEADER, resolveLanguage } from '~/utils/transportLanguage'
 
 /**
@@ -217,7 +218,7 @@ export const apiFetch = async <T = unknown>(
   url: string,
   opts: Parameters<typeof $fetch>[1] = {}
 ): Promise<T> => {
-  let locale = 'en'
+  let locale: string = DEFAULT_APP_LOCALE
   try {
     locale = (useNuxtApp().$i18n as LocaleHolder).locale.value
   }

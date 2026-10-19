@@ -51,3 +51,15 @@ export const authCookieMaxAge = (token: string, nowSeconds: number = Math.floor(
   }
   return Math.max(0, exp - nowSeconds)
 }
+
+/** Lifetime of the readable `authed` flag cookie, in seconds (seven days). */
+export const AUTHED_FLAG_MAX_AGE = 60 * 60 * 24 * 7
+
+/** Lifetime, in seconds, of the short cookies that carry a single sign-in round trip (PKCE verifier, state, return address). */
+export const SSO_FLOW_COOKIE_MAX_AGE = 60 * 5
+
+/** Lifetime, in seconds, of the loop guard and return address of the silent sign-in attempt. */
+export const SSO_SILENT_COOKIE_MAX_AGE = 30
+
+/** Access-token lifetime, in seconds, assumed when the identity provider does not state one (15 minutes). */
+export const ACCESS_TOKEN_FALLBACK_MAX_AGE = 60 * 15

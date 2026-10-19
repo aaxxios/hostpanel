@@ -1,5 +1,5 @@
 /**
- * FAQ type - represents a frequently asked question
+ * FAQ type - one question served by `GET /api/public/faqs`.
  *
  * @module types/faq
  */
@@ -7,13 +7,18 @@
 import type { FaqCategory } from '~/types/faqcategory'
 
 /**
- * FAQ type - represents a frequently asked question
- * Used in FAQ section with category tabs
- * Text content (question, answer) loaded from i18n locale files
+ * A frequently asked question as the storefront receives it, already localised by the API.
+ * The category is the enum name the API serializes, which is the value of {@link FaqCategory}.
  */
 export interface FAQ {
-  /** Unique identifier - used as key for i18n lookup */
-  id: string
-  /** Category for tab filtering */
+  /** Question identifier. */
+  id: number
+  /** Topic the question belongs to; the tab filter. */
   category: FaqCategory
+  /** The question in the request language. */
+  question: string
+  /** The answer in the request language. */
+  answer: string
+  /** Display order, ascending. */
+  sortOrder: number
 }

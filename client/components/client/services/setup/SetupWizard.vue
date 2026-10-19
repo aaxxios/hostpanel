@@ -38,7 +38,7 @@
       v-motion
       :initial="{ opacity: 0, scale: 0.95 }"
       :enter="{ opacity: 1, scale: 1 }"
-      :plan-name="service.name"
+      :plan-name="productNameOrFallback(t, service.name, service.id)"
       :domain="setupData.domain"
       :username="setupData.username"
       :submitting="setupSubmitting"
@@ -56,12 +56,14 @@
  * the server's validator); provisioning, its in-flight flag and the API's refusal belong to the
  * service management store. A successful setup opens the service's management page.
  */
+import { clientServicePath } from '~/constants/clientRoutes'
 import { computed, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useServiceManagementStore } from '~/stores/servicemanagement'
 import { ActionOutcome } from '~/types/actionoutcome'
 import type { ServiceDetail } from '~/types/servicedetail'
 import { SetupStep } from '~/types/setupstep'
+import { productNameOrFallback } from '~/utils/displayFallback'
 import { domainErrorKey, passwordErrorKey, usernameErrorKey } from '~/utils/hostingSetup'
 
 /** How many steps the wizard has. */
@@ -166,6 +168,6 @@ const finishSetup = async (): Promise<void> => {
   // Clear the cached data of this service so the detail page refetches it.
   clearNuxtData()
 
-  await navigateTo(`/client/services/${props.serviceId}`)
+  await navigateTo(clientServicePath(props.serviceId))
 }
 </script>

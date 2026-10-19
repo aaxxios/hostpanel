@@ -6,6 +6,8 @@
 
 import { useApi } from '@/composables/useApi'
 import type { PluginActionResultDto, PluginListItemDto } from '@/types/plugin'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/admin/plugins`.
@@ -21,7 +23,7 @@ export const usePluginsApi = () => {
    * @returns Every installed plugin.
    */
   const listPlugins = (): Promise<PluginListItemDto[]> =>
-    request<PluginListItemDto[]>('/admin/plugins')
+    request<PluginListItemDto[]>(ApiPath.AdminPlugins)
 
   /**
    * Uploads a plugin ZIP for installation.
@@ -30,7 +32,7 @@ export const usePluginsApi = () => {
    * @returns Whether a restart is needed.
    */
   const installPlugin = (file: File): Promise<PluginActionResultDto> =>
-    upload<PluginActionResultDto>('/admin/plugins/install', file)
+    upload<PluginActionResultDto>(`${ApiPath.AdminPlugins}/install`, file)
 
   /**
    * Removes an installed plugin.
@@ -39,7 +41,7 @@ export const usePluginsApi = () => {
    * @returns Whether a restart is needed.
    */
   const removePlugin = (id: string): Promise<PluginActionResultDto> =>
-    request<PluginActionResultDto>(`/admin/plugins/${id}`, { method: 'DELETE' })
+    request<PluginActionResultDto>(`${ApiPath.AdminPlugins}/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Asks the server for a graceful restart.
@@ -47,7 +49,7 @@ export const usePluginsApi = () => {
    * @returns Nothing; the server may drop the connection before it answers.
    */
   const restartServer = (): Promise<void> =>
-    request<void>('/admin/plugins/restart', { method: 'POST' })
+    request<void>(`${ApiPath.AdminPlugins}/restart`, { method: HttpMethod.Post })
 
   return { listPlugins, installPlugin, removePlugin, restartServer }
 }

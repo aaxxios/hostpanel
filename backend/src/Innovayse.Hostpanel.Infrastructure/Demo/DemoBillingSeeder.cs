@@ -1,8 +1,7 @@
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Clients;
-using Innovayse.Hostpanel.Domain.Domains;
-using Innovayse.Hostpanel.Domain.Orders;
+using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
@@ -12,226 +11,246 @@ using Microsoft.EntityFrameworkCore;
 namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>
-/// Seeds what customers own and owe: hosting services, registered domains, orders, and six months
-/// of invoices (paid, overdue and still unpaid) with the payments behind the paid ones. Built
-/// only from entity factories and behaviour methods; the figures are arithmetic, not random, so
-/// every reset produces the same picture.
+/// Seeds the money side of the history: twelve months of invoices for every customer in the statuses the
+/// entity can reach (draft, unpaid, overdue, paid, cancelled, refunded), the payments and refunds behind them,
+/// the ledger rows those produce, and the credit top-ups that match the customers' credit balances. The status
+/// of an invoice is a function of the customer, the customer's state and the month, so the revenue charts have
+/// a shape and every reset reproduces it exactly.
 /// </summary>
 internal sealed class DemoBillingSeeder
 {
-    /// <summary>How many months of invoice history each client gets, the current month included.</summary>
-    private const int HistoryMonths = 6;
-
     /// <summary>Days between an invoice date and its due date.</summary>
     private const int PaymentTermDays = 14;
 
-    /// <summary>The domain suffix the sample sites are registered under.</summary>
-    private const string SiteSuffix = ".com";
+    /// <summary>The card processing fee as a share of the payment, rounded to cents.</summary>
+    private const decimal CardFeeRate = 0.029m;
+
+    /// <summary>Value-added tax applied to invoices of customers billed in the local currency.</summary>
+    private const decimal LocalTaxRate = 20m;
+
+    /// <summary>How often, in months, a domain renewal line is added to the monthly invoice.</summary>
+    private const int DomainRenewalEvery = 3;
 
     /// <summary>The data context the rows are added to and saved through.</summary>
     private readonly AppDbContext _db;
 
+    /// <summary>The anchor dates are measured from.</summary>
+    private readonly DateTimeOffset _today;
+
     /// <summary>Creates the seeder.</summary>
     /// <param name="db">The data context the rows are added to and saved through.</param>
-    public DemoBillingSeeder(AppDbContext db)
+    /// <param name="today">The anchor dates are measured from.</param>
+    public DemoBillingSeeder(AppDbContext db, DateTimeOffset today)
     {
         _db = db;
+        _today = today;
     }
 
-    /// <summary>Seeds the services, domains, orders and invoices that are not there yet.</summary>
+    /// <summary>Seeds the invoices, the ledger and the credit top-ups that are not there yet.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
     public async Task SeedAsync(CancellationToken ct)
     {
+        if (!await _db.Invoices.AnyAsync(ct))
+        {
+            await SeedInvoicesAsync(ct);
+        }
+
+        if (!await _db.Transactions.AnyAsync(ct))
+        {
+            await SeedLedgerAsync(ct);
+        }
+    }
+
+    /// <summary>
+    /// The status an invoice ends up in. Recent months are open or overdue, older ones are settled, with the odd
+    /// refund and cancellation; a suspended customer is behind, a closed customer stopped being billed.
+    /// </summary>
+    /// <param name="client">The customer.</param>
+    /// <param name="position">The customer's position in the id order, the demo client first.</param>
+    /// <param name="monthsBack">How many months before the current one the invoice falls.</param>
+    /// <returns>The status, or null when the customer is not billed that month.</returns>
+    private static InvoiceStatus? StatusFor(Client client, int position, int monthsBack)
+    {
+        if (client.Status == ClientStatus.Closed)
+        {
+            return monthsBack >= 3 ? InvoiceStatus.Paid : null;
+        }
+
+        if (client.Status == ClientStatus.Suspended && monthsBack < 3)
+        {
+            return monthsBack == 0 ? InvoiceStatus.Unpaid : InvoiceStatus.Overdue;
+        }
+
+        if (position == 0 && monthsBack <= 2)
+        {
+            return monthsBack switch
+            {
+                0 => InvoiceStatus.Unpaid,
+                1 => InvoiceStatus.Overdue,
+                _ => InvoiceStatus.Paid,
+            };
+        }
+
+        return monthsBack switch
+        {
+            0 => position % 4 == 0 ? InvoiceStatus.Draft : InvoiceStatus.Unpaid,
+            1 => (position % 3) switch
+            {
+                0 => InvoiceStatus.Overdue,
+                1 => InvoiceStatus.Unpaid,
+                _ => InvoiceStatus.Paid,
+            },
+            2 => position % 5 == 0 ? InvoiceStatus.Overdue : InvoiceStatus.Paid,
+            _ when (position + monthsBack) % 11 == 0 => InvoiceStatus.Refunded,
+            _ when (position + monthsBack) % 13 == 0 => InvoiceStatus.Cancelled,
+            _ => InvoiceStatus.Paid,
+        };
+    }
+
+    /// <summary>The first month, counted back from the current one, a customer is billed in; later joiners have shorter histories.</summary>
+    /// <param name="position">The customer's position in the id order, the demo client first.</param>
+    /// <returns>Months back, at most <see cref="DemoAnchor.HistoryMonths"/> minus one.</returns>
+    private static int FirstMonthBack(int position) =>
+        position == 0 ? DemoAnchor.HistoryMonths - 1 : Math.Min(DemoAnchor.HistoryMonths - 1, 3 + ((position * 5) % 9));
+
+    /// <summary>Seeds every customer's invoices, newest last, with the payments and refunds on the settled ones.</summary>
+    /// <param name="ct">Cancels the save.</param>
+    /// <returns>A task that completes once the rows are saved.</returns>
+    private async Task SeedInvoicesAsync(CancellationToken ct)
+    {
         var clients = await _db.Clients.OrderBy(c => c.Id).ToListAsync(ct);
-        var products = await _db.Products.Include(p => p.Prices).OrderBy(p => p.Id).ToListAsync(ct);
-        var hosting = products.Where(p => p.Type is ProductType.SharedHosting or ProductType.Vps).ToList();
-        if (clients.Count == 0 || hosting.Count == 0)
+        var products = await _db.Products.Include(p => p.Prices).ToDictionaryAsync(p => p.Id, ct);
+        var services = (await _db.ClientServices.OrderBy(s => s.Id).ToListAsync(ct))
+            .GroupBy(s => s.ClientId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        if (clients.Count == 0 || products.Count == 0)
         {
             return;
         }
 
-        if (!await _db.ClientServices.AnyAsync(ct))
-        {
-            await SeedServicesAsync(clients, hosting, ct);
-        }
-
-        if (!await _db.Domains.AnyAsync(ct))
-        {
-            await SeedDomainsAsync(clients, ct);
-        }
-
-        if (!await _db.Invoices.AnyAsync(ct))
-        {
-            await SeedInvoicesAsync(clients, hosting, ct);
-        }
-
-        if (!await _db.Orders.AnyAsync(ct))
-        {
-            await SeedOrdersAsync(clients, hosting, ct);
-        }
-    }
-
-    /// <summary>The first day of the month a number of months back, plus a day offset.</summary>
-    /// <param name="monthsBack">Whole months back from the current month.</param>
-    /// <param name="day">Day of that month, 1-based.</param>
-    /// <returns>Midnight UTC on that day.</returns>
-    private static DateTimeOffset MonthsAgo(int monthsBack, int day)
-    {
-        var now = DateTimeOffset.UtcNow;
-        return new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero)
-            .AddMonths(-monthsBack)
-            .AddDays(day - 1);
-    }
-
-    /// <summary>The site name a client's services and domains are registered under.</summary>
-    /// <param name="client">The client.</param>
-    /// <returns>A lower-case host name derived from the company name.</returns>
-    private static string SiteOf(Client client)
-    {
-        var letters = new string((client.CompanyName ?? client.FirstName).Where(char.IsLetter).ToArray());
-        return letters.ToLowerInvariant() + SiteSuffix;
-    }
-
-    /// <summary>Gives every client one or two active services, the demo client three.</summary>
-    /// <param name="clients">All clients, the demo client first.</param>
-    /// <param name="hosting">The hosting products to choose from.</param>
-    /// <param name="ct">Cancels the save.</param>
-    /// <returns>A task that completes once the rows are saved.</returns>
-    private async Task SeedServicesAsync(IReadOnlyList<Client> clients, IReadOnlyList<Product> hosting, CancellationToken ct)
-    {
         for (var c = 0; c < clients.Count; c++)
         {
             var client = clients[c];
-            var currency = client.Currency ?? DemoCatalogueSeeder.BaseCurrency;
-            var count = c == 0 ? 3 : 1 + (c % 2);
-
-            for (var i = 0; i < count; i++)
+            var clientServices = services.GetValueOrDefault(client.Id) ?? [];
+            for (var monthsBack = FirstMonthBack(c); monthsBack >= 0; monthsBack--)
             {
-                var product = hosting[(c + i) % hosting.Count];
-                var cycle = i % 2 == 0 ? BillingCycleNames.Monthly : BillingCycleNames.Annual;
-                var price = product.PriceFor(currency, BillingCycleParser.Parse(cycle)) ?? 0m;
-                var site = i == 0 ? SiteOf(client) : $"{(i == 1 ? "shop" : "blog")}-{SiteOf(client)}";
+                var status = StatusFor(client, c, monthsBack);
+                if (status is null)
+                {
+                    continue;
+                }
 
-                var service = ClientService.Create(client.Id, product.Id, cycle);
-                service.Update(
-                    domain: site, dedicatedIp: null, username: $"demo{client.Id}{i}", password: null,
-                    billingCycle: cycle, recurringAmount: price, paymentMethod: null,
-                    nextRenewalAt: null, subscriptionId: null, overrideAutoSuspend: false, suspendUntil: null,
-                    autoTerminateEndOfCycle: false, autoTerminateReason: null, adminNotes: null,
-                    provisioningRef: null, firstPaymentAmount: price, promotionCode: null, terminatedAt: null,
-                    serverId: null, quantity: 1, productId: null);
-                service.Activate($"demo-account-{client.Id}-{i}");
-                _db.ClientServices.Add(service);
+                var service = clientServices.Count == 0 ? null : clientServices[(c + monthsBack) % clientServices.Count];
+                _db.Invoices.Add(BuildInvoice(client, c, monthsBack, status.Value, service, service is null ? null : products[service.ProductId]));
             }
         }
 
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Registers one or two domains per client with nameservers and a registrar lock.</summary>
-    /// <param name="clients">All clients, the demo client first.</param>
-    /// <param name="ct">Cancels the save.</param>
-    /// <returns>A task that completes once the rows are saved.</returns>
-    private async Task SeedDomainsAsync(IReadOnlyList<Client> clients, CancellationToken ct)
+    /// <summary>Builds one invoice with its lines, tax, backdating and the payment history its status implies.</summary>
+    /// <param name="client">The customer.</param>
+    /// <param name="position">The customer's position in the id order.</param>
+    /// <param name="monthsBack">How many months before the current one the invoice falls.</param>
+    /// <param name="status">The status to reach.</param>
+    /// <param name="service">The service the main line bills, or null when the customer has none.</param>
+    /// <param name="product">The service's product, or null when there is no service.</param>
+    /// <returns>The invoice, not yet saved.</returns>
+    private Invoice BuildInvoice(Client client, int position, int monthsBack, InvoiceStatus status, ClientService? service, Product? product)
     {
-        var now = DateTimeOffset.UtcNow;
+        var currency = client.Currency ?? DemoCatalogueSeeder.BaseCurrency;
+        var invoiceDate = _today.AddMonths(-monthsBack).AddDays(-(position % 7));
+        var dueDate = invoiceDate.AddDays(PaymentTermDays);
 
-        for (var c = 0; c < clients.Count; c++)
+        var invoice = status == InvoiceStatus.Draft
+            ? Invoice.CreateDraft(client.Id, dueDate, currency)
+            : Invoice.Create(client.Id, dueDate, currency);
+
+        var price = product?.PriceFor(currency, BillingCycle.Monthly) ?? service?.RecurringAmount ?? 0m;
+        invoice.AddItem($"{product?.Name ?? "Hosting"} - monthly", price, 1, service?.Id);
+        if (monthsBack % DomainRenewalEvery == 0)
         {
-            var client = clients[c];
-            var count = c == 0 ? 2 : 1;
-
-            for (var i = 0; i < count; i++)
-            {
-                var name = i == 0 ? SiteOf(client) : $"{SiteOf(client).Replace(SiteSuffix, string.Empty, StringComparison.Ordinal)}.net";
-                var currency = client.Currency ?? DemoCatalogueSeeder.BaseCurrency;
-                var price = currency == DemoCatalogueSeeder.BaseCurrency ? 11.99m : 4600m;
-
-                var domain = RegisteredDomain.Register(
-                    client.Id, name, now.AddDays(45 + (c * 70) + (i * 120)), autoRenew: i == 0, whoisPrivacy: i == 0,
-                    recurringAmount: price, firstPaymentAmount: price, priceCurrency: currency,
-                    registrar: "Demo Registrar", registrationPeriod: 1);
-                domain.Activate($"DEMO-{100000 + (c * 10) + i}");
-                domain.SetLock(true);
-                domain.SetNameservers(["ns1.demo-dns.example", "ns2.demo-dns.example"]);
-                _db.Domains.Add(domain);
-            }
+            var renewal = currency == DemoCatalogueSeeder.BaseCurrency ? 14.99m : 5800m;
+            invoice.AddItem($"Domain renewal - {DemoSites.HostOf(client)}", renewal, 1);
         }
 
-        await _db.SaveChangesAsync(ct);
+        invoice.Backdate(invoiceDate);
+        invoice.UpdateOptions(invoiceDate, dueDate, PaymentMethodNames.Card, currency == DemoCatalogueSeeder.LocalCurrency ? LocalTaxRate : 0m);
+
+        switch (status)
+        {
+            case InvoiceStatus.Overdue:
+                invoice.MarkOverdue();
+                break;
+            case InvoiceStatus.Cancelled:
+                invoice.Cancel();
+                break;
+            case InvoiceStatus.Paid:
+            case InvoiceStatus.Refunded:
+                RecordPayment(invoice, client, position, monthsBack, invoiceDate, status == InvoiceStatus.Refunded);
+                break;
+            default:
+                break;
+        }
+
+        return invoice;
+    }
+
+    /// <summary>Records the payment on an invoice, by card for most and by bank transfer for every fourth, and a refund when asked.</summary>
+    /// <param name="invoice">The invoice to settle.</param>
+    /// <param name="client">The customer.</param>
+    /// <param name="position">The customer's position in the id order.</param>
+    /// <param name="monthsBack">How many months before the current one the invoice falls.</param>
+    /// <param name="invoiceDate">When the invoice was raised.</param>
+    /// <param name="refund">Whether the payment is then refunded in full.</param>
+    private static void RecordPayment(Invoice invoice, Client client, int position, int monthsBack, DateTimeOffset invoiceDate, bool refund)
+    {
+        var byCard = (position + monthsBack) % 4 != 0;
+        var gateway = byCard ? PaymentMethodNames.Card : PaymentMethodNames.BankTransfer;
+        var fees = byCard ? Math.Round(invoice.Total * CardFeeRate, 2) : 0m;
+        var paidAt = invoiceDate.AddDays(2 + ((position + monthsBack) % 9));
+
+        invoice.AddPayment(paidAt, gateway, $"demo_pay_{client.Id}_{monthsBack}", invoice.Total, fees, null);
+        if (refund)
+        {
+            invoice.AddRefund(paidAt.AddDays(5), gateway, $"demo_refund_{client.Id}_{monthsBack}", invoice.Total, 0m, "Refunded at the customer's request.");
+        }
     }
 
     /// <summary>
-    /// Seeds <see cref="HistoryMonths"/> months of invoices per client: the older ones paid, the
-    /// previous month overdue for every other client, the current month still unpaid.
+    /// Seeds the ledger the payments produced (one row per payment, one per refund, as the real flows write them)
+    /// and a top-up row for every customer who starts with a credit balance.
     /// </summary>
-    /// <param name="clients">All clients, the demo client first.</param>
-    /// <param name="hosting">The hosting products to bill.</param>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
-    private async Task SeedInvoicesAsync(IReadOnlyList<Client> clients, IReadOnlyList<Product> hosting, CancellationToken ct)
+    private async Task SeedLedgerAsync(CancellationToken ct)
     {
-        for (var c = 0; c < clients.Count; c++)
+        var invoices = await _db.Invoices.Include(i => i.Transactions).OrderBy(i => i.Id).ToListAsync(ct);
+        foreach (var invoice in invoices)
         {
-            var client = clients[c];
-            var currency = client.Currency ?? DemoCatalogueSeeder.BaseCurrency;
-
-            for (var monthsBack = HistoryMonths - 1; monthsBack >= 0; monthsBack--)
+            foreach (var payment in invoice.Transactions.OrderBy(t => t.Date))
             {
-                var product = hosting[(c + monthsBack) % hosting.Count];
-                var price = product.PriceFor(currency, BillingCycle.Monthly) ?? 0m;
-                var invoiceDate = MonthsAgo(monthsBack, 3 + c);
-
-                var invoice = Invoice.Create(client.Id, invoiceDate.AddDays(PaymentTermDays), currency);
-                invoice.AddItem($"{product.Name} - monthly", price, 1);
-
-                if (monthsBack % 3 == 0)
+                if (payment.Type == InvoiceTransactionType.Payment)
                 {
-                    var tldPrice = currency == DemoCatalogueSeeder.BaseCurrency ? 14.99m : 5800m;
-                    invoice.AddItem($"Domain renewal - {SiteOf(client)}", tldPrice, 1);
+                    _db.Transactions.Add(Transaction.CreateInvoicePayment(
+                        invoice, payment.Date, payment.Gateway, payment.TransactionId, payment.Amount, payment.Fees));
                 }
-
-                invoice.Backdate(invoiceDate);
-
-                if (monthsBack >= 2)
+                else if (payment.Type == InvoiceTransactionType.Refund)
                 {
-                    var fees = Math.Round(invoice.Total * 0.029m, 2);
-                    invoice.AddPayment(
-                        invoiceDate.AddDays(PaymentTermDays - 5), PaymentMethodNames.Card,
-                        $"demo_pay_{client.Id}_{monthsBack}", invoice.Total, fees, null);
+                    _db.Transactions.Add(Transaction.Create(
+                        invoice.ClientId, payment.Date, $"Invoice #{invoice.Id} Refund", payment.TransactionId, invoice.Id,
+                        payment.Gateway, 0m, payment.Amount, payment.Fees, false, invoice.Currency));
                 }
-                else if (monthsBack == 1 && c % 2 == 0)
-                {
-                    invoice.MarkOverdue();
-                }
-
-                _db.Invoices.Add(invoice);
             }
         }
 
-        await _db.SaveChangesAsync(ct);
-    }
-
-    /// <summary>Seeds one accepted order per client, for the orders list and the order report.</summary>
-    /// <param name="clients">All clients, the demo client first.</param>
-    /// <param name="hosting">The hosting products to order.</param>
-    /// <param name="ct">Cancels the save.</param>
-    /// <returns>A task that completes once the rows are saved.</returns>
-    private async Task SeedOrdersAsync(IReadOnlyList<Client> clients, IReadOnlyList<Product> hosting, CancellationToken ct)
-    {
-        for (var c = 0; c < clients.Count; c++)
+        var credited = await _db.Clients.Where(c => c.CreditBalance > 0).OrderBy(c => c.Id).ToListAsync(ct);
+        foreach (var client in credited)
         {
-            var client = clients[c];
-            var currency = client.Currency ?? DemoCatalogueSeeder.BaseCurrency;
-            var product = hosting[c % hosting.Count];
-            var price = product.PriceFor(currency, BillingCycle.Monthly) ?? 0m;
-
-            var order = Order.Create($"DEMO-{1000 + c}", client.Id, PaymentMethodNames.Card, null);
-            order.AddItem(product.Id, product.Name, BillingCycleNames.Monthly, price, price, SiteOf(client), null);
-            order.Accept();
-            order.Backdate(MonthsAgo(HistoryMonths - 1, 2 + c));
-            _db.Orders.Add(order);
+            _db.Transactions.Add(Transaction.Create(
+                client.Id, _today.AddDays(-20), "Account credit top-up", $"demo_credit_{client.Id}", null,
+                PaymentMethodNames.Card, client.CreditBalance, 0m, 0m, true, client.Currency));
         }
 
         await _db.SaveChangesAsync(ct);

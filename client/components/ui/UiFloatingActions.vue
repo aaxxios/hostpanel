@@ -47,7 +47,7 @@
       >
         <a
           v-if="isOpen && whatsappNumber"
-          :href="`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(defaultMessage)}`"
+          :href="`${WHATSAPP_LINK_BASE}${whatsappNumber}?text=${encodeURIComponent(defaultMessage)}`"
           target="_blank"
           rel="noopener noreferrer"
           data-testid="floating-whatsapp"
@@ -74,7 +74,7 @@
       >
         <a
           v-if="isOpen && telegramHandle"
-          :href="`https://t.me/${telegramHandle}`"
+          :href="`${TELEGRAM_LINK_BASE}${telegramHandle}`"
           target="_blank"
           rel="noopener noreferrer"
           data-testid="floating-telegram"
@@ -99,8 +99,8 @@
       data-testid="floating-toggle"
       :initial="{ opacity: 0, scale: 0 }"
       :enter="{ opacity: 1, scale: 1, transition: { delay: 800, duration: 400, type: 'spring' } }"
-      class="relative w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 focus:outline-none"
-      :class="isOpen ? 'bg-gray-700 rotate-45' : 'bg-gradient-to-br from-channel-chat to-primary-600 shadow-glow-chat'"
+      class="relative w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110"
+      :class="[FOCUS_RING, isOpen ? 'bg-gray-700 rotate-45' : 'bg-gradient-to-br from-channel-chat to-primary-600 shadow-glow-chat']"
       :aria-expanded="isOpen"
       :aria-label="$t('contact.info.quickConnect.toggle')"
       @click="isOpen = !isOpen"
@@ -121,8 +121,12 @@
  * install shows its own contacts; each action hides when its setting is empty. Escape or a click
  * outside closes the fan.
  */
+import { PortalSettingKey } from '~/constants/portalSettingKey'
+import { TELEGRAM_LINK_BASE, WHATSAPP_LINK_BASE } from '~/constants/contactChannel'
+import { ChatProvider } from '~/types/chatprovider'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Send, MessageCircle, MessageSquare } from 'lucide-vue-next'
+import { FOCUS_RING } from '~/utils/ui/tones'
 
 /** Translator for the strings this component builds itself. */
 const { t } = useI18n()
@@ -171,24 +175,24 @@ const defaultMessage = computed(() => t('whatsapp.defaultMessage'))
 const { get: getPortalSetting } = usePortalSettings()
 
 /** WhatsApp number from configuration; empty hides the action. */
-const whatsappNumber = computed(() => getPortalSetting('portal.contact.whatsapp', 'portalWhatsapp'))
+const whatsappNumber = computed(() => getPortalSetting(PortalSettingKey.ContactWhatsapp, 'portalWhatsapp'))
 
 /** Telegram handle from configuration; empty hides the action. */
-const telegramHandle = computed(() => getPortalSetting('portal.contact.telegram', 'portalTelegram'))
+const telegramHandle = computed(() => getPortalSetting(PortalSettingKey.ContactTelegram, 'portalTelegram'))
 
 /** Chat provider from configuration; empty hides the chat bubble. */
-const chatProvider = computed(() => getPortalSetting('portal.chat.provider', 'portalChatProvider'))
+const chatProvider = computed(() => getPortalSetting(PortalSettingKey.ChatProvider, 'portalChatProvider'))
 
 /**
  * Whether to offer the live chat action.
  *
  * Both spellings are accepted. The provider is Innochat, which is what an operator configuring
- * this today would reasonably write, but the setting has shipped seeded with `chatwoot` since the
+ * this today would reasonably write, but the setting has shipped seeded with the legacy value since the
  * first release and existing installs have that value stored. Refusing it would have switched
  * the widget off for every one of them on upgrade.
  */
 const liveChatEnabled = computed(() =>
-  ['chatwoot', 'innochat'].includes(chatProvider.value.toLowerCase()))
+  Object.values<string>(ChatProvider).includes(chatProvider.value.toLowerCase()))
 
 /**
  * Opens the live chat widget.

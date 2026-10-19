@@ -15,48 +15,6 @@
       "title": "Still have questions?",
       "description": "Can't find the answer you're looking for? Please chat with our friendly team.",
       "button": "Get in Touch"
-    },
-    "items": {
-      "faq-1": {
-        "question": "What does the platform offer?",
-        "answer": "Web hosting, domain registration and transfer, virtual and dedicated servers, and a client portal for ordering, billing and support."
-      },
-      "faq-2": {
-        "question": "How do I get started?",
-        "answer": "Choose a plan or search for a domain, create an account and pay the first invoice. Most services are activated automatically."
-      },
-      "faq-3": {
-        "question": "Which payment methods do you accept?",
-        "answer": "Cards and the other methods enabled at checkout. Invoices can be paid from the client portal at any time."
-      },
-      "faq-4": {
-        "question": "How does billing work?",
-        "answer": "Services are billed per cycle, monthly or yearly. Invoices are issued ahead of the due date and reminders are sent by email."
-      },
-      "faq-5": {
-        "question": "How do I contact support?",
-        "answer": "Open a ticket from the client portal or use the contact page. Support is available 24/7."
-      },
-      "faq-6": {
-        "question": "Can I move my existing site?",
-        "answer": "Yes. Migration is free on all annual plans, including databases and mail."
-      },
-      "faq-7": {
-        "question": "How do I register or transfer a domain?",
-        "answer": "Search for the name on the domains page and add it to your cart. To transfer, unlock the domain with your current registrar and provide the EPP code."
-      },
-      "faq-8": {
-        "question": "Is an SSL certificate included?",
-        "answer": "Yes, a free SSL certificate is included in every hosting plan."
-      },
-      "faq-9": {
-        "question": "Can I upgrade my plan later?",
-        "answer": "Yes. You can upgrade a service from the client portal at any time."
-      },
-      "faq-10": {
-        "question": "Are backups included?",
-        "answer": "Daily backups are included in every hosting plan."
-      }
     }
   }
 }

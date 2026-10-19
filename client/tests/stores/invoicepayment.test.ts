@@ -10,6 +10,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
+import { PaymentTarget } from '~/types/paymenttarget'
 
 /** The mocked saved-method payment call, re-created for every test. */
 const payInvoiceMock = vi.fn()
@@ -195,7 +196,7 @@ describe('useInvoicePaymentStore.verifyGatewayPayment', () => {
   ])('reports the bank word %s as the state %s', async (word, expected) => {
     completeGatewayMock.mockResolvedValue({ state: word })
 
-    const state = await useInvoicePaymentStore().verifyGatewayPayment('order', '42', 'tok')
+    const state = await useInvoicePaymentStore().verifyGatewayPayment(PaymentTarget.Order, '42', 'tok')
 
     expect(state).toBe(expected)
     expect(completeGatewayMock).toHaveBeenCalledWith('order', '42', 'tok')
@@ -204,7 +205,7 @@ describe('useInvoicePaymentStore.verifyGatewayPayment', () => {
   it('reports Unknown, never Declined, when no answer could be had', async () => {
     completeGatewayMock.mockRejectedValue(new Error('timeout'))
 
-    const state = await useInvoicePaymentStore().verifyGatewayPayment('invoice', '7')
+    const state = await useInvoicePaymentStore().verifyGatewayPayment(PaymentTarget.Invoice, '7')
 
     expect(state).toBe('unknown')
   })

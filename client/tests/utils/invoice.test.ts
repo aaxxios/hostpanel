@@ -35,7 +35,7 @@ const txn = (amount: number, fees = 0): ClientInvoiceTransaction => ({
 const invoice = (over: Partial<ClientInvoice> = {}): ClientInvoice => ({
   id: 8,
   clientId: 1,
-  clientName: 'Test Client',
+  clientName: null,
   status: 'Unpaid',
   currency: 'USD',
   invoiceDate: '2026-08-01T00:00:00+00:00',

@@ -32,13 +32,11 @@ import { gatewayLogResultTone } from '@/lib/tones'
 import { useGatewayLogStore } from '@/stores/gatewayLog'
 import { GatewayLogResult } from '@/types/gatewaylog'
 import type { GatewayLogFilters } from '@/types/gatewaylog'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 const { t } = useI18n()
 
 const store = useGatewayLogStore()
-
-/** Rows per page. */
-const PAGE_SIZE = 20
 
 /** Current page (1-based). */
 const page = ref(1)
@@ -78,7 +76,7 @@ const resultOptions = computed(() => [
  */
 const load = async (next: number): Promise<void> => {
   page.value = next
-  await store.fetchPage(applied.value, next, PAGE_SIZE)
+  await store.fetchPage(applied.value, next, DEFAULT_PAGE_SIZE)
 }
 
 /**
@@ -214,7 +212,7 @@ onMounted(() => load(1))
     <UiPagination
       :page="page"
       :total="store.totalCount"
-      :page-size="PAGE_SIZE"
+      :page-size="DEFAULT_PAGE_SIZE"
       testid="billing-gateway-log-pagination"
       @update:page="load"
     />

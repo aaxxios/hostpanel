@@ -26,4 +26,13 @@ describe('client forgot-password page', () => {
 
     expect(navigateTo).toHaveBeenCalledWith('https://sso.example.test/forgot-password', { external: true })
   })
+
+  it('renders the local form under SSO when no SSO address is configured', async () => {
+    stubAuthRuntime({ isSso: true, publicConfig: { ssoPublicUrl: '' } })
+
+    const wrapper = await mountAuthPage(ForgotPasswordPage)
+
+    expect(navigateTo).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="forgot-form"]').exists()).toBe(true)
+  })
 })

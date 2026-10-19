@@ -15,6 +15,8 @@ import type {
   SetupRequiredResponse,
   TwoFactorLoginResponse,
 } from '@/types/auth'
+import { API_BASE, ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 
 /**
@@ -35,7 +37,7 @@ export const useAuthApi = () => {
    *
    * @returns The deployment's auth mode.
    */
-  const fetchMode = (): Promise<AuthModeResponse> => request<AuthModeResponse>('/auth/mode')
+  const fetchMode = (): Promise<AuthModeResponse> => request<AuthModeResponse>(`${ApiPath.Auth}/mode`)
 
   /**
    * Asks whether first-run bootstrap is still outstanding, i.e. whether the Admin
@@ -44,7 +46,7 @@ export const useAuthApi = () => {
    * @returns Whether setup is required.
    */
   const fetchSetupRequired = (): Promise<SetupRequiredResponse> =>
-    request<SetupRequiredResponse>('/auth/setup-required')
+    request<SetupRequiredResponse>(`${ApiPath.Auth}/setup-required`)
 
   /**
    * Loads the signed-in account. Whether a session exists is a question only the
@@ -52,7 +54,7 @@ export const useAuthApi = () => {
    *
    * @returns Email, locally granted roles, and email-verified flag; null when signed out (401).
    */
-  const fetchMe = (): Promise<MeResponse | null> => probe<MeResponse>('/auth/me')
+  const fetchMe = (): Promise<MeResponse | null> => probe<MeResponse>(`${ApiPath.Auth}/me`)
 
   /**
    * Signs in with email and password. Local mode only — under SSO this same path is
@@ -63,8 +65,8 @@ export const useAuthApi = () => {
    * @returns Either a bearer token, or a 2FA continuation.
    */
   const localLogin = (email: string, password: string): Promise<LocalLoginResponse> =>
-    request<LocalLoginResponse>('/auth/login', {
-      method: 'POST',
+    request<LocalLoginResponse>(`${ApiPath.Auth}/login`, {
+      method: HttpMethod.Post,
       body: JSON.stringify({ email, password }),
     })
 
@@ -76,8 +78,8 @@ export const useAuthApi = () => {
    * @returns A bearer token for the completed session.
    */
   const twoFactorLogin = (pendingToken: string, code: string): Promise<TwoFactorLoginResponse> =>
-    request<TwoFactorLoginResponse>('/auth/2fa-login', {
-      method: 'POST',
+    request<TwoFactorLoginResponse>(`${ApiPath.Auth}/2fa-login`, {
+      method: HttpMethod.Post,
       body: JSON.stringify({ pendingToken, code }),
     })
 
@@ -98,8 +100,8 @@ export const useAuthApi = () => {
     firstName: string,
     lastName: string,
   ): Promise<RegisterResponse> =>
-    request<RegisterResponse>('/auth/register', {
-      method: 'POST',
+    request<RegisterResponse>(`${ApiPath.Auth}/register`, {
+      method: HttpMethod.Post,
       body: JSON.stringify({ email, password, firstName, lastName }),
     })
 
@@ -113,8 +115,8 @@ export const useAuthApi = () => {
    * @returns Confirmation that the role was granted.
    */
   const claimAdmin = (setupToken?: string): Promise<{ success: boolean }> =>
-    request<{ success: boolean }>('/auth/setup', {
-      method: 'POST',
+    request<{ success: boolean }>(`${ApiPath.Auth}/setup`, {
+      method: HttpMethod.Post,
       body: JSON.stringify({ setupToken: setupToken ?? null }),
     })
 
@@ -132,7 +134,7 @@ export const useAuthApi = () => {
    * @returns Confirmation that the cookie was cleared.
    */
   const localLogout = (): Promise<{ success: boolean }> =>
-    request<{ success: boolean }>('/auth/logout', { method: 'DELETE' })
+    request<{ success: boolean }>(ApiPath.AuthLogout, { method: HttpMethod.Delete })
 
   /**
    * Confirms an email address with the token mailed to it. Anonymous; local mode only --
@@ -144,8 +146,8 @@ export const useAuthApi = () => {
    * @returns Nothing once the API accepted the token.
    */
   const verifyEmail = (token: string, email: string): Promise<void> =>
-    request<void>('/auth/confirm-email', {
-      method: 'POST',
+    request<void>(`${ApiPath.Auth}/confirm-email`, {
+      method: HttpMethod.Post,
       body: JSON.stringify({ email, token }),
     })
 
@@ -156,7 +158,7 @@ export const useAuthApi = () => {
    * @returns Nothing once the API accepted the request.
    */
   const resendVerification = (): Promise<void> =>
-    request<void>('/auth/resend-verification', { method: 'POST' })
+    request<void>(`${ApiPath.Auth}/resend-verification`, { method: HttpMethod.Post })
 
   /**
    * Builds the address that sends the browser through the SSO sign-in and back to a page.
@@ -167,7 +169,7 @@ export const useAuthApi = () => {
    * @param returnTo - Path (with query) to come back to after signing in.
    * @returns The same-origin URL to navigate to.
    */
-  const ssoLoginUrl = (returnTo: string): string => `/api/auth/login${buildQuery({ returnTo })}`
+  const ssoLoginUrl = (returnTo: string): string => `${API_BASE}${ApiPath.Auth}/login${buildQuery({ returnTo })}`
 
   /**
    * Ends the session under SSO — this product's, or every product's with scope 'all' — and
@@ -178,8 +180,8 @@ export const useAuthApi = () => {
    */
   const endSessionUrl = async (scope: LogoutScope = LogoutScope.This): Promise<string | null> => {
     const query = buildQuery({ scope: scope === LogoutScope.All ? scope : undefined })
-    const result = await request<{ endSessionUrl?: string } | undefined>(`/auth/logout${query}`, {
-      method: 'POST',
+    const result = await request<{ endSessionUrl?: string } | undefined>(`${ApiPath.AuthLogout}${query}`, {
+      method: HttpMethod.Post,
     }).catch(() => undefined)
     return result?.endSessionUrl ?? null
   }

@@ -12,12 +12,17 @@
  * @module composables/usePortalApps
  */
 
+import { ACCOUNT_APP_PATH, CLIENT_AREA_PATH } from '~/constants/clientRoutes'
+import { PortalSettingKey } from '~/constants/portalSettingKey'
+import { PortalAppId } from '~/types/portalappid'
 import type { PortalApp } from '~/types/portalapp'
 
 /** The static part of one launcher entry. */
 interface AppDefinition {
-  /** Stable id, also the suffix of the `portal.apps.<id>` setting. */
-  id: string
+  /** Stable id of the entry. */
+  id: PortalAppId
+  /** Operator setting holding this app's URL override. */
+  settingKey: PortalSettingKey
   /** Two-letter tile label. */
   tag: string
   /** CSS gradient of the tile. */
@@ -31,17 +36,17 @@ interface AppDefinition {
 /**
  * Static part of each entry: identity, tile styling and where its URL comes
  * from. `envKey` names a `runtimeConfig.public` key; entries with none are
- * reachable only by setting `portal.apps.<id>` in the admin panel.
+ * reachable only by the matching `portal.apps.*` setting in the admin panel.
  */
 const APP_DEFS: ReadonlyArray<AppDefinition> = [
-  { id: 'account',   tag: 'Ac', tint: 'linear-gradient(135deg, #7DE3FF, #5D3FFF)', envKey: 'baseUrl', path: '/account' },
-  { id: 'tasks',     tag: 'Tk', tint: 'linear-gradient(135deg, #38E8A0, #00D1FF)', envKey: 'tasksUrl' },
-  { id: 'erp',       tag: 'Er', tint: 'linear-gradient(135deg, #B9A6FF, #5D3FFF)', envKey: 'erpUrl' },
-  { id: 'hostpanel', tag: 'Hp', tint: 'linear-gradient(135deg, #FF9CE0, #B9A6FF)', envKey: 'baseUrl', path: '/client' },
-  { id: 'sheets',    tag: 'Sh', tint: 'linear-gradient(135deg, #00D1FF, #38E8A0)', envKey: 'sheetsUrl' },
-  { id: 'mail',      tag: 'Ml', tint: 'linear-gradient(135deg, #5D3FFF, #00D1FF)', envKey: 'emailUrl' },
-  { id: 'docs',      tag: 'Dc', tint: 'linear-gradient(135deg, #7DE3FF, #B9A6FF)', envKey: '' },
-  { id: 'calendar',  tag: 'Cl', tint: 'linear-gradient(135deg, #FF9CE0, #5D3FFF)', envKey: '' },
+  { id: PortalAppId.Account, settingKey: PortalSettingKey.AppsAccount, tag: 'Ac', tint: 'linear-gradient(135deg, #7DE3FF, #5D3FFF)', envKey: 'baseUrl', path: ACCOUNT_APP_PATH },
+  { id: PortalAppId.Tasks, settingKey: PortalSettingKey.AppsTasks, tag: 'Tk', tint: 'linear-gradient(135deg, #38E8A0, #00D1FF)', envKey: 'tasksUrl' },
+  { id: PortalAppId.Erp, settingKey: PortalSettingKey.AppsErp, tag: 'Er', tint: 'linear-gradient(135deg, #B9A6FF, #5D3FFF)', envKey: 'erpUrl' },
+  { id: PortalAppId.Hostpanel, settingKey: PortalSettingKey.AppsHostpanel, tag: 'Hp', tint: 'linear-gradient(135deg, #FF9CE0, #B9A6FF)', envKey: 'baseUrl', path: CLIENT_AREA_PATH },
+  { id: PortalAppId.Sheets, settingKey: PortalSettingKey.AppsSheets, tag: 'Sh', tint: 'linear-gradient(135deg, #00D1FF, #38E8A0)', envKey: 'sheetsUrl' },
+  { id: PortalAppId.Mail, settingKey: PortalSettingKey.AppsMail, tag: 'Ml', tint: 'linear-gradient(135deg, #5D3FFF, #00D1FF)', envKey: 'emailUrl' },
+  { id: PortalAppId.Docs, settingKey: PortalSettingKey.AppsDocs, tag: 'Dc', tint: 'linear-gradient(135deg, #7DE3FF, #B9A6FF)', envKey: '' },
+  { id: PortalAppId.Calendar, settingKey: PortalSettingKey.AppsCalendar, tag: 'Cl', tint: 'linear-gradient(135deg, #FF9CE0, #5D3FFF)', envKey: '' },
 ]
 
 /**
@@ -92,7 +97,7 @@ export const resolveAppUrl = (override: string, base: string, path = ''): string
 /**
  * Tells a sibling product which account to open as.
  *
- * Every Innovayse product accepts `?authuser=<email>` and routes the visit to that
+ * Every sibling product accepts `?authuser=<email>` and routes the visit to that
  * account's slot (or to the SSO chooser when it does not hold one). Without it a click
  * from a browser signed in to two accounts lands on the first — the platform-wide
  * regression fixed on 2026-09-18. Same rule as the portal's `withAccountHandoff`.
@@ -143,7 +148,7 @@ export const usePortalApps = () => {
 
   /** Whether the deployment has switched the launcher on. */
   const enabled = computed(() =>
-    isLauncherEnabled(get('portal.apps.enabled', ''), config.public.portalAppsEnabled))
+    isLauncherEnabled(get(PortalSettingKey.AppsEnabled, ''), config.public.portalAppsEnabled))
 
   /** The entries that resolved to a URL. */
   const apps = computed<PortalApp[]>(() => {
@@ -152,7 +157,7 @@ export const usePortalApps = () => {
     }
 
     return APP_DEFS.flatMap(def => {
-      const url = resolveAppUrl(get(`portal.apps.${def.id}`, ''), fromEnv(def.envKey), def.path)
+      const url = resolveAppUrl(get(def.settingKey, ''), fromEnv(def.envKey), def.path)
       if (!url) {
         return []
       }

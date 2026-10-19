@@ -14,10 +14,10 @@ describe('NovaSecurity', () => {
   it('shows a gated claim once its setting is filled in', () => {
     // Non-null: the security list carries gated claims (firewall, scanner, backups), asserted by content.test.ts.
     const gated = SECURITY_FEATURES.find(feature => feature.requiresSetting)!
-    const key = gated.requiresSetting![0]
+    const key = gated.requiresSetting!
     stubTemplateGlobals({ settings: { [key]: 'true' } })
     // Several claims may wait on the same setting, so count everything that setting unlocks.
-    const expected = SECURITY_FEATURES.filter(feature => !feature.requiresSetting || feature.requiresSetting[0] === key).length
+    const expected = SECURITY_FEATURES.filter(feature => !feature.requiresSetting || feature.requiresSetting === key).length
 
     expect(mountWithKit(NovaSecurity).findAll('ul > li')).toHaveLength(expected)
   })

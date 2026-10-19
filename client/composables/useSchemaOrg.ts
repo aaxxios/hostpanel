@@ -6,6 +6,8 @@
  */
 
 import { APP_LOCALES } from '~/constants/appLocales'
+import { PortalSettingKey } from '~/constants/portalSettingKey'
+import { SCHEMA_ORG_CONTEXT } from '~/constants/schemaOrg'
 
 /** A service as the service schema describes it. */
 interface SchemaService {
@@ -54,52 +56,46 @@ interface SchemaFaq {
  */
 export const useSchemaOrg = () => {
   const config = useRuntimeConfig()
-  const baseUrl = config.public.baseUrl || 'https://yourdomain.com'
-  const contactSettings = usePortalSettings()
-  // The operator's name and tagline. The address, phone, founding date, opening hours
-  // and rating below are still Innovayse's own and belong in settings too.
-  // TODO(phase 3): move the organisation details into portal.* settings.
+  // The deployment's public address, as `useSeo` reads it; an unset one yields site-relative URLs rather than a made-up host.
+  const baseUrl = config.public.baseUrl
+  const { get } = usePortalSettings()
+  // Everything about the operator comes from settings: name and tagline from site identity,
+  // contact channels and address from `portal.contact.*`, the logo from `portal.logo`. A value
+  // that is not set is omitted from the document instead of being published empty.
   const { name: siteName, tagline: siteTagline } = useSiteIdentity()
+  const { email, phone, telegramUrl, whatsappUrl, address } = useContactDetails()
+
+  /** The operator's logo when uploaded, otherwise the bundled neutral one. */
+  const logoUrl = (): string => {
+    const uploaded = get(PortalSettingKey.Logo, 'portalLogo')
+    if (!uploaded) {
+      return `${baseUrl}/logo.png`
+    }
+    return uploaded.startsWith('http') ? uploaded : `${baseUrl}${uploaded}`
+  }
+
+  /** The postal address as structured data, or nothing when the operator set none. */
+  const postalAddress = () => (address.value ? { address: { '@type': 'PostalAddress', streetAddress: address.value } } : {})
 
   /**
    * Organization schema
    */
   const organizationSchema = () => {
     return {
-      '@context': 'https://schema.org',
+      '@context': SCHEMA_ORG_CONTEXT,
       '@type': 'Organization',
       '@id': `${baseUrl}/#organization`,
       name: siteName.value,
       url: baseUrl,
       logo: {
         '@type': 'ImageObject',
-        url: `${baseUrl}/logo.png`
+        url: logoUrl()
       },
-      description: siteTagline.value || 'Web hosting, domains and servers with online billing and a client portal',
-      foundingDate: '2016',
-      contactPoint: {
-        '@type': 'ContactPoint',
-        telephone: '+374-33-731673',
-        contactType: 'customer service',
-        availableLanguage: ['English', 'Russian', 'Armenian']
-      },
-      address: {
-        '@type': 'PostalAddress',
-        addressCountry: 'AM',
-        addressLocality: 'Yerevan'
-      },
-      // Built from the operator's contact settings rather than fixed, so a
-      // self-hosted install does not publish Innovayse's own channels as its
-      // own structured data. Unset channels are omitted rather than empty.
-      sameAs: [
-        contactSettings.get('portal.contact.telegram', 'portalTelegram')
-          ? `https://t.me/${contactSettings.get('portal.contact.telegram', 'portalTelegram')}`
-          : '',
-        contactSettings.get('portal.contact.whatsapp', 'portalWhatsapp')
-          ? `https://wa.me/${contactSettings.get('portal.contact.whatsapp', 'portalWhatsapp')}`
-          : '',
-      ].filter(Boolean),
-      email: 'contact@yourdomain.com'
+      ...(siteTagline.value ? { description: siteTagline.value } : {}),
+      ...(phone.value ? { contactPoint: { '@type': 'ContactPoint', telephone: phone.value, contactType: 'customer service' } } : {}),
+      ...postalAddress(),
+      sameAs: [telegramUrl.value, whatsappUrl.value].filter(Boolean),
+      ...(email.value ? { email: email.value } : {})
     }
   }
 
@@ -108,36 +104,15 @@ export const useSchemaOrg = () => {
    */
   const localBusinessSchema = () => {
     return {
-      '@context': 'https://schema.org',
+      '@context': SCHEMA_ORG_CONTEXT,
       '@type': 'LocalBusiness',
       '@id': `${baseUrl}/#organization`,
       name: siteName.value,
-      image: `${baseUrl}/logo.png`,
+      image: logoUrl(),
       url: baseUrl,
-      telephone: '+374-33-731673',
-      email: 'contact@yourdomain.com',
-      address: {
-        '@type': 'PostalAddress',
-        addressCountry: 'AM',
-        addressLocality: 'Yerevan'
-      },
-      geo: {
-        '@type': 'GeoCoordinates',
-        latitude: 40.175837,
-        longitude: 44.512906
-      },
-      openingHoursSpecification: {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-        opens: '09:00',
-        closes: '18:00'
-      },
-      priceRange: '$$',
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: '4.9',
-        reviewCount: '150'
-      }
+      ...(phone.value ? { telephone: phone.value } : {}),
+      ...(email.value ? { email: email.value } : {}),
+      ...postalAddress()
     }
   }
 
@@ -146,12 +121,12 @@ export const useSchemaOrg = () => {
    */
   const websiteSchema = () => {
     return {
-      '@context': 'https://schema.org',
+      '@context': SCHEMA_ORG_CONTEXT,
       '@type': 'WebSite',
       '@id': `${baseUrl}/#website`,
       url: baseUrl,
       name: siteName.value,
-      description: siteTagline.value || 'Web hosting, domains and servers with online billing and a client portal',
+      ...(siteTagline.value ? { description: siteTagline.value } : {}),
       publisher: {
         '@id': `${baseUrl}/#organization`
       },
@@ -160,11 +135,11 @@ export const useSchemaOrg = () => {
   }
 
   /**
-   * Service schema
+   * Service schema. Names no served area: the operator's real coverage is not known here.
    */
   const serviceSchema = (service: SchemaService) => {
     return {
-      '@context': 'https://schema.org',
+      '@context': SCHEMA_ORG_CONTEXT,
       '@type': 'Service',
       name: service.name,
       description: service.description,
@@ -172,38 +147,23 @@ export const useSchemaOrg = () => {
       serviceType: service.serviceType,
       provider: {
         '@id': `${baseUrl}/#organization`
-      },
-      areaServed: {
-        '@type': 'Country',
-        name: 'Worldwide'
       }
     }
   }
 
   /**
-   * Product schema (for SaaS products)
+   * Product schema (for SaaS products). Carries no offer and no rating: neither is known
+   * here, and a published figure that is not the operator's own is a false claim.
    */
   const productSchema = (product: SchemaProduct) => {
     return {
-      '@context': 'https://schema.org',
+      '@context': SCHEMA_ORG_CONTEXT,
       '@type': 'SoftwareApplication',
       name: product.name,
       description: product.description,
       url: product.url.startsWith('http') ? product.url : `${baseUrl}${product.url}`,
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
-      offers: {
-        '@type': 'AggregateOffer',
-        priceCurrency: 'USD',
-        lowPrice: '99',
-        highPrice: '999',
-        offerCount: '3'
-      },
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: '4.8',
-        reviewCount: '120'
-      },
       provider: {
         '@id': `${baseUrl}/#organization`
       }
@@ -215,7 +175,7 @@ export const useSchemaOrg = () => {
    */
   const breadcrumbSchema = (items: SchemaBreadcrumb[]) => {
     return {
-      '@context': 'https://schema.org',
+      '@context': SCHEMA_ORG_CONTEXT,
       '@type': 'BreadcrumbList',
       itemListElement: items.map((item, index) => ({
         '@type': 'ListItem',
@@ -231,7 +191,7 @@ export const useSchemaOrg = () => {
    */
   const faqSchema = (faqs: SchemaFaq[]) => {
     return {
-      '@context': 'https://schema.org',
+      '@context': SCHEMA_ORG_CONTEXT,
       '@type': 'FAQPage',
       mainEntity: faqs.map(faq => ({
         '@type': 'Question',

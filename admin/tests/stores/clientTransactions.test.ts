@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { useTransactionsStore } from '@/stores/clientTransactions'
+import { useClientTransactionsStore } from '@/stores/clientTransactions'
 import { json, problem, stubFetch, callOf } from '../helpers/fetch'
 import { installStoreHooks } from '../helpers/storeHooks'
 
@@ -18,7 +18,7 @@ describe('clientTransactionsStore', () => {
       totalFees: 0,
       balance: 4,
     }))
-    const store = useTransactionsStore()
+    const store = useClientTransactionsStore()
 
     await store.fetchByClient(7, 2, 10)
     expect(store.transactions).toEqual([{ id: 1 }])
@@ -29,14 +29,14 @@ describe('clientTransactionsStore', () => {
 
   it('fetchByClient shows the API sentence on refusal', async () => {
     stubFetch(problem('Client not found.', 404))
-    const store = useTransactionsStore()
+    const store = useClientTransactionsStore()
 
     await store.fetchByClient(7)
     expect(store.error).toBe('Client not found.')
   })
 
   it('create and remove report the outcome', async () => {
-    const store = useTransactionsStore()
+    const store = useClientTransactionsStore()
     const body = {
       clientId: 7,
       date: 'd',

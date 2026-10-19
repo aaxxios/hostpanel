@@ -6,6 +6,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import { useClientSummaryStore } from '@/stores/clientSummary'
 import { useClientsStore } from '@/stores/clients'
 import { QUOTE_STAGE_OPTIONS } from '@/lib/constants'
@@ -35,8 +36,14 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { ClientSection, clientItemPath, clientSectionPath, clientTicketNewPath, quoteAddPath, quotePath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { productLabel } = useFallbackLabels()
 
 /** Empty-value dash. */
 const DASH = '—'
@@ -266,7 +273,7 @@ const saveNotes = async (): Promise<void> => {
  * @returns Nothing.
  */
 const openService = (id: number): void => {
-  router.push(`/clients/${clientId.value}/services/${id}`)
+  router.push(clientItemPath(clientId.value, ClientSection.Services, id))
 }
 
 /**
@@ -276,7 +283,7 @@ const openService = (id: number): void => {
  * @returns Nothing.
  */
 const openDomain = (id: number): void => {
-  router.push(`/clients/${clientId.value}/domains/${id}`)
+  router.push(clientItemPath(clientId.value, ClientSection.Domains, id))
 }
 
 /**
@@ -286,7 +293,7 @@ const openDomain = (id: number): void => {
  * @returns Nothing.
  */
 const openQuote = (id: number): void => {
-  router.push(`/billing/quotes/${id}`)
+  router.push(quotePath(id))
 }
 
 /** Initialize admin notes from the client detail when it loads. */
@@ -372,7 +379,7 @@ onMounted(() => {
             <UiText v-else :tone="UiTextTone.Muted">{{ t('clients.clientSummary.noAdditionalContacts') }}</UiText>
             <UiStack direction="row">
               <UiLink
-                :to="`/clients/${clientId}/contacts`"
+                :to="clientSectionPath(clientId, ClientSection.Contacts)"
                 :variant="UiButtonVariant.Link"
                 data-testid="client-summary-contacts-all"
               >
@@ -401,13 +408,13 @@ onMounted(() => {
               </UiStack>
             </UiStack>
             <UiStack direction="row" wrap>
-              <UiLink :to="`/clients/${clientId}/invoices`" :variant="UiButtonVariant.Link" data-testid="client-summary-create-invoice">
+              <UiLink :to="clientSectionPath(clientId, ClientSection.Invoices)" :variant="UiButtonVariant.Link" data-testid="client-summary-create-invoice">
                 {{ t('clients.clientSummary.createInvoice') }}
               </UiLink>
-              <UiLink :to="`/clients/${clientId}/billable-items`" :variant="UiButtonVariant.Link" data-testid="client-summary-add-billable">
+              <UiLink :to="clientSectionPath(clientId, ClientSection.BillableItems)" :variant="UiButtonVariant.Link" data-testid="client-summary-add-billable">
                 {{ t('shared.addBillableItem') }}
               </UiLink>
-              <UiLink :to="`/billing/quotes/add?clientId=${clientId}`" :variant="UiButtonVariant.Link" data-testid="client-summary-create-quote">
+              <UiLink :to="quoteAddPath(clientId)" :variant="UiButtonVariant.Link" data-testid="client-summary-create-quote">
                 {{ t('clients.clientSummary.createNewQuote') }}
               </UiLink>
             </UiStack>
@@ -424,10 +431,10 @@ onMounted(() => {
               </UiStack>
             </UiStack>
             <UiStack direction="row" wrap>
-              <UiLink :to="`/clients/${clientId}/tickets`" :variant="UiButtonVariant.Link" data-testid="client-summary-tickets-all">
+              <UiLink :to="clientSectionPath(clientId, ClientSection.Tickets)" :variant="UiButtonVariant.Link" data-testid="client-summary-tickets-all">
                 {{ t('clients.clientSummary.viewAllTickets') }}
               </UiLink>
-              <UiLink :to="`/clients/${clientId}/tickets/new`" :variant="UiButtonVariant.Link" data-testid="client-summary-ticket-new">
+              <UiLink :to="clientTicketNewPath(clientId)" :variant="UiButtonVariant.Link" data-testid="client-summary-ticket-new">
                 {{ t('shared.openNewTicket') }}
               </UiLink>
             </UiStack>
@@ -446,7 +453,7 @@ onMounted(() => {
             <UiText v-else :tone="UiTextTone.Muted">{{ t('clients.clientSummary.noEmailsSent') }}</UiText>
             <UiStack direction="row">
               <UiLink
-                :to="`/clients/${clientId}/emails`"
+                :to="clientSectionPath(clientId, ClientSection.Emails)"
                 :variant="UiButtonVariant.Link"
                 data-testid="client-summary-emails-all"
               >
@@ -483,7 +490,7 @@ onMounted(() => {
       <UiStack>
         <UiStack direction="row" :justify="UiJustify.Between" :align="UiAlignItems.Center">
           <UiHeading :level="2" variant="card">{{ t('clients.clientSummary.productsServices2') }}</UiHeading>
-          <UiLink :to="`/clients/${clientId}/services`" :variant="UiButtonVariant.Link" data-testid="client-summary-services-all">
+          <UiLink :to="clientSectionPath(clientId, ClientSection.Services)" :variant="UiButtonVariant.Link" data-testid="client-summary-services-all">
             {{ t('clients.clientSummary.viewAll') }}
           </UiLink>
         </UiStack>
@@ -515,7 +522,7 @@ onMounted(() => {
                 @click="openService(service.id)"
               >
                 <UiTableCell muted>{{ service.id }}</UiTableCell>
-                <UiTableCell>{{ service.productName }}</UiTableCell>
+                <UiTableCell>{{ productLabel(service.productName) }}</UiTableCell>
                 <UiTableCell muted>{{ service.domain ?? DASH }}</UiTableCell>
                 <UiTableCell muted>{{ formatPrice(service.price, service.priceCurrency) }}</UiTableCell>
                 <UiTableCell muted>{{ capitalize(service.billingCycle) }}</UiTableCell>
@@ -545,7 +552,7 @@ onMounted(() => {
       <UiStack>
         <UiStack direction="row" :justify="UiJustify.Between" :align="UiAlignItems.Center">
           <UiHeading :level="2" variant="card">{{ t('shared.domains') }}</UiHeading>
-          <UiLink :to="`/clients/${clientId}/domains`" :variant="UiButtonVariant.Link" data-testid="client-summary-domains-all">
+          <UiLink :to="clientSectionPath(clientId, ClientSection.Domains)" :variant="UiButtonVariant.Link" data-testid="client-summary-domains-all">
             {{ t('clients.clientSummary.viewAll') }}
           </UiLink>
         </UiStack>
@@ -609,7 +616,7 @@ onMounted(() => {
       <UiStack>
         <UiStack direction="row" :justify="UiJustify.Between" :align="UiAlignItems.Center">
           <UiHeading :level="2" variant="card">{{ t('clients.clientSummary.currentQuotes') }}</UiHeading>
-          <UiLink :to="`/clients/${clientId}/quotes`" :variant="UiButtonVariant.Link" data-testid="client-summary-quotes-all">
+          <UiLink :to="clientSectionPath(clientId, ClientSection.Quotes)" :variant="UiButtonVariant.Link" data-testid="client-summary-quotes-all">
             {{ t('clients.clientSummary.viewAll') }}
           </UiLink>
         </UiStack>

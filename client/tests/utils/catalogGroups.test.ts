@@ -1,5 +1,33 @@
 import { describe, expect, it } from 'vitest'
-import { parseDescription } from '~/utils/catalogGroups'
+import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
+import type { PortalProductGroup } from '~/types/portalproductgroup'
+import {
+  FAMILY_COLORS,
+  FAMILY_ICON,
+  HOSTING_FAMILY_KEY,
+  familyColor,
+  familyConfig,
+  familyKey,
+  isFamilyGroup,
+  nameToKey,
+  parseDescription
+} from '~/utils/catalogGroups'
+
+/**
+ * Builds a catalogue group.
+ *
+ * @param overrides Fields that differ from the defaults.
+ * @returns The group.
+ */
+const group = (overrides: Partial<PortalProductGroup> = {}): PortalProductGroup => ({
+  id: 3,
+  name: 'Alpha Suite',
+  description: null,
+  isActive: true,
+  productCount: 2,
+  ...overrides
+})
+
 
 /**
  * The exact shape a operator-authored description arrives in when it was edited as
@@ -59,5 +87,62 @@ describe('parseDescription', () => {
 
   it('reports an empty description as empty rather than as one blank feature', () => {
     expect(parseDescription('')).toEqual({ summary: '', features: [] })
+  })
+})
+
+describe('nameToKey', () => {
+  it('lower-cases a name, joins its words with dashes and drops other characters', () => {
+    expect(nameToKey('Alpha Suite')).toBe('alpha-suite')
+    expect(nameToKey('Beta  Kit (Pro)!')).toBe('beta-kit-pro')
+  })
+})
+
+describe('isFamilyGroup', () => {
+  it('accepts an active group that holds a product', () => {
+    expect(isFamilyGroup(group())).toBe(true)
+  })
+
+  it('refuses an inactive group and an empty one', () => {
+    expect(isFamilyGroup(group({ isActive: false }))).toBe(false)
+    expect(isFamilyGroup(group({ productCount: 0 }))).toBe(false)
+  })
+})
+
+describe('familyKey', () => {
+  it('names a family by its group name', () => {
+    expect(familyKey(group())).toBe('alpha-suite')
+  })
+
+  it('gives hosting its fixed key whatever the operator called the group', () => {
+    expect(familyKey(group({ id: HOSTING_GROUP_ID, name: 'Anything' }))).toBe(HOSTING_FAMILY_KEY)
+  })
+
+  it('falls back to the group id when the name leaves no letters', () => {
+    expect(familyKey(group({ id: 8, name: '!!!' }))).toBe('group-8')
+  })
+})
+
+describe('familyColor', () => {
+  it('is the same colour for the same key, taken from the palette', () => {
+    expect(familyColor('alpha-suite')).toBe(familyColor('alpha-suite'))
+    expect(FAMILY_COLORS).toContain(familyColor('alpha-suite'))
+  })
+})
+
+describe('familyConfig', () => {
+  it('derives a catalogue family from its group', () => {
+    expect(familyConfig(group())).toEqual({
+      name: 'Alpha Suite',
+      icon: FAMILY_ICON,
+      color: familyColor('alpha-suite'),
+      learnMoreUrl: '/products/alpha-suite'
+    })
+  })
+
+  it('points hosting at its own page', () => {
+    expect(familyConfig(group({ id: HOSTING_GROUP_ID, name: 'Web Hosting' }))).toMatchObject({
+      name: 'Web Hosting',
+      learnMoreUrl: '/hosting'
+    })
   })
 })

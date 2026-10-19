@@ -29,6 +29,7 @@ const rows: ExpectedRequest[] = [
   { name: 'fetchProducts sends the filters as a query', call: () => api.fetchProducts({ gid: 1, currency: 'USD' }), method: 'GET', url: '/api/portal/public/products?gid=1&currency=USD' },
   { name: 'fetchProducts drops an undefined filter and sends no query at all', call: () => api.fetchProducts({ currency: undefined }), method: 'GET', url: '/api/portal/public/products' },
   { name: 'fetchProducts sends the group list as one comma-separated value', call: () => api.fetchProducts({ gids: '1,3,4' }), method: 'GET', url: '/api/portal/public/products?gids=1,3,4' },
+  { name: 'fetchProductGroups reads the list', call: () => api.fetchProductGroups(), method: 'GET', url: '/api/portal/public/product-groups' },
   { name: 'fetchProductFeatures asks for one group', call: () => api.fetchProductFeatures(7), method: 'GET', url: '/api/portal/public/product-features?gid=7' },
   { name: 'fetchCurrencies reads the list', call: () => api.fetchCurrencies(), method: 'GET', url: '/api/portal/public/currencies' },
   { name: 'fetchTldPricing quotes in the payer currency', call: () => api.fetchTldPricing('AMD'), method: 'GET', url: '/api/portal/public/tld-pricing?currency=AMD' },

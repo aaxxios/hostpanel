@@ -27,6 +27,7 @@ import { toIsoDay } from '@/lib/format'
 import { useBillableItemsStore } from '@/stores/billableItems'
 import { BillableItemType } from '@/types/billableitem'
 import { CurrencyCode } from '@/types/currency'
+import { AppRoute } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -95,7 +96,7 @@ const submit = async (): Promise<void> => {
     nextDueDate: nextDueDate.value || undefined,
   })
   if (ok) {
-    await router.push('/billing/billable-items')
+    await router.push(AppRoute.BillingBillableItems)
   }
 }
 
@@ -161,7 +162,7 @@ onMounted(loadClients)
           <UiButton type="submit" variant="primary" :loading="store.loading" data-testid="billing-add-billable-item-submit">
             {{ t('shared.addBillableItem') }}
           </UiButton>
-          <UiLink to="/billing/billable-items" variant="ghost" data-testid="billing-add-billable-item-cancel">
+          <UiLink :to="AppRoute.BillingBillableItems" variant="ghost" data-testid="billing-add-billable-item-cancel">
             {{ t('shared.cancel') }}
           </UiLink>
         </UiStack>

@@ -9,8 +9,8 @@ export interface Service {
   id: number
   /** Associated client identifier. */
   clientId: number
-  /** Product name (e.g. Shared Hosting, VPS). */
-  productName: string
+  /** Product name (e.g. Shared Hosting, VPS); null when unresolved. */
+  productName: string | null
   /** Primary domain assigned to the service. */
   domain: string
   /** Service status (active, suspended, cancelled, pending). */
@@ -27,10 +27,10 @@ export interface ServiceListItem {
   id: number
   /** Associated client identifier. */
   clientId: number
-  /** Full name of the owning client. */
-  clientName: string
-  /** Product display name. */
-  productName: string
+  /** Full name of the owning client; null when unresolved. */
+  clientName: string | null
+  /** Product display name; null when unresolved. */
+  productName: string | null
   /** Linked domain name, or null if no domain is linked. */
   domain: string | null
   /** Resolved price based on billing cycle. */
@@ -51,12 +51,12 @@ export interface ServiceDetail {
   id: number
   /** Associated client identifier. */
   clientId: number
-  /** Full name of the owning client. */
-  clientName: string
+  /** Full name of the owning client; null when unresolved. */
+  clientName: string | null
   /** Product identifier. */
   productId: number
-  /** Product display name. */
-  productName: string
+  /** Product display name; null when unresolved. */
+  productName: string | null
   /** Linked domain name, if any. */
   domain?: string
   /** Dedicated IP address, if assigned. */
@@ -111,12 +111,12 @@ export interface CancellationRequestItem {
   id: number
   /** ID of the service being cancelled. */
   serviceId: number
-  /** Name of the product/service. */
-  serviceName: string
+  /** Name of the product/service; null when unresolved. */
+  serviceName: string | null
   /** ID of the owning client. */
   clientId: number
-  /** Full name of the owning client. */
-  clientName: string
+  /** Full name of the owning client; null when unresolved. */
+  clientName: string | null
   /**
    * Cancellation type as the backend enum member name -- `"Immediate"` or
    * `"EndOfBillingPeriod"`. Not display text; the screen owns the wording.
@@ -194,6 +194,14 @@ export interface UpdateServicePayload {
 export interface ProvisioningReasonPayload {
   /** Reason recorded with the command. */
   reason: string
+}
+
+/** Reasons the admin records when it suspends or terminates a service from the service page. */
+export enum ServiceChangeReason {
+  /** Recorded on a suspension. */
+  Suspended = 'Admin suspended',
+  /** Recorded on a termination. */
+  Terminated = 'Admin terminated',
 }
 
 /** Status of a hosted service, exactly as the API sends it. */

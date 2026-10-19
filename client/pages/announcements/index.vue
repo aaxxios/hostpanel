@@ -43,7 +43,7 @@
           :description="t('announcements.signInRequiredDesc')"
           data-testid="announcements-sign-in"
         >
-          <UiButton :to="localePath('/client/login?redirect=/announcements')" data-testid="announcements-sign-in-link">
+          <UiButton :to="localePath(`${CLIENT_LOGIN_PATH}?${CLIENT_REDIRECT_QUERY}=/announcements`)" data-testid="announcements-sign-in-link">
             {{ t('announcements.signIn') }}
           </UiButton>
         </UiEmptyState>
@@ -111,6 +111,8 @@
  * Fetches all announcements from the API and supports month-based filtering.
  */
 
+import { CLIENT_LOGIN_PATH, CLIENT_REDIRECT_QUERY } from '~/constants/clientRoutes'
+import { SessionCookie } from '~/constants/sessionCookie'
 import { Megaphone, Calendar, ArrowRight } from 'lucide-vue-next'
 import { useContentStore } from '~/stores/content'
 import { formatDate } from '~/utils/formatDate'
@@ -139,7 +141,7 @@ const { pending } = await useAsyncData('announcements:list', () => content.loadA
 const error = computed(() => content.error)
 
 /** The `authed` cookie the sign-in sets; its absence means the visitor has no session. */
-const authed = useCookie('authed')
+const authed = useCookie(SessionCookie.Authed)
 
 /**
  * Whether the refusal is just "not signed in". The API serves published announcements to signed-in

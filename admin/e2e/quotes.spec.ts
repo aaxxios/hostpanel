@@ -2,6 +2,7 @@
  * Quotes flow: the list shows each quote with its client and stage, the subject filter narrows it,
  * and a quote's id opens its detail page; a refused load shows the API's sentence.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { acceptedQuote, draftQuote, quotesPage } from './fixtures/quotes'
 import { fieldOf } from './support/locators'
@@ -10,7 +11,7 @@ import { json, stubApi } from './support/stubApi'
 test('the subject filter narrows the quotes list', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
-    routes: [json('GET', '/api/billing/quotes', quotesPage), json('GET', '/api/clients', { items: [], totalCount: 0, page: 1, pageSize: 100 })],
+    routes: [json(HttpMethod.Get, '/api/billing/quotes', quotesPage), json(HttpMethod.Get, '/api/clients', { items: [], totalCount: 0, page: 1, pageSize: 100 })],
   })
 
   await page.goto('/billing/quotes')
@@ -28,9 +29,9 @@ test('a quote id opens the quote detail', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/billing/quotes', quotesPage),
-      json('GET', '/api/clients', { items: [], totalCount: 0, page: 1, pageSize: 100 }),
-      json('GET', `/api/billing/quotes/${draftQuote.id}`, { ...draftQuote, items: [], notes: '' }),
+      json(HttpMethod.Get, '/api/billing/quotes', quotesPage),
+      json(HttpMethod.Get, '/api/clients', { items: [], totalCount: 0, page: 1, pageSize: 100 }),
+      json(HttpMethod.Get, `/api/billing/quotes/${draftQuote.id}`, { ...draftQuote, items: [], notes: '' }),
     ],
   })
 
@@ -45,8 +46,8 @@ test('a refused load shows the API sentence', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/billing/quotes', { type: 'FORBIDDEN', title: 'Forbidden', status: 403, detail: sentence }, 403),
-      json('GET', '/api/clients', { items: [], totalCount: 0, page: 1, pageSize: 100 }),
+      json(HttpMethod.Get, '/api/billing/quotes', { type: 'FORBIDDEN', title: 'Forbidden', status: 403, detail: sentence }, 403),
+      json(HttpMethod.Get, '/api/clients', { items: [], totalCount: 0, page: 1, pageSize: 100 }),
     ],
   })
 

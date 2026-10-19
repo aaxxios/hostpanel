@@ -43,6 +43,7 @@
  * payment methods and the available gateways are read through the invoice payment store, which
  * also owns the in-flight flag, the success flag and the refusal sentence.
  */
+import { CLIENT_INVOICES_PATH, clientInvoicePath } from '~/constants/clientRoutes'
 import { AlertCircle, CheckCircle } from 'lucide-vue-next'
 import { useInvoicePaymentStore } from '~/stores/invoicepayment'
 import { InvoiceStatus } from '~/types/invoicestatus'
@@ -75,11 +76,11 @@ const { pending } = await useAsyncData(
 const invoice = computed(() => paymentStore.invoice)
 
 /** The invoice's own page. */
-const invoicePath = computed(() => localePath(`/client/invoices/${invoiceId}`))
+const invoicePath = computed(() => localePath(clientInvoicePath(invoiceId)))
 
 /** The breadcrumb trail: invoices, this invoice, the payment step. */
 const crumbs = computed(() => [
-  { label: t('client.invoices.title'), to: localePath('/client/invoices') },
+  { label: t('client.invoices.title'), to: localePath(CLIENT_INVOICES_PATH) },
   { label: t('invoicePay.invoiceNum', { id: invoiceId }), to: invoicePath.value },
   { label: t('invoicePay.makePayment') },
 ])

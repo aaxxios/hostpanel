@@ -36,7 +36,7 @@
       <UiTableBody>
         <UiTableRow v-for="invoice in relatedInvoices" :key="invoice.id" :data-testid="`service-invoice-${invoice.id}`">
           <UiTableTd>
-            <UiLink data-testid="service-invoice-link" :to="`/client/invoices/${invoice.id}`" :underline="false" class="font-medium">#{{ invoice.id }}</UiLink>
+            <UiLink data-testid="service-invoice-link" :to="clientInvoicePath(invoice.id)" :underline="false" class="font-medium">#{{ invoice.id }}</UiLink>
           </UiTableTd>
           <UiTableTd>
             <UiText as="span" size="sm" tone="subtle">{{ formatDate(invoice.invoiceDate) }}</UiText>
@@ -67,7 +67,7 @@
       data-testid="service-invoices-unrecorded"
     >
       {{ $t('client.services.unrecordedNote', { count: unattributedInvoices }) }}
-      <UiLink data-testid="service-invoices-all" to="/client/invoices" :underline="false">{{ $t('client.services.viewAllInvoices') }}</UiLink>
+      <UiLink data-testid="service-invoices-all" :to="CLIENT_INVOICES_PATH" :underline="false">{{ $t('client.services.viewAllInvoices') }}</UiLink>
     </UiAlert>
   </UiCard>
 </template>
@@ -77,6 +77,7 @@
  * ServiceInvoicesCard - the invoices raised against one service, read through the service
  * management store, with a note about invoices the platform could not attribute to any service.
  */
+import { CLIENT_INVOICES_PATH, clientInvoicePath } from '~/constants/clientRoutes'
 import { FileText } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { useServiceManagementStore } from '~/stores/servicemanagement'

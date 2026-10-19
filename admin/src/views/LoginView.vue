@@ -5,7 +5,7 @@
  * The page draws whatever the deployment actually supports, which it does not guess:
  * `GET /api/auth/mode` is called before anything is rendered.
  *
- * - **sso** — one button, which hands the browser to Innovayse SSO. The API performs
+ * - **sso** — one button, which hands the browser to single sign-on. The API performs
  *   the token exchange and returns a session cookie; nothing is exchanged here.
  * - **local** — an email/password form, and a TOTP field after it when the account has
  *   a second factor. This is the standalone, open-source path.
@@ -30,6 +30,8 @@ import UiForm from '@/components/ui/UiForm.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { TWO_FACTOR_CODE_LENGTH } from '@/lib/limits'
+import { AppRoute } from '@/lib/routes'
 
 /** Translation function. */
 const { t } = useI18n()
@@ -75,7 +77,7 @@ const isLocal = computed<boolean>(() => authStore.mode === AuthMode.Local)
 const subtitle = computed<string>(() =>
   isLocal.value
     ? t('auth.login.signInWithYourAdministrator')
-    : t('auth.login.signInWithYourInnovayse'),
+    : t('auth.login.signInWithYourAccount'),
 )
 
 /**
@@ -88,7 +90,7 @@ const finishSignIn = async (): Promise<void> => {
     offerBootstrap.value = true
     return
   }
-  await router.push('/dashboard')
+  await router.push(AppRoute.Dashboard)
 }
 
 /** Fills the form with the published demo Admin account; the operator still presses Sign in. */
@@ -158,7 +160,7 @@ const handleClaimAdmin = async (): Promise<void> => {
     return
   }
   setupToken.value = ''
-  await router.push('/dashboard')
+  await router.push(AppRoute.Dashboard)
 }
 
 /**
@@ -167,7 +169,7 @@ const handleClaimAdmin = async (): Promise<void> => {
  * @returns Promise resolving once the navigation has happened.
  */
 const handleSkip = async (): Promise<void> => {
-  await router.push('/dashboard')
+  await router.push(AppRoute.Dashboard)
 }
 
 /**
@@ -178,7 +180,7 @@ const handleSkip = async (): Promise<void> => {
  * @returns Promise resolving once the navigation has happened.
  */
 const handleGoToSetup = async (): Promise<void> => {
-  await router.push('/setup')
+  await router.push(AppRoute.Setup)
 }
 
 /** Retries the mode lookup after it failed, without reloading the page. */
@@ -295,7 +297,7 @@ onMounted(async () => {
           inputmode="numeric"
           autocomplete="one-time-code"
           :placeholder="t('auth.login.codePlaceholder')"
-          :maxlength="6"
+          :maxlength="TWO_FACTOR_CODE_LENGTH"
           :autofocus="true"
           required
           :disabled="authStore.loading"
@@ -408,7 +410,7 @@ onMounted(async () => {
         data-testid="login-sso"
         @click="handleSsoLogin"
       >
-        {{ t('auth.login.signInWithInnovayseSso') }}
+        {{ t('auth.login.signInWithSso') }}
       </UiButton>
     </UiStack>
   </AuthShell>

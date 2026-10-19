@@ -13,6 +13,12 @@ const authed = { value: null as string | null }
 /** The runtime config public half. */
 const publicConfig: Record<string, unknown> = {}
 
+/** The origin the stood-in request arrived on. */
+const REQUEST_ORIGIN = 'https://request.example'
+
+/** The stood-in `useRequestURL`; records the options the middleware asks the forwarded headers with. */
+const requestUrlMock = vi.fn()
+
 /** The recorded navigation. */
 const navigateToMock = vi.fn()
 
@@ -37,6 +43,7 @@ const loadMiddleware = async (): Promise<Middleware> => {
   vi.stubGlobal('useCookie', () => authed)
   vi.stubGlobal('useRuntimeConfig', () => ({ public: publicConfig }))
   vi.stubGlobal('navigateTo', navigateToMock)
+  vi.stubGlobal('useRequestURL', requestUrlMock)
   return (await import('~/middleware/client-auth')).default as unknown as Middleware
 }
 
@@ -47,6 +54,8 @@ beforeEach(() => {
   }
   publicConfig.authMode = AuthMode.Local
   navigateToMock.mockReset()
+  requestUrlMock.mockReset()
+  requestUrlMock.mockReturnValue({ origin: REQUEST_ORIGIN })
   vi.resetModules()
 })
 
@@ -76,6 +85,32 @@ describe('client-auth middleware', () => {
 
     expect(navigateToMock).toHaveBeenCalledWith(
       'https://host.example/api/portal/auth/sso/authorize',
+      { external: true, replace: true },
+    )
+  })
+
+  it('falls back to the request origin when no public address is configured', async () => {
+    publicConfig.authMode = AuthMode.Sso
+    const run = await loadMiddleware()
+
+    run({ path: '/client/dashboard', fullPath: '/client/dashboard' })
+
+    expect(navigateToMock).toHaveBeenCalledWith(
+      `${REQUEST_ORIGIN}/api/portal/auth/sso/authorize`,
+      { external: true, replace: true },
+    )
+  })
+
+  it('asks for the forwarded host and proto when no public address is configured', async () => {
+    publicConfig.authMode = AuthMode.Sso
+    requestUrlMock.mockReturnValue({ origin: 'https://public.example' })
+    const run = await loadMiddleware()
+
+    run({ path: '/client/dashboard', fullPath: '/client/dashboard' })
+
+    expect(requestUrlMock).toHaveBeenCalledWith({ xForwardedHost: true, xForwardedProto: true })
+    expect(navigateToMock).toHaveBeenCalledWith(
+      'https://public.example/api/portal/auth/sso/authorize',
       { external: true, replace: true },
     )
   })

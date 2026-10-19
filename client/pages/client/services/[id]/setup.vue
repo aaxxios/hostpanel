@@ -14,7 +14,7 @@
       :title="$t('client.setup.errorTitle')"
       :description="$t('client.setup.errorDesc')"
     >
-      <UiButton to="/client/services" variant="subtle" data-testid="setup-back-to-services">{{ $t('client.setup.backToServices') }}</UiButton>
+      <UiButton :to="CLIENT_SERVICES_PATH" variant="subtle" data-testid="setup-back-to-services">{{ $t('client.setup.backToServices') }}</UiButton>
     </ClientServicesSetupStatePanel>
 
     <ClientServicesSetupStatePanel
@@ -24,7 +24,7 @@
       :title="$t('client.setup.alreadyActive')"
       :description="$t('client.setup.alreadyActiveDesc')"
     >
-      <UiButton :to="`/client/services/${service.id}`" data-testid="setup-go-manage">{{ $t('client.setup.goToManage') }}</UiButton>
+      <UiButton :to="clientServicePath(service.id)" data-testid="setup-go-manage">{{ $t('client.setup.goToManage') }}</UiButton>
     </ClientServicesSetupStatePanel>
 
     <ClientServicesSetupWizard v-else :service="service" :service-id="serviceId" />
@@ -37,6 +37,7 @@
  * to set up (the service could not be read, or it is already configured). The service is read
  * through the service management store.
  */
+import { CLIENT_SERVICES_PATH, clientServicePath } from '~/constants/clientRoutes'
 import { AlertCircle, CheckCircle } from 'lucide-vue-next'
 import { useServiceManagementStore } from '~/stores/servicemanagement'
 import { ServiceStatus } from '~/types/servicestatus'

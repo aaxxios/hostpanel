@@ -18,6 +18,7 @@ import type { ReportDailyPerformanceRow } from '@/types/reportdailyperformance'
 import { UiChartType } from '@/utils/ui/chart'
 import type { UiChartSeries } from '@/utils/ui/chart'
 import { UiAlign } from '@/utils/ui/table'
+import { AppRoute } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -25,7 +26,7 @@ const { t } = useI18n()
 const dateRange = ref<[string, string] | null>(null)
 
 const { data, load } = useReport<ReportDailyPerformanceRow[]>(() =>
-  reportPath('/reports/daily-performance', { from: dateRange.value?.[0], to: dateRange.value?.[1] }),
+  reportPath(AppRoute.ReportsDailyPerformance, { from: dateRange.value?.[0], to: dateRange.value?.[1] }),
 )
 
 /** Days with their counters; empty until loaded. */

@@ -10,6 +10,8 @@ import type {
   ProductFeature,
   UpdateProductFeaturePayload,
 } from '@/types/productfeature'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/product-features`.
@@ -26,7 +28,7 @@ export const useProductFeaturesApi = () => {
    * @returns The lines.
    */
   const listFeatures = (productId: number): Promise<ProductFeature[]> =>
-    request<ProductFeature[]>(`/product-features${buildQuery({ productId })}`)
+    request<ProductFeature[]>(`${ApiPath.ProductFeatures}${buildQuery({ productId })}`)
 
   /**
    * Adds a line.
@@ -35,7 +37,7 @@ export const useProductFeaturesApi = () => {
    * @returns Nothing.
    */
   const createFeature = (payload: CreateProductFeaturePayload): Promise<void> =>
-    request<void>('/product-features', { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(ApiPath.ProductFeatures, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Replaces a line.
@@ -44,7 +46,7 @@ export const useProductFeaturesApi = () => {
    * @returns Nothing.
    */
   const updateFeature = (payload: UpdateProductFeaturePayload): Promise<void> =>
-    request<void>(`/product-features/${payload.id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.ProductFeatures}/${payload.id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Removes a line.
@@ -53,7 +55,7 @@ export const useProductFeaturesApi = () => {
    * @returns Nothing.
    */
   const deleteFeature = (id: number): Promise<void> =>
-    request<void>(`/product-features/${id}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.ProductFeatures}/${id}`, { method: HttpMethod.Delete })
 
   return { listFeatures, createFeature, updateFeature, deleteFeature }
 }

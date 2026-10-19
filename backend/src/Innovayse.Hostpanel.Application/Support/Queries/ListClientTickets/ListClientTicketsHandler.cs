@@ -12,7 +12,7 @@ namespace Innovayse.Hostpanel.Application.Support.Queries.ListClientTickets;
 public sealed class ListClientTicketsHandler
 {
     /// <summary>Widest page allowed, regardless of what the caller asks for.</summary>
-    private const int MaxPageSize = 100;
+    private const int MaxPageSize = PagingLimits.MaxPageSize;
 
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
@@ -34,7 +34,7 @@ public sealed class ListClientTicketsHandler
         ArgumentNullException.ThrowIfNull(query);
 
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, MaxPageSize);
 
         var tickets = _context.Tickets.AsNoTracking().Where(t => t.ClientId == query.ClientId);
         if (!string.IsNullOrWhiteSpace(query.Search))

@@ -10,6 +10,18 @@ namespace Innovayse.Providers.CWP7;
 /// </summary>
 public sealed class Cwp7ProvisioningProvider : IProvisioningProvider
 {
+    /// <summary>Domain of the placeholder address CWP7 requires when an account is terminated.</summary>
+    private const string TerminatedEmailDomain = "terminated.local";
+
+    /// <summary>Domain of the placeholder address CWP7 requires when a package is changed.</summary>
+    private const string ChangeEmailDomain = "change.local";
+
+    /// <summary>Builds the placeholder address CWP7's API demands but never mails.</summary>
+    /// <param name="user">The account username, used as the local part.</param>
+    /// <param name="domain">The reserved placeholder domain.</param>
+    /// <returns>The address.</returns>
+    private static string PlaceholderEmail(string user, string domain) => $"{user}@{domain}";
+
     /// <summary>CWP7 API client.</summary>
     private readonly Cwp7ApiClient _client;
 
@@ -110,7 +122,7 @@ public sealed class Cwp7ProvisioningProvider : IProvisioningProvider
     public async Task TerminateAsync(TerminateAccountOrder req, CancellationToken ct)
     {
         var response = await _client.TerminateAccountAsync(
-            _host, _apiKey, req.ProvisioningRef, $"{req.ProvisioningRef}@terminated.local", ct);
+            _host, _apiKey, req.ProvisioningRef, PlaceholderEmail(req.ProvisioningRef, TerminatedEmailDomain), ct);
 
         if (!response.IsSuccess)
         {
@@ -185,7 +197,7 @@ public sealed class Cwp7ProvisioningProvider : IProvisioningProvider
     public async Task ChangePackageAsync(string provisioningRef, string newPackage, CancellationToken ct)
     {
         var response = await _client.ChangePackageAsync(
-            _host, _apiKey, provisioningRef, $"{provisioningRef}@change.local", newPackage, ct);
+            _host, _apiKey, provisioningRef, PlaceholderEmail(provisioningRef, ChangeEmailDomain), newPackage, ct);
 
         if (!response.IsSuccess)
         {

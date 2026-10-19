@@ -43,7 +43,7 @@
     "makeBaseSucceeded": "{code} is now the base currency.",
     "ratesUpdated": "Rates updated: {updated}{missing}",
     "ratesMissing": "; not quoted: {codes}",
-    "pricesUpdated": "{count} product price row(s) recomputed.",
+    "pricesUpdated": "{count} product price row recomputed. | {count} product price rows recomputed.",
     "none": "none"
   },
   "form": {

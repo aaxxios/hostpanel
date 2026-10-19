@@ -65,6 +65,7 @@
  * links the visitor may see, whether the mobile drawer is open, how the platform widget is told
  * who is signed in, and signing out.
  */
+import { CLIENT_ACCOUNT_PATH, CLIENT_DASHBOARD_PATH, CLIENT_DOMAINS_PATH, CLIENT_INVOICES_PATH, CLIENT_SERVICES_PATH, CLIENT_TICKETS_PATH } from '~/constants/clientRoutes'
 import {
   LayoutDashboard,
   Server,
@@ -168,14 +169,14 @@ onUpdated(() => {
 
 /** Every sidebar link with the permission that unlocks it. */
 const navItems = computed<NavEntry[]>(() => [
-  { to: '/client/dashboard', label: t('client.nav.dashboard'), icon: LayoutDashboard, permission: Permission.None },
-  { to: '/client/services', label: t('client.nav.services'), icon: Server, permission: Permission.ViewProductsServices },
-  { to: '/client/domains', label: t('client.nav.domains'), icon: Globe, permission: Permission.ViewDomains },
-  { to: '/client/invoices', label: t('client.nav.invoices'), icon: FileText, permission: Permission.ViewPayInvoices },
-  { to: '/client/tickets', label: t('client.nav.support'), icon: MessageSquare, permission: Permission.ViewOpenSupportTickets },
+  { to: CLIENT_DASHBOARD_PATH, label: t('client.nav.dashboard'), icon: LayoutDashboard, permission: Permission.None },
+  { to: CLIENT_SERVICES_PATH, label: t('client.nav.services'), icon: Server, permission: Permission.ViewProductsServices },
+  { to: CLIENT_DOMAINS_PATH, label: t('client.nav.domains'), icon: Globe, permission: Permission.ViewDomains },
+  { to: CLIENT_INVOICES_PATH, label: t('client.nav.invoices'), icon: FileText, permission: Permission.ViewPayInvoices },
+  { to: CLIENT_TICKETS_PATH, label: t('client.nav.support'), icon: MessageSquare, permission: Permission.ViewOpenSupportTickets },
   { to: '/announcements', label: t('announcements.title'), icon: Megaphone, permission: Permission.None },
   { to: '/knowledgebase', label: t('kb.title'), icon: BookOpen, permission: Permission.None },
-  { to: '/client/account', label: t('client.nav.account'), icon: UserCog, permission: Permission.None }
+  { to: CLIENT_ACCOUNT_PATH, label: t('client.nav.account'), icon: UserCog, permission: Permission.None }
 ])
 
 /** Nav items filtered by the current user's permissions. */

@@ -15,7 +15,7 @@ public sealed class GetHostingPanelV7ServerInfoHandler
     private const string CacheKey = HostingPanelCacheKeys.Cwp7;
 
     /// <summary>How long a successful server-info result is cached before being refreshed.</summary>
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan CacheDuration = HostingPanelCacheLifetimes.ServerInfo;
 
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;

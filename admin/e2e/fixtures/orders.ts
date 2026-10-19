@@ -25,12 +25,15 @@ export const pendingOrder: OrderListItem = {
 /** `GET /api/orders` — one page with the pending order. */
 export const ordersPage: PagedResult<OrderListItem> = { items: [pendingOrder], totalCount: 1, page: 1, pageSize: 20 }
 
+/** Product name of the hosting service, kept non-null so tests can assert on it. */
+export const hostingProductName = 'Shared Hosting'
+
 /** A hosting service of the first client. */
 export const hostingService: ServiceListItem = {
   id: 41,
   clientId: 7,
   clientName: 'Ada Lovelace',
-  productName: 'Shared Hosting',
+  productName: hostingProductName,
   domain: 'engines.example.test',
   price: 9.99,
   priceCurrency: 'USD',
@@ -48,7 +51,7 @@ export const registeredDomain: DomainRegistration = {
   clientId: 8,
   clientName: 'Grace Hopper',
   name: 'compiler.example.test',
-  regPeriod: '1 Year',
+  regPeriodYears: 1,
   registrar: null,
   recurringAmount: 12.99,
   priceCurrency: 'USD',

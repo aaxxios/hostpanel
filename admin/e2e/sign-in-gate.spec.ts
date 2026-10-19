@@ -4,6 +4,7 @@
  *
  * The API is stubbed at the network layer (`support/stubApi.ts`).
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { adminMe } from './fixtures/auth'
 import { json, stubApi } from './support/stubApi'
@@ -11,9 +12,9 @@ import { json, stubApi } from './support/stubApi'
 test('an SSO deployment shows the SSO button instead of the password form and redirects through the API', async ({ page }) => {
   const api = await stubApi(page, {
     routes: [
-      json('GET', '/api/auth/mode', { mode: 'sso' }),
+      json(HttpMethod.Get, '/api/auth/mode', { mode: 'sso' }),
       // The redirect endpoint the button navigates to; the stub stands in for the SSO hand-off.
-      json('GET', '/api/auth/login', {}),
+      json(HttpMethod.Get, '/api/auth/login', {}),
     ],
   })
 
@@ -23,10 +24,10 @@ test('an SSO deployment shows the SSO button instead of the password form and re
   await expect(page.getByTestId('login-email')).toHaveCount(0)
 
   await page.getByTestId('login-sso').click()
-  await expect.poll(() => api.callsTo('GET', '/api/auth/login').length).toBe(1)
+  await expect.poll(() => api.callsTo(HttpMethod.Get, '/api/auth/login').length).toBe(1)
 
   // The browser asks to come back to the page it left from.
-  const [redirect] = api.callsTo('GET', '/api/auth/login')
+  const [redirect] = api.callsTo(HttpMethod.Get, '/api/auth/login')
   expect(redirect?.search).toContain('returnTo=')
 })
 
@@ -37,21 +38,21 @@ test('signing out ends the session and returns to the login page', async ({ page
     signedIn: true,
     routes: [
       {
-        method: 'GET',
+        method: HttpMethod.Get,
         path: '/api/auth/me',
         respond: () => (signedIn
           ? { body: adminMe }
           : { status: 401, body: { type: 'auth.unauthenticated', title: 'Unauthorized', status: 401 } }),
       },
       {
-        method: 'DELETE',
+        method: HttpMethod.Delete,
         path: '/api/auth/logout',
         respond: () => {
           signedIn = false
           return { body: { success: true } }
         },
       },
-      json('GET', '/api/admin/dashboard/stats', {
+      json(HttpMethod.Get, '/api/admin/dashboard/stats', {
         totalRevenue: 0,
         monthlyRevenue: 0,
         activeServices: 0,
@@ -69,5 +70,5 @@ test('signing out ends the session and returns to the login page', async ({ page
 
   await page.waitForURL('**/login')
   await expect(page.getByTestId('login-email')).toBeVisible()
-  expect(api.callsTo('DELETE', '/api/auth/logout')).toHaveLength(1)
+  expect(api.callsTo(HttpMethod.Delete, '/api/auth/logout')).toHaveLength(1)
 })

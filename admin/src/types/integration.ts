@@ -10,6 +10,23 @@ export const IntegrationCategory = {
 /** Category grouping for an integration. */
 export type IntegrationCategory = (typeof IntegrationCategory)[keyof typeof IntegrationCategory]
 
+/** Closed set of the category names the API groups integrations under. */
+export const IntegrationCategoryName = {
+  /** Card and bank payment providers. */
+  PaymentGateways: 'Payment Gateways',
+  /** Domain registrars. */
+  DomainRegistrars: 'Domain Registrars',
+  /** Hosting and provisioning panels. */
+  Provisioning: 'Hosting / Provisioning',
+  /** Outgoing mail. */
+  Email: 'Email / SMTP',
+  /** Fraud screening. */
+  FraudProtection: 'Fraud Protection',
+} as const
+
+/** One of the {@link IntegrationCategoryName} values. */
+export type IntegrationCategoryName = (typeof IntegrationCategoryName)[keyof typeof IntegrationCategoryName]
+
 /** Closed set of integration slugs. */
 export const IntegrationSlug = {
   Stripe: 'stripe',
@@ -150,3 +167,40 @@ export const IntegrationFieldType = {
 
 /** One of the {@link IntegrationFieldType} values. */
 export type IntegrationFieldType = (typeof IntegrationFieldType)[keyof typeof IntegrationFieldType]
+
+/** Closed set of environments a payment integration runs against; the strings are what the API stores. */
+export const IntegrationMode = {
+  /** Real charges. */
+  Live: 'Live',
+  /** The provider's test environment. */
+  Test: 'Test',
+  /** The provider's sandbox environment. */
+  Sandbox: 'Sandbox',
+} as const
+
+/** One of the {@link IntegrationMode} values. */
+export type IntegrationMode = (typeof IntegrationMode)[keyof typeof IntegrationMode]
+
+/** Closed set of the answers of a yes/no integration field; the strings are what the API stores. */
+export const IntegrationYesNo = {
+  /** The option is on. */
+  Yes: 'Yes',
+  /** The option is off. */
+  No: 'No',
+} as const
+
+/** One of the {@link IntegrationYesNo} values. */
+export type IntegrationYesNo = (typeof IntegrationYesNo)[keyof typeof IntegrationYesNo]
+
+/** Closed set of mail transport encryptions; the strings are what the API stores. */
+export const IntegrationEncryption = {
+  /** Upgrade the connection with STARTTLS. */
+  Tls: 'TLS',
+  /** Encrypt from the first byte. */
+  Ssl: 'SSL',
+  /** Send in the clear. */
+  None: 'None',
+} as const
+
+/** One of the {@link IntegrationEncryption} values. */
+export type IntegrationEncryption = (typeof IntegrationEncryption)[keyof typeof IntegrationEncryption]

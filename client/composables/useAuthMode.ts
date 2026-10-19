@@ -4,6 +4,7 @@
  * @module composables/useAuthMode
  */
 
+import { CLIENT_LOGIN_PATH, SSO_AUTHORIZE_PATH } from '~/constants/clientRoutes'
 import { AuthMode } from '~/types/authmode'
 
 /**
@@ -13,7 +14,7 @@ import { AuthMode } from '~/types/authmode'
  * hostpanel ships two authentication paths and a deployment runs exactly one of
  * them:
  *
- * - `sso`   — Innovayse SSO is the identity provider. Signing in means starting
+ * - `sso`   — the single sign-on service is the identity provider. Signing in means starting
  *             the OIDC code flow at `/api/portal/auth/sso/authorize`, a Nitro
  *             route that mints PKCE state and redirects the browser on to
  *             `SSO_PUBLIC_URL/connect/authorize`. The local form is never used.
@@ -36,7 +37,7 @@ export const useAuthMode = () => {
 
   /**
    * Active authentication mode. Falls back to `sso`, which is what
-   * `nuxt.config.ts` defaults to and what every Innovayse-operated tier runs;
+   * `nuxt.config.ts` defaults to and what every hosted tier runs;
    * a standalone install sets `AUTH_MODE=local`.
    */
   const mode = computed<string>(() => (config.public.authMode as string) || AuthMode.Sso)
@@ -57,7 +58,7 @@ export const useAuthMode = () => {
    * Under `local` it is the localised `/client/login` page.
    */
   const signInHref = computed<string>(() =>
-    isSso.value ? '/api/portal/auth/sso/authorize' : localePath('/client/login'))
+    isSso.value ? SSO_AUTHORIZE_PATH : localePath(CLIENT_LOGIN_PATH))
 
   return { mode, isSso, signInHref }
 }

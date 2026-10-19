@@ -8,6 +8,7 @@
  */
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import { useRoute, useRouter } from 'vue-router'
 import OrderFact from '@/components/orders/OrderFact.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
@@ -37,8 +38,14 @@ import { formatMoney } from '@/lib/money'
 import { invoiceStatusTone, orderItemStatusTone, orderStatusTone, statusLabel } from '@/lib/tones'
 import { OrderStatus } from '@/types/order'
 import { useOrdersStore } from '@/stores/orders'
+import { AppRoute, clientPath, invoicePath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { clientLabel } = useFallbackLabels()
 
 const route = useRoute()
 const router = useRouter()
@@ -85,7 +92,7 @@ const handleDelete = async (): Promise<void> => {
   const deleted = await store.deleteOrder(orderId())
   showDeleteConfirm.value = false
   if (deleted) {
-    await router.push('/orders')
+    await router.push(AppRoute.Orders)
   }
 }
 
@@ -101,7 +108,7 @@ onMounted(async () => {
 
 <template>
   <UiStack>
-    <UiLink variant="link" to="/orders" data-testid="order-back">
+    <UiLink variant="link" :to="AppRoute.Orders" data-testid="order-back">
       <UiIcon :markup="Icon.Back" size="sm" />
       {{ t('orders.orderDetail.backToOrders') }}
     </UiLink>
@@ -172,8 +179,8 @@ onMounted(async () => {
               {{ t('orders.orderDetail.orderInfo') }}
             </UiHeading>
             <OrderFact :label="t('shared.client')">
-              <UiLink variant="link" :to="`/clients/${store.currentOrder.clientId}`" data-testid="order-client">
-                {{ store.currentOrder.clientName }}
+              <UiLink variant="link" :to="clientPath(store.currentOrder.clientId)" data-testid="order-client">
+                {{ clientLabel(store.currentOrder.clientName, store.currentOrder.clientId) }}
               </UiLink>
             </OrderFact>
             <OrderFact :label="t('shared.paymentMethod')">
@@ -195,7 +202,7 @@ onMounted(async () => {
             </UiHeading>
             <template v-if="store.currentOrder.invoiceId">
               <OrderFact :label="t('shared.invoiceId')">
-                <UiLink variant="link" :to="`/billing/${store.currentOrder.invoiceId}`" data-testid="order-invoice-link">
+                <UiLink variant="link" :to="invoicePath(store.currentOrder.invoiceId)" data-testid="order-invoice-link">
                   #{{ store.currentOrder.invoiceId }}
                 </UiLink>
               </OrderFact>

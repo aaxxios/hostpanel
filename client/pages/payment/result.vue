@@ -43,7 +43,7 @@
         <AlertTriangle :size="48" class="mx-auto text-yellow-600 dark:text-yellow-400 mb-4" />
         <UiHeading :level="1" size="subsection" class="text-xl mb-2" data-testid="payment-title">{{ $t('paymentResult.missingTitle') }}</UiHeading>
         <UiText tone="muted" class="mb-8">{{ $t('paymentResult.missingBody') }}</UiText>
-        <UiButton variant="subtle" size="lg" :to="localePath('/client/invoices')" class="font-bold" data-testid="payment-invoices">
+        <UiButton variant="subtle" size="lg" :to="localePath(CLIENT_INVOICES_PATH)" class="font-bold" data-testid="payment-invoices">
           {{ $t('paymentResult.viewInvoices') }}
         </UiButton>
       </template>
@@ -71,9 +71,11 @@
  * authenticated) and verifies the payment against the backend, which pulls the
  * authoritative status from the bank.
  */
+import { CLIENT_INVOICES_PATH, clientInvoicePayPath, clientOrderSuccessPath } from '~/constants/clientRoutes'
 import { AlertTriangle, CheckCircle2, Clock, Loader2, XCircle } from 'lucide-vue-next'
 import { useInvoicePaymentStore } from '~/stores/invoicepayment'
 import { GatewayPaymentState } from '~/types/gatewaypaymentstate'
+import { PaymentTarget } from '~/types/paymenttarget'
 
 /** The current route. */
 const route = useRoute()
@@ -107,19 +109,19 @@ const checking = ref(false)
 /** Where the primary button leads after a successful payment. */
 const continueTarget = computed(() =>
   orderId.value
-    ? localePath(`/client/order-success?order=ORD-${String(orderId.value).padStart(4, '0')}`)
-    : localePath(`/client/invoices/${invoiceId.value}`))
+    ? localePath(clientOrderSuccessPath(`ORD-${String(orderId.value).padStart(4, '0')}`))
+    : localePath(`${CLIENT_INVOICES_PATH}/${invoiceId.value}`))
 
 /** Where to send the payer to retry after a declined payment. */
 const retryTarget = computed(() =>
-  invoiceId.value ? localePath(`/client/invoices/${invoiceId.value}/pay`) : localePath('/cart'))
+  invoiceId.value ? localePath(clientInvoicePayPath(invoiceId.value)) : localePath('/cart'))
 
 /**
  * Where to send the payer from the unknown state to check on the order or invoice themselves: a
  * read-only view, not a "pay again" link, since we do not know whether the payment succeeded.
  */
 const statusTarget = computed(() =>
-  invoiceId.value ? localePath(`/client/invoices/${invoiceId.value}`) : localePath('/client/invoices'))
+  invoiceId.value ? localePath(`${CLIENT_INVOICES_PATH}/${invoiceId.value}`) : localePath(CLIENT_INVOICES_PATH))
 
 /** Calls the matching complete endpoint and updates the view state. */
 const check = async (): Promise<void> => {
@@ -127,7 +129,7 @@ const check = async (): Promise<void> => {
   // guarantee lives in another function and the compiler cannot carry it here, where the invoice
   // branch would otherwise post to `/invoices/undefined/gateway-payment/complete`. The check is
   // restated rather than asserted away so the two cannot drift apart.
-  const target = orderId.value ? 'order' : 'invoice'
+  const target = orderId.value ? PaymentTarget.Order : PaymentTarget.Invoice
   const id = orderId.value ?? invoiceId.value
   if (!id) {
     state.value = GatewayPaymentState.Missing
@@ -140,12 +142,12 @@ const check = async (): Promise<void> => {
   // none. A missing token is not special-cased: the request is made either way and the backend
   // answers as it would for an order that does not exist, the same answer it gives anyone
   // guessing at ids.
-  const paymentToken = target === 'order' ? recallPaymentToken(id) : undefined
+  const paymentToken = target === PaymentTarget.Order ? recallPaymentToken(id) : undefined
 
   checking.value = true
   const result = await paymentStore.verifyGatewayPayment(target, id, paymentToken)
   state.value = result
-  if (target === 'order' && result !== GatewayPaymentState.Pending && result !== GatewayPaymentState.Unknown) {
+  if (target === PaymentTarget.Order && result !== GatewayPaymentState.Pending && result !== GatewayPaymentState.Unknown) {
     // Settled one way or the other: the token has done its job and should not sit in the browser
     // afterwards. A pending payment keeps it so a retry can still verify, and so does an unknown
     // outcome: the store reports a failure to get an answer as `Unknown`, and the payer may need

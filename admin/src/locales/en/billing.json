@@ -106,7 +106,7 @@
     "activeRecurring": "Active Recurring",
     "completedRecurring": "Completed Recurring",
     "deleteItems": "Delete billable items",
-    "deleteItemsMessage": "Delete {count} selected billable items? This action cannot be undone."
+    "deleteItemsMessage": "Delete {count} selected billable item? This action cannot be undone. | Delete {count} selected billable items? This action cannot be undone."
   },
   "disputes": {
     "listDisputes": "List Disputes",
@@ -159,7 +159,7 @@
     "deleteInvoice": "Delete invoice",
     "deleteInvoiceMessage": "Delete invoice #{id}? This action cannot be undone.",
     "deleteInvoices": "Delete invoices",
-    "deleteInvoicesMessage": "Delete {count} selected invoices? This action cannot be undone."
+    "deleteInvoicesMessage": "Delete {count} selected invoice? This action cannot be undone. | Delete {count} selected invoices? This action cannot be undone."
   },
   "offlineCC": {
     "offlineCreditCardProcessing": "Offline Credit Card Processing",

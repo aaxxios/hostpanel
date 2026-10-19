@@ -76,7 +76,7 @@ public sealed class ListTransactionsHandler
 
         var dtos = items.Select(t => new TransactionDto(
             t.Id, t.ClientId,
-            clientMap.TryGetValue(t.ClientId, out var name) ? name : $"Client #{t.ClientId}",
+            clientMap.TryGetValue(t.ClientId, out var name) ? name : null,
             t.Date, t.Description, t.TransactionId,
             t.InvoiceId, t.PaymentMethod, t.AmountIn, t.AmountOut, t.Fees, t.AddedToCredit))
             .ToList();

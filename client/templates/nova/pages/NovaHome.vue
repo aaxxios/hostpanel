@@ -8,7 +8,7 @@
       @update:yearly="value => emit('update:yearly', value)"
     />
     <NovaComparisonTable :plans="plans" :rows="comparisonRows" />
-    <NovaWhyInnovayse />
+    <NovaWhyChooseUs />
     <NovaPerformance />
     <NovaSecurity />
     <NovaDashboard />
@@ -40,7 +40,7 @@ import NovaHero from '~/templates/nova/sections/NovaHero.vue'
 import NovaTrustBar from '~/templates/nova/sections/NovaTrustBar.vue'
 import NovaPricingSection from '~/templates/nova/sections/PricingSection.vue'
 import NovaComparisonTable from '~/templates/nova/sections/NovaComparisonTable.vue'
-import NovaWhyInnovayse from '~/templates/nova/sections/WhyInnovayse.vue'
+import NovaWhyChooseUs from '~/templates/nova/sections/WhyChooseUs.vue'
 import NovaPerformance from '~/templates/nova/sections/NovaPerformance.vue'
 import NovaSecurity from '~/templates/nova/sections/NovaSecurity.vue'
 import NovaDashboard from '~/templates/nova/sections/NovaDashboard.vue'

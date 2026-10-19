@@ -3,7 +3,7 @@
  * the back-to-top button.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, ref } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import LayoutFooter from '~/components/layout/LayoutFooter.vue'
@@ -34,6 +34,7 @@ describe('LayoutFooter', () => {
       'portal.social.facebook': 'https://facebook.test/p',
     }
     vi.stubGlobal('usePortalSettings', () => ({ get: (key: string) => settings[key] ?? '' }))
+    vi.stubGlobal('useContactDetails', () => ({ phone: ref('+1 555 010 200'), phoneLink: ref('+1555010200'), address: ref('') }))
   })
 
   it('renders the logo and the description', () => {
@@ -62,7 +63,21 @@ describe('LayoutFooter', () => {
     const wrapper = mountFooter()
 
     expect(wrapper.find('[data-testid="footer-email"]').attributes('href')).toBe('mailto:hello@portal.test')
-    expect(wrapper.find('[data-testid="footer-phone"]').attributes('href')).toBe('tel:+37433731673')
+    expect(wrapper.find('[data-testid="footer-phone"]').attributes('href')).toBe('tel:+1555010200')
+  })
+
+  it('shows the configured address and hides the row when there is none', () => {
+    vi.stubGlobal('useContactDetails', () => ({ phone: ref(''), phoneLink: ref(''), address: ref('1 Example Street') }))
+    expect(mountFooter().find('[data-testid="footer-address"]').text()).toBe('1 Example Street')
+
+    vi.stubGlobal('useContactDetails', () => ({ phone: ref(''), phoneLink: ref(''), address: ref('') }))
+    expect(mountFooter().find('[data-testid="footer-address"]').exists()).toBe(false)
+  })
+
+  it('hides the phone row when no phone is configured', () => {
+    vi.stubGlobal('useContactDetails', () => ({ phone: ref(''), phoneLink: ref('') }))
+
+    expect(mountFooter().find('[data-testid="footer-phone"]').exists()).toBe(false)
   })
 
   it('opens the social profiles in a new tab', () => {

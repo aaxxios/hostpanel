@@ -39,7 +39,7 @@ public sealed class GetQuoteHandler
             .AsNoTracking()
             .Where(c => c.Id == quote.ClientId)
             .Select(c => c.FirstName + " " + c.LastName)
-            .FirstOrDefaultAsync(ct) ?? "Unknown";
+            .FirstOrDefaultAsync(ct);
 
         var itemDtos = quote.Items
             .Select(item => new QuoteItemDto(

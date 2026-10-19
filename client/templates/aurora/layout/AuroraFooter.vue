@@ -125,6 +125,9 @@
  * shows a subscribe button that goes nowhere. Live chat is not duplicated here —
  * the layout already mounts UiFloatingActions.
  */
+import { PortalSettingKey } from '~/constants/portalSettingKey'
+import { TELEGRAM_LINK_BASE } from '~/constants/contactChannel'
+
 const { t } = useI18n()
 /** Prefixes a path with the active locale. */
 const localePath = useLocalePath()
@@ -134,15 +137,13 @@ const { get } = usePortalSettings()
 const { name: siteName } = useSiteIdentity()
 
 /** Subscribe endpoint of the newsletter provider; empty hides the block. */
-const newsletterUrl = computed(() => get('portal.newsletter.action_url', 'portalNewsletterUrl'))
-// Was a hard-coded support@innovayse.com — every self-hosted install published
-// this operator's address as its own. Hidden when unset, like the other channels.
+const newsletterUrl = computed(() => get(PortalSettingKey.NewsletterActionUrl, 'portalNewsletterUrl'))
 /** Public contact e-mail; empty hides it. */
-const contactEmail = computed(() => get('portal.contact.email', 'portalContactEmail'))
+const contactEmail = computed(() => get(PortalSettingKey.ContactEmail, 'portalContactEmail'))
 /** Public phone number; empty hides it. */
-const phone = computed(() => get('portal.contact.phone', 'portalContactPhone'))
+const phone = computed(() => get(PortalSettingKey.ContactPhone, 'portalContactPhone'))
 /** Legal tax identifier; empty hides it. */
-const taxId = computed(() => get('portal.legal.tax_id', 'portalLegalTaxId'))
+const taxId = computed(() => get(PortalSettingKey.LegalTaxId, 'portalLegalTaxId'))
 /** Current year for the copyright line. */
 const year = new Date().getFullYear()
 
@@ -151,8 +152,8 @@ const phoneHref = computed(() => `tel:${phone.value.replace(/[^0-9+]/g, '')}`)
 
 /** Telegram is stored as a handle, not a URL, because the chat actions need it that way. */
 const telegramUrl = computed(() => {
-  const handle = get('portal.contact.telegram', 'portalTelegram')
-  return handle ? `https://t.me/${handle}` : ''
+  const handle = get(PortalSettingKey.ContactTelegram, 'portalTelegram')
+  return handle ? `${TELEGRAM_LINK_BASE}${handle}` : ''
 })
 
 /**
@@ -161,11 +162,11 @@ const telegramUrl = computed(() => {
  * icons pointing at this project's own accounts.
  */
 const socials = computed(() => [
-  { tag: 'fb', name: 'Facebook', url: get('portal.social.facebook', 'portalSocialFacebook') },
-  { tag: 'ig', name: 'Instagram', url: get('portal.social.instagram', 'portalSocialInstagram') },
-  { tag: 'in', name: 'LinkedIn', url: get('portal.social.linkedin', 'portalSocialLinkedin') },
+  { tag: 'fb', name: 'Facebook', url: get(PortalSettingKey.SocialFacebook, 'portalSocialFacebook') },
+  { tag: 'ig', name: 'Instagram', url: get(PortalSettingKey.SocialInstagram, 'portalSocialInstagram') },
+  { tag: 'in', name: 'LinkedIn', url: get(PortalSettingKey.SocialLinkedin, 'portalSocialLinkedin') },
   { tag: 'tg', name: 'Telegram', url: telegramUrl.value },
-  { tag: 'yt', name: 'YouTube', url: get('portal.social.youtube', 'portalSocialYoutube') },
+  { tag: 'yt', name: 'YouTube', url: get(PortalSettingKey.SocialYoutube, 'portalSocialYoutube') },
 ].filter(entry => entry.url))
 
 /** What the visitor typed in the newsletter field. */

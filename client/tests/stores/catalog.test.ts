@@ -14,6 +14,7 @@ import { createPinia, setActivePinia } from 'pinia'
 /** The mocked catalogue endpoints, re-created for every test. */
 const api = {
   fetchProducts: vi.fn(),
+  fetchProductGroups: vi.fn(),
   fetchProductFeatures: vi.fn(),
   fetchSlides: vi.fn(),
   fetchCountries: vi.fn(),
@@ -129,6 +130,71 @@ describe('useCatalogStore.loadProducts', () => {
     await store.loadProducts()
 
     expect(store.domainProductId).toBe(9)
+  })
+})
+
+describe('useCatalogStore product families', () => {
+  /** The groups the API answers with: hosting, one family, an empty group and a switched-off one. */
+  const groups = [
+    { id: 3, name: 'Alpha Suite', isActive: true, productCount: 2 },
+    { id: 4, name: 'Beta Kit', isActive: true, productCount: 0 },
+    { id: 5, name: 'Gamma Tool', isActive: false, productCount: 1 },
+    { id: 1, name: 'Web Hosting', isActive: true, productCount: 3 },
+  ]
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    payer.code = 'USD'
+    Object.values(api).forEach(fn => fn.mockReset())
+  })
+
+  it('keeps the groups and leaves the sentence empty when the read succeeds', async () => {
+    api.fetchProductGroups.mockResolvedValue(groups)
+    const store = useCatalogStore()
+
+    await store.loadProductGroups()
+
+    expect(store.productGroups).toEqual(groups)
+    expect(store.error).toBe('')
+  })
+
+  it('shows only active, non-empty groups as families, with hosting first', async () => {
+    api.fetchProductGroups.mockResolvedValue(groups)
+    const store = useCatalogStore()
+
+    await store.loadProductGroups()
+
+    expect(store.familyGroups.map(group => group.id)).toEqual([1, 3])
+  })
+
+  it('reads the products of the family groups in the payer currency and keeps them', async () => {
+    api.fetchProductGroups.mockResolvedValue(groups)
+    api.fetchProducts.mockResolvedValue([{ id: 10, groupId: 3, name: 'Alpha Suite' }])
+    const store = useCatalogStore()
+
+    const products = await store.loadFamilies()
+
+    expect(api.fetchProducts).toHaveBeenCalledWith({ gids: '1,3', currency: 'USD' })
+    expect(products).toHaveLength(1)
+    expect(store.familyProducts).toEqual(products)
+  })
+
+  it('asks for no products while there is no family, so the endpoint is not asked for everything', async () => {
+    api.fetchProductGroups.mockResolvedValue([groups[1]])
+    const store = useCatalogStore()
+
+    expect(await store.loadFamilies()).toEqual([])
+    expect(api.fetchProducts).not.toHaveBeenCalled()
+    expect(store.familyProducts).toEqual([])
+  })
+
+  it('keeps the API sentence and no families when the groups cannot be read', async () => {
+    api.fetchProductGroups.mockRejectedValue(refusal)
+    const store = useCatalogStore()
+
+    expect(await store.loadFamilies()).toEqual([])
+    expect(store.productGroups).toEqual([])
+    expect(store.error).toBe('Catalogue unavailable.')
   })
 })
 

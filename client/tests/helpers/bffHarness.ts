@@ -109,6 +109,8 @@ vi.stubGlobal('sendRedirect', (event: FakeEvent, location: string) => {
 })
 vi.stubGlobal('createError', (options: Record<string, unknown>) =>
   Object.assign(new Error(String(options['statusMessage'] ?? '')), options))
+// The request's own origin, built from its `host` header (`localhost` when a test sends none).
+vi.stubGlobal('getRequestURL', (event: FakeEvent) => new URL(`http://${event.headers['host'] ?? 'localhost'}${event.path}`))
 vi.stubGlobal('getQuery', (event: FakeEvent) => event.query)
 vi.stubGlobal('setResponseHeaders', (event: FakeEvent, headers: Record<string, string>) => {
   Object.assign(event.responseHeaders, headers)
@@ -126,10 +128,11 @@ vi.stubGlobal('REFRESH_TOKEN_MAX_AGE', 60)
 vi.stubGlobal('authCookieMaxAge', (await import('~/server/utils/auth-cookie')).authCookieMaxAge)
 vi.stubGlobal('useRuntimeConfig', () => runtimeConfig)
 
-const { internalApiCall } = await import('~/server/utils/api')
+const { getApiUrl, internalApiCall } = await import('~/server/utils/api')
 const { requireRouteParam } = await import('~/server/utils/requireRouteParam')
 
 vi.stubGlobal('internalApiCall', internalApiCall)
+vi.stubGlobal('getApiUrl', getApiUrl)
 vi.stubGlobal('requireRouteParam', requireRouteParam)
 
 /**
@@ -165,10 +168,10 @@ export const startBackend = async (handler?: (request: StubRequest) => StubReply
 /**
  * Runs a route's handler and returns what it threw instead of failing the test.
  *
- * @param run - Invokes the handler.
+ * @param run - Invokes the handler; a synchronous handler throws from the call itself.
  * @returns The thrown error as a plain record; fails when nothing was thrown.
  */
-export const refusal = async (run: () => Promise<unknown>): Promise<Record<string, unknown>> => {
+export const refusal = async (run: () => unknown): Promise<Record<string, unknown>> => {
   try {
     await run()
   } catch (error) {
@@ -179,8 +182,8 @@ export const refusal = async (run: () => Promise<unknown>): Promise<Record<strin
 
 /** The shape of a route module: its default export is the handler. */
 export interface RouteModule {
-  /** The route's event handler. */
-  default: (event: H3Event) => Promise<unknown>
+  /** The route's event handler; a handler with nothing to await answers synchronously. */
+  default: (event: H3Event) => unknown
 }
 
 /** The shape of a Nitro middleware module: its default export may answer synchronously with nothing. */

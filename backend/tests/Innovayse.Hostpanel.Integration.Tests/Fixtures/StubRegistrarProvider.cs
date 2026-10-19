@@ -95,8 +95,8 @@ internal sealed class StubRegistrarProvider : IRegistrarProvider
 
     /// <summary>The registrant contact the stub answers with for every name outside <see cref="NoContactSuffix"/>.</summary>
     public static readonly DomainContact StubContact = new(
-        "Stub", "Registrant", "Stub Org", "registrant@example.test", "+37400000000",
-        "1 Registry St", null, "Yerevan", "Yerevan", "0001", "AM");
+        "Stub", "Registrant", "Stub Org", "registrant@example.test", "+15550100",
+        "1 Registry St", null, "Springfield", "Springfield", "00100", "US");
 
     /// <inheritdoc/>
     public Task<DomainContact?> GetContactDetailsAsync(string domainName, CancellationToken ct)

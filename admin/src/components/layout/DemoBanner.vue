@@ -12,15 +12,13 @@ import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { MS_PER_MINUTE } from '@/lib/limits'
 
 /** Translation function. */
 const { t } = useI18n()
 
 /** Demo store: whether demo mode is on and when the data resets. */
 const demo = useDemoStore()
-
-/** Milliseconds per minute. */
-const MINUTE_MS = 60_000
 
 /** Current time in epoch milliseconds, refreshed every minute so the countdown moves. */
 const now = ref(Date.now())
@@ -32,7 +30,7 @@ let timer: ReturnType<typeof setInterval> | undefined
 onMounted(() => {
   timer = setInterval(() => {
     now.value = Date.now()
-  }, MINUTE_MS)
+  }, MS_PER_MINUTE)
 })
 
 /** Stops the minute tick. */
@@ -51,7 +49,7 @@ const minutesLeft = computed<number | null>(() => {
   if (Number.isNaN(target)) {
     return null
   }
-  return Math.max(0, Math.ceil((target - now.value) / MINUTE_MS))
+  return Math.max(0, Math.ceil((target - now.value) / MS_PER_MINUTE))
 })
 
 /** Reloads the demo description once the countdown hits zero, so the next reset time replaces the stale one. */

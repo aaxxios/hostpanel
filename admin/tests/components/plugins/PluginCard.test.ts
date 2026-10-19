@@ -11,7 +11,7 @@ const plugin = {
   id: 'ineco',
   name: 'Ineco Pay',
   version: '1.2.0',
-  author: 'Innovayse',
+  author: 'Hostpanel',
   description: 'Card payments',
   type: 'payment',
   category: 'Payments',

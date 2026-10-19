@@ -4,7 +4,9 @@
  * @module plugins/live-chat
  */
 
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import type { Ref } from 'vue'
+import { ChatProvider } from '~/types/chatprovider'
 import { AppLocale } from '~/types/applocale'
 import {
   LIVE_CHAT_HOLDER_SELECTOR,
@@ -49,20 +51,20 @@ export default defineNuxtPlugin({
 
     /** True when the operator selected a supported chat provider. */
     const enabled = computed(() => {
-      const provider = get('portal.chat.provider', 'portalChatProvider').toLowerCase()
-      return provider === 'chatwoot' || provider === 'innochat'
+      const provider = get(PortalSettingKey.ChatProvider, 'portalChatProvider').toLowerCase()
+      return provider === ChatProvider.LegacyChat || provider === ChatProvider.Innochat
     })
     /** The chat server's base URL. */
-    const baseUrl = computed(() => get('portal.chat.base_url', 'portalChatBaseUrl'))
+    const baseUrl = computed(() => get(PortalSettingKey.ChatBaseUrl, 'portalChatBaseUrl'))
 
     /** The token for the current locale, falling back to the default one. */
     const token = computed(() => {
       const perLocale = locale.value === AppLocale.Ru
-        ? get('portal.chat.website_token.ru', 'portalChatWebsiteTokenRu')
+        ? get(PortalSettingKey.ChatWebsiteTokenRu, 'portalChatWebsiteTokenRu')
         : locale.value === AppLocale.Hy
-          ? get('portal.chat.website_token.hy', 'portalChatWebsiteTokenHy')
+          ? get(PortalSettingKey.ChatWebsiteTokenHy, 'portalChatWebsiteTokenHy')
           : ''
-      return perLocale || get('portal.chat.website_token', 'portalChatWebsiteToken')
+      return perLocale || get(PortalSettingKey.ChatWebsiteToken, 'portalChatWebsiteToken')
     })
 
     /** True when provider, server and token are all set. */

@@ -1,12 +1,13 @@
 using Innovayse.Hostpanel.Domain.Products.Enums;
+
 namespace Innovayse.Hostpanel.Application.Services.Queries.GetService;
 
 /// <summary>Detailed service DTO for admin detail views, including all editable and read-only fields.</summary>
 /// <param name="Id">Primary key of the client service.</param>
 /// <param name="ClientId">FK to the owning client.</param>
-/// <param name="ClientName">Full name of the owning client.</param>
+/// <param name="ClientName">Full name of the owning client. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="ProductId">FK to the ordered product.</param>
-/// <param name="ProductName">Denormalized product display name.</param>
+/// <param name="ProductName">Denormalized product display name. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="Domain">Linked domain name, or <see langword="null"/> if no domain is linked.</param>
 /// <param name="DedicatedIp">Dedicated IP address.</param>
 /// <param name="Username">Hosting account username.</param>
@@ -35,9 +36,9 @@ namespace Innovayse.Hostpanel.Application.Services.Queries.GetService;
 public record ServiceDetailDto(
     int Id,
     int ClientId,
-    string ClientName,
+    string? ClientName,
     int ProductId,
-    string ProductName,
+    string? ProductName,
     string? Domain,
     string? DedicatedIp,
     string? Username,

@@ -18,6 +18,8 @@ import type {
   InvoiceRefundPayload,
 } from '@/types/invoice'
 import type { PagedResult } from '@/types/pagedresult'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/api/billing` invoices.
@@ -36,7 +38,7 @@ export const useInvoicesApi = () => {
    * @returns One page of invoices.
    */
   const list = (page: number, pageSize: number, filters: InvoiceFilters = {}): Promise<PagedResult<Invoice>> =>
-    request<PagedResult<Invoice>>(`/billing${buildQuery({ page, pageSize, ...filters })}`)
+    request<PagedResult<Invoice>>(`${ApiPath.Billing}${buildQuery({ page, pageSize, ...filters })}`)
 
   /**
    * Lists the invoices of one client.
@@ -53,7 +55,7 @@ export const useInvoicesApi = () => {
     pageSize: number,
     filters: InvoiceFilters = {},
   ): Promise<PagedResult<Invoice>> =>
-    request<PagedResult<Invoice>>(`/billing/client/${clientId}${buildQuery({ page, pageSize, ...filters })}`)
+    request<PagedResult<Invoice>>(`${ApiPath.Billing}/client/${clientId}${buildQuery({ page, pageSize, ...filters })}`)
 
   /**
    * Loads one invoice with its lines and transactions.
@@ -61,7 +63,7 @@ export const useInvoicesApi = () => {
    * @param id - The invoice id.
    * @returns The invoice.
    */
-  const get = (id: number): Promise<Invoice> => request<Invoice>(`/billing/${id}`)
+  const get = (id: number): Promise<Invoice> => request<Invoice>(`${ApiPath.Billing}/${id}`)
 
   /**
    * Creates an invoice for a client.
@@ -70,7 +72,7 @@ export const useInvoicesApi = () => {
    * @returns The new invoice id.
    */
   const create = (payload: CreateInvoicePayload): Promise<CreatedId> =>
-    request<CreatedId>('/billing', { method: 'POST', body: JSON.stringify(payload) })
+    request<CreatedId>(ApiPath.Billing, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Replaces the line items of an invoice.
@@ -80,7 +82,7 @@ export const useInvoicesApi = () => {
    * @returns Nothing.
    */
   const updateItems = (id: number, items: InvoiceItemUpdate[]): Promise<void> =>
-    request<void>(`/billing/${id}/items`, { method: 'PUT', body: JSON.stringify({ items }) })
+    request<void>(`${ApiPath.Billing}/${id}/items`, { method: HttpMethod.Put, body: JSON.stringify({ items }) })
 
   /**
    * Updates dates, payment method and tax rate.
@@ -90,7 +92,7 @@ export const useInvoicesApi = () => {
    * @returns Nothing.
    */
   const updateOptions = (id: number, options: InvoiceOptionsPayload): Promise<void> =>
-    request<void>(`/billing/${id}/options`, { method: 'PUT', body: JSON.stringify(options) })
+    request<void>(`${ApiPath.Billing}/${id}/options`, { method: HttpMethod.Put, body: JSON.stringify(options) })
 
   /**
    * Updates the admin notes.
@@ -100,7 +102,7 @@ export const useInvoicesApi = () => {
    * @returns Nothing.
    */
   const updateNotes = (id: number, notes: string): Promise<void> =>
-    request<void>(`/billing/${id}/notes`, { method: 'PUT', body: JSON.stringify({ notes }) })
+    request<void>(`${ApiPath.Billing}/${id}/notes`, { method: HttpMethod.Put, body: JSON.stringify({ notes }) })
 
   /**
    * Publishes a draft invoice (Draft to Unpaid).
@@ -108,7 +110,7 @@ export const useInvoicesApi = () => {
    * @param id - The invoice id.
    * @returns Nothing.
    */
-  const publish = (id: number): Promise<void> => request<void>(`/billing/${id}/publish`, { method: 'POST' })
+  const publish = (id: number): Promise<void> => request<void>(`${ApiPath.Billing}/${id}/publish`, { method: HttpMethod.Post })
 
   /**
    * Attempts to capture payment through the configured gateway.
@@ -118,7 +120,7 @@ export const useInvoicesApi = () => {
    * @returns Nothing.
    */
   const pay = (id: number, currency: string): Promise<void> =>
-    request<void>(`/billing/${id}/pay`, { method: 'POST', body: JSON.stringify({ currency }) })
+    request<void>(`${ApiPath.Billing}/${id}/pay`, { method: HttpMethod.Post, body: JSON.stringify({ currency }) })
 
   /**
    * Cancels an invoice.
@@ -126,7 +128,7 @@ export const useInvoicesApi = () => {
    * @param id - The invoice id.
    * @returns Nothing.
    */
-  const cancel = (id: number): Promise<void> => request<void>(`/billing/${id}/cancel`, { method: 'POST' })
+  const cancel = (id: number): Promise<void> => request<void>(`${ApiPath.Billing}/${id}/cancel`, { method: HttpMethod.Post })
 
   /**
    * Records a payment against an invoice.
@@ -136,7 +138,7 @@ export const useInvoicesApi = () => {
    * @returns Nothing.
    */
   const addPayment = (id: number, payment: InvoicePaymentPayload): Promise<void> =>
-    request<void>(`/billing/${id}/payment`, { method: 'POST', body: JSON.stringify(payment) })
+    request<void>(`${ApiPath.Billing}/${id}/payment`, { method: HttpMethod.Post, body: JSON.stringify(payment) })
 
   /**
    * Applies client credit to an invoice.
@@ -146,7 +148,7 @@ export const useInvoicesApi = () => {
    * @returns Nothing.
    */
   const applyCredit = (id: number, amount: number): Promise<void> =>
-    request<void>(`/billing/${id}/credit`, { method: 'POST', body: JSON.stringify({ amount }) })
+    request<void>(`${ApiPath.Billing}/${id}/credit`, { method: HttpMethod.Post, body: JSON.stringify({ amount }) })
 
   /**
    * Removes applied credit from an invoice.
@@ -156,7 +158,7 @@ export const useInvoicesApi = () => {
    * @returns Nothing.
    */
   const removeCredit = (id: number, amount: number): Promise<void> =>
-    request<void>(`/billing/${id}/credit/remove`, { method: 'POST', body: JSON.stringify({ amount }) })
+    request<void>(`${ApiPath.Billing}/${id}/credit/remove`, { method: HttpMethod.Post, body: JSON.stringify({ amount }) })
 
   /**
    * Refunds a payment transaction.
@@ -166,7 +168,7 @@ export const useInvoicesApi = () => {
    * @returns Nothing.
    */
   const refund = (id: number, payload: InvoiceRefundPayload): Promise<void> =>
-    request<void>(`/billing/${id}/refund`, { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Billing}/${id}/refund`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Duplicates an invoice.
@@ -175,7 +177,7 @@ export const useInvoicesApi = () => {
    * @returns The new invoice id.
    */
   const duplicate = (id: number): Promise<CreatedId> =>
-    request<CreatedId>(`/billing/${id}/duplicate`, { method: 'POST' })
+    request<CreatedId>(`${ApiPath.Billing}/${id}/duplicate`, { method: HttpMethod.Post })
 
   /**
    * Deletes an invoice.
@@ -183,7 +185,7 @@ export const useInvoicesApi = () => {
    * @param id - The invoice id.
    * @returns Nothing.
    */
-  const remove = (id: number): Promise<void> => request<void>(`/billing/${id}`, { method: 'DELETE' })
+  const remove = (id: number): Promise<void> => request<void>(`${ApiPath.Billing}/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Applies one action to several invoices.
@@ -193,7 +195,7 @@ export const useInvoicesApi = () => {
    * @returns Nothing.
    */
   const bulk = (invoiceIds: number[], action: string): Promise<void> =>
-    request<void>('/billing/bulk', { method: 'POST', body: JSON.stringify({ invoiceIds, action }) })
+    request<void>(`${ApiPath.Billing}/bulk`, { method: HttpMethod.Post, body: JSON.stringify({ invoiceIds, action }) })
 
   return {
     list,

@@ -3,7 +3,7 @@
     <div class="max-w-[640px]">
       <NovaSectionHeader
         :eyebrow="t('nova.migration.eyebrow')"
-        :title="t('nova.migration.title')"
+        :title="t('nova.migration.title', { site: siteName })"
         :lead="t('nova.migration.lead')"
       >
         <template #badge>
@@ -57,16 +57,20 @@
  * assistive technology, which gets the ordering from the list itself.
  */
 import NovaCta from '~/templates/nova/sections/NovaCta.vue'
+import { SETTING_ON } from '~/constants/settingValue'
 import NovaSectionHeader from '~/templates/nova/sections/NovaSectionHeader.vue'
 import { MIGRATION_FREE_SETTING, MIGRATION_STEPS } from '~/templates/nova/content'
 
 /** Translator for the copy. */
 const { t } = useI18n()
+
+/** Operator-set site name that the copy interpolates as `{site}`. */
+const { name: siteName } = useSiteIdentity()
 /** Prefixes a route with the active locale. */
 const localePath = useLocalePath()
 /** Reads the operator settings. */
 const { get } = usePortalSettings()
 
 /** Whether the operator has switched the "free migration" badge on. */
-const freeMigration = computed(() => get(MIGRATION_FREE_SETTING[0], MIGRATION_FREE_SETTING[1]) === 'true')
+const freeMigration = computed(() => get(MIGRATION_FREE_SETTING, '') === SETTING_ON)
 </script>

@@ -88,5 +88,8 @@
   "fillType": {
     "leastFull": "Ավելացնել ամենաքիչ լցված սերվերին",
     "fillUntilFull": "Լցնել ակտիվ սերվերը մինչև լրիվ լինելը, ապա անցնել հաջորդին"
+  },
+  "moduleLabels": {
+    "wordPressHosting": "Innovayse WordPress Hosting"
   }
 }

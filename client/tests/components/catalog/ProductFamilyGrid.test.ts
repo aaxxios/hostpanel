@@ -15,12 +15,12 @@ import type { ProductFamily } from '~/types/productfamily'
  * @returns The family.
  */
 const family = (overrides: Partial<ProductFamily> = {}): ProductFamily => ({
-  id: 'smartlearn-system',
+  id: 'alpha-suite',
   gid: 3,
   icon: 'school',
   color: '#8b5cf6',
-  learnMoreUrl: '/products/smartlearn-system',
-  name: 'SmartLearn System',
+  learnMoreUrl: '/products/alpha-suite',
+  name: 'Alpha Suite',
   tagline: '',
   description: 'Learn online',
   features: ['One', 'Two', 'Three', 'Four'],
@@ -34,7 +34,7 @@ describe('ProductFamilyGrid', () => {
   })
 
   it('renders a shortcut and a card for every family', () => {
-    const wrapper = mountWithKit(ProductFamilyGrid, { props: { products: [family(), family({ id: 'taskero', name: 'Taskero' })] } })
+    const wrapper = mountWithKit(ProductFamilyGrid, { props: { products: [family(), family({ id: 'gamma-tool', name: 'Gamma Tool' })] } })
 
     expect(wrapper.findAll('[data-testid^="product-nav-"]')).toHaveLength(2)
     expect(wrapper.findAll('[data-testid^="product-card-"]')).toHaveLength(2)
@@ -42,11 +42,11 @@ describe('ProductFamilyGrid', () => {
 
   it('links a family to its learn-more page, or to its detail page when it has none', () => {
     const wrapper = mountWithKit(ProductFamilyGrid, {
-      props: { products: [family(), family({ id: 'taskero', name: 'Taskero', learnMoreUrl: '' })] },
+      props: { products: [family(), family({ id: 'gamma-tool', name: 'Gamma Tool', learnMoreUrl: '' })] },
     })
 
-    expect(wrapper.find('[data-testid="product-link-smartlearn-system"]').attributes('href')).toBe('/en/products/smartlearn-system')
-    expect(wrapper.find('[data-testid="product-link-taskero"]').attributes('href')).toBe('/en/products/taskero')
+    expect(wrapper.find('[data-testid="product-link-alpha-suite"]').attributes('href')).toBe('/en/products/alpha-suite')
+    expect(wrapper.find('[data-testid="product-link-gamma-tool"]').attributes('href')).toBe('/en/products/gamma-tool')
   })
 
   it('paints each card in its family accent colour', () => {
@@ -61,7 +61,7 @@ describe('ProductFamilyGrid', () => {
       props: { products: [family(), family({ id: 'domains', name: 'Domains', tagline: 'Find yours', features: [] })] },
     })
 
-    const first = wrapper.find('[data-testid="product-card-smartlearn-system"]')
+    const first = wrapper.find('[data-testid="product-card-alpha-suite"]')
     expect(first.text()).toContain('Three')
     expect(first.text()).not.toContain('Four')
     expect(first.text()).not.toContain('Find yours')

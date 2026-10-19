@@ -14,6 +14,8 @@ import type {
   ServiceListItem,
   UpdateServicePayload,
 } from '@/types/service'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/services` and `/provisioning`.
@@ -31,7 +33,7 @@ export const useServicesApi = () => {
    */
   const listServices = (filter: ServiceFilter): Promise<PagedResult<ServiceListItem>> =>
     request<PagedResult<ServiceListItem>>(
-      `/services${buildQuery({ clientId: filter.clientId, page: filter.page, pageSize: filter.pageSize })}`,
+      `${ApiPath.Services}${buildQuery({ clientId: filter.clientId, page: filter.page, pageSize: filter.pageSize })}`,
     )
 
   /**
@@ -40,7 +42,7 @@ export const useServicesApi = () => {
    * @param id - Service id.
    * @returns The service detail.
    */
-  const getService = (id: number | string): Promise<ServiceDetail> => request<ServiceDetail>(`/services/${id}`)
+  const getService = (id: number | string): Promise<ServiceDetail> => request<ServiceDetail>(`${ApiPath.Services}/${id}`)
 
   /**
    * Saves the editable fields of a service.
@@ -50,7 +52,7 @@ export const useServicesApi = () => {
    * @returns Nothing.
    */
   const updateService = (id: number | string, payload: UpdateServicePayload): Promise<void> =>
-    request<void>(`/services/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Services}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Asks the provisioning server for a one-time control-panel login URL.
@@ -59,7 +61,7 @@ export const useServicesApi = () => {
    * @returns The URL.
    */
   const getPanelLoginUrl = (id: number | string): Promise<{ url: string }> =>
-    request<{ url: string }>(`/provisioning/${id}/cpanel-sso`)
+    request<{ url: string }>(`${ApiPath.Provisioning}/${id}/cpanel-sso`)
 
   /**
    * Provisions a pending service.
@@ -68,7 +70,7 @@ export const useServicesApi = () => {
    * @returns Nothing.
    */
   const provisionService = (id: number | string): Promise<void> =>
-    request<void>(`/provisioning/${id}/provision`, { method: 'POST' })
+    request<void>(`${ApiPath.Provisioning}/${id}/provision`, { method: HttpMethod.Post })
 
   /**
    * Changes the hosting account password.
@@ -78,7 +80,7 @@ export const useServicesApi = () => {
    * @returns Nothing.
    */
   const changePassword = (id: number | string, newPassword: string): Promise<void> =>
-    request<void>(`/provisioning/${id}/change-password`, { method: 'POST', body: JSON.stringify({ newPassword }) })
+    request<void>(`${ApiPath.Provisioning}/${id}/change-password`, { method: HttpMethod.Post, body: JSON.stringify({ newPassword }) })
 
   /**
    * Changes the hosting package.
@@ -88,7 +90,7 @@ export const useServicesApi = () => {
    * @returns Nothing.
    */
   const changePackage = (id: number | string, newPackage: string): Promise<void> =>
-    request<void>(`/provisioning/${id}/change-package`, { method: 'POST', body: JSON.stringify({ newPackage }) })
+    request<void>(`${ApiPath.Provisioning}/${id}/change-package`, { method: HttpMethod.Post, body: JSON.stringify({ newPackage }) })
 
   /**
    * Suspends a service.
@@ -98,7 +100,7 @@ export const useServicesApi = () => {
    * @returns Nothing.
    */
   const suspendService = (id: number | string, payload: ProvisioningReasonPayload): Promise<void> =>
-    request<void>(`/provisioning/${id}/suspend`, { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Provisioning}/${id}/suspend`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Unsuspends a service.
@@ -107,7 +109,7 @@ export const useServicesApi = () => {
    * @returns Nothing.
    */
   const unsuspendService = (id: number | string): Promise<void> =>
-    request<void>(`/provisioning/${id}/unsuspend`, { method: 'POST' })
+    request<void>(`${ApiPath.Provisioning}/${id}/unsuspend`, { method: HttpMethod.Post })
 
   /**
    * Terminates a service.
@@ -117,7 +119,7 @@ export const useServicesApi = () => {
    * @returns Nothing.
    */
   const terminateService = (id: number | string, payload: ProvisioningReasonPayload): Promise<void> =>
-    request<void>(`/provisioning/${id}/terminate`, { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Provisioning}/${id}/terminate`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   return {
     listServices, getService, updateService, getPanelLoginUrl,

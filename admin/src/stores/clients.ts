@@ -17,9 +17,7 @@ import type { ClientOption } from '@/types/clientoption'
 import type { UserSearchHit } from '@/types/clientuser'
 import type { CountryOption } from '@/types/countryoption'
 import type { CurrencyOption } from '@/types/currencyoption'
-
-/** Number of clients a picker offers. */
-const OPTIONS_PAGE_SIZE = 100
+import { DEFAULT_PAGE_SIZE, LOOKUP_PAGE_SIZE } from '@/lib/limits'
 
 /** Number of suggestions a search box offers. */
 const SUGGESTION_COUNT = 10
@@ -38,7 +36,7 @@ export const useClientsStore = defineStore('clients', () => {
   const page = ref(1)
 
   /** Items per page. */
-  const pageSize = ref(20)
+  const pageSize = ref(DEFAULT_PAGE_SIZE)
 
   /** Currently viewed client detail, null until loaded. */
   const current = ref<ClientDetail | null>(null)
@@ -147,7 +145,7 @@ export const useClientsStore = defineStore('clients', () => {
    * @returns The options; an empty list when the call failed (see `error`).
    */
   const fetchClientOptions = async (): Promise<ClientOption[]> => {
-    const result = await runAction(error, () => api.list(1, OPTIONS_PAGE_SIZE))
+    const result = await runAction(error, () => api.list(1, LOOKUP_PAGE_SIZE))
     if (!result.ok) {
       return []
     }

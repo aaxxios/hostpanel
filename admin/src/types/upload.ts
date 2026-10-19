@@ -17,8 +17,33 @@ export const BrandingImageKind = {
 /** One of the {@link BrandingImageKind} values. */
 export type BrandingImageKind = (typeof BrandingImageKind)[keyof typeof BrandingImageKind]
 
-/** The answer of an upload endpoint. */
+/** Content areas that own an image upload endpoint under the scope name. */
+export const ImageUploadScope = {
+  /** Homepage slides. */
+  Slides: 'slides',
+  /** Storefront content: testimonial avatars, partner logos, project pictures. */
+  Storefront: 'storefront',
+} as const
+
+/** One of the {@link ImageUploadScope} values. */
+export type ImageUploadScope = (typeof ImageUploadScope)[keyof typeof ImageUploadScope]
+
+/** One stored rendition of an uploaded image. */
+export interface UploadedAsset {
+  /** Public URL the rendition is served from. */
+  url: string
+  /** MIME type of the rendition. */
+  contentType: string
+  /** Edge length in pixels of a square rendition; null when the format has no fixed size. */
+  pixelSize: number | null
+  /** What the rendition is used for (the backend role name, e.g. Primary or Icon). */
+  role: string
+}
+
+/** The answer of an upload endpoint (200). */
 export interface UploadedImage {
   /** Public URL the stored image is served from. */
   url: string
+  /** Every rendition stored for the image (the original and any generated sizes). */
+  assets: UploadedAsset[]
 }

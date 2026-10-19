@@ -586,4 +586,40 @@
   <data name="BACKCHANNEL_LOGOUT_UNAUTHORIZED" xml:space="preserve">
     <value>Ключ выхода отсутствует или неверен.</value>
   </data>
+  <data name="TESTIMONIAL_NOT_FOUND" xml:space="preserve">
+    <value>Такого отзыва нет.</value>
+  </data>
+  <data name="PARTNER_NOT_FOUND" xml:space="preserve">
+    <value>Такого партнёра нет.</value>
+  </data>
+  <data name="PROJECT_NOT_FOUND" xml:space="preserve">
+    <value>Такого проекта нет.</value>
+  </data>
+  <data name="FAQ_NOT_FOUND" xml:space="preserve">
+    <value>Такого вопроса нет.</value>
+  </data>
+  <data name="PROJECT_SLUG_EXISTS" xml:space="preserve">
+    <value>Этот идентификатор уже занят другим проектом. Выберите другой.</value>
+  </data>
+  <data name="FAQ_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>Порядок сортировки вопроса не может быть отрицательным.</value>
+  </data>
+  <data name="PARTNER_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>Порядок сортировки партнёра не может быть отрицательным.</value>
+  </data>
+  <data name="PROJECT_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>Порядок сортировки проекта не может быть отрицательным.</value>
+  </data>
+  <data name="PROJECT_SLUG_REQUIRED" xml:space="preserve">
+    <value>Проекту нужен идентификатор (slug).</value>
+  </data>
+  <data name="TESTIMONIAL_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>Порядок сортировки отзыва не может быть отрицательным.</value>
+  </data>
+  <data name="TESTIMONIAL_NAME_REQUIRED" xml:space="preserve">
+    <value>Отзыву нужно имя.</value>
+  </data>
+  <data name="TESTIMONIAL_RATING_OUT_OF_RANGE" xml:space="preserve">
+    <value>Оценка должна быть от 1 до 5.</value>
+  </data>
 </root>

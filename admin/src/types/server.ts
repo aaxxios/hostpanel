@@ -185,7 +185,7 @@ export interface ServerGroupPayload {
   serverIds: number[]
 }
 
-/** Human-readable labels for each module. */
+/** Human-readable labels for each module; product names stay as they are, the in-house hosting product is read from the catalogue. */
 export const MODULE_LABELS: Record<ServerModule, string> = {
   CPanel: 'cPanel / WHM',
   Plesk: 'Plesk',
@@ -193,7 +193,7 @@ export const MODULE_LABELS: Record<ServerModule, string> = {
   Centos: 'CentOS Web Panel',
   Cwp7: 'CWP7',
   Lukittu: 'Lukittu',
-  InnovayseWordPressHosting: 'Innovayse WordPress Hosting',
+  get InnovayseWordPressHosting() { return translate('servers.moduleLabels.wordPressHosting') },
   Virtualmin: 'Virtualmin',
   HyperVm: 'HyperVM',
 }

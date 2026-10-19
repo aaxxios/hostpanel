@@ -5,11 +5,30 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { REFRESH_TOKEN_MAX_AGE, authCookieMaxAge } from '~/server/utils/auth-cookie'
+import {
+  ACCESS_TOKEN_FALLBACK_MAX_AGE,
+  AUTHED_FLAG_MAX_AGE,
+  REFRESH_TOKEN_MAX_AGE,
+  SSO_FLOW_COOKIE_MAX_AGE,
+  SSO_SILENT_COOKIE_MAX_AGE,
+  authCookieMaxAge
+} from '~/server/utils/auth-cookie'
 
 describe('REFRESH_TOKEN_MAX_AGE', () => {
   it('is thirty days in seconds, the lifetime the identity provider grants a refresh token', () => {
     expect(REFRESH_TOKEN_MAX_AGE).toBe(30 * 24 * 60 * 60)
+  })
+})
+
+describe('the other cookie lifetimes', () => {
+  it('keeps the flag at seven days, the sign-in round trip at five minutes and the silent attempt at thirty seconds', () => {
+    expect(AUTHED_FLAG_MAX_AGE).toBe(7 * 24 * 60 * 60)
+    expect(SSO_FLOW_COOKIE_MAX_AGE).toBe(300)
+    expect(SSO_SILENT_COOKIE_MAX_AGE).toBe(30)
+  })
+
+  it('assumes a fifteen-minute access token when none is stated', () => {
+    expect(ACCESS_TOKEN_FALLBACK_MAX_AGE).toBe(900)
   })
 })
 

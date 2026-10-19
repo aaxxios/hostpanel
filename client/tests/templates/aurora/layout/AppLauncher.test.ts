@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import AppLauncher from '~/templates/aurora/layout/AppLauncher.vue'
 import type { PortalApp } from '~/types/portalapp'
+import { PortalAppId } from '~/types/portalappid'
 import { stubAuroraGlobals } from '../auroraGlobals'
 
 /**
@@ -14,7 +15,7 @@ import { stubAuroraGlobals } from '../auroraGlobals'
  * @param id App id.
  * @returns A ready-to-render entry; the composable's own gradient string is deliberately unused.
  */
-const app = (id: string): PortalApp => ({
+const app = (id: PortalAppId): PortalApp => ({
   id,
   tag: id.slice(0, 2),
   tint: 'linear-gradient(135deg, #000000, #ffffff)',
@@ -32,7 +33,7 @@ describe('AppLauncher', () => {
   })
 
   it('opens a panel with one link per app', async () => {
-    stubAuroraGlobals({ apps: [app('tasks'), app('erp')] })
+    stubAuroraGlobals({ apps: [app(PortalAppId.Tasks), app(PortalAppId.Erp)] })
     const wrapper = mountWithKit(AppLauncher)
 
     await wrapper.find('[data-testid="app-launcher-trigger"]').trigger('click')
@@ -43,17 +44,17 @@ describe('AppLauncher', () => {
   })
 
   it('paints each tile from a gradient token keyed by app id, with no inline style', async () => {
-    stubAuroraGlobals({ apps: [app('tasks'), app('mystery')] })
+    stubAuroraGlobals({ apps: [app(PortalAppId.Tasks), app(PortalAppId.Calendar)] })
     const wrapper = mountWithKit(AppLauncher)
     await wrapper.find('[data-testid="app-launcher-trigger"]').trigger('click')
 
     expect(wrapper.find('[data-testid="app-launcher-tasks"] .place-items-center').classes()).toContain('bg-tile-mint')
-    expect(wrapper.find('[data-testid="app-launcher-mystery"] .place-items-center').classes()).toContain('bg-brand')
+    expect(wrapper.find('[data-testid="app-launcher-calendar"] .place-items-center').classes()).toContain('bg-tile-rose')
     expect(wrapper.html()).not.toContain(' style=')
   })
 
   it('closes the panel when an app is chosen', async () => {
-    stubAuroraGlobals({ apps: [app('tasks')] })
+    stubAuroraGlobals({ apps: [app(PortalAppId.Tasks)] })
     const wrapper = mountWithKit(AppLauncher)
     await wrapper.find('[data-testid="app-launcher-trigger"]').trigger('click')
 

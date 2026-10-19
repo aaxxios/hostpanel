@@ -8,7 +8,7 @@
  * The key list below has to stay in step with `PortalSettingKeys.Public` in
  * `backend/src/Innovayse.Domain/Settings/PortalSettingKeys.cs`, which is what
  * `GetPublicSettingsHandler` serves. This file cannot import that class, so the two
- * are kept in step by hand. A key the backend serves but this list omits is dropped
+ * are kept in step by hand; `PUBLIC_PORTAL_SETTING_KEYS` is explicit and a test pins it to the backend set. A key the backend serves but this list omits is dropped
  * here without a trace, and the storefront renders its build-time default as though
  * the operator had never set the value.
  *
@@ -33,47 +33,10 @@
  * site failing to render.
  */
 
-/** The only keys this endpoint will ever expose. */
-const PUBLIC_KEYS = [
-  'portal.template',
-  'portal.site.name',
-  'portal.site.tagline',
-  'portal.theme.default',
-  'portal.theme.user_toggle',
-  'portal.logo',
-  'portal.logo.dark',
-  'portal.logo.mark',
-  'portal.favicon',
-  'portal.brand.primary',
-  'portal.brand.accent',
-  'portal.brand.font_heading',
-  'portal.brand.font_body',
-  'portal.analytics.gtm_id',
-  'portal.chat.base_url',
-  'portal.chat.website_token',
-  'portal.chat.website_token.ru',
-  'portal.chat.website_token.hy',
-  'portal.contact.whatsapp',
-  'portal.contact.telegram',
-  'portal.chat.provider',
-  'portal.newsletter.action_url',
-  'portal.contact.email',
-  'portal.social.facebook',
-  'portal.social.instagram',
-  'portal.social.linkedin',
-  'portal.social.youtube',
-  'portal.contact.phone',
-  'portal.legal.tax_id',
-  'portal.apps.enabled',
-  'portal.apps.account',
-  'portal.apps.tasks',
-  'portal.apps.erp',
-  'portal.apps.hostpanel',
-  'portal.apps.sheets',
-  'portal.apps.mail',
-  'portal.apps.docs',
-  'portal.apps.calendar',
-] as const
+import { PUBLIC_PORTAL_SETTING_KEYS } from '~/constants/publicPortalSettingKeys'
+
+/** The only keys this endpoint will ever expose: an explicit list, never every enum member. */
+const PUBLIC_KEYS: readonly string[] = PUBLIC_PORTAL_SETTING_KEYS
 
 /** One public setting row, as the backend lists it. */
 interface PublicSettingRow {
@@ -83,13 +46,14 @@ interface PublicSettingRow {
   value: string
 }
 
+/** Handler: the allow-listed, non-empty public settings as a key-to-value object; `{}` when the backend cannot answer. */
 export default defineEventHandler(async (event) => {
   try {
     const rows = await internalApiCall<PublicSettingRow[]>(event, '/settings/public')
 
     const settings: Record<string, string> = {}
     for (const row of rows ?? []) {
-      if ((PUBLIC_KEYS as readonly string[]).includes(row.key) && row.value) {
+      if (PUBLIC_KEYS.includes(row.key) && row.value) {
         settings[row.key] = row.value
       }
     }

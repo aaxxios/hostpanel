@@ -17,6 +17,8 @@ import type {
   TicketReplyPayload,
   UpdateTicketPayload,
 } from '@/types/ticket'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/tickets`.
@@ -48,7 +50,7 @@ export const useSupportApi = () => {
    * @param id - Ticket id.
    * @returns The ticket.
    */
-  const getTicket = (id: number | string): Promise<Ticket> => request<Ticket>(`/tickets/${id}`)
+  const getTicket = (id: number | string): Promise<Ticket> => request<Ticket>(`${ApiPath.Tickets}/${id}`)
 
   /**
    * Reads the support overview figures.
@@ -57,14 +59,14 @@ export const useSupportApi = () => {
    * @returns The figures for the period.
    */
   const getOverview = (period: SupportOverviewPeriod): Promise<SupportOverviewStats> =>
-    request<SupportOverviewStats>(`/tickets/overview${buildQuery({ period })}`)
+    request<SupportOverviewStats>(`${ApiPath.Tickets}/overview${buildQuery({ period })}`)
 
   /**
    * Lists the support departments.
    *
    * @returns Every department.
    */
-  const listDepartments = (): Promise<Department[]> => request<Department[]>('/tickets/departments')
+  const listDepartments = (): Promise<Department[]> => request<Department[]>(ApiPath.TicketsDepartments)
 
   /**
    * Opens a ticket on behalf of a client.
@@ -73,7 +75,7 @@ export const useSupportApi = () => {
    * @returns The new ticket's id.
    */
   const createTicket = (payload: CreateTicketPayload): Promise<number> =>
-    request<number>('/tickets', { method: 'POST', body: JSON.stringify(payload) })
+    request<number>(ApiPath.Tickets, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Changes a ticket's metadata.
@@ -83,7 +85,7 @@ export const useSupportApi = () => {
    * @returns Nothing.
    */
   const updateTicket = (id: number | string, payload: UpdateTicketPayload): Promise<void> =>
-    request<void>(`/tickets/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Tickets}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes a ticket.
@@ -92,7 +94,7 @@ export const useSupportApi = () => {
    * @returns Nothing.
    */
   const deleteTicket = (id: number | string): Promise<void> =>
-    request<void>(`/tickets/${id}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.Tickets}/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Adds a staff reply.
@@ -102,7 +104,7 @@ export const useSupportApi = () => {
    * @returns Nothing.
    */
   const replyToTicket = (id: number | string, payload: TicketReplyPayload): Promise<void> =>
-    request<void>(`/tickets/${id}/reply`, { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Tickets}/${id}/reply`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Flips a ticket's flagged state.
@@ -111,7 +113,7 @@ export const useSupportApi = () => {
    * @returns Nothing.
    */
   const toggleFlag = (id: number | string): Promise<void> =>
-    request<void>(`/tickets/${id}/toggle-flag`, { method: 'POST' })
+    request<void>(`${ApiPath.Tickets}/${id}/toggle-flag`, { method: HttpMethod.Post })
 
   /**
    * Runs one action on several tickets.
@@ -120,7 +122,7 @@ export const useSupportApi = () => {
    * @returns Nothing.
    */
   const bulkAction = (payload: TicketBulkPayload): Promise<void> =>
-    request<void>('/tickets/bulk', { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Tickets}/bulk`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   return {
     listTickets, getTicket, getOverview, listDepartments,

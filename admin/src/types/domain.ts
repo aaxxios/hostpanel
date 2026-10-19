@@ -24,12 +24,12 @@ export interface DomainRegistration {
   id: number
   /** Associated client identifier. */
   clientId: number
-  /** Full name of the owning client. */
-  clientName: string
+  /** Full name of the owning client; null when unresolved. */
+  clientName: string | null
   /** Domain name (e.g. example.com). */
   name: string
-  /** Registration period label (e.g. "1 Year"). */
-  regPeriod: string
+  /** Registration period in years; 0 or less means unknown. */
+  regPeriodYears: number
   /** Name of the registrar module. */
   registrar: string | null
   /** Recurring renewal amount. */

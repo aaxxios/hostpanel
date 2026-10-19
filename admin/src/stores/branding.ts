@@ -21,9 +21,10 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { usePublicSettingsApi } from '@/composables/apis/usePublicSettingsApi'
 import { runAction } from '@/lib/runAction'
+import { SettingKey } from '@/types/setting'
 
 /** Setting key holding the logo drawn on light backgrounds. */
-const LOGO_KEY = 'portal.logo'
+const LOGO_KEY = SettingKey.Logo
 
 /**
  * Setting key holding the logo drawn on dark backgrounds.
@@ -31,10 +32,10 @@ const LOGO_KEY = 'portal.logo'
  * The panel is dark-only, so this is the one it wants; it used to read the light
  * variant alone and paint a logo made for white paper onto its dark sidebar.
  */
-const LOGO_DARK_KEY = 'portal.logo.dark'
+const LOGO_DARK_KEY = SettingKey.LogoDark
 
 /** Setting key holding the browser tab icon. */
-const FAVICON_KEY = 'portal.favicon'
+const FAVICON_KEY = SettingKey.Favicon
 
 /** Pinia store holding the operator's logo and favicon URLs for the panel. */
 export const useBrandingStore = defineStore('branding', () => {

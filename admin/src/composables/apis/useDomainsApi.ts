@@ -17,6 +17,8 @@ import type {
   UpdateDomainPayload,
 } from '@/types/domain'
 import type { PagedResult } from '@/types/pagedresult'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/domains`.
@@ -48,7 +50,7 @@ export const useDomainsApi = () => {
    * @param id - Domain id.
    * @returns The domain detail.
    */
-  const getDomain = (id: number | string): Promise<DomainDetail> => request<DomainDetail>(`/domains/${id}`)
+  const getDomain = (id: number | string): Promise<DomainDetail> => request<DomainDetail>(`${ApiPath.Domains}/${id}`)
 
   /**
    * Saves the editable fields of a domain.
@@ -58,7 +60,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const updateDomain = (id: number | string, payload: UpdateDomainPayload): Promise<void> =>
-    request<void>(`/domains/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Domains}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Sends the register command to the registrar.
@@ -67,7 +69,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const registerDomain = (id: number | string): Promise<void> =>
-    request<void>(`/domains/${id}/register`, { method: 'POST' })
+    request<void>(`${ApiPath.Domains}/${id}/register`, { method: HttpMethod.Post })
 
   /**
    * Renews a domain for more years.
@@ -77,7 +79,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const renewDomain = (id: number | string, years: number): Promise<void> =>
-    request<void>(`/domains/${id}/renew`, { method: 'POST', body: JSON.stringify({ years }) })
+    request<void>(`${ApiPath.Domains}/${id}/renew`, { method: HttpMethod.Post, body: JSON.stringify({ years }) })
 
   /**
    * Turns auto-renew on or off.
@@ -87,7 +89,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const setAutoRenew = (id: number | string, toggle: DomainToggle): Promise<void> =>
-    request<void>(`/domains/${id}/auto-renew`, { method: 'PUT', body: JSON.stringify(toggle) })
+    request<void>(`${ApiPath.Domains}/${id}/auto-renew`, { method: HttpMethod.Put, body: JSON.stringify(toggle) })
 
   /**
    * Turns WHOIS privacy on or off.
@@ -97,7 +99,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const setWhoisPrivacy = (id: number | string, toggle: DomainToggle): Promise<void> =>
-    request<void>(`/domains/${id}/whois-privacy`, { method: 'PUT', body: JSON.stringify(toggle) })
+    request<void>(`${ApiPath.Domains}/${id}/whois-privacy`, { method: HttpMethod.Put, body: JSON.stringify(toggle) })
 
   /**
    * Turns the registrar lock on or off.
@@ -107,7 +109,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const setLock = (id: number | string, toggle: DomainToggle): Promise<void> =>
-    request<void>(`/domains/${id}/lock`, { method: 'PUT', body: JSON.stringify(toggle) })
+    request<void>(`${ApiPath.Domains}/${id}/lock`, { method: HttpMethod.Put, body: JSON.stringify(toggle) })
 
   /**
    * Turns DNS management on or off.
@@ -117,7 +119,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const setDnsManagement = (id: number | string, toggle: DomainToggle): Promise<void> =>
-    request<void>(`/domains/${id}/dns-management`, { method: 'PUT', body: JSON.stringify(toggle) })
+    request<void>(`${ApiPath.Domains}/${id}/dns-management`, { method: HttpMethod.Put, body: JSON.stringify(toggle) })
 
   /**
    * Turns email forwarding on or off.
@@ -127,7 +129,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const setEmailForwarding = (id: number | string, toggle: DomainToggle): Promise<void> =>
-    request<void>(`/domains/${id}/email-forwarding-toggle`, { method: 'PUT', body: JSON.stringify(toggle) })
+    request<void>(`${ApiPath.Domains}/${id}/email-forwarding-toggle`, { method: HttpMethod.Put, body: JSON.stringify(toggle) })
 
   /**
    * Changes the WHOIS registrant contact.
@@ -137,7 +139,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const modifyContact = (id: number | string, contact: DomainContactPayload): Promise<void> =>
-    request<void>(`/domains/${id}/modify-contact`, { method: 'POST', body: JSON.stringify(contact) })
+    request<void>(`${ApiPath.Domains}/${id}/modify-contact`, { method: HttpMethod.Post, body: JSON.stringify(contact) })
 
   /**
    * Starts an outgoing transfer and reads back the EPP code.
@@ -146,7 +148,7 @@ export const useDomainsApi = () => {
    * @returns The EPP authorization code.
    */
   const initiateOutgoingTransfer = (id: number | string): Promise<{ eppCode: string }> =>
-    request<{ eppCode: string }>(`/domains/${id}/initiate-outgoing-transfer`, { method: 'POST' })
+    request<{ eppCode: string }>(`${ApiPath.Domains}/${id}/initiate-outgoing-transfer`, { method: HttpMethod.Post })
 
   /**
    * Adds a DNS record.
@@ -156,7 +158,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const addDnsRecord = (id: number | string, payload: DnsRecordPayload): Promise<void> =>
-    request<void>(`/domains/${id}/dns`, { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Domains}/${id}/dns`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Replaces a DNS record.
@@ -167,7 +169,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const updateDnsRecord = (id: number | string, recordId: number, payload: DnsRecordPayload): Promise<void> =>
-    request<void>(`/domains/${id}/dns/${recordId}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Domains}/${id}/dns/${recordId}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes a DNS record.
@@ -177,7 +179,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const deleteDnsRecord = (id: number | string, recordId: number): Promise<void> =>
-    request<void>(`/domains/${id}/dns/${recordId}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.Domains}/${id}/dns/${recordId}`, { method: HttpMethod.Delete })
 
   /**
    * Adds an email forwarding rule.
@@ -187,7 +189,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const addForwardingRule = (id: number | string, payload: ForwardingRulePayload): Promise<void> =>
-    request<void>(`/domains/${id}/email-forwarding`, { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Domains}/${id}/email-forwarding`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Replaces an email forwarding rule.
@@ -198,7 +200,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const updateForwardingRule = (id: number | string, ruleId: number, payload: ForwardingRulePayload): Promise<void> =>
-    request<void>(`/domains/${id}/email-forwarding/${ruleId}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Domains}/${id}/email-forwarding/${ruleId}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes an email forwarding rule.
@@ -208,7 +210,7 @@ export const useDomainsApi = () => {
    * @returns Nothing.
    */
   const deleteForwardingRule = (id: number | string, ruleId: number): Promise<void> =>
-    request<void>(`/domains/${id}/email-forwarding/${ruleId}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.Domains}/${id}/email-forwarding/${ruleId}`, { method: HttpMethod.Delete })
 
   return {
     listDomains, getDomain, updateDomain, registerDomain, renewDomain,

@@ -13,6 +13,7 @@ import { runAction } from '@/lib/runAction'
 import type { ClientTicketStats } from '@/types/client'
 import type { Department } from '@/types/department'
 import type { CreateTicketPayload, Ticket, TicketListItem, UpdateTicketPayload } from '@/types/ticket'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 /** Loads and changes the support tickets of a client. */
 export const useClientTicketsStore = defineStore('clientTickets', () => {
@@ -57,7 +58,7 @@ export const useClientTicketsStore = defineStore('clientTickets', () => {
   const fetchClientTickets = async (
     clientId: number | string,
     page = 1,
-    pageSize = 20,
+    pageSize = DEFAULT_PAGE_SIZE,
     search?: string,
   ): Promise<void> => {
     loading.value = true

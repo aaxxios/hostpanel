@@ -8,6 +8,7 @@
 import { useApi } from '@/composables/useApi'
 import type { ActivityEvent } from '@/types/activityevent'
 import type { DashboardStats } from '@/types/dashboardstats'
+import { ApiPath } from '@/lib/apiPaths'
 
 /**
  * Endpoint functions for `/api/admin/dashboard/*`.
@@ -23,7 +24,7 @@ export const useDashboardApi = () => {
    * @returns Revenue, service, invoice, ticket and client totals.
    */
   const fetchStats = (): Promise<DashboardStats> =>
-    request<DashboardStats>('/admin/dashboard/stats')
+    request<DashboardStats>(`${ApiPath.AdminDashboard}/stats`)
 
   /**
    * Reads the recent activity feed.
@@ -32,7 +33,7 @@ export const useDashboardApi = () => {
    * @returns Events, newest first.
    */
   const fetchActivity = (limit: number): Promise<ActivityEvent[]> =>
-    request<ActivityEvent[]>(`/admin/dashboard/activity?limit=${limit}`)
+    request<ActivityEvent[]>(`${ApiPath.AdminDashboard}/activity?limit=${limit}`)
 
   return { fetchStats, fetchActivity }
 }

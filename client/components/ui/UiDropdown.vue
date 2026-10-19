@@ -189,14 +189,14 @@ onClickOutside(wrapperRef, closeDropdown)
 const triggerClasses = computed(() => {
   let state: string
   if (props.error) {
-    state = 'border-red-500/50 focus:border-red-500 focus:ring-red-500/50 bg-red-500/5'
+    state = 'border-red-500/50 focus-visible:border-red-500 focus-visible:ring-red-500/50 bg-red-500/5'
   } else if (isOpen.value) {
     state = 'border-primary-500 ring-2 ring-primary-500/50 bg-gray-100 dark:bg-white/10'
   } else {
-    state = 'border-gray-300 dark:border-gray-700 focus:border-primary-500 focus:ring-primary-500/50 bg-white dark:bg-white/5 hover:border-primary-500/50'
+    state = 'border-gray-300 dark:border-gray-700 focus-visible:border-primary-500 focus-visible:ring-primary-500/50 bg-white dark:bg-white/5 hover:border-primary-500/50'
   }
   return [
-    'relative w-full border-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 text-gray-900 dark:text-white text-left pr-10',
+    'relative w-full border-2 rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 text-gray-900 dark:text-white text-left pr-10',
     CONTROL_SIZE_CLASSES[props.size as UiSize],
     props.icon ? 'pl-10' : '',
     state,
