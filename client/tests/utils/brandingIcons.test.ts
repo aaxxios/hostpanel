@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { BrandingIconRel } from '~/types/brandingiconrel'
-import { brandingIcons, isUploadedBranding } from '~/utils/brandingIcons'
+import { brandingIcons, isUploadedBranding, toHeadIconLink } from '~/utils/brandingIcons'
 
 describe('isUploadedBranding', () => {
   it('accepts a file inside a generated icon directory', () => {
@@ -51,5 +51,22 @@ describe('brandingIcons', () => {
     expect(icons.every(icon => icon.href.startsWith('/uploads/branding/favicon/abc/'))).toBe(true)
     expect(icons.every(icon => icon.type === 'image/png')).toBe(true)
     expect(icons.find(icon => icon.rel === BrandingIconRel.AppleTouchIcon)!.href).toBe('/uploads/branding/favicon/abc/apple-touch-icon.png')
+  })
+})
+
+describe('toHeadIconLink', () => {
+  it('keeps a mask icon tint and drops its empty type', () => {
+    expect(toHeadIconLink({ rel: BrandingIconRel.MaskIcon, href: '/m.svg', type: '', color: '#000000' }))
+      .toEqual({ rel: BrandingIconRel.MaskIcon, href: '/m.svg', color: '#000000' })
+  })
+
+  it('carries type and sizes on an apple touch icon', () => {
+    expect(toHeadIconLink({ rel: BrandingIconRel.AppleTouchIcon, href: '/a.png', type: 'image/png', sizes: '180x180' }))
+      .toEqual({ rel: BrandingIconRel.AppleTouchIcon, href: '/a.png', type: 'image/png', sizes: '180x180' })
+  })
+
+  it('omits empty attributes on a favicon', () => {
+    expect(toHeadIconLink({ rel: BrandingIconRel.Icon, href: '/f.ico', type: '' }))
+      .toEqual({ rel: BrandingIconRel.Icon, href: '/f.ico' })
   })
 })

@@ -48,16 +48,7 @@ const faviconUrl = computed(() => getPortalSetting(PortalSettingKey.Favicon, 'po
  * Kept as a `computed` rather than an inline arrow so the dependency on the settings state
  * is explicit; both forms work with `useHead`.
  */
-const faviconLinks = computed((): HeadIconLink[] => brandingIcons(faviconUrl.value).map((icon) => ({
-  // unhead's link `rel` takes any string; widening the enum to `string` keeps every element the
-  // same type, so the array is not inferred as a union of literal-`rel` objects that unhead's
-  // discriminated link type rejects.
-  rel: String(icon.rel),
-  href: icon.href,
-  ...(icon.type ? { type: icon.type } : {}),
-  ...(icon.sizes ? { sizes: icon.sizes } : {}),
-  ...(icon.color ? { color: icon.color } : {})
-})))
+const faviconLinks = computed((): HeadIconLink[] => brandingIcons(faviconUrl.value).map(toHeadIconLink))
 
 /**
  * The operator's site name and tagline. `og:site_name` and `author` used to be static
