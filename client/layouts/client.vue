@@ -141,6 +141,9 @@ const reinitWidget = (): boolean => {
 /** The pending widget poll, so leaving the layout can cancel it before it fires on a torn-down page. */
 let widgetPoll: ReturnType<typeof setTimeout> | undefined
 
+/** Set when the layout unmounts; a mount still awaiting the identity then schedules no poll. */
+let unmounted = false
+
 onMounted(async () => {
   // No `userLoaded` check: the store is the one authority on whether this needs a request,
   // and the flag read here answered "not loaded yet" for a request that was already on the
@@ -156,15 +159,23 @@ onMounted(async () => {
    * @returns Nothing.
    */
   const tryReinit = (): void => {
+    if (unmounted) {
+      return
+    }
     if (!reinitWidget() && attempts++ < WIDGET_POLL_ATTEMPTS) {
       widgetPoll = setTimeout(tryReinit, WIDGET_POLL_MS)
     }
+  }
+  // The layout may have been left while the identity was loading; onBeforeUnmount has already run then.
+  if (unmounted) {
+    return
   }
   widgetPoll = setTimeout(tryReinit, WIDGET_FIRST_POLL_MS)
 })
 
 // A poll still waiting when the layout goes away would look for the widget on a page that no longer exists.
 onBeforeUnmount(() => {
+  unmounted = true
   clearTimeout(widgetPoll)
 })
 

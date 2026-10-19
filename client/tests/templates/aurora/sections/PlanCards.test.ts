@@ -61,7 +61,7 @@ describe('PlanCards', () => {
     expect(wrapper.find('[data-testid="billing-toggle"]').attributes('role')).toBe('radiogroup')
     expect(active.attributes('aria-checked')).toBe('true')
     expect(wrapper.find('[data-testid="billing-monthly"]').attributes('aria-checked')).toBe('false')
-    expect(active.classes()).toEqual(expect.arrayContaining(['rounded-full', 'bg-brand', 'text-white']))
+    expect(active.classes()).toEqual(expect.arrayContaining(['rounded-full', 'bg-brand', 'text-on-tint']))
     expect(active.classes()).not.toContain('rounded-lg')
   })
 
