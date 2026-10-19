@@ -61,7 +61,7 @@ describe('FaqFormView', () => {
     })
 
     expect(bodyOf(mock, 'POST')).toEqual({
-      category: 'general',
+      category: FaqCategory.General,
       sortOrder: 0,
       isActive: true,
       translations: { en: { question: 'How?', answer: 'Like this.' } },
@@ -93,7 +93,7 @@ describe('FaqFormView', () => {
     await vi.waitFor(() => {
       expect(requestsOf(mock)).toContain('PUT /admin/faqs/3')
     })
-    expect(bodyOf(mock, 'PUT')).toMatchObject({ category: 'products', sortOrder: 2 })
+    expect(bodyOf(mock, 'PUT')).toMatchObject({ category: FaqCategory.Products, sortOrder: 2 })
   })
 
   it('says when the entry being edited does not exist', async () => {

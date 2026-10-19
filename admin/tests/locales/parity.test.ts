@@ -30,13 +30,15 @@ const flatten = (node: unknown, prefix = '', out: Record<string, unknown> = {}):
 }
 
 /**
- * Lists the `{named}` placeholders of a message in a stable order.
+ * Lists the distinct `{named}` placeholders of a message in a stable order. A plural message
+ * repeats its placeholder once per form and the number of forms differs per language (`ru` has
+ * three, `en` two), so each name is counted once.
  *
  * @param message - A message string.
  * @returns The placeholder names, sorted and comma-joined.
  */
 const placeholders = (message: string): string =>
-  [...message.matchAll(/\{([A-Za-z_]\w*)\}/g)].map((match) => match[1]).sort().join(',')
+  [...new Set([...message.matchAll(/\{([A-Za-z_]\w*)\}/g)].map((match) => match[1]))].sort().join(',')
 
 /** Flattened view of each catalogue. */
 const FLAT = {

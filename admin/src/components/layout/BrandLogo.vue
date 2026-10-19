@@ -35,6 +35,6 @@ const lightSrc = computed<string>(() => branding.logoOnLightUrl || '/logo.svg')
 </script>
 
 <template>
-  <UiImage :src="darkSrc" :alt="t('shared.productName')" :class="[imgClass, 'light:hidden']" data-testid="brand-logo-dark" />
-  <UiImage :src="lightSrc" :alt="t('shared.productName')" :class="[imgClass, 'hidden light:block']" data-testid="brand-logo-light" />
+  <UiImage :src="darkSrc" :alt="t('shared.brandName')" :class="[imgClass, 'light:hidden']" data-testid="brand-logo-dark" />
+  <UiImage :src="lightSrc" :alt="t('shared.brandName')" :class="[imgClass, 'hidden light:block']" data-testid="brand-logo-light" />
 </template>

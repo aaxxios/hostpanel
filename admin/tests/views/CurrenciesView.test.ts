@@ -120,7 +120,7 @@ describe('CurrenciesView', () => {
 
     await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
     await vi.waitFor(() => {
-      expect(wrapper.get('[data-testid="currencies-result"]').text()).toBe('4 product price row(s) recomputed.')
+      expect(wrapper.get('[data-testid="currencies-result"]').text()).toBe('4 product price rows recomputed.')
     })
     expect(requestsOf(mock)).toContain('POST /admin/currencies/update-product-prices')
   })

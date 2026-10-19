@@ -39,7 +39,7 @@
     },
     "contactEmail": {
       "label": "Contact email",
-      "hint": "support@example.com"
+      "hint": "support{'@'}example.com"
     },
     "contactPhone": {
       "label": "Contact phone",
@@ -51,7 +51,7 @@
     },
     "contactTelegram": {
       "label": "Telegram handle",
-      "hint": "@example"
+      "hint": "{'@'}example"
     },
     "contactAddress": {
       "label": "Address",

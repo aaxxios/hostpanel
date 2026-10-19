@@ -39,7 +39,7 @@
     },
     "contactEmail": {
       "label": "Контактный email",
-      "hint": "support@example.com"
+      "hint": "support{'@'}example.com"
     },
     "contactPhone": {
       "label": "Контактный телефон",
@@ -51,7 +51,7 @@
     },
     "contactTelegram": {
       "label": "Имя в Telegram",
-      "hint": "@example"
+      "hint": "{'@'}example"
     },
     "contactAddress": {
       "label": "Адрес",
