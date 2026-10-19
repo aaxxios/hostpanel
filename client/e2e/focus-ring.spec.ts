@@ -33,8 +33,11 @@ test('clicking a link leaves no focus outline or ring', async ({ page }) => {
   // "no outline" means none or an invisible one, not the style keyword alone.
   const style = await back.evaluate(el => {
     const css = getComputedStyle(el)
-    const invisible = css.outlineStyle === 'none' || css.outlineColor === 'rgba(0, 0, 0, 0)' || css.outlineColor === 'transparent'
-    return { outline: invisible ? 'none' : css.outlineStyle, shadow: css.boxShadow }
+    // Any serialisation of a zero-alpha colour: rgba(…, 0), color(srgb … / 0), transparent.
+    const clear = /transparent|,\s*0\)$|\/\s*0\)$/.test(css.outlineColor)
+    const invisible = css.outlineStyle === 'none' || css.outlineWidth === '0px' || clear
+    // The colour rides along in the value so a failure says what was actually drawn.
+    return { outline: invisible ? 'none' : `${css.outlineStyle} ${css.outlineWidth} ${css.outlineColor}`, shadow: css.boxShadow }
   })
   await page.mouse.up()
   expect(style.outline).toBe('none')
