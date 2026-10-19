@@ -258,8 +258,13 @@ export default defineNuxtConfig({
   // back to the request host, which is at least the operator's own domain. A
   // literal here would put this deployment's domain in every other operator's
   // sitemap.
+  //
+  // The name is set explicitly: with none, nuxt-site-config falls back to the
+  // package name and ships it in the SSR payload. Same neutral fallback as
+  // NEUTRAL_SITE_NAME in useSiteIdentity().
   site: {
     url: process.env.NUXT_PUBLIC_BASE_URL,
+    name: process.env.NUXT_PUBLIC_PORTAL_SITE_NAME || 'Hostpanel',
   },
 
   // Sitemap configuration

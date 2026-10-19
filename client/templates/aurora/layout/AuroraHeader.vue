@@ -8,33 +8,12 @@
         testid="site-home"
         class="flex items-center gap-3 text-tx"
       >
-        <!-- Both wordmarks, swapped by the dark: variant — see useBrandLogo for why not one mode-aware src. -->
-        <template v-if="logoLight">
-          <UiImage
-            unoptimised
-            loading="eager"
-            fit="contain"
-            testid="site-logo-light"
-            :src="logoLight"
-            :alt="logoAlt"
-            class="h-[34px] w-auto max-w-[140px]"
-            :class="{ 'dark:hidden': hasDarkLogo }"
-          />
-          <UiImage
-            v-if="hasDarkLogo"
-            unoptimised
-            loading="eager"
-            fit="contain"
-            testid="site-logo-dark"
-            :src="logoDark"
-            :alt="logoAlt"
-            class="hidden h-[34px] w-auto max-w-[140px] dark:block"
-          />
-        </template>
-        <template v-else>
-          <UiTile class="bg-brand font-extrabold text-on-tint" aria-hidden="true">{{ siteName.charAt(0).toLowerCase() }}</UiTile>
-          <UiText as="span" size="lg" weight="bold" tone="inherit">{{ siteName }}</UiText>
-        </template>
+        <!-- The operator's upload when there is one, otherwise the cube mark and the site name. -->
+        <AppLogoLockup
+          img-class="h-[34px] w-auto max-w-[140px]"
+          mark-class="h-9 w-9"
+          name-class="text-lg font-bold"
+        />
       </UiLink>
 
       <UiStack
@@ -167,6 +146,7 @@
  * Two things it does read: whether there is a session, which decides between the
  * account menu and the sign-in pair, and the configured sign-in destination.
  */
+import AppLogoLockup from '~/components/AppLogoLockup.vue'
 import AuroraAppLauncher from '~/templates/aurora/layout/AppLauncher.vue'
 import AuroraAccountMenu from '~/templates/aurora/layout/AccountMenu.vue'
 import { useCartStore } from '~/stores/cart'
@@ -201,12 +181,6 @@ const menuOpen = ref(false)
 /** Number of lines in the cart, shown on the cart button. */
 const cartCount = computed(() => cart.items.length)
 
-// Operator-uploaded logo for the current colour mode, with the site name as alt text.
-// Empty renders the built-in mark and wordmark below.
-/** Uploaded wordmarks and their alt text. */
-const { light: logoLight, dark: logoDark, hasDarkVariant: hasDarkLogo, alt: logoAlt } = useBrandLogo()
-/** The operator's site name. */
-const { name: siteName } = useSiteIdentity()
 
 /** Navigation entries, in display order. */
 const navLinks = computed(() => [

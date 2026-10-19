@@ -8,28 +8,13 @@
         </UiHeading>
       </UiStack>
 
-      <UiCard tone="bare" padding="none" data-testid="billing-toggle" :class="TOGGLE_TRACK">
-        <UiStack direction="row" align="center" gap="xs">
-          <UiButton
-            variant="bare"
-            data-testid="billing-monthly"
-            :aria-pressed="!yearly"
-            :class="[TOGGLE_SEGMENT, yearly ? TOGGLE_IDLE : TOGGLE_ACTIVE]"
-            @click="emit('update:yearly', false)"
-          >
-            {{ t('aurora.plans.monthly') }}
-          </UiButton>
-          <UiButton
-            variant="bare"
-            data-testid="billing-yearly"
-            :aria-pressed="yearly"
-            :class="[TOGGLE_SEGMENT, yearly ? TOGGLE_ACTIVE : TOGGLE_IDLE]"
-            @click="emit('update:yearly', true)"
-          >
-            {{ t('aurora.plans.yearly') }}
-          </UiButton>
-        </UiStack>
-      </UiCard>
+      <UiSegmentedControl
+        :model-value="yearly"
+        :options="billingOptions"
+        :label="t('aurora.plans.billingLabel')"
+        testid="billing-toggle"
+        @update:model-value="emit('update:yearly', $event)"
+      />
     </UiStack>
 
     <UiText v-if="plans.length === 0" tone="inherit" class="mt-10 text-[15px] text-mut2" data-testid="plans-empty">
@@ -171,9 +156,10 @@
  * Presentation only — plans and their formatted prices arrive as props, and the
  * billing-period toggle is reported upward rather than owned here.
  */
-import { BRAND_BUTTON, LINE_BUTTON, TOGGLE_ACTIVE, TOGGLE_IDLE, TOGGLE_SEGMENT, TOGGLE_TRACK } from '~/templates/aurora/buttons'
+import { BRAND_BUTTON, LINE_BUTTON } from '~/templates/aurora/buttons'
 import { EYEBROW_CLASS, SECTION_TITLE_CLASS } from '~/templates/aurora/typography'
 import type { PlanCard } from '~/types/plancard'
+import type { SegmentedOption } from '~/types/segmentedoption'
 
 /** Props with their defaults applied. */
 const props = withDefaults(defineProps<{
@@ -205,6 +191,12 @@ const paidPlans = computed(() => props.plans.filter(plan => !plan.isFree))
 
 /** Whether the shared "included in every plan" list stands in for per-plan feature lines. */
 const showIncluded = computed(() => props.plans.length > 0 && !props.plans.some(plan => plan.features.length))
+
+/** The two billing periods the toggle offers; `true` is the per-month annual price. */
+const billingOptions = computed<SegmentedOption<boolean>[]>(() => [
+  { value: false, label: t('aurora.plans.monthly'), testid: 'billing-monthly' },
+  { value: true, label: t('aurora.plans.yearly'), testid: 'billing-yearly' },
+])
 
 /** What every plan includes. */
 const included = computed(() => [

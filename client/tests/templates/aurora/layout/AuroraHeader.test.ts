@@ -29,31 +29,32 @@ describe('AuroraHeader', () => {
     expect(wrapper.find('[data-testid="nav-hosting"]').classes()).not.toContain('font-semibold')
   })
 
-  it('draws the built-in mark and the site name when no logo is uploaded', () => {
+  it('draws the bundled cube mark and the site name, never a letter tile, when no logo is uploaded', () => {
     stubAuroraGlobals({ siteName: 'Acme Host' })
-    const wrapper = mountWithKit(AuroraHeader, { stubs: STUBS })
+    const home = mountWithKit(AuroraHeader, { stubs: STUBS }).find('[data-testid="site-home"]')
 
-    expect(wrapper.find('[data-testid="site-home"]').text()).toContain('Acme Host')
-    expect(wrapper.find('[data-testid="site-home"]').text()).toContain('a')
-    expect(wrapper.find('[data-testid="site-logo-light"]').exists()).toBe(false)
+    expect(home.text()).toBe('Acme Host')
+    expect(home.find('[data-testid="app-logo-mark"]').attributes('src')).toContain('/favicon.svg')
+    expect(home.find('[data-testid="app-logo-light"]').exists()).toBe(false)
   })
 
   it('renders only the light logo, as a plain image, when there is no dark variant', () => {
-    stubAuroraGlobals({ logo: '/api/uploads/logo.png' })
+    // The real brand pair falls back each side to the other, so one upload is both URLs.
+    stubAuroraGlobals({ logo: '/api/uploads/logo.png', logoDark: '/api/uploads/logo.png' })
     const wrapper = mountWithKit(AuroraHeader, { stubs: STUBS })
-    const light = wrapper.find('[data-testid="site-logo-light"]')
+    const light = wrapper.find('[data-testid="app-logo-light"]')
 
     expect(light.attributes('src')).toBe('/api/uploads/logo.png')
     expect(light.classes()).not.toContain('dark:hidden')
-    expect(wrapper.find('[data-testid="site-logo-dark"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="app-logo-dark"]').exists()).toBe(false)
   })
 
   it('renders both logos and swaps them with the dark variant, never with script', () => {
     stubAuroraGlobals({ logo: '/light.png', logoDark: '/dark.png' })
     const wrapper = mountWithKit(AuroraHeader, { stubs: STUBS })
 
-    expect(wrapper.find('[data-testid="site-logo-light"]').classes()).toContain('dark:hidden')
-    expect(wrapper.find('[data-testid="site-logo-dark"]').classes()).toEqual(expect.arrayContaining(['hidden', 'dark:block']))
+    expect(wrapper.find('[data-testid="app-logo-light"]').classes()).toContain('dark:hidden')
+    expect(wrapper.find('[data-testid="app-logo-dark"]').classes()).toEqual(expect.arrayContaining(['hidden', 'dark:block']))
   })
 
   it('offers sign in and get started to a visitor, and no account menu', () => {

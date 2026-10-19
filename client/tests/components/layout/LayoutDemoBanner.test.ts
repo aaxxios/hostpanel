@@ -59,4 +59,15 @@ describe('LayoutDemoBanner', () => {
     expect(wrapper.find('[data-testid="demo-banner"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="demo-banner-reset"]').exists()).toBe(false)
   })
+
+  it('lays the content out inside the page container, centred and wrapping on narrow screens', () => {
+    const wrapper = mountBanner({ enabled: true, nextResetAt: null })
+    const container = wrapper.get('[data-testid="demo-banner-container"]')
+    const row = container.get('[data-testid="demo-banner-label"]').element.parentElement!
+
+    expect(container.classes()).toContain('container-custom')
+    expect(row.className).toContain('items-center')
+    expect(row.className).toContain('flex-wrap')
+    expect(wrapper.get('[data-testid="demo-banner-label"]').classes()).toContain('shrink-0')
+  })
 })

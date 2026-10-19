@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest'
 import { useCartStore } from '~/stores/cart'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import NovaHeader from '~/templates/nova/layout/NovaHeader.vue'
-import AppLogo from '~/components/AppLogo.vue'
 import { NAV_ITEMS } from '~/templates/nova/content'
 import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
 
@@ -17,7 +16,7 @@ import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
  * @returns The wrapper.
  */
 const mountHeader = (props: Record<string, unknown> = {}) =>
-  mountWithKit(NovaHeader, { props, attachToBody: true, components: { AppLogo } })
+  mountWithKit(NovaHeader, { props, attachToBody: true })
 
 describe('NovaHeader', () => {
   it('links every navigation entry and marks the current one', () => {
@@ -37,12 +36,20 @@ describe('NovaHeader', () => {
     expect(mountHeader().find('[data-testid="nova-skip-link"]').attributes('href')).toBe('#nova-main')
   })
 
-  it('draws the built-in mark from the site name when no logo is uploaded', () => {
+  it('draws the bundled cube mark and the site name, never a letter tile, when no logo is uploaded', () => {
     stubTemplateGlobals({ siteName: 'Acme Host' })
-    const wrapper = mountHeader()
+    const logo = mountHeader().find('[data-testid="nova-nav-logo"]')
 
-    expect(wrapper.find('[data-testid="nova-nav-logo"]').text()).toContain('Acme Host')
-    expect(wrapper.find('[data-testid="nova-nav-logo"] [aria-hidden="true"]').text()).toBe('a')
+    expect(logo.text()).toBe('Acme Host')
+    expect(logo.find('[data-testid="app-logo-mark"]').attributes('src')).toContain('/favicon.svg')
+  })
+
+  it('renders the uploaded logo instead of the mark', () => {
+    stubTemplateGlobals({ logo: '/api/uploads/logo.png' })
+    const logo = mountHeader().find('[data-testid="nova-nav-logo"]')
+
+    expect(logo.find('[data-testid="app-logo-light"]').attributes('src')).toBe('/api/uploads/logo.png')
+    expect(logo.find('[data-testid="app-logo-mark"]').exists()).toBe(false)
   })
 
   it('shows the cart count only when the cart has lines', async () => {

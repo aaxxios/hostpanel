@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LogoSurface, STATIC_LOGO_DARK, STATIC_LOGO_LIGHT, resolveAppLogo } from '~/utils/appLogo'
+import { LogoSurface, STATIC_LOGO_DARK, STATIC_LOGO_LIGHT, STATIC_LOGO_MARK, resolveAppLogo } from '~/utils/appLogo'
 
 /** The pair with nothing uploaded. */
 const empty = { light: '', dark: '', hasDarkVariant: false }
@@ -26,5 +26,11 @@ describe('resolveAppLogo', () => {
     expect(resolveAppLogo(same, LogoSurface.Auto)).toMatchObject({ uploaded: true, swap: false })
     expect(resolveAppLogo(split, LogoSurface.Auto)).toMatchObject({ dark: '/u/b.png', swap: true })
     expect(resolveAppLogo(split, LogoSurface.Dark).dark).toBe('/u/b.png')
+  })
+})
+
+describe('STATIC_LOGO_MARK', () => {
+  it('points at the bundled cube mark', () => {
+    expect(STATIC_LOGO_MARK).toBe('/favicon.svg')
   })
 })
