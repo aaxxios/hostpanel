@@ -224,4 +224,23 @@ describe('client layout', () => {
       Reflect.deleteProperty(window, 'InnoWidget')
     }
   })
+
+  it('schedules no widget poll when the layout is left while the identity is still loading', async () => {
+    vi.useFakeTimers()
+    try {
+      /** Resolves the pending identity request once the layout is already gone. */
+      let answer: (value: typeof ME) => void = () => {}
+      fetchMe.mockReturnValue(new Promise<typeof ME>((resolve) => {
+        answer = resolve
+      }))
+      const wrapper = mountClient(ClientLayout, { slots: { default: 'page content' }, stubs: STUBS, components: { LayoutDemoBanner } })
+      wrapper.unmount()
+      answer(ME)
+      await flushPromises()
+
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
