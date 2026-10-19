@@ -8,11 +8,12 @@ import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import ThemeToggle from '~/components/ui/UiThemeToggle.vue'
 
 /** The color-mode state the stubbed composable exposes. */
-const state = { isDark: ref(false), userToggleEnabled: ref(true), toggle: vi.fn() }
+const state = { isDark: ref(false), applied: ref<string | null>('light'), userToggleEnabled: ref(true), toggle: vi.fn() }
 
 describe('ThemeToggle', () => {
   beforeEach(() => {
     state.isDark.value = false
+    state.applied.value = 'light'
     state.userToggleEnabled.value = true
     state.toggle.mockClear()
     vi.stubGlobal('useAppColorMode', () => state)
@@ -45,9 +46,25 @@ describe('ThemeToggle', () => {
     expect(wrapper.find('[data-testid="theme-toggle"]').attributes('aria-label')).toBe('ui.theme.switchLight')
   })
 
+  it('names the action from the first render when the server already knew the mode', () => {
+    state.isDark.value = true
+    state.applied.value = 'dark'
+
+    const wrapper = mountWithKit(ThemeToggle)
+
+    expect(wrapper.find('[data-testid="theme-toggle"]').attributes('aria-label')).toBe('ui.theme.switchLight')
+  })
+
   it('draws both icons and lets the dark variant pick one', () => {
     const wrapper = mountWithKit(ThemeToggle)
 
     expect(wrapper.findAll('svg')).toHaveLength(2)
+  })
+
+  it('shows the moon in dark mode and the sun in light mode, by class so SSR and hydration agree', () => {
+    const wrapper = mountWithKit(ThemeToggle)
+
+    expect(wrapper.find('[data-testid="theme-toggle-moon"]').classes()).toEqual(expect.arrayContaining(['hidden', 'dark:block']))
+    expect(wrapper.find('[data-testid="theme-toggle-sun"]').classes()).toEqual(expect.arrayContaining(['block', 'dark:hidden']))
   })
 })

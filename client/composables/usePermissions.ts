@@ -44,13 +44,20 @@ export enum Permission {
 /**
  * Composable for checking client portal permissions.
  *
- * Reads the current user's permissions from {@link useAuthStore} and provides
- * helpers to check individual or combined permission flags.
+ * Reads the current user's permissions from {@link useClientStore} (the record the client area
+ * loads on every page), falling back to {@link useAuthStore} for the moment right after sign-in.
+ * Reading only the auth store left every gated link hidden after a reload without the `authed`
+ * cookie (the demo, SSO), because that store is filled only by a cookie-guarded plugin.
+ * Provides helpers to check individual or combined permission flags.
  *
  * @returns Permission checking utilities and the {@link Permission} constants.
  */
 export const usePermissions = () => {
-  const { user } = storeToRefs(useAuthStore())
+  const { user: authUser } = storeToRefs(useAuthStore())
+  const { user: clientUser } = storeToRefs(useClientStore())
+
+  /** The signed-in person: the client store's record first, the auth store's second. */
+  const user = computed(() => clientUser.value ?? authUser.value)
 
   /**
    * Checks whether the current user has a specific permission.

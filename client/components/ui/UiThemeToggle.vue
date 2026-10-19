@@ -3,7 +3,8 @@
     Rendered only while the operator allows visitors to switch. The composable's
     toggle() is a no-op in that case too, so this is the visible half of one rule.
 
-    Both icons are in the markup and the dark: variant shows one: under the `system`
+    The icon shows the mode the page is in NOW (moon in dark, sun in light); the accessible
+    name and the tooltip say what a click does. Both icons are in the markup and the dark: variant shows one: under the `system`
     default the server renders as dark, and production Vue does not patch an icon
     that disagrees after hydration, so a v-if on isDark left a light-device visitor
     looking at the sun. The class swap follows <html class> and cannot disagree with it.
@@ -16,8 +17,8 @@
     :title="title"
     @click="toggle"
   >
-    <Sun :size="16" :stroke-width="2" class="hidden dark:block" />
-    <Moon :size="16" :stroke-width="2" class="block dark:hidden" />
+    <Moon :size="16" :stroke-width="2" class="hidden dark:block" data-testid="theme-toggle-moon" />
+    <Sun :size="16" :stroke-width="2" class="block dark:hidden" data-testid="theme-toggle-sun" />
   </UiIconButton>
 </template>
 
@@ -35,7 +36,7 @@ import { Sun, Moon } from 'lucide-vue-next'
 /** Translator for the strings this component builds itself. */
 const { t } = useI18n()
 /** Current color mode, whether visitors may switch it, and the switch action. */
-const { isDark, userToggleEnabled, toggle } = useAppColorMode()
+const { isDark, applied, userToggleEnabled, toggle } = useAppColorMode()
 
 /** False until the browser knows the mode; the server may not (see the template note). */
 const mounted = ref(false)
@@ -43,7 +44,11 @@ onMounted(() => {
   mounted.value = true
 })
 
-/** Tooltip and accessible name, only once the mode is certain. */
+/**
+ * Tooltip and accessible name, only once the mode is certain: after mount, or from the first
+ * render when the server already knew it (a saved choice or a fixed operator default), so a
+ * dark page is never announced as "switch to dark mode".
+ */
 const title = computed(() =>
-  mounted.value ? (isDark.value ? t('ui.theme.switchLight') : t('ui.theme.switchDark')) : undefined)
+  mounted.value || applied.value !== null ? (isDark.value ? t('ui.theme.switchLight') : t('ui.theme.switchDark')) : undefined)
 </script>

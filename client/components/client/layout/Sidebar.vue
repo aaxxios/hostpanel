@@ -1,27 +1,21 @@
 <template>
   <!--
-    Mobile: fixed overlay that slides in and out.
-    Desktop: a normal flex child that fills the height and scrolls internally.
+    Mobile: an overlay anchored to the body row (the layout's positioned ancestor), so it opens
+    below the demo banner and the top bar instead of under them. It is `invisible` while closed so
+    its links leave the tab order. Desktop: a normal flex child that fills the height and scrolls
+    internally.
   -->
   <aside
-    class="fixed inset-y-0 left-0 z-20 flex w-64 flex-col border-r border-gray-200 bg-ui-surface transition-transform duration-300 dark:border-white/10 lg:relative lg:inset-y-auto lg:z-auto lg:flex-shrink-0 lg:translate-x-0"
-    :class="open ? 'translate-x-0' : '-translate-x-full'"
+    ref="asideRef"
+    class="absolute inset-y-0 left-0 z-20 flex w-64 max-w-[85vw] flex-col border-r border-gray-200 bg-ui-surface transition-[transform,visibility] duration-300 dark:border-white/10 lg:relative lg:inset-y-auto lg:z-auto lg:max-w-none lg:flex-shrink-0 lg:translate-x-0 lg:visible"
+    :class="open ? 'translate-x-0' : '-translate-x-full invisible'"
     data-testid="client-sidebar"
   >
-    <!-- Logo -->
-    <div class="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-6 py-5 dark:border-white/10">
+    <!-- Logo: desktop only, the top bar carries the brand and the close button on mobile -->
+    <div class="hidden flex-shrink-0 items-center border-b border-gray-200 px-6 py-5 dark:border-white/10 lg:flex">
       <UiLink to="/" tone="inherit" :underline="false" testid="client-sidebar-brand" class="text-lg font-bold">
         {{ $t('client.nav.brand', { site: siteName }) }}
       </UiLink>
-      <UiIconButton
-        :icon="X"
-        :label="$t('ui.close')"
-        variant="ghost"
-        size="sm"
-        class="lg:hidden"
-        testid="client-sidebar-close"
-        @click="$emit('close')"
-      />
     </div>
 
     <!-- Navigation: scrolls when the items overflow -->
@@ -31,13 +25,13 @@
         :key="item.to"
         :item="item"
         :active="isActive(item.to)"
-        @navigate="$emit('close')"
+        @navigate="emit('close')"
       />
     </nav>
 
     <!-- Sign out: always at the bottom -->
     <div class="flex-shrink-0 border-t border-gray-100 px-3 py-3 dark:border-white/5">
-      <UiButton variant="ghost" full-width class="!justify-start gap-3 hover:!text-red-500" data-testid="client-sign-out" @click="$emit('signOut')">
+      <UiButton variant="ghost" full-width class="!justify-start gap-3 hover:!text-red-500" data-testid="client-sign-out" @click="emit('signOut')">
         <LogOut :size="18" :stroke-width="2" />
         {{ $t('client.nav.signOut') }}
       </UiButton>
@@ -48,8 +42,11 @@
 <script setup lang="ts">
 /**
  * The client area's left navigation: brand, the permitted links and the sign-out button.
+ *
+ * On mobile it is a drawer that traps focus, closes on Escape and locks the page scroll while open.
  */
-import { LogOut, X } from 'lucide-vue-next'
+import { LogOut } from 'lucide-vue-next'
+import { useOverlay } from '~/utils/ui/overlay'
 import type { ClientNavItem } from '~/types/clientnavitem'
 
 /** Props of ClientLayoutSidebar. */
@@ -60,18 +57,24 @@ interface Props {
   open: boolean
 }
 
-defineProps<Props>()
+/** Props of the sidebar; `open` also drives the focus trap and scroll lock. */
+const props = defineProps<Props>()
 
 /** Operator-set site name shown as the brand. */
 const { name: siteName } = useSiteIdentity()
 
 /** Events of ClientLayoutSidebar. */
-defineEmits<{
-  /** The drawer should close (a link was followed or the close button pressed). */
+const emit = defineEmits<{
+  /** The drawer should close (a link was followed or Escape was pressed). */
   close: []
   /** The visitor asked to sign out. */
   signOut: []
 }>()
+
+/** The drawer element; while open on mobile it traps focus and holds the page scroll lock. */
+const asideRef = ref<HTMLElement | null>(null)
+
+useOverlay(() => props.open, () => emit('close'), () => asideRef.value)
 
 /** The current route, read for its query and path. */
 const route = useRoute()
