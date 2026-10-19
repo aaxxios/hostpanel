@@ -9,27 +9,13 @@
         class="min-w-0"
       />
 
-      <UiStack
-        direction="row"
-        align="center"
-        gap="none"
-        role="group"
-        :aria-label="t('nova.plans.billingLabel')"
-        class="gap-1 rounded-full border border-nova-border p-1"
-      >
-        <UiButton
-          v-for="option in options"
-          :key="option.key"
-          variant="bare"
-          class="min-h-[44px] rounded-full px-5 text-sm font-semibold"
-          :class="option.selected ? 'bg-nova-accent text-nova-on-accent' : 'text-nova-muted hover:text-nova-ink'"
-          :aria-pressed="option.selected"
-          :data-testid="`nova-billing-${option.key}`"
-          @click="emit('update:yearly', option.value)"
-        >
-          {{ t(option.labelKey) }}
-        </UiButton>
-      </UiStack>
+      <UiSegmentedControl
+        :model-value="yearly"
+        :options="options"
+        :label="t('nova.plans.billingLabel')"
+        testid="nova-billing-toggle"
+        @update:model-value="emit('update:yearly', $event)"
+      />
     </UiStack>
 
     <!--
@@ -73,6 +59,7 @@ import NovaPricingCard from '~/templates/nova/sections/PricingCard.vue'
 import NovaSectionHeader from '~/templates/nova/sections/NovaSectionHeader.vue'
 import { toNovaPlans } from '~/templates/nova/pricing'
 import type { PlanCard } from '~/types/plancard'
+import type { SegmentedOption } from '~/types/segmentedoption'
 
 /** Props of PricingSection. */
 const props = withDefaults(defineProps<{
@@ -96,9 +83,9 @@ const { t } = useI18n()
 /** The plans in the shape the cards render. */
 const novaPlans = computed(() => toNovaPlans(props.plans))
 
-/** The two billing options and which one is selected. */
-const options = computed(() => [
-  { key: 'monthly', labelKey: 'nova.plans.monthly', value: false, selected: !props.yearly },
-  { key: 'yearly', labelKey: 'nova.plans.yearly', value: true, selected: props.yearly },
+/** The two billing options; `true` is the yearly price. */
+const options = computed<SegmentedOption<boolean>[]>(() => [
+  { value: false, label: t('nova.plans.monthly'), testid: 'nova-billing-monthly' },
+  { value: true, label: t('nova.plans.yearly'), testid: 'nova-billing-yearly' },
 ])
 </script>

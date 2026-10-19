@@ -43,33 +43,26 @@ describe('PlanCards', () => {
 
   it('reports the billing period the visitor picks', async () => {
     stubAuroraGlobals()
-    const wrapper = mountWithKit(PlanCards, { props: { plans: PLANS } })
 
-    await wrapper.find('[data-testid="billing-yearly"]').trigger('click')
-    await wrapper.find('[data-testid="billing-monthly"]').trigger('click')
+    const monthly = mountWithKit(PlanCards, { props: { plans: PLANS } })
+    await monthly.find('[data-testid="billing-yearly"]').trigger('click')
+    const yearly = mountWithKit(PlanCards, { props: { plans: PLANS, yearly: true } })
+    await yearly.find('[data-testid="billing-monthly"]').trigger('click')
 
-    expect(wrapper.emitted('update:yearly')).toEqual([[true], [false]])
+    expect(monthly.emitted('update:yearly')).toEqual([[true]])
+    expect(yearly.emitted('update:yearly')).toEqual([[false]])
   })
 
-  it('marks the active period and paints it with the brand gradient', () => {
+  it('renders the toggle as the kit segmented control with the active period checked', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(PlanCards, { props: { plans: PLANS, yearly: true } })
+    const active = wrapper.find('[data-testid="billing-yearly"]')
 
-    expect(wrapper.find('[data-testid="billing-yearly"]').attributes('aria-pressed')).toBe('true')
-    expect(wrapper.find('[data-testid="billing-yearly"]').classes()).toContain('bg-brand')
-    expect(wrapper.find('[data-testid="billing-monthly"]').classes()).not.toContain('bg-brand')
-  })
-
-  it('keeps the toggle track and both segments in one pill radius family with white text on the gradient', () => {
-    stubAuroraGlobals()
-    const wrapper = mountWithKit(PlanCards, { props: { plans: PLANS, yearly: true } })
-    const active = wrapper.find('[data-testid="billing-yearly"]').classes()
-    const idle = wrapper.find('[data-testid="billing-monthly"]').classes()
-
-    expect(wrapper.find('[data-testid="billing-toggle"]').classes()).toContain('rounded-full')
-    expect(active).toEqual(expect.arrayContaining(['rounded-full', 'bg-brand', 'text-white', 'shadow-md', 'min-w-[120px]']))
-    expect(idle).toEqual(expect.arrayContaining(['rounded-full', 'text-tx2', 'hover:text-tx', 'min-w-[120px]']))
-    expect(active.some((c) => c.startsWith('focus:ring'))).toBe(false)
+    expect(wrapper.find('[data-testid="billing-toggle"]').attributes('role')).toBe('radiogroup')
+    expect(active.attributes('aria-checked')).toBe('true')
+    expect(wrapper.find('[data-testid="billing-monthly"]').attributes('aria-checked')).toBe('false')
+    expect(active.classes()).toEqual(expect.arrayContaining(['rounded-full', 'bg-brand', 'text-white']))
+    expect(active.classes()).not.toContain('rounded-lg')
   })
 
   it('drops the section headline when the page already has one', () => {
