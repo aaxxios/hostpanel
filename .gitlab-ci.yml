@@ -449,6 +449,7 @@ deploy:staging:
 #   DEMO_API_HOST_PORT, DEMO_CLIENT_HOST_PORT, DEMO_ADMIN_HOST_PORT, DEMO_MAILHOG_UI_HOST_PORT,
 #   DEMO_ADMIN_BASE_URL and DEMO_CLIENT_BASE_URL (both required: the bases of the links the demo mail carries),
 #   DEMO_PUBLISH_ADDRESS (required: the address the demo's published ports bind to) and DEMO_SMTP_ENCRYPTION,
+#   optionally DEMO_CONTACT_EMAIL / DEMO_CONTACT_PHONE (the storefront contact; unset keeps the fictional pair),
 # plus the demo's own DOMAIN, ADMIN_DOMAIN, ALLOWED_HOSTS and POSTGRES_DB, with AUTH_MODE=local, and
 # DEPLOY_DIR: the demo's own checkout on the host, never production's.
 deploy:demo:

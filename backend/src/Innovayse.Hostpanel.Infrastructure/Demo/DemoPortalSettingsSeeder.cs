@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
+using Innovayse.Hostpanel.Shared.Settings;
 using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Infrastructure.Demo;
@@ -8,10 +9,17 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// Gives the storefront's portal settings the demo's identity and the template's own palette. The shared portal-settings
 /// seeder only creates empty rows (an operator's choices must survive a restart), so this runs after it and
 /// writes the demo's values through the entity's update method. The demo is reset on a schedule, so its values
-/// are meant to be restored, unlike a real deployment's.
+/// are meant to be restored, unlike a real deployment's. The contact email and phone come from
+/// <see cref="DemoOptions"/> when the operator sets them, and fall back to the fictional pair otherwise.
 /// </summary>
 internal sealed class DemoPortalSettingsSeeder
 {
+    /// <summary>The contact email shown when <see cref="DemoOptions.ContactEmail"/> is empty; reserved <c>.example</c> domain.</summary>
+    internal const string DefaultContactEmail = "demo@hostpanel-demo.example";
+
+    /// <summary>The contact phone shown when <see cref="DemoOptions.ContactPhone"/> is empty; a fictional 555 number.</summary>
+    internal const string DefaultContactPhone = "+1 555 0100";
+
     /// <summary>The fictional company story shown on the demo's About page, in English.</summary>
     private const string AboutEn =
         "Hostpanel Demo is a fictional hosting company that exists only to show what this panel can do.\n\n"
@@ -33,13 +41,11 @@ internal sealed class DemoPortalSettingsSeeder
         + "և նրանք բոլորը, ինչպես այստեղ յուրաքանչյուր դոմեյն և հաշիվ, հորինված են։\n\n"
         + "Ազատ ուսումնասիրեք․ տվյալները վերականգնվում են ժամանակացույցով, ուստի ձեր փոփոխությունները չեն պահպանվում։";
 
-    /// <summary>The values the demo sets, by setting key.</summary>
-    private static readonly (string Key, string Value)[] Values =
+    /// <summary>The values the demo sets that no option changes, by setting key.</summary>
+    private static readonly (string Key, string Value)[] FixedValues =
     [
         (PortalSettingKeys.SiteName, "Hostpanel Demo"),
         (PortalSettingKeys.SiteTagline, "Hosting, domains and servers, managed in one place."),
-        (PortalSettingKeys.ContactEmail, "demo@hostpanel-demo.example"),
-        (PortalSettingKeys.ContactPhone, "+1 555 0100"),
         (PortalSettingKeys.ThemeDefault, "light"),
         (PortalSettingKeys.ThemeUserToggle, "true"),
         // Empty brand colours make the brand-tokens plugin emit no colour scale, so the template renders its own
@@ -72,22 +78,44 @@ internal sealed class DemoPortalSettingsSeeder
     /// <summary>The data context the settings are read and saved through.</summary>
     private readonly AppDbContext _db;
 
+    /// <summary>The demo options, read for the optional contact email and phone.</summary>
+    private readonly DemoOptions _options;
+
     /// <summary>Creates the seeder.</summary>
     /// <param name="db">The data context the settings are read and saved through.</param>
-    public DemoPortalSettingsSeeder(AppDbContext db)
+    /// <param name="options">The demo options, read for the optional contact email and phone.</param>
+    public DemoPortalSettingsSeeder(AppDbContext db, DemoOptions options)
     {
         _db = db;
+        _options = options;
     }
+
+    /// <summary>Every value the demo sets: the fixed ones plus the contact pair, configured or the fictional default.</summary>
+    /// <returns>The values by setting key.</returns>
+    private (string Key, string Value)[] Values() =>
+    [
+        (PortalSettingKeys.ContactEmail, OrDefault(_options.ContactEmail, DefaultContactEmail)),
+        (PortalSettingKeys.ContactPhone, OrDefault(_options.ContactPhone, DefaultContactPhone)),
+        .. FixedValues,
+    ];
+
+    /// <summary>The trimmed configured value, or the fallback when it is empty.</summary>
+    /// <param name="configured">The operator's value, possibly empty.</param>
+    /// <param name="fallback">The fictional default.</param>
+    /// <returns>The value to store.</returns>
+    private static string OrDefault(string? configured, string fallback) =>
+        string.IsNullOrWhiteSpace(configured) ? fallback : configured.Trim();
 
     /// <summary>Sets the demo's values on the rows the shared seeder created; a key with no row is skipped.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the settings are saved.</returns>
     public async Task SeedAsync(CancellationToken ct)
     {
-        var keys = Values.Select(v => v.Key).ToList();
+        var values = Values();
+        var keys = values.Select(v => v.Key).ToList();
         var rows = await _db.Settings.Where(s => keys.Contains(s.Key)).ToDictionaryAsync(s => s.Key, ct);
 
-        foreach (var (key, value) in Values)
+        foreach (var (key, value) in values)
         {
             if (rows.TryGetValue(key, out var row) && row.Value != value)
             {

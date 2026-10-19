@@ -96,7 +96,10 @@ pipeline. A value has one name and one home:
   fresh install and matter only on the first start; after that the departments are edited in the admin
   panel. `.env.example` carries `example.com` placeholders: a real deployment sets its own.
 - **Demo**: `DEMO_PUBLISH_ADDRESS` (the address its published ports bind to; required, so it can never be empty and bind every interface) and `DEMO_SMTP_ENCRYPTION`,
-  next to the existing `DEMO_*` keys.
+  next to the existing `DEMO_*` keys. `DEMO_CONTACT_EMAIL` and `DEMO_CONTACT_PHONE` are optional (`Demo__ContactEmail` /
+  `Demo__ContactPhone`): the contact the demo storefront shows in its footer and contact page, written on every seed and
+  reset. Empty keeps the fictional `demo@hostpanel-demo.example` / `+1 555 0100`; a set email must be an address or
+  startup is refused. They are display only: the demo's mail still goes to its own mailhog.
 - **Optional storefront content** (prod, dev and hub client): `NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS`,
   `NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL`, `NUXT_PUBLIC_PORTAL_STATS_CLIENTS`, `NUXT_PUBLIC_PORTAL_STATS_UPTIME`,
   `NUXT_PUBLIC_PORTAL_STATS_REGIONS` and `NUXT_PUBLIC_PORTAL_HERO_BADGE`. Empty is allowed: the matching
