@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The admin menu no longer "thinks" before a page opens on a slow connection. The admin image now compresses its bundle and lets browsers keep content-hashed assets for good; a screen's code starts downloading when the pointer reaches its link (and, on a cold page load, in parallel with the session check, which itself now asks the mode and the session together); and a thin progress bar shows at the top as soon as a navigation has been waiting for its screen.
 - A signed-in caller's first order no longer fails with a server error when it races the client record created on registration; the record is now saved once and the order continues with it.
 - Focus styling follows `:focus-visible`.
 - The billing toggle is fixed.

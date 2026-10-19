@@ -8,16 +8,20 @@
  */
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterView } from 'vue-router'
+import { RouterView, useRouter } from 'vue-router'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppTopbar from '@/components/layout/AppTopbar.vue'
 import DemoBanner from '@/components/layout/DemoBanner.vue'
 import EmailVerificationBanner from '@/components/layout/EmailVerificationBanner.vue'
 import UiDrawer from '@/components/ui/UiDrawer.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import { useLinkPrefetch } from '@/composables/useLinkPrefetch'
 
 /** Translation function and the active language; the language keys the routed view so labels built once at setup re-render when it changes. */
 const { t, locale } = useI18n()
+
+// Hovering, focusing or touching any in-app link starts downloading its screen, so the click finds it ready.
+useLinkPrefetch(useRouter())
 
 /** Controls the mobile drawer open state. */
 const drawerOpen = ref(false)

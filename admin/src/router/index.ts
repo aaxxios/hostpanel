@@ -5,23 +5,30 @@ import { authMiddleware } from '@/middleware/auth'
 import { getRuntimeConfig } from '@/lib/runtimeConfig'
 import { REPORTS } from '@/lib/reports'
 import { AppRoute } from '@/lib/routes'
+import { lazyView, withRetry } from '@/lib/lazyView'
+import { prefetchRoute } from '@/lib/prefetchRoute'
 
 /** Every view and layout as a lazy loader, keyed by its path relative to this file; Vite splits each into its own chunk. */
 const loaders = import.meta.glob<{ default: Component }>(['../views/*.vue', '../layouts/*.vue'])
 
 /**
- * Looks up the lazy loader of one routed file.
+ * Looks up one routed file and makes it lazy.
+ *
+ * A view becomes an async component: the router switches to it at once and the screen shows a
+ * skeleton while its chunk downloads, instead of the URL waiting on the download. A layout has to be
+ * in place before anything can draw inside it, so it stays a plain loader the router awaits. Both
+ * retry a failed download, so one dropped request does not leave the click with no effect.
  *
  * @param file - Path under `src/`, such as `views/LoginView.vue` or `layouts/AppLayout.vue`.
- * @returns The dynamic-import function vue-router calls on first visit.
+ * @returns The component to put in a route record.
  * @throws When no such file exists, so a typo fails when the table is built rather than on navigation.
  */
-const lazy = (file: string): (() => Promise<{ default: Component }>) => {
+const lazy = (file: string): Component | (() => Promise<{ default: Component }>) => {
   const loader = loaders[`../${file}`]
   if (!loader) {
     throw new Error(`Unknown routed file: ${file}`)
   }
-  return loader
+  return file.startsWith('views/') ? lazyView(loader) : withRetry(loader)
 }
 
 /**
@@ -133,7 +140,7 @@ const router = createRouter({
           children: [
             { path: '', redirect: AppRoute.ReportsDailyPerformance },
             /** One route per catalogued report. */
-            ...REPORTS.map(r => ({ path: r.slug, component: r.component })),
+            ...REPORTS.map(r => ({ path: r.slug, component: lazyView(r.component) })),
           ],
         },
         { path: 'orders', component: lazy('views/OrdersListView.vue') },
@@ -195,6 +202,12 @@ const router = createRouter({
     },
     { path: '/:pathMatch(.*)*', redirect: AppRoute.Login },
   ],
+})
+
+// First: start downloading the target's chunks now. The session check below can take a few round trips
+// on a cold page load, and vue-router would otherwise only begin fetching the screen after it finished.
+router.beforeEach((to) => {
+  prefetchRoute(to)
 })
 
 router.beforeEach(authMiddleware)
