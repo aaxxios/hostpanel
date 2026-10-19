@@ -19,7 +19,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useDemoStore } from '@/stores/demo'
 import { AuthMode, SignInResult } from '@/types/auth'
@@ -32,12 +32,16 @@ import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { TWO_FACTOR_CODE_LENGTH } from '@/lib/limits'
 import { AppRoute } from '@/lib/routes'
+import { REDIRECT_QUERY_PARAM, safeRedirectTarget } from '@/lib/redirectTarget'
 
 /** Translation function. */
 const { t } = useI18n()
 
 /** Router, for the hand-off to the panel and to first-run setup. */
 const router = useRouter()
+
+/** Current route, whose `redirect` query says where the visitor was heading before signing in. */
+const route = useRoute()
 
 /** Auth store: mode, session and every refusal sentence. */
 const authStore = useAuthStore()
@@ -81,6 +85,16 @@ const subtitle = computed<string>(() =>
 )
 
 /**
+ * Navigates to the page the visitor originally asked for, or the dashboard when there is none or
+ * the requested value is not a safe in-app path.
+ *
+ * @returns Promise resolving once the navigation has happened.
+ */
+const goToDestination = async (): Promise<void> => {
+  await router.push(safeRedirectTarget(route.query[REDIRECT_QUERY_PARAM]) ?? AppRoute.Dashboard)
+}
+
+/**
  * Sends the operator on to the panel, or stops to offer the Admin claim first.
  *
  * @returns Promise resolving once the navigation or the hand-off has happened.
@@ -90,7 +104,7 @@ const finishSignIn = async (): Promise<void> => {
     offerBootstrap.value = true
     return
   }
-  await router.push(AppRoute.Dashboard)
+  await goToDestination()
 }
 
 /** Fills the form with the published demo Admin account; the operator still presses Sign in. */
@@ -160,7 +174,7 @@ const handleClaimAdmin = async (): Promise<void> => {
     return
   }
   setupToken.value = ''
-  await router.push(AppRoute.Dashboard)
+  await goToDestination()
 }
 
 /**
@@ -169,7 +183,7 @@ const handleClaimAdmin = async (): Promise<void> => {
  * @returns Promise resolving once the navigation has happened.
  */
 const handleSkip = async (): Promise<void> => {
-  await router.push(AppRoute.Dashboard)
+  await goToDestination()
 }
 
 /**
