@@ -8,8 +8,12 @@
  */
 import { useFavicon } from '@/composables/useFavicon'
 import { useDemoStore } from '@/stores/demo'
+import { useThemeStore } from '@/stores/theme'
 
 useFavicon()
+
+// The pre-paint script already applied the theme; the store keeps it in step with the system.
+useThemeStore().init()
 
 // Demo mode is read once at app start so the banner and the login prefill know about it.
 void useDemoStore().load()
