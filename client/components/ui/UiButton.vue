@@ -100,7 +100,10 @@ const tagAttrs = computed(() => {
 
 /** Class list of the root element. */
 const buttonClasses = computed(() => {
-  const base = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+  // `transition`, not `transition-all`: `focus:outline-none` sets a transparent outline, and
+  // animating every property fades that outline in from the text colour, so a mouse press
+  // flashes a visible outline the focus rules say only the keyboard may draw.
+  const base = 'inline-flex items-center justify-center font-medium rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
   const width = props.fullWidth ? 'w-full' : ''
   // A bare button carries no palette and no padding step: the screen owns both, and the offset
   // ring (drawn in the page colour) would show as a halo on a surface it does not know.
