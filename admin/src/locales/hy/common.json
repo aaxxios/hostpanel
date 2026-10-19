@@ -5,6 +5,7 @@
   "signOut": "Դուրս գալ",
   "admin": "Ադմին",
   "notifications": "Ծանուցումներ",
+  "notificationsWithCount": "Ծանուցումներ, {count} նոր",
   "toggleSidebar": "Ցույց տալ/թաքցնել մենյուն",
   "viewAllNotifications": "Դիտել բոլոր ծանուցումները",
   "newCount": "{count} նոր | {count} նոր",

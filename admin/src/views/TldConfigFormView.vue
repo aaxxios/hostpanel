@@ -254,7 +254,7 @@ const handleCancel = (): void => {
         {{ saveError }}
       </UiAlert>
 
-      <UiGrid :columns="2" class="mb-24 items-start">
+      <UiGrid :columns="2" class="items-start">
         <!-- Left: general settings -->
         <SettingsSection :title="t('settings.tldConfigForm.generalSettings')">
           <UiField :label="t('settings.tldConfigForm.tld')" :hint="t('settings.tldConfigForm.domainExtensionWithoutTheDot')">

@@ -108,7 +108,7 @@ onMounted(async () => {
 
 <template>
   <UiStack>
-    <UiLink variant="link" :to="AppRoute.Orders" data-testid="order-back">
+    <UiLink variant="link" :to="AppRoute.Orders" class="self-start" data-testid="order-back">
       <UiIcon :markup="Icon.Back" size="sm" />
       {{ t('orders.orderDetail.backToOrders') }}
     </UiLink>

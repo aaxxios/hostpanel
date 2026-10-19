@@ -61,7 +61,7 @@ onMounted(() => store.fetchEmailTemplates())
             :data-testid="`email-templates-row-${template.id}`"
           >
             <UiTableCell muted>{{ template.id }}</UiTableCell>
-            <UiTableCell>{{ template.name }}</UiTableCell>
+            <UiTableCell>{{ template.slug }}</UiTableCell>
             <UiTableCell muted>{{ template.subject }}</UiTableCell>
           </UiTableRow>
         </UiTableBody>

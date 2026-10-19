@@ -23,6 +23,13 @@ describe('SettingsFormFooter', () => {
     expect(wrapper.get('[data-testid="settings-form-save"]').text()).toBe('Create slide')
   })
 
+  it('sticks to the content column instead of covering the sidebar', () => {
+    const wrapper = mountFooter({ saveLabel: 'Save', saving: false })
+
+    expect(wrapper.classes()).toContain('sticky')
+    expect(wrapper.classes()).not.toContain('fixed')
+  })
+
   it('emits cancel and save from their buttons', async () => {
     const wrapper = mountFooter({ saveLabel: 'Save', saving: false })
 

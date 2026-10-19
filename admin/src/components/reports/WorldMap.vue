@@ -116,7 +116,7 @@ const caption = computed<string>(() => {
         v-for="loc in World.locations"
         :key="loc.id"
         :d="loc.path"
-        class="fill-surface-hover stroke-border"
+        class="fill-border stroke-surface-card"
         stroke-width="0.3"
       />
       <g v-for="marker in markers" :key="marker.city + marker.country">
