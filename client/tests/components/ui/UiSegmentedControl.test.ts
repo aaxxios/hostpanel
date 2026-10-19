@@ -81,14 +81,14 @@ describe('UiSegmentedControl', () => {
     wrapper.unmount()
   })
 
-  it('paints the chosen segment as a borderless pill with the brand gradient and white text', () => {
+  it('paints the chosen segment as a borderless pill with the brand gradient and its contrast text', () => {
     const wrapper = mountControl('monthly')
     const active = wrapper.find('[data-testid="seg-monthly"]').classes()
 
-    expect(active).toEqual(expect.arrayContaining(['rounded-full', 'bg-brand', 'text-white']))
+    expect(active).toEqual(expect.arrayContaining(['rounded-full', 'bg-brand', 'text-on-tint']))
     expect(active).not.toContain('rounded-lg')
     expect(active.some((c) => c === 'border' || c.startsWith('border-'))).toBe(false)
-    expect(active.some((c) => c.startsWith('text-') && c !== 'text-white' && c !== 'text-center' && c !== 'text-sm')).toBe(false)
+    expect(active.some((c) => c.startsWith('text-') && c !== 'text-on-tint' && c !== 'text-center' && c !== 'text-sm')).toBe(false)
     wrapper.unmount()
   })
 

@@ -16,6 +16,15 @@ describe('TrustBar', () => {
     expect(text).toContain('aurora.trust.noHidden')
   })
 
+  it('spreads the guarantees over a full-width grid, each icon in a tinted chip', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(TrustBar)
+
+    expect(wrapper.find('[data-testid="trust-bar"]').classes()).toContain('w-full')
+    expect(wrapper.findAll('[data-testid="trust-item"]')).toHaveLength(3)
+    expect(wrapper.findAll('[data-testid="trust-chip"]')).toHaveLength(3)
+  })
+
   it('names no payment brand', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(TrustBar)

@@ -36,10 +36,24 @@
       </UiButton>
     </UiStack>
 
-    <UiStack v-if="stats.length > 0" direction="row" wrap gap="none" class="mt-11 gap-x-10 gap-y-7" data-testid="hero-stats">
-      <UiStack v-for="stat in stats" :key="stat.label" gap="none">
-        <UiText as="span" size="inherit" tone="inherit" weight="bold" class="text-[26px] text-tx">{{ stat.value }}</UiText>
-        <UiText as="span" size="sm" tone="inherit" class="mt-1 text-mut2">{{ stat.label }}</UiText>
+    <UiStack
+      v-if="stats.length > 0"
+      direction="row"
+      wrap
+      gap="none"
+      class="mt-11 gap-y-6 border-t border-line pt-7"
+      data-testid="hero-stats"
+    >
+      <UiStack
+        v-for="(stat, index) in stats"
+        :key="stat.label"
+        gap="none"
+        class="min-w-[110px] pr-8"
+        :class="index > 0 ? 'border-l border-line pl-8' : ''"
+        data-testid="hero-stat"
+      >
+        <UiText as="span" size="inherit" tone="inherit" weight="bold" class="text-[26px] leading-none text-tx">{{ stat.value }}</UiText>
+        <UiText as="span" size="sm" tone="inherit" class="mt-2 text-mut">{{ stat.label }}</UiText>
       </UiStack>
     </UiStack>
   </UiStack>
