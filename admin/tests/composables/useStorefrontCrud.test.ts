@@ -41,7 +41,8 @@ describe('useStorefrontCrud', () => {
   })
 
   it('keeps the per-field messages of a refused create and clears them on the next attempt', async () => {
-    stubFetch(invalid('Check the form.', { name: ['Name is required.'] }), json(2), json([]))
+    // Every mutation reloads the list, the refused one too: refusal, reload, create, reload.
+    stubFetch(invalid('Check the form.', { name: ['Name is required.'] }), json([]), json(2), json([]))
     const crud = makeCrud()
 
     expect(await crud.create({ name: '' })).toBeNull()
