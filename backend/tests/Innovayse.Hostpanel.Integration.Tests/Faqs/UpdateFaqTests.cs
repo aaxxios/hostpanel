@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Domain.Faqs.Enums;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Xunit;
 
@@ -25,7 +26,7 @@ public sealed class UpdateFaqTests(IntegrationTestFactory factory) : IClassFixtu
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         var fetched = await client.GetFromJsonAsync<JsonElement>($"/api/admin/faqs/{id}");
-        fetched.GetProperty("category").GetString().Should().Be("products");
+        fetched.GetProperty("category").GetString().Should().Be(nameof(FaqCategory.Products));
         fetched.GetProperty("sortOrder").GetInt32().Should().Be(9);
         fetched.GetProperty("isActive").GetBoolean().Should().BeFalse();
         var translations = fetched.GetProperty("translations");

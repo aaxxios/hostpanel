@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { mountPage, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import type { PublicPageSpies } from '~/tests/helpers/publicPage'
+import { testimonialFixture } from '~/tests/helpers/storefrontFixtures'
 import ProductsPage from '~/pages/products/index.vue'
 import CatalogProductsHero from '~/components/catalog/ProductsHero.vue'
 import CatalogProductFamilyGrid from '~/components/catalog/ProductFamilyGrid.vue'
@@ -31,6 +32,18 @@ vi.mock('~/composables/apis/useCatalogApi', () => ({
    * @returns The mocked endpoints.
    */
   useCatalogApi: () => api,
+}))
+
+/** The mocked storefront endpoints, so the testimonials block has quotes to show. */
+const storefrontApi = { fetchPartners: vi.fn(), fetchTestimonials: vi.fn(), fetchProjects: vi.fn(), fetchFaqs: vi.fn() }
+
+vi.mock('~/composables/apis/useStorefrontApi', () => ({
+  /**
+   * Stands in for the storefront API composable so the store runs without transport.
+   *
+   * @returns The mocked endpoints.
+   */
+  useStorefrontApi: () => storefrontApi,
 }))
 
 vi.mock('~/composables/apis/useCurrencyApi', () => ({
@@ -83,6 +96,8 @@ describe('products page', () => {
     api.fetchProducts.mockResolvedValue(catalogue)
     api.fetchProductGroups.mockReset()
     api.fetchProductGroups.mockResolvedValue(groups)
+    storefrontApi.fetchTestimonials.mockReset()
+    storefrontApi.fetchTestimonials.mockResolvedValue([1, 2, 3].map(id => testimonialFixture(id)))
     window.localStorage.clear()
   })
 

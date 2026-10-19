@@ -108,10 +108,13 @@ describe('pages/faq/[category]', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-    const wrapper = await mountPage(Page).catch(() => null)
+    const errorHandler = vi.fn()
+
+    const wrapper = await mountPage(Page, { errorHandler })
 
     expect(spies.createError).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 404 }))
-    expect(wrapper?.find('[data-testid="faq-category-page"]').exists() ?? false).toBe(false)
+    expect(errorHandler).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 404 }), expect.anything(), expect.anything())
+    expect(wrapper.find('[data-testid="faq-category-page"]').exists()).toBe(false)
     consoleError.mockRestore()
     consoleWarn.mockRestore()
   })

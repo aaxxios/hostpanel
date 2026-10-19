@@ -2,7 +2,7 @@
  * Tests for the Cookie Policy page: the cookie types as cards, the uses as a checklist, a note,
  * and the contact address as a mail link.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { mountPage, registerPageComponents, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import type { PublicPageSpies } from '~/tests/helpers/publicPage'
@@ -25,6 +25,10 @@ describe('pages/cookie-policy', () => {
   beforeEach(() => {
     spies = stubPublicPageRuntime({ tm: key => MESSAGES[key] ?? [] })
     registerPageComponents({ LegalDocument })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('shows the title and the dated last-updated line without a badge', async () => {

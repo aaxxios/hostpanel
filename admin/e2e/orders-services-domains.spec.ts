@@ -4,7 +4,7 @@
  */
 import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
-import { domainsPage, hostingService, ordersPage, pendingOrder, registeredDomain, servicesPage } from './fixtures/orders'
+import { domainsPage, hostingProductName, hostingService, ordersPage, pendingOrder, registeredDomain, servicesPage } from './fixtures/orders'
 import type { OrderListItem } from '../src/types/order'
 import { OrderStatus } from '../src/types/order'
 import { json, stubApi } from './support/stubApi'
@@ -62,7 +62,7 @@ test('the services list links each service to its client', async ({ page }) => {
 
   await page.goto('/services')
 
-  await expect(page.getByTestId(`services-row-${hostingService.id}`)).toContainText(hostingService.productName)
+  await expect(page.getByTestId(`services-row-${hostingService.id}`)).toContainText(hostingProductName)
   await expect(page.getByTestId(`services-client-${hostingService.id}`)).toHaveAttribute('href', `/clients/${hostingService.clientId}`)
 })
 

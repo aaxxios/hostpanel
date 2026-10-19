@@ -103,9 +103,12 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory) : IClas
         var host = DemoTestHost.Enabled(factory);
         await ResetAsync(host);
 
-        // A visitor's leftovers: a client and a ticket the sample does not contain.
+        // A visitor's leftovers: a client the sample does not contain. Its creation event is
+        // held back, or the welcome email it triggers lands in the email log after the reset
+        // has run and skews the count below.
         using (var scope = host.Services.CreateScope())
         {
+            using var suppression = scope.ServiceProvider.GetRequiredService<IDomainEventGate>().Suppress();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var stray = Client.Create($"stray-{Guid.NewGuid():N}", "Stray", "Visitor", $"{Guid.NewGuid():N}@example.test");
             db.Clients.Add(stray);

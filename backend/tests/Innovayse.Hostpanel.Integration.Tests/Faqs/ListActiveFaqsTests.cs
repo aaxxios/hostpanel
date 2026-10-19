@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Domain.Faqs.Enums;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Xunit;
 
@@ -38,7 +39,7 @@ public sealed class ListActiveFaqsTests(IntegrationTestFactory factory) : IClass
         item.GetProperty("sortOrder").GetInt32().Should().Be(3);
         item.GetProperty("question").GetString().Should().Be("English question?");
         item.TryGetProperty("translations", out _).Should().BeFalse();
-        item.GetProperty("category").GetString().Should().Be("general");
+        item.GetProperty("category").GetString().Should().Be(nameof(FaqCategory.General));
         item.TryGetProperty("isActive", out _).Should().BeFalse();
     }
 

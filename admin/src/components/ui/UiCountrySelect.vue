@@ -28,9 +28,9 @@ const emit = defineEmits<{
 /** Country list of the geo atlas, the same source every other country picker reads. */
 const { geoCountries } = useGeoOptions()
 
-/** The countries as `UiSelect` options: value is the ISO code, label the country name. */
+/** The countries as `UiSelect` options: value is the ISO code, label the country name; entries without either are left out. */
 const countryOptions = computed(() =>
-  geoCountries.filter(c => c.iso2).map(c => ({ value: String(c.iso2), label: c.name })),
+  geoCountries.flatMap(c => (c.iso2 && c.name ? [{ value: String(c.iso2), label: c.name }] : [])),
 )
 
 /** Two-way bridge between the prop and the inner select. */

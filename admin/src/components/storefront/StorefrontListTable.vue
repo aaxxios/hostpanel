@@ -90,6 +90,16 @@ const emit = defineEmits<{
   reorder: [order: StorefrontOrderItem[]]
 }>()
 
+defineSlots<{
+  /**
+   * The cells of one row between the drag handle and the actions.
+   *
+   * @param props - The slot props.
+   * @param props.item - The entry the row shows.
+   */
+  row(props: { item: T }): unknown
+}>()
+
 /** Local mutable copy of the entries, which the drag library reorders in place. */
 const local = ref<T[]>([]) as Ref<T[]>
 

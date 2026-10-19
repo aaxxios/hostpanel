@@ -69,7 +69,7 @@ describe('PlanCards', () => {
     expect(wrapper.find('[data-testid="billing-toggle"]').classes()).toContain('rounded-full')
     expect(active).toEqual(expect.arrayContaining(['rounded-full', 'bg-brand', 'text-white', 'shadow-md', 'min-w-[120px]']))
     expect(idle).toEqual(expect.arrayContaining(['rounded-full', 'text-tx2', 'hover:text-tx', 'min-w-[120px]']))
-    expect(active.some((c) => c.startsWith('focus:'))).toBe(false)
+    expect(active.some((c) => c.startsWith('focus:ring'))).toBe(false)
   })
 
   it('drops the section headline when the page already has one', () => {

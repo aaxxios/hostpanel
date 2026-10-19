@@ -83,6 +83,7 @@ describe('pages/contact', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   it('sets the page tags and publishes the contact-page structured data', async () => {
