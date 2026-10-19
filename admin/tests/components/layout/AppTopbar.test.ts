@@ -52,6 +52,17 @@ describe('AppTopbar', () => {
     expect(wrapper.get('[data-testid="notifications-drawer"]').text()).toContain('example.com expires')
   })
 
+  it('overlays the count on the bell, names it with the count and caps it at 9+', async () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ type: 'ClientRegistered', message: `Client ${i}`, occurredAt: '2026-10-14T08:00:00Z', entityId: i }))
+    const wrapper = await mountBar('/dashboard', many)
+
+    const badge = wrapper.get('[data-testid="topbar-notification-count"]')
+    expect(badge.text()).toBe('9+')
+    expect(badge.classes()).toContain('absolute')
+    expect(badge.element.parentElement?.classList.contains('relative')).toBe(true)
+    expect(wrapper.get('[data-testid="topbar-notifications"]').attributes('aria-label')).toBe('Notifications, 12 new')
+  })
+
   it('shows the empty message for an empty feed and hides the badge', async () => {
     const wrapper = await mountBar('/dashboard', [])
 

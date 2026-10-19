@@ -79,7 +79,7 @@ const timeLeft = computed<string | null>(() => {
   <UiAlert v-if="demo.enabled" variant="info" data-testid="demo-banner">
     <UiStack direction="row" gap="sm" align="center" wrap>
       <UiBadge tone="info" small data-testid="demo-banner-label">{{ t('demo.banner.label') }}</UiBadge>
-      <UiText v-if="timeLeft !== null" size="sm" data-testid="demo-banner-countdown">
+      <UiText v-if="timeLeft !== null" tone="primary" size="sm" data-testid="demo-banner-countdown">
         {{ t('demo.banner.resetsIn', { time: timeLeft }) }}
       </UiText>
       <UiText size="sm" tone="secondary">{{ t('demo.banner.dataResets') }}</UiText>

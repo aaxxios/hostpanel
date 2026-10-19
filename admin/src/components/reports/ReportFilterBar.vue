@@ -50,7 +50,7 @@ const emit = defineEmits<{
     <slot />
 
     <template #actions>
-      <UiStack direction="row" gap="sm" justify="center" align="center" wrap>
+      <UiStack direction="row" gap="sm" justify="start" align="center" wrap>
         <UiButton variant="primary" data-testid="report-generate" @click="emit('generate')">
           {{ generateLabel ?? t('shared.generate') }}
         </UiButton>

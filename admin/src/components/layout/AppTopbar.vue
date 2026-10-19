@@ -143,6 +143,14 @@ const chooseLocale = (code: string): void => {
   }
 }
 
+/** Text of the count badge: the exact number up to 9, "9+" beyond. */
+const notificationBadge = computed<string>(() => (notificationCount.value > 9 ? '9+' : String(notificationCount.value)))
+
+/** Accessible name of the bell: carries the unread count when there is one. */
+const notificationLabel = computed<string>(() =>
+  notificationCount.value > 0 ? t('common.notificationsWithCount', { count: notificationCount.value }) : t('common.notifications'),
+)
+
 /** Opens the notification drawer, loading the feed the first time it opens. */
 const openNotifications = (): void => {
   showNotifications.value = true
@@ -223,12 +231,20 @@ onMounted(() => {
         @update:model-value="chooseLocale"
       />
 
-      <UiStack direction="row" align="center" gap="xs">
-        <UiIconButton :label="t('common.notifications')" data-testid="topbar-notifications" @click="openNotifications">
+      <!-- The badge is overlaid on the bell's top-right corner; the ring cuts it out of the bar surface. -->
+      <UiStack direction="row" align="center" class="relative">
+        <UiIconButton :label="notificationLabel" data-testid="topbar-notifications" class="hover:bg-surface-hover" @click="openNotifications">
           <UiIcon :markup="BELL_MARKUP" />
         </UiIconButton>
-        <UiBadge v-if="notificationCount > 0" tone="primary" small data-testid="topbar-notification-count">
-          {{ notificationCount }}
+        <UiBadge
+          v-if="notificationCount > 0"
+          tone="primary"
+          small
+          aria-hidden="true"
+          class="pointer-events-none absolute -right-1 -top-1 min-w-[1.125rem] justify-center ring-2 ring-surface-panel"
+          data-testid="topbar-notification-count"
+        >
+          {{ notificationBadge }}
         </UiBadge>
       </UiStack>
 

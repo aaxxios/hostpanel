@@ -34,6 +34,7 @@ import { pageCount } from '@/lib/paging'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiTableDensity } from '@/utils/ui/injection'
 import { UiSize } from '@/utils/ui/size'
+import { toneTextClasses, UiTone } from '@/utils/ui/tone'
 import { SEARCH_DEBOUNCE_MS } from '@/lib/limits'
 import { AppRoute, supportTicketPath } from '@/lib/routes'
 
@@ -301,7 +302,7 @@ onMounted(() => {
               <UiIconButton
                 :label="t('support.supportTickets.flag')"
                 :size="UiSize.Sm"
-                :class="ticket.isFlagged ? 'text-status-yellow' : 'text-text-muted'"
+                :class="ticket.isFlagged ? toneTextClasses[UiTone.Warning] : 'text-text-muted'"
                 :data-testid="`support-tickets-flag-${ticket.id}`"
                 @click="handleToggleFlag(ticket.id)"
               >
