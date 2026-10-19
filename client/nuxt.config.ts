@@ -103,6 +103,22 @@ export default defineNuxtConfig({
     },
     '@nuxt/eslint', '@nuxt/icon', '@nuxt/image', '@nuxtjs/tailwindcss', '@nuxtjs/i18n', '@nuxtjs/sitemap', 'nuxt-swiper', '@pinia/nuxt'],
 
+  /**
+   * Icon delivery. Two settings, one cause: the header's cart and menu icons rendered as empty
+   * squares on a deployed install.
+   *
+   * - `localApiEndpoint`: the module's own icon route defaults to `/api/_nuxt_icon`, but the edge proxy
+   *   sends every `/api/` request to the C# backend, which answers 404 for it. The route lives outside
+   *   `/api` so the Nuxt server answers it.
+   * - `clientBundle.scan`: every icon named in the source (literals in templates and data files) is
+   *   shipped inside the client bundle, so the browser makes no icon request at all and nothing can
+   *   404 at runtime. The endpoint above stays as the fallback for a name built at runtime.
+   */
+  icon: {
+    localApiEndpoint: '/_nuxt_icon',
+    clientBundle: { scan: true },
+  },
+
   image: {
     quality: 80,
     format: ['webp'],

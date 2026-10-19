@@ -48,10 +48,14 @@
         :to="item.to"
         role="menuitem"
         :data-testid="`account-menu-${item.key}`"
-        class="w-full justify-start rounded-xl px-3 py-2.5 text-sm font-normal text-tx hover:bg-acbg"
+        :class="ITEM_CLASSES"
         @click="close"
       >
-        {{ item.label }}
+        <!-- The row is its own flex box: the button centres its content, and a utility on the button alone loses to that. -->
+        <UiStack direction="row" align="center" gap="sm" class="w-full min-w-0">
+          <component :is="item.icon" :size="16" :stroke-width="2" class="shrink-0 text-mut2" aria-hidden="true" />
+          <UiText as="span" size="sm" tone="inherit" truncate>{{ item.label }}</UiText>
+        </UiStack>
       </UiButton>
 
       <div class="my-1 h-px bg-line2" />
@@ -60,10 +64,13 @@
         variant="bare"
         role="menuitem"
         data-testid="account-menu-sign-out"
-        class="w-full justify-start rounded-xl px-3 py-2.5 text-sm font-normal text-danger hover:bg-acbg"
+        :class="[ITEM_CLASSES, 'text-danger']"
         @click="onSignOut"
       >
-        {{ t('client.nav.signOut') }}
+        <UiStack direction="row" align="center" gap="sm" class="w-full min-w-0">
+          <LogOut :size="16" :stroke-width="2" class="shrink-0" aria-hidden="true" />
+          <UiText as="span" size="sm" tone="inherit" truncate>{{ t('client.nav.signOut') }}</UiText>
+        </UiStack>
       </UiButton>
     </template>
   </UiPopover>
@@ -82,10 +89,18 @@
  * The avatar comes from `UiAvatar` and the floating panel from `UiPopover`, so nothing is
  * drawn by hand twice and the outside-click / Escape handling lives in one place.
  */
+import { FileText, Globe, LayoutDashboard, LogOut, Server, UserCog } from 'lucide-vue-next'
 import {
   CLIENT_ACCOUNT_PATH, CLIENT_DASHBOARD_PATH, CLIENT_DOMAINS_PATH, CLIENT_INVOICES_PATH, CLIENT_SERVICES_PATH
 } from '~/constants/clientRoutes'
 const { t } = useI18n()
+
+/**
+ * Look shared by every row of the panel: full width, left-aligned content, and the same
+ * tinted background for pointer hover and keyboard focus, both from the template tokens.
+ */
+const ITEM_CLASSES = 'w-full rounded-xl px-3 py-2.5 text-tx transition-colors hover:bg-acbg focus-visible:bg-acbg focus-visible:ring-inset'
+
 /** Prefixes a path with the active locale. */
 const localePath = useLocalePath()
 /** The session store. */
@@ -122,11 +137,11 @@ const menuLabel = computed(() => displayName.value)
 
 /** Destinations offered in the panel, in the order the client-area nav uses. */
 const menuItems = computed(() => [
-  { key: 'dashboard', label: t('client.nav.dashboard'), to: localePath(CLIENT_DASHBOARD_PATH) },
-  { key: 'services', label: t('client.nav.services'), to: localePath(CLIENT_SERVICES_PATH) },
-  { key: 'domains', label: t('client.nav.domains'), to: localePath(CLIENT_DOMAINS_PATH) },
-  { key: 'invoices', label: t('client.nav.invoices'), to: localePath(CLIENT_INVOICES_PATH) },
-  { key: 'account', label: t('client.nav.account'), to: localePath(CLIENT_ACCOUNT_PATH) },
+  { key: 'dashboard', icon: LayoutDashboard, label: t('client.nav.dashboard'), to: localePath(CLIENT_DASHBOARD_PATH) },
+  { key: 'services', icon: Server, label: t('client.nav.services'), to: localePath(CLIENT_SERVICES_PATH) },
+  { key: 'domains', icon: Globe, label: t('client.nav.domains'), to: localePath(CLIENT_DOMAINS_PATH) },
+  { key: 'invoices', icon: FileText, label: t('client.nav.invoices'), to: localePath(CLIENT_INVOICES_PATH) },
+  { key: 'account', icon: UserCog, label: t('client.nav.account'), to: localePath(CLIENT_ACCOUNT_PATH) },
 ])
 
 /** Ends the session; in SSO mode this navigates the browser away. */
