@@ -3,7 +3,7 @@
     "badge": "Why Choose Us",
     "title": "We Deliver {results}, Not Just Services",
     "titleHighlight": "Results",
-    "subtitle": "With over 8 years of experience and 150+ successful projects, we've mastered the art of turning ideas into profitable digital products.",
+    "subtitle": "We've mastered the art of turning ideas into profitable digital products.",
     "advantages": {
       "fastDelivery": {
         "title": "Fast Delivery",
@@ -14,12 +14,12 @@
         "description": "Every project goes through rigorous testing and quality assurance before delivery."
       },
       "support": {
-        "title": "24/7 Support",
-        "description": "Dedicated support team available around the clock to assist with any issues."
+        "title": "Dedicated Support",
+        "description": "Dedicated support team available to assist with any issues."
       },
       "provenResults": {
         "title": "Proven Results",
-        "description": "Our clients see measurable improvements and ROI within the first year of partnership."
+        "description": "Our clients see measurable improvements and ROI from the partnership."
       }
     }
   }

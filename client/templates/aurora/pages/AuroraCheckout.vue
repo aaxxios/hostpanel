@@ -102,7 +102,7 @@
                       <UiText size="sm" tone="inherit" class="text-mut">
                         {{ $t('checkout.guestNotice') }}
                         <UiLink
-                          :to="localePath('/client/login')"
+                          :to="localePath(CLIENT_LOGIN_PATH)"
                           tone="inherit"
                           :underline="false"
                           testid="checkout-sign-in"
@@ -337,6 +337,7 @@ import {
   CreditCard, ShoppingCart, Server, CheckCircle, User,
   Lock, ShieldCheck, Info, Receipt, HelpCircle,
 } from 'lucide-vue-next'
+import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
 import { BRAND_BUTTON } from '~/templates/aurora/buttons'
 import { PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
 import { useCheckoutPage } from '~/composables/useCheckoutPage'

@@ -2,15 +2,37 @@
  * Unit tests for AuroraHome: every section is composed in, the optional ones can be switched off,
  * and the search and billing events travel up to the page that owns the data.
  */
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
+import { faqFixture, testimonialFixture } from '~/tests/helpers/storefrontFixtures'
 import AuroraHome from '~/templates/aurora/pages/AuroraHome.vue'
 import { stubAuroraGlobals, PLANS } from '../auroraGlobals'
 
+/** The mocked storefront endpoints, so the FAQ and testimonials sections have content to show. */
+const api = { fetchPartners: vi.fn().mockResolvedValue([]), fetchTestimonials: vi.fn(), fetchProjects: vi.fn().mockResolvedValue([]), fetchFaqs: vi.fn() }
+
+vi.mock('~/composables/apis/useStorefrontApi', () => ({
+  /**
+   * Stands in for the storefront API composable so the store runs without transport.
+   *
+   * @returns The mocked endpoints.
+   */
+  useStorefrontApi: () => api,
+}))
+
 describe('AuroraHome', () => {
-  it('composes the hero, search, trust bar, plans, services, process, testimonials, FAQ and call to action', () => {
+  beforeEach(() => {
+    api.fetchFaqs.mockReset()
+    api.fetchFaqs.mockResolvedValue([faqFixture(1), faqFixture(2)])
+    api.fetchTestimonials.mockReset()
+    api.fetchTestimonials.mockResolvedValue([testimonialFixture(1), testimonialFixture(2)])
+  })
+
+  it('composes the hero, search, trust bar, plans, services, process, testimonials, FAQ and call to action', async () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(AuroraHome, { props: { plans: PLANS } })
+    await flushPromises()
 
     expect(wrapper.attributes('data-testid')).toBe('aurora-home')
     expect(wrapper.find('[data-testid="hero-title"]').exists()).toBe(true)

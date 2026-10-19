@@ -41,6 +41,16 @@ describe('AppSidebar', () => {
     expect(wrapper.get('[data-testid="nav-clients-users"]').classes()).toContain('text-primary-400')
   })
 
+  it('lists the four storefront content pages and opens the section on one of them', async () => {
+    const wrapper = await mountSidebar('/storefront/faqs')
+
+    expect(wrapper.get('[data-testid="nav-storefront"]').attributes('aria-expanded')).toBe('true')
+    expect(wrapper.get('[data-testid="nav-storefront-testimonials"]').attributes('href')).toBe('/storefront/testimonials')
+    expect(wrapper.get('[data-testid="nav-storefront-partners"]').attributes('href')).toBe('/storefront/partners')
+    expect(wrapper.get('[data-testid="nav-storefront-projects"]').attributes('href')).toBe('/storefront/projects')
+    expect(wrapper.get('[data-testid="nav-storefront-faqs"]').classes()).toContain('text-primary-400')
+  })
+
   it('opens a closed sub-menu when its toggle is clicked', async () => {
     const wrapper = await mountSidebar('/dashboard')
     expect(wrapper.get('[data-testid="nav-billing"]').attributes('aria-expanded')).toBe('false')
@@ -59,10 +69,12 @@ describe('AppSidebar', () => {
     expect(wrapper.emitted('navigate')).toHaveLength(1)
   })
 
-  it('falls back to the dark-background logo, since the sidebar is dark', async () => {
+  it('renders the built-in wordmark for each theme', async () => {
     const wrapper = await mountSidebar('/dashboard')
 
-    expect(wrapper.find('img[src="/logo-dark.svg"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="brand-logo-dark"]').attributes('src')).toBe('/logo-dark.svg')
+    expect(wrapper.get('[data-testid="brand-logo-light"]').attributes('src')).toBe('/logo.svg')
+    expect(wrapper.get('[data-testid="brand-logo-dark"]').attributes('alt')).toBe('Hostpanel')
   })
 
   it('offers sign-out', async () => {

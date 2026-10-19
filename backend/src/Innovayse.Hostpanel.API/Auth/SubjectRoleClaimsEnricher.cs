@@ -52,7 +52,7 @@ public static class SubjectRoleClaimsEnricher
         // leave the default mapping on, which renames it to NameIdentifier. Reading only one name
         // finds nothing on the other scheme — the same trap HttpCurrentUserService documents.
         var subject = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? context.Principal?.FindFirstValue("sub");
+            ?? context.Principal?.FindFirstValue(Innovayse.Hostpanel.Shared.Constants.JwtClaims.Sub);
 
         if (string.IsNullOrEmpty(subject))
         {

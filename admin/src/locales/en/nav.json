@@ -49,5 +49,12 @@
     "gateways": "Payment Gateways",
     "currencies": "Currencies"
   },
+  "storefront": "Storefront content",
+  "storefrontChildren": {
+    "testimonials": "Testimonials",
+    "partners": "Partners",
+    "projects": "Projects",
+    "faqs": "FAQ"
+  },
   "servicesTitle": "Services"
 }

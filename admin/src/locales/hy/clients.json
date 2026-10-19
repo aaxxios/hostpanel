@@ -139,7 +139,7 @@
     "areYouSureYouWant": "Վստա՞հ եք, որ ցանկանում եք անմիջապես հաշիվ դուրս գրել ընտրված դիրքերի համար։",
     "confirmDelete": "Հաստատեք ջնջումը",
     "areYouSureYouWant2": "Վստա՞հ եք, որ ցանկանում եք ջնջել այս վճարվող դիրքը։",
-    "confirmDeleteSelected": "Վստա՞հ եք, որ ուզում եք ջնջել ընտրված {count} տարրերը։"
+    "confirmDeleteSelected": "Վստա՞հ եք, որ ուզում եք ջնջել ընտրված {count} տարրը։ | Վստա՞հ եք, որ ուզում եք ջնջել ընտրված {count} տարրերը։"
   },
   "clientContacts": {
     "contactsLength": "Կոնտակտներ ({length})",
@@ -218,7 +218,7 @@
     "clientinvoicestotalInvoiceValue": "Հաշիվներ՝ {clientInvoicesTotal}",
     "deleteInvoice": "Ջնջել հաշիվը",
     "confirmBulkAction": "Հաստատեք զանգվածային գործողությունը",
-    "confirmBulkApply": "Կիրառե՞լ «{action}» ընտրված {count} հաշիվ-ապրանքագրերին։",
+    "confirmBulkApply": "Կիրառե՞լ «{action}» ընտրված {count} հաշիվ-ապրանքագրին։ | Կիրառե՞լ «{action}» ընտրված {count} հաշիվ-ապրանքագրերին։",
     "confirmDeleteInvoice": "Վստա՞հ եք, որ ուզում եք ջնջել #{id} հաշիվ-ապրանքագիրը։"
   },
   "clientLayout": {

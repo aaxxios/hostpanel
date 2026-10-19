@@ -1,15 +1,16 @@
 using Innovayse.Hostpanel.Application.Admin.Commands.UpdateSetting;
 using Innovayse.Hostpanel.Application.Admin.Commands.UploadBrandingImage;
 using Innovayse.Hostpanel.Application.Admin.Common;
+using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 using Innovayse.Hostpanel.Application.Admin.Queries.GetSetting;
 using Innovayse.Hostpanel.Application.Admin.Queries.GetSettings;
 using Innovayse.Hostpanel.Shared.Authorization;
+using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.Hostpanel.Shared.Controllers;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine;
-using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 
 namespace Innovayse.Hostpanel.API.Controllers;
 
@@ -98,11 +99,11 @@ public sealed class SettingsController : BaseApiController
     /// <c>BRANDING_IMAGE_TOO_LARGE</c>; 401; 403.
     /// </returns>
     [HttpPost("branding/{kind}")]
-    [RequestSizeLimit(6 * 1024 * 1024)]
+    [RequestSizeLimit(BrandingUploadLimits.RequestSizeLimitBytes)]
     [ProducesResponseType(typeof(BrandingUploadResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status413PayloadTooLarge)]
-    public async Task<IActionResult> UploadBrandingImageAsync(string kind, IFormFile file, CancellationToken ct)
+    public async Task<IActionResult> UploadBrandingImageAsync(BrandingKind kind, IFormFile file, CancellationToken ct)
     {
         await using var content = file?.OpenReadStream() ?? Stream.Null;
         var command = new UploadBrandingImageCommand(

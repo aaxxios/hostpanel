@@ -8,6 +8,7 @@
  * the login call succeeds" behaves like the real API. Anything nobody stubbed answers 404 and is
  * recorded in {@link StubApi.unhandled}, which is what a spec reads to see an unexpected call.
  */
+import { HttpMethod } from '../../src/types/http'
 import type { Page, Request } from '@playwright/test'
 import { adminMe, loginOk, loginRejected, localMode, setupDone, validCredentials } from '../fixtures/auth'
 
@@ -145,17 +146,17 @@ export const stubApi = async (page: Page, options: StubOptions = {}): Promise<St
   const unhandled: RecordedCall[] = []
 
   const sessionRoutes: StubRoute[] = [
-    json('GET', '/api/auth/mode', localMode),
-    json('GET', '/api/auth/setup-required', setupDone),
+    json(HttpMethod.Get, '/api/auth/mode', localMode),
+    json(HttpMethod.Get, '/api/auth/setup-required', setupDone),
     {
-      method: 'GET',
+      method: HttpMethod.Get,
       path: '/api/auth/me',
       respond: () => (signedIn
         ? { body: adminMe }
         : { status: 401, body: { type: 'auth.unauthenticated', title: 'Unauthorized', status: 401 } }),
     },
     {
-      method: 'POST',
+      method: HttpMethod.Post,
       path: '/api/auth/login',
       respond: (call) => {
         const credentials = call.body as { email?: string; password?: string } | null
@@ -166,8 +167,8 @@ export const stubApi = async (page: Page, options: StubOptions = {}): Promise<St
         return { status: 401, body: loginRejected }
       },
     },
-    json('GET', '/api/settings/public', []),
-    json('GET', '/api/admin/dashboard/activity', []),
+    json(HttpMethod.Get, '/api/settings/public', []),
+    json(HttpMethod.Get, '/api/admin/dashboard/activity', []),
   ]
   const routes = [...(options.routes ?? []), ...sessionRoutes]
 

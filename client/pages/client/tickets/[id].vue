@@ -1,6 +1,6 @@
 <template>
   <UiStack gap="lg">
-    <UiBackLink to="/client/tickets" :label="$t('client.tickets.backTo')" testid="ticket-back" />
+    <UiBackLink :to="CLIENT_TICKETS_PATH" :label="$t('client.tickets.backTo')" testid="ticket-back" />
 
     <UiStack v-if="pending">
       <UiSkeleton shape="block" class="h-32" />
@@ -73,7 +73,7 @@ data-testid="ticket-reply-form"
       <UiCard v-else padding="sm" data-testid="ticket-closed-notice">
         <UiText size="sm" tone="subtle" class="text-center">
           {{ $t('client.tickets.closedNotice') }}
-          <UiLink data-testid="ticket-new-link" to="/client/tickets/new" :underline="false">{{ $t('client.tickets.openNewLink') }}</UiLink>
+          <UiLink data-testid="ticket-new-link" :to="CLIENT_TICKET_NEW_PATH" :underline="false">{{ $t('client.tickets.openNewLink') }}</UiLink>
           {{ $t('client.tickets.closedSuffix') }}
         </UiText>
       </UiCard>
@@ -87,11 +87,13 @@ data-testid="ticket-reply-form"
  * The ticket is read through the support store; the reply flags and refusal sentence are the
  * store's too.
  */
+import { CLIENT_TICKETS_PATH, CLIENT_TICKET_NEW_PATH } from '~/constants/clientRoutes'
 import { AlertCircle, Send } from 'lucide-vue-next'
 import { useSupportStore } from '~/stores/support'
 import type { TicketReply } from '~/types/ticketreply'
 import { SubmitOutcome } from '~/types/submitoutcome'
 import { TicketStatus } from '~/types/ticketstatus'
+import { nameOrUnknown } from '~/utils/displayFallback'
 import { formatDateTime } from '~/utils/formatDate'
 
 definePageMeta({ layout: 'client', middleware: 'client-auth' })
@@ -153,7 +155,11 @@ const replySuccess = ref(false)
  * @param reply - The reply to name the author of.
  * @returns The text shown above the reply.
  */
-const replyAuthor = (reply: TicketReply): string => (reply.isStaffReply ? `${reply.authorName} (${t('client.tickets.support')})` : reply.authorName)
+const replyAuthor = (reply: TicketReply): string => {
+  const name = nameOrUnknown(t, reply.authorName)
+
+  return reply.isStaffReply ? `${name} (${t('client.tickets.support')})` : name
+}
 
 /**
  * Sends the typed reply through the store and reloads the thread when it was accepted.

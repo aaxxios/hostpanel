@@ -28,7 +28,9 @@ const applyFavicon = (url: string): void => {
     return
   }
 
-  document.head.querySelectorAll('link[rel~="icon"]').forEach(el => el.remove())
+  // The built-in pinned-tab silhouette goes too: an upload has none, and Safari would
+  // otherwise keep pinning the shipped mark for an operator's own brand.
+  document.head.querySelectorAll('link[rel~="icon"], link[rel="mask-icon"]').forEach(el => el.remove())
 
   const link = document.createElement('link')
   link.rel = 'icon'

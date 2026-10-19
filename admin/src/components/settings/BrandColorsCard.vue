@@ -28,6 +28,7 @@ import {
   hexToRgb,
   rgbToHex,
 } from '@/lib/brandPalette'
+import { SettingEnv, SettingKey } from '@/types/setting'
 import type { Setting } from '@/types/setting'
 
 const { t } = useI18n()
@@ -49,7 +50,7 @@ const emit = defineEmits<{
 const settings = toRef(props, 'settings')
 
 /** The storefront's built-in colours, shown when a setting is empty. Mirrors the Tailwind fallbacks. */
-const DEFAULTS = { 'portal.brand.primary': '#0ea5e9', 'portal.brand.accent': '#a855f7' } as const
+const DEFAULTS = { [SettingKey.BrandPrimary]: '#0ea5e9', [SettingKey.BrandAccent]: '#a855f7' } as const
 
 /** Index of the shade previewed as a link on a light surface. */
 const LIGHT_SURFACE_SHADE = 7
@@ -79,20 +80,20 @@ interface ColourField {
 /** The two colour rows. */
 const FIELDS: ColourField[] = [
   {
-    key: 'portal.brand.primary',
-    env: 'NUXT_PUBLIC_PORTAL_BRAND_PRIMARY',
+    key: SettingKey.BrandPrimary,
+    env: SettingEnv[SettingKey.BrandPrimary],
     testid: 'primary',
     labelKey: 'settings.brandColors.primary.label',
     hintKey: 'settings.brandColors.primary.hint',
-    draft: useSettingDraft(settings, 'portal.brand.primary'),
+    draft: useSettingDraft(settings, SettingKey.BrandPrimary),
   },
   {
-    key: 'portal.brand.accent',
-    env: 'NUXT_PUBLIC_PORTAL_BRAND_ACCENT',
+    key: SettingKey.BrandAccent,
+    env: SettingEnv[SettingKey.BrandAccent],
     testid: 'accent',
     labelKey: 'settings.brandColors.accent.label',
     hintKey: 'settings.brandColors.accent.hint',
-    draft: useSettingDraft(settings, 'portal.brand.accent'),
+    draft: useSettingDraft(settings, SettingKey.BrandAccent),
   },
 ]
 

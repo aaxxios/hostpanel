@@ -43,7 +43,7 @@
     "makeBaseSucceeded": "{code} теперь базовая валюта.",
     "ratesUpdated": "Курсы обновлены: {updated}{missing}",
     "ratesMissing": "; не котируются: {codes}",
-    "pricesUpdated": "Пересчитано строк цен товаров: {count}.",
+    "pricesUpdated": "Пересчитана {count} строка цен товаров. | Пересчитано {count} строки цен товаров. | Пересчитано {count} строк цен товаров.",
     "none": "нет"
   },
   "form": {

@@ -10,7 +10,19 @@ import {
   CLIENT_LOGIN_PATH,
   CLIENT_PUBLIC_ROUTES,
   CLIENT_REDIRECT_QUERY,
+  CLIENT_SERVICES_PATH,
+  CLIENT_TICKETS_PATH,
+  clientAccountTabPath,
+  clientDomainPath,
+  clientInvoicePath,
+  clientInvoicePayPath,
+  clientOrderSuccessPath,
+  clientServicePath,
+  clientServiceSetupPath,
+  clientTicketPath,
+  SSO_AUTHORIZE_PATH,
 } from '~/constants/clientRoutes'
+import { AccountTab } from '~/types/accounttab'
 
 describe('client routes', () => {
   it('keeps the well-known paths', () => {
@@ -26,5 +38,26 @@ describe('client routes', () => {
 
   it('keeps every public route under the client area', () => {
     expect(CLIENT_PUBLIC_ROUTES.every(route => route.startsWith('/client/'))).toBe(true)
+  })
+
+  it('keeps the list pages under the client area and the SSO entry under the BFF', () => {
+    expect(CLIENT_SERVICES_PATH).toBe('/client/services')
+    expect(CLIENT_TICKETS_PATH).toBe('/client/tickets')
+    expect(SSO_AUTHORIZE_PATH).toBe('/api/portal/auth/sso/authorize')
+  })
+
+  it('builds the record paths below their list pages', () => {
+    expect(clientServicePath(7)).toBe('/client/services/7')
+    expect(clientServiceSetupPath('7')).toBe('/client/services/7/setup')
+    expect(clientTicketPath(4)).toBe('/client/tickets/4')
+    expect(clientInvoicePath(9)).toBe('/client/invoices/9')
+    expect(clientInvoicePayPath(9)).toBe('/client/invoices/9/pay')
+    expect(clientDomainPath(2)).toBe('/client/domains/2')
+  })
+
+  it('builds the account tab and order-success paths', () => {
+    expect(clientAccountTabPath(AccountTab.Users)).toBe('/client/account?tab=users')
+    expect(clientOrderSuccessPath('ORD-0042')).toBe('/client/order-success?order=ORD-0042')
+    expect(clientOrderSuccessPath('ORD-0042', '&amount=5')).toBe('/client/order-success?order=ORD-0042&amount=5')
   })
 })

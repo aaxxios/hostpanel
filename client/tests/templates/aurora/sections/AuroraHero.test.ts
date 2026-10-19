@@ -1,7 +1,7 @@
 /**
- * Unit tests for AuroraHero: the single page headline, both calls to action and the headline figures.
+ * Unit tests for AuroraHero: the single page headline, both calls to action and the operator-set badge and figures.
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import AuroraHero from '~/templates/aurora/sections/AuroraHero.vue'
 import { stubAuroraGlobals } from '../auroraGlobals'
@@ -23,14 +23,34 @@ describe('AuroraHero', () => {
     expect(wrapper.find('[data-testid="hero-cta-secondary"]').attributes('href')).toBe('/contact')
   })
 
-  it('shows the three headline figures with their captions', () => {
+  it('shows the badge and the figures the operator configured', () => {
     stubAuroraGlobals()
-    const text = mountWithKit(AuroraHero).text()
+    const settings: Record<string, string> = {
+      'portal.hero.badge': 'Fast and calm',
+      'portal.stats.clients': '1 200+',
+      'portal.stats.uptime': '99.9%',
+      'portal.stats.regions': '3',
+    }
+    vi.stubGlobal('usePortalSettings', () => ({ get: (key: string) => settings[key] ?? '' }))
+    const wrapper = mountWithKit(AuroraHero)
 
-    expect(text).toContain('24/7')
-    expect(text).toContain('aurora.hero.statDomains')
-    expect(text).toContain('aurora.hero.statProjects')
-    expect(text).toContain('aurora.hero.statSupport')
+    expect(wrapper.find('[data-testid="hero-badge"]').text()).toContain('Fast and calm')
+    expect(wrapper.find('[data-testid="hero-stats"]').text()).toContain('1 200+')
+    expect(wrapper.find('[data-testid="hero-stats"]').text()).toContain('99.9%')
+    expect(wrapper.find('[data-testid="hero-stats"]').text()).toContain('aurora.hero.statRegions')
+  })
+
+  it('leaves out an unset figure and hides the badge and the figures row when nothing is set', () => {
+    stubAuroraGlobals()
+    vi.stubGlobal('usePortalSettings', () => ({ get: (key: string) => (key === 'portal.stats.uptime' ? '99.9%' : '') }))
+    const partial = mountWithKit(AuroraHero)
+    expect(partial.find('[data-testid="hero-stats"]').text()).toContain('99.9%')
+    expect(partial.find('[data-testid="hero-stats"]').text()).not.toContain('aurora.hero.statClients')
+
+    vi.stubGlobal('usePortalSettings', () => ({ get: () => '' }))
+    const empty = mountWithKit(AuroraHero)
+    expect(empty.find('[data-testid="hero-badge"]').exists()).toBe(false)
+    expect(empty.find('[data-testid="hero-stats"]').exists()).toBe(false)
   })
 
   it('paints the primary button with the brand gradient and the brand tint text', () => {

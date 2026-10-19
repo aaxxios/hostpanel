@@ -1,5 +1,5 @@
 /**
- * Tests for `plugins/i18n.ts`: every app locale receives its merged message set, and a missing
+ * Tests for `plugins/i18n.ts`: every app locale receives its merged message set, the site-name placeholder is left for the translator, and a missing
  * locale file does not stop the others.
  *
  * @module tests/plugins/i18n.test
@@ -14,16 +14,19 @@ const PLUGIN_TIMEOUT_MS = 60_000
 /** The recorded `setLocaleMessage` calls. */
 const setLocaleMessage = vi.fn()
 
-/** The plugin function as Nuxt calls it. */
-type I18nPlugin = (app: { $i18n: { setLocaleMessage: typeof setLocaleMessage } }) => Promise<void>
+/** The plugin as Nuxt calls it. */
+interface I18nPlugin {
+  /** Loads and registers the messages. */
+  setup: (app: { $i18n: { setLocaleMessage: typeof setLocaleMessage } }) => Promise<void>
+}
 
 /**
  * Loads the plugin and runs it against the recording i18n instance.
  */
 const runPlugin = async (): Promise<void> => {
-  vi.stubGlobal('defineNuxtPlugin', (setup: unknown) => setup)
+  vi.stubGlobal('defineNuxtPlugin', (plugin: unknown) => plugin)
   const plugin = (await import('~/plugins/i18n')).default as unknown as I18nPlugin
-  await plugin({ $i18n: { setLocaleMessage } })
+  await plugin.setup({ $i18n: { setLocaleMessage } })
 }
 
 beforeEach(() => {
@@ -32,6 +35,14 @@ beforeEach(() => {
 })
 
 describe('i18n plugin', () => {
+  it('keeps the {site} placeholder for the translator to fill at render time', async () => {
+    await runPlugin()
+
+    const serialized = JSON.stringify(setLocaleMessage.mock.calls.map(call => call[1]))
+    expect(serialized).toContain('{site}')
+    expect(serialized).not.toContain('%site%')
+  }, PLUGIN_TIMEOUT_MS)
+
   it('loads messages for every app locale', async () => {
     await runPlugin()
 

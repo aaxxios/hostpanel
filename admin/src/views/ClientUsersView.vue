@@ -43,6 +43,7 @@ import { UiSize } from '@/utils/ui/size'
 import { UiLabelVariant, UiTextTone } from '@/utils/ui/text'
 import { UiTone } from '@/utils/ui/tone'
 import type { UiTabItem } from '@/utils/ui/tabs'
+import { MS_PER_SECOND, NOTICE_VISIBLE_MS } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -51,9 +52,6 @@ const AddUserMode = {
   Search: 'search',
   Invite: 'invite',
 } as const
-
-/** How long a success banner stays, in milliseconds. */
-const SUCCESS_BANNER_MS = 3000
 
 /** Current route, source of the client id. */
 const route = useRoute()
@@ -142,7 +140,7 @@ const inviteReady = computed<boolean>(() =>
  * @param ms - How long to keep it, in milliseconds.
  * @returns Nothing.
  */
-const flashSuccess = (message: string, ms: number = SUCCESS_BANNER_MS): void => {
+const flashSuccess = (message: string, ms: number = NOTICE_VISIBLE_MS): void => {
   successMessage.value = message
   clearTimeout(successTimer)
   successTimer = setTimeout(() => {
@@ -234,7 +232,7 @@ const handleSendInvite = async (): Promise<void> => {
   })
   inviteSending.value = false
   if (sent) {
-    flashSuccess(t('clients.clientUsers.invitationSentTo', { email: sentTo }), SUCCESS_BANNER_MS + 1000)
+    flashSuccess(t('clients.clientUsers.invitationSentTo', { email: sentTo }), NOTICE_VISIBLE_MS + MS_PER_SECOND)
     inviteEmail.value = ''
     inviteFirstName.value = ''
     inviteLastName.value = ''
@@ -454,7 +452,7 @@ onBeforeUnmount(() => {
                   :id="id"
                   v-model="inviteEmail"
                   type="email"
-                  placeholder="user@example.com"
+                  :placeholder="t('shared.examples.email')"
                   data-testid="client-users-invite-email"
                 />
               </template>

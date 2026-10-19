@@ -12,7 +12,7 @@ import type { BillingCurrency } from '~/types/currency'
 import type { PortalProduct } from '~/types/portalproduct'
 
 /** The mocked catalogue endpoints, re-created for every test. */
-const api = { fetchProducts: vi.fn() }
+const api = { fetchProducts: vi.fn(), fetchProductGroups: vi.fn() }
 
 /** The currency the stood-in currency endpoint answers with. */
 const usd: BillingCurrency = { code: 'USD', numeric: '840', prefix: '$', suffix: '', decimals: 2, isBase: true }
@@ -62,6 +62,8 @@ describe('configure page', () => {
     vi.stubGlobal('navigateTo', navigate)
     api.fetchProducts.mockReset()
     api.fetchProducts.mockResolvedValue([starter])
+    api.fetchProductGroups.mockReset()
+    api.fetchProductGroups.mockResolvedValue([{ id: 1, name: 'Web Hosting', isActive: true, productCount: 1 }])
     window.localStorage.clear()
   })
 

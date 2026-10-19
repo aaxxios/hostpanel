@@ -5,6 +5,10 @@
 @import "@fontsource/noto-sans-armenian";
 @import "@fontsource/noto-serif-armenian";
 
+/* `light:` utilities for the few things a token cannot swap, such as which logo file is shown.
+   Matches the same `<html class="light">` the palette below keys on. */
+@custom-variant light (&:where(.light, .light *));
+
 /* Runtime theme palette. Dark is the default; `<html class="light">` swaps every surface, border
    and text token at once, so a Ui* component never carries a per-theme class. */
 :root {
@@ -65,7 +69,7 @@
 }
 
 @theme {
-  /* Brand colors (matching innovayse.com) */
+  /* Brand colors */
   --color-primary-50:  #f0f9ff;
   --color-primary-100: #e0f2fe;
   --color-primary-200: #bae6fd;

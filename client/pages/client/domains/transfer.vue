@@ -1,15 +1,15 @@
 <template>
   <UiStack gap="lg" class="max-w-lg mx-auto">
-    <UiBackLink to="/client/domains" :label="$t('client.domains.backTo')" testid="transfer-back" />
+    <UiBackLink :to="CLIENT_DOMAINS_PATH" :label="$t('client.domains.backTo')" testid="transfer-back" />
 
     <UiCard v-if="success" data-testid="transfer-success">
       <UiEmptyState :icon="CheckCircle" :title="$t('client.domainTransfer.successTitle')" :description="$t('client.domainTransfer.successDesc')">
         <UiStack direction="row" gap="sm" justify="center" wrap>
-          <UiButton :to="`/client/invoices/${success.invoiceId}`" data-testid="transfer-pay-invoice">
+          <UiButton :to="clientInvoicePath(success.invoiceId)" data-testid="transfer-pay-invoice">
             <CreditCard :size="16" :stroke-width="2" class="mr-2" />
             {{ $t('client.domainTransfer.payInvoice') }}
           </UiButton>
-          <UiButton to="/client/domains" variant="subtle" data-testid="transfer-view-domains">{{ $t('client.domainTransfer.viewDomains') }}</UiButton>
+          <UiButton :to="CLIENT_DOMAINS_PATH" variant="subtle" data-testid="transfer-view-domains">{{ $t('client.domainTransfer.viewDomains') }}</UiButton>
         </UiStack>
       </UiEmptyState>
     </UiCard>
@@ -80,6 +80,7 @@
  * payment method) and, once the order is placed, a link to its invoice. The order, its in-flight
  * flag and the API's refusal belong to the domains store.
  */
+import { CLIENT_DOMAINS_PATH, clientInvoicePath } from '~/constants/clientRoutes'
 import { ArrowLeftRight, CheckCircle, CreditCard } from 'lucide-vue-next'
 import { useDomainsStore } from '~/stores/domains'
 import { toPaymentMethodOptions } from '~/utils/paymentMethodOptions'

@@ -27,8 +27,9 @@ client/.vite/
 CLAUDE.md
 client/CLAUDE.md
 
-# Docs / plans
-docs/
+# Docs / plans -- except the brand kit, which the README and the avatars are taken from
+docs/*
+!docs/brand/
 
 # Playwright MCP logs
 .playwright-mcp/
@@ -60,8 +61,12 @@ admin/.env.production
 # panel's six PNGs were staged, silently dropped, and committed as an .ico and a manifest
 # pointing at files that were not there.
 !client/public/*.png
+# og-image.jpg is the default share card nuxt.config, useSeo and the product pages point at.
+!client/public/*.jpg
 !admin/public/*.png
 !client/public/images/**
+# The brand kit: mark sizes and the GitHub / Docker Hub avatars, listed in docs/brand/README.md.
+!docs/brand/*.png
 
 # IDEs
 .idea/

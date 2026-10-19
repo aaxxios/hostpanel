@@ -19,8 +19,8 @@ internal sealed class DemoRegistrarProvider : IRegistrarProvider
 
     /// <summary>The sample contact the fake registry returns for any domain.</summary>
     private static readonly DomainContact SampleContact = new(
-        "Demo", "Registrant", "Demo Registrant LLC", "registrant@demo.example", "+374 10 555 000",
-        "1 Demo Street", null, "Yerevan", "Yerevan", "0001", "AM");
+        "Demo", "Registrant", "Demo Registrant LLC", "registrant@demo.example", "+1 555 0100",
+        "1 Demo Street", null, "Northvale", "Northvale", "00001", "US");
 
     /// <summary>Builds the reference the registry would hand back for a name.</summary>
     /// <param name="domainName">The domain name.</param>

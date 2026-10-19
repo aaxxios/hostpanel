@@ -48,7 +48,7 @@
         <!-- Column 2: navigation -->
         <UiStack gap="none">
           <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="mb-8 tracking-tight flex items-center gap-3 font-bold">
-            <UiStack gap="none" class="w-2 h-2 rounded-full bg-primary-500 shadow-[0_0_10px_rgba(14,165,233,0.5)]" />
+            <UiStack gap="none" class="w-2 h-2 rounded-full bg-primary-500 shadow-dot-primary" />
             {{ $t('footer.columns.navigation') }}
           </UiHeading>
           <UiList list-style="plain" class="space-y-4">
@@ -70,7 +70,7 @@
         <!-- Column 3: services -->
         <UiStack gap="none">
           <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="mb-8 tracking-tight flex items-center gap-3 font-bold">
-            <UiStack gap="none" class="w-2 h-2 rounded-full bg-secondary-500 shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
+            <UiStack gap="none" class="w-2 h-2 rounded-full bg-secondary-500 shadow-dot-secondary" />
             {{ $t('footer.columns.services') }}
           </UiHeading>
           <UiList list-style="plain" class="space-y-4">
@@ -92,7 +92,7 @@
         <!-- Column 4: contact and back to top -->
         <UiStack gap="none">
           <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="mb-8 tracking-tight flex items-center gap-3 font-bold">
-            <UiStack gap="none" class="w-2 h-2 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
+            <UiStack gap="none" class="w-2 h-2 rounded-full bg-cyan-500 shadow-dot-cyan" />
             {{ $t('footer.columns.contact') }}
           </UiHeading>
           <UiList list-style="plain" class="space-y-6">
@@ -110,9 +110,9 @@
                 {{ contactEmail }}
               </UiLink>
             </UiListItem>
-            <UiListItem class="group">
+            <UiListItem v-if="contactPhone" class="group">
               <UiLink
-                :href="`tel:${CONTACT_PHONE_E164}`"
+                :href="`tel:${contactPhoneLink}`"
                 tone="muted"
                 :underline="false"
                 class="flex items-center gap-4 text-sm transition-all duration-300"
@@ -121,15 +121,15 @@
                 <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 group-hover:border-secondary-500/30 group-hover:bg-secondary-500/10">
                   <Phone :size="18" class="text-secondary-400 transition-transform group-hover:scale-110" />
                 </UiStack>
-                {{ CONTACT_PHONE_LABEL }}
+                {{ contactPhone }}
               </UiLink>
             </UiListItem>
-            <UiListItem class="group">
+            <UiListItem v-if="contactAddress" class="group">
               <UiStack direction="row" align="center" gap="lg">
                 <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 group-hover:border-cyan-500/30 group-hover:bg-cyan-500/10">
                   <MapPin :size="18" class="text-cyan-600 dark:text-cyan-400 transition-transform group-hover:scale-110" />
                 </UiStack>
-                <UiText as="span" size="sm" tone="muted">{{ $t('footer.address') }}</UiText>
+                <UiText as="span" size="sm" tone="muted" data-testid="footer-address">{{ contactAddress }}</UiText>
               </UiStack>
             </UiListItem>
           </UiList>
@@ -141,7 +141,7 @@
                 :icon="ChevronUp"
                 :label="$t('footer.backToTop')"
                 size="lg"
-                class="w-14 h-14 rounded-full bg-white dark:bg-white/[0.03] shadow-[0_0_30px_rgba(0,0,0,0.5)]"
+                class="w-14 h-14 rounded-full bg-white dark:bg-white/[0.03] shadow-drop-badge"
                 testid="footer-back-to-top"
                 @click="scrollToTop"
               />
@@ -187,6 +187,7 @@
  * LayoutFooter - the site footer with four columns: logo and social icons, navigation links,
  * service links, and contact details with a back-to-top button, above a bar of legal links.
  */
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { ChevronUp, Mail, MapPin, Phone } from 'lucide-vue-next'
 import type { SocialLink } from '~/types/sociallink'
 import { LogoSurface } from '~/utils/appLogo'
@@ -205,13 +206,10 @@ const { name: BRAND_NAME } = useSiteIdentity()
 const { get } = usePortalSettings()
 
 /** Contact address shown and linked in the contact column; empty hides the row. */
-const contactEmail = computed(() => get('portal.contact.email', 'portalContactEmail'))
+const contactEmail = computed(() => get(PortalSettingKey.ContactEmail, 'portalContactEmail'))
 
-/** Contact phone in the form a `tel:` link needs. */
-const CONTACT_PHONE_E164 = '+37433731673'
-
-/** Contact phone as it is written for readers. */
-const CONTACT_PHONE_LABEL = '+374 33 73 16 73'
+/** Contact phone as the operator wrote it, and in the form a `tel:` link needs; empty hides the row. */
+const { phone: contactPhone, phoneLink: contactPhoneLink, address: contactAddress } = useContactDetails()
 
 /** Scrolls the page back to the top. */
 const scrollToTop = (): void => {
@@ -248,9 +246,9 @@ const legalLinks = computed(() => [
  * A profile with no URL is dropped, so an install that sets none renders no icons at all.
  */
 const socialLinks = computed<SocialLink[]>(() => [
-  { name: 'Twitter', href: get('portal.social.twitter', 'portalSocialTwitter'), icon: 'mdi:twitter' },
-  { name: 'LinkedIn', href: get('portal.social.linkedin', 'portalSocialLinkedin'), icon: 'mdi:linkedin' },
-  { name: 'Facebook', href: get('portal.social.facebook', 'portalSocialFacebook'), icon: 'mdi:facebook' },
+  { name: 'Twitter', href: get(PortalSettingKey.SocialTwitter, 'portalSocialTwitter'), icon: 'mdi:twitter' },
+  { name: 'LinkedIn', href: get(PortalSettingKey.SocialLinkedin, 'portalSocialLinkedin'), icon: 'mdi:linkedin' },
+  { name: 'Facebook', href: get(PortalSettingKey.SocialFacebook, 'portalSocialFacebook'), icon: 'mdi:facebook' },
 ].filter(entry => entry.href))
 
 /** Current year for the copyright line. */

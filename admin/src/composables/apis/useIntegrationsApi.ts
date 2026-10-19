@@ -15,6 +15,8 @@ import type {
 } from '@/types/integration'
 import type { CwpServerInfoDto } from '@/types/cwp'
 import type { Cwp7ServerInfoDto } from '@/types/cwp7'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/admin/integrations`.
@@ -30,7 +32,7 @@ export const useIntegrationsApi = () => {
    * @returns The summary rows, with the backend's category strings untouched.
    */
   const listIntegrations = (): Promise<IntegrationDto[]> =>
-    request<IntegrationDto[]>('/admin/integrations')
+    request<IntegrationDto[]>(ApiPath.AdminIntegrations)
 
   /**
    * Reads one integration's config.
@@ -39,7 +41,7 @@ export const useIntegrationsApi = () => {
    * @returns The detail with its field definitions and values.
    */
   const getIntegration = (slug: string): Promise<IntegrationDetailDto> =>
-    request<IntegrationDetailDto>(`/admin/integrations/${slug}`)
+    request<IntegrationDetailDto>(`${ApiPath.AdminIntegrations}/${slug}`)
 
   /**
    * Saves an integration's config.
@@ -49,7 +51,7 @@ export const useIntegrationsApi = () => {
    * @returns Nothing; the API answers 204 No Content.
    */
   const saveIntegration = (slug: string, payload: IntegrationConfigPayload): Promise<void> =>
-    request<void>(`/admin/integrations/${slug}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.AdminIntegrations}/${slug}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Runs a live connection test.
@@ -58,7 +60,7 @@ export const useIntegrationsApi = () => {
    * @returns The probe result.
    */
   const testIntegration = (slug: string): Promise<IntegrationTestResult> =>
-    request<IntegrationTestResult>(`/admin/integrations/${slug}/test`, { method: 'POST' })
+    request<IntegrationTestResult>(`${ApiPath.AdminIntegrations}/${slug}/test`, { method: HttpMethod.Post })
 
   /**
    * Reads the live status of the connected CWP server.
@@ -66,7 +68,7 @@ export const useIntegrationsApi = () => {
    * @returns The server status.
    */
   const getCwpServerInfo = (): Promise<CwpServerInfoDto> =>
-    request<CwpServerInfoDto>('/admin/integrations/cwp/server-info')
+    request<CwpServerInfoDto>(`${ApiPath.AdminIntegrations}/cwp/server-info`)
 
   /**
    * Reads the live status of the connected CWP7 server.
@@ -74,7 +76,7 @@ export const useIntegrationsApi = () => {
    * @returns The server status.
    */
   const getCwp7ServerInfo = (): Promise<Cwp7ServerInfoDto> =>
-    request<Cwp7ServerInfoDto>('/admin/integrations/cwp7/server-info')
+    request<Cwp7ServerInfoDto>(`${ApiPath.AdminIntegrations}/cwp7/server-info`)
 
   return {
     listIntegrations,

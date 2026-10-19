@@ -19,6 +19,7 @@ import UiAlert from '@/components/ui/UiAlert.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiSplit from '@/components/ui/UiSplit.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import { AppRoute } from '@/lib/routes'
 
 /** Current route, whose param is the slug. */
 const route = useRoute()
@@ -88,7 +89,7 @@ const handleTest = async (): Promise<void> => {
 onMounted(() => {
   if (isCwp) {
     if (store.integrations.length > 0 && !store.integrations.some(i => i.slug === IntegrationSlug.Cwp)) {
-      void router.replace({ path: '/plugins' })
+      void router.replace({ path: AppRoute.Plugins })
     }
     return
   }

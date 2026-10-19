@@ -40,7 +40,8 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
 /** The hosting plans the catalogue answers with. */
 const plans: PortalProduct[] = [
   { id: 2, pid: 2, groupId: 1, name: 'Starter', description: 'Small sites<br />✔ 5 GB SSD<br />✔ Free SSL', pricing: { monthly: 5, annual: 50 } },
-  { id: 3, pid: 3, groupId: 1, name: 'Free Trial', description: 'Try it', pricing: { monthly: null, annual: null } },
+  { id: 3, pid: 3, groupId: 1, name: 'Free Trial', description: 'Try it', pricing: { monthly: 0, annual: 0 } },
+  { id: 5, pid: 5, groupId: 1, name: 'Freelancer', description: 'For freelancers', pricing: { monthly: 9, annual: 90 } },
   { id: 4, pid: 4, groupId: 1, name: 'Custom', description: 'Ask us', pricing: { monthly: null, annual: null } },
 ]
 
@@ -72,6 +73,7 @@ describe('hosting plan page', () => {
   it('builds the canonical link from the configured site URL', async () => {
     await mountPlan()
 
+    /** The head object the page registered with `useHead`, resolved from its getter. */
     const head = (useHeadSpy.mock.calls[0]?.[0] as () => { link: { rel: string, href: string }[] })()
     expect(head.link[0]).toEqual({ rel: 'canonical', href: 'https://panel.test/hosting/starter' })
   })
@@ -116,12 +118,20 @@ describe('hosting plan page', () => {
     expect(wrapper.find('[data-testid="hosting-plan-order"]').text()).toContain('hosting.inCart')
   })
 
-  it('adds a plan whose name declares it free at no charge', async () => {
+  it('adds a plan priced at zero at no charge', async () => {
     const wrapper = await mountPlan('free-trial')
 
     await wrapper.find('[data-testid="hosting-plan-order"]').trigger('click')
 
     expect(useCartStore().items[0]).toMatchObject({ pid: 3, billingcycle: 'free', amount: 0, cycleLabel: 'hosting.cycles.free' })
+  })
+
+  it('does not treat a priced plan as free because its name starts with free', async () => {
+    const wrapper = await mountPlan('freelancer')
+
+    await wrapper.find('[data-testid="hosting-plan-order"]').trigger('click')
+
+    expect(useCartStore().items[0]).toMatchObject({ pid: 5, billingcycle: 'monthly', amount: 9 })
   })
 
   it('shows "custom" and adds nothing for a plan with no price that is not free', async () => {

@@ -12,6 +12,7 @@ import { expectLastRequest, startTransport } from '../../helpers/stubTransport'
 import type { ExpectedRequest } from '../../helpers/stubTransport'
 import type { StubServer } from '../../helpers/stubServer'
 import { useBillingApi } from '~/composables/apis/useBillingApi'
+import { PaymentTarget } from '~/types/paymenttarget'
 
 /** The stub started by the current test. */
 let stub: StubServer | undefined
@@ -37,8 +38,8 @@ const rows: ExpectedRequest[] = [
   { name: 'createOrderPaymentIntent posts the payment token', call: () => api.createOrderPaymentIntent(42, 'tok'), method: 'POST', url: '/api/portal/order/42/create-payment-intent', body: { paymentToken: 'tok' } },
   { name: 'startOrderGatewayPayment posts module, return address and token', call: () => api.startOrderGatewayPayment(42, 'inecobank', 'https://x/return', 'tok'), method: 'POST', url: '/api/portal/order/42/gateway-payment/start', body: { module: 'inecobank', returnUrl: 'https://x/return', paymentToken: 'tok' } },
   { name: 'startInvoiceGatewayPayment posts module and return address', call: () => api.startInvoiceGatewayPayment(7, 'inecobank', 'https://x/return'), method: 'POST', url: '/api/portal/client/invoices/7/gateway-payment/start', body: { module: 'inecobank', returnUrl: 'https://x/return' } },
-  { name: 'completeGatewayPayment for an order sends the token', call: () => api.completeGatewayPayment('order', 42, 'tok'), method: 'POST', url: '/api/portal/order/42/gateway-payment/complete', body: { paymentToken: 'tok' } },
-  { name: 'completeGatewayPayment for an invoice sends an empty body', call: () => api.completeGatewayPayment('invoice', 7), method: 'POST', url: '/api/portal/client/invoices/7/gateway-payment/complete', body: {} },
+  { name: 'completeGatewayPayment for an order sends the token', call: () => api.completeGatewayPayment(PaymentTarget.Order, 42, 'tok'), method: 'POST', url: '/api/portal/order/42/gateway-payment/complete', body: { paymentToken: 'tok' } },
+  { name: 'completeGatewayPayment for an invoice sends an empty body', call: () => api.completeGatewayPayment(PaymentTarget.Invoice, 7), method: 'POST', url: '/api/portal/client/invoices/7/gateway-payment/complete', body: {} },
   { name: 'confirmOrderPayment merges the token into the body', call: () => api.confirmOrderPayment(42, { paymentIntentId: 'pi_1' }, 'tok'), method: 'POST', url: '/api/portal/order/42/confirm-payment', body: { paymentIntentId: 'pi_1', paymentToken: 'tok' } },
 ]
 

@@ -8,6 +8,7 @@
  */
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -33,8 +34,14 @@ import { formatMoney } from '@/lib/money'
 import { OrderStatus } from '@/types/order'
 import { orderStatusTone, statusLabel } from '@/lib/tones'
 import { useOrdersStore } from '@/stores/orders'
+import { clientPath, orderPath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { clientLabel } = useFallbackLabels()
 
 const store = useOrdersStore()
 
@@ -137,8 +144,8 @@ onMounted(() => store.fetchAll())
           >
             <UiTableCell>{{ order.orderNumber }}</UiTableCell>
             <UiTableCell>
-              <UiLink variant="link" :to="`/clients/${order.clientId}`" :data-testid="`orders-client-${order.id}`">
-                {{ order.clientName }}
+              <UiLink variant="link" :to="clientPath(order.clientId)" :data-testid="`orders-client-${order.id}`">
+                {{ clientLabel(order.clientName, order.clientId) }}
               </UiLink>
             </UiTableCell>
             <UiTableCell>
@@ -171,7 +178,7 @@ onMounted(() => store.fetchAll())
                   <UiIcon :markup="Icon.Close" size="sm" />
                 </UiIconButton>
                 <UiLink
-                  :to="`/orders/${order.id}`"
+                  :to="orderPath(order.id)"
                   variant="ghost"
                   size="sm"
                   :title="t('shared.view')"

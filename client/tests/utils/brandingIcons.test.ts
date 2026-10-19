@@ -26,8 +26,16 @@ describe('brandingIcons', () => {
   it('returns the built-in set when nothing is stored', () => {
     const icons = brandingIcons('')
 
-    expect(icons).toHaveLength(6)
+    expect(icons).toHaveLength(9)
     expect(icons[0]!.href).toBe('/favicon.ico')
+    expect(icons.find(icon => icon.type === 'image/svg+xml')!.href).toBe('/favicon.svg')
+  })
+
+  it('adds the pinned-tab silhouette only to the built-in set', () => {
+    const mask = brandingIcons('').find(icon => icon.rel === BrandingIconRel.MaskIcon)
+
+    expect(mask).toEqual({ rel: BrandingIconRel.MaskIcon, href: '/safari-pinned-tab.svg', type: '', color: '#5E8EF3' })
+    expect(brandingIcons('/uploads/branding/favicon/abc/favicon-32x32.png').some(icon => icon.rel === BrandingIconRel.MaskIcon)).toBe(false)
   })
 
   it('returns a single link for a pasted URL', () => {

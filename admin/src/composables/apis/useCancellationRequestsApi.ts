@@ -8,6 +8,8 @@
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { PagedResult } from '@/types/pagedresult'
 import type { CancellationRequestItem } from '@/types/service'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for cancellation requests.
@@ -25,7 +27,7 @@ export const useCancellationRequestsApi = () => {
    * @returns One page of requests.
    */
   const list = (page: number, pageSize: number): Promise<PagedResult<CancellationRequestItem>> =>
-    request<PagedResult<CancellationRequestItem>>(`/admin/cancellation-requests${buildQuery({ page, pageSize })}`)
+    request<PagedResult<CancellationRequestItem>>(`${ApiPath.AdminCancellationRequests}${buildQuery({ page, pageSize })}`)
 
   /**
    * Deletes a cancellation request.
@@ -34,7 +36,7 @@ export const useCancellationRequestsApi = () => {
    * @returns Nothing.
    */
   const remove = (id: number): Promise<void> =>
-    request<void>(`/admin/cancellation-requests/${id}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.AdminCancellationRequests}/${id}`, { method: HttpMethod.Delete })
 
   return { list, remove }
 }

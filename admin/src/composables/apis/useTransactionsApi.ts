@@ -13,6 +13,8 @@ import type {
   TransactionsResult,
   UpdateTransactionPayload,
 } from '@/types/transaction'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for transactions.
@@ -30,7 +32,7 @@ export const useTransactionsApi = () => {
    * @returns One page of transactions and the totals.
    */
   const list = (page: number, pageSize: number): Promise<TransactionsResult> =>
-    request<TransactionsResult>(`/transactions${buildQuery({ page, pageSize })}`)
+    request<TransactionsResult>(`${ApiPath.Transactions}${buildQuery({ page, pageSize })}`)
 
   /**
    * Lists the transactions of one client, with summary totals.
@@ -41,7 +43,7 @@ export const useTransactionsApi = () => {
    * @returns One page of transactions and the totals.
    */
   const listByClient = (clientId: number | string, page: number, pageSize: number): Promise<TransactionsResult> =>
-    request<TransactionsResult>(`/transactions/client/${clientId}${buildQuery({ page, pageSize })}`)
+    request<TransactionsResult>(`${ApiPath.Transactions}/client/${clientId}${buildQuery({ page, pageSize })}`)
 
   /**
    * Loads one transaction.
@@ -49,7 +51,7 @@ export const useTransactionsApi = () => {
    * @param id - The transaction id.
    * @returns The transaction.
    */
-  const get = (id: number): Promise<Transaction> => request<Transaction>(`/transactions/${id}`)
+  const get = (id: number): Promise<Transaction> => request<Transaction>(`${ApiPath.Transactions}/${id}`)
 
   /**
    * Creates a transaction.
@@ -58,7 +60,7 @@ export const useTransactionsApi = () => {
    * @returns Nothing.
    */
   const create = (payload: CreateTransactionPayload | CreateClientTransactionPayload): Promise<void> =>
-    request<void>('/transactions', { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(ApiPath.Transactions, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Updates a transaction.
@@ -68,7 +70,7 @@ export const useTransactionsApi = () => {
    * @returns Nothing.
    */
   const update = (id: number, payload: UpdateTransactionPayload): Promise<void> =>
-    request<void>(`/transactions/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Transactions}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes a transaction.
@@ -76,7 +78,7 @@ export const useTransactionsApi = () => {
    * @param id - The transaction id.
    * @returns Nothing.
    */
-  const remove = (id: number): Promise<void> => request<void>(`/transactions/${id}`, { method: 'DELETE' })
+  const remove = (id: number): Promise<void> => request<void>(`${ApiPath.Transactions}/${id}`, { method: HttpMethod.Delete })
 
   return { list, listByClient, get, create, update, remove }
 }

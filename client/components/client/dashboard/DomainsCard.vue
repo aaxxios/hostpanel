@@ -1,7 +1,7 @@
 <template>
   <UiCard data-testid="dashboard-domains">
     <UiCardHeader :title="$t('client.dashboard.myDomains')">
-      <UiButton size="sm" variant="subtle" to="/client/domains" data-testid="dashboard-domains-all">
+      <UiButton size="sm" variant="subtle" :to="CLIENT_DOMAINS_PATH" data-testid="dashboard-domains-all">
         {{ $t('client.dashboard.viewAll') }}
         <ArrowRight :size="12" :stroke-width="2" class="ml-1.5" />
       </UiButton>
@@ -19,7 +19,7 @@
       <ClientDashboardListRow
         v-for="domain in store.domains.slice(0, 4)"
         :key="domain.id"
-        :to="`/client/domains/${domain.id}`"
+        :to="clientDomainPath(domain.id)"
         :testid="`dashboard-domain-${domain.id}`"
       >
         <UiStack direction="row" align="center" gap="sm" class="min-w-0">
@@ -40,6 +40,7 @@
  * The dashboard's "My Domains" card: the first four domains with their most relevant date and
  * status, each opening the domain.
  */
+import { CLIENT_DOMAINS_PATH, clientDomainPath } from '~/constants/clientRoutes'
 import { ArrowRight, Globe } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
 import type { ClientDomain } from '~/types/clientdomain'

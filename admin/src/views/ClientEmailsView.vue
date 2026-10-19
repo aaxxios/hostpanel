@@ -24,6 +24,7 @@ import UiTableRow from '@/components/ui/UiTableRow.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -37,7 +38,7 @@ const store = useClientEmailStore()
 const page = ref(1)
 
 /** Number of entries per page. */
-const pageSize = 20
+const pageSize = DEFAULT_PAGE_SIZE
 
 /** Numeric client ID from route params. */
 const clientId = computed(() => Number(route.params.id))

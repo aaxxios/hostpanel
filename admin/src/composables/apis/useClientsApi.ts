@@ -15,6 +15,8 @@ import type { DomainRegistration } from '@/types/domain'
 import type { PagedResult } from '@/types/pagedresult'
 import type { ServiceListItem } from '@/types/service'
 import type { UserSearchHit } from '@/types/clientuser'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for clients.
@@ -33,7 +35,7 @@ export const useClientsApi = () => {
    * @returns One page of clients.
    */
   const list = (page: number, pageSize: number, filters: ClientFilters = {}): Promise<PagedResult<ClientListItem>> =>
-    request<PagedResult<ClientListItem>>(`/clients${buildQuery({ page, pageSize, ...filters })}`)
+    request<PagedResult<ClientListItem>>(`${ApiPath.Clients}${buildQuery({ page, pageSize, ...filters })}`)
 
   /**
    * Loads one client with its detail.
@@ -41,7 +43,7 @@ export const useClientsApi = () => {
    * @param id - The client id.
    * @returns The client.
    */
-  const get = (id: number | string): Promise<ClientDetail> => request<ClientDetail>(`/clients/${id}`)
+  const get = (id: number | string): Promise<ClientDetail> => request<ClientDetail>(`${ApiPath.Clients}/${id}`)
 
   /**
    * Creates a client through the admin endpoint.
@@ -50,7 +52,7 @@ export const useClientsApi = () => {
    * @returns Nothing.
    */
   const create = (payload: AdminCreateClientPayload): Promise<void> =>
-    request<void>('/clients/admin', { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Clients}/admin`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Updates a client profile, address, notification and settings.
@@ -60,7 +62,7 @@ export const useClientsApi = () => {
    * @returns Nothing.
    */
   const update = (id: number | string, payload: Record<string, unknown>): Promise<void> =>
-    request<void>(`/clients/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Clients}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Searches Identity users by name or email.
@@ -70,7 +72,7 @@ export const useClientsApi = () => {
    * @returns One page of matching users.
    */
   const searchUsers = (search: string, pageSize: number): Promise<PagedResult<UserSearchHit>> =>
-    request<PagedResult<UserSearchHit>>(`/admin/users${buildQuery({ search, pageSize, page: 1 })}`)
+    request<PagedResult<UserSearchHit>>(`${ApiPath.AdminUsers}${buildQuery({ search, pageSize, page: 1 })}`)
 
   /**
    * Loads the country reference list.
@@ -85,7 +87,7 @@ export const useClientsApi = () => {
    * @returns Every configured currency, enabled or not.
    */
   const configuredCurrencies = (): Promise<ConfiguredCurrency[]> =>
-    request<ConfiguredCurrency[]>('/admin/currencies')
+    request<ConfiguredCurrency[]>(ApiPath.AdminCurrencies)
 
   /**
    * Adds a contact to a client.
@@ -95,7 +97,7 @@ export const useClientsApi = () => {
    * @returns Nothing.
    */
   const addContact = (clientId: number | string, payload: Record<string, unknown>): Promise<void> =>
-    request<void>(`/clients/${clientId}/contacts`, { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Clients}/${clientId}/contacts`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Updates a contact of a client.
@@ -106,7 +108,7 @@ export const useClientsApi = () => {
    * @returns Nothing.
    */
   const updateContact = (clientId: number | string, contactId: number, payload: Record<string, unknown>): Promise<void> =>
-    request<void>(`/clients/${clientId}/contacts/${contactId}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Clients}/${clientId}/contacts/${contactId}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Removes a contact from a client.
@@ -116,7 +118,7 @@ export const useClientsApi = () => {
    * @returns Nothing.
    */
   const removeContact = (clientId: number | string, contactId: number): Promise<void> =>
-    request<void>(`/clients/${clientId}/contacts/${contactId}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.Clients}/${clientId}/contacts/${contactId}`, { method: HttpMethod.Delete })
 
   /**
    * Exports the chosen sections of a client data.
@@ -126,7 +128,7 @@ export const useClientsApi = () => {
    * @returns The exported document.
    */
   const exportData = (clientId: number | string, fields: string[]): Promise<object> =>
-    request<object>(`/clients/${clientId}/export${buildQuery({ fields })}`)
+    request<object>(`${ApiPath.Clients}/${clientId}/export${buildQuery({ fields })}`)
 
   /**
    * Loads the aggregated summary of a client.
@@ -135,7 +137,7 @@ export const useClientsApi = () => {
    * @returns The summary figures.
    */
   const summary = (clientId: number): Promise<ClientSummaryData> =>
-    request<ClientSummaryData>(`/clients/${clientId}/summary`)
+    request<ClientSummaryData>(`${ApiPath.Clients}/${clientId}/summary`)
 
   /**
    * Lists a few services of a client for the summary table.
@@ -145,7 +147,7 @@ export const useClientsApi = () => {
    * @returns One page of services.
    */
   const recentServices = (clientId: number, pageSize: number): Promise<PagedResult<ServiceListItem>> =>
-    request<PagedResult<ServiceListItem>>(`/services${buildQuery({ clientId, page: 1, pageSize })}`)
+    request<PagedResult<ServiceListItem>>(`${ApiPath.Services}${buildQuery({ clientId, page: 1, pageSize })}`)
 
   /**
    * Lists a few domains of a client for the summary table.
@@ -155,7 +157,7 @@ export const useClientsApi = () => {
    * @returns One page of domains.
    */
   const recentDomains = (clientId: number, pageSize: number): Promise<PagedResult<DomainRegistration>> =>
-    request<PagedResult<DomainRegistration>>(`/domains${buildQuery({ clientId, page: 1, pageSize })}`)
+    request<PagedResult<DomainRegistration>>(`${ApiPath.Domains}${buildQuery({ clientId, page: 1, pageSize })}`)
 
   return {
     list,

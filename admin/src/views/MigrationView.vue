@@ -33,6 +33,8 @@ import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { API_BASE } from '@/lib/apiPaths'
+import { COPIED_VISIBLE_MS } from '@/lib/limits'
 
 /** Translation function. */
 const { t } = useI18n()
@@ -41,10 +43,7 @@ const { t } = useI18n()
 const store = useMigrationStore()
 
 /** Where the source-side plugin archive is served from. */
-const PLUGIN_DOWNLOAD_URL = '/api/migrations/plugin/download'
-
-/** How long the "Copied" confirmation stays visible, in milliseconds. */
-const COPIED_VISIBLE_MS = 2000
+const PLUGIN_DOWNLOAD_URL = `${API_BASE}/migrations/plugin/download`
 
 /** Export flag that belongs to each entity group. */
 const EXPORT_FLAG: Record<MigrationEntityKey, keyof MigrationExportFlags> = {

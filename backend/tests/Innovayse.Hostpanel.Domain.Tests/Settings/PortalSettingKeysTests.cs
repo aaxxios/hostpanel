@@ -89,4 +89,62 @@ public class PortalSettingKeysTests
             new[] { "aurora", "classic", "nova" },
             PortalSettingKeys.TemplateNames.OrderBy(n => n).ToArray());
     }
+
+    /// <summary>The hero figures and the office address and map are seeded empty and public.</summary>
+    [Fact]
+    public void HeroAndOfficeKeys_AreSeededEmptyAndPublic()
+    {
+        string[] keys =
+        [
+            PortalSettingKeys.StatsClients,
+            PortalSettingKeys.StatsUptime,
+            PortalSettingKeys.StatsRegions,
+            PortalSettingKeys.HeroBadge,
+            PortalSettingKeys.ContactAddress,
+            PortalSettingKeys.ContactMapUrl,
+        ];
+
+        Assert.Equal(
+            ["portal.stats.clients", "portal.stats.uptime", "portal.stats.regions", "portal.hero.badge", "portal.contact.address", "portal.contact.map_url"],
+            keys);
+        foreach (var key in keys)
+        {
+            Assert.Contains(key, PortalSettingKeys.Public);
+            Assert.True(PortalSettingKeys.AllowsEmpty(key), $"{key} must seed empty so no figure is invented");
+        }
+    }
+
+    /// <summary>The social, hours and nova switch keys are seeded empty and public; the switches accept only booleans.</summary>
+    [Fact]
+    public void StorefrontExtras_AreSeededEmptyAndPublic()
+    {
+        string[] switches =
+        [
+            PortalSettingKeys.FeaturesBackups,
+            PortalSettingKeys.FeaturesStorage,
+            PortalSettingKeys.FeaturesCaching,
+            PortalSettingKeys.FeaturesCdn,
+            PortalSettingKeys.FeaturesFirewall,
+            PortalSettingKeys.FeaturesMalware,
+            PortalSettingKeys.MigrationFree,
+        ];
+        string[] keys =
+        [
+            PortalSettingKeys.SocialTwitter,
+            PortalSettingKeys.ContactHours,
+            PortalSettingKeys.ContactTimezone,
+            .. switches,
+        ];
+
+        foreach (var key in keys)
+        {
+            Assert.Contains(key, PortalSettingKeys.Public);
+            Assert.True(PortalSettingKeys.AllowsEmpty(key), $"{key} must seed empty so no claim is invented");
+        }
+
+        foreach (var key in switches)
+        {
+            Assert.Same(PortalSettingKeys.Booleans, PortalSettingKeys.AllowedValues[key]);
+        }
+    }
 }

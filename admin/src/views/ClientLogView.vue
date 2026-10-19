@@ -30,6 +30,7 @@ import UiText from '@/components/ui/UiText.vue'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { LEDGER_PAGE_SIZE } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -46,7 +47,7 @@ const clientId = computed(() => Number(route.params.id))
 const page = ref(1)
 
 /** Items per page. */
-const pageSize = 25
+const pageSize = LEDGER_PAGE_SIZE
 
 /** Whether the filter panel is visible. */
 const showFilters = ref(false)

@@ -2,6 +2,7 @@
  * Settings branding flow: picking a logo uploads it as multipart data, stages the returned URL
  * in the field, and saving writes that URL to the setting.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { brandingSettings, tinyPng, uploadedLogoUrl } from './fixtures/settings'
 import type { Setting } from '../src/types/setting'
@@ -17,10 +18,10 @@ test('uploading a logo stages its URL and saving persists it', async ({ page }) 
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      { method: 'GET', path: '/api/admin/settings', respond: () => ({ body: stored }) },
-      json('POST', '/api/admin/settings/branding/logo', { url: uploadedLogoUrl }),
+      { method: HttpMethod.Get, path: '/api/admin/settings', respond: () => ({ body: stored }) },
+      json(HttpMethod.Post, '/api/admin/settings/branding/logo', { url: uploadedLogoUrl }),
       {
-        method: 'PUT',
+        method: HttpMethod.Put,
         path: new RegExp(`^/api/admin/settings/${logoId}$`),
         respond: (call) => {
           const row = stored.find((setting) => setting.id === logoId)
@@ -43,17 +44,17 @@ test('uploading a logo stages its URL and saving persists it', async ({ page }) 
 
   // The upload went out as multipart form data under the field `file`.
   await expect(fieldOf(page, 'branding-url-logo')).toHaveValue(uploadedLogoUrl)
-  const [upload] = api.callsTo('POST', '/api/admin/settings/branding/logo')
+  const [upload] = api.callsTo(HttpMethod.Post, '/api/admin/settings/branding/logo')
   expect(upload?.contentType).toContain('multipart/form-data')
   expect(upload?.postData).toContain('filename="logo.png"')
   await expect(page.getByTestId('branding-preview-logo')).toBeAttached()
 
   // Nothing is stored until Save: the staged URL is only a draft.
-  expect(api.callsTo('PUT', `/api/admin/settings/${logoId}`)).toHaveLength(0)
+  expect(api.callsTo(HttpMethod.Put, `/api/admin/settings/${logoId}`)).toHaveLength(0)
   await page.getByTestId('branding-save-logo').click()
 
   await expect(page.getByTestId('branding-save-logo')).toHaveCount(0)
   await expect(fieldOf(page, 'branding-url-logo')).toHaveValue(uploadedLogoUrl)
-  const [save] = api.callsTo('PUT', `/api/admin/settings/${logoId}`)
+  const [save] = api.callsTo(HttpMethod.Put, `/api/admin/settings/${logoId}`)
   expect(save?.body).toEqual({ value: uploadedLogoUrl })
 })

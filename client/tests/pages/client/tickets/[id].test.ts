@@ -47,6 +47,16 @@ describe('ticket page', () => {
     expect(wrapper.text()).toContain('Grace (client.tickets.support)')
   })
 
+  it('names a reply with an empty author as unknown', async () => {
+    const nameless = thread(TicketStatus.Open)
+    nameless.replies[0]!.authorName = ''
+    supportApi.fetchTicket.mockResolvedValue(nameless)
+
+    const wrapper = await mountPage(TicketPage)
+
+    expect(wrapper.text()).toContain('fallback.unknown (client.tickets.support)')
+  })
+
   it('offers the reply form while the ticket is open', async () => {
     supportApi.fetchTicket.mockResolvedValue(thread(TicketStatus.Answered))
 

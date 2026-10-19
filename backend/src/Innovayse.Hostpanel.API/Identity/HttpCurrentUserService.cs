@@ -71,7 +71,7 @@ public sealed class HttpCurrentUserService : ICurrentUserService
 
     /// <inheritdoc/>
     public string? UserId =>
-        User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? User?.FindFirstValue("sub");
+        User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? User?.FindFirstValue(Innovayse.Hostpanel.Shared.Constants.JwtClaims.Sub);
 
     /// <inheritdoc/>
     public string? UserName

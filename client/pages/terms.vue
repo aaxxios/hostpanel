@@ -42,7 +42,7 @@ const SECTION_DEFINITIONS = [
 const sections = computed<LegalSection[]>(() => SECTION_DEFINITIONS.map(section => ({
   id: section.id,
   title: t(`terms.sections.${section.id}.title`),
-  paragraphs: Array.from({ length: section.paragraphs }, (_, index) => t(`terms.sections.${section.id}.content.${index}`))
+  paragraphs: Array.from({ length: section.paragraphs }, (_, index) => t(`terms.sections.${section.id}.content.${index}`, { site: siteName.value }))
 })))
 
 /** The "last updated" line shown under the title. */

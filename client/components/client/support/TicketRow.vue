@@ -1,5 +1,5 @@
 <template>
-  <UiLinkCard :to="`/client/tickets/${ticket.id}`" :testid="`ticket-row-${ticket.id}`">
+  <UiLinkCard :to="clientTicketPath(ticket.id)" :testid="`ticket-row-${ticket.id}`">
     <UiStack direction="row" justify="between" align="start">
       <UiStack direction="row" align="start" gap="sm" class="min-w-0">
         <UiTile :icon="MessageSquare" tone="primary" size="md" />
@@ -30,6 +30,7 @@
  * TicketRow - one row of the ticket list: subject, department, dates, priority and status, the
  * whole row being a link to the ticket.
  */
+import { clientTicketPath } from '~/constants/clientRoutes'
 import { MessageSquare } from 'lucide-vue-next'
 import type { ClientTicket } from '~/types/clientticket'
 import { formatDateTime } from '~/utils/formatDate'

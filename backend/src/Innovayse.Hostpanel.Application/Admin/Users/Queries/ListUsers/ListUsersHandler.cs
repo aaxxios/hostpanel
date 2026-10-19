@@ -33,7 +33,7 @@ public sealed class ListUsersHandler
     /// <returns>Success with the page. This use case refuses nothing.</returns>
     public async Task<Result<PagedResult<UserListItemDto>>> HandleAsync(ListUsersQuery query, CancellationToken ct)
     {
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
         var page = Math.Max(1, query.Page);
 
         var (accounts, total) = await _identity.ListAsync(query.Search, page, pageSize, ct);

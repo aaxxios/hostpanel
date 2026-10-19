@@ -4,7 +4,7 @@ namespace Innovayse.Hostpanel.Application.Orders.Queries.ListOrders;
 /// <param name="Id">Order primary key.</param>
 /// <param name="OrderNumber">Human-readable order number (e.g. "ORD-0001").</param>
 /// <param name="ClientId">FK to the owning client.</param>
-/// <param name="ClientName">Display name of the client (first + last).</param>
+/// <param name="ClientName">Display name of the client (first + last). <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="Status">Current lifecycle status as a string.</param>
 /// <param name="PaymentMethod">Payment gateway module name selected at checkout.</param>
 /// <param name="Total">Sum of all item first-payment amounts.</param>
@@ -15,7 +15,7 @@ public sealed record OrderListItemDto(
     int Id,
     string OrderNumber,
     int ClientId,
-    string ClientName,
+    string? ClientName,
     string Status,
     string PaymentMethod,
     decimal Total,

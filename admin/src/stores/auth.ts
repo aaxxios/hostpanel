@@ -1,3 +1,8 @@
+/**
+ * The auth store: the signed-in user, the sign-in mode, the local and SSO sign-in steps (including
+ * two-factor and first-account setup), email verification and sign-out.
+ */
+
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAuthApi } from '@/composables/apis/useAuthApi'
@@ -6,6 +11,10 @@ import type { SignInResult } from '@/types/auth'
 import { errorSentence } from '@/lib/errorHandler'
 import { runAction } from '@/lib/runAction'
 import { translate } from '@/lib/translate'
+import { getRuntimeConfig } from '@/lib/runtimeConfig'
+
+/** Query parameter the SSO end-session endpoint reads the address to send the browser back to. */
+const POST_LOGOUT_PARAM = 'post_logout_redirect_uri'
 
 /**
  * What a sign-in attempt ended in. The store reports an expected failure as a return
@@ -16,7 +25,7 @@ export type SignInOutcome = SignInResult
 /**
  * Pinia store managing admin authentication state, in both deployment shapes.
  *
- * Under `AUTH_MODE=sso` authentication happens against Innovayse SSO, but no longer in
+ * Under `AUTH_MODE=sso` authentication happens against single sign-on, but no longer in
  * this browser: the Hostpanel API performs the OIDC exchange and holds the tokens, and
  * this store only tracks the resulting session by calling /auth/me — roles are assigned
  * locally in Hostpanel and cannot be read off any SSO token anyway. The PKCE flow, the
@@ -335,14 +344,14 @@ export const useAuthStore = defineStore('auth', () => {
     // Tell the SSO where to send the browser afterwards. Without this the end-session endpoint
     // has nowhere to go and answers 200 with an empty body, which is a blank white page — the
     // sign-out worked, but it looked like the app had died. The address must be one registered
-    // for this client on the SSO side, which `https://<origin>/admin` is.
+    // for this client on the SSO side, which the origin plus the deployment's base path is.
     const endSessionUrl = await api.endSessionUrl()
     if (!endSessionUrl) {
       location.href = '/'
       return
     }
     const url = new URL(endSessionUrl)
-    url.searchParams.set('post_logout_redirect_uri', `${location.origin}/admin`)
+    url.searchParams.set(POST_LOGOUT_PARAM, new URL(getRuntimeConfig().basePath, location.origin).href)
     location.href = url.toString()
   }
 

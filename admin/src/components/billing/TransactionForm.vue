@@ -25,6 +25,7 @@ import UiText from '@/components/ui/UiText.vue'
 import { TRANSACTION_METHOD_OPTIONS } from '@/lib/constants'
 import type { ClientOption } from '@/types/clientoption'
 import type { TransactionFormValues } from '@/types/transaction'
+import { AppRoute } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -211,7 +212,7 @@ const patch = (change: Partial<TransactionFormValues>): void => {
         >
           {{ submitLabel }}
         </UiButton>
-        <UiLink to="/billing/transactions" variant="ghost" data-testid="billing-transaction-cancel">
+        <UiLink :to="AppRoute.BillingTransactions" variant="ghost" data-testid="billing-transaction-cancel">
           {{ t('shared.cancel') }}
         </UiLink>
       </UiStack>

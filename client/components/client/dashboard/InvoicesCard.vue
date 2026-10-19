@@ -1,7 +1,7 @@
 <template>
   <UiCard data-testid="dashboard-invoices">
     <UiCardHeader :title="$t('client.dashboard.recentInvoices')">
-      <UiButton size="sm" variant="subtle" to="/client/invoices" data-testid="dashboard-invoices-all">
+      <UiButton size="sm" variant="subtle" :to="CLIENT_INVOICES_PATH" data-testid="dashboard-invoices-all">
         {{ $t('client.dashboard.viewAll') }}
         <ArrowRight :size="12" :stroke-width="2" class="ml-1.5" />
       </UiButton>
@@ -19,7 +19,7 @@
       <ClientDashboardListRow
         v-for="invoice in store.invoices.slice(0, 4)"
         :key="invoice.id"
-        :to="`/client/invoices/${invoice.id}`"
+        :to="clientInvoicePath(invoice.id)"
         :testid="`dashboard-invoice-${invoice.id}`"
       >
         <div>
@@ -40,6 +40,7 @@
  * The dashboard's "Recent Invoices" card: the latest four invoices with due date, total and
  * status, each opening the invoice.
  */
+import { CLIENT_INVOICES_PATH, clientInvoicePath } from '~/constants/clientRoutes'
 import { ArrowRight } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
 import { formatCurrency } from '~/utils/formatCurrency'

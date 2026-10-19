@@ -26,6 +26,12 @@ describe('ServiceHeader', () => {
     expect(wrapper.text()).toContain('example.com')
   })
 
+  it('shows the product fallback when the backend sent no product name', () => {
+    const wrapper = mountClient(ServiceHeader, { props: { service: service({ name: null }), ssoLoading: false } })
+
+    expect(wrapper.find('h1').text()).toBe('fallback.product')
+  })
+
   it('falls back to the product group when there is no domain', () => {
     const wrapper = mountClient(ServiceHeader, { props: { service: service({ domain: '' }), ssoLoading: false } })
 

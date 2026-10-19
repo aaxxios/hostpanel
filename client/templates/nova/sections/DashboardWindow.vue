@@ -7,7 +7,7 @@
   -->
   <UiCard
     padding="none"
-    class="overflow-hidden shadow-[0_28px_60px_-30px_rgba(0,0,0,0.55)] !border-nova-border !bg-nova-surface"
+    class="overflow-hidden shadow-nova-window !border-nova-border !bg-nova-surface"
     aria-hidden="true"
   >
     <div class="flex items-center gap-2 border-b border-nova-border bg-nova-surface-2 px-4 py-3">

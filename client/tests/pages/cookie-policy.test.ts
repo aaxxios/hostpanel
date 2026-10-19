@@ -2,7 +2,8 @@
  * Tests for the Cookie Policy page: the cookie types as cards, the uses as a checklist, a note,
  * and the contact address as a mail link.
  */
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
 import { mountPage, registerPageComponents, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import type { PublicPageSpies } from '~/tests/helpers/publicPage'
 import LegalDocument from '~/components/legal/LegalDocument.vue'
@@ -24,6 +25,10 @@ describe('pages/cookie-policy', () => {
   beforeEach(() => {
     spies = stubPublicPageRuntime({ tm: key => MESSAGES[key] ?? [] })
     registerPageComponents({ LegalDocument })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('shows the title and the dated last-updated line without a badge', async () => {
@@ -66,12 +71,19 @@ describe('pages/cookie-policy', () => {
   })
 
   it('links the contact address as a mail link and has no separate contact card', async () => {
+    vi.stubGlobal('useContactDetails', () => ({ email: ref('hello@acme.test') }))
     const wrapper = await mountPage(Page)
 
     const link = wrapper.find('[data-testid="legal-section-link"]')
-    expect(link.attributes('href')).toBe('mailto:contact@innovayse.com')
-    expect(link.text()).toBe('contact@innovayse.com')
+    expect(link.attributes('href')).toBe('mailto:hello@acme.test')
+    expect(link.text()).toBe('hello@acme.test')
     expect(wrapper.find('[data-testid="legal-contact"]').exists()).toBe(false)
+  })
+
+  it('leaves the contact link out when no address is configured', async () => {
+    const wrapper = await mountPage(Page)
+
+    expect(wrapper.find('[data-testid="legal-section-link"]').exists()).toBe(false)
   })
 
   it('asks search engines not to index it and sets the social tags', async () => {

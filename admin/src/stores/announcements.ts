@@ -9,6 +9,7 @@ import { ref } from 'vue'
 import { useAnnouncementsApi } from '@/composables/apis/useAnnouncementsApi'
 import { runAction } from '@/lib/runAction'
 import type { Announcement, AnnouncementPayload } from '@/types/announcement'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 /** Paginated listing and CRUD of announcements. */
 export const useAnnouncementsStore = defineStore('announcements', () => {
@@ -36,7 +37,7 @@ export const useAnnouncementsStore = defineStore('announcements', () => {
   const page = ref(1)
 
   /** Items per page. */
-  const pageSize = ref(20)
+  const pageSize = ref(DEFAULT_PAGE_SIZE)
 
   /**
    * Loads one page of announcements.

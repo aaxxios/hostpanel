@@ -11,6 +11,7 @@ import { useServicesApi } from '@/composables/apis/useServicesApi'
 import { runAction } from '@/lib/runAction'
 import type { PagedResult } from '@/types/pagedresult'
 import type { ServiceDetail, ServiceListItem, UpdateServicePayload } from '@/types/service'
+import { DEFAULT_PAGE_SIZE, LOOKUP_PAGE_SIZE } from '@/lib/limits'
 
 /** Loads and changes services. */
 export const useServicesStore = defineStore('services', () => {
@@ -23,7 +24,7 @@ export const useServicesStore = defineStore('services', () => {
   const page = ref(1)
 
   /** Items per page. */
-  const pageSize = ref(20)
+  const pageSize = ref(DEFAULT_PAGE_SIZE)
 
   /** Total number of matching items across all pages. */
   const totalCount = ref(0)
@@ -106,7 +107,7 @@ export const useServicesStore = defineStore('services', () => {
   const fetchClientServices = async (clientId: number | string): Promise<ServiceListItem[]> => {
     /** Throwaway error ref: the switcher is optional, so its failure is deliberately silent. */
     const quiet = ref<string | null>(null)
-    const result = await runAction(quiet, () => api.listServices({ clientId, page: 1, pageSize: 100 }))
+    const result = await runAction(quiet, () => api.listServices({ clientId, page: 1, pageSize: LOOKUP_PAGE_SIZE }))
     return result.ok ? result.value.items : []
   }
 

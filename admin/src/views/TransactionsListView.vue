@@ -6,6 +6,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import TransactionChart from '@/components/billing/TransactionChart.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -39,8 +40,14 @@ import { formatDate, toIsoDay } from '@/lib/format'
 import { formatUsdPlain } from '@/lib/money'
 import { useTransactionsStore } from '@/stores/billingTransactions'
 import type { Transaction } from '@/types/transaction'
+import { AppRoute, transactionEditPath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { clientLabel } = useFallbackLabels()
 
 /** Which side of the ledger the list shows. */
 const Direction = {
@@ -169,7 +176,7 @@ onMounted(() => load(1))
         <UiButton variant="secondary" data-testid="billing-transactions-filter-toggle" @click="filtersOpen = !filtersOpen">
           {{ filtersOpen ? t('shared.hideFilters') : t('shared.searchFilter') }}
         </UiButton>
-        <UiLink to="/billing/add-transaction" variant="primary" data-testid="billing-transactions-add">
+        <UiLink :to="AppRoute.BillingAddTransaction" variant="primary" data-testid="billing-transactions-add">
           <UiIcon :markup="Icon.Add" size="sm" />
           {{ t('billing.transactionsList.addTransaction') }}
         </UiLink>
@@ -266,7 +273,7 @@ onMounted(() => load(1))
         </UiTableHead>
         <UiTableBody divided>
           <UiTableRow v-for="transaction in shownTransactions" :key="transaction.id" hoverable>
-            <UiTableCell>{{ transaction.clientName }}</UiTableCell>
+            <UiTableCell>{{ clientLabel(transaction.clientName, transaction.clientId) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(transaction.date) }}</UiTableCell>
             <UiTableCell>{{ transaction.paymentMethod || t('billing.transactionsList.manual') }}</UiTableCell>
             <UiTableCell>{{ transaction.description }}</UiTableCell>
@@ -282,7 +289,7 @@ onMounted(() => load(1))
                 <UiLink
                   variant="ghost"
                   size="sm"
-                  :to="`/billing/transactions/${transaction.id}/edit`"
+                  :to="transactionEditPath(transaction.id)"
                   :aria-label="t('shared.edit')"
                   :data-testid="`billing-transaction-edit-${transaction.id}`"
                 >

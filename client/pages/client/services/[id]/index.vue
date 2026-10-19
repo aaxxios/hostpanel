@@ -1,6 +1,6 @@
 <template>
   <UiStack gap="lg">
-    <UiBackLink to="/client/services" :label="$t('client.services.backTo')" testid="service-back" />
+    <UiBackLink :to="CLIENT_SERVICES_PATH" :label="$t('client.services.backTo')" testid="service-back" />
 
     <UiStack v-if="pending">
       <UiSkeleton shape="block" class="h-20" />
@@ -65,6 +65,7 @@
  */
 import { AlertCircle } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
+import { CLIENT_SERVICES_PATH, clientServiceSetupPath } from '~/constants/clientRoutes'
 import { useClientStore } from '~/stores/client'
 import { useServiceManagementStore } from '~/stores/servicemanagement'
 import { ServiceStatus } from '~/types/servicestatus'
@@ -140,22 +141,12 @@ const loadInvoices = (): Promise<void> => mgmt.loadInvoices(serviceId)
  *
  * @returns Resolves when the attempt has ended.
  */
-const loginToCpanel = async (): Promise<void> => {
-  const url = await mgmt.fetchCpanelUrl(serviceId)
-  if (url) {
-    window.open(url, '_blank', 'noopener')
-    return
-  }
-  const hostname = service.value?.serverhostname
-  if (hostname) {
-    window.open(`https://${hostname}:2083`, '_blank', 'noopener')
-  }
-}
+const loginToCpanel = (): Promise<void> => mgmt.openControlPanel(serviceId, service.value?.serverhostname)
 
 // A service without a control-panel account is not manageable yet: send it to the setup wizard.
 watch(service, (current) => {
   if (!pending.value && current && current.status !== ServiceStatus.Terminated && current.status !== ServiceStatus.Cancelled && !current.username) {
-    navigateTo(`/client/services/${serviceId}/setup`)
+    navigateTo(clientServiceSetupPath(serviceId))
   }
 }, { immediate: true })
 

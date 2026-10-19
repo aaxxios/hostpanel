@@ -1,13 +1,13 @@
 using Innovayse.Hostpanel.Domain.Domains;
-
 using Innovayse.Hostpanel.Domain.Domains.Enums;
+
 namespace Innovayse.Hostpanel.Application.Domains.Queries.ListDomains;
 /// <summary>DTO for domain registration list — includes client name, pricing, and registrar info.</summary>
 /// <param name="Id">Domain primary key.</param>
 /// <param name="ClientId">FK to the owning client.</param>
-/// <param name="ClientName">Full name of the owning client.</param>
+/// <param name="ClientName">Full name of the owning client. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="Name">Domain name including TLD (e.g. "example.com").</param>
-/// <param name="RegPeriod">Registration period label (e.g. "1 Year").</param>
+/// <param name="RegPeriodYears">Registration period in whole years; the caller formats it for display.</param>
 /// <param name="Registrar">Name of the registrar module.</param>
 /// <param name="RecurringAmount">Recurring registration price.</param>
 /// <param name="PriceCurrency">ISO 4217 currency code for the price.</param>
@@ -18,9 +18,9 @@ namespace Innovayse.Hostpanel.Application.Domains.Queries.ListDomains;
 public record DomainRegistrationDto(
     int Id,
     int ClientId,
-    string ClientName,
+    string? ClientName,
     string Name,
-    string RegPeriod,
+    int RegPeriodYears,
     string? Registrar,
     decimal RecurringAmount,
     string PriceCurrency,

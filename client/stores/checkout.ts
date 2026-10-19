@@ -16,6 +16,7 @@
  * @module stores/checkout
  */
 
+import { CLIENT_INVOICES_PATH, clientOrderSuccessPath } from '~/constants/clientRoutes'
 import { defineStore } from 'pinia'
 import { useBillingApi } from '~/composables/apis/useBillingApi'
 import { useOrderPaymentToken } from '~/composables/useOrderPaymentToken'
@@ -221,7 +222,10 @@ export const useCheckoutStore = defineStore('checkout', () => {
         return {
           kind: CheckoutDestinationKind.Route,
           target: input.localizePath(
-            `/client/order-success?order=ORD-${String(result.orderId).padStart(4, '0')}&amount=${finalAmount}${domainQuery}`
+            clientOrderSuccessPath(
+              `ORD-${String(result.orderId).padStart(4, '0')}`,
+              `&amount=${finalAmount}${domainQuery}`
+            )
           )
         }
       }
@@ -255,7 +259,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
       return {
         kind: CheckoutDestinationKind.Route,
         target: input.localizePath(
-          result.invoiceId ? `/client/invoices/${result.invoiceId}/pay` : '/client/invoices'
+          result.invoiceId ? `${CLIENT_INVOICES_PATH}/${result.invoiceId}/pay` : CLIENT_INVOICES_PATH
         )
       }
     } catch (e: unknown) {

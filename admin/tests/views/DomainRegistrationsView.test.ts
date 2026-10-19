@@ -19,7 +19,7 @@ describe('DomainRegistrationsView', () => {
     clientId: 9,
     clientName: 'Grace Hopper',
     name: 'example.com',
-    regPeriod: '1 Year',
+    regPeriodYears: 1,
     registrar: null,
     recurringAmount: 12.99,
     priceCurrency: 'USD',
@@ -37,6 +37,21 @@ describe('DomainRegistrationsView', () => {
     expect(row).toContain('example.com')
     expect(row).toContain('$12.99')
     expect(wrapper.get('[data-testid="domain-registrations-client-4"]').attributes('href')).toBe('/clients/9')
+  })
+
+  it('falls back when the client name is unresolved and the period is unknown', async () => {
+    stubRoutes({ 'GET /api/domains': () => json({ items: [{ ...domain, clientName: null, regPeriodYears: 0 }], totalCount: 1 }) })
+    const wrapper = await mountRoutedSettled(DomainRegistrationsView, '/clients/domain-registrations')
+
+    expect(wrapper.get('[data-testid="domain-registrations-client-4"]').text()).toBe('Client #9')
+    expect(wrapper.get('[data-testid="domain-registrations-row-4"]').text()).toContain('N/A')
+  })
+
+  it('pluralises the registration period', async () => {
+    stubRoutes({ 'GET /api/domains': () => json({ items: [{ ...domain, regPeriodYears: 2 }], totalCount: 1 }) })
+    const wrapper = await mountRoutedSettled(DomainRegistrationsView, '/clients/domain-registrations')
+
+    expect(wrapper.get('[data-testid="domain-registrations-row-4"]').text()).toContain('2 years')
   })
 
   it('shows the empty state and the refusal sentence', async () => {

@@ -4,6 +4,7 @@
  * @module plugins/color-mode
  */
 
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { COLOR_MODE_COOKIE, SYSTEM_MODE_BOOTSTRAP, parseColorMode } from '~/utils/colorMode'
 import { ColorMode } from '~/types/colormode'
 import { ColorModeSystem } from '~/types/colormodesystem'
@@ -76,8 +77,21 @@ export default defineNuxtPlugin({
       })
     }
 
-    const template = computed(() => resolveTemplateName(get('portal.template', 'portalTemplate')))
-    const themeColor = computed(() => PAGE_COLORS[template.value][applied.value ?? ColorMode.Dark])
+    /** The active storefront template, which decides the page colours. */
+    const template = computed(() => resolveTemplateName(get(PortalSettingKey.Template, 'portalTemplate')))
+    /**
+     * The browser chrome colour for a device scheme. A chosen mode wins on both devices; with
+     * no choice yet (`system`, no cookie) each scheme gets its own page colour, so the browser
+     * picks the right one before any script has run.
+     *
+     * @param scheme The device colour scheme the tag's `media` query matches.
+     * @returns The colour for that scheme.
+     */
+    const themeColorFor = (scheme: ColorMode): string => PAGE_COLORS[template.value][applied.value ?? scheme]
+    /** Chrome colour on a light device. */
+    const themeColorLight = computed(() => themeColorFor(ColorMode.Light))
+    /** Chrome colour on a dark device. */
+    const themeColorDark = computed(() => themeColorFor(ColorMode.Dark))
 
     useHead({
       htmlAttrs: {
@@ -87,7 +101,9 @@ export default defineNuxtPlugin({
         // Tells the browser both schemes are supported, so form controls and
         // scrollbars follow the page rather than the OS.
         { name: 'color-scheme', content: 'dark light' },
-        { name: 'theme-color', content: themeColor },
+        // Two tags with explicit keys: unhead would otherwise keep only one theme-color.
+        { key: 'theme-color-light', name: 'theme-color', media: '(prefers-color-scheme: light)', content: themeColorLight },
+        { key: 'theme-color-dark', name: 'theme-color', media: '(prefers-color-scheme: dark)', content: themeColorDark },
       ],
       // Emitted only when the server could not decide. With a class already in the
       // HTML the script would be dead weight, and a fixed operator mode must not be

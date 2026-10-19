@@ -7,6 +7,8 @@
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { DownloadCategory, DownloadCategoryPayload } from '@/types/downloadcategory'
 import type { DownloadItem, DownloadItemPayload } from '@/types/downloaditem'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/downloads`.
@@ -22,7 +24,7 @@ export const useDownloadsApi = () => {
    * @returns The flat category list.
    */
   const listCategories = (): Promise<DownloadCategory[]> =>
-    request<DownloadCategory[]>('/downloads/categories')
+    request<DownloadCategory[]>(ApiPath.DownloadsCategories)
 
   /**
    * Lists downloads, optionally of one category.
@@ -31,7 +33,7 @@ export const useDownloadsApi = () => {
    * @returns The downloads.
    */
   const listDownloads = (categoryId: number | null): Promise<DownloadItem[]> =>
-    request<DownloadItem[]>(`/downloads${buildQuery({ categoryId: categoryId || undefined })}`)
+    request<DownloadItem[]>(`${ApiPath.Downloads}${buildQuery({ categoryId: categoryId || undefined })}`)
 
   /**
    * Creates a download category.
@@ -40,7 +42,7 @@ export const useDownloadsApi = () => {
    * @returns Nothing.
    */
   const createCategory = (payload: DownloadCategoryPayload): Promise<void> =>
-    request<void>('/downloads/categories', { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(ApiPath.DownloadsCategories, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Replaces a download category.
@@ -50,7 +52,7 @@ export const useDownloadsApi = () => {
    * @returns Nothing.
    */
   const updateCategory = (id: number, payload: DownloadCategoryPayload): Promise<void> =>
-    request<void>(`/downloads/categories/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.DownloadsCategories}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes a download category.
@@ -59,7 +61,7 @@ export const useDownloadsApi = () => {
    * @returns Nothing.
    */
   const deleteCategory = (id: number): Promise<void> =>
-    request<void>(`/downloads/categories/${id}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.DownloadsCategories}/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Creates a downloadable file entry.
@@ -68,7 +70,7 @@ export const useDownloadsApi = () => {
    * @returns Nothing.
    */
   const createDownload = (payload: DownloadItemPayload): Promise<void> =>
-    request<void>('/downloads', { method: 'POST', body: JSON.stringify(payload) })
+    request<void>(ApiPath.Downloads, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Replaces a downloadable file entry.
@@ -78,7 +80,7 @@ export const useDownloadsApi = () => {
    * @returns Nothing.
    */
   const updateDownload = (id: number, payload: DownloadItemPayload): Promise<void> =>
-    request<void>(`/downloads/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.Downloads}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes a downloadable file entry.
@@ -87,7 +89,7 @@ export const useDownloadsApi = () => {
    * @returns Nothing.
    */
   const deleteDownload = (id: number): Promise<void> =>
-    request<void>(`/downloads/${id}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.Downloads}/${id}`, { method: HttpMethod.Delete })
 
   return {
     listCategories, listDownloads,

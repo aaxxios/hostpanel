@@ -28,6 +28,7 @@ import UiSelect from '@/components/ui/UiSelect.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { AppRoute } from '@/lib/routes'
 
 /** Emitted when the hamburger button is clicked on mobile. */
 const emit = defineEmits<{
@@ -58,23 +59,27 @@ const BELL_MARKUP = '<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21
 
 /** Maps route paths to i18n keys for the page title. */
 const titleKeys: Record<string, string> = {
-  '/dashboard': 'nav.dashboard',
-  '/clients': 'nav.clients',
-  '/billing': 'nav.billing',
-  '/services': 'nav.servicesTitle',
-  '/domains': 'nav.domains',
-  '/support': 'nav.support',
-  '/plugins': 'nav.pluginManager',
-  '/servers': 'nav.servers',
-  '/integrations': 'nav.integrations',
-  '/settings': 'nav.settings',
-  '/reports': 'nav.reports',
-  '/orders': 'nav.orders',
-  '/notifications': 'common.notifications',
+  [AppRoute.Dashboard]: 'nav.dashboard',
+  [AppRoute.Clients]: 'nav.clients',
+  [AppRoute.Billing]: 'nav.billing',
+  [AppRoute.Services]: 'nav.servicesTitle',
+  [AppRoute.Domains]: 'nav.domains',
+  [AppRoute.Support]: 'nav.support',
+  [AppRoute.Plugins]: 'nav.pluginManager',
+  [AppRoute.Servers]: 'nav.servers',
+  [AppRoute.Integrations]: 'nav.integrations',
+  [AppRoute.Settings]: 'nav.settings',
+  [AppRoute.Reports]: 'nav.reports',
+  [AppRoute.Orders]: 'nav.orders',
+  [AppRoute.Notifications]: 'common.notifications',
 }
 
 /** Display labels for the language switcher. */
-const localeLabels: Record<SupportedLocale, string> = { en: 'EN', hy: 'ՀՅ', ru: 'РУ' }
+const localeLabels = computed<Record<SupportedLocale, string>>(() => ({
+  en: t('layout.localeLabels.en'),
+  hy: t('layout.localeLabels.hy'),
+  ru: t('layout.localeLabels.ru'),
+}))
 
 /** Controls the notification drawer. */
 const showNotifications = ref(false)
@@ -87,7 +92,7 @@ const pageTitle = computed<string>(() => {
 
 /** Options of the language select. */
 const localeOptions = computed(() =>
-  SUPPORTED_LOCALES.map(code => ({ value: code, label: localeLabels[code] })),
+  SUPPORTED_LOCALES.map(code => ({ value: code, label: localeLabels.value[code] })),
 )
 
 /** Number of events in the feed, shown as the badge and header count. */
@@ -133,7 +138,7 @@ const relativeTime = (iso: string): string => formatRelativeFromNow(iso, locale.
 /** Closes the drawer and sends the operator to the full notification feed. */
 const viewAllNotifications = (): void => {
   showNotifications.value = false
-  void router.push('/notifications')
+  void router.push(AppRoute.Notifications)
 }
 
 /**
@@ -153,7 +158,7 @@ const goToActivityEvent = (event: ActivityEvent): void => {
  */
 const signOut = async (): Promise<void> => {
   await auth.logout()
-  await router.push('/login')
+  await router.push(AppRoute.Login)
 }
 
 /** Loads the notification feed once on mount so the badge reflects real data immediately. */
@@ -197,7 +202,7 @@ onMounted(() => {
       <UiText tone="secondary" size="md" class="hidden max-w-[12rem] truncate font-medium sm:block" data-testid="topbar-account">
         {{ accountLabel }}
       </UiText>
-      <UiLink to="/settings" variant="ghost" size="sm" data-testid="topbar-settings">
+      <UiLink :to="AppRoute.Settings" variant="ghost" size="sm" data-testid="topbar-settings">
         {{ t('nav.settings') }}
       </UiLink>
       <UiButton type="button" variant="danger" size="sm" data-testid="topbar-sign-out" @click="signOut">
@@ -208,7 +213,7 @@ onMounted(() => {
     <!-- Notification feed -->
     <UiDrawer :open="showNotifications" :title="t('common.notifications')" @close="showNotifications = false">
       <UiStack gap="sm" data-testid="notifications-drawer">
-        <UiBadge tone="primary" small>{{ t('common.newCount', { count: notificationCount }) }}</UiBadge>
+        <UiBadge tone="primary" small>{{ t('common.newCount', { count: notificationCount }, notificationCount) }}</UiBadge>
 
         <UiSkeleton v-if="activity.loading && activity.events.length === 0" :lines="3" />
         <UiEmptyState v-else-if="activity.events.length === 0" :title="t('common.noNotifications')" />

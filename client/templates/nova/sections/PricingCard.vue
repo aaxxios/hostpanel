@@ -3,7 +3,7 @@
     <UiCard
       padding="lg"
       class="relative flex h-full flex-col transition-[transform,border-color] motion-safe:hover:-translate-y-1 !bg-nova-surface"
-      :class="plan.popular ? '!border-nova-accent shadow-[0_24px_50px_-30px_rgba(0,0,0,0.5)]' : '!border-nova-border'"
+      :class="plan.popular ? '!border-nova-accent shadow-nova-card' : '!border-nova-border'"
     >
       <UiText
         v-if="plan.popular"

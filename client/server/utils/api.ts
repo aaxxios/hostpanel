@@ -18,6 +18,8 @@
 
 import type { H3Event } from 'h3'
 import { LANGUAGE_HEADER, resolveLanguage } from '~/utils/transportLanguage'
+import { SessionCookie } from '~/constants/sessionCookie'
+import { ACCESS_TOKEN_FALLBACK_MAX_AGE, AUTHED_FLAG_MAX_AGE } from '~/server/utils/auth-cookie'
 
 /** The SSO token endpoint's reply to a refresh-token grant. */
 interface RefreshTokenResponse {
@@ -58,11 +60,11 @@ let refreshPromise: Promise<string | null> | null = null
 /**
  * Resolve the C# backend base URL from runtime config.
  *
- * @returns The backend API base URL, e.g. `http://localhost:5000`.
+ * @returns The backend API base URL (`API_URL`, defaulted in `nuxt.config.ts`).
  */
-const getApiUrl = (): string => {
+export const getApiUrl = (): string => {
   const config = useRuntimeConfig()
-  return (config.apiUrl as string) || 'http://localhost:5000'
+  return config.apiUrl as string
 }
 
 /**
@@ -95,7 +97,7 @@ export const tryRefreshToken = async (event: H3Event): Promise<string | null> =>
     return refreshPromise
   }
 
-  const refreshToken = getCookie(event, 'refresh_token')
+  const refreshToken = getCookie(event, SessionCookie.RefreshToken)
   if (!refreshToken) {
     clearAllAuthCookies(event)
     return null
@@ -121,16 +123,16 @@ export const tryRefreshToken = async (event: H3Event): Promise<string | null> =>
         return null
       }
 
-      setCookie(event, 'auth_token', access_token, {
+      setCookie(event, SessionCookie.AuthToken, access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: expires_in ?? 60 * 15,
+        maxAge: expires_in ?? ACCESS_TOKEN_FALLBACK_MAX_AGE,
         path: '/',
       })
 
       if (newRefreshToken) {
-        setCookie(event, 'refresh_token', newRefreshToken, {
+        setCookie(event, SessionCookie.RefreshToken, newRefreshToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
@@ -228,7 +230,7 @@ const forwardRenewedToken = (event: H3Event, renewedToken: string | null): void 
   if (!renewedToken) {
     return
   }
-  setCookie(event, 'auth_token', renewedToken, {
+  setCookie(event, SessionCookie.AuthToken, renewedToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -256,7 +258,7 @@ export const internalApiCall = async <T>(
   options: InternalApiOptions = {}
 ): Promise<T> => {
   const apiUrl = getApiUrl()
-  const token = options.anonymous ? undefined : getCookie(event, 'auth_token')
+  const token = options.anonymous ? undefined : getCookie(event, SessionCookie.AuthToken)
 
   /**
    * Builds the headers for one attempt; the language is read once per attempt from the incoming request.
@@ -332,7 +334,7 @@ export const internalApiCall = async <T>(
  * @param token - JWT access token from the C# API
  */
 export const setAuthCookie = (event: H3Event, token: string): void => {
-  setCookie(event, 'auth_token', token, {
+  setCookie(event, SessionCookie.AuthToken, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -340,7 +342,7 @@ export const setAuthCookie = (event: H3Event, token: string): void => {
     path: '/',
   })
 
-  setCookie(event, 'authed', '1', {
+  setCookie(event, SessionCookie.Authed, '1', {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -350,7 +352,7 @@ export const setAuthCookie = (event: H3Event, token: string): void => {
     // the SSO issues those for 30 days. Whether the hint should be stretched to match
     // is a separate question from the credential bug, and stretching it silently would
     // make the middleware assert a session for three more weeks than it does today.
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: AUTHED_FLAG_MAX_AGE,
     path: '/',
   })
 }
@@ -365,7 +367,7 @@ export const setAuthCookie = (event: H3Event, token: string): void => {
  * @param token - Opaque refresh token from the C# API
  */
 export const setRefreshCookie = (event: H3Event, token: string): void => {
-  setCookie(event, 'refresh_token', token, {
+  setCookie(event, SessionCookie.RefreshToken, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -380,8 +382,8 @@ export const setRefreshCookie = (event: H3Event, token: string): void => {
  * @param event - H3 event
  */
 export const clearAllAuthCookies = (event: H3Event): void => {
-  deleteCookie(event, 'auth_token', { path: '/' })
-  deleteCookie(event, 'refresh_token', { path: '/' })
-  deleteCookie(event, 'authed', { path: '/' })
-  deleteCookie(event, 'inno_pending_account', { path: '/' })
+  deleteCookie(event, SessionCookie.AuthToken, { path: '/' })
+  deleteCookie(event, SessionCookie.RefreshToken, { path: '/' })
+  deleteCookie(event, SessionCookie.Authed, { path: '/' })
+  deleteCookie(event, SessionCookie.PendingAccount, { path: '/' })
 }

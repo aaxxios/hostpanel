@@ -11,6 +11,7 @@ import { INTEGRATION_CATEGORIES } from '@/types/integrationmeta'
 import { IntegrationCategory } from '@/types/integration'
 import type { UiSidebarItem } from '@/utils/ui/sidebar'
 import UiSidebar from '@/components/ui/UiSidebar.vue'
+import { AppRoute, integrationCategoryPath } from '@/lib/routes'
 
 /** Current route, to mark the active category. */
 const route = useRoute()
@@ -29,17 +30,17 @@ const items = computed<UiSidebarItem[]>(() =>
   INTEGRATION_CATEGORIES.map(category => ({
     key: category.key,
     label: category.label,
-    to: `/integrations/${category.key}`,
+    to: integrationCategoryPath(category.key),
     icon: CATEGORY_ICONS[category.key],
   })),
 )
 
 /** Key of the category for the current route. */
 const activeKey = computed<string | undefined>(() => {
-  if (route.path === '/integrations') {
+  if (route.path === AppRoute.Integrations) {
     return IntegrationCategory.Payments
   }
-  return INTEGRATION_CATEGORIES.find(category => route.path === `/integrations/${category.key}`)?.key
+  return INTEGRATION_CATEGORIES.find(category => route.path === integrationCategoryPath(category.key))?.key
 })
 </script>
 

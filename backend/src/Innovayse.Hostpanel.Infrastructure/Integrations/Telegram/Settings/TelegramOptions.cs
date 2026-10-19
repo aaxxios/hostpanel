@@ -24,6 +24,12 @@ public sealed class TelegramOptions
     public const string SectionName = "Telegram";
 
     /// <summary>
+    /// The Bot API root, absolute and ending in a slash so a relative path extends it rather than
+    /// replacing its last segment. Overridable for a self-hosted Bot API server or a test double.
+    /// </summary>
+    public string ApiUrl { get; set; } = "https://api.telegram.org/";
+
+    /// <summary>
     /// The bot token issued by BotFather, in its <c>&lt;bot-id&gt;:&lt;secret&gt;</c> form. A
     /// secret, so it carries no default: a fabricated one fails against the live API with a 401
     /// that names nothing about configuration. Empty means no bot is configured.

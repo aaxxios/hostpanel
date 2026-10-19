@@ -36,7 +36,7 @@
             <UiTableTd class="text-gray-500 dark:text-gray-400 whitespace-nowrap text-sm">{{ formatDateTime(email.date) }}</UiTableTd>
             <UiTableTd class="text-gray-900 dark:text-white font-medium">{{ email.subject }}</UiTableTd>
             <UiTableTd align="right">
-              <UiButton data-testid="emails-view" size="sm" variant="subtle" :to="`/client/emails/${email.id}`">
+              <UiButton data-testid="emails-view" size="sm" variant="subtle" :to="clientEmailPath(email.id)">
                 {{ $t('client.emails.view') }}
               </UiButton>
             </UiTableTd>
@@ -65,6 +65,7 @@
 
 import { Mail } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
+import { clientEmailPath } from '~/constants/clientRoutes'
 import { useAccountStore } from '~/stores/account'
 import { formatDateTime } from '~/utils/formatDate'
 

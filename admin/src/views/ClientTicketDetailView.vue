@@ -7,6 +7,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import { useClientTicketsStore } from '@/stores/clientTickets'
 import { formatDate, formatDateTimeCompact } from '@/lib/format'
 import { TICKET_PRIORITY_OPTIONS } from '@/lib/constants'
@@ -32,8 +33,14 @@ import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
 import { UiTone } from '@/utils/ui/tone'
+import { ClientSection, clientSectionPath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { orUnknown } = useFallbackLabels()
 
 /** Icon markup (shape tags) of the back link. */
 const BACK_ICON = '<polyline points="15 18 9 12 15 6"/>'
@@ -171,7 +178,7 @@ const handleDelete = async (): Promise<void> => {
   showDeleteModal.value = false
   const ok = await store.deleteTicket(ticketId.value)
   if (ok) {
-    router.push(`/clients/${clientId.value}/tickets`)
+    router.push(clientSectionPath(clientId.value, ClientSection.Tickets))
   }
 }
 
@@ -201,7 +208,7 @@ onMounted(() => {
       <UiStack direction="row" wrap :justify="UiJustify.Between" :align="UiAlignItems.Center">
         <UiStack direction="row" :align="UiAlignItems.Center">
           <UiLink
-            :to="`/clients/${clientId}/tickets`"
+            :to="clientSectionPath(clientId, ClientSection.Tickets)"
             :variant="UiButtonVariant.Secondary"
             data-testid="client-ticket-back"
           >
@@ -330,7 +337,7 @@ onMounted(() => {
             <UiStack gap="sm">
               <UiStack direction="row" :justify="UiJustify.Between" :align="UiAlignItems.Center">
                 <UiStack direction="row" gap="sm" :align="UiAlignItems.Center">
-                  <UiText :tone="UiTextTone.Primary" :size="UiTextSize.Sm">{{ reply.authorName }}</UiText>
+                  <UiText :tone="UiTextTone.Primary" :size="UiTextSize.Sm">{{ orUnknown(reply.authorName) }}</UiText>
                   <UiBadge v-if="reply.isStaffReply" :tone="UiTone.Primary" small>
                     {{ t('clients.clientTicketDetail.staff') }}
                   </UiBadge>

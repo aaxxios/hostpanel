@@ -6,6 +6,7 @@ using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Services.Queries.GetServices;
 /// <summary>Returns a paginated list of all client services for admin use, enriched with client, domain, and pricing data.</summary>
 public sealed class GetServicesHandler
@@ -92,8 +93,8 @@ public sealed class GetServicesHandler
                 return new ServiceListItemDto(
                     svc.Id,
                     svc.ClientId,
-                    clientMap.GetValueOrDefault(svc.ClientId, "Unknown"),
-                    product?.Name ?? "Unknown",
+                    clientMap.GetValueOrDefault(svc.ClientId),
+                    product?.Name,
                     domainMap.GetValueOrDefault(svc.Id),
                     price,
                     currency.Code,

@@ -1,6 +1,6 @@
 <template>
   <UiStack gap="lg">
-    <UiBackLink to="/client/domains" :label="$t('client.domains.backTo')" testid="domain-back" />
+    <UiBackLink :to="CLIENT_DOMAINS_PATH" :label="$t('client.domains.backTo')" testid="domain-back" />
 
     <UiStack v-if="pending">
       <UiSkeleton shape="block" class="h-20" />
@@ -70,6 +70,7 @@
  * read through the domains store, which also owns the in-flight flags and refusal sentences the
  * panels render. The three switches are kept here so they survive switching panels.
  */
+import { CLIENT_DOMAINS_PATH } from '~/constants/clientRoutes'
 import { AlertCircle } from 'lucide-vue-next'
 import { useDomainsStore } from '~/stores/domains'
 import { DomainStatus } from '~/types/domainstatus'

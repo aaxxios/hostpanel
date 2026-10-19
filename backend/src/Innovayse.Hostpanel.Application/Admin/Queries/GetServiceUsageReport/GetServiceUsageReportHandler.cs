@@ -46,7 +46,7 @@ public sealed class GetServiceUsageReportHandler
 
         IReadOnlyList<ServiceUsageReportItemDto> items = grouped
             .Select(g => new ServiceUsageReportItemDto(
-                productMap.TryGetValue(g.ProductId, out var name) ? name : $"Product #{g.ProductId}",
+                productMap.TryGetValue(g.ProductId, out var name) ? name : null,
                 g.Count))
             .OrderByDescending(r => r.Count)
             .ToList();

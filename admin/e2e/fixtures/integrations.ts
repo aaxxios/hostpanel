@@ -30,7 +30,7 @@ export const cwpPlugin: PluginListItemDto = {
   id: 'innovayse-cwp',
   name: 'CWP provisioning',
   version: '1.0.0',
-  author: 'Innovayse',
+  author: 'Hostpanel',
   description: 'Provisions hosting accounts on CWP servers.',
   type: 'provisioning',
   category: 'Hosting / Provisioning',

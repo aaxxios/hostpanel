@@ -18,6 +18,7 @@ import type {
   UpdateDomainPayload,
 } from '@/types/domain'
 import type { PagedResult } from '@/types/pagedresult'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 /** Loads and changes domain registrations. */
 export const useDomainsStore = defineStore('domains', () => {
@@ -36,7 +37,7 @@ export const useDomainsStore = defineStore('domains', () => {
   const page = ref(1)
 
   /** Items per page. */
-  const pageSize = ref(20)
+  const pageSize = ref(DEFAULT_PAGE_SIZE)
 
   /** Total number of matching items. */
   const totalCount = ref(0)

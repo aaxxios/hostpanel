@@ -18,6 +18,7 @@
  */
 
 import { defineStore } from 'pinia'
+import { RECENTLY_ADDED_MS } from '~/constants/uiDefaults'
 import type { CartItem } from '~/types/cartitem'
 import { CartItemType } from '~/types/cartitemtype'
 import type { DomainOrderAction } from '~/types/domainorderaction'
@@ -169,7 +170,7 @@ export const useCartStore = defineStore('cart', {
         this.recentlyAdded.push(item.pid)
         setTimeout(() => {
           this.recentlyAdded = this.recentlyAdded.filter(p => p !== item.pid)
-        }, 2000)
+        }, RECENTLY_ADDED_MS)
       }
     },
 

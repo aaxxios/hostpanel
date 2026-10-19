@@ -26,6 +26,7 @@ import { Icon } from '@/lib/icons'
 import { formatUsdPlain } from '@/lib/money'
 import { useBillingStore } from '@/stores/billing'
 import type { Invoice, InvoiceItemUpdate } from '@/types/invoice'
+import { MAX_PERCENT } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -95,7 +96,7 @@ const previewSubTotal = computed<number>(() => lines.value.reduce((sum, line) =>
 /** Tax previewed on the taxed editable lines at `taxPercent`. */
 const previewTax = computed<number>(() => {
   const taxable = lines.value.filter((line) => line.taxed).reduce((sum, line) => sum + line.amount, 0)
-  return taxable * (props.taxPercent / 100)
+  return taxable * (props.taxPercent / MAX_PERCENT)
 })
 
 /** Total due after the invoice credit, as the editor previews it. */

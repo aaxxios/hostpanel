@@ -1,9 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Innovayse.Hostpanel.Application.Clients.Common;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Shared.Constants;
-using Innovayse.Hostpanel.Application.Common.Interfaces;
+
 namespace Innovayse.Hostpanel.Application.Common.Errors;
 
 /// <summary>
@@ -576,6 +577,23 @@ public static class HostpanelErrorCodes
     /// <summary>An uploaded slide image is over the byte ceiling this deployment enforces (400).</summary>
     public const string SLIDE_IMAGE_EXCEEDS_LIMIT = "SLIDE_IMAGE_EXCEEDS_LIMIT";
 
+    // Storefront content
+
+    /// <summary>The id names no testimonial (404).</summary>
+    public const string TESTIMONIAL_NOT_FOUND = "TESTIMONIAL_NOT_FOUND";
+
+    /// <summary>The id names no partner (404).</summary>
+    public const string PARTNER_NOT_FOUND = "PARTNER_NOT_FOUND";
+
+    /// <summary>The id names no portfolio project (404).</summary>
+    public const string PROJECT_NOT_FOUND = "PROJECT_NOT_FOUND";
+
+    /// <summary>The id names no frequently asked question (404).</summary>
+    public const string FAQ_NOT_FOUND = "FAQ_NOT_FOUND";
+
+    /// <summary>Another portfolio project already uses the slug (409, via the <c>_EXISTS</c> suffix).</summary>
+    public const string PROJECT_SLUG_EXISTS = "PROJECT_SLUG_EXISTS";
+
     // Migration
 
     /// <summary>The id or key names no migration job (404).</summary>
@@ -813,4 +831,25 @@ public static class HostpanelErrorCodes
 
     /// <summary>The ticket is already closed (400) — <see cref="Domain.Support.Ticket.Close"/>.</summary>
     public const string TICKET_CLOSE_NOT_ALLOWED = Domain.Support.SupportErrors.TicketCloseNotAllowed;
+
+    /// <summary>The sort order of a question is negative (400).</summary>
+    public const string FAQ_SORT_ORDER_NEGATIVE = Domain.Faqs.FaqErrors.SortOrderNegative;
+
+    /// <summary>The sort order of a partner is negative (400).</summary>
+    public const string PARTNER_SORT_ORDER_NEGATIVE = Domain.Partners.PartnerErrors.SortOrderNegative;
+
+    /// <summary>The sort order of a project is negative (400).</summary>
+    public const string PROJECT_SORT_ORDER_NEGATIVE = Domain.Projects.ProjectErrors.SortOrderNegative;
+
+    /// <summary>A project's slug is empty (400).</summary>
+    public const string PROJECT_SLUG_REQUIRED = Domain.Projects.ProjectErrors.SlugRequired;
+
+    /// <summary>The sort order of a testimonial is negative (400).</summary>
+    public const string TESTIMONIAL_SORT_ORDER_NEGATIVE = Domain.Testimonials.TestimonialErrors.SortOrderNegative;
+
+    /// <summary>A testimonial's name is empty (400).</summary>
+    public const string TESTIMONIAL_NAME_REQUIRED = Domain.Testimonials.TestimonialErrors.NameRequired;
+
+    /// <summary>A testimonial's rating is outside 1 to 5 (400).</summary>
+    public const string TESTIMONIAL_RATING_OUT_OF_RANGE = Domain.Testimonials.TestimonialErrors.RatingOutOfRange;
 }

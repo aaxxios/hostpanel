@@ -9,6 +9,7 @@
  * Root app component: global structured data, the favicon set and the site identity
  * metas. Third-party scripts live in plugins, driven by the operator's settings.
  */
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { BrandingIconRel } from '~/types/brandingiconrel'
 import { resolveLanguage } from '~/utils/transportLanguage'
 
@@ -33,7 +34,7 @@ injectSchema([
 const { get: getPortalSetting } = usePortalSettings()
 
 /** Operator-uploaded favicon, admin-managed with an environment fallback. Empty keeps nuxt.config's static default. */
-const faviconUrl = computed(() => getPortalSetting('portal.favicon', 'portalFavicon'))
+const faviconUrl = computed(() => getPortalSetting(PortalSettingKey.Favicon, 'portalFavicon'))
 
 /**
  * Every `<link rel="icon">` the page emits, built-in defaults included.
@@ -51,13 +52,18 @@ const faviconLinks = computed(() => brandingIcons(faviconUrl.value).map((icon) =
   const attributes = {
     href: icon.href,
     ...(icon.type ? { type: icon.type } : {}),
-    ...(icon.sizes ? { sizes: icon.sizes } : {})
+    ...(icon.sizes ? { sizes: icon.sizes } : {}),
+    ...(icon.color ? { color: icon.color } : {})
   }
   // unhead types a link as a union keyed on its literal `rel`, so each relation is built as its
   // own literal-typed object; a bare string-enum member (or a union of both) is not assignable.
-  return icon.rel === BrandingIconRel.AppleTouchIcon
-    ? { rel: 'apple-touch-icon' as const, ...attributes }
-    : { rel: 'icon' as const, ...attributes }
+  if (icon.rel === BrandingIconRel.AppleTouchIcon) {
+    return { rel: 'apple-touch-icon' as const, ...attributes }
+  }
+  if (icon.rel === BrandingIconRel.MaskIcon) {
+    return { rel: 'mask-icon' as const, ...attributes }
+  }
+  return { rel: 'icon' as const, ...attributes }
 }))
 
 /**

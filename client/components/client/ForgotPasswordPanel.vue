@@ -7,7 +7,7 @@
       :title="$t('client.forgot.successTitle')"
       :message="$t('client.forgot.successMessage', { email: submittedEmail })"
     >
-      <UiBackLink to="/client/login" testid="forgot-sent-back" class="mt-4" compact>
+      <UiBackLink :to="CLIENT_LOGIN_PATH" testid="forgot-sent-back" class="mt-4" compact>
         {{ $t('client.forgot.backToSignIn') }}
       </UiBackLink>
     </ClientOutcomePanel>
@@ -29,7 +29,7 @@
         {{ loading ? $t('client.forgot.submitting') : $t('client.forgot.submit') }}
       </UiButton>
       <div class="text-center">
-        <UiBackLink to="/client/login" testid="forgot-back" compact>
+        <UiBackLink :to="CLIENT_LOGIN_PATH" testid="forgot-back" compact>
           {{ $t('client.forgot.backToSignIn') }}
         </UiBackLink>
       </div>
@@ -45,6 +45,7 @@
  * this form that had already drifted apart. The request, its in-flight flag and a refusal's
  * sentence belong to the auth store; this component renders them.
  */
+import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
 import { MailCheck, Send } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '~/stores/auth'

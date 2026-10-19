@@ -31,6 +31,13 @@ describe('SystemSettingsView', () => {
     expect(wrapper.get('[data-testid="setting-row-21"]').text()).toContain('Contact address')
   })
 
+  it('draws the storefront card with the stored figure', async () => {
+    stubRouteTable({ 'GET /admin/settings': () => json([...stored, { id: 30, key: 'portal.stats.clients', value: '5,000+' }]) })
+    const { wrapper } = await mountScreen(SystemSettingsView)
+
+    expect((wrapper.get('[data-testid="storefront-stats-clients"]').element as HTMLInputElement).value).toBe('5,000+')
+  })
+
   it('edits a table row and saves only that row', async () => {
     const mock = stubRouteTable({
       'GET /admin/settings': () => json(stored),

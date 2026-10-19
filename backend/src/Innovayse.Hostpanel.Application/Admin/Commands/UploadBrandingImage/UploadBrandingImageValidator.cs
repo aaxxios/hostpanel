@@ -3,7 +3,6 @@ using Innovayse.Hostpanel.Application.Admin.Common;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
-using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 
 namespace Innovayse.Hostpanel.Application.Admin.Commands.UploadBrandingImage;
 
@@ -21,12 +20,12 @@ public sealed class UploadBrandingImageValidator : LocalizedValidator<UploadBran
     public UploadBrandingImageValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
-        // IsDefined as well as TryParse: TryParse also accepts a numeric string and returns a
-        // value that is not one of the named members, so "/branding/7" would otherwise reach the
-        // storage layer and become a directory called "7" -- caller-steered input in a path,
-        // which is exactly what that layer documents as impossible.
+        // IsInEnum: the model binder also accepts a numeric segment and yields a value that is not
+        // one of the named members, so "/branding/7" would otherwise reach the storage layer and
+        // become a directory called "7" -- caller-steered input in a path, which is exactly what
+        // that layer documents as impossible.
         RuleFor(x => x.Kind)
-            .Must(kind => Enum.TryParse<BrandingKind>(kind, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed))
+            .IsInEnum()
             .WithMessage(L["BrandingKindInvalid"]);
 
         RuleFor(x => x.Length).GreaterThan(0).WithMessage(L["BrandingImageRequired"]);

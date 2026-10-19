@@ -9,12 +9,15 @@
 import { toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingDraft } from '@/composables/useSettingDraft'
+import type { SettingDraft } from '@/composables/useSettingDraft'
 import SettingNotSeeded from '@/components/settings/SettingNotSeeded.vue'
 import SettingSaveButton from '@/components/settings/SettingSaveButton.vue'
 import SettingsSection from '@/components/settings/SettingsSection.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import { SettingEnv, SettingKey } from '@/types/setting'
 import type { Setting } from '@/types/setting'
+import { SHORT_TEXT_MAX_LENGTH } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -34,23 +37,39 @@ const emit = defineEmits<{
 /** The settings list as a ref, which is what the draft composable watches. */
 const settings = toRef(props, 'settings')
 
+/** One identity field of the card. */
+interface IdentityField {
+  /** Settings key the field edits. */
+  key: SettingKey
+  /** Environment variable the portal falls back to until the row exists. */
+  env: string
+  /** Suffix of the field's test ids. */
+  testid: string
+  /** Locale key of the label. */
+  labelKey: string
+  /** Locale key of the placeholder. */
+  hintKey: string
+  /** The field's draft state. */
+  draft: SettingDraft
+}
+
 /** The two identity fields, each with its own draft. */
-const FIELDS = [
+const FIELDS: IdentityField[] = [
   {
-    key: 'portal.site.name',
-    env: 'NUXT_PUBLIC_PORTAL_SITE_NAME',
+    key: SettingKey.SiteName,
+    env: SettingEnv[SettingKey.SiteName],
     testid: 'name',
     labelKey: 'settings.siteIdentity.name.label',
     hintKey: 'settings.siteIdentity.name.hint',
-    draft: useSettingDraft(settings, 'portal.site.name'),
+    draft: useSettingDraft(settings, SettingKey.SiteName),
   },
   {
-    key: 'portal.site.tagline',
-    env: 'NUXT_PUBLIC_PORTAL_SITE_NAME',
+    key: SettingKey.SiteTagline,
+    env: SettingEnv[SettingKey.SiteTagline],
     testid: 'tagline',
     labelKey: 'settings.siteIdentity.tagline.label',
     hintKey: 'settings.siteIdentity.tagline.hint',
-    draft: useSettingDraft(settings, 'portal.site.tagline'),
+    draft: useSettingDraft(settings, SettingKey.SiteTagline),
   },
 ]
 </script>
@@ -67,7 +86,7 @@ const FIELDS = [
           v-model="field.draft.value.value"
           :label="t(field.labelKey)"
           :placeholder="t(field.hintKey)"
-          :maxlength="200"
+          :maxlength="SHORT_TEXT_MAX_LENGTH"
           :data-testid="`site-identity-${field.testid}`"
           class="min-w-72 flex-1"
           @keyup.enter="field.draft.submit((id, value) => emit('save', id, value))"

@@ -1,20 +1,20 @@
 /**
  * nova's structure, in one place.
  *
- * Every list below is what the sections iterate: adding a use case, a feature
- * card or an FAQ entry is a line here plus its i18n keys in the three locale
+ * Every list below is what the sections iterate: adding a use case or a feature
+ * card is a line here plus its i18n keys in the three locale
  * files, and no component changes. The strings themselves are never here — only
  * the keys — so a translator never has to open a `.ts` file.
  *
  * @module templates/nova/content
  */
 
+import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import type { DashboardRow } from '~/templates/nova/types/dashboardrow'
-import type { FaqItem } from '~/templates/nova/types/faqitem'
 import type { Feature } from '~/templates/nova/types/feature'
 import type { MigrationStep } from '~/templates/nova/types/migrationstep'
 import type { NavItem } from '~/templates/nova/types/navitem'
-import type { Testimonial } from '~/templates/nova/types/testimonial'
 import type { UseCase } from '~/templates/nova/types/usecase'
 import type { ComparisonRow } from '~/types/comparisonrow'
 
@@ -49,7 +49,7 @@ export const HERO_BENEFITS: readonly Feature[] = [
     key: 'backups',
     icon: 'lucide:history',
     titleKey: 'nova.hero.benefitBackups',
-    requiresSetting: ['portal.features.backups', 'portalFeatureBackups'],
+    requiresSetting: PortalSettingKey.FeaturesBackups,
   },
   { key: 'support', icon: 'lucide:life-buoy', titleKey: 'nova.hero.benefitSupport' },
   { key: 'scale', icon: 'lucide:trending-up', titleKey: 'nova.hero.benefitScale' },
@@ -60,7 +60,7 @@ export const HERO_BENEFITS: readonly Feature[] = [
  *
  * Qualitative on purpose. An uptime figure is a measurement, and nothing in
  * this repository measures it, so the one numeric line is gated behind an
- * operator setting that holds the figure itself — see `TRUST_UPTIME_SETTING`.
+ * operator setting that holds the figure itself — `portal.stats.uptime`, the same figure the hero prints.
  */
 export const TRUST_ITEMS: readonly Feature[] = [
   { key: 'performance', icon: 'lucide:zap', titleKey: 'nova.trust.performance' },
@@ -70,22 +70,12 @@ export const TRUST_ITEMS: readonly Feature[] = [
     key: 'backups',
     icon: 'lucide:database-backup',
     titleKey: 'nova.trust.backups',
-    requiresSetting: ['portal.features.backups', 'portalFeatureBackups'],
+    requiresSetting: PortalSettingKey.FeaturesBackups,
   },
   { key: 'support', icon: 'lucide:headphones', titleKey: 'nova.trust.support' },
 ]
 
-/**
- * Setting that holds the operator's published uptime figure, e.g. `99.9%`.
- *
- * The trust bar prints it verbatim and shows nothing when it is unset. It is a
- * setting rather than a constant because it is a promise a particular operator
- * makes about particular hardware, and this project has no standing to make it
- * on their behalf.
- */
-export const TRUST_UPTIME_SETTING = ['portal.trust.uptime', 'portalTrustUptime'] as const
-
-/** The "why Innovayse" grid. Every line here is something the platform does. */
+/** The "why choose us" grid. Every line here is something the platform does. */
 export const WHY_FEATURES: readonly Feature[] = [
   {
     key: 'performance',
@@ -129,8 +119,8 @@ export const WHY_FEATURES: readonly Feature[] = [
  * The performance section.
  *
  * Storage medium, caching and a CDN are properties of the machines an operator
- * runs, not of this application: it provisions accounts through cPanel/WHM or
- * CWP and never learns what is underneath. Those three are gated. What is left
+ * runs, not of this application: it provisions accounts through a hosting
+ * control panel and never learns what is underneath. Those three are gated. What is left
  * ungated is true of every install — plans can be upgraded, provisioning is
  * automated, and the operator chooses the server an account lands on.
  */
@@ -140,21 +130,21 @@ export const PERFORMANCE_FEATURES: readonly Feature[] = [
     icon: 'lucide:hard-drive',
     titleKey: 'nova.performance.storageTitle',
     bodyKey: 'nova.performance.storageBody',
-    requiresSetting: ['portal.features.storage', 'portalFeatureStorage'],
+    requiresSetting: PortalSettingKey.FeaturesStorage,
   },
   {
     key: 'caching',
     icon: 'lucide:rocket',
     titleKey: 'nova.performance.cachingTitle',
     bodyKey: 'nova.performance.cachingBody',
-    requiresSetting: ['portal.features.caching', 'portalFeatureCaching'],
+    requiresSetting: PortalSettingKey.FeaturesCaching,
   },
   {
     key: 'cdn',
     icon: 'lucide:globe',
     titleKey: 'nova.performance.cdnTitle',
     bodyKey: 'nova.performance.cdnBody',
-    requiresSetting: ['portal.features.cdn', 'portalFeatureCdn'],
+    requiresSetting: PortalSettingKey.FeaturesCdn,
   },
   {
     key: 'servers',
@@ -201,21 +191,21 @@ export const SECURITY_FEATURES: readonly Feature[] = [
     icon: 'lucide:database-backup',
     titleKey: 'nova.security.backupsTitle',
     bodyKey: 'nova.security.backupsBody',
-    requiresSetting: ['portal.features.backups', 'portalFeatureBackups'],
+    requiresSetting: PortalSettingKey.FeaturesBackups,
   },
   {
     key: 'firewall',
     icon: 'lucide:shield',
     titleKey: 'nova.security.firewallTitle',
     bodyKey: 'nova.security.firewallBody',
-    requiresSetting: ['portal.features.firewall', 'portalFeatureFirewall'],
+    requiresSetting: PortalSettingKey.FeaturesFirewall,
   },
   {
     key: 'malware',
     icon: 'lucide:bug',
     titleKey: 'nova.security.malwareTitle',
     bodyKey: 'nova.security.malwareBody',
-    requiresSetting: ['portal.features.malware', 'portalFeatureMalware'],
+    requiresSetting: PortalSettingKey.FeaturesMalware,
   },
 ]
 
@@ -251,7 +241,7 @@ export const MIGRATION_STEPS: readonly MigrationStep[] = [
  * Whether a migration is free is a commercial decision an operator makes, and
  * nothing in the backend records it, so the badge waits to be switched on.
  */
-export const MIGRATION_FREE_SETTING = ['portal.migration.free', 'portalMigrationFree'] as const
+export const MIGRATION_FREE_SETTING = PortalSettingKey.MigrationFree
 
 /** The audiences grid. */
 export const USE_CASES: readonly UseCase[] = [
@@ -261,29 +251,6 @@ export const USE_CASES: readonly UseCase[] = [
   { key: 'ecommerce', icon: 'lucide:shopping-bag', titleKey: 'nova.useCases.ecommerceTitle', bodyKey: 'nova.useCases.ecommerceBody' },
   { key: 'agencies', icon: 'lucide:users', titleKey: 'nova.useCases.agenciesTitle', bodyKey: 'nova.useCases.agenciesBody' },
   { key: 'developers', icon: 'lucide:code-2', titleKey: 'nova.useCases.developersTitle', bodyKey: 'nova.useCases.developersBody' },
-]
-
-/**
- * Customer quotes.
- *
- * Deliberately empty: no endpoint serves testimonials, and the section renders
- * nothing while this list is. Filling it means pasting words somebody actually
- * said, with their name as they gave it — the shape exists so that stays the
- * only way to make the section appear.
- */
-export const TESTIMONIALS: readonly Testimonial[] = []
-
-/** The FAQ accordion. */
-export const FAQ_ITEMS: readonly FaqItem[] = [
-  { key: 'what', questionKey: 'nova.faq.whatQ', answerKey: 'nova.faq.whatA' },
-  { key: 'which', questionKey: 'nova.faq.whichQ', answerKey: 'nova.faq.whichA' },
-  { key: 'migrate', questionKey: 'nova.faq.migrateQ', answerKey: 'nova.faq.migrateA' },
-  { key: 'ssl', questionKey: 'nova.faq.sslQ', answerKey: 'nova.faq.sslA' },
-  { key: 'backups', questionKey: 'nova.faq.backupsQ', answerKey: 'nova.faq.backupsA' },
-  { key: 'wordpress', questionKey: 'nova.faq.wordpressQ', answerKey: 'nova.faq.wordpressA' },
-  { key: 'upgrade', questionKey: 'nova.faq.upgradeQ', answerKey: 'nova.faq.upgradeA' },
-  { key: 'expires', questionKey: 'nova.faq.expiresQ', answerKey: 'nova.faq.expiresA' },
-  { key: 'contact', questionKey: 'nova.faq.contactQ', answerKey: 'nova.faq.contactA' },
 ]
 
 /** One footer column: a heading and the links beneath it. */
@@ -344,7 +311,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     links: [
       { key: 'help', labelKey: 'nova.footer.helpCentre', to: '/knowledgebase' },
       { key: 'faq', labelKey: 'nova.footer.faq', to: '/faq' },
-      { key: 'login', labelKey: 'nova.footer.clientArea', to: '/client/login' },
+      { key: 'login', labelKey: 'nova.footer.clientArea', to: CLIENT_LOGIN_PATH },
     ],
   },
   {

@@ -9,7 +9,7 @@
       :message="$t('client.resetPassword.invalidMessage')"
       data-testid="reset-invalid"
     >
-      <UiLink to="/client/forgot" :underline="false" testid="reset-request-new" class="mt-3 text-sm font-medium">
+      <UiLink :to="CLIENT_FORGOT_PATH" :underline="false" testid="reset-request-new" class="mt-3 text-sm font-medium">
         {{ $t('client.resetPassword.requestNew') }}
       </UiLink>
     </ClientOutcomePanel>
@@ -23,7 +23,7 @@
       :message="$t('client.resetPassword.successMessage')"
       data-testid="reset-success"
     >
-      <UiBackLink to="/client/login" testid="reset-success-signin" class="mt-3" compact>
+      <UiBackLink :to="CLIENT_LOGIN_PATH" testid="reset-success-signin" class="mt-3" compact>
         {{ $t('client.resetPassword.backToSignIn') }}
       </UiBackLink>
     </ClientOutcomePanel>
@@ -54,7 +54,7 @@
         {{ loading ? $t('client.resetPassword.submitting') : $t('client.resetPassword.submit') }}
       </UiButton>
       <UiStack align="center">
-        <UiBackLink to="/client/login" testid="reset-back" compact>
+        <UiBackLink :to="CLIENT_LOGIN_PATH" testid="reset-back" compact>
           {{ $t('client.resetPassword.backToSignIn') }}
         </UiBackLink>
       </UiStack>
@@ -67,6 +67,7 @@
  * Password reset page: reads the token and email from the link's query and lets the visitor set
  * a new password. The request and a refusal's sentence belong to the auth store.
  */
+import { CLIENT_FORGOT_PATH, CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
 import { AlertCircle, CheckCircle, KeyRound } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '~/stores/auth'

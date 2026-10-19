@@ -2,7 +2,7 @@
   <UiStack gap="lg">
     <UiPageHeader :title="$t('client.tickets.title')" :description="$t('client.tickets.subtitle')" :icon="MessageSquare" class="!mb-0">
       <template #actions>
-        <UiButton to="/client/tickets/new" variant="outline" data-testid="tickets-open-new">
+        <UiButton :to="CLIENT_TICKET_NEW_PATH" variant="outline" data-testid="tickets-open-new">
           <Plus :size="16" :stroke-width="2" class="mr-2" />
           {{ $t('client.tickets.openNew') }}
         </UiButton>
@@ -24,7 +24,7 @@
     <UiAlert v-else-if="store.ticketsError" variant="error" data-testid="tickets-error">{{ store.ticketsError }}</UiAlert>
 
     <UiEmptyState v-else-if="!filteredTickets.length" :icon="MessageSquare" :title="$t('client.tickets.empty')">
-      <UiButton to="/client/tickets/new" data-testid="tickets-open-cta">{{ $t('client.tickets.openCta') }}</UiButton>
+      <UiButton :to="CLIENT_TICKET_NEW_PATH" data-testid="tickets-open-cta">{{ $t('client.tickets.openCta') }}</UiButton>
     </UiEmptyState>
 
     <UiStack v-else gap="sm" data-testid="tickets-list">
@@ -38,6 +38,7 @@
  * Support ticket list: filter tabs (all / open / closed) over the client's tickets, each row a
  * link to the ticket. Loading, missing-profile and failure states come from the client store.
  */
+import { CLIENT_TICKET_NEW_PATH } from '~/constants/clientRoutes'
 import { MessageSquare, Plus } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
 import { ListFilter } from '~/types/listfilter'

@@ -13,6 +13,7 @@ import { useClientOptions } from '@/composables/useClientOptions'
 import { blankTransactionForm, firstInvoiceId, formFromTransaction } from '@/lib/transactionForm'
 import { useTransactionsStore } from '@/stores/billingTransactions'
 import type { TransactionFormValues } from '@/types/transaction'
+import { AppRoute } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -44,7 +45,7 @@ const submit = async (): Promise<void> => {
     fees: values.value.fees,
   })
   if (ok) {
-    await router.push('/billing/transactions')
+    await router.push(AppRoute.BillingTransactions)
   }
 }
 

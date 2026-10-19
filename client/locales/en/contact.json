@@ -16,7 +16,7 @@
       "placeholders": {
         "name": "John Doe",
         "email": "john{'@'}example.com",
-        "phone": "+1 (555) 000-0000",
+        "phone": "+1 555 0100",
         "service": "Select a service",
         "message": "Tell us what you need help with..."
       },
@@ -34,7 +34,7 @@
       "submit": "Send Message",
       "success": {
         "title": "Message sent successfully!",
-        "subtitle": "We'll get back to you within 24 hours."
+        "subtitle": "We'll get back to you soon."
       },
       "error": {
         "consentRequired": "Please accept the privacy policy to continue"
@@ -42,9 +42,7 @@
     },
     "info": {
       "officeAddress": {
-        "title": "Office Address",
-        "street": "Vazgen Sargsyan 26/3",
-        "city": "Yerevan, Armenia"
+        "title": "Office Address"
       },
       "contactMethods": {
         "title": "Contact Methods",

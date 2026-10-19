@@ -7,13 +7,16 @@
  * are not part of this catalogue.
  */
 import { createI18n } from 'vue-i18n'
-import { messages } from '@/locales/messages'
+import { MessageLanguage, messages } from '@/locales/messages'
 
 /** Locale codes the admin panel ships. */
-export const SUPPORTED_LOCALES = ['en', 'hy', 'ru'] as const
+export const SUPPORTED_LOCALES = [MessageLanguage.En, MessageLanguage.Hy, MessageLanguage.Ru] as const
 
 /** One of the shipped locale codes. */
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
+
+/** Locale an unseen visitor gets, and the one a missing message falls back to. */
+const DEFAULT_LOCALE = MessageLanguage.En
 
 /** localStorage key holding the operator's chosen locale. */
 const STORAGE_KEY = 'admin.locale'
@@ -29,15 +32,39 @@ const initialLocale = (): SupportedLocale => {
   if (stored && (SUPPORTED_LOCALES as readonly string[]).includes(stored)) {
     return stored as SupportedLocale
   }
-  return 'en'
+  return DEFAULT_LOCALE
+}
+
+/**
+ * Russian plural rule: picks "one | few | many" (1 год, 2 года, 5 лет) from a three-form message.
+ *
+ * @param choice - The counted number.
+ * @param choicesLength - How many forms the message carries.
+ * @returns Index of the form to use.
+ */
+const russianPlural = (choice: number, choicesLength: number): number => {
+  if (choicesLength < 3) {
+    return choice === 1 ? 0 : 1
+  }
+  const abs = Math.abs(choice)
+  const mod10 = abs % 10
+  const mod100 = abs % 100
+  if (mod10 === 1 && mod100 !== 11) {
+    return 0
+  }
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return 1
+  }
+  return 2
 }
 
 /** The application's vue-i18n instance (composition mode, English fallback). */
 export const i18n = createI18n({
   legacy: false,
   locale: initialLocale(),
-  fallbackLocale: 'en',
+  fallbackLocale: DEFAULT_LOCALE,
   messages,
+  pluralRules: { [MessageLanguage.Ru]: russianPlural },
 })
 
 /**

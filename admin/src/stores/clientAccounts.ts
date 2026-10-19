@@ -12,6 +12,7 @@ import { ref } from 'vue'
 import { useUsersApi } from '@/composables/apis/useUsersApi'
 import { runAction } from '@/lib/runAction'
 import type { UpdateUserPayload, UserDetail, UserListItem } from '@/types/useraccount'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 /** Lists, opens and changes Identity users. */
 export const useUsersStore = defineStore('clientAccounts', () => {
@@ -27,7 +28,7 @@ export const useUsersStore = defineStore('clientAccounts', () => {
   const page = ref(1)
 
   /** Items per page. */
-  const pageSize = ref(20)
+  const pageSize = ref(DEFAULT_PAGE_SIZE)
 
   /** Currently viewed user detail. */
   const current = ref<UserDetail | null>(null)

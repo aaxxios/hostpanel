@@ -82,6 +82,9 @@
  * The avatar comes from `UiAvatar` and the floating panel from `UiPopover`, so nothing is
  * drawn by hand twice and the outside-click / Escape handling lives in one place.
  */
+import {
+  CLIENT_ACCOUNT_PATH, CLIENT_DASHBOARD_PATH, CLIENT_DOMAINS_PATH, CLIENT_INVOICES_PATH, CLIENT_SERVICES_PATH
+} from '~/constants/clientRoutes'
 const { t } = useI18n()
 /** Prefixes a path with the active locale. */
 const localePath = useLocalePath()
@@ -119,11 +122,11 @@ const menuLabel = computed(() => displayName.value)
 
 /** Destinations offered in the panel, in the order the client-area nav uses. */
 const menuItems = computed(() => [
-  { key: 'dashboard', label: t('client.nav.dashboard'), to: localePath('/client/dashboard') },
-  { key: 'services', label: t('client.nav.services'), to: localePath('/client/services') },
-  { key: 'domains', label: t('client.nav.domains'), to: localePath('/client/domains') },
-  { key: 'invoices', label: t('client.nav.invoices'), to: localePath('/client/invoices') },
-  { key: 'account', label: t('client.nav.account'), to: localePath('/client/account') },
+  { key: 'dashboard', label: t('client.nav.dashboard'), to: localePath(CLIENT_DASHBOARD_PATH) },
+  { key: 'services', label: t('client.nav.services'), to: localePath(CLIENT_SERVICES_PATH) },
+  { key: 'domains', label: t('client.nav.domains'), to: localePath(CLIENT_DOMAINS_PATH) },
+  { key: 'invoices', label: t('client.nav.invoices'), to: localePath(CLIENT_INVOICES_PATH) },
+  { key: 'account', label: t('client.nav.account'), to: localePath(CLIENT_ACCOUNT_PATH) },
 ])
 
 /** Ends the session; in SSO mode this navigates the browser away. */

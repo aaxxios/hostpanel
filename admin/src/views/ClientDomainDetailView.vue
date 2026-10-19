@@ -39,14 +39,13 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiLabelVariant, UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { NOTICE_VISIBLE_MS } from '@/lib/limits'
+import { ClientSection, clientSectionPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
 /** Icon markup (shape tags) of the back link. */
 const BACK_ICON = '<polyline points="15 18 9 12 15 6"/>'
-
-/** How long the "saved" banner stays, in milliseconds. */
-const SAVED_BANNER_MS = 3000
 
 /** Longest registration or renewal period, in years. */
 const MAX_YEARS = 10
@@ -238,7 +237,7 @@ const handleSave = async (): Promise<void> => {
     clearTimeout(savedTimer)
     savedTimer = setTimeout(() => {
       saveSuccess.value = false
-    }, SAVED_BANNER_MS)
+    }, NOTICE_VISIBLE_MS)
     await fetchDomain()
   }
   saving.value = false
@@ -410,7 +409,7 @@ onBeforeUnmount(() => {
         <UiStack direction="row" wrap :justify="UiJustify.Between" :align="UiAlignItems.Center">
           <UiStack direction="row" :align="UiAlignItems.Center">
             <UiLink
-              :to="`/clients/${clientId}/domains`"
+              :to="clientSectionPath(clientId, ClientSection.Domains)"
               :variant="UiButtonVariant.Secondary"
               data-testid="client-domain-back"
             >
@@ -479,7 +478,7 @@ onBeforeUnmount(() => {
                         :id="id"
                         v-model="promotionCode"
                         type="text"
-                        placeholder="PROMO2026"
+                        :placeholder="t('shared.examples.promoCode')"
                         data-testid="client-domain-promotion"
                       />
                     </template>
@@ -490,7 +489,7 @@ onBeforeUnmount(() => {
                         :id="id"
                         v-model="subscriptionId"
                         type="text"
-                        placeholder="sub_1234567890"
+                        :placeholder="t('shared.examples.subscriptionId')"
                         data-testid="client-domain-subscription"
                       />
                     </template>
@@ -508,7 +507,7 @@ onBeforeUnmount(() => {
                       :id="id"
                       v-model="nameservers[idx]"
                       type="text"
-                      :placeholder="`ns${idx + 1}.example.com`"
+                      :placeholder="t('servers.serverForm.nsHostPlaceholder', { n: idx + 1 })"
                       :data-testid="`client-domain-ns-${idx + 1}`"
                     />
                   </template>

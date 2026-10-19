@@ -22,7 +22,7 @@
             :visible-once="{ opacity: 1, x: 0, transition: { duration: 600 } }"
           >
             <!-- Office Info Card -->
-            <UiCard hover data-testid="contact-office">
+            <UiCard v-if="address" hover data-testid="contact-office">
               <UiStack direction="row" align="start" gap="md">
                 <UiTile
                   :icon="Building2"
@@ -33,11 +33,8 @@
                   <UiHeading :level="3" class="mb-1">
                     {{ t('contact.info.officeAddress.title') }}
                   </UiHeading>
-                  <UiText size="sm" tone="muted" class="leading-relaxed">
-                    {{ t('contact.info.officeAddress.street') }}
-                  </UiText>
-                  <UiText size="sm" tone="muted" class="leading-relaxed">
-                    {{ t('contact.info.officeAddress.city') }}
+                  <UiText size="sm" tone="muted" class="whitespace-pre-line leading-relaxed" data-testid="contact-address">
+                    {{ address }}
                   </UiText>
                 </UiStack>
               </UiStack>
@@ -52,7 +49,8 @@
               <UiStack gap="sm">
                 <!-- Email -->
                 <UiLink
-                  :href="`mailto:${CONTACT_EMAIL}`"
+                  v-if="contactEmail"
+                  :href="`mailto:${contactEmail}`"
                   tone="inherit"
                   :underline="false"
                   class="group flex items-center gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
@@ -73,14 +71,15 @@
                       weight="semibold"
                       class="transition-colors group-hover:text-primary-700 dark:group-hover:text-primary-300"
                     >
-                      {{ CONTACT_EMAIL }}
+                      {{ contactEmail }}
                     </UiText>
                   </UiStack>
                 </UiLink>
 
                 <!-- Phone -->
                 <UiLink
-                  :href="`tel:${CONTACT_PHONE_LINK}`"
+                  v-if="contactPhone"
+                  :href="`tel:${contactPhoneLink}`"
                   tone="inherit"
                   :underline="false"
                   class="group flex items-center gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
@@ -101,7 +100,7 @@
                       weight="semibold"
                       class="transition-colors group-hover:text-primary-700 dark:group-hover:text-secondary-300"
                     >
-                      {{ CONTACT_PHONE_DISPLAY }}
+                      {{ contactPhone }}
                     </UiText>
                   </UiStack>
                 </UiLink>
@@ -133,14 +132,15 @@
             </UiCard>
 
             <!-- Social/Messengers -->
-            <UiCard>
+            <UiCard v-if="telegramUrl || whatsappUrl">
               <UiHeading :level="3" class="mb-4">
                 {{ t('contact.info.quickConnect.title') }}
               </UiHeading>
 
               <UiGrid cols="2" gap="sm" class="grid-cols-2">
                 <UiLink
-                  :href="CONTACT_TELEGRAM_URL"
+                  v-if="telegramUrl"
+                  :href="telegramUrl"
                   external
                   tone="inherit"
                   :underline="false"
@@ -154,7 +154,8 @@
                 </UiLink>
 
                 <UiLink
-                  :href="CONTACT_WHATSAPP_URL"
+                  v-if="whatsappUrl"
+                  :href="whatsappUrl"
                   external
                   tone="inherit"
                   :underline="false"
@@ -170,7 +171,7 @@
             </UiCard>
 
             <!-- Map widget -->
-            <UiEmbed :src="mapUrl" :title="t('contact.map.title')" data-testid="contact-map" />
+            <UiEmbed v-if="mapSrc" :src="mapSrc" :title="t('contact.map.title')" data-testid="contact-map" />
           </UiStack>
         </template>
 
@@ -321,19 +322,12 @@
  */
 
 import { Send, Building2, Mail, Phone, Clock, MessageCircle } from 'lucide-vue-next'
-import {
-  CONTACT_EMAIL,
-  CONTACT_PHONE_DISPLAY,
-  CONTACT_PHONE_LINK,
-  CONTACT_TELEGRAM_URL,
-  CONTACT_WHATSAPP_URL,
-  OFFICE_LATITUDE,
-  OFFICE_LONGITUDE
-} from '~/constants/contactInfo'
+import { ColorMode } from '~/types/colormode'
 import { APP_LOCALES } from '~/constants/appLocales'
+import { SCHEMA_ORG_CONTEXT } from '~/constants/schemaOrg'
+import { SUCCESS_BANNER_MS } from '~/constants/uiDefaults'
 import { useSupportStore } from '~/stores/support'
 import { ContactService } from '~/types/contactservice'
-import { ColorMode } from '~/types/colormode'
 import { SubmitOutcome } from '~/types/submitoutcome'
 import { SeoPageType } from '~/types/seopagetype'
 
@@ -365,7 +359,7 @@ const { organizationSchema, injectSchema } = useSchemaOrg()
 injectSchema([
   organizationSchema(),
   {
-    '@context': 'https://schema.org',
+    '@context': SCHEMA_ORG_CONTEXT,
     '@type': 'ContactPage',
     '@id': `${baseUrl}/contact#contactpage`,
     url: `${baseUrl}/contact`,
@@ -376,15 +370,29 @@ injectSchema([
   }
 ])
 
+/** The operator's contact details; each row is hidden when its setting is empty. */
+const {
+  email: contactEmail,
+  phone: contactPhone,
+  phoneLink: contactPhoneLink,
+  telegramUrl,
+  whatsappUrl,
+  address,
+  mapUrl,
+} = useContactDetails()
+
 /** Whether the page is in dark mode; flips when the visitor toggles the colour mode. */
 const { isDark } = useAppColorMode()
 
-/** Map theme that follows the current colour mode. */
-const theme = computed(() => (isDark.value ? ColorMode.Dark : ColorMode.Light))
-
-/** Map embed URL; recomputed when the theme changes. */
-const mapUrl = computed(() =>
-  `https://yandex.com/map-widget/v1/?ll=${OFFICE_LONGITUDE},${OFFICE_LATITUDE}&z=17&l=map&pt=${OFFICE_LONGITUDE},${OFFICE_LATITUDE},pm2rdm&theme=${theme.value}`)
+/** The operator's map address with the theme that follows the colour mode; empty hides the map. */
+const mapSrc = computed(() => {
+  if (!mapUrl.value) {
+    return ''
+  }
+  const url = new URL(mapUrl.value)
+  url.searchParams.set('theme', isDark.value ? ColorMode.Dark : ColorMode.Light)
+  return url.toString()
+})
 
 /** What the visitor typed into the contact form. */
 interface ContactFormState {
@@ -487,10 +495,10 @@ const handleSubmit = async (): Promise<void> => {
     showSuccess.value = true
     formData.value = emptyForm()
 
-    // Hide success message after 5 seconds
+    // Hide the success message once the banner time has passed
     setTimeout(() => {
       showSuccess.value = false
-    }, 5000)
+    }, SUCCESS_BANNER_MS)
   }
 }
 </script>

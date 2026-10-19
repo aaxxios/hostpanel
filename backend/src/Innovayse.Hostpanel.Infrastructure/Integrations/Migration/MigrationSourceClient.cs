@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Migration.Common;
+using Innovayse.Hostpanel.Infrastructure.Resilience;
 using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.Migration;
@@ -33,7 +34,7 @@ public sealed class MigrationSourceClient : IMigrationSource
     /// Name of the configured <see cref="HttpClient"/>. It carries a deliberately long timeout,
     /// because a single page of a large export can take minutes to assemble on the source side.
     /// </summary>
-    private const string HttpClientName = "migration";
+    private const string HttpClientName = HttpClientNames.Migration;
 
     /// <summary>Operation name the source expects for a bare connectivity check.</summary>
     private const string PingAction = "ping";

@@ -18,7 +18,7 @@
   },
   "inecobank": {
     "shortDescription": "Принимайте армянские банковские карты через размещённую страницу оплаты Inecobank.",
-    "fieldGateway_url": "Базовый URL шлюза (например, https://pg.inecoecom.am)",
+    "fieldGateway_url": "Базовый URL шлюза (например, https://gateway.example.com)",
     "fieldUsername": "Имя пользователя API",
     "fieldPassword": "Пароль API",
     "fieldCurrency": "Валюта (числовой код ISO 4217, по умолчанию 051)",

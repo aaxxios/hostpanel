@@ -8,7 +8,7 @@ import type { DomainResultStatus } from '~/templates/aurora/types/domainresultst
 
 /** One row of the domain availability list rendered by the aurora domain search. */
 export interface DomainResult {
-  /** Fully qualified domain, e.g. "innovayse.am". */
+  /** Fully qualified domain, e.g. "example.com". */
   name: string
   /** Formatted price, or a dash when unavailable or unpriced. */
   price: string

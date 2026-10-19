@@ -136,4 +136,13 @@ describe('ProductsFullSlider', () => {
 
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
   })
+
+  it('renders no image for a slide whose image is empty', async () => {
+    api.fetchSlides.mockResolvedValue([slide(1, { imageUrl: '' })])
+    const wrapper = await mountSlider()
+
+    expect(wrapper.text()).toContain('Slide 1')
+    expect(wrapper.find('img').exists()).toBe(false)
+    expect(wrapper.find('nuxt-img-stub').exists()).toBe(false)
+  })
 })

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Innovayse.Hostpanel.Infrastructure.Auth;
 /// <summary>
@@ -36,7 +37,7 @@ public sealed class SsoTwoFactorClient
     public async Task<SsoTotpEnrolment> EnableAsync(string bearerToken, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "api/account/totp/enable");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+        request.Headers.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, bearerToken);
 
         using var response = await _http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
@@ -62,7 +63,7 @@ public sealed class SsoTwoFactorClient
         {
             Content = JsonContent.Create(new TotpCodeRequest(totpCode)),
         };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+        request.Headers.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, bearerToken);
 
         using var response = await _http.SendAsync(request, ct);
         if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
@@ -87,7 +88,7 @@ public sealed class SsoTwoFactorClient
         {
             Content = JsonContent.Create(new TotpCodeRequest(totpCode)),
         };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+        request.Headers.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, bearerToken);
 
         using var response = await _http.SendAsync(request, ct);
         if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)

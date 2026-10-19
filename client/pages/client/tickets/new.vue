@@ -1,12 +1,12 @@
 <template>
   <UiStack gap="lg" class="max-w-2xl">
-    <UiBackLink to="/client/tickets" :label="$t('client.tickets.backTo')" testid="ticket-back" />
+    <UiBackLink :to="CLIENT_TICKETS_PATH" :label="$t('client.tickets.backTo')" testid="ticket-back" />
 
     <UiPageHeader :title="$t('client.tickets.newTitle')" :description="$t('client.tickets.newSubtitle')" class="!mb-0" />
 
     <UiCard v-if="submitted" data-testid="ticket-success">
       <UiEmptyState :icon="CheckCircle" :title="$t('client.tickets.successTitle')" :description="$t('client.tickets.successSubtitle')">
-        <UiButton to="/client/tickets" data-testid="ticket-view-all">{{ $t('client.tickets.viewMyTickets') }}</UiButton>
+        <UiButton :to="CLIENT_TICKETS_PATH" data-testid="ticket-view-all">{{ $t('client.tickets.viewMyTickets') }}</UiButton>
       </UiEmptyState>
     </UiCard>
 
@@ -60,6 +60,7 @@
  * A refusal is rendered from the store's `ticketError`; an accepted ticket swaps the form for a
  * confirmation.
  */
+import { CLIENT_TICKETS_PATH } from '~/constants/clientRoutes'
 import { CheckCircle, Send } from 'lucide-vue-next'
 import { useSupportStore } from '~/stores/support'
 import { SubmitOutcome } from '~/types/submitoutcome'

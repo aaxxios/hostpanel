@@ -24,6 +24,7 @@ import { UiAlignItems } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
 import { UiTone } from '@/utils/ui/tone'
+import { AppRoute } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -62,7 +63,7 @@ const loadClient = async (id: string): Promise<void> => {
  * @returns Nothing.
  */
 const goBack = (): void => {
-  router.push('/clients')
+  router.push(AppRoute.Clients)
 }
 
 // Re-fetch when client ID changes in the route

@@ -60,6 +60,18 @@ describe('PlanCards', () => {
     expect(wrapper.find('[data-testid="billing-monthly"]').classes()).not.toContain('bg-brand')
   })
 
+  it('keeps the toggle track and both segments in one pill radius family with white text on the gradient', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(PlanCards, { props: { plans: PLANS, yearly: true } })
+    const active = wrapper.find('[data-testid="billing-yearly"]').classes()
+    const idle = wrapper.find('[data-testid="billing-monthly"]').classes()
+
+    expect(wrapper.find('[data-testid="billing-toggle"]').classes()).toContain('rounded-full')
+    expect(active).toEqual(expect.arrayContaining(['rounded-full', 'bg-brand', 'text-white', 'shadow-md', 'min-w-[120px]']))
+    expect(idle).toEqual(expect.arrayContaining(['rounded-full', 'text-tx2', 'hover:text-tx', 'min-w-[120px]']))
+    expect(active.some((c) => c.startsWith('focus:ring'))).toBe(false)
+  })
+
   it('drops the section headline when the page already has one', () => {
     stubAuroraGlobals()
 

@@ -7,6 +7,7 @@ using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Support.Queries.ListNetworkIssues;
 
 /// <summary>Returns a paged list of network issues, optionally filtered by status.</summary>
@@ -31,7 +32,7 @@ public sealed class ListNetworkIssuesHandler
         ArgumentNullException.ThrowIfNull(query);
 
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
         NetworkIssueStatus? statusFilter = null;
         if (!string.IsNullOrWhiteSpace(query.Status) &&

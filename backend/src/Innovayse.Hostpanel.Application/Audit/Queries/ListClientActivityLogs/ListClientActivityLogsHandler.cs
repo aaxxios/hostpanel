@@ -31,7 +31,7 @@ public sealed class ListClientActivityLogsHandler
         ListClientActivityLogsQuery query, CancellationToken ct)
     {
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
         // Was IActivityLogRepository.ListByClientIdAsync -- read-only, so no tracking is needed.
         var logsQuery = _context.ActivityLogs.AsNoTracking().Where(l => l.ClientId == query.ClientId);

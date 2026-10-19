@@ -21,6 +21,7 @@ using Innovayse.Hostpanel.Infrastructure.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Infrastructure.Persistence;
 /// <summary>
 /// Seeds realistic test data for development. Idempotent — skips if clients already exist.
@@ -80,7 +81,7 @@ public sealed class DevDataSeeder
         using var suppression = _eventGate.Suppress();
 
         // ── Admin user ───────────────────────────────────────────────────────
-        const string adminEmail = "admin@hostpanel.com";
+        const string adminEmail = "admin@example.test";
         if (await _userManager.FindByEmailAsync(adminEmail) is null)
         {
             var adminUser = new AppUser
@@ -165,26 +166,26 @@ public sealed class DevDataSeeder
         // ── Clients ──────────────────────────────────────────────────────────
         var clientDefs = new List<(string Email, string First, string Last, string? Company, string? Phone, string? Street, string? City, string? State, string? PostCode, string? Country, ClientStatus Status)>
         {
-            ("owner@hostpanel.com",     "Owner",     "One",     "Owner Enterprises",    "+1-555-0101", "123 Main St",        "New York",      "NY",  "10001",    "US", ClientStatus.Active),
-            ("owner2@hostpanel.com",    "Owner",     "Two",     "Owner & Co",           "+1-555-0102", "456 Oak Ave",        "San Francisco", "CA",  "94102",    "US", ClientStatus.Active),
-            ("owner3@hostpanel.com",    "Owner",     "Three",   "DigiTech Solutions",   "+374-91-123456", "15 Tumanyan St",  "Yerevan",       null,  "0001",     "AM", ClientStatus.Active),
-            ("customer@hostpanel.com",  "Customer",  "One",     null,                   "+34-612-345678", "Calle Mayor 22",  "Madrid",        null,  "28013",    "ES", ClientStatus.Active),
-            ("customer2@hostpanel.com", "Customer",  "Two",     "Customer Web Solutions", "+44-20-7946-0958", "10 Downing Rd", "London",     null,  "SW1A 2AA", "GB", ClientStatus.Active),
-            ("customer3@hostpanel.com", "Customer",  "Three",   null,                   "+1-555-0106", "789 Pine Ln",        "Chicago",       "IL",  "60601",    "US", ClientStatus.Suspended),
-            ("customer4@hostpanel.com", "Customer",  "Four",    "Customer Hosting",     "+1-555-0107", "321 Elm St",         "Austin",        "TX",  "73301",    "US", ClientStatus.Active),
-            ("customer5@hostpanel.com", "Customer",  "Five",    "Customer Digital",     "+82-10-1234-5678", "Gangnam-gu",  "Seoul",         null,  "06000",    "KR", ClientStatus.Active),
-            ("developer@hostpanel.com", "Developer", "One",     null,                   "+33-6-12-34-56-78", "8 Rue de Rivoli", "Paris",     null,  "75001",    "FR", ClientStatus.Inactive),
-            ("developer2@hostpanel.com","Developer", "Two",     "Dev Media",            "+61-2-1234-5678", "42 George St",   "Sydney",        "NSW", "2000",     "AU", ClientStatus.Active),
-            ("manager@hostpanel.com",   "Manager",   "One",     null,                   null,          null,                 null,            null,  null,       null, ClientStatus.Active),
-            ("manager2@hostpanel.com",  "Manager",   "Two",     "Manager Corp",         "+1-555-0112", "555 Broadway",       "New York",      "NY",  "10012",    "US", ClientStatus.Active),
-            ("partner@hostpanel.com",   "Partner",   "One",     null,                   "+49-30-12345678", "Friedrichstr. 100", "Berlin",   null,  "10117",    "DE", ClientStatus.Active),
-            ("reseller@hostpanel.com",  "Reseller",  "One",     "Reseller Cloud Hosting", "+1-555-0114", "900 Cloud Dr",   "Seattle",       "WA",  "98101",    "US", ClientStatus.Closed),
-            ("reseller2@hostpanel.com", "Reseller",  "Two",     null,                   "+1-555-0115", "77 Sunset Blvd",     "Los Angeles",   "CA",  "90028",    "US", ClientStatus.Active),
-            ("customer6@hostpanel.com", "Customer",  "Six",     "Six Tech Ltd",         "+1-416-555-0101", "200 Bay St",     "Toronto",       "ON",  "M5J 2J3",  "CA", ClientStatus.Active),
-            ("customer7@hostpanel.com", "Customer",  "Seven",   null,                   "+55-11-91234-5678", "Av. Paulista 1000", "São Paulo", null, "01310-100", "BR", ClientStatus.Active),
-            ("developer3@hostpanel.com","Developer", "Three",   "Dev Studio AM",        "+374-55-987654", "20 Baghramyan", "Yerevan",       null,  "0019",     "AM", ClientStatus.Active),
-            ("partner2@hostpanel.com",  "Partner",   "Two",     "Partner Solutions",    "+971-50-123-4567", "Sheikh Zayed Rd", "Dubai",      null,  "00000",    "AE", ClientStatus.Active),
-            ("reseller3@hostpanel.com", "Reseller",  "Three",   "Reseller Networks",    "+65-9123-4567", "1 Raffles Place",  "Singapore",     null,  "048616",   "SG", ClientStatus.Suspended),
+            ("owner@example.test",     "Owner",     "One",     "Owner Enterprises",    "+1-555-0101", "123 Main St",        "New York",      "NY",  "10001",    "US", ClientStatus.Active),
+            ("owner2@example.test",    "Owner",     "Two",     "Owner & Co",           "+1-555-0102", "456 Oak Ave",        "San Francisco", "CA",  "94102",    "US", ClientStatus.Active),
+            ("owner3@example.test",    "Owner",     "Three",   "DigiTech Solutions",   "+1-555-0141", "1 Example St",  "Sampletown",       null,  "0001",     "AM", ClientStatus.Active),
+            ("customer@example.test",  "Customer",  "One",     null,                   "+1-555-0142", "2 Example St",  "Sampletown",        null,  "28013",    "ES", ClientStatus.Active),
+            ("customer2@example.test", "Customer",  "Two",     "Customer Web Solutions", "+1-555-0143", "3 Example St", "Sampletown",     null,  "SW1A 2AA", "GB", ClientStatus.Active),
+            ("customer3@example.test", "Customer",  "Three",   null,                   "+1-555-0106", "789 Pine Ln",        "Chicago",       "IL",  "60601",    "US", ClientStatus.Suspended),
+            ("customer4@example.test", "Customer",  "Four",    "Customer Hosting",     "+1-555-0107", "321 Elm St",         "Austin",        "TX",  "73301",    "US", ClientStatus.Active),
+            ("customer5@example.test", "Customer",  "Five",    "Customer Digital",     "+1-555-0144", "4 Example St",  "Sampletown",         null,  "06000",    "KR", ClientStatus.Active),
+            ("developer@example.test", "Developer", "One",     null,                   "+1-555-0145", "5 Example St", "Sampletown",     null,  "75001",    "FR", ClientStatus.Inactive),
+            ("developer2@example.test","Developer", "Two",     "Dev Media",            "+1-555-0146", "6 Example St",   "Sampletown",        "NSW", "2000",     "AU", ClientStatus.Active),
+            ("manager@example.test",   "Manager",   "One",     null,                   null,          null,                 null,            null,  null,       null, ClientStatus.Active),
+            ("manager2@example.test",  "Manager",   "Two",     "Manager Corp",         "+1-555-0112", "555 Broadway",       "New York",      "NY",  "10012",    "US", ClientStatus.Active),
+            ("partner@example.test",   "Partner",   "One",     null,                   "+1-555-0147", "7 Example St", "Sampletown",   null,  "10117",    "DE", ClientStatus.Active),
+            ("reseller@example.test",  "Reseller",  "One",     "Reseller Cloud Hosting", "+1-555-0114", "900 Cloud Dr",   "Seattle",       "WA",  "98101",    "US", ClientStatus.Closed),
+            ("reseller2@example.test", "Reseller",  "Two",     null,                   "+1-555-0115", "77 Sunset Blvd",     "Los Angeles",   "CA",  "90028",    "US", ClientStatus.Active),
+            ("customer6@example.test", "Customer",  "Six",     "Six Tech Ltd",         "+1-555-0148", "8 Example St",     "Sampletown",       "ON",  "M5J 2J3",  "CA", ClientStatus.Active),
+            ("customer7@example.test", "Customer",  "Seven",   null,                   "+1-555-0149", "9 Example St", "Sampletown", null, "01310-100", "BR", ClientStatus.Active),
+            ("developer3@example.test","Developer", "Three",   "Dev Studio AM",        "+1-555-0150", "10 Example St", "Sampletown",       null,  "0019",     "AM", ClientStatus.Active),
+            ("partner2@example.test",  "Partner",   "Two",     "Partner Solutions",    "+1-555-0151", "11 Example St", "Sampletown",      null,  "00000",    "AE", ClientStatus.Active),
+            ("reseller3@example.test", "Reseller",  "Three",   "Reseller Networks",    "+1-555-0152", "12 Example St",  "Sampletown",     null,  "048616",   "SG", ClientStatus.Suspended),
         };
 
         if (!await _db.Clients.AnyAsync(ct))
@@ -561,7 +562,7 @@ public sealed class DevDataSeeder
             var now = DateTimeOffset.UtcNow;
             (string domain, bool hasSsl, string? issuer, DateTimeOffset? expires, bool isActive)[] sslDefs =
             [
-                ("hostpanel.com",       true,  "Let's Encrypt",         now.AddDays(60),  true),
+                ("example.test",       true,  "Let's Encrypt",         now.AddDays(60),  true),
                 ("google.com",          true,  "Google Trust Services", now.AddDays(75),  true),
                 ("github.com",          true,  "DigiCert Inc",          now.AddDays(45),  true),
                 ("cloudflare.com",      true,  "Google Trust Services", now.AddDays(90),  true),
@@ -765,7 +766,7 @@ public sealed class DevDataSeeder
 
         (string Name, decimal Price, int ExpiresInDays, bool AutoRenew, bool WhoisPrivacy, string Registrar)[] domainDefs =
         [
-            ("hostpanel.com",        12.99m, 365,  true,  true,  "Namecheap"),
+            ("example.test",        12.99m, 365,  true,  true,  "Namecheap"),
             ("ownerbusiness.com",    12.99m, 180,  true,  false, "Namecheap"),
             ("customershop.net",     11.99m, 90,   true,  true,  "Name.am"),
             ("developerlab.io",      39.99m, 270,  false, false, "Namecheap"),
@@ -786,7 +787,7 @@ public sealed class DevDataSeeder
 
             domain.Activate("REG-" + (100000 + i));
             domain.SetLock(true);
-            domain.SetNameservers(["ns1.hostpanel.com", "ns2.hostpanel.com"]);
+            domain.SetNameservers(["ns1.example.test", "ns2.example.test"]);
 
             db.Domains.Add(domain);
         }
@@ -814,28 +815,28 @@ public sealed class DevDataSeeder
         // Servers
         var serverDefs = new[]
         {
-            new ServerDetails("Shared US-01", "shared01.hostpanel.com", "192.168.1.10", null,
+            new ServerDetails("Shared US-01", "shared01.example.test", "192.168.1.10", null,
                 ServerModule.CPanel, "root", "changeme", null, null,
                 true, 500, true, false, 150m, "US-East DC", null,
-                "ns1.hostpanel.com", "192.168.1.1", "ns2.hostpanel.com", "192.168.1.2",
+                "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2",
                 null, null, null, null, null, null),
 
-            new ServerDetails("Shared EU-01", "shared01-eu.hostpanel.com", "10.0.0.10", null,
+            new ServerDetails("Shared EU-01", "shared01-eu.example.test", "10.0.0.10", null,
                 ServerModule.CPanel, "root", "changeme", null, null,
                 true, 500, false, false, 150m, "EU-West DC", null,
-                "ns1.hostpanel.com", "192.168.1.1", "ns2.hostpanel.com", "192.168.1.2",
+                "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2",
                 null, null, null, null, null, null),
 
-            new ServerDetails("VPS US-01", "vps01.hostpanel.com", "172.16.0.10", null,
+            new ServerDetails("VPS US-01", "vps01.example.test", "172.16.0.10", null,
                 ServerModule.Plesk, "admin", "changeme", null, null,
                 true, 100, true, false, 350m, "US-East DC", null,
-                "ns1.hostpanel.com", "192.168.1.1", "ns2.hostpanel.com", "192.168.1.2",
+                "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2",
                 null, null, null, null, null, null),
 
-            new ServerDetails("Dedicated US-01", "dedicated01.hostpanel.com", "203.0.113.10", null,
+            new ServerDetails("Dedicated US-01", "dedicated01.example.test", "203.0.113.10", null,
                 ServerModule.DirectAdmin, "admin", "changeme", null, null,
                 true, 50, false, false, 800m, "US-West DC", null,
-                "ns1.hostpanel.com", "192.168.1.1", "ns2.hostpanel.com", "192.168.1.2",
+                "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2",
                 null, null, null, null, null, null),
 
             // The only CWP7 server, and the only one the setup flow can actually pick: every
@@ -843,10 +844,10 @@ public sealed class DevDataSeeder
             // so without a Cwp7 server the server selector returns nothing and "Build My Server"
             // fails before it starts. The access hash is a dev placeholder — the real CWP7 call is
             // short-circuited by the fake provider (Provisioning:UseFakeProvider), so it is never used.
-            new ServerDetails("CWP7 US-01", "cwp01.hostpanel.com", "203.0.113.20", null,
+            new ServerDetails("CWP7 US-01", "cwp01.example.test", "203.0.113.20", null,
                 ServerModule.Cwp7, "root", "changeme", null, "dev-access-hash",
                 true, 200, true, false, 300m, "US-East DC", null,
-                "ns1.hostpanel.com", "192.168.1.1", "ns2.hostpanel.com", "192.168.1.2",
+                "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2",
                 null, null, null, null, null, null),
         };
 
@@ -875,9 +876,9 @@ public sealed class DevDataSeeder
         (string Key, string Value, string Description)[] settingDefs =
         [
             ("company.name",              "HostPanel",                       "Company display name"),
-            ("company.email",             "hello@hostpanel.com",             "Primary contact email"),
-            ("company.phone",             "+1-800-HOSTPANEL",                "Primary support phone number"),
-            ("company.address",           "123 Server Street, New York, NY", "Company mailing address"),
+            ("company.email",             "hello@example.test",             "Primary contact email"),
+            ("company.phone",             "+1-555-0100",                "Primary support phone number"),
+            ("company.address",           "1 Sample Street, Sampletown", "Company mailing address"),
             ("company.logo",              "/images/logo.png",                "Path to company logo"),
             ("billing.currency",          "USD",                             "Default billing currency"),
             ("billing.tax_rate",          "0",                               "Default tax rate percentage"),
@@ -886,9 +887,9 @@ public sealed class DevDataSeeder
             ("support.ticket_auto_close", "14",                              "Days after last reply before a ticket is auto-closed"),
             ("support.department_default","1",                               "Default department ID for new tickets"),
             ("domain.registrar_default",  "Namecheap",                       "Default domain registrar module"),
-            ("domain.ns1",                "ns1.hostpanel.com",               "Primary nameserver"),
-            ("domain.ns2",                "ns2.hostpanel.com",               "Secondary nameserver"),
-            ("mail.from_address",         "noreply@hostpanel.com",           "From address used for outgoing emails"),
+            ("domain.ns1",                "ns1.example.test",               "Primary nameserver"),
+            ("domain.ns2",                "ns2.example.test",               "Secondary nameserver"),
+            ("mail.from_address",         "noreply@example.test",           "From address used for outgoing emails"),
             ("mail.from_name",            "HostPanel",                       "From name used for outgoing emails"),
         ];
 
@@ -944,60 +945,24 @@ public sealed class DevDataSeeder
         (string Key, string Icon, string Color, string Image, string? DemoUrl, string LearnMoreUrl,
          string Title, string Tagline, string Description, string Features, string CtaText)[] slideDefs =
         [
-            ("web-hosting", "cloud-check", "#0ea5e9", "/images/products/hosting.jpg",
+            ("web-hosting", "cloud-check", "#0ea5e9", "",
                 null, "/hosting",
                 "Web Hosting", "Fast & Reliable Hosting",
-                "Launch your website on high-performance servers with 99.9% uptime SLA, free SSL, and one-click app installs.",
-                "[\"Free SSL certificate\",\"99.9% uptime SLA\",\"One-click app installs\",\"24/7 expert support\",\"Daily backups\"]",
+                "Launch your website on high-performance servers with free SSL, daily backups and one-click app installs.",
+                "[\"Free SSL certificate\",\"One-click app installs\",\"24/7 expert support\",\"Daily backups\"]",
                 "Get Started"),
-            ("domains", "earth", "#3b82f6", "/images/products/domains.jpg",
+            ("domains", "earth", "#3b82f6", "",
                 null, "/domains",
                 "Domain Registration", "Find & Register Your Domain",
                 "Search and register your perfect domain name with competitive pricing and instant activation.",
                 "[\"Free DNS management\",\"WHOIS privacy protection\",\"Auto-renewal options\"]",
                 "Get Started"),
-            ("kelpie-ai", "brain", "#7c3aed", "/images/products/kelpie-ai.jpg",
-                "https://kelpie-ai.ai", "/products/kelpie-ai",
-                "Kelpie AI", "AI-Powered Automation Platform",
-                "Harness the power of artificial intelligence to automate workflows, generate insights, and scale your business faster.",
-                "[\"Natural language processing\",\"Workflow automation\",\"Real-time analytics\",\"API integrations\",\"Enterprise security\"]",
-                "Get Started"),
-            ("metricskit-pro", "chart-bar", "#ec4899", "/images/products/metricskit-pro.jpg",
-                "#", "/products/metricskit-pro",
-                "MetricsKit Pro", "Advanced Analytics & Reporting",
-                "Track every metric that matters. Beautiful dashboards, real-time data, and actionable insights for your business.",
-                "[\"Real-time dashboards\",\"Custom reports\",\"Multi-source data\",\"Automated alerts\",\"White-label ready\"]",
-                "Get Started"),
-            ("smartlearn-system", "school", "#8b5cf6", "/images/products/smartlearn-system.jpg",
-                "#", "/products/smartlearn-system",
-                "SmartLearn System", "Modern E-Learning Platform",
-                "Deliver engaging online courses, track learner progress, and grow your educational business with a full-featured LMS.",
-                "[\"Course builder\",\"Progress tracking\",\"Certificates & badges\",\"Live sessions\",\"White-label branding\"]",
-                "Get Started"),
-            ("propsystem-pro", "office-building", "#06b6d4", "/images/products/propsystem-pro.jpg",
-                "#", "/products/propsystem-pro",
-                "PropSystem Pro", "Complete Property Management",
-                "Manage properties, tenants, maintenance requests, and payments all in one platform built for real estate professionals.",
-                "[\"Tenant portal\",\"Online rent collection\",\"Maintenance tracking\",\"Financial reporting\",\"Document storage\"]",
-                "Get Started"),
-            ("shopkit-pro", "cart", "#f59e0b", "/images/products/shopkit-pro.jpg",
-                "#", "/products/shopkit-pro",
-                "ShopKit Pro", "E-Commerce Made Simple",
-                "Launch your online store in minutes with built-in payments, inventory management, and multi-channel selling tools.",
-                "[\"Built-in payments\",\"Inventory management\",\"Multi-channel selling\",\"SEO optimized\",\"Mobile storefront\"]",
-                "Get Started"),
-            ("quickbite", "silverware-fork-knife", "#ef4444", "/images/products/quickbite.jpg",
-                "#", "/products/quickbite",
-                "QuickBite", "Restaurant & Food Ordering System",
-                "Power your restaurant with online ordering, table management, and kitchen display integration — all in one platform.",
-                "[\"Online ordering\",\"Table management\",\"Kitchen display\",\"Menu builder\",\"Delivery integration\"]",
-                "Get Started"),
-            ("taskero", "view-dashboard", "#10b981", "/images/products/taskero.jpg",
-                "#", "/products/taskero",
-                "Taskero", "Project & Task Management",
-                "Organise projects, assign tasks, and collaborate with your team using a clean and intuitive project management platform.",
-                "[\"Kanban & list views\",\"Time tracking\",\"Team collaboration\",\"Reporting & insights\",\"Integrations\"]",
-                "Get Started"),
+            ("example-service", "server", "#8b5cf6", "",
+                "https://demo.example", "/services/example",
+                "Example Service", "A Placeholder Offer",
+                "A neutral example entry for the development slider; replace it with your own offer in the admin panel.",
+                "[\"First example feature\",\"Second example feature\",\"Third example feature\"]",
+                "Learn More"),
         ];
 
         for (var sortOrder = 0; sortOrder < slideDefs.Length; sortOrder++)

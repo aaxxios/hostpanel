@@ -3,6 +3,7 @@
  * answer on the row, deleting asks first and removes the server, and an empty install offers the
  * first-server prompt.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { connectionOk, hostServer } from './fixtures/servers'
 import type { ServerDto } from '../src/types/server'
@@ -12,9 +13,9 @@ test('testing a connection shows the panel version on the server row', async ({ 
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/admin/servers', [hostServer]),
-      json('GET', '/api/admin/server-groups', []),
-      json('POST', `/api/admin/servers/${hostServer.id}/test-connection`, connectionOk),
+      json(HttpMethod.Get, '/api/admin/servers', [hostServer]),
+      json(HttpMethod.Get, '/api/admin/server-groups', []),
+      json(HttpMethod.Post, `/api/admin/servers/${hostServer.id}/test-connection`, connectionOk),
     ],
   })
 
@@ -25,7 +26,7 @@ test('testing a connection shows the panel version on the server row', async ({ 
   await page.getByTestId(`server-test-${hostServer.id}`).click()
 
   await expect(page.getByTestId(`server-test-result-${hostServer.id}`)).toContainText(connectionOk.version ?? '')
-  expect(api.callsTo('POST', `/api/admin/servers/${hostServer.id}/test-connection`)).toHaveLength(1)
+  expect(api.callsTo(HttpMethod.Post, `/api/admin/servers/${hostServer.id}/test-connection`)).toHaveLength(1)
 })
 
 test('deleting a server asks first and then removes it', async ({ page }) => {
@@ -34,10 +35,10 @@ test('deleting a server asks first and then removes it', async ({ page }) => {
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      { method: 'GET', path: '/api/admin/servers', respond: () => ({ body: stored }) },
-      json('GET', '/api/admin/server-groups', []),
+      { method: HttpMethod.Get, path: '/api/admin/servers', respond: () => ({ body: stored }) },
+      json(HttpMethod.Get, '/api/admin/server-groups', []),
       {
-        method: 'DELETE',
+        method: HttpMethod.Delete,
         path: `/api/admin/servers/${hostServer.id}`,
         respond: () => {
           stored.splice(0, stored.length)
@@ -49,11 +50,11 @@ test('deleting a server asks first and then removes it', async ({ page }) => {
 
   await page.goto('/servers')
   await page.getByTestId(`server-delete-${hostServer.id}`).click()
-  expect(api.callsTo('DELETE', `/api/admin/servers/${hostServer.id}`)).toHaveLength(0)
+  expect(api.callsTo(HttpMethod.Delete, `/api/admin/servers/${hostServer.id}`)).toHaveLength(0)
   await page.getByTestId('dialog-confirm').click()
 
   await expect(page.getByTestId('servers-empty')).toBeVisible()
-  expect(api.callsTo('DELETE', `/api/admin/servers/${hostServer.id}`)).toHaveLength(1)
+  expect(api.callsTo(HttpMethod.Delete, `/api/admin/servers/${hostServer.id}`)).toHaveLength(1)
 })
 
 test('a failed connection test shows the API sentence on the row', async ({ page }) => {
@@ -61,9 +62,9 @@ test('a failed connection test shows the API sentence on the row', async ({ page
   await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/admin/servers', [hostServer]),
-      json('GET', '/api/admin/server-groups', []),
-      json('POST', `/api/admin/servers/${hostServer.id}/test-connection`, { type: 'UPSTREAM', title: 'Bad gateway', status: 502, detail: sentence }, 502),
+      json(HttpMethod.Get, '/api/admin/servers', [hostServer]),
+      json(HttpMethod.Get, '/api/admin/server-groups', []),
+      json(HttpMethod.Post, `/api/admin/servers/${hostServer.id}/test-connection`, { type: 'UPSTREAM', title: 'Bad gateway', status: 502, detail: sentence }, 502),
     ],
   })
 
@@ -76,7 +77,7 @@ test('a failed connection test shows the API sentence on the row', async ({ page
 test('an install without servers offers to add the first one', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
-    routes: [json('GET', '/api/admin/servers', []), json('GET', '/api/admin/server-groups', [])],
+    routes: [json(HttpMethod.Get, '/api/admin/servers', []), json(HttpMethod.Get, '/api/admin/server-groups', [])],
   })
 
   await page.goto('/servers')

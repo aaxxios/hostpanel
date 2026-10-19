@@ -15,7 +15,11 @@
  * @module plugins/tracking.client
  */
 
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { CookieConsent } from '~/types/cookieconsent'
+
+/** Address of the tag-manager loader script; the container id is appended as `id`. */
+const GTM_SCRIPT_URL = 'https://www.googletagmanager.com/gtm.js'
 
 /** The `window` as the tag manager extends it. */
 interface WindowWithDataLayer {
@@ -23,6 +27,7 @@ interface WindowWithDataLayer {
   dataLayer?: unknown[]
 }
 
+/** Loads the tag manager once a container is configured and the visitor accepted all cookies. */
 export default defineNuxtPlugin({
   name: 'tracking',
   dependsOn: ['portal-settings'],
@@ -30,7 +35,8 @@ export default defineNuxtPlugin({
     const { get } = usePortalSettings()
     const { consent } = useCookieConsent()
 
-    const containerId = computed(() => get('portal.analytics.gtm_id', 'portalGtmId'))
+    /** The tag manager container id from the settings; empty when tracking is not configured. */
+    const containerId = computed(() => get(PortalSettingKey.AnalyticsGtmId, 'portalGtmId'))
 
     /** True once the snippet has been injected. */
     let loaded = false
@@ -48,7 +54,7 @@ export default defineNuxtPlugin({
 
       const script = document.createElement('script')
       script.async = true
-      script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(containerId.value)}`
+      script.src = `${GTM_SCRIPT_URL}?id=${encodeURIComponent(containerId.value)}`
       document.head.appendChild(script)
     }
 

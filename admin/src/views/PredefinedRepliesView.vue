@@ -27,13 +27,11 @@ import { PredefinedRepliesTab } from '@/types/supporttab'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiSize } from '@/utils/ui/size'
 import type { UiTabItem } from '@/utils/ui/tabs'
+import { SEARCH_DEBOUNCE_MS } from '@/lib/limits'
 
 const { t } = useI18n()
 
 const store = usePredefinedRepliesStore()
-
-/** Delay between the last keystroke in the search box and the search, in milliseconds. */
-const SEARCH_DEBOUNCE_MS = 300
 
 /** Currently active tab. */
 const activeTab = ref<PredefinedRepliesTab>(PredefinedRepliesTab.Category)

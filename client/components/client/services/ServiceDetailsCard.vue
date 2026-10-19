@@ -2,7 +2,7 @@
   <UiCard data-testid="service-details">
     <UiCardHeader :title="$t('client.services.serviceDetails')" :icon="LayoutGrid" />
     <UiGrid as="dl" cols="2" gap="lg">
-      <UiDescriptionItem :label="$t('client.services.plan')" :value="service.name" value-class="font-medium" />
+      <UiDescriptionItem :label="$t('client.services.plan')" :value="productNameOrFallback($t, service.name, service.id)" value-class="font-medium" />
       <UiDescriptionItem :label="$t('client.services.domain')" :value="service.domain || null" />
       <UiDescriptionItem :label="$t('client.services.status')">
         <ClientStatusBadge :status="service.status" />
@@ -25,6 +25,7 @@
 import { LayoutGrid } from 'lucide-vue-next'
 import type { ServiceDetail } from '~/types/servicedetail'
 import type { CurrencyInfo } from '~/utils/formatCurrency'
+import { productNameOrFallback } from '~/utils/displayFallback'
 import { formatCurrency } from '~/utils/formatCurrency'
 import { formatDate } from '~/utils/formatDate'
 

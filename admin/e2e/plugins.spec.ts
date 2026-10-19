@@ -3,6 +3,7 @@
  * multipart data and shows the restart banner, restarting posts the command, and removing a
  * plugin deletes it from the list.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { cwpPlugin } from './fixtures/integrations'
 import { tinyPng } from './fixtures/settings'
@@ -16,16 +17,16 @@ test('uploading an archive installs the plugin and offers the restart', async ({
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      { method: 'GET', path: '/api/admin/plugins', respond: () => ({ body: stored }) },
+      { method: HttpMethod.Get, path: '/api/admin/plugins', respond: () => ({ body: stored }) },
       {
-        method: 'POST',
+        method: HttpMethod.Post,
         path: '/api/admin/plugins/install',
         respond: () => {
           stored.push({ ...cwpPlugin, isLoaded: false })
           return { body: { requiresRestart: true } }
         },
       },
-      { method: 'POST', path: '/api/admin/plugins/restart', respond: () => ({ status: 204 }) },
+      { method: HttpMethod.Post, path: '/api/admin/plugins/restart', respond: () => ({ status: 204 }) },
     ],
   })
 
@@ -38,12 +39,12 @@ test('uploading an archive installs the plugin and offers the restart', async ({
 
   await expect(page.getByTestId(`plugin-card-${cwpPlugin.id}`)).toContainText(cwpPlugin.name)
   await expect(page.getByTestId('plugins-restart-banner')).toBeVisible()
-  const [install] = api.callsTo('POST', '/api/admin/plugins/install')
+  const [install] = api.callsTo(HttpMethod.Post, '/api/admin/plugins/install')
   expect(install?.contentType).toContain('multipart/form-data')
   expect(install?.postData).toContain('filename="cwp.zip"')
 
   await page.getByTestId('plugins-restart').click()
-  await expect.poll(() => api.callsTo('POST', '/api/admin/plugins/restart').length).toBe(1)
+  await expect.poll(() => api.callsTo(HttpMethod.Post, '/api/admin/plugins/restart').length).toBe(1)
 })
 
 test('removing a plugin deletes it from the list', async ({ page }) => {
@@ -52,9 +53,9 @@ test('removing a plugin deletes it from the list', async ({ page }) => {
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      { method: 'GET', path: '/api/admin/plugins', respond: () => ({ body: stored }) },
+      { method: HttpMethod.Get, path: '/api/admin/plugins', respond: () => ({ body: stored }) },
       {
-        method: 'DELETE',
+        method: HttpMethod.Delete,
         path: `/api/admin/plugins/${cwpPlugin.id}`,
         respond: () => {
           stored.splice(0, stored.length)
@@ -68,7 +69,7 @@ test('removing a plugin deletes it from the list', async ({ page }) => {
   await page.getByTestId(`plugin-remove-${cwpPlugin.id}`).click()
 
   await expect(page.getByTestId('plugins-empty')).toBeVisible()
-  expect(api.callsTo('DELETE', `/api/admin/plugins/${cwpPlugin.id}`)).toHaveLength(1)
+  expect(api.callsTo(HttpMethod.Delete, `/api/admin/plugins/${cwpPlugin.id}`)).toHaveLength(1)
 })
 
 test('a refused install shows the API sentence', async ({ page }) => {
@@ -76,8 +77,8 @@ test('a refused install shows the API sentence', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/admin/plugins', []),
-      json('POST', '/api/admin/plugins/install', { type: 'INVALID_PLUGIN', title: 'Invalid plugin', status: 400, detail: sentence }, 400),
+      json(HttpMethod.Get, '/api/admin/plugins', []),
+      json(HttpMethod.Post, '/api/admin/plugins/install', { type: 'INVALID_PLUGIN', title: 'Invalid plugin', status: 400, detail: sentence }, 400),
     ],
   })
 

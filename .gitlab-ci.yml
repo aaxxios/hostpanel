@@ -2,31 +2,59 @@
 # a job's own `if:` is never evaluated unless a pipeline was created here first.
 workflow:
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"      # → production (ProdServer, manual)
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "main"      # → production (ProdServer, manual)
     # A push to develop no longer builds anything. Stage is out of use, so the images
     # this produced and the staging deploy behind them were work nobody collected, and
     # the commits in it were already tested on the merge request that gated them. The
     # line is commented rather than deleted and every develop-gated job is left defined
     # and dormant, so bringing staging back is this one line.
-    # - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "develop" # → staging (LocalServer)
+    # - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "develop" # → staging (LocalServer)
     # ci-test stays. It is not a branch anything is developed on — it exists to try a
     # change to this file on a real pipeline, which is the only way to verify one, and
     # it only builds when somebody deliberately pushes that name.
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"   # throwaway verification branch
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "ci-test"   # throwaway verification branch
     # A version tag (v1.2.3) gets a pipeline of its own, holding only publish:dockerhub.
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
 
 stages: [test, build, deploy]
+
+# Values several jobs share, written once. A project or environment-scoped CI/CD variable of the same
+# name overrides the value here. DEPLOY_DIR (each deploy job's checkout on its host) is deliberately
+# not defined: it is a CI/CD variable scoped to staging/hostpanel, production/hostpanel and
+# demo/hostpanel, and every deploy job refuses to run without it.
+variables:
+  # The only GitLab host that runs these pipelines (the pull-mirror of the GitHub repository).
+  PIPELINE_SERVER_HOST: gitlab.com
+  DOTNET_SDK_IMAGE: mcr.microsoft.com/dotnet/sdk:9.0
+  NODE_IMAGE: node:22
+  DOCKER_IMAGE: docker:27
+  BINFMT_IMAGE: tonistiigi/binfmt
+  # The Playwright image tag follows @playwright/test in each app's package.json.
+  PLAYWRIGHT_CLIENT_IMAGE: mcr.microsoft.com/playwright:v1.62.1-noble
+  PLAYWRIGHT_ADMIN_IMAGE: mcr.microsoft.com/playwright:v1.56.0-noble
+  YARN_VERSION: "1.22.22"
+  # Where the public source lives; stamped into the Docker Hub image labels.
+  PUBLIC_REPOSITORY_URL: https://github.com/innovayse/hostpanel
+  # The compose chain every deployed tier runs; the demo adds its overlay.
+  COMPOSE_FILES_DEPLOYED: -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml
 
 # ── Reusable templates (inlined — this project runs on a GitLab pull-mirror
 #    of the GitHub repo and has no access to the workspace's shared
 #    ci/templates.yml, so the relevant hidden jobs are copied here) ───────────
 
+# The job's own token as the Innovayse.Auth package credential (see the note on .test-dotnet). Defined here
+# once and extended only by the jobs that restore NuGet (.test-dotnet, .build-image, .deploy-staging and
+# deploy:prod), so no other job sees the token as a variable.
+.nuget-credentials:
+  variables:
+    INNOVAYSE_NUGET_CREDENTIALS: "Username=gitlab-ci-token;Password=${CI_JOB_TOKEN}"
+
 .test-dotnet:
+  extends: .nuget-credentials
   stage: test
   tags: [builder]
-  image: mcr.microsoft.com/dotnet/sdk:9.0
+  image: $DOTNET_SDK_IMAGE
   variables:
     DOTNET_CLI_TELEMETRY_OPTOUT: "1"
     # The credential for Innovayse.Auth, which lives in innovayse-workspace's package
@@ -42,7 +70,7 @@ stages: [test, build, deploy]
     # It is the job's own token, valid only while the job runs. For it to be accepted
     # the workspace project must list this project in its CI_JOB_TOKEN allowlist,
     # since a job token is scoped to its own project by default.
-    NuGetPackageSourceCredentials_innovayse: "Username=gitlab-ci-token;Password=${CI_JOB_TOKEN}"
+    NuGetPackageSourceCredentials_innovayse: $INNOVAYSE_NUGET_CREDENTIALS
     # Testcontainers starts Ryuk, its reaper container, before the first real container and
     # then dials it on a mapped port. On the builder runner that connection is never made:
     # it waits its full minute, throws "ResourceReaperException: Initialization has been
@@ -92,10 +120,10 @@ stages: [test, build, deploy]
 .test-node-yarn:
   stage: test
   tags: [builder]
-  image: node:22
+  image: $NODE_IMAGE
   script:
     - cd "$SERVICE"
-    - corepack enable && corepack prepare yarn@1.22.22 --activate
+    - corepack enable && corepack prepare yarn@${YARN_VERSION} --activate
     - yarn install --frozen-lockfile
     - yarn lint
     # Blocking: locale parity, unused keys and undefined literal keys fail the pipeline.
@@ -113,16 +141,17 @@ stages: [test, build, deploy]
 .test-node-npm:
   stage: test
   tags: [builder]
-  image: node:22
+  image: $NODE_IMAGE
   script:
     - cd "$SERVICE"
     - npm ci
     - npm run build-only
 
 .build-image:
+  extends: .nuget-credentials
   stage: build
   tags: [builder]
-  image: docker:27
+  image: $DOCKER_IMAGE
   variables:
     IMAGE: $CI_REGISTRY_IMAGE/$SERVICE
   before_script:
@@ -130,25 +159,40 @@ stages: [test, build, deploy]
   script:
     # The API image restores Innovayse.Auth during its build, so the credential has to
     # arrive as a build arg — see the note on .test-dotnet. Harmless for the client and
-    # admin images, whose Dockerfiles never declare the ARG.
-    - docker build --build-arg "NuGetPackageSourceCredentials_innovayse=Username=gitlab-ci-token;Password=$CI_JOB_TOKEN" --build-arg AUTH_MODE=sso --target "$IMAGE_TARGET" -f "$DOCKERFILE" -t "$IMAGE:$TAG" -t "$IMAGE:$CI_COMMIT_SHORT_SHA" "$BUILD_CONTEXT"
+    # admin images, whose Dockerfiles never declare the ARG. NUXT_PUBLIC_PORTAL_CHAT_BASE_URL is the
+    # client's build-time proxy target; an unset CI/CD variable expands to empty (no proxy).
+    - docker build --build-arg "NuGetPackageSourceCredentials_innovayse=$INNOVAYSE_NUGET_CREDENTIALS" --build-arg AUTH_MODE=sso --build-arg "NUXT_PUBLIC_PORTAL_CHAT_BASE_URL=$NUXT_PUBLIC_PORTAL_CHAT_BASE_URL" --target "$IMAGE_TARGET" -f "$DOCKERFILE" -t "$IMAGE:$TAG" -t "$IMAGE:$CI_COMMIT_SHORT_SHA" "$BUILD_CONTEXT"
     - docker push "$IMAGE:$TAG"
     - docker push "$IMAGE:$CI_COMMIT_SHORT_SHA"
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "main"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "ci-test"
 
 .deploy-staging:
+  extends: .nuget-credentials
   stage: deploy
   tags: [staging]
   variables:
     GIT_STRATEGY: none
     # The build below restores Innovayse.Auth from the package registry, so the
     # credential has to reach it here the same way it does on production.
-    NUGET_INNOVAYSE_CREDENTIALS: "Username=gitlab-ci-token;Password=${CI_JOB_TOKEN}"
+    NUGET_INNOVAYSE_CREDENTIALS: $INNOVAYSE_NUGET_CREDENTIALS
+    COMPOSE_FILES: $COMPOSE_FILES_DEPLOYED
+    # The local image names docker/docker-compose.prod.yml builds and runs: the project's own registry path.
+    IMAGE_REGISTRY: $CI_REGISTRY_IMAGE
+    # Which tier the API believes it is running on. docker/docker-compose.dev.yml passes
+    # ${ASPNETCORE_ENVIRONMENT} through to it - the laptop .env sets Development, and
+    # a deployed host inherited that too unless someone had remembered to write the
+    # variable into that host's .env by hand. An API left on Development serves developer
+    # exception pages, and it is also what makes an absent EncryptionKey allowed rather than
+    # fatal, so server credentials and client-service passwords go to the database in plain
+    # text. Setting it per tier here is what makes it true of the deployment rather than of
+    # one file on one machine. Every deployed tier (staging, prod, demo) is Production.
+    ASPNETCORE_ENVIRONMENT: Production
   before_script:
     - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY"
   script:
+    - test -n "$DEPLOY_DIR" || { echo "DEPLOY_DIR must be set as a CI/CD variable scoped to this environment" >&2; exit 1; }
     - cd "$DEPLOY_DIR"
     # GIT_STRATEGY is none, so the runner never touches this checkout — but the
     # deploy builds the api, client and admin images from it (neither compose file
@@ -167,12 +211,12 @@ stages: [test, build, deploy]
     # images are built here from the synced checkout and tagged hostpanel/<svc>:stage
     # (prod.yml carries both `image:` and `build:`); only the infrastructure images are pulled.
     - export IMAGE_TAG=stage
-    - docker compose -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml pull --ignore-buildable
-    - docker compose -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml build hostpanel-api hostpanel-client hostpanel-admin
+    - docker compose $COMPOSE_FILES pull --ignore-buildable
+    - docker compose $COMPOSE_FILES build hostpanel-api hostpanel-client hostpanel-admin
     # Services named one by one to leave nginx out. It publishes 80 and 443, which
     # on this host belong to the shared Nginx Proxy Manager that fronts every
     # Innovayse product - so it can never bind. The platform overlay parks it too.
-    - docker compose -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml up -d hostpanel-db hostpanel-api hostpanel-client hostpanel-admin
+    - docker compose $COMPOSE_FILES up -d hostpanel-db hostpanel-api hostpanel-client hostpanel-admin
   # This job has no `image:`, so it is the shell executor: the login above writes
   # the runner user's real ~/.docker/config.json on the staging host, and nothing
   # took it away again. CI_JOB_TOKEN dies with the job, but the entry stayed, and
@@ -187,7 +231,7 @@ stages: [test, build, deploy]
     # Off with the job that extends this. A rule here is overridden by any job that
     # declares its own, so this is not what stops deploy:staging -- it is what stops a
     # job added later that forgets to.
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "develop" && $DEPLOY_STAGING == "true"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "develop" && $DEPLOY_STAGING == "true"
 
 # ── backend (Innovayse.Hostpanel.API, .NET) ──────────────────────────────────────────────
 
@@ -201,7 +245,7 @@ backend:test:
       Innovayse.CWP.Tests
       Innovayse.Inecobank.Tests
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [backend/**/*]
 
 # The Integration suite, in four shards that run ONE AT A TIME. Every top-level folder of
@@ -224,7 +268,7 @@ backend:test:
     # Keeps glibc from giving every thread its own arena; the testhost runs many.
     MALLOC_ARENA_MAX: "2"
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [backend/**/*]
 
 backend:test:integration:a:
@@ -243,7 +287,7 @@ backend:test:integration:c:
   extends: .test-integration
   variables:
     TEST_FILTER: >-
-      FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Support.
+      FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Support.|FullyQualifiedName~Integration.Tests.Faqs.|FullyQualifiedName~Integration.Tests.Partners.|FullyQualifiedName~Integration.Tests.Projects.|FullyQualifiedName~Integration.Tests.Testimonials.
 
 backend:test:integration:d:
   extends: .test-integration
@@ -255,18 +299,18 @@ backend:build:api:prod:
   extends: .build-image
   variables: { SERVICE: api, DOCKERFILE: backend/Dockerfile, BUILD_CONTEXT: backend, IMAGE_TARGET: prod, TAG: latest }
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "main"
       changes: [backend/**/*]
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "ci-test"
       changes: [backend/**/*]
 
 backend:build:api:dev:
   extends: .build-image
   variables: { SERVICE: api, DOCKERFILE: backend/Dockerfile, BUILD_CONTEXT: backend, IMAGE_TARGET: dev, TAG: dev }
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "main"
       changes: [backend/Dockerfile]
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "ci-test"
       changes: [backend/Dockerfile]
 
 # ── client (Nuxt frontend, yarn) ────────────────────────────────────────────────
@@ -275,20 +319,20 @@ client:test:
   extends: .test-node-yarn
   variables: { SERVICE: client }
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [client/**/*]
 
 # Playwright against the production build of client:test, with the stub backend
 # (client/e2e/support/stub-backend.mjs) standing in for the API. The image tag follows
-# @playwright/test in client/package.json.
+# @playwright/test in client/package.json (PLAYWRIGHT_CLIENT_IMAGE).
 client:e2e:
   stage: test
   tags: [builder]
-  image: mcr.microsoft.com/playwright:v1.62.1-noble
+  image: $PLAYWRIGHT_CLIENT_IMAGE
   needs: [client:test]
   script:
     - cd client
-    - corepack enable && corepack prepare yarn@1.22.22 --activate
+    - corepack enable && corepack prepare yarn@${YARN_VERSION} --activate
     - yarn install --frozen-lockfile
     - yarn e2e
   artifacts:
@@ -296,25 +340,25 @@ client:e2e:
     expire_in: 3 days
     paths: [client/test-results/, client/e2e-results.xml]
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [client/**/*]
 
 client:build:prod:
   extends: .build-image
   variables: { SERVICE: client, DOCKERFILE: client/Dockerfile, BUILD_CONTEXT: client, IMAGE_TARGET: prod, TAG: latest }
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "main"
       changes: [client/**/*]
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "ci-test"
       changes: [client/**/*]
 
 client:build:dev:
   extends: .build-image
   variables: { SERVICE: client, DOCKERFILE: client/Dockerfile, BUILD_CONTEXT: client, IMAGE_TARGET: dev, TAG: dev }
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "main"
       changes: [client/Dockerfile]
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "ci-test"
       changes: [client/Dockerfile]
 
 # ── admin (Vue/Vite, npm) ────────────────────────────────────────────────────
@@ -324,7 +368,7 @@ client:build:dev:
 admin:test:
   stage: test
   tags: [builder]
-  image: node:22
+  image: $NODE_IMAGE
   script:
     - cd admin
     - npm ci
@@ -334,65 +378,53 @@ admin:test:
     - npm test -- --maxWorkers=2
     - npm run build-only
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [admin/**/*]
 
 # Playwright flows against `vite preview`; the API is stubbed with page.route, so no backend runs.
-# The image tag must match the @playwright/test version pinned in admin/package.json.
+# The image tag (PLAYWRIGHT_ADMIN_IMAGE) must match the @playwright/test version pinned in admin/package.json.
 admin:e2e:
   stage: test
   tags: [builder]
-  image: mcr.microsoft.com/playwright:v1.56.0-noble
+  image: $PLAYWRIGHT_ADMIN_IMAGE
   needs: [admin:test]
   script:
     - cd admin
     - npm ci
     - npm run e2e
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [admin/**/*]
 
 admin:build:prod:
   extends: .build-image
   variables: { SERVICE: admin, DOCKERFILE: admin/Dockerfile, BUILD_CONTEXT: ., IMAGE_TARGET: prod, TAG: latest }
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "main"
       changes: [admin/**/*]
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "ci-test"
       changes: [admin/**/*]
 
 admin:build:dev:
   extends: .build-image
   variables: { SERVICE: admin, DOCKERFILE: admin/Dockerfile, BUILD_CONTEXT: ., IMAGE_TARGET: dev, TAG: dev }
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "main"
       changes: [admin/Dockerfile, docker/nginx/admin.conf]
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "ci-test"
       changes: [admin/Dockerfile, docker/nginx/admin.conf]
 
 # ── deploy ───────────────────────────────────────────────────────────────────
 
 deploy:staging:
   extends: .deploy-staging
-  variables:
-    DEPLOY_DIR: /home/innovayse/www/innovayse-workspace/hostpanel
-    # Which tier the API believes it is running on. docker/docker-compose.dev.yml passes
-    # ${ASPNETCORE_ENVIRONMENT} through to it — the laptop .env sets Development, and
-    # a deployed host inherited that too unless someone had
-    # remembered to write the variable into that host's .env by hand. An API left on
-    # Development serves developer exception pages, and it is also what makes an
-    # absent EncryptionKey allowed rather than fatal, so server credentials and
-    # client-service passwords go to the database in plain text. Setting it per tier
-    # here is what makes it true of the deployment rather than of one file on one
-    # machine.
-    ASPNETCORE_ENVIRONMENT: Production
   environment: { name: staging/hostpanel }
   rules:
     # Staging deploys are off: that host filled its disk and this job fails in get_sources,
     # before the deploy script runs at all. Production is unaffected -- it deploys from main,
     # on another host, and is manual. Set DEPLOY_STAGING=true in CI/CD variables to turn it
     # back on; the condition below is the one this job had before, unchanged.
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "develop" && $DEPLOY_STAGING == "true"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "develop" && $DEPLOY_STAGING == "true"
   needs:
     - job: backend:build:api:prod
       optional: true
@@ -415,37 +447,42 @@ deploy:staging:
 #   DEMO_CLIENT_EMAIL, DEMO_CLIENT_PASSWORD (required), DEMO_SMTP_PORT, DEMO_REDIS_PORT,
 #   DEMO_API_HOST_PORT, DEMO_CLIENT_HOST_PORT, DEMO_ADMIN_HOST_PORT, DEMO_MAILHOG_UI_HOST_PORT,
 #   DEMO_ADMIN_BASE_URL and DEMO_CLIENT_BASE_URL (both required: the bases of the links the demo mail carries),
-# plus the demo's own DOMAIN, ADMIN_DOMAIN, ALLOWED_HOSTS and POSTGRES_DB, with AUTH_MODE=local.
+#   DEMO_PUBLISH_ADDRESS (required: the address the demo's published ports bind to) and DEMO_SMTP_ENCRYPTION,
+# plus the demo's own DOMAIN, ADMIN_DOMAIN, ALLOWED_HOSTS and POSTGRES_DB, with AUTH_MODE=local, and
+# DEPLOY_DIR: the demo's own checkout on the host, never production's.
 deploy:demo:
   extends: .deploy-staging
   tags: [prod]
   variables:
-    # The demo has a checkout of its own: this job runs `git checkout -f`, which in production's directory
-    # would swap the files under the running production stack.
-    DEPLOY_DIR: /home/innovayse-server/www/hostpanel-demo
-    COMPOSE_FILES: -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml -f docker/docker-compose.demo.yml
+    # The demo has a checkout of its own (DEPLOY_DIR, scoped to demo/hostpanel): this job runs
+    # `git checkout -f`, which in production's directory would swap the files under the running
+    # production stack. Demo behaviour comes from Demo__Enabled, not from the environment name.
+    COMPOSE_FILES: $COMPOSE_FILES_DEPLOYED -f docker/docker-compose.demo.yml
     IMAGE_TAG: demo
-    # Demo behaviour comes from Demo__Enabled, not from the environment name.
-    ASPNETCORE_ENVIRONMENT: Production
+    # The compose project that keeps the demo's containers, volumes and network apart from production's.
+    DEMO_PROJECT: hostpanel-demo
   script:
+    - test -n "$DEPLOY_DIR" || { echo "DEPLOY_DIR must be set as a CI/CD variable scoped to this environment" >&2; exit 1; }
     - test -d "$DEPLOY_DIR/.git" || git init "$DEPLOY_DIR"
     - git -C "$DEPLOY_DIR" fetch "$CI_REPOSITORY_URL" "$CI_COMMIT_SHA"
     - git -C "$DEPLOY_DIR" checkout -f "$CI_COMMIT_SHA"
     - cd "$DEPLOY_DIR"
     # The demo's edge network is external (docker-compose.demo.yml) and is not innovayse_network: create it
     # when missing. The edge proxy must also be attached to it (edge-proxy/docker-compose.yml) to route here.
-    - docker network inspect hostpanel_demo_edge >/dev/null 2>&1 || docker network create hostpanel_demo_edge
-    - docker compose -p hostpanel-demo $COMPOSE_FILES pull --ignore-buildable
-    - docker compose -p hostpanel-demo $COMPOSE_FILES build hostpanel-demo-api hostpanel-demo-client hostpanel-demo-admin
+    # The subnet is fixed (172.29.0.0/16): the edge's nginx.conf denies it on every host except the demo ones, so a
+    # demo container cannot reach production through the proxy. Keep it equal to the `deny` line there.
+    - docker network inspect hostpanel_demo_edge >/dev/null 2>&1 || docker network create --subnet 172.29.0.0/16 hostpanel_demo_edge
+    - docker compose -p "$DEMO_PROJECT" $COMPOSE_FILES pull --ignore-buildable
+    - docker compose -p "$DEMO_PROJECT" $COMPOSE_FILES build hostpanel-demo-api hostpanel-demo-client hostpanel-demo-admin
     # Services named one by one: nginx is parked, and the demo's broker, redis and mailhog come with the api.
-    - docker compose -p hostpanel-demo $COMPOSE_FILES up -d hostpanel-db hostpanel-demo-api hostpanel-demo-client hostpanel-demo-admin
+    - docker compose -p "$DEMO_PROJECT" $COMPOSE_FILES up -d hostpanel-db hostpanel-demo-api hostpanel-demo-client hostpanel-demo-admin
   environment: { name: demo/hostpanel }
   when: manual
   allow_failure: true
   needs: []
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "ci-test"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "main"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "ci-test"
 
 # ── Docker Hub (public images for self-hosters) ───────────────────────────────
 # Runs only on a version tag (vMAJOR.MINOR.PATCH) and only when somebody plays it. Builds the
@@ -470,13 +507,13 @@ deploy:demo:
 publish:dockerhub:
   stage: build
   tags: [builder]
-  image: docker:27
+  image: $DOCKER_IMAGE
   needs: []
   variables:
     GIT_DEPTH: "1"
   before_script:
     - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-    - docker run --privileged --rm tonistiigi/binfmt --install arm64,amd64
+    - docker run --privileged --rm "$BINFMT_IMAGE" --install arm64,amd64
     - docker buildx create --name hub --driver docker-container --use
     - docker buildx inspect --bootstrap
   script:
@@ -493,18 +530,18 @@ publish:dockerhub:
         context="${rest%%|*}"; args="${rest#*|}"
         image="$DOCKERHUB_NAMESPACE/hostpanel"
         # $args is intentionally unquoted: it holds zero or more --build-arg words.
-        docker buildx build --platform linux/amd64,linux/arm64 --target prod           -f "$dockerfile" $args           --label "org.opencontainers.image.source=https://github.com/innovayse/hostpanel"           --label "org.opencontainers.image.version=$VERSION"           --label "org.opencontainers.image.revision=$CI_COMMIT_SHA"           --label "org.opencontainers.image.licenses=$LICENSES"           --label "org.opencontainers.image.title=hostpanel-$name"           -t "$image:$name-$VERSION" -t "$image:$name-latest" --push "$context"
+        docker buildx build --platform linux/amd64,linux/arm64 --target prod           -f "$dockerfile" $args           --label "org.opencontainers.image.source=$PUBLIC_REPOSITORY_URL"           --label "org.opencontainers.image.version=$VERSION"           --label "org.opencontainers.image.revision=$CI_COMMIT_SHA"           --label "org.opencontainers.image.licenses=$LICENSES"           --label "org.opencontainers.image.title=hostpanel-$name"           -t "$image:$name-$VERSION" -t "$image:$name-latest" --push "$context"
       done
   after_script:
     - docker logout || true
   when: manual
   allow_failure: false
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
       when: manual
 
 # ── production ───────────────────────────────────────────────────────────────
-# ProdServer (10.0.0.4) serves host.innovayse.com. Unlike staging it does not
+# ProdServer serves the public production site. Unlike staging it does not
 # consume registry images at all: inspecting the api container reports a bare
 # `hostpanel-api` image, because this host builds its own from the checkout. So
 # this job needs nothing from the build stage and declares `needs: []` — the
@@ -518,22 +555,36 @@ publish:dockerhub:
 #
 #   docker inspect $(docker ps -q #     -f label=com.docker.compose.project=hostpanel #     -f label=com.docker.compose.service=api) #     --format '{{.Config.Image}} {{index .Config.Labels "com.docker.compose.project.config_files"}}'
 deploy:prod:
+  extends: .nuget-credentials
   stage: deploy
   tags: [prod]
   variables:
     GIT_STRATEGY: none
-    DEPLOY_DIR: /home/innovayse-server/www/innovayse-workspace/hostpanel
-    COMPOSE_FILES: -f docker/docker-compose.shared.yml -f docker/docker-compose.prod.yml -f docker/docker-compose.platform.yml
+    # DEPLOY_DIR is the CI/CD variable scoped to production/hostpanel.
+    COMPOSE_FILES: $COMPOSE_FILES_DEPLOYED
     # The tag backend:build:*:prod / client:build:prod / admin:build:prod pushed from main.
     IMAGE_TAG: latest
-    # See the note on deploy:staging above.
+    # The local image names docker/docker-compose.prod.yml builds and runs: the project's own registry path.
+    IMAGE_REGISTRY: $CI_REGISTRY_IMAGE
+    # See the note on .deploy-staging above.
     ASPNETCORE_ENVIRONMENT: Production
+    # Where the pre-deploy database dumps go, and how many of the newest are kept.
+    BACKUP_DIR: $DEPLOY_DIR/backups
+    BACKUP_KEEP: "10"
     # This job builds the API image on the production host, so the Innovayse.Auth
     # credential has to reach the restore here too — docker-compose.prod.yml passes it
     # through as a build arg under this name. ProdServer's .env does not carry it, and
     # without it the restore goes to the feed anonymously and the build fails 401.
-    NUGET_INNOVAYSE_CREDENTIALS: "Username=gitlab-ci-token;Password=${CI_JOB_TOKEN}"
+    NUGET_INNOVAYSE_CREDENTIALS: $INNOVAYSE_NUGET_CREDENTIALS
   script:
+    - test -n "$DEPLOY_DIR" || { echo "DEPLOY_DIR must be set as a CI/CD variable scoped to this environment" >&2; exit 1; }
+    - test -n "$PROD_PUBLIC_URL" || { echo "PROD_PUBLIC_URL must be set as a CI/CD variable scoped to this environment" >&2; exit 1; }
+    # Checked before anything is touched: a non-numeric BACKUP_KEEP would otherwise break the
+    # prune step only after the dump, with the deploy half done.
+    - |
+      case "$BACKUP_KEEP" in
+        ''|*[!0-9]*) echo "BACKUP_KEEP must be a whole number, got '$BACKUP_KEEP'" >&2; exit 1 ;;
+      esac
     - git -C "$DEPLOY_DIR" fetch "$CI_REPOSITORY_URL" "$CI_COMMIT_SHA"
     - git -C "$DEPLOY_DIR" checkout -f "$CI_COMMIT_SHA"
     - cd "$DEPLOY_DIR"
@@ -545,13 +596,13 @@ deploy:prod:
     #
     # Failing the deploy when the dump fails is the point. A deploy that cannot be
     # undone should not start.
-    - mkdir -p "$DEPLOY_DIR/backups"
+    - mkdir -p "$BACKUP_DIR"
     - >
       docker exec hostpanel-db sh -lc
       'pg_dump -U "$POSTGRES_USER" -d "${POSTGRES_DB}" -Fc'
-      > "$DEPLOY_DIR/backups/hostpanel-$(date -u +%Y%m%dT%H%M%SZ)-${CI_COMMIT_SHORT_SHA}.dump"
-    - ls -1t "$DEPLOY_DIR"/backups/hostpanel-*.dump | tail -n +11 | xargs -r rm --
-    - ls -lh "$DEPLOY_DIR"/backups/ | tail -3
+      > "$BACKUP_DIR/hostpanel-$(date -u +%Y%m%dT%H%M%SZ)-${CI_COMMIT_SHORT_SHA}.dump"
+    - ls -1t "$BACKUP_DIR"/hostpanel-*.dump | tail -n +$((BACKUP_KEEP + 1)) | xargs -r rm --
+    - ls -lh "$BACKUP_DIR"/ | tail -3
     # The service keys, not the old ones. They were renamed to carry the product
     # prefix when container_name was introduced — `api` and `client` no longer exist
     # in any compose file here, so this job could only fail with "no such service".
@@ -592,10 +643,10 @@ deploy:prod:
         fi
         echo "$svc is on image ${have#sha256:}"
       done
-  environment: { name: production/hostpanel, url: "https://host.innovayse.com", deployment_tier: production }
+  environment: { name: production/hostpanel, url: "$PROD_PUBLIC_URL", deployment_tier: production }
   # Manual on purpose — merging should not by itself change what customers see.
   when: manual
   allow_failure: false
   needs: []
   rules:
-    - if: $CI_SERVER_HOST == "gitlab.com" && $CI_COMMIT_BRANCH == "main"
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "main"

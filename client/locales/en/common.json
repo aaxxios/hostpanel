@@ -42,6 +42,10 @@
     "retry": "Retry",
     "breadcrumb": "Breadcrumb"
   },
+  "fallback": {
+    "unknown": "Unknown",
+    "product": "Product #{id}"
+  },
   "errors": {
     "noAnswer": "Could not reach the server."
   }

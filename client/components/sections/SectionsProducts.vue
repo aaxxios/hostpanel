@@ -120,22 +120,34 @@
 /**
  * Products section of the home page: one image card per product family.
  *
- * Data: the catalogue API (name, plus description and features parsed out of one `description`
- * field), `lib/data.ts` (image) and `productConfig` (icon, accent colour, demo link). There is no
- * tagline: the catalogue sends none, so only the static domains card shows one. Each card is
- * painted in its family's accent colour and always uses the dark palette, because it sits on a
- * photograph under a dark overlay.
+ * Data: the catalogue API (product groups and their products, shaped by `buildProductFamilies`:
+ * the group names the family, one `description` field gives the summary and the features) and
+ * `familyConfig` (icon, accent colour, page). There is no tagline: the catalogue sends none, so
+ * only the static domains card shows one. Each card is painted in its family's accent colour and
+ * always uses the dark palette, because it sits on a photograph under a dark overlay.
  */
 import { ArrowRight, CheckCircle } from 'lucide-vue-next'
-import { products as visualData } from '~/lib/data'
+import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
 import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
 import type { ProductCard } from '~/types/productcard'
-import { nameToKey, parseDescription, productConfig, productGidToKey, productGids } from '~/utils/catalogGroups'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'
+import { buildProductFamilies } from '~/utils/productFamilies'
 
-/** Catalogue group of the hosting plans, which has its own visual config. */
-const HOSTING_GID = 1
+/** Id of the domains card, which is not a catalogue family. */
+const DOMAINS_CARD_ID = 'domains'
+
+/** Icon of the domains card. */
+const DOMAINS_CARD_ICON = 'earth'
+
+/** Accent of the domains card. */
+const DOMAINS_CARD_COLOR = '#3b82f6'
+
+/** Page the domains card links to. */
+const DOMAINS_CARD_URL = '/domains'
+
+/** How many feature lines a card lists. */
+const CARD_FEATURE_LIMIT = 3
 
 /** Accent classes the cards read (the colour itself is set by each card's UiAccent). */
 const accent = ACCENT_CLASSES
@@ -154,76 +166,43 @@ onMounted(() => {
   currencyStore.load()
 })
 
-/** Image of each family by id, from the static visual data. */
-const imageMap = Object.fromEntries(visualData.map((product) => [product.id, product.image]))
-
 /** Operator-configured hosting demo address; empty hides the demo link (the card links to the learn-more page). */
 const hostingDemoUrl = (useRuntimeConfig().public.portalHostingDemoUrl as string) || ''
 
-/** Hosting's visual config; it is not in `productConfig`. */
-const hostingVisual = {
-  icon: 'cloud-check',
-  color: '#0ea5e9',
-  image: '/images/products/hosting.jpg',
-  demoUrl: hostingDemoUrl,
-  learnMoreUrl: '/hosting',
-}
-
-/** Which products the section reads: hosting plus every SaaS group, in one request. */
-const catalogFilter = { gids: productGids.join(',') }
-
-await useAsyncData('products:families', () => catalogStore.loadProducts(catalogFilter), {
+await useAsyncData('products:families', () => catalogStore.loadFamilies(), {
   watch: [() => currencyStore.payerCode, locale],
 })
 
 /** The cards: the static domains entry, then one per catalogue family that has products. */
 const products = computed<ProductCard[]>(() => {
-  const raw = catalogStore.productsFor(catalogFilter)
   const items: ProductCard[] = [{
-    id: 'domains',
+    id: DOMAINS_CARD_ID,
     name: t('domains.card.name'),
     tagline: t('domains.card.tagline'),
     description: t('domains.card.description'),
     features: [t('domains.card.f1'), t('domains.card.f2'), t('domains.card.f3')],
-    icon: 'earth',
-    color: '#3b82f6',
-    image: imageMap.domains || '/images/products/domains.jpg',
+    icon: DOMAINS_CARD_ICON,
+    color: DOMAINS_CARD_COLOR,
+    image: '',
     demoUrl: '',
-    learnMoreUrl: '/domains',
+    learnMoreUrl: DOMAINS_CARD_URL,
   }]
 
-  for (const gid of productGids) {
-    const key = productGidToKey[gid]
-    // `productGidToKey` does not cover every gid in `productGids`.
-    if (!key) {
-      continue
-    }
-    const config = productConfig[key]
-    if (!config) {
-      continue
-    }
-
-    const group = raw.filter((product) => Number(product.groupId) === gid)
-    const parent = group.find((product) => product.slug?.trim() === key)
-      ?? group.find((product) => nameToKey(product.name) === key)
-      ?? group[0]
-    if (!parent) {
-      continue
-    }
-
-    const { summary, features } = parseDescription(parent.description || '')
-    const visual = gid === HOSTING_GID
-      ? hostingVisual
-      : { icon: config.icon, color: config.color, image: imageMap[key] || '', demoUrl: config.demoUrl ?? '', learnMoreUrl: config.learnMoreUrl }
-
+  // Prices are not shown on a card, so the formatter is never asked for one.
+  const families = buildProductFamilies(catalogStore.familyGroups, catalogStore.familyProducts, () => '', null)
+  for (const family of families) {
     items.push({
-      id: key,
-      name: parent.name || config.name,
+      id: family.id,
+      name: family.name,
       // Empty on purpose: the catalogue endpoint sends no tagline, and the card guards on it.
       tagline: '',
-      description: summary,
-      features: features.slice(0, 3),
-      ...visual,
+      description: family.description,
+      features: family.features.slice(0, CARD_FEATURE_LIMIT),
+      icon: family.icon,
+      color: family.color,
+      image: '',
+      demoUrl: family.gid === HOSTING_GROUP_ID ? hostingDemoUrl : (family.demoUrl ?? ''),
+      learnMoreUrl: family.learnMoreUrl,
     })
   }
 

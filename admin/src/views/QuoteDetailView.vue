@@ -32,6 +32,7 @@ import { formatDate } from '@/lib/format'
 import { useQuotesStore } from '@/stores/quotes'
 import { QuoteStage } from '@/types/quote'
 import type { QuoteItemUpdate } from '@/types/quote'
+import { invoicePath, quotePath } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -142,7 +143,7 @@ const save = async (): Promise<void> => {
       items: items.value,
     })
     if (id !== null) {
-      await router.push(`/billing/quotes/${id}`)
+      await router.push(quotePath(id))
     }
     return
   }
@@ -154,7 +155,7 @@ const duplicate = async (): Promise<void> => {
   store.successMessage = null
   const id = await store.duplicateQuote(quoteId.value)
   if (id !== null) {
-    await router.push(`/billing/quotes/${id}`)
+    await router.push(quotePath(id))
   }
 }
 
@@ -163,7 +164,7 @@ const convert = async (): Promise<void> => {
   convertOpen.value = false
   const id = await store.convertToInvoice(quoteId.value)
   if (id !== null) {
-    await router.push(`/billing/${id}`)
+    await router.push(invoicePath(id))
   }
 }
 

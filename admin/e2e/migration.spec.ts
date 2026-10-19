@@ -3,6 +3,7 @@
  * URL and shows the secret key to copy into the source plugin, and a refusal shows the API's
  * sentence inside the dialog flow.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { pendingJob } from './fixtures/migration'
 import type { MigrationJob } from '../src/types/migration'
@@ -16,16 +17,16 @@ test('creating a migration posts the source and shows the secret key', async ({ 
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      { method: 'GET', path: '/api/admin/migrations', respond: () => ({ body: stored }) },
+      { method: HttpMethod.Get, path: '/api/admin/migrations', respond: () => ({ body: stored }) },
       {
-        method: 'POST',
+        method: HttpMethod.Post,
         path: '/api/admin/migrations',
         respond: () => {
           stored.push({ ...pendingJob })
           return { body: pendingJob }
         },
       },
-      { method: 'GET', path: `/api/admin/migrations/${pendingJob.id}`, respond: () => ({ body: pendingJob }) },
+      { method: HttpMethod.Get, path: `/api/admin/migrations/${pendingJob.id}`, respond: () => ({ body: pendingJob }) },
     ],
   })
 
@@ -40,7 +41,7 @@ test('creating a migration posts the source and shows the secret key', async ({ 
 
   await expect(page.getByTestId('migration-secret-key')).toContainText(pendingJob.key)
   await expect(page.getByTestId(`migration-job-${pendingJob.id}`)).toBeVisible()
-  const [created] = api.callsTo('POST', '/api/admin/migrations')
+  const [created] = api.callsTo(HttpMethod.Post, '/api/admin/migrations')
   expect(created?.body).toMatchObject({ sourceUrl: pendingJob.sourceUrl, label: pendingJob.label })
 })
 
@@ -49,8 +50,8 @@ test('a refused creation shows the API sentence', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/admin/migrations', []),
-      json('POST', '/api/admin/migrations', { type: 'UNREACHABLE', title: 'Unreachable', status: 400, detail: sentence }, 400),
+      json(HttpMethod.Get, '/api/admin/migrations', []),
+      json(HttpMethod.Post, '/api/admin/migrations', { type: 'UNREACHABLE', title: 'Unreachable', status: 400, detail: sentence }, 400),
     ],
   })
 
@@ -66,8 +67,8 @@ test('an existing job is listed in the history and selecting it shows its setup'
   await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/admin/migrations', [pendingJob]),
-      json('GET', `/api/admin/migrations/${pendingJob.id}`, pendingJob),
+      json(HttpMethod.Get, '/api/admin/migrations', [pendingJob]),
+      json(HttpMethod.Get, `/api/admin/migrations/${pendingJob.id}`, pendingJob),
     ],
   })
 

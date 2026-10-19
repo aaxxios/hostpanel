@@ -5,6 +5,7 @@ using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Clients.Queries.ListClients;
 
 /// <summary>
@@ -39,7 +40,7 @@ public sealed class ListClientsHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
         var page = Math.Max(1, query.Page);
 
         // The address is not a column on the client row, so filtering by it means asking the

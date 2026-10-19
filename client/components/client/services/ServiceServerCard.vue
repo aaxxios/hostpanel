@@ -48,11 +48,11 @@
     </div>
 
     <UiStack v-if="service.domain" direction="row" wrap class="mt-6 pt-6 border-t border-gray-100 dark:border-white/10">
-      <UiButton :href="`https://${service.domain}`" target="_blank" rel="noopener noreferrer" variant="subtle" size="sm" data-testid="service-visit-website">
+      <UiButton :href="websiteUrl(service.domain)" target="_blank" rel="noopener noreferrer" variant="subtle" size="sm" data-testid="service-visit-website">
         <Globe :size="15" :stroke-width="2" class="mr-2" />
         {{ $t('client.services.visitWebsite') }}
       </UiButton>
-      <UiButton to="/client/domains" variant="subtle" size="sm" data-testid="service-manage-domain">
+      <UiButton :to="CLIENT_DOMAINS_PATH" variant="subtle" size="sm" data-testid="service-manage-domain">
         <Settings :size="15" :stroke-width="2" class="mr-2" />
         {{ $t('client.services.manageDomain') }}
       </UiButton>
@@ -67,8 +67,10 @@
  * the domain page.
  */
 import { Globe, Server, Settings, ShieldAlert, ShieldCheck, ShieldX } from 'lucide-vue-next'
+import { CLIENT_DOMAINS_PATH } from '~/constants/clientRoutes'
 import type { HostingInfo } from '~/types/hostinginfo'
 import type { ServiceDetail } from '~/types/servicedetail'
+import { websiteUrl } from '~/utils/controlPanel'
 import { hasUsageLimit } from '~/utils/serviceUsage'
 
 /** Props of ServiceServerCard. */

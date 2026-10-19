@@ -37,6 +37,10 @@ import { createServer } from 'node:http'
 import {
   ACCESS_TOKEN,
   ANNOUNCEMENT,
+  FAQS,
+  PARTNERS,
+  PROJECTS,
+  TESTIMONIALS,
   BAD_CONTACT_EMAIL,
   BAD_CONTACT_EMAIL_MESSAGE,
   CLIENT,
@@ -56,6 +60,7 @@ import {
   INVOICE,
   KB_ARTICLES,
   ORDER,
+  PRODUCT_GROUPS,
   productsIn,
   PUBLIC_SETTINGS,
   SAVED_CARD,
@@ -264,6 +269,10 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     send(res, 200, CURRENCIES)
     return true
   }
+  if (isGet && path === '/api/products/groups') {
+    send(res, 200, PRODUCT_GROUPS)
+    return true
+  }
   if (isGet && path === '/api/products') {
     send(res, 200, productsIn(query.get('currency')))
     return true
@@ -347,6 +356,24 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
   }
   if (method === 'POST' && path === '/api/auth/resend-verification') {
     send(res, 204)
+    return true
+  }
+
+  // Storefront content the operator manages -- anonymous, read by the Nuxt server while rendering.
+  if (isGet && path === '/api/public/faqs') {
+    send(res, 200, FAQS)
+    return true
+  }
+  if (isGet && path === '/api/public/testimonials') {
+    send(res, 200, TESTIMONIALS)
+    return true
+  }
+  if (isGet && path === '/api/public/partners') {
+    send(res, 200, PARTNERS)
+    return true
+  }
+  if (isGet && path === '/api/public/projects') {
+    send(res, 200, PROJECTS)
     return true
   }
 

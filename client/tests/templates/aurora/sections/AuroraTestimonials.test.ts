@@ -1,33 +1,58 @@
 /**
- * Unit tests for AuroraTestimonials: the quote on show, the previous and next arrows wrapping at
- * both ends, the dots, and the empty locale.
+ * Unit tests for AuroraTestimonials: the quote on show comes from the storefront store, the
+ * previous and next arrows wrap at both ends, the dots jump, and the section hides itself when
+ * there are no quotes.
  */
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
+import { testimonialFixture } from '~/tests/helpers/storefrontFixtures'
 import AuroraTestimonials from '~/templates/aurora/sections/AuroraTestimonials.vue'
 import { stubAuroraGlobals } from '../auroraGlobals'
 
-/** Two quotes as the locale messages deliver them. */
-const MESSAGES = {
-  'aurora.testimonials.items': [
-    { quote: 'First quote', author: 'Ann', role: 'CEO' },
-    { quote: 'Second quote', author: 'Bob', role: 'CTO' },
-  ],
+/** The mocked storefront endpoints, re-created for every test. */
+const api = { fetchPartners: vi.fn(), fetchTestimonials: vi.fn(), fetchProjects: vi.fn(), fetchFaqs: vi.fn() }
+
+vi.mock('~/composables/apis/useStorefrontApi', () => ({
+  /**
+   * Stands in for the storefront API composable so the store runs without transport.
+   *
+   * @returns The mocked endpoints.
+   */
+  useStorefrontApi: () => api,
+}))
+
+/**
+ * Mounts the section and lets the quotes load.
+ *
+ * @returns The wrapper.
+ */
+const mountSection = async () => {
+  stubAuroraGlobals()
+  const wrapper = mountWithKit(AuroraTestimonials)
+  await flushPromises()
+  return wrapper
 }
 
 describe('AuroraTestimonials', () => {
-  it('shows the first quote with its author and role', () => {
-    stubAuroraGlobals({ messages: MESSAGES })
-    const card = mountWithKit(AuroraTestimonials).find('[data-testid="testimonial-card"]')
+  beforeEach(() => {
+    api.fetchTestimonials.mockReset()
+    api.fetchTestimonials.mockResolvedValue([
+      testimonialFixture(1, { quote: 'First quote', name: 'Ann', role: 'CEO', company: 'Example Co' }),
+      testimonialFixture(2, { quote: 'Second quote', name: 'Bob', role: null, company: null }),
+    ])
+  })
+
+  it('shows the first quote with its author, role and company', async () => {
+    const card = (await mountSection()).find('[data-testid="testimonial-card"]')
 
     expect(card.text()).toContain('First quote')
     expect(card.text()).toContain('Ann')
-    expect(card.text()).toContain('CEO')
+    expect(card.text()).toContain('CEO, Example Co')
   })
 
   it('advances with next and wraps back to the first quote', async () => {
-    stubAuroraGlobals({ messages: MESSAGES })
-    const wrapper = mountWithKit(AuroraTestimonials)
+    const wrapper = await mountSection()
 
     await wrapper.find('[data-testid="testimonials-next"]').trigger('click')
     expect(wrapper.find('[data-testid="testimonial-card"]').text()).toContain('Second quote')
@@ -37,8 +62,7 @@ describe('AuroraTestimonials', () => {
   })
 
   it('wraps from the first quote to the last with previous', async () => {
-    stubAuroraGlobals({ messages: MESSAGES })
-    const wrapper = mountWithKit(AuroraTestimonials)
+    const wrapper = await mountSection()
 
     await wrapper.find('[data-testid="testimonials-prev"]').trigger('click')
 
@@ -46,20 +70,19 @@ describe('AuroraTestimonials', () => {
   })
 
   it('jumps to a quote from its dot', async () => {
-    stubAuroraGlobals({ messages: MESSAGES })
-    const wrapper = mountWithKit(AuroraTestimonials)
+    const wrapper = await mountSection()
 
     await wrapper.find('[data-testid="testimonials-dot-1"]').trigger('click')
 
     expect(wrapper.find('[data-testid="testimonial-card"]').text()).toContain('Second quote')
   })
 
-  it('draws no card, and ignores the arrows, when the locale has no quotes', async () => {
-    stubAuroraGlobals()
-    const wrapper = mountWithKit(AuroraTestimonials)
+  it('renders nothing, arrows included, when there are no quotes', async () => {
+    api.fetchTestimonials.mockResolvedValue([])
 
-    await wrapper.find('[data-testid="testimonials-next"]').trigger('click')
+    const wrapper = await mountSection()
 
     expect(wrapper.find('[data-testid="testimonial-card"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="testimonials-next"]').exists()).toBe(false)
   })
 })

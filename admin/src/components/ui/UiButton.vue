@@ -9,8 +9,8 @@
  * `data-testid` and listeners fall through to the native `<button>`.
  */
 import { computed } from 'vue'
-import { buttonBaseClasses, buttonVariantClasses } from '@/utils/ui/button'
-import type { UiButtonType, UiButtonVariant } from '@/utils/ui/button'
+import { buttonBaseClasses, buttonVariantClasses, UiButtonVariant } from '@/utils/ui/button'
+import type { UiButtonType } from '@/utils/ui/button'
 import { buttonSizeClasses } from '@/utils/ui/size'
 import type { UiSize } from '@/utils/ui/size'
 
@@ -29,7 +29,7 @@ const props = withDefaults(defineProps<{
   /** Stretches the button to the full width of its container. */
   block?: boolean
 }>(), {
-  variant: 'plain',
+  variant: UiButtonVariant.Plain,
   size: 'md',
   type: undefined,
   loading: false,
@@ -40,7 +40,7 @@ const props = withDefaults(defineProps<{
 /** Class list for the chosen look and size. */
 const classes = computed<string[]>(() => {
   const width = props.block ? 'w-full' : ''
-  if (props.variant === 'plain') {
+  if (props.variant === UiButtonVariant.Plain) {
     return [width]
   }
   return [buttonBaseClasses, buttonVariantClasses[props.variant], buttonSizeClasses[props.size], width]

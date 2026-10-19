@@ -5,6 +5,7 @@
  * The API is stubbed at the network layer (`support/stubApi.ts`); `/api/auth/me` answers 401
  * until the stubbed login call has accepted the credentials, as the real one does.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { loginRejected, validCredentials } from './fixtures/auth'
 import { fieldOf } from './support/locators'
@@ -30,7 +31,7 @@ test('rejected credentials show the sentence the API returned and stay on the lo
 
   await expect(page.getByTestId('login-error')).toContainText(loginRejected.detail)
   expect(new URL(page.url()).pathname).toBe('/login')
-  expect(api.callsTo('POST', '/api/auth/login')).toHaveLength(1)
+  expect(api.callsTo(HttpMethod.Post, '/api/auth/login')).toHaveLength(1)
 })
 
 test('correct credentials sign in and open the dashboard', async ({ page }) => {
@@ -45,7 +46,7 @@ test('correct credentials sign in and open the dashboard', async ({ page }) => {
   await expect(page.getByTestId('dashboard-header')).toBeVisible()
 
   // The credentials travel in the JSON body — never in the URL.
-  const [login] = api.callsTo('POST', '/api/auth/login')
+  const [login] = api.callsTo(HttpMethod.Post, '/api/auth/login')
   expect(login?.body).toEqual({ email: validCredentials.email, password: validCredentials.password })
   expect(login?.search).toBe('')
 })

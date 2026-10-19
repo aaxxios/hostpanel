@@ -8,9 +8,11 @@ import { mountPage, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import SectionsProducts from '~/components/sections/SectionsProducts.vue'
 import MarketingSectionHeader from '~/components/marketing/MarketingSectionHeader.vue'
 import type { PortalProduct } from '~/types/portalproduct'
+import type { PortalProductGroup } from '~/types/portalproductgroup'
+import { familyColor } from '~/utils/catalogGroups'
 
 /** The mocked catalogue endpoints, re-created for every test. */
-const api = { fetchProducts: vi.fn() }
+const api = { fetchProducts: vi.fn(), fetchProductGroups: vi.fn() }
 
 vi.mock('~/composables/apis/useCatalogApi', () => ({
   /**
@@ -33,7 +35,15 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
 /** One hosting plan and one SaaS family with its parent. */
 const catalogue: PortalProduct[] = [
   { id: 1, pid: 1, groupId: 1, name: 'Web Hosting', slug: 'web-hosting', description: 'Fast hosting<br />✔ SSD<br />✔ SSL<br />✔ Backups<br />✔ Email' },
-  { id: 10, pid: 10, groupId: 3, name: 'SmartLearn System', slug: 'smartlearn-system', description: 'Learn online<br />✔ Courses' },
+  { id: 10, pid: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', description: 'Learn online<br />✔ Courses' },
+]
+
+/** The groups: hosting and one family are shown; one is empty and one is switched off. */
+const groups: PortalProductGroup[] = [
+  { id: 3, name: 'Alpha Suite', isActive: true, productCount: 1 },
+  { id: 1, name: 'Web Hosting', isActive: true, productCount: 1 },
+  { id: 4, name: 'Beta Kit', isActive: true, productCount: 0 },
+  { id: 5, name: 'Gamma Tool', isActive: false, productCount: 2 },
 ]
 
 /** Mounts the section and lets the catalogue load. */
@@ -49,6 +59,8 @@ describe('SectionsProducts', () => {
     vi.stubGlobal('useRuntimeConfig', () => ({ public: { portalHostingDemoUrl: 'https://demo.test' } }))
     api.fetchProducts.mockReset()
     api.fetchProducts.mockResolvedValue(catalogue)
+    api.fetchProductGroups.mockReset()
+    api.fetchProductGroups.mockResolvedValue(groups)
     window.localStorage.clear()
   })
 
@@ -63,8 +75,27 @@ describe('SectionsProducts', () => {
     const wrapper = await mountSection()
 
     expect(wrapper.find('[data-testid="home-product-web-hosting"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="home-product-smartlearn-system"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="home-product-taskero"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="home-product-alpha-suite"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-product-beta-kit"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="home-product-gamma-tool"]').exists()).toBe(false)
+  })
+
+  it('puts hosting before the other families and asks only for the family groups products', async () => {
+    const wrapper = await mountSection()
+
+    const ids = wrapper.findAll('[data-testid^="home-product-"]').map((card) => card.attributes('data-testid') ?? '')
+    const cards = ids.filter((id) => ['domains', 'web-hosting', 'alpha-suite'].includes(id.replace('home-product-', '')))
+    expect(cards).toEqual(['home-product-domains', 'home-product-web-hosting', 'home-product-alpha-suite'])
+    expect(api.fetchProducts).toHaveBeenCalledWith(expect.objectContaining({ gids: '1,3' }))
+  })
+
+  it('reads no products and shows only the domains card when the catalogue has no family', async () => {
+    api.fetchProductGroups.mockResolvedValue([])
+    const wrapper = await mountSection()
+
+    expect(api.fetchProducts).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="home-product-domains"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-product-web-hosting"]').exists()).toBe(false)
   })
 
   it('shows a family summary and at most three features', async () => {
@@ -79,8 +110,8 @@ describe('SectionsProducts', () => {
   it('paints each card in its own colour', async () => {
     const wrapper = await mountSection()
 
-    const card = wrapper.find('[data-testid="home-product-smartlearn-system"]').element.parentElement as HTMLElement
-    expect(card.style.getPropertyValue('--accent')).toBe('#8b5cf6')
+    const card = wrapper.find('[data-testid="home-product-alpha-suite"]').element.parentElement as HTMLElement
+    expect(card.style.getPropertyValue('--accent')).toBe(familyColor('alpha-suite'))
   })
 
   it('uses the dark palette on the cards, which sit on a photograph', async () => {
@@ -111,5 +142,14 @@ describe('SectionsProducts', () => {
     const wrapper = await mountSection()
 
     expect(wrapper.find('[data-testid="home-products-all"]').attributes('href')).toBe('/en/products')
+  })
+
+  it('renders no image on a card that has none', async () => {
+    const wrapper = await mountSection()
+
+    const card = wrapper.find('[data-testid="home-product-domains"]')
+    expect(card.exists()).toBe(true)
+    expect(card.find('img').exists()).toBe(false)
+    expect(card.find('nuxt-img-stub').exists()).toBe(false)
   })
 })

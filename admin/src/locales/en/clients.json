@@ -139,7 +139,7 @@
     "areYouSureYouWant": "Are you sure you want to invoice the selected items immediately?",
     "confirmDelete": "Confirm Delete",
     "areYouSureYouWant2": "Are you sure you want to delete this billable item?",
-    "confirmDeleteSelected": "Are you sure you want to delete {count} selected item(s)?"
+    "confirmDeleteSelected": "Are you sure you want to delete {count} selected item? | Are you sure you want to delete {count} selected items?"
   },
   "clientContacts": {
     "contactsLength": "Contacts ({length})",
@@ -218,7 +218,7 @@
     "clientinvoicestotalInvoiceValue": "Invoices: {clientInvoicesTotal}",
     "deleteInvoice": "Delete Invoice",
     "confirmBulkAction": "Confirm Bulk Action",
-    "confirmBulkApply": "Apply '{action}' to {count} selected invoice(s)?",
+    "confirmBulkApply": "Apply '{action}' to {count} selected invoice? | Apply '{action}' to {count} selected invoices?",
     "confirmDeleteInvoice": "Are you sure you want to delete invoice #{id}?"
   },
   "clientLayout": {

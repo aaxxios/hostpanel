@@ -28,6 +28,8 @@ import type { ClientListItem } from '@/types/client'
 import { Icon } from '@/lib/icons'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiSize } from '@/utils/ui/size'
+import { SEARCH_DEBOUNCE_MS } from '@/lib/limits'
+import { AppRoute, supportTicketPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
@@ -37,9 +39,6 @@ const clientsStore = useClientsStore()
 
 /** Shortest search text that triggers a client lookup. */
 const MIN_SEARCH_LENGTH = 2
-
-/** Delay between the last keystroke and the client lookup, in milliseconds. */
-const SEARCH_DEBOUNCE_MS = 300
 
 /** Search query for client lookup. */
 const clientSearch = ref('')
@@ -149,7 +148,7 @@ const handleSubmit = async (): Promise<void> => {
     priority: priority.value,
   })
   if (newId) {
-    router.push(`/support/tickets/${newId}`)
+    router.push(supportTicketPath(newId))
   }
 }
 
@@ -167,7 +166,7 @@ onMounted(() => {
     <UiPageHeader :title="t('shared.openNewTicket')">
       <template #actions>
         <UiLink
-          to="/support/tickets"
+          :to="AppRoute.SupportTickets"
           :variant="UiButtonVariant.Secondary"
           :size="UiSize.Sm"
           data-testid="support-open-ticket-back"

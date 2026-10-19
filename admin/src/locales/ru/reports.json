@@ -297,6 +297,6 @@
   },
   "common": {
     "years": "{count} г.",
-    "clientCount": "{count} клиент | {count} клиентов"
+    "clientCount": "{count} клиент | {count} клиента | {count} клиентов"
   }
 }

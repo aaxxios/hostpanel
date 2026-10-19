@@ -6,6 +6,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import { useServicesStore } from '@/stores/services'
 import { serviceStatusTone } from '@/lib/tones'
 import { capitalize, formatDate } from '@/lib/format'
@@ -27,8 +28,15 @@ import UiTableRow from '@/components/ui/UiTableRow.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
+import { ClientSection, clientItemPath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+
+/** Fallback text for fields the API leaves unresolved. */
+
+const { productLabel } = useFallbackLabels()
 
 /** Current route, source of the client id. */
 const route = useRoute()
@@ -55,7 +63,7 @@ const error = computed(() => store.error)
 const page = ref(1)
 
 /** Items per page. */
-const pageSize = ref(20)
+const pageSize = ref(DEFAULT_PAGE_SIZE)
 
 /** Total number of matching items across all pages. */
 const totalCount = ref(0)
@@ -91,7 +99,7 @@ const goToPage = (p: number): void => {
  * @returns Nothing.
  */
 const viewService = (serviceId: number): void => {
-  router.push(`/clients/${clientId.value}/services/${serviceId}`)
+  router.push(clientItemPath(clientId.value, ClientSection.Services, serviceId))
 }
 
 onMounted(() => fetchServices())
@@ -131,7 +139,7 @@ onMounted(() => fetchServices())
             @click="viewService(service.id)"
           >
             <UiTableCell muted>{{ service.id }}</UiTableCell>
-            <UiTableCell>{{ service.productName }}</UiTableCell>
+            <UiTableCell>{{ productLabel(service.productName) }}</UiTableCell>
             <UiTableCell muted>{{ service.domain ?? '—' }}</UiTableCell>
             <UiTableCell muted>{{ formatPrice(service.price, service.priceCurrency) }}</UiTableCell>
             <UiTableCell muted>{{ capitalize(service.billingCycle) }}</UiTableCell>

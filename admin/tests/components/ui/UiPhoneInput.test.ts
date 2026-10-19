@@ -7,18 +7,18 @@ import { mount } from '@vue/test-utils'
 import UiPhoneInput from '@/components/ui/UiPhoneInput.vue'
 
 describe('UiPhoneInput', () => {
-  it('defaults to Armenia', () => {
+  it('defaults to the first listed country', () => {
     const wrapper = mount(UiPhoneInput)
-
-    expect(wrapper.get('[data-testid="phone-country-trigger"]').text()).toContain('+374')
-    expect(wrapper.get('[data-testid="phone-number-input"]').attributes('placeholder')).toBe('77 123456')
-  })
-
-  it('shows the code and sample number of the chosen country', () => {
-    const wrapper = mount(UiPhoneInput, { props: { countryCode: 'US' } })
 
     expect(wrapper.get('[data-testid="phone-country-trigger"]').text()).toContain('+1')
     expect(wrapper.get('[data-testid="phone-number-input"]').attributes('placeholder')).toBe('201-555-0123')
+  })
+
+  it('shows the code and sample number of the chosen country', () => {
+    const wrapper = mount(UiPhoneInput, { props: { countryCode: 'GB' } })
+
+    expect(wrapper.get('[data-testid="phone-country-trigger"]').text()).toContain('+44')
+    expect(wrapper.get('[data-testid="phone-number-input"]').attributes('placeholder')).toBe('7700 900000')
   })
 
   it('shows the number it was given and emits typing', async () => {
@@ -44,12 +44,13 @@ describe('UiPhoneInput', () => {
     expect(wrapper.find('[data-testid="phone-country-GB"]').exists()).toBe(false)
   })
 
-  it('draws flags with classes, not inline styles', async () => {
+  it('draws each flag as text from the country list, not as an image from a host', async () => {
     const wrapper = mount(UiPhoneInput)
 
     await wrapper.get('[data-testid="phone-country-trigger"]').trigger('click')
 
     expect(wrapper.html()).not.toContain('style=')
-    expect(wrapper.get('[data-testid="phone-country-trigger"] span').classes()).toContain('bg-contain')
+    expect(wrapper.html()).not.toContain('http')
+    expect(wrapper.get('[data-testid="phone-country-AM"]').text()).toContain('+374')
   })
 })

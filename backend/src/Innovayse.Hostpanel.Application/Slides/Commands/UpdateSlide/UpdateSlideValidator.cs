@@ -2,7 +2,6 @@ using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Innovayse.Hostpanel.Application.Slides.Common;
-using Innovayse.Hostpanel.Application.Slides.Validators;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Slides.Commands.UpdateSlide;

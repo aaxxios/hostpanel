@@ -6,7 +6,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useTransactionsStore } from '@/stores/clientTransactions'
+import { useClientTransactionsStore } from '@/stores/clientTransactions'
 import { formatDate } from '@/lib/format'
 import { formatMoney } from '@/lib/money'
 import AddTransactionModal from '@/components/clients/AddTransactionModal.vue'
@@ -34,6 +34,7 @@ import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
 import { UiTone } from '@/utils/ui/tone'
+import { LEDGER_PAGE_SIZE } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -44,7 +45,7 @@ const TRASH_ICON = '<polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01
 const route = useRoute()
 
 /** Client transactions store, the only caller of the transaction endpoints. */
-const store = useTransactionsStore()
+const store = useClientTransactionsStore()
 
 /** Client ID from route params. */
 const clientId = computed(() => route.params.id as string)
@@ -53,7 +54,7 @@ const clientId = computed(() => route.params.id as string)
 const page = ref(1)
 
 /** Items per page. */
-const pageSize = ref(25)
+const pageSize = ref(LEDGER_PAGE_SIZE)
 
 /** Whether the add transaction modal is visible. */
 const showAddModal = ref(false)

@@ -1,4 +1,5 @@
 using FluentValidation;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
@@ -9,7 +10,7 @@ namespace Innovayse.Hostpanel.Application.Domains.Queries.ListDomains;
 public sealed class ListDomainsValidator : LocalizedValidator<ListDomainsQuery>
 {
     /// <summary>Largest page size an admin listing may ask for.</summary>
-    private const int MaxPageSize = 100;
+    private const int MaxPageSize = PagingLimits.MaxPageSize;
 
     /// <summary>Initializes validator with localization service.</summary>
     /// <param name="localizer">String localizer for validation messages.</param>

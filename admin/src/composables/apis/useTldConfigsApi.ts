@@ -13,6 +13,8 @@ import type {
   TldImportResult,
   UpdateTldConfigPayload,
 } from '@/types/tldconfig'
+import { ApiPath } from '@/lib/apiPaths'
+import { HttpMethod } from '@/types/http'
 
 /**
  * Endpoint functions for `/admin/tld-configs`.
@@ -28,7 +30,7 @@ export const useTldConfigsApi = () => {
    * @returns The list rows.
    */
   const listTldConfigs = (): Promise<TldConfigListItem[]> =>
-    request<TldConfigListItem[]>('/admin/tld-configs')
+    request<TldConfigListItem[]>(ApiPath.AdminTldConfigs)
 
   /**
    * Reads one TLD config.
@@ -37,7 +39,7 @@ export const useTldConfigsApi = () => {
    * @returns The full config.
    */
   const getTldConfig = (id: number): Promise<TldConfig> =>
-    request<TldConfig>(`/admin/tld-configs/${id}`)
+    request<TldConfig>(`${ApiPath.AdminTldConfigs}/${id}`)
 
   /**
    * Creates a TLD config.
@@ -46,7 +48,7 @@ export const useTldConfigsApi = () => {
    * @returns The new config's id.
    */
   const createTldConfig = (payload: CreateTldConfigPayload): Promise<number> =>
-    request<number>('/admin/tld-configs', { method: 'POST', body: JSON.stringify(payload) })
+    request<number>(ApiPath.AdminTldConfigs, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
    * Updates a TLD config.
@@ -56,7 +58,7 @@ export const useTldConfigsApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const updateTldConfig = (id: number, payload: UpdateTldConfigPayload): Promise<void> =>
-    request<void>(`/admin/tld-configs/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+    request<void>(`${ApiPath.AdminTldConfigs}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
    * Deletes a TLD config.
@@ -65,7 +67,7 @@ export const useTldConfigsApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const deleteTldConfig = (id: number): Promise<void> =>
-    request<void>(`/admin/tld-configs/${id}`, { method: 'DELETE' })
+    request<void>(`${ApiPath.AdminTldConfigs}/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Imports TLDs from a registrar module.
@@ -74,7 +76,7 @@ export const useTldConfigsApi = () => {
    * @returns Counts of what was imported.
    */
   const importTldConfigs = (module: string): Promise<TldImportResult> =>
-    request<TldImportResult>(`/admin/tld-configs/import/${module}`, { method: 'POST' })
+    request<TldImportResult>(`${ApiPath.AdminTldConfigs}/import/${module}`, { method: HttpMethod.Post })
 
   /**
    * Triggers a manual cost-price sync from every provider.
@@ -82,7 +84,7 @@ export const useTldConfigsApi = () => {
    * @returns Nothing; the API answers 204.
    */
   const syncTldPrices = (): Promise<void> =>
-    request<void>('/admin/tld-configs/sync', { method: 'POST' })
+    request<void>(`${ApiPath.AdminTldConfigs}/sync`, { method: HttpMethod.Post })
 
   return {
     listTldConfigs,

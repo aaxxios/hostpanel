@@ -30,12 +30,12 @@ describe('useSiteIdentity', () => {
     expect(tagline.value).toBe('Fast and calm')
   })
 
-  it('falls back to the brand name and an empty tagline', () => {
+  it('falls back to the neutral product name and an empty tagline', () => {
     stubSettings({})
 
     const { name, tagline } = useSiteIdentity()
 
-    expect(name.value).toBe('Innovayse')
+    expect(name.value).toBe('Hostpanel')
     expect(tagline.value).toBe('')
   })
 })

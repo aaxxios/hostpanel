@@ -2,6 +2,7 @@
  * Create-invoice flow: from a client's invoices tab the operator opens the inline form, fills
  * one line item, submits, and lands on the new invoice's detail page.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { adaDetail } from './fixtures/clients'
 import { createdInvoice, emptyClientInvoices, newInvoiceId } from './fixtures/billing'
@@ -12,11 +13,11 @@ test('creating an invoice posts the line item and opens the new invoice', async 
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/clients/7', adaDetail),
-      json('GET', '/api/billing/client/7', emptyClientInvoices),
-      json('POST', '/api/billing', { id: newInvoiceId }),
+      json(HttpMethod.Get, '/api/clients/7', adaDetail),
+      json(HttpMethod.Get, '/api/billing/client/7', emptyClientInvoices),
+      json(HttpMethod.Post, '/api/billing', { id: newInvoiceId }),
       // The detail page loads its invoice by id.
-      json('GET', `/api/billing/${newInvoiceId}`, createdInvoice),
+      json(HttpMethod.Get, `/api/billing/${newInvoiceId}`, createdInvoice),
     ],
   })
 
@@ -34,7 +35,7 @@ test('creating an invoice posts the line item and opens the new invoice', async 
   await page.waitForURL(`**/billing/${newInvoiceId}`)
   await expect(page.getByTestId('invoice-detail-title')).toContainText(String(newInvoiceId))
 
-  const [create] = api.callsTo('POST', '/api/billing')
+  const [create] = api.callsTo(HttpMethod.Post, '/api/billing')
   expect(create?.body).toMatchObject({
     clientId: 7,
     isDraft: true,

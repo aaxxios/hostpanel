@@ -12,7 +12,10 @@
  * @module server/middleware/sso-silent
  */
 
+import { SSO_AUTHORIZE_PATH } from '~/constants/clientRoutes'
 import { AuthMode } from '~/types/authmode'
+import { SessionCookie } from '~/constants/sessionCookie'
+import { SSO_SILENT_COOKIE_MAX_AGE } from '~/server/utils/auth-cookie'
 
 /** Sends a signed-out page navigation through one silent SSO probe. */
 export default defineEventHandler((event) => {
@@ -33,28 +36,28 @@ export default defineEventHandler((event) => {
     return
   }
 
-  const authed = getCookie(event, 'authed')
-  const silentTried = getCookie(event, 'sso_silent_tried')
+  const authed = getCookie(event, SessionCookie.Authed)
+  const silentTried = getCookie(event, SessionCookie.SsoSilentTried)
 
   if (authed || silentTried) {
     return
   }
 
   // Store the current URL to return to after silent SSO
-  setCookie(event, 'sso_silent_return', url || '/', {
+  setCookie(event, SessionCookie.SsoSilentReturn, url || '/', {
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 30,
+    maxAge: SSO_SILENT_COOKIE_MAX_AGE,
     path: '/',
   })
 
   // Mark that we've tried — prevents redirect loop when SSO returns login_required
-  setCookie(event, 'sso_silent_tried', '1', {
+  setCookie(event, SessionCookie.SsoSilentTried, '1', {
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 30,
+    maxAge: SSO_SILENT_COOKIE_MAX_AGE,
     path: '/',
   })
 
-  return sendRedirect(event, '/api/portal/auth/sso/authorize?prompt=none', 302)
+  return sendRedirect(event, `${SSO_AUTHORIZE_PATH}?prompt=none`, 302)
 })

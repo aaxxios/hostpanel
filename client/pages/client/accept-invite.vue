@@ -9,7 +9,7 @@
       :message="$t('client.acceptInvite.invalidMessage')"
       data-testid="invite-invalid"
     >
-      <UiBackLink to="/client/login" testid="invite-invalid-back" class="mt-3" compact>
+      <UiBackLink :to="CLIENT_LOGIN_PATH" testid="invite-invalid-back" class="mt-3" compact>
         {{ $t('client.acceptInvite.backToSignIn') }}
       </UiBackLink>
     </ClientOutcomePanel>
@@ -37,7 +37,7 @@
         {{ loading ? $t('client.acceptInvite.submitting') : $t('client.acceptInvite.submit') }}
       </UiButton>
       <UiStack align="center">
-        <UiBackLink to="/client/login" testid="invite-back" compact>
+        <UiBackLink :to="CLIENT_LOGIN_PATH" testid="invite-back" compact>
           {{ $t('client.acceptInvite.backToSignIn') }}
         </UiBackLink>
       </UiStack>
@@ -60,6 +60,7 @@
  * password set that nothing ever stored. The password fields are replaced by the sign-in
  * step that flow actually needs.
  */
+import { CLIENT_DASHBOARD_PATH, CLIENT_LOGIN_PATH, CLIENT_REDIRECT_QUERY } from '~/constants/clientRoutes'
 import { AlertCircle, LogIn, UserPlus } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '~/stores/auth'
@@ -127,7 +128,7 @@ const goToSignIn = (): ReturnType<typeof navigateTo> => {
     return navigateTo(`${baseUrl}/api/portal/auth/sso/authorize?returnTo=${returnTo}`, { external: true })
   }
 
-  return navigateTo(`/client/login?redirect=${returnTo}`)
+  return navigateTo(`${CLIENT_LOGIN_PATH}?${CLIENT_REDIRECT_QUERY}=${returnTo}`)
 }
 
 /**
@@ -144,7 +145,7 @@ const handleSubmit = async (): Promise<void> => {
   const outcome = await authStore.acceptInvite(token.value)
   if (outcome === InviteOutcome.Accepted) {
     // Full page reload so the new role and cookies are picked up by middleware
-    window.location.href = '/client/dashboard'
+    window.location.href = CLIENT_DASHBOARD_PATH
   }
 }
 </script>

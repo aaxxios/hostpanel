@@ -1,12 +1,12 @@
 using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Application.Clients.Extensions;
-using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Services.Queries.GetMyServices;
 
 /// <summary>Returns the calling client's services as DTOs with product names.</summary>
@@ -87,7 +87,7 @@ public sealed class GetMyServicesHandler
                 return new ClientServiceDto(
                     svc.Id,
                     svc.ProductId,
-                    productMap.GetValueOrDefault(svc.ProductId, "Unknown"),
+                    productMap.GetValueOrDefault(svc.ProductId),
                     svc.BillingCycle,
                     svc.Status,
                     svc.NextRenewalAt,

@@ -87,7 +87,7 @@ public sealed class JwtTokenService : IJwtService
 
         var claims = new List<Claim>
         {
-            new("sub", userId),
+            new(Innovayse.Hostpanel.Shared.Constants.JwtClaims.Sub, userId),
             new("email", email),
             new("email_verified", emailVerified ? "true" : "false"),
             new(SessionStartClaim, _time.GetUtcNow().ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)),

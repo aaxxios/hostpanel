@@ -141,6 +141,54 @@ public static class PortalSettingKeys
     /// <summary>Armenian-locale chat token; empty falls back to <see cref="ChatWebsiteToken"/>.</summary>
     public const string ChatWebsiteTokenHy = "portal.chat.website_token.hy";
 
+    /// <summary>Headline client count shown in the hero, e.g. <c>120+</c>.</summary>
+    public const string StatsClients = "portal.stats.clients";
+
+    /// <summary>Published uptime figure shown in the hero, e.g. <c>99.9%</c>.</summary>
+    public const string StatsUptime = "portal.stats.uptime";
+
+    /// <summary>Where the servers are, shown in the hero, e.g. <c>Armenia, Europe</c>.</summary>
+    public const string StatsRegions = "portal.stats.regions";
+
+    /// <summary>Short claim shown in the hero badge.</summary>
+    public const string HeroBadge = "portal.hero.badge";
+
+    /// <summary>Street address of the office, shown on the contact page and in the footer.</summary>
+    public const string ContactAddress = "portal.contact.address";
+
+    /// <summary>Absolute <c>https://</c> address of the embeddable map of the office.</summary>
+    public const string ContactMapUrl = "portal.contact.map_url";
+
+    /// <summary>Twitter profile URL.</summary>
+    public const string SocialTwitter = "portal.social.twitter";
+
+    /// <summary>Support working hours shown on the contact page, e.g. <c>Mon-Fri 09:00-18:00</c>.</summary>
+    public const string ContactHours = "portal.contact.hours";
+
+    /// <summary>Time zone the working hours are stated in, e.g. <c>GMT+4</c>; shown only beside the hours.</summary>
+    public const string ContactTimezone = "portal.contact.timezone";
+
+    /// <summary>Whether the operator states that backups are offered: <c>true</c> or <c>false</c>.</summary>
+    public const string FeaturesBackups = "portal.features.backups";
+
+    /// <summary>Whether the operator states the storage claim: <c>true</c> or <c>false</c>.</summary>
+    public const string FeaturesStorage = "portal.features.storage";
+
+    /// <summary>Whether the operator states the caching claim: <c>true</c> or <c>false</c>.</summary>
+    public const string FeaturesCaching = "portal.features.caching";
+
+    /// <summary>Whether the operator states the CDN claim: <c>true</c> or <c>false</c>.</summary>
+    public const string FeaturesCdn = "portal.features.cdn";
+
+    /// <summary>Whether the operator states the firewall claim: <c>true</c> or <c>false</c>.</summary>
+    public const string FeaturesFirewall = "portal.features.firewall";
+
+    /// <summary>Whether the operator states the malware-scanning claim: <c>true</c> or <c>false</c>.</summary>
+    public const string FeaturesMalware = "portal.features.malware";
+
+    /// <summary>Whether the free-migration badge is shown: <c>true</c> or <c>false</c>.</summary>
+    public const string MigrationFree = "portal.migration.free";
+
     /// <summary>The template names the storefront can render. Mirrors <c>client/templates/types.ts</c>.</summary>
     public static readonly IReadOnlySet<string> TemplateNames =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "aurora", "nova", "classic" };
@@ -213,6 +261,13 @@ public static class PortalSettingKeys
             [ThemeDefault] = ThemeModes,
             [ThemeUserToggle] = Booleans,
             [AppsEnabled] = Booleans,
+            [FeaturesBackups] = Booleans,
+            [FeaturesStorage] = Booleans,
+            [FeaturesCaching] = Booleans,
+            [FeaturesCdn] = Booleans,
+            [FeaturesFirewall] = Booleans,
+            [FeaturesMalware] = Booleans,
+            [MigrationFree] = Booleans,
             [BrandFontHeading] = FontNames,
             [BrandFontBody] = FontNames,
         };
@@ -267,6 +322,22 @@ public static class PortalSettingKeys
         (AppsMail,            "",       "URL for the Mail entry in the header app launcher. Empty hides it."),
         (AppsDocs,            "",       "URL for the Docs entry in the header app launcher. Empty hides it."),
         (AppsCalendar,        "",       "URL for the Calendar entry in the header app launcher. Empty hides it."),
+        (StatsClients,        "",       "Headline client count shown in the hero, e.g. 120+. Empty hides it."),
+        (StatsUptime,         "",       "Published uptime figure shown in the hero, e.g. 99.9%. Empty hides it."),
+        (StatsRegions,        "",       "Server regions shown in the hero, e.g. Armenia, Europe. Empty hides it."),
+        (HeroBadge,           "",       "Short claim shown in the hero badge. Empty shows the built-in text."),
+        (ContactAddress,      "",       "Office street address shown on the contact page and in the footer. Empty hides it."),
+        (ContactMapUrl,       "",       "Embeddable map address of the office, https:// only. Empty hides the map."),
+        (SocialTwitter,       "",       "Twitter profile URL. Empty hides the icon."),
+        (ContactHours,        "",       "Support working hours shown on the contact page. Empty hides the row."),
+        (ContactTimezone,     "",       "Time zone the working hours are stated in, shown beside them. Ignored while the hours are empty."),
+        (FeaturesBackups,     "",       "Show the backups claims on the nova template: true or false. Empty hides them."),
+        (FeaturesStorage,     "",       "Show the storage claim on the nova template: true or false. Empty hides it."),
+        (FeaturesCaching,     "",       "Show the caching claim on the nova template: true or false. Empty hides it."),
+        (FeaturesCdn,         "",       "Show the CDN claim on the nova template: true or false. Empty hides it."),
+        (FeaturesFirewall,    "",       "Show the firewall claim on the nova template: true or false. Empty hides it."),
+        (FeaturesMalware,     "",       "Show the malware-scanning claim on the nova template: true or false. Empty hides it."),
+        (MigrationFree,       "",       "Show the free-migration badge on the nova template: true or false. Empty hides it."),
     ];
 
     /// <summary>

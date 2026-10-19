@@ -7,7 +7,8 @@
  */
 
 import { useApi } from '@/composables/useApi'
-import type { BrandingImageKind, UploadedImage } from '@/types/upload'
+import type { BrandingImageKind, ImageUploadScope, UploadedImage } from '@/types/upload'
+import { ApiPath } from '@/lib/apiPaths'
 
 /**
  * Endpoint functions for the image uploads.
@@ -25,16 +26,17 @@ export const useUploadApi = () => {
    * @returns The stored image's URL.
    */
   const uploadBrandingImage = (kind: BrandingImageKind, file: File): Promise<UploadedImage> =>
-    upload<UploadedImage>(`/admin/settings/branding/${kind}`, file)
+    upload<UploadedImage>(`${ApiPath.AdminSettings}/branding/${kind}`, file)
 
   /**
-   * Uploads a slide image.
+   * Uploads a content image to the endpoint of its scope.
    *
+   * @param scope - Which content area the image belongs to.
    * @param file - The image file.
    * @returns The stored image's URL.
    */
-  const uploadSlideImage = (file: File): Promise<UploadedImage> =>
-    upload<UploadedImage>('/admin/slides/upload-image', file)
+  const uploadImage = (scope: ImageUploadScope, file: File): Promise<UploadedImage> =>
+    upload<UploadedImage>(`/admin/${scope}/upload-image`, file)
 
-  return { uploadBrandingImage, uploadSlideImage }
+  return { uploadBrandingImage, uploadImage }
 }

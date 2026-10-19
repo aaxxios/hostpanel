@@ -49,7 +49,7 @@
             <ClientStatusBadge :status="invoice.status" />
           </UiTableTd>
           <UiTableTd align="right">
-            <UiButton :to="`/client/invoices/${invoice.id}`" variant="subtle" size="sm" :data-testid="`invoice-view-${invoice.id}`">
+            <UiButton :to="clientInvoicePath(invoice.id)" variant="subtle" size="sm" :data-testid="`invoice-view-${invoice.id}`">
               {{ $t('client.invoices.view') }}
             </UiButton>
           </UiTableTd>
@@ -65,6 +65,7 @@
  * and status, each row linking to the invoice. Loading, missing-profile and failure states come
  * from the client store.
  */
+import { clientInvoicePath } from '~/constants/clientRoutes'
 import { FileText } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
 import { InvoiceStatus } from '~/types/invoicestatus'

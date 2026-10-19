@@ -8,8 +8,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: 1G
+          cpus: '${DB_CPUS:?DB_CPUS must be set}'
+          memory: ${DB_MEMORY:?DB_MEMORY must be set}
 
   hostpanel-rabbitmq:
     ports:
@@ -18,28 +18,28 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: 512M
+          cpus: '${RABBITMQ_CPUS:?RABBITMQ_CPUS must be set}'
+          memory: ${RABBITMQ_MEMORY:?RABBITMQ_MEMORY must be set}
 
   hostpanel-redis:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 256M
+          cpus: '${REDIS_CPUS:?REDIS_CPUS must be set}'
+          memory: ${REDIS_MEMORY:?REDIS_MEMORY must be set}
 
   # Dev-only mail catcher; kept out of the shared set so a server never runs it.
   hostpanel-mailhog:
     container_name: hostpanel-mailhog
-    image: mailhog/mailhog
+    image: ${MAILHOG_IMAGE:?MAILHOG_IMAGE must be set}
     ports:
       - "${MAILHOG_SMTP_HOST_PORT}:1025"
       - "${MAILHOG_UI_HOST_PORT}:8025"
     deploy:
       resources:
         limits:
-          cpus: '0.2'
-          memory: 256M
+          cpus: '${MAILHOG_CPUS:?MAILHOG_CPUS must be set}'
+          memory: ${MAILHOG_MEMORY:?MAILHOG_MEMORY must be set}
 
   hostpanel-api:
     container_name: hostpanel-api
@@ -62,8 +62,8 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ASPNETCORE_HTTP_PORTS: ${API_PORT}
       AllowedHosts: ${ALLOWED_HOSTS:?ALLOWED_HOSTS must be set}
-      DOTNET_USE_POLLING_FILE_WATCHER: 1
-      DOTNET_NUGET_SIGNATURE_VERIFICATION: "false"
+      DOTNET_USE_POLLING_FILE_WATCHER: ${DEV_FILE_POLLING:?DEV_FILE_POLLING must be set}
+      DOTNET_NUGET_SIGNATURE_VERIFICATION: ${DEV_NUGET_SIGNATURE_VERIFICATION:?DEV_NUGET_SIGNATURE_VERIFICATION must be set}
 
       ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
 
@@ -82,6 +82,10 @@ services:
       Smtp__From__Name: ${SMTP_FROM_NAME}
       Smtp__Encryption: ${SMTP_ENCRYPTION}
       Notifications__ContactEmail: ${EMAIL_TO}
+      DefaultDepartments__SupportEmail: ${DEPARTMENT_SUPPORT_EMAIL:?DEPARTMENT_SUPPORT_EMAIL must be set}
+      DefaultDepartments__BillingEmail: ${DEPARTMENT_BILLING_EMAIL:?DEPARTMENT_BILLING_EMAIL must be set}
+      DefaultDepartments__SalesEmail: ${DEPARTMENT_SALES_EMAIL:?DEPARTMENT_SALES_EMAIL must be set}
+      DefaultDepartments__GeneralEmail: ${DEPARTMENT_GENERAL_EMAIL:?DEPARTMENT_GENERAL_EMAIL must be set}
       Telegram__BotToken: ${TELEGRAM_BOT_TOKEN}
       Telegram__ChatId: ${TELEGRAM_CHAT_ID}
 
@@ -92,7 +96,7 @@ services:
       Session__MaxSessionMinutes: ${SESSION_MAX_MINUTES}
       EncryptionKey: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       Auth__Mode: ${AUTH_MODE}
-      Auth__AppName: hostpanel
+      Auth__AppName: ${AUTH_APP_NAME:?AUTH_APP_NAME must be set}
       Auth__Authority: ${SSO_URL}
       Auth__PublicAuthority: ${SSO_PUBLIC_URL}
       Auth__ClientId: ${SSO_CLIENT_ID}
@@ -111,8 +115,8 @@ services:
       # Where mailed client links (verification, password reset, invoices) land.
       ClientBaseUrl: ${CORS_CLIENT_ORIGIN}
 
-      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
-      NUGET_AUDIT: "false"
+      TESTCONTAINERS_HOST_OVERRIDE: ${TESTCONTAINERS_HOST_OVERRIDE:?TESTCONTAINERS_HOST_OVERRIDE must be set}
+      NUGET_AUDIT: ${DEV_NUGET_AUDIT:?DEV_NUGET_AUDIT must be set}
       NuGetPackageSourceCredentials_innovayse: ${NUGET_INNOVAYSE_CREDENTIALS}
       BackchannelLogout__Key: ${HOSTPANEL_BACKCHANNEL_LOGOUT_KEY}
     healthcheck:
@@ -136,8 +140,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
-          memory: 2G
+          cpus: '${API_CPUS:?API_CPUS must be set}'
+          memory: ${API_MEMORY:?API_MEMORY must be set}
 
   hostpanel-client:
     container_name: hostpanel-client
@@ -146,7 +150,7 @@ services:
       dockerfile: Dockerfile
       target: dev
     ports:
-      - "${CLIENT_HOST_PORT}:3000"
+      - "${CLIENT_HOST_PORT}:${CLIENT_PORT:?CLIENT_PORT must be set}"
     volumes:
       - ../client:/app
       - client_node_modules:/app/node_modules
@@ -166,6 +170,7 @@ services:
       SSO_CLIENT_SECRET: ${SSO_CLIENT_SECRET}
       SSO_CALLBACK_URL: ${SSO_CALLBACK_URL}
 
+      NITRO_PORT: ${CLIENT_PORT:?CLIENT_PORT must be set}
       API_URL: http://hostpanel-api:${API_PORT}
       NUXT_PUBLIC_BASE_URL: ${NUXT_PUBLIC_BASE_URL}
       NUXT_PUBLIC_MAIN_URL: ${MAIN_APP_URL}
@@ -181,6 +186,12 @@ services:
       NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN: ${NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN}
       NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK: ${NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK}
       NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL: ${NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL}
+      NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS: ${NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS}
+      NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL: ${NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL}
+      NUXT_PUBLIC_PORTAL_STATS_CLIENTS: ${NUXT_PUBLIC_PORTAL_STATS_CLIENTS}
+      NUXT_PUBLIC_PORTAL_STATS_UPTIME: ${NUXT_PUBLIC_PORTAL_STATS_UPTIME}
+      NUXT_PUBLIC_PORTAL_STATS_REGIONS: ${NUXT_PUBLIC_PORTAL_STATS_REGIONS}
+      NUXT_PUBLIC_PORTAL_HERO_BADGE: ${NUXT_PUBLIC_PORTAL_HERO_BADGE}
       NUXT_PUBLIC_PORTAL_SITE_NAME: ${NUXT_PUBLIC_PORTAL_SITE_NAME}
       NUXT_PUBLIC_PORTAL_SITE_TAGLINE: ${NUXT_PUBLIC_PORTAL_SITE_TAGLINE}
       NUXT_PUBLIC_PORTAL_THEME_DEFAULT: ${NUXT_PUBLIC_PORTAL_THEME_DEFAULT}
@@ -202,10 +213,10 @@ services:
       NUXT_MAIN_API_URL: ${NUXT_MAIN_API_URL}
 
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
-      WATCHPACK_POLLING: "true"
-      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: ${DEV_FILE_POLLING:?DEV_FILE_POLLING must be set}
+      CHOKIDAR_USEPOLLING: ${DEV_FILE_POLLING:?DEV_FILE_POLLING must be set}
     healthcheck:
-      test: ["CMD", "nc", "-z", "127.0.0.1", "3000"]
+      test: ["CMD", "nc", "-z", "127.0.0.1", "${CLIENT_PORT:?CLIENT_PORT must be set}"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -215,8 +226,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.5'
-          memory: 2G
+          cpus: '${CLIENT_CPUS:?CLIENT_CPUS must be set}'
+          memory: ${CLIENT_MEMORY:?CLIENT_MEMORY must be set}
 
   hostpanel-admin:
     container_name: hostpanel-admin
@@ -230,10 +241,10 @@ services:
       - ../admin:/app
       - admin_node_modules:/app/node_modules
     environment:
-      VITE_API_BASE: /api
+      VITE_API_BASE: ${ADMIN_API_BASE:?ADMIN_API_BASE must be set}
 
       API_PROXY_TARGET: http://hostpanel-api:${API_PORT}
-      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_USEPOLLING: ${DEV_FILE_POLLING:?DEV_FILE_POLLING must be set}
     healthcheck:
       # A port probe, like the client: rendering the SPA shell as a liveness check took ~40s on the
       # dev bind mount while Vite transformed it, well past the 5s timeout.
@@ -247,8 +258,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: 1536M
+          cpus: '${ADMIN_CPUS:?ADMIN_CPUS must be set}'
+          memory: ${ADMIN_MEMORY:?ADMIN_MEMORY must be set}
 
 volumes:
   client_node_modules:

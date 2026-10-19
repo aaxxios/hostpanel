@@ -24,17 +24,24 @@ describe('useUploadApi', () => {
     expect((call.init.body as FormData).get('file')).toBeInstanceOf(File)
   })
 
-  it('uploadSlideImage posts to the slide endpoint', async () => {
+  it('uploadImage posts to the endpoint of the scope', async () => {
     const mock = stubFetch(json({ url: '/img/s.png' }))
 
-    expect(await useUploadApi().uploadSlideImage(image)).toEqual({ url: '/img/s.png' })
+    expect(await useUploadApi().uploadImage('slides', image)).toEqual({ url: '/img/s.png' })
     expect(callOf(mock)).toMatchObject({ url: '/api/admin/slides/upload-image', method: 'POST' })
+  })
+
+  it('uploadImage with the storefront scope posts to the storefront endpoint', async () => {
+    const mock = stubFetch(json({ url: '/img/p.png', assets: [] }))
+
+    expect(await useUploadApi().uploadImage('storefront', image)).toEqual({ url: '/img/p.png', assets: [] })
+    expect(callOf(mock)).toMatchObject({ url: '/api/admin/storefront/upload-image', method: 'POST' })
   })
 
   it('does not force a JSON content type, so the browser writes the multipart boundary', async () => {
     const mock = stubFetch(json({ url: '/x' }))
 
-    await useUploadApi().uploadSlideImage(image)
+    await useUploadApi().uploadImage('slides', image)
     const headers = callOf(mock).init.headers as Record<string, string>
     expect(headers['Content-Type']).toBeUndefined()
   })
@@ -42,6 +49,6 @@ describe('useUploadApi', () => {
   it('rejects when the API refuses', async () => {
     stubFetch(problem('The file is too large.', 413))
 
-    await expect(useUploadApi().uploadSlideImage(image)).rejects.toBeTruthy()
+    await expect(useUploadApi().uploadImage('slides', image)).rejects.toBeTruthy()
   })
 })

@@ -3,6 +3,7 @@ import type { RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { AuthMode } from '@/types/auth'
 import { pinia } from '@/pinia'
+import { AppRoute } from '@/lib/routes'
 
 /**
  * Auth middleware — decides, per navigation, whether a route may be entered.
@@ -40,19 +41,19 @@ export const authMiddleware = async (
   // sign-on service — and reaching it would call endpoints that answer 404 there.
   if (to.meta.setup === true) {
     if (!auth.setupRequired || auth.mode !== AuthMode.Local) {
-      return '/login'
+      return AppRoute.Login
     }
     return true
   }
 
   // Authenticated user trying to access /login → redirect to dashboard
   if (to.meta.public && auth.isAuthenticated) {
-    return '/dashboard'
+    return AppRoute.Dashboard
   }
 
   // Protected route without valid session → redirect to login
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return '/login'
+    return AppRoute.Login
   }
 
   return true

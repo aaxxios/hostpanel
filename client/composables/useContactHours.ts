@@ -6,7 +6,15 @@
  * in the source: a self-hosted install has its own hours and its own zone, and an install
  * that sets neither shows no row at all.
  *
- * @returns The display line, empty when no hours are set.
+ * @module composables/useContactHours
+ */
+
+import { PortalSettingKey } from '~/constants/portalSettingKey'
+
+/**
+ * Reads the published working hours.
+ *
+ * @returns The reactive display line.
  */
 export const useContactHours = () => {
   const { get } = usePortalSettings()
@@ -16,12 +24,12 @@ export const useContactHours = () => {
    * Empty when the hours are empty, even if a time zone is set: a zone alone says nothing.
    */
   const workingHours = computed(() => {
-    const hours = get('portal.contact.hours', 'portalContactHours')
+    const hours = get(PortalSettingKey.ContactHours, 'portalContactHours')
     if (!hours) {
       return ''
     }
 
-    const timezone = get('portal.contact.timezone', 'portalContactTimezone')
+    const timezone = get(PortalSettingKey.ContactTimezone, 'portalContactTimezone')
     return timezone ? `${hours} ${timezone}` : hours
   })
 

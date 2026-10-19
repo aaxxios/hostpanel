@@ -52,7 +52,7 @@ export interface TicketReply {
   id: number
   /** Reply message body. */
   message: string
-  /** Display name of the reply author. */
+  /** Display name of the reply author; an empty string means the reply has no author. */
   authorName: string
   /** Whether this reply was posted by a staff member. */
   isStaffReply: boolean

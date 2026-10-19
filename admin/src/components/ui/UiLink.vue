@@ -9,8 +9,7 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { RouteLocationRaw } from 'vue-router'
-import { buttonBaseClasses, buttonVariantClasses } from '@/utils/ui/button'
-import type { UiButtonVariant } from '@/utils/ui/button'
+import { buttonBaseClasses, buttonVariantClasses, UiButtonVariant } from '@/utils/ui/button'
 import { buttonSizeClasses } from '@/utils/ui/size'
 import type { UiSize } from '@/utils/ui/size'
 
@@ -30,16 +29,16 @@ const props = withDefaults(defineProps<{
   to: undefined,
   href: undefined,
   external: false,
-  variant: 'plain',
+  variant: UiButtonVariant.Plain,
   size: 'md',
 })
 
 /** Class list for the chosen look. */
 const classes = computed<string[]>(() => {
-  if (props.variant === 'plain') {
+  if (props.variant === UiButtonVariant.Plain) {
     return []
   }
-  const padding = props.variant === 'link' ? '' : buttonSizeClasses[props.size]
+  const padding = props.variant === UiButtonVariant.Link ? '' : buttonSizeClasses[props.size]
   return [buttonBaseClasses, buttonVariantClasses[props.variant], padding]
 })
 </script>

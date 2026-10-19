@@ -158,7 +158,7 @@ describe('ClassicHosting', () => {
     expect(useCartStore().items).toEqual([])
   })
 
-  it('lists the plans in the comparison table in catalogue order with their data', async () => {
+  it('lists the plans in the comparison table in catalogue order with their own feature lines', async () => {
     const wrapper = await mountHosting()
 
     const table = wrapper.find('[data-testid="classic-hosting-compare"]')
@@ -167,8 +167,10 @@ describe('ClassicHosting', () => {
     expect(headings[2]).toContain('Starter')
     expect(headings[3]).toContain('Business')
     expect(headings[4]).toContain('Agency')
-    expect(table.text()).toContain('600 MB')
-    expect(table.text()).toContain('hosting.comparison.unlimited')
+    const cells = table.findAll('[data-testid="classic-hosting-compare-features"]').map((cell) => cell.text())
+    expect(cells[0]).toContain('5 GB Bandwidth')
+    expect(cells[1]).toContain('10 Emails')
+    expect(cells[3]).toContain('Unlimited Websites')
   })
 
   it('shows the failure sentence with a retry that reads again', async () => {

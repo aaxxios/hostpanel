@@ -25,12 +25,13 @@
  */
 
 import { AuthMode } from '~/types/authmode'
+import { SessionCookie } from '~/constants/sessionCookie'
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const authMode = config.authMode as string ?? AuthMode.Sso
 
   if (authMode === AuthMode.Sso) {
-    const accessToken = getCookie(event, 'auth_token')
+    const accessToken = getCookie(event, SessionCookie.AuthToken)
     if (!accessToken) {
       throw createError({ statusCode: 401 })
     }

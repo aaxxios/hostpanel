@@ -20,7 +20,9 @@ import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { ChatProvider } from '@/types/chatprovider'
+import { SettingEnv, SettingKey } from '@/types/setting'
 import type { Setting } from '@/types/setting'
+import { ANALYTICS_ID_MAX_LENGTH, CHAT_SETTING_MAX_LENGTH } from '@/lib/limits'
 
 const { t } = useI18n()
 
@@ -37,17 +39,14 @@ const emit = defineEmits<{
   save: [id: number, value: string]
 }>()
 
-/** The environment variable the portal falls back to for the chat fields. */
-const CHAT_ENV = 'NUXT_PUBLIC_PORTAL_CHAT_BASE_URL'
-
 /** The settings list as a ref, which is what the draft composable watches. */
 const settings = toRef(props, 'settings')
 
 /** Draft of the tag-manager id. */
-const gtm = useSettingDraft(settings, 'portal.analytics.gtm_id')
+const gtm = useSettingDraft(settings, SettingKey.AnalyticsGtmId)
 
 /** Draft of the chat provider. */
-const provider = useSettingDraft(settings, 'portal.chat.provider')
+const provider = useSettingDraft(settings, SettingKey.ChatProvider)
 
 /** Options of the provider dropdown. */
 const providerOptions = computed(() => [
@@ -58,10 +57,10 @@ const providerOptions = computed(() => [
 
 /** The text fields, each saved on its own. */
 const TEXT_FIELDS = [
-  { key: 'portal.chat.base_url', testid: 'base-url', labelKey: 'settings.trackingChat.chat.baseUrl', hintKey: 'settings.trackingChat.chat.baseUrlHint', draft: useSettingDraft(settings, 'portal.chat.base_url') },
-  { key: 'portal.chat.website_token', testid: 'token', labelKey: 'settings.trackingChat.chat.token', hintKey: 'settings.trackingChat.chat.tokenHint', draft: useSettingDraft(settings, 'portal.chat.website_token') },
-  { key: 'portal.chat.website_token.ru', testid: 'token-ru', labelKey: 'settings.trackingChat.chat.tokenRu', hintKey: 'settings.trackingChat.chat.tokenLocaleHint', draft: useSettingDraft(settings, 'portal.chat.website_token.ru') },
-  { key: 'portal.chat.website_token.hy', testid: 'token-hy', labelKey: 'settings.trackingChat.chat.tokenHy', hintKey: 'settings.trackingChat.chat.tokenLocaleHint', draft: useSettingDraft(settings, 'portal.chat.website_token.hy') },
+  { key: SettingKey.ChatBaseUrl, testid: 'base-url', labelKey: 'settings.trackingChat.chat.baseUrl', hintKey: 'settings.trackingChat.chat.baseUrlHint', draft: useSettingDraft(settings, SettingKey.ChatBaseUrl) },
+  { key: SettingKey.ChatWebsiteToken, testid: 'token', labelKey: 'settings.trackingChat.chat.token', hintKey: 'settings.trackingChat.chat.tokenHint', draft: useSettingDraft(settings, SettingKey.ChatWebsiteToken) },
+  { key: SettingKey.ChatWebsiteTokenRu, testid: 'token-ru', labelKey: 'settings.trackingChat.chat.tokenRu', hintKey: 'settings.trackingChat.chat.tokenLocaleHint', draft: useSettingDraft(settings, SettingKey.ChatWebsiteTokenRu) },
+  { key: SettingKey.ChatWebsiteTokenHy, testid: 'token-hy', labelKey: 'settings.trackingChat.chat.tokenHy', hintKey: 'settings.trackingChat.chat.tokenLocaleHint', draft: useSettingDraft(settings, SettingKey.ChatWebsiteTokenHy) },
 ]
 </script>
 
@@ -72,13 +71,13 @@ const TEXT_FIELDS = [
   >
     <!-- Tag manager -->
     <UiStack gap="xs">
-      <SettingNotSeeded v-if="!gtm.setting.value" setting-key="portal.analytics.gtm_id" env-name="NUXT_PUBLIC_PORTAL_GTM_ID" />
+      <SettingNotSeeded v-if="!gtm.setting.value" :setting-key="SettingKey.AnalyticsGtmId" :env-name="SettingEnv[SettingKey.AnalyticsGtmId]" />
       <UiStack v-else direction="row" align="end" wrap>
         <UiInput
           v-model="gtm.value.value"
           :label="t('settings.trackingChat.gtm.label')"
-          placeholder="GTM-XXXXXXX"
-          :maxlength="20"
+          :placeholder="t('shared.examples.tagManagerId')"
+          :maxlength="ANALYTICS_ID_MAX_LENGTH"
           data-testid="tracking-gtm"
           class="min-w-64 flex-1"
           @keyup.enter="gtm.submit((id, value) => emit('save', id, value))"
@@ -122,13 +121,13 @@ const TEXT_FIELDS = [
 
       <UiGrid :columns="2">
         <template v-for="field in TEXT_FIELDS" :key="field.key">
-          <SettingNotSeeded v-if="!field.draft.setting.value" :setting-key="field.key" :env-name="CHAT_ENV" />
+          <SettingNotSeeded v-if="!field.draft.setting.value" :setting-key="field.key" :env-name="SettingEnv[field.key]" />
           <UiStack v-else direction="row" align="end">
             <UiInput
               v-model="field.draft.value.value"
               :label="t(field.labelKey)"
               :placeholder="t(field.hintKey)"
-              :maxlength="300"
+              :maxlength="CHAT_SETTING_MAX_LENGTH"
               :data-testid="`tracking-chat-${field.testid}`"
               class="min-w-0 flex-1"
               @keyup.enter="field.draft.submit((id, value) => emit('save', id, value))"

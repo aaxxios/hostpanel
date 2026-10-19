@@ -16,6 +16,7 @@
  */
 
 import type { H3Event } from 'h3'
+import { SessionCookie } from '~/constants/sessionCookie'
 
 /**
  * The actual product fetch — pulled out so a signed-in caller can bypass the shared cache
@@ -105,7 +106,7 @@ const cachedLoadProducts = defineCachedEventHandler(loadProducts, {
  * priced in the base currency, is safe to share.
  */
 export default defineEventHandler(async (event) => {
-  if (getCookie(event, 'auth_token')) {
+  if (getCookie(event, SessionCookie.AuthToken)) {
     return await loadProducts(event)
   }
   return await cachedLoadProducts(event)

@@ -255,6 +255,16 @@ data-testid="layout-header-trigger"
 import { storeToRefs } from 'pinia'
 import type { Component } from 'vue'
 import {
+  CLIENT_ACCOUNT_PATH,
+  CLIENT_DASHBOARD_PATH,
+  CLIENT_DOMAINS_PATH,
+  CLIENT_INVOICES_PATH,
+  CLIENT_LOGIN_PATH,
+  CLIENT_SERVICES_PATH,
+  CLIENT_TICKETS_PATH,
+  SSO_AUTHORIZE_PATH
+} from '~/constants/clientRoutes'
+import {
   ChevronDown, FileText, Globe, LayoutDashboard, LogOut, Menu, MessageSquare, Server, Settings, User, X
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
@@ -320,12 +330,12 @@ const navLinks = computed<NavLink[]>(() => [
 
 /** Links of the signed-in account group. */
 const clientLinks = computed(() => [
-  { to: localePath('/client/dashboard'), icon: LayoutDashboard, label: t('client.nav.dashboard') },
-  { to: localePath('/client/services'), icon: Server, label: t('client.nav.services') },
-  { to: localePath('/client/domains'), icon: Globe, label: t('client.nav.domains') },
-  { to: localePath('/client/invoices'), icon: FileText, label: t('client.nav.invoices') },
-  { to: localePath('/client/tickets'), icon: MessageSquare, label: t('client.nav.support') },
-  { to: localePath('/client/account'), icon: Settings, label: t('client.nav.account') }
+  { to: localePath(CLIENT_DASHBOARD_PATH), icon: LayoutDashboard, label: t('client.nav.dashboard') },
+  { to: localePath(CLIENT_SERVICES_PATH), icon: Server, label: t('client.nav.services') },
+  { to: localePath(CLIENT_DOMAINS_PATH), icon: Globe, label: t('client.nav.domains') },
+  { to: localePath(CLIENT_INVOICES_PATH), icon: FileText, label: t('client.nav.invoices') },
+  { to: localePath(CLIENT_TICKETS_PATH), icon: MessageSquare, label: t('client.nav.support') },
+  { to: localePath(CLIENT_ACCOUNT_PATH), icon: Settings, label: t('client.nav.account') }
 ])
 
 /** Authentication state for the client-area entry. */
@@ -345,8 +355,8 @@ const runtimeConfig = useRuntimeConfig()
 /** In SSO mode, link directly to the SSO authorize endpoint (skips the intermediate page). */
 const clientAreaHref = computed(() =>
   runtimeConfig.public.authMode === AuthMode.Sso
-    ? '/api/portal/auth/sso/authorize'
-    : localePath('/client/login')
+    ? SSO_AUTHORIZE_PATH
+    : localePath(CLIENT_LOGIN_PATH)
 )
 
 /** Mobile menu open/close state. */
@@ -396,7 +406,7 @@ const closeMobileMenu = (): void => {
 const handleLogout = async (): Promise<void> => {
   await logout()
   closeMobileMenu()
-  await navigateTo(localePath('/client/login'))
+  await navigateTo(localePath(CLIENT_LOGIN_PATH))
 }
 
 /** Records the scroll position for the blur effect. */

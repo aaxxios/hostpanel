@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Domain.Clients.Enums;
+
 namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>What the people seeder needs to create one demo customer.</summary>
@@ -13,6 +15,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// <param name="PostCode">Postal code.</param>
 /// <param name="Country">ISO 3166 alpha-2 country code.</param>
 /// <param name="Currency">ISO 4217 billing currency.</param>
+/// <param name="Status">The account state the customer ends up in.</param>
+/// <param name="Credit">Credit balance the customer starts with; zero for none.</param>
 internal sealed record DemoClientProfile(
     string Email,
     string Password,
@@ -25,4 +29,6 @@ internal sealed record DemoClientProfile(
     string? State,
     string PostCode,
     string Country,
-    string Currency);
+    string Currency,
+    ClientStatus Status = ClientStatus.Active,
+    decimal Credit = 0m);

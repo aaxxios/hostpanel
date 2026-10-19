@@ -9,18 +9,15 @@
 /** A nested message tree as stored in one area file. */
 export type MessageTree = { [key: string]: string | MessageTree }
 
-/** Languages the catalogue ships; one folder each. */
-export const MessageLanguage = {
-  /** The `en` option. */
-  En: 'en',
-  /** The `ru` option. */
-  Ru: 'ru',
-  /** The `hy` option. */
-  Hy: 'hy',
-} as const
-
-/** One of the MessageLanguage values. */
-export type MessageLanguage = (typeof MessageLanguage)[keyof typeof MessageLanguage]
+/** Languages the catalogue ships; one folder each. Also the languages storefront content is translated into. */
+export enum MessageLanguage {
+  /** English. */
+  En = 'en',
+  /** Russian. */
+  Ru = 'ru',
+  /** Armenian. */
+  Hy = 'hy',
+}
 
 /** Message trees of one language, keyed by area name. */
 export type LanguageMessages = Record<string, MessageTree>
@@ -35,7 +32,11 @@ const modules = import.meta.glob<MessageTree>('./*/*.json', { eager: true, impor
  * @returns Messages per language, each keyed by area name.
  */
 export const buildMessages = (files: Record<string, MessageTree>): Record<MessageLanguage, LanguageMessages> => {
-  const result: Record<MessageLanguage, LanguageMessages> = { en: {}, ru: {}, hy: {} }
+  const result: Record<MessageLanguage, LanguageMessages> = {
+    [MessageLanguage.En]: {},
+    [MessageLanguage.Ru]: {},
+    [MessageLanguage.Hy]: {},
+  }
   for (const [path, tree] of Object.entries(files)) {
     const match = /^\.\/([^/]+)\/([^/]+)\.json$/.exec(path)
     const language = match?.[1]

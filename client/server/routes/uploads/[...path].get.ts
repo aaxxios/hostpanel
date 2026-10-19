@@ -7,8 +7,5 @@
  */
 export default defineEventHandler(async (event) => {
   const path = getRouterParam(event, 'path')
-  const config = useRuntimeConfig()
-  const apiUrl = (config.apiUrl as string) || 'http://localhost:5000'
-
-  return proxyRequest(event, `${apiUrl}/uploads/${path}`)
+  return proxyRequest(event, `${getApiUrl()}/uploads/${path}`)
 })

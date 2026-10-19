@@ -37,18 +37,18 @@
     },
     "hosting": {
       "title": "Web Hosting Plans - Fast & Reliable Hosting {'|'} {site}",
-      "description": "Choose the right web hosting plan for your website. SSD storage, free SSL certificate, 99.9% uptime guarantee, and 24/7 expert support. Order online and get set up automatically.",
+      "description": "Choose the right web hosting plan for your website. SSD storage, free SSL certificate and expert support. Order online and get set up automatically.",
       "keywords": "web hosting, SSD hosting, cloud hosting, web hosting plans, managed hosting, SSL hosting, hosting control panel"
     },
     "hostingPlan": {
       "named": "{name} - Web Hosting Plan {'|'} {site}",
       "title": "Hosting Plan Details {'|'} {site}",
-      "description": "Get detailed information about our hosting plan. SSD storage, free SSL, high performance, and 24/7 support included.",
+      "description": "Get detailed information about our hosting plan. SSD storage, free SSL, high performance and support included.",
       "keywords": "hosting plan, web hosting, SSD storage, SSL certificate, managed hosting"
     },
     "domains": {
       "title": "Domain Registration & Transfer {'|'} {site}",
-      "description": "Register or transfer your domain name at competitive prices. Search hundreds of TLDs including .com, .net and .org, and manage DNS and renewals from your client portal.",
+      "description": "Register or transfer your domain name. Search TLDs including .com, .net and .org, and manage DNS and renewals from your client portal.",
       "keywords": "domain registration, domain transfer, buy domain, domain name search, domain renewal, DNS management, WHOIS privacy"
     },
     "legal": {

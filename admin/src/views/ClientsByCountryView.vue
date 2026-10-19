@@ -12,7 +12,7 @@ import WorldMap from '@/components/reports/WorldMap.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
-import { reportCountryName } from '@/lib/reportsCountry'
+import { UNKNOWN_COUNTRY, reportCountryName } from '@/lib/reportsCountry'
 import { useReportsStore } from '@/stores/reports'
 import type { ReportColumn } from '@/types/reportcolumn'
 import type { ReportCityRow, ReportCountryRow } from '@/types/reportcountry'
@@ -23,6 +23,16 @@ import { UiAlign } from '@/utils/ui/table'
 const { t, locale } = useI18n()
 
 const store = useReportsStore()
+
+/**
+ * Names a country for display; an unresolved one (null) reads "Unknown".
+ *
+ * @param code - ISO-2 code, or null when the API could not resolve it.
+ * @returns The localised country name.
+ */
+const countryName = (code: string | null): string => {
+  return code === null || code === UNKNOWN_COUNTRY ? t('shared.unknown') : reportCountryName(code, locale.value)
+}
 
 /** Active clients per country. */
 const countries = ref<ReportCountryRow[]>([])
@@ -51,7 +61,7 @@ const top = computed<ReportCountryRow[]>(() => {
 
 /** Country rows with their display name. */
 const rows = computed(() =>
-  countries.value.map(row => ({ country: reportCountryName(row.country, locale.value), code: row.country, clientCount: row.clientCount })),
+  countries.value.map(row => ({ country: countryName(row.country), code: row.country, clientCount: row.clientCount })),
 )
 
 /** Table columns. */
@@ -61,7 +71,7 @@ const columns = computed<ReportColumn[]>(() => [
 ])
 
 /** Bar chart labels. */
-const labels = computed<string[]>(() => top.value.map(row => reportCountryName(row.country, locale.value)))
+const labels = computed<string[]>(() => top.value.map(row => countryName(row.country)))
 
 /** Bar chart series. */
 const series = computed<UiChartSeries[]>(() => [

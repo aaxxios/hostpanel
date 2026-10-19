@@ -14,7 +14,7 @@
       data-testid="login-sso"
     >
       <Hexagon :size="20" :stroke-width="1.5" class="mr-3" />
-      {{ $t('client.login.continueWithInnovayse') }}
+      {{ $t('client.login.continueWithSso') }}
     </UiButton>
 
     <!-- Demo mode: the published customer account, one click from filled in -->
@@ -91,7 +91,7 @@
         required
       />
       <UiStack direction="row" justify="end">
-        <UiLink to="/client/forgot-password" :underline="false" testid="login-forgot" class="text-xs">
+        <UiLink :to="CLIENT_FORGOT_PASSWORD_PATH" :underline="false" testid="login-forgot" class="text-xs">
           {{ $t('client.login.forgotPassword') }}
         </UiLink>
       </UiStack>
@@ -103,7 +103,7 @@
     <template v-if="!isSso" #footer>
       <UiText as="span" size="sm" tone="muted">
         {{ $t('client.login.noAccount') }}
-        <UiLink to="/client/register" :underline="false" testid="login-register" class="font-medium">
+        <UiLink :to="CLIENT_REGISTER_PATH" :underline="false" testid="login-register" class="font-medium">
           {{ $t('client.login.createAccount') }}
         </UiLink>
       </UiText>
@@ -119,6 +119,7 @@
  * password form. The request, its in-flight flag, the refusal sentence and the field messages
  * belong to the auth store; this page renders them and follows the redirect on success.
  */
+import { CLIENT_FORGOT_PASSWORD_PATH, CLIENT_REGISTER_PATH } from '~/constants/clientRoutes'
 import { Hexagon } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useDemoStore } from '~/stores/demo'

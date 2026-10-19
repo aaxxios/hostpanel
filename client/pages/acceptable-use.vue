@@ -2,7 +2,7 @@
   <LegalDocument
     :badge="t('aup.badge')"
     :title="t('aup.title')"
-    :subtitle="t('aup.subtitle')"
+    :subtitle="t('aup.subtitle', { site: siteName })"
     :meta="lastUpdatedLine"
     :sections="sections"
     :contact-title="t('aup.contact.title')"
@@ -43,7 +43,7 @@ const sections = computed<LegalSection[]>(() => SECTION_DEFINITIONS.map(section 
   id: section.id,
   icon: section.icon,
   title: t(`aup.sections.${section.id}.title`),
-  paragraphs: Array.from({ length: section.paragraphs }, (_, index) => t(`aup.sections.${section.id}.content.${index}`))
+  paragraphs: Array.from({ length: section.paragraphs }, (_, index) => t(`aup.sections.${section.id}.content.${index}`, { site: siteName.value }))
 })))
 
 /** The "last updated" line shown under the title. */

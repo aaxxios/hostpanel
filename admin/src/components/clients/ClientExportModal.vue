@@ -15,6 +15,7 @@ import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiLabelVariant, UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { MimeType } from '@/types/http'
 
 const { t } = useI18n()
 
@@ -109,7 +110,7 @@ const download = async (): Promise<void> => {
   if (data === null) {
     return
   }
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: MimeType.Json })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

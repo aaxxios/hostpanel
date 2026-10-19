@@ -65,9 +65,71 @@ Images are published by `.github/workflows/publish-dockerhub.yml`, the primary p
 and the variable `DOCKERHUB_NAMESPACE`. The GitLab `publish:dockerhub` job is a manual fallback; it needs the variables
 `DOCKERHUB_NAMESPACE`, `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (masked, protected).
 
+The `deploy:prod` job takes its GitLab environment URL from the CI/CD variable `PROD_PUBLIC_URL` (the public
+address of the production site, for example `https://panel.example.com`), scoped to `production/hostpanel`; the
+address is never written in `.gitlab-ci.yml`.
+
+## Where a value lives
+
+Nothing a deployment could want to change is typed into a compose file, a proxy config, a script or the
+pipeline. A value has one name and one home:
+
+- **Compose and the edge proxies** read `docker/.env` (copied from `.env.example`; on a deployed tier the
+  deploy job's environment, from GitLab CI/CD variables, wins). The nginx template and the Caddyfile get
+  `DOMAIN`, `ADMIN_DOMAIN`, `API_PORT`, `CLIENT_PORT`, `EDGE_MAX_BODY_SIZE` and `EDGE_ADMIN_MAX_BODY_SIZE`
+  through their container's environment, so the port or the upload limit is changed in `.env` and nowhere else.
+- **The public addresses** are `CLIENT_BASE_URL` and `ADMIN_BASE_URL`: the client's `NUXT_PUBLIC_BASE_URL`,
+  `NUXT_PUBLIC_SITE_URL`, the SSO callback and the API's first CORS origin all derive from `CLIENT_BASE_URL`
+  (the demo derives them from `DEMO_CLIENT_BASE_URL`). `DOMAIN` is only the edge's `server_name`.
+- **Versions** of the third-party images are `POSTGRES_IMAGE`, `RABBITMQ_IMAGE`, `REDIS_IMAGE`,
+  `MAILHOG_IMAGE`, `NGINX_IMAGE` and `CADDY_IMAGE`, full references such as `postgres:17-alpine`.
+- **Application images** (`prod`) are `${IMAGE_REGISTRY}/{api,client,admin}:${IMAGE_TAG}`; the deploy jobs
+  set `IMAGE_REGISTRY` to the project's own registry path. **For manual compose use on a host or laptop, `IMAGE_REGISTRY` must be in the host `docker/.env`** (compose refuses to start without it; `.env.example` carries a placeholder). The public Docker Hub images stay
+  `innovayse/hostpanel:{api,client,admin}-<version>` (`DOCKERHUB_NAMESPACE`).
+- **Runtime tuning**: `AUTH_APP_NAME`, `API_GC_SERVER`, `API_GC_CONSERVE_MEMORY`,
+  `API_GC_HEAP_HARD_LIMIT_PERCENT` (prod and hub); in the dev stack `DEV_FILE_POLLING`, `DEV_NUGET_AUDIT`,
+  `DEV_NUGET_SIGNATURE_VERIFICATION`, `TESTCONTAINERS_HOST_OVERRIDE`, `ADMIN_API_BASE`, and the
+  `<SERVICE>_CPUS` / `<SERVICE>_MEMORY` caps for `DB`, `RABBITMQ`, `REDIS`, `MAILHOG`, `API`, `CLIENT`, `ADMIN`.
+- **Support departments**: `DEPARTMENT_SUPPORT_EMAIL`, `DEPARTMENT_BILLING_EMAIL`, `DEPARTMENT_SALES_EMAIL` and
+  `DEPARTMENT_GENERAL_EMAIL` reach the API as `DefaultDepartments__SupportEmail`, `__BillingEmail`, `__SalesEmail`
+  and `__GeneralEmail` (dev, prod and hub stacks). They name the mailboxes of the departments created on a
+  fresh install and matter only on the first start; after that the departments are edited in the admin
+  panel. `.env.example` carries `example.com` placeholders: a real deployment sets its own.
+- **Demo**: `DEMO_PUBLISH_ADDRESS` (the address its published ports bind to; required, so it can never be empty and bind every interface) and `DEMO_SMTP_ENCRYPTION`,
+  next to the existing `DEMO_*` keys.
+- **Optional storefront content** (prod, dev and hub client): `NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS`,
+  `NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL`, `NUXT_PUBLIC_PORTAL_STATS_CLIENTS`, `NUXT_PUBLIC_PORTAL_STATS_UPTIME`,
+  `NUXT_PUBLIC_PORTAL_STATS_REGIONS` and `NUXT_PUBLIC_PORTAL_HERO_BADGE`. Empty is allowed: the matching
+  `portal.*` setting in the admin panel wins, and an empty value hides the element.
+- **Build-time chat address**: `NUXT_PUBLIC_PORTAL_CHAT_BASE_URL` is also read when the client image is built
+  (`nuxt.config.ts` bakes the `/brand-assets/**` proxy target into the output), so `client/Dockerfile` declares it
+  as a build `ARG`/`ENV`. The GitLab `.build-image` job passes the CI/CD variable of the same name, and the Docker Hub
+  workflow passes the repository variable of the same name; unset means empty, which builds without the proxy.
+  A locally built image needs `--build-arg NUXT_PUBLIC_PORTAL_CHAT_BASE_URL=...` for the proxy to exist.
+- **The pipeline** (`.gitlab-ci.yml`) keeps its toolchain versions in one top-level `variables:` block
+  (`DOTNET_SDK_IMAGE`, `NODE_IMAGE`, `DOCKER_IMAGE`, `BINFMT_IMAGE`, `PLAYWRIGHT_*_IMAGE`, `YARN_VERSION`),
+  and takes the GitLab host (`PIPELINE_SERVER_HOST`), the public source address (`PUBLIC_REPOSITORY_URL`)
+  and the compose chain (`COMPOSE_FILES_DEPLOYED`) from there too. The deploy jobs need these CI/CD
+  variables, scoped per environment, and refuse to run without `DEPLOY_DIR`:
+
+  | Variable | Scope | Meaning |
+  | --- | --- | --- |
+  | `DEPLOY_DIR` | `staging/hostpanel`, `production/hostpanel`, `demo/hostpanel` | the job's own checkout on its host (the demo's is never production's) |
+  | `PROD_PUBLIC_URL` | `production/hostpanel` | the production site's address |
+  | `BACKUP_KEEP` | optional, `production/hostpanel` | how many pre-deploy dumps `deploy:prod` keeps (10 in the pipeline) |
+
+- **GitHub workflows** name their toolchain versions once in the workflow-level `env:` (`ci.yml`), read the
+  source address of the image labels from the `github` context, and push the mirror to the repository
+  variable `GITLAB_MIRROR_URL` (host and path of the GitLab project, no scheme) with the secret
+  `GITLAB_MIRROR_TOKEN`.
+- **`install.sh`** writes only what differs from the template (the generated secrets, the answers, the
+  `--no-tls` ports, the database and broker user); the rest of a new `.env` is `.env.example` as downloaded.
+
+A key added to `.env.example` needs its GitLab variable before the next deploy, or compose refuses to start.
+
 ## Rules
 
-- No `${VAR:-x}` defaults and no `env_file:`; required secrets are `${VAR:?...}`.
+- No `${VAR:-x}` defaults and no `env_file:`; every required value (secrets, ports, sizes, resource caps, addresses) is `${VAR:?VAR must be set}`.
 - Services talk to each other by container name (`hostpanel-api:${API_PORT}`, `hostpanel-db`), never localhost.
 - Parked services (rabbitmq, redis, nginx under the platform overlay) carry no `container_name`.
 
@@ -92,9 +154,17 @@ reach the demo. Create the network once per host, before the first demo `up` and
 (re)started with the new `edge-proxy/docker-compose.yml`:
 
 ```bash
-docker network create hostpanel_demo_edge        # `deploy:demo` does this when it is missing
+docker network create --subnet 172.29.0.0/16 hostpanel_demo_edge   # `deploy:demo` does this when it is missing
 docker network connect hostpanel_demo_edge innovayse-edge   # attach an already-running proxy, no restart
 ```
+
+The subnet is **fixed at 172.29.0.0/16** (checked free on the server). The edge proxy routes by `Host` header,
+so without a guard a demo container could send `Host: host.innovayse.com` to it and reach production.
+`edge-proxy/nginx.conf` therefore carries `deny 172.29.0.0/16;` in the http context: every host answers 403
+to that subnet, and only the two demo server blocks opt back in with `allow all;`. Real traffic arrives over
+the WireGuard tunnel from a different range. Change the subnet in three places together: the `deploy:demo`
+network creation, that `deny` line, and this paragraph. An existing network cannot change subnet in place:
+disconnect the edge, remove the network, recreate it, reconnect the edge, then redeploy the demo.
 
 Outbound traffic: the demo needs nothing external (fake payment, registrar and provisioning adapters, mail to
 mailhog), and the db, broker, redis and mailhog sit on a bridge with no production peer. The api, client and
@@ -102,7 +172,7 @@ admin keep the ordinary bridge egress of `hostpanel_demo_edge`; to cut that too,
 `--internal` and drop the `DEMO_*_HOST_PORT` publishes (Docker cannot publish a port from an internal-only
 network). `hostpanel-demo_default` is not `internal` for the same reason: mailhog publishes its UI port.
 The overlay publishes the api, client,
-admin and mailhog UI on the `DEMO_*_HOST_PORT` ports, bound to `127.0.0.1` only (the edge proxy reaches them by name), and never starts the bundled nginx.
+admin and mailhog UI on the `DEMO_*_HOST_PORT` ports, bound to `DEMO_PUBLISH_ADDRESS` (required; `127.0.0.1` keeps them off the network, the edge proxy reaches them by name), and never starts the bundled nginx.
 
 Set the `# Demo` block of `.env.example` (copy to `docker/.env`, `AUTH_MODE=local`, a database of its
 own in `POSTGRES_DB`; `DEMO_ADMIN_PASSWORD`, `DEMO_CLIENT_PASSWORD`, `DEMO_ADMIN_BASE_URL` and `DEMO_CLIENT_BASE_URL` are required), then from the
@@ -115,8 +185,12 @@ docker compose -p hostpanel-demo -f docker/docker-compose.shared.yml -f docker/d
 On a deployed host add `-f docker/docker-compose.platform.yml` before the demo file (the `deploy:demo`
 CI job does). Demo mode (`Demo__Enabled`) swaps the payment, registrar and provisioning integrations for
 fakes, delivers all mail to mailhog (UI on `DEMO_MAILHOG_UI_HOST_PORT`), seeds the two demo accounts and
-resets the data every `DEMO_RESET_INTERVAL_HOURS` hours.
+resets the data every `DEMO_RESET_INTERVAL_HOURS` hours. The seed is fixed and deterministic (the same sample data on
+every reset), and the site name is `Hostpanel Demo`.
 
 **The demo needs its own `DEPLOY_DIR`.** `deploy:demo` runs `git checkout -f`; in production's directory that
-would rewrite the compose files under the running production stack. The job uses
-`/home/innovayse-server/www/hostpanel-demo` and creates it (`git init`, then a fetch of the pipeline's commit) when missing.
+would rewrite the compose files under the running production stack. Its `DEPLOY_DIR` (the CI/CD variable scoped
+to `demo/hostpanel`) is a directory of its own, and the job creates it (`git init`, then a fetch of the
+pipeline's commit) when missing.
+
+The demo's GitLab scope is `demo/hostpanel`.

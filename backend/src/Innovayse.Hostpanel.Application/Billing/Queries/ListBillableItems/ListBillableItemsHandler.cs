@@ -5,6 +5,7 @@ using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Billing.Queries.ListBillableItems;
 
 /// <summary>Returns a paginated list of billable items with client names.</summary>
@@ -30,7 +31,7 @@ public sealed class ListBillableItemsHandler
         ArgumentNullException.ThrowIfNull(query);
 
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
         IQueryable<BillableItem> filtered = _context.BillableItems.AsNoTracking();
         if (query.Type == nameof(BillableItemType.Recurring))
@@ -60,7 +61,7 @@ public sealed class ListBillableItemsHandler
             .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
 
         var dtos = items
-            .Select(i => i with { ClientName = clientMap.TryGetValue(i.ClientId, out var name) ? name : "Unknown" })
+            .Select(i => i with { ClientName = clientMap.TryGetValue(i.ClientId, out var name) ? name : null })
             .ToList();
 
         return Result<PagedResult<BillableItemDto>>.Success(

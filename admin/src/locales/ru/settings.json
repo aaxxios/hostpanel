@@ -18,6 +18,50 @@
       "hint": "Одна строка, описание страницы по умолчанию"
     }
   },
+  "storefrontContent": {
+    "title": "Витрина",
+    "description": "Цифры, плашка в шапке и контакты, которые показывает витрина. Название сайта и слоган — в карточке идентичности выше.",
+    "statsClients": {
+      "label": "Число клиентов",
+      "hint": "Например, 5 000+"
+    },
+    "statsUptime": {
+      "label": "Доступность",
+      "hint": "Например, 99,9%"
+    },
+    "statsRegions": {
+      "label": "Число регионов",
+      "hint": "Например, 12"
+    },
+    "heroBadge": {
+      "label": "Плашка в шапке",
+      "hint": "Короткая строка над заголовком"
+    },
+    "contactEmail": {
+      "label": "Контактный email",
+      "hint": "support@example.com"
+    },
+    "contactPhone": {
+      "label": "Контактный телефон",
+      "hint": "+1 555 000 0000"
+    },
+    "contactWhatsapp": {
+      "label": "Номер WhatsApp",
+      "hint": "+1 555 000 0000"
+    },
+    "contactTelegram": {
+      "label": "Имя в Telegram",
+      "hint": "@example"
+    },
+    "contactAddress": {
+      "label": "Адрес",
+      "hint": "Улица, город, страна"
+    },
+    "contactMapUrl": {
+      "label": "Ссылка на карту",
+      "hint": "https://maps.example.com/..."
+    }
+  },
   "portalAppearance": {
     "title": "Оформление портала",
     "description": "Какой шаблон использует публичная витрина и в какой цветовой теме посетитель её открывает. Изменения вступают в силу при следующей загрузке страницы.",
@@ -115,7 +159,7 @@
       "title": "Онлайн-чат",
       "baseUrl": "Сервер чата",
       "baseUrlHint": "https://chat.example.com",
-      "token": "Website token",
+      "token": "Токен сайта",
       "tokenHint": "Из настроек inbox в чате",
       "tokenRu": "Токен для русскоязычных",
       "tokenHy": "Токен для армяноязычных",

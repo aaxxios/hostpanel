@@ -6,11 +6,12 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import { useServicesStore } from '@/stores/services'
 import { useServersStore } from '@/stores/servers'
 import { useSettingsStore } from '@/stores/settings'
 import { SERVICE_STATUS_OPTIONS, BILLING_CYCLE_OPTIONS } from '@/lib/constants'
-import { BillingCycle, ServiceStatus } from '@/types/service'
+import { BillingCycle, ServiceChangeReason, ServiceStatus } from '@/types/service'
 import { toDateInputValue } from '@/lib/format'
 import type { ServiceListItem } from '@/types/service'
 import UiAlert from '@/components/ui/UiAlert.vue'
@@ -37,23 +38,19 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiLabelVariant, UiTextTone } from '@/utils/ui/text'
+import { NOTICE_VISIBLE_MS } from '@/lib/limits'
+import { ClientSection, clientItemPath, clientSectionPath } from '@/lib/routes'
 
 const { t } = useI18n()
+
+/** Fallback text for fields the API leaves unresolved. */
+const { productLabel } = useFallbackLabels()
 
 /** Icon markup (shape tags) of the back link. */
 const BACK_ICON = '<polyline points="15 18 9 12 15 6"/>'
 
 /** Icon markup (shape tags) of the control panel button. */
 const PANEL_ICON = '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />'
-
-/** How long the "saved" banner stays, in milliseconds. */
-const SAVED_BANNER_MS = 3000
-
-/** Reason recorded when staff suspend a service from this page. */
-const SUSPEND_REASON = 'Admin suspended'
-
-/** Reason recorded when staff terminate a service from this page. */
-const TERMINATE_REASON = 'Admin terminated'
 
 /** Default billing cycle. */
 const DEFAULT_CYCLE: string = BillingCycle.Monthly
@@ -226,7 +223,7 @@ const productOptions = computed(() =>
 const serviceSwitcherOptions = computed(() =>
   clientServices.value.map(s => ({
     value: s.id,
-    label: `#${s.id} — ${s.productName}`,
+    label: `#${s.id} — ${productLabel(s.productName)}`,
   })),
 )
 
@@ -336,7 +333,7 @@ const handleSave = async (): Promise<void> => {
     clearTimeout(savedTimer)
     savedTimer = setTimeout(() => {
       saveSuccess.value = false
-    }, SAVED_BANNER_MS)
+    }, NOTICE_VISIBLE_MS)
     await fetchService()
   }
   saving.value = false
@@ -418,7 +415,7 @@ const handleChangePackage = async (): Promise<void> => {
  */
 const handleSuspend = async (): Promise<void> => {
   showSuspendModal.value = false
-  await runCommand(() => store.suspend(serviceId.value, SUSPEND_REASON))
+  await runCommand(() => store.suspend(serviceId.value, ServiceChangeReason.Suspended))
 }
 
 /**
@@ -437,7 +434,7 @@ const handleUnsuspend = async (): Promise<void> => {
  */
 const handleTerminate = async (): Promise<void> => {
   showTerminateModal.value = false
-  await runCommand(() => store.terminate(serviceId.value, TERMINATE_REASON))
+  await runCommand(() => store.terminate(serviceId.value, ServiceChangeReason.Terminated))
 }
 
 /**
@@ -447,7 +444,7 @@ const handleTerminate = async (): Promise<void> => {
  * @returns Nothing.
  */
 const switchService = (val: number): void => {
-  router.push(`/clients/${clientId.value}/services/${val}`)
+  router.push(clientItemPath(clientId.value, ClientSection.Services, val))
 }
 
 /**
@@ -496,7 +493,7 @@ onBeforeUnmount(() => {
         <UiStack direction="row" wrap :justify="UiJustify.Between" :align="UiAlignItems.Center">
           <UiStack direction="row" :align="UiAlignItems.Center">
             <UiLink
-              :to="`/clients/${clientId}/services`"
+              :to="clientSectionPath(clientId, ClientSection.Services)"
               :variant="UiButtonVariant.Secondary"
               data-testid="client-service-back"
             >
@@ -513,7 +510,7 @@ onBeforeUnmount(() => {
               @update:model-value="switchService"
             />
             <UiHeading :level="1" variant="card">
-              {{ t('clients.clientServiceDetail.serviceIdProductname', { id: service.id, productName: service.productName }) }}
+              {{ t('clients.clientServiceDetail.serviceIdProductname', { id: service.id, productName: productLabel(service.productName) }) }}
             </UiHeading>
           </UiStack>
 
@@ -587,7 +584,7 @@ onBeforeUnmount(() => {
                         :id="id"
                         v-model="domain"
                         type="text"
-                        placeholder="example.com"
+                        :placeholder="t('shared.examples.domain')"
                         data-testid="client-service-domain"
                       />
                     </template>
@@ -598,7 +595,7 @@ onBeforeUnmount(() => {
                         :id="id"
                         v-model="provisioningRef"
                         type="text"
-                        placeholder="cpanel-account-name"
+                        :placeholder="t('shared.examples.hostingAccount')"
                         data-testid="client-service-provisioning-ref"
                       />
                     </template>
@@ -609,7 +606,7 @@ onBeforeUnmount(() => {
                         :id="id"
                         v-model="dedicatedIp"
                         type="text"
-                        placeholder="192.168.1.1"
+                        :placeholder="t('shared.examples.ipAddress')"
                         data-testid="client-service-dedicated-ip"
                       />
                     </template>
@@ -620,7 +617,7 @@ onBeforeUnmount(() => {
                         :id="id"
                         v-model="username"
                         type="text"
-                        placeholder="cpanel_user"
+                        :placeholder="t('shared.examples.hostingUser')"
                         data-testid="client-service-username"
                       />
                     </template>
@@ -787,7 +784,7 @@ onBeforeUnmount(() => {
                         :id="id"
                         v-model="promotionCode"
                         type="text"
-                        placeholder="PROMO2026"
+                        :placeholder="t('shared.examples.promoCode')"
                         data-testid="client-service-promotion"
                       />
                     </template>
@@ -799,7 +796,7 @@ onBeforeUnmount(() => {
                       :id="id"
                       v-model="subscriptionId"
                       type="text"
-                      placeholder="sub_1234567890"
+                      :placeholder="t('shared.examples.subscriptionId')"
                       data-testid="client-service-subscription"
                     />
                   </template>

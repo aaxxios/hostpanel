@@ -1,6 +1,6 @@
 using Innovayse.Hostpanel.Domain.Billing;
-
 using Innovayse.Hostpanel.Domain.Billing.Enums;
+
 namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <summary>DTO representing a full invoice with its line items and transactions.</summary>
 /// <param name="Id">Invoice primary key.</param>
@@ -18,7 +18,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <param name="Notes">Optional invoice notes.</param>
 /// <param name="InvoiceDate">Invoice issue date (UTC).</param>
 /// <param name="PaymentMethod">Preferred payment method; null when not specified.</param>
-/// <param name="ClientName">Display name of the owning client.</param>
+/// <param name="ClientName">Display name of the owning client. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="Currency">ISO 4217 currency code the invoice was raised and is payable in.</param>
 /// <param name="Items">Line items on the invoice.</param>
 /// <param name="Transactions">Financial transactions recorded against the invoice.</param>
@@ -38,7 +38,7 @@ public record InvoiceDto(
     string? Notes,
     DateTimeOffset InvoiceDate,
     string? PaymentMethod,
-    string ClientName,
+    string? ClientName,
     string Currency,
     IReadOnlyList<InvoiceItemDto> Items,
     IReadOnlyList<InvoiceTransactionDto> Transactions);

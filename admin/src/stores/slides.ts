@@ -11,12 +11,13 @@ import { ref } from 'vue'
 import { useSlidesApi } from '@/composables/apis/useSlidesApi'
 import { useUploadApi } from '@/composables/apis/useUploadApi'
 import { runAction } from '@/lib/runAction'
+import { ImageUploadScope } from '@/types/upload'
 import type { CreateSlidePayload, Slide, SlideOrderItem, UpdateSlidePayload } from '@/types/slide'
 
 /** Manages homepage slides state and CRUD operations. */
 export const useSlidesStore = defineStore('slides', () => {
   const api = useSlidesApi()
-  const { uploadSlideImage } = useUploadApi()
+  const { uploadImage: upload } = useUploadApi()
 
   /** All slides from the admin API. */
   const slides = ref<Slide[]>([])
@@ -57,7 +58,7 @@ export const useSlidesStore = defineStore('slides', () => {
    * @returns The stored image's URL, or null when refused (see `uploadError`).
    */
   const uploadImage = async (file: File): Promise<string | null> => {
-    const result = await runAction(uploadError, async () => (await uploadSlideImage(file)).url)
+    const result = await runAction(uploadError, async () => (await upload(ImageUploadScope.Slides, file)).url)
     return result.ok ? result.value : null
   }
 

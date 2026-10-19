@@ -13,6 +13,7 @@ import UiCard from '@/components/ui/UiCard.vue'
 import UiFileInput from '@/components/ui/UiFileInput.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { BYTES_PER_KB } from '@/lib/limits'
 
 /** Translation function. */
 const { t } = useI18n()
@@ -22,9 +23,6 @@ const emit = defineEmits<{
   /** Emitted with the chosen archive when the admin confirms the install. */
   upload: [file: File]
 }>()
-
-/** Bytes in a kilobyte, for the size line. */
-const BYTES_PER_KB = 1024
 
 /** Files currently held by the picker (empty or one). */
 const picked = ref<File[]>([])

@@ -2,7 +2,7 @@
   <LegalDocument
     :badge="t('refundPolicy.badge')"
     :title="t('refundPolicy.title')"
-    :subtitle="t('refundPolicy.subtitle')"
+    :subtitle="t('refundPolicy.subtitle', { site: siteName })"
     :meta="lastUpdatedLine"
     :sections="sections"
     :contact-title="t('refundPolicy.contact.title')"
@@ -41,7 +41,7 @@ const sections = computed<LegalSection[]>(() => SECTION_DEFINITIONS.map(section 
   id: section.id,
   icon: section.icon,
   title: t(`refundPolicy.sections.${section.id}.title`),
-  paragraphs: Array.from({ length: section.paragraphs }, (_, index) => t(`refundPolicy.sections.${section.id}.content.${index}`))
+  paragraphs: Array.from({ length: section.paragraphs }, (_, index) => t(`refundPolicy.sections.${section.id}.content.${index}`, { site: siteName.value }))
 })))
 
 /** The "last updated" line shown under the title. */

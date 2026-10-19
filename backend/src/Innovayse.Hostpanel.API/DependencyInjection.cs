@@ -1,6 +1,8 @@
-using Innovayse.Hostpanel.Infrastructure.Scheduling;
+using System.Text.Json.Serialization;
 using Innovayse.Hostpanel.API.Identity;
 using Innovayse.Hostpanel.Application.Common.Settings;
+using Innovayse.Hostpanel.Infrastructure.Scheduling;
+using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Filters;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
@@ -80,6 +82,14 @@ public static class DependencyInjection
                     + "e.g. https://admin.example.com.")
             .ValidateOnStart();
 
+        // Contact addresses for the support departments seeded on a fresh install.
+        services.AddOptions<DefaultDepartmentsOptions>()
+            .Bind(configuration.GetSection(DefaultDepartmentsOptions.SectionName))
+            .Validate(
+                o => o.IsValid,
+                $"{DefaultDepartmentsOptions.SectionName} addresses must each be a mailbox such as support@example.com.")
+            .ValidateOnStart();
+
         // The caller of the request, for handlers. One scoped instance answers both ports, so the
         // display name it looks up is resolved once per request whichever port asked first.
         services.AddHttpContextAccessor();
@@ -109,7 +119,7 @@ public static class DependencyInjection
                 opts.ConfigureLocalizedModelBinding();
             })
             .AddJsonOptions(opts =>
-                opts.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
+                opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
         // Three of the error surfaces that short-circuit before a controller or the exception
         // middleware runs (rules/api.md): model binding, the bearer challenge/forbid, and an
@@ -125,7 +135,7 @@ public static class DependencyInjection
 
         services.ConfigureModelStateProblemDetails();
         services.ConfigureProblemDetailsAuthEvents();
-        services.PostConfigure<JwtBearerOptions>("LocalJwt", o => o.UseProblemDetailsResponses());
+        services.PostConfigure<JwtBearerOptions>(LocalJwtScheme.Name, o => o.UseProblemDetailsResponses());
         services.AddProblemDetailsAuthorizationResponses();
         services.AddOpenApi(options =>
         {
@@ -136,11 +146,11 @@ public static class DependencyInjection
                     Title = "Innovayse API",
                     Version = "v1",
                     Description = "Innovayse hosting panel API — self-hosted hosting management platform built with ASP.NET Core",
-                    Contact = new() { Name = "Innovayse", Email = "support@innovayse.com" },
+                    Contact = new() { Name = "Hostpanel" },
                 };
                 doc.Components ??= new();
                 doc.Components.SecuritySchemes ??= new Dictionary<string, OpenApiSecurityScheme>();
-                doc.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+                doc.Components.SecuritySchemes[JwtBearerDefaults.AuthenticationScheme] = new OpenApiSecurityScheme
                 {
                     Type = SecuritySchemeType.Http,
                     Scheme = "bearer",
@@ -159,7 +169,7 @@ public static class DependencyInjection
                         Reference = new OpenApiReference
                         {
                             Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer",
+                            Id = JwtBearerDefaults.AuthenticationScheme,
                         },
                     }] = [],
                 });

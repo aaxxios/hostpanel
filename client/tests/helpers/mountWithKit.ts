@@ -94,6 +94,8 @@ export interface MountWithKitOptions {
   attachToBody?: boolean
   /** A Pinia the test filled before mounting; a fresh one is created when omitted. */
   pinia?: Pinia
+  /** Receives an error a component raised (such as a page's `createError` thrown from an async setup) instead of it escaping as an unhandled rejection. */
+  errorHandler?: (error: unknown) => void
 }
 
 /**
@@ -117,6 +119,7 @@ export const mountWithKit = (component: Component, options: MountWithKitOptions 
       directives: { motion: {} },
       mocks: { $t: (key: string) => key },
       stubs: { teleport: true, ...options.stubs },
+      config: options.errorHandler ? { errorHandler: options.errorHandler } : {},
     },
   })
 }

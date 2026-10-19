@@ -5,7 +5,7 @@
  */
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useTransactionsStore } from '@/stores/clientTransactions'
+import { useClientTransactionsStore } from '@/stores/clientTransactions'
 import { GATEWAY_OPTIONS } from '@/lib/constants'
 import { toDateInputValue } from '@/lib/format'
 import { PaymentGateway } from '@/types/gateway'
@@ -44,7 +44,7 @@ const emit = defineEmits<{
 }>()
 
 /** Client transactions store, the only caller of the transaction endpoints. */
-const store = useTransactionsStore()
+const store = useClientTransactionsStore()
 
 /** True while save is in progress. */
 const internalSaving = ref(false)

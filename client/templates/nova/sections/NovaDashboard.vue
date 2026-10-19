@@ -8,7 +8,7 @@
           :lead="t('nova.dashboard.lead')"
         />
         <NovaCta
-          :to="localePath('/client/login')"
+          :to="localePath(CLIENT_LOGIN_PATH)"
           tone="outline"
           class="mt-7"
           data-testid="nova-dashboard-cta"
@@ -41,6 +41,7 @@
  * `compact` drops the copy and the section wrapper, which is how the hero
  * reuses the same window without a second copy of the markup or a second h2.
  */
+import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
 import NovaCta from '~/templates/nova/sections/NovaCta.vue'
 import NovaDashboardWindow from '~/templates/nova/sections/DashboardWindow.vue'
 import NovaSectionHeader from '~/templates/nova/sections/NovaSectionHeader.vue'

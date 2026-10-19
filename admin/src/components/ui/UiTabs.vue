@@ -7,6 +7,7 @@
  * between enabled tabs.
  */
 import type { UiTabItem } from '@/utils/ui/tabs'
+import { Key } from '@/utils/ui/keys'
 
 /** Props for UiTabs. */
 const props = defineProps<{
@@ -28,10 +29,10 @@ const emit = defineEmits<{
  * @param index - Index of the tab that has focus.
  */
 const onKeydown = (event: KeyboardEvent, index: number): void => {
-  if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
+  if (event.key !== Key.ArrowRight && event.key !== Key.ArrowLeft) {
     return
   }
-  const step = event.key === 'ArrowRight' ? 1 : -1
+  const step = event.key === Key.ArrowRight ? 1 : -1
   const enabled = props.items.filter(item => item.disabled !== true)
   const current = props.items[index]
   const position = current === undefined ? -1 : enabled.indexOf(current)

@@ -21,9 +21,10 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { usePublicSettingsApi } from '@/composables/apis/usePublicSettingsApi'
 import { runAction } from '@/lib/runAction'
+import { SettingKey } from '@/types/setting'
 
 /** Setting key holding the logo drawn on light backgrounds. */
-const LOGO_KEY = 'portal.logo'
+const LOGO_KEY = SettingKey.Logo
 
 /**
  * Setting key holding the logo drawn on dark backgrounds.
@@ -31,10 +32,10 @@ const LOGO_KEY = 'portal.logo'
  * The panel is dark-only, so this is the one it wants; it used to read the light
  * variant alone and paint a logo made for white paper onto its dark sidebar.
  */
-const LOGO_DARK_KEY = 'portal.logo.dark'
+const LOGO_DARK_KEY = SettingKey.LogoDark
 
 /** Setting key holding the browser tab icon. */
-const FAVICON_KEY = 'portal.favicon'
+const FAVICON_KEY = SettingKey.Favicon
 
 /** Pinia store holding the operator's logo and favicon URLs for the panel. */
 export const useBrandingStore = defineStore('branding', () => {
@@ -52,6 +53,13 @@ export const useBrandingStore = defineStore('branding', () => {
    * ("Empty falls back to the light logo"). Empty means "use the built-in mark".
    */
   const logoOnDarkUrl = computed(() => logoDarkUrl.value || logoUrl.value)
+
+  /**
+   * The logo to draw on the panel's light surfaces: the light variant when set, else the
+   * dark one, so an operator who uploaded a single logo sees it in both themes. Empty means
+   * "use the built-in wordmark".
+   */
+  const logoOnLightUrl = computed(() => logoUrl.value || logoDarkUrl.value)
 
   /** Operator's favicon URL; empty string means "leave index.html's links alone". */
   const faviconUrl = ref('')
@@ -85,5 +93,5 @@ export const useBrandingStore = defineStore('branding', () => {
     faviconUrl.value = rows.find(r => r.key === FAVICON_KEY)?.value?.trim() ?? ''
   }
 
-  return { logoUrl, logoDarkUrl, logoOnDarkUrl, faviconUrl, loaded, load }
+  return { logoUrl, logoDarkUrl, logoOnDarkUrl, logoOnLightUrl, faviconUrl, loaded, load }
 })

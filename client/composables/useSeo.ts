@@ -11,6 +11,7 @@
 import { AppLocale } from '~/types/applocale'
 import { SeoPageType } from '~/types/seopagetype'
 import { buildSeoLinks, localizedUrl, stripLocalePrefix } from '~/utils/seoLinks'
+import { shareImageMeta } from '~/utils/shareImage'
 
 /** What a page tells the SEO composable about itself. */
 export interface SeoOptions {
@@ -38,6 +39,7 @@ export const useSeo = (options: SeoOptions) => {
   const { locale } = useI18n()
   const config = useRuntimeConfig()
   const route = useRoute()
+  const { name: siteName } = useSiteIdentity()
 
   const baseUrl = config.public.baseUrl
 
@@ -50,9 +52,9 @@ export const useSeo = (options: SeoOptions) => {
   // Build canonical URL with locale
   const canonicalUrl = computed(() => localizedUrl(baseUrl, pagePath, locale.value))
 
-  // Default image
-  const defaultImage = `${baseUrl}/og-image.jpg`
-  const imageUrl = options.image ? `${baseUrl}${options.image}` : defaultImage
+  // Share image: the page's own, or the bundled card with its size and type. The alt text
+  // names the page, or the site when the page has no title.
+  const image = shareImageMeta(baseUrl, options.title || siteName.value, options.image)
 
   // OG Locale mapping
   const ogLocaleMap: Record<string, string> = {
@@ -69,7 +71,7 @@ export const useSeo = (options: SeoOptions) => {
     // Open Graph
     ogTitle: options.title,
     ogDescription: options.description,
-    ogImage: imageUrl,
+    ...image,
     ogUrl: canonicalUrl.value,
     ogType: options.type || SeoPageType.Website,
     ogLocale: ogLocaleMap[locale.value] || 'en_US',
@@ -77,8 +79,7 @@ export const useSeo = (options: SeoOptions) => {
     // Twitter Card
     twitterCard: 'summary_large_image',
     twitterTitle: options.title,
-    twitterDescription: options.description,
-    twitterImage: imageUrl
+    twitterDescription: options.description
   })
 
   // Set canonical and hreflang, and the keywords tag. `useSeoMeta` has no `keywords` member in the

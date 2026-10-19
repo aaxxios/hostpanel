@@ -5,6 +5,7 @@ using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Orders.Queries.ListOrders;
 
 /// <summary>
@@ -32,7 +33,7 @@ public sealed class ListOrdersHandler
         ArgumentNullException.ThrowIfNull(query);
 
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
         var statusFilter = ParseStatus(query.Status);
 
         IQueryable<Order> filtered = _context.Orders.AsNoTracking();
@@ -59,7 +60,7 @@ public sealed class ListOrdersHandler
                 o.Id,
                 o.OrderNumber,
                 o.ClientId,
-                clientMap.GetValueOrDefault(o.ClientId, "Unknown"),
+                clientMap.GetValueOrDefault(o.ClientId),
                 o.Status.ToString(),
                 o.PaymentMethod,
                 o.Items.Sum(i => i.FirstPaymentAmount),

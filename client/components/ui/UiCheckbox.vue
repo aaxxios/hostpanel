@@ -16,7 +16,7 @@
       :aria-checked="modelValue"
       :disabled="disabled"
       :data-testid="testid"
-      class="flex-shrink-0 mt-0.5 w-5 h-5 rounded border-2 transition-all duration-150 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+      class="flex-shrink-0 mt-0.5 w-5 h-5 rounded border-2 transition-all duration-150 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
       :class="[
         modelValue
           ? 'bg-primary-500 border-primary-500 dark:bg-primary-500 dark:border-primary-400'

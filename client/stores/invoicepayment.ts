@@ -18,6 +18,7 @@ import type { GatewayMethod } from '~/types/gatewaymethod'
 import { GatewayPaymentState } from '~/types/gatewaypaymentstate'
 import type { PaymentMethod } from '~/types/payment'
 import { PAYMENT_MODULE_BANK_TRANSFER, PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
+import type { PaymentTarget } from '~/types/paymenttarget'
 
 /** How the backend's settled-payment words map onto the page's states. */
 const STATE_BY_WIRE: Record<'paid' | 'pending' | 'declined', GatewayPaymentState> = {
@@ -104,7 +105,7 @@ export const useInvoicePaymentStore = defineStore('invoicePayment', () => {
    * @returns What the bank said, or `Unknown` when no answer could be had.
    */
   const verifyGatewayPayment = async (
-    target: 'order' | 'invoice',
+    target: PaymentTarget,
     id: string,
     paymentToken?: string
   ): Promise<GatewayPaymentState> => {

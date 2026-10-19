@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Domain.Clients.Events;
 using Innovayse.Hostpanel.SharedKernel.Domain;
+
 namespace Innovayse.Hostpanel.Domain.Tests.Clients;
 /// <summary>Unit tests for the <see cref="Client"/> aggregate.</summary>
 public class ClientTests
@@ -133,7 +134,7 @@ public class ClientTests
         var contactId = client.Contacts[0].Id;
         client.UpdateContact(
             contactId, "Janet", "Smith", "Acme", "janet@example.com", "+1-555-0100", ContactType.Technical,
-            "123 Main St", null, "Yerevan", null, "0010", "AM",
+            "123 Main St", null, "Springfield", null, "00100", "US",
             false, true, false, true, false, true);
 
         var contact = client.Contacts[0];
@@ -142,7 +143,7 @@ public class ClientTests
         Assert.Equal("Acme", contact.CompanyName);
         Assert.Equal("janet@example.com", contact.Email);
         Assert.Equal(ContactType.Technical, contact.Type);
-        Assert.Equal("AM", contact.Country);
+        Assert.Equal("US", contact.Country);
         Assert.False(contact.NotifyGeneral);
     }
 

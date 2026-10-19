@@ -38,11 +38,9 @@ import UiToggle from '@/components/ui/UiToggle.vue'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiLabelVariant, UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { NOTICE_VISIBLE_MS } from '@/lib/limits'
 
 const { t } = useI18n()
-
-/** How long the "saved" banner stays, in milliseconds. */
-const SAVED_BANNER_MS = 3000
 
 /** Current route, source of the client id. */
 const route = useRoute()
@@ -316,7 +314,7 @@ const handleSave = async (): Promise<void> => {
     clearTimeout(savedTimer)
     savedTimer = setTimeout(() => {
       saveSuccess.value = false
-    }, SAVED_BANNER_MS)
+    }, NOTICE_VISIBLE_MS)
   }
 }
 
@@ -374,7 +372,7 @@ onBeforeUnmount(() => {
                   :id="fieldId"
                   v-model="email"
                   type="email"
-                  placeholder="client@example.com"
+                  :placeholder="t('shared.examples.email')"
                   data-testid="client-profile-email"
                 />
               </template>

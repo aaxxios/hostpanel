@@ -63,14 +63,14 @@ const fields: ContactFieldDef[] = [
   { key: ContactField.FirstName, label: t('shared.firstName'), placeholder: t('shared.john'), type: 'text' },
   { key: ContactField.LastName, label: t('shared.lastName'), placeholder: t('shared.doe'), type: 'text' },
   { key: ContactField.Organization, label: t('clients.domainContact.organization'), placeholder: t('shared.acmeInc'), type: 'text' },
-  { key: ContactField.Email, label: t('shared.email'), placeholder: 'john@example.com', type: 'email' },
-  { key: ContactField.Phone, label: t('shared.phone'), placeholder: '+1.5551234567', type: 'text' },
+  { key: ContactField.Email, label: t('shared.email'), placeholder: t('shared.examples.email'), type: 'email' },
+  { key: ContactField.Phone, label: t('shared.phone'), placeholder: t('shared.examples.phone'), type: 'text' },
   { key: ContactField.Address1, label: t('shared.address1'), placeholder: t('clients.domainContact.123MainSt'), type: 'text' },
   { key: ContactField.Address2, label: t('shared.address2'), placeholder: t('shared.suite100'), type: 'text' },
   { key: ContactField.City, label: t('shared.city'), placeholder: t('shared.newYork'), type: 'text' },
-  { key: ContactField.State, label: t('shared.state'), placeholder: 'NY', type: 'text' },
-  { key: ContactField.PostalCode, label: t('clients.domainContact.postalCode'), placeholder: '10001', type: 'text' },
-  { key: ContactField.Country, label: t('shared.country'), placeholder: 'US', type: 'text' },
+  { key: ContactField.State, label: t('shared.state'), placeholder: t('shared.examples.state'), type: 'text' },
+  { key: ContactField.PostalCode, label: t('clients.domainContact.postalCode'), placeholder: t('shared.examples.postalCode'), type: 'text' },
+  { key: ContactField.Country, label: t('shared.country'), placeholder: t('shared.examples.countryCode'), type: 'text' },
 ]
 
 /** Contact values keyed by payload key. */

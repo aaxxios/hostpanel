@@ -10,8 +10,8 @@ export interface Transaction {
   id: number
   /** Associated client identifier. */
   clientId: number
-  /** Full name of the owning client. */
-  clientName: string
+  /** Full name of the owning client; null when unresolved. */
+  clientName: string | null
   /** ISO 8601 transaction date. */
   date: string
   /** Human-readable description of the transaction. */

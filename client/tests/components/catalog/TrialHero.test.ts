@@ -9,7 +9,7 @@ import TrialHero from '~/components/catalog/TrialHero.vue'
 /** Mounts the hero. */
 const mountHero = () =>
   mountWithKit(TrialHero, {
-    props: { name: 'Taskero', icon: 'view-dashboard', color: '#10b981', trialUrl: '/products/taskero', learnMoreUrl: '/products/taskero' },
+    props: { name: 'Gamma Tool', icon: 'view-dashboard', color: '#10b981', trialUrl: '/products/gamma-tool', learnMoreUrl: '/products/gamma-tool' },
   })
 
 describe('TrialHero', () => {
@@ -28,13 +28,13 @@ describe('TrialHero', () => {
   it('opens the trial in a new tab without giving the new page access to this one', () => {
     const cta = mountHero().find('[data-testid="trial-cta"]')
 
-    expect(cta.attributes('href')).toBe('/products/taskero')
+    expect(cta.attributes('href')).toBe('/products/gamma-tool')
     expect(cta.attributes('target')).toBe('_blank')
     expect(cta.attributes('rel')).toBe('noopener noreferrer')
   })
 
   it('links learn more to the localised catalogue page', () => {
-    expect(mountHero().find('[data-testid="trial-learn-more"]').attributes('href')).toBe('/en/products/taskero')
+    expect(mountHero().find('[data-testid="trial-learn-more"]').attributes('href')).toBe('/en/products/gamma-tool')
   })
 
   it('paints the hero in the product accent colour', () => {

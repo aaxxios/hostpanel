@@ -1,6 +1,6 @@
 {
   "footer": {
-    "description": "Web hosting, domains, servers, billing and a client portal, backed by 24/7 support.",
+    "description": "Web hosting, domains, servers, billing and a client portal, backed by support.",
     "columns": {
       "navigation": "Navigation",
       "services": "Services",
@@ -24,7 +24,6 @@
       "refund": "Refund Policy",
       "secure": "Secure SSL"
     },
-    "address": "Yerevan, Armenia",
     "backToTop": "Back to top"
   }
 }

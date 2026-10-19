@@ -1,6 +1,6 @@
 /**
  * Unit tests for nova's feature visibility rule: a card without a required setting always shows, a
- * card that names one shows only once the operator has filled it in.
+ * card that names one shows only once the operator has switched it on.
  *
  * @module tests/templates/nova/features.test
  */
@@ -26,10 +26,10 @@ const stubSources = (settings: Record<string, string>, env: Record<string, unkno
  * Builds a feature card.
  *
  * @param key Stable key.
- * @param requiresSetting Optional `[settingKey, envKey]` pair.
+ * @param requiresSetting Optional setting key.
  * @returns The card.
  */
-const card = (key: string, requiresSetting?: readonly [string, string]): Feature => ({
+const card = (key: string, requiresSetting?: string): Feature => ({
   key,
   icon: 'lucide:shield-check',
   titleKey: `t.${key}`,
@@ -49,27 +49,27 @@ describe('useVisibleFeatures', () => {
     expect(visible.value.map((feature) => feature.key)).toEqual(['a', 'b'])
   })
 
-  it('hides a card whose setting is empty', () => {
-    stubSources({})
+  it('hides a card whose setting is empty or false', () => {
+    stubSources({ 'portal.claims.cdn': 'false' })
 
-    const visible = useVisibleFeatures([card('a'), card('nvme', ['portal.claims.nvme', 'claimsNvme'])])
+    const visible = useVisibleFeatures([card('a'), card('nvme', 'portal.claims.nvme')])
 
     expect(visible.value.map((feature) => feature.key)).toEqual(['a'])
   })
 
-  it('shows a card once the operator setting is filled in, keeping the original order', () => {
-    stubSources({ 'portal.claims.nvme': 'yes' })
+  it('shows a card once the operator setting is true, keeping the original order', () => {
+    stubSources({ 'portal.claims.nvme': 'true' })
 
-    const visible = useVisibleFeatures([card('a'), card('nvme', ['portal.claims.nvme', 'claimsNvme']), card('c')])
+    const visible = useVisibleFeatures([card('a'), card('nvme', 'portal.claims.nvme'), card('c')])
 
     expect(visible.value.map((feature) => feature.key)).toEqual(['a', 'nvme', 'c'])
   })
 
-  it('accepts the environment value when no setting row exists', () => {
-    stubSources({}, { claimsCdn: 'cloudflare' })
+  it('ignores a runtime-config value: the setting is the only source', () => {
+    stubSources({}, { claimsCdn: 'true' })
 
-    const visible = useVisibleFeatures([card('cdn', ['portal.claims.cdn', 'claimsCdn'])])
+    const visible = useVisibleFeatures([card('cdn', 'portal.claims.cdn')])
 
-    expect(visible.value.map((feature) => feature.key)).toEqual(['cdn'])
+    expect(visible.value).toEqual([])
   })
 })

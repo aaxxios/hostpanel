@@ -33,7 +33,7 @@ import { useCurrencyStore } from '~/stores/currency'
 import { PricingCycle } from '~/types/pricingcycle'
 import type { PortalProduct } from '~/types/portalproduct'
 import type { PricingCycleOption } from '~/types/pricingcycleoption'
-import { parseDescription, productConfig, productGidToKey } from '~/utils/catalogGroups'
+import { familyConfig, parseDescription } from '~/utils/catalogGroups'
 import { formatMoney } from '~/utils/formatMoney'
 import { cycleAmount } from '~/utils/productFamilies'
 
@@ -63,21 +63,20 @@ const pid = Number(route.params.pid)
 const pidFilter = { pid }
 
 /** Whether the catalogue read is still running. */
-const { pending } = await useAsyncData(`configure:${pid}`, () => catalogStore.loadProducts(pidFilter), {
+const { pending } = await useAsyncData(`configure:${pid}`, async () => {
+  await catalogStore.loadProductGroups()
+  return catalogStore.loadProducts(pidFilter)
+}, {
   watch: [() => currencyStore.payerCode, locale],
 })
 
 /** The product, or null when the id matches none. */
 const product = computed<PortalProduct | null>(() => catalogStore.productsFor(pidFilter)[0] ?? null)
 
-/** Visual config of the product's family (icon, accent colour, name), or null when it is unknown. */
+/** Visual config of the product's family (name, icon, accent colour), or null when its group is unknown. */
 const config = computed(() => {
-  const groupId = product.value?.groupId
-  if (groupId === undefined) {
-    return null
-  }
-  const key = productGidToKey[groupId]
-  return key ? productConfig[key] : null
+  const group = catalogStore.productGroups.find((candidate) => candidate.id === product.value?.groupId)
+  return group ? familyConfig(group) : null
 })
 
 /** Name of the product's family. */

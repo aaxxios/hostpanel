@@ -8,10 +8,10 @@
     <UiGrid cols="auto" gap="lg" class="mt-10">
       <UiCard
         v-for="service in services"
-        :key="service.tag"
+        :key="service.key"
         tone="bare"
         hover
-        :data-testid="`service-card-${service.tag}`"
+        :data-testid="`service-card-${service.key}`"
         class="border-line bg-surf hover:border-ac1"
       >
         <UiStack gap="sm">
@@ -31,11 +31,11 @@ import { EYEBROW_CLASS, SECTION_TITLE_CLASS } from '~/templates/aurora/typograph
 /** Translator for the active locale. */
 const { t } = useI18n()
 
-/** The four services; each tile gradient is a named token class. */
+/** The four services: stable key, translated tile tag, copy, and a named token class for the tile gradient. */
 const services = computed(() => [
-  { tag: 'Host', title: t('aurora.services.hostingTitle'), body: t('aurora.services.hostingBody'), tint: 'bg-tile-sky' },
-  { tag: 'VPS', title: t('aurora.services.serversTitle'), body: t('aurora.services.serversBody'), tint: 'bg-tile-lilac' },
-  { tag: 'DNS', title: t('aurora.services.domainsTitle'), body: t('aurora.services.domainsBody'), tint: 'bg-tile-mint' },
-  { tag: 'Bill', title: t('aurora.services.billingTitle'), body: t('aurora.services.billingBody'), tint: 'bg-tile-pink' },
+  { key: 'hosting', tag: t('aurora.services.hostingTag'), title: t('aurora.services.hostingTitle'), body: t('aurora.services.hostingBody'), tint: 'bg-tile-sky' },
+  { key: 'servers', tag: t('aurora.services.serversTag'), title: t('aurora.services.serversTitle'), body: t('aurora.services.serversBody'), tint: 'bg-tile-lilac' },
+  { key: 'domains', tag: t('aurora.services.domainsTag'), title: t('aurora.services.domainsTitle'), body: t('aurora.services.domainsBody'), tint: 'bg-tile-mint' },
+  { key: 'billing', tag: t('aurora.services.billingTag'), title: t('aurora.services.billingTitle'), body: t('aurora.services.billingBody'), tint: 'bg-tile-pink' },
 ])
 </script>

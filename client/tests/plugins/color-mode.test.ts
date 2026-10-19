@@ -16,7 +16,7 @@ interface HeadInput {
   /** Attributes of `<html>`. */
   htmlAttrs: { class: () => string }
   /** Meta tags. */
-  meta: Array<{ name: string, content: unknown }>
+  meta: Array<{ name: string, content: unknown, media?: string }>
 }
 
 /** The plugin definition. */
@@ -91,8 +91,23 @@ describe('color-mode plugin', () => {
     await loadPlugin()
 
     const head = useHeadMock.mock.calls[0]![0] as HeadInput
-    const themeColor = head.meta.find(tag => tag.name === 'theme-color')!
-    expect((themeColor.content as Ref<string>).value).toBe('#f4f8fa')
+    const themeColors = head.meta.filter(tag => tag.name === 'theme-color')
+    expect(themeColors).toHaveLength(2)
+    // A chosen mode wins whatever the device scheme.
+    expect(themeColors.map(tag => (tag.content as Ref<string>).value)).toEqual(['#f4f8fa', '#f4f8fa'])
+  })
+
+  it('gives each device scheme its own theme-color while no mode is chosen', async () => {
+    settings['portal.template'] = 'nova'
+    await loadPlugin()
+    // The browser half reads a mode back from <html>; clear it to stand for the server render.
+    applied.value = null
+
+    const head = useHeadMock.mock.calls[0]![0] as HeadInput
+    const byMedia = Object.fromEntries(head.meta
+      .filter(tag => tag.name === 'theme-color')
+      .map(tag => [tag.media, (tag.content as Ref<string>).value]))
+    expect(byMedia).toEqual({ '(prefers-color-scheme: light)': '#f4f8fa', '(prefers-color-scheme: dark)': '#08191f' })
   })
 
   it('migrates a legacy stored choice and removes the key', async () => {

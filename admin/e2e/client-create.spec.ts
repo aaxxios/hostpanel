@@ -2,6 +2,7 @@
  * Client creation flow: a refusal from the API shows its sentence and field messages and keeps the
  * form, and a corrected submit creates the client and returns to the list.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { clientsPage } from './fixtures/clients'
 import { fieldOf } from './support/locators'
@@ -14,11 +15,11 @@ test('a refused create shows the API sentence, and the next submit creates the c
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/admin/currencies', []),
-      json('GET', '/api/reference/countries', []),
-      json('GET', '/api/clients', clientsPage),
+      json(HttpMethod.Get, '/api/admin/currencies', []),
+      json(HttpMethod.Get, '/api/reference/countries', []),
+      json(HttpMethod.Get, '/api/clients', clientsPage),
       {
-        method: 'POST',
+        method: HttpMethod.Post,
         path: '/api/clients/admin',
         respond: () => {
           attempts += 1
@@ -54,8 +55,8 @@ test('a refused create shows the API sentence, and the next submit creates the c
   await page.getByTestId('add-client-submit').click()
 
   await page.waitForURL('**/clients')
-  expect(api.callsTo('POST', '/api/clients/admin')).toHaveLength(2)
-  expect(api.callsTo('POST', '/api/clients/admin')[1]?.body).toMatchObject({
+  expect(api.callsTo(HttpMethod.Post, '/api/clients/admin')).toHaveLength(2)
+  expect(api.callsTo(HttpMethod.Post, '/api/clients/admin')[1]?.body).toMatchObject({
     createNewUser: true,
     email: 'new@example.test',
     firstName: 'Alan',
@@ -68,10 +69,10 @@ test('a refused empty form shows the API field message under the field', async (
   await stubApi(page, {
     signedIn: true,
     routes: [
-      json('GET', '/api/admin/currencies', []),
-      json('GET', '/api/reference/countries', []),
+      json(HttpMethod.Get, '/api/admin/currencies', []),
+      json(HttpMethod.Get, '/api/reference/countries', []),
       {
-        method: 'POST',
+        method: HttpMethod.Post,
         path: '/api/clients/admin',
         respond: () => ({
           status: 400,

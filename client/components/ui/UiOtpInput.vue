@@ -111,7 +111,7 @@ const cellClasses = (index: number): string => {
   if (digits.value[index]) {
     return `${base} bg-white dark:bg-white/10 border-primary-500 dark:border-primary-400 shadow-[0_0_0_3px] shadow-primary-500/20`
   }
-  return `${base} bg-white dark:bg-white/5 border-gray-300 dark:border-white/15 hover:border-primary-400 dark:hover:border-primary-500/60 focus:border-primary-500 focus:shadow-[0_0_0_3px] focus:shadow-primary-500/20`
+  return `${base} bg-white dark:bg-white/5 border-gray-300 dark:border-white/15 hover:border-primary-400 dark:hover:border-primary-500/60 focus-visible:border-primary-500 focus-visible:shadow-[0_0_0_3px] focus-visible:shadow-primary-500/20`
 }
 
 /**

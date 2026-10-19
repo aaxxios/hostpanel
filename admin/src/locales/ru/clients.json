@@ -139,7 +139,7 @@
     "areYouSureYouWant": "Вы уверены, что хотите немедленно выставить счёт по выбранным позициям?",
     "confirmDelete": "Подтвердите удаление",
     "areYouSureYouWant2": "Вы уверены, что хотите удалить эту оплачиваемую позицию?",
-    "confirmDeleteSelected": "Вы уверены, что хотите удалить выбранные элементы ({count})?"
+    "confirmDeleteSelected": "Вы уверены, что хотите удалить {count} выбранный элемент? | Вы уверены, что хотите удалить {count} выбранных элемента? | Вы уверены, что хотите удалить {count} выбранных элементов?"
   },
   "clientContacts": {
     "contactsLength": "Контакты ({length})",
@@ -218,7 +218,7 @@
     "clientinvoicestotalInvoiceValue": "Счетов: {clientInvoicesTotal}",
     "deleteInvoice": "Удалить счёт",
     "confirmBulkAction": "Подтвердите массовое действие",
-    "confirmBulkApply": "Применить «{action}» к выбранным счетам ({count})?",
+    "confirmBulkApply": "Применить «{action}» к {count} выбранному счёту? | Применить «{action}» к {count} выбранным счетам? | Применить «{action}» к {count} выбранным счетам?",
     "confirmDeleteInvoice": "Вы уверены, что хотите удалить счёт #{id}?"
   },
   "clientLayout": {

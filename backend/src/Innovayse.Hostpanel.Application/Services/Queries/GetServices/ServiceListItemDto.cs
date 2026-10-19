@@ -1,12 +1,13 @@
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Services.Enums;
+
 namespace Innovayse.Hostpanel.Application.Services.Queries.GetServices;
 /// <summary>Enriched service DTO for admin list views, including client and domain info.</summary>
 /// <param name="Id">Primary key of the client service.</param>
 /// <param name="ClientId">FK to the owning client.</param>
-/// <param name="ClientName">Full name of the owning client.</param>
-/// <param name="ProductName">Denormalized product display name.</param>
+/// <param name="ClientName">Full name of the owning client. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
+/// <param name="ProductName">Denormalized product display name. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="Domain">Linked domain name, or <see langword="null"/> if no domain is linked.</param>
 /// <param name="Price">Resolved price based on the billing cycle (monthly or annual).</param>
 /// <param name="PriceCurrency">ISO 4217 currency code (e.g. "USD").</param>
@@ -16,8 +17,8 @@ namespace Innovayse.Hostpanel.Application.Services.Queries.GetServices;
 public record ServiceListItemDto(
     int Id,
     int ClientId,
-    string ClientName,
-    string ProductName,
+    string? ClientName,
+    string? ProductName,
     string? Domain,
     decimal Price,
     string PriceCurrency,

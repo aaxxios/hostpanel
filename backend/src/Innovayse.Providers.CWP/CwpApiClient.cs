@@ -65,7 +65,7 @@ internal sealed class CwpApiClient : IHostingPanelApiClient
     /// <param name="email">Contact email address.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The CWP API response indicating success or failure.</returns>
-    public Task<CwpApiResponse> CreateAccountAsync(
+    public Task<CwpApiWire> CreateAccountAsync(
         string host,
         string apiKey,
         string domain,
@@ -96,7 +96,7 @@ internal sealed class CwpApiClient : IHostingPanelApiClient
     /// <param name="username">cPanel username of the account to suspend.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The CWP API response indicating success or failure.</returns>
-    public Task<CwpApiResponse> SuspendAccountAsync(
+    public Task<CwpApiWire> SuspendAccountAsync(
         string host,
         string apiKey,
         string username,
@@ -119,7 +119,7 @@ internal sealed class CwpApiClient : IHostingPanelApiClient
     /// <param name="username">cPanel username of the account to unsuspend.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The CWP API response indicating success or failure.</returns>
-    public Task<CwpApiResponse> UnsuspendAccountAsync(
+    public Task<CwpApiWire> UnsuspendAccountAsync(
         string host,
         string apiKey,
         string username,
@@ -142,7 +142,7 @@ internal sealed class CwpApiClient : IHostingPanelApiClient
     /// <param name="username">cPanel username of the account to delete.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The CWP API response indicating success or failure.</returns>
-    public Task<CwpApiResponse> TerminateAccountAsync(
+    public Task<CwpApiWire> TerminateAccountAsync(
         string host,
         string apiKey,
         string username,
@@ -224,10 +224,10 @@ internal sealed class CwpApiClient : IHostingPanelApiClient
     /// <param name="baseUrl">CWP server base URL including port, e.g. "https://cwp.example.com:2304".</param>
     /// <param name="request">The request parameters to send.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Parsed <see cref="CwpApiResponse"/>.</returns>
+    /// <returns>Parsed <see cref="CwpApiWire"/>.</returns>
     /// <exception cref="HttpRequestException">Thrown when the HTTP request fails.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the response body cannot be parsed.</exception>
-    private async Task<CwpApiResponse> SendAsync(string baseUrl, CwpAccountRequest request, CancellationToken ct)
+    private async Task<CwpApiWire> SendAsync(string baseUrl, CwpAccountRequest request, CancellationToken ct)
     {
         var url = $"{baseUrl}/v1/account";
         _logger.LogDebug("CWP API request: action={Action} url={Url}", request.Action, url);
@@ -237,7 +237,7 @@ internal sealed class CwpApiClient : IHostingPanelApiClient
 
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<CwpApiResponse>(ct)
+        var result = await response.Content.ReadFromJsonAsync<CwpApiWire>(ct)
             ?? throw new InvalidOperationException("CWP API returned an empty response body.");
 
         _logger.LogDebug(

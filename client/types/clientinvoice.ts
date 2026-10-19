@@ -53,8 +53,8 @@ export interface ClientInvoice {
   id: number
   /** FK to the owning client. */
   clientId: number
-  /** Display name of the owning client. */
-  clientName: string
+  /** Display name of the owning client; null when unknown (render with `nameOrUnknown`). */
+  clientName: string | null
   /** Current lifecycle status. */
   status: ClientInvoiceStatus
   /** ISO 4217 code this invoice was raised and is payable in — fixed at creation, never changed. */

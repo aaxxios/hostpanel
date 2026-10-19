@@ -8,9 +8,15 @@
  */
 
 import { randomBytes, createHash } from 'node:crypto'
+import { SessionCookie } from '~/constants/sessionCookie'
+import { SSO_FLOW_COOKIE_MAX_AGE } from '~/server/utils/auth-cookie'
+import { requireSsoSetting } from '~/server/utils/requireSsoSetting'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
+  // Fail closed before any cookie is set: an unconfigured SSO has nowhere to send the browser.
+  const ssoPublicUrl = requireSsoSetting(config.public.ssoPublicUrl)
+  const redirectUri = requireSsoSetting(config.ssoCallbackUrl)
 
   // Generate PKCE
   const codeVerifier = randomBytes(32).toString('base64url')
@@ -19,25 +25,24 @@ export default defineEventHandler(async (event) => {
     .digest('base64url')
 
   // Store verifier server-side in an httpOnly cookie (5 min TTL)
-  setCookie(event, 'pkce_verifier', codeVerifier, {
+  setCookie(event, SessionCookie.PkceVerifier, codeVerifier, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 5,
+    maxAge: SSO_FLOW_COOKIE_MAX_AGE,
     path: '/',
   })
 
   // Generate and store state for CSRF protection
   const state = randomBytes(16).toString('hex')
-  setCookie(event, 'oauth_state', state, {
+  setCookie(event, SessionCookie.OauthState, state, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 5,
+    maxAge: SSO_FLOW_COOKIE_MAX_AGE,
     path: '/',
   })
 
-  const redirectUri = config.ssoCallbackUrl
   const query = getQuery(event)
   const params = new URLSearchParams({
     client_id: config.ssoClientId,
@@ -63,15 +68,15 @@ export default defineEventHandler(async (event) => {
     }
   }
   if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('/api/')) {
-    setCookie(event, 'post_login_redirect', returnTo, {
+    setCookie(event, SessionCookie.PostLoginRedirect, returnTo, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 5,
+      maxAge: SSO_FLOW_COOKIE_MAX_AGE,
       path: '/',
     })
   }
 
-  const authorizeUrl = `${config.public.ssoPublicUrl}/connect/authorize?${params}`
+  const authorizeUrl = `${ssoPublicUrl}/connect/authorize?${params}`
   return sendRedirect(event, authorizeUrl, 302)
 })

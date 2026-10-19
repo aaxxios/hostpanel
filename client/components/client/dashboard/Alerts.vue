@@ -8,7 +8,7 @@
     <UiAlert v-if="servicesNeedingSetup.length > 0" variant="info" :title="setupTitle" data-testid="dashboard-alert-setup">
       {{ $t('client.dashboard.setupAlertSubtitle') }}
       <template #action>
-        <UiButton size="sm" variant="subtle" to="/client/services" data-testid="dashboard-alert-setup-action">
+        <UiButton size="sm" variant="subtle" :to="CLIENT_SERVICES_PATH" data-testid="dashboard-alert-setup-action">
           <ArrowRight :size="13" :stroke-width="2" class="mr-1" />
           {{ $t('client.dashboard.setupAlertAction') }}
         </UiButton>
@@ -19,7 +19,7 @@
     <UiAlert v-if="unpaidInvoices.length > 0" :title="unpaidTitle" data-testid="dashboard-alert-unpaid">
       {{ $t('client.dashboard.unpaidSubtitle') }}
       <template #action>
-        <UiButton size="sm" variant="subtle" to="/client/invoices" data-testid="dashboard-alert-unpaid-action">
+        <UiButton size="sm" variant="subtle" :to="CLIENT_INVOICES_PATH" data-testid="dashboard-alert-unpaid-action">
           <ArrowRight :size="13" :stroke-width="2" class="mr-1" />
           {{ $t('client.dashboard.unpaidView') }}
         </UiButton>
@@ -33,7 +33,7 @@
       data-testid="dashboard-alert-expiring"
     >
       <UiCardHeader :title="$t('client.dashboard.expiringSoonTitle')" :icon="Globe">
-        <UiButton size="sm" variant="subtle" to="/client/domains" data-testid="dashboard-alert-expiring-action">
+        <UiButton size="sm" variant="subtle" :to="CLIENT_DOMAINS_PATH" data-testid="dashboard-alert-expiring-action">
           <RefreshCw :size="12" :stroke-width="2" class="mr-1" />
           {{ $t('client.dashboard.expiringSoonRenew') }}
         </UiButton>
@@ -52,6 +52,7 @@
  * The attention banners under the dashboard counters: services waiting for setup, unpaid
  * invoices and domains close to expiry. Renders nothing when there is nothing to flag.
  */
+import { CLIENT_DOMAINS_PATH, CLIENT_INVOICES_PATH, CLIENT_SERVICES_PATH } from '~/constants/clientRoutes'
 import { ArrowRight, Globe, RefreshCw } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
 import { useDashboardSummary } from '~/composables/useDashboardSummary'

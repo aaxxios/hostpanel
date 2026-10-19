@@ -18,10 +18,10 @@
     <UiButton
       v-for="category in categories"
       :key="category.value"
-      :to="localePath(`/faq/${category.value}`)"
+      :to="localePath(`/faq/${category.slug}`)"
       :variant="category.value === active ? 'primary' : 'subtle'"
       size="sm"
-      :data-testid="`faq-category-${category.value}`"
+      :data-testid="`faq-category-${category.slug}`"
     >
       {{ category.label }}
     </UiButton>
@@ -37,6 +37,7 @@
  * back to the landing page.
  */
 import { FaqCategory } from '~/types/faqcategory'
+import { faqCategorySlug } from '~/utils/faqCategory'
 
 /** Props of FaqCategoryNav. */
 interface Props {
@@ -57,9 +58,10 @@ const { t } = useI18n()
 /** Localised path builder from the i18n module. */
 const localePath = useLocalePath()
 
-/** Every topic with its label in the active language. */
+/** Every topic with its URL slug and its label in the active language. */
 const categories = computed(() => Object.values(FaqCategory).map(value => ({
   value,
-  label: t(`faq.categories.${value}`)
+  slug: faqCategorySlug(value),
+  label: t(`faq.categories.${faqCategorySlug(value)}`)
 })))
 </script>

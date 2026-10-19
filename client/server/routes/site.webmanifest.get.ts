@@ -14,6 +14,8 @@
  * so the install prompt has something real to show either way.
  */
 
+import { PortalSettingKey } from '~/constants/portalSettingKey'
+
 /** Sizes an installable PWA is expected to declare, and the file each maps to. */
 const MANIFEST_ICON_SIZES = [
   { file: 'icon-192.png', sizes: '192x192', purpose: 'any' },
@@ -41,7 +43,7 @@ export default defineEventHandler(async (event) => {
   const settings = await $fetch<Record<string, string>>('/api/portal/public/settings')
     .catch(() => ({} as Record<string, string>))
 
-  const favicon = (settings['portal.favicon'] ?? '').trim()
+  const favicon = (settings[PortalSettingKey.Favicon] ?? '').trim()
 
   // An upload has its generated set in its own directory; anything else -- nothing set, a URL
   // the operator pasted, or an upload from before the generator existed -- falls back to the
@@ -82,8 +84,8 @@ export default defineEventHandler(async (event) => {
     name: 'Hostpanel',
     short_name: 'Hostpanel',
     icons,
-    theme_color: '#0ea5e9',
-    background_color: '#1e3a5f',
+    theme_color: '#0B0B14',
+    background_color: '#0B0B14',
     display: 'standalone',
   }
 })

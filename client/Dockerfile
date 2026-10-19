@@ -21,6 +21,11 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
+# Nitro bakes the /brand-assets/** proxy target into the build (nuxt.config.ts reads it at build time),
+# so the chat server address has to arrive here as well as at runtime. Empty means no proxy.
+ARG NUXT_PUBLIC_PORTAL_CHAT_BASE_URL=""
+ENV NUXT_PUBLIC_PORTAL_CHAT_BASE_URL=$NUXT_PUBLIC_PORTAL_CHAT_BASE_URL
+
 COPY . .
 RUN yarn build
 

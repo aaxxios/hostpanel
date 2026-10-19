@@ -30,7 +30,7 @@
       <UiStack gap="sm">
         <UiButton
           v-if="domainName"
-          :to="localePath('/client/domains')"
+          :to="localePath(CLIENT_DOMAINS_PATH)"
           size="lg"
           full-width
           data-testid="order-success-manage-domain"
@@ -41,7 +41,7 @@
           {{ $t('checkout.success.setupService') }}
         </UiButton>
         <UiButton
-          :to="localePath('/client/invoices')"
+          :to="localePath(CLIENT_INVOICES_PATH)"
           variant="subtle"
           size="lg"
           full-width
@@ -59,6 +59,7 @@
  * Payment success page shown after a successful checkout: the order confirmation and links on to
  * the service setup, the domain and the invoices.
  */
+import { CLIENT_DOMAINS_PATH, CLIENT_INVOICES_PATH, CLIENT_SERVICES_PATH } from '~/constants/clientRoutes'
 import { CheckCircle } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
 import { DomainOrderAction } from '~/types/domainorderaction'
@@ -104,6 +105,6 @@ const domainAction = computed(() => (route.query.action as DomainOrderAction) ||
  */
 const openServices = async (): Promise<void> => {
   await store.fetchServices(true)
-  await navigateTo(localePath('/client/services'))
+  await navigateTo(localePath(CLIENT_SERVICES_PATH))
 }
 </script>

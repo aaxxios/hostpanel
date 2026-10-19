@@ -82,8 +82,8 @@ export interface Invoice {
   paidAt?: string
   /** Gateway transaction reference, if paid. */
   gatewayTransactionId?: string
-  /** Display name of the owning client. */
-  clientName: string
+  /** Display name of the owning client; null when unresolved. */
+  clientName: string | null
   /** Line items on the invoice. */
   items: InvoiceItem[]
   /** Payment/refund/credit transactions. */

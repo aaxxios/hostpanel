@@ -57,7 +57,7 @@
     <template #footer>
       <UiText as="span" size="sm" tone="muted">
         {{ $t('client.register.haveAccount') }}
-        <UiLink to="/client/login" :underline="false" testid="register-signin" class="font-medium">
+        <UiLink :to="CLIENT_LOGIN_PATH" :underline="false" testid="register-signin" class="font-medium">
           {{ $t('client.register.signIn') }}
         </UiLink>
       </UiText>
@@ -72,6 +72,7 @@
  * The request, its in-flight flag, the refusal sentence and the per-field messages belong to the
  * auth store; this page renders them and sends the visitor to sign in once the account exists.
  */
+import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
 import { UserPlus } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '~/stores/auth'
@@ -108,7 +109,7 @@ const handleRegister = async (): Promise<void> => {
   const outcome = await authStore.register(form)
   if (outcome === ActionOutcome.Succeeded) {
     success.value = true
-    setTimeout(() => navigateTo('/client/login'), REDIRECT_DELAY_MS)
+    setTimeout(() => navigateTo(CLIENT_LOGIN_PATH), REDIRECT_DELAY_MS)
   }
 }
 </script>

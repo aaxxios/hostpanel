@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import FloatingActions from '~/components/ui/UiFloatingActions.vue'
+import { ChatProvider } from '~/types/chatprovider'
 
 /**
  * Stubs the portal settings composable with the given values.
@@ -52,7 +53,7 @@ describe('FloatingActions', () => {
     wrapper.unmount()
   })
 
-  it.each([['chatwoot'], ['innochat'], ['InnoChat']])('offers live chat for the %s provider', async (provider) => {
+  it.each([[ChatProvider.LegacyChat], [ChatProvider.Innochat], ['InnoChat']])('offers live chat for the %s provider', async (provider) => {
     stubSettings({ 'portal.chat.provider': provider })
     const wrapper = mountAttached()
 

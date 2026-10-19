@@ -2,6 +2,7 @@
  * Currencies flow: editing a non-base currency opens the form with its stored values, submits
  * the upsert payload, closes the modal and shows the new rate in the table.
  */
+import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { eur, usd } from './fixtures/currencies'
 import type { CurrencyDto } from '../src/types/currency'
@@ -16,9 +17,9 @@ test('editing a currency saves the new prefix and rate and shows them in the tab
   const api = await stubApi(page, {
     signedIn: true,
     routes: [
-      { method: 'GET', path: '/api/admin/currencies', respond: () => ({ body: stored }) },
+      { method: HttpMethod.Get, path: '/api/admin/currencies', respond: () => ({ body: stored }) },
       {
-        method: 'PUT',
+        method: HttpMethod.Put,
         path: `/api/admin/currencies/${eur.code}`,
         respond: (call) => {
           const row = stored.find((currency) => currency.code === eur.code)
@@ -49,7 +50,7 @@ test('editing a currency saves the new prefix and rate and shows them in the tab
   await expect(page.getByTestId(`currency-row-${eur.code}`)).toContainText('0.95000000')
   await expect(page.getByTestId(`currency-row-${eur.code}`)).toContainText('EUR2.99')
 
-  const [save] = api.callsTo('PUT', `/api/admin/currencies/${eur.code}`)
+  const [save] = api.callsTo(HttpMethod.Put, `/api/admin/currencies/${eur.code}`)
   expect(save?.body).toEqual({
     numeric: eur.numeric,
     prefix: 'EUR',

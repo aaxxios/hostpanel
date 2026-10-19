@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { authMiddleware } from '@/middleware/auth'
 import { getRuntimeConfig } from '@/lib/runtimeConfig'
 import { REPORTS } from '@/lib/reports'
+import { AppRoute } from '@/lib/routes'
 
 /** Every view and layout as a lazy loader, keyed by its path relative to this file; Vite splits each into its own chunk. */
 const loaders = import.meta.glob<{ default: Component }>(['../views/*.vue', '../layouts/*.vue'])
@@ -49,7 +50,7 @@ const router = createRouter({
       // outstanding, and a deployment that owns its own accounts — and the public rule
       // would bounce the operator to /dashboard the moment registration signed them in,
       // before they had claimed the Admin role.
-      path: '/setup',
+      path: AppRoute.Setup,
       component: lazy('views/SetupView.vue'),
       meta: { setup: true },
     },
@@ -59,7 +60,7 @@ const router = createRouter({
       meta: { public: true },
     },
     {
-      path: '/login',
+      path: AppRoute.Login,
       component: lazy('views/LoginView.vue'),
       meta: { public: true },
     },
@@ -70,7 +71,7 @@ const router = createRouter({
       component: lazy('layouts/AppLayout.vue'),
       meta: { requiresAuth: true },
       children: [
-        { path: '', redirect: '/dashboard' },
+        { path: '', redirect: AppRoute.Dashboard },
         { path: 'dashboard', component: lazy('views/DashboardView.vue') },
         { path: 'notifications', component: lazy('views/NotificationsView.vue') },
         { path: 'clients', component: lazy('views/ClientsListView.vue') },
@@ -130,7 +131,7 @@ const router = createRouter({
           path: 'reports',
           component: lazy('layouts/ReportsLayout.vue'),
           children: [
-            { path: '', redirect: '/reports/daily-performance' },
+            { path: '', redirect: AppRoute.ReportsDailyPerformance },
             /** One route per catalogued report. */
             ...REPORTS.map(r => ({ path: r.slug, component: r.component })),
           ],
@@ -139,7 +140,7 @@ const router = createRouter({
         { path: 'orders/:id', component: lazy('views/OrderDetailView.vue') },
         { path: 'services', component: lazy('views/ServicesListView.vue') },
         { path: 'domains', component: lazy('views/DomainsListView.vue') },
-        { path: 'support', redirect: '/support/overview' },
+        { path: 'support', redirect: AppRoute.SupportOverview },
         { path: 'support/overview', component: lazy('views/SupportOverviewView.vue') },
         { path: 'support/tickets', component: lazy('views/SupportTicketsView.vue') },
         { path: 'support/tickets/new', component: lazy('views/SupportOpenTicketView.vue') },
@@ -161,7 +162,7 @@ const router = createRouter({
           path: 'integrations',
           component: lazy('layouts/IntegrationsLayout.vue'),
           children: [
-            { path: '', redirect: '/integrations/payments' },
+            { path: '', redirect: AppRoute.IntegrationsPayments },
             { path: ':category', component: lazy('views/IntegrationsView.vue') },
           ],
         },
@@ -176,11 +177,23 @@ const router = createRouter({
         { path: 'settings/tld-pricing/:id/edit', component: lazy('views/TldConfigFormView.vue') },
         // The old gateways table read an endpoint that never existed; payment gateways are configured
         // under Integrations, so a bookmark to the old address goes there.
-        { path: 'settings/gateways', redirect: '/integrations/payments' },
+        { path: 'settings/gateways', redirect: AppRoute.IntegrationsPayments },
         { path: 'settings/currencies', component: lazy('views/CurrenciesView.vue') },
+        { path: 'storefront/testimonials', component: lazy('views/TestimonialsView.vue') },
+        { path: 'storefront/testimonials/create', component: lazy('views/TestimonialFormView.vue') },
+        { path: 'storefront/testimonials/:id/edit', component: lazy('views/TestimonialFormView.vue') },
+        { path: 'storefront/partners', component: lazy('views/PartnersView.vue') },
+        { path: 'storefront/partners/create', component: lazy('views/PartnerFormView.vue') },
+        { path: 'storefront/partners/:id/edit', component: lazy('views/PartnerFormView.vue') },
+        { path: 'storefront/projects', component: lazy('views/ProjectsView.vue') },
+        { path: 'storefront/projects/create', component: lazy('views/ProjectFormView.vue') },
+        { path: 'storefront/projects/:id/edit', component: lazy('views/ProjectFormView.vue') },
+        { path: 'storefront/faqs', component: lazy('views/FaqsView.vue') },
+        { path: 'storefront/faqs/create', component: lazy('views/FaqFormView.vue') },
+        { path: 'storefront/faqs/:id/edit', component: lazy('views/FaqFormView.vue') },
       ],
     },
-    { path: '/:pathMatch(.*)*', redirect: '/login' },
+    { path: '/:pathMatch(.*)*', redirect: AppRoute.Login },
   ],
 })
 

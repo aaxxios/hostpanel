@@ -165,7 +165,7 @@ public static class RateLimitingExtensions
         //
         // NoLimiter rather than a limit of int.MaxValue: there is no counter to keep and no
         // partition dictionary to grow, so the behaviour is "off" rather than "improbably large".
-        var limitingDisabled = environment.IsEnvironment("Testing");
+        var limitingDisabled = environment.IsEnvironment(EnvironmentNames.Testing);
 
         // Read back by the rejection callback so X-RateLimit-Limit can state the budget that was
         // actually spent. Built here because the callback has only a policy name to go on.
@@ -316,7 +316,7 @@ public static class RateLimitingExtensions
     private static string ResolvePartitionKey(HttpContext context)
     {
         var subject = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? context.User.FindFirst("sub")?.Value
+            ?? context.User.FindFirst(JwtClaims.Sub)?.Value
             ?? context.User.Identity?.Name;
 
         return string.IsNullOrWhiteSpace(subject)
@@ -447,7 +447,7 @@ public static class RateLimitingExtensions
 
         var localizer = httpContext.RequestServices.GetRequiredService<IStringLocalizer<ValidationMessages>>();
 
-        httpContext.Response.ContentType = "application/json";
+        httpContext.Response.ContentType = System.Net.Mime.MediaTypeNames.Application.Json;
         await httpContext.Response.WriteAsJsonAsync(
             new { error = localizer[RateLimitedMessageKey].Value, code = RateLimitedCode }, cancellationToken);
     }
