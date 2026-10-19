@@ -16,7 +16,8 @@ test('a signed-out visitor opening a protected page is sent to the login form', 
 
   await page.goto('/dashboard')
 
-  await page.waitForURL('**/login')
+  // The login address now carries the page that was asked for, so it ends in a query, not in `/login`.
+  await page.waitForURL(/\/login\?redirect=/)
   await expect(fieldOf(page, 'login-email')).toBeVisible()
   await expect(fieldOf(page, 'login-password')).toBeVisible()
 })
@@ -55,7 +56,8 @@ test('a deep link opened while signed out is opened after signing in', async ({ 
   await stubApi(page)
 
   await page.goto('/billing/invoices')
-  await page.waitForURL('**/login?redirect=*')
+  // A glob's `*` does not cross a `/`, and the remembered target (`/billing/invoices`) has one.
+  await page.waitForURL(/\/login\?redirect=\/billing\/invoices$/)
 
   await fieldOf(page, 'login-email').fill(validCredentials.email)
   await fieldOf(page, 'login-password').fill(validCredentials.password)
