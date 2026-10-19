@@ -46,7 +46,7 @@ const tailwind = readFileSync(resolve(__dirname, '../../../../tailwind.config.ts
  * @returns The first `r g b` fallback written for it, or an empty string.
  */
 const fallbackOf = (source: string, name: string): string =>
-  new RegExp(`--${name},\s*(\d+ \d+ \d+)`).exec(source)?.[1] ?? ''
+  new RegExp(`--${name},\\s*(\\d+ \\d+ \\d+)`).exec(source)?.[1] ?? ''
 
 describe('aurora fallbacks agree with the Tailwind ramp', () => {
   it.each(['brand-primary-500', 'brand-primary-600', 'brand-accent-700'])('uses one literal for %s', (name) => {
