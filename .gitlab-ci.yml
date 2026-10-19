@@ -30,8 +30,8 @@ variables:
   NODE_IMAGE: node:22
   DOCKER_IMAGE: docker:27
   BINFMT_IMAGE: tonistiigi/binfmt
-  # The Playwright image tag follows @playwright/test in each app's package.json.
-  PLAYWRIGHT_CLIENT_IMAGE: mcr.microsoft.com/playwright:v1.62.1-noble
+  # Each Playwright image tag equals the exact @playwright/test pinned in that app's package.json.
+  PLAYWRIGHT_CLIENT_IMAGE: mcr.microsoft.com/playwright:v1.64.1-noble
   PLAYWRIGHT_ADMIN_IMAGE: mcr.microsoft.com/playwright:v1.56.0-noble
   YARN_VERSION: "1.22.22"
   # Where the public source lives; stamped into the Docker Hub image labels.
@@ -323,8 +323,9 @@ client:test:
       changes: [client/**/*]
 
 # Playwright against the production build of client:test, with the stub backend
-# (client/e2e/support/stub-backend.mjs) standing in for the API. The image tag follows
-# @playwright/test in client/package.json (PLAYWRIGHT_CLIENT_IMAGE).
+# (client/e2e/support/stub-backend.mjs) standing in for the API. The image tag equals
+# the exact @playwright/test pinned in client/package.json (PLAYWRIGHT_CLIENT_IMAGE); a caret
+# range let the lockfile drift past the image and every browser launch failed.
 client:e2e:
   stage: test
   tags: [builder]
