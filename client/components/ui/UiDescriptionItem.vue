@@ -1,6 +1,6 @@
 <template>
   <div>
-    <dt class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
+    <dt class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
       {{ label }}
     </dt>
     <dd class="text-gray-900 dark:text-white text-sm" :class="valueClass">

@@ -11,5 +11,6 @@ describe('TableBody', () => {
 
     expect(wrapper.element.tagName).toBe('TBODY')
     expect(wrapper.classes()).toContain('divide-y')
+    expect(wrapper.classes()).toContain('dark:divide-white/10')
   })
 })

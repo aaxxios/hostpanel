@@ -31,10 +31,15 @@ describe('UiText', () => {
     [UiTextTone.Muted, 'text-gray-600'],
     [UiTextTone.Subtle, 'text-gray-500'],
     [UiTextTone.Primary, 'text-primary-600'],
-    [UiTextTone.Success, 'text-green-600'],
+    [UiTextTone.Success, 'text-green-700'],
     [UiTextTone.Danger, 'text-red-600'],
   ])('paints the %s role with %s', (tone, expected) => {
     expect(mountWithKit(UiText, { props: { tone } }).classes()).toContain(expected)
+  })
+
+  it('keeps the muted and subtle roles readable on the dark surface', () => {
+    expect(mountWithKit(UiText, { props: { tone: UiTextTone.Muted } }).classes()).toContain('dark:text-gray-300')
+    expect(mountWithKit(UiText, { props: { tone: UiTextTone.Subtle } }).classes()).toContain('dark:text-gray-400')
   })
 
   it.each([

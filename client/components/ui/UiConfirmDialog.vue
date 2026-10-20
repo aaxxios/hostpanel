@@ -14,7 +14,7 @@
           :is="isDanger ? Trash2 : AlertTriangle"
           :size="22"
           :stroke-width="2"
-          :class="isDanger ? 'text-red-400' : 'text-yellow-400'"
+          :class="isDanger ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'"
         />
       </div>
       <h3 class="text-base font-bold text-gray-900 dark:text-white mb-2">{{ title }}</h3>

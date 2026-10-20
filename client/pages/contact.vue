@@ -15,11 +15,8 @@
         <!-- Right: Contact Info -->
         <template #start>
           <UiStack
-            v-motion
             gap="lg"
-            class="w-full min-w-0"
-            :initial="{ opacity: 0, x: 40 }"
-            :visible-once="{ opacity: 1, x: 0, transition: { duration: 600 } }"
+            class="w-full min-w-0 animate-reveal-up motion-reduce:animate-none"
           >
             <!-- Office Info Card -->
             <UiCard v-if="address" hover data-testid="contact-office">
@@ -27,7 +24,7 @@
                 <UiTile
                   :icon="Building2"
                   size="xl"
-                  class="border border-primary-500/20 bg-primary-500/10 text-primary-600 dark:text-primary-400"
+                  class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300"
                 />
                 <UiStack gap="none">
                   <UiHeading :level="3" class="mb-1">
@@ -59,10 +56,10 @@
                   <UiTile
                     :icon="Mail"
                     size="xl"
-                    class="bg-primary-500/20 text-primary-600 dark:text-primary-400"
+                    class="bg-primary-500/20 text-primary-700 dark:text-primary-300"
                   />
                   <UiStack gap="none">
-                    <UiText as="span" size="xs" tone="subtle">
+                    <UiText as="span" size="xs" tone="muted">
                       {{ t('contact.info.contactMethods.email') }}
                     </UiText>
                     <UiText
@@ -91,7 +88,7 @@
                     class="bg-primary-500/20 text-primary-700 dark:bg-secondary-500/20 dark:text-secondary-400"
                   />
                   <UiStack gap="none">
-                    <UiText as="span" size="xs" tone="subtle">
+                    <UiText as="span" size="xs" tone="muted">
                       {{ t('contact.info.contactMethods.phone') }}
                     </UiText>
                     <UiText
@@ -120,7 +117,7 @@
                     class="bg-cyan-500/20 text-cyan-700 dark:text-cyan-400"
                   />
                   <UiStack gap="none">
-                    <UiText as="span" size="xs" tone="subtle">
+                    <UiText as="span" size="xs" tone="muted">
                       {{ t('contact.info.contactMethods.workingHours') }}
                     </UiText>
                     <UiText as="span" size="sm" weight="semibold">
@@ -178,11 +175,8 @@
         <!-- Left: Contact Form -->
         <template #end>
           <UiCard
-            v-motion
             padding="xl"
-            class="relative overflow-hidden"
-            :initial="{ opacity: 0, x: -40 }"
-            :visible-once="{ opacity: 1, x: 0, transition: { duration: 600 } }"
+            class="relative overflow-hidden animate-reveal-up motion-reduce:animate-none"
           >
             <UiHeading :level="2" class="mb-6">
               {{ t('contact.form.title') }}

@@ -81,4 +81,13 @@ describe('UiForm', () => {
     expect(plain.attributes('data-testid')).toBe('ui-form')
     expect(named.attributes('data-testid')).toBe('contact-form')
   })
+
+  it('paints the banners with the shared alert tones so the text is readable in both themes', () => {
+    const wrapper = mountWithKit(UiForm, { props: { error: 'Bad', success: 'Saved' } })
+
+    expect(wrapper.find('[data-testid="ui-form-error"]').classes()).toContain('bg-red-50')
+    expect(wrapper.find('[data-testid="ui-form-error"] p').classes()).toContain('text-red-700')
+    expect(wrapper.find('[data-testid="ui-form-success"]').classes()).toContain('bg-green-50')
+    expect(wrapper.find('[data-testid="ui-form-success"] p').classes()).toContain('text-green-700')
+  })
 })

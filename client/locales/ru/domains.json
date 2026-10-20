@@ -38,6 +38,12 @@
       "browseByCategory": "Просмотр по категориям",
       "catAll": "Все",
       "categories": {
+        "budget": "Бюджетные",
+        "community": "Сообщества",
+        "creative": "Творчество",
+        "local": "Локальные",
+        "regional": "Региональные",
+        "tech": "Технологии",
         "popular": "Популярные",
         "technology": "Технологии",
         "shopping": "Покупки",

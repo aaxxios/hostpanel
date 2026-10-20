@@ -28,14 +28,20 @@ internal sealed class DemoStorefrontSeeder
         (PortalSettingKeys.StatsClients, "500+"),
         (PortalSettingKeys.StatsUptime, "99.9%"),
         (PortalSettingKeys.StatsRegions, "Europe, North America"),
-        (PortalSettingKeys.ContactAddress, "1 Sample Street, Sampletown"),
-        (PortalSettingKeys.ContactMapUrl, "https://maps.example/embed?q=sample"),
+        (PortalSettingKeys.ContactAddress, "1 Market Street, Fairhaven"),
+        (PortalSettingKeys.ContactMapUrl, "https://maps.example/embed?q=fairhaven"),
+    ];
+
+    /// <summary>The bundled sample portraits a testimonial may show; the rest show the client's initials.</summary>
+    private static readonly string[] Avatars =
+    [
+        "/demo/avatars/avatar-1.svg", "/demo/avatars/avatar-2.svg", "/demo/avatars/avatar-3.svg", "/demo/avatars/avatar-4.svg",
     ];
 
     /// <summary>The testimonials: client name, company, rating, then the role and the quote in three languages.</summary>
     private static readonly (string Name, string Company, int Rating, string[] Role, string[] Quote)[] Testimonials =
     [
-        ("Alex Morgan", "Northwind Example", 5,
+        ("Alex Morgan", "Northwind Outfitters", 5,
             ["CEO", "Генеральный директор", "Գործադիր տնօրեն"],
             ["Moving our sites here took one evening, and nothing has gone down since.",
              "Перенос наших сайтов занял один вечер, и с тех пор ничего не падало.",
@@ -65,12 +71,42 @@ internal sealed class DemoStorefrontSeeder
             ["A clean control panel and honest prices. Exactly what we wanted.",
              "Понятная панель управления и честные цены. Именно то, что мы искали.",
              "Մաքուր կառավարման վահանակ և ազնիվ գներ։ Հենց այն, ինչ փնտրում էինք։"]),
+        ("Ivo Brandt", "Copperfield Clinic", 5,
+            ["IT lead", "Руководитель ИТ", "ՏՏ ղեկավար"],
+            ["Our booking system has run here for two years without a single lost appointment.",
+             "Наша система записи работает здесь два года без единой потерянной записи.",
+             "Մեր ամրագրման համակարգը այստեղ աշխատում է երկու տարի՝ առանց մեկ կորած գրանցման։"]),
+        ("Nadia Klein", "Silverpine Retail", 5,
+            ["E-commerce manager", "Менеджер интернет-магазина", "Առցանց վաճառքի մենեջեր"],
+            ["Black Friday traffic was ten times normal and checkout never slowed down.",
+             "В Чёрную пятницу трафик вырос в десять раз, а оформление заказа не замедлилось.",
+             "Սև ուրբաթին տրաֆիկը տասնապատկվեց, իսկ պատվերի ձևակերպումը չդանդաղեց։"]),
+        ("Tomasz Wolny", "Riverbend Software", 4,
+            ["CTO", "Технический директор", "Տեխնիկական տնօրեն"],
+            ["Root access, snapshots and a clear API. Our developers felt at home on day one.",
+             "Root-доступ, снимки и понятный API. Разработчики освоились с первого дня.",
+             "Root հասանելիություն, պատկերներ և հստակ API։ Մշակողները առաջին օրվանից իրենց տանը զգացին։"]),
+        ("Grace Owens", "Meadowlark Charity", 5,
+            ["Volunteer coordinator", "Координатор волонтёров", "Կամավորների համակարգող"],
+            ["Friendly support that explains things without jargon. That matters to a small team.",
+             "Дружелюбная поддержка, которая объясняет без жаргона. Для маленькой команды это важно.",
+             "Բարյացակամ աջակցություն, որը բացատրում է առանց ժարգոնի։ Փոքր թիմի համար դա կարևոր է։"]),
+        ("Ruben Castillo", "Sunpeak Travel", 4,
+            ["Marketing lead", "Руководитель маркетинга", "Մարքեթինգի ղեկավար"],
+            ["We launched sites in three languages and every one of them loads fast worldwide.",
+             "Мы запустили сайты на трёх языках, и каждый быстро открывается по всему миру.",
+             "Մենք գործարկեցինք կայքեր երեք լեզվով, և յուրաքանչյուրն արագ է բացվում ամբողջ աշխարհում։"]),
+        ("Elif Arslan", "Bosphorus Design", 5,
+            ["Studio owner", "Владелец студии", "Ստուդիայի սեփականատեր"],
+            ["Managing all our clients' domains and hosting from one place changed how we work.",
+             "Управление доменами и хостингом всех клиентов из одного места изменило нашу работу.",
+             "Մեր բոլոր հաճախորդների դոմեյնների և հոսթինգի կառավարումը մեկ տեղից փոխեց մեր աշխատանքը։"]),
     ];
 
     /// <summary>The partners: the name shown, in three languages.</summary>
     private static readonly string[][] Partners =
     [
-        ["Alpha Example", "Альфа Пример", "Ալֆա Օրինակ"],
+        ["Alderstone Group", "Олдерстоун Груп", "Օլդերսթոուն Գրուպ"],
         ["Beacon Labs", "Бикон Лабс", "Բիկոն Լաբս"],
         ["Cobalt Works", "Кобальт Воркс", "Կոբալտ Ուորքս"],
         ["Delta Studio", "Дельта Студия", "Դելտա Ստուդիա"],
@@ -78,6 +114,14 @@ internal sealed class DemoStorefrontSeeder
         ["Fjord Logistics", "Фьорд Логистика", "Ֆյորդ Լոգիստիկա"],
         ["Granite Bank", "Гранит Банк", "Գրանիտ Բանկ"],
         ["Harbor Media", "Харбор Медиа", "Հարբոր Մեդիա"],
+        ["Irislane Analytics", "Айрислейн Аналитикс", "Այրիսլեյն Անալիտիքս"],
+        ["Jadeline Cloud", "Джейдлайн Клауд", "Ջեյդլայն Քլաուդ"],
+        ["Kelpie Security", "Келпи Секьюрити", "Քելփի Սեքյուրիթի"],
+        ["Lumora Networks", "Люмора Нетворкс", "Լյումորա Նեթվորքս"],
+        ["Marlowe Payments", "Марлоу Пейментс", "Մարլոու Փեյմենթս"],
+        ["Nimbusline Data", "Нимбуслайн Дата", "Նիմբուսլայն Դատա"],
+        ["Orchid Commerce", "Орхид Коммерс", "Օրքիդ Քոմերս"],
+        ["Pinnacle Labs", "Пиннакл Лабс", "Փինաքլ Լաբս"],
     ];
 
     /// <summary>The projects: slug, then the title and the one-line summary in three languages.</summary>
@@ -107,6 +151,30 @@ internal sealed class DemoStorefrontSeeder
             ["A publishing site with subscriptions and a reader archive.",
              "Издательский сайт с подписками и архивом для читателей.",
              "Հրատարակչական կայք բաժանորդագրություններով և ընթերցողների արխիվով։"]),
+        ("copperfield-booking", ["Copperfield Booking", "Запись Copperfield", "Copperfield ամրագրում"],
+            ["An appointment booking system with reminders by mail and text.",
+             "Система записи на приём с напоминаниями по почте и SMS.",
+             "Ընդունելության ամրագրման համակարգ՝ հիշեցումներով էլ. փոստով և SMS-ով։"]),
+        ("silverpine-store", ["Silverpine Store", "Магазин Silverpine", "Silverpine խանութ"],
+            ["A high-traffic fashion store with product filters and gift cards.",
+             "Нагруженный магазин одежды с фильтрами товаров и подарочными картами.",
+             "Բարձր այցելությամբ հագուստի խանութ՝ ապրանքների զտիչներով և նվեր քարտերով։"]),
+        ("riverbend-docs", ["Riverbend Docs", "Документация Riverbend", "Riverbend փաստաթղթեր"],
+            ["A developer documentation site with versioned guides and search.",
+             "Сайт документации для разработчиков с версиями руководств и поиском.",
+             "Մշակողների փաստաթղթերի կայք՝ տարբերակված ուղեցույցներով և որոնմամբ։"]),
+        ("meadowlark-donations", ["Meadowlark Donations", "Пожертвования Meadowlark", "Meadowlark նվիրատվություններ"],
+            ["A charity site with recurring donations and a volunteer sign-up form.",
+             "Благотворительный сайт с регулярными пожертвованиями и анкетой волонтёра.",
+             "Բարեգործական կայք՝ պարբերական նվիրատվություններով և կամավորի գրանցման ձևով։"]),
+        ("sunpeak-tours", ["Sunpeak Tours", "Туры Sunpeak", "Sunpeak տուրեր"],
+            ["A multilingual travel site with tour search and online deposits.",
+             "Многоязычный туристический сайт с поиском туров и онлайн-предоплатой.",
+             "Բազմալեզու զբոսաշրջային կայք՝ տուրերի որոնմամբ և առցանց կանխավճարով։"]),
+        ("bosphorus-portfolio", ["Bosphorus Portfolio", "Портфолио Bosphorus", "Bosphorus պորտֆոլիո"],
+            ["A design studio portfolio with case studies and a client area.",
+             "Портфолио дизайн-студии с кейсами и кабинетом клиента.",
+             "Դիզայն ստուդիայի պորտֆոլիո՝ դեպքերի ուսումնասիրություններով և հաճախորդի բաժնով։"]),
     ];
 
     /// <summary>The questions: category, then the question and the answer in three languages.</summary>
@@ -137,9 +205,9 @@ internal sealed class DemoStorefrontSeeder
              "Да. Запросите отмену на странице услуги, она завершится в конце оплаченного периода.",
              "Այո։ Չեղարկումը պահանջեք ծառայության էջից, այն կավարտվի վճարված ժամանակահատվածի վերջում։"]),
         (FaqCategory.Products, ["Can I move my existing site?", "Можно ли перенести существующий сайт?", "Կարո՞ղ եմ տեղափոխել առկա կայքը"],
-            ["Yes. Migration is free on annual plans, including databases and mail.",
-             "Да. Перенос бесплатен на годовых тарифах, включая базы данных и почту.",
-             "Այո։ Տարեկան փաթեթների դեպքում տեղափոխումն անվճար է՝ տվյալների բազաների և փոստի հետ միասին։"]),
+            ["Yes. Migration assistance is available for sites, databases and mail; open a ticket to plan it.",
+             "Да. Доступна помощь с переносом сайтов, баз данных и почты; откройте тикет, чтобы спланировать его.",
+             "Այո։ Հասանելի է կայքերի, տվյալների բազաների և փոստի տեղափոխման աջակցություն. բացեք հարցում՝ այն պլանավորելու համար։"]),
         (FaqCategory.Products, ["How do I register or transfer a domain?", "Как зарегистрировать или перенести домен?", "Ինչպե՞ս գրանցել կամ տեղափոխել դոմեյն"],
             ["Search for the name on the domains page and add it to your cart. To transfer, provide the authorization code.",
              "Найдите имя на странице доменов и добавьте в корзину. Для переноса укажите код авторизации.",
@@ -160,6 +228,54 @@ internal sealed class DemoStorefrontSeeder
             ["Yes, virtual and dedicated servers with full root access and monitoring.",
              "Да, виртуальные и выделенные серверы с полным root-доступом и мониторингом.",
              "Այո, վիրտուալ և առանձնացված սերվերներ՝ լիարժեք root հասանելիությամբ և մոնիթորինգով։"]),
+        (FaqCategory.General, ["Is there a money-back guarantee?", "Есть ли гарантия возврата денег?", "Կա՞ գումարի վերադարձի երաշխիք"],
+            ["Yes. Hosting plans can be cancelled within thirty days for a full refund.",
+             "Да. Тарифы хостинга можно отменить в течение тридцати дней с полным возвратом.",
+             "Այո։ Հոսթինգի փաթեթները կարելի է չեղարկել երեսուն օրվա ընթացքում՝ ամբողջական վերադարձով։"]),
+        (FaqCategory.General, ["Can I pay annually?", "Можно ли платить за год?", "Կարո՞ղ եմ վճարել տարեկան"],
+            ["Yes. Every plan has an annual price that saves about two months compared with monthly billing.",
+             "Да. У каждого тарифа есть годовая цена, которая экономит около двух месяцев.",
+             "Այո։ Յուրաքանչյուր փաթեթ ունի տարեկան գին, որը խնայում է մոտ երկու ամիս։"]),
+        (FaqCategory.General, ["Which currencies can I pay in?", "В какой валюте можно платить?", "Ի՞նչ արժույթով կարող եմ վճարել"],
+            ["Dollars and drams. Choose the currency when you create the account.",
+             "В долларах и драмах. Валюту выбирают при создании аккаунта.",
+             "Դոլարով և դրամով։ Արժույթն ընտրվում է հաշիվ ստեղծելիս։"]),
+        (FaqCategory.General, ["Do you send invoices by email?", "Отправляете ли вы счета по почте?", "Հաշիվներն ուղարկո՞ւմ եք էլ. փոստով"],
+            ["Yes. Every invoice is emailed and is also available to download in the client portal.",
+             "Да. Каждый счёт приходит по почте и доступен для скачивания в клиентском портале.",
+             "Այո։ Յուրաքանչյուր հաշիվ ուղարկվում է էլ. փոստով և հասանելի է ներբեռնման համար հաճախորդի պորտալում։"]),
+        (FaqCategory.General, ["Can several people manage one account?", "Могут ли несколько человек управлять одним аккаунтом?", "Կարո՞ղ են մի քանի հոգի կառավարել մեկ հաշիվ"],
+            ["Yes. Invite team members and choose what each of them may see and do.",
+             "Да. Пригласите участников команды и выберите, что каждый может видеть и делать.",
+             "Այո։ Հրավիրեք թիմի անդամներին և ընտրեք, թե յուրաքանչյուրն ինչ կարող է տեսնել և անել։"]),
+        (FaqCategory.General, ["Where are your data centres?", "Где находятся ваши дата-центры?", "Որտե՞ղ են գտնվում ձեր տվյալների կենտրոնները"],
+            ["In Europe and North America. Choose the location when you order a server.",
+             "В Европе и Северной Америке. Расположение выбирается при заказе сервера.",
+             "Եվրոպայում և Հյուսիսային Ամերիկայում։ Վայրն ընտրվում է սերվեր պատվիրելիս։"]),
+        (FaqCategory.Products, ["Can I host several sites on one plan?", "Можно ли разместить несколько сайтов на одном тарифе?", "Կարո՞ղ եմ մեկ փաթեթում տեղադրել մի քանի կայք"],
+            ["Yes. Business Hosting allows ten sites and Pro Hosting allows unlimited sites.",
+             "Да. Business Hosting вмещает десять сайтов, а Pro Hosting — без ограничений.",
+             "Այո։ Business Hosting-ը թույլ է տալիս տասը կայք, իսկ Pro Hosting-ը՝ անսահմանափակ։"]),
+        (FaqCategory.Products, ["Do you offer managed site hosting?", "Есть ли управляемый хостинг сайтов?", "Առաջարկո՞ւմ եք կառավարվող կայքերի հոսթինգ"],
+            ["Yes. Managed Site Hosting keeps the site engine and its plugins up to date for you.",
+             "Да. Тариф Managed Site Hosting сам обновляет движок сайта и плагины.",
+             "Այո։ Managed Site Hosting-ը ինքն է թարմացնում կայքի շարժիչը և հավելումները։"]),
+        (FaqCategory.Products, ["Can I take snapshots of my VPS?", "Можно ли делать снимки VPS?", "Կարո՞ղ եմ VPS-ի պատկերներ ստեղծել"],
+            ["Yes. Every VPS can keep up to three snapshots at no extra cost.",
+             "Да. Каждый VPS может хранить до трёх снимков без доплаты.",
+             "Այո։ Յուրաքանչյուր VPS կարող է պահել մինչև երեք պատկեր՝ առանց հավելավճարի։"]),
+        (FaqCategory.Products, ["What is WHOIS privacy?", "Что такое скрытие WHOIS?", "Ի՞նչ է WHOIS գաղտնիությունը"],
+            ["It keeps your contact details out of the public domain record and forwards mail to you.",
+             "Оно скрывает ваши контакты в публичной записи домена и пересылает вам почту.",
+             "Այն թաքցնում է ձեր կոնտակտային տվյալները դոմեյնի հրապարակային գրառումից և փոստը վերահասցեավորում ձեզ։"]),
+        (FaqCategory.Products, ["Which certificate should I choose?", "Какой сертификат выбрать?", "Ո՞ր վկայագիրն ընտրեմ"],
+            ["Basic suits one site, Wildcard covers every subdomain and Extended shows your verified organisation.",
+             "Basic подходит для одного сайта, Wildcard покрывает все поддомены, а Extended показывает проверенную организацию.",
+             "Basic-ը հարմար է մեկ կայքի համար, Wildcard-ը ծածկում է բոլոր ենթադոմեյնները, իսկ Extended-ը ցույց է տալիս ստուգված կազմակերպությունը։"]),
+        (FaqCategory.Products, ["Can I add more mailboxes later?", "Можно ли добавить почтовые ящики позже?", "Կարո՞ղ եմ հետո ավելացնել փոստարկղեր"],
+            ["Yes. Upgrade the mail plan at any time and the new mailboxes are ready at once.",
+             "Да. Повысьте почтовый тариф в любое время, и новые ящики сразу готовы.",
+             "Այո։ Փոստի փաթեթը կարելի է թարմացնել ցանկացած պահի, և նոր փոստարկղերը անմիջապես պատրաստ են։"]),
     ];
 
     /// <summary>The data context the storefront rows will be added to and saved through.</summary>
@@ -177,11 +293,23 @@ internal sealed class DemoStorefrontSeeder
     /// <returns>A task that completes once the rows are saved.</returns>
     public async Task SeedAsync(CancellationToken ct)
     {
+        await SeedContentAsync(ct);
+        await SeedSettingsAsync(ct);
+    }
+
+    /// <summary>
+    /// Seeds only the storefront content tables (testimonials, partners, projects, FAQs) that are still empty,
+    /// leaving the settings alone. The development seeder calls this so a local storefront is fully populated
+    /// without its locally edited settings being overwritten on every start.
+    /// </summary>
+    /// <param name="ct">Cancels the save.</param>
+    /// <returns>A task that completes once the rows are saved.</returns>
+    public async Task SeedContentAsync(CancellationToken ct)
+    {
         await SeedTestimonialsAsync(ct);
         await SeedPartnersAsync(ct);
         await SeedProjectsAsync(ct);
         await SeedFaqsAsync(ct);
-        await SeedSettingsAsync(ct);
     }
 
     /// <summary>Adds the testimonials when there are none.</summary>
@@ -197,7 +325,9 @@ internal sealed class DemoStorefrontSeeder
         for (var i = 0; i < Testimonials.Length; i++)
         {
             var (name, company, rating, role, quote) = Testimonials[i];
-            var row = Testimonial.Create(name, company, null, rating, i, true);
+            // Every third testimonial shows a bundled portrait, the others fall back to initials; one a month back over the last year.
+            var avatar = i % 3 == 0 ? Avatars[(i / 3) % Avatars.Length] : null;
+            var row = Testimonial.Create(name, company, avatar, rating, i, true, DateTimeOffset.UtcNow.AddMonths(-((i % 12) + 1)));
             for (var l = 0; l < Locales.Length; l++)
             {
                 row.SetTranslation(Locales[l], role[l], quote[l]);

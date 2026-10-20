@@ -78,7 +78,7 @@ const go = (next: number): void => {
       {{ t('ui.pagination.previous') }}
     </UiButton>
     <template v-for="(entry, index) in entries" :key="index">
-      <span v-if="entry === null" class="px-1 text-text-muted" aria-hidden="true">…</span>
+      <span v-if="entry === null" class="px-1 text-text-secondary" aria-hidden="true">…</span>
       <UiButton
         v-else
         :variant="entry === page ? 'primary' : 'ghost'"

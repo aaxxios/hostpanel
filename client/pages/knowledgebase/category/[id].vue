@@ -18,13 +18,13 @@
         <UiTile
           :icon="Folder"
           size="xl"
-          class="border border-primary-500/20 bg-primary-500/10 text-primary-600 dark:text-primary-400"
+          class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300"
         />
         <UiStack gap="none">
           <UiHeading :level="1" size="section" data-testid="kb-category-heading">
             {{ categoryName }}
           </UiHeading>
-          <UiText size="sm" tone="subtle" data-testid="kb-category-count">
+          <UiText size="sm" tone="muted" data-testid="kb-category-count">
             {{ articles.length }} {{ t('kb.articles') }}
           </UiText>
         </UiStack>

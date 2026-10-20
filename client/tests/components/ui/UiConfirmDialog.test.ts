@@ -67,7 +67,7 @@ describe('UiConfirmDialog', () => {
   it('uses the primary confirm button otherwise', () => {
     const wrapper = mountDialog({ variant: UiConfirmVariant.Warning })
 
-    expect(wrapper.find('[data-testid="ui-confirm-confirm"]').classes()).toContain('bg-primary-600')
+    expect(wrapper.find('[data-testid="ui-confirm-confirm"]').classes()).toContain('bg-primary-700')
   })
 
   it('disables the confirm button while loading', () => {

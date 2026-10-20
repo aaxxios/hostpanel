@@ -19,7 +19,7 @@
               <!-- Header -->
               <div>
                 <div class="flex items-start gap-4 mb-4">
-                  <UiAccentTile :icon="`mdi:${product.icon}`" size="lg" />
+                  <UiAccentTile :icon="product.icon" size="lg" />
                   <div class="flex-1">
                     <UiHeading :level="1" size="subsection" class="text-2xl" data-testid="product-name">{{ product.name }}</UiHeading>
                   </div>
@@ -41,10 +41,8 @@
                   <div
                     v-for="(feature, index) in product.features"
                     :key="index"
-                    v-motion
-                    :initial="{ opacity: 0, x: -20 }"
-                    :visible-once="{ opacity: 1, x: 0, transition: { delay: index * 50, duration: 300 } }"
-                    class="flex items-center gap-2 group"
+                    class="flex items-center gap-2 group animate-reveal-up motion-reduce:animate-none"
+                    :style="revealStyle(index * 50)"
                   >
                     <CheckCircle :size="18" :stroke-width="2" :class="[accent.text, 'flex-shrink-0 group-hover:scale-110 transition-transform']" />
                     <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{{ feature }}</span>
@@ -79,18 +77,16 @@
                 <div
                   v-for="(plan, index) in product.plans"
                   :key="plan.tier"
-                  v-motion
-                  :initial="{ opacity: 0, y: 30 }"
-                  :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 500 } }"
-                  class="relative group"
+                  class="relative group animate-reveal-up motion-reduce:animate-none"
                   :data-testid="`product-plan-${plan.pid}`"
+                  :style="revealStyle(index * 100)"
                 >
                   <UiAccentPanel :highlighted="index === POPULAR_PLAN_INDEX">
                     <span v-if="index === POPULAR_PLAN_INDEX" class="absolute -top-[7px] left-1/2 -translate-x-1/2 z-10">
                       <span :class="[accent.fill, 'px-4 py-1 text-xs font-bold rounded-full text-white shadow-lg whitespace-nowrap']">{{ $t('products.pricing.popular') }}</span>
                     </span>
 
-                    <span :class="[index === POPULAR_PLAN_INDEX ? accent.text : 'text-gray-400', 'block text-xs uppercase tracking-wider mb-2 font-bold']">{{ plan.tier }}</span>
+                    <span :class="[index === POPULAR_PLAN_INDEX ? accent.text : 'text-gray-600 dark:text-gray-400', 'block text-xs uppercase tracking-wider mb-2 font-bold']">{{ plan.tier }}</span>
 
                     <div class="text-4xl font-bold text-gray-900 dark:text-white mb-6" data-testid="product-plan-price">{{ priceFor(plan) || '—' }}</div>
 
@@ -136,7 +132,7 @@
                   <ShieldCheck :size="28" :stroke-width="2" class="text-green-600 dark:text-green-400 flex-shrink-0" />
                   <div>
                     <div class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white break-words">{{ $t('products.pricing.guarantee.title') }}</div>
-                    <div class="text-[10px] sm:text-xs text-gray-500 break-words">{{ $t('products.pricing.guarantee.subtitle') }}</div>
+                    <div class="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 break-words">{{ $t('products.pricing.guarantee.subtitle') }}</div>
                   </div>
                 </div>
 
@@ -171,6 +167,8 @@
  * offer, the chosen cycle and three lookups (`priceFor`, `isInCart`, `trialUrlFor`), and reacts
  * to the events. The whole section is painted in the product's own accent colour.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { Check, CheckCircle, DollarSign, PlayCircle, ShieldCheck, ShoppingCart, Sparkle } from 'lucide-vue-next'
 import { PRICING_CYCLE_I18N_KEY } from '~/constants/pricingCycle'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'

@@ -1,6 +1,7 @@
 /**
- * Guards the aurora colour tokens: the brand gradient must be defined per colour mode, and the
- * light mode must be built from the saturated 600 shades so it stays vivid and carries white text.
+ * Guards the aurora colour tokens: the brand gradient is built from the saturated 600 shades in
+ * both colour modes, and white text on both of its end stops stays AA (4.5:1, the body-size
+ * threshold; the buttons are bold 14px+ so the 3:1 large-text bar is only a floor).
  */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -14,13 +15,13 @@ const light = css.slice(css.indexOf(':root.light {'))
 /** The declarations of the dark `:root` block. */
 const dark = css.slice(0, css.indexOf(':root.light {'))
 
-describe('aurora tokens', () => {
-  it('defines the brand gradient for dark mode from the light 400 tint', () => {
-    expect(dark).toMatch(/--brand-grad:[^;]*brand-primary-400/)
-  })
+/** The Tailwind configuration source, where the primary ramp's fallback literals live. */
+const tailwind = readFileSync(resolve(__dirname, '../../../../tailwind.config.ts'), 'utf8')
 
-  it('redefines the brand gradient for light mode from the 600 shades', () => {
-    expect(light).toMatch(/--brand-grad:[^;]*brand-accent-600[^;]*brand-primary-600/)
+describe('aurora tokens', () => {
+  it('defines the brand gradient once, for both modes, from the 600 shades', () => {
+    expect(dark).toMatch(/--brand-grad:[^;]*brand-accent-600[^;]*brand-primary-600/)
+    expect(light).not.toContain('--brand-grad:')
   })
 
   it('defines the call-to-action wash and the trust chip in both modes', () => {
@@ -30,13 +31,12 @@ describe('aurora tokens', () => {
     expect(light).toContain('--chip-bg:')
   })
 
-  it('puts white text on the light gradient', () => {
-    expect(light).toContain('--brand-on-tint: 255 255 255')
+  it('puts white text on the gradient in both modes via a fixed on-brand token', () => {
+    expect(css).not.toContain('--brand-on-tint')
+    expect(tailwind).toContain("'on-brand': 'rgb(255 255 255 / <alpha-value>)'")
   })
 })
 
-/** The Tailwind configuration source, where the primary ramp's fallback literals live. */
-const tailwind = readFileSync(resolve(__dirname, '../../../../tailwind.config.ts'), 'utf8')
 
 /**
  * Reads the fallback literal of a brand variable.
@@ -54,6 +54,23 @@ describe('aurora fallbacks agree with the Tailwind ramp', () => {
 
     expect(expected).not.toBe('')
     expect(fallbackOf(css, name)).toBe(expected)
+  })
+
+  it('keeps white on both gradient end stops at or above 4.5:1 by fallback', () => {
+    /** Relative luminance of an `r g b` string. */
+    const lum = (rgb: string): number => {
+      const [r = 0, g = 0, b = 0] = rgb.split(' ').map((v) => {
+        const c = Number(v) / 255
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+      })
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    const stops = /--brand-grad:[^;]*brand-accent-600,\s*(\d+ \d+ \d+)[^;]*brand-primary-600,\s*(\d+ \d+ \d+)/.exec(css)
+
+    expect(stops).not.toBeNull()
+    for (const stop of [stops?.[1] ?? '', stops?.[2] ?? '']) {
+      expect(1.05 / (lum(stop) + 0.05)).toBeGreaterThanOrEqual(4.5)
+    }
   })
 
   it('keeps white on primary-500 and primary-600 text above 4.5:1 by fallback', () => {

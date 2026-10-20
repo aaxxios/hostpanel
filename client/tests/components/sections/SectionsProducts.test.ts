@@ -12,7 +12,7 @@ import type { PortalProductGroup } from '~/types/portalproductgroup'
 import { familyColor } from '~/utils/catalogGroups'
 
 /** The mocked catalogue endpoints, re-created for every test. */
-const api = { fetchProducts: vi.fn(), fetchProductGroups: vi.fn() }
+const api = { fetchProducts: vi.fn(), fetchProductGroups: vi.fn(), fetchProductFeatures: vi.fn() }
 
 vi.mock('~/composables/apis/useCatalogApi', () => ({
   /**
@@ -34,14 +34,18 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
 
 /** One hosting plan and one SaaS family with its parent. */
 const catalogue: PortalProduct[] = [
-  { id: 1, pid: 1, groupId: 1, name: 'Web Hosting', slug: 'web-hosting', description: 'Fast hosting<br />✔ SSD<br />✔ SSL<br />✔ Backups<br />✔ Email' },
-  { id: 10, pid: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', description: 'Learn online<br />✔ Courses' },
+  { id: 1, pid: 1, groupId: 1, name: 'Web Hosting', slug: 'web-hosting', type: 'SharedHosting', description: 'Fast hosting<br />✔ SSD<br />✔ SSL<br />✔ Backups<br />✔ Email' },
+  { id: 10, pid: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', type: 'Vps', description: 'Learn online<br />✔ Courses' },
+  { id: 20, pid: 20, groupId: 6, name: 'Domain Registration', slug: 'domain-registration', type: 'Domain', description: 'Register domains' },
+  { id: 30, pid: 30, groupId: 7, name: 'Plain Plan', slug: 'plain-plan', type: 'Other', description: 'No bullets here' },
 ]
 
 /** The groups: hosting and one family are shown; one is empty and one is switched off. */
 const groups: PortalProductGroup[] = [
   { id: 3, name: 'Alpha Suite', isActive: true, productCount: 1 },
   { id: 1, name: 'Web Hosting', isActive: true, productCount: 1 },
+  { id: 6, name: 'Domains', isActive: true, productCount: 1 },
+  { id: 7, name: 'Plain Plan', isActive: true, productCount: 1 },
   { id: 4, name: 'Beta Kit', isActive: true, productCount: 0 },
   { id: 5, name: 'Gamma Tool', isActive: false, productCount: 2 },
 ]
@@ -61,6 +65,8 @@ describe('SectionsProducts', () => {
     api.fetchProducts.mockResolvedValue(catalogue)
     api.fetchProductGroups.mockReset()
     api.fetchProductGroups.mockResolvedValue(groups)
+    api.fetchProductFeatures.mockReset()
+    api.fetchProductFeatures.mockResolvedValue([])
     window.localStorage.clear()
   })
 
@@ -81,6 +87,8 @@ describe('SectionsProducts', () => {
   })
 
   it('puts hosting before the other families and asks only for the family groups products', async () => {
+    api.fetchProducts.mockResolvedValue(catalogue.filter((item) => item.groupId !== 6 && item.groupId !== 7))
+    api.fetchProductGroups.mockResolvedValue(groups.filter((item) => item.id !== 6 && item.id !== 7))
     const wrapper = await mountSection()
 
     const ids = wrapper.findAll('[data-testid^="home-product-"]').map((card) => card.attributes('data-testid') ?? '')
@@ -105,6 +113,37 @@ describe('SectionsProducts', () => {
     expect(hosting.text()).toContain('Fast hosting')
     expect(hosting.text()).toContain('Backups')
     expect(hosting.text()).not.toContain('Email')
+  })
+
+  it('shows domains once: the domains group is covered by the static card', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.findAll('[data-testid="home-product-domains"]')).toHaveLength(1)
+    expect(wrapper.find('[data-testid="home-product-domain-registration"]').exists()).toBe(false)
+  })
+
+  it('draws each family tile from the type of its products with a full icon name', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.html()).not.toContain('mdi:mdi:')
+    expect(wrapper.find('[data-testid="home-product-web-hosting"]').html()).toContain('mdi:cloud-check')
+    expect(wrapper.find('[data-testid="home-product-alpha-suite"]').html()).toContain('mdi:server')
+  })
+
+  it('lists no features, and no placeholder, for a family with none', async () => {
+    const wrapper = await mountSection()
+
+    const plain = wrapper.find('[data-testid="home-product-plain-plan"]')
+    expect(plain.text()).not.toContain('SaaS')
+    expect(plain.findAll('svg')).toHaveLength(1)
+  })
+
+  it('uses the specification lines when a description lists no features', async () => {
+    api.fetchProductFeatures.mockImplementation((groupId: number) =>
+      Promise.resolve(groupId === 7 ? [{ id: 1, productId: 30, label: 'Disk', value: '10 GB', sortOrder: 1 }] : []))
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('[data-testid="home-product-plain-plan"]').text()).toContain('Disk: 10 GB')
   })
 
   it('paints each card in its own colour', async () => {

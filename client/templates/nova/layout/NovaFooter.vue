@@ -48,15 +48,14 @@
           </UiHeading>
           <UiList list-style="bare" class="mt-4 flex flex-col gap-1">
             <li v-for="link in column.links" :key="link.key">
-              <UiLink
+              <UiFooterLink
                 :to="localePath(link.to)"
-                tone="inherit"
-                :underline="false"
+                :variant="UiFooterLinkVariant.Nova"
                 :testid="`nova-footer-${column.key}-${link.key}`"
-                class="flex min-h-[40px] items-center text-[15px] text-nova-muted hover:text-nova-ink"
+                class="min-h-[40px] text-[15px]"
               >
                 {{ t(link.labelKey) }}
-              </UiLink>
+              </UiFooterLink>
             </li>
           </UiList>
         </div>
@@ -76,26 +75,22 @@
         <UiList list-style="bare" class="flex flex-wrap items-center gap-x-4 gap-y-1">
           <li v-if="taxId">{{ t('nova.footer.taxId') }} {{ taxId }}</li>
           <li v-if="contactEmail">
-            <UiLink
+            <UiFooterLink
               :href="`mailto:${contactEmail}`"
-              tone="inherit"
-              :underline="false"
+              :variant="UiFooterLinkVariant.Nova"
               testid="nova-footer-email"
-              class="hover:text-nova-ink"
             >
               {{ contactEmail }}
-            </UiLink>
+            </UiFooterLink>
           </li>
           <li v-if="phone">
-            <UiLink
+            <UiFooterLink
               :href="`tel:${phoneHref}`"
-              tone="inherit"
-              :underline="false"
+              :variant="UiFooterLinkVariant.Nova"
               testid="nova-footer-phone"
-              class="hover:text-nova-ink"
             >
               {{ phone }}
-            </UiLink>
+            </UiFooterLink>
           </li>
         </UiList>
       </UiStack>
@@ -115,6 +110,7 @@
  * Live chat is not repeated here: the layout already mounts UiFloatingActions.
  */
 import AppLogoLockup from '~/components/AppLogoLockup.vue'
+import { UiFooterLinkVariant } from '~/utils/ui/enums'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { TELEGRAM_LINK_BASE } from '~/constants/contactChannel'
 import { FOOTER_COLUMNS } from '~/templates/nova/content'

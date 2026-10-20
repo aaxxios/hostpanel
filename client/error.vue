@@ -14,12 +14,9 @@
       <UiStack gap="lg" class="mx-auto max-w-2xl text-center">
         <!-- Error Code -->
         <UiHeading
-          v-motion
           :level="1"
           size="display"
-          class="!text-[150px] !leading-none md:!text-[200px]"
-          :initial="{ opacity: 0, scale: 0.5 }"
-          :enter="{ opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 100, damping: 10 } }"
+          class="!text-[150px] !leading-none md:!text-[200px] animate-reveal-up motion-reduce:animate-none"
           data-testid="error-status"
         >
           <UiGradientText class="bg-gradient-to-r from-primary-400 via-secondary-400 to-primary-400">
@@ -29,11 +26,9 @@
 
         <!-- Error Message Card -->
         <UiCard
-          v-motion
           padding="xl"
-          class="relative backdrop-blur-xl md:p-12"
-          :initial="{ opacity: 0, y: 50 }"
-          :enter="{ opacity: 1, y: 0, transition: { delay: 200 } }"
+          class="relative backdrop-blur-xl md:p-12 animate-reveal-up motion-reduce:animate-none"
+          :style="revealStyle(200)"
         >
           <UiStack gap="md" align="center">
             <component
@@ -78,11 +73,10 @@
 
         <!-- Help Text -->
         <UiText
-          v-motion
           size="sm"
-          tone="subtle"
-          :initial="{ opacity: 0 }"
-          :enter="{ opacity: 1, transition: { delay: 400 } }"
+          tone="muted"
+          class="animate-reveal-up motion-reduce:animate-none"
+          :style="revealStyle(400)"
         >
           {{ t('error.helpText') }}
           <UiLink :to="localePath('/contact')" testid="error-contact">
@@ -111,6 +105,8 @@
  * Error page: shown by Nuxt for any unhandled error (404, 403, 500 ...) with wording and an icon
  * per status, a way back and a way home.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import type { Component } from 'vue'
 import { ArrowLeft, Home, Search, AlertTriangle, Lock, XCircle } from 'lucide-vue-next'
 import { ErrorStatus } from '~/types/errorstatus'

@@ -11,10 +11,9 @@
       <UiSkeleton v-for="i in 3" :key="i" shape="block" class="h-12" />
     </UiStack>
 
-    <UiText v-else-if="!store.services.length" size="sm" tone="muted" class="py-4" data-testid="dashboard-services-empty">
-      {{ $t('client.dashboard.noActiveServices') }}
-      <UiLink to="/hosting" :underline="false" testid="dashboard-place-order">{{ $t('client.dashboard.placeOrder') }}</UiLink>
-    </UiText>
+    <UiEmptyState v-else-if="!store.services.length" :icon="Server" :title="$t('client.dashboard.noActiveServices')" class="!py-6" data-testid="dashboard-services-empty">
+      <UiButton size="sm" variant="subtle" to="/hosting" data-testid="dashboard-place-order">{{ $t('client.dashboard.placeOrder') }}</UiButton>
+    </UiEmptyState>
 
     <UiStack v-else gap="sm">
       <ClientDashboardListRow

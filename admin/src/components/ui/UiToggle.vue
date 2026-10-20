@@ -41,7 +41,7 @@ const flip = (): void => {
     role="switch"
     :aria-checked="modelValue"
     :disabled="disabled"
-    class="w-9 h-5 rounded-full transition-colors duration-200 flex items-center px-0.5 shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 disabled:opacity-40 disabled:cursor-not-allowed"
+    class="w-9 h-5 rounded-full transition-colors duration-200 flex items-center px-0.5 shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface-card disabled:opacity-40 disabled:cursor-not-allowed"
     :class="modelValue ? 'bg-primary-500' : 'bg-border-strong'"
     @click="flip"
   >

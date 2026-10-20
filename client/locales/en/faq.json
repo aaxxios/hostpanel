@@ -1,6 +1,7 @@
 {
   "faq": {
     "badge": "FAQ",
+    "filterLabel": "Filter by topic",
     "title": "Frequently Asked Questions",
     "subtitle": "Find answers to common questions about hosting, domains, billing and your account",
     "viewAll": "View All FAQs",

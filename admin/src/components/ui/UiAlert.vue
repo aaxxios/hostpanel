@@ -61,7 +61,7 @@ const iconPath = computed<string>(() => (tone.value === UiTone.Warning ? WARNING
       <line x1="12" y1="9" x2="12" y2="13" />
       <line x1="12" y1="17" x2="12.01" y2="17" />
     </svg>
-    <span class="text-[0.82rem]">
+    <span class="text-[0.82rem] text-text-primary">
       <slot />
     </span>
   </div>

@@ -18,21 +18,19 @@
       </MarketingSectionHeader>
 
       <!-- Benefits -->
-      <UiGrid cols="2" gap="lg" class="mb-16 lg:grid-cols-4">
+      <UiGrid cols="2" gap="lg" class="mb-10 lg:grid-cols-4">
         <UiCard
           v-for="(benefit, index) in benefits"
           :key="benefit.key"
-          v-motion
-          :initial="{ opacity: 0, y: 40 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 500 } }"
-          padding="xl"
-          class="relative group h-full text-center hover:border-primary-500/40 dark:hover:border-secondary-500/40 hover:-translate-y-2 transition-all duration-300"
+          :style="revealStyle(index * 100)"
+          padding="lg"
+          class="relative group h-full text-center animate-reveal-up motion-reduce:animate-none hover:border-primary-500/40 dark:hover:border-secondary-500/40 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-none transition-all duration-300"
           :data-testid="`benefit-${benefit.key}`"
         >
           <UiDecor class="inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary-500/10 dark:from-secondary-500/10 to-cyan-500/5" />
 
-          <span class="relative inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500/25 dark:from-secondary-500/25 to-cyan-500/15 items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 border-2 border-primary-500/30 dark:border-secondary-500/30 shadow-xl shadow-primary-500/20">
-            <Icon :name="benefit.icon" class="text-3xl text-primary-700 dark:text-secondary-400" />
+          <span class="relative inline-flex w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500/25 dark:from-secondary-500/25 to-cyan-500/15 items-center justify-center mb-4 group-hover:scale-105 transition-transform duration-300 border border-primary-500/25 dark:border-secondary-500/25">
+            <Icon :name="benefit.icon" class="text-2xl text-primary-700 dark:text-secondary-400" />
           </span>
 
           <UiHeading :level="3" class="relative text-lg mb-3">{{ benefit.title }}</UiHeading>
@@ -47,11 +45,9 @@
         <UiCard
           v-for="(item, index) in reassurances"
           :key="item.key"
-          v-motion
-          :initial="{ opacity: 0, y: 30 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: (index + 1) * 100, duration: 400 } }"
+          :style="revealStyle((index + 1) * 100)"
           padding="md"
-          :class="[item.hoverBorder, 'group text-center transition-colors']"
+          :class="[item.hoverBorder, 'group text-center transition-colors animate-reveal-up motion-reduce:animate-none']"
           :data-testid="`reassurance-${item.key}`"
         >
           <component :is="item.icon" :size="32" :stroke-width="2" :class="[item.iconColor, 'mx-auto mb-3 group-hover:scale-110 transition-transform']" />
@@ -71,18 +67,21 @@
 /**
  * The benefits block of the products page: four platform benefits and three reassurances (free
  * trial, guarantee, lifetime updates).
+ *
+ * The cards enter with a CSS keyframe (`animate-reveal-up`) rather than a scroll-triggered
+ * directive: the markup is never rendered hidden, so the content shows in server HTML, before
+ * hydration, in both themes and when nothing ever scrolls it into view.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { CheckCircle, Infinity as InfinityIcon, ShieldCheck } from 'lucide-vue-next'
 
 /** Translation helpers and the active language. */
 const { t } = useI18n()
 
-/** Operator-set site name that the copy interpolates as `{site}`. */
-const { name: siteName } = useSiteIdentity()
-
 /** The four platform benefits, in display order. */
 const benefits = computed(() => [
-  { key: 'whiteLabel', icon: 'mdi:palette', title: t('products.benefits.whiteLabel.title'), description: t('products.benefits.whiteLabel.description', { site: siteName.value }) },
+  { key: 'whiteLabel', icon: 'mdi:palette', title: t('products.benefits.whiteLabel.title'), description: t('products.benefits.whiteLabel.description') },
   { key: 'support', icon: 'mdi:headset', title: t('products.benefits.support.title'), description: t('products.benefits.support.description') },
   { key: 'updates', icon: 'mdi:refresh', title: t('products.benefits.updates.title'), description: t('products.benefits.updates.description') },
   { key: 'api', icon: 'mdi:code-tags', title: t('products.benefits.api.title'), description: t('products.benefits.api.description') },

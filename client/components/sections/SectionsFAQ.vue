@@ -1,5 +1,5 @@
 <template>
-  <section v-if="faqs.length" class="py-20 bg-ui-surface relative overflow-hidden" data-testid="sections-faq">
+  <section v-if="faqs.length" class="py-12 md:py-20 bg-ui-surface relative overflow-hidden" data-testid="sections-faq">
     <!-- Background -->
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-primary-500/5 dark:to-secondary-500/5" />
@@ -23,17 +23,13 @@
       />
 
       <!-- Category tabs -->
-      <div v-if="showCategories" class="flex flex-wrap justify-center gap-2 mb-12">
-        <UiButton
-          v-for="category in categories"
-          :key="category.value"
-          :variant="activeCategory === category.value ? 'primary' : 'subtle'"
-          :data-testid="`faq-category-${category.slug}`"
-          @click="activeCategory = category.value"
-        >
-          {{ category.label }}
-        </UiButton>
-      </div>
+      <UiChipTabs
+        v-if="showCategories"
+        v-model="activeCategory"
+        class="mb-12"
+        :tabs="categoryTabs"
+        :label="$t('faq.filterLabel')"
+      />
 
       <div class="max-w-3xl mx-auto">
         <!-- Questions -->
@@ -93,6 +89,7 @@ import { ArrowRight, MessageCircle, MessageSquare } from 'lucide-vue-next'
 import { useStorefrontStore } from '~/stores/storefront'
 import { FaqCategory } from '~/types/faqcategory'
 import { faqCategorySlug } from '~/utils/faqCategory'
+import type { ChipTab } from '~/types/chiptab'
 
 /** Props of SectionsFAQ. */
 interface Props {
@@ -141,6 +138,14 @@ const categories = computed(() =>
       label: t(`faq.categories.${slug}`),
     }
   }))
+
+/** The tabs as chips, each keeping its `faq-category-<slug>` test id. */
+const categoryTabs = computed<ChipTab<CategoryChoice>[]>(() =>
+  categories.value.map(category => ({
+    value: category.value,
+    label: category.label,
+    testid: `faq-category-${category.slug}`,
+  })))
 
 /** The category chosen in the tabs. */
 const activeCategory = ref<CategoryChoice>(ALL_CATEGORIES)

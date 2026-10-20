@@ -1093,6 +1093,9 @@
   <data name="TestimonialRatingInvalid" xml:space="preserve">
     <value>Գնահատականը պետք է լինի 1-ից 5։</value>
   </data>
+  <data name="TestimonialPublishedAtFuture" xml:space="preserve">
+    <value>Կարծիքի ամսաթիվը չի կարող լինել ապագայում։</value>
+  </data>
   <data name="TestimonialRoleTooLong" xml:space="preserve">
     <value>Պաշտոնը կարող է պարունակել առավելագույնը {0} նիշ։</value>
   </data>

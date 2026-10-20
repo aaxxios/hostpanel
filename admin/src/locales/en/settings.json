@@ -211,6 +211,9 @@
     "createProduct": "Create Product",
     "sharedHosting": "Shared Hosting",
     "dedicated": "Dedicated",
+    "email": "Email",
+    "addon": "Add-on",
+    "backup": "Backup",
     "other": "Other",
     "vps": "VPS"
   },
@@ -235,6 +238,9 @@
     "typeSharedHosting": "Shared Hosting",
     "typeDedicated": "Dedicated",
     "typeDomain": "Domain",
+    "typeEmail": "Email",
+    "typeAddon": "Add-on",
+    "typeBackup": "Backup",
     "typeOther": "Other",
     "typeVps": "VPS",
     "typeSsl": "SSL"

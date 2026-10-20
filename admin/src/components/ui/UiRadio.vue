@@ -34,7 +34,7 @@ const onChange = (): void => {
     type="radio"
     :checked="modelValue === value"
     :disabled="disabled"
-    class="[:where(&)]:w-4 [:where(&)]:h-4 [:where(&)]:accent-primary-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+    class="[:where(&)]:w-4 [:where(&)]:h-4 [:where(&)]:accent-primary-500 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
     @change="onChange"
   >
 </template>

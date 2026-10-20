@@ -117,7 +117,7 @@ const SIZE_CLASSES: Record<UiPanelSize, string> = {
 
 /** Class list of the panel. */
 const panelClasses = computed(() =>
-  `relative w-full ${SIZE_CLASSES[props.size as UiPanelSize]} bg-ui-surface rounded-xl shadow-2xl max-h-[90dvh] flex flex-col overflow-hidden`)
+  `relative w-full ${SIZE_CLASSES[props.size as UiPanelSize]} bg-ui-surface rounded-xl border border-gray-200 dark:border-white/15 shadow-2xl max-h-[90dvh] flex flex-col overflow-hidden`)
 
 /** Closes the dialog and tells the parent. */
 const close = (): void => {

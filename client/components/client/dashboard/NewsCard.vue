@@ -14,9 +14,7 @@
       </UiButton>
     </UiCardHeader>
 
-    <UiText v-if="!announcements.length" size="sm" tone="muted" class="py-4 text-center" data-testid="dashboard-news-empty">
-      {{ $t('client.dashboard.noAnnouncements') }}
-    </UiText>
+    <UiEmptyState v-if="!announcements.length" :icon="Megaphone" :title="$t('client.dashboard.noAnnouncements')" class="!py-6" data-testid="dashboard-news-empty" />
 
     <UiStack v-else gap="sm">
       <div
@@ -39,7 +37,7 @@
  * The server route behind the store's `recentNews` returns only published rows and only
  * `{ id, title, date }` — no draft rows and no editorial `isPublished` flag.
  */
-import { ArrowRight } from 'lucide-vue-next'
+import { ArrowRight, Megaphone } from 'lucide-vue-next'
 import { useContentStore } from '~/stores/content'
 import { formatDate } from '~/utils/formatDate'
 

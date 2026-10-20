@@ -37,7 +37,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 /** Class list of the frame wrapper. */
 const frameClasses = computed(() => [
-  'relative w-full min-w-0 overflow-hidden rounded-xl border border-gray-200 dark:border-white/10 sm:rounded-2xl',
+  'relative w-full min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5 sm:rounded-2xl',
   EMBED_HEIGHT_CLASSES[props.height as UiEmbedHeight],
 ].join(' '))
 </script>

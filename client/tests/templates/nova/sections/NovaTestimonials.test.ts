@@ -58,4 +58,11 @@ describe('NovaTestimonials', () => {
     expect(cards[1]!.text()).toContain('Bo')
     expect(cards[1]!.text()).not.toContain('CTO')
   })
+
+  it('keeps cards at a normal column width, centred, instead of stretching them', async () => {
+    const list = (await mountSection()).find('ul')
+
+    expect(list.classes()).toContain('justify-center')
+    expect(list.find('li').classes()).toContain('lg:w-[calc((100%-2.5rem)/3)]')
+  })
 })

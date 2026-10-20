@@ -39,7 +39,7 @@ internal sealed class DemoServiceSeeder
     ];
 
     /// <summary>The prefixes of the extra sites a customer runs next to the main one.</summary>
-    private static readonly string[] SitePrefixes = ["shop", "blog", "app", "mail", "docs", "portal"];
+    private static readonly string[] SitePrefixes = ["shop", "blog", "app", "mail", "docs", "portal", "store", "status", "help", "news", "api", "staging"];
 
     /// <summary>The reasons customers give for stopping a service, rotated over the requests.</summary>
     private static readonly string[] CancellationReasons =
@@ -86,10 +86,10 @@ internal sealed class DemoServiceSeeder
         }
     }
 
-    /// <summary>How many services a customer runs: the demo client six, everyone else one to three.</summary>
+    /// <summary>How many services a customer runs: the demo client twelve, everyone else one to three.</summary>
     /// <param name="position">The customer's position in the id order, the demo client first.</param>
     /// <returns>The service count.</returns>
-    private static int ServiceCountFor(int position) => position == 0 ? 6 : 1 + (position % 3);
+    private static int ServiceCountFor(int position) => position == 0 ? 12 : 1 + (position % 3);
 
     /// <summary>The status a service ends up in, following the pattern but never contradicting its owner.</summary>
     /// <param name="client">The owner.</param>

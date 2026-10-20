@@ -1,10 +1,10 @@
 {
   "products": {
     "hero": {
-      "badge": "Enterprise-grade SaaS Solutions",
+      "badge": "Reliable Hosting Solutions",
       "headline1": "Build Less.",
       "headline2": "Launch Faster.",
-      "subtitle": "Skip months of development. Get production-ready SaaS platforms with {whiteLabel}, built-in payments, and enterprise features.",
+      "subtitle": "Skip months of development. Get a production-ready hosting platform with {whiteLabel}, built-in payments, and enterprise features.",
       "whiteLabelHighlight": "white-label capabilities",
       "cta": {
         "viewProducts": "View Products",
@@ -17,7 +17,7 @@
       }
     },
     "products": {
-      "badge": "SaaS Solutions",
+      "badge": "Products & Services",
       "title": "Our Products",
       "subtitle": "Ready-to-use solutions built with cutting-edge technology",
       "viewAll": "Explore All Products",
@@ -66,10 +66,10 @@
     "benefits": {
       "title": "Enterprise-grade {benefitsHighlight}",
       "benefitsHighlight": "Benefits",
-      "subtitle": "Everything you need to launch and scale your SaaS business",
+      "subtitle": "Everything you need to launch, run and grow your hosting business",
       "whiteLabel": {
         "title": "White-label",
-        "description": "Full customization with your branding. Remove all traces of {site}."
+        "description": "Full customization with your branding. Run it under your own brand."
       },
       "support": {
         "title": "Expert Support",

@@ -20,6 +20,17 @@ describe('NovaFooter', () => {
     }
   })
 
+  it('gives every footer link a nova-token hover and focus state, in light and dark', () => {
+    stubTemplateGlobals({ settings: { 'portal.contact.email': 'hi@acme.test' } })
+    const wrapper = mountWithKit(NovaFooter)
+    const links = [...wrapper.findAll('[data-testid^="nova-footer-"][href]')]
+
+    expect(links.length).toBeGreaterThan(1)
+    for (const link of links) {
+      expect(link.classes()).toEqual(expect.arrayContaining(['text-nova-muted', 'hover:text-nova-brand', 'focus-visible:text-nova-brand']))
+    }
+  })
+
   it('publishes no contact entry and no social row on a fresh install', () => {
     stubTemplateGlobals()
     const wrapper = mountWithKit(NovaFooter)

@@ -71,27 +71,27 @@ const onDrop = (event: DragEvent): void => {
 
 <template>
   <label
-    class="flex w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors"
+    class="flex w-full cursor-pointer flex-col focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/30 items-center justify-center rounded-lg border-2 border-dashed transition-colors"
     :class="[
       compact ? 'h-20' : 'h-24',
-      dragging ? 'border-primary-500 bg-primary-500/5' : 'border-border bg-surface-field hover:border-border-strong',
+      dragging ? 'border-primary-500 bg-primary-500/10' : 'border-border bg-surface-field hover:border-primary-500/50 hover:bg-surface-hover',
     ]"
     @dragover.prevent="dragging = true"
     @dragleave.prevent="dragging = false"
     @drop.prevent="onDrop"
   >
-    <span v-if="uploading" class="flex items-center gap-2 text-sm text-text-muted" role="status">
+    <span v-if="uploading" class="flex items-center gap-2 text-sm text-text-secondary" role="status">
       <span class="h-4 w-4 animate-spin rounded-full border-2 border-primary-500/20 border-t-primary-500" />
       {{ t('ui.uploadZone.uploading') }}
     </span>
     <span v-else class="flex flex-col items-center gap-1">
-      <svg class="h-5 w-5 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <svg class="h-5 w-5 text-text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
         <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
       </svg>
-      <span class="text-xs text-text-muted">
-        {{ t('ui.uploadZone.dropOr') }} <span class="text-primary-400">{{ t('ui.uploadZone.browse') }}</span>
+      <span class="text-xs text-text-secondary">
+        {{ t('ui.uploadZone.dropOr') }} <span class="text-primary-600 light:text-primary-700 font-medium">{{ t('ui.uploadZone.browse') }}</span>
       </span>
-      <span v-if="hint" class="text-[0.65rem] text-text-muted">{{ hint }}</span>
+      <span v-if="hint" class="text-[0.65rem] text-text-secondary">{{ hint }}</span>
     </span>
     <UiFileInput :accept="accept" class="hidden" :data-testid="inputTestid" @change="onChange" />
   </label>

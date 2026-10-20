@@ -55,6 +55,18 @@ describe('SectionsTestimonials', () => {
     ])
   })
 
+  it('carries every quote in the server-render fallback, where the browser-only carousel is absent', async () => {
+    const wrapper = mountWithKit(SectionsTestimonials, {
+      components: { MarketingSectionHeader },
+      stubs: { ClientOnly: { template: '<div><slot name="fallback" /></div>' } },
+    })
+    await flushPromises()
+
+    const items = wrapper.find('[data-testid="testimonials-fallback"]').findAll('li')
+    expect(items).toHaveLength(2)
+    expect(wrapper.find('[data-testid="swiper"]').exists()).toBe(false)
+  })
+
   it('renders a slide per testimonial with its quote, author, role and company', async () => {
     const wrapper = await mountSection()
 
@@ -93,6 +105,12 @@ describe('SectionsTestimonials', () => {
 
     expect(slide.classes().some((name) => name.startsWith('dark:from-'))).toBe(true)
     expect(slide.classes().some((name) => name === 'bg-gradient-to-br')).toBe(false)
+  })
+
+  it('draws no oversized decorative quote glyph', async () => {
+    const slide = (await mountSection()).find('[data-testid="testimonial-1"]')
+
+    expect(slide.find('svg[width="64"]').exists()).toBe(false)
   })
 
   it('shows the swipe hint', async () => {

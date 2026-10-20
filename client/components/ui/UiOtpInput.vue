@@ -101,17 +101,17 @@ const setInputRef = (element: unknown, index: number): void => {
  * @returns The cell's classes for its current state.
  */
 const cellClasses = (index: number): string => {
-  const base = 'w-12 h-14 text-center text-xl font-bold rounded-xl border-2 transition-all duration-200 focus:outline-none focus:scale-105 text-gray-900 dark:text-white'
+  const base = 'w-12 h-14 text-center text-xl font-bold rounded-xl border-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:scale-105 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500'
   if (props.error) {
-    return `${base} bg-white dark:bg-white/5 border-red-400 dark:border-red-500 shadow-[0_0_0_3px] shadow-red-500/20`
+    return `${base} bg-white dark:bg-white/5 border-red-400 dark:border-red-500 focus-visible:ring-red-500/50 shadow-[0_0_0_3px] shadow-red-500/20`
   }
   if (props.disabled) {
-    return `${base} bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 cursor-not-allowed opacity-60`
+    return `${base} bg-gray-100 dark:bg-white/5 border-gray-300 dark:border-white/15 cursor-not-allowed opacity-60`
   }
   if (digits.value[index]) {
-    return `${base} bg-white dark:bg-white/10 border-primary-500 dark:border-primary-400 shadow-[0_0_0_3px] shadow-primary-500/20`
+    return `${base} bg-white dark:bg-white/10 border-primary-500 dark:border-primary-400 focus-visible:ring-primary-500/50 shadow-[0_0_0_3px] shadow-primary-500/20`
   }
-  return `${base} bg-white dark:bg-white/5 border-gray-300 dark:border-white/15 hover:border-primary-400 dark:hover:border-primary-500/60 focus-visible:border-primary-500 focus-visible:shadow-[0_0_0_3px] focus-visible:shadow-primary-500/20`
+  return `${base} bg-white dark:bg-white/5 border-gray-300 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500/60 focus-visible:ring-primary-500/50 focus-visible:border-primary-500 focus-visible:shadow-[0_0_0_3px] focus-visible:shadow-primary-500/20`
 }
 
 /**

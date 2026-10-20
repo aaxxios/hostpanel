@@ -115,12 +115,12 @@ const selectCountry = (code: string): void => {
     <button
       type="button"
       data-testid="phone-country-trigger"
-      class="flex items-center gap-2 px-3 py-2 bg-surface-field border border-border border-r-0 rounded-l-[9px] cursor-pointer hover:bg-surface-hover transition-colors whitespace-nowrap"
+      class="flex items-center gap-2 px-3 py-2 bg-surface-field border border-border border-r-0 rounded-l-[9px] cursor-pointer hover:bg-surface-hover outline-none focus-visible:border-primary-500/50 focus-visible:ring-2 focus-visible:ring-primary-500/30 transition-colors whitespace-nowrap"
       @click="isOpen = !isOpen"
     >
       <span aria-hidden="true">{{ selectedCountry?.flag }}</span>
       <span class="text-[0.82rem] font-medium text-text-primary">{{ selectedCountry?.code }}</span>
-      <span class="text-[0.7rem] text-text-muted" aria-hidden="true">▼</span>
+      <span class="text-[0.7rem] text-text-secondary" aria-hidden="true">▼</span>
     </button>
 
     <!-- Phone number input -->
@@ -129,7 +129,7 @@ const selectCountry = (code: string): void => {
       type="text"
       :placeholder="currentPlaceholder"
       data-testid="phone-number-input"
-      class="flex-1 px-3 py-2 text-[0.82rem] text-text-primary bg-surface-field border border-border border-l-0 rounded-r-[9px] placeholder:text-text-muted outline-none focus:border-primary-500/40 transition-colors"
+      class="flex-1 px-3 py-2 text-[0.82rem] text-text-primary bg-surface-field border border-border border-l-0 rounded-r-[9px] placeholder:text-text-muted outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/10 transition-colors"
     >
 
     <!-- Country dropdown -->
@@ -142,12 +142,12 @@ const selectCountry = (code: string): void => {
         :key="country.value"
         :data-testid="`phone-country-${country.value}`"
         class="px-3 py-2.5 text-[0.82rem] cursor-pointer transition-colors flex items-center gap-2.5"
-        :class="selectedCountryCode === country.value ? 'bg-primary-500 text-white' : 'text-text-primary hover:bg-surface-hover'"
+        :class="selectedCountryCode === country.value ? 'bg-primary-600 light:bg-primary-700 text-white' : 'text-text-primary hover:bg-surface-hover'"
         @click="selectCountry(country.value)"
       >
         <span aria-hidden="true">{{ country.flag }}</span>
         <span>{{ country.label }}</span>
-        <span class="ml-auto text-[0.75rem] font-medium opacity-75">{{ country.code }}</span>
+        <span class="ml-auto text-[0.75rem] font-medium opacity-90">{{ country.code }}</span>
       </div>
     </div>
 

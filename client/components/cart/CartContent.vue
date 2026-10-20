@@ -14,7 +14,7 @@
           :description="$t('cart.emptyHint')"
           data-testid="cart-empty"
         >
-          <UiButton :to="localePath('/hosting')" class="bg-cyan-500 hover:bg-cyan-400 text-white" data-testid="cart-browse">
+          <UiButton :to="localePath('/hosting')" data-testid="cart-browse">
             <Server :size="18" :stroke-width="2" class="mr-2" />
             {{ $t('cart.browseHosting') }}
           </UiButton>
@@ -49,14 +49,14 @@
                 </span>
                 <div class="min-w-0">
                   <div class="font-semibold text-gray-900 dark:text-white truncate" data-testid="cart-item-name">{{ item.name }}</div>
-                  <div class="text-xs text-gray-500 mt-0.5">{{ item.cycleLabel }}</div>
+                  <div class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{{ item.cycleLabel }}</div>
                 </div>
               </div>
 
               <div class="flex items-center gap-4 flex-shrink-0">
                 <div class="text-right">
                   <div class="text-lg font-bold text-gray-900 dark:text-white">{{ priceOf(item) }}</div>
-                  <div class="text-xs text-gray-500">/ {{ item.cycleLabel }}</div>
+                  <div class="text-xs text-gray-600 dark:text-gray-400">/ {{ item.cycleLabel }}</div>
                 </div>
                 <UiIconButton
                   :icon="Trash2"

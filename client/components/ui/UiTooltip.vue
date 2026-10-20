@@ -19,7 +19,7 @@
         ref="tooltipRef"
         role="tooltip"
         data-testid="ui-tooltip-content"
-        class="absolute z-50 top-full mt-1.5 left-[var(--tip-left,0px)] rounded-xl border border-gray-200 dark:border-white/10 bg-ui-popover shadow-xl text-xs text-gray-700 dark:text-gray-300 leading-relaxed p-4 w-72 max-w-[calc(100vw-2rem)]"
+        class="absolute z-50 top-full mt-1.5 left-[var(--tip-left,0px)] rounded-xl border border-gray-200 dark:border-white/15 bg-ui-popover shadow-xl text-xs text-gray-700 dark:text-gray-300 leading-relaxed p-4 w-72 max-w-[calc(100vw-2rem)]"
       >
         <slot name="content" />
       </div>

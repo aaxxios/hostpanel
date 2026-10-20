@@ -7,14 +7,17 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>
 /// Seeds the support side: an extra department, predefined reply categories with canned replies, a knowledge
-/// base of categories and articles, twenty tickets in every status the entity can reach with multi-message
-/// threads, tags, flags and feedback, nine announcements and the network issues the status page lists. The
+/// base of categories and articles, sixty-six tickets in every status the entity can reach with multi-message
+/// threads, tags, flags and feedback, twenty-five announcements and the network issues the status page lists. The
 /// default departments are seeded for every deployment elsewhere; this seeder only adds to and files into them.
 /// </summary>
 internal sealed class DemoSupportSeeder
 {
     /// <summary>How many tickets are seeded.</summary>
-    private const int TicketCount = 20;
+    private const int TicketCount = 66;
+
+    /// <summary>How many of the first tickets belong to the published demo client, so its portal shows open, answered and closed threads.</summary>
+    private const int DemoClientTickets = 6;
 
     /// <summary>The name of the department the demo adds to the default ones.</summary>
     private const string ExtraDepartment = "Abuse and Security";
@@ -25,7 +28,7 @@ internal sealed class DemoSupportSeeder
     /// <summary>The tags put on tickets, rotated.</summary>
     private static readonly string[] TagNames = ["billing", "urgent", "dns", "ssl", "migration", "vps", "email", "refund"];
 
-    /// <summary>The subjects and opening messages of the tickets, in order; the first three belong to the demo client.</summary>
+    /// <summary>The subjects and opening messages of the tickets, in order and repeating past the end; the first ones belong to the demo client.</summary>
     private static readonly (string Subject, string Message)[] TicketTopics =
     [
         ("My site is loading slowly since yesterday", "The pages of my site have taken several seconds to load since yesterday evening. I have not changed anything on my side. Could you take a look?"),
@@ -48,6 +51,30 @@ internal sealed class DemoSupportSeeder
         ("Quote for a managed migration", "We plan to move twelve sites from another host. Could you quote a managed migration?"),
         ("Abuse report received about my account", "I received a notice that a site on my account sent spam. I believe it was hacked. What should I do?"),
         ("Slow response from the control panel", "The control panel takes a long time to open in the evening. Is there a known issue?"),
+        ("Add a staging copy of my site", "We would like a staging copy of our shop to test changes before they go live. Is that possible on our plan?"),
+        ("Cron job does not run", "A scheduled task I set up last week has never run. The command works when I start it by hand."),
+        ("Need a copy of a paid invoice", "Our auditor asks for a copy of an invoice we paid in spring. Where can I download it?"),
+        ("Move my VPS to another region", "Most of our visitors are now in North America. Can the VPS be moved closer to them?"),
+        ("Upload limit too small", "Uploading a large video to the site fails. Can the upload size limit be raised?"),
+        ("Domain shows as expired", "One of our domains shows as expired although auto-renew was on. What happened?"),
+        ("Set up mail on a new phone", "A colleague needs the mailbox on a new phone. Which server settings should she use?"),
+        ("Too many failed sign-in alerts", "We get alerts about failed sign-ins on our account every night. Is someone trying to break in?"),
+        ("Change the primary domain of a service", "We rebranded and want the hosting service to use the new domain as its main one."),
+        ("Invoice in the wrong currency", "Our latest invoice is in dollars but we pay in drams. Can it be reissued?"),
+        ("Snapshot before an upgrade", "Please take a snapshot of the VPS before we upgrade the operating system tonight."),
+        ("Website redirects to the wrong page", "After moving to secure connections the home page redirects to an old landing page."),
+        ("Add a second admin to our account", "Our new office manager needs access to billing and tickets. How do we add her?"),
+        ("Bandwidth warning received", "We got a notice that the service is close to its monthly bandwidth. What happens if we go over?"),
+        ("Unable to connect over SSH", "SSH to the server times out since this morning. The website itself still loads."),
+        ("Refund for an unused add-on", "We ordered a dedicated IP by mistake and never used it. Could it be refunded?"),
+        ("Wildcard certificate installation", "We bought a wildcard certificate and need help installing it on three subdomains."),
+        ("Mailbox is full", "One mailbox stopped receiving mail because it is full. Can it be enlarged or archived?"),
+        ("Database import fails", "Importing a database dump stops halfway with a timeout. Is there another way to import it?"),
+        ("Question about the reseller plan", "How many client accounts can we create on the reseller plan, and can they have their own branding?"),
+        ("PHP version for an old site", "One of our older sites needs an older PHP version. Can it run side by side with the others?"),
+        ("Order stuck in pending", "We placed an order two days ago and it still shows as pending. Is anything missing on our side?"),
+        ("Block traffic from one address", "One address keeps flooding our contact form. Can you block it at the server level?"),
+        ("Close our old account", "We have moved everything to a new account. Please close the old one once the last invoice is settled."),
     ];
 
     /// <summary>What staff say in a thread, in turn.</summary>
@@ -150,7 +177,7 @@ internal sealed class DemoSupportSeeder
             [
                 ("Plan comparison", "Our plans differ in storage, number of sites and support level. We recommend the one that fits your traffic with room to grow."),
                 ("Upgrade steps", "You can upgrade from the service page. The new plan starts at once and the difference is billed pro rata."),
-                ("Migration offer", "We can migrate your sites for you at no extra charge on annual plans."),
+                ("Migration offer", "We offer migration assistance for your sites; tell us which ones to move and we will plan it with you."),
             ]),
         ];
 
@@ -211,6 +238,21 @@ internal sealed class DemoSupportSeeder
             ("How to set up a mailbox", "Open the email service, choose Add mailbox, pick a name and password, and use the settings shown to connect your mail app.", "Email"),
             ("Forwarding mail to another address", "Open the domain, choose Email forwarding and add a rule from the address you want to the address that should receive the mail.", "Email"),
             ("My site shows an error page", "Clear your cache first, then check that the domain points to the right server. If the error persists, send us the exact message and the time you saw it.", "Troubleshooting"),
+            ("Logging in to the control panel from the client area", "Open the service, then press Log in to control panel. You are signed in without typing a separate password.", "Getting Started"),
+            ("Ordering more than one service at once", "Add each service to the cart before checking out. One invoice covers the whole order.", "Getting Started"),
+            ("Changing your billing currency", "You can change the billing currency from your account until the first invoice is issued. After that, ask support.", "Billing & Payments"),
+            ("Saving a card for automatic payments", "Open Billing, choose Payment methods and add a card. Renewals are then charged on the due date.", "Billing & Payments"),
+            ("Downloading invoices for your records", "Every invoice in Billing has a Download button that saves a PDF copy for your accountant.", "Billing & Payments"),
+            ("Keeping a domain from expiring", "Turn on auto-renew and keep a valid payment method on file. Reminders are sent thirty and fourteen days before expiry.", "Domains"),
+            ("What the registrar lock does", "The lock stops anyone from transferring the domain away without your consent. Turn it off only while a transfer is in progress.", "Domains"),
+            ("Scheduling tasks with cron", "Open the control panel, choose Scheduled tasks and add the command and the times it should run. Output can be mailed to you.", "Hosting"),
+            ("Taking and restoring VPS snapshots", "Open the VPS, choose Snapshots and press Create. Restoring a snapshot returns the server to that moment.", "Hosting"),
+            ("Installing a certificate on a subdomain", "Open SSL, choose the certificate and add the subdomain. The certificate is issued and installed within minutes.", "Security"),
+            ("Recognising phishing messages", "We never ask for your password by email. Check the sender and the link address before you sign in anywhere.", "Security"),
+            ("Improving email deliverability", "Publish SPF, DKIM and DMARC records for your domain so receiving servers trust the mail you send.", "Email"),
+            ("Mailbox storage is full", "Delete or archive old messages, or upgrade the mail plan for more space. Incoming mail is held for a short time meanwhile.", "Email"),
+            ("The site is slow after an update", "Disable recently added plugins one by one, clear the cache and check the error log in the control panel.", "Troubleshooting"),
+            ("I cannot connect over SSH", "Check that your address is not blocked after failed attempts and that you use the right port and key. Support can unblock you.", "Troubleshooting"),
             ("Draft: planned maintenance checklist", "This article is being written and is not yet visible to customers.", "Troubleshooting"),
         ];
 
@@ -229,7 +271,7 @@ internal sealed class DemoSupportSeeder
     }
 
     /// <summary>
-    /// Seeds tickets: the first three on the demo client, the rest spread over the other customers. Each follows one of
+    /// Seeds tickets: the first few on the demo client, the rest spread over the other customers. Each follows one of
     /// five thread shapes (unanswered, answered, a back-and-forth, resolved with feedback, closed after one answer).
     /// </summary>
     /// <param name="demoClientId">The published demo client.</param>
@@ -247,8 +289,8 @@ internal sealed class DemoSupportSeeder
         var priorities = new[] { TicketPriority.High, TicketPriority.Medium, TicketPriority.Low };
         for (var n = 0; n < TicketCount; n++)
         {
-            var (subject, message) = TicketTopics[n];
-            var clientId = n < 3 ? demoClientId : otherClients[(n - 3) % otherClients.Count].Id;
+            var (subject, message) = TicketTopics[n % TicketTopics.Length];
+            var clientId = n < DemoClientTickets ? demoClientId : otherClients[(n - DemoClientTickets) % otherClients.Count].Id;
             var ticket = Ticket.Create(clientId, subject, message, departments[n % departments.Count].Id, priorities[n % priorities.Length]);
 
             var shape = n % 5;
@@ -291,7 +333,7 @@ internal sealed class DemoSupportSeeder
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Seeds nine announcements, the last of them an unpublished draft.</summary>
+    /// <summary>Seeds twenty-five announcements, the last of them an unpublished draft.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
     private async Task SeedAnnouncementsAsync(CancellationToken ct)
@@ -306,6 +348,22 @@ internal sealed class DemoSupportSeeder
             ("New data centre location", "Our Helsinki data centre is open for dedicated servers. Choose it when you order.", true),
             ("Improved spam protection for email", "Every mailbox now has a stronger spam filter. No action is needed.", true),
             ("Holiday support hours", "Our support team answers with a short delay over the holidays. Urgent issues are still handled around the clock.", true),
+            ("Wildcard certificates now issued in minutes", "Wildcard certificates are now validated automatically, so most are issued within minutes of the order.", true),
+            ("Snapshots for every VPS", "Every virtual server can now keep up to three snapshots at no extra cost. Open the server to take one.", true),
+            ("Price update for dedicated servers", "From next quarter the dedicated server range gets more memory at the same price. Existing servers are upgraded on request.", true),
+            ("New knowledge base articles", "We added guides on deliverability, scheduled tasks and SSH access. Find them in the knowledge base.", true),
+            ("Reseller branding options", "Reseller accounts can now show their own logo and colours in the control panel their clients see.", true),
+            ("Improved status page", "The network status page now lists planned work ahead of time and keeps a history of resolved issues.", true),
+            ("Faster support for priority customers", "Customers with the priority support add-on now get a first answer within one hour, day and night.", true),
+            ("Annual billing discount", "Paying annually now saves about two months compared with monthly billing on every hosting plan.", true),
+            ("IPv6 on every server", "Every shared, virtual and dedicated server now has an IPv6 address alongside IPv4.", true),
+            ("Team access for client accounts", "Invite colleagues to your account and choose what each of them can see and do.", true),
+            ("Domain search now suggests alternatives", "When a name is taken, the domain search now suggests similar names across popular extensions.", true),
+            ("Larger mailboxes at the same price", "Mail Business mailboxes grow from 25 GB to 30 GB each, with no change to the price.", true),
+            ("Website monitoring add-on", "Get an alert within a minute when your site stops answering, by mail or text message.", true),
+            ("Updated terms of service", "We have clarified the acceptable use and refund sections of our terms. Nothing changes for existing services.", true),
+            ("New payment receipts", "Payment receipts now list every invoice line and can be downloaded as PDF from the billing area.", true),
+            ("Quarterly network report", "Uptime across all regions stayed above the target this quarter. The full report is on the status page.", true),
             ("Upcoming: new client area", "We are preparing a redesigned client area. This note is a draft and is not yet shown to customers.", false),
         ];
 
@@ -317,7 +375,7 @@ internal sealed class DemoSupportSeeder
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Seeds six network issues in every status: reported, under investigation, scheduled and resolved.</summary>
+    /// <summary>Seeds twelve network issues in every status: reported, under investigation, scheduled and resolved.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
     private async Task SeedNetworkIssuesAsync(CancellationToken ct)
@@ -330,6 +388,12 @@ internal sealed class DemoSupportSeeder
             ("Mail delivery delays", NetworkIssueType.Other, null, NetworkIssuePriority.Medium, NetworkIssueStatus.Resolved, 9, "<p>Outgoing mail was delayed by up to an hour. The queue has been cleared.</p>"),
             ("Disk failure on a storage node", NetworkIssueType.Server, "Dedicated EU-01", NetworkIssuePriority.Critical, NetworkIssueStatus.Resolved, 21, "<p>A failed disk was replaced and the array rebuilt. No data was lost.</p>"),
             ("DNS resolver slowdown", NetworkIssueType.Other, null, NetworkIssuePriority.High, NetworkIssueStatus.Resolved, 40, "<p>Name resolution was slow for about two hours. A resolver was restarted and monitoring added.</p>"),
+            ("Backup jobs running late", NetworkIssueType.Server, "Shared EU-02", NetworkIssuePriority.Low, NetworkIssueStatus.Investigating, 1, "<p>Last night's backups finished later than usual. Engineers are checking the storage throughput.</p>"),
+            ("Kernel updates on virtual servers", NetworkIssueType.Server, "VPS US-01", NetworkIssuePriority.Medium, NetworkIssueStatus.Scheduled, -7, "<p>Host nodes will be patched and rebooted one by one. Each server restarts once, for about five minutes.</p>"),
+            ("Webmail sign-in slow", NetworkIssueType.Other, null, NetworkIssuePriority.Low, NetworkIssueStatus.Reported, 0, "<p>Some users report that webmail takes long to open. We are gathering details.</p>"),
+            ("Power maintenance in one rack", NetworkIssueType.Server, "Dedicated US-01", NetworkIssuePriority.High, NetworkIssueStatus.Resolved, 60, "<p>Power supplies were replaced during the announced window. All servers came back as planned.</p>"),
+            ("Certificate renewals delayed", NetworkIssueType.Other, null, NetworkIssuePriority.Medium, NetworkIssueStatus.Resolved, 75, "<p>Automatic renewals were held back for a few hours. Every certificate was renewed before expiry.</p>"),
+            ("Brief outage on the billing pages", NetworkIssueType.Other, null, NetworkIssuePriority.Critical, NetworkIssueStatus.Resolved, 95, "<p>The billing pages were unavailable for twelve minutes after a deployment. The change was rolled back.</p>"),
         ];
 
         foreach (var (title, type, server, priority, status, startedDaysAgo, description) in issues)

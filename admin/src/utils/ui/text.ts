@@ -84,6 +84,6 @@ export type UiLabelVariant = (typeof UiLabelVariant)[keyof typeof UiLabelVariant
 /** Label classes per look: `field` is the caption above a control, `inline` wraps a checkbox or radio. */
 export const labelVariantClasses: Record<UiLabelVariant, string> = {
   plain: '',
-  field: 'block text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-text-muted',
+  field: 'block text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-text-secondary',
   inline: 'flex items-center gap-2 cursor-pointer text-[0.82rem] text-text-secondary',
 }

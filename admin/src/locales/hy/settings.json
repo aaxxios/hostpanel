@@ -211,6 +211,9 @@
     "createProduct": "Ստեղծել ապրանք",
     "sharedHosting": "Ընդհանուր հոսթինգ",
     "dedicated": "Հատկացված",
+    "email": "Էլ. փոստ",
+    "addon": "Հավելում",
+    "backup": "Պահուստավորում",
     "other": "Այլ",
     "vps": "VPS"
   },
@@ -235,6 +238,9 @@
     "typeSharedHosting": "Ընդհանուր հոսթինգ",
     "typeDedicated": "Հատկացված",
     "typeDomain": "Դոմեյն",
+    "typeEmail": "Էլ. փոստ",
+    "typeAddon": "Հավելում",
+    "typeBackup": "Պահուստավորում",
     "typeOther": "Այլ",
     "typeVps": "VPS",
     "typeSsl": "SSL"

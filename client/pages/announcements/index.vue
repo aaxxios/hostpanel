@@ -11,24 +11,13 @@
     <UiSection padding="md">
       <UiStack class="mx-auto w-full max-w-3xl" gap="lg">
         <!-- Month filter -->
-        <UiStack
+        <UiChipTabs
           v-if="months.length > 1"
-          direction="row"
-          wrap
-          gap="xs"
-          data-testid="announcements-months"
-        >
-          <UiButton
-            v-for="month in months"
-            :key="month"
-            :variant="activeMonth === month ? 'outline' : 'ghost'"
-            size="sm"
-            :data-testid="`announcements-month-${month}`"
-            @click="activeMonth = month"
-          >
-            {{ month === ALL_MONTHS ? t('announcements.allMonths') : month }}
-          </UiButton>
-        </UiStack>
+          v-model="activeMonth"
+          :tabs="monthTabs"
+          :label="t('announcements.filterLabel')"
+          testid="announcements-months"
+        />
 
         <!-- Loading -->
         <UiStack v-if="pending" gap="md" data-testid="announcements-loading">
@@ -72,7 +61,7 @@
             <UiText
               as="span"
               size="xs"
-              tone="subtle"
+              tone="muted"
               class="mb-3 flex items-center gap-2"
             >
               <Calendar :size="13" :stroke-width="2" />
@@ -117,6 +106,7 @@ import { Megaphone, Calendar, ArrowRight } from 'lucide-vue-next'
 import { useContentStore } from '~/stores/content'
 import { formatDate } from '~/utils/formatDate'
 import type { Announcement } from '~/types/announcement'
+import type { ChipTab } from '~/types/chiptab'
 
 /** Month-filter value that shows every announcement. */
 const ALL_MONTHS = 'all'
@@ -192,6 +182,13 @@ const months = computed(() => {
   }
   return seen.length > 1 ? [ALL_MONTHS, ...seen] : []
 })
+
+/** The month chips: "all" reads as its translated label, every other month as its own name. */
+const monthTabs = computed<ChipTab[]>(() => months.value.map(month => ({
+  value: month,
+  label: month === ALL_MONTHS ? t('announcements.allMonths') : month,
+  testid: `announcements-month-${month}`,
+})))
 
 /** The month filter currently chosen. */
 const activeMonth = ref(ALL_MONTHS)

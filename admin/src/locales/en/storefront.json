@@ -46,6 +46,8 @@
     "rolePlaceholder": "e.g. CTO",
     "avatar": "Avatar",
     "activeHint": "Show this testimonial to visitors",
+    "publishedAt": "Date",
+    "publishedAtHint": "The date shown with the testimonial; leave empty to use the date it was added",
     "quotePlaceholder": "What the customer said..."
   },
   "partners": {

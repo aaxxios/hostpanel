@@ -80,7 +80,7 @@
           <!-- Categories grid -->
           <UiStack gap="lg" data-testid="kb-categories">
             <UiHeading :level="2" size="subsection" class="flex items-center gap-2">
-              <FolderOpen :size="20" :stroke-width="2" class="text-primary-600 dark:text-primary-400" />
+              <FolderOpen :size="20" :stroke-width="2" class="text-primary-700 dark:text-primary-400" />
               {{ t('kb.categories') }}
             </UiHeading>
 
@@ -104,7 +104,7 @@
                     <UiTile
                       :icon="Folder"
                       size="xl"
-                      class="border border-primary-500/20 bg-primary-500/10 text-primary-600 dark:text-primary-400"
+                      class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300"
                     />
                     <UiText
                       as="span"

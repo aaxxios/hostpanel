@@ -82,6 +82,13 @@ internal sealed class DemoBillingSeeder
             return monthsBack == 0 ? InvoiceStatus.Unpaid : InvoiceStatus.Overdue;
         }
 
+        // The demo client sees every status the billing area can show: open, overdue, paid, cancelled and refunded
+        // (month eleven, from the general rule below), plus the draft added next to the current month.
+        if (position == 0 && monthsBack == 4)
+        {
+            return InvoiceStatus.Cancelled;
+        }
+
         if (position == 0 && monthsBack <= 2)
         {
             return monthsBack switch
@@ -143,6 +150,14 @@ internal sealed class DemoBillingSeeder
 
                 var service = clientServices.Count == 0 ? null : clientServices[(c + monthsBack) % clientServices.Count];
                 _db.Invoices.Add(BuildInvoice(client, c, monthsBack, status.Value, service, service is null ? null : products[service.ProductId]));
+            }
+
+            // A draft the demo client's account manager is still preparing, beside the current unpaid invoice.
+            if (c == 0)
+            {
+                var draftService = clientServices.Count == 0 ? null : clientServices[^1];
+                _db.Invoices.Add(BuildInvoice(
+                    client, c, 0, InvoiceStatus.Draft, draftService, draftService is null ? null : products[draftService.ProductId]));
             }
         }
 

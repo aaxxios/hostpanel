@@ -16,11 +16,9 @@
         <!-- Billing cycles -->
         <UiCard
           v-if="cycles.length"
-          v-motion
-          :initial="{ opacity: 0, y: 24 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { duration: 500 } }"
           :title="$t('hosting.billingCycles')"
           data-testid="hosting-plan-cycles"
+          class="animate-reveal-up motion-reduce:animate-none"
         >
           <UiGrid cols="2" gap="sm" class="md:grid-cols-3 lg:grid-cols-6">
             <UiButton
@@ -40,21 +38,18 @@
         <!-- Features -->
         <UiCard
           v-if="features.length"
-          v-motion
-          :initial="{ opacity: 0, y: 24 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: 100, duration: 500 } }"
           padding="xl"
           data-testid="hosting-plan-features"
+          class="animate-reveal-up motion-reduce:animate-none"
+          :style="revealStyle(100)"
         >
           <UiHeading :level="2" size="subsection" class="text-xl mb-6">{{ $t('hosting.includedFeatures') }}</UiHeading>
           <UiGrid as="ul" cols="1" gap="sm" class="md:grid-cols-2">
             <UiListItem
               v-for="(feature, index) in features"
               :key="feature"
-              v-motion
-              :initial="{ opacity: 0, x: -10 }"
-              :visible-once="{ opacity: 1, x: 0, transition: { delay: index * 50, duration: 400 } }"
-              class="flex items-center gap-3"
+              class="flex items-center gap-3 animate-reveal-up motion-reduce:animate-none"
+              :style="revealStyle(index * 50)"
             >
               <CheckCircle :size="16" :stroke-width="2" class="text-primary-600 dark:text-primary-400 flex-shrink-0" />
               <span class="text-sm">{{ feature }}</span>
@@ -64,10 +59,8 @@
 
         <!-- Closing call to action -->
         <div
-          v-motion
-          :initial="{ opacity: 0, y: 20 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: 200, duration: 500 } }"
-          class="text-center pt-4"
+          class="text-center pt-4 animate-reveal-up motion-reduce:animate-none"
+          :style="revealStyle(200)"
         >
           <UiButton
             size="lg"
@@ -95,6 +88,8 @@
  *
  * Presentational: the page owns the plan, the selected cycle and the cart.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { CheckCircle, Lock, ShoppingCart } from 'lucide-vue-next'
 import type { PricingCycle } from '~/types/pricingcycle'
 import type { PricingCycleOption } from '~/types/pricingcycleoption'

@@ -23,6 +23,7 @@
         :data-testid="`language-card-${loc.code}`"
         :class="[
           'flex flex-row items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all duration-100',
+          FOCUS_RING,
           locale === loc.code
             ? 'bg-primary-500/20 ring-2 ring-primary-500 shadow-lg shadow-primary-500/30'
             : 'bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10'
@@ -54,10 +55,10 @@
           type="button"
           role="menuitem"
           :data-testid="`language-option-${loc.code}`"
-          class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors duration-150"
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
           :class="locale === loc.code
-            ? 'bg-primary-50 dark:bg-primary-500/20 text-primary-600 dark:text-primary-300'
-            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-on-primary'"
+            ? 'bg-primary-100 dark:bg-primary-500/25 text-primary-700 dark:text-primary-300 font-medium'
+            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white'"
           @click="switchLanguage(loc.code)"
         >
           <NuxtImg :src="flagOf(loc.code)" :alt="loc.name" width="20" height="20" class="w-5 h-5 flex-shrink-0" />
@@ -83,6 +84,7 @@ import { ChevronDown, Check } from 'lucide-vue-next'
 import { onClickOutside } from '@vueuse/core'
 import type { AppLocale } from '~/types/applocale'
 import { UiLanguageLayout, UiPlacement } from '~/utils/ui/enums'
+import { FOCUS_RING, PICKER_TRIGGER } from '~/utils/ui/tones'
 
 /** Props of LanguageSwitcher. */
 interface Props {
@@ -135,7 +137,9 @@ const currentLocale = computed(() =>
 
 /** Class list of the trigger. */
 const triggerClasses = computed(() => [
-  'items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-primary-500/30 hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-200',
+  'items-center gap-2 px-3 py-2 rounded-lg',
+  PICKER_TRIGGER,
+  FOCUS_RING,
   isResponsive.value ? 'hidden xl:flex' : 'flex',
 ].join(' '))
 

@@ -25,7 +25,7 @@
       <span v-if="selectedOption" class="block truncate text-left">
         {{ selectedOption.label }}
       </span>
-      <span v-else class="block truncate text-left text-gray-500">
+      <span v-else class="block truncate text-left text-gray-500 dark:text-gray-400">
         {{ placeholder ?? $t('ui.selectPlaceholder') }}
       </span>
 
@@ -40,7 +40,7 @@
     <p v-if="error" class="mt-2 text-sm text-red-600 dark:text-red-400">
       {{ error }}
     </p>
-    <p v-else-if="hint" class="mt-2 text-sm text-gray-500">
+    <p v-else-if="hint" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
       {{ hint }}
     </p>
 
@@ -62,7 +62,7 @@
             type="button"
             :data-testid="`ui-dropdown-option-${option.value}`"
             :class="[
-              'w-full px-4 py-3 text-left text-sm transition-all duration-200 flex items-center justify-between group',
+              'w-full px-4 py-3 text-left text-sm transition-all duration-200 flex items-center justify-between group focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500',
               modelValue === option.value
                 ? 'bg-gradient-to-r from-primary-500 to-primary-500 dark:to-secondary-500 text-on-primary font-semibold'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-on-primary'
@@ -189,7 +189,7 @@ onClickOutside(wrapperRef, closeDropdown)
 const triggerClasses = computed(() => {
   let state: string
   if (props.error) {
-    state = 'border-red-500/50 focus-visible:border-red-500 focus-visible:ring-red-500/50 bg-red-500/5'
+    state = 'border-red-400 dark:border-red-500/50 focus-visible:border-red-500 focus-visible:ring-red-500/50 bg-red-50 dark:bg-red-500/5'
   } else if (isOpen.value) {
     state = 'border-primary-500 ring-2 ring-primary-500/50 bg-gray-100 dark:bg-white/10'
   } else {

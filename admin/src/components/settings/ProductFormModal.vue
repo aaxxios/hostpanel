@@ -78,6 +78,9 @@ const productTypes = computed(() => [
   { value: ProductType.SharedHosting, label: t('settings.productForm.sharedHosting'), icon: Icon.Rack },
   { value: ProductType.Vps, label: t('settings.productForm.vps'), icon: Icon.Cloud },
   { value: ProductType.Dedicated, label: t('settings.productForm.dedicated'), icon: Icon.Dedicated },
+  { value: ProductType.Email, label: t('settings.productForm.email'), icon: Icon.Mail },
+  { value: ProductType.Addon, label: t('settings.productForm.addon'), icon: Icon.Puzzle },
+  { value: ProductType.Backup, label: t('settings.productForm.backup'), icon: Icon.Archive },
   { value: ProductType.Other, label: t('settings.productForm.other'), icon: Icon.Box },
 ])
 

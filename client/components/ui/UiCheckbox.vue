@@ -16,11 +16,12 @@
       :aria-checked="modelValue"
       :disabled="disabled"
       :data-testid="testid"
-      class="flex-shrink-0 mt-0.5 w-5 h-5 rounded border-2 transition-all duration-150 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+      class="flex-shrink-0 mt-0.5 w-5 h-5 rounded border-2 transition-all duration-150 flex items-center justify-center"
       :class="[
+        FOCUS_RING,
         modelValue
           ? 'bg-primary-500 border-primary-500 dark:bg-primary-500 dark:border-primary-400'
-          : 'bg-white dark:bg-white/5 border-gray-300 dark:border-white/20 hover:border-primary-500 dark:hover:border-primary-400',
+          : 'bg-white dark:bg-white/5 border-gray-400 dark:border-gray-500 hover:border-primary-500 dark:hover:border-primary-400',
         disabled ? 'cursor-not-allowed' : 'cursor-pointer',
       ]"
       @click="toggle"
@@ -52,6 +53,7 @@
  * button so the look is fully ours. Both the box and the label toggle the value.
  */
 import { computed, useId } from 'vue'
+import { FOCUS_RING } from '~/utils/ui/tones'
 
 /** Props of UiCheckbox. */
 interface Props {

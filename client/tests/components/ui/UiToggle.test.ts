@@ -34,11 +34,14 @@ describe('UiToggle', () => {
     expect(wrapper.emitted('update:modelValue')).toBeUndefined()
   })
 
-  it('moves the knob and greens the track when on', () => {
+  it('moves the knob and paints the track primary when on', () => {
     const on = mountWithKit(UiToggle, { props: { modelValue: true, label: 'Lock' } })
     const off = mountWithKit(UiToggle, { props: { modelValue: false, label: 'Lock' } })
 
-    expect(on.find('button').classes()).toContain('bg-green-500')
+    expect(on.find('button').classes()).toContain('bg-primary-500')
+    expect(on.find('button').classes()).not.toContain('bg-gray-400')
+    expect(off.find('button').classes()).toContain('bg-gray-400')
+    expect(off.find('button').classes()).toContain('border-gray-500')
     expect(on.find('span').classes()).toContain('translate-x-6')
     expect(off.find('span').classes()).toContain('translate-x-0')
   })

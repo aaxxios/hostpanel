@@ -12,10 +12,10 @@ import {
 } from '@/utils/ui/table'
 
 describe('table vocabulary', () => {
-  it('maps every alignment to its text- class', () => {
-    for (const align of Object.values(UiAlign)) {
-      expect(alignClasses[align]).toBe(`text-${align}`)
-    }
+  it('maps every alignment to its logical text- class, so right-to-left layouts mirror', () => {
+    expect(alignClasses[UiAlign.Left]).toBe('text-start')
+    expect(alignClasses[UiAlign.Center]).toBe('text-center')
+    expect(alignClasses[UiAlign.Right]).toBe('text-end')
   })
 
   it('uses the aria-sort strings for sort directions', () => {

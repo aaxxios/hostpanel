@@ -36,7 +36,7 @@
             v-if="article.dateupdated"
             as="span"
             size="xs"
-            tone="subtle"
+            tone="muted"
             class="flex items-center gap-1"
             data-testid="kb-article-updated"
           >
@@ -47,7 +47,7 @@
             v-if="article.views"
             as="span"
             size="xs"
-            tone="subtle"
+            tone="muted"
             class="flex items-center gap-1"
             data-testid="kb-article-views"
           >

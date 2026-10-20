@@ -24,4 +24,6 @@ export interface Testimonial {
   rating: number
   /** Display order, ascending. */
   sortOrder: number
+  /** ISO date shown with the testimonial: the admin-set date, or the creation time when none was set. */
+  publishedAt: string
 }

@@ -67,15 +67,15 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
       type="button"
       data-testid="field-selector-trigger"
       :aria-expanded="open"
-      class="w-full flex items-center gap-2 bg-surface-field border border-border rounded-[10px] px-3 py-2 text-[0.82rem] text-text-secondary hover:text-text-primary hover:border-text-muted outline-none focus:border-primary-500/50 transition-colors"
+      class="w-full flex items-center gap-2 bg-surface-field border border-border rounded-[10px] px-3 py-2 text-[0.82rem] text-text-secondary hover:text-text-primary hover:border-text-secondary outline-none focus-visible:border-primary-500/50 focus-visible:ring-2 focus-visible:ring-primary-500/30 transition-colors"
       @click="open = !open"
     >
       <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
       </svg>
       <span class="flex-1 text-left">{{ t('shared.fieldsToInclude') }}</span>
-      <span v-if="selectedCount > 0" class="text-[0.68rem] bg-primary-500/20 text-primary-400 px-1.5 py-0.5 rounded-full font-medium shrink-0">{{ selectedCount }}/{{ totalCount }}</span>
-      <svg class="w-3.5 h-3.5 text-text-muted shrink-0 transition-transform duration-150 ml-auto" :class="open ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+      <span v-if="selectedCount > 0" class="text-[0.68rem] bg-primary-500/20 text-primary-600 light:text-primary-700 px-1.5 py-0.5 rounded-full font-medium shrink-0">{{ selectedCount }}/{{ totalCount }}</span>
+      <svg class="w-3.5 h-3.5 text-text-secondary shrink-0 transition-transform duration-150 ml-auto" :class="open ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
     </button>
 
     <!-- Dropdown -->
@@ -90,13 +90,13 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
       <div v-if="open" class="absolute z-50 mt-1.5 left-0 bg-surface-card border border-border rounded-[10px] shadow-xl w-[320px] overflow-hidden">
         <!-- Select all / clear all -->
         <div class="flex items-center justify-between px-3 py-2 border-b border-border bg-surface-field">
-          <span class="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-text-muted">{{ t('ui.uiFieldSelector.fields') }}</span>
+          <span class="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-text-secondary">{{ t('ui.uiFieldSelector.fields') }}</span>
           <div class="flex gap-2">
-            <button type="button" data-testid="field-selector-select-all" class="text-[0.72rem] text-primary-400 hover:text-primary-300 transition-colors" @click="emit('selectAll')">
+            <button type="button" data-testid="field-selector-select-all" class="text-[0.72rem] text-primary-600 light:text-primary-700 hover:text-primary-500 rounded outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-colors" @click="emit('selectAll')">
               {{ t('shared.selectAll') }}
             </button>
-            <span class="text-text-muted">|</span>
-            <button type="button" data-testid="field-selector-clear-all" class="text-[0.72rem] text-text-muted hover:text-text-secondary transition-colors" @click="emit('clearAll')">
+            <span class="text-border-strong">|</span>
+            <button type="button" data-testid="field-selector-clear-all" class="text-[0.72rem] text-text-secondary hover:text-text-primary rounded outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-colors" @click="emit('clearAll')">
               {{ t('ui.uiFieldSelector.clearAll') }}
             </button>
           </div>
@@ -125,7 +125,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
           <button
             type="button"
             data-testid="field-selector-apply"
-            class="px-3 py-1 gradient-brand text-white text-[0.72rem] font-semibold rounded-[7px] transition-opacity hover:opacity-90"
+            class="px-3 py-1 gradient-brand text-white text-[0.72rem] font-semibold rounded-[7px] outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary-500/50"
             @click="open = false"
           >
             {{ t('shared.apply') }}

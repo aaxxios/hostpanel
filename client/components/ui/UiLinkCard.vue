@@ -12,6 +12,7 @@
  * `group-hover:` utilities.
  */
 import { computed } from 'vue'
+import { FOCUS_RING } from '~/utils/ui/tones'
 
 /** Props of UiLinkCard. */
 interface Props {
@@ -32,8 +33,9 @@ const props = withDefaults(defineProps<Props>(), {
 /** Class list of the card. */
 const classes = computed(() => [
   'group block p-5 rounded-2xl bg-gray-50 dark:bg-white/5 border transition-all duration-200',
+  FOCUS_RING,
   props.highlight
-    ? 'border-blue-500/20 hover:border-blue-500/40'
+    ? 'border-blue-500/20 hover:border-blue-500/40 dark:border-blue-400/30 dark:hover:border-blue-400/50'
     : 'border-gray-200 dark:border-white/10 hover:border-primary-500/30 hover:bg-gray-100 dark:hover:bg-white/10',
 ].join(' '))
 </script>

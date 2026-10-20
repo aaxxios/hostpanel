@@ -94,7 +94,7 @@
           <UiButton
             variant="ghost"
             size="sm"
-            class="text-xs font-bold text-gray-500 hover:text-red-400 uppercase tracking-widest"
+            class="text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-red-400 uppercase tracking-widest"
             data-testid="cart-drawer-clear"
             @click="cart.clear()"
           >

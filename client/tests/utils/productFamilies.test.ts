@@ -8,7 +8,8 @@ import type { PortalProduct } from '~/types/portalproduct'
 import type { PortalProductGroup } from '~/types/portalproductgroup'
 import { familyColor } from '~/utils/catalogGroups'
 import type { ProductFamily } from '~/types/productfamily'
-import { buildPricingRows, buildProductFamilies, cycleAmount, findProductDetail, firstOfferedPrice } from '~/utils/productFamilies'
+import type { ProductFeature } from '~/types/productfeature'
+import { buildPricingRows, buildProductFamilies, cycleAmount, findProductDetail, firstOfferedPrice, specificationBullets } from '~/utils/productFamilies'
 
 /**
  * Builds a catalogue product.
@@ -90,6 +91,19 @@ describe('buildPricingRows', () => {
   })
 })
 
+describe('specificationBullets', () => {
+  it('joins label and value once per label, in display order', () => {
+    const lines: ProductFeature[] = [
+      { id: 2, productId: 1, label: 'Bandwidth', value: '1 TB', sortOrder: 2 },
+      { id: 1, productId: 1, label: 'Disk', value: '10 GB', sortOrder: 1 },
+      { id: 3, productId: 2, label: 'Disk', value: '20 GB', sortOrder: 1 },
+      { id: 4, productId: 2, label: 'Backups', value: '', sortOrder: 3 },
+    ]
+
+    expect(specificationBullets(lines)).toEqual(['Disk: 10 GB', 'Bandwidth: 1 TB', 'Backups'])
+  })
+})
+
 describe('buildProductFamilies', () => {
   it('builds one family per group, priced by its sub-plans and named by its parent', () => {
     const families = buildProductFamilies(groups, learnGroup, dollars, 'USD')
@@ -114,13 +128,52 @@ describe('buildProductFamilies', () => {
 
   it('leaves out a group that has no products, and puts the leading entries first', () => {
     const leading: ProductFamily = {
-      id: 'domains', gid: null, icon: 'earth', color: '#3b82f6', learnMoreUrl: '/domains', name: 'Domains',
+      id: 'domains', gid: null, icon: 'mdi:earth', color: '#3b82f6', learnMoreUrl: '/domains', name: 'Domains',
       tagline: 'Tag', description: 'Desc', features: [], pricing: [],
     }
 
     const families = buildProductFamilies(groups, learnGroup, dollars, 'USD', [leading])
 
     expect(families.map((family) => family.id)).toEqual(['domains', 'alpha-suite'])
+  })
+
+  it('shows domains once: a domain-type group is left out in favour of the leading domains card', () => {
+    const leading: ProductFamily = {
+      id: 'domains', gid: null, icon: 'mdi:earth', color: '#3b82f6', learnMoreUrl: '/domains', name: 'Domains',
+      tagline: 'Tag', description: 'Desc', features: [], pricing: [],
+    }
+
+    const families = buildProductFamilies(
+      [...groups, group(9, 'Domains')],
+      [...learnGroup, product({ id: 90, groupId: 9, name: 'Domain Registration', type: 'Domain' })],
+      dollars,
+      'USD',
+      [leading],
+    )
+
+    expect(families.map((family) => family.id)).toEqual(['domains', 'alpha-suite'])
+  })
+
+  it('derives the icon of a family from the type of its products', () => {
+    const families = buildProductFamilies(
+      [group(7, 'Epsilon Line')],
+      [product({ id: 70, groupId: 7, name: 'Basic', type: 'Vps' })],
+      dollars,
+      'USD',
+    )
+
+    expect(families[0]?.icon).toBe('mdi:server-network')
+  })
+
+  it('falls back to the specification lines when no description lists a feature, and to nothing otherwise', () => {
+    const lines: ProductFeature[] = [{ id: 1, productId: 70, label: 'Disk space', value: '50 GB', sortOrder: 1 }]
+    const plans = [product({ id: 70, groupId: 7, name: 'Basic', description: 'Plain summary' })]
+
+    const withLines = buildProductFamilies([group(7, 'Epsilon Line')], plans, dollars, 'USD', [], () => lines)
+    const without = buildProductFamilies([group(7, 'Epsilon Line')], plans, dollars, 'USD')
+
+    expect(withLines[0]?.features).toEqual(['Disk space: 50 GB'])
+    expect(without[0]?.features).toEqual([])
   })
 
   it('leaves out an inactive group, an empty group and a group with no products in the list', () => {

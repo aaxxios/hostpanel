@@ -49,8 +49,14 @@ const selectedLabel = computed<string>(
   () => props.options.find(o => o.value === props.modelValue)?.label ?? props.placeholder ?? '—',
 )
 
-/** Whether the trigger is showing the placeholder instead of a chosen label. */
-const showingPlaceholder = computed<boolean>(() => selectedLabel.value === (props.placeholder ?? '—'))
+/**
+ * Whether the trigger is showing the placeholder instead of a chosen label.
+ *
+ * Decided by whether an option matches the value, never by comparing texts: a select whose
+ * placeholder equals the chosen option's label (the language switch shows "English" for both)
+ * would otherwise read as empty and be drawn dimmed, like a disabled control.
+ */
+const showingPlaceholder = computed<boolean>(() => !props.options.some(o => o.value === props.modelValue))
 
 /** Options after the search term is applied (matches both label and displayLabel). */
 const filteredOptions = computed(() => {
@@ -114,15 +120,15 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
       :aria-expanded="open"
       aria-haspopup="listbox"
       data-testid="ui-select-trigger"
-      class="w-full flex items-center justify-between gap-2 bg-surface-field border border-border rounded-[10px] px-3 py-2 text-[0.82rem] text-text-primary outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      :class="open ? 'border-primary-500/50 ring-1 ring-primary-500/10' : ''"
+      class="w-full flex items-center justify-between gap-2 bg-surface-field border border-border rounded-[10px] px-3 py-2 text-[0.82rem] text-text-primary outline-none focus-visible:border-primary-500/50 focus-visible:ring-2 focus-visible:ring-primary-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      :class="open ? 'border-primary-500/50 ring-2 ring-primary-500/20' : ''"
       @click="toggle"
     >
       <span class="truncate" :class="showingPlaceholder ? 'text-text-muted' : 'text-text-primary'">
         {{ selectedLabel }}
       </span>
       <svg
-        class="w-4 h-4 text-text-muted shrink-0 transition-transform duration-150"
+        class="w-4 h-4 text-text-secondary shrink-0 transition-transform duration-150"
         :class="open ? 'rotate-180' : ''"
         viewBox="0 0 24 24"
         fill="none"
@@ -156,7 +162,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
             v-model="search"
             type="text"
             :placeholder="t('shared.search')"
-            class="w-full bg-surface-field border border-border rounded-lg px-2.5 py-1.5 text-[0.82rem] text-text-primary placeholder:text-text-muted outline-none focus:border-primary-500/50 transition-colors"
+            class="w-full bg-surface-field border border-border rounded-lg px-2.5 py-1.5 text-[0.82rem] text-text-primary placeholder:text-text-muted outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-colors"
             @click.stop
           >
         </div>
@@ -169,16 +175,16 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
             role="option"
             data-testid="ui-select-option"
             :aria-selected="opt.value === props.modelValue"
-            class="w-full flex items-center justify-between px-3 py-1.5 text-[0.82rem] transition-colors"
+            class="w-full flex items-center justify-between px-3 py-1.5 text-[0.82rem] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500/40"
             :class="opt.value === props.modelValue
-              ? 'text-primary-400 bg-primary-500/10'
-              : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'"
+              ? 'bg-primary-600 light:bg-primary-700 text-white font-medium'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover focus-visible:text-text-primary focus-visible:bg-surface-hover'"
             @mousedown.prevent.stop="select(opt.value)"
           >
             <span class="truncate">{{ opt.displayLabel ?? opt.label }}</span>
             <svg
               v-if="opt.value === props.modelValue"
-              class="w-3.5 h-3.5 text-primary-400 shrink-0 ml-2"
+              class="w-3.5 h-3.5 text-white shrink-0 ml-2"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -188,7 +194,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutsideClick))
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </button>
-          <p v-if="filteredOptions.length === 0" class="px-3 py-2 text-[0.82rem] text-text-muted">
+          <p v-if="filteredOptions.length === 0" class="px-3 py-2 text-[0.82rem] text-text-secondary">
             {{ t('ui.uiSelect.noResults') }}
           </p>
         </div>

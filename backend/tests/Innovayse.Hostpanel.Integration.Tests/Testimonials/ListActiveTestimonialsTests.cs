@@ -43,6 +43,22 @@ public sealed class ListActiveTestimonialsTests(IntegrationTestFactory factory) 
         item.TryGetProperty("isActive", out _).Should().BeFalse();
     }
 
+    /// <summary>The feed carries the admin-set date, and the creation time when none was set.</summary>
+    [Fact]
+    public async Task PublicList_CarriesPublishedAt_FallingBackToCreatedAt()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+        var date = new DateTimeOffset(2026, 3, 10, 0, 0, 0, TimeSpan.Zero);
+        var dated = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/testimonials", StorefrontContentTestSeeds.TestimonialBody(publishedAt: date));
+        var undated = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/testimonials", StorefrontContentTestSeeds.TestimonialBody());
+
+        var response = await StorefrontContentTestSeeds.GetPublicAsync(factory, "/api/public/testimonials", "en");
+        var list = await response.Content.ReadFromJsonAsync<JsonElement[]>();
+
+        list!.Single(x => x.GetProperty("id").GetInt32() == dated).GetProperty("publishedAt").GetDateTimeOffset().Should().Be(date);
+        list!.Single(x => x.GetProperty("id").GetInt32() == undated).GetProperty("publishedAt").GetDateTimeOffset().Should().BeAfter(date);
+    }
+
     /// <summary>The feed excludes an inactive record and orders the rest by sort order.</summary>
     [Fact]
     public async Task PublicList_ExcludesInactive_AndOrdersBySortOrder()

@@ -18,13 +18,13 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 internal sealed class DemoSalesSeeder
 {
     /// <summary>How many quotes are seeded.</summary>
-    private const int QuoteCount = 14;
+    private const int QuoteCount = 66;
 
     /// <summary>How many billable items are seeded.</summary>
-    private const int BillableItemCount = 20;
+    private const int BillableItemCount = 66;
 
     /// <summary>How many orders are seeded.</summary>
-    private const int OrderCount = 26;
+    private const int OrderCount = 160;
 
     /// <summary>The quote stages handed out in turn; every stage the entity can reach appears.</summary>
     private static readonly QuoteStage[] QuoteStages =
@@ -125,8 +125,8 @@ internal sealed class DemoSalesSeeder
     {
         for (var n = 0; n < QuoteCount; n++)
         {
-            // The demo client gets the first two so its portal shows quotes to accept.
-            var client = clients[n < 2 ? 0 : (n - 1) % clients.Count];
+            // The demo client gets the first four so its portal shows quotes in several stages.
+            var client = clients[n < 4 ? 0 : (n - 3) % clients.Count];
             var stage = QuoteStages[n % QuoteStages.Length];
             var expiry = stage == QuoteStage.Expired ? _today.AddDays(-(5 + n)) : _today.AddDays(10 + (n * 3));
 

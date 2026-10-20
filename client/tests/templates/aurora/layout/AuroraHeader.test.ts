@@ -93,4 +93,24 @@ describe('AuroraHeader', () => {
     await wrapper.find('[data-testid="nav-mobile-faq"]').trigger('click')
     expect(wrapper.find('[data-testid="nav-mobile-menu"]').exists()).toBe(false)
   })
+
+  it('carries sign in and get started in the narrow-screen menu for a visitor', async () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(AuroraHeader, { stubs: STUBS })
+    await wrapper.find('[data-testid="nav-menu-toggle"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="nav-mobile-sign-in"]').attributes('href')).toBe('/client/login')
+    expect(wrapper.find('[data-testid="nav-mobile-start"]').attributes('href')).toBe('/hosting')
+    expect(wrapper.find('[data-testid="nav-mobile-account"]').exists()).toBe(false)
+  })
+
+  it('carries the client-area link instead of the pair once signed in', async () => {
+    stubAuroraGlobals({ user: { firstname: 'Ann', lastname: 'Lee', email: 'ann@acme.test' } })
+    const wrapper = mountWithKit(AuroraHeader, { stubs: STUBS })
+    await wrapper.find('[data-testid="nav-menu-toggle"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="nav-mobile-account"]').attributes('href')).toBe('/client/dashboard')
+    expect(wrapper.find('[data-testid="nav-mobile-sign-in"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="nav-mobile-start"]').exists()).toBe(false)
+  })
 })

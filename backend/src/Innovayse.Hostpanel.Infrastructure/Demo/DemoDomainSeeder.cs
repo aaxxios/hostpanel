@@ -43,6 +43,12 @@ internal sealed class DemoDomainSeeder
         ("-org.example", DomainStatus.Active, 150),
         ("-dev.example", DomainStatus.Expired, -12),
         ("-app.example", DomainStatus.PendingRegistration, 365),
+        ("-co.example", DomainStatus.Active, 22),
+        ("-shop.example", DomainStatus.Active, 300),
+        ("-old.example", DomainStatus.Redemption, -45),
+        ("-moved.example", DomainStatus.Transferred, 200),
+        ("-closed.example", DomainStatus.Cancelled, -60),
+        ("-blog.example", DomainStatus.Active, 90),
     ];
 
     /// <summary>The suffixes (all under the reserved example name) the other customers' second domains use, rotated.</summary>

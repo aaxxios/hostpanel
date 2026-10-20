@@ -111,7 +111,7 @@ export const dateFieldClasses =
 export const datePopupClasses = 'bg-surface-card rounded-[10px] shadow-2xl border border-border'
 
 /** Classes of the previous/next month arrows. */
-export const dateArrowClasses = 'text-text-muted hover:text-text-primary text-lg transition-colors'
+export const dateArrowClasses = 'text-text-secondary hover:text-text-primary text-lg transition-colors'
 
 /** Classes of a plain text action (Clear, Close). */
 export const dateActionClasses = 'text-sm text-text-secondary hover:text-text-primary transition-colors'
@@ -120,13 +120,13 @@ export const dateActionClasses = 'text-sm text-text-secondary hover:text-text-pr
 export const dateCellBaseClasses = 'h-8 flex items-center justify-center text-sm rounded transition-colors'
 
 /** Classes of the selected day (and of a range edge). */
-export const dateCellSelectedClasses = 'bg-primary-500 text-white rounded font-semibold'
+export const dateCellSelectedClasses = 'bg-primary-600 light:bg-primary-700 text-white rounded font-semibold'
 
 /** Classes of a day inside a range. */
-export const dateCellInRangeClasses = 'bg-primary-500/20 text-text-primary'
+export const dateCellInRangeClasses = 'bg-primary-500/25 text-text-primary'
 
 /** Classes of an empty padding cell before the first of the month. */
-export const dateCellEmptyClasses = 'text-text-muted cursor-not-allowed'
+export const dateCellEmptyClasses = 'text-text-muted opacity-60 cursor-not-allowed'
 
 /** Classes of a selectable, unselected day. */
 export const dateCellIdleClasses = 'text-text-primary hover:bg-surface-hover'
@@ -135,7 +135,7 @@ export const dateCellIdleClasses = 'text-text-primary hover:bg-surface-hover'
 export const datePresetIdleClasses = 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
 
 /** Classes of a quick-choice button in its active state. */
-export const datePresetActiveClasses = 'bg-primary-500 text-white'
+export const datePresetActiveClasses = 'bg-primary-600 light:bg-primary-700 text-white'
 
 /**
  * Renders a local date as `YYYY-MM-DD`.

@@ -56,4 +56,11 @@ describe('UiTabs', () => {
 
     expect(wrapper.get('[data-testid="panel"]').text()).toBe('c')
   })
+
+  it('colours the selected tab with the primary accent and keeps idle tabs readable', () => {
+    const wrapper = mount(UiTabs, { props: { items, modelValue: 'a' } })
+
+    expect(wrapper.get('[data-testid="tab-a"]').classes()).toContain('text-primary-500')
+    expect(wrapper.get('[data-testid="tab-c"]').classes()).toContain('text-text-secondary')
+  })
 })

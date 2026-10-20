@@ -4,6 +4,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   DateRangePreset,
+  dateCellSelectedClasses,
+  datePresetActiveClasses,
   QuickDate,
   UiDatePickerDirection,
   buildYearOptions,
@@ -97,5 +99,13 @@ describe('datePicker helpers', () => {
     expect(iso(DateRangePreset.LastMonth)).toEqual(['2026-04-01', '2026-04-30'])
     expect(iso(DateRangePreset.ThisYear)).toEqual(['2026-01-01', '2026-05-20'])
     expect(iso(DateRangePreset.LastYear)).toEqual(['2025-01-01', '2025-12-31'])
+  })
+})
+
+describe('datePicker selected states', () => {
+  it('fills the selected cell and active preset with a deeper primary that carries white text', () => {
+    expect(dateCellSelectedClasses).toContain('bg-primary-600')
+    expect(dateCellSelectedClasses).toContain('text-white')
+    expect(datePresetActiveClasses).toContain('bg-primary-600')
   })
 })

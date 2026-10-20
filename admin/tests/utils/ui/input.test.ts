@@ -24,3 +24,10 @@ describe('field vocabulary', () => {
     expect(fieldInvalidClasses).toContain('border-status-red')
   })
 })
+
+describe('field focus look', () => {
+  it('draws a keyboard-only ring at 30% instead of a 10% wash', () => {
+    expect(fieldBaseClasses).toContain('focus-visible:ring-primary-500/30')
+    expect(fieldInvalidClasses).toContain('focus-visible:ring-status-red/30')
+  })
+})

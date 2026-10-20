@@ -40,7 +40,7 @@ public sealed class UpdateTestimonialHandler
             return Result.FailureCode(HostpanelErrorCodes.TESTIMONIAL_NOT_FOUND);
         }
 
-        entity.Update(cmd.Name, cmd.Company, cmd.AvatarUrl, cmd.Rating, cmd.SortOrder, cmd.IsActive);
+        entity.Update(cmd.Name, cmd.Company, cmd.AvatarUrl, cmd.Rating, cmd.SortOrder, cmd.IsActive, cmd.PublishedAt);
         entity.ApplyTranslations(cmd.Translations);
 
         await _context.SaveChangesAsync(ct);

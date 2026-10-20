@@ -18,8 +18,8 @@ describe('TicketPriorityPicker', () => {
   it('fills only the chosen priority', () => {
     const wrapper = mountClient(TicketPriorityPicker, { props: { modelValue: TicketPriority.High } })
 
-    expect(wrapper.find('[data-testid="ticket-priority-High"]').classes()).toContain('bg-primary-600')
-    expect(wrapper.find('[data-testid="ticket-priority-Low"]').classes()).not.toContain('bg-primary-600')
+    expect(wrapper.find('[data-testid="ticket-priority-High"]').classes()).toContain('bg-primary-700')
+    expect(wrapper.find('[data-testid="ticket-priority-Low"]').classes()).not.toContain('bg-primary-700')
   })
 
   it('emits the priority that was clicked', async () => {

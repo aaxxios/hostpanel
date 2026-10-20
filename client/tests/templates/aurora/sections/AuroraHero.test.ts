@@ -57,6 +57,6 @@ describe('AuroraHero', () => {
     stubAuroraGlobals()
     const classes = mountWithKit(AuroraHero).find('[data-testid="hero-cta-primary"]').classes()
 
-    expect(classes).toEqual(expect.arrayContaining(['bg-brand', 'text-on-tint']))
+    expect(classes).toEqual(expect.arrayContaining(['bg-brand', 'text-on-brand']))
   })
 })

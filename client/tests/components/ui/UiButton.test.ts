@@ -17,10 +17,11 @@ describe('UiButton', () => {
   })
 
   it.each([
-    [UiButtonVariant.Primary, 'bg-primary-600'],
+    [UiButtonVariant.Primary, 'bg-primary-700'],
     [UiButtonVariant.Danger, 'bg-red-600'],
     [UiButtonVariant.Outline, 'border-primary-600'],
     [UiButtonVariant.Ghost, 'hover:bg-gray-100'],
+    [UiButtonVariant.Subtle, 'bg-primary-500/10'],
   ])('applies the %s variant classes', (variant, expected) => {
     const wrapper = mountWithKit(UiButton, { props: { variant } })
 
@@ -91,5 +92,19 @@ describe('UiButton', () => {
 
     expect(classes).toContain('transition')
     expect(classes).not.toContain('transition-all')
+  })
+
+  it('offsets the focus ring from the surface in both themes', () => {
+    const classes = mountWithKit(UiButton, { slots: { default: 'Go' } }).find('button').classes()
+
+    expect(classes).toContain('ring-offset-white')
+    expect(classes).toContain('dark:ring-offset-ui-surface')
+  })
+
+  it('lightens the outline variant on dark surfaces', () => {
+    const classes = mountWithKit(UiButton, { props: { variant: UiButtonVariant.Outline } }).classes()
+
+    expect(classes).toContain('dark:text-primary-400')
+    expect(classes).toContain('dark:border-primary-400')
   })
 })

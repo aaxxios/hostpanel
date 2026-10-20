@@ -35,7 +35,7 @@ describe('UiNavItem', () => {
     const wrapper = mountWithKit(UiNavItem, { props: { active: true } })
 
     expect(wrapper.classes()).toContain('font-medium')
-    expect(wrapper.classes()).toContain('text-primary-600')
+    expect(wrapper.classes()).toContain('text-primary-700')
   })
 
   it('greys out and disables a disabled entry', () => {
@@ -48,7 +48,7 @@ describe('UiNavItem', () => {
   it('draws the warning tone in yellow', () => {
     const wrapper = mountWithKit(UiNavItem, { props: { tone: UiNavTone.Warning } })
 
-    expect(wrapper.classes()).toContain('text-yellow-600')
+    expect(wrapper.classes()).toContain('text-yellow-700')
   })
 
   it('swaps the icon for a spinner while loading and disables the button', () => {
@@ -62,5 +62,12 @@ describe('UiNavItem', () => {
     const wrapper = mountWithKit(UiNavItem, { props: { testid: 'nav-overview' } })
 
     expect(wrapper.attributes('data-testid')).toBe('nav-overview')
+  })
+
+  it('draws an inset keyboard focus ring that the group border cannot clip', () => {
+    const wrapper = mountWithKit(UiNavItem, { props: {} })
+
+    expect(wrapper.classes()).toContain('focus-visible:ring-2')
+    expect(wrapper.classes()).toContain('focus-visible:ring-inset')
   })
 })

@@ -33,14 +33,14 @@ const el = ref<HTMLDivElement | null>(null)
 /** Frame colour for the current state; an error outranks readiness. */
 const stateClasses = computed(() => {
   if (props.invalid) {
-    return 'border-red-500/50'
+    return 'border-red-500 dark:border-red-400/60'
   }
-  return props.ready ? 'border-cyan-500/30' : 'border-gray-300 dark:border-white/10'
+  return props.ready ? 'border-cyan-600/50 dark:border-cyan-400/40' : 'border-gray-300 dark:border-white/10'
 })
 
 /** Class list of the box. */
 const classes = computed(() =>
-  `min-h-[44px] rounded-2xl border bg-white p-4 transition-colors dark:bg-white/5 ${stateClasses.value}`)
+  `min-h-[44px] rounded-2xl border bg-ui-surface p-4 transition-colors ${stateClasses.value}`)
 
 defineExpose({ el })
 </script>

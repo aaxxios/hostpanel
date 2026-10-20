@@ -45,6 +45,12 @@ describe('AuroraHome', () => {
     expect(wrapper.find('[data-testid="aurora-cta"]').exists()).toBe(true)
   })
 
+  it('sets a brand glow behind the hero search card', () => {
+    const wrapper = mountWithKit(AuroraHome)
+
+    expect(wrapper.find('[data-testid="hero-search-glow"]').exists()).toBe(true)
+  })
+
   it('leaves out the process and FAQ sections when they are switched off', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(AuroraHome, { props: { showProcess: false, showFaq: false } })

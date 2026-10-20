@@ -44,7 +44,7 @@ provide(UI_TABLE_CONTEXT, {
     <slot />
     <tbody v-if="loading || empty">
       <tr>
-        <td :colspan="colspan" class="py-8 px-4 text-center text-[0.82rem] text-text-muted">
+        <td :colspan="colspan" class="py-8 px-4 text-center text-[0.82rem] text-text-secondary">
           <UiSkeleton v-if="loading" :lines="3" />
           <slot v-else name="empty">
             {{ t('ui.table.empty') }}

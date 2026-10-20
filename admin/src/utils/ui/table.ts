@@ -16,9 +16,9 @@ export type UiAlign = (typeof UiAlign)[keyof typeof UiAlign]
 
 /** Text alignment classes. */
 export const alignClasses: Record<UiAlign, string> = {
-  left: 'text-left',
+  left: 'text-start',
   center: 'text-center',
-  right: 'text-right',
+  right: 'text-end',
 }
 
 /** Closed set of sort directions of a sortable column. */

@@ -17,10 +17,8 @@
       </MarketingSectionHeader>
 
       <div
-        v-motion
-        :initial="{ opacity: 0, y: 40 }"
-        :visible-once="{ opacity: 1, y: 0, transition: { delay: 200, duration: 600 } }"
-        class="max-w-6xl mx-auto"
+        class="max-w-6xl mx-auto animate-reveal-up motion-reduce:animate-none"
+        :style="revealStyle(200)"
       >
         <UiTable scrollable :label="$t('products.comparison.title')">
           <UiTableHead>
@@ -28,7 +26,7 @@
               <th class="text-left p-6 text-gray-900 dark:text-white font-bold text-lg w-1/4">{{ $t('products.comparison.headers.product') }}</th>
               <th class="p-6 text-center">
                 <div class="text-gray-600 dark:text-gray-400 font-semibold text-sm mb-1">{{ $t('products.comparison.headers.starter') }}</div>
-                <div class="text-xs text-gray-500">{{ $t('products.comparison.headers.starterDesc') }}</div>
+                <div class="text-xs text-gray-600 dark:text-gray-400">{{ $t('products.comparison.headers.starterDesc') }}</div>
               </th>
               <th class="p-6 text-center bg-gradient-to-b from-primary-500/10 to-transparent">
                 <div class="inline-flex flex-col">
@@ -38,7 +36,7 @@
               </th>
               <th class="p-6 text-center">
                 <div class="text-gray-600 dark:text-gray-400 font-semibold text-sm mb-1">{{ $t('products.comparison.headers.enterprise') }}</div>
-                <div class="text-xs text-gray-500">{{ $t('products.comparison.headers.enterpriseDesc') }}</div>
+                <div class="text-xs text-gray-600 dark:text-gray-400">{{ $t('products.comparison.headers.enterpriseDesc') }}</div>
               </th>
             </tr>
           </UiTableHead>
@@ -47,19 +45,18 @@
             <UiTableRow
               v-for="(product, rowIndex) in pricedProducts"
               :key="product.id"
-              v-motion
-              :initial="{ opacity: 0, x: -20 }"
-              :visible-once="{ opacity: 1, x: 0, transition: { delay: 300 + rowIndex * 100, duration: 400 } }"
               group
               :data-testid="`comparison-row-${product.id}`"
+              class="animate-reveal-up motion-reduce:animate-none"
+              :style="revealStyle(300 + rowIndex * 100)"
             >
               <td class="p-6">
                 <UiAccent :color="product.color">
                   <NuxtLink :to="hrefFor(product)" class="flex items-center gap-3 group/link">
-                    <UiAccentTile :icon="`mdi:${product.icon}`" size="sm" class="group-hover/link:scale-110" />
+                    <UiAccentTile :icon="product.icon" size="sm" class="group-hover/link:scale-110" />
                     <div>
                       <div class="font-bold text-gray-900 dark:text-white group-hover/link:text-primary-700 dark:group-hover/link:text-primary-300 transition-colors">{{ product.name }}</div>
-                      <div v-if="product.tagline" class="text-xs text-gray-500 group-hover/link:text-gray-600 dark:group-hover/link:text-gray-400 transition-colors">{{ product.tagline }}</div>
+                      <div v-if="product.tagline" class="text-xs text-gray-600 dark:text-gray-400 group-hover/link:text-gray-800 dark:group-hover/link:text-gray-200 transition-colors">{{ product.tagline }}</div>
                     </div>
                   </NuxtLink>
                 </UiAccent>
@@ -90,6 +87,8 @@
  * The plan-comparison table of the products page: one row per family that has priced plans, with
  * its first three plans as the Starter, Professional and Enterprise columns.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'
 import type { ProductFamily } from '~/types/productfamily'
 

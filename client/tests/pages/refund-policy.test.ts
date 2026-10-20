@@ -39,7 +39,7 @@ describe('pages/refund-policy', () => {
 
     const link = wrapper.find('[data-testid="legal-contact-link"]')
     expect(link.text()).toContain('refundPolicy.contact.link')
-    expect(link.classes()).toContain('bg-primary-600')
+    expect(link.classes()).toContain('bg-primary-700')
     expect(link.classes()).not.toContain('bg-red-600')
   })
 

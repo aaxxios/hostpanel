@@ -49,10 +49,10 @@ const SIZE_CLASSES: Record<UiTextSize, string> = {
 /** Colour utilities per role. */
 const TONE_CLASSES: Record<UiTextTone, string> = {
   [UiTextTone.Default]: 'text-gray-900 dark:text-white',
-  [UiTextTone.Muted]: 'text-gray-600 dark:text-gray-400',
-  [UiTextTone.Subtle]: 'text-gray-500 dark:text-gray-500',
+  [UiTextTone.Muted]: 'text-gray-600 dark:text-gray-300',
+  [UiTextTone.Subtle]: 'text-gray-500 dark:text-gray-400',
   [UiTextTone.Primary]: 'text-primary-600 dark:text-primary-400',
-  [UiTextTone.Success]: 'text-green-600 dark:text-green-400',
+  [UiTextTone.Success]: 'text-green-700 dark:text-green-400',
   [UiTextTone.Danger]: 'text-red-600 dark:text-red-400',
   [UiTextTone.Inherit]: '',
 }

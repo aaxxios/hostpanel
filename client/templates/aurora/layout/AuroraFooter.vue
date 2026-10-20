@@ -42,7 +42,7 @@
                 type="submit"
                 variant="bare"
                 data-testid="newsletter-submit"
-                class="whitespace-nowrap rounded-xl bg-brand px-[18px] py-3 text-sm font-bold text-on-tint hover:brightness-110"
+                class="whitespace-nowrap rounded-xl bg-brand px-[18px] py-3 text-sm font-bold text-on-brand hover:brightness-110"
               >
                 {{ t('aurora.footer.newsletterCta') }}
               </UiButton>
@@ -76,17 +76,16 @@
             {{ col.title }}
           </UiHeading>
           <UiStack gap="sm" class="mt-[18px]">
-            <UiLink
+            <UiFooterLink
               v-for="link in col.links"
               :key="link.label"
-              data-testid="aurora-footer-link"
+              testid="aurora-footer-link"
               :to="link.to"
-              tone="inherit"
-              :underline="false"
-              class="text-[15px] text-mut hover:text-tx"
+              :variant="UiFooterLinkVariant.Aurora"
+              class="text-[15px]"
             >
               {{ link.label }}
-            </UiLink>
+            </UiFooterLink>
           </UiStack>
         </UiStack>
       </UiGrid>
@@ -102,13 +101,13 @@
         <UiStack direction="row" wrap align="center" gap="none" class="gap-x-2.5 gap-y-1 text-sm text-mut2">
           <UiText v-if="taxId" as="span" size="sm" tone="inherit">{{ t('aurora.footer.taxId') }} {{ taxId }}</UiText>
           <UiText v-if="taxId && (contactEmail || phone)" as="span" size="sm" tone="inherit">·</UiText>
-          <UiLink v-if="contactEmail" data-testid="aurora-footer-email" :href="`mailto:${contactEmail}`" tone="inherit" :underline="false" class="hover:text-tx">
+          <UiFooterLink v-if="contactEmail" testid="aurora-footer-email" :href="`mailto:${contactEmail}`" :variant="UiFooterLinkVariant.Aurora">
             {{ contactEmail }}
-          </UiLink>
+          </UiFooterLink>
           <UiText v-if="contactEmail && phone" as="span" size="sm" tone="inherit">·</UiText>
-          <UiLink v-if="phone" data-testid="aurora-footer-phone" :href="phoneHref" tone="inherit" :underline="false" class="hover:text-tx">
+          <UiFooterLink v-if="phone" testid="aurora-footer-phone" :href="phoneHref" :variant="UiFooterLinkVariant.Aurora">
             {{ phone }}
-          </UiLink>
+          </UiFooterLink>
         </UiStack>
       </UiStack>
     </UiContainer>
@@ -127,6 +126,7 @@
 import AppLogoLockup from '~/components/AppLogoLockup.vue'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { TELEGRAM_LINK_BASE } from '~/constants/contactChannel'
+import { UiFooterLinkVariant } from '~/utils/ui/enums'
 
 const { t } = useI18n()
 /** Prefixes a path with the active locale. */

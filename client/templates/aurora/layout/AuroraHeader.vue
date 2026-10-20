@@ -56,7 +56,7 @@
             v-if="cartCount > 0"
             size="sm"
             rounded
-            class="absolute -right-1.5 -top-1.5 bg-brand font-extrabold text-on-tint"
+            class="absolute -right-1.5 -top-1.5 bg-brand font-extrabold text-on-brand"
             data-testid="nav-cart-count"
           >
             {{ cartCount }}
@@ -90,7 +90,7 @@
             variant="bare"
             :to="localePath('/hosting')"
             data-testid="nav-start"
-            class="hidden whitespace-nowrap rounded-xl bg-brand px-5 py-[11px] text-[15px] font-semibold text-on-tint hover:brightness-110 sm:inline-flex"
+            class="hidden whitespace-nowrap rounded-xl bg-brand px-5 py-[11px] text-[15px] font-semibold text-on-brand hover:brightness-110 sm:inline-flex"
           >
             {{ t('aurora.nav.start') }}
           </UiButton>
@@ -130,6 +130,46 @@
         >
           {{ link.label }}
         </UiLink>
+
+        <!--
+          The bar hides the sign-in pair below the sm breakpoint, so the panel carries it
+          there; signed in, the avatar stays in the bar and the panel adds the way to the
+          client area.
+        -->
+        <UiLink
+          v-if="isLoggedIn"
+          :to="localePath(CLIENT_DASHBOARD_PATH)"
+          tone="inherit"
+          :underline="false"
+          testid="nav-mobile-account"
+          class="rounded-xl px-2 py-3 text-base font-semibold text-tx"
+          @click="menuOpen = false"
+        >
+          {{ t('nav.clientArea') }}
+        </UiLink>
+
+        <UiStack v-else gap="sm" class="mt-3 border-t border-line pt-4 sm:hidden">
+          <UiLink
+            :href="signInHref"
+            tone="inherit"
+            :underline="false"
+            testid="nav-mobile-sign-in"
+            class="rounded-xl border border-line2 px-5 py-3 text-center text-base font-semibold text-tx"
+            @click="menuOpen = false"
+          >
+            {{ t('aurora.nav.login') }}
+          </UiLink>
+
+          <UiButton
+            variant="bare"
+            :to="localePath('/hosting')"
+            data-testid="nav-mobile-start"
+            class="w-full rounded-xl bg-brand px-5 py-3 text-base font-semibold text-on-brand hover:brightness-110"
+            @click="menuOpen = false"
+          >
+            {{ t('aurora.nav.start') }}
+          </UiButton>
+        </UiStack>
       </UiStack>
     </UiContainer>
   </div>
@@ -141,7 +181,9 @@
  *
  * Presentation only. The locale menu, colour-mode toggle, apps launcher and
  * account menu are the portal's existing components; this restyles their
- * surroundings rather than reimplementing them.
+ * surroundings rather than reimplementing them. The narrow-screen panel repeats the
+ * sign-in pair (signed out) or links the client area (signed in), because the bar itself
+ * drops them below the sm breakpoint.
  *
  * Two things it does read: whether there is a session, which decides between the
  * account menu and the sign-in pair, and the configured sign-in destination.
@@ -149,6 +191,7 @@
 import AppLogoLockup from '~/components/AppLogoLockup.vue'
 import AuroraAppLauncher from '~/templates/aurora/layout/AppLauncher.vue'
 import AuroraAccountMenu from '~/templates/aurora/layout/AccountMenu.vue'
+import { CLIENT_DASHBOARD_PATH } from '~/constants/clientRoutes'
 import { useCartStore } from '~/stores/cart'
 
 /** Props of the header. */

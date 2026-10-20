@@ -51,7 +51,7 @@ export const fieldWidthClasses = '[:where(&)]:w-full'
 
 /** Border, background, text and focus classes of a text-like field. */
 export const fieldBaseClasses =
-  'bg-surface-field border border-border rounded-[10px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/10 disabled:opacity-50 disabled:cursor-not-allowed read-only:cursor-default'
+  'bg-surface-field border border-border rounded-[10px] text-text-primary placeholder:text-text-muted outline-none transition-colors duration-200 focus-visible:border-primary-500/60 focus-visible:ring-2 focus-visible:ring-primary-500/30 disabled:opacity-50 disabled:cursor-not-allowed read-only:cursor-default'
 
 /** Extra classes of a field flagged invalid (the server refused its value). */
-export const fieldInvalidClasses = 'border-status-red/60 focus:border-status-red focus:ring-status-red/10'
+export const fieldInvalidClasses = 'border-status-red/60 focus-visible:border-status-red focus-visible:ring-status-red/30'

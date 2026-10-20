@@ -150,11 +150,15 @@ try
         // development one: both would create clients, and the demo's idempotency keys on its own rows.
         // Reading .Value here also validates Demo:* now, so a half-configured demo stops the start
         // with the key named rather than failing on the first request.
+        //
+        // A demo starts from its fixed seed: the seeders add a dataset only to an empty table, so seeding on
+        // top of the previous release's rows would leave a deploy showing a mix of old and new sample data until
+        // the first scheduled reset, one whole interval later. Resetting wipes and reseeds in one transaction.
         if (app.Services.GetRequiredService<IOptions<DemoOptions>>().Value.Enabled)
         {
             await scope.ServiceProvider
                 .GetRequiredService<IDemoDataManager>()
-                .SeedAsync(CancellationToken.None);
+                .ResetAsync(CancellationToken.None);
         }
         else if (app.Environment.IsDevelopment() && isLocalMode)
         {

@@ -60,4 +60,10 @@ describe('UiCard', () => {
     expect(wrapper.classes()).toEqual(expect.arrayContaining(['rounded-2xl', 'border', 'p-6']))
     expect(wrapper.classes().some((name) => name.startsWith('bg-') || name.startsWith('border-') || name.includes('dark:'))).toBe(false)
   })
+
+  it('lifts the default card off the light page with a shadow that the dark page drops', () => {
+    const wrapper = mountWithKit(UiCard)
+
+    expect(wrapper.classes()).toEqual(expect.arrayContaining(['shadow-sm', 'dark:shadow-none']))
+  })
 })

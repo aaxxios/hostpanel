@@ -11,11 +11,9 @@
     <ClientServicesSetupDomainStep
       v-if="currentStep === SetupStep.Domain"
       v-model:domain="setupData.domain"
-      v-motion
-      :initial="{ opacity: 0, x: 20 }"
-      :enter="{ opacity: 1, x: 0 }"
       :domain-error="domainError"
       :has-purchased-domain="hasPurchasedDomain"
+      class="animate-reveal-up motion-reduce:animate-none"
       @next="nextStep"
     />
 
@@ -23,26 +21,22 @@
       v-else-if="currentStep === SetupStep.Credentials"
       v-model:username="setupData.username"
       v-model:password="setupData.password"
-      v-motion
-      :initial="{ opacity: 0, x: 20 }"
-      :enter="{ opacity: 1, x: 0 }"
       :username-error="usernameError"
       :password-error="passwordError"
       :can-continue="canContinue"
+      class="animate-reveal-up motion-reduce:animate-none"
       @back="prevStep"
       @next="nextStep"
     />
 
     <ClientServicesSetupReviewStep
       v-else
-      v-motion
-      :initial="{ opacity: 0, scale: 0.95 }"
-      :enter="{ opacity: 1, scale: 1 }"
       :plan-name="productNameOrFallback(t, service.name, service.id)"
       :domain="setupData.domain"
       :username="setupData.username"
       :submitting="setupSubmitting"
       :error="setupError"
+      class="animate-reveal-up motion-reduce:animate-none"
       @build="finishSetup"
       @back="prevStep"
     />

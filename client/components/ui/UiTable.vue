@@ -1,7 +1,7 @@
 <template>
   <div class="overflow-hidden rounded-2xl border border-gray-200 dark:border-white/10 bg-ui-surface">
     <div
-      :class="scrollable ? 'overflow-x-auto' : undefined"
+      :class="scrollable ? 'overflow-x-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500' : undefined"
       :tabindex="scrollable && label ? 0 : undefined"
       :role="scrollable && label ? 'region' : undefined"
       :aria-label="scrollable ? label : undefined"

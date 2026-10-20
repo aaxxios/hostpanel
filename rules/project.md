@@ -198,7 +198,7 @@ folder per use case under `Application/<Feature>/{Commands,Queries}/<UseCase>/`.
   with demo on, the email and password of `Demo__AdminEmail` / `Demo__ClientEmail` cannot change; password
   reset (`ResetPasswordCommand`) and `UpdateClientHandler`'s email change ask it and answer 403 `DEMO_ACTION_DISABLED`.
 - **Currency.** The demo payment plugin accepts every currency stored (`IPaymentPlugin.AcceptsCurrency`), not only USD.
-- **Data.** `IDemoDataManager` seeds idempotently at startup (instead of `DevDataSeeder`) and
+- **Data.** `IDemoDataManager` resets (wipes and reseeds) at startup instead of running `DevDataSeeder`, so every deploy shows the current seed, and
   `ResetDemoDataCommand` truncates every table except the identity roles and reseeds in one
   transaction every `ResetIntervalHours`; `GET /api/public/demo` publishes the accounts and the next
   reset. Seed text names no outside product.

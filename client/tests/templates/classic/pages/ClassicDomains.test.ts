@@ -225,7 +225,7 @@ describe('ClassicDomains', () => {
 
   it('filters the table to a category and back to all', async () => {
     const wrapper = await mountDomains()
-    const categories = wrapper.findAll('[data-testid="classic-domains-category"]')
+    const categories = wrapper.findAll('[data-testid^="classic-domains-category-"]:not([data-testid="classic-domains-category-all"])')
     expect(categories).toHaveLength(2)
 
     await at(categories, 1).trigger('click')

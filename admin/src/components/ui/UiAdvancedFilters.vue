@@ -89,17 +89,17 @@ watch(filters, (val) => {
     <div
       v-for="(f, i) in filters"
       :key="i"
-      class="bg-surface-field border border-border/50 rounded-xl p-3"
+      class="bg-surface-field border border-border rounded-xl p-3"
     >
       <!-- Header: label + remove -->
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-text-muted">{{ t('ui.uiAdvancedFilters.filterValue', { value: i + 1 }) }}</span>
+        <span class="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-text-secondary">{{ t('ui.uiAdvancedFilters.filterValue', { value: i + 1 }) }}</span>
         <button
           v-if="filters.length > 1"
           type="button"
           :aria-label="t('shared.delete')"
           :data-testid="`advanced-filters-remove-${i}`"
-          class="w-6 h-6 flex items-center justify-center text-text-muted hover:text-status-red transition-colors rounded-md hover:bg-surface-hover"
+          class="w-6 h-6 flex items-center justify-center text-text-secondary hover:text-status-red transition-colors rounded-md hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-primary-500"
           @click="removeFilter(i)"
         >
           <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -115,7 +115,7 @@ watch(filters, (val) => {
           type="text"
           :placeholder="t('ui.uiAdvancedFilters.enterValue')"
           :data-testid="`advanced-filters-value-${i}`"
-          class="w-full bg-surface-field border border-border rounded-[10px] px-3 py-2 text-[0.82rem] text-text-primary placeholder:text-text-muted outline-none focus:border-primary-500/50 transition-colors"
+          class="w-full bg-surface-field border border-border rounded-[10px] px-3 py-2 text-[0.82rem] text-text-primary placeholder:text-text-muted outline-none focus:border-primary-500/50 focus-visible:ring-2 focus-visible:ring-primary-500/30 transition-colors"
         >
       </div>
     </div>
@@ -125,7 +125,7 @@ watch(filters, (val) => {
       v-if="filters.length < maxFilters"
       type="button"
       data-testid="advanced-filters-add"
-      class="flex items-center gap-1.5 text-[0.78rem] text-primary-400 hover:text-primary-300 transition-colors px-1"
+      class="flex items-center gap-1.5 text-[0.78rem] text-primary-400 hover:text-primary-300 light:text-primary-600 light:hover:text-primary-700 transition-colors px-1 rounded-md focus-visible:outline-2 focus-visible:outline-primary-500"
       @click="addFilter"
     >
       <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>

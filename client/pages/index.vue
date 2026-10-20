@@ -70,6 +70,10 @@ const catalogStore = useCatalogStore()
 /** The domains store: the domain lookup. */
 const domainsStore = useDomainsStore()
 
+// The currencies load on the server too: without them the payer's currency (and its symbol)
+// is unknown during the server render and the plan prices print as bare numbers.
+await useAsyncData('home:currencies', () => currencyStore.load())
+
 // Prices follow the payer's currency, so each read runs again when it resolves or changes.
 await Promise.all([
   useAsyncData('home:tld-pricing', () => catalogStore.loadTldPricing(), {
@@ -94,7 +98,6 @@ const plans = computed(() => catalogStore.planCards(id => localePath(`/configure
 
 onMounted(() => {
   currencyStore.init()
-  currencyStore.load()
 })
 
 /** Whether the plan prices are shown per year instead of per month. */

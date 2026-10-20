@@ -30,7 +30,7 @@ const paddingClasses: Record<UiCardPadding, string> = {
 
 /** Surface and padding classes. */
 const classes = computed<string[]>(() => [
-  props.elevated ? 'bg-surface-elevated shadow-lg' : 'bg-surface-card',
+  props.elevated ? 'bg-surface-elevated shadow-lg' : 'bg-surface-card light:shadow-sm',
   paddingClasses[props.padding],
 ])
 </script>

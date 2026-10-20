@@ -14,6 +14,9 @@
 /** The custom property `UiAccent` writes and the classes below read. */
 export const ACCENT_VARIABLE = '--accent'
 
+/** The custom property holding the text colour that reads on a solid accent fill. */
+export const ACCENT_INK_VARIABLE = '--accent-ink'
+
 /** Look of a UiAccentButton. */
 export enum UiAccentAppearance {
   /** Filled with the accent. */
@@ -57,8 +60,8 @@ export const isAccentColor = (value: string | null | undefined): value is string
  * Classes that read the `--accent` property. Complete literals, so Tailwind emits them.
  */
 export const ACCENT_CLASSES = {
-  /** Accent as text or icon colour. */
-  text: 'text-[color:var(--accent)]',
+  /** Accent as text or icon colour: a deeper mix on a light page so it holds AA, a lightened mix on a dark one. */
+  text: 'text-[color:color-mix(in_srgb,var(--accent)_65%,black)] dark:text-[color:color-mix(in_srgb,var(--accent)_75%,white)]',
   /** Accent as a solid fill. */
   fill: 'bg-[color:var(--accent)]',
   /** A faint tint of the accent as a fill (about 8 %). */
@@ -87,9 +90,31 @@ export const ACCENT_TILE_CLASSES: Record<UiAccentTileSize, { box: string; icon: 
 /** Colour classes of a UiAccentButton per appearance. */
 export const ACCENT_BUTTON_CLASSES: Record<UiAccentAppearance, string> = {
   [UiAccentAppearance.Solid]:
-    'bg-[color:var(--accent)] text-white shadow-[0_8px_30px_color-mix(in_srgb,var(--accent)_25%,transparent)] hover:brightness-110',
+    'bg-[color:var(--accent)] text-[color:var(--accent-ink,white)] shadow-[0_8px_30px_color-mix(in_srgb,var(--accent)_25%,transparent)] hover:brightness-110',
   [UiAccentAppearance.Soft]:
-    'border bg-[color:color-mix(in_srgb,var(--accent)_10%,transparent)] border-[color:color-mix(in_srgb,var(--accent)_25%,transparent)] text-[color:var(--accent)] hover:bg-[color:color-mix(in_srgb,var(--accent)_20%,transparent)]',
+    'border bg-[color:color-mix(in_srgb,var(--accent)_10%,transparent)] border-[color:color-mix(in_srgb,var(--accent)_25%,transparent)] text-[color:color-mix(in_srgb,var(--accent)_65%,black)] dark:text-[color:color-mix(in_srgb,var(--accent)_75%,white)] hover:bg-[color:color-mix(in_srgb,var(--accent)_20%,transparent)]',
   [UiAccentAppearance.Outline]:
-    'border-2 border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] text-[color:var(--accent)] hover:bg-white dark:hover:bg-white/5',
+    'border-2 border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] text-[color:color-mix(in_srgb,var(--accent)_65%,black)] dark:text-[color:color-mix(in_srgb,var(--accent)_75%,white)] hover:bg-white dark:hover:bg-white/5',
+}
+
+/**
+ * Picks the text colour that reads on a solid fill of the given hex colour.
+ *
+ * Uses the WCAG relative luminance: a light accent gets near-black text, a dark one white, so a
+ * solid accent button never carries white on a pale colour. CSS cannot choose between two colours
+ * by luminance, which is why the choice is made here and written next to `--accent`.
+ *
+ * @param hex A hex colour accepted by `isAccentColor`.
+ * @returns `white` or a near-black hex.
+ */
+export const accentInk = (hex: string): string => {
+  const raw = hex.slice(1)
+  const full = raw.length <= 4 ? raw.split('').map((c) => c + c).join('') : raw
+  const channel = (i: number): number => {
+    const v = parseInt(full.slice(i, i + 2), 16) / 255
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+  }
+  const luminance = 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4)
+  // White wins above a 4.5:1 ratio against the fill, i.e. luminance below about 0.18.
+  return luminance < 0.18 ? 'white' : '#08090f'
 }

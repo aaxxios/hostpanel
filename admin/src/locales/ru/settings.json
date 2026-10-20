@@ -211,6 +211,9 @@
     "createProduct": "Создать продукт",
     "sharedHosting": "Общий хостинг",
     "dedicated": "Выделенный",
+    "email": "Почта",
+    "addon": "Дополнение",
+    "backup": "Резервное копирование",
     "other": "Другое",
     "vps": "VPS"
   },
@@ -235,6 +238,9 @@
     "typeSharedHosting": "Общий хостинг",
     "typeDedicated": "Выделенный",
     "typeDomain": "Домен",
+    "typeEmail": "Почта",
+    "typeAddon": "Дополнение",
+    "typeBackup": "Резервное копирование",
     "typeOther": "Другое",
     "typeVps": "VPS",
     "typeSsl": "SSL"

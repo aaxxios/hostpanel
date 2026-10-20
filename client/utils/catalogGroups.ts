@@ -5,13 +5,16 @@
  */
 
 import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
+import { DEFAULT_PRODUCT_ICON, productTypeIcon } from '~/constants/productTypeIcon'
+import type { PortalProduct } from '~/types/portalproduct'
 import type { PortalProductGroup } from '~/types/portalproductgroup'
+import { ProductType } from '~/types/producttype'
 
 /** Visual and meta config of one product family. */
 export interface ProductFamilyConfig {
   /** Display name. */
   name: string
-  /** Icon name. */
+  /** Full icon name, e.g. `mdi:server`. */
   icon: string
   /** Accent colour, `#rrggbb`. */
   color: string
@@ -24,11 +27,8 @@ export interface ProductFamilyConfig {
 /** Key of the hosting family, which has its own page rather than a `/products/<key>` one. */
 export const HOSTING_FAMILY_KEY = 'web-hosting'
 
-/** Icon of a family; the catalogue stores none, so every catalogue family shares this one. */
-export const FAMILY_ICON = 'cube'
-
-/** Icon of the hosting family. */
-export const HOSTING_FAMILY_ICON = 'cloud-check'
+/** Icon of a family whose type is unknown; the catalogue stores no icon, so it is derived from the type. */
+export const FAMILY_ICON = DEFAULT_PRODUCT_ICON
 
 /** Accent of the hosting family. */
 export const HOSTING_FAMILY_COLOR = '#0ea5e9'
@@ -86,17 +86,53 @@ export const familyColor = (key: string): string => {
 }
 
 /**
- * The look and links of a family, derived from its group: only hosting has a look of its own.
+ * The service type most of a group's products sell.
+ *
+ * The group itself carries no type, so it is read from its products; a tie goes to the type met first.
+ *
+ * @param products The group's products.
+ * @returns The dominant type, or null when there is no product or none has a type.
+ */
+export const dominantProductType = (products: readonly PortalProduct[]): string | null => {
+  const counts = new Map<string, number>()
+  let best: string | null = null
+  for (const product of products) {
+    if (!product.type) {
+      continue
+    }
+    const count = (counts.get(product.type) ?? 0) + 1
+    counts.set(product.type, count)
+    if (best === null || count > (counts.get(best) ?? 0)) {
+      best = product.type
+    }
+  }
+  return best
+}
+
+/**
+ * Whether a group sells domain names, which the static domains card stands for.
+ *
+ * @param products The group's products.
+ * @returns True when the group's dominant type is {@link ProductType.Domain}.
+ */
+export const isDomainGroup = (products: readonly PortalProduct[]): boolean => dominantProductType(products) === ProductType.Domain
+
+/**
+ * The look and links of a family, derived from its group: the icon from the type of its products,
+ * and only hosting has a colour and address of its own.
  *
  * @param group The catalogue group.
+ * @param products The group's products, whose type picks the icon; omit when unknown.
  * @returns The family's config.
  */
-export const familyConfig = (group: PortalProductGroup): ProductFamilyConfig => {
+export const familyConfig = (group: PortalProductGroup, products: readonly PortalProduct[] = []): ProductFamilyConfig => {
   const key = familyKey(group)
+  const type = group.id === HOSTING_GROUP_ID ? ProductType.SharedHosting : dominantProductType(products)
+  const icon = productTypeIcon(type)
   if (group.id === HOSTING_GROUP_ID) {
-    return { name: group.name, icon: HOSTING_FAMILY_ICON, color: HOSTING_FAMILY_COLOR, learnMoreUrl: HOSTING_FAMILY_URL }
+    return { name: group.name, icon, color: HOSTING_FAMILY_COLOR, learnMoreUrl: HOSTING_FAMILY_URL }
   }
-  return { name: group.name, icon: FAMILY_ICON, color: familyColor(key), learnMoreUrl: `/products/${key}` }
+  return { name: group.name, icon, color: familyColor(key), learnMoreUrl: `/products/${key}` }
 }
 
 /*

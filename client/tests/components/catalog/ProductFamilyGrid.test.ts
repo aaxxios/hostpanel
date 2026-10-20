@@ -17,7 +17,7 @@ import type { ProductFamily } from '~/types/productfamily'
 const family = (overrides: Partial<ProductFamily> = {}): ProductFamily => ({
   id: 'alpha-suite',
   gid: 3,
-  icon: 'school',
+  icon: 'mdi:school',
   color: '#8b5cf6',
   learnMoreUrl: '/products/alpha-suite',
   name: 'Alpha Suite',
@@ -67,6 +67,19 @@ describe('ProductFamilyGrid', () => {
     expect(first.text()).not.toContain('Find yours')
     const domains = wrapper.find('[data-testid="product-card-domains"]')
     expect(domains.text()).toContain('Find yours')
-    expect(domains.text()).toContain('products.products.badge')
+    expect(domains.text()).not.toContain('products.products.badge')
+  })
+
+  it('renders no feature list and no placeholder for a family with none', () => {
+    const wrapper = mountWithKit(ProductFamilyGrid, { props: { products: [family({ features: [] })] } })
+
+    const card = wrapper.find('[data-testid="product-card-alpha-suite"]')
+    expect(card.text()).not.toContain('products.products.badge')
+  })
+
+  it('hands the full icon name to the tile', () => {
+    const wrapper = mountWithKit(ProductFamilyGrid, { props: { products: [family()] } })
+
+    expect(wrapper.html()).not.toContain('mdi:mdi:')
   })
 })

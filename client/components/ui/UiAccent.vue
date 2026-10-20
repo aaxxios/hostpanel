@@ -12,7 +12,7 @@
  * attribute is produced, because the value is data that no stylesheet can know in advance.
  */
 import { defineComponent, h } from 'vue'
-import { ACCENT_VARIABLE, isAccentColor } from '~/utils/ui/accent'
+import { ACCENT_INK_VARIABLE, ACCENT_VARIABLE, accentInk, isAccentColor } from '~/utils/ui/accent'
 
 export default defineComponent({
   name: 'UiAccent',
@@ -28,7 +28,9 @@ export default defineComponent({
       {
         class: 'contents',
         'data-testid': 'ui-accent',
-        style: isAccentColor(props.color) ? { [ACCENT_VARIABLE]: props.color } : undefined,
+        style: isAccentColor(props.color)
+          ? { [ACCENT_VARIABLE]: props.color, [ACCENT_INK_VARIABLE]: accentInk(props.color) }
+          : undefined,
       },
       slots.default?.(),
     )

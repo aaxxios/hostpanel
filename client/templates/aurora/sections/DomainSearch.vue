@@ -5,11 +5,11 @@
     data-testid="home-domain-search"
     class="relative min-w-0 border-line2 bg-card shadow-panel"
   >
-    <UiText as="span" size="inherit" tone="inherit" weight="semibold" class="text-[15px] text-tx">
+    <UiText as="span" size="inherit" tone="inherit" weight="bold" class="font-display text-[20px] -tracking-[0.01em] text-tx">
       {{ t('aurora.domainSearch.title') }}
     </UiText>
 
-    <UiForm data-testid="domain-search-form" spacing="none" class="mt-3.5" @submit="emit('search', query)">
+    <UiForm data-testid="domain-search-form" spacing="none" class="mt-4" @submit="emit('search', query)">
       <UiStack direction="row" align="end" gap="xs">
         <UiInput
           v-model="query"

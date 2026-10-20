@@ -9,6 +9,7 @@ namespace Innovayse.Hostpanel.Application.Testimonials.Common;
 /// <param name="SortOrder">Display order (ascending).</param>
 /// <param name="IsActive">Whether the testimonial is shown on the storefront.</param>
 /// <param name="CreatedAt">UTC creation timestamp.</param>
+/// <param name="PublishedAt">The admin-set date the testimonial was given, or <c>null</c> when none was set.</param>
 /// <param name="Translations">All per-locale translations, keyed by locale code.</param>
 public sealed record TestimonialAdminDto(
     int Id,
@@ -19,4 +20,5 @@ public sealed record TestimonialAdminDto(
     int SortOrder,
     bool IsActive,
     DateTimeOffset CreatedAt,
+    DateTimeOffset? PublishedAt,
     Dictionary<string, TestimonialTranslationDto> Translations);

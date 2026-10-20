@@ -12,7 +12,7 @@ export interface ProductFamily {
   id: string
   /** Catalogue group id; null for the static domains card. */
   gid: number | null
-  /** Icon name (without the `mdi:` prefix). */
+  /** Full icon name, e.g. `mdi:server`. */
   icon: string
   /** Accent colour as a hex string. */
   color: string

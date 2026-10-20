@@ -14,10 +14,7 @@
       <div class="text-center max-w-5xl mx-auto">
         <!-- Eyebrow badge -->
         <span
-          v-motion
-          :initial="{ opacity: 0, y: 20 }"
-          :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }"
-          class="inline-flex items-center gap-2 px-4 py-2 mb-8 rounded-full glass border border-primary-500/20 backdrop-blur-sm"
+          class="inline-flex items-center gap-2 px-4 py-2 mb-8 rounded-full glass border border-primary-500/20 backdrop-blur-sm animate-reveal-up motion-reduce:animate-none"
         >
           <span class="relative flex h-2 w-2">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75" />
@@ -31,36 +28,27 @@
           <span
             v-for="(line, index) in titleLines"
             :key="index"
-            v-motion
-            :initial="{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }"
-            :enter="{
-              opacity: 1,
-              scale: 1,
-              filter: 'blur(0px)',
-              transition: { delay: 300 + index * 150, duration: 800, type: 'spring', stiffness: 100 }
-            }"
-            :class="[GRADIENT_DELAYS[index % GRADIENT_DELAYS.length], 'block bg-gradient-to-r from-cyan-400 via-primary-400 to-primary-400 dark:to-secondary-400 bg-clip-text text-transparent animate-gradient bg-300 drop-shadow-2xl']"
-          >{{ line }}</span>
+            class="block animate-reveal-up motion-reduce:animate-none"
+            :style="revealStyle(300 + index * 150)"
+          >
+            <span :class="[GRADIENT_DELAYS[index % GRADIENT_DELAYS.length], 'block bg-gradient-to-r from-cyan-400 via-primary-400 to-primary-400 dark:to-secondary-400 bg-clip-text text-transparent animate-gradient bg-300 drop-shadow-2xl']">{{ line }}</span>
+          </span>
         </UiHeading>
 
         <!-- Subtitle -->
         <UiText
-          v-motion
-          :initial="{ opacity: 0, y: 20 }"
-          :enter="{ opacity: 1, y: 0, transition: { delay: 600, duration: 600 } }"
           tone="muted"
           size="lg"
-          class="md:text-xl lg:text-2xl mb-12 max-w-3xl mx-auto leading-relaxed font-light mt-4"
+          class="md:text-xl lg:text-2xl mb-12 max-w-3xl mx-auto leading-relaxed font-light mt-4 animate-reveal-up motion-reduce:animate-none"
+          :style="revealStyle(600)"
         >
           {{ $t('hero.subtitle') }}
         </UiText>
 
         <!-- Calls to action -->
         <div
-          v-motion
-          :initial="{ opacity: 0, y: 20 }"
-          :enter="{ opacity: 1, y: 0, transition: { delay: 800, duration: 600 } }"
-          class="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 mb-16 sm:mb-20"
+          class="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 mb-16 sm:mb-20 animate-reveal-up motion-reduce:animate-none"
+          :style="revealStyle(800)"
         >
           <UiMagnetic :strength="0.3" :range="100">
             <UiButton
@@ -93,15 +81,9 @@
           <div
             v-for="(stat, index) in stats"
             :key="stat.labelKey"
-            v-motion
-            :initial="{ opacity: 0, y: 40 }"
-            :visible-once="{
-              opacity: 1,
-              y: 0,
-              transition: { delay: 400 + index * 100, duration: 800, type: 'spring', bounce: 0.4 }
-            }"
-            class="group relative"
+            class="group relative animate-reveal-up motion-reduce:animate-none"
             :data-testid="`hero-stat-${index}`"
+            :style="revealStyle(400 + index * 100)"
             @mouseenter="startStatCounter(index)"
           >
             <div class="relative text-center py-4 px-2">
@@ -153,6 +135,8 @@
  * figures and a scroll hint. The figures are operator settings (`portal.stats.*`), each hidden while
  * empty; a figure that is a whole number counts up when hovered (and once on load).
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { ArrowRight, PlayCircle } from 'lucide-vue-next'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 

@@ -1129,6 +1129,9 @@
   <data name="TestimonialRatingInvalid" xml:space="preserve">
     <value>Оценка должна быть от 1 до 5.</value>
   </data>
+  <data name="TestimonialPublishedAtFuture" xml:space="preserve">
+    <value>Дата отзыва не может быть в будущем.</value>
+  </data>
   <data name="TestimonialRoleTooLong" xml:space="preserve">
     <value>Должность может содержать не более {0} символов.</value>
   </data>

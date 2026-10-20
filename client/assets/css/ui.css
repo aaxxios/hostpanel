@@ -16,7 +16,7 @@
 
 .dark {
   --ui-surface: #0d0d12;
-  --ui-popover: #0d0d14;
+  --ui-popover: #14141c;
   --ui-page: #0a0a0f;
   --ui-raised: #12121a;
 }
@@ -34,12 +34,28 @@
     @apply border-primary-500 outline-none ring-2 ring-primary-500/50 !important;
   }
 
+  .phone-input-container.has-error .vue-tel-input:focus-within {
+    @apply border-red-500 ring-red-500/50 !important;
+  }
+
+  .phone-input-container .vue-tel-input:hover:not(:focus-within) {
+    @apply border-gray-400 dark:border-gray-600 !important;
+  }
+
+  .phone-input-container .vue-tel-input.disabled {
+    @apply cursor-not-allowed bg-gray-100 opacity-60 dark:bg-gray-800/50 !important;
+  }
+
   .phone-input-container .vti__input {
-    @apply bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none dark:text-white dark:placeholder:text-gray-500 !important;
+    @apply bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none dark:text-white dark:placeholder:text-gray-400 !important;
   }
 
   .phone-input-container .vti__dropdown {
-    @apply rounded-l-lg transition-colors hover:bg-gray-50 dark:hover:bg-white/10 !important;
+    @apply rounded-l-lg transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 dark:hover:bg-white/10 !important;
+  }
+
+  .phone-input-container .vti__dropdown.open {
+    @apply bg-gray-100 dark:bg-white/10 !important;
   }
 
   .phone-input-container .vti__dropdown-list {
@@ -49,11 +65,23 @@
   }
 
   .phone-input-container .vti__dropdown-item {
-    @apply py-2 text-gray-700 dark:text-gray-300 !important;
+    @apply py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10 !important;
+  }
+
+  .phone-input-container .vti__dropdown-item.last-preferred {
+    @apply border-b border-gray-200 dark:border-white/10 !important;
   }
 
   .phone-input-container .vti__dropdown-item.highlighted {
-    @apply bg-primary-500/10 text-primary-500 !important;
+    @apply bg-primary-500/10 text-primary-700 dark:text-primary-300 !important;
+  }
+
+  .phone-input-container .vti__dropdown-item strong {
+    @apply font-semibold text-gray-600 dark:text-gray-400 !important;
+  }
+
+  .phone-input-container .vti__search_box {
+    @apply border-b border-gray-200 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 dark:border-white/10 dark:text-white dark:placeholder:text-gray-400 !important;
   }
 
   .phone-input-container .vti__selection {

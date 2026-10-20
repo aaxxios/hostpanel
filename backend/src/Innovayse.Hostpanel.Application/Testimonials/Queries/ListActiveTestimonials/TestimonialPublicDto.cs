@@ -9,6 +9,7 @@ namespace Innovayse.Hostpanel.Application.Testimonials.Queries.ListActiveTestimo
 /// <param name="Quote">The testimonial text in the resolved locale.</param>
 /// <param name="Rating">The star rating, from 1 to 5.</param>
 /// <param name="SortOrder">Display order (ascending).</param>
+/// <param name="PublishedAt">The date shown with the testimonial: the admin-set date, or the creation time when none was set.</param>
 public sealed record TestimonialPublicDto(
     int Id,
     string Name,
@@ -17,4 +18,5 @@ public sealed record TestimonialPublicDto(
     string? AvatarUrl,
     string Quote,
     int Rating,
-    int SortOrder);
+    int SortOrder,
+    DateTimeOffset PublishedAt);

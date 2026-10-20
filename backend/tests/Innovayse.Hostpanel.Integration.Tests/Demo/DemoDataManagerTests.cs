@@ -35,16 +35,16 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory) : IClas
 {
     /// <summary>The amounts the seed produces; they are fixed, so a change here is a deliberate change of the demo.</summary>
     private static readonly Counts Expected = new(
-        Currencies: 2, ProductGroups: 7, Products: 24, Prices: 96, Features: 72, Tlds: 19,
-        Clients: 15, Users: 23, SubjectRoles: 23, Contacts: 24, ClientUsers: 3, Invitations: 4,
-        Servers: 7, ServerGroups: 3, SslChecks: 16, DiskUsage: 16, Services: 35, Cancellations: 20,
-        Domains: 27, DomainReminders: 11, DnsRecords: 74, ForwardingRules: 14,
-        Invoices: 122, InvoiceTransactions: 98, Transactions: 102, Quotes: 14, QuoteItems: 35, BillableItems: 20, Orders: 26,
-        Departments: 5, ReplyCategories: 4, Replies: 12, KbCategories: 7, Articles: 18, Tickets: 20, TicketReplies: 36,
-        TicketTags: 27, Announcements: 9, NetworkIssues: 6,
-        Slides: 7, SlideTranslations: 21, DownloadCategories: 4, Downloads: 9, ActivityLogs: 48, EmailLogs: 36,
-        Testimonials: 6, TestimonialTranslations: 18, Partners: 8, PartnerTranslations: 24,
-        Projects: 6, ProjectTranslations: 18, Faqs: 12, FaqTranslations: 36);
+        Currencies: 2, ProductGroups: 7, Products: 31, Prices: 124, Features: 93, Tlds: 19,
+        Clients: 65, Users: 73, SubjectRoles: 73, Contacts: 99, ClientUsers: 3, Invitations: 4,
+        Servers: 7, ServerGroups: 3, SslChecks: 66, DiskUsage: 63, Services: 140, Cancellations: 75,
+        Domains: 108, DomainReminders: 40, DnsRecords: 280, ForwardingRules: 46,
+        Invoices: 517, InvoiceTransactions: 399, Transactions: 409, Quotes: 66, QuoteItems: 165, BillableItems: 66, Orders: 160,
+        Departments: 5, ReplyCategories: 4, Replies: 12, KbCategories: 7, Articles: 33, Tickets: 66, TicketReplies: 117,
+        TicketTags: 88, Announcements: 25, NetworkIssues: 12,
+        Slides: 7, SlideTranslations: 21, DownloadCategories: 4, Downloads: 21, ActivityLogs: 160, EmailLogs: 120,
+        Testimonials: 12, TestimonialTranslations: 36, Partners: 16, PartnerTranslations: 48,
+        Projects: 12, ProjectTranslations: 36, Faqs: 24, FaqTranslations: 72);
 
     /// <summary>Counts every seeded dataset.</summary>
     /// <param name="provider">The scope to read through.</param>
@@ -262,6 +262,49 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory) : IClas
 
         admin.StatusCode.Should().Be(HttpStatusCode.OK);
         customer.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// The storefront shows a full testimonial carousel: at least nine translated testimonials rated four or five,
+    /// some with a bundled portrait and some without, so both the picture and the initials fallback appear.
+    /// </summary>
+    [Fact]
+    public async Task Seed_FillsTheTestimonialCarouselAsync()
+    {
+        var host = DemoTestHost.Enabled(factory);
+        await ResetAsync(host);
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var testimonials = await db.Testimonials.Include(t => t.Translations).ToListAsync();
+        testimonials.Should().HaveCountGreaterThanOrEqualTo(9);
+        testimonials.Should().OnlyContain(t => t.IsActive && t.Rating >= 4 && t.Rating <= 5 && t.Translations.Count == 3);
+        testimonials.Select(t => t.Name).Should().OnlyHaveUniqueItems();
+        testimonials.Should().Contain(t => t.AvatarUrl != null && t.AvatarUrl.StartsWith("/demo/avatars/"));
+        testimonials.Should().Contain(t => t.AvatarUrl == null);
+    }
+
+    /// <summary>
+    /// The content-only entry the development seeder uses adds nothing to tables that already hold rows and never
+    /// touches the settings, so a developer's local edits survive a restart.
+    /// </summary>
+    [Fact]
+    public async Task SeedContent_OnPopulatedTables_ChangesNothingAsync()
+    {
+        var host = DemoTestHost.Enabled(factory);
+        await ResetAsync(host);
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var badge = await db.Settings.SingleAsync(s => s.Key == PortalSettingKeys.HeroBadge);
+        badge.UpdateValue("Edited locally");
+        await db.SaveChangesAsync();
+        var before = (await db.Testimonials.CountAsync(), await db.Partners.CountAsync(), await db.Projects.CountAsync(), await db.Faqs.CountAsync());
+
+        await new DemoStorefrontSeeder(db).SeedContentAsync(CancellationToken.None);
+
+        (await db.Testimonials.CountAsync(), await db.Partners.CountAsync(), await db.Projects.CountAsync(), await db.Faqs.CountAsync())
+            .Should().Be(before);
+        (await db.Settings.SingleAsync(s => s.Key == PortalSettingKeys.HeroBadge)).Value.Should().Be("Edited locally");
     }
 
     /// <summary>A deployment that is not a demo is never seeded, even if the manager is asked.</summary>

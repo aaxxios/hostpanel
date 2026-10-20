@@ -12,7 +12,7 @@ describe('UiAccentTile', () => {
     const icon = wrapper.find('[data-icon="mdi:school"]')
 
     expect(icon.exists()).toBe(true)
-    expect(icon.classes()).toContain('text-[color:var(--accent)]')
+    expect(icon.classes()).toContain('dark:text-[color:color-mix(in_srgb,var(--accent)_75%,white)]')
   })
 
   it('tints the square with the accent', () => {

@@ -7,14 +7,12 @@
     />
     <div
       aria-hidden="true"
-      class="pointer-events-none absolute bottom-0 left-0 h-48 w-48 border-b-2 border-l-2 border-primary-500/30"
+      class="pointer-events-none absolute bottom-0 left-0 h-48 w-48 border-b-2 border-l-2 border-primary-500/30 dark:border-secondary-500/30"
     />
 
     <UiContainer class="relative z-10 text-center">
       <div
-        v-motion
-        :initial="{ opacity: 0, y: 30 }"
-        :enter="{ opacity: 1, y: 0, transition: { duration: 600 } }"
+      class="animate-reveal-up motion-reduce:animate-none"
       >
         <slot name="breadcrumbs" />
         <UiBadge
@@ -35,7 +33,7 @@
           {{ title }}
           <UiGradientText
             v-if="highlight"
-            class="bg-gradient-to-r from-primary-400 to-primary-400 dark:to-secondary-400"
+            class="bg-gradient-to-r from-primary-600 to-primary-600 dark:from-primary-400 dark:to-secondary-400"
           >
             {{ highlight }}
           </UiGradientText>
