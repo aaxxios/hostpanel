@@ -21,9 +21,12 @@ env:
   DOTNET_VERSION: "9.0.x"
   NODE_VERSION: "22"
 
+# A newer push to a pull request supersedes the older run, so only that one is cancelled.
+# Pushes to develop/main are never cancelled: a cancelled run there shows as a red check on
+# the commit it was meant to verify.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend:
@@ -117,7 +120,7 @@ jobs:
       - run: yarn test
 
   admin:
-    name: Admin panel (type-check + build)
+    name: Admin panel (lint + unit tests + build)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -131,8 +134,27 @@ jobs:
           cache: npm
           cache-dependency-path: admin/package-lock.json
       - run: npm ci
-      # The same lint the GitLab admin:test job runs; build alone never lints, so a lint-only
-      # failure used to reach main unnoticed.
       - run: npm run lint:ci
       - run: npm run lint:i18n
+      # `build` runs the type-check and the production build together.
       - run: npm run build
+      - run: npm test -- --maxWorkers=2
+
+  # Playwright flows against `vite preview`; the API is stubbed with page.route, so no backend
+  # runs. Mirrors admin:e2e in .gitlab-ci.yml. The image tag must match the @playwright/test
+  # version pinned in admin/package.json (and PLAYWRIGHT_ADMIN_IMAGE in .gitlab-ci.yml): the
+  # image carries the browsers that exact version expects.
+  admin-e2e:
+    name: Admin panel (e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: admin
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
+    defaults:
+      run:
+        working-directory: admin
+    steps:
+      - uses: actions/checkout@v7
+      - run: npm ci
+      - run: npm run e2e
