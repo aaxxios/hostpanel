@@ -41,7 +41,7 @@
           padding="xl"
           data-testid="hosting-plan-features"
           class="animate-reveal-up motion-reduce:animate-none"
-          :style="revealStyle(100)"
+          :class="revealDelay(100)"
         >
           <UiHeading :level="2" size="subsection" class="text-xl mb-6">{{ $t('hosting.includedFeatures') }}</UiHeading>
           <UiGrid as="ul" cols="1" gap="sm" class="md:grid-cols-2">
@@ -49,7 +49,7 @@
               v-for="(feature, index) in features"
               :key="feature"
               class="flex items-center gap-3 animate-reveal-up motion-reduce:animate-none"
-              :style="revealStyle(index * 50)"
+              :class="revealDelay(index * 50)"
             >
               <CheckCircle :size="16" :stroke-width="2" class="text-primary-600 dark:text-primary-400 flex-shrink-0" />
               <span class="text-sm">{{ feature }}</span>
@@ -60,7 +60,7 @@
         <!-- Closing call to action -->
         <div
           class="text-center pt-4 animate-reveal-up motion-reduce:animate-none"
-          :style="revealStyle(200)"
+          :class="revealDelay(200)"
         >
           <UiButton
             size="lg"
@@ -89,7 +89,7 @@
  * Presentational: the page owns the plan, the selected cycle and the cart.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { CheckCircle, Lock, ShoppingCart } from 'lucide-vue-next'
 import type { PricingCycle } from '~/types/pricingcycle'
 import type { PricingCycleOption } from '~/types/pricingcycleoption'

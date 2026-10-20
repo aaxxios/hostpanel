@@ -29,7 +29,7 @@
             v-for="(line, index) in titleLines"
             :key="index"
             class="block animate-reveal-up motion-reduce:animate-none"
-            :style="revealStyle(300 + index * 150)"
+            :class="revealDelay(300 + index * 150)"
           >
             <span :class="[GRADIENT_DELAYS[index % GRADIENT_DELAYS.length], 'block bg-gradient-to-r from-cyan-400 via-primary-400 to-primary-400 dark:to-secondary-400 bg-clip-text text-transparent animate-gradient bg-300 drop-shadow-2xl']">{{ line }}</span>
           </span>
@@ -40,7 +40,7 @@
           tone="muted"
           size="lg"
           class="md:text-xl lg:text-2xl mb-12 max-w-3xl mx-auto leading-relaxed font-light mt-4 animate-reveal-up motion-reduce:animate-none"
-          :style="revealStyle(600)"
+          :class="revealDelay(600)"
         >
           {{ $t('hero.subtitle') }}
         </UiText>
@@ -48,7 +48,7 @@
         <!-- Calls to action -->
         <div
           class="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 mb-16 sm:mb-20 animate-reveal-up motion-reduce:animate-none"
-          :style="revealStyle(800)"
+          :class="revealDelay(800)"
         >
           <UiMagnetic :strength="0.3" :range="100">
             <UiButton
@@ -83,7 +83,7 @@
             :key="stat.labelKey"
             class="group relative animate-reveal-up motion-reduce:animate-none"
             :data-testid="`hero-stat-${index}`"
-            :style="revealStyle(400 + index * 100)"
+            :class="revealDelay(400 + index * 100)"
             @mouseenter="startStatCounter(index)"
           >
             <div class="relative text-center py-4 px-2">
@@ -136,7 +136,7 @@
  * empty; a figure that is a whole number counts up when hovered (and once on load).
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { ArrowRight, PlayCircle } from 'lucide-vue-next'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 

@@ -25,7 +25,7 @@
           :key="step.id"
           class="relative group animate-reveal-up motion-reduce:animate-none"
           :data-testid="`process-step-${step.id}`"
-          :style="revealStyle(index * 150)"
+          :class="revealDelay(index * 150)"
         >
           <UiCard class="relative h-full group-hover:-translate-y-2 hover:border-primary-500/50 dark:hover:border-secondary-500/50 transition-all duration-300">
             <!-- Hover glow -->
@@ -66,7 +66,7 @@
  * The steps (id, icon, order) come from constants/processStep.ts; their text from the locale files.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { ArrowRight } from 'lucide-vue-next'
 import { PROCESS_STEPS } from '~/constants/processStep'
 

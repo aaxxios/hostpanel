@@ -81,7 +81,7 @@
                 <UiHeading
                   :level="2"
                   class="mb-4 sm:mb-6 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-none drop-shadow-lg animate-reveal-up motion-reduce:animate-none"
-                  :style="revealStyle(400)"
+                  :class="revealDelay(400)"
                 >
                   {{ item.name }}
                 </UiHeading>
@@ -89,7 +89,7 @@
                 <UiText
                   tone="primary"
                   class="mb-4 sm:mb-6 text-lg sm:text-xl md:text-2xl font-semibold tracking-wide uppercase italic ml-2 animate-reveal-up motion-reduce:animate-none"
-                  :style="revealStyle(550)"
+                  :class="revealDelay(550)"
                 >
                   {{ item.tagline }}
                 </UiText>
@@ -97,7 +97,7 @@
                 <UiText
                   tone="muted"
                   class="mb-6 sm:mb-8 text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed font-light line-clamp-3 md:line-clamp-none px-4 animate-reveal-up motion-reduce:animate-none"
-                  :style="revealStyle(700)"
+                  :class="revealDelay(700)"
                 >
                   {{ item.description }}
                 </UiText>
@@ -107,8 +107,7 @@
                   <span
                     v-for="(feature, featureIndex) in item.features"
                     :key="feature"
-                    :class="[accent.tintStrong, accent.borderMedium, 'inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs sm:text-sm font-bold text-white backdrop-blur-md border transition-all hover:scale-110 cursor-default', 'animate-reveal-up motion-reduce:animate-none']"
-                    :style="revealStyle(800 + featureIndex * 100)"
+                    :class="[accent.tintStrong, accent.borderMedium, 'inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs sm:text-sm font-bold text-white backdrop-blur-md border transition-all hover:scale-110 cursor-default', 'animate-reveal-up motion-reduce:animate-none', revealDelay(800 + featureIndex * 100)]"
                   >
                     <CheckCircle :size="14" :stroke-width="3" :class="accent.text" />
                     {{ feature }}
@@ -118,7 +117,7 @@
                 <!-- Calls to action -->
                 <div
                   class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mt-8 animate-reveal-up motion-reduce:animate-none"
-                  :style="revealStyle(1000)"
+                  :class="revealDelay(1000)"
                 >
                   <UiMagnetic :strength="0.2">
                     <UiAccentButton :to="localePath(item.learnMoreUrl)" size="lg" class="w-full sm:w-auto sm:px-10 sm:py-4 font-bold" :data-testid="`slider-cta-${item.id}`">
@@ -181,7 +180,7 @@
  * text hero (`SectionsHero`) in its place, so the page never opens on an empty, full-height band.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { ArrowRight, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, PlayCircle } from 'lucide-vue-next'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Autoplay, Navigation, Pagination } from 'swiper/modules'

@@ -26,7 +26,7 @@
           <div
             class="dark group relative rounded-2xl overflow-hidden min-h-[450px] animate-reveal-up motion-reduce:animate-none"
             :data-testid="`home-product-${product.id}`"
-            :style="revealStyle(index * 100)"
+            :class="revealDelay(index * 100)"
           >
             <UiImage
               v-if="product.image"
@@ -125,7 +125,7 @@
  * always uses the dark palette, because it sits on a photograph under a dark overlay.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { ArrowRight, CheckCircle } from 'lucide-vue-next'
 import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
 import { productTypeIcon } from '~/constants/productTypeIcon'

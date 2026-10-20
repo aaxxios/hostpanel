@@ -18,7 +18,7 @@
 
       <div
         class="max-w-6xl mx-auto animate-reveal-up motion-reduce:animate-none"
-        :style="revealStyle(200)"
+        :class="revealDelay(200)"
       >
         <UiTable scrollable :label="$t('products.comparison.title')">
           <UiTableHead>
@@ -48,7 +48,7 @@
               group
               :data-testid="`comparison-row-${product.id}`"
               class="animate-reveal-up motion-reduce:animate-none"
-              :style="revealStyle(300 + rowIndex * 100)"
+              :class="revealDelay(300 + rowIndex * 100)"
             >
               <td class="p-6">
                 <UiAccent :color="product.color">
@@ -88,7 +88,7 @@
  * its first three plans as the Starter, Professional and Enterprise columns.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'
 import type { ProductFamily } from '~/types/productfamily'
 

@@ -100,10 +100,9 @@
       type="button"
       data-testid="floating-toggle"
       class="relative w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 animate-reveal-up motion-reduce:animate-none"
-      :class="[FOCUS_RING, isOpen ? 'bg-gray-700 text-white rotate-45' : 'bg-primary-600 text-on-primary shadow-primary-500/40 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400']"
+      :class="[FOCUS_RING, isOpen ? 'bg-gray-700 text-white rotate-45' : 'bg-primary-600 text-on-primary shadow-primary-500/40 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400', revealDelay(800)]"
       :aria-expanded="isOpen"
       :aria-label="$t('contact.info.quickConnect.toggle')"
-      :style="revealStyle(800)"
       @click="isOpen = !isOpen"
     >
       <span v-if="!isOpen" class="absolute inset-0 rounded-full bg-primary-500 animate-ping opacity-25" />
@@ -123,7 +122,7 @@
  * outside closes the fan.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { TELEGRAM_LINK_BASE, WHATSAPP_LINK_BASE } from '~/constants/contactChannel'
 import { ChatProvider } from '~/types/chatprovider'
