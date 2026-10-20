@@ -18,7 +18,7 @@ defineProps<{
 
 <template>
   <div class="flex flex-col items-center justify-center gap-3 py-12 text-center">
-    <div class="text-text-muted">
+    <div class="text-text-secondary">
       <slot name="icon" />
     </div>
     <UiHeading :level="3" variant="card">

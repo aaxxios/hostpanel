@@ -44,6 +44,15 @@ describe('CookieBanner', () => {
     expect(document.documentElement.style.getPropertyValue(COOKIE_BANNER_HEIGHT_VAR)).toBe('')
   })
 
+  it('floats as a compact rounded card instead of a full-width bar', async () => {
+    const wrapper = mountWithKit(CookieBanner)
+    await nextTick()
+
+    const banner = wrapper.find('[data-testid="cookie-banner"]')
+    expect(banner.classes()).toEqual(expect.arrayContaining(['rounded-2xl', 'sm:w-[400px]', 'border']))
+    expect(banner.classes()).not.toContain('bottom-0')
+  })
+
   it('stays hidden when a choice already exists', async () => {
     consent.value = CookieConsent.All
 

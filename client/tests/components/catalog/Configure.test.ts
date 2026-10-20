@@ -23,7 +23,7 @@ const mountConfigure = (props: Record<string, unknown> = {}) =>
       productName: 'Starter',
       description: 'Small sites',
       features: ['5 GB SSD', '10 Emails'],
-      icon: 'cloud-check',
+      icon: 'mdi:cloud-check',
       color: '#0ea5e9',
       cycles: [
         { cycle: PricingCycle.Monthly, label: 'Monthly', price: '$5.00' },

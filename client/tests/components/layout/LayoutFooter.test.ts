@@ -37,6 +37,14 @@ describe('LayoutFooter', () => {
     vi.stubGlobal('useContactDetails', () => ({ phone: ref('+1 555 010 200'), phoneLink: ref('+1555010200'), address: ref('') }))
   })
 
+  it('colours footer links for both modes and keeps the social hover readable on a pale tint', () => {
+    const wrapper = mountFooter()
+
+    for (const link of wrapper.findAll('[data-testid="footer-nav-link"], [data-testid="footer-legal-link"]')) {
+      expect(link.classes()).toEqual(expect.arrayContaining(['text-gray-600', 'dark:text-gray-400', 'hover:text-primary-700']))
+    }
+  })
+
   it('renders the logo and the description', () => {
     const wrapper = mountFooter()
 

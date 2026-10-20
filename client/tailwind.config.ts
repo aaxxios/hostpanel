@@ -56,11 +56,12 @@ export default <Partial<Config>>{
           900: 'rgb(var(--brand-primary-900, 10 62 94) / <alpha-value>)',
           950: 'rgb(var(--brand-primary-950, 8 47 73) / <alpha-value>)',
         },
-        // Text on a filled primary (buttons in classic and the shared components) and on
-        // the lighter tint aurora's gradient and nova's dark-mode brand are built from. The
-        // plugin decides white or near-black per colour; unset keeps today's white / near-black.
+        // Text on a filled primary (buttons in classic and the shared components). The plugin
+        // decides white or near-black per colour; unset keeps today's white.
         'on-primary': 'rgb(var(--brand-on-primary, 255 255 255) / <alpha-value>)',
-        'on-tint': 'rgb(var(--brand-on-tint, 8 9 15) / <alpha-value>)',
+        // Text on the brand gradient (`bg-brand`): always white, because the gradient is built from the
+        // saturated 600 shades in both colour modes. Not operator-computed, unlike on-primary.
+        'on-brand': 'rgb(255 255 255 / <alpha-value>)',
         secondary: {
           50: 'rgb(var(--brand-accent-50, 250 245 255) / <alpha-value>)',
           100: 'rgb(var(--brand-accent-100, 243 232 255) / <alpha-value>)',
@@ -112,6 +113,9 @@ export default <Partial<Config>>{
         mut2: 'var(--mut2)',
         line: 'var(--line)',
         line2: 'var(--line2)',
+        // Featured-card ring, a full colour value per mode: use border-line-brand, never border-ac1/25
+        // (ac1 is a var(), so the opacity modifier emits no CSS and the border falls back to grey).
+        'line-brand': 'var(--line-brand)',
         surf: 'var(--surf)',
         panel: 'var(--panel)',
         input: 'var(--input)',
@@ -170,6 +174,8 @@ export default <Partial<Config>>{
       },
       boxShadow: {
         panel: 'var(--sh)',
+        // The resting depth of an aurora content card (assets/css/templates/aurora.css).
+        card: 'var(--sh-card)',
         'glow-whatsapp': '0 4px 20px rgba(37, 211, 102, 0.5)',
         'glow-telegram': '0 4px 20px rgba(0, 136, 204, 0.5)',
         'glow-chat': '0 4px 24px rgba(6, 182, 212, 0.5)',
@@ -192,6 +198,8 @@ export default <Partial<Config>>{
       // Marketing motion. `float`, `blob` and `gradient` already exist in assets/styles/animations.css;
       // these are the ones that used to live in a scoped <style> of a single section.
       keyframes: {
+        // Entrance reveal: runs in CSS so the content is in the markup and visible without any script.
+        'reveal-up': { '0%': { opacity: '0', transform: 'translateY(24px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
         sheen: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(100%)' } },
         marquee: { '0%': { transform: 'translateX(0)' }, '100%': { transform: 'translateX(-50%)' } },
         'ken-burns': { '0%, 100%': { transform: 'scale(1)' }, '50%': { transform: 'scale(1.1)' } },
@@ -211,6 +219,7 @@ export default <Partial<Config>>{
         },
       },
       animation: {
+        'reveal-up': 'reveal-up 0.5s ease-out backwards',
         sheen: 'sheen 3s linear infinite',
         marquee: 'marquee 30s linear infinite',
         'ken-burns': 'ken-burns 20s ease-in-out infinite',

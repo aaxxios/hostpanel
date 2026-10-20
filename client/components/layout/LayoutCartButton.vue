@@ -14,7 +14,7 @@
         align="center"
         justify="center"
         gap="none"
-        class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-cyan-500 text-white text-[10px] font-bold"
+        class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-700 text-on-primary text-[10px] font-bold"
         data-testid="layout-cart-count"
       >
         {{ cart.count }}

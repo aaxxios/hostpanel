@@ -111,11 +111,17 @@ describe('pages/index', () => {
     expect(stores.catalog.loadProductFeatures).toHaveBeenCalledTimes(1)
   })
 
-  it('starts the currency store once mounted', async () => {
+  it('restores the guest currency once mounted', async () => {
     await mountPage(Page)
 
     expect(stores.currency.init).toHaveBeenCalledTimes(1)
+  })
+
+  it('loads the billing currencies during the server render, before the plans', async () => {
+    await mountPage(Page)
+
     expect(stores.currency.load).toHaveBeenCalledTimes(1)
+    expect(stores.currency.load.mock.invocationCallOrder[0]).toBeLessThan(stores.catalog.loadHostingPlans.mock.invocationCallOrder[0]!)
   })
 
   it('renders the template\'s home component with the domain lookup state', async () => {

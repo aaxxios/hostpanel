@@ -122,8 +122,40 @@ export const useCatalogStore = defineStore('catalog', () => {
   const productsFor = (filter: CatalogFilter = {}): PortalProduct[] =>
     productsByKey.value[productKey(filter)] ?? []
 
-  /** The hosting plans, in the payer's currency; what the plan cards and the home page show. */
-  const hostingPlans = computed(() => productsFor({ gid: HOSTING_GROUP_ID }))
+  /**
+   * The cheapest per-month price a product offers, for ordering; products with no price sort last.
+   *
+   * @param product - The product.
+   * @returns The monthly price, else the annual price per month, else infinity.
+   */
+  const orderingPrice = (product: PortalProduct): number =>
+    product.pricing?.monthly ?? (product.pricing?.annual != null ? product.pricing.annual / 12 : Number.POSITIVE_INFINITY)
+
+  /**
+   * Orders plans for display. The API returns products in no meaningful order (the database's), so
+   * the operator's `sortOrder` wins when the product carries one and the monthly price, cheapest
+   * first, decides otherwise.
+   *
+   * @param a - First plan.
+   * @param b - Second plan.
+   * @returns Negative when `a` comes first.
+   */
+  const comparePlans = (a: PortalProduct, b: PortalProduct): number => {
+    const orderA = a.sortOrder ?? Number.POSITIVE_INFINITY
+    const orderB = b.sortOrder ?? Number.POSITIVE_INFINITY
+    if (orderA !== orderB) {
+      return orderA < orderB ? -1 : 1
+    }
+    const priceA = orderingPrice(a)
+    const priceB = orderingPrice(b)
+    if (priceA === priceB) {
+      return 0
+    }
+    return priceA < priceB ? -1 : 1
+  }
+
+  /** The hosting plans in display order, in the payer's currency; what the plan cards and the home page show. */
+  const hostingPlans = computed(() => [...productsFor({ gid: HOSTING_GROUP_ID })].sort(comparePlans))
 
   /**
    * The id of the product a domain cart line hangs on, from the whole catalogue read by

@@ -26,20 +26,15 @@
       operator actually sells rather than a fixed list. Hidden when the backend
       supplies none, which is also when there is nothing to filter.
     -->
-    <UiStack v-if="categories.length > 1" direction="row" wrap justify="center" gap="xs" class="mt-4">
-      <UiButton
-        v-for="entry in categories"
-        :key="entry"
-        variant="bare"
-        :data-testid="`domain-category-${entry}`"
-        :aria-pressed="entry === active"
-        class="px-3.5 py-2 text-[13px] font-semibold"
-        :class="entry === active ? PILL_ACTIVE : 'rounded-full border border-line2 text-mut'"
-        @click="emit('update:category', entry)"
-      >
-        {{ entry === ALL_CATEGORY ? t('aurora.tldTable.all') : entry }}
-      </UiButton>
-    </UiStack>
+    <UiChipTabs
+      v-if="categories.length > 1"
+      class="mt-4"
+      :tabs="categoryTabs"
+      :model-value="active"
+      :label="t('aurora.tldTable.filterLabel')"
+      testid="domain-categories"
+      @update:model-value="value => emit('update:category', value)"
+    />
   </div>
 </template>
 
@@ -48,8 +43,10 @@
  * aurora domain search bar — the wide field and category filter that head the
  * domains page. Presentation only: it emits the term and the chosen category.
  */
-import { BRAND_BUTTON, PILL_ACTIVE } from '~/templates/aurora/buttons'
+import { BRAND_BUTTON } from '~/templates/aurora/buttons'
 import { ALL_CATEGORY } from '~/templates/aurora/types/allcategory'
+import type { ChipTab } from '~/types/chiptab'
+import { tldCategoryLabel } from '~/utils/tldCategory'
 
 /** Props with their defaults applied. */
 const props = withDefaults(defineProps<{
@@ -73,6 +70,13 @@ const emit = defineEmits<{
 
 /** Translator for the active locale. */
 const { t } = useI18n()
+
+/** The category chips: the sentinel reads "all", every other category its translated (or capitalised) name. */
+const categoryTabs = computed<ChipTab[]>(() => props.categories.map(entry => ({
+  value: entry,
+  label: entry === ALL_CATEGORY ? t('aurora.tldTable.all') : tldCategoryLabel(entry, t),
+  testid: `domain-category-${entry}`,
+})))
 
 /** What the visitor has typed (v-model of the field). */
 const query = ref(props.initialQuery)

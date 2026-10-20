@@ -33,7 +33,7 @@ const valueClasses = computed<string>(() => toneTextClasses[props.tone])
 <template>
   <UiCard padding="md">
     <div class="flex items-start justify-between gap-2">
-      <UiText tone="muted" size="xs" class="uppercase tracking-[0.08em] font-semibold">
+      <UiText tone="secondary" size="xs" class="uppercase tracking-[0.08em] font-semibold">
         {{ label }}
       </UiText>
       <slot name="icon" />

@@ -13,14 +13,14 @@
     </UiDecor>
 
     <UiContainer class="relative z-10">
-      <MarketingSectionHeader class="mb-16" :badge="$t('testimonials.badge')" :subtitle="$t('testimonials.subtitle')">
+      <MarketingSectionHeader class="mb-10" :badge="$t('testimonials.badge')" :subtitle="$t('testimonials.subtitle')">
         <template #title>
           {{ $t('testimonials.heading') }} <span class="text-primary-700 dark:text-secondary-400">{{ $t('testimonials.headingHighlight') }}</span> {{ $t('testimonials.headingEnd') }}
         </template>
       </MarketingSectionHeader>
 
       <!-- Carousel -->
-      <div class="relative max-w-4xl mx-auto">
+      <div class="relative max-w-xl mx-auto">
         <ClientOnly>
           <Swiper
             :modules="modules"
@@ -40,40 +40,35 @@
                 <!-- Pattern -->
                 <UiDecor class="inset-0 opacity-10 pattern-dots-30" />
 
-                <div class="relative p-8 md:p-10">
+                <div class="relative p-5 md:p-6">
                   <!-- Rating -->
-                  <div class="flex items-center gap-1 mb-6">
+                  <div class="flex items-center gap-1 mb-3">
                     <Star
                       v-for="(delay, star) in STAR_DELAYS.slice(0, testimonial.rating)"
                       :key="star"
-                      :size="20"
+                      :size="14"
                       :stroke-width="2"
                       fill="currentColor"
                       :class="[delay, 'text-primary-600 dark:text-primary-400 animate-pulse']"
                     />
                   </div>
 
-                  <!-- Quote mark -->
-                  <div class="absolute top-6 right-8 text-gray-900/5 dark:text-white/5">
-                    <Quote :size="64" :stroke-width="2" />
-                  </div>
-
-                  <UiText class="relative text-lg md:text-xl mb-8 leading-relaxed italic text-gray-800 dark:text-white/90">"{{ testimonial.quote }}"</UiText>
+                  <UiText class="relative text-sm md:text-base mb-5 leading-relaxed italic text-gray-800 dark:text-white/90">"{{ testimonial.quote }}"</UiText>
 
                   <!-- Author -->
                   <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-4">
-                      <span class="relative flex w-14 h-14 rounded-full border-2 border-primary-400 p-0.5">
+                    <div class="flex items-center gap-3">
+                      <span class="relative flex w-10 h-10 rounded-full border-2 border-primary-400 p-0.5">
                         <UiDecor class="inset-0 rounded-full border-2 border-primary-500/50 animate-ping" />
-                        <span class="relative flex w-full h-full items-center justify-center rounded-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-bold text-sm">
+                        <span class="relative flex w-full h-full items-center justify-center rounded-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-bold text-xs">
                           {{ getInitials(testimonial.name) }}
                         </span>
                       </span>
 
                       <div>
                         <div class="font-semibold text-gray-900 dark:text-white">{{ testimonial.name }}</div>
-                        <div v-if="testimonial.role" class="text-sm text-gray-700 dark:text-gray-300">{{ testimonial.role }}</div>
-                        <div v-if="testimonial.company" class="text-sm text-primary-700 dark:text-secondary-400">{{ testimonial.company }}</div>
+                        <div v-if="testimonial.role" class="text-xs text-gray-700 dark:text-gray-300">{{ testimonial.role }}</div>
+                        <div v-if="testimonial.company" class="text-xs text-primary-700 dark:text-secondary-400">{{ testimonial.company }}</div>
                       </div>
                     </div>
 
@@ -91,6 +86,14 @@
               </UiCard>
             </SwiperSlide>
           </Swiper>
+          <!-- The carousel only exists in the browser; the server render carries every quote as plain text. -->
+          <template #fallback>
+            <UiStack as="ul" gap="none" class="sr-only" data-testid="testimonials-fallback">
+              <li v-for="testimonial in testimonials" :key="testimonial.id">
+                <UiText as="span">"{{ testimonial.quote }}" - {{ testimonial.name }}</UiText>
+              </li>
+            </UiStack>
+          </template>
         </ClientOnly>
 
         <UiText size="sm" tone="subtle" class="text-center mt-6">{{ $t('testimonials.hint') }}</UiText>
@@ -111,7 +114,7 @@
  * with none the section renders nothing. Each card sits on a dark gradient in dark mode and on
  * the plain surface in light mode, so the quote text is always readable.
  */
-import { Building2, Quote, Star } from 'lucide-vue-next'
+import { Building2, Star } from 'lucide-vue-next'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Autoplay, Pagination } from 'swiper/modules'
 import { TESTIMONIAL_AUTOPLAY_MS } from '~/constants/uiDefaults'

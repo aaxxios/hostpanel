@@ -12,6 +12,7 @@ export const annTestimonial: Testimonial = {
   rating: 5,
   sortOrder: 0,
   isActive: true,
+  publishedAt: null,
   createdAt: '2026-01-01T00:00:00Z',
   translations: {
     en: { role: 'CTO', quote: 'Fast and calm hosting.' },

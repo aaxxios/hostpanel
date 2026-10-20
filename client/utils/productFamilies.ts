@@ -17,7 +17,8 @@ import type { PortalProductPricing } from '~/types/portalproductpricing'
 import type { ProductDetail } from '~/types/productdetail'
 import type { ProductFamily } from '~/types/productfamily'
 import type { ProductPricingRow } from '~/types/productpricingrow'
-import { familyConfig, familyKey, isFamilyGroup, nameToKey, parseDescription } from '~/utils/catalogGroups'
+import type { ProductFeature } from '~/types/productfeature'
+import { familyConfig, familyKey, isDomainGroup, isFamilyGroup, nameToKey, parseDescription } from '~/utils/catalogGroups'
 
 /** How many feature lines a family card aggregates from its plans. */
 const FAMILY_FEATURE_LIMIT = 6
@@ -86,6 +87,26 @@ export const buildPricingRows = (plans: PortalProduct[], format: MoneyFormatter,
   })
 
 /**
+ * Turns a group's specification lines into card bullets: one "label: value" per distinct label.
+ *
+ * @param lines The group's `ProductFeature` lines, every plan's.
+ * @returns The bullets, in display order, the first plan's value winning for a repeated label.
+ */
+export const specificationBullets = (lines: readonly ProductFeature[]): string[] => {
+  const seen = new Set<string>()
+  const bullets: string[] = []
+  for (const line of [...lines].sort((a, b) => a.sortOrder - b.sortOrder)) {
+    const label = line.label.trim()
+    if (!label || seen.has(label)) {
+      continue
+    }
+    seen.add(label)
+    bullets.push(line.value.trim() ? `${label}: ${line.value.trim()}` : label)
+  }
+  return bullets
+}
+
+/**
  * The key a product answers to in an address: its slug, or its normalised name when it has none.
  *
  * @param product The catalogue product.
@@ -99,13 +120,17 @@ const productKeyOf = (product: PortalProduct): string => product.slug?.trim() ||
  * Each family group becomes a family named by its group and its parent product (the one whose slug
  * or name is the family key, when there is one) and priced by its other plans; a group whose only
  * product is the parent is priced by the parent alone, and a group with no products is left out.
- * The card's feature list is the unique feature lines of every plan in the group.
+ * The card's feature list is the unique feature lines of every plan's description; a group whose
+ * descriptions hold none falls back to its specification lines, and the list is empty when neither
+ * exists. A group that sells domain names is left out: the `leading` domains card stands for it, so
+ * domains are shown once.
  *
  * @param groups The catalogue's product groups.
  * @param raw Every product the catalogue returned for the family groups.
  * @param format Formats an amount in the payer's currency.
  * @param payerCode The payer's currency code; empty while it is still resolving.
  * @param leading Entries that come before the catalogue families (the static domains card).
+ * @param specifications The specification lines read for a group, by its id.
  * @returns The families, `leading` first.
  */
 export const buildProductFamilies = (
@@ -114,11 +139,15 @@ export const buildProductFamilies = (
   format: MoneyFormatter,
   payerCode: string | null,
   leading: ProductFamily[] = [],
+  specifications: (groupId: number) => readonly ProductFeature[] = () => [],
 ): ProductFamily[] => {
   const items: ProductFamily[] = [...leading]
   for (const group of groups.filter(isFamilyGroup)) {
     const key = familyKey(group)
     const inGroup = raw.filter((product) => Number(product.groupId) === group.id)
+    if (isDomainGroup(inGroup)) {
+      continue
+    }
     const parent = inGroup.find((product) => productKeyOf(product) === key)
     const subPlans = inGroup.filter((product) => product !== parent)
     // With no sub-plans the parent product is the single plan.
@@ -137,12 +166,12 @@ export const buildProductFamilies = (
     items.push({
       id: key,
       gid: group.id,
-      ...familyConfig(group),
+      ...familyConfig(group, inGroup),
       // A family has no tagline: the catalogue endpoint sends none. Only the static domains card
       // carries one, and it comes from the locale files.
       tagline: '',
       description: parseDescription((parent ?? plans[0])?.description || '').summary,
-      features: Array.from(featureSet).filter(Boolean).slice(0, FAMILY_FEATURE_LIMIT),
+      features: (featureSet.size > 0 ? Array.from(featureSet).filter(Boolean) : specificationBullets(specifications(group.id))).slice(0, FAMILY_FEATURE_LIMIT),
       pricing: buildPricingRows(plans, format, payerCode),
     })
   }
@@ -178,7 +207,7 @@ export const findProductDetail = (groups: PortalProductGroup[], list: PortalProd
   }
 
   const key = familyKey(group)
-  const config = familyConfig(group)
+  const config = familyConfig(group, inFamilies.filter((product) => Number(product.groupId) === group.id))
   const { summary, features } = parseDescription(found.description || '')
 
   const plans = inFamilies

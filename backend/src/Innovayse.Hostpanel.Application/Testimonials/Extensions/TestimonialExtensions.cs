@@ -22,6 +22,7 @@ public static class TestimonialExtensions
             x.SortOrder,
             x.IsActive,
             x.CreatedAt,
+            x.PublishedAt,
             x.Translations.ToDictionary(t => t.Locale, t => new TestimonialTranslationDto(t.Role, t.Quote)));
     }
 

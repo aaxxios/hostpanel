@@ -14,7 +14,7 @@ export interface ProductDetail {
   pid: number | undefined
   /** Display name. */
   name: string
-  /** Icon name (without the `mdi:` prefix). */
+  /** Full icon name, e.g. `mdi:server`. */
   icon: string
   /** Accent colour as a hex string. */
   color: string

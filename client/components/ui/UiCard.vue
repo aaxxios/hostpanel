@@ -57,7 +57,9 @@ const cardClasses = computed(() => {
   // A bare card paints nothing, so a screen with its own palette sets surface and border colour.
   const base = props.tone === UiCardTone.Bare
     ? 'rounded-2xl border'
-    : 'rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10'
+    // A whisper of shadow lifts the white card off the light page; the dark page has no room
+    // for a shadow, so there the hairline alone carries the edge.
+    : 'rounded-2xl bg-ui-surface border border-gray-200 shadow-sm dark:border-white/10 dark:shadow-none'
   const hoverClass = props.hover && props.tone !== UiCardTone.Bare
     ? 'transition-colors duration-200 hover:border-gray-300 dark:hover:border-white/20'
     : ''

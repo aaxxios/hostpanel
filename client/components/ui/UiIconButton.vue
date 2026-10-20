@@ -58,10 +58,10 @@ const props = withDefaults(defineProps<Props>(), {
 
 /** Frame and colours per variant. */
 const VARIANT_CLASSES: Record<UiIconButtonVariant, string> = {
-  [UiIconButtonVariant.Subtle]: 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/20',
-  [UiIconButtonVariant.Ghost]: 'border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white',
-  [UiIconButtonVariant.Primary]: 'border-transparent bg-primary-600 text-on-primary hover:bg-primary-700',
-  [UiIconButtonVariant.Danger]: 'border-transparent text-red-500 hover:bg-red-500/10',
+  [UiIconButtonVariant.Subtle]: 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/20',
+  [UiIconButtonVariant.Ghost]: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white',
+  [UiIconButtonVariant.Primary]: 'border-transparent bg-primary-600 text-on-primary hover:bg-primary-700 active:bg-primary-800',
+  [UiIconButtonVariant.Danger]: 'border-transparent text-red-600 dark:text-red-400 hover:bg-red-500/10',
 }
 
 /** Square dimensions per size. */

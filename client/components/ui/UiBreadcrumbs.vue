@@ -1,15 +1,12 @@
 <template>
   <nav
-    v-motion
-    :initial="{ opacity: 0, y: -10 }"
-    :enter="{ opacity: 1, y: 0, transition: { duration: 400 } }"
-    class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-500"
+    class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 animate-reveal-up motion-reduce:animate-none"
     :class="containerClass"
     :aria-label="$t('common.breadcrumb')"
   >
     <NuxtLink
       :to="localePath('/')"
-      class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors whitespace-nowrap"
+      :class="[LINK_CLASSES, 'whitespace-nowrap']"
     >
       {{ $t('common.home') }}
     </NuxtLink>
@@ -20,7 +17,7 @@
       <NuxtLink
         v-if="item.to && index < items.length - 1"
         :to="item.to"
-        class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors break-words max-w-[150px] sm:max-w-none truncate sm:whitespace-normal"
+        :class="[LINK_CLASSES, 'break-words max-w-[150px] sm:max-w-none truncate sm:whitespace-normal']"
       >
         {{ item.label }}
       </NuxtLink>
@@ -45,6 +42,7 @@
  * current page and is not a link.
  */
 import { ChevronRight } from 'lucide-vue-next'
+import { FOCUS_RING } from '~/utils/ui/tones'
 
 /** One step of the trail. */
 interface BreadcrumbItem {
@@ -65,6 +63,9 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   containerClass: 'mb-8',
 })
+
+/** Look of a step that is a link: hover colour, transition and the shared focus ring. */
+const LINK_CLASSES = `rounded-sm transition-colors hover:text-primary-600 dark:hover:text-primary-400 ${FOCUS_RING}`
 
 /** Localised path builder from the i18n module. */
 const localePath = useLocalePath()

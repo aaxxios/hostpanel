@@ -33,9 +33,7 @@
       <!-- Plan -->
       <div
         v-else
-        v-motion
-        :initial="{ opacity: 0, y: 30 }"
-        :enter="{ opacity: 1, y: 0, transition: { duration: 600 } }"
+        class="animate-reveal-up motion-reduce:animate-none"
       >
         <!-- There is no "popular" badge or tagline: `ProductDto` has no field for either. -->
         <UiHeading :level="1" size="display" class="mb-4 leading-tight" data-testid="hosting-plan-name">{{ plan.name }}</UiHeading>
@@ -46,7 +44,7 @@
         <div class="flex flex-wrap items-end gap-6">
           <div class="flex items-baseline gap-1.5">
             <div class="text-5xl font-bold text-gray-900 dark:text-white" data-testid="hosting-plan-price">{{ price }}</div>
-            <div class="text-gray-500 text-sm">{{ $t('hosting.perMonthFull') }}</div>
+            <div class="text-gray-600 dark:text-gray-400 text-sm">{{ $t('hosting.perMonthFull') }}</div>
           </div>
           <UiButton
             size="lg"

@@ -155,38 +155,15 @@
 
           <template v-else-if="tldPricing">
             <!-- Category filter -->
-            <UiStack v-if="allCategories.length" gap="none" class="mb-12">
-              <UiStack direction="row" gap="sm" class="flex-nowrap overflow-x-auto no-scrollbar pb-6 scroll-smooth" data-testid="classic-domains-categories">
-                <UiButton
-                  :variant="activeCategory === null ? 'primary' : 'subtle'"
-                  size="sm"
-                  class="px-6 py-2.5 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap"
-                  :class="activeCategory === null
-                    ? 'bg-gradient-to-r from-primary-500 to-cyan-500 border-transparent shadow-xl shadow-primary-500/20 scale-105 z-10'
-                    : 'text-gray-500'"
-                  data-testid="classic-domains-category-all"
-                  @click="activeCategory = null"
-                >
-                  {{ $t('domains.pricing.catAll') }}
-                  <UiText as="span" tone="inherit" size="inherit" class="ml-2 opacity-50 font-mono">[{{ totalTldCount }}]</UiText>
-                </UiButton>
-                <UiButton
-                  v-for="cat in allCategories"
-                  :key="cat.name"
-                  :variant="activeCategory === cat.name ? 'primary' : 'subtle'"
-                  size="sm"
-                  class="px-6 py-2.5 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap"
-                  :class="activeCategory === cat.name
-                    ? 'bg-gradient-to-r from-primary-500 to-cyan-500 border-transparent shadow-xl shadow-primary-500/20 scale-105 z-10'
-                    : 'text-gray-500'"
-                  data-testid="classic-domains-category"
-                  @click="activeCategory = cat.name"
-                >
-                  {{ translateCategory(cat.name) }}
-                  <UiText as="span" tone="inherit" size="inherit" class="ml-2 opacity-50 font-mono">[{{ cat.count }}]</UiText>
-                </UiButton>
-              </UiStack>
-            </UiStack>
+            <UiChipTabs
+              v-if="allCategories.length"
+              class="mb-12"
+              :tabs="categoryTabs"
+              :model-value="activeCategory ?? ALL_CATEGORY"
+              :label="$t('domains.pricing.browseByCategory')"
+              testid="classic-domains-categories"
+              @update:model-value="chooseCategory"
+            />
 
             <!-- Desktop: table -->
             <UiCard padding="none" class="hidden md:block rounded-[2.5rem] bg-white/[0.01] overflow-hidden backdrop-blur-3xl shadow-2xl">
@@ -201,7 +178,7 @@
                   </UiTableRow>
                 </UiTableHead>
                 <UiTableBody>
-                  <UiTableRow v-for="[ext, tld] in displayedTlds" :key="ext" group class="hover:bg-white/[0.03]" data-testid="classic-domains-row">
+                  <UiTableRow v-for="[ext, tld] in displayedTlds" :key="ext" group class="hover:bg-gray-900/[0.03] dark:hover:bg-white/[0.03]" data-testid="classic-domains-row">
                     <UiTableTd class="!py-8 !px-10">
                       <UiText as="span" weight="bold" class="text-2xl font-black group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors tracking-tighter uppercase">.{{ ext }}</UiText>
                     </UiTableTd>
@@ -230,7 +207,7 @@
                     </UiTableTd>
                   </UiTableRow>
                   <UiTableRow v-if="!displayedTlds.length" :hoverable="false">
-                    <UiTableTd colspan="5" align="center" class="text-gray-500 py-20 font-medium italic">
+                    <UiTableTd colspan="5" align="center" class="text-gray-600 dark:text-gray-400 py-20 font-medium italic">
                       {{ $t('domains.pricing.noResults') }}
                     </UiTableTd>
                   </UiTableRow>
@@ -362,6 +339,9 @@ import { UiHeadingLevel } from '~/utils/ui/enums'
 import { DOMAIN_BILLING_CYCLE } from '~/constants/pricingCycle'
 import { CartItemType } from '~/types/cartitemtype'
 import { DomainOrderAction } from '~/types/domainorderaction'
+import type { ChipTab } from '~/types/chiptab'
+import { ALL_CATEGORY } from '~/templates/aurora/types/allcategory'
+import { tldCategoryLabel, tldCategorySlug } from '~/utils/tldCategory'
 
 /** One extension's entry of the price table. */
 type TldEntry = TldPricing['pricing'][string]
@@ -556,6 +536,26 @@ const allCategories = computed(() => {
   return Array.from(cats.entries()).map(([name, count]) => ({ name, count }))
 })
 
+/** The category chips: "all" first (with the full count), then one per category the data carries. */
+const categoryTabs = computed<ChipTab[]>(() => [
+  { value: ALL_CATEGORY, label: t('domains.pricing.catAll'), count: totalTldCount.value, testid: 'classic-domains-category-all' },
+  ...allCategories.value.map(cat => ({
+    value: cat.name,
+    label: tldCategoryLabel(cat.name, t),
+    count: cat.count,
+    testid: `classic-domains-category-${tldCategorySlug(cat.name)}`,
+  })),
+])
+
+/**
+ * Applies a chip choice to the filter.
+ *
+ * @param value - The chosen category, or the "all" sentinel to show every extension.
+ */
+const chooseCategory = (value: string): void => {
+  activeCategory.value = value === ALL_CATEGORY ? null : value
+}
+
 /** How many extensions the table holds before filtering. */
 const totalTldCount = computed(() => Object.keys(tldPricing.value?.pricing ?? {}).length)
 
@@ -584,20 +584,5 @@ const formatPrice = (price: string | undefined): string => {
   }
   const code = tldPricing.value?.currency?.code
   return formatMoney(parseFloat(price), currencyStore.moneyCurrencyFor(code))
-}
-
-/**
- * Translates a TLD category name using i18n, falling back to the raw name.
- *
- * @param name - Category name to translate.
- * @returns Translated category name or the original name if no translation exists.
- */
-const translateCategory = (name: string): string => {
-  if (!name) {
-    return ''
-  }
-  const key = `domains.pricing.categories.${name.toLowerCase().replace(/\s+/g, '-')}`
-  const translated = t(key)
-  return translated !== key ? translated : name
 }
 </script>

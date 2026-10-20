@@ -1,5 +1,5 @@
 <template>
-  <section class="py-20 bg-ui-page relative overflow-hidden" data-testid="sections-products">
+  <section class="py-12 md:py-20 bg-ui-page relative overflow-hidden" data-testid="sections-products">
     <!-- Background decorations -->
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-tr from-primary-500/5 dark:from-secondary-500/5 via-transparent to-cyan-500/5" />
@@ -24,11 +24,9 @@
         <UiAccent v-for="(product, index) in products" :key="product.id" :color="product.color">
           <!-- The card sits on a dark photograph, so it always uses the dark palette. -->
           <div
-            v-motion
-            :initial="{ opacity: 0, y: 50 }"
-            :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 500 } }"
-            class="dark group relative rounded-2xl overflow-hidden min-h-[450px]"
+            class="dark group relative rounded-2xl overflow-hidden min-h-[450px] animate-reveal-up motion-reduce:animate-none"
             :data-testid="`home-product-${product.id}`"
+            :style="revealStyle(index * 100)"
           >
             <UiImage
               v-if="product.image"
@@ -56,7 +54,7 @@
 
               <!-- Clickable content -->
               <NuxtLink :to="localePath(product.learnMoreUrl)" class="flex flex-col flex-1 cursor-pointer" :data-testid="`home-product-link-${product.id}`">
-                <UiAccentTile :icon="`mdi:${product.icon}`" class="mb-4 mt-8 backdrop-blur-sm group-hover:scale-110 group-hover:rotate-3" />
+                <UiAccentTile :icon="product.icon" class="mb-4 mt-8 backdrop-blur-sm group-hover:scale-110 group-hover:rotate-3" />
 
                 <UiHeading :level="3" size="subsection" class="text-xl mb-2 group-hover:text-cyan-300 transition-colors duration-300">{{ product.name }}</UiHeading>
 
@@ -126,19 +124,23 @@
  * only the static domains card shows one. Each card is painted in its family's accent colour and
  * always uses the dark palette, because it sits on a photograph under a dark overlay.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { ArrowRight, CheckCircle } from 'lucide-vue-next'
 import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
+import { productTypeIcon } from '~/constants/productTypeIcon'
 import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
 import type { ProductCard } from '~/types/productcard'
+import { ProductType } from '~/types/producttype'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'
 import { buildProductFamilies } from '~/utils/productFamilies'
 
 /** Id of the domains card, which is not a catalogue family. */
 const DOMAINS_CARD_ID = 'domains'
 
-/** Icon of the domains card. */
-const DOMAINS_CARD_ICON = 'earth'
+/** Icon of the domains card: the icon of the domain product type. */
+const DOMAINS_CARD_ICON = productTypeIcon(ProductType.Domain)
 
 /** Accent of the domains card. */
 const DOMAINS_CARD_COLOR = '#3b82f6'
@@ -169,7 +171,12 @@ onMounted(() => {
 /** Operator-configured hosting demo address; empty hides the demo link (the card links to the learn-more page). */
 const hostingDemoUrl = (useRuntimeConfig().public.portalHostingDemoUrl as string) || ''
 
-await useAsyncData('products:families', () => catalogStore.loadFamilies(), {
+await useAsyncData('products:families', async () => {
+  const products = await catalogStore.loadFamilies()
+  // Specification lines back the bullets of a family whose descriptions list none.
+  await Promise.all(catalogStore.familyGroups.map((group) => catalogStore.loadProductFeatures(group.id)))
+  return products
+}, {
   watch: [() => currencyStore.payerCode, locale],
 })
 
@@ -189,7 +196,7 @@ const products = computed<ProductCard[]>(() => {
   }]
 
   // Prices are not shown on a card, so the formatter is never asked for one.
-  const families = buildProductFamilies(catalogStore.familyGroups, catalogStore.familyProducts, () => '', null)
+  const families = buildProductFamilies(catalogStore.familyGroups, catalogStore.familyProducts, () => '', null, [], catalogStore.featuresFor)
   for (const family of families) {
     items.push({
       id: family.id,

@@ -4,6 +4,7 @@
     "title": "Announcements",
     "subtitle": "Stay up to date with the latest news, updates and special offers.",
     "allMonths": "All",
+    "filterLabel": "Filter by month",
     "readMore": "Continue reading",
     "empty": "No announcements at this time.",
     "signInRequired": "Sign in to read announcements",

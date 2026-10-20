@@ -34,7 +34,7 @@
                 external
                 tone="muted"
                 :underline="false"
-                class="w-12 h-12 rounded-xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 flex items-center justify-center hover:text-on-primary hover:bg-primary-500/20 hover:border-primary-500/50 transition-all duration-300 group/social"
+                class="w-12 h-12 rounded-xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 flex items-center justify-center hover:text-primary-700 dark:hover:text-on-primary hover:bg-primary-500/20 hover:border-primary-500/50 transition-all duration-300 group/social"
                 :aria-label="social.name"
                 :title="social.name"
                 data-testid="footer-social-link"
@@ -53,16 +53,16 @@
           </UiHeading>
           <UiList list-style="plain" class="space-y-4">
             <UiListItem v-for="link in navigationLinks" :key="link.href">
-              <UiLink
+              <UiFooterLink
                 :to="link.href"
-                tone="muted"
+                :variant="UiFooterLinkVariant.Classic"
                 :underline="false"
-                class="text-sm text-gray-600 transition-all duration-300 flex items-center group"
-                data-testid="footer-nav-link"
+                class="text-sm duration-300 group"
+                testid="footer-nav-link"
               >
                 <UiStack gap="none" as="span" class="w-0 group-hover:w-4 h-px bg-primary-500 mr-0 group-hover:mr-3 transition-all duration-300 opacity-0 group-hover:opacity-100" />
                 {{ link.label }}
-              </UiLink>
+              </UiFooterLink>
             </UiListItem>
           </UiList>
         </UiStack>
@@ -75,16 +75,16 @@
           </UiHeading>
           <UiList list-style="plain" class="space-y-4">
             <UiListItem v-for="service in serviceLinks" :key="service.href">
-              <UiLink
+              <UiFooterLink
                 :to="service.href"
-                tone="muted"
+                :variant="UiFooterLinkVariant.Classic"
                 :underline="false"
-                class="text-sm text-gray-600 transition-all duration-300 flex items-center group"
-                data-testid="footer-service-link"
+                class="text-sm duration-300 group"
+                testid="footer-service-link"
               >
                 <UiStack gap="none" as="span" class="w-0 group-hover:w-4 h-px bg-secondary-500 mr-0 group-hover:mr-3 transition-all duration-300 opacity-0 group-hover:opacity-100" />
                 {{ service.label }}
-              </UiLink>
+              </UiFooterLink>
             </UiListItem>
           </UiList>
         </UiStack>
@@ -97,32 +97,32 @@
           </UiHeading>
           <UiList list-style="plain" class="space-y-6">
             <UiListItem v-if="contactEmail" class="group">
-              <UiLink
+              <UiFooterLink
                 :href="`mailto:${contactEmail}`"
-                tone="muted"
+                :variant="UiFooterLinkVariant.Classic"
                 :underline="false"
-                class="flex items-center gap-4 text-sm transition-all duration-300"
-                data-testid="footer-email"
+                class="gap-4 text-sm"
+                testid="footer-email"
               >
                 <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 group-hover:border-primary-500/30 group-hover:bg-primary-500/10">
                   <Mail :size="18" class="text-primary-600 dark:text-primary-400 transition-transform group-hover:scale-110" />
                 </UiStack>
                 {{ contactEmail }}
-              </UiLink>
+              </UiFooterLink>
             </UiListItem>
             <UiListItem v-if="contactPhone" class="group">
-              <UiLink
+              <UiFooterLink
                 :href="`tel:${contactPhoneLink}`"
-                tone="muted"
+                :variant="UiFooterLinkVariant.Classic"
                 :underline="false"
-                class="flex items-center gap-4 text-sm transition-all duration-300"
-                data-testid="footer-phone"
+                class="gap-4 text-sm"
+                testid="footer-phone"
               >
                 <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 group-hover:border-secondary-500/30 group-hover:bg-secondary-500/10">
-                  <Phone :size="18" class="text-secondary-400 transition-transform group-hover:scale-110" />
+                  <Phone :size="18" class="text-secondary-600 dark:text-secondary-400 transition-transform group-hover:scale-110" />
                 </UiStack>
                 {{ contactPhone }}
-              </UiLink>
+              </UiFooterLink>
             </UiListItem>
             <UiListItem v-if="contactAddress" class="group">
               <UiStack direction="row" align="center" gap="lg">
@@ -158,17 +158,16 @@
           </UiText>
 
           <UiStack direction="row" align="center" justify="center" wrap gap="lg">
-            <UiLink
+            <UiFooterLink
               v-for="legal in legalLinks"
               :key="legal.to"
               :to="legal.to"
-              tone="muted"
-              :underline="false"
-              class="text-sm font-medium hover:text-primary-600 dark:hover:text-primary-400 duration-300"
-              data-testid="footer-legal-link"
+              :variant="UiFooterLinkVariant.Classic"
+              class="text-sm font-medium"
+              testid="footer-legal-link"
             >
               {{ legal.label }}
-            </UiLink>
+            </UiFooterLink>
           </UiStack>
 
           <!-- Trusted badge -->
@@ -191,7 +190,7 @@ import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { ChevronUp, Mail, MapPin, Phone } from 'lucide-vue-next'
 import type { SocialLink } from '~/types/sociallink'
 import { LogoSurface } from '~/utils/appLogo'
-import { UiHeadingLevel } from '~/utils/ui/enums'
+import { UiFooterLinkVariant, UiHeadingLevel } from '~/utils/ui/enums'
 
 /** Translate function. */
 const { t } = useI18n()

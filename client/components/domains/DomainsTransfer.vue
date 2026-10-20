@@ -10,7 +10,7 @@
       <UiContainer class="relative z-10 text-center">
         <div class="mx-auto max-w-3xl">
           <!-- Breadcrumb -->
-          <div class="flex items-center justify-center gap-2 text-sm text-gray-500 mb-6">
+          <div class="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-6">
             <UiLink :to="localePath('/domains')" tone="muted" :underline="false" class="hover:text-primary-600 dark:hover:text-primary-400" testid="domains-transfer-crumb">
               {{ $t('domains.card.name') }}
             </UiLink>
@@ -25,7 +25,7 @@
 
           <UiHeading :level="1" size="display" class="mb-6 leading-tight">
             {{ $t('domains.promoTransferTitle') }}
-            <span class="block pb-2 text-transparent bg-clip-text bg-gradient-to-r from-primary-400 dark:from-secondary-400 to-cyan-400">
+            <span class="block pb-2 text-transparent bg-clip-text bg-gradient-to-r from-primary-700 to-cyan-700 dark:from-primary-300 dark:to-cyan-300">
               {{ $t('domains.card.name') }}
             </span>
           </UiHeading>
@@ -65,7 +65,7 @@
                 />
                 <div class="flex justify-end mt-1">
                   <UiTooltip>
-                    <UiButton variant="ghost" size="sm" class="text-xs text-primary-600 dark:text-primary-400" data-testid="domains-transfer-help">
+                    <UiButton variant="ghost" size="sm" class="text-xs text-primary-700 dark:text-primary-300" data-testid="domains-transfer-help">
                       <HelpCircle :size="13" :stroke-width="2" class="mr-1" />
                       {{ $t('domains.transferAuthHelp') }}
                     </UiButton>

@@ -4,7 +4,7 @@
       v-if="icon"
       class="w-14 h-14 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center mb-4"
     >
-      <component :is="icon" :size="26" :stroke-width="1.75" class="text-gray-400 dark:text-gray-500" />
+      <component :is="icon" :size="26" :stroke-width="1.75" class="text-gray-500 dark:text-gray-400" />
     </div>
     <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ title }}</h3>
     <p v-if="description" class="mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">{{ description }}</p>

@@ -24,7 +24,7 @@
         @keydown.arrow-up.prevent="open"
       >
         <Icon v-if="icon" :name="icon" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-400 pointer-events-none z-10" />
-        <span :class="selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-500'">
+        <span :class="selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'">
           {{ selectedOption?.label ?? placeholder ?? $t('ui.selectPlaceholder') }}
         </span>
         <ChevronDown
@@ -69,7 +69,7 @@
             />
             <span :class="modelValue !== option.value ? 'ml-[22px]' : ''">{{ option.label }}</span>
           </li>
-          <li v-if="!options.length" class="px-4 py-2.5 text-sm text-gray-500 text-center">
+          <li v-if="!options.length" class="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 text-center">
             {{ $t('ui.noOptions') }}
           </li>
         </ul>
@@ -77,7 +77,7 @@
     </div>
 
     <p v-if="error" class="mt-2 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
-    <p v-else-if="hint" class="mt-2 text-sm text-gray-500">{{ hint }}</p>
+    <p v-else-if="hint" class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ hint }}</p>
   </div>
 </template>
 

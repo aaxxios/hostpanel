@@ -44,10 +44,10 @@ const expanded = ref(false)
         :to="item.to"
         :aria-current="item.key === activeKey ? 'page' : undefined"
         :data-testid="`${testid}-${item.key}`"
-        class="relative flex items-center gap-2.5 px-3 py-2.5 transition-all duration-150 no-underline"
+        class="relative flex items-center gap-2.5 px-3 py-2.5 transition-all duration-150 no-underline outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500/60"
         :class="item.key === activeKey
-          ? 'text-primary-400 bg-primary-500/10'
-          : 'text-text-muted hover:text-text-secondary hover:bg-surface-hover'"
+          ? 'text-primary-500 light:text-primary-600 bg-primary-500/15'
+          : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'"
       >
         <span
           v-if="item.key === activeKey"

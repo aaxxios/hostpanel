@@ -34,7 +34,7 @@ describe('ClientDashboardDomainsCard', () => {
   it('says there are no domains when the list is empty', () => {
     const wrapper = mountClient(DomainsCard)
 
-    expect(wrapper.find('[data-testid="dashboard-domains-empty"]').text()).toBe('client.dashboard.noDomains')
+    expect(wrapper.find('[data-testid="dashboard-domains-empty"]').text()).toContain('client.dashboard.noDomains')
   })
 
   it('lists at most four domains, each opening the domain', async () => {

@@ -23,6 +23,13 @@ describe('SectionsCTA', () => {
     expect(wrapper.text()).toContain('cta.subtitle')
   })
 
+  it('is never rendered hidden: the content block enters with a CSS animation, not an initial opacity', () => {
+    const block = mountWithKit(SectionsCTA).find('.max-w-3xl')
+
+    expect(block.attributes('style') ?? '').not.toContain('opacity')
+    expect(block.classes()).toContain('animate-reveal-up')
+  })
+
   it('gives the e-mail field a placeholder and an e-mail type', () => {
     const input = mountWithKit(SectionsCTA).find('[data-testid="cta-email"]')
 

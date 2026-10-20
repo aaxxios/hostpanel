@@ -23,7 +23,7 @@ describe('UiTableCell', () => {
   it('aligns and greys on request', () => {
     const wrapper = mount(UiTableCell, { props: { align: 'right', muted: true } })
 
-    expect(wrapper.classes()).toEqual(expect.arrayContaining(['text-right', 'text-text-muted']))
+    expect(wrapper.classes()).toEqual(expect.arrayContaining(['text-end', 'text-text-muted']))
   })
 
   it('adds no padding outside a table', () => {

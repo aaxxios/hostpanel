@@ -2,8 +2,8 @@
   <UiCard data-testid="account-2fa-card">
     <UiStack direction="row" align="center" justify="between" gap="md">
       <UiStack direction="row" align="center" gap="sm" class="min-w-0">
-        <ShieldCheck v-if="enabled" :size="22" :stroke-width="1.5" class="text-green-400 flex-shrink-0" />
-        <ShieldOff v-else :size="22" :stroke-width="1.5" class="text-gray-400 flex-shrink-0" />
+        <ShieldCheck v-if="enabled" :size="22" :stroke-width="1.5" class="text-green-600 dark:text-green-400 flex-shrink-0" />
+        <ShieldOff v-else :size="22" :stroke-width="1.5" class="text-gray-500 dark:text-gray-400 flex-shrink-0" />
         <UiStack gap="none" class="min-w-0">
           <UiText size="sm" weight="semibold">{{ $t('client.twoFactor.title') }}</UiText>
           <UiText size="xs" tone="muted">

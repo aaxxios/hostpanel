@@ -27,6 +27,6 @@ describe('UiTableRow', () => {
   it('tints on hover, marks the selection and draws the border on request', () => {
     const wrapper = mount(UiTableRow, { props: { hoverable: true, selected: true, bordered: true } })
 
-    expect(wrapper.classes()).toEqual(expect.arrayContaining(['hover:bg-surface-hover', 'bg-primary-500/5', 'border-b']))
+    expect(wrapper.classes()).toEqual(expect.arrayContaining(['hover:bg-surface-hover', 'bg-primary-500/10', 'border-b']))
   })
 })

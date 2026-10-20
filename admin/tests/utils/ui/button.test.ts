@@ -21,6 +21,7 @@ describe('button variants', () => {
 
   it('shares a base set with a focus ring and a disabled state', () => {
     expect(buttonBaseClasses).toContain('focus-visible:ring-2')
+    expect(buttonBaseClasses).toContain('ring-primary-500/60')
     expect(buttonBaseClasses).toContain('disabled:opacity-50')
   })
 })

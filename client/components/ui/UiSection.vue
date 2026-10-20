@@ -37,11 +37,14 @@ const props = withDefaults(defineProps<Props>(), {
   contained: true,
 })
 
-/** Padding utility per step. */
+/**
+ * Padding utility per step: the storefront's one vertical rhythm. Tight on a phone, where a tall
+ * empty band reads as a broken page, and roomier from `md`.
+ */
 const PADDING_CLASSES: Record<UiSectionPadding, string> = {
-  [UiSectionPadding.Sm]: 'py-8',
-  [UiSectionPadding.Md]: 'py-12 md:py-16',
-  [UiSectionPadding.Lg]: 'py-16 md:py-24',
+  [UiSectionPadding.Sm]: 'py-8 md:py-10',
+  [UiSectionPadding.Md]: 'py-10 md:py-14',
+  [UiSectionPadding.Lg]: 'py-12 md:py-20',
 }
 
 /** Class list of the root element. */

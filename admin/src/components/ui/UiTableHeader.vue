@@ -55,13 +55,13 @@ const arrow = computed<string>(() => {
 <template>
   <th
     :aria-sort="sortable ? direction : undefined"
-    class="[:where(&)]:text-[0.68rem] [:where(&)]:font-semibold [:where(&)]:uppercase [:where(&)]:tracking-[0.08em] [:where(&)]:text-text-muted"
+    class="[:where(&)]:text-[0.68rem] [:where(&)]:font-semibold [:where(&)]:uppercase [:where(&)]:tracking-[0.08em] [:where(&)]:text-text-secondary"
     :class="classes"
   >
     <button
       v-if="sortable"
       type="button"
-      class="inline-flex items-center gap-1 uppercase hover:text-text-primary transition-colors cursor-pointer"
+      class="inline-flex items-center gap-1 uppercase hover:text-text-primary transition-colors cursor-pointer rounded-md focus-visible:outline-2 focus-visible:outline-primary-500"
       :data-testid="sortTestid"
       @click="emit('sort')"
     >

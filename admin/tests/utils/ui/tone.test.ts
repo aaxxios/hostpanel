@@ -26,6 +26,20 @@ describe('tone maps', () => {
     }
   })
 
+  it('gives every coloured text tone a readable light-theme step', () => {
+    for (const tone of tones.filter((t) => t !== UiTone.Neutral)) {
+      expect(toneTextClasses[tone]).toContain('light:text-')
+      expect(toneBadgeClasses[tone]).toContain('light:text-')
+    }
+  })
+
+  it('pairs solid status fills with explicit text per theme, never a theme token', () => {
+    for (const tone of [UiTone.Success, UiTone.Warning, UiTone.Danger]) {
+      expect(toneSolidClasses[tone]).toContain('text-gray-950 light:text-white')
+      expect(toneSolidClasses[tone]).not.toContain('text-surface-base')
+    }
+  })
+
   it('exposes the named members as their literal values', () => {
     expect(UiTone.Danger).toBe('danger')
     expect(UiTone.Primary).toBe('primary')

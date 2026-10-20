@@ -515,7 +515,7 @@ onUnmounted(() => {
             >
               {{ t(item.labelKey) }}
             </button>
-            <div class="text-left px-3 py-2 text-primary-500 font-semibold rounded text-sm">{{ t('shared.custom') }}</div>
+            <div class="text-left px-3 py-2 text-primary-600 light:text-primary-700 font-semibold rounded text-sm bg-primary-500/10">{{ t('shared.custom') }}</div>
           </div>
 
           <div class="flex-1 p-4">
@@ -545,7 +545,7 @@ onUnmounted(() => {
             <div class="flex gap-8">
               <div v-for="(month, idx) in months" :key="idx" class="flex-1">
                 <div class="grid grid-cols-7 gap-1 mb-2">
-                  <div v-for="name in dayNames" :key="name" class="text-center text-xs font-semibold text-text-muted">{{ name }}</div>
+                  <div v-for="name in dayNames" :key="name" class="text-center text-xs font-semibold text-text-secondary">{{ name }}</div>
                 </div>
                 <div class="grid grid-cols-7 gap-1">
                   <button
@@ -567,13 +567,13 @@ onUnmounted(() => {
 
         <div class="flex items-center justify-between border-t border-border p-4 bg-surface-hover rounded-b-[10px]">
           <span v-if="pickedLabel" class="text-sm text-text-secondary">{{ pickedLabel }}</span>
-          <span v-else class="text-sm text-text-muted">{{ t('ui.uiDateRangePicker.selectDateRange') }}</span>
+          <span v-else class="text-sm text-text-secondary">{{ t('ui.uiDateRangePicker.selectDateRange') }}</span>
           <div class="flex gap-2">
             <button type="button" data-testid="date-range-clear" :class="dateActionClasses" class="px-4 py-2" @click="clearRange">{{ t('shared.clear') }}</button>
             <button
               type="button"
               data-testid="date-range-apply"
-              class="px-4 py-2 text-sm gradient-brand text-white rounded-[9px] transition-opacity hover:opacity-90 font-semibold"
+              class="px-4 py-2 text-sm gradient-brand text-white rounded-[9px] outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary-500/50 font-semibold"
               @click="applyRange"
             >
               {{ t('shared.apply') }}

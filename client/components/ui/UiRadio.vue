@@ -20,11 +20,12 @@
       :aria-checked="selected"
       :disabled="disabled"
       :data-testid="testid"
-      class="flex-shrink-0 w-5 h-5 rounded-full border-2 transition-all duration-150 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+      class="flex-shrink-0 w-5 h-5 rounded-full border-2 transition-all duration-150 flex items-center justify-center"
       :class="[
+        FOCUS_RING,
         selected
           ? 'border-primary-500 dark:border-primary-400 bg-transparent'
-          : 'bg-transparent border-gray-300 dark:border-white/30 hover:border-primary-500 dark:hover:border-primary-400',
+          : 'bg-transparent border-gray-400 dark:border-gray-500 hover:border-primary-500 dark:hover:border-primary-400',
         disabled ? 'cursor-not-allowed' : 'cursor-pointer',
       ]"
       @click="choose"
@@ -56,6 +57,7 @@
  * A hidden native radio keeps form semantics; the visible circle is a `role="radio"` button.
  */
 import { computed, useId } from 'vue'
+import { FOCUS_RING } from '~/utils/ui/tones'
 
 /** Props of UiRadio. */
 interface Props {

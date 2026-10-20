@@ -1,9 +1,6 @@
 <template>
   <div
-    v-motion
-    :initial="{ opacity: 0, y: 30 }"
-    :visible-once="{ opacity: 1, y: 0, transition: { duration: 600 } }"
-    class="text-center"
+    class="text-center animate-reveal-up motion-reduce:animate-none"
     data-testid="section-header"
   >
     <UiBadge v-if="badge" variant="primary" rounded class="px-4 py-1.5 mb-4" data-testid="section-header-badge">

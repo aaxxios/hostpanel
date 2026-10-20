@@ -14,7 +14,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// <summary>
 /// Seeds the people: the published demo administrator and client, staff with different roles, the demo
 /// client's full profile (contacts, team members, invitations, a saved-card customer and a credit
-/// balance), and fourteen more fictional customers in mixed states so lists, charts and reports have
+/// balance), and sixty-four more fictional customers in mixed states so lists, charts and reports have
 /// something to show. Accounts are created through Identity (so the stored hash is the real one), the
 /// role of each is also granted in the subject-role table the authorization reads, and clients are built
 /// through <see cref="Client.Create"/> and its behaviour methods; an account or client that already exists
@@ -68,7 +68,7 @@ internal sealed class DemoPeopleSeeder
         var (demoClient, demoCreated) = await EnsureClientAsync(
             new DemoClientProfile(
                 _options.ClientEmail!, _options.ClientPassword!, "Demo", "Client", "Brightleaf Studio LLC",
-                "+1 555 0110", "15 Example Street", "Northvale", null, "00001", "US", "USD",
+                "+1 555 0110", "15 Harbour Street", "Northvale", null, "00001", "US", "USD",
                 ClientStatus.Active, 120m),
             ct);
         if (demoCreated)
@@ -78,7 +78,7 @@ internal sealed class DemoPeopleSeeder
 
         (string First, string Last, string Company, string Phone, string Street, string City, string? State, string PostCode, string Country, string Currency, ClientStatus Status, decimal Credit)[] fillers =
         [
-            ("Maple", "Digital", "Maple Digital Inc", "+1 555 0120", "20 Sample Avenue", "Northvale", null, "00019", "US", "AMD", ClientStatus.Active, 0m),
+            ("Maple", "Digital", "Maple Digital Inc", "+1 555 0120", "20 Linden Avenue", "Northvale", null, "00019", "US", "AMD", ClientStatus.Active, 0m),
             ("Harper", "Lane", "Lane & Co Consulting", "+1 212 555 0130", "480 Hudson Street", "New York", "NY", "10014", "US", "USD", ClientStatus.Active, 40m),
             ("Sofia", "Rinaldi", "Rinaldi Design Studio", "+39 06 555 0140", "Via Roma 12", "Rome", null, "00184", "IT", "USD", ClientStatus.Active, 0m),
             ("Kenji", "Mori", "Mori Web Works", "+81 3 5550 0150", "2-4-1 Shibuya", "Tokyo", null, "150-0002", "JP", "USD", ClientStatus.Active, 0m),
@@ -92,6 +92,56 @@ internal sealed class DemoPeopleSeeder
             ("Tomas", "Novak", "Novak Craft Brewery", "+420 2 5550 0200", "Narodni 25", "Prague", null, "11000", "CZ", "USD", ClientStatus.Suspended, 0m),
             ("Isabel", "Costa", "Costa Travel Agency", "+351 21 555 0210", "Rua Augusta 100", "Lisbon", null, "1100-053", "PT", "USD", ClientStatus.Active, 0m),
             ("Maya", "Patel", "Patel Software Pvt", "+91 22 5550 0220", "Linking Road 5", "Mumbai", "MH", "400050", "IN", "USD", ClientStatus.Active, 0m),
+            ("Liam", "Carter", "Carterline Builders", "+1 555 0230", "41 Mill Road", "Northvale", null, "00041", "US", "USD", ClientStatus.Active, 0m),
+            ("Chloe", "Dubois", "Dubois Bakery", "+33 1 5550 0240", "8 Rue des Lilas", "Paris", null, "75002", "FR", "USD", ClientStatus.Active, 10m),
+            ("Arman", "Sargsyan", "Apricot Tours", "+374 10 555 024", "5 Orchard Lane", "Fairhaven", null, "0010", "AM", "AMD", ClientStatus.Active, 0m),
+            ("Hugo", "Lindqvist", "Northstar Outdoor AB", "+46 8 5550 0250", "Hamngatan 3", "Stockholm", null, "11122", "SE", "USD", ClientStatus.Active, 0m),
+            ("Priya", "Nair", "Lotus Wellness", "+91 80 5550 0260", "MG Road 77", "Bengaluru", "KA", "560001", "IN", "USD", ClientStatus.Active, 0m),
+            ("Mateo", "Garcia", "Solana Coffee Roasters", "+34 91 555 0270", "Calle Mayor 9", "Madrid", null, "28013", "ES", "USD", ClientStatus.Active, 0m),
+            ("Ava", "Thompson", "Quillstone Publishing", "+44 161 555 0280", "12 Kings Row", "Manchester", null, "M1 1AA", "GB", "USD", ClientStatus.Active, 0m),
+            ("Noah", "Becker", "Bergwerk Engineering", "+49 89 5550 0290", "Lindenweg 4", "Munich", null, "80331", "DE", "USD", ClientStatus.Suspended, 0m),
+            ("Zara", "Ahmed", "Oasis Events", "+971 2 555 0300", "Corniche Road 6", "Abu Dhabi", null, "00000", "AE", "USD", ClientStatus.Active, 0m),
+            ("Lucas", "Silva", "Verdant Farms", "+55 11 5550 0310", "Rua das Flores 50", "Sao Paulo", "SP", "01000-000", "BR", "USD", ClientStatus.Active, 0m),
+            ("Emma", "Johansen", "Fjelltopp Cabins", "+47 22 55 50 320", "Fjordveien 2", "Oslo", null, "0150", "NO", "USD", ClientStatus.Active, 0m),
+            ("Ethan", "Walsh", "Tidewater Marine", "+353 1 555 0330", "3 Custom House Quay", "Dublin", null, "D02 XY00", "IE", "USD", ClientStatus.Active, 0m),
+            ("Sofia", "Kowalska", "Amberline Studio", "+48 22 555 0340", "ul. Ogrodowa 7", "Warsaw", null, "00-001", "PL", "USD", ClientStatus.Active, 0m),
+            ("Leo", "Martins", "Atlantico Surf School", "+351 22 555 0350", "Avenida da Praia 15", "Porto", null, "4000-001", "PT", "USD", ClientStatus.Closed, 0m),
+            ("Hana", "Suzuki", "Sakura Tea House", "+81 6 5550 0360", "1-2-3 Namba", "Osaka", null, "542-0076", "JP", "USD", ClientStatus.Active, 0m),
+            ("Oliver", "Grant", "Summit Legal Partners", "+1 312 555 0370", "200 Lakeshore Plaza", "Chicago", "IL", "60601", "US", "USD", ClientStatus.Active, 75m),
+            ("Ani", "Hakobyan", "Pomegranate Crafts", "+374 10 555 038", "9 Linden Avenue", "Fairhaven", null, "0025", "AM", "AMD", ClientStatus.Active, 8000m),
+            ("Jack", "Murphy", "Ironbridge Fitness", "+1 555 0390", "88 Riverside Drive", "Lakeside", null, "00039", "US", "USD", ClientStatus.Active, 0m),
+            ("Mila", "Horvat", "Adriatic Yachting", "+385 1 555 0400", "Ilica 11", "Zagreb", null, "10000", "HR", "USD", ClientStatus.Active, 0m),
+            ("Ryan", "Cooper", "Copperleaf Accounting", "+1 415 555 0410", "500 Market Street", "San Francisco", "CA", "94105", "US", "USD", ClientStatus.Active, 0m),
+            ("Leila", "Rahimi", "Saffron Kitchen", "+1 555 0420", "6 Elm Court", "Northvale", null, "00042", "US", "USD", ClientStatus.Active, 0m),
+            ("Felix", "Wagner", "Alpenglow Hotels", "+43 1 555 0430", "Lindengasse 5", "Vienna", null, "1010", "AT", "USD", ClientStatus.Active, 0m),
+            ("Grace", "Kim", "Hanbit Robotics", "+82 2 555 0440", "Hangang-daero 21", "Seoul", null, "04524", "KR", "USD", ClientStatus.Active, 0m),
+            ("Victor", "Ionescu", "Danube Freight", "+40 21 555 0450", "Strada Florilor 4", "Bucharest", null, "010011", "RO", "USD", ClientStatus.Suspended, 0m),
+            ("Isla", "Brown", "Heather Knitwear", "+44 131 555 0460", "7 Abbey Close", "Edinburgh", null, "EH1 1AA", "GB", "USD", ClientStatus.Active, 0m),
+            ("Ella", "Novik", "Birchwood Bakery", "+1 555 0470", "100 Harbour Street", "Fairhaven", null, "50000", "US", "USD", ClientStatus.Active, 0m),
+            ("Max", "Ferreira", "Cascade Plumbing", "+44 20 5550 0480", "101 Harbour Street", "Fairhaven", null, "50001", "GB", "USD", ClientStatus.Active, 0m),
+            ("Ruby", "Lam", "Driftwood Gallery", "+49 30 5550 0490", "102 Harbour Street", "Fairhaven", null, "50002", "DE", "USD", ClientStatus.Active, 0m),
+            ("Sam", "Okoro", "Evergreen Landscaping", "+374 10 555 0500", "103 Harbour Street", "Fairhaven", null, "50003", "AM", "AMD", ClientStatus.Active, 20000m),
+            ("Lily", "Rossi", "Foxglove Florist", "+33 1 5550 0510", "104 Harbour Street", "Fairhaven", null, "50004", "FR", "USD", ClientStatus.Active, 0m),
+            ("Adam", "Kerr", "Glacier Water Co", "+1 555 0520", "105 Harbour Street", "Fairhaven", null, "50005", "US", "USD", ClientStatus.Active, 0m),
+            ("Nina", "Vos", "Hollow Oak Furniture", "+44 20 5550 0530", "106 Harbour Street", "Fairhaven", null, "50006", "GB", "USD", ClientStatus.Suspended, 0m),
+            ("Theo", "Mendes", "Indigo Print Shop", "+49 30 5550 0540", "107 Harbour Street", "Fairhaven", null, "50007", "DE", "USD", ClientStatus.Active, 0m),
+            ("Iris", "Holm", "Jasmine Spa", "+374 10 555 0550", "108 Harbour Street", "Fairhaven", null, "50008", "AM", "AMD", ClientStatus.Active, 0m),
+            ("Jonas", "Weber", "Keystone Realty", "+33 1 5550 0560", "109 Harbour Street", "Fairhaven", null, "50009", "FR", "USD", ClientStatus.Active, 0m),
+            ("Clara", "Moretti", "Larkspur Music School", "+1 555 0570", "110 Harbour Street", "Fairhaven", null, "50010", "US", "USD", ClientStatus.Active, 0m),
+            ("Owen", "Price", "Moonrise Cinema", "+44 20 5550 0580", "111 Harbour Street", "Fairhaven", null, "50011", "GB", "USD", ClientStatus.Active, 50m),
+            ("Eva", "Lund", "Nettle Organic Market", "+49 30 5550 0590", "112 Harbour Street", "Fairhaven", null, "50012", "DE", "USD", ClientStatus.Active, 0m),
+            ("Paul", "Dimitrov", "Obsidian Games", "+374 10 555 0600", "113 Harbour Street", "Fairhaven", null, "50013", "AM", "AMD", ClientStatus.Active, 0m),
+            ("Rosa", "Vega", "Pebble Pet Care", "+33 1 5550 0610", "114 Harbour Street", "Fairhaven", null, "50014", "FR", "USD", ClientStatus.Active, 0m),
+            ("Kai", "Tanaka", "Quartz Electronics", "+1 555 0620", "115 Harbour Street", "Fairhaven", null, "50015", "US", "USD", ClientStatus.Active, 0m),
+            ("Lea", "Brun", "Redwood Dental", "+44 20 5550 0630", "116 Harbour Street", "Fairhaven", null, "50016", "GB", "USD", ClientStatus.Active, 0m),
+            ("Ben", "Ali", "Sapphire Jewelry", "+49 30 5550 0640", "117 Harbour Street", "Fairhaven", null, "50017", "DE", "USD", ClientStatus.Closed, 0m),
+            ("Mia", "Hansen", "Thistle Tailoring", "+374 10 555 0650", "118 Harbour Street", "Fairhaven", null, "50018", "AM", "AMD", ClientStatus.Active, 0m),
+            ("Dan", "Popescu", "Umber Coffee Bar", "+33 1 5550 0660", "119 Harbour Street", "Fairhaven", null, "50019", "FR", "USD", ClientStatus.Active, 50m),
+            ("Tara", "Quinn", "Vellum Bookbinders", "+1 555 0670", "120 Harbour Street", "Fairhaven", null, "50020", "US", "USD", ClientStatus.Active, 0m),
+            ("Ian", "Reid", "Willow Daycare", "+44 20 5550 0680", "121 Harbour Street", "Fairhaven", null, "50021", "GB", "USD", ClientStatus.Suspended, 0m),
+            ("Lina", "Saleh", "Yarrow Herbal", "+49 30 5550 0690", "122 Harbour Street", "Fairhaven", null, "50022", "DE", "USD", ClientStatus.Active, 0m),
+            ("Erik", "Strand", "Zephyr Cycling", "+374 10 555 0700", "123 Harbour Street", "Fairhaven", null, "50023", "AM", "AMD", ClientStatus.Active, 0m),
+            ("Nora", "Paz", "Aspen Ski Rentals", "+33 1 5550 0710", "124 Harbour Street", "Fairhaven", null, "50024", "FR", "USD", ClientStatus.Active, 0m),
         ];
 
         for (var i = 0; i < fillers.Length; i++)
@@ -160,10 +210,10 @@ internal sealed class DemoPeopleSeeder
 
         client.AddContact(
             "Nina", "Avery", "Brightleaf Studio LLC", $"nina.avery@{FillerMailDomain}", "+1 555 0111", ContactType.Technical,
-            "15 Example Street", null, "Northvale", null, "00001", "US", true, false, true, true, true, false);
+            "15 Harbour Street", null, "Northvale", null, "00001", "US", true, false, true, true, true, false);
         client.AddContact(
             "Gary", "Sawyer", "Brightleaf Studio LLC", $"gary.sawyer@{FillerMailDomain}", "+1 555 0112", ContactType.General,
-            "15 Example Street", null, "Northvale", null, "00001", "US", true, false, false, false, false, false);
+            "15 Harbour Street", null, "Northvale", null, "00001", "US", true, false, false, false, false, false);
 
         var editor = await EnsureAccountAsync(
             $"team.editor@{FillerMailDomain}", NewGeneratedPassword(), "Taylor", "Editor", Roles.Client, ct);

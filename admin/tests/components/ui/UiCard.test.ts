@@ -25,6 +25,10 @@ describe('UiCard', () => {
     expect(mount(UiCard, { props: { padding: 'md' } }).classes()).toContain('p-5')
   })
 
+  it('separates the card from the page in the light theme with a soft shadow', () => {
+    expect(mount(UiCard).classes()).toContain('light:shadow-sm')
+  })
+
   it('moves to the elevated surface', () => {
     const wrapper = mount(UiCard, { props: { elevated: true } })
 

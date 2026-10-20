@@ -11,7 +11,7 @@
 
 <script setup lang="ts">
 /**
- * Products page - the SaaS and hosting families with their plans and prices.
+ * Products page - the product families with their plans and prices.
  *
  * The page reads the catalogue through the catalogue store (prices are in the payer's currency, so
  * the read runs again when the payer's currency or the language changes), groups it into
@@ -19,6 +19,7 @@
  * the head (title, canonical, hreflang, schema.org) and nothing visual.
  */
 import { APP_LOCALES } from '~/constants/appLocales'
+import { productTypeIcon } from '~/constants/productTypeIcon'
 import { SCHEMA_ORG_CONTEXT } from '~/constants/schemaOrg'
 import { useCartStore } from '~/stores/cart'
 import { useCatalogStore } from '~/stores/catalog'
@@ -26,6 +27,7 @@ import { useCurrencyStore } from '~/stores/currency'
 import { formatMoney } from '~/utils/formatMoney'
 import { buildProductFamilies } from '~/utils/productFamilies'
 import type { ProductFamily } from '~/types/productfamily'
+import { ProductType } from '~/types/producttype'
 import { SeoPageType } from '~/types/seopagetype'
 
 /** Translation helpers and the active language. */
@@ -49,7 +51,12 @@ onMounted(() => {
 /** The payer's currency to format prices with, never chosen by the page's language. */
 const payerCurrency = computed(() => currencyStore.moneyCurrencyFor(currencyStore.payerCode))
 
-await useAsyncData('products:families', () => catalogStore.loadFamilies(), {
+await useAsyncData('products:families', async () => {
+  const list = await catalogStore.loadFamilies()
+  // Specification lines back the bullets of a family whose descriptions list none.
+  await Promise.all(catalogStore.familyGroups.map((group) => catalogStore.loadProductFeatures(group.id)))
+  return list
+}, {
   watch: [() => currencyStore.payerCode, locale],
 })
 
@@ -57,7 +64,7 @@ await useAsyncData('products:families', () => catalogStore.loadFamilies(), {
 const domainsFamily = computed<ProductFamily>(() => ({
   id: 'domains',
   gid: null,
-  icon: 'earth',
+  icon: productTypeIcon(ProductType.Domain),
   color: '#3b82f6',
   demoUrl: '',
   learnMoreUrl: '/domains',
@@ -76,6 +83,7 @@ const products = computed<ProductFamily[]>(() =>
     (amount) => formatMoney(amount, payerCurrency.value),
     currencyStore.payerCode,
     [domainsFamily.value],
+    catalogStore.featuresFor,
   ))
 
 /** Public site address, from the SEO helper that also sets the head. */

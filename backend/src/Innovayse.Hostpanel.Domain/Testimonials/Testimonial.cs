@@ -43,6 +43,12 @@ public sealed class Testimonial : BaseEntity, IAggregateRoot
     /// <summary>Gets the UTC creation timestamp.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
+    /// <summary>
+    /// Gets the date the testimonial was given, as set by an admin, or <c>null</c> when none was set
+    /// (the storefront then shows <see cref="CreatedAt"/>).
+    /// </summary>
+    public DateTimeOffset? PublishedAt { get; private set; }
+
     /// <summary>Backing field for translations.</summary>
     private readonly List<TestimonialTranslation> _translations = [];
 
@@ -61,9 +67,10 @@ public sealed class Testimonial : BaseEntity, IAggregateRoot
     /// <param name="rating">The star rating, from 1 to 5.</param>
     /// <param name="sortOrder">Display order (ascending).</param>
     /// <param name="isActive">Whether the testimonial is shown on the storefront.</param>
+    /// <param name="publishedAt">The date the testimonial was given, or <c>null</c> to fall back to the creation time.</param>
     /// <returns>A new <see cref="Testimonial"/>.</returns>
     /// <exception cref="DomainRuleException">The name is empty, the rating is outside 1 to 5, or the sort order is negative.</exception>
-    public static Testimonial Create(string name, string? company, string? avatarUrl, int rating, int sortOrder, bool isActive)
+    public static Testimonial Create(string name, string? company, string? avatarUrl, int rating, int sortOrder, bool isActive, DateTimeOffset? publishedAt)
     {
         EnsureValid(name, rating, sortOrder);
 
@@ -75,7 +82,8 @@ public sealed class Testimonial : BaseEntity, IAggregateRoot
             Rating = rating,
             SortOrder = sortOrder,
             IsActive = isActive,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            PublishedAt = publishedAt
         };
     }
 
@@ -88,8 +96,9 @@ public sealed class Testimonial : BaseEntity, IAggregateRoot
     /// <param name="rating">The star rating, from 1 to 5.</param>
     /// <param name="sortOrder">New display order.</param>
     /// <param name="isActive">New active state.</param>
+    /// <param name="publishedAt">The date the testimonial was given, or <c>null</c> to fall back to the creation time.</param>
     /// <exception cref="DomainRuleException">The name is empty, the rating is outside 1 to 5, or the sort order is negative.</exception>
-    public void Update(string name, string? company, string? avatarUrl, int rating, int sortOrder, bool isActive)
+    public void Update(string name, string? company, string? avatarUrl, int rating, int sortOrder, bool isActive, DateTimeOffset? publishedAt)
     {
         EnsureValid(name, rating, sortOrder);
 
@@ -99,7 +108,12 @@ public sealed class Testimonial : BaseEntity, IAggregateRoot
         Rating = rating;
         SortOrder = sortOrder;
         IsActive = isActive;
+        PublishedAt = publishedAt;
     }
+
+    /// <summary>Returns the date the storefront shows: <see cref="PublishedAt"/>, or <see cref="CreatedAt"/> when none was set.</summary>
+    /// <returns>The display date.</returns>
+    public DateTimeOffset GetDisplayDate() => PublishedAt ?? CreatedAt;
 
     /// <summary>Shows the testimonial on the storefront.</summary>
     public void Activate() => IsActive = true;

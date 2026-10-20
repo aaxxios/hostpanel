@@ -33,7 +33,7 @@ public sealed class CreateTestimonialHandler
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var entity = Testimonial.Create(cmd.Name, cmd.Company, cmd.AvatarUrl, cmd.Rating, cmd.SortOrder, cmd.IsActive);
+        var entity = Testimonial.Create(cmd.Name, cmd.Company, cmd.AvatarUrl, cmd.Rating, cmd.SortOrder, cmd.IsActive, cmd.PublishedAt);
         entity.ApplyTranslations(cmd.Translations);
 
         _context.Testimonials.Add(entity);

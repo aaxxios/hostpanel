@@ -6,7 +6,7 @@
       aria-hidden="true"
     />
 
-    <UiContainer class="relative grid items-center gap-12 py-16 lg:grid-cols-2 lg:py-24">
+    <UiContainer class="relative grid items-center gap-12 py-12 lg:grid-cols-2 lg:py-20">
       <div class="n-reveal min-w-0">
         <UiText
           size="inherit"

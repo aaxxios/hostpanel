@@ -11,9 +11,9 @@
       <UiSkeleton v-for="i in 2" :key="i" shape="block" class="h-12" />
     </UiStack>
 
-    <UiText v-else-if="!store.domains.length" size="sm" tone="muted" class="py-4 text-center" data-testid="dashboard-domains-empty">
-      {{ $t('client.dashboard.noDomains') }}
-    </UiText>
+    <UiEmptyState v-else-if="!store.domains.length" :icon="Globe" :title="$t('client.dashboard.noDomains')" class="!py-6" data-testid="dashboard-domains-empty">
+      <UiButton size="sm" variant="subtle" to="/domains" data-testid="dashboard-domains-search">{{ $t('client.domains.searchDomains') }}</UiButton>
+    </UiEmptyState>
 
     <UiStack v-else gap="sm">
       <ClientDashboardListRow

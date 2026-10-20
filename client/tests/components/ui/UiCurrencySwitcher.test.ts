@@ -67,6 +67,14 @@ describe('UiCurrencySwitcher', () => {
     expect(wrapper.find('[data-testid="currency-switcher-current"]').text()).toBe('USD')
   })
 
+  it('draws the trigger as a brand-tinted outline, not a grey fill', async () => {
+    const wrapper = await mountSwitcher()
+    const classes = wrapper.find('[data-testid="currency-switcher-trigger"]').classes()
+
+    expect(classes).toEqual(expect.arrayContaining(['border-primary-500/30', 'hover:bg-primary-500/10']))
+    expect(classes).not.toContain('bg-gray-100')
+  })
+
   it('keeps the menu closed until the trigger is clicked, then lists every enabled currency', async () => {
     const wrapper = await mountSwitcher()
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)

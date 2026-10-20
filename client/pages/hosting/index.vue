@@ -52,6 +52,10 @@ const currencyStore = useCurrencyStore()
 /** The catalogue: products, plans, slides and TLD prices. */
 const catalogStore = useCatalogStore()
 
+// The currencies load on the server too: without them the payer's currency (and its symbol)
+// is unknown during the server render and the plan prices print as bare numbers.
+await useAsyncData('hosting:currencies', () => currencyStore.load())
+
 // Prices follow the payer's currency, so the plans are read again when it resolves or changes.
 await Promise.all([
   useAsyncData('hosting:plans', () => catalogStore.loadHostingPlans(), {
@@ -69,7 +73,6 @@ const yearly = ref(false)
 
 onMounted(() => {
   currencyStore.init()
-  currencyStore.load()
 })
 
 /**

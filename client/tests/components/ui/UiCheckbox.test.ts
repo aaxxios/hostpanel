@@ -71,4 +71,11 @@ describe('UiCheckbox', () => {
     expect(tagged.find('input').attributes('data-testid')).toBe('terms-box-input')
     expect(plain.find('input').attributes('data-testid')).toBeUndefined()
   })
+
+  it('draws the kit focus ring on the visible box', () => {
+    const box = mountWithKit(UiCheckbox).find('[role="checkbox"]')
+
+    expect(box.classes()).toContain('focus-visible:ring-2')
+    expect(box.classes()).toContain('focus-visible:ring-primary-500')
+  })
 })

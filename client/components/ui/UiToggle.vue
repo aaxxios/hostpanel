@@ -9,10 +9,10 @@
     :class="trackClasses"
     @click="emit('update:modelValue', !modelValue)"
   >
-    <Loader2 v-if="loading" :size="14" class="absolute top-0.5 left-0.5 w-5 h-5 text-white animate-spin" />
+    <Loader2 v-if="loading" :size="14" :class="['absolute top-0.5 left-0.5 w-5 h-5 animate-spin', modelValue ? 'text-on-primary' : 'text-gray-700 dark:text-white']" />
     <span
       v-else
-      :class="['absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-300 shadow-sm', modelValue ? 'translate-x-6' : 'translate-x-0']"
+      :class="['absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-300 shadow-sm', modelValue ? 'translate-x-6 dark:bg-on-primary' : 'translate-x-0 dark:bg-gray-200']"
     />
   </button>
 </template>
@@ -56,12 +56,12 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-/** Class list of the track. */
+/** Class list of the track: primary when on; a clearly bordered grey when off so it reads on a white and on a dark page. */
 const trackClasses = computed(() => [
   'relative w-12 h-6 rounded-full border transition-all duration-300 flex-shrink-0 disabled:cursor-not-allowed disabled:opacity-70',
   FOCUS_RING,
   props.modelValue
-    ? 'bg-green-500 dark:bg-green-500/30 border-green-600 dark:border-green-500/40'
-    : 'bg-gray-200 dark:bg-white/10 border-gray-300 dark:border-white/20',
+    ? 'bg-primary-500 border-primary-600 dark:border-primary-400'
+    : 'bg-gray-400 dark:bg-white/20 border-gray-500 hover:bg-gray-500 dark:hover:bg-white/30',
 ].join(' '))
 </script>

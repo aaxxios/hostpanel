@@ -23,6 +23,8 @@ public sealed class CreateTestimonialValidator : LocalizedValidator<CreateTestim
         RuleFor(x => x.AvatarUrl).MaximumLength(Testimonial.AvatarUrlMaxLength).WithMessage(L["ContentUrlTooLong", Testimonial.AvatarUrlMaxLength])
             .MustBeWebLink(L["ContentUrlInvalid"]);
         RuleFor(x => x.Rating).InclusiveBetween(1, 5).WithMessage(L["TestimonialRatingInvalid"]);
+        // One day of slack so a date picked in a timezone ahead of UTC is not refused.
+        RuleFor(x => x.PublishedAt).Must(d => d is null || d.Value <= DateTimeOffset.UtcNow.AddDays(1)).WithMessage(L["TestimonialPublishedAtFuture"]);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0).WithMessage(L["ContentSortOrderInvalid"]);
         RuleFor(x => x.Translations).NotEmpty().WithMessage(L["ContentTranslationsRequired"]);
         RuleForEach(x => x.Translations).SetValidator(new TestimonialTranslationValidator(localizer));

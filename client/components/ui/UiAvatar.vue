@@ -1,7 +1,7 @@
 <template>
   <span
     :class="sizeClasses"
-    class="grid flex-shrink-0 place-items-center rounded-full bg-primary-500/20 font-bold uppercase leading-none text-primary-400 select-none"
+    class="grid flex-shrink-0 place-items-center rounded-full bg-primary-500/20 font-bold uppercase leading-none text-primary-700 dark:text-primary-300 select-none"
     :title="label || undefined"
     aria-hidden="true"
   >

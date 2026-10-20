@@ -80,6 +80,17 @@ describe('OtpInput', () => {
     expect(wrapper.find('[data-testid="otp-input-0"]').classes()).toContain('border-red-400')
   })
 
+  it('draws a focus ring on every cell state, not only a scale', () => {
+    const empty = mountWithKit(OtpInput, { props: { modelValue: '' } })
+    const filled = mountWithKit(OtpInput, { props: { modelValue: '1' } })
+    const failed = mountWithKit(OtpInput, { props: { modelValue: '', error: 'Wrong code' } })
+
+    for (const cell of [empty.find('input'), filled.find('input'), failed.find('input')]) {
+      expect(cell.classes()).toContain('focus-visible:ring-2')
+    }
+    expect(failed.find('input').classes()).toContain('focus-visible:ring-red-500/50')
+  })
+
   it('disables every cell', () => {
     const wrapper = mountWithKit(OtpInput, { props: { modelValue: '', disabled: true } })
 

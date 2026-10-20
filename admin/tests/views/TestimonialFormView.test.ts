@@ -18,6 +18,7 @@ const stored: Testimonial = {
   rating: 4,
   sortOrder: 2,
   isActive: true,
+  publishedAt: '2026-03-10T00:00:00+00:00',
   createdAt: '2026-01-01T00:00:00Z',
   translations: { en: { role: 'CTO', quote: 'Great' }, ru: { role: '', quote: 'Отлично' } },
 }
@@ -64,6 +65,48 @@ describe('TestimonialFormView', () => {
 
     expect(bodyOf(mock, 'POST')).toMatchObject({ name: 'Bob', rating: 5, isActive: true, translations: { en: { role: '', quote: 'Fast' } } })
     expect(Object.keys(bodyOf(mock, 'POST').translations)).toEqual(['en'])
+  })
+
+  it('sends no date when the date field is left empty', async () => {
+    const mock = stubRouteTable({ ...routes, 'POST /admin/testimonials': () => json(9) })
+    const { wrapper } = await mountScreen(TestimonialFormView, {}, '/storefront/testimonials/create', '/storefront/testimonials/create')
+
+    await wrapper.get('[data-testid="testimonial-form-name"]').setValue('Bob')
+    await wrapper.get('[data-testid="testimonial-form-quote"]').setValue('Fast')
+    await wrapper.get('[data-testid="settings-form-save"]').trigger('click')
+    await vi.waitFor(() => {
+      expect(requestsOf(mock)).toContain('POST /admin/testimonials')
+    })
+
+    expect(bodyOf(mock, 'POST').publishedAt).toBeNull()
+  })
+
+  it('sends the typed date as a UTC instant', async () => {
+    const mock = stubRouteTable({ ...routes, 'POST /admin/testimonials': () => json(9) })
+    const { wrapper } = await mountScreen(TestimonialFormView, {}, '/storefront/testimonials/create', '/storefront/testimonials/create')
+
+    await wrapper.get('[data-testid="testimonial-form-name"]').setValue('Bob')
+    await wrapper.get('[data-testid="testimonial-form-quote"]').setValue('Fast')
+    await wrapper.get('[data-testid="date-picker-input"]').setValue('02/05/2026')
+    await wrapper.get('[data-testid="settings-form-save"]').trigger('click')
+    await vi.waitFor(() => {
+      expect(requestsOf(mock)).toContain('POST /admin/testimonials')
+    })
+
+    expect(bodyOf(mock, 'POST').publishedAt).toBe('2026-05-02T00:00:00Z')
+  })
+
+  it('shows the stored date when editing and sends it back unchanged', async () => {
+    const mock = stubRouteTable({ ...routes, 'PUT /admin/testimonials/3': () => new Response(null, { status: 204 }) })
+    const { wrapper } = await mountScreen(TestimonialFormView, {}, '/storefront/testimonials/3/edit', '/storefront/testimonials/:id/edit')
+
+    expect((wrapper.get('[data-testid="date-picker-input"]').element as HTMLInputElement).value).toBe('10/03/2026')
+
+    await wrapper.get('[data-testid="settings-form-save"]').trigger('click')
+    await vi.waitFor(() => {
+      expect(requestsOf(mock)).toContain('PUT /admin/testimonials/3')
+    })
+    expect(bodyOf(mock, 'PUT').publishedAt).toBe('2026-03-10T00:00:00Z')
   })
 
   it('keeps each locale tab separate', async () => {

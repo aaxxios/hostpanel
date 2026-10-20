@@ -468,3 +468,13 @@ export enum UiNavTone {
   /** Entry that asks for action, drawn in the warning colour. */
   Warning = 'warning',
 }
+
+/** Which template palette a UiFooterLink takes its resting and hover colours from. */
+export enum UiFooterLinkVariant {
+  /** aurora tokens: muted text, accent on hover. */
+  Aurora = 'aurora',
+  /** nova tokens: muted text, brand on hover. */
+  Nova = 'nova',
+  /** classic: the generic gray and primary scales, with a light and a dark value each. */
+  Classic = 'classic',
+}

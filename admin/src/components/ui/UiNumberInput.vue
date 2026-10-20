@@ -119,7 +119,7 @@ const increment = (): void => {
       :value="modelValue"
       :placeholder="placeholder"
       :disabled="disabled"
-      class="w-full bg-surface-field border border-border rounded-[10px] pl-3 pr-8 py-2 text-[0.82rem] text-text-primary placeholder:text-text-muted outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/10 transition-colors [appearance:textfield]"
+      class="w-full bg-surface-field border border-border rounded-[10px] pl-3 pr-8 py-2 text-[0.82rem] text-text-primary placeholder:text-text-muted outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/10 transition-colors disabled:cursor-not-allowed [appearance:textfield]"
       @input="onInput"
       @blur="emit('update:modelValue', clamp(numericValue))"
     >
@@ -131,7 +131,7 @@ const increment = (): void => {
         aria-hidden="true"
         data-testid="number-increment"
         :disabled="disabled || !canIncrement"
-        class="flex-1 flex items-center justify-center bg-surface-elevated text-text-muted hover:bg-primary-500 hover:text-white transition-colors rounded-tr-[10px] disabled:opacity-30 disabled:cursor-not-allowed"
+        class="flex-1 flex items-center justify-center bg-surface-elevated text-text-secondary hover:bg-primary-600 hover:text-white transition-colors rounded-tr-[10px] disabled:opacity-30 disabled:cursor-not-allowed"
         @mousedown.prevent="increment"
       >
         <svg class="w-2.5 h-2.5" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -145,7 +145,7 @@ const increment = (): void => {
         aria-hidden="true"
         data-testid="number-decrement"
         :disabled="disabled || !canDecrement"
-        class="flex-1 flex items-center justify-center bg-surface-elevated text-text-muted hover:bg-primary-500 hover:text-white transition-colors rounded-br-[10px] disabled:opacity-30 disabled:cursor-not-allowed"
+        class="flex-1 flex items-center justify-center bg-surface-elevated text-text-secondary hover:bg-primary-600 hover:text-white transition-colors rounded-br-[10px] disabled:opacity-30 disabled:cursor-not-allowed"
         @mousedown.prevent="decrement"
       >
         <svg class="w-2.5 h-2.5" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

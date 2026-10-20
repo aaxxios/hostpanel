@@ -160,6 +160,15 @@
       "developersTitle": "Developers",
       "developersBody": "Databases you create yourself, full control-panel access, and a documented API behind all of it."
     },
+    "partners": {
+      "eyebrow": "Partners",
+      "title": "Companies we work with"
+    },
+    "projects": {
+      "eyebrow": "Projects",
+      "title": "Work we have shipped",
+      "visit": "Visit site"
+    },
     "testimonials": {
       "eyebrow": "Customers",
       "title": "What our customers say"

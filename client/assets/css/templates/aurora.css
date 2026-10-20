@@ -15,8 +15,8 @@
   --tx2: #c4c8dc;
   --mut: #9ba0b8;
   --mut2: #949ab4;
-  --line: rgba(255, 255, 255, 0.08);
-  --line2: rgba(255, 255, 255, 0.13);
+  --line: rgba(255, 255, 255, 0.065);
+  --line2: rgba(255, 255, 255, 0.1);
   --surf: rgba(255, 255, 255, 0.025);
   --panel: #101220;
   --input: rgba(8, 9, 15, 0.8);
@@ -34,13 +34,22 @@
   --glow1: rgba(93, 63, 255, 0.35);
   --glow2: rgba(0, 209, 255, 0.18);
   --sh: 0 34px 70px -24px rgba(0, 0, 0, 0.85);
-  /* The brand gradient behind every filled button and active toggle segment: the accent
-     into a light tint of the primary, dark text (--brand-on-tint) on top. */
-  --brand-grad: linear-gradient(135deg, rgb(var(--brand-accent-500, 93 63 255)), rgb(var(--brand-primary-400, 0 209 255)));
+  /* The brand gradient behind every filled button and active toggle segment, in both colour
+     modes (:root also matches :root.light, so the light block does not repeat it). It is built
+     from the saturated 600 shades, dark enough for white text (text-on-brand) to clear 4.5:1
+     on both ends; the light 400 tints would need black text. Both ends fall back to the
+     template's own violet and blue. */
+  --brand-grad: linear-gradient(135deg, rgb(var(--brand-accent-600, 93 63 255)), rgb(var(--brand-primary-600, 3 105 161)));
   /* The closing call-to-action card: a brand-tinted wash that fades to the surface. */
   --cta-card: linear-gradient(135deg, rgb(var(--brand-accent-500, 93 63 255) / 0.3), rgb(var(--brand-primary-500, 2 119 182) / 0.12) 55%, rgba(255, 255, 255, 0.02));
   /* The tinted chip behind a trust-bar icon. */
   --chip-bg: rgba(255, 255, 255, 0.06);
+  /* The soft brand ring of a featured card: the primary accent at low alpha, so it reads as a
+     tint of the brand rather than a white-grey hairline. */
+  --line-brand: rgb(var(--brand-primary-300, 125 227 255) / 0.28);
+  /* The resting depth of a content card: on the dark page a faint top highlight instead of a
+     shadow nobody would see, so a card reads as raised glass rather than a hole. */
+  --sh-card: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 :root.light {
@@ -66,13 +75,10 @@
   --glow1: rgba(62, 123, 250, 0.18);
   --glow2: rgba(14, 165, 233, 0.12);
   --sh: 0 24px 50px -22px rgba(20, 22, 42, 0.28);
-  /* Light mode builds the gradient from the 600 shades: saturated enough to read as the brand
-     on a white page, dark enough for white text (the light 400 tint the dark theme uses
-     washes out here). Both ends fall back to the template's own violet and blue. */
-  --brand-grad: linear-gradient(135deg, rgb(var(--brand-accent-600, 93 63 255)), rgb(var(--brand-primary-600, 3 105 161)));
   --cta-card: linear-gradient(135deg, rgb(var(--brand-accent-100, 233 228 255)), #ffffff 50%, rgb(var(--brand-primary-100, 214 238 255)));
   --chip-bg: rgb(var(--brand-primary-500, 2 119 182) / 0.1);
-  /* The brand gradient is saturated in light mode; white text reads on it where the
-     operator-computed near-black does not. :root.light outranks the injected :root rule. */
-  --brand-on-tint: 255 255 255;
+  --line-brand: rgb(var(--brand-primary-700, 29 78 216) / 0.32);
+  /* On the light page a white card on a near-white page needs a soft two-layer shadow to
+     separate from it; the hairline alone looked flat. */
+  --sh-card: 0 1px 2px rgba(20, 22, 42, 0.04), 0 10px 28px -14px rgba(20, 22, 42, 0.14);
 }

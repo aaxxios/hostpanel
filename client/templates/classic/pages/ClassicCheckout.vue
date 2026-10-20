@@ -9,12 +9,9 @@
 
       <UiContainer class="relative z-10">
         <UiStack
-          v-motion
           align="center"
           gap="none"
-          class="max-w-4xl mx-auto text-center"
-          :initial="{ opacity: 0, y: 20 }"
-          :enter="{ opacity: 1, y: 0 }"
+          class="max-w-4xl mx-auto text-center animate-reveal-up motion-reduce:animate-none"
         >
           <UiStack direction="row" align="center" gap="xs" class="inline-flex px-3 py-1 mb-6 rounded-full glass border border-gray-200 dark:border-white/10">
             <ShieldCheck :size="14" class="text-cyan-700 dark:text-cyan-400" />
@@ -36,11 +33,8 @@
         <!-- Empty cart state -->
         <UiCard
           v-if="cart.isEmpty"
-          v-motion
           padding="none"
-          class="max-w-2xl mx-auto py-8 rounded-3xl backdrop-blur-sm"
-          :initial="{ opacity: 0, scale: 0.95 }"
-          :enter="{ opacity: 1, scale: 1 }"
+          class="max-w-2xl mx-auto py-8 rounded-3xl backdrop-blur-sm animate-reveal-up motion-reduce:animate-none"
           data-testid="checkout-empty"
         >
           <UiEmptyState :icon="ShoppingCart" :title="$t('cart.empty')" :description="$t('cart.emptyDesc')">
@@ -85,7 +79,7 @@
                     <UiText size="sm" tone="success" data-testid="checkout-user-email">{{ userEmail }}</UiText>
                   </UiStack>
                 </UiStack>
-                <UiButton variant="ghost" size="sm" class="text-xs font-bold text-gray-500" data-testid="checkout-not-you" @click="handleLogout">
+                <UiButton variant="ghost" size="sm" class="text-xs font-bold text-gray-600 dark:text-gray-400" data-testid="checkout-not-you" @click="handleLogout">
                   {{ $t('checkout.notYou') }}
                 </UiButton>
               </UiStack>
@@ -189,7 +183,7 @@
                 >
                   <UiStack gap="sm">
                     <UiStack direction="row" align="center" justify="center" gap="none" class="w-8 h-8 rounded-lg bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10">
-                      <CreditCard :size="16" :class="selectedMethod === method.module ? 'text-cyan-700 dark:text-cyan-400' : 'text-gray-500'" />
+                      <CreditCard :size="16" :class="selectedMethod === method.module ? 'text-cyan-700 dark:text-cyan-400' : 'text-gray-600 dark:text-gray-400'" />
                     </UiStack>
                     <UiRadio
                       v-model="selectedMethod"
@@ -289,7 +283,7 @@
                 {{ submitting ? submittingLabel : $t('checkout.placeOrder') }}
               </UiButton>
 
-              <UiText size="xs" tone="inherit" weight="medium" class="relative mt-6 flex items-center justify-center gap-2 text-gray-500">
+              <UiText size="xs" tone="inherit" weight="medium" class="relative mt-6 flex items-center justify-center gap-2 text-gray-400">
                 <ShieldCheck :size="14" class="text-green-500" />
                 {{ $t('cart.secureCheckout') }}
               </UiText>

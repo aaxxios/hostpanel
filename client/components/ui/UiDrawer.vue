@@ -112,7 +112,7 @@ const panelClasses = computed(() => [
   'absolute inset-y-0 flex w-full flex-col overflow-hidden bg-ui-surface shadow-2xl',
   SIZE_CLASSES[props.size as UiPanelSize],
   props.side === UiDrawerSide.Left ? 'left-0 border-r' : 'right-0 border-l',
-  'border-gray-200 dark:border-white/10',
+  'border-gray-200 dark:border-white/15',
 ].join(' '))
 
 /** Closes the drawer and tells the parent. */

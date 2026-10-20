@@ -74,6 +74,8 @@ export interface PortalProduct {
   status?: string
   /** FK to the server group used for provisioning. */
   serverGroupId?: number | null
+  /** Display order, ascending, when the API supplies one; plans fall back to price order without it. */
+  sortOrder?: number | null
   /** The product's price in the caller's own currency; null when it carries no price at all. */
   pricing?: PortalProductPricing | null
   /** The product's price in every currency it is sold in — what the admin pricing grid edits. */

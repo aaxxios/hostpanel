@@ -13,7 +13,7 @@
   >
     <UiContainer data-testid="demo-banner-container">
       <UiStack direction="row" align="center" gap="none" wrap class="min-w-0 gap-x-3 gap-y-1">
-        <UiBadge variant="primary" class="shrink-0" data-testid="demo-banner-label">{{ $t('demo.label') }}</UiBadge>
+        <UiBadge variant="info" class="shrink-0" data-testid="demo-banner-label">{{ $t('demo.label') }}</UiBadge>
         <UiText v-if="resetText" as="span" size="sm" tone="inherit" :class="tone.title" data-testid="demo-banner-reset">{{ resetText }}</UiText>
         <UiText as="span" size="sm" tone="inherit" class="min-w-0 break-words" :class="tone.body" data-testid="demo-banner-note">{{ $t('demo.note') }}</UiText>
       </UiStack>

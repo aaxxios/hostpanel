@@ -30,10 +30,10 @@
             <div>
               <div class="flex items-center gap-4 mb-4">
                 <UiAccent v-if="icon && color" :color="color">
-                  <UiAccentTile :icon="`mdi:${icon}`" />
+                  <UiAccentTile :icon="icon" />
                 </UiAccent>
                 <div>
-                  <div class="text-xs text-gray-500 uppercase tracking-widest mb-1">{{ groupName }}</div>
+                  <div class="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1">{{ groupName }}</div>
                   <UiHeading :level="1" class="text-2xl md:text-3xl" data-testid="configure-product-name">{{ productName }}</UiHeading>
                 </div>
               </div>
@@ -88,7 +88,7 @@
               <div class="p-6 space-y-4">
                 <div>
                   <div class="font-semibold text-gray-900 dark:text-white">{{ productName }}</div>
-                  <div class="text-sm text-gray-500 italic">{{ groupName }}</div>
+                  <div class="text-sm text-gray-600 dark:text-gray-400 italic">{{ groupName }}</div>
                 </div>
 
                 <div class="space-y-2 pt-2 border-t border-gray-200 dark:border-white/10">
@@ -110,7 +110,7 @@
                   <div class="flex justify-between">
                     <span class="text-2xl font-bold text-gray-900 dark:text-white" data-testid="configure-total">{{ selectedPrice }}</span>
                   </div>
-                  <div class="text-xs text-gray-500 text-right mt-0.5">{{ $t('configure.totalDueToday') }}</div>
+                  <div class="text-xs text-gray-600 dark:text-gray-400 text-right mt-0.5">{{ $t('configure.totalDueToday') }}</div>
                 </div>
 
                 <UiButton
@@ -165,7 +165,7 @@ interface Props {
   description: string
   /** Feature bullets of the description. */
   features: string[]
-  /** Icon name of the family without the `mdi:` prefix; null when the family is unknown. */
+  /** Full icon name of the family, e.g. `mdi:server`; null when the family is unknown. */
   icon: string | null
   /** Accent colour of the family as a hex string; null when the family is unknown. */
   color: string | null

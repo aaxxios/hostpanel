@@ -24,7 +24,7 @@
   --border-strong:    rgb(255 255 255 / 0.14);
   --text-primary:     #f0f4ff;
   --text-secondary:   #8b90a8;
-  --text-muted:       #4a4f66;
+  --text-muted:       #7a8099;
   --chart-grid:       rgb(255 255 255 / 0.05);
   --chart-tick:       #64748b;
   --chart-1: #0ea5e9;
@@ -48,9 +48,19 @@
   --border-strong:    rgb(15 23 42 / 0.2);
   --text-primary:     #0f172a;
   --text-secondary:   #475069;
-  --text-muted:       #7a8199;
+  --text-muted:       #6b7389;
   --chart-grid:       rgb(15 23 42 / 0.08);
   --chart-tick:       #64748b;
+  /* Status text on a light surface: the dark-theme tints are below AA on white. */
+  --color-status-red:    #dc2626;
+  --color-status-green:  #047857;
+  --color-status-yellow: #b45309;
+  --chart-1: #0284c7;
+  --chart-2: #9333ea;
+  --chart-3: #059669;
+  --chart-4: #d97706;
+  --chart-5: #dc2626;
+  --chart-6: #0369a1;
 }
 
 @theme inline {
@@ -109,7 +119,7 @@
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: linear-gradient(to bottom, #0ea5e9, #8b5cf6);
+    background: linear-gradient(to bottom, var(--color-primary-500), var(--color-secondary-500));
     border-radius: 10px;
   }
   ::selection { background: rgba(14,165,233,0.25); color: var(--text-primary); }

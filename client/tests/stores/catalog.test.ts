@@ -216,7 +216,7 @@ describe('useCatalogStore.planCards', () => {
 
     const cards = store.planCards(id => `/en/configure/${id}`)
 
-    expect(cards[0]).toMatchObject({
+    expect(cards[1]).toMatchObject({
       id: 5,
       name: 'Pro',
       description: 'Fast hosting',
@@ -225,8 +225,33 @@ describe('useCatalogStore.planCards', () => {
       priceAnnual: formatMoney(10, usd),
       href: '/en/configure/5'
     })
-    expect(cards[1]?.isFree).toBe(true)
+    expect(cards[0]?.isFree).toBe(true)
     expect(cards[2]).toMatchObject({ isFree: false, priceMonthly: '—', priceAnnual: '—' })
+  })
+
+  it('orders plans by price, cheapest first, when the API gives no sort order', async () => {
+    api.fetchProducts.mockResolvedValue([
+      { id: 1, name: 'Business', pricing: { monthly: 9.99, annual: 99 } },
+      { id: 2, name: 'Starter', pricing: { monthly: 4.99, annual: 49 } },
+      { id: 3, name: 'Pro', pricing: { monthly: 19.99, annual: 199 } },
+      { id: 4, name: 'Quote', pricing: null }
+    ])
+    const store = useCatalogStore()
+    await store.loadHostingPlans()
+
+    expect(store.planCards(id => `/${id}`).map(card => card.name)).toEqual(['Starter', 'Business', 'Pro', 'Quote'])
+  })
+
+  it('lets an explicit sort order win over price', async () => {
+    api.fetchProducts.mockResolvedValue([
+      { id: 1, name: 'Cheap', sortOrder: 2, pricing: { monthly: 1, annual: 10 } },
+      { id: 2, name: 'Dear', sortOrder: 1, pricing: { monthly: 50, annual: 500 } },
+      { id: 3, name: 'Unordered', pricing: { monthly: 0.5, annual: 5 } }
+    ])
+    const store = useCatalogStore()
+    await store.loadHostingPlans()
+
+    expect(store.planCards(id => `/${id}`).map(card => card.name)).toEqual(['Dear', 'Cheap', 'Unordered'])
   })
 
   it('has no cards before the plans were read', () => {

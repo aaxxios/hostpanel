@@ -13,10 +13,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 internal sealed class DemoLogSeeder
 {
     /// <summary>How many activity log entries are seeded.</summary>
-    internal const int ActivityCount = 48;
+    internal const int ActivityCount = 160;
 
     /// <summary>How many email log entries are seeded.</summary>
-    internal const int EmailCount = 36;
+    internal const int EmailCount = 120;
 
     /// <summary>Every n-th email is a failed send.</summary>
     private const int FailureEvery = 9;

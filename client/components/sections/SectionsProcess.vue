@@ -1,5 +1,5 @@
 <template>
-  <section class="py-20 bg-ui-page relative overflow-hidden" data-testid="sections-process">
+  <section class="py-12 md:py-20 bg-ui-page relative overflow-hidden" data-testid="sections-process">
     <!-- Background -->
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-tr from-primary-500/5 dark:from-secondary-500/5 via-transparent to-primary-500/5" />
@@ -7,8 +7,8 @@
       <UiDecor class="bottom-1/3 left-1/3 w-80 h-80 bg-primary-500/10 rounded-full blur-[140px]" />
       <UiDecor class="top-1/3 left-1/4 w-2 h-2 bg-primary-400/50 dark:bg-secondary-400/50 rounded-full animate-float [animation-delay:0.7s]" />
       <UiDecor class="bottom-1/4 right-1/3 w-3 h-3 bg-primary-400/40 rounded-full animate-float [animation-delay:1.4s]" />
-      <UiDecor class="top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-white/5 to-transparent" />
-      <UiDecor class="top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-white/5 to-transparent" />
+      <UiDecor class="top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-gray-900/5 dark:via-white/5 to-transparent" />
+      <UiDecor class="top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-gray-900/5 dark:via-white/5 to-transparent" />
     </UiDecor>
 
     <UiContainer class="relative z-10">
@@ -23,11 +23,9 @@
         <div
           v-for="(step, index) in processSteps"
           :key="step.id"
-          v-motion
-          :initial="{ opacity: 0, y: 40 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 150, duration: 500 } }"
-          class="relative group"
+          class="relative group animate-reveal-up motion-reduce:animate-none"
           :data-testid="`process-step-${step.id}`"
+          :style="revealStyle(index * 150)"
         >
           <UiCard class="relative h-full group-hover:-translate-y-2 hover:border-primary-500/50 dark:hover:border-secondary-500/50 transition-all duration-300">
             <!-- Hover glow -->
@@ -67,6 +65,8 @@
  * Process section showing the work methodology.
  * The steps (id, icon, order) come from constants/processStep.ts; their text from the locale files.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { ArrowRight } from 'lucide-vue-next'
 import { PROCESS_STEPS } from '~/constants/processStep'
 

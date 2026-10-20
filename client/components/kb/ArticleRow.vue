@@ -7,15 +7,15 @@
     :testid="`kb-article-${article.id}`"
     class="group flex items-start gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/5"
   >
-    <FileText :size="16" :stroke-width="2" class="mt-0.5 flex-shrink-0 text-primary-600 dark:text-primary-400" />
+    <FileText :size="16" :stroke-width="2" class="mt-0.5 flex-shrink-0 text-primary-700 dark:text-primary-400" />
     <UiStack gap="none" class="min-w-0">
       <UiText
         as="span"
         size="sm"
         weight="medium"
-        tone="primary"
+        tone="inherit"
         truncate
-        class="block transition-colors group-hover:text-primary-700 dark:group-hover:text-primary-300"
+        class="block text-primary-700 transition-colors group-hover:text-primary-800 dark:text-primary-400 dark:group-hover:text-primary-300"
         data-testid="kb-article-title"
       >
         {{ article.title }}
@@ -24,7 +24,7 @@
         v-if="article.excerpt"
         as="span"
         size="xs"
-        tone="subtle"
+        tone="muted"
         class="mt-0.5 line-clamp-1 block"
         data-testid="kb-article-excerpt"
       >
@@ -35,7 +35,7 @@
       v-if="article.views"
       as="span"
       size="xs"
-      tone="subtle"
+      tone="muted"
       class="ml-auto flex flex-shrink-0 items-center gap-1"
       data-testid="kb-article-views"
     >

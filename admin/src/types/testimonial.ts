@@ -26,6 +26,8 @@ export interface TestimonialPayload {
   sortOrder: number
   /** Whether the testimonial is shown. */
   isActive: boolean
+  /** The date the testimonial was given (ISO 8601); null falls back to the creation time on the storefront. */
+  publishedAt: string | null
   /** Role and quote per locale, keyed by locale code; a locale left out is removed on update, at least one is required. */
   translations: StorefrontTranslations<TestimonialTranslation>
 }

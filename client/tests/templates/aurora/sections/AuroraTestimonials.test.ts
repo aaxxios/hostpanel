@@ -1,7 +1,8 @@
 /**
  * Unit tests for AuroraTestimonials: the quote on show comes from the storefront store, the
- * previous and next arrows wrap at both ends, the dots jump, and the section hides itself when
- * there are no quotes.
+ * previous and next arrows and the arrow keys wrap at both ends, the dots jump, each card shows
+ * its rating, avatar or initials, role, company and localised date, and the section hides itself
+ * when there are no quotes.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
@@ -34,31 +35,129 @@ const mountSection = async () => {
   return wrapper
 }
 
+/**
+ * Finds the quote card on show (the others are hidden but stay in the DOM).
+ *
+ * @param wrapper The mounted section.
+ * @returns The visible card.
+ */
+const visibleCard = (wrapper: Awaited<ReturnType<typeof mountSection>>) =>
+  wrapper.findAll('[data-testid="testimonial-card"]').find(card => !card.classes().includes('hidden'))!
+
 describe('AuroraTestimonials', () => {
   beforeEach(() => {
     api.fetchTestimonials.mockReset()
     api.fetchTestimonials.mockResolvedValue([
-      testimonialFixture(1, { quote: 'First quote', name: 'Ann', role: 'CEO', company: 'Example Co' }),
-      testimonialFixture(2, { quote: 'Second quote', name: 'Bob', role: null, company: null }),
+      testimonialFixture(1, { quote: 'First quote', name: 'Ann Lee', role: 'CEO', company: 'Example Co', rating: 4, publishedAt: '2026-03-10T00:00:00+00:00' }),
+      testimonialFixture(2, { quote: 'Second quote', name: 'Bob', role: null, company: null, avatarUrl: '/uploads/bob.png', publishedAt: '2026-05-02T00:00:00+00:00' }),
     ])
   })
 
   it('shows the first quote with its author, role and company', async () => {
-    const card = (await mountSection()).find('[data-testid="testimonial-card"]')
+    const card = visibleCard(await mountSection())
 
     expect(card.text()).toContain('First quote')
-    expect(card.text()).toContain('Ann')
+    expect(card.text()).toContain('Ann Lee')
     expect(card.text()).toContain('CEO, Example Co')
+  })
+
+  it('shows the month and year the quote was given, in the active locale', async () => {
+    const wrapper = await mountSection()
+
+    const date = wrapper.find('[data-testid="testimonial-date"]')
+
+    expect(date.text()).toBe('March 2026')
+    expect(date.attributes('datetime')).toBe('2026-03-10T00:00:00+00:00')
+  })
+
+  it('draws the rating as filled and empty stars with an accessible label', async () => {
+    const rating = (await mountSection()).find('[data-testid="testimonial-rating"]')
+
+    expect(rating.attributes('aria-label')).toBe('aurora.testimonials.rating')
+    expect(rating.findAll('svg')).toHaveLength(5)
+    expect(rating.findAll('svg.text-amber-500')).toHaveLength(4)
+  })
+
+  it('shows initials on the brand gradient without an avatar, and the picture with one', async () => {
+    const wrapper = await mountSection()
+    const cards = wrapper.findAll('[data-testid="testimonial-card"]')
+
+    expect(cards[0]!.find('[data-testid="testimonial-initials"]').text()).toBe('AL')
+    expect(cards[0]!.find('img').exists()).toBe(false)
+    expect(cards[1]!.find('img').attributes('src')).toBe('/uploads/bob.png')
+    expect(cards[1]!.find('[data-testid="testimonial-initials"]').exists()).toBe(false)
+  })
+
+  it('draws no decorative quote glyph', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('[data-testid="testimonial-quote-mark"]').exists()).toBe(false)
+  })
+
+  it('keeps cards at their column width, centred, instead of stretching them', async () => {
+    const card = visibleCard(await mountSection())
+
+    expect(card.classes()).toContain('max-w-md')
+    expect(card.classes()).toContain('sm:w-[calc((100%-1.25rem)/2)]')
+    expect(card.classes()).toContain('lg:w-[calc((100%-2.5rem)/3)]')
+    expect(card.element.parentElement!.className).toContain('justify-center')
+  })
+
+  it('hides the arrows and dots where all quotes fit, and shows them when there are more than three', async () => {
+    const two = await mountSection()
+    expect(two.find('[data-testid="testimonials-arrows"]').classes()).toContain('sm:hidden')
+
+    api.fetchTestimonials.mockResolvedValue([1, 2, 3, 4].map(id => testimonialFixture(id, { quote: `Q${id}` })))
+    const four = await mountSection()
+    expect(four.find('[data-testid="testimonials-arrows"]').classes()).not.toContain('sm:hidden')
+    expect(four.find('[data-testid="testimonials-arrows"]').classes()).not.toContain('lg:hidden')
+  })
+
+  it('has no controls for a single quote', async () => {
+    api.fetchTestimonials.mockResolvedValue([testimonialFixture(1, { quote: 'Only' })])
+
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('[data-testid="testimonials-arrows"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="testimonials-dots"]').exists()).toBe(false)
+  })
+
+  it('renders every quote in the window, wrapping past the last one', async () => {
+    const wrapper = await mountSection()
+
+    await wrapper.find('[data-testid="testimonials-next"]').trigger('click')
+
+    const texts = wrapper.findAll('[data-testid="testimonial-card"]').map(card => card.text())
+    expect(texts[0]).toContain('Second quote')
+    expect(texts[1]).toContain('First quote')
+  })
+
+  it('moves with the left and right arrow keys', async () => {
+    const wrapper = await mountSection()
+    const track = wrapper.find('[data-testid="testimonials-track"]')
+
+    await track.trigger('keydown', { key: 'ArrowRight' })
+    expect(wrapper.find('[data-testid="testimonial-card"]').text()).toContain('Second quote')
+
+    await track.trigger('keydown', { key: 'ArrowLeft' })
+    expect(wrapper.find('[data-testid="testimonial-card"]').text()).toContain('First quote')
+  })
+
+  it('marks the dot of the leading quote as current', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('[data-testid="testimonials-dot-0"]').attributes('aria-current')).toBe('true')
+    expect(wrapper.find('[data-testid="testimonials-dot-1"]').attributes('aria-current')).toBeUndefined()
   })
 
   it('advances with next and wraps back to the first quote', async () => {
     const wrapper = await mountSection()
 
     await wrapper.find('[data-testid="testimonials-next"]').trigger('click')
-    expect(wrapper.find('[data-testid="testimonial-card"]').text()).toContain('Second quote')
+    expect(visibleCard(wrapper).text()).toContain('Second quote')
 
     await wrapper.find('[data-testid="testimonials-next"]').trigger('click')
-    expect(wrapper.find('[data-testid="testimonial-card"]').text()).toContain('First quote')
+    expect(visibleCard(wrapper).text()).toContain('First quote')
   })
 
   it('wraps from the first quote to the last with previous', async () => {
@@ -66,7 +165,7 @@ describe('AuroraTestimonials', () => {
 
     await wrapper.find('[data-testid="testimonials-prev"]').trigger('click')
 
-    expect(wrapper.find('[data-testid="testimonial-card"]').text()).toContain('Second quote')
+    expect(visibleCard(wrapper).text()).toContain('Second quote')
   })
 
   it('jumps to a quote from its dot', async () => {
@@ -74,7 +173,7 @@ describe('AuroraTestimonials', () => {
 
     await wrapper.find('[data-testid="testimonials-dot-1"]').trigger('click')
 
-    expect(wrapper.find('[data-testid="testimonial-card"]').text()).toContain('Second quote')
+    expect(visibleCard(wrapper).text()).toContain('Second quote')
   })
 
   it('renders nothing, arrows included, when there are no quotes', async () => {

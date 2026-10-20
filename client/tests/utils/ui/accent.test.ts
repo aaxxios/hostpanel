@@ -9,6 +9,7 @@ import {
   ACCENT_TILE_CLASSES,
   UiAccentAppearance,
   UiAccentTileSize,
+  accentInk,
   isAccentColor,
 } from '~/utils/ui/accent'
 
@@ -39,5 +40,25 @@ describe('accent class maps', () => {
     for (const value of Object.values(ACCENT_CLASSES)) {
       expect(value).toContain('var(--accent)')
     }
+  })
+})
+
+describe('accentInk', () => {
+  it('puts white on a dark accent and near-black on a pale one', () => {
+    expect(accentInk('#0369a1')).toBe('white')
+    expect(accentInk('#fde047')).toBe('#08090f')
+    expect(accentInk('#fff')).toBe('#08090f')
+  })
+})
+
+describe('accent text contrast', () => {
+  it('darkens the accent text on a light page and lightens it on a dark one', () => {
+    expect(ACCENT_CLASSES.text).toContain('_65%,black')
+    expect(ACCENT_CLASSES.text).toContain('dark:text-[color:color-mix(in_srgb,var(--accent)_75%,white)]')
+  })
+
+  it('reads the ink colour on a solid accent button, never a fixed white', () => {
+    expect(ACCENT_BUTTON_CLASSES[UiAccentAppearance.Solid]).toContain('var(--accent-ink')
+    expect(ACCENT_BUTTON_CLASSES[UiAccentAppearance.Solid]).not.toContain('text-white')
   })
 })

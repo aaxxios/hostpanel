@@ -128,7 +128,7 @@ internal sealed class DemoContentSeeder
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Seeds download categories (one nested, one hidden) and nine downloads with download counts.</summary>
+    /// <summary>Seeds download categories (one nested, one hidden) and twenty-one downloads with download counts.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
     private async Task SeedDownloadsAsync(CancellationToken ct)
@@ -155,6 +155,18 @@ internal sealed class DemoContentSeeder
             ("Mail client setup pack", "Account settings for desktop and mobile mail programs.", "ZIP File", "mail-setup-pack.zip", mail.Id, false, false, 167),
             ("Command line toolkit", "Scripts for backups and log rotation on your server.", "ZIP File", "cli-toolkit.zip", software.Id, true, false, 38),
             ("Service level agreement", "The uptime and support commitments in full.", "PDF Document", "service-level-agreement.pdf", guides.Id, false, false, 245),
+            ("Email deliverability guide", "How SPF, DKIM and DMARC keep your mail out of spam folders.", "PDF Document", "deliverability-guide.pdf", guides.Id, false, false, 142),
+            ("Domain transfer checklist", "Everything to prepare before moving a domain to us.", "PDF Document", "domain-transfer-checklist.pdf", guides.Id, false, false, 97),
+            ("Backup and restore handbook", "Taking, keeping and restoring backups of sites and databases.", "PDF Document", "backup-handbook.pdf", guides.Id, true, false, 64),
+            ("Reseller quick start", "Setting up packages and branding for your own clients.", "PDF Document", "reseller-quick-start.pdf", guides.Id, true, false, 29),
+            ("SSL installation guide", "Installing and renewing certificates on every plan.", "PDF Document", "ssl-installation.pdf", guides.Id, false, false, 118),
+            ("Mobile mail profiles", "Ready-made profiles for phones and tablets.", "ZIP File", "mobile-mail-profiles.zip", mail.Id, false, false, 83),
+            ("Desktop mail settings", "Server settings for desktop mail programs.", "ZIP File", "desktop-mail-settings.zip", mail.Id, false, false, 71),
+            ("Server monitoring agent", "A small agent that reports load and disk use from your VPS.", "ZIP File", "monitoring-agent.zip", software.Id, true, false, 46),
+            ("Database export scripts", "Scripts that export and compress your databases on a schedule.", "ZIP File", "db-export-scripts.zip", software.Id, true, false, 33),
+            ("Brand assets for resellers", "Neutral logos and banners resellers may use.", "ZIP File", "reseller-assets.zip", software.Id, true, false, 18),
+            ("Acceptable use policy", "What may and may not be hosted on our services.", "PDF Document", "acceptable-use-policy.pdf", guides.Id, false, false, 156),
+            ("Privacy notice", "How customer data is stored and processed.", "PDF Document", "privacy-notice.pdf", guides.Id, false, false, 132),
             ("Staff onboarding notes", "Internal notes, not shown to customers.", "PDF Document", "staff-onboarding.pdf", internalDocs.Id, true, true, 4),
         ];
 

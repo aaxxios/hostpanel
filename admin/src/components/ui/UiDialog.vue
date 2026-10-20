@@ -108,7 +108,7 @@ const onBackdrop = (): void => {
   <Teleport to="body">
     <div
       v-if="open"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
       @click.self="onBackdrop"
     >
       <div
@@ -117,7 +117,7 @@ const onBackdrop = (): void => {
         aria-modal="true"
         :aria-labelledby="title ? titleId : undefined"
         tabindex="-1"
-        class="bg-surface-card border border-border rounded-xl shadow-2xl w-full max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col outline-none"
+        class="bg-surface-card border border-border-strong rounded-xl shadow-2xl w-full max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col outline-none"
         :class="sizeClasses[size]"
         @keydown="onKeydown"
       >
@@ -151,7 +151,7 @@ const onBackdrop = (): void => {
             variant="plain"
             :disabled="loading"
             data-testid="dialog-confirm"
-            class="px-4 py-2 text-[0.82rem] font-medium rounded-lg transition disabled:opacity-50"
+            class="px-4 py-2 text-[0.82rem] font-medium rounded-lg transition cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60 disabled:opacity-50 disabled:cursor-not-allowed"
             :class="confirmClasses"
             @click="emit('confirm')"
           >

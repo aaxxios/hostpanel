@@ -41,7 +41,7 @@ describe('FaqCategoryNav', () => {
 
     const active = wrapper.find('[data-testid="faq-category-products"]').classes()
     const other = wrapper.find('[data-testid="faq-category-general"]').classes()
-    expect(active).toContain('bg-primary-600')
-    expect(other).not.toContain('bg-primary-600')
+    expect(active).toContain('bg-primary-700')
+    expect(other).not.toContain('bg-primary-700')
   })
 })

@@ -19,20 +19,20 @@ describe('UiWidgetFrame', () => {
     const wrapper = mountWithKit(UiWidgetFrame)
 
     expect(wrapper.classes()).toContain('border-gray-300')
-    expect(wrapper.classes()).not.toContain('border-cyan-500/30')
-    expect(wrapper.classes()).not.toContain('border-red-500/50')
+    expect(wrapper.classes()).not.toContain('border-cyan-600/50')
+    expect(wrapper.classes()).not.toContain('border-red-500')
   })
 
   it('shows the ready colour once the widget has drawn', () => {
     const wrapper = mountWithKit(UiWidgetFrame, { props: { ready: true } })
 
-    expect(wrapper.classes()).toContain('border-cyan-500/30')
+    expect(wrapper.classes()).toContain('border-cyan-600/50')
   })
 
   it('shows the error colour, which outranks ready', () => {
     const wrapper = mountWithKit(UiWidgetFrame, { props: { ready: true, invalid: true } })
 
-    expect(wrapper.classes()).toContain('border-red-500/50')
-    expect(wrapper.classes()).not.toContain('border-cyan-500/30')
+    expect(wrapper.classes()).toContain('border-red-500')
+    expect(wrapper.classes()).not.toContain('border-cyan-600/50')
   })
 })

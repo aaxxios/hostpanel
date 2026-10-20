@@ -31,8 +31,7 @@
  * A real radio group: `role="radiogroup"` with `role="radio"` segments, one tab stop (the chosen
  * segment) and arrow / Home / End keys that move the choice. The track and the segments share
  * the pill radius, every segment is the same width, the chosen one carries the brand gradient
- * with the brand's contrast text (`text-on-tint`: white on the saturated light gradient, near-black on the
- * light-tinted dark one), and the focus ring is drawn inside the pill. The control
+ * with the brand's contrast text (`text-on-brand`: white on the saturated gradient in both colour modes), and the focus ring is drawn inside the pill. The control
  * owns its whole look, so a screen never passes override classes to a button.
  */
 import type { ComponentPublicInstance } from 'vue'
@@ -81,7 +80,7 @@ const SEGMENT_SIZE_CLASSES: Record<UiSize, string> = {
 }
 
 /** The chosen segment: brand gradient with its contrast text; the ring takes the same colour so it reads on the gradient. */
-const SEGMENT_ACTIVE = 'bg-brand text-on-tint shadow-md focus-visible:ring-on-tint/80'
+const SEGMENT_ACTIVE = 'bg-brand text-on-brand shadow-md focus-visible:ring-on-brand/80'
 
 /** An available segment: readable token text that brightens on hover; its ring uses the brand. */
 const SEGMENT_IDLE = 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white focus-visible:ring-primary-500'

@@ -20,7 +20,7 @@
     <!-- Demo mode: the published customer account, one click from filled in -->
     <UiAlert v-if="demoAccount && !isSso" variant="info" class="mb-4" data-testid="login-demo">
       <UiStack gap="sm">
-        <UiText as="span" size="sm" data-testid="login-demo-hint">
+        <UiText as="span" size="sm" tone="inherit" data-testid="login-demo-hint">
           {{ $t('client.login.demoAccountHint', { email: demoAccount.email }) }}
         </UiText>
         <UiButton variant="outline" size="sm" data-testid="login-demo-use" @click="fillDemoAccount">
@@ -38,10 +38,10 @@
     >
       <UiAlert variant="info" data-testid="login-2fa-hint">
         <UiStack gap="sm">
-          <UiText as="span" size="sm" class="font-medium">
+          <UiText as="span" size="sm" tone="inherit" class="font-medium">
             {{ $t('client.login.twoFactorRequired') }}
           </UiText>
-          <UiText as="span" size="sm">
+          <UiText as="span" size="sm" tone="inherit">
             {{ $t('client.login.twoFactorPrompt') }}
           </UiText>
         </UiStack>
