@@ -30,7 +30,7 @@ describe('new ticket page', () => {
   it('defaults the priority to medium', async () => {
     const wrapper = await mountPage(NewTicketPage)
 
-    expect(wrapper.find('[data-testid="ticket-priority-Medium"]').classes()).toContain('bg-primary-600')
+    expect(wrapper.find('[data-testid="ticket-priority-Medium"]').classes()).toContain('bg-primary-700')
   })
 
   it('sends the typed ticket with the chosen priority and shows the confirmation', async () => {

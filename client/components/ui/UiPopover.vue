@@ -49,7 +49,7 @@ const rootEl = ref<HTMLElement | null>(null)
 
 /** Class list of the panel: the surface, plus the screen's placement. */
 const panelClasses = computed(() => [
-  'z-40 flex flex-col rounded-2xl border border-gray-200 bg-ui-popover p-2.5 shadow-2xl dark:border-white/10',
+  'z-40 flex flex-col rounded-2xl border border-gray-200 bg-ui-popover p-2.5 shadow-2xl dark:border-white/15',
   props.panelClass,
 ].filter(Boolean).join(' '))
 

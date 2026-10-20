@@ -7,7 +7,7 @@
       </UiDecor>
 
       <UiContainer class="relative z-10 text-center">
-        <UiAccentTile :icon="`mdi:${icon}`" size="xl" class="mx-auto mb-6" />
+        <UiAccentTile :icon="icon" size="xl" class="mx-auto mb-6" />
 
         <span :class="[accent.borderSoft, accent.tint, 'inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full border backdrop-blur-sm']">
           <Zap :size="14" :stroke-width="2" :class="accent.text" />
@@ -51,7 +51,7 @@ import { ACCENT_CLASSES } from '~/utils/ui/accent'
 interface Props {
   /** Display name of the product. */
   name: string
-  /** Icon name of the product, without the `mdi:` prefix. */
+  /** Full icon name of the product, e.g. `mdi:server`. */
   icon: string
   /** Accent colour of the product, as a hex string. */
   color: string

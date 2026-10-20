@@ -4,7 +4,7 @@
       <UiText
         v-if="meta"
         size="sm"
-        tone="subtle"
+        tone="muted"
         class="mt-4"
         data-testid="legal-last-updated"
       >
@@ -17,16 +17,15 @@
         <UiStack
           v-for="(section, index) in sections"
           :key="section.id"
-          v-motion
           gap="md"
-          :initial="{ opacity: 0, y: 30 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 500 } }"
           :data-testid="`legal-section-${section.id}`"
+          class="animate-reveal-up motion-reduce:animate-none"
+          :style="revealStyle(index * 100)"
         >
           <UiStack direction="row" align="center" gap="md">
             <UiTile
               size="xl"
-              class="border border-primary-500/20 bg-primary-500/10 text-primary-600 dark:text-primary-400"
+              class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300"
               data-testid="legal-section-marker"
             >
               <Icon v-if="section.icon" :name="section.icon" size="22" />
@@ -96,11 +95,10 @@
 
         <UiCard
           v-if="contactTitle"
-          v-motion
           padding="xl"
-          :initial="{ opacity: 0, y: 30 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: 200, duration: 500 } }"
           data-testid="legal-contact"
+          class="animate-reveal-up motion-reduce:animate-none"
+          :style="revealStyle(200)"
         >
           <UiHeading :level="3" size="section" class="mb-4">
             {{ contactTitle }}
@@ -133,6 +131,8 @@
  * The page owns its copy and SEO; this component only lays the text out, so the five documents
  * can not drift apart in how they look.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import type { Component } from 'vue'
 import { ArrowRight, CheckCircle } from 'lucide-vue-next'
 import type { LegalSection } from '~/types/legalsection'

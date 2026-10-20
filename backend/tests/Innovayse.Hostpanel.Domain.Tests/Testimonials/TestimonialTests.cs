@@ -8,7 +8,7 @@ public sealed class TestimonialTests
 {
     /// <summary>Builds a testimonial with the sample first-state values.</summary>
     /// <returns>A new, active testimonial.</returns>
-    private static Testimonial NewEntity() => Testimonial.Create(name: "Ann", company: "Acme", avatarUrl: "/a.png", rating: 4, sortOrder: 2, isActive: true);
+    private static Testimonial NewEntity() => Testimonial.Create(name: "Ann", company: "Acme", avatarUrl: "/a.png", rating: 4, sortOrder: 2, isActive: true, publishedAt: null);
 
     /// <summary>Create stores every field, starts with no translations and stamps the creation time.</summary>
     [Fact]
@@ -35,7 +35,7 @@ public sealed class TestimonialTests
         var entity = NewEntity();
         var created = entity.CreatedAt;
 
-        entity.Update(name: "Bob", company: null, avatarUrl: null, rating: 5, sortOrder: 7, isActive: false);
+        entity.Update(name: "Bob", company: null, avatarUrl: null, rating: 5, sortOrder: 7, isActive: false, publishedAt: null);
 
         Assert.Equal("Bob", entity.Name);
         Assert.Null(entity.Company);
@@ -44,6 +44,31 @@ public sealed class TestimonialTests
         Assert.Equal(7, entity.SortOrder);
         Assert.False(entity.IsActive);
         Assert.Equal(created, entity.CreatedAt);
+    }
+
+    /// <summary>Create stores the admin-set date, and Update replaces it.</summary>
+    [Fact]
+    public void CreateThenUpdate_StoresAndReplacesPublishedAt()
+    {
+        var first = new DateTimeOffset(2026, 3, 10, 0, 0, 0, TimeSpan.Zero);
+        var second = new DateTimeOffset(2026, 5, 2, 0, 0, 0, TimeSpan.Zero);
+        var entity = Testimonial.Create("Ann", null, null, 4, 0, true, first);
+        Assert.Equal(first, entity.PublishedAt);
+
+        entity.Update("Ann", null, null, 4, 0, true, second);
+
+        Assert.Equal(second, entity.PublishedAt);
+        Assert.Equal(second, entity.GetDisplayDate());
+    }
+
+    /// <summary>GetDisplayDate falls back to the creation time when no date was set.</summary>
+    [Fact]
+    public void GetDisplayDate_WithoutPublishedAt_FallsBackToCreatedAt()
+    {
+        var entity = NewEntity();
+
+        Assert.Null(entity.PublishedAt);
+        Assert.Equal(entity.CreatedAt, entity.GetDisplayDate());
     }
 
     /// <summary>Deactivate hides the testimonial and Activate shows it again.</summary>
@@ -104,7 +129,7 @@ public sealed class TestimonialTests
     [Fact]
     public void Create_NegativeSortOrder_Throws()
     {
-        var ex = Assert.Throws<DomainRuleException>(() => Testimonial.Create("Ann", null, null, 3, -1, true));
+        var ex = Assert.Throws<DomainRuleException>(() => Testimonial.Create("Ann", null, null, 3, -1, true, null));
 
         Assert.Equal(TestimonialErrors.SortOrderNegative, ex.Code);
     }
@@ -115,7 +140,7 @@ public sealed class TestimonialTests
     {
         var entity = NewEntity();
 
-        var ex = Assert.Throws<DomainRuleException>(() => entity.Update("Ann", null, null, 3, -1, true));
+        var ex = Assert.Throws<DomainRuleException>(() => entity.Update("Ann", null, null, 3, -1, true, null));
 
         Assert.Equal(TestimonialErrors.SortOrderNegative, ex.Code);
         Assert.Equal(2, entity.SortOrder);
@@ -151,7 +176,7 @@ public sealed class TestimonialTests
     [InlineData("  ")]
     public void Create_BlankName_Throws(string name)
     {
-        var ex = Assert.Throws<DomainRuleException>(() => Testimonial.Create(name, null, null, 3, 0, true));
+        var ex = Assert.Throws<DomainRuleException>(() => Testimonial.Create(name, null, null, 3, 0, true, null));
 
         Assert.Equal(TestimonialErrors.NameRequired, ex.Code);
     }
@@ -162,7 +187,7 @@ public sealed class TestimonialTests
     {
         var entity = NewEntity();
 
-        var ex = Assert.Throws<DomainRuleException>(() => entity.Update("", null, null, 4, 2, true));
+        var ex = Assert.Throws<DomainRuleException>(() => entity.Update("", null, null, 4, 2, true, null));
 
         Assert.Equal(TestimonialErrors.NameRequired, ex.Code);
         Assert.Equal("Ann", entity.Name);
@@ -181,11 +206,11 @@ public sealed class TestimonialTests
     {
         if (allowed)
         {
-            Assert.Equal(rating, Testimonial.Create("Ann", null, null, rating, 0, true).Rating);
+            Assert.Equal(rating, Testimonial.Create("Ann", null, null, rating, 0, true, null).Rating);
             return;
         }
 
-        var ex = Assert.Throws<DomainRuleException>(() => Testimonial.Create("Ann", null, null, rating, 0, true));
+        var ex = Assert.Throws<DomainRuleException>(() => Testimonial.Create("Ann", null, null, rating, 0, true, null));
 
         Assert.Equal(TestimonialErrors.RatingOutOfRange, ex.Code);
     }
@@ -196,7 +221,7 @@ public sealed class TestimonialTests
     {
         var entity = NewEntity();
 
-        var ex = Assert.Throws<DomainRuleException>(() => entity.Update("Ann", null, null, 6, 2, true));
+        var ex = Assert.Throws<DomainRuleException>(() => entity.Update("Ann", null, null, 6, 2, true, null));
 
         Assert.Equal(TestimonialErrors.RatingOutOfRange, ex.Code);
         Assert.Equal(4, entity.Rating);

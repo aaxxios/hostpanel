@@ -18,6 +18,7 @@ using Innovayse.Hostpanel.Domain.Ssl;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Infrastructure.Auth;
+using Innovayse.Hostpanel.Infrastructure.Demo;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -79,6 +80,10 @@ public sealed class DevDataSeeder
         // Seeded rows are fixtures, not business events: no welcome mails, and the seed runs before
         // the message bus has started.
         using var suppression = _eventGate.Suppress();
+
+        // The storefront content (testimonials, partners, projects, FAQs) is the same fictional set the demo
+        // ships, filled into whichever of those tables are still empty; one source, so the two never drift.
+        await new DemoStorefrontSeeder(_db).SeedContentAsync(ct);
 
         // ── Admin user ───────────────────────────────────────────────────────
         const string adminEmail = "admin@example.test";
@@ -168,24 +173,24 @@ public sealed class DevDataSeeder
         {
             ("owner@example.test",     "Owner",     "One",     "Owner Enterprises",    "+1-555-0101", "123 Main St",        "New York",      "NY",  "10001",    "US", ClientStatus.Active),
             ("owner2@example.test",    "Owner",     "Two",     "Owner & Co",           "+1-555-0102", "456 Oak Ave",        "San Francisco", "CA",  "94102",    "US", ClientStatus.Active),
-            ("owner3@example.test",    "Owner",     "Three",   "DigiTech Solutions",   "+1-555-0141", "1 Example St",  "Sampletown",       null,  "0001",     "AM", ClientStatus.Active),
-            ("customer@example.test",  "Customer",  "One",     null,                   "+1-555-0142", "2 Example St",  "Sampletown",        null,  "28013",    "ES", ClientStatus.Active),
-            ("customer2@example.test", "Customer",  "Two",     "Customer Web Solutions", "+1-555-0143", "3 Example St", "Sampletown",     null,  "SW1A 2AA", "GB", ClientStatus.Active),
+            ("owner3@example.test",    "Owner",     "Three",   "DigiTech Solutions",   "+1-555-0141", "1 Harbour St",  "Fairhaven",       null,  "0001",     "AM", ClientStatus.Active),
+            ("customer@example.test",  "Customer",  "One",     null,                   "+1-555-0142", "2 Harbour St",  "Fairhaven",        null,  "28013",    "ES", ClientStatus.Active),
+            ("customer2@example.test", "Customer",  "Two",     "Customer Web Solutions", "+1-555-0143", "3 Harbour St", "Fairhaven",     null,  "SW1A 2AA", "GB", ClientStatus.Active),
             ("customer3@example.test", "Customer",  "Three",   null,                   "+1-555-0106", "789 Pine Ln",        "Chicago",       "IL",  "60601",    "US", ClientStatus.Suspended),
             ("customer4@example.test", "Customer",  "Four",    "Customer Hosting",     "+1-555-0107", "321 Elm St",         "Austin",        "TX",  "73301",    "US", ClientStatus.Active),
-            ("customer5@example.test", "Customer",  "Five",    "Customer Digital",     "+1-555-0144", "4 Example St",  "Sampletown",         null,  "06000",    "KR", ClientStatus.Active),
-            ("developer@example.test", "Developer", "One",     null,                   "+1-555-0145", "5 Example St", "Sampletown",     null,  "75001",    "FR", ClientStatus.Inactive),
-            ("developer2@example.test","Developer", "Two",     "Dev Media",            "+1-555-0146", "6 Example St",   "Sampletown",        "NSW", "2000",     "AU", ClientStatus.Active),
+            ("customer5@example.test", "Customer",  "Five",    "Customer Digital",     "+1-555-0144", "4 Harbour St",  "Fairhaven",         null,  "06000",    "KR", ClientStatus.Active),
+            ("developer@example.test", "Developer", "One",     null,                   "+1-555-0145", "5 Harbour St", "Fairhaven",     null,  "75001",    "FR", ClientStatus.Inactive),
+            ("developer2@example.test","Developer", "Two",     "Dev Media",            "+1-555-0146", "6 Harbour St",   "Fairhaven",        "NSW", "2000",     "AU", ClientStatus.Active),
             ("manager@example.test",   "Manager",   "One",     null,                   null,          null,                 null,            null,  null,       null, ClientStatus.Active),
             ("manager2@example.test",  "Manager",   "Two",     "Manager Corp",         "+1-555-0112", "555 Broadway",       "New York",      "NY",  "10012",    "US", ClientStatus.Active),
-            ("partner@example.test",   "Partner",   "One",     null,                   "+1-555-0147", "7 Example St", "Sampletown",   null,  "10117",    "DE", ClientStatus.Active),
+            ("partner@example.test",   "Partner",   "One",     null,                   "+1-555-0147", "7 Harbour St", "Fairhaven",   null,  "10117",    "DE", ClientStatus.Active),
             ("reseller@example.test",  "Reseller",  "One",     "Reseller Cloud Hosting", "+1-555-0114", "900 Cloud Dr",   "Seattle",       "WA",  "98101",    "US", ClientStatus.Closed),
             ("reseller2@example.test", "Reseller",  "Two",     null,                   "+1-555-0115", "77 Sunset Blvd",     "Los Angeles",   "CA",  "90028",    "US", ClientStatus.Active),
-            ("customer6@example.test", "Customer",  "Six",     "Six Tech Ltd",         "+1-555-0148", "8 Example St",     "Sampletown",       "ON",  "M5J 2J3",  "CA", ClientStatus.Active),
-            ("customer7@example.test", "Customer",  "Seven",   null,                   "+1-555-0149", "9 Example St", "Sampletown", null, "01310-100", "BR", ClientStatus.Active),
-            ("developer3@example.test","Developer", "Three",   "Dev Studio AM",        "+1-555-0150", "10 Example St", "Sampletown",       null,  "0019",     "AM", ClientStatus.Active),
-            ("partner2@example.test",  "Partner",   "Two",     "Partner Solutions",    "+1-555-0151", "11 Example St", "Sampletown",      null,  "00000",    "AE", ClientStatus.Active),
-            ("reseller3@example.test", "Reseller",  "Three",   "Reseller Networks",    "+1-555-0152", "12 Example St",  "Sampletown",     null,  "048616",   "SG", ClientStatus.Suspended),
+            ("customer6@example.test", "Customer",  "Six",     "Six Tech Ltd",         "+1-555-0148", "8 Harbour St",     "Fairhaven",       "ON",  "M5J 2J3",  "CA", ClientStatus.Active),
+            ("customer7@example.test", "Customer",  "Seven",   null,                   "+1-555-0149", "9 Harbour St", "Fairhaven", null, "01310-100", "BR", ClientStatus.Active),
+            ("developer3@example.test","Developer", "Three",   "Dev Studio AM",        "+1-555-0150", "10 Harbour St", "Fairhaven",       null,  "0019",     "AM", ClientStatus.Active),
+            ("partner2@example.test",  "Partner",   "Two",     "Partner Solutions",    "+1-555-0151", "11 Harbour St", "Fairhaven",      null,  "00000",    "AE", ClientStatus.Active),
+            ("reseller3@example.test", "Reseller",  "Three",   "Reseller Networks",    "+1-555-0152", "12 Harbour St",  "Fairhaven",     null,  "048616",   "SG", ClientStatus.Suspended),
         };
 
         if (!await _db.Clients.AnyAsync(ct))
@@ -402,7 +407,7 @@ public sealed class DevDataSeeder
                 ("VPS Servers",       ProductType.Vps,           new[] { ("VPS Basic", 29.99m, 299.99m), ("VPS Pro", 59.99m, 599.99m), ("VPS Enterprise", 99.99m, 999.99m) }),
                 ("Dedicated Servers", ProductType.Dedicated,     new[] { ("Dedicated Starter", 89.99m, 899.99m), ("Dedicated Pro", 149.99m, 1499.99m) }),
                 ("SSL Certificates",  ProductType.Ssl,           new[] { ("SSL Basic", 9.99m, 89.99m), ("SSL Wildcard", 29.99m, 279.99m) }),
-                ("Email Hosting",     ProductType.Other,         new[] { ("Email Basic", 2.99m, 29.99m), ("Email Pro", 7.99m, 79.99m) }),
+                ("Email Hosting",     ProductType.Email,         new[] { ("Email Basic", 2.99m, 29.99m), ("Email Pro", 7.99m, 79.99m) }),
                 ("Domains",           ProductType.Domain,        new[] { ("Domain Registration", 0m, 0m) }),
             };
 
@@ -878,7 +883,7 @@ public sealed class DevDataSeeder
             ("company.name",              "HostPanel",                       "Company display name"),
             ("company.email",             "hello@example.test",             "Primary contact email"),
             ("company.phone",             "+1-555-0100",                "Primary support phone number"),
-            ("company.address",           "1 Sample Street, Sampletown", "Company mailing address"),
+            ("company.address",           "1 Market Street, Fairhaven", "Company mailing address"),
             ("company.logo",              "/images/logo.png",                "Path to company logo"),
             ("billing.currency",          "USD",                             "Default billing currency"),
             ("billing.tax_rate",          "0",                               "Default tax rate percentage"),
@@ -957,11 +962,11 @@ public sealed class DevDataSeeder
                 "Search and register your perfect domain name with competitive pricing and instant activation.",
                 "[\"Free DNS management\",\"WHOIS privacy protection\",\"Auto-renewal options\"]",
                 "Get Started"),
-            ("example-service", "server", "#8b5cf6", "",
-                "https://demo.example", "/services/example",
-                "Example Service", "A Placeholder Offer",
-                "A neutral example entry for the development slider; replace it with your own offer in the admin panel.",
-                "[\"First example feature\",\"Second example feature\",\"Third example feature\"]",
+            ("cloud-vps", "server", "#8b5cf6", "",
+                null, "/vps",
+                "Cloud VPS", "Full Control, Instant Setup",
+                "Isolated virtual servers with root access and NVMe storage, ready within minutes of your order.",
+                "[\"Root access\",\"NVMe storage\",\"Snapshots included\"]",
                 "Learn More"),
         ];
 

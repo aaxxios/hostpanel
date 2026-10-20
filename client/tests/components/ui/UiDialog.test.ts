@@ -119,6 +119,12 @@ describe('UiDialog', () => {
     expect(panel.classes()).not.toContain('overflow-y-auto')
   })
 
+  it('frames the panel with a border so it stays distinct from the page in dark mode', () => {
+    const panel = open({ title: 'T' }).find('[role="dialog"]')
+
+    expect(panel.classes()).toEqual(expect.arrayContaining(['border', 'dark:border-white/15']))
+  })
+
   it('keeps the page locked until the last of two nested dialogs closes', () => {
     const outer = open({})
     const inner = open({})

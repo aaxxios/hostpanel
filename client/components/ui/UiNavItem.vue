@@ -76,16 +76,16 @@ const tagAttrs = computed(() => {
 
 /** Class list of the entry. */
 const classes = computed(() => {
-  const base = 'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left'
+  const base = 'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500'
   if (props.active) {
-    return `${base} bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium`
+    return `${base} bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 font-medium`
   }
   if (props.disabled) {
-    return `${base} text-gray-300 dark:text-gray-600 cursor-not-allowed`
+    return `${base} text-gray-400 dark:text-gray-500 cursor-not-allowed`
   }
   if (props.tone === UiNavTone.Warning) {
-    return `${base} text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 font-medium`
+    return `${base} text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 font-medium`
   }
-  return `${base} text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-60 disabled:cursor-wait`
+  return `${base} text-gray-600 dark:text-gray-300 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white disabled:opacity-60 disabled:cursor-wait`
 })
 </script>

@@ -5,6 +5,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
+import { ref } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { faqFixture } from '~/tests/helpers/storefrontFixtures'
 import AuroraFaq from '~/templates/aurora/sections/AuroraFaq.vue'
@@ -37,6 +38,7 @@ const mountSection = async () => {
 describe('AuroraFaq', () => {
   beforeEach(() => {
     api.fetchFaqs.mockReset()
+    vi.stubGlobal('useContactDetails', () => ({ email: ref(''), phone: ref(''), phoneLink: ref('') }))
     api.fetchFaqs.mockResolvedValue([
       faqFixture(1, { question: 'How fast?', answer: 'Very fast.' }),
       faqFixture(2, { question: 'Is it safe?', answer: 'Yes, safe.' }),
@@ -75,5 +77,28 @@ describe('AuroraFaq', () => {
 
     expect(wrapper.find('#faq').exists()).toBe(false)
     expect(wrapper.find('[data-testid="aurora-faq"]').exists()).toBe(false)
+  })
+
+  it('keeps the intro sticky and links the contact call to action to the contact page', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('[data-testid="faq-aside"]').classes()).toEqual(expect.arrayContaining(['lg:sticky', 'lg:self-start']))
+    expect(wrapper.find('[data-testid="faq-contact"]').attributes('href')).toBe('/contact')
+    expect(wrapper.find('[data-testid="faq-email"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="faq-phone"]').exists()).toBe(false)
+  })
+
+  it('shows the support email and phone when the operator configured them', async () => {
+    vi.stubGlobal('useContactDetails', () => ({
+      email: ref('help@example.com'),
+      phone: ref('+1 555 0100'),
+      phoneLink: ref('+15550100'),
+    }))
+
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('[data-testid="faq-email"]').attributes('href')).toBe('mailto:help@example.com')
+    expect(wrapper.find('[data-testid="faq-phone"]').attributes('href')).toBe('tel:+15550100')
+    expect(wrapper.find('[data-testid="faq-phone"]').text()).toBe('+1 555 0100')
   })
 })

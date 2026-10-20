@@ -3,7 +3,7 @@
     <Search
       :size="14"
       :stroke-width="2"
-      class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none"
+      class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none"
     />
     <input
       :value="modelValue"
@@ -19,7 +19,7 @@
       type="button"
       :aria-label="$t('ui.clearSearch')"
       data-testid="search-input-clear"
-      class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+      :class="clearClasses"
       @click="$emit('update:modelValue', '')"
     >
       <X :size="13" :stroke-width="2" />
@@ -62,9 +62,12 @@ defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
+/** Class list of the clear button: muted icon, one hover step, the kit focus ring. */
+const clearClasses = `absolute right-2.5 top-1/2 -translate-y-1/2 rounded text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors ${FOCUS_RING}`
+
 /** Class list of the input. */
 const inputClasses = computed(() => [
-  'w-full pl-8 pr-7 rounded-lg border bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border-gray-200 dark:border-white/10 focus-visible:border-primary-500/50 transition-all duration-200',
+  'w-full pl-8 pr-7 rounded-lg border bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 focus-visible:border-primary-500 transition-all duration-200',
   FOCUS_RING,
   props.size === UiSize.Md ? 'py-2 text-base' : 'py-1.5 text-sm',
 ].join(' '))

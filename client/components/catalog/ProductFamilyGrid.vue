@@ -6,15 +6,13 @@
         <UiButton
           v-for="(product, index) in products"
           :key="product.id"
-          v-motion
-          :initial="{ opacity: 0, y: 20 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 400 } }"
           variant="subtle"
           size="sm"
-          :icon="`mdi:${product.icon}`"
+          :icon="product.icon"
           :to="hrefFor(product)"
-          class="font-semibold whitespace-nowrap"
+          class="font-semibold whitespace-nowrap animate-reveal-up motion-reduce:animate-none"
           :data-testid="`product-nav-${product.id}`"
+          :style="revealStyle(index * 100)"
         >
           {{ product.name }}
         </UiButton>
@@ -24,12 +22,10 @@
       <UiGrid cols="3" gap="lg" class="md:gap-8">
         <UiAccent v-for="(product, index) in products" :key="product.id" :color="product.color">
           <UiCard
-            v-motion
-            :initial="{ opacity: 0, y: 30 }"
-            :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 500 } }"
             hover
-            class="group relative h-full sm:p-8 hover:-translate-y-2 transition-all duration-300"
+            class="group relative h-full sm:p-7 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-none transition-all duration-300 animate-reveal-up motion-reduce:animate-none"
             :data-testid="`product-card-${product.id}`"
+            :style="revealStyle(index * 100)"
           >
             <NuxtLink :to="hrefFor(product)" class="flex flex-col h-full" :data-testid="`product-link-${product.id}`">
               <!-- Radial glow on hover -->
@@ -37,7 +33,7 @@
 
               <!-- Header -->
               <div class="relative flex items-start gap-4 mb-6">
-                <UiAccentTile :icon="`mdi:${product.icon}`" class="group-hover:scale-110" />
+                <UiAccentTile :icon="product.icon" class="group-hover:scale-110" />
                 <div class="flex-1">
                   <UiHeading :level="3" class="text-xl font-bold group-hover:text-primary-700 dark:group-hover:text-primary-300 transition-colors">
                     {{ product.name }}
@@ -55,12 +51,6 @@
                 <div v-for="(feature, featureIndex) in product.features.slice(0, 3)" :key="featureIndex" class="flex items-center gap-2">
                   <CheckCircle :size="16" :stroke-width="2" :class="accent.text" />
                   <span class="text-xs text-gray-700 dark:text-gray-300 line-clamp-1">{{ feature }}</span>
-                </div>
-              </div>
-              <div v-else class="relative space-y-2 mb-8">
-                <div class="flex items-center gap-2">
-                  <CheckCircle :size="16" :stroke-width="2" :class="accent.text" />
-                  <span class="text-xs text-gray-700 dark:text-gray-300">{{ $t('products.products.badge') }}</span>
                 </div>
               </div>
 
@@ -89,8 +79,10 @@
  *
  * Every family is coloured by its own accent (`UiAccent`), so a card, its icon tile and its
  * check marks share one colour without the page knowing it. A family that has a `learnMoreUrl`
- * links there; one without links to its detail page.
+ * links there; one without links to its detail page. A family with no feature lines shows no list.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { CheckCircle } from 'lucide-vue-next'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'
 import type { ProductFamily } from '~/types/productfamily'

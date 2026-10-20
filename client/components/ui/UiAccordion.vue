@@ -10,7 +10,7 @@
         type="button"
         :aria-expanded="isOpen(index)"
         :data-testid="`ui-accordion-toggle-${index}`"
-        class="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+        class="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
         @click="toggle(index)"
       >
         <span class="font-medium text-gray-900 dark:text-white">
@@ -19,7 +19,7 @@
         <ChevronDown
           :size="20"
           :stroke-width="2"
-          class="text-gray-500 transition-transform duration-200"
+          class="text-gray-500 dark:text-gray-400 transition-transform duration-200"
           :class="{ 'rotate-180': isOpen(index) }"
         />
       </button>

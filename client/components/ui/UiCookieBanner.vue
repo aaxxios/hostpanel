@@ -18,22 +18,21 @@
       ref="bannerRef"
       role="dialog"
       data-testid="cookie-banner"
-      class="fixed bottom-0 left-0 right-0 z-50 p-3 md:p-6 bg-white/95 dark:bg-ui-surface backdrop-blur-xl border-t-2 border-primary-500/30 shadow-2xl"
+      class="fixed bottom-3 left-3 right-3 z-50 p-4 sm:bottom-5 sm:left-auto sm:right-5 sm:w-[400px] rounded-2xl bg-white/95 dark:bg-ui-surface backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-xl"
     >
-      <div class="container-custom">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
+      <div>
+        <div class="flex flex-col items-stretch gap-3">
           <!-- Content -->
           <div class="flex-1 flex items-start gap-4">
-            <div class="hidden md:block p-3 rounded-xl bg-primary-500/10 border border-primary-500/20">
-              <Cookie :size="24" :stroke-width="2" class="text-primary-600 dark:text-primary-400" />
+            <div class="hidden sm:block p-2 rounded-lg bg-primary-500/10">
+              <Cookie :size="18" :stroke-width="2" class="text-primary-600 dark:text-primary-400" />
             </div>
             <div class="flex-1">
-              <h3 class="hidden md:block text-lg font-bold text-gray-900 dark:text-white mb-2">
+              <h3 class="hidden sm:block text-sm font-semibold text-gray-900 dark:text-white mb-1">
                 {{ $t('cookieBanner.title') }}
               </h3>
-              <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 leading-snug md:leading-relaxed">
-                <span class="md:hidden">{{ $t('cookieBanner.descriptionShort') }}</span>
-                <span class="hidden md:inline">{{ $t('cookieBanner.description') }}</span>
+              <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                {{ $t('cookieBanner.descriptionShort') }}
                 <UiLink :to="localePath('/cookie-policy')" testid="cookie-banner-learn-more">
                   {{ $t('cookieBanner.learnMore') }}
                 </UiLink>
@@ -42,11 +41,11 @@
           </div>
 
           <!-- Buttons -->
-          <div class="flex flex-row gap-2 md:gap-3 w-full md:w-auto">
+          <div class="flex flex-row gap-2 w-full">
             <UiButton
               variant="subtle"
               size="sm"
-              class="flex-1 whitespace-nowrap md:flex-none"
+              class="flex-1 whitespace-nowrap"
               data-testid="cookie-banner-essential"
               @click="acceptEssential"
             >
@@ -54,7 +53,7 @@
             </UiButton>
             <UiButton
               size="sm"
-              class="flex-1 whitespace-nowrap md:flex-none"
+              class="flex-1 whitespace-nowrap"
               data-testid="cookie-banner-accept-all"
               @click="acceptAll"
             >
@@ -69,7 +68,8 @@
 
 <script setup lang="ts">
 /**
- * CookieBanner (`UiCookieBanner`) - the consent bar fixed to the bottom of the page.
+ * CookieBanner (`UiCookieBanner`) - the consent card floating in the bottom corner of the page
+ * (full width less a gutter on a phone), small enough that it never sits over the page's content.
  *
  * Mounted by the `default` and `client` layouts only, so auth pages (no layout) never show it.
  * While visible it also renders a spacer so the bar does not cover content.

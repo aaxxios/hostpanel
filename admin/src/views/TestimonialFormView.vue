@@ -10,6 +10,7 @@ import { useI18n } from 'vue-i18n'
 import SettingsSection from '@/components/settings/SettingsSection.vue'
 import StorefrontFormShell from '@/components/storefront/StorefrontFormShell.vue'
 import StorefrontImageField from '@/components/storefront/StorefrontImageField.vue'
+import UiDatePicker from '@/components/ui/UiDatePicker.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -53,6 +54,7 @@ const form = reactive({
   rating: DEFAULT_RATING,
   sortOrder: 0,
   isActive: true,
+  publishedAt: null as string | null,
   translations: blankTranslations(blankQuote),
 })
 
@@ -71,6 +73,8 @@ const populate = (item: Testimonial): void => {
   form.rating = item.rating
   form.sortOrder = item.sortOrder
   form.isActive = item.isActive
+  // The picker works in whole days; the API sends a full ISO instant.
+  form.publishedAt = item.publishedAt ? item.publishedAt.slice(0, 10) : null
   form.translations = formsFromTranslations(item.translations, blankQuote)
 }
 
@@ -86,6 +90,7 @@ const build = (): TestimonialPayload => ({
   rating: form.rating,
   sortOrder: form.sortOrder,
   isActive: form.isActive,
+  publishedAt: form.publishedAt ? `${form.publishedAt}T00:00:00Z` : null,
   translations: collectTranslations(
     form.translations,
     (text) => text.quote.trim() !== '',
@@ -141,6 +146,10 @@ const breadcrumb = computed(() => [
         :upload-error="store.uploadError"
         testid="testimonial-form-avatar"
       />
+
+      <UiField :label="t('storefront.testimonials.publishedAt')" :hint="t('storefront.testimonials.publishedAtHint')" :error="store.fieldErrors.publishedAt">
+        <UiDatePicker v-model="form.publishedAt" :placeholder="t('shared.selectDate')" data-testid="testimonial-form-published-at" />
+      </UiField>
 
       <UiField :label="t('storefront.form.sortOrder')" :error="store.fieldErrors.sortOrder">
         <UiNumberInput v-model="form.sortOrder" :min="0" placeholder="0" data-testid="testimonial-form-sort-order" />

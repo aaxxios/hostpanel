@@ -1,6 +1,8 @@
 <template>
   <!-- The slider sits on photographs under a dark overlay, so it always uses the dark palette. -->
-  <section ref="sectionRef" class="dark products-slider relative h-[75dvh] sm:h-[85dvh] md:h-dvh w-full overflow-hidden" data-testid="products-slider">
+  <!-- No slides configured: the text hero, so the top of the home page is never an empty viewport. -->
+  <SectionsHero v-if="!sliderItems.length" />
+  <section v-else ref="sectionRef" class="dark products-slider relative h-[75dvh] sm:h-[85dvh] md:h-dvh w-full overflow-hidden" data-testid="products-slider">
     <ClientOnly>
       <!-- Before hydration: the first slide, rendered at once so the page is never blank -->
       <template #fallback>
@@ -68,46 +70,34 @@
             <!-- Content -->
             <UiContainer class="relative z-10 flex h-full items-center justify-center">
               <UiGlassPanel
-                v-motion
-                class="max-w-4xl text-center mb-10 sm:mb-0"
-                :initial="{ opacity: 0, scale: 0.9, y: 30 }"
-                :enter="{ opacity: 1, scale: 1, y: 0, transition: { duration: 800, type: 'spring' } }"
+                class="max-w-4xl text-center mb-10 sm:mb-0 animate-reveal-up motion-reduce:animate-none"
               >
                 <UiAccentTile
-                  v-motion
                   :icon="`mdi:${item.icon}`"
                   size="xl"
-                  :initial="{ opacity: 0, scale: 0.5, rotate: -20 }"
-                  :enter="{ opacity: 1, scale: 1, rotate: 0, transition: { delay: 200, duration: 600 } }"
                   :class="[FLOAT_DELAYS[index % FLOAT_DELAYS.length], 'mb-6 sm:mb-8 mx-auto animate-float']"
                 />
 
                 <UiHeading
-                  v-motion
                   :level="2"
-                  :initial="{ opacity: 0, y: 20 }"
-                  :enter="{ opacity: 1, y: 0, transition: { delay: 400, duration: 600 } }"
-                  class="mb-4 sm:mb-6 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-none drop-shadow-lg"
+                  class="mb-4 sm:mb-6 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-none drop-shadow-lg animate-reveal-up motion-reduce:animate-none"
+                  :style="revealStyle(400)"
                 >
                   {{ item.name }}
                 </UiHeading>
 
                 <UiText
-                  v-motion
                   tone="primary"
-                  :initial="{ opacity: 0, y: 15 }"
-                  :enter="{ opacity: 1, y: 0, transition: { delay: 550, duration: 600 } }"
-                  class="mb-4 sm:mb-6 text-lg sm:text-xl md:text-2xl font-semibold tracking-wide uppercase italic ml-2"
+                  class="mb-4 sm:mb-6 text-lg sm:text-xl md:text-2xl font-semibold tracking-wide uppercase italic ml-2 animate-reveal-up motion-reduce:animate-none"
+                  :style="revealStyle(550)"
                 >
                   {{ item.tagline }}
                 </UiText>
 
                 <UiText
-                  v-motion
                   tone="muted"
-                  :initial="{ opacity: 0, y: 15 }"
-                  :enter="{ opacity: 1, y: 0, transition: { delay: 700, duration: 600 } }"
-                  class="mb-6 sm:mb-8 text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed font-light line-clamp-3 md:line-clamp-none px-4"
+                  class="mb-6 sm:mb-8 text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed font-light line-clamp-3 md:line-clamp-none px-4 animate-reveal-up motion-reduce:animate-none"
+                  :style="revealStyle(700)"
                 >
                   {{ item.description }}
                 </UiText>
@@ -117,10 +107,8 @@
                   <span
                     v-for="(feature, featureIndex) in item.features"
                     :key="feature"
-                    v-motion
-                    :initial="{ opacity: 0, x: -10 }"
-                    :enter="{ opacity: 1, x: 0, transition: { delay: 800 + featureIndex * 100 } }"
-                    :class="[accent.tintStrong, accent.borderMedium, 'inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs sm:text-sm font-bold text-white backdrop-blur-md border transition-all hover:scale-110 cursor-default']"
+                    :class="[accent.tintStrong, accent.borderMedium, 'inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs sm:text-sm font-bold text-white backdrop-blur-md border transition-all hover:scale-110 cursor-default', 'animate-reveal-up motion-reduce:animate-none']"
+                    :style="revealStyle(800 + featureIndex * 100)"
                   >
                     <CheckCircle :size="14" :stroke-width="3" :class="accent.text" />
                     {{ feature }}
@@ -129,10 +117,8 @@
 
                 <!-- Calls to action -->
                 <div
-                  v-motion
-                  :initial="{ opacity: 0, y: 20 }"
-                  :enter="{ opacity: 1, y: 0, transition: { delay: 1000, duration: 600 } }"
-                  class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mt-8"
+                  class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mt-8 animate-reveal-up motion-reduce:animate-none"
+                  :style="revealStyle(1000)"
                 >
                   <UiMagnetic :strength="0.2">
                     <UiAccentButton :to="localePath(item.learnMoreUrl)" size="lg" class="w-full sm:w-auto sm:px-10 sm:py-4 font-bold" :data-testid="`slider-cta-${item.id}`">
@@ -191,8 +177,11 @@
  * Fetches the slides from the backend through the catalogue store and shows them in a Swiper
  * carousel with a Ken Burns background, a floating icon and staggered feature badges. Every slide
  * is painted in its own brand colour (`UiAccent`). Before the browser takes over, the first slide
- * is rendered by the server so the page is never blank.
+ * is rendered by the server so the page is never blank. With no slide at all it renders the
+ * text hero (`SectionsHero`) in its place, so the page never opens on an empty, full-height band.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { ArrowRight, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, PlayCircle } from 'lucide-vue-next'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Autoplay, Navigation, Pagination } from 'swiper/modules'

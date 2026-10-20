@@ -57,7 +57,7 @@ await useAsyncData(`trial:${productSlug}`, () => catalogStore.loadFamilies(), {
 })
 
 /** Display name, icon, accent colour and catalogue page of the product. */
-const config = computed(() => (group.value ? familyConfig(group.value) : {
+const config = computed(() => (group.value ? familyConfig(group.value, catalogStore.familyProducts.filter((product) => Number(product.groupId) === group.value?.id)) : {
   name: productSlug,
   icon: FAMILY_ICON,
   color: UNKNOWN_PRODUCT_COLOR,

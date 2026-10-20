@@ -2,8 +2,10 @@
  * Unit tests for UiDateTimePicker: the library is replaced by a stub that exposes the props the
  * kit passes and lets the test report a value.
  */
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { useThemeStore } from '@/stores/theme'
 import UiDateTimePicker from '@/components/ui/UiDateTimePicker.vue'
 
 vi.mock('@vuepic/vue-datepicker', async () => {
@@ -23,12 +25,27 @@ vi.mock('@vuepic/vue-datepicker', async () => {
 })
 
 describe('UiDateTimePicker', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
   it('passes the placeholder and the themed input classes to the library', () => {
     const wrapper = mount(UiDateTimePicker, { props: { modelValue: null, placeholder: 'No start date' } })
     const stub = wrapper.get('[data-testid="stub"]')
 
     expect(stub.attributes('data-placeholder')).toBe('No start date')
     expect(stub.attributes('data-class')).toContain('bg-surface-field!')
+  })
+
+  it('follows the panel scheme: the library is dark unless the light palette is applied', () => {
+    const theme = useThemeStore()
+    const wrapper = mount(UiDateTimePicker, { props: { modelValue: null } })
+
+    theme.isLight = true
+
+    return wrapper.vm.$nextTick().then(() => {
+      expect(wrapper.findComponent({ name: 'VueDatePicker' }).props('dark')).toBe(false)
+    })
   })
 
   it('emits the picked moment as a Date', async () => {

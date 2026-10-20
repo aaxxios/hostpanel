@@ -34,6 +34,30 @@ public sealed class CreateTestimonialTests(IntegrationTestFactory factory) : ICl
         translations.GetProperty("hy").GetProperty("quote").GetString().Should().Be("Armenian quote");
     }
 
+    /// <summary>The admin-set date round-trips through the admin read.</summary>
+    [Fact]
+    public async Task CreateThenGet_RoundTripsPublishedAt()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+        var date = new DateTimeOffset(2026, 3, 10, 0, 0, 0, TimeSpan.Zero);
+
+        var id = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/testimonials", StorefrontContentTestSeeds.TestimonialBody(publishedAt: date));
+
+        var fetched = await client.GetFromJsonAsync<JsonElement>($"/api/admin/testimonials/{id}");
+        fetched.GetProperty("publishedAt").GetDateTimeOffset().Should().Be(date);
+    }
+
+    /// <summary>A date in the future is refused.</summary>
+    [Fact]
+    public async Task Create_FuturePublishedAt_Refuses()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync("/api/admin/testimonials", StorefrontContentTestSeeds.TestimonialBody(publishedAt: DateTimeOffset.UtcNow.AddYears(1)));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     /// <summary>A field the validator refuses answers 400 with the validation code, and nothing is stored.</summary>
     [Fact]
     public async Task Create_InvalidField_RefusesWithValidationFailure()

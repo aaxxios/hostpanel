@@ -38,6 +38,12 @@
       "browseByCategory": "Դիտել ըստ կատեգորիայի",
       "catAll": "Բոլորը",
       "categories": {
+        "budget": "Բյուջետային",
+        "community": "Համայնք",
+        "creative": "Ստեղծագործական",
+        "local": "Տեղական",
+        "regional": "Տարածաշրջանային",
+        "tech": "Տեխնոլոգիա",
         "popular": "Հայտնի",
         "technology": "Տեխնոլոգիա",
         "shopping": "Գնումներ",

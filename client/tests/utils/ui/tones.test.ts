@@ -85,4 +85,16 @@ describe('focus rings', () => {
       expect(ring).not.toMatch(/(^|\s)focus:ring/)
     }
   })
+
+  it('use a solid ring colour with a dark-theme variant so the ring stays visible in both themes', () => {
+    for (const ring of [FOCUS_RING, FOCUS_RING_OFFSET]) {
+      expect(ring).toContain('focus-visible:ring-primary-500')
+      expect(ring).not.toContain('ring-primary-500/50')
+      expect(ring).toContain('dark:focus-visible:ring-primary-400')
+    }
+  })
+
+  it('offsets the filled-button ring from the theme surface, not plain white', () => {
+    expect(FOCUS_RING_OFFSET).toContain('focus-visible:ring-offset-ui-surface')
+  })
 })

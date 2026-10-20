@@ -2,9 +2,30 @@
   <UiSection v-if="entries.length" id="faq" padding="lg" :contained="false" class="relative border-t border-line">
     <UiSplit ratio="equal" gap="xl">
       <template #start>
-        <UiHeading :level="2" size="bare" :class="BLOCK_TITLE_CLASS">
-          {{ t('aurora.faq.title') }}
-        </UiHeading>
+        <UiStack gap="none" :class="STICKY_COLUMN_CLASS" data-testid="faq-aside">
+          <UiHeading :level="2" size="bare" :class="BLOCK_TITLE_CLASS">
+            {{ t('aurora.faq.title') }}
+          </UiHeading>
+          <UiText tone="inherit" class="mt-4 text-[17px] leading-relaxed text-mut">{{ t('aurora.faq.lead') }}</UiText>
+          <UiStack direction="row" wrap class="mt-8">
+            <UiButton
+              variant="bare"
+              :to="localePath('/contact')"
+              data-testid="faq-contact"
+              :class="[BRAND_BUTTON, 'px-6 py-3 text-[15px]']"
+            >
+              {{ t('aurora.faq.contact') }}
+            </UiButton>
+          </UiStack>
+          <UiStack v-if="email || phone" gap="xs" class="mt-5 text-[14px] text-mut" data-testid="faq-support">
+            <UiLink v-if="email" :href="`mailto:${email}`" tone="inherit" :underline="false" data-testid="faq-email" class="hover:text-ac1">
+              {{ email }}
+            </UiLink>
+            <UiLink v-if="phone" :href="`tel:${phoneLink}`" tone="inherit" :underline="false" data-testid="faq-phone" class="hover:text-ac1">
+              {{ phone }}
+            </UiLink>
+          </UiStack>
+        </UiStack>
       </template>
       <template #end>
         <!-- Answers stay in the DOM: this is indexable content and a crawler should read every one. -->
@@ -16,15 +37,24 @@
 
 <script setup lang="ts">
 /**
- * aurora FAQ accordion. The questions come from the storefront store
- * (`GET /api/public/faqs`); with none the section renders nothing. Answers stay in the DOM so
- * they remain indexable.
+ * aurora FAQ accordion beside a sticky intro with a contact call to action. The questions come
+ * from the storefront store (`GET /api/public/faqs`); with none the section renders nothing.
+ * Answers stay in the DOM so they remain indexable. The support email and phone shown under the
+ * button are the operator's portal settings and are hidden when unset.
  */
+import { BRAND_BUTTON } from '~/templates/aurora/buttons'
+import { STICKY_COLUMN_CLASS } from '~/templates/aurora/layoutClasses'
 import { BLOCK_TITLE_CLASS } from '~/templates/aurora/typography'
 import { useStorefrontStore } from '~/stores/storefront'
 
 /** Translator and the active language. */
 const { t, locale } = useI18n()
+
+/** Prefixes a path with the active locale. */
+const localePath = useLocalePath()
+
+/** The support email and phone the operator configured; each is empty when unset. */
+const { email, phone, phoneLink } = useContactDetails()
 
 /** The storefront content: testimonials, partners, projects and FAQs. */
 const storefront = useStorefrontStore()

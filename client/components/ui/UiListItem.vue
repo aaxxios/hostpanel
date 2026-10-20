@@ -1,6 +1,6 @@
 <template>
   <li :class="classes">
-    <component :is="icon" v-if="icon" :size="18" :stroke-width="2" class="flex-shrink-0 mt-0.5 text-primary-500" />
+    <component :is="icon" v-if="icon" :size="18" :stroke-width="2" class="flex-shrink-0 mt-0.5 text-primary-600 dark:text-primary-400" />
     <span v-if="icon" class="min-w-0"><slot /></span>
     <slot v-else />
   </li>

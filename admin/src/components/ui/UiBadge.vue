@@ -34,7 +34,7 @@ const sizeClasses = computed<string>(() => (props.small ? 'px-1.5 py-0 text-[0.6
 
 <template>
   <span
-    class="inline-flex items-center gap-1.5 rounded-full border font-medium whitespace-nowrap"
+    class="inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border font-medium whitespace-nowrap"
     :class="[toneClasses, sizeClasses]"
   >
     <span v-if="dot" class="w-1.5 h-1.5 rounded-full" :class="dotClasses" />

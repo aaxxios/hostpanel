@@ -30,7 +30,7 @@
       tone="bare"
       padding="none"
       data-testid="plan-free"
-      class="mt-10 border-ac1/25 bg-surf p-[clamp(24px,4vw,40px)]"
+      class="mt-8 border-line-brand bg-surf shadow-card p-[clamp(24px,4vw,40px)] transition-colors duration-200 hover:border-ac1"
     >
       <UiStack direction="row" wrap align="center" justify="between" gap="xl">
         <UiStack gap="none" class="min-w-[260px] flex-1">
@@ -87,7 +87,7 @@
         tone="bare"
         padding="xl"
         :data-testid="`plan-card-${plan.id}`"
-        class="flex h-full flex-col border-line bg-surf"
+        class="flex h-full flex-col border-line bg-surf shadow-card transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-ac1"
       >
         <UiText as="span" size="inherit" tone="inherit" weight="bold" class="text-[17px] text-tx">{{ plan.name }}</UiText>
         <UiText v-if="plan.description" size="sm" tone="inherit" class="mt-1.5 text-mut2">{{ plan.description }}</UiText>
@@ -134,9 +134,9 @@
       v-if="showIncluded"
       tone="bare"
       data-testid="plans-included"
-      class="mt-9 border-line bg-surf"
+      class="mt-8 border-line bg-surf shadow-card"
     >
-      <UiText as="span" size="inherit" tone="inherit" :class="[EYEBROW_CLASS, 'tracking-[0.1em] text-ac2']">
+      <UiText as="span" size="inherit" tone="inherit" :class="[EYEBROW_CLASS, 'tracking-[0.1em] text-ac1']">
         {{ t('aurora.plans.includedTitle') }}
       </UiText>
       <UiGrid cols="auto" gap="md" class="mt-4">

@@ -62,4 +62,11 @@ describe('UiSidebar', () => {
     await wrapper.trigger('focusin')
     expect(wrapper.classes()).toContain('w-[230px]')
   })
+
+  it('colours the active entry with the primary accent and idle entries with secondary text', () => {
+    const wrapper = mountSidebar('email')
+
+    expect(wrapper.get('[data-testid="int-email"]').classes()).toContain('text-primary-500')
+    expect(wrapper.get('[data-testid="int-payments"]').classes()).toContain('text-text-secondary')
+  })
 })

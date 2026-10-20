@@ -93,7 +93,7 @@ describe('StripeCardForm', () => {
     handlers.ready?.()
     await flushPromises()
 
-    expect(wrapper.find('[data-testid="stripe-card-frame"]').classes()).toContain('border-cyan-500/30')
+    expect(wrapper.find('[data-testid="stripe-card-frame"]').classes()).toContain('border-cyan-600/50')
     wrapper.unmount()
   })
 
@@ -103,7 +103,7 @@ describe('StripeCardForm', () => {
     handlers.change?.({ error: { message: 'Your card number is incomplete.' } })
     await flushPromises()
     expect(wrapper.text()).toContain('Your card number is incomplete.')
-    expect(wrapper.find('[data-testid="stripe-card-frame"]').classes()).toContain('border-red-500/50')
+    expect(wrapper.find('[data-testid="stripe-card-frame"]').classes()).toContain('border-red-500')
 
     handlers.change?.({})
     await flushPromises()

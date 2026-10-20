@@ -1145,6 +1145,9 @@
   <data name="TestimonialRatingInvalid" xml:space="preserve">
     <value>The rating must be between 1 and 5.</value>
   </data>
+  <data name="TestimonialPublishedAtFuture" xml:space="preserve">
+    <value>The testimonial date cannot be in the future.</value>
+  </data>
   <data name="TestimonialRoleTooLong" xml:space="preserve">
     <value>The role can be at most {0} characters.</value>
   </data>

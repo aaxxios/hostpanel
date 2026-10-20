@@ -31,8 +31,8 @@ describe('UiSection', () => {
 
   it.each([
     [UiSectionPadding.Sm, 'py-8'],
-    [UiSectionPadding.Md, 'py-12'],
-    [UiSectionPadding.Lg, 'py-16'],
+    [UiSectionPadding.Md, 'py-10'],
+    [UiSectionPadding.Lg, 'md:py-20'],
   ])('maps padding %s to %s', (padding, expected) => {
     expect(mountWithKit(UiSection, { props: { padding } }).classes()).toContain(expected)
   })

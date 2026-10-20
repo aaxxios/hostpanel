@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<{
 /** State classes. */
 const classes = computed<string[]>(() => [
   props.hoverable ? 'hover:bg-surface-hover transition-colors' : '',
-  props.selected ? 'bg-primary-500/5' : '',
+  props.selected ? 'bg-primary-500/10' : '',
   props.bordered ? 'border-b border-border last:border-0' : '',
 ])
 </script>

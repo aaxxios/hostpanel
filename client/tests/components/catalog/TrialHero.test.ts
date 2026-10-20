@@ -9,7 +9,7 @@ import TrialHero from '~/components/catalog/TrialHero.vue'
 /** Mounts the hero. */
 const mountHero = () =>
   mountWithKit(TrialHero, {
-    props: { name: 'Gamma Tool', icon: 'view-dashboard', color: '#10b981', trialUrl: '/products/gamma-tool', learnMoreUrl: '/products/gamma-tool' },
+    props: { name: 'Gamma Tool', icon: 'mdi:view-dashboard', color: '#10b981', trialUrl: '/products/gamma-tool', learnMoreUrl: '/products/gamma-tool' },
   })
 
 describe('TrialHero', () => {

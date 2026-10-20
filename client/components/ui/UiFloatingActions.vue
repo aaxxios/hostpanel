@@ -23,15 +23,16 @@
           v-if="isOpen && liveChatEnabled"
           type="button"
           data-testid="floating-live-chat"
-          class="group absolute bottom-0 right-0 flex items-center justify-center -translate-x-[5px] -translate-y-[75px] delay-0"
+          :class="FOCUS_RING"
+          class="group absolute bottom-0 right-0 rounded-full flex items-center justify-center -translate-x-[5px] -translate-y-[75px] delay-0"
           :aria-label="$t('contact.info.quickConnect.liveChat')"
           @click.stop="openChat"
         >
-          <span class="absolute right-full mr-2 px-2.5 py-1 bg-gray-900/90 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          <span class="absolute right-full mr-2 px-2.5 py-1 bg-gray-900/90 dark:bg-gray-800/95 dark:ring-1 dark:ring-white/15 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             {{ $t('contact.info.quickConnect.liveChat') }}
           </span>
-          <span class="w-10 h-10 bg-channel-chat rounded-full flex items-center justify-center shadow-glow-chat hover:scale-110 transition-transform duration-200">
-            <MessageSquare :size="18" :stroke-width="2" class="text-white" />
+          <span class="w-10 h-10 bg-primary-600 text-on-primary dark:bg-primary-500 rounded-full flex items-center justify-center shadow-lg shadow-primary-500/40 hover:scale-110 transition-transform duration-200">
+            <MessageSquare :size="18" :stroke-width="2" />
           </span>
         </button>
       </Transition>
@@ -51,10 +52,11 @@
           target="_blank"
           rel="noopener noreferrer"
           data-testid="floating-whatsapp"
-          class="group absolute bottom-0 right-0 flex items-center justify-center -translate-x-[55px] -translate-y-[55px] delay-[60ms]"
+          :class="FOCUS_RING"
+          class="group absolute bottom-0 right-0 rounded-full flex items-center justify-center -translate-x-[55px] -translate-y-[55px] delay-[60ms]"
           :aria-label="$t('whatsapp.contactUs')"
         >
-          <span class="absolute right-full mr-2 px-2.5 py-1 bg-gray-900/90 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          <span class="absolute right-full mr-2 px-2.5 py-1 bg-gray-900/90 dark:bg-gray-800/95 dark:ring-1 dark:ring-white/15 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             {{ $t('contact.info.quickConnect.whatsapp') }}
           </span>
           <span class="w-10 h-10 bg-channel-whatsapp rounded-full flex items-center justify-center shadow-glow-whatsapp hover:scale-110 transition-transform duration-200">
@@ -78,10 +80,11 @@
           target="_blank"
           rel="noopener noreferrer"
           data-testid="floating-telegram"
-          class="group absolute bottom-0 right-0 flex items-center justify-center -translate-x-[75px] -translate-y-[5px] delay-[120ms]"
+          :class="FOCUS_RING"
+          class="group absolute bottom-0 right-0 rounded-full flex items-center justify-center -translate-x-[75px] -translate-y-[5px] delay-[120ms]"
           :aria-label="$t('telegram.contactUs')"
         >
-          <span class="absolute right-full mr-2 px-2.5 py-1 bg-gray-900/90 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          <span class="absolute right-full mr-2 px-2.5 py-1 bg-gray-900/90 dark:bg-gray-800/95 dark:ring-1 dark:ring-white/15 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             {{ $t('contact.info.quickConnect.telegram') }}
           </span>
           <span class="w-10 h-10 bg-channel-telegram rounded-full flex items-center justify-center shadow-glow-telegram hover:scale-110 transition-transform duration-200">
@@ -94,19 +97,17 @@
 
     <!-- Main toggle button -->
     <button
-      v-motion
       type="button"
       data-testid="floating-toggle"
-      :initial="{ opacity: 0, scale: 0 }"
-      :enter="{ opacity: 1, scale: 1, transition: { delay: 800, duration: 400, type: 'spring' } }"
-      class="relative w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110"
-      :class="[FOCUS_RING, isOpen ? 'bg-gray-700 rotate-45' : 'bg-gradient-to-br from-channel-chat to-primary-600 shadow-glow-chat']"
+      class="relative w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 animate-reveal-up motion-reduce:animate-none"
+      :class="[FOCUS_RING, isOpen ? 'bg-gray-700 text-white rotate-45' : 'bg-primary-600 text-on-primary shadow-primary-500/40 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400']"
       :aria-expanded="isOpen"
       :aria-label="$t('contact.info.quickConnect.toggle')"
+      :style="revealStyle(800)"
       @click="isOpen = !isOpen"
     >
-      <span v-if="!isOpen" class="absolute inset-0 rounded-full bg-channel-chat animate-ping opacity-25" />
-      <MessageCircle :size="26" :stroke-width="2" class="relative text-white transition-transform duration-300" :class="isOpen ? 'rotate-[-45deg]' : ''" />
+      <span v-if="!isOpen" class="absolute inset-0 rounded-full bg-primary-500 animate-ping opacity-25" />
+      <MessageCircle :size="26" :stroke-width="2" class="relative transition-transform duration-300" :class="isOpen ? 'rotate-[-45deg]' : ''" />
     </button>
 
   </div>
@@ -121,6 +122,8 @@
  * install shows its own contacts; each action hides when its setting is empty. Escape or a click
  * outside closes the fan.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { TELEGRAM_LINK_BASE, WHATSAPP_LINK_BASE } from '~/constants/contactChannel'
 import { ChatProvider } from '~/types/chatprovider'

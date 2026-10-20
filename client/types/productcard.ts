@@ -16,7 +16,7 @@ export interface ProductCard {
   description: string
   /** Up to three feature lines. */
   features: string[]
-  /** Icon name without the `mdi:` prefix. */
+  /** Full icon name, e.g. `mdi:server`. */
   icon: string
   /** Accent colour as a hex string. */
   color: string

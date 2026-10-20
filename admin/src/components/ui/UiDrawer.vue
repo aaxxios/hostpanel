@@ -39,8 +39,8 @@ const panel = ref<HTMLElement | null>(null)
 
 /** Placement classes per edge. */
 const sideClasses: Record<UiDrawerSide, string> = {
-  left: 'left-0 border-r',
-  right: 'right-0 border-l',
+  left: 'left-0 border-r border-border-strong',
+  right: 'right-0 border-l border-border-strong',
 }
 
 /** Requests closing. */
@@ -54,14 +54,14 @@ const onKeydown = useModalSurface(panel, () => props.open, close)
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="fixed inset-0 z-50 bg-black/60" @click.self="close">
+    <div v-if="open" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" @click.self="close">
       <aside
         ref="panel"
         role="dialog"
         aria-modal="true"
         :aria-labelledby="titleId"
         tabindex="-1"
-        class="absolute top-0 bottom-0 w-full max-w-md bg-surface-card border-border shadow-2xl flex flex-col overflow-hidden outline-none"
+        class="absolute top-0 bottom-0 w-full max-w-md bg-surface-card shadow-2xl flex flex-col overflow-hidden outline-none"
         :class="sideClasses[side]"
         @keydown="onKeydown"
       >

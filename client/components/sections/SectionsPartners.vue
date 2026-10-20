@@ -11,10 +11,7 @@
     <UiContainer class="relative z-10">
       <!-- Header -->
       <div
-        v-motion
-        :initial="{ opacity: 0, y: 20 }"
-        :visible-once="{ opacity: 1, y: 0, transition: { duration: 500 } }"
-        class="text-center mb-8 sm:mb-12"
+        class="text-center mb-8 sm:mb-12 animate-reveal-up motion-reduce:animate-none"
       >
         <UiText size="sm" tone="subtle" class="uppercase tracking-wider mb-2">{{ $t('clients.subtitle') }}</UiText>
         <UiHeading :level="3" size="subsection" class="text-xl">{{ $t('clients.heading') }}</UiHeading>

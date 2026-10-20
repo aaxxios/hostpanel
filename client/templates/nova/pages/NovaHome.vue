@@ -2,6 +2,7 @@
   <UiStack id="nova-main" as="div" gap="none" class="tpl-nova bg-nova-bg font-nova text-nova-ink" data-testid="nova-home">
     <NovaHero />
     <NovaTrustBar />
+    <NovaPartners />
     <NovaPricingSection
       :plans="plans"
       :yearly="yearly"
@@ -14,6 +15,7 @@
     <NovaDashboard />
     <NovaMigration />
     <NovaUseCases />
+    <NovaProjects />
     <NovaTestimonials />
     <NovaFaq />
     <NovaFinalCta />
@@ -46,6 +48,8 @@ import NovaSecurity from '~/templates/nova/sections/NovaSecurity.vue'
 import NovaDashboard from '~/templates/nova/sections/NovaDashboard.vue'
 import NovaMigration from '~/templates/nova/sections/NovaMigration.vue'
 import NovaUseCases from '~/templates/nova/sections/UseCases.vue'
+import NovaPartners from '~/templates/nova/sections/NovaPartners.vue'
+import NovaProjects from '~/templates/nova/sections/NovaProjects.vue'
 import NovaTestimonials from '~/templates/nova/sections/NovaTestimonials.vue'
 import NovaFaq from '~/templates/nova/sections/NovaFaq.vue'
 import NovaFinalCta from '~/templates/nova/sections/FinalCta.vue'

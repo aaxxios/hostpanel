@@ -47,10 +47,10 @@
             type="button"
             role="menuitem"
             :data-testid="`currency-option-${option.code}`"
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors duration-150"
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
             :class="option.code === currentCode
-              ? 'bg-primary-50 dark:bg-primary-500/20 text-primary-600 dark:text-primary-300'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-on-primary'"
+              ? 'bg-primary-100 dark:bg-primary-500/25 text-primary-700 dark:text-primary-300 font-medium'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white'"
             @click="choose(option.code)"
           >
             <span class="flex-1 text-left">{{ option.code }}</span>
@@ -79,6 +79,7 @@ import { Check, ChevronDown, Lock } from 'lucide-vue-next'
 import { onClickOutside } from '@vueuse/core'
 import { useCurrencyStore } from '~/stores/currency'
 import { UiPlacement } from '~/utils/ui/enums'
+import { FOCUS_RING, PICKER_TRIGGER } from '~/utils/ui/tones'
 
 /** Props of CurrencySwitcher. */
 interface Props {
@@ -133,7 +134,7 @@ const visible = computed(() => {
 })
 
 /** Class list of the trigger chip. */
-const triggerClasses = 'flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-primary-500/30 hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-200'
+const triggerClasses = `flex items-center gap-2 px-3 py-2 rounded-lg ${PICKER_TRIGGER} ${FOCUS_RING}`
 
 /** Class list of the menu panel. */
 const menuClasses = computed(() => [

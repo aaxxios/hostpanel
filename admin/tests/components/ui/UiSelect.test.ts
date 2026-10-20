@@ -35,6 +35,13 @@ describe('UiSelect', () => {
     expect(wrapper.get('button span').classes()).toContain('text-text-muted')
   })
 
+  it('draws a chosen label in the primary colour even when it equals the placeholder', () => {
+    const wrapper = mountSelect({ modelValue: 'a', placeholder: 'Alpha' })
+
+    expect(wrapper.get('button span').classes()).toContain('text-text-primary')
+    expect(wrapper.get('button span').classes()).not.toContain('text-text-muted')
+  })
+
   it('opens the list on click and marks the selected option', async () => {
     const wrapper = mountSelect({ modelValue: 'a' })
 
@@ -45,6 +52,17 @@ describe('UiSelect', () => {
     expect(items).toHaveLength(2)
     expect(items[0]?.attributes('aria-selected')).toBe('true')
     expect(items[1]?.attributes('aria-selected')).toBe('false')
+  })
+
+  it('paints the selected option solid primary with white text and a focus ring on every option', async () => {
+    const wrapper = mountSelect({ modelValue: 'a' })
+
+    await wrapper.get('button').trigger('click')
+    const items = wrapper.findAll('[role="option"]')
+
+    expect(items[0]?.classes()).toEqual(expect.arrayContaining(['bg-primary-600', 'text-white']))
+    expect(items[1]?.classes()).not.toContain('bg-primary-600')
+    expect(items[1]?.classes()).toContain('focus-visible:ring-2')
   })
 
   it('emits the picked value and closes', async () => {

@@ -2,19 +2,19 @@
   <div class="w-full">
     <label v-if="label" :for="inputId" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
       {{ label }}
-      <span v-if="required" class="text-primary-500">*</span>
+      <span v-if="required" class="text-primary-600 dark:text-primary-400">*</span>
     </label>
 
     <div class="relative">
       <!-- Prefix slot (e.g. search icon) -->
-      <div v-if="$slots.prefix" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+      <div v-if="$slots.prefix" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400">
         <slot name="prefix" />
       </div>
 
       <Icon
         v-else-if="icon"
         :name="icon"
-        class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+        class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none"
       />
 
       <input
@@ -40,7 +40,7 @@
         tabindex="-1"
         :data-testid="testid ? `${testid}-toggle` : 'ui-input-toggle'"
         :aria-label="showPassword ? $t('ui.hidePassword') : $t('ui.showPassword')"
-        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        :class="toggleClasses"
         @click="showPassword = !showPassword"
       >
         <Eye v-if="!showPassword" :size="18" :stroke-width="2" />
@@ -55,8 +55,8 @@
       />
     </div>
 
-    <p v-if="error" class="mt-2 text-sm text-red-500 dark:text-red-400">{{ error }}</p>
-    <p v-else-if="hint" class="mt-2 text-sm text-gray-500">{{ hint }}</p>
+    <p v-if="error" class="mt-2 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+    <p v-else-if="hint" class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ hint }}</p>
   </div>
 </template>
 
@@ -71,7 +71,7 @@
 import { computed, ref, useId, useSlots } from 'vue'
 import { AlertCircle, Eye, EyeOff } from 'lucide-vue-next'
 import { UiInputType, UiSize } from '~/utils/ui/enums'
-import { CONTROL_SIZE_CLASSES, fieldStateClasses } from '~/utils/ui/tones'
+import { CONTROL_SIZE_CLASSES, FOCUS_RING, fieldStateClasses } from '~/utils/ui/tones'
 
 /** Props of UiInput. */
 interface Props {
@@ -152,6 +152,9 @@ const resolvedType = computed(() =>
   isPassword.value && showPassword.value ? UiInputType.Text : props.type,
 )
 
+/** Class list of the password reveal button: muted icon, one hover step, the kit focus ring. */
+const toggleClasses = `absolute right-3 top-1/2 -translate-y-1/2 rounded text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors ${FOCUS_RING}`
+
 /** Class list of the `<input>`. */
 const inputClasses = computed(() => {
   // `slots.prefix`, not `$slots` in a prop: the template's `v-if="$slots.prefix"` is right, but
@@ -160,7 +163,7 @@ const inputClasses = computed(() => {
   const rightPadding = (isPassword.value || props.error) ? 'pr-10' : ''
   return [
     fieldStateClasses({ error: Boolean(props.error), disabled: props.disabled }),
-    'placeholder:text-gray-400 dark:placeholder:text-gray-500',
+    'placeholder:text-gray-500 dark:placeholder:text-gray-400',
     CONTROL_SIZE_CLASSES[props.size as UiSize],
     iconPadding,
     rightPadding,

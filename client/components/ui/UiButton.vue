@@ -67,14 +67,17 @@ const props = withDefaults(defineProps<Props>(), {
 
 /** Frame and colours per variant, light and dark. */
 const VARIANT_CLASSES: Record<UiButtonVariant, string> = {
-  [UiButtonVariant.Primary]: 'bg-primary-600 text-on-primary hover:bg-primary-700 active:bg-primary-800',
-  [UiButtonVariant.Secondary]: 'bg-gray-200 text-gray-800 hover:bg-gray-300 active:bg-gray-400 dark:bg-white/10 dark:text-gray-100 dark:hover:bg-white/20',
-  [UiButtonVariant.Outline]: 'border-2 border-primary-600 text-primary-600 hover:bg-primary-500/10 active:bg-primary-500/20',
+  [UiButtonVariant.Primary]: 'bg-primary-700 text-on-primary hover:bg-primary-800 active:bg-primary-900',
+  [UiButtonVariant.Secondary]: 'bg-gray-200 text-gray-800 hover:bg-gray-300 active:bg-gray-400 dark:bg-white/10 dark:text-gray-100 dark:hover:bg-white/20 dark:active:bg-white/[0.25]',
+  [UiButtonVariant.Outline]: 'border-2 border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400 hover:bg-primary-500/10 active:bg-primary-500/20',
   [UiButtonVariant.Ghost]: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/[0.15]',
-  [UiButtonVariant.Subtle]: 'bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 active:bg-gray-300 dark:active:bg-white/[0.15]',
+  [UiButtonVariant.Subtle]: 'bg-primary-500/10 border border-primary-500/30 text-primary-700 hover:bg-primary-500/15 hover:border-primary-500/50 active:bg-primary-500/25 dark:text-primary-300 dark:hover:bg-primary-500/20 dark:active:bg-primary-500/30',
   [UiButtonVariant.Danger]: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800',
   [UiButtonVariant.Bare]: '',
 }
+
+/** Colour of the focus-ring offset gap: the surface the button sits on, so the ring reads on white and on dark. */
+const OFFSET_SURFACE = 'ring-offset-white dark:ring-offset-ui-surface'
 
 /** Element or component to render. */
 const tag = computed(() => {
@@ -110,7 +113,7 @@ const buttonClasses = computed(() => {
   if (props.variant === UiButtonVariant.Bare) {
     return [base, FOCUS_RING, width].filter(Boolean).join(' ')
   }
-  return [base, FOCUS_RING_OFFSET, VARIANT_CLASSES[props.variant as UiButtonVariant], BUTTON_SIZE_CLASSES[props.size as UiSize], width]
+  return [base, FOCUS_RING_OFFSET, OFFSET_SURFACE, VARIANT_CLASSES[props.variant as UiButtonVariant], BUTTON_SIZE_CLASSES[props.size as UiSize], width]
     .filter(Boolean)
     .join(' ')
 })

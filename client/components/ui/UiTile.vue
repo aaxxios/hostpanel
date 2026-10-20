@@ -9,7 +9,7 @@
 /**
  * UiTile - a small square (or round) tile that centres an icon or a short label.
  *
- * Structure by default: the screen paints the tile (`bg-brand text-on-tint`, a gradient token)
+ * Structure by default: the screen paints the tile (`bg-brand text-on-brand`, a gradient token)
  * through its class, so one component serves brand marks, service tiles, avatars and count
  * badges. With a `tone` the tile carries the soft tint of that tone instead (status panels,
  * section markers).

@@ -14,6 +14,7 @@ namespace Innovayse.Hostpanel.Application.Testimonials.Commands.UpdateTestimonia
 /// <param name="Rating">The star rating, from 1 to 5.</param>
 /// <param name="SortOrder">Display order (ascending).</param>
 /// <param name="IsActive">Whether the testimonial is shown on the storefront.</param>
+/// <param name="PublishedAt">The date the testimonial was given, or <c>null</c> to fall back to the creation time.</param>
 /// <param name="Translations">Per-locale translations keyed by locale code (<c>en</c>, <c>ru</c>, <c>hy</c>).</param>
 public sealed record UpdateTestimonialCommand(
     int Id,
@@ -23,4 +24,5 @@ public sealed record UpdateTestimonialCommand(
     int Rating,
     int SortOrder,
     bool IsActive,
+    DateTimeOffset? PublishedAt,
     Dictionary<string, TestimonialTranslationDto> Translations);

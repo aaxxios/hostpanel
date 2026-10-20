@@ -11,12 +11,11 @@
       <UiSkeleton v-for="i in 3" :key="i" shape="block" class="h-12" />
     </UiStack>
 
-    <UiStack v-else-if="!store.tickets.length" align="center" gap="xs" class="py-6" data-testid="dashboard-tickets-empty">
-      <UiText size="sm" tone="muted">{{ $t('client.dashboard.noTickets') }}</UiText>
-      <UiButton size="sm" variant="ghost" :to="CLIENT_TICKET_NEW_PATH" data-testid="dashboard-ticket-open">
+    <UiEmptyState v-else-if="!store.tickets.length" :icon="MessageSquare" :title="$t('client.dashboard.noTickets')" class="!py-6" data-testid="dashboard-tickets-empty">
+      <UiButton size="sm" variant="subtle" :to="CLIENT_TICKET_NEW_PATH" data-testid="dashboard-ticket-open">
         {{ $t('client.dashboard.openTicketLink') }}
       </UiButton>
-    </UiStack>
+    </UiEmptyState>
 
     <UiStack v-else gap="sm">
       <ClientDashboardListRow
@@ -41,7 +40,7 @@
  * an invitation to open the first one.
  */
 import { CLIENT_TICKET_NEW_PATH, clientTicketPath } from '~/constants/clientRoutes'
-import { Plus } from 'lucide-vue-next'
+import { MessageSquare, Plus } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
 
 /** Client store: the signed-in person and their services, invoices, domains and tickets. */

@@ -15,11 +15,9 @@
         <UiCard
           v-for="(testimonial, index) in items"
           :key="testimonial.id"
-          v-motion
-          :initial="{ opacity: 0, y: 30 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 400 } }"
-          class="group hover:border-primary-500/30 dark:hover:border-secondary-500/30 hover:-translate-y-2 transition-all duration-300"
+          class="group hover:border-primary-500/30 dark:hover:border-secondary-500/30 hover:-translate-y-2 transition-all duration-300 animate-reveal-up motion-reduce:animate-none"
           :data-testid="`product-testimonial-${testimonial.id}`"
+          :style="revealStyle(index * 100)"
         >
           <div class="flex gap-1 mb-4">
             <Star v-for="star in testimonial.rating" :key="star" :size="14" :stroke-width="2" fill="currentColor" class="text-primary-700 dark:text-secondary-400" />
@@ -45,6 +43,8 @@
  * Three client testimonials for the products page, each quote cut to 120 characters. They come
  * from the storefront store; with none the section renders nothing.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { Star } from 'lucide-vue-next'
 import { useStorefrontStore } from '~/stores/storefront'
 

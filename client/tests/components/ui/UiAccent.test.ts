@@ -14,6 +14,12 @@ describe('UiAccent', () => {
     expect(wrapper.text()).toBe('inside')
   })
 
+  it('writes the readable ink colour next to the accent', () => {
+    const wrapper = mountWithKit(UiAccent, { props: { color: '#fde047' } })
+
+    expect((wrapper.element as HTMLElement).style.getPropertyValue('--accent-ink')).toBe('#08090f')
+  })
+
   it('takes no part in the layout', () => {
     expect(mountWithKit(UiAccent, { props: { color: '#fff' } }).classes()).toContain('contents')
   })

@@ -35,3 +35,10 @@ describe('typography maps', () => {
     expect(labelVariantClasses.inline).toContain('flex')
   })
 })
+
+describe('field label contrast', () => {
+  it('uses the secondary text token, not the muted one', () => {
+    expect(labelVariantClasses.field).toContain('text-text-secondary')
+    expect(labelVariantClasses.field).not.toContain('text-text-muted')
+  })
+})

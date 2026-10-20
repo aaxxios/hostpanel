@@ -5,22 +5,18 @@
  * @module tests/templates/aurora/buttons.test
  */
 import { describe, expect, it } from 'vitest'
-import { BRAND_BUTTON, LINE_BUTTON, PILL_ACTIVE } from '~/templates/aurora/buttons'
+import { BRAND_BUTTON, LINE_BUTTON } from '~/templates/aurora/buttons'
 
 /** Every constant under test. */
-const ALL = [BRAND_BUTTON, LINE_BUTTON, PILL_ACTIVE]
+const ALL = [BRAND_BUTTON, LINE_BUTTON]
 
 describe('aurora button classes', () => {
   it('paints the brand button with the gradient token and the brand tint text', () => {
-    expect(BRAND_BUTTON.split(' ')).toEqual(expect.arrayContaining(['bg-brand', 'text-on-tint']))
+    expect(BRAND_BUTTON.split(' ')).toEqual(expect.arrayContaining(['bg-brand', 'text-on-brand']))
   })
 
   it('frames the line button with the template line colour and lights it up on hover', () => {
     expect(LINE_BUTTON.split(' ')).toEqual(expect.arrayContaining(['border-line2', 'hover:border-ac1']))
-  })
-
-  it('shares the brand look between the brand button and the active pill', () => {
-    expect(PILL_ACTIVE.split(' ')).toEqual(expect.arrayContaining(['bg-brand', 'text-on-tint', 'rounded-full']))
   })
 
   it('contains no hex colour and no interpolation placeholder', () => {

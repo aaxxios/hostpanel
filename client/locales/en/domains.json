@@ -40,6 +40,12 @@
       "browseByCategory": "Browse extensions by category",
       "catAll": "All",
       "categories": {
+        "budget": "Budget",
+        "community": "Community",
+        "creative": "Creative",
+        "local": "Local",
+        "regional": "Regional",
+        "tech": "Tech",
         "popular": "Popular",
         "technology": "Technology",
         "shopping": "Shopping",

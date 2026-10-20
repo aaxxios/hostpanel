@@ -23,7 +23,7 @@ describe('UiLabel', () => {
   it('draws the field caption look', () => {
     const wrapper = mount(UiLabel, { props: { variant: 'field' } })
 
-    expect(wrapper.classes()).toEqual(expect.arrayContaining(['uppercase', 'text-text-muted']))
+    expect(wrapper.classes()).toEqual(expect.arrayContaining(['uppercase', 'text-text-secondary']))
   })
 
   it('draws the inline look for a checkbox row', () => {

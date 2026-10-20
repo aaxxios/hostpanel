@@ -187,8 +187,8 @@ docker compose -p hostpanel-demo -f docker/docker-compose.shared.yml -f docker/d
 
 On a deployed host add `-f docker/docker-compose.platform.yml` before the demo file (the `deploy:demo`
 CI job does). Demo mode (`Demo__Enabled`) swaps the payment, registrar and provisioning integrations for
-fakes, delivers all mail to mailhog (UI on `DEMO_MAILHOG_UI_HOST_PORT`), seeds the two demo accounts and
-resets the data every `DEMO_RESET_INTERVAL_HOURS` hours. The seed is fixed and deterministic (the same sample data on
+fakes, delivers all mail to mailhog (UI on `DEMO_MAILHOG_UI_HOST_PORT`), seeds the two demo accounts, resets the data on every start (so a deploy shows the new seed at once) and
+every `DEMO_RESET_INTERVAL_HOURS` hours. The seed is fixed and deterministic (the same sample data on
 every reset), and the site name is `Hostpanel Demo`.
 
 **The demo needs its own `DEPLOY_DIR`.** `deploy:demo` runs `git checkout -f`; in production's directory that

@@ -43,6 +43,7 @@ const entry = (id: number, name: string, extra: Partial<Testimonial> = {}): Test
   rating: 4,
   sortOrder: id,
   isActive: true,
+  publishedAt: null,
   createdAt: '2026-01-01T00:00:00Z',
   translations: { en: { role: 'CTO', quote: `${name} says hello` } },
   ...extra,

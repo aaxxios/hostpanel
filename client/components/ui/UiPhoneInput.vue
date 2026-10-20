@@ -1,8 +1,8 @@
 <template>
   <div class="w-full">
-    <label v-if="label" :for="id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+    <label v-if="label" :for="id" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
       {{ label }}
-      <span v-if="required" class="text-primary-500">*</span>
+      <span v-if="required" class="text-primary-600 dark:text-primary-400">*</span>
     </label>
 
     <div class="relative phone-input-container" :class="{ 'has-error': error }" :data-testid="testid">
@@ -22,8 +22,8 @@
       />
     </div>
 
-    <p v-if="error" class="mt-2 text-sm text-red-500 dark:text-red-400">{{ error }}</p>
-    <p v-else-if="hint" class="mt-2 text-sm text-gray-500">{{ hint }}</p>
+    <p v-if="error" class="mt-2 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+    <p v-else-if="hint" class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ hint }}</p>
   </div>
 </template>
 

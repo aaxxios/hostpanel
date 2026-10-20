@@ -38,8 +38,16 @@ describe('DomainSearchBar', () => {
     const wrapper = mountWithKit(DomainSearchBar, { props: { categories: [ALL_CATEGORY, 'Popular'], active: 'Popular' } })
 
     expect(wrapper.find(`[data-testid="domain-category-${ALL_CATEGORY}"]`).text()).toBe('aurora.tldTable.all')
-    expect(wrapper.find('[data-testid="domain-category-Popular"]').attributes('aria-pressed')).toBe('true')
-    expect(wrapper.find(`[data-testid="domain-category-${ALL_CATEGORY}"]`).attributes('aria-pressed')).toBe('false')
+    expect(wrapper.find('[data-testid="domain-category-Popular"]').attributes('aria-selected')).toBe('true')
+    expect(wrapper.find(`[data-testid="domain-category-${ALL_CATEGORY}"]`).attributes('aria-selected')).toBe('false')
+    expect(wrapper.find('[data-testid="domain-category-Popular"]').text()).toBe('domains.pricing.categories.popular')
+  })
+
+  it('capitalises a category that has no translation', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(DomainSearchBar, { props: { categories: [ALL_CATEGORY, 'gaming'] } })
+
+    expect(wrapper.find('[data-testid="domain-category-gaming"]').text()).toBe('Gaming')
   })
 
   it('emits the chosen category', async () => {

@@ -142,7 +142,7 @@ onUnmounted(() => {
       :value="displayValue"
       type="text"
       :placeholder="placeholder || t('shared.selectAClient')"
-      class="w-full px-3 py-2 text-[0.82rem] text-text-primary bg-surface-field border border-border rounded-[9px] placeholder:text-text-muted outline-none focus:border-primary-500/40 transition-colors"
+      class="w-full px-3 py-2 text-[0.82rem] text-text-primary bg-surface-field border border-border rounded-[9px] placeholder:text-text-muted outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/10 transition-colors"
       @input="handleInputChange"
       @click="handleFocus"
       @focus="handleFocus"
@@ -154,7 +154,7 @@ onUnmounted(() => {
       class="absolute z-50 top-full left-0 right-0 mt-2 bg-surface-card border border-border rounded-[9px] shadow-lg overflow-hidden"
     >
       <div class="max-h-64 overflow-y-auto">
-        <div v-if="filteredClients.length === 0" class="p-4 text-center text-text-muted text-[0.82rem]">
+        <div v-if="filteredClients.length === 0" class="p-4 text-center text-text-secondary text-[0.82rem]">
           {{ t('ui.uiClientSelect.noClientsFound') }}
         </div>
         <div
@@ -165,13 +165,13 @@ onUnmounted(() => {
           :class="String(modelValue) === String(client.id) ? 'bg-primary-500/10 border-l-2 border-l-primary-500' : ''"
           @click="selectClient(client)"
         >
-          <div v-if="client.status" class="text-[0.68rem] font-semibold text-text-muted mb-1">
+          <div v-if="client.status" class="text-[0.68rem] font-semibold text-text-secondary mb-1">
             {{ client.status }}
           </div>
           <div class="text-[0.82rem] font-medium text-text-primary">
             {{ client.name }} - #{{ client.id }}
           </div>
-          <div v-if="client.email" class="text-[0.75rem] text-text-muted mt-0.5">
+          <div v-if="client.email" class="text-[0.75rem] text-text-secondary mt-0.5">
             {{ client.email }}
           </div>
         </div>

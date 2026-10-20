@@ -64,8 +64,9 @@ internal static class StorefrontContentTestSeeds
     /// <summary>The body for creating a testimonial with an English and an Armenian translation.</summary>
     /// <param name="sortOrder">Display order.</param>
     /// <param name="isActive">Whether the testimonial is created active.</param>
+    /// <param name="publishedAt">The admin-set date, or <c>null</c> to leave it unset.</param>
     /// <returns>The request body.</returns>
-    public static object TestimonialBody(int sortOrder = 0, bool isActive = true) => new
+    public static object TestimonialBody(int sortOrder = 0, bool isActive = true, DateTimeOffset? publishedAt = null) => new
     {
         name = "Ann Client",
             company = (string?)"Acme",
@@ -73,6 +74,7 @@ internal static class StorefrontContentTestSeeds
             rating = 5,
         sortOrder,
         isActive,
+        publishedAt,
         translations = new
         {
             en = new { role = "CEO", quote = "English quote" },

@@ -67,7 +67,8 @@ const slide = (id: number, overrides: Partial<SlidePublic> = {}): SlidePublic =>
  * @returns The wrapper.
  */
 const mountSlider = async () => {
-  const wrapper = await mountPage(ProductsFullSlider)
+  // The hero is auto-imported by Nuxt, so the test registers a stand-in that keeps its test id.
+  const wrapper = await mountPage(ProductsFullSlider, { stubs: { SectionsHero: { template: '<div data-testid="sections-hero" />' } } })
   await flushPromises()
   return wrapper
 }
@@ -119,6 +120,14 @@ describe('ProductsFullSlider', () => {
     api.fetchSlides.mockResolvedValue([slide(1)])
     const single = await mountSlider()
     expect((single.find('[data-testid="slider-prev"]').element as HTMLElement).style.display).toBe('none')
+  })
+
+  it('falls back to the text hero when the operator has no slides, instead of an empty band', async () => {
+    api.fetchSlides.mockResolvedValue([])
+    const wrapper = await mountSlider()
+
+    expect(wrapper.find('[data-testid="products-slider"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="sections-hero"]').exists()).toBe(true)
   })
 
   it('always uses the dark palette, because it sits on photographs', async () => {

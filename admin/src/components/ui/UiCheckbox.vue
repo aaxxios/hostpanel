@@ -41,10 +41,10 @@ const toggle = (): void => {
     role="checkbox"
     :aria-checked="modelValue"
     :disabled="disabled"
-    class="w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+    class="w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
     :class="modelValue
       ? 'bg-primary-500 border-primary-500'
-      : 'bg-surface-field border-border hover:border-text-muted'"
+      : 'bg-surface-field border-border hover:border-text-secondary'"
     @click="toggle"
   >
     <svg

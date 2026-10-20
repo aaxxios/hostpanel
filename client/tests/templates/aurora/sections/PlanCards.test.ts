@@ -34,6 +34,20 @@ describe('PlanCards', () => {
     expect(card.find('.mt-auto').exists()).toBe(true)
   })
 
+  it('frames every plan card with a theme token and a hover state, never an opacity-modified accent', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(PlanCards, { props: { plans: PLANS } })
+    const free = wrapper.find('[data-testid="plan-free"]').classes()
+    const paid = wrapper.find('[data-testid="plan-card-1"]').classes()
+
+    // border-ac1/25 emits no CSS (ac1 is a var()), which left the grey default border in dark mode.
+    expect(free).toContain('border-line-brand')
+    expect(free).not.toContain('border-ac1/25')
+    expect(paid).toContain('border-line')
+    expect(free).toContain('hover:border-ac1')
+    expect(paid).toContain('hover:border-ac1')
+  })
+
   it('shows the monthly price by default and the per-month annual price when yearly', () => {
     stubAuroraGlobals()
 
@@ -61,7 +75,7 @@ describe('PlanCards', () => {
     expect(wrapper.find('[data-testid="billing-toggle"]').attributes('role')).toBe('radiogroup')
     expect(active.attributes('aria-checked')).toBe('true')
     expect(wrapper.find('[data-testid="billing-monthly"]').attributes('aria-checked')).toBe('false')
-    expect(active.classes()).toEqual(expect.arrayContaining(['rounded-full', 'bg-brand', 'text-on-tint']))
+    expect(active.classes()).toEqual(expect.arrayContaining(['rounded-full', 'bg-brand', 'text-on-brand']))
     expect(active.classes()).not.toContain('rounded-lg')
   })
 

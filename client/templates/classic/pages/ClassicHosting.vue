@@ -54,11 +54,8 @@
           <!-- Free hosting -->
           <UiStack v-if="freePlan" gap="none" class="max-w-6xl mx-auto mb-16" data-testid="classic-hosting-free">
             <UiCard
-              v-motion
               padding="none"
-              :initial="{ opacity: 0, scale: 0.95 }"
-              :visible-once="{ opacity: 1, scale: 1, transition: { duration: 600 } }"
-              class="relative overflow-hidden rounded-[2.5rem] border-cyan-500/30 dark:border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-classic-surface to-primary-500/10 backdrop-blur-md p-8 md:p-12 shadow-halo-cyan-lg"
+              class="relative overflow-hidden rounded-[2.5rem] border-cyan-500/30 dark:border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-classic-surface to-primary-500/10 backdrop-blur-md p-8 md:p-12 shadow-halo-cyan-lg animate-reveal-up motion-reduce:animate-none"
             >
               <UiStack align="center" justify="between" gap="xl" class="relative z-10 lg:flex-row">
                 <UiStack gap="none" class="flex-1 text-center lg:text-left">
@@ -108,7 +105,7 @@
 
             <!-- Separator -->
             <UiStack align="center" gap="none" class="text-center mt-24 mb-16">
-              <UiText as="span" size="xs" tone="inherit" weight="bold" class="md:text-sm text-gray-500 dark:text-white/40 font-black uppercase tracking-[0.3em] block mb-4">{{ $t('hosting.premiumSolutions') }}</UiText>
+              <UiText as="span" size="xs" tone="inherit" weight="bold" class="md:text-sm text-gray-600 dark:text-gray-400 font-black uppercase tracking-[0.3em] block mb-4">{{ $t('hosting.premiumSolutions') }}</UiText>
               <UiStack gap="none" class="w-24 h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent mx-auto" />
             </UiStack>
           </UiStack>
@@ -118,12 +115,10 @@
             <UiStack
               v-for="(plan, index) in otherPlans"
               :key="plan.pid"
-              v-motion
               gap="none"
-              :initial="{ opacity: 0, y: 30 }"
-              :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 500 } }"
-              class="relative w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-22px)]"
+              class="relative w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-22px)] animate-reveal-up motion-reduce:animate-none"
               data-testid="classic-hosting-plan"
+              :style="revealStyle(index * 100)"
             >
               <UiCard
                 padding="none"
@@ -177,7 +172,7 @@
                       class="justify-between text-[10px] px-3 py-2 rounded-xl duration-300"
                       :class="c.key === selectedCycle
                         ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-black'
-                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'"
                       :data-testid="`classic-hosting-mini-${c.key}`"
                       @click="selectedCycle = c.key"
                     >
@@ -201,7 +196,7 @@
                     variant="outline"
                     full-width
                     class="!rounded-2xl !h-12 font-black uppercase tracking-widest !text-xs transition-all shadow-xl hover:shadow-cyan-500/20"
-                    :class="cart.hasItem(plan.pid, selectedCycle) ? '!bg-green-500/20 !text-green-700 dark:!text-green-400 !border-green-500/40' : '!border-gray-200 dark:!border-white/10 hover:!border-cyan-500/50'"
+                    :class="cart.hasItem(plan.pid, selectedCycle) ? '!bg-green-500/20 !text-green-700 dark:!text-green-400 !border-green-500/40' : '!border-gray-300 dark:!border-white/10 hover:!border-cyan-500/50'"
                     data-testid="classic-hosting-add"
                     @click="addToCart(plan)"
                   >
@@ -224,16 +219,13 @@ data-testid="classic-hosting-plan-select"
           <!-- Agency section -->
           <UiStack v-if="agencyPlan" gap="none" class="max-w-6xl mx-auto mb-24" data-testid="classic-hosting-agency">
             <UiStack align="center" gap="none" class="text-center mb-16">
-              <UiText as="span" size="xs" tone="inherit" weight="bold" class="md:text-sm text-gray-500 dark:text-white/40 font-black uppercase tracking-[0.3em] block mb-4">{{ $t('hosting.enterpriseSolutions') }}</UiText>
+              <UiText as="span" size="xs" tone="inherit" weight="bold" class="md:text-sm text-gray-600 dark:text-gray-400 font-black uppercase tracking-[0.3em] block mb-4">{{ $t('hosting.enterpriseSolutions') }}</UiText>
               <UiStack gap="none" class="w-24 h-px bg-gradient-to-r from-transparent via-primary-500 to-transparent mx-auto" />
             </UiStack>
 
             <UiCard
-              v-motion
               padding="none"
-              :initial="{ opacity: 0, y: 40 }"
-              :visible-once="{ opacity: 1, y: 0, transition: { duration: 700 } }"
-              class="relative rounded-3xl md:rounded-[3rem] border-primary-500/30 dark:border-primary-500/30 bg-gradient-to-br from-primary-500/10 via-classic-surface to-cyan-500/10 backdrop-blur-md p-8 md:p-12 shadow-halo-violet"
+              class="relative rounded-3xl md:rounded-[3rem] border-primary-500/30 dark:border-primary-500/30 bg-gradient-to-br from-primary-500/10 via-classic-surface to-cyan-500/10 backdrop-blur-md p-8 md:p-12 shadow-halo-violet animate-reveal-up motion-reduce:animate-none"
             >
               <UiStack align="center" justify="between" gap="xl" class="relative z-10 lg:flex-row">
                 <UiStack gap="none" class="flex-1 text-center lg:text-left">
@@ -304,7 +296,7 @@ data-testid="classic-hosting-plan-select"
               <UiStack gap="none" class="overflow-x-auto no-scrollbar scroll-smooth">
                 <UiTable class="min-w-[320px] md:min-w-[1100px] border-0 rounded-none bg-transparent">
                   <UiTableHead>
-                    <UiTableRow :hoverable="false" class="bg-gray-50 dark:bg-white/[0.03]">
+                    <UiTableRow :hoverable="false" class="bg-gray-900/[0.04] dark:bg-white/[0.03]">
                       <UiTableTh class="!p-4 md:!p-8 !text-[10px] md:!text-xs font-black sticky left-0 bg-classic-page z-30 min-w-[140px] md:min-w-[280px]">
                         <UiStack direction="row" align="center" gap="xs">
                           <Server :size="16" class="text-cyan-700 dark:text-cyan-400" />
@@ -324,11 +316,11 @@ data-testid="classic-hosting-plan-select"
                   </UiTableHead>
                   <UiTableBody>
                     <!-- What each plan includes, exactly as the operator wrote it in the catalogue. -->
-                    <UiTableRow group class="hover:bg-white/[0.03]">
+                    <UiTableRow group class="hover:bg-gray-900/[0.03] dark:hover:bg-white/[0.03]">
                       <UiTableTd class="!p-4 md:!p-6 !text-[10px] md:!text-sm text-gray-600 dark:text-gray-400 font-bold sticky left-0 bg-classic-surface/95 backdrop-blur-xl z-20 border-r border-gray-200 dark:border-white/5 align-top group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
                         <UiText as="span" tone="inherit" size="inherit" class="whitespace-nowrap">{{ $t('hosting.comparison.includes') }}</UiText>
                       </UiTableTd>
-                      <UiTableTd v-for="plan in plans" :key="plan.pid" align="center" class="!p-4 md:!p-6 !text-[10px] md:!text-sm text-gray-500 align-top relative group-hover:text-gray-700 dark:group-hover:text-gray-200" data-testid="classic-hosting-compare-features">
+                      <UiTableTd v-for="plan in plans" :key="plan.pid" align="center" class="!p-4 md:!p-6 !text-[10px] md:!text-sm text-gray-600 dark:text-gray-400 align-top relative group-hover:text-gray-700 dark:group-hover:text-gray-200" data-testid="classic-hosting-compare-features">
                         <UiList v-if="planFeatures(plan).length" list-style="bare">
                           <UiListItem v-for="feature in planFeatures(plan)" :key="feature" :icon="Check">{{ feature }}</UiListItem>
                         </UiList>
@@ -379,6 +371,8 @@ data-testid="classic-hosting-plan-select"
  * The catalogue is read through the catalogue store in the payer's own currency; prices are
  * formatted as sent, never converted. Cart actions go to the cart store.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { Server, CheckCircle, AlertCircle, ShoppingCart, Check, ArrowRight } from 'lucide-vue-next'
 import { useCartStore } from '~/stores/cart'
 import { useCurrencyStore } from '~/stores/currency'

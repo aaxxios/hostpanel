@@ -405,7 +405,7 @@ onUnmounted(() => {
           </div>
 
           <div class="grid grid-cols-7 gap-1 mb-2">
-            <div v-for="name in dayNames" :key="name" class="text-center text-xs font-semibold text-text-muted">{{ name }}</div>
+            <div v-for="name in dayNames" :key="name" class="text-center text-xs font-semibold text-text-secondary">{{ name }}</div>
           </div>
           <div class="grid grid-cols-7 gap-1">
             <button

@@ -1,5 +1,5 @@
 <template>
-  <section class="py-24 relative overflow-hidden" data-testid="sections-cta">
+  <section class="py-14 md:py-20 relative overflow-hidden" data-testid="sections-cta">
     <!-- Background cover -->
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-br from-blue-50 dark:from-gray-900 via-white dark:via-ui-page to-blue-50 dark:to-gray-900" />
@@ -23,12 +23,7 @@
     </UiDecor>
 
     <UiContainer class="relative z-10">
-      <div
-        v-motion
-        :initial="{ opacity: 0, y: 40 }"
-        :visible-once="{ opacity: 1, y: 0, transition: { duration: 600 } }"
-        class="max-w-3xl mx-auto text-center"
-      >
+      <div class="max-w-3xl mx-auto text-center animate-reveal-up motion-reduce:animate-none">
         <span class="inline-block px-4 py-2 mb-6 bg-white dark:bg-white/5 backdrop-blur-sm border border-gray-200 dark:border-white/10 rounded-full text-sm text-gray-700 dark:text-gray-300">{{ $t('cta.badge') }}</span>
 
         <UiHeading :level="2" class="text-4xl md:text-5xl lg:text-6xl mb-4">{{ $t('cta.title') }}</UiHeading>
@@ -87,7 +82,8 @@
  * Call-to-action band that closes a marketing page: a headline and an e-mail field.
  *
  * The submit is simulated (a one second wait, then a confirmation that disappears after three
- * seconds); the field is cleared afterwards.
+ * seconds); the field is cleared afterwards. The block enters with a CSS keyframe, not a
+ * scroll-triggered directive, so it is visible in server HTML and in both themes.
  */
 import { ArrowRight } from 'lucide-vue-next'
 

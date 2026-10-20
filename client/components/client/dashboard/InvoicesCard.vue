@@ -11,9 +11,7 @@
       <UiSkeleton v-for="i in 3" :key="i" shape="block" class="h-12" />
     </UiStack>
 
-    <UiText v-else-if="!store.invoices.length" size="sm" tone="muted" class="py-4 text-center" data-testid="dashboard-invoices-empty">
-      {{ $t('client.dashboard.noInvoices') }}
-    </UiText>
+    <UiEmptyState v-else-if="!store.invoices.length" :icon="FileText" :title="$t('client.dashboard.noInvoices')" class="!py-6" data-testid="dashboard-invoices-empty" />
 
     <UiStack v-else gap="sm">
       <ClientDashboardListRow
@@ -41,7 +39,7 @@
  * status, each opening the invoice.
  */
 import { CLIENT_INVOICES_PATH, clientInvoicePath } from '~/constants/clientRoutes'
-import { ArrowRight } from 'lucide-vue-next'
+import { ArrowRight, FileText } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
 import { formatCurrency } from '~/utils/formatCurrency'
 import { formatDate } from '~/utils/formatDate'

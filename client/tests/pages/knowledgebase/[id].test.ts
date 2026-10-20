@@ -92,12 +92,12 @@ describe('pages/knowledgebase/[id]', () => {
     const wrapper = await mountPage(Page)
 
     await wrapper.find('[data-testid="kb-vote-yes"]').trigger('click')
-    expect(wrapper.find('[data-testid="kb-vote-yes"]').classes()).toContain('bg-primary-600')
+    expect(wrapper.find('[data-testid="kb-vote-yes"]').classes()).toContain('bg-primary-700')
     expect(wrapper.find('[data-testid="kb-vote-no"]').classes()).not.toContain('bg-red-600')
 
     await wrapper.find('[data-testid="kb-vote-no"]').trigger('click')
     expect(wrapper.find('[data-testid="kb-vote-no"]').classes()).toContain('bg-red-600')
-    expect(wrapper.find('[data-testid="kb-vote-yes"]').classes()).not.toContain('bg-primary-600')
+    expect(wrapper.find('[data-testid="kb-vote-yes"]').classes()).not.toContain('bg-primary-700')
   })
 
   it('shows the failure state when the article cannot be read', async () => {

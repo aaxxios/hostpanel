@@ -1,5 +1,5 @@
 <template>
-  <section class="py-20 bg-ui-page relative overflow-hidden" data-testid="sections-why-choose-us">
+  <section class="py-12 md:py-20 bg-ui-page relative overflow-hidden" data-testid="sections-why-choose-us">
     <!-- Background -->
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-cyan-500/5" />
@@ -27,11 +27,9 @@
         <UiCard
           v-for="(advantage, index) in advantages"
           :key="advantage.key"
-          v-motion
-          :initial="{ opacity: 0, y: 40 }"
-          :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 500 } }"
-          class="relative flex flex-col items-center text-center group hover:border-primary-500/30 hover:-translate-y-2 transition-all duration-300"
+          class="relative flex flex-col items-center text-center group hover:border-primary-500/30 hover:-translate-y-2 transition-all duration-300 animate-reveal-up motion-reduce:animate-none"
           :data-testid="`advantage-${advantage.key}`"
+          :style="revealStyle(index * 100)"
         >
           <!-- Hover glow -->
           <UiDecor class="inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary-500/10 to-cyan-500/5" />
@@ -61,6 +59,8 @@
 /**
  * Why Choose Us section highlighting the company's four advantages.
  */
+import { revealStyle } from '~/utils/reveal'
+
 const { t } = useI18n()
 
 /** The four advantages, each with the icon that stands for it and its translated copy. */

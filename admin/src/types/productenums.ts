@@ -19,6 +19,12 @@ export enum ProductType {
   Ssl = 'Ssl',
   /** Anything else. */
   Other = 'Other',
+  /** Mailboxes and mail hosting. */
+  Email = 'Email',
+  /** An extra attached to another service. */
+  Addon = 'Addon',
+  /** Backup storage and restore. */
+  Backup = 'Backup',
 }
 
 /** Whether the storefront shows a product. */

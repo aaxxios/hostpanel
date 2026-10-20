@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
+import type { PortalProduct } from '~/types/portalproduct'
+import { ProductType } from '~/types/producttype'
 import type { PortalProductGroup } from '~/types/portalproductgroup'
 import {
   FAMILY_COLORS,
@@ -7,7 +9,9 @@ import {
   HOSTING_FAMILY_KEY,
   familyColor,
   familyConfig,
+  dominantProductType,
   familyKey,
+  isDomainGroup,
   isFamilyGroup,
   nameToKey,
   parseDescription
@@ -129,6 +133,33 @@ describe('familyColor', () => {
   })
 })
 
+/**
+ * Builds a catalogue product of a type.
+ *
+ * @param type The product type as the API sends it.
+ * @returns The product.
+ */
+const typed = (type: string | undefined): PortalProduct => ({ id: 1, groupId: 3, name: 'Plan', type })
+
+describe('dominantProductType', () => {
+  it('is the type most products have, the first met winning a tie', () => {
+    expect(dominantProductType([typed('A'), typed('B'), typed('B')])).toBe('B')
+    expect(dominantProductType([typed('A'), typed('B')])).toBe('A')
+  })
+
+  it('is null when no product has a type', () => {
+    expect(dominantProductType([])).toBeNull()
+    expect(dominantProductType([typed(undefined)])).toBeNull()
+  })
+})
+
+describe('isDomainGroup', () => {
+  it('is true only for a group that sells domain names', () => {
+    expect(isDomainGroup([typed(ProductType.Domain), typed(ProductType.Domain)])).toBe(true)
+    expect(isDomainGroup([typed(ProductType.SharedHosting)])).toBe(false)
+  })
+})
+
 describe('familyConfig', () => {
   it('derives a catalogue family from its group', () => {
     expect(familyConfig(group())).toEqual({
@@ -137,6 +168,16 @@ describe('familyConfig', () => {
       color: familyColor('alpha-suite'),
       learnMoreUrl: '/products/alpha-suite'
     })
+  })
+
+  it('takes the icon from the type of the group products, and the default when there are none', () => {
+    expect(familyConfig(group(), [typed(ProductType.Vps)]).icon).toBe('mdi:server-network')
+    expect(familyConfig(group(), [typed(ProductType.Ssl), typed(ProductType.Ssl), typed(ProductType.Vps)]).icon).toBe('mdi:shield-lock')
+    expect(familyConfig(group(), [typed(undefined)]).icon).toBe(FAMILY_ICON)
+  })
+
+  it('gives hosting the hosting icon whatever its products say', () => {
+    expect(familyConfig(group({ id: HOSTING_GROUP_ID, name: 'Web Hosting' }), [typed(ProductType.Other)]).icon).toBe('mdi:cloud-check')
   })
 
   it('points hosting at its own page', () => {

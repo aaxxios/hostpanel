@@ -58,4 +58,15 @@ describe('UiPagination', () => {
 
     expect(wrapper.findAll('[role="option"]').map((option) => option.text())).toEqual(['5', '20'])
   })
+
+  it('paints the current page solid primary and gives every button a focus ring', () => {
+    const wrapper = mountWithKit(UiPagination, { props: { modelValue: 2, totalPages: 3, perPage: 10 } })
+    const current = wrapper.find('[data-testid="ui-pagination-page-2"]')
+    const other = wrapper.find('[data-testid="ui-pagination-page-1"]')
+
+    expect(current.classes()).toEqual(expect.arrayContaining(['bg-primary-600', 'text-on-primary']))
+    expect(other.classes()).not.toContain('bg-primary-600')
+    expect(other.classes()).toContain('focus-visible:ring-2')
+    expect(wrapper.find('[data-testid="ui-pagination-next"]').classes()).toContain('focus-visible:ring-2')
+  })
 })

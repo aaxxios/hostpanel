@@ -95,6 +95,8 @@ internal sealed class DemoCatalogueSeeder
                     "Websites=Unlimited;Storage=150 GB SSD;Support=Priority"),
                 ("Reseller Hosting", "reseller-hosting", "Host your own clients with 50 isolated accounts.", 34.99m, 349.99m,
                     "Accounts=50;Storage=300 GB SSD;Branding=White label"),
+                ("Managed Site Hosting", "managed-site-hosting", "Managed sites with automatic engine and plugin updates.", 14.99m, 149.99m,
+                    "Websites=5;Storage=75 GB SSD;Updates=Automatic"),
             ]),
             ("Cloud VPS", "Isolated virtual servers with full root access.", ProductType.Vps,
             [
@@ -106,6 +108,8 @@ internal sealed class DemoCatalogueSeeder
                     "CPU=6 vCPU;Memory=16 GB RAM;Storage=320 GB NVMe"),
                 ("VPS Enterprise", "vps-enterprise", "8 vCPU, 32 GB RAM, 640 GB NVMe.", 179.99m, 1799.99m,
                     "CPU=8 vCPU;Memory=32 GB RAM;Storage=640 GB NVMe"),
+                ("VPS Mini", "vps-mini", "1 vCPU, 2 GB RAM, 40 GB NVMe.", 14.99m, 149.99m,
+                    "CPU=1 vCPU;Memory=2 GB RAM;Storage=40 GB NVMe"),
             ]),
             ("Dedicated Servers", "Single-tenant hardware for demanding workloads.", ProductType.Dedicated,
             [
@@ -115,6 +119,8 @@ internal sealed class DemoCatalogueSeeder
                     "CPU=12 cores;Memory=64 GB RAM;Storage=2 x 960 GB SSD"),
                 ("Dedicated Max", "dedicated-max", "24 cores, 128 GB RAM, 4 x 960 GB NVMe.", 259.99m, 2599.99m,
                     "CPU=24 cores;Memory=128 GB RAM;Storage=4 x 960 GB NVMe"),
+                ("Dedicated GPU", "dedicated-gpu", "16 cores, 128 GB RAM and one data-centre GPU.", 449.99m, 4499.99m,
+                    "CPU=16 cores;Memory=128 GB RAM;GPU=1 data-centre GPU"),
                 ("Dedicated Legacy", "dedicated-legacy", "Previous generation hardware, no longer sold.", 69.99m, 699.99m,
                     "CPU=4 cores;Memory=16 GB RAM;Storage=2 x 240 GB SSD"),
             ]),
@@ -126,8 +132,10 @@ internal sealed class DemoCatalogueSeeder
                     "Validation=Domain;Names=Unlimited subdomains;Warranty=$50,000"),
                 ("SSL Extended", "ssl-extended", "Organisation-validated certificate with a verified identity.", 79.99m, 749.99m,
                     "Validation=Organisation;Names=1;Warranty=$250,000"),
+                ("SSL Multi-Domain", "ssl-multi-domain", "One certificate for up to five different names.", 39.99m, 379.99m,
+                    "Validation=Domain;Names=Up to 5;Warranty=$50,000"),
             ]),
-            ("Business Email", "Professional mailboxes on your own domain.", ProductType.Other,
+            ("Business Email", "Professional mailboxes on your own domain.", ProductType.Email,
             [
                 ("Mail Starter", "mail-starter", "5 mailboxes with 10 GB each.", 2.99m, 29.99m,
                     "Mailboxes=5;Storage=10 GB each;Spam filter=Included"),
@@ -135,6 +143,8 @@ internal sealed class DemoCatalogueSeeder
                     "Mailboxes=25;Storage=30 GB each;Calendars=Shared"),
                 ("Mail Enterprise", "mail-enterprise", "Unlimited mailboxes with archiving and audit logs.", 11.99m, 119.99m,
                     "Mailboxes=Unlimited;Storage=100 GB each;Archiving=Included"),
+                ("Mail Archive", "mail-archive", "Ten-year compliant archive for every mailbox on a domain.", 4.99m, 49.99m,
+                    "Retention=10 years;Search=Full text;Export=On request"),
             ]),
             ("Domains", "Register and manage domain names.", ProductType.Domain,
             [
@@ -144,8 +154,10 @@ internal sealed class DemoCatalogueSeeder
                     "Extension=One year;DNS=Free management;Downtime=None"),
                 ("WHOIS Privacy", "whois-privacy", "Keep your contact details out of the public record.", 0.99m, 9.99m,
                     "Protection=Contact details hidden;Forwarding=Mail forwarded;Renewal=With the domain"),
+                ("Premium DNS", "premium-dns", "Anycast name servers with DNSSEC and a 100% uptime target.", 1.99m, 19.99m,
+                    "Network=Anycast;Security=DNSSEC;Uptime=100% target"),
             ]),
-            ("Add-ons", "Extras that can be attached to a service.", ProductType.Other,
+            ("Add-ons", "Extras that can be attached to a service.", ProductType.Addon,
             [
                 ("Dedicated IP", "dedicated-ip", "A private IP address for one service.", 2.99m, 29.99m,
                     "Address=IPv4;Reverse DNS=Included;Setup=Instant"),
@@ -153,6 +165,8 @@ internal sealed class DemoCatalogueSeeder
                     "Frequency=Daily;Retention=30 days;Restore=Self-service"),
                 ("Priority Support", "priority-support", "Skip the queue with a one-hour response target.", 14.99m, 149.99m,
                     "Response=1 hour;Channel=Phone and tickets;Hours=24/7"),
+                ("Site Monitoring", "site-monitoring", "Uptime checks every minute with alerts by mail and text.", 4.99m, 49.99m,
+                    "Interval=1 minute;Alerts=Mail and text;Locations=5"),
             ]),
         ];
 

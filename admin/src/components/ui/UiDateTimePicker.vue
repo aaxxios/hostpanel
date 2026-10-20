@@ -1,13 +1,17 @@
 <script setup lang="ts">
 /**
- * Date and time picker for an optional moment, with the popup in the panel's dark look.
+ * Date and time picker for an optional moment, with the popup following the panel's light/dark scheme.
  *
  * Wraps the date-picker library so a screen does not configure it (or restyle its input) itself.
  * The model is a `Date` or `null`; the clear button sets `null`. `minDate` stops the pick earlier
  * than another field, e.g. an end moment before its start.
  */
 import { VueDatePicker } from '@vuepic/vue-datepicker'
+import { useThemeStore } from '@/stores/theme'
 import '@vuepic/vue-datepicker/dist/main.css'
+
+/** Theme store; the library has its own dark/light switch, so it is fed the panel's scheme. */
+const theme = useThemeStore()
 
 /** Props for UiDateTimePicker. */
 withDefaults(defineProps<{
@@ -28,7 +32,7 @@ const emit = defineEmits<{
 }>()
 
 /** Classes for the library's input, so it matches the kit's fields (the library's own CSS is overridden). */
-const INPUT_CLASSES = 'bg-surface-field! border-border! text-text-primary! rounded-lg! px-3! py-2! text-sm! placeholder:text-text-muted!'
+const INPUT_CLASSES = 'bg-surface-field! border-border! text-text-primary! rounded-lg! px-3! py-2! text-sm! placeholder:text-text-muted! focus:border-primary-500/50! focus:ring-2! focus:ring-primary-500/10!'
 
 /**
  * Re-emits the library's value as a `Date` or `null` (its model type is wider than ours).
@@ -45,7 +49,7 @@ const onUpdate = (value: unknown): void => {
     :model-value="modelValue"
     :enable-time-picker="true"
     :clearable="true"
-    :dark="true"
+    :dark="!theme.isLight"
     :auto-apply="true"
     :min-date="minDate"
     :placeholder="placeholder"

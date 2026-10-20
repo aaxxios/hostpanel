@@ -28,7 +28,7 @@
         </UiStack>
 
         <UiGrid as="dl" cols="3" gap="md">
-          <UiDescriptionItem :label="$t('client.invoices.dueDate')" :value="formatDate(invoice.dueDate)" :value-class="isOverdue ? '!text-red-500' : ''" />
+          <UiDescriptionItem :label="$t('client.invoices.dueDate')" :value="formatDate(invoice.dueDate)" :value-class="isOverdue ? '!text-red-600 dark:!text-red-400' : ''" />
           <!-- `paidAt` is a moment, not a calendar day, so it is rendered with its time. -->
           <UiDescriptionItem v-if="formatDateTime(invoice.paidAt) !== EMPTY_DATE" :label="$t('client.invoices.datePaid')" :value="formatDateTime(invoice.paidAt)" />
           <UiDescriptionItem :label="$t('client.invoices.paymentMethod')" :value="invoice.paymentMethod || EMPTY_DATE" value-class="capitalize" />

@@ -81,7 +81,7 @@ describe('pages/faq/[category]', () => {
   it('highlights the current topic and offers the "All" link', async () => {
     const wrapper = await mountPage(Page)
 
-    expect(wrapper.find('[data-testid="faq-category-products"]').classes()).toContain('bg-primary-600')
+    expect(wrapper.find('[data-testid="faq-category-products"]').classes()).toContain('bg-primary-700')
     expect(wrapper.find('[data-testid="faq-category-all"]').attributes('href')).toBe('/en/faq')
   })
 

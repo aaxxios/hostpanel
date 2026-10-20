@@ -116,7 +116,6 @@ export const mountWithKit = (component: Component, options: MountWithKitOptions 
     global: {
       plugins: [pinia],
       components: { LayoutDemoBanner, ...config.global.components, ...KIT, ...options.components, NuxtLink: NuxtLinkStub, NuxtImg: NuxtImgStub, Icon: IconStub, ClientOnly: ClientOnlyStub },
-      directives: { motion: {} },
       mocks: { $t: (key: string) => key },
       stubs: { teleport: true, ...options.stubs },
       config: options.errorHandler ? { errorHandler: options.errorHandler } : {},

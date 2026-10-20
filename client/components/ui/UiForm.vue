@@ -11,10 +11,10 @@
         v-if="error"
         role="alert"
         data-testid="ui-form-error"
-        class="mb-5 p-4 rounded-xl border border-red-500/30 bg-red-500/10 flex items-start gap-3"
+        :class="['mb-5 p-4 rounded-xl border flex items-start gap-3', ALERT_TONE_CLASSES[UiAlertVariant.Error].wrap]"
       >
-        <AlertCircle :size="16" :stroke-width="2" class="text-red-400 flex-shrink-0 mt-0.5" />
-        <p class="text-red-400 text-sm">{{ error }}</p>
+        <AlertCircle :size="16" :stroke-width="2" :class="['flex-shrink-0 mt-0.5', ALERT_TONE_CLASSES[UiAlertVariant.Error].icon]" />
+        <p :class="['text-sm', ALERT_TONE_CLASSES[UiAlertVariant.Error].title]">{{ error }}</p>
       </div>
     </Transition>
 
@@ -29,10 +29,10 @@
         v-if="success"
         role="status"
         data-testid="ui-form-success"
-        class="mb-5 p-4 rounded-xl border border-green-500/30 bg-green-500/10 flex items-start gap-3"
+        :class="['mb-5 p-4 rounded-xl border flex items-start gap-3', ALERT_TONE_CLASSES[UiAlertVariant.Success].wrap]"
       >
-        <CheckCircle :size="16" :stroke-width="2" class="text-green-400 flex-shrink-0 mt-0.5" />
-        <p class="text-green-400 text-sm">{{ success }}</p>
+        <CheckCircle :size="16" :stroke-width="2" :class="['flex-shrink-0 mt-0.5', ALERT_TONE_CLASSES[UiAlertVariant.Success].icon]" />
+        <p :class="['text-sm', ALERT_TONE_CLASSES[UiAlertVariant.Success].title]">{{ success }}</p>
       </div>
     </Transition>
 
@@ -57,7 +57,8 @@
  */
 import { computed } from 'vue'
 import { AlertCircle, CheckCircle } from 'lucide-vue-next'
-import { UiFormSpacing } from '~/utils/ui/enums'
+import { UiAlertVariant, UiFormSpacing } from '~/utils/ui/enums'
+import { ALERT_TONE_CLASSES } from '~/utils/ui/tones'
 
 /** Props of UiForm. */
 interface Props {

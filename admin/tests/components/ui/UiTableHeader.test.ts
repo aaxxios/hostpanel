@@ -54,4 +54,10 @@ describe('UiTableHeader', () => {
 
     expect(wrapper.get('button').text()).toContain(arrow)
   })
+
+  it('gives the sort button a visible keyboard focus outline', () => {
+    const wrapper = mount(UiTableHeader, { props: { sortable: true } })
+
+    expect(wrapper.get('button').classes()).toContain('focus-visible:outline-primary-500')
+  })
 })

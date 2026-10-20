@@ -221,7 +221,7 @@ onBeforeUnmount(() => {
   <div class="relative" :class="heightClasses[height]">
     <p
       v-if="isEmpty"
-      class="absolute inset-0 flex items-center justify-center text-[0.82rem] text-text-muted"
+      class="absolute inset-0 flex items-center justify-center text-[0.82rem] text-text-secondary"
       data-testid="chart-empty"
     >
       {{ t('ui.chart.empty') }}

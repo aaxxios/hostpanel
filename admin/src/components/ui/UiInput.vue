@@ -95,14 +95,14 @@ const onInput = (event: Event): void => {
   <div v-if="wrapped" class="flex flex-col gap-1.5">
     <span
       v-if="label !== undefined"
-      class="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-text-muted"
+      class="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-text-secondary"
     >
       {{ label }}
     </span>
     <div class="relative">
       <span
         v-if="hasIcon"
-        class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted flex items-center"
+        class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary flex items-center"
       >
         <slot name="icon" />
       </span>

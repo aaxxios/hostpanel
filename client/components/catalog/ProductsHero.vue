@@ -63,10 +63,8 @@
 
         <!-- Trust badges -->
         <div
-          v-motion
-          :initial="{ opacity: 0, y: 20 }"
-          :enter="{ opacity: 1, y: 0, transition: { delay: 400, duration: 500 } }"
-          class="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-500"
+          class="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600 dark:text-gray-400 animate-reveal-up motion-reduce:animate-none"
+          :style="revealStyle(400)"
         >
           <div class="flex items-center gap-2">
             <ShieldCheck :size="20" :stroke-width="2" class="text-green-600 dark:text-green-400" />
@@ -97,6 +95,8 @@
  * "View Products" scrolls to the catalogue section of the same page (`products-section`); "Book a
  * Demo" goes to the contact page. Everything it shows is a locale key.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { ArrowDown, Calendar, Lock, ShieldCheck, Trophy } from 'lucide-vue-next'
 
 /** Id of the catalogue section the first call to action scrolls to. */

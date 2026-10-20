@@ -9,11 +9,9 @@
             <UiCard
               v-for="(feature, index) in features"
               :key="index"
-              v-motion
-              :initial="{ opacity: 0, x: -20 }"
-              :visible-once="{ opacity: 1, x: 0, transition: { delay: index * 60, duration: 300 } }"
               padding="sm"
-              class="flex items-center gap-3"
+              class="flex items-center gap-3 animate-reveal-up motion-reduce:animate-none"
+              :style="revealStyle(index * 60)"
             >
               <CheckCircle :size="18" :stroke-width="2" :class="[accent.text, 'flex-shrink-0']" />
               <span class="text-sm text-gray-700 dark:text-gray-300">{{ feature }}</span>
@@ -31,11 +29,9 @@
             <UiCard
               v-for="(perk, index) in perks"
               :key="perk.key"
-              v-motion
-              :initial="{ opacity: 0, y: 20 }"
-              :visible-once="{ opacity: 1, y: 0, transition: { delay: index * 100, duration: 400 } }"
-              class="text-center"
+              class="text-center animate-reveal-up motion-reduce:animate-none"
               :data-testid="`trial-perk-${perk.key}`"
+              :style="revealStyle(index * 100)"
             >
               <component :is="perk.icon" :size="32" :stroke-width="2" :class="[accent.text, 'mx-auto mb-3']" />
               <UiText weight="semibold" class="mb-1">{{ $t(`trial.perks.${perk.key}.title`) }}</UiText>
@@ -61,6 +57,8 @@
  * Body of the trial page: the product's feature lines, the three trial perks and the closing
  * trial call to action, painted in the product's own accent colour.
  */
+
+import { revealStyle } from '~/utils/reveal'
 import { CheckCircle, Clock, CreditCard, Headphones, Rocket } from 'lucide-vue-next'
 import { TrialPerk } from '~/types/trialperk'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'

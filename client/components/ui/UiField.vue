@@ -2,7 +2,7 @@
   <div class="w-full">
     <label v-if="label" :for="controlId" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
       {{ label }}
-      <span v-if="required" class="text-primary-500">*</span>
+      <span v-if="required" class="text-primary-600 dark:text-primary-400">*</span>
     </label>
 
     <slot v-bind="slotProps" />
@@ -12,7 +12,7 @@
       :id="messageId"
       role="alert"
       data-testid="ui-field-error"
-      class="mt-2 text-sm text-red-500 dark:text-red-400"
+      class="mt-2 text-sm text-red-600 dark:text-red-400"
     >
       {{ message }}
     </p>
@@ -20,7 +20,7 @@
       v-else-if="hint"
       :id="messageId"
       data-testid="ui-field-hint"
-      class="mt-2 text-sm text-gray-500"
+      class="mt-2 text-sm text-gray-500 dark:text-gray-400"
     >
       {{ hint }}
     </p>

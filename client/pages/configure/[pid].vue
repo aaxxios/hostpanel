@@ -76,7 +76,7 @@ const product = computed<PortalProduct | null>(() => catalogStore.productsFor(pi
 /** Visual config of the product's family (name, icon, accent colour), or null when its group is unknown. */
 const config = computed(() => {
   const group = catalogStore.productGroups.find((candidate) => candidate.id === product.value?.groupId)
-  return group ? familyConfig(group) : null
+  return group ? familyConfig(group, product.value ? [product.value] : []) : null
 })
 
 /** Name of the product's family. */

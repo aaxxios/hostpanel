@@ -30,6 +30,17 @@ describe('AuroraFooter', () => {
     expect(labels).not.toContain('aurora.footer.blog')
   })
 
+  it('gives every footer link a theme-token hover and focus state, in light and dark', () => {
+    stubAuroraGlobals({ settings: { 'portal.contact.email': 'hi@acme.test' } })
+    const wrapper = mountWithKit(AuroraFooter)
+    const links = [...wrapper.findAll('[data-testid="aurora-footer-link"]'), wrapper.find('[data-testid="aurora-footer-email"]')]
+
+    expect(links.length).toBeGreaterThan(1)
+    for (const link of links) {
+      expect(link.classes()).toEqual(expect.arrayContaining(['text-mut', 'hover:text-ac1', 'focus-visible:text-ac1', 'hover:after:scale-x-100']))
+    }
+  })
+
   it('shows no newsletter form, no social row and no contact line on a fresh install', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(AuroraFooter)

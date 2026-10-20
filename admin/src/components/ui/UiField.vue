@@ -68,7 +68,7 @@ const describedby = computed<string | undefined>(() => {
     <UiText
       v-else-if="hint !== undefined"
       :id="messageId"
-      tone="muted"
+      tone="secondary"
       size="xs"
     >
       {{ hint }}

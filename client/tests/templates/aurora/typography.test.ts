@@ -29,4 +29,13 @@ describe('aurora typography classes', () => {
       expect(classes).not.toContain('${')
     }
   })
+
+  it('steps the headings down from page to section to block, with a tight leading', () => {
+    expect(PAGE_TITLE_CLASS).toContain('clamp(30px,4.2vw,46px)')
+    expect(SECTION_TITLE_CLASS).toContain('clamp(26px,3.2vw,36px)')
+    expect(BLOCK_TITLE_CLASS).toContain('clamp(24px,2.8vw,32px)')
+    for (const title of [SECTION_TITLE_CLASS, BLOCK_TITLE_CLASS, PAGE_TITLE_CLASS]) {
+      expect(title.split(' ')).toContain('leading-[1.15]')
+    }
+  })
 })

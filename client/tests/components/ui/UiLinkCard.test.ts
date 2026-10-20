@@ -28,4 +28,10 @@ describe('UiLinkCard', () => {
     expect(plain.classes()).not.toContain('border-blue-500/20')
     expect(highlighted.classes()).toContain('border-blue-500/20')
   })
+
+  it('draws a keyboard focus ring', () => {
+    const wrapper = mountWithKit(UiLinkCard, { props: { to: '/x' } })
+
+    expect(wrapper.classes()).toContain('focus-visible:ring-2')
+  })
 })

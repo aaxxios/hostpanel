@@ -34,7 +34,7 @@
         <UiText
           as="span"
           size="xs"
-          tone="subtle"
+          tone="muted"
           class="flex items-center gap-2"
           data-testid="announcement-date"
         >

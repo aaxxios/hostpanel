@@ -104,6 +104,15 @@ describe('FloatingActions', () => {
     wrapper.unmount()
   })
 
+  it('paints the toggle with brand tokens, readable in light and dark', () => {
+    const wrapper = mountAttached()
+    const toggle = wrapper.find('[data-testid="floating-toggle"]').classes()
+
+    expect(toggle).toEqual(expect.arrayContaining(['bg-primary-600', 'text-on-primary', 'dark:bg-primary-500']))
+    expect(toggle).not.toContain('from-channel-chat')
+    wrapper.unmount()
+  })
+
   it('closes on a click outside', async () => {
     stubSettings({ 'portal.contact.telegram': 'support' })
     const wrapper = mountAttached()

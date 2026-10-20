@@ -62,16 +62,12 @@
     "services": {
       "eyebrow": "Services",
       "title": "From the domain to the server",
-      "hostingTag": "Host",
       "hostingTitle": "Web hosting",
       "hostingBody": "Web hosting with SSL, daily backups and migration assistance.",
-      "serversTag": "VPS",
       "serversTitle": "VPS and servers",
       "serversBody": "Virtual and dedicated servers with full root access and monitoring.",
-      "domainsTag": "DNS",
       "domainsTitle": "Domains and DNS",
       "domainsBody": "Register, transfer and renew domains, with DNS and WHOIS privacy managed in the panel.",
-      "billingTag": "Bill",
       "billingTitle": "Billing and client portal",
       "billingBody": "Invoices, payments, renewals and support tickets in one account."
     },
@@ -79,6 +75,9 @@
       "eyebrow": "Process",
       "title": "Four steps to go live",
       "lead": "Clear steps and a support team at every stage.",
+      "start": "Get started",
+      "talk": "Talk to a specialist",
+      "note": "Not sure which plan fits? Our team will help you choose.",
       "step1Title": "Choose a plan",
       "step1Body": "Pick hosting or a server and search for the domain you want.",
       "step2Title": "Order and pay",
@@ -88,14 +87,28 @@
       "step4Title": "Manage and get support",
       "step4Body": "Manage services, domains and invoices in the client portal; reach support whenever you need it."
     },
+    "partners": {
+      "eyebrow": "Partners",
+      "title": "Trusted by our partners"
+    },
+    "projects": {
+      "eyebrow": "Projects",
+      "title": "Our work",
+      "visit": "Visit site"
+    },
     "testimonials": {
       "eyebrow": "Clients",
       "title": "What they say about us",
       "prev": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "rating": "Rated {rating} out of 5",
+      "slide": "Testimonial {current} of {total}",
+      "goTo": "Show testimonial from {name}"
     },
     "faq": {
-      "title": "Frequently asked questions"
+      "title": "Frequently asked questions",
+      "lead": "Quick answers about plans, domains and support.",
+      "contact": "Still have questions? Contact support"
     },
     "cta": {
       "title": "Let's start with your project",
@@ -142,6 +155,7 @@
       "renew": "Renew",
       "transfer": "Transfer",
       "all": "All",
+      "filterLabel": "Filter by category",
       "empty": "No zones in this category.",
       "note": "Note"
     },

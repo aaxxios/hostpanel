@@ -26,12 +26,12 @@
         <p v-if="error" class="text-sm text-red-600 dark:text-red-400">
           {{ error }}
         </p>
-        <p v-else-if="hint" class="text-sm text-gray-500">
+        <p v-else-if="hint" class="text-sm text-gray-500 dark:text-gray-400">
           {{ hint }}
         </p>
       </div>
 
-      <p v-if="maxLength" class="text-sm text-gray-500">
+      <p v-if="maxLength" class="text-sm text-gray-500 dark:text-gray-400">
         {{ characterCount }}/{{ maxLength }}
       </p>
     </div>
@@ -122,7 +122,7 @@ const characterCount = computed(() => props.modelValue?.length ?? 0)
 /** Class list of the `<textarea>`. */
 const textareaClasses = computed(() => [
   fieldStateClasses({ error: Boolean(props.error), disabled: props.disabled }),
-  'px-4 py-2.5 placeholder:text-gray-500',
+  'px-4 py-2.5 placeholder:text-gray-500 dark:placeholder:text-gray-400',
   props.resize ? 'resize-y' : 'resize-none',
 ].join(' '))
 </script>

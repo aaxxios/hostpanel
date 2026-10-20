@@ -73,6 +73,13 @@ describe('LanguageSwitcher', () => {
     expect(wrapper.find('[data-testid="language-switcher-trigger"]').classes()).not.toContain('hidden')
   })
 
+  it('draws the trigger as a brand-tinted outline, not a grey fill', () => {
+    const classes = mountWithKit(LanguageSwitcher).find('[data-testid="language-switcher-trigger"]').classes()
+
+    expect(classes).toEqual(expect.arrayContaining(['border-primary-500/30', 'hover:bg-primary-500/10']))
+    expect(classes).not.toContain('bg-gray-100')
+  })
+
   it('adds the card row and hides the trigger below xl in the responsive layout', () => {
     const wrapper = mountWithKit(LanguageSwitcher, { props: { layout: UiLanguageLayout.Responsive } })
 

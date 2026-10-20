@@ -71,7 +71,8 @@ public sealed class ListActiveTestimonialsHandler
                 e.AvatarUrl,
                 t.Quote,
                 e.Rating,
-                e.SortOrder));
+                e.SortOrder,
+                e.GetDisplayDate()));
         }
 
         return Result<IReadOnlyList<TestimonialPublicDto>>.Success(dtos);

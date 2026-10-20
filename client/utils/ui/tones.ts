@@ -11,29 +11,32 @@
 import { UiAlertVariant, UiSize, UiTone } from './enums'
 
 /** Focus ring used by every focusable kit control; `focus-visible` so a mouse click or a programmatic focus draws nothing. */
-export const FOCUS_RING = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent'
+export const FOCUS_RING = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent'
 
-/** Focus ring that also offsets from the surface, for filled buttons. */
-export const FOCUS_RING_OFFSET = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500'
+/** Trigger of a header picker (language, currency): a tinted brand outline with a brand-tint hover, drawn from theme tokens in light and dark. */
+export const PICKER_TRIGGER = 'border border-primary-500/30 bg-primary-500/5 hover:border-primary-500/50 hover:bg-primary-500/10 transition duration-200'
+
+/** Focus ring that also offsets from the theme surface (so the gap is white in light, near-black in dark), for filled buttons. */
+export const FOCUS_RING_OFFSET = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400 focus-visible:ring-offset-ui-surface'
 
 /** Soft badge / chip colours per tone, light and dark. */
 export const BADGE_TONE_CLASSES: Record<UiTone, string> = {
   [UiTone.Default]: 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300',
-  [UiTone.Primary]: 'bg-primary-100 text-primary-800 dark:bg-primary-500/20 dark:text-primary-400',
-  [UiTone.Secondary]: 'bg-secondary-100 text-secondary-800 dark:bg-secondary-500/20 dark:text-secondary-400',
+  [UiTone.Primary]: 'bg-primary-100 text-primary-800 dark:bg-primary-500/25 dark:text-primary-200',
+  [UiTone.Secondary]: 'bg-secondary-100 text-secondary-800 dark:bg-secondary-500/25 dark:text-secondary-200',
   [UiTone.Success]: 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400',
   [UiTone.Warning]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400',
   [UiTone.Danger]: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400',
-  [UiTone.Info]: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400',
+  [UiTone.Info]: 'bg-blue-100 text-blue-800 dark:bg-blue-500/25 dark:text-blue-200',
 }
 
 /** Icon colour per tone, used where an icon sits on a neutral surface (stat tiles). */
 export const ICON_TONE_CLASSES: Record<UiTone, string> = {
-  [UiTone.Default]: 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400',
+  [UiTone.Default]: 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300',
   [UiTone.Primary]: 'bg-primary-500/10 text-primary-600 dark:text-primary-400',
   [UiTone.Secondary]: 'bg-secondary-500/10 text-secondary-600 dark:text-secondary-400',
-  [UiTone.Success]: 'bg-green-500/10 text-green-600 dark:text-green-400',
-  [UiTone.Warning]: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
+  [UiTone.Success]: 'bg-green-500/10 text-green-700 dark:text-green-400',
+  [UiTone.Warning]: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400',
   [UiTone.Danger]: 'bg-red-500/10 text-red-600 dark:text-red-400',
   [UiTone.Info]: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
 }
@@ -54,27 +57,27 @@ export interface AlertToneClasses {
 export const ALERT_TONE_CLASSES: Record<UiAlertVariant, AlertToneClasses> = {
   [UiAlertVariant.Warning]: {
     wrap: 'bg-yellow-50 dark:bg-yellow-500/10 border-yellow-300 dark:border-yellow-500/30',
-    icon: 'text-yellow-500 dark:text-yellow-400',
+    icon: 'text-yellow-700 dark:text-yellow-400',
     title: 'text-yellow-800 dark:text-yellow-300',
-    body: 'text-yellow-700 dark:text-yellow-400/80',
+    body: 'text-yellow-700 dark:text-yellow-400/90',
   },
   [UiAlertVariant.Error]: {
     wrap: 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20',
     icon: 'text-red-500 dark:text-red-400',
     title: 'text-red-700 dark:text-red-400',
-    body: 'text-red-600 dark:text-red-400/80',
+    body: 'text-red-600 dark:text-red-400/90',
   },
   [UiAlertVariant.Info]: {
     wrap: 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20',
-    icon: 'text-blue-500 dark:text-blue-400',
+    icon: 'text-blue-600 dark:text-blue-400',
     title: 'text-blue-700 dark:text-blue-300',
-    body: 'text-blue-600 dark:text-blue-400/80',
+    body: 'text-blue-700 dark:text-blue-300',
   },
   [UiAlertVariant.Success]: {
     wrap: 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20',
-    icon: 'text-green-500 dark:text-green-400',
+    icon: 'text-green-600 dark:text-green-400',
     title: 'text-green-700 dark:text-green-300',
-    body: 'text-green-600 dark:text-green-400/80',
+    body: 'text-green-700 dark:text-green-400/90',
   },
 }
 
@@ -108,11 +111,11 @@ export const fieldStateClasses = (state: { error?: boolean; disabled?: boolean; 
   const frame = 'block w-full border rounded-lg transition-all duration-200 text-gray-900 dark:text-white'
   let look: string
   if (state.error) {
-    look = 'border-red-400 dark:border-red-500/50 focus-visible:border-red-500 focus-visible:ring-red-500/50 bg-red-50 dark:bg-red-500/5'
+    look = 'border-red-400 dark:border-red-500/50 focus-visible:border-red-500 focus-visible:ring-red-500/50 dark:focus-visible:ring-red-400/50 bg-red-50 dark:bg-red-500/5'
   } else if (state.open) {
     look = 'border-primary-500 ring-2 ring-primary-500/50 bg-white dark:bg-white/5'
   } else {
-    look = 'border-gray-300 dark:border-gray-700 focus-visible:border-primary-500 focus-visible:ring-primary-500/50 bg-white dark:bg-white/5 hover:border-gray-400 dark:hover:border-gray-600'
+    look = 'border-gray-300 dark:border-gray-700 focus-visible:border-primary-500 dark:focus-visible:border-primary-400 focus-visible:ring-primary-500/50 bg-white dark:bg-white/5 hover:border-gray-400 dark:hover:border-gray-600'
   }
   const disabled = state.disabled ? 'bg-gray-100 dark:bg-gray-800/50 cursor-not-allowed opacity-60' : ''
   return [frame, 'focus:outline-none focus-visible:ring-2', look, disabled].filter(Boolean).join(' ')

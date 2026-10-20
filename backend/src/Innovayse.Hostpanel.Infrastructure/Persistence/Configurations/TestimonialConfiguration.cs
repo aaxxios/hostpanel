@@ -19,6 +19,7 @@ public sealed class TestimonialConfiguration : IEntityTypeConfiguration<Testimon
         builder.Property(x => x.SortOrder).IsRequired();
         builder.Property(x => x.IsActive).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
+        builder.Property(x => x.PublishedAt);
         builder.HasIndex(x => x.SortOrder);
         builder.HasIndex(x => x.IsActive);
         builder.HasMany(x => x.Translations)

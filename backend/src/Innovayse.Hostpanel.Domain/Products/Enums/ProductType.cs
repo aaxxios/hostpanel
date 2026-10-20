@@ -19,4 +19,13 @@ public enum ProductType
 
     /// <summary>Other or custom service.</summary>
     Other = 5,
+
+    /// <summary>Mailboxes and mail hosting.</summary>
+    Email = 6,
+
+    /// <summary>An extra attached to another service (an IP address, a licence).</summary>
+    Addon = 7,
+
+    /// <summary>Backup storage and restore.</summary>
+    Backup = 8,
 }

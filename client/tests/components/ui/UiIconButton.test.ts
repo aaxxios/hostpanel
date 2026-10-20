@@ -35,7 +35,7 @@ describe('UiIconButton', () => {
 
   it.each([
     [UiIconButtonVariant.Primary, 'bg-primary-600'],
-    [UiIconButtonVariant.Danger, 'text-red-500'],
+    [UiIconButtonVariant.Danger, 'text-red-600'],
     [UiIconButtonVariant.Ghost, 'border-transparent'],
     [UiIconButtonVariant.Subtle, 'bg-gray-100'],
   ])('paints the %s variant with %s', (variant, expected) => {

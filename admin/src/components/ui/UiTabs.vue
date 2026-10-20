@@ -58,8 +58,8 @@ const onKeydown = (event: KeyboardEvent, index: number): void => {
         :data-testid="item.testid"
         class="px-4 py-2.5 text-[0.82rem] font-medium whitespace-nowrap border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         :class="item.value === modelValue
-          ? 'border-primary-500 text-text-primary'
-          : 'border-transparent text-text-muted hover:text-text-secondary'"
+          ? 'border-primary-500 text-primary-500 light:text-primary-600'
+          : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-strong'"
         @click="emit('update:modelValue', item.value)"
         @keydown="onKeydown($event, index)"
       >
