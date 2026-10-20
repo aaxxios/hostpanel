@@ -3287,7 +3287,7 @@
   resolved "https://registry.npmjs.org/@vueuse/metadata/-/metadata-13.9.0.tgz"
   integrity sha512-1AFRvuiGphfF7yWixZa0KwjYH8ulyjDCC0aFgrGRz8+P4kvDFSdXLVfTk5xAN9wEuD1J6z4/myMoYbnHoX07zg==
 
-"@vueuse/shared@13.9.0", "@vueuse/shared@^13.0.0":
+"@vueuse/shared@13.9.0":
   version "13.9.0"
   resolved "https://registry.npmjs.org/@vueuse/shared/-/shared-13.9.0.tgz"
   integrity sha512-e89uuTLMh0U5cZ9iDpEI2senqPGfbPRTHM/0AaQkcxnpqjkZqDYP8rpfm7edOz8s+pOCOROEy1PIveSW8+fL5g==
