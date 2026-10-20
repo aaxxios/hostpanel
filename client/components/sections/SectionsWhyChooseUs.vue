@@ -29,7 +29,7 @@
           :key="advantage.key"
           class="relative flex flex-col items-center text-center group hover:border-primary-500/30 hover:-translate-y-2 transition-all duration-300 animate-reveal-up motion-reduce:animate-none"
           :data-testid="`advantage-${advantage.key}`"
-          :style="revealStyle(index * 100)"
+          :class="revealDelay(index * 100)"
         >
           <!-- Hover glow -->
           <UiDecor class="inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary-500/10 to-cyan-500/5" />
@@ -59,7 +59,7 @@
 /**
  * Why Choose Us section highlighting the company's four advantages.
  */
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 
 const { t } = useI18n()
 

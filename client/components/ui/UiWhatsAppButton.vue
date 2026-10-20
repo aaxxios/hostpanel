@@ -13,7 +13,7 @@
     >
       <div
         class="relative w-12 h-12 md:w-14 md:h-14 bg-channel-telegram rounded-full flex items-center justify-center shadow-glow-telegram hover:scale-110 transition-all duration-300 cursor-pointer animate-reveal-up motion-reduce:animate-none"
-        :style="revealStyle(1100)"
+        :class="revealDelay(1100)"
       >
         <!-- Pulse animation -->
         <div class="absolute inset-0 rounded-full bg-channel-telegram animate-ping opacity-75" />
@@ -55,7 +55,7 @@
     >
       <div
         class="relative w-12 h-12 md:w-14 md:h-14 bg-channel-whatsapp rounded-full flex items-center justify-center shadow-glow-whatsapp hover:scale-110 transition-all duration-300 cursor-pointer animate-reveal-up motion-reduce:animate-none"
-        :style="revealStyle(1000)"
+        :class="revealDelay(1000)"
       >
         <!-- Pulse animation -->
         <div class="absolute inset-0 rounded-full bg-channel-whatsapp animate-ping opacity-75" />
@@ -96,7 +96,7 @@
  * (`channel-*`, `shadow-glow-*`), and the pulse is Tailwind's `animate-ping`.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { TELEGRAM_LINK_BASE, WHATSAPP_LINK_BASE } from '~/constants/contactChannel'
 import { computed } from 'vue'
