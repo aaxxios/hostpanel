@@ -20,7 +20,7 @@
           gap="md"
           :data-testid="`legal-section-${section.id}`"
           class="animate-reveal-up motion-reduce:animate-none"
-          :style="revealStyle(index * 100)"
+          :class="revealDelay(index * 100)"
         >
           <UiStack direction="row" align="center" gap="md">
             <UiTile
@@ -98,7 +98,7 @@
           padding="xl"
           data-testid="legal-contact"
           class="animate-reveal-up motion-reduce:animate-none"
-          :style="revealStyle(200)"
+          :class="revealDelay(200)"
         >
           <UiHeading :level="3" size="section" class="mb-4">
             {{ contactTitle }}
@@ -132,7 +132,7 @@
  * can not drift apart in how they look.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import type { Component } from 'vue'
 import { ArrowRight, CheckCircle } from 'lucide-vue-next'
 import type { LegalSection } from '~/types/legalsection'

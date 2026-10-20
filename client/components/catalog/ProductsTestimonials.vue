@@ -17,7 +17,7 @@
           :key="testimonial.id"
           class="group hover:border-primary-500/30 dark:hover:border-secondary-500/30 hover:-translate-y-2 transition-all duration-300 animate-reveal-up motion-reduce:animate-none"
           :data-testid="`product-testimonial-${testimonial.id}`"
-          :style="revealStyle(index * 100)"
+          :class="revealDelay(index * 100)"
         >
           <div class="flex gap-1 mb-4">
             <Star v-for="star in testimonial.rating" :key="star" :size="14" :stroke-width="2" fill="currentColor" class="text-primary-700 dark:text-secondary-400" />
@@ -44,7 +44,7 @@
  * from the storefront store; with none the section renders nothing.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { Star } from 'lucide-vue-next'
 import { useStorefrontStore } from '~/stores/storefront'
 

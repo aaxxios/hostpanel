@@ -22,7 +22,7 @@
         <UiCard
           v-for="(benefit, index) in benefits"
           :key="benefit.key"
-          :style="revealStyle(index * 100)"
+          :class="revealDelay(index * 100)"
           padding="lg"
           class="relative group h-full text-center animate-reveal-up motion-reduce:animate-none hover:border-primary-500/40 dark:hover:border-secondary-500/40 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-none transition-all duration-300"
           :data-testid="`benefit-${benefit.key}`"
@@ -45,9 +45,8 @@
         <UiCard
           v-for="(item, index) in reassurances"
           :key="item.key"
-          :style="revealStyle((index + 1) * 100)"
           padding="md"
-          :class="[item.hoverBorder, 'group text-center transition-colors animate-reveal-up motion-reduce:animate-none']"
+          :class="[item.hoverBorder, 'group text-center transition-colors animate-reveal-up motion-reduce:animate-none', revealDelay((index + 1) * 100)]"
           :data-testid="`reassurance-${item.key}`"
         >
           <component :is="item.icon" :size="32" :stroke-width="2" :class="[item.iconColor, 'mx-auto mb-3 group-hover:scale-110 transition-transform']" />
@@ -73,7 +72,7 @@
  * hydration, in both themes and when nothing ever scrolls it into view.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { CheckCircle, Infinity as InfinityIcon, ShieldCheck } from 'lucide-vue-next'
 
 /** Translation helpers and the active language. */

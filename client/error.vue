@@ -28,7 +28,7 @@
         <UiCard
           padding="xl"
           class="relative backdrop-blur-xl md:p-12 animate-reveal-up motion-reduce:animate-none"
-          :style="revealStyle(200)"
+          :class="revealDelay(200)"
         >
           <UiStack gap="md" align="center">
             <component
@@ -76,7 +76,7 @@
           size="sm"
           tone="muted"
           class="animate-reveal-up motion-reduce:animate-none"
-          :style="revealStyle(400)"
+          :class="revealDelay(400)"
         >
           {{ t('error.helpText') }}
           <UiLink :to="localePath('/contact')" testid="error-contact">
@@ -106,7 +106,7 @@
  * per status, a way back and a way home.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import type { Component } from 'vue'
 import { ArrowLeft, Home, Search, AlertTriangle, Lock, XCircle } from 'lucide-vue-next'
 import { ErrorStatus } from '~/types/errorstatus'

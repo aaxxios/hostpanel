@@ -12,7 +12,7 @@
           :to="hrefFor(product)"
           class="font-semibold whitespace-nowrap animate-reveal-up motion-reduce:animate-none"
           :data-testid="`product-nav-${product.id}`"
-          :style="revealStyle(index * 100)"
+          :class="revealDelay(index * 100)"
         >
           {{ product.name }}
         </UiButton>
@@ -25,7 +25,7 @@
             hover
             class="group relative h-full sm:p-7 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-none transition-all duration-300 animate-reveal-up motion-reduce:animate-none"
             :data-testid="`product-card-${product.id}`"
-            :style="revealStyle(index * 100)"
+            :class="revealDelay(index * 100)"
           >
             <NuxtLink :to="hrefFor(product)" class="flex flex-col h-full" :data-testid="`product-link-${product.id}`">
               <!-- Radial glow on hover -->
@@ -82,7 +82,7 @@
  * links there; one without links to its detail page. A family with no feature lines shows no list.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { CheckCircle } from 'lucide-vue-next'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'
 import type { ProductFamily } from '~/types/productfamily'

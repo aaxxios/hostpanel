@@ -42,7 +42,7 @@
                     v-for="(feature, index) in product.features"
                     :key="index"
                     class="flex items-center gap-2 group animate-reveal-up motion-reduce:animate-none"
-                    :style="revealStyle(index * 50)"
+                    :class="revealDelay(index * 50)"
                   >
                     <CheckCircle :size="18" :stroke-width="2" :class="[accent.text, 'flex-shrink-0 group-hover:scale-110 transition-transform']" />
                     <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{{ feature }}</span>
@@ -79,7 +79,7 @@
                   :key="plan.tier"
                   class="relative group animate-reveal-up motion-reduce:animate-none"
                   :data-testid="`product-plan-${plan.pid}`"
-                  :style="revealStyle(index * 100)"
+                  :class="revealDelay(index * 100)"
                 >
                   <UiAccentPanel :highlighted="index === POPULAR_PLAN_INDEX">
                     <span v-if="index === POPULAR_PLAN_INDEX" class="absolute -top-[7px] left-1/2 -translate-x-1/2 z-10">
@@ -168,7 +168,7 @@
  * to the events. The whole section is painted in the product's own accent colour.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { Check, CheckCircle, DollarSign, PlayCircle, ShieldCheck, ShoppingCart, Sparkle } from 'lucide-vue-next'
 import { PRICING_CYCLE_I18N_KEY } from '~/constants/pricingCycle'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'

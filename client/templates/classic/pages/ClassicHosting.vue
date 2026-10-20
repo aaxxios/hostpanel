@@ -118,7 +118,7 @@
               gap="none"
               class="relative w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-22px)] animate-reveal-up motion-reduce:animate-none"
               data-testid="classic-hosting-plan"
-              :style="revealStyle(index * 100)"
+              :class="revealDelay(index * 100)"
             >
               <UiCard
                 padding="none"
@@ -372,7 +372,7 @@ data-testid="classic-hosting-plan-select"
  * formatted as sent, never converted. Cart actions go to the cart store.
  */
 
-import { revealStyle } from '~/utils/reveal'
+import { revealDelay } from '~/utils/reveal'
 import { Server, CheckCircle, AlertCircle, ShoppingCart, Check, ArrowRight } from 'lucide-vue-next'
 import { useCartStore } from '~/stores/cart'
 import { useCurrencyStore } from '~/stores/currency'
