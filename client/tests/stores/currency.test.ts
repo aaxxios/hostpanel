@@ -128,6 +128,22 @@ describe('useCurrencyStore.isFixed and select', () => {
     expect(store.selectedCode).toBe('USD')
   })
 
+  it('waits for the app to be ready before restoring while it hydrates', () => {
+    localStorage.setItem('innovayse_currency', 'USD')
+    let ready: () => void = () => undefined
+    vi.stubGlobal('useNuxtApp', () => ({ isHydrating: true }))
+    vi.stubGlobal('onNuxtReady', (callback: () => void) => {
+      ready = callback
+    })
+    const store = useCurrencyStore()
+    store.init()
+
+    expect(store.selectedCode).toBeNull()
+    ready()
+    expect(store.selectedCode).toBe('USD')
+    vi.unstubAllGlobals()
+  })
+
   it('ignores a selection for a signed-in client whose currency is fixed', () => {
     mockUser = { currency: 'AMD' }
     const store = useCurrencyStore()
