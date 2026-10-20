@@ -103,16 +103,27 @@ export const useCurrencyStore = defineStore('currency', {
     /**
      * Restores the guest's previously chosen currency from localStorage.
      * Must be called client-side only (e.g. in `onMounted`); validated once {@link load} has run.
+     *
+     * While the page is still hydrating the restore waits until the app is ready: a data read
+     * that follows the payer's currency does not re-run for a change made during hydration, and
+     * the server-rendered prices (in the base currency) would stay on screen.
      */
     init() {
       if (!import.meta.client) {
         return
       }
-      try {
-        this.selectedCode = localStorage.getItem(STORAGE_KEY)
-      } catch {
-        // ignore corrupt/blocked storage
+      const restore = (): void => {
+        try {
+          this.selectedCode = localStorage.getItem(STORAGE_KEY)
+        } catch {
+          // ignore corrupt/blocked storage
+        }
       }
+      if (useNuxtApp().isHydrating) {
+        onNuxtReady(restore)
+        return
+      }
+      restore()
     },
 
     /**
