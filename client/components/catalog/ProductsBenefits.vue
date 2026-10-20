@@ -45,9 +45,8 @@
         <UiCard
           v-for="(item, index) in reassurances"
           :key="item.key"
-          :class="revealDelay((index + 1) * 100)"
           padding="md"
-          :class="[item.hoverBorder, 'group text-center transition-colors animate-reveal-up motion-reduce:animate-none']"
+          :class="[item.hoverBorder, 'group text-center transition-colors animate-reveal-up motion-reduce:animate-none', revealDelay((index + 1) * 100)]"
           :data-testid="`reassurance-${item.key}`"
         >
           <component :is="item.icon" :size="32" :stroke-width="2" :class="[item.iconColor, 'mx-auto mb-3 group-hover:scale-110 transition-transform']" />
