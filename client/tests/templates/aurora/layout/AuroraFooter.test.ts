@@ -21,6 +21,15 @@ describe('AuroraFooter', () => {
     expect(wrapper.find('a[href="/domains/transfer"]').exists()).toBe(true)
   })
 
+  it('labels the /knowledgebase link in the company column "knowledgebase", not "blog"', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(AuroraFooter)
+    const labels = wrapper.findAll('a[href="/knowledgebase"]').map((link) => link.text())
+
+    expect(labels).toContain('aurora.footer.knowledgebase')
+    expect(labels).not.toContain('aurora.footer.blog')
+  })
+
   it('shows no newsletter form, no social row and no contact line on a fresh install', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(AuroraFooter)
