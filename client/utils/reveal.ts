@@ -66,5 +66,6 @@ const DELAY_CLASSES: Record<number, string> = {
  */
 export const revealDelay = (delayMs: number): string => {
   const clamped = Math.min(MAX_DELAY_MS, Math.max(0, delayMs))
-  return DELAY_CLASSES[Math.round(clamped / STEP_MS) * STEP_MS]
+  // Every step up to the cap has an entry, so the empty fallback only satisfies the index type.
+  return DELAY_CLASSES[Math.round(clamped / STEP_MS) * STEP_MS] ?? ''
 }
