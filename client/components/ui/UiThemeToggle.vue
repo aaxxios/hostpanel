@@ -15,6 +15,8 @@
     testid="theme-toggle"
     :label="title ?? $t('ui.theme.switchDark')"
     :title="title"
+    :variant="variant"
+    :size="size"
     @click="toggle"
   >
     <Moon :size="16" :stroke-width="2" class="hidden dark:block" data-testid="theme-toggle-moon" />
@@ -32,6 +34,21 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { Sun, Moon } from 'lucide-vue-next'
+import { UiIconButtonVariant, UiSize } from '~/utils/ui/enums'
+
+/** Props of ThemeToggle. */
+interface Props {
+  /** Look of the underlying icon button; `bare` lets the screen paint the frame through its class. */
+  variant?: `${UiIconButtonVariant}`
+  /** Size step of the underlying icon button. */
+  size?: `${UiSize}`
+}
+
+/** Props of the component with their defaults applied. */
+withDefaults(defineProps<Props>(), {
+  variant: UiIconButtonVariant.Subtle,
+  size: UiSize.Md,
+})
 
 /** Translator for the strings this component builds itself. */
 const { t } = useI18n()

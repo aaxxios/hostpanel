@@ -1,11 +1,14 @@
 /**
  * Unit tests for NovaFaq: one native disclosure per question read from the storefront store, and
- * nothing at all when there are no questions.
+ * nothing at all when there are no questions. The list is cut to the home limit, and the link to the
+ * full FAQ page shows only when questions were left out.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
+import { stubLocalePath } from '~/tests/helpers/runtimeStubs'
 import { faqFixture } from '~/tests/helpers/storefrontFixtures'
+import { HOME_FAQ_LIMIT } from '~/constants/faq'
 import NovaFaq from '~/templates/nova/sections/NovaFaq.vue'
 
 /** The mocked storefront endpoints, re-created for every test. */
@@ -33,6 +36,7 @@ const mountSection = async () => {
 
 describe('NovaFaq', () => {
   beforeEach(() => {
+    stubLocalePath()
     api.fetchFaqs.mockReset()
     api.fetchFaqs.mockResolvedValue([faqFixture(1), faqFixture(2)])
   })
@@ -49,6 +53,22 @@ describe('NovaFaq', () => {
     const wrapper = await mountSection()
 
     expect(wrapper.find('[data-testid="nova-faq-2"]').exists()).toBe(true)
+  })
+
+  it('lists at most the home limit and links to the full FAQ page when more exist', async () => {
+    api.fetchFaqs.mockResolvedValue(Array.from({ length: HOME_FAQ_LIMIT + 2 }, (_, index) => faqFixture(index + 1)))
+
+    const wrapper = await mountSection()
+
+    expect(wrapper.findAll('details')).toHaveLength(HOME_FAQ_LIMIT)
+    expect(wrapper.find('[data-testid="nova-faq-view-all"]').exists()).toBe(true)
+  })
+
+  it('has no view-all link when every question fits the limit', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.findAll('details')).toHaveLength(2)
+    expect(wrapper.find('[data-testid="nova-faq-view-all"]').exists()).toBe(false)
   })
 
   it('renders no section while there are no questions', async () => {

@@ -20,8 +20,8 @@ export interface HostingPlan {
   name: string
   /** Operator-authored HTML: leading prose, then `<br />`-separated feature lines. */
   description: string
-  /** `'on'` when the operator flagged the plan as the featured one. */
-  is_featured?: string
+  /** True when the operator marked the plan as the group's recommended one. */
+  isFeatured?: boolean
   /** The plan's price in the caller's own currency; null fields when not offered. */
   pricing?: PortalProductPricing | null
 }

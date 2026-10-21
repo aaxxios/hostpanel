@@ -76,6 +76,8 @@ export interface PortalProduct {
   serverGroupId?: number | null
   /** Display order, ascending, when the API supplies one; plans fall back to price order without it. */
   sortOrder?: number | null
+  /** True when the operator marked this product as its group's recommended plan. */
+  isFeatured?: boolean
   /** The product's price in the caller's own currency; null when it carries no price at all. */
   pricing?: PortalProductPricing | null
   /** The product's price in every currency it is sold in — what the admin pricing grid edits. */

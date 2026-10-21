@@ -2,15 +2,15 @@
   <section v-if="faqs.length" class="py-12 md:py-20 bg-ui-surface relative overflow-hidden" data-testid="sections-faq">
     <!-- Background -->
     <UiDecor class="inset-0">
-      <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-primary-500/5 dark:to-secondary-500/5" />
+      <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-secondary-500/5" />
       <UiDecor class="top-1/4 right-1/4 w-96 h-96 bg-primary-500/15 rounded-full blur-[140px] animate-blob" />
-      <UiDecor class="bottom-1/3 left-1/3 w-80 h-80 bg-primary-500/10 dark:bg-secondary-500/10 rounded-full blur-[130px] animate-blob animation-delay-2000" />
+      <UiDecor class="bottom-1/3 left-1/3 w-80 h-80 bg-secondary-500/10 rounded-full blur-[130px] animate-blob animation-delay-2000" />
       <UiDecor class="top-20 left-1/4 w-2 h-2 bg-primary-400/60 rounded-full animate-float [animation-delay:0.6s]" />
-      <UiDecor class="top-1/3 right-1/3 w-3 h-3 bg-primary-400/50 dark:bg-secondary-400/50 rounded-full animate-float [animation-delay:1.4s]" />
+      <UiDecor class="top-1/3 right-1/3 w-3 h-3 bg-secondary-600/50 dark:bg-secondary-400/50 rounded-full animate-float [animation-delay:1.4s]" />
       <UiDecor class="bottom-1/4 left-1/2 w-2 h-2 bg-cyan-400/60 rounded-full animate-float [animation-delay:2.1s]" />
       <UiDecor class="inset-0 opacity-[0.015] pattern-grid-50" />
       <UiDecor class="top-0 left-1/3 w-px h-full bg-gradient-to-b from-transparent via-primary-500/10 to-transparent" />
-      <UiDecor class="top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-primary-500/10 dark:via-secondary-500/10 to-transparent" />
+      <UiDecor class="top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-secondary-500/10 to-transparent" />
     </UiDecor>
 
     <UiContainer class="relative z-10">
@@ -43,7 +43,7 @@
         />
 
         <!-- View all FAQs (when limited) -->
-        <div v-if="limit" class="text-center mb-8">
+        <div v-if="hasMore" class="text-center mb-8">
           <UiButton variant="outline" size="lg" :to="localePath('/faq')" data-testid="faq-view-all">
             <span>{{ $t('faq.viewAll') }}</span>
             <ArrowRight :size="18" :stroke-width="2" class="ml-2" />
@@ -52,10 +52,10 @@
 
         <!-- Contact card -->
         <UiCard class="relative text-center overflow-hidden group hover:border-primary-500/50 transition-all duration-300" padding="xl" data-testid="faq-contact">
-          <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/20 to-primary-500/10 dark:to-secondary-500/10" />
-          <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/10 to-primary-500/5 dark:to-secondary-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/20 to-secondary-500/10" />
+          <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/10 to-secondary-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <UiDecor class="top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-3xl" />
-          <UiDecor class="bottom-0 left-0 w-24 h-24 bg-primary-500/10 dark:bg-secondary-500/10 rounded-full blur-2xl" />
+          <UiDecor class="bottom-0 left-0 w-24 h-24 bg-secondary-500/10 rounded-full blur-2xl" />
 
           <MessageCircle :size="48" :stroke-width="2" class="relative text-primary-600 dark:text-primary-400 mx-auto mb-4 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300" />
           <UiHeading :level="3" size="subsection" class="relative text-xl mb-2">{{ $t('faq.cta.title') }}</UiHeading>
@@ -71,7 +71,7 @@
     </UiContainer>
 
     <!-- Section corner decorations -->
-    <UiDecor class="top-0 right-0 w-40 h-40 border-r-2 border-t-2 border-primary-500/25 dark:border-secondary-500/25" />
+    <UiDecor class="top-0 right-0 w-40 h-40 border-r-2 border-t-2 border-secondary-500/25" />
     <UiDecor class="bottom-0 left-0 w-40 h-40 border-l-2 border-b-2 border-primary-500/25" />
   </section>
 </template>
@@ -83,7 +83,8 @@
  * The questions come from the storefront store (`GET /api/portal/public/faqs`, localised by the API); with
  * none the section renders nothing. Choosing a
  * category reloads the list and opens its first question; before any choice every question is
- * closed. With a `limit` the section is a preview that links to the full FAQ page.
+ * closed. With a `limit` the section is a preview that links to the full FAQ page, but only
+ * when the limit actually hides some questions.
  */
 import { ArrowRight, MessageCircle, MessageSquare } from 'lucide-vue-next'
 import { useStorefrontStore } from '~/stores/storefront'
@@ -157,12 +158,16 @@ watch(activeCategory, () => {
   categoryChosen.value = true
 })
 
+/** The questions of the active category, before any `limit` is applied. */
+const categoryFaqs = computed(() =>
+  faqs.value.filter((faq) => activeCategory.value === ALL_CATEGORIES || faq.category === activeCategory.value))
+
+/** Whether a `limit` hides some questions, so the link to the full FAQ page is worth showing. */
+const hasMore = computed(() => Boolean(props.limit) && categoryFaqs.value.length > (props.limit ?? 0))
+
 /** The questions of the active category, cut to `limit` when one is set, with their translated text. */
 const accordionItems = computed(() => {
-  let result = faqs.value.filter((faq) => activeCategory.value === ALL_CATEGORIES || faq.category === activeCategory.value)
-  if (props.limit) {
-    result = result.slice(0, props.limit)
-  }
+  const result = props.limit ? categoryFaqs.value.slice(0, props.limit) : categoryFaqs.value
   return result.map((faq) => ({
     title: faq.question,
     content: faq.answer,

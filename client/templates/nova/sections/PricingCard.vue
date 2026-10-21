@@ -12,7 +12,7 @@
         tone="inherit"
         class="absolute -top-3 left-6 rounded-full bg-nova-accent px-3 py-1 text-[12px] font-extrabold uppercase tracking-[0.06em] text-nova-on-accent"
       >
-        {{ t('nova.plans.popular') }}
+        {{ plan.isFeatured ? t('nova.plans.recommended') : t('nova.plans.popular') }}
       </UiText>
 
       <UiText

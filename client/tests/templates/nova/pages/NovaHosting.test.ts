@@ -34,7 +34,7 @@ describe('NovaHosting', () => {
   it('renders the comparison table when rows arrive', () => {
     stubTemplateGlobals()
     const wrapper = mountWithKit(NovaHosting, {
-      props: { plans: [], comparisonRows: [{ label: 'Storage', values: [] }] },
+      props: { plans: [], comparisonRows: [{ label: 'Storage', values: ['1 GB', '2 GB'] }, { label: 'Sites', values: ['1', '5'] }] },
     })
 
     expect(wrapper.find('[data-testid="nova-comparison-table"]').exists()).toBe(true)

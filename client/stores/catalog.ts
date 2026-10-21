@@ -29,6 +29,7 @@ import type { SlidePublic } from '~/types/slidepublic'
 import type { TldPricing } from '~/types/tldpricing'
 import { isFamilyGroup, parseDescription } from '~/utils/catalogGroups'
 import { formatMoney } from '~/utils/formatMoney'
+import { specificationBullets } from '~/utils/productFamilies'
 
 /**
  * Central store for the public catalogue.
@@ -179,10 +180,15 @@ export const useCatalogStore = defineStore('catalog', () => {
    *
    * @param hrefFor - Builds a plan's order link from its id; the page supplies its localised
    * path builder because a store has no router.
+   * @param specifications - The group's specification lines. A plan whose description carries no
+   * feature lines lists its own specification lines instead, so a card is never bare.
    * @returns One card per hosting plan.
    */
-  const planCards = (hrefFor: (productId: number) => string): PlanCard[] =>
-    hostingPlans.value.map((product) => {
+  const planCards = (hrefFor: (productId: number) => string, specifications: readonly ProductFeature[] = []): PlanCard[] =>
+    hostingPlans.value.map((product, _index, ordered) => {
+      // The domain keeps one featured product per group, but legacy rows may hold several; the
+      // first featured, non-free plan in display order is the one that gets the badge.
+      const featuredId = ordered.find(candidate => candidate.isFeatured === true && candidate.pricing?.monthly !== 0)?.id
       const currency = currencyStore.moneyCurrencyFor(currencyStore.payerCode)
 
       /**
@@ -202,7 +208,8 @@ export const useCatalogStore = defineStore('catalog', () => {
       // A description is authored either as plain text or as HTML with <br /> between items,
       // and both are in the catalogue; `parseDescription` understands both and separates the
       // summary from the feature lines the card renders as a list.
-      const { summary, features } = parseDescription(product.description ?? '')
+      const { summary, features: described } = parseDescription(product.description ?? '')
+      const features = described.length > 0 ? described : specificationBullets(specifications.filter(line => line.productId === product.id))
 
       // Free is decided by the price, not by the name: matching "free" in a name would feature
       // a "Freelancer Hosting" that costs money and miss a free plan called anything else.
@@ -214,6 +221,7 @@ export const useCatalogStore = defineStore('catalog', () => {
         description: summary,
         features,
         isFree: monthly === 0,
+        isFeatured: product.id === featuredId,
         priceMonthly: format(monthly),
         priceAnnual: format(product.pricing?.annual, 12),
         href: hrefFor(product.id)

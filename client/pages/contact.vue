@@ -85,7 +85,7 @@
                   <UiTile
                     :icon="Phone"
                     size="xl"
-                    class="bg-primary-500/20 text-primary-700 dark:bg-secondary-500/20 dark:text-secondary-400"
+                    class="bg-secondary-500/20 text-secondary-700 dark:text-secondary-400"
                   />
                   <UiStack gap="none">
                     <UiText as="span" size="xs" tone="muted">
@@ -95,7 +95,7 @@
                       as="span"
                       size="sm"
                       weight="semibold"
-                      class="transition-colors group-hover:text-primary-700 dark:group-hover:text-secondary-300"
+                      class="transition-colors group-hover:text-secondary-700 dark:group-hover:text-secondary-300"
                     >
                       {{ contactPhone }}
                     </UiText>

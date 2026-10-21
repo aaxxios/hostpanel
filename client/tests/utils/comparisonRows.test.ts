@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildComparisonRows } from '~/utils/comparisonRows'
+import { buildComparisonRows, commonRowCount, isComparable } from '~/utils/comparisonRows'
 import type { ProductFeature } from '~/types/productfeature'
 
 /**
@@ -74,5 +74,20 @@ describe('buildComparisonRows', () => {
 
     expect(buildComparisonRows(features, [1]).map(r => r.label))
       .toEqual(['Disk', 'Bandwidth', 'Databases'])
+  })
+})
+
+describe('isComparable', () => {
+  it('counts only rows at least two plans have a value for', () => {
+    const rows = [{ label: 'A', values: ['1', '2'] }, { label: 'B', values: ['1', ''] }, { label: 'C', values: ['', ' '] }]
+
+    expect(commonRowCount(rows)).toBe(1)
+  })
+
+  it('needs two shared rows, so plans with no common features get no table', () => {
+    expect(isComparable([])).toBe(false)
+    expect(isComparable([{ label: 'A', values: ['1', '2'] }])).toBe(false)
+    expect(isComparable([{ label: 'A', values: ['1', ''] }, { label: 'B', values: ['', '2'] }])).toBe(false)
+    expect(isComparable([{ label: 'A', values: ['1', '2'] }, { label: 'B', values: ['3', '4'] }])).toBe(true)
   })
 })

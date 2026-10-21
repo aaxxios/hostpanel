@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
+import { HOME_FAQ_LIMIT } from '~/constants/faq'
 import ClassicHome from '~/templates/classic/pages/ClassicHome.vue'
 
 /** Names of the section components the home page composes, in the order they appear. */
@@ -26,7 +27,8 @@ const SECTION_NAMES = [
  */
 const sectionStub = (name: string) => defineComponent({
   name,
-  setup: () => () => h('section', { 'data-section': name }),
+  props: { limit: { type: Number, default: undefined } },
+  setup: (props) => () => h('section', { 'data-section': name, 'data-limit': props.limit === undefined ? undefined : String(props.limit) }),
 })
 
 describe('ClassicHome', () => {
@@ -39,6 +41,12 @@ describe('ClassicHome', () => {
     expect(title.element.tagName).toBe('H1')
     expect(title.classes()).toContain('sr-only')
     expect(title.text()).toBe('seo.home.h1')
+  })
+
+  it('previews only the home limit of FAQ questions', () => {
+    const wrapper = mountWithKit(ClassicHome, { components })
+
+    expect(wrapper.find('[data-section="SectionsFAQ"]').attributes('data-limit')).toBe(String(HOME_FAQ_LIMIT))
   })
 
   it('renders every section in landing order', () => {

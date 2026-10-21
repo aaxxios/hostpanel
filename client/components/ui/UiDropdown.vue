@@ -64,7 +64,7 @@
             :class="[
               'w-full px-4 py-3 text-left text-sm transition-all duration-200 flex items-center justify-between group focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500',
               modelValue === option.value
-                ? 'bg-gradient-to-r from-primary-500 to-primary-500 dark:to-secondary-500 text-on-primary font-semibold'
+                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-on-primary font-semibold'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-on-primary'
             ]"
             @click="selectOption(option)"

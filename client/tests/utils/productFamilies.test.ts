@@ -9,7 +9,7 @@ import type { PortalProductGroup } from '~/types/portalproductgroup'
 import { familyColor } from '~/utils/catalogGroups'
 import type { ProductFamily } from '~/types/productfamily'
 import type { ProductFeature } from '~/types/productfeature'
-import { buildPricingRows, buildProductFamilies, cycleAmount, findProductDetail, firstOfferedPrice, specificationBullets } from '~/utils/productFamilies'
+import { buildPricingRows, buildProductFamilies, cycleAmount, familyBullets, findProductDetail, firstOfferedPrice, representativePlan, specificationBullets } from '~/utils/productFamilies'
 
 /**
  * Builds a catalogue product.
@@ -104,6 +104,34 @@ describe('specificationBullets', () => {
   })
 })
 
+describe('representativePlan and familyBullets', () => {
+  it('picks the cheapest priced plan, and the first on a tie or when none is priced', () => {
+    const cheap = product({ id: 2, groupId: 1, name: 'B', pricing: { monthly: 3, annual: null } })
+    const dear = product({ id: 1, groupId: 1, name: 'A', pricing: { monthly: 9, annual: null } })
+
+    expect(representativePlan([dear, cheap])).toBe(cheap)
+    expect(representativePlan([dear, product({ id: 3, groupId: 1, name: 'C', pricing: { monthly: 9, annual: null } })])).toBe(dear)
+    expect(representativePlan([])).toBeUndefined()
+  })
+
+  it('takes the bullets from the one plan, capped at three, and never from other plans', () => {
+    const lines: ProductFeature[] = [
+      ...['A', 'B', 'C', 'D'].map((label, i) => ({ id: i, productId: 1, label, value: '1', sortOrder: i })),
+      { id: 9, productId: 2, label: 'Other', value: 'x', sortOrder: 0 },
+    ]
+
+    expect(familyBullets(product({ id: 1, groupId: 1, name: 'A' }), lines)).toEqual(['A: 1', 'B: 1', 'C: 1'])
+    expect(familyBullets(undefined, lines)).toEqual([])
+  })
+
+  it('uses the group description as the family description and the plan lines for the bullets', () => {
+    const lines: ProductFeature[] = [{ id: 1, productId: 11, label: 'Sites', value: '1', sortOrder: 0 }, { id: 2, productId: 12, label: 'Sites', value: '9', sortOrder: 0 }]
+    const families = buildProductFamilies([group(3, 'Alpha Suite', { description: 'Family sentence.', productCount: 2 })], learnGroup.slice(1), dollars, 'USD', [], () => lines)
+
+    expect(families[0]).toMatchObject({ description: 'Family sentence.', features: ['Sites: 1'] })
+  })
+})
+
 describe('buildProductFamilies', () => {
   it('builds one family per group, priced by its sub-plans and named by its parent', () => {
     const families = buildProductFamilies(groups, learnGroup, dollars, 'USD')
@@ -111,7 +139,8 @@ describe('buildProductFamilies', () => {
     expect(families).toHaveLength(1)
     expect(families[0]).toMatchObject({ id: 'alpha-suite', gid: 3, tagline: '', description: 'Learn online' })
     expect(families[0]?.pricing.map((row) => row.pid)).toEqual([11, 12])
-    expect(families[0]?.features).toEqual(expect.arrayContaining(['Courses', 'Exams', 'One site', 'Two sites']))
+    // Bullets come from ONE plan (the cheapest, Starter), never a mix of every plan's lines.
+    expect(families[0]?.features).toEqual(['One site'])
   })
 
   it('prices a group that has only its parent by the parent alone', () => {
@@ -199,13 +228,13 @@ describe('buildProductFamilies', () => {
     expect(families[0]?.pricing.map((row) => row.pid)).toEqual([70, 71])
   })
 
-  it('caps the aggregated feature list at six lines', () => {
+  it('caps the family card bullets at three lines', () => {
     const many = product({
       id: 30, groupId: 5, name: 'Gamma Tool', slug: 'gamma-tool',
       description: ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'].map((word) => `✔ ${word}`).join('<br />'),
     })
 
-    expect(buildProductFamilies(groups, [many], dollars, 'USD')[0]?.features).toHaveLength(6)
+    expect(buildProductFamilies(groups, [many], dollars, 'USD')[0]?.features).toHaveLength(3)
   })
 })
 

@@ -85,11 +85,14 @@ import { FOCUS_RING, PICKER_TRIGGER } from '~/utils/ui/tones'
 interface Props {
   /** Whether the menu opens below or above the trigger. */
   placement?: `${UiPlacement}`
+  /** Replaces the default tinted frame of the trigger (shape, spacing and colours); focus and display stay. */
+  triggerClass?: string
 }
 
 /** Props of the component with their defaults applied. */
 const props = withDefaults(defineProps<Props>(), {
   placement: UiPlacement.Bottom,
+  triggerClass: undefined,
 })
 
 /** The currency store: enabled currencies, the payer's currency and the guest's selection. */
@@ -134,7 +137,11 @@ const visible = computed(() => {
 })
 
 /** Class list of the trigger chip. */
-const triggerClasses = `flex items-center gap-2 px-3 py-2 rounded-lg ${PICKER_TRIGGER} ${FOCUS_RING}`
+const triggerClasses = computed(() => [
+  'flex',
+  props.triggerClass ?? `items-center gap-2 px-3 py-2 rounded-lg ${PICKER_TRIGGER}`,
+  FOCUS_RING,
+].join(' '))
 
 /** Class list of the menu panel. */
 const menuClasses = computed(() => [

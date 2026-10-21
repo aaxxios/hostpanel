@@ -33,7 +33,7 @@ describe('ComparisonTable', () => {
 
   it('has a column heading per plan after the feature column', () => {
     const wrapper = mountWithKit(ComparisonTable, {
-      props: { plans: [plan(1, 'Basic'), plan(2, 'Pro')], rows: [{ label: 'Storage', values: ['10 GB', '50 GB'] }] },
+      props: { plans: [plan(1, 'Basic'), plan(2, 'Pro')], rows: [{ label: 'Storage', values: ['10 GB', '50 GB'] }, { label: 'Sites', values: ['1', '5'] }] },
     })
     const heads = wrapper.findAll('thead th').map(cell => cell.text())
 
@@ -43,11 +43,11 @@ describe('ComparisonTable', () => {
   it('puts the familiar lines in their preferred order and keeps unknown ones after', () => {
     const wrapper = mountWithKit(ComparisonTable, {
       props: {
-        plans: [plan(1, 'Basic')],
+        plans: [plan(1, 'Basic'), plan(2, 'Pro')],
         rows: [
-          { label: 'Zebra line', values: ['x'] },
-          { label: 'Bandwidth', values: ['1 TB'] },
-          { label: 'Storage', values: ['10 GB'] },
+          { label: 'Zebra line', values: ['x', 'y'] },
+          { label: 'Bandwidth', values: ['1 TB', '2 TB'] },
+          { label: 'Storage', values: ['10 GB', '50 GB'] },
         ],
       },
     })
@@ -58,15 +58,29 @@ describe('ComparisonTable', () => {
 
   it('marks a missing value as absent, never as zero', () => {
     const wrapper = mountWithKit(ComparisonTable, {
-      props: { plans: [plan(1, 'Basic')], rows: [{ label: 'CDN', values: [''] }] },
+      props: {
+        plans: [plan(1, 'Basic'), plan(2, 'Pro')],
+        rows: [{ label: 'CDN', values: ['', 'Yes'] }, { label: 'Storage', values: ['10 GB', '50 GB'] }, { label: 'Sites', values: ['1', '5'] }],
+      },
     })
 
-    expect(wrapper.find('tbody td').text()).toContain('nova.comparison.absent')
+    expect(wrapper.find('tbody').text()).toContain('nova.comparison.absent')
+  })
+
+  it('hides the table when the plans share fewer than two lines', () => {
+    const wrapper = mountWithKit(ComparisonTable, {
+      props: {
+        plans: [plan(1, 'Basic'), plan(2, 'Pro')],
+        rows: [{ label: 'Storage', values: ['10 GB', '50 GB'] }, { label: 'CDN', values: ['Yes', ''] }, { label: 'Panel', values: ['', 'Yes'] }],
+      },
+    })
+
+    expect(wrapper.find('table').exists()).toBe(false)
   })
 
   it('labels its scroll area so a keyboard can reach it', () => {
     const wrapper = mountWithKit(ComparisonTable, {
-      props: { plans: [plan(1, 'Basic')], rows: [{ label: 'Storage', values: ['10 GB'] }] },
+      props: { plans: [plan(1, 'Basic'), plan(2, 'Pro')], rows: [{ label: 'Storage', values: ['10 GB', '50 GB'] }, { label: 'Sites', values: ['1', '5'] }] },
     })
     const scroller = wrapper.find('[role="region"]')
 

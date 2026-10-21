@@ -1,5 +1,5 @@
 <template>
-  <UiStack gap="none" class="min-h-dvh bg-ui-page" data-testid="trial-page">
+  <UiStack gap="none" class="bg-ui-page" data-testid="trial-page">
     <CatalogTrialHero
       :name="config.name"
       :icon="config.icon"

@@ -229,6 +229,22 @@ describe('useCatalogStore.planCards', () => {
     expect(cards[2]).toMatchObject({ isFree: false, priceMonthly: '—', priceAnnual: '—' })
   })
 
+  it('lists a plan\'s own specification lines when its description carries no feature lines', async () => {
+    api.fetchProducts.mockResolvedValue([
+      { id: 5, name: 'Pro', description: 'Fast hosting', pricing: { monthly: 12, annual: 120 } },
+      { id: 6, name: 'Plus', description: 'Faster', pricing: { monthly: 20, annual: 200 } }
+    ])
+    const store = useCatalogStore()
+    await store.loadHostingPlans()
+
+    const cards = store.planCards(id => `/${id}`, [
+      { id: 1, productId: 5, label: 'Storage', value: '50 GB', sortOrder: 0 },
+      { id: 2, productId: 6, label: 'Storage', value: '90 GB', sortOrder: 0 }
+    ])
+
+    expect(cards.map(card => card.features)).toEqual([['Storage: 50 GB'], ['Storage: 90 GB']])
+  })
+
   it('orders plans by price, cheapest first, when the API gives no sort order', async () => {
     api.fetchProducts.mockResolvedValue([
       { id: 1, name: 'Business', pricing: { monthly: 9.99, annual: 99 } },
@@ -252,6 +268,32 @@ describe('useCatalogStore.planCards', () => {
     await store.loadHostingPlans()
 
     expect(store.planCards(id => `/${id}`).map(card => card.name)).toEqual(['Dear', 'Cheap', 'Unordered'])
+  })
+
+  it('marks only the first featured paid plan, in display order, as recommended', async () => {
+    api.fetchProducts.mockResolvedValue([
+      { id: 1, name: 'Free', isFeatured: true, sortOrder: 0, pricing: { monthly: 0, annual: 0 } },
+      { id: 2, name: 'Late', isFeatured: true, sortOrder: 5, pricing: { monthly: 9, annual: 90 } },
+      { id: 3, name: 'Early', isFeatured: true, sortOrder: 2, pricing: { monthly: 19, annual: 190 } },
+      { id: 4, name: 'Plain', sortOrder: 3, pricing: { monthly: 29, annual: 290 } }
+    ])
+    const store = useCatalogStore()
+    await store.loadHostingPlans()
+
+    const cards = store.planCards(id => `/${id}`)
+
+    expect(cards.filter(card => card.isFeatured).map(card => card.name)).toEqual(['Early'])
+  })
+
+  it('marks no plan when none is featured', async () => {
+    api.fetchProducts.mockResolvedValue([
+      { id: 1, name: 'A', pricing: { monthly: 5, annual: 50 } },
+      { id: 2, name: 'B', isFeatured: false, pricing: { monthly: 9, annual: 90 } }
+    ])
+    const store = useCatalogStore()
+    await store.loadHostingPlans()
+
+    expect(store.planCards(id => `/${id}`).some(card => card.isFeatured)).toBe(false)
   })
 
   it('has no cards before the plans were read', () => {

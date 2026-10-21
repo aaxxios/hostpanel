@@ -92,6 +92,13 @@ describe('SectionsFAQ', () => {
     expect(wrapper.find('[data-testid="faq-view-all"]').attributes('href')).toBe('/en/faq')
   })
 
+  it('has no view-all link when the limit hides nothing', async () => {
+    const wrapper = await mountFaq({ limit: FAQS.length })
+
+    expect(questionCount(wrapper)).toBe(FAQS.length)
+    expect(wrapper.find('[data-testid="faq-view-all"]').exists()).toBe(false)
+  })
+
   it('has no view-all link without a limit', async () => {
     expect((await mountFaq()).find('[data-testid="faq-view-all"]').exists()).toBe(false)
   })

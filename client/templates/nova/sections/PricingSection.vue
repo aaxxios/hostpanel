@@ -36,14 +36,14 @@
       </UiText>
     </UiCard>
 
-    <UiGrid v-else cols="3" gap="lg" class="mt-10">
+    <UiBalancedGrid v-else :count="novaPlans.length" class="mt-10" data-testid="nova-plan-grid">
       <NovaPricingCard
         v-for="plan in novaPlans"
         :key="plan.id"
         :plan="plan"
         :yearly="yearly"
       />
-    </UiGrid>
+    </UiBalancedGrid>
   </UiSection>
 </template>
 

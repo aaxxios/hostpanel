@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import ProductFamilyGrid from '~/components/catalog/ProductFamilyGrid.vue'
+import { balancedColumns } from '~/utils/balancedGrid'
 import type { ProductFamily } from '~/types/productfamily'
 
 /**
@@ -81,5 +82,27 @@ describe('ProductFamilyGrid', () => {
     const wrapper = mountWithKit(ProductFamilyGrid, { props: { products: [family()] } })
 
     expect(wrapper.html()).not.toContain('mdi:mdi:')
+  })
+
+  it.each([1, 2, 5, 7])('balances %i families in one centred grid', (count) => {
+    const products = Array.from({ length: count }, (_, i) => family({ id: `f${i}`, name: `Family ${i}` }))
+    const wrapper = mountWithKit(ProductFamilyGrid, { props: { products } })
+    const grid = wrapper.find('[data-testid="product-grid"]').element as HTMLElement
+
+    expect(wrapper.findAll('[data-testid^="product-card-"]')).toHaveLength(count)
+    expect(grid.style.getPropertyValue('--ui-bg-cols')).toBe(String(balancedColumns(count)))
+  })
+
+  it('keeps cards the same height with very long text: clamped description, three bullets, wrapped name', () => {
+    const long = 'word '.repeat(300)
+    const wrapper = mountWithKit(ProductFamilyGrid, {
+      props: { products: [family({ name: long, description: long, features: [long, long, long, long, long] })] },
+    })
+    const card = wrapper.find('[data-testid="product-card-alpha-suite"]')
+
+    expect(card.classes()).toContain('h-full')
+    expect(card.find('.line-clamp-3').exists()).toBe(true)
+    expect(card.find('h3').classes()).toContain('break-words')
+    expect(card.findAll('.line-clamp-1')).toHaveLength(3)
   })
 })

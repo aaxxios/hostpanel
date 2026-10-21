@@ -73,6 +73,14 @@ describe('LanguageSwitcher', () => {
     expect(wrapper.find('[data-testid="language-switcher-trigger"]').classes()).not.toContain('hidden')
   })
 
+  it('replaces the tinted frame with the class a screen supplies', () => {
+    const classes = mountWithKit(LanguageSwitcher, { props: { triggerClass: 'h-10 rounded-xl border-line2' } })
+      .find('[data-testid="language-switcher-trigger"]').classes()
+
+    expect(classes).toEqual(expect.arrayContaining(['h-10', 'rounded-xl', 'border-line2']))
+    expect(classes).not.toContain('border-primary-500/30')
+  })
+
   it('draws the trigger as a brand-tinted outline, not a grey fill', () => {
     const classes = mountWithKit(LanguageSwitcher).find('[data-testid="language-switcher-trigger"]').classes()
 

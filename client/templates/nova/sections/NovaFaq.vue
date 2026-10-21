@@ -27,6 +27,19 @@
         </UiText>
       </details>
     </UiStack>
+
+    <UiStack v-if="hasMore" direction="row" class="mt-6">
+      <UiLink
+        :to="localePath('/faq')"
+        tone="inherit"
+        :underline="false"
+        class="inline-flex items-center gap-2 text-[15px] font-semibold text-nova-brand"
+        testid="nova-faq-view-all"
+      >
+        {{ t('nova.faq.viewAll') }}
+        <Icon name="lucide:arrow-right" class="h-4 w-4" aria-hidden="true" />
+      </UiLink>
+    </UiStack>
   </UiSection>
 </template>
 
@@ -40,9 +53,11 @@
  * accordion has to reimplement and usually gets partly wrong. The headings and
  * answers inside it are kit text; the chevron is the only thing scripted, and it
  * is scripted in CSS. The questions come from the storefront store (`GET /api/public/faqs`); with
- * none the section renders nothing.
+ * none the section renders nothing. Only the first `HOME_FAQ_LIMIT` questions are listed, with a
+ * link to the full `/faq` page when more exist.
  */
 import NovaSectionHeader from '~/templates/nova/sections/NovaSectionHeader.vue'
+import { HOME_FAQ_LIMIT } from '~/constants/faq'
 import { useStorefrontStore } from '~/stores/storefront'
 
 /** Translator for the section copy, and the active language. */
@@ -54,6 +69,12 @@ const storefront = useStorefrontStore()
 // Not awaited: Nuxt still holds the server render for it, and the section stays synchronous.
 useAsyncData('storefront:faqs', () => storefront.loadFaqs(), { watch: [locale] })
 
-/** The questions, in display order. */
-const faqs = computed(() => storefront.faqs)
+/** Prefixes a path with the active locale. */
+const localePath = useLocalePath()
+
+/** The first `HOME_FAQ_LIMIT` questions, in display order. */
+const faqs = computed(() => storefront.faqs.slice(0, HOME_FAQ_LIMIT))
+
+/** Whether more questions exist than the home page lists, so the link to the full page is worth showing. */
+const hasMore = computed(() => storefront.faqs.length > HOME_FAQ_LIMIT)
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <UiSection v-if="rows.length > 0" padding="lg" class="border-b border-nova-border">
+  <UiSection v-if="comparable" padding="lg" class="border-b border-nova-border">
     <NovaSectionHeader
       :eyebrow="t('nova.comparison.eyebrow')"
       :title="t('nova.comparison.title')"
@@ -77,6 +77,7 @@
  */
 import NovaSectionHeader from '~/templates/nova/sections/NovaSectionHeader.vue'
 import { orderComparisonRows } from '~/templates/nova/content'
+import { isComparable } from '~/utils/comparisonRows'
 import type { ComparisonRow } from '~/types/comparisonrow'
 import type { PlanCard } from '~/types/plancard'
 
@@ -90,6 +91,9 @@ const props = withDefaults(defineProps<{
 
 /** Translator for the copy. */
 const { t } = useI18n()
+
+/** Whether the plans share enough lines for the table to add value. */
+const comparable = computed(() => isComparable(props.rows))
 
 /** The rows rearranged into the order these lines usually read best in. */
 const orderedRows = computed(() => orderComparisonRows(props.rows))

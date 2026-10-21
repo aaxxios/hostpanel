@@ -50,6 +50,7 @@
       "perMonth": "/ month",
       "perMonthAnnual": "/ month, billed yearly",
       "cta": "Choose plan",
+      "moreFeatures": "+{count} more",
       "includedTitle": "Included in every plan",
       "included1": "Free SSL certificate",
       "included2": "Daily backups",
@@ -57,6 +58,7 @@
       "included4": "Support included",
       "empty": "Plans are temporarily unavailable.",
       "freeBadge": "Start for free",
+      "recommended": "Recommended",
       "freeForever": "Free forever"
     },
     "services": {
@@ -69,7 +71,8 @@
       "domainsTitle": "Domains and DNS",
       "domainsBody": "Register, transfer and renew domains, with DNS and WHOIS privacy managed in the panel.",
       "billingTitle": "Billing and client portal",
-      "billingBody": "Invoices, payments, renewals and support tickets in one account."
+      "billingBody": "Invoices, payments, renewals and support tickets in one account.",
+      "viewAll": "See all services"
     },
     "process": {
       "eyebrow": "Process",
@@ -108,7 +111,8 @@
     "faq": {
       "title": "Frequently asked questions",
       "lead": "Quick answers about plans, domains and support.",
-      "contact": "Still have questions? Contact support"
+      "contact": "Still have questions? Contact support",
+      "viewAll": "View all questions"
     },
     "cta": {
       "title": "Let's start with your project",
@@ -125,6 +129,7 @@
       "support": "Support",
       "legal": "Legal",
       "about": "About us",
+      "services": "Services",
       "knowledgebase": "Knowledge base",
       "helpCenter": "Help centre",
       "faq": "FAQ",
@@ -204,7 +209,8 @@
     "comparison": {
       "title": "Compare the plans",
       "lead": "Everything each plan includes, side by side.",
-      "feature": "Feature"
+      "feature": "Feature",
+      "notIncluded": "Not included"
     }
   }
 }
