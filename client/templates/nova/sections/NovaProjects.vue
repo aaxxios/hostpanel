@@ -2,7 +2,7 @@
   <UiSection v-if="items.length" padding="lg" class="border-b border-nova-border bg-nova-surface" data-testid="nova-projects">
     <NovaSectionHeader :eyebrow="t('nova.projects.eyebrow')" :title="t('nova.projects.title')" />
 
-    <UiGrid as="ul" cols="3" gap="lg" class="mt-10">
+    <UiBalancedGrid as="ul" :count="items.length" class="mt-10" data-testid="nova-projects-grid">
       <li v-for="project in items" :key="project.id" class="h-full" :data-testid="`project-${project.id}`">
         <UiCard padding="none" class="flex h-full flex-col overflow-hidden !border-nova-border !bg-nova-bg">
           <UiImage
@@ -37,7 +37,7 @@
           </UiStack>
         </UiCard>
       </li>
-    </UiGrid>
+    </UiBalancedGrid>
   </UiSection>
 </template>
 
