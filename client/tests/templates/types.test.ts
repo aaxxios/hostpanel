@@ -26,6 +26,6 @@ describe('resolveTemplateName', () => {
   })
 
   it('defaults to aurora', () => {
-    expect(DEFAULT_TEMPLATE).toBe(TemplateName.Aurora)
+    expect(DEFAULT_TEMPLATE).toBe(TemplateName.Classic)
   })
 })

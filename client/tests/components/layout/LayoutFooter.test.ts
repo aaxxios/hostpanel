@@ -45,6 +45,12 @@ describe('LayoutFooter', () => {
     }
   })
 
+  it('adds no top margin, so the padding of the last section is the only space above it and no gap is stacked', () => {
+    const wrapper = mountFooter()
+
+    expect(wrapper.find('footer').classes().filter((name) => /^-?m[ty]?-/.test(name))).toEqual([])
+  })
+
   it('renders the logo and the description', () => {
     const wrapper = mountFooter()
 
@@ -107,6 +113,21 @@ describe('LayoutFooter', () => {
     const social = wrapper.findAll('[data-testid="footer-social-link"]')
     expect(social).toHaveLength(1)
     expect(social[0]?.attributes('href')).toBe('https://linkedin.test/p')
+  })
+
+  it('points the contact column at the contact page when no channel is configured', () => {
+    settings = {}
+    vi.stubGlobal('useContactDetails', () => ({ phone: ref(''), phoneLink: ref(''), address: ref('') }))
+    const wrapper = mountFooter()
+
+    expect(wrapper.find('[data-testid="footer-contact-page"]').attributes('href')).toBe('/en/contact')
+    expect(wrapper.find('[data-testid="footer-contact-page"]').text()).toContain('footer.contactPage')
+  })
+
+  it('hides the contact-page fallback once a channel is configured', () => {
+    const wrapper = mountFooter()
+
+    expect(wrapper.find('[data-testid="footer-contact-page"]').exists()).toBe(false)
   })
 
   it('renders no social row at all when none is configured', () => {

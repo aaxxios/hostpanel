@@ -45,6 +45,8 @@ export const PLAN_PRO = {
   description: 'Business hosting for the end-to-end suite',
   status: 'Active',
   pricing: { monthly: 15, annual: 144 },
+  // The operator's recommended plan, so the pricing pages draw their badge.
+  isFeatured: true,
   prices: [
     { currencyCode: 'USD', monthly: 15, annual: 144 },
     { currencyCode: 'AMD', monthly: 6000, annual: 57600 },

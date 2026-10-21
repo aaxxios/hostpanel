@@ -58,6 +58,8 @@ describe('LayoutHeader', () => {
   })
 
   afterEach(() => {
+    // Put back the setup's empty route, which the active-state tests replace.
+    vi.stubGlobal('useRoute', () => ({ params: {}, query: {}, path: '/', fullPath: '/', meta: {} }))
     document.body.style.overflow = ''
   })
 
@@ -73,8 +75,25 @@ describe('LayoutHeader', () => {
 
     const children = wrapper.findAll('[data-testid="layout-nav-child"]').map((link) => link.attributes('href'))
     expect(children).toEqual(['/en/hosting', '/en/domains'])
-    expect(wrapper.find('[data-testid="layout-nav-link"]').attributes('href')).toBe('/en/products')
+    const links = wrapper.find('[data-testid="layout-desktop-nav"]').findAll('[data-testid="layout-nav-link"]').map((link) => link.attributes('href'))
+    expect(links).toEqual(['/en/#services', '/en/#process', '/en/products'])
     expect(wrapper.find('[data-testid="layout-desktop-nav"]').text()).toContain('nav.hostingDesc')
+  })
+
+  it('marks the products link as the current page on a products route', () => {
+    vi.stubGlobal('useRoute', () => ({ params: {}, query: {}, path: '/en/products/vps', fullPath: '/en/products/vps', hash: '', meta: {} }))
+    const wrapper = mountHeader()
+
+    const links = wrapper.find('[data-testid="layout-desktop-nav"]').findAll('[data-testid="layout-nav-link"]')
+    expect(links.map((link) => link.attributes('aria-current'))).toEqual([undefined, undefined, 'page'])
+  })
+
+  it('marks a section link as current when the home hash names it', () => {
+    vi.stubGlobal('useRoute', () => ({ params: {}, query: {}, path: '/en/', fullPath: '/en/#process', hash: '#process', meta: {} }))
+    const wrapper = mountHeader()
+
+    const links = wrapper.find('[data-testid="layout-desktop-nav"]').findAll('[data-testid="layout-nav-link"]')
+    expect(links.map((link) => link.attributes('aria-current'))).toEqual([undefined, 'page', undefined])
   })
 
   it('keeps the mobile menu closed until the burger is pressed', async () => {

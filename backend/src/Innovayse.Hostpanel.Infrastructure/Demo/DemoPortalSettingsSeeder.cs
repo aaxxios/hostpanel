@@ -44,6 +44,8 @@ internal sealed class DemoPortalSettingsSeeder
     /// <summary>The values the demo sets that no option changes, by setting key.</summary>
     private static readonly (string Key, string Value)[] FixedValues =
     [
+        // The demo shows the default template; a reset restores it after a visitor switches templates in the admin.
+        (PortalSettingKeys.Template, PortalSettingKeys.TemplateValue(PortalSettingKeys.DefaultTemplate)),
         (PortalSettingKeys.SiteName, "Hostpanel Demo"),
         (PortalSettingKeys.SiteTagline, "Hosting, domains and servers, managed in one place."),
         (PortalSettingKeys.ThemeDefault, "light"),

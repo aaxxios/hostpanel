@@ -1,5 +1,5 @@
 <template>
-  <section class="py-12 md:py-20 bg-ui-page relative overflow-hidden" data-testid="sections-process">
+  <section :id="HomeSectionId.Process" :class="[HOME_SECTION_SCROLL_MARGIN_CLASS, 'py-12 md:py-20 bg-ui-page relative overflow-hidden']" data-testid="sections-process">
     <!-- Background -->
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-tr from-secondary-500/5 via-transparent to-primary-500/5" />
@@ -67,6 +67,8 @@
  */
 
 import { revealDelay } from '~/utils/reveal'
+import { HomeSectionId } from '~/types/homesectionid'
+import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
 import { ArrowRight } from 'lucide-vue-next'
 import { PROCESS_STEPS } from '~/constants/processStep'
 

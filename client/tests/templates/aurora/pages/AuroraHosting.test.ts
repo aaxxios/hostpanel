@@ -34,6 +34,13 @@ describe('AuroraHosting', () => {
     ).toBe(true)
   })
 
+  it('hides the comparison table for prod-shaped plans whose lines do not overlap', () => {
+    stubAuroraGlobals()
+    const disjoint = [{ label: 'Disk', values: ['1', '', ''] }, { label: 'Sites', values: ['', '2', ''] }, { label: 'Mail', values: ['', '', '3'] }]
+
+    expect(mountWithKit(AuroraHosting, { props: { plans: PLANS, comparisonRows: disjoint } }).find('[data-testid="comparison-table"]').exists()).toBe(false)
+  })
+
   it('ends with the call to action and passes the billing period up', async () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(AuroraHosting, { props: { plans: PLANS } })

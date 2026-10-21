@@ -10,6 +10,8 @@ import MarketingSectionHeader from '~/components/marketing/MarketingSectionHeade
 import type { PortalProduct } from '~/types/portalproduct'
 import type { PortalProductGroup } from '~/types/portalproductgroup'
 import { familyColor } from '~/utils/catalogGroups'
+import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
+import { HomeSectionId } from '~/types/homesectionid'
 
 /** The mocked catalogue endpoints, re-created for every test. */
 const api = { fetchProducts: vi.fn(), fetchProductGroups: vi.fn(), fetchProductFeatures: vi.fn() }
@@ -68,6 +70,20 @@ describe('SectionsProducts', () => {
     api.fetchProductFeatures.mockReset()
     api.fetchProductFeatures.mockResolvedValue([])
     window.localStorage.clear()
+  })
+
+  it('carries the services anchor the header links to, with room above it', async () => {
+    const section = (await mountSection()).find('[data-testid="sections-products"]')
+
+    expect(section.attributes('id')).toBe(HomeSectionId.Services)
+    expect(section.classes()).toContain(HOME_SECTION_SCROLL_MARGIN_CLASS)
+  })
+
+  it('draws a card without a photograph on the light surface, not the forced dark palette', async () => {
+    const card = (await mountSection()).find('[data-testid^="home-product-"]')
+
+    expect(card.classes()).not.toContain('dark')
+    expect(card.classes()).toContain('bg-classic-surface')
   })
 
   it('starts with the domains card, which links to the domains page', async () => {
@@ -153,10 +169,12 @@ describe('SectionsProducts', () => {
     expect(card.style.getPropertyValue('--accent')).toBe(familyColor('alpha-suite'))
   })
 
-  it('uses the dark palette on the cards, which sit on a photograph', async () => {
+  it('leaves every card without a photograph on the page theme, never forcing the dark palette', async () => {
     const wrapper = await mountSection()
 
-    expect(wrapper.find('[data-testid="home-product-domains"]').classes()).toContain('dark')
+    const cards = wrapper.findAll('[data-testid^="home-product-"]').filter(card => card.find('[data-testid^="home-product-link-"]').exists())
+    expect(cards.length).toBeGreaterThan(0)
+    cards.forEach(card => expect(card.classes()).not.toContain('dark'))
   })
 
   it('opens a demo in a new tab when the family has one, and the learn-more page otherwise', async () => {

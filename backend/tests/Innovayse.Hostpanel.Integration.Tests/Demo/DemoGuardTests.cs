@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
 using Xunit;
@@ -15,13 +16,14 @@ namespace Innovayse.Hostpanel.Integration.Tests.Demo;
 /// normally when it is not. Driven through <c>PUT /api/admin/settings/{id}</c>, a restricted route.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
-public sealed class DemoGuardTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+public sealed class DemoGuardTests(IntegrationTestFactory factory)
+    : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>The restricted setting the tests try to change.</summary>
     private const string SettingKey = "portal.template";
 
     /// <summary>The value the setting is restored to after a successful write.</summary>
-    private const string RestoredValue = "aurora";
+    private static readonly string RestoredValue = PortalSettingKeys.TemplateValue(PortalSettingKeys.DefaultTemplate);
 
     /// <summary>Builds an admin client on the given host and finds the restricted setting's id.</summary>
     /// <param name="host">The host to call.</param>

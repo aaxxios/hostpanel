@@ -30,23 +30,30 @@ const props = withDefaults(defineProps<Props>(), { as: 'div' })
 /** Columns on a desktop screen. */
 const columns = computed(() => balancedColumns(props.count))
 
-/** Classes that size a child to one column on a tablet-width screen, keyed by column count. */
+/**
+ * Classes that size a child to one column on a tablet-width screen, keyed by column count.
+ *
+ * Each size is written twice: for a direct child, and for the child of a `contents` wrapper such
+ * as `UiAccent`. A `display: contents` element is not a flex item, so a width set on it would
+ * never reach the card inside it and the card would size to its content instead.
+ */
 const TABLET_CHILD_CLASSES: Record<number, string> = {
-  1: 'sm:[&>*]:basis-full',
-  2: 'sm:[&>*]:basis-[calc((100%-1.5rem)/2)]',
+  1: 'sm:[&>*]:basis-full sm:[&>.contents>*]:basis-full',
+  2: 'sm:[&>*]:basis-[calc((100%-1.5rem)/2)] sm:[&>.contents>*]:basis-[calc((100%-1.5rem)/2)]',
 }
 
-/** Classes that size a child to one column on a desktop screen, keyed by column count. */
+/** Classes that size a child to one column on a desktop screen, keyed by column count (wrappers included, as above). */
 const DESKTOP_CHILD_CLASSES: Record<number, string> = {
-  1: 'lg:[&>*]:basis-full',
-  2: 'lg:[&>*]:basis-[calc((100%-1.5rem)/2)]',
-  3: 'lg:[&>*]:basis-[calc((100%-3rem)/3)]',
-  4: 'lg:[&>*]:basis-[calc((100%-4.5rem)/4)]',
+  1: 'lg:[&>*]:basis-full lg:[&>.contents>*]:basis-full',
+  2: 'lg:[&>*]:basis-[calc((100%-1.5rem)/2)] lg:[&>.contents>*]:basis-[calc((100%-1.5rem)/2)]',
+  3: 'lg:[&>*]:basis-[calc((100%-3rem)/3)] lg:[&>.contents>*]:basis-[calc((100%-3rem)/3)]',
+  4: 'lg:[&>*]:basis-[calc((100%-4.5rem)/4)] lg:[&>.contents>*]:basis-[calc((100%-4.5rem)/4)]',
 }
 
 /** Classes of the root: a centred wrapping row whose children are sized to the column count. */
 const classes = computed(() => [
   'ui-balanced-grid flex flex-wrap justify-center gap-6 [&>*]:min-w-0 [&>*]:flex-none [&>*]:basis-full',
+  '[&>.contents>*]:min-w-0 [&>.contents>*]:flex-none [&>.contents>*]:basis-full',
   TABLET_CHILD_CLASSES[tabletColumns(props.count)],
   DESKTOP_CHILD_CLASSES[columns.value],
 ])

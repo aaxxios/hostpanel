@@ -1,6 +1,6 @@
 /**
- * Unit tests for SectionsPartners: the doubled marquee of partners read from the storefront store,
- * and the section hiding itself when there are none.
+ * Unit tests for SectionsPartners: a short list centred, a long one as the doubled marquee, read
+ * from the storefront store, and the section hiding itself when there are none.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
@@ -47,7 +47,16 @@ describe('SectionsPartners', () => {
     expect(wrapper.text()).toContain('clients.heading')
   })
 
-  it('lists every partner twice, so the marquee loops without a gap', async () => {
+  it('centres a short list once instead of running a half-empty marquee', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('[data-testid="sections-partners-static"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sections-partners-marquee"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="partner-1"]')).toHaveLength(1)
+  })
+
+  it('lists every partner twice once the strip is full, so the marquee loops without a gap', async () => {
+    api.fetchPartners.mockResolvedValue([1, 2, 3, 4, 5, 6].map((id) => partnerFixture(id)))
     const wrapper = await mountSection()
 
     const cards = wrapper.findAll('[data-testid="partner-1"]')
@@ -63,6 +72,7 @@ describe('SectionsPartners', () => {
   })
 
   it('pauses the marquee on hover', async () => {
+    api.fetchPartners.mockResolvedValue([1, 2, 3, 4, 5, 6].map((id) => partnerFixture(id)))
     const wrapper = await mountSection()
 
     expect(wrapper.find('.animate-marquee').classes()).toContain('hover:[animation-play-state:paused]')

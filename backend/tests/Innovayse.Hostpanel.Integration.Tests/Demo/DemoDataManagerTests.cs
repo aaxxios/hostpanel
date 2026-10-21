@@ -31,7 +31,8 @@ namespace Innovayse.Hostpanel.Integration.Tests.Demo;
 /// that is not a demo is left empty.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
-public sealed class DemoDataManagerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
+    : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>The amounts the seed produces; they are fixed, so a change here is a deliberate change of the demo.</summary>
     private static readonly Counts Expected = new(
@@ -282,6 +283,7 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory) : IClas
 
         var settings = await db.Settings.ToDictionaryAsync(s => s.Key, s => s.Value);
         settings[PortalSettingKeys.SiteName].Should().Be("Hostpanel Demo");
+        settings[PortalSettingKeys.Template].Should().Be(PortalSettingKeys.TemplateValue(PortalSettingKeys.DefaultTemplate), "the demo shows the default template");
         settings[PortalSettingKeys.ContactEmail].Should().Be(DemoPortalSettingsSeeder.DefaultContactEmail, "no contact email is configured");
         settings[PortalSettingKeys.ContactPhone].Should().Be(DemoPortalSettingsSeeder.DefaultContactPhone, "no contact phone is configured");
         settings[PortalSettingKeys.SiteTagline].Should().NotBeNullOrEmpty();

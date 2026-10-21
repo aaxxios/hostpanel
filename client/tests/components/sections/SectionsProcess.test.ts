@@ -6,11 +6,20 @@ import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import SectionsProcess from '~/components/sections/SectionsProcess.vue'
 import MarketingSectionHeader from '~/components/marketing/MarketingSectionHeader.vue'
 import { PROCESS_STEPS as processSteps } from '~/constants/processStep'
+import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
+import { HomeSectionId } from '~/types/homesectionid'
 
 /** Mounts the section. */
 const mountProcess = () => mountWithKit(SectionsProcess, { components: { MarketingSectionHeader } })
 
 describe('SectionsProcess', () => {
+  it('carries the process anchor the header links to, with room above it', () => {
+    const section = mountProcess().find('[data-testid="sections-process"]')
+
+    expect(section.attributes('id')).toBe(HomeSectionId.Process)
+    expect(section.classes()).toContain(HOME_SECTION_SCROLL_MARGIN_CLASS)
+  })
+
   it('renders a card per step', () => {
     expect(mountProcess().findAll('[data-testid^="process-step-"]')).toHaveLength(processSteps.length)
   })

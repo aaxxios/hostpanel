@@ -70,7 +70,7 @@
     "templates": {
       "aurora": {
         "label": "Aurora",
-        "hint": "Current default — dark/light, Armenian typography"
+        "hint": "Glow-backed design — dark/light, Armenian typography"
       },
       "nova": {
         "label": "Nova",
@@ -78,7 +78,7 @@
       },
       "classic": {
         "label": "Classic",
-        "hint": "The original storefront design"
+        "hint": "Default — the original storefront design, dark/light"
       }
     },
     "themeDefault": "Default colour mode",
