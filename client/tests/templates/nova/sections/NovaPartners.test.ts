@@ -6,6 +6,7 @@ import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { partnerFixture } from '~/tests/helpers/storefrontFixtures'
 import NovaPartners from '~/templates/nova/sections/NovaPartners.vue'
+import { balancedColumns } from '~/utils/balancedGrid'
 
 /** The mocked storefront endpoints, re-created for every test. */
 const api = { fetchPartners: vi.fn(), fetchTestimonials: vi.fn(), fetchProjects: vi.fn(), fetchFaqs: vi.fn() }
@@ -62,5 +63,16 @@ describe('NovaPartners', () => {
 
     expect(wrapper.find('[data-testid="nova-partners"]').exists()).toBe(false)
     expect(wrapper.find('h2').exists()).toBe(false)
+  })
+
+  it('lays the cards out in the shared balanced grid, so no card is left alone on a row', async () => {
+    api.fetchPartners.mockResolvedValue(Array.from({ length: 5 }, (_, index) => partnerFixture(index + 1)))
+
+    const wrapper = await mountSection()
+
+    const grid = wrapper.find('[data-testid="nova-partners-grid"]')
+    expect(grid.exists()).toBe(true)
+    expect(grid.attributes('data-columns')).toBe(String(balancedColumns(5)))
+    expect(grid.classes()).toContain('ui-balanced-grid')
   })
 })

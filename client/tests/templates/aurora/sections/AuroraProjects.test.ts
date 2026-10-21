@@ -7,6 +7,7 @@ import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { projectFixture } from '~/tests/helpers/storefrontFixtures'
 import AuroraProjects from '~/templates/aurora/sections/AuroraProjects.vue'
 import { stubAuroraGlobals } from '../auroraGlobals'
+import { balancedColumns } from '~/utils/balancedGrid'
 
 /** The mocked storefront endpoints, re-created for every test. */
 const api = { fetchPartners: vi.fn(), fetchTestimonials: vi.fn(), fetchProjects: vi.fn(), fetchFaqs: vi.fn() }
@@ -73,5 +74,16 @@ describe('AuroraProjects', () => {
     const wrapper = await mountSection()
 
     expect(wrapper.find('[data-testid="project-1"]').classes()).toContain('shadow-card')
+  })
+
+  it('lays the cards out in the shared balanced grid, so no card is left alone on a row', async () => {
+    api.fetchProjects.mockResolvedValue(Array.from({ length: 5 }, (_, index) => projectFixture(index + 1)))
+
+    const wrapper = await mountSection()
+
+    const grid = wrapper.find('[data-testid="aurora-projects-grid"]')
+    expect(grid.exists()).toBe(true)
+    expect(grid.attributes('data-columns')).toBe(String(balancedColumns(5)))
+    expect(grid.classes()).toContain('ui-balanced-grid')
   })
 })

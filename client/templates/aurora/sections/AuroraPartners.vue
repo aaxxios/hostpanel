@@ -7,7 +7,7 @@
       </UiHeading>
     </UiStack>
 
-    <UiStack direction="row" wrap align="center" justify="center" gap="md" class="mt-9">
+    <UiBalancedGrid :count="items.length" class="mt-9" data-testid="aurora-partners-grid">
       <component
         :is="partner.url ? UiLink : UiStack"
         v-for="partner in items"
@@ -20,7 +20,7 @@
           padding="none"
           class="border-line2 bg-card-hi px-6 py-3 shadow-card transition-colors hover:border-ac1"
         >
-          <UiStack direction="row" align="center" gap="sm">
+          <UiStack direction="row" align="center" justify="center" gap="sm">
             <UiImage
               v-if="partner.logoUrl"
               :src="partner.logoUrl"
@@ -33,7 +33,7 @@
           </UiStack>
         </UiCard>
       </component>
-    </UiStack>
+    </UiBalancedGrid>
   </UiSection>
 </template>
 

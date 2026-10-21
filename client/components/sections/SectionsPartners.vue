@@ -18,7 +18,7 @@
       </div>
 
       <!-- A short list sits centred and wrapped; a marquee of two names reads as a half-empty strip. -->
-      <UiStack v-if="!marquee" direction="row" wrap justify="center" gap="md" class="py-4" data-testid="sections-partners-static">
+      <UiBalancedGrid v-if="!marquee" :count="partners.length" class="py-4" data-testid="sections-partners-static">
         <UiCard
           v-for="partner in partners"
           :key="partner.id"
@@ -26,7 +26,7 @@
           class="px-4 py-2.5 sm:px-6 sm:py-3 group hover:border-primary-500/50 hover:shadow-lg transition-all duration-300"
           :data-testid="`partner-${partner.id}`"
         >
-          <UiStack direction="row" align="center" gap="xs">
+          <UiStack direction="row" align="center" justify="center" gap="xs">
             <UiImage
               v-if="partner.logoUrl"
               :src="partner.logoUrl"
@@ -38,7 +38,7 @@
             <UiText as="span" tone="inherit" weight="semibold" class="text-sm sm:text-base text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-300 whitespace-nowrap">{{ partner.name }}</UiText>
           </UiStack>
         </UiCard>
-      </UiStack>
+      </UiBalancedGrid>
 
       <!-- Logos marquee -->
       <div v-else class="relative overflow-hidden" data-testid="sections-partners-marquee">
