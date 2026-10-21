@@ -3,6 +3,11 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   DASHBOARD_ROWS,
+  GUARANTEE_CARDS,
+  INSTALLER_CATEGORY_CARDS,
+  PERFORMANCE_STAT_CARDS,
+  SECURITY_FEATURE_CARDS,
+  SUPPORT_CHANNEL_CARDS,
   FOOTER_COLUMNS,
   HERO_BENEFITS,
   MIGRATION_STEPS,
@@ -54,7 +59,9 @@ const messages = Object.fromEntries(
 const referenced = [
   ...NAV_ITEMS.map(item => item.labelKey),
   ...FOOTER_COLUMNS.flatMap(column => [column.titleKey, ...column.links.map(link => link.labelKey)]),
-  ...[...HERO_BENEFITS, ...TRUST_ITEMS, ...WHY_FEATURES, ...PERFORMANCE_FEATURES, ...SECURITY_FEATURES]
+  ...[...HERO_BENEFITS, ...TRUST_ITEMS, ...WHY_FEATURES, ...PERFORMANCE_FEATURES, ...SECURITY_FEATURES,
+    ...Object.values(SECURITY_FEATURE_CARDS), ...Object.values(PERFORMANCE_STAT_CARDS), ...Object.values(GUARANTEE_CARDS),
+    ...Object.values(SUPPORT_CHANNEL_CARDS), ...Object.values(INSTALLER_CATEGORY_CARDS)]
     .flatMap(feature => [feature.titleKey, ...(feature.bodyKey ? [feature.bodyKey] : [])]),
   ...USE_CASES.flatMap(useCase => [useCase.titleKey, useCase.bodyKey]),
   ...MIGRATION_STEPS.flatMap(step => [step.titleKey, step.bodyKey]),

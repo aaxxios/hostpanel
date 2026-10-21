@@ -91,6 +91,144 @@
     "userToggle": "Let visitors switch between light and dark",
     "userToggleHint": "Off hides the sun/moon button in the header."
   },
+  "homeSections": {
+    "title": "Home sections",
+    "description": "Which sections the storefront home page shows. The hero is always shown. Each switch is saved on its own.",
+    "sections": {
+      "stats": {
+        "label": "Stats strip",
+        "hint": "The figures under the hero, or the trust bar."
+      },
+      "partners": {
+        "label": "Partners",
+        "hint": "Partner logos."
+      },
+      "services": {
+        "label": "Why choose us",
+        "hint": "The services and benefits blocks."
+      },
+      "process": {
+        "label": "How it works",
+        "hint": "The steps from order to a running site."
+      },
+      "plans": {
+        "label": "Plans and pricing",
+        "hint": "Plan cards, products and prices."
+      },
+      "comparison": {
+        "label": "Comparison table",
+        "hint": "The plan comparison table (Nova)."
+      },
+      "dashboard": {
+        "label": "Dashboard preview",
+        "hint": "The control panel preview (Nova)."
+      },
+      "use_cases": {
+        "label": "Use cases",
+        "hint": "What customers build on the platform (Nova)."
+      },
+      "migration": {
+        "label": "Migration",
+        "hint": "The free migration block."
+      },
+      "projects": {
+        "label": "Projects",
+        "hint": "Portfolio projects. Off until you turn it on."
+      },
+      "testimonials": {
+        "label": "Testimonials",
+        "hint": "Customer quotes."
+      },
+      "faq": {
+        "label": "FAQ",
+        "hint": "Frequently asked questions."
+      },
+      "cta": {
+        "label": "Call to action",
+        "hint": "The closing banner."
+      },
+      "locations": {
+        "label": "Server locations",
+        "hint": "Where the servers are. Edited under Storefront content."
+      },
+      "performance": {
+        "label": "Performance",
+        "hint": "Uptime, response time, sites hosted and support response."
+      },
+      "security": {
+        "label": "Security",
+        "hint": "SSL, backups, DDoS, malware and firewall protection."
+      },
+      "apps": {
+        "label": "One-click installer",
+        "hint": "The apps you can install in one click."
+      },
+      "guarantees": {
+        "label": "Guarantees",
+        "hint": "Free migration, money back and no hidden fees."
+      },
+      "support": {
+        "label": "Support",
+        "hint": "Chat, ticket, email and phone channels."
+      },
+      "trusted": {
+        "label": "Trusted by",
+        "hint": "The logo strip taken from the partners."
+      }
+    }
+  },
+  "hostingDetails": {
+    "title": "Hosting details",
+    "description": "The figures and facts behind the performance, security, installer, guarantee and support sections. Leave a figure empty to hide it.",
+    "statsResponseTime": {
+      "label": "Response time",
+      "hint": "e.g. 180 ms"
+    },
+    "statsSitesHosted": {
+      "label": "Sites hosted",
+      "hint": "e.g. 12,000+"
+    },
+    "statsSupportResponse": {
+      "label": "Support response",
+      "hint": "e.g. 15 min"
+    },
+    "installerAppCount": {
+      "label": "Installer app count",
+      "hint": "e.g. 150+"
+    },
+    "guaranteeMoneyBackDays": {
+      "label": "Money back days",
+      "hint": "e.g. 30"
+    },
+    "supportResponseChat": {
+      "label": "Chat response time",
+      "hint": "e.g. 1 min"
+    },
+    "supportResponseTicket": {
+      "label": "Ticket response time",
+      "hint": "e.g. 2 hours"
+    },
+    "supportResponseEmail": {
+      "label": "Email response time",
+      "hint": "e.g. 4 hours"
+    },
+    "supportResponsePhone": {
+      "label": "Phone response time",
+      "hint": "e.g. 5 min"
+    },
+    "featuresSsl": {
+      "label": "Free SSL",
+      "hint": "Lists SSL in the security section."
+    },
+    "featuresDdos": {
+      "label": "DDoS protection",
+      "hint": "Lists DDoS protection in the security section."
+    },
+    "guaranteeNoHiddenFees": {
+      "label": "No hidden fees",
+      "hint": "Shows the no hidden fees guarantee."
+    }
+  },
   "branding": {
     "title": "Branding",
     "description": "The storefront's logos and browser tab icon. Changes take effect on the next page load.",

@@ -41,7 +41,7 @@ describe('AppSidebar', () => {
     expect(wrapper.get('[data-testid="nav-clients-users"]').classes()).toContain('text-primary-400')
   })
 
-  it('lists the four storefront content pages and opens the section on one of them', async () => {
+  it('lists the five storefront content pages and opens the section on one of them', async () => {
     const wrapper = await mountSidebar('/storefront/faqs')
 
     expect(wrapper.get('[data-testid="nav-storefront"]').attributes('aria-expanded')).toBe('true')
@@ -49,6 +49,7 @@ describe('AppSidebar', () => {
     expect(wrapper.get('[data-testid="nav-storefront-partners"]').attributes('href')).toBe('/storefront/partners')
     expect(wrapper.get('[data-testid="nav-storefront-projects"]').attributes('href')).toBe('/storefront/projects')
     expect(wrapper.get('[data-testid="nav-storefront-faqs"]').classes()).toContain('text-primary-400')
+    expect(wrapper.get('[data-testid="nav-storefront-locations"]').attributes('href')).toBe('/storefront/locations')
   })
 
   it('opens a closed sub-menu when its toggle is clicked', async () => {

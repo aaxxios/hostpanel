@@ -111,12 +111,12 @@
           </UiStack>
 
           <!-- Other plans grid -->
-          <UiStack direction="row" wrap justify="center" gap="lg" class="md:gap-8 mb-8" data-testid="classic-hosting-plans">
+          <UiBalancedGrid :count="otherPlans.length" class="mb-8" data-testid="classic-hosting-plans">
             <UiStack
               v-for="(plan, index) in otherPlans"
               :key="plan.pid"
               gap="none"
-              class="relative w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-22px)] animate-reveal-up motion-reduce:animate-none"
+              class="relative animate-reveal-up motion-reduce:animate-none"
               data-testid="classic-hosting-plan"
               :class="revealDelay(index * 100)"
             >
@@ -214,7 +214,7 @@ data-testid="classic-hosting-plan-select"
                 </UiStack>
               </UiCard>
             </UiStack>
-          </UiStack>
+          </UiBalancedGrid>
 
           <!-- Agency section -->
           <UiStack v-if="agencyPlan" gap="none" class="max-w-6xl mx-auto mb-24" data-testid="classic-hosting-agency">

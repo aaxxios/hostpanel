@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
 /// Shared helpers for the storefront-content modules' per-use-case Integration tests (Testimonials,
-/// Partners, Projects, Faqs): an admin bearer token, the request bodies every test starts from,
+/// Partners, Locations, Projects, Faqs): an admin bearer token, the request bodies every test starts from,
 /// reading a refusal's error code, and a language-stamped anonymous request.
 /// </summary>
 internal static class StorefrontContentTestSeeds
@@ -96,6 +96,22 @@ internal static class StorefrontContentTestSeeds
         {
             en = new { name = "English name" },
             hy = new { name = "Armenian name" },
+        },
+    };
+
+    /// <summary>The body for creating a server location with an English and an Armenian translation.</summary>
+    /// <param name="sortOrder">Display order.</param>
+    /// <param name="isActive">Whether the location is created active.</param>
+    /// <returns>The request body.</returns>
+    public static object LocationBody(int sortOrder = 0, bool isActive = true) => new
+    {
+        countryCode = "de",
+        sortOrder,
+        isActive,
+        translations = new
+        {
+            en = new { name = "English name", city = (string?)"English city", latencyNote = (string?)"English note" },
+            hy = new { name = "Armenian name", city = (string?)null, latencyNote = (string?)null },
         },
     };
 

@@ -1,6 +1,6 @@
 /**
  * Pinia store for the storefront content the operator manages in the admin: testimonials,
- * partners, projects and FAQs.
+ * partners, projects, FAQs and server locations.
  *
  * A server-rendered section wraps a load action in `useAsyncData(key, () => storefront.loadX(),
  * { watch: [locale] })` and renders store state, which `@pinia/nuxt` carries from the server
@@ -18,6 +18,7 @@ import type { FAQ } from '~/types/faq'
 import type { FaqCategory } from '~/types/faqcategory'
 import type { Partner } from '~/types/partner'
 import type { Project } from '~/types/project'
+import type { ServerLocation } from '~/types/serverlocation'
 import { StorefrontSection } from '~/types/storefrontsection'
 import type { Testimonial } from '~/types/testimonial'
 
@@ -34,6 +35,9 @@ export const useStorefrontStore = defineStore('storefront', () => {
 
   /** The active partners; empty until {@link loadPartners}. */
   const partners = ref<Partner[]>([])
+
+  /** The active server locations; empty until {@link loadLocations}. */
+  const locations = ref<ServerLocation[]>([])
 
   /** The active portfolio projects; empty until {@link loadProjects}. */
   const projects = ref<Project[]>([])
@@ -55,7 +59,8 @@ export const useStorefrontStore = defineStore('storefront', () => {
     [StorefrontSection.Testimonials]: '',
     [StorefrontSection.Partners]: '',
     [StorefrontSection.Projects]: '',
-    [StorefrontSection.Faqs]: ''
+    [StorefrontSection.Faqs]: '',
+    [StorefrontSection.Locations]: ''
   })
 
   /**
@@ -101,6 +106,16 @@ export const useStorefrontStore = defineStore('storefront', () => {
   }
 
   /**
+   * Reads the server locations in the active language.
+   *
+   * @returns The locations; empty after a failure.
+   */
+  const loadLocations = async (): Promise<ServerLocation[]> => {
+    locations.value = await guarded(StorefrontSection.Locations, () => api.fetchLocations(), [] as ServerLocation[])
+    return locations.value
+  }
+
+  /**
    * Reads the portfolio projects in the active language.
    *
    * @returns The projects; empty after a failure.
@@ -131,12 +146,14 @@ export const useStorefrontStore = defineStore('storefront', () => {
   return {
     testimonials,
     partners,
+    locations,
     projects,
     faqs,
     loading,
     errors,
     loadTestimonials,
     loadPartners,
+    loadLocations,
     loadProjects,
     loadFaqs,
     faqsIn

@@ -1278,6 +1278,74 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.ToTable("disk_usage_stats", (string)null);
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Locations.ServerLocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("SortOrder");
+
+                    b.ToTable("server_locations", (string)null);
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Locations.ServerLocationTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("City")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("LatencyNote")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("ServerLocationId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerLocationId", "Locale")
+                        .IsUnique();
+
+                    b.ToTable("server_location_translations", (string)null);
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Migration.MigrationJob", b =>
                 {
                     b.Property<int>("Id")
@@ -3454,6 +3522,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Locations.ServerLocationTranslation", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Locations.ServerLocation", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("ServerLocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Orders.OrderItem", b =>
                 {
                     b.HasOne("Innovayse.Hostpanel.Domain.Orders.Order", null)
@@ -3643,6 +3720,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Faqs.Faq", b =>
+                {
+                    b.Navigation("Translations");
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Locations.ServerLocation", b =>
                 {
                     b.Navigation("Translations");
                 });

@@ -6,6 +6,7 @@ using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Faqs;
 using Innovayse.Hostpanel.Domain.Hosting;
+using Innovayse.Hostpanel.Domain.Locations;
 using Innovayse.Hostpanel.Domain.Migration;
 using Innovayse.Hostpanel.Domain.Notifications;
 using Innovayse.Hostpanel.Domain.Orders;
@@ -199,6 +200,12 @@ public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbConte
 
     /// <summary>Gets the per-locale translations of the storefront partners.</summary>
     public DbSet<PartnerTranslation> PartnerTranslations => Set<PartnerTranslation>();
+
+    /// <summary>Gets the storefront server locations table.</summary>
+    public DbSet<ServerLocation> ServerLocations => Set<ServerLocation>();
+
+    /// <summary>Gets the per-locale translations of the storefront server locations.</summary>
+    public DbSet<ServerLocationTranslation> ServerLocationTranslations => Set<ServerLocationTranslation>();
 
     /// <summary>Gets the storefront portfolio projects table.</summary>
     public DbSet<Project> Projects => Set<Project>();

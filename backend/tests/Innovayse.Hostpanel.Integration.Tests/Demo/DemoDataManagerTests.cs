@@ -45,7 +45,7 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
         TicketTags: 88, Announcements: 25, NetworkIssues: 12,
         Slides: 7, SlideTranslations: 21, DownloadCategories: 4, Downloads: 21, ActivityLogs: 160, EmailLogs: 120,
         Testimonials: 12, TestimonialTranslations: 36, Partners: 16, PartnerTranslations: 48,
-        Projects: 12, ProjectTranslations: 36, Faqs: 24, FaqTranslations: 72);
+        ServerLocations: 6, ServerLocationTranslations: 18, Projects: 12, ProjectTranslations: 36, Faqs: 24, FaqTranslations: 72);
 
     /// <summary>Counts every seeded dataset.</summary>
     /// <param name="provider">The scope to read through.</param>
@@ -73,7 +73,8 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
             await db.Slides.CountAsync(), await db.SlideTranslations.CountAsync(), await db.DownloadCategories.CountAsync(),
             await db.Downloads.CountAsync(), await db.ActivityLogs.CountAsync(), await db.EmailLogs.CountAsync(),
             await db.Testimonials.CountAsync(), await db.TestimonialTranslations.CountAsync(), await db.Partners.CountAsync(),
-            await db.PartnerTranslations.CountAsync(), await db.Projects.CountAsync(), await db.ProjectTranslations.CountAsync(),
+            await db.PartnerTranslations.CountAsync(), await db.ServerLocations.CountAsync(),
+            await db.ServerLocationTranslations.CountAsync(), await db.Projects.CountAsync(), await db.ProjectTranslations.CountAsync(),
             await db.Faqs.CountAsync(), await db.FaqTranslations.CountAsync());
     }
 
@@ -289,6 +290,23 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
         settings[PortalSettingKeys.SiteTagline].Should().NotBeNullOrEmpty();
         settings[PortalSettingKeys.ContactHours].Should().NotBeNullOrEmpty("the contact page shows its hours row");
         settings[PortalSettingKeys.StatsClients].Should().NotBeNullOrEmpty("the hero shows its figures");
+        new[]
+            {
+                PortalSettingKeys.StatsResponseTime, PortalSettingKeys.StatsSitesHosted, PortalSettingKeys.StatsSupportResponse,
+                PortalSettingKeys.InstallerAppCount, PortalSettingKeys.GuaranteeMoneyBackDays, PortalSettingKeys.SupportResponseChat,
+                PortalSettingKeys.SupportResponseTicket, PortalSettingKeys.SupportResponseEmail, PortalSettingKeys.SupportResponsePhone,
+                PortalSettingKeys.ChatProvider,
+            }
+            .Should().OnlyContain(key => !string.IsNullOrEmpty(settings[key]), "every hosting fact and support channel is filled");
+        new[]
+            {
+                PortalSettingKeys.FeaturesSsl, PortalSettingKeys.FeaturesDdos, PortalSettingKeys.FeaturesBackups,
+                PortalSettingKeys.FeaturesMalware, PortalSettingKeys.FeaturesFirewall, PortalSettingKeys.GuaranteeNoHiddenFees,
+                PortalSettingKeys.MigrationFree,
+            }
+            .Should().OnlyContain(key => settings[key] == "true", "every security and guarantee card is on");
+        settings.Where(s => s.Key.StartsWith("portal.sections.", StringComparison.Ordinal))
+            .Should().HaveCount(20).And.OnlyContain(s => s.Value == "true", "every home-page section is on in the demo");
         new[] { PortalSettingKeys.AboutText, PortalSettingKeys.AboutTextRu, PortalSettingKeys.AboutTextHy }
             .Should().OnlyContain(k => settings[k].Length > 0, "the About page has a story in every language");
         settings[PortalSettingKeys.BrandPrimary].Should().BeEmpty("the demo shows the template's own palette");
@@ -352,11 +370,11 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
         var badge = await db.Settings.SingleAsync(s => s.Key == PortalSettingKeys.HeroBadge);
         badge.UpdateValue("Edited locally");
         await db.SaveChangesAsync();
-        var before = (await db.Testimonials.CountAsync(), await db.Partners.CountAsync(), await db.Projects.CountAsync(), await db.Faqs.CountAsync());
+        var before = (await db.Testimonials.CountAsync(), await db.Partners.CountAsync(), await db.ServerLocations.CountAsync(), await db.Projects.CountAsync(), await db.Faqs.CountAsync());
 
         await new DemoStorefrontSeeder(db).SeedContentAsync(CancellationToken.None);
 
-        (await db.Testimonials.CountAsync(), await db.Partners.CountAsync(), await db.Projects.CountAsync(), await db.Faqs.CountAsync())
+        (await db.Testimonials.CountAsync(), await db.Partners.CountAsync(), await db.ServerLocations.CountAsync(), await db.Projects.CountAsync(), await db.Faqs.CountAsync())
             .Should().Be(before);
         (await db.Settings.SingleAsync(s => s.Key == PortalSettingKeys.HeroBadge)).Value.Should().Be("Edited locally");
     }

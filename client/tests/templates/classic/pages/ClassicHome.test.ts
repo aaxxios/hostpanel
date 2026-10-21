@@ -1,23 +1,46 @@
 /**
- * Unit tests for ClassicHome: the hidden H1 and the marketing sections, in landing order.
+ * Unit tests for ClassicHome: the hidden H1, the marketing sections in hosting-site order, and
+ * the per-section visibility toggles.
  */
-import { describe, expect, it } from 'vitest'
-import { defineComponent, h } from 'vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h, ref } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { HOME_FAQ_LIMIT } from '~/constants/faq'
+import { HOME_SECTION_DEFAULT, HomeSection } from '~/constants/homeSection'
 import ClassicHome from '~/templates/classic/pages/ClassicHome.vue'
 
 /** Names of the section components the home page composes, in the order they appear. */
 const SECTION_NAMES = [
   'SectionsProductsFullSlider',
-  'SectionsPartners',
+  'SectionsTrusted',
+  'SectionsPerformance',
+  'SectionsProducts',
   'SectionsWhyChooseUs',
+  'SectionsLocations',
+  'SectionsSecurity',
+  'SectionsApps',
+  'SectionsGuarantees',
   'SectionsProcess',
   'SectionsTestimonials',
-  'SectionsProducts',
+  'SectionsSupport',
+  'SectionsPartners',
   'SectionsFAQ',
   'SectionsCTA',
 ]
+
+/** The sections the test has switched off; empty means the defaults apply. */
+const switchedOff = ref<Set<HomeSection>>(new Set())
+
+/** The visibility composable, answering from the section defaults and the test's overrides. */
+vi.stubGlobal('useHomeSections', () => ({
+  /**
+   * Stands in for the visibility composable: the defaults, minus whatever the test switched off.
+   *
+   * @param section The section asked about.
+   * @returns Whether it is shown.
+   */
+  isVisible: (section: HomeSection): boolean => HOME_SECTION_DEFAULT[section] && !switchedOff.value.has(section),
+}))
 
 /**
  * Builds a stand-in section that renders its own name, so order can be read from the DOM.
@@ -33,6 +56,10 @@ const sectionStub = (name: string) => defineComponent({
 
 describe('ClassicHome', () => {
   const components = Object.fromEntries(SECTION_NAMES.map((name) => [name, sectionStub(name)]))
+
+  beforeEach(() => {
+    switchedOff.value = new Set()
+  })
 
   it('renders the SEO heading visually hidden', () => {
     const wrapper = mountWithKit(ClassicHome, { components })
@@ -54,5 +81,54 @@ describe('ClassicHome', () => {
 
     const order = wrapper.findAll('[data-section]').map((node) => node.attributes('data-section'))
     expect(order).toEqual(SECTION_NAMES)
+  })
+
+  it('hides a section whose toggle is off and keeps the rest', () => {
+    switchedOff.value = new Set([HomeSection.Security])
+
+    const wrapper = mountWithKit(ClassicHome, { components })
+
+    const order = wrapper.findAll('[data-section]').map((node) => node.attributes('data-section'))
+    expect(order).not.toContain('SectionsSecurity')
+    expect(order).toEqual(SECTION_NAMES.filter((name) => name !== 'SectionsSecurity'))
+  })
+
+  it('hides each toggleable section when its toggle is off', () => {
+    const toggled: Array<[HomeSection, string]> = [
+      [HomeSection.Trusted, 'SectionsTrusted'],
+      [HomeSection.Performance, 'SectionsPerformance'],
+      [HomeSection.Plans, 'SectionsProducts'],
+      [HomeSection.Services, 'SectionsWhyChooseUs'],
+      [HomeSection.Locations, 'SectionsLocations'],
+      [HomeSection.Apps, 'SectionsApps'],
+      [HomeSection.Guarantees, 'SectionsGuarantees'],
+      [HomeSection.Process, 'SectionsProcess'],
+      [HomeSection.Testimonials, 'SectionsTestimonials'],
+      [HomeSection.Support, 'SectionsSupport'],
+      [HomeSection.Partners, 'SectionsPartners'],
+      [HomeSection.Faq, 'SectionsFAQ'],
+      [HomeSection.Cta, 'SectionsCTA'],
+    ]
+
+    for (const [section, name] of toggled) {
+      switchedOff.value = new Set([section])
+
+      const wrapper = mountWithKit(ClassicHome, { components })
+
+      expect(wrapper.find(`[data-section="${name}"]`).exists()).toBe(false)
+    }
+  })
+
+  it('always shows the hero, which has no toggle', () => {
+    switchedOff.value = new Set(Object.values(HomeSection))
+
+    const wrapper = mountWithKit(ClassicHome, { components })
+
+    expect(wrapper.find('[data-section="SectionsProductsFullSlider"]').exists()).toBe(true)
+  })
+
+  it('keeps the projects section off by default', () => {
+    expect(HOME_SECTION_DEFAULT[HomeSection.Projects]).toBe(false)
+    expect(useHomeSections().isVisible(HomeSection.Projects)).toBe(false)
   })
 })

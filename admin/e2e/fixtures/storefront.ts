@@ -4,6 +4,7 @@
  */
 import type { Faq } from '../../src/types/faq'
 import type { Partner } from '../../src/types/partner'
+import type { ServerLocation } from '../../src/types/serverlocation'
 import type { Project } from '../../src/types/project'
 import { FaqCategory } from '../../src/types/storefrontenums'
 
@@ -16,6 +17,15 @@ export const acmePartner: Partner = {
   sortOrder: 0,
   isActive: true,
   createdAt: '2026-01-01T00:00:00Z',
+}
+
+/** An active server location with English text. */
+export const frankfurtLocation: ServerLocation = {
+  id: 81,
+  countryCode: 'DE',
+  sortOrder: 0,
+  isActive: true,
+  translations: { en: { name: 'Frankfurt', city: 'Frankfurt am Main', latencyNote: '20 ms to Europe' } },
 }
 
 /** An active project with English text. */

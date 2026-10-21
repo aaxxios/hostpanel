@@ -592,6 +592,9 @@
   <data name="PARTNER_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի գործընկեր չկա։</value>
   </data>
+  <data name="LOCATION_NOT_FOUND" xml:space="preserve">
+    <value>Այդպիսի տեղակայում չկա։</value>
+  </data>
   <data name="PROJECT_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի նախագիծ չկա։</value>
   </data>
@@ -606,6 +609,12 @@
   </data>
   <data name="PARTNER_SORT_ORDER_NEGATIVE" xml:space="preserve">
     <value>Գործընկերի դասավորության համարը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="LOCATION_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>Տեղակայման դասավորության համարը չի կարող բացասական լինել։</value>
+  </data>
+  <data name="LOCATION_COUNTRY_CODE_INVALID" xml:space="preserve">
+    <value>Տեղակայման երկրի կոդը պետք է լինի երկու տառ։</value>
   </data>
   <data name="PROJECT_SORT_ORDER_NEGATIVE" xml:space="preserve">
     <value>Նախագծի դասավորության համարը չի կարող բացասական լինել։</value>

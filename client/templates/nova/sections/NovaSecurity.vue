@@ -1,5 +1,5 @@
 <template>
-  <UiSection v-if="features.length" padding="lg" class="border-b border-nova-border">
+  <UiSection v-if="features.length" padding="lg" class="border-b border-nova-border" data-testid="nova-security">
     <div class="max-w-[620px]">
       <NovaSectionHeader
         :eyebrow="t('nova.security.eyebrow')"
@@ -18,18 +18,23 @@
 /**
  * nova security section.
  *
- * SSL and two-factor sign-in are implemented in this codebase and stated
- * plainly. A firewall, a malware scanner and a backup schedule live on the
- * operator's servers, so each of those waits for its setting before it claims
- * anything.
+ * The cards the operator has switched on (SSL, backups, DDoS protection, malware scanning,
+ * firewall) come from `useSecurityFeatures()` and are drawn from `SECURITY_FEATURE_CARDS`;
+ * two-factor sign-in and account isolation are implemented in this codebase and always stated.
  */
 import NovaFeatureCard from '~/templates/nova/sections/FeatureCard.vue'
 import NovaSectionHeader from '~/templates/nova/sections/NovaSectionHeader.vue'
-import { SECURITY_FEATURES } from '~/templates/nova/content'
-import { useVisibleFeatures } from '~/templates/nova/features'
+import { SECURITY_FEATURES, SECURITY_FEATURE_CARDS } from '~/templates/nova/content'
+import type { Feature } from '~/templates/nova/types/feature'
 
 /** Translator for the copy. */
 const { t } = useI18n()
-/** The security claims this install may state. */
-const features = useVisibleFeatures(SECURITY_FEATURES)
+/** The operator-configured security claims that are switched on. */
+const enabled = useSecurityFeatures()
+
+/** Every card to render: the switched-on claims first, then the always-true statements. */
+const features = computed<Feature[]>(() => [
+  ...enabled.value.map(key => SECURITY_FEATURE_CARDS[key]),
+  ...SECURITY_FEATURES,
+])
 </script>

@@ -76,7 +76,7 @@ jobs:
               FullyQualifiedName~Integration.Tests.Billing.|FullyQualifiedName~Integration.Tests.Domains.
           - shard: 3 of 4
             filter: >-
-              FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Support.|FullyQualifiedName~Integration.Tests.Faqs.|FullyQualifiedName~Integration.Tests.Partners.|FullyQualifiedName~Integration.Tests.Projects.|FullyQualifiedName~Integration.Tests.Testimonials.
+              FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Support.|FullyQualifiedName~Integration.Tests.Faqs.|FullyQualifiedName~Integration.Tests.Partners.|FullyQualifiedName~Integration.Tests.Locations.|FullyQualifiedName~Integration.Tests.Projects.|FullyQualifiedName~Integration.Tests.Testimonials.
           - shard: 4 of 4
             filter: >-
               FullyQualifiedName~Integration.Tests.Migration.|FullyQualifiedName~Integration.Tests.Notifications.|FullyQualifiedName~Integration.Tests.Orders.|FullyQualifiedName~Integration.Tests.Persistence.|FullyQualifiedName~Integration.Tests.Products.|FullyQualifiedName~Integration.Tests.Provisioning.|FullyQualifiedName~Integration.Tests.Services.

@@ -1,12 +1,54 @@
 /**
  * Unit tests for NovaHome: the page root the header's skip link points at, and its sections.
  */
-import { describe, expect, it } from 'vitest'
+import { computed } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import NovaHome from '~/templates/nova/pages/NovaHome.vue'
 import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
+import { HomeSection } from '~/constants/homeSection'
+import { InstallerAppCategory } from '~/constants/installerAppCategory'
+import { SupportChannel } from '~/constants/supportChannel'
+import { GuaranteeKey } from '~/constants/guaranteeKey'
+import { PerformanceStatKey } from '~/constants/performanceStatKey'
+import { SecurityFeatureKey } from '~/constants/securityFeatureKey'
+
+/**
+ * Stands in for the section composables the page's sections call, with every section on unless
+ * a test hides some.
+ *
+ * @param hidden The sections the operator has switched off.
+ */
+const stubSections = (hidden: HomeSection[] = []): void => {
+  vi.stubGlobal('useHomeSections', () => ({
+    isVisible: (section: HomeSection) => !hidden.includes(section),
+  }))
+  vi.stubGlobal('usePerformanceStats', () => computed(() => [{ key: PerformanceStatKey.Uptime, value: '99.9%' }]))
+  vi.stubGlobal('useSecurityFeatures', () => computed(() => [SecurityFeatureKey.Ssl]))
+  vi.stubGlobal('useGuarantees', () => computed(() => [{ key: GuaranteeKey.NoHiddenFees }]))
+  vi.stubGlobal('useSupportChannels', () => computed(() => [{ channel: SupportChannel.Ticket }]))
+  vi.stubGlobal('useInstallerApps', () => computed(() => ({ count: '150+', categories: Object.values(InstallerAppCategory) })))
+}
+
+/** Test ids of the sections that render without any fetched data, by the section that gates them. */
+const SECTION_TEST_IDS: Partial<Record<HomeSection, string>> = {
+  [HomeSection.Performance]: 'nova-performance',
+  [HomeSection.Security]: 'nova-security',
+  [HomeSection.Apps]: 'nova-apps',
+  [HomeSection.Guarantees]: 'nova-guarantees',
+  [HomeSection.Support]: 'nova-support',
+  [HomeSection.Plans]: 'nova-plans-empty',
+}
 
 describe('NovaHome', () => {
+  beforeEach(() => {
+    stubSections()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('is the skip-link target and carries the nova palette', () => {
     stubTemplateGlobals()
     const wrapper = mountWithKit(NovaHome)
@@ -43,5 +85,32 @@ describe('NovaHome', () => {
 
     expect(wrapper.attributes('domainpending')).toBeUndefined()
     expect(wrapper.attributes('haszones')).toBeUndefined()
+  })
+
+  it('renders every data-free section while all are switched on', () => {
+    stubTemplateGlobals()
+    const wrapper = mountWithKit(NovaHome)
+
+    for (const testId of Object.values(SECTION_TEST_IDS)) {
+      expect(wrapper.find(`[data-testid="${testId}"]`).exists(), testId).toBe(true)
+    }
+  })
+
+  it.each(Object.entries(SECTION_TEST_IDS) as [HomeSection, string][])('drops the %s section when the operator hides it', (section, testId) => {
+    stubTemplateGlobals()
+    stubSections([section])
+
+    expect(mountWithKit(NovaHome).find(`[data-testid="${testId}"]`).exists()).toBe(false)
+  })
+
+  it('keeps the hero when every section is hidden', () => {
+    stubTemplateGlobals()
+    stubSections(Object.values(HomeSection))
+    const wrapper = mountWithKit(NovaHome)
+
+    expect(wrapper.findAll('h1')).toHaveLength(1)
+    for (const testId of Object.values(SECTION_TEST_IDS)) {
+      expect(wrapper.find(`[data-testid="${testId}"]`).exists(), testId).toBe(false)
+    }
   })
 })

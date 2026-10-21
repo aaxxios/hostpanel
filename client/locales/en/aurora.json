@@ -170,47 +170,69 @@
       "helpCta": "Contact us"
     },
     "apps": {
-      "title": "Apps",
-      "items": {
-        "account": {
-          "label": "Account",
-          "desc": "Profile & settings"
-        },
-        "tasks": {
-          "label": "Tasks",
-          "desc": "Project & task management"
-        },
-        "erp": {
-          "label": "ERP",
-          "desc": "Business & operations"
-        },
-        "hostpanel": {
-          "label": "Hostpanel",
-          "desc": "Manage your hosting"
-        },
-        "sheets": {
-          "label": "Sheets",
-          "desc": "Collaborative spreadsheets"
-        },
-        "mail": {
-          "label": "Mail",
-          "desc": "Webmail client"
-        },
-        "docs": {
-          "label": "Docs",
-          "desc": "Collaborative documents"
-        },
-        "calendar": {
-          "label": "Calendar",
-          "desc": "Schedule & team calendar"
-        }
-      }
+      "eyebrow": "One-click installer",
+      "title": "Launch your site in a click",
+      "count": "{count} apps ready to install",
+      "cms": "Content management",
+      "shop": "Online shops",
+      "forum": "Forums",
+      "wiki": "Wikis",
+      "blog": "Blogs",
+      "gallery": "Galleries"
     },
     "comparison": {
       "title": "Compare the plans",
       "lead": "Everything each plan includes, side by side.",
       "feature": "Feature",
       "notIncluded": "Not included"
+    },
+    "locations": {
+      "eyebrow": "Locations",
+      "title": "Servers close to your visitors"
+    },
+    "performance": {
+      "eyebrow": "Performance",
+      "title": "Fast and reliable, measured",
+      "uptime": "Uptime",
+      "response_time": "Server response time",
+      "sites_hosted": "Sites hosted",
+      "support_response": "Support response time"
+    },
+    "security": {
+      "eyebrow": "Security",
+      "title": "Your site stays protected",
+      "sslTitle": "SSL certificates",
+      "sslBody": "Encrypted connections for every site.",
+      "backupsTitle": "Automatic backups",
+      "backupsBody": "Regular copies you can restore when needed.",
+      "ddosTitle": "DDoS protection",
+      "ddosBody": "Attack traffic is filtered before it reaches your site.",
+      "malwareTitle": "Malware scanning",
+      "malwareBody": "Files are scanned for threats on an ongoing basis.",
+      "firewallTitle": "Firewall",
+      "firewallBody": "Network rules block unwanted access."
+    },
+    "guarantees": {
+      "eyebrow": "Guarantees",
+      "title": "Host with confidence",
+      "free_migrationTitle": "Free migration",
+      "free_migrationBody": "We move your existing site to us at no cost.",
+      "money_backTitle": "{days}-day money back",
+      "money_backBody": "Not happy within {days} days? You get a refund.",
+      "no_hidden_feesTitle": "No hidden fees",
+      "no_hidden_feesBody": "The price you see is the price you pay."
+    },
+    "support": {
+      "eyebrow": "Support",
+      "title": "Help whenever you need it",
+      "chat": "Live chat",
+      "ticket": "Support ticket",
+      "email": "Email",
+      "phone": "Phone",
+      "response": "Typical response: {time}"
+    },
+    "trusted": {
+      "title": "Trusted by"
     }
   }
 }

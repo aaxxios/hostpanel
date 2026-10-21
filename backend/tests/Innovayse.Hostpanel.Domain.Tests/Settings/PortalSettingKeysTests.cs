@@ -159,4 +159,92 @@ public class PortalSettingKeysTests
             Assert.Same(PortalSettingKeys.Booleans, PortalSettingKeys.AllowedValues[key]);
         }
     }
+
+    /// <summary>The home-page section toggles seed "true" (projects "false"), are public, and accept only booleans, never empty.</summary>
+    [Fact]
+    public void SectionToggles_SeedVisible_ExceptProjects_AndAcceptOnlyBooleans()
+    {
+        string[] sections =
+        [
+            PortalSettingKeys.SectionStats,
+            PortalSettingKeys.SectionPartners,
+            PortalSettingKeys.SectionServices,
+            PortalSettingKeys.SectionProcess,
+            PortalSettingKeys.SectionPlans,
+            PortalSettingKeys.SectionComparison,
+            PortalSettingKeys.SectionDashboard,
+            PortalSettingKeys.SectionUseCases,
+            PortalSettingKeys.SectionMigration,
+            PortalSettingKeys.SectionProjects,
+            PortalSettingKeys.SectionTestimonials,
+            PortalSettingKeys.SectionFaq,
+            PortalSettingKeys.SectionCta,
+            PortalSettingKeys.SectionLocations,
+            PortalSettingKeys.SectionPerformance,
+            PortalSettingKeys.SectionSecurity,
+            PortalSettingKeys.SectionApps,
+            PortalSettingKeys.SectionGuarantees,
+            PortalSettingKeys.SectionSupport,
+            PortalSettingKeys.SectionTrusted,
+        ];
+
+        Assert.Equal(20, sections.Length);
+        Assert.All(sections, key => Assert.StartsWith("portal.sections.", key));
+        foreach (var key in sections)
+        {
+            var seeded = PortalSettingKeys.Defaults.Single(d => d.Key == key);
+            Assert.Equal(key == PortalSettingKeys.SectionProjects ? "false" : "true", seeded.Value);
+            Assert.Contains(key, PortalSettingKeys.Public);
+            Assert.False(PortalSettingKeys.AllowsEmpty(key), $"{key} always has a value");
+            Assert.Same(PortalSettingKeys.Booleans, PortalSettingKeys.AllowedValues[key]);
+        }
+    }
+
+    /// <summary>The performance, security, installer, guarantee and support-response keys seed empty and public so nothing is invented.</summary>
+    [Fact]
+    public void HostingFactKeys_AreSeededEmptyAndPublic()
+    {
+        string[] keys =
+        [
+            PortalSettingKeys.StatsResponseTime,
+            PortalSettingKeys.StatsSitesHosted,
+            PortalSettingKeys.StatsSupportResponse,
+            PortalSettingKeys.FeaturesSsl,
+            PortalSettingKeys.FeaturesDdos,
+            PortalSettingKeys.InstallerAppCount,
+            PortalSettingKeys.GuaranteeMoneyBackDays,
+            PortalSettingKeys.GuaranteeNoHiddenFees,
+            PortalSettingKeys.SupportResponseChat,
+            PortalSettingKeys.SupportResponseTicket,
+            PortalSettingKeys.SupportResponseEmail,
+            PortalSettingKeys.SupportResponsePhone,
+        ];
+
+        foreach (var key in keys)
+        {
+            Assert.Contains(key, PortalSettingKeys.Public);
+            Assert.True(PortalSettingKeys.AllowsEmpty(key), $"{key} must seed empty so no claim is invented");
+        }
+
+        Assert.Same(PortalSettingKeys.Booleans, PortalSettingKeys.AllowedValues[PortalSettingKeys.FeaturesSsl]);
+        Assert.Same(PortalSettingKeys.Booleans, PortalSettingKeys.AllowedValues[PortalSettingKeys.FeaturesDdos]);
+        Assert.Same(PortalSettingKeys.Booleans, PortalSettingKeys.AllowedValues[PortalSettingKeys.GuaranteeNoHiddenFees]);
+    }
+
+    /// <summary>The money-back days accept one to three digits and nothing else.</summary>
+    /// <param name="value">The value to test.</param>
+    /// <param name="valid">Whether the shape should accept it.</param>
+    [Theory]
+    [InlineData("30", true)]
+    [InlineData("7", true)]
+    [InlineData("365", true)]
+    [InlineData("1000", false)]
+    [InlineData("30 days", false)]
+    [InlineData("-5", false)]
+    public void MoneyBackDays_PatternAcceptsOnlyShortDigitStrings(string value, bool valid)
+    {
+        var pattern = PortalSettingKeys.Patterns[PortalSettingKeys.GuaranteeMoneyBackDays];
+
+        Assert.Equal(valid, pattern.Regex.IsMatch(value));
+    }
 }

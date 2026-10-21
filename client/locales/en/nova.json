@@ -90,7 +90,11 @@
       "serversTitle": "Servers you can choose",
       "serversBody": "Your provider decides which server an account lands on, so capacity is planned rather than discovered.",
       "scalingTitle": "Resources that scale",
-      "scalingBody": "Move to a larger plan from the client area and keep the same account, the same domain and the same data."
+      "scalingBody": "Move to a larger plan from the client area and keep the same account, the same domain and the same data.",
+      "statUptime": "Uptime",
+      "statResponseTime": "Average response time",
+      "statSitesHosted": "Sites hosted",
+      "statSupportResponse": "Support response time"
     },
     "security": {
       "eyebrow": "Security",
@@ -107,7 +111,9 @@
       "firewallTitle": "Firewall",
       "firewallBody": "Traffic is filtered before it reaches your site, and repeat offenders are blocked at the edge.",
       "malwareTitle": "Malware protection",
-      "malwareBody": "Files are scanned for known malware, and anything found is quarantined rather than quietly left in place."
+      "malwareBody": "Files are scanned for known malware, and anything found is quarantined rather than quietly left in place.",
+      "ddosTitle": "DDoS protection",
+      "ddosBody": "Floods of junk traffic are absorbed before they reach your site, so real visitors keep getting through."
     },
     "dashboard": {
       "eyebrow": "Control panel",
@@ -214,6 +220,52 @@
       "rights": "All rights reserved.",
       "taxId": "Tax ID",
       "social": "Follow us"
+    },
+    "locations": {
+      "eyebrow": "Locations",
+      "title": "Servers close to your visitors",
+      "lead": "Pick the region that suits your audience best."
+    },
+    "apps": {
+      "eyebrow": "One-click apps",
+      "title": "Install your software in a click",
+      "lead": "Launch a ready-made site from the client area, without uploading files or touching a database.",
+      "count": "{count} apps ready to install",
+      "cms": "Content management",
+      "shop": "Online shops",
+      "forum": "Forums",
+      "wiki": "Wikis",
+      "blog": "Blogs",
+      "gallery": "Galleries"
+    },
+    "guarantees": {
+      "eyebrow": "Guarantees",
+      "title": "Try it without worry",
+      "lead": "What we promise, in plain words.",
+      "freeMigrationTitle": "Free migration",
+      "freeMigrationBody": "We move your existing site over for you, at no charge.",
+      "moneyBackTitle": "Money-back guarantee",
+      "moneyBackBody": "Not happy? Ask for a refund within {days} days of your order.",
+      "noHiddenFeesTitle": "No hidden fees",
+      "noHiddenFeesBody": "The price you see is the price you pay. No surprise charges at checkout or at renewal."
+    },
+    "support": {
+      "eyebrow": "Support",
+      "title": "Help when you need it",
+      "lead": "Reach us the way that suits you.",
+      "chatTitle": "Live chat",
+      "chatBody": "Ask a quick question and get an answer while you are still on the page.",
+      "ticketTitle": "Support ticket",
+      "ticketBody": "Describe the problem in detail and follow the conversation from your client area.",
+      "emailTitle": "Email",
+      "emailBody": "Write to us any time and we will reply to your inbox.",
+      "phoneTitle": "Phone",
+      "phoneBody": "Talk to a person about anything that is hard to explain in writing.",
+      "responseTime": "Typical reply: {time}",
+      "open": "Contact us"
+    },
+    "trusted": {
+      "title": "Trusted by"
     }
   }
 }

@@ -25,21 +25,29 @@
         </UiSplit>
       </UiSection>
 
-      <AuroraTrustBar />
-      <AuroraPartners />
+      <AuroraTrustBar v-if="isVisible(HomeSection.Stats)" />
+      <AuroraTrusted v-if="isVisible(HomeSection.Trusted)" />
+      <AuroraPartners v-if="isVisible(HomeSection.Partners)" />
 
       <AuroraPlanCards
+        v-if="isVisible(HomeSection.Plans)"
         :plans="plans"
         :yearly="yearly"
         @update:yearly="value => emit('update:yearly', value)"
       />
 
-      <AuroraServices />
-      <AuroraProcess v-if="showProcess" />
-      <AuroraProjects />
-      <AuroraTestimonials />
-      <AuroraFaq v-if="showFaq" />
-      <AuroraCta />
+      <AuroraServices v-if="isVisible(HomeSection.Services)" />
+      <AuroraPerformance v-if="isVisible(HomeSection.Performance)" />
+      <AuroraSecurity v-if="isVisible(HomeSection.Security)" />
+      <AuroraApps v-if="isVisible(HomeSection.Apps)" />
+      <AuroraLocations v-if="isVisible(HomeSection.Locations)" />
+      <AuroraGuarantees v-if="isVisible(HomeSection.Guarantees)" />
+      <AuroraProcess v-if="showProcess && isVisible(HomeSection.Process)" />
+      <AuroraProjects v-if="isVisible(HomeSection.Projects)" />
+      <AuroraTestimonials v-if="isVisible(HomeSection.Testimonials)" />
+      <AuroraSupport v-if="isVisible(HomeSection.Support)" />
+      <AuroraFaq v-if="showFaq && isVisible(HomeSection.Faq)" />
+      <AuroraCta v-if="isVisible(HomeSection.Cta)" />
     </UiContainer>
   </UiStack>
 </template>
@@ -60,6 +68,15 @@ import AuroraProjects from '~/templates/aurora/sections/AuroraProjects.vue'
 import AuroraTestimonials from '~/templates/aurora/sections/AuroraTestimonials.vue'
 import AuroraFaq from '~/templates/aurora/sections/AuroraFaq.vue'
 import AuroraCta from '~/templates/aurora/sections/AuroraCta.vue'
+import AuroraLocations from '~/templates/aurora/sections/AuroraLocations.vue'
+import AuroraPerformance from '~/templates/aurora/sections/AuroraPerformance.vue'
+import AuroraSecurity from '~/templates/aurora/sections/AuroraSecurity.vue'
+import AuroraApps from '~/templates/aurora/sections/AuroraApps.vue'
+import AuroraGuarantees from '~/templates/aurora/sections/AuroraGuarantees.vue'
+import AuroraSupport from '~/templates/aurora/sections/AuroraSupport.vue'
+import AuroraTrusted from '~/templates/aurora/sections/AuroraTrusted.vue'
+import { HomeSection } from '~/constants/homeSection'
+import { useHomeSections } from '~/composables/useHomeSections'
 import type { DomainResult } from '~/templates/aurora/types/domainresult'
 import type { PlanCard } from '~/types/plancard'
 import type { TldPriceRow } from '~/types/tldpricerow'
@@ -91,6 +108,9 @@ withDefaults(defineProps<{
   showProcess: true,
   showFaq: true,
 })
+
+/** Whether the operator switched a home section on. */
+const { isVisible } = useHomeSections()
 
 /** Events this component raises. */
 const emit = defineEmits<{
