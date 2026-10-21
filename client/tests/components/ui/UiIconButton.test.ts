@@ -38,6 +38,7 @@ describe('UiIconButton', () => {
     [UiIconButtonVariant.Danger, 'text-red-600'],
     [UiIconButtonVariant.Ghost, 'border-transparent'],
     [UiIconButtonVariant.Subtle, 'bg-gray-100'],
+    [UiIconButtonVariant.Bare, 'rounded-lg'],
   ])('paints the %s variant with %s', (variant, expected) => {
     const wrapper = mountWithKit(UiIconButton, { props: { label: 'x', variant } })
 

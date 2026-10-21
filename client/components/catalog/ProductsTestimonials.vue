@@ -5,7 +5,7 @@
         <template #title>
           <i18n-t keypath="products.testimonials.title" tag="span">
             <template #thousands>
-              <span class="text-primary-700 dark:text-secondary-400">{{ $t('products.testimonials.thousandsHighlight') }}</span>
+              <span class="text-secondary-700 dark:text-secondary-400">{{ $t('products.testimonials.thousandsHighlight') }}</span>
             </template>
           </i18n-t>
         </template>
@@ -15,12 +15,12 @@
         <UiCard
           v-for="(testimonial, index) in items"
           :key="testimonial.id"
-          class="group hover:border-primary-500/30 dark:hover:border-secondary-500/30 hover:-translate-y-2 transition-all duration-300 animate-reveal-up motion-reduce:animate-none"
+          class="group hover:border-secondary-500/30 hover:-translate-y-2 transition-all duration-300 animate-reveal-up motion-reduce:animate-none"
           :data-testid="`product-testimonial-${testimonial.id}`"
           :class="revealDelay(index * 100)"
         >
           <div class="flex gap-1 mb-4">
-            <Star v-for="star in testimonial.rating" :key="star" :size="14" :stroke-width="2" fill="currentColor" class="text-primary-700 dark:text-secondary-400" />
+            <Star v-for="star in testimonial.rating" :key="star" :size="14" :stroke-width="2" fill="currentColor" class="text-secondary-700 dark:text-secondary-400" />
           </div>
 
           <UiText size="sm" class="mb-4 italic leading-relaxed text-gray-700 dark:text-gray-300">"{{ testimonial.text }}"</UiText>

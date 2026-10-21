@@ -190,6 +190,7 @@ const columns = computed(() => [
     // /about tells the operator's story, or sends the visitor on to contact when none is set.
     links: [
       { label: t('aurora.footer.about'), to: localePath('/about') },
+      { label: t('aurora.footer.services'), to: localePath('/products') },
       { label: t('aurora.footer.knowledgebase'), to: localePath('/knowledgebase') },
       { label: t('aurora.footer.contact'), to: localePath('/contact') },
     ],

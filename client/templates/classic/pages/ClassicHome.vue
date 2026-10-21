@@ -22,7 +22,7 @@
     <SectionsProducts />
 
     <!-- FAQ -->
-    <SectionsFAQ :limit="6" :show-categories="false" />
+    <SectionsFAQ :limit="HOME_FAQ_LIMIT" :show-categories="false" />
 
     <!-- Call to action -->
     <SectionsCTA />
@@ -34,5 +34,6 @@
  * ClassicHome - the classic template's homepage: the original landing composition, a hidden
  * H1 followed by the marketing sections.
  */
+import { HOME_FAQ_LIMIT } from '~/constants/faq'
 import { UiHeadingLevel } from '~/utils/ui/enums'
 </script>

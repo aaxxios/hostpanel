@@ -67,7 +67,7 @@ await Promise.all([
 ])
 
 /** The hosting plans as the storefront cards, each linking to its configure page. */
-const plans = computed(() => catalogStore.planCards(id => localePath(`/configure/${id}`)))
+const plans = computed(() => catalogStore.planCards(id => localePath(`/configure/${id}`), catalogStore.featuresFor(HOSTING_GROUP_ID)))
 /** Whether the visitor chose yearly billing; the template reports changes through `update:yearly`. */
 const yearly = ref(false)
 

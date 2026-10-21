@@ -24,7 +24,6 @@
     "transferAuthHelpText": "To initiate a transfer you will need to obtain the authorization code from your current registrar. These can often be referred to as either the epp code or auth code. They act as a password and are unique to the domain name.",
     "card": {
       "name": "Domain Registration",
-      "tagline": "Find & Register Your Domain",
       "description": "Search and register your perfect domain name with competitive pricing and instant activation.",
       "f1": "Free DNS management",
       "f2": "WHOIS privacy protection",

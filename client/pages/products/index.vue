@@ -69,7 +69,8 @@ const domainsFamily = computed<ProductFamily>(() => ({
   demoUrl: '',
   learnMoreUrl: '/domains',
   name: t('domains.card.name'),
-  tagline: t('domains.card.tagline'),
+  // No tagline, like every other family card, so the cards read alike.
+  tagline: '',
   description: t('domains.card.description'),
   features: [t('domains.card.f1'), t('domains.card.f2'), t('domains.card.f3')],
   pricing: [],

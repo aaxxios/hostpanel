@@ -21,6 +21,8 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.MonthlyPrice).IsRequired().HasColumnType("numeric(18,4)");
         builder.Property(x => x.AnnualPrice).IsRequired().HasColumnType("numeric(18,4)");
         builder.Property(x => x.ServerGroupId).IsRequired(false);
+        builder.Property(x => x.IsFeatured).IsRequired();
+        builder.Property(x => x.SortOrder).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
 
         // Per-currency prices. ProductPrice.ProductId is never set in memory — SetPrice leaves it 0 —

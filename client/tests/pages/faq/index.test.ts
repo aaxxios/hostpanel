@@ -28,11 +28,16 @@ const FAQS = [faqFixture(1), faqFixture(2)]
 /** Stands in for the FAQ list section, recording the props it was given. */
 const SectionsFaqStub = defineComponent({
   name: 'SectionsFAQ',
-  props: { showHeader: { type: Boolean, default: true }, showCategories: { type: Boolean, default: true } },
+  props: {
+    showHeader: { type: Boolean, default: true },
+    showCategories: { type: Boolean, default: true },
+    limit: { type: Number, default: undefined },
+  },
   setup: props => () => h('div', {
     'data-testid': 'sections-faq',
     'data-header': String(props.showHeader),
     'data-categories': String(props.showCategories),
+    'data-limit': String(props.limit),
   }),
 })
 
@@ -70,6 +75,8 @@ describe('pages/faq/index', () => {
     const list = wrapper.find('[data-testid="sections-faq"]')
     expect(list.attributes('data-header')).toBe('false')
     expect(list.attributes('data-categories')).toBe('false')
+    // The full page never gets the home preview limit.
+    expect(list.attributes('data-limit')).toBe('undefined')
   })
 
   it('publishes one structured-data question per FAQ item', async () => {

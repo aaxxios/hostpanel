@@ -18,7 +18,7 @@ describe('ComparisonTable', () => {
   it('renders a header per plan and a row per specification line', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(ComparisonTable, {
-      props: { plans: PLANS.slice(0, 2), rows: [{ label: 'Disk', values: ['10 GB', '50 GB'] }] },
+      props: { plans: PLANS.slice(0, 2), rows: [{ label: 'Disk', values: ['10 GB', '50 GB'] }, { label: 'Sites', values: ['1', '5'] }] },
     })
 
     expect(wrapper.findAll('th').map((cell) => cell.text())).toEqual(['aurora.comparison.feature', 'Starter', 'Business'])
@@ -26,13 +26,22 @@ describe('ComparisonTable', () => {
     expect(wrapper.find('[data-testid="comparison-row-Disk"]').text()).toContain('50 GB')
   })
 
-  it('shows a dash where a plan has no such line', () => {
+  it('shows a clear marker where a plan has no such line', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(ComparisonTable, {
-      props: { plans: PLANS.slice(0, 2), rows: [{ label: 'Backups', values: ['Daily', ''] }] },
+      props: { plans: PLANS.slice(0, 2), rows: [{ label: 'Backups', values: ['Daily', ''] }, { label: 'Disk', values: ['10 GB', '50 GB'] }, { label: 'Sites', values: ['1', '5'] }] },
     })
 
     const cells = wrapper.find('[data-testid="comparison-row-Backups"]').findAll('td')
-    expect(cells.map((cell) => cell.text())).toEqual(['Backups', 'Daily', '—'])
+    expect(cells.map((cell) => cell.text())).toEqual(['Backups', 'Daily', 'aurora.comparison.notIncluded'])
+  })
+
+  it('hides the table when the plans share fewer than two lines', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(ComparisonTable, {
+      props: { plans: PLANS.slice(0, 2), rows: [{ label: 'A', values: ['x', ''] }, { label: 'B', values: ['', 'y'] }] },
+    })
+
+    expect(wrapper.find('[data-testid="comparison-table"]').exists()).toBe(false)
   })
 })

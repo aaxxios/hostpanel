@@ -29,6 +29,10 @@ export interface Product {
   prices: ProductPrice[]
   /** Optional FK to the server group for provisioning. */
   serverGroupId: number | null
+  /** Whether the product is its group's recommended plan; at most one per group stays featured. */
+  isFeatured: boolean
+  /** Operator-defined position inside the group, lowest first. */
+  sortOrder: number
 }
 
 /** A product's stored prices in one currency. */
@@ -75,6 +79,10 @@ export interface CreateProductPayload {
   prices: ProductPrice[]
   /** Optional FK to the server group for provisioning. */
   serverGroupId: number | null
+  /** Marks the product as the group's recommended plan; saving it clears the flag on the group's others. */
+  isFeatured: boolean
+  /** Position inside the group, lowest first; zero or more. */
+  sortOrder: number
 }
 
 /** Payload for updating an existing product. */
@@ -93,4 +101,8 @@ export interface UpdateProductPayload {
   prices: ProductPrice[]
   /** Optional FK to the server group for provisioning. */
   serverGroupId: number | null
+  /** Marks the product as the group's recommended plan; saving it clears the flag on the group's others. */
+  isFeatured: boolean
+  /** Position inside the group, lowest first; zero or more. */
+  sortOrder: number
 }

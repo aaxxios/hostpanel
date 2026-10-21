@@ -25,6 +25,11 @@ namespace Innovayse.Hostpanel.Application.Products.Commands.CreateProduct;
 /// Legacy single-currency annual price, sent by the pre-multi-currency admin form. Exists for
 /// one release; read only when <paramref name="Prices"/> is absent, as the base-currency price.
 /// </param>
+/// <param name="IsFeatured">
+/// Whether this is the group's recommended plan. When true the handler clears the flag on the
+/// group's other products, so at most one stays featured.
+/// </param>
+/// <param name="SortOrder">Position inside the group, lowest first; <c>0</c> by default.</param>
 public sealed record CreateProductCommand(
     int GroupId,
     string Name,
@@ -36,4 +41,6 @@ public sealed record CreateProductCommand(
     IReadOnlyList<ProductPriceDto>? Prices,
     int? ServerGroupId,
     decimal? MonthlyPrice = null,
-    decimal? AnnualPrice = null);
+    decimal? AnnualPrice = null,
+    bool IsFeatured = false,
+    int SortOrder = 0);

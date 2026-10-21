@@ -1,5 +1,5 @@
 <template>
-  <UiStack gap="none" class="min-h-dvh bg-classic-page text-gray-900 dark:text-white selection:bg-cyan-500/30" data-testid="classic-checkout">
+  <UiStack gap="none" class="bg-classic-page text-gray-900 dark:text-white selection:bg-cyan-500/30" data-testid="classic-checkout">
     <!-- Hero header -->
     <UiStack gap="none" class="relative py-12 md:py-20 overflow-hidden border-b border-gray-200 dark:border-white/5">
       <UiStack gap="none" class="absolute inset-0 pointer-events-none">
@@ -176,7 +176,7 @@
                   padding="sm"
                   class="cursor-pointer transition-all duration-300"
                   :class="selectedMethod === method.module
-                    ? 'border-cyan-500/60 dark:border-cyan-500/60 bg-cyan-500/10 dark:bg-cyan-500/10 shadow-halo-cyan-sm'
+                    ? 'border-cyan-500/60 bg-cyan-500/10 shadow-halo-cyan-sm'
                     : 'hover:border-gray-300 dark:hover:border-white/20'"
                   :data-testid="`checkout-method-${method.module}`"
                   @click="selectedMethod = method.module"
@@ -216,7 +216,7 @@
           <UiStack as="aside" gap="lg" class="lg:col-span-5 sticky top-24">
             <UiCard
               padding="none"
-              class="p-8 bg-gradient-to-br from-classic-summary-from to-classic-summary-to border-white/10 dark:border-white/10 rounded-[32px] shadow-2xl relative overflow-hidden ring-1 ring-white/10 text-white"
+              class="p-8 bg-gradient-to-br from-classic-summary-from to-classic-summary-to border-white/10 rounded-[32px] shadow-2xl relative overflow-hidden ring-1 ring-white/10 text-white"
               data-testid="checkout-summary"
             >
               <!-- Decorative background -->
@@ -236,7 +236,7 @@
                   v-for="item in cart.itemsInCurrency(currencyStore.payerCode)"
                   :key="item.pid"
                   padding="sm"
-                  class="bg-white/5 dark:bg-white/5 border-white/10 dark:border-white/5"
+                  class="bg-white/5 border-white/10 dark:border-white/5"
                   data-testid="checkout-item"
                 >
                   <UiStack direction="row" align="start" justify="between" gap="md">

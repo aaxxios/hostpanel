@@ -1,7 +1,9 @@
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Products.Common;
 using Innovayse.Hostpanel.Domain.Products;
 
 using Innovayse.Hostpanel.Domain.Products.Enums;
+using Microsoft.EntityFrameworkCore;
 namespace Innovayse.Hostpanel.Application.Products.Extensions;
 /// <summary>Extension methods for mapping <see cref="Product"/> to DTOs.</summary>
 public static class ProductExtensions
@@ -29,7 +31,33 @@ public static class ProductExtensions
                 product.PriceFor(callerCurrencyCode, BillingCycle.Monthly),
                 product.PriceFor(callerCurrencyCode, BillingCycle.Annual)),
             product.ToPriceDtos(),
-            product.ServerGroupId);
+            product.ServerGroupId,
+            product.IsFeatured,
+            product.SortOrder);
+    }
+
+    /// <summary>
+    /// Clears the recommended-plan flag on every other product in this product's group, so the
+    /// group keeps at most one featured plan. Loads the siblings into the context; the caller's
+    /// save persists the change together with the product itself.
+    /// </summary>
+    /// <param name="product">The product that is now featured.</param>
+    /// <param name="context">The module's data context.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task that completes once the siblings are updated in the context.</returns>
+    public static async Task UnfeatureSiblingsAsync(
+        this Product product, IHostpanelDbContext context, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(product);
+        ArgumentNullException.ThrowIfNull(context);
+
+        var siblings = await context.Products
+            .Where(p => p.GroupId == product.GroupId && p.Id != product.Id && p.IsFeatured)
+            .ToListAsync(ct);
+        foreach (var sibling in siblings)
+        {
+            sibling.Unfeature();
+        }
     }
 
     /// <summary>Groups a product's stored prices by currency, one DTO per currency.</summary>

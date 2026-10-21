@@ -124,7 +124,9 @@ export const popularPlanId = (plans: readonly PlanCard[]): number | null => {
  *   discount. An empty input gives an empty result; the section handles that.
  */
 export const toNovaPlans = (plans: readonly PlanCard[]): NovaPlan[] => {
-  const popularId = popularPlanId(plans)
+  // The operator's recommended plan wins; the derived middle plan is only the fallback for a
+  // catalogue where nobody marked one.
+  const popularId = plans.find(plan => plan.isFeatured === true && !plan.isFree)?.id ?? popularPlanId(plans)
 
   return plans.map(plan => ({
     ...plan,

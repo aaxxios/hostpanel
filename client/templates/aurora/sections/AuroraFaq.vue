@@ -30,6 +30,16 @@
       <template #end>
         <!-- Answers stay in the DOM: this is indexable content and a crawler should read every one. -->
         <UiAccordion :items="entries" keep-content :default-open="[0]" data-testid="aurora-faq" />
+        <UiStack v-if="hasMore" direction="row" class="mt-8">
+          <UiButton
+            variant="bare"
+            :to="localePath('/faq')"
+            data-testid="faq-view-all"
+            :class="[LINE_BUTTON, 'px-6 py-3 text-[15px]']"
+          >
+            {{ t('aurora.faq.viewAll') }}
+          </UiButton>
+        </UiStack>
       </template>
     </UiSplit>
   </UiSection>
@@ -40,11 +50,13 @@
  * aurora FAQ accordion beside a sticky intro with a contact call to action. The questions come
  * from the storefront store (`GET /api/public/faqs`); with none the section renders nothing.
  * Answers stay in the DOM so they remain indexable. The support email and phone shown under the
- * button are the operator's portal settings and are hidden when unset.
+ * button are the operator's portal settings and are hidden when unset. Only the first
+ * `HOME_FAQ_LIMIT` questions are listed, with a link to the full `/faq` page when more exist.
  */
-import { BRAND_BUTTON } from '~/templates/aurora/buttons'
+import { BRAND_BUTTON, LINE_BUTTON } from '~/templates/aurora/buttons'
 import { STICKY_COLUMN_CLASS } from '~/templates/aurora/layoutClasses'
 import { BLOCK_TITLE_CLASS } from '~/templates/aurora/typography'
+import { HOME_FAQ_LIMIT } from '~/constants/faq'
 import { useStorefrontStore } from '~/stores/storefront'
 
 /** Translator and the active language. */
@@ -62,6 +74,9 @@ const storefront = useStorefrontStore()
 // Not awaited: Nuxt still holds the server render for it, and the section stays synchronous.
 useAsyncData('storefront:faqs', () => storefront.loadFaqs(), { watch: [locale] })
 
-/** The questions in the shape the accordion takes. */
-const entries = computed(() => storefront.faqs.map(faq => ({ title: faq.question, content: faq.answer })))
+/** Whether more questions exist than the home page lists, so the link to the full page is worth showing. */
+const hasMore = computed(() => storefront.faqs.length > HOME_FAQ_LIMIT)
+
+/** The first `HOME_FAQ_LIMIT` questions in the shape the accordion takes. */
+const entries = computed(() => storefront.faqs.slice(0, HOME_FAQ_LIMIT).map(faq => ({ title: faq.question, content: faq.answer })))
 </script>

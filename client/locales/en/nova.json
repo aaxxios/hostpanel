@@ -49,6 +49,7 @@
       "empty": "Plans temporarily unavailable.",
       "emptyHint": "Nothing is wrong with your account — the catalogue is not answering right now. Please try again shortly.",
       "freeBadge": "Start for free",
+      "recommended": "Recommended",
       "freeForever": "free forever"
     },
     "comparison": {
@@ -175,7 +176,8 @@
     },
     "faq": {
       "eyebrow": "FAQ",
-      "title": "Questions people ask before signing up"
+      "title": "Questions people ask before signing up",
+      "viewAll": "View all questions"
     },
     "finalCta": {
       "title": "Ready to launch your website?",

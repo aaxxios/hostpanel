@@ -35,7 +35,7 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory) : IClas
 {
     /// <summary>The amounts the seed produces; they are fixed, so a change here is a deliberate change of the demo.</summary>
     private static readonly Counts Expected = new(
-        Currencies: 2, ProductGroups: 7, Products: 31, Prices: 124, Features: 93, Tlds: 19,
+        Currencies: 2, ProductGroups: 7, Products: 31, Prices: 124, Features: 161, Tlds: 19,
         Clients: 65, Users: 73, SubjectRoles: 73, Contacts: 99, ClientUsers: 3, Invitations: 4,
         Servers: 7, ServerGroups: 3, SslChecks: 66, DiskUsage: 63, Services: 140, Cancellations: 75,
         Domains: 108, DomainReminders: 40, DnsRecords: 280, ForwardingRules: 46,
@@ -137,6 +137,58 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory) : IClas
 
         using var after = host.Services.CreateScope();
         (await CountAsync(after.ServiceProvider)).Should().Be(Expected);
+    }
+
+    /// <summary>Every plan of a product group carries the same feature labels in the same order, so no comparison cell is empty.</summary>
+    [Fact]
+    public async Task SeededPlans_ShareTheSameFeatureLabelsWithinAGroupAsync()
+    {
+        var host = DemoTestHost.Enabled(factory);
+        await ResetAsync(host);
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var products = await db.Products.ToListAsync();
+        var features = (await db.ProductFeatures.ToListAsync()).ToLookup(f => f.ProductId);
+        var byGroup = products.GroupBy(p => p.GroupId).ToList();
+
+        byGroup.Should().NotBeEmpty();
+        foreach (var group in byGroup)
+        {
+            var labelSets = group
+                .Select(p => string.Join('|', features[p.Id].OrderBy(f => f.SortOrder).Select(f => f.Label)))
+                .Distinct()
+                .ToList();
+            labelSets.Should().ContainSingle($"group {group.Key} must give every plan the same labels");
+            group.Should().OnlyContain(p => features[p.Id].All(f => !string.IsNullOrWhiteSpace(f.Value)));
+        }
+
+        // The hosting plans are the ones the home page compares, so they carry a full specification.
+        products.Where(p => p.Type == ProductType.SharedHosting).Should().OnlyContain(p => features[p.Id].Count() == 9);
+    }
+
+    /// <summary>Exactly one hosting plan and one VPS plan are featured, and each group's plans read in a logical order.</summary>
+    [Fact]
+    public async Task SeededPlans_FeatureTheMiddleTierAndOrderEachGroupAsync()
+    {
+        var host = DemoTestHost.Enabled(factory);
+        await ResetAsync(host);
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var products = await db.Products.ToListAsync();
+
+        var featured = products.Where(p => p.IsFeatured).ToList();
+        featured.Select(p => p.Type).Should().BeEquivalentTo([ProductType.SharedHosting, ProductType.Vps]);
+        featured.Select(p => p.Slug).Should().BeEquivalentTo(["managed-site-hosting", "vps-pro"]);
+
+        foreach (var group in products.GroupBy(p => p.GroupId))
+        {
+            group.Select(p => p.SortOrder).OrderBy(o => o).Should().Equal(Enumerable.Range(1, group.Count()));
+        }
+
+        products.Where(p => p.Type == ProductType.SharedHosting).OrderBy(p => p.SortOrder).Select(p => p.Slug)
+            .Should().Equal("starter-hosting", "business-hosting", "managed-site-hosting", "pro-hosting", "reseller-hosting");
     }
 
     /// <summary>The sample covers every state the entities can reach, in both currencies, over twelve months.</summary>

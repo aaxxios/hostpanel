@@ -125,6 +125,24 @@ describe('toNovaPlans', () => {
     expect(result.filter(entry => entry.popular).map(entry => entry.id)).toEqual([3])
   })
 
+  it('lets the operator-featured plan win over the derived middle plan', () => {
+    const result = toNovaPlans([plan(1, '$3.00'), plan(2, '$6.00'), { ...plan(3, '$9.00'), isFeatured: true }])
+
+    expect(result.filter(entry => entry.popular).map(entry => entry.id)).toEqual([3])
+  })
+
+  it('badges a featured plan even when fewer than three plans exist', () => {
+    const result = toNovaPlans([plan(1, '$3.00'), { ...plan(2, '$6.00'), isFeatured: true }])
+
+    expect(result.filter(entry => entry.popular).map(entry => entry.id)).toEqual([2])
+  })
+
+  it('never badges a free plan, featured or not', () => {
+    const result = toNovaPlans([{ ...freePlan(1), isFeatured: true }, plan(2, '$3.00'), plan(3, '$6.00')])
+
+    expect(result.find(entry => entry.id === 1)?.popular).toBe(false)
+  })
+
   it('carries each plan\'s own discount, and none where there is none', () => {
     const result = toNovaPlans([plan(1, '$10.00', '$8.00'), plan(2, '$10.00')])
 

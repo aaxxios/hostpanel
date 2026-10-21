@@ -50,6 +50,13 @@ describe('PricingCard', () => {
     expect(wrapper.find('[data-testid="nova-plan-cta-7"]').classes()).toContain('bg-nova-accent')
   })
 
+  it('labels the operator-recommended plan "recommended" instead of "most popular"', () => {
+    const wrapper = mountWithKit(PricingCard, { props: { plan: plan({ popular: true, isFeatured: true }), yearly: false } })
+
+    expect(wrapper.text()).toContain('nova.plans.recommended')
+    expect(wrapper.text()).not.toContain('nova.plans.popular')
+  })
+
   it('states a free plan on its own terms, whatever the billing period', () => {
     const wrapper = mountWithKit(PricingCard, {
       props: { plan: plan({ isFree: true, priceMonthly: '$0.00', priceAnnual: '$0.00', discountPercent: null }), yearly: true },

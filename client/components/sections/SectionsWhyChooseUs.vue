@@ -4,9 +4,9 @@
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-cyan-500/5" />
       <UiDecor class="top-1/2 left-0 w-1/3 h-1/2 bg-primary-500/10 rounded-full blur-[150px]" />
-      <UiDecor class="bottom-0 right-0 w-1/4 h-1/3 bg-primary-500/10 dark:bg-secondary-500/10 rounded-full blur-[120px]" />
+      <UiDecor class="bottom-0 right-0 w-1/4 h-1/3 bg-secondary-500/10 rounded-full blur-[120px]" />
       <UiDecor class="top-1/4 right-1/4 w-2 h-2 bg-primary-400/50 rounded-full animate-float [animation-delay:0.5s]" />
-      <UiDecor class="top-1/3 left-1/4 w-3 h-3 bg-primary-400/40 dark:bg-secondary-400/40 rounded-full animate-float [animation-delay:1.2s]" />
+      <UiDecor class="top-1/3 left-1/4 w-3 h-3 bg-secondary-600/40 dark:bg-secondary-400/40 rounded-full animate-float [animation-delay:1.2s]" />
       <UiDecor class="bottom-1/3 right-1/3 w-2 h-2 bg-cyan-400/50 rounded-full animate-float [animation-delay:2s]" />
       <UiDecor class="inset-0 opacity-[0.015] pattern-grid-50" />
     </UiDecor>
@@ -50,7 +50,7 @@
     </UiContainer>
 
     <!-- Section decorative corners -->
-    <UiDecor class="top-0 right-0 w-32 h-32 border-r-2 border-t-2 border-primary-500/25 dark:border-secondary-500/25" />
+    <UiDecor class="top-0 right-0 w-32 h-32 border-r-2 border-t-2 border-secondary-500/25" />
     <UiDecor class="bottom-0 left-0 w-32 h-32 border-l-2 border-b-2 border-primary-500/25" />
   </section>
 </template>

@@ -62,6 +62,7 @@ const VARIANT_CLASSES: Record<UiIconButtonVariant, string> = {
   [UiIconButtonVariant.Ghost]: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white',
   [UiIconButtonVariant.Primary]: 'border-transparent bg-primary-600 text-on-primary hover:bg-primary-700 active:bg-primary-800',
   [UiIconButtonVariant.Danger]: 'border-transparent text-red-600 dark:text-red-400 hover:bg-red-500/10',
+  [UiIconButtonVariant.Bare]: '',
 }
 
 /** Square dimensions per size. */

@@ -1,5 +1,5 @@
 <template>
-  <UiStack gap="none" class="relative min-h-dvh overflow-hidden font-aurora text-tx">
+  <UiStack gap="none" class="relative overflow-hidden font-aurora text-tx">
     <UiBackdrop variant="aurora" />
 
     <UiContainer class="relative">

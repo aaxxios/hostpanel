@@ -165,6 +165,8 @@ export enum UiIconButtonVariant {
   Primary = 'primary',
   /** Destructive. */
   Danger = 'danger',
+  /** Structure and focus only; the screen paints the frame and colours through its class. */
+  Bare = 'bare',
 }
 
 /** How an image fills its box. */

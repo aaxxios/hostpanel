@@ -67,6 +67,14 @@ describe('UiCurrencySwitcher', () => {
     expect(wrapper.find('[data-testid="currency-switcher-current"]').text()).toBe('USD')
   })
 
+  it('replaces the tinted frame with the class a screen supplies', async () => {
+    const wrapper = await mountSwitcher({ triggerClass: 'h-10 rounded-xl border-line2' })
+    const classes = wrapper.find('[data-testid="currency-switcher-trigger"]').classes()
+
+    expect(classes).toEqual(expect.arrayContaining(['h-10', 'rounded-xl', 'border-line2']))
+    expect(classes).not.toContain('border-primary-500/30')
+  })
+
   it('draws the trigger as a brand-tinted outline, not a grey fill', async () => {
     const wrapper = await mountSwitcher()
     const classes = wrapper.find('[data-testid="currency-switcher-trigger"]').classes()

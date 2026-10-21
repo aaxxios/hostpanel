@@ -4,7 +4,7 @@
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent" />
       <UiDecor class="top-10 left-10 w-2 h-2 bg-primary-400/40 rounded-full animate-float" />
-      <UiDecor class="top-20 right-20 w-3 h-3 bg-primary-400/30 dark:bg-secondary-400/30 rounded-full animate-float [animation-delay:1s]" />
+      <UiDecor class="top-20 right-20 w-3 h-3 bg-secondary-600/30 dark:bg-secondary-400/30 rounded-full animate-float [animation-delay:1s]" />
       <UiDecor class="bottom-10 left-1/3 w-2 h-2 bg-cyan-400/40 rounded-full animate-float [animation-delay:2s]" />
     </UiDecor>
 
@@ -53,7 +53,7 @@
     </UiContainer>
 
     <!-- Decorative corner accents -->
-    <UiDecor class="top-0 right-0 w-32 h-32 border-r-2 border-t-2 border-primary-500/25 dark:border-secondary-500/25" />
+    <UiDecor class="top-0 right-0 w-32 h-32 border-r-2 border-t-2 border-secondary-500/25" />
     <UiDecor class="bottom-0 left-0 w-32 h-32 border-l-2 border-b-2 border-primary-500/25" />
   </section>
 </template>

@@ -114,6 +114,12 @@ const serverGroupId = ref<number | null>(null)
 /** Whether the product is hidden (maps to Inactive status). */
 const isHidden = ref(false)
 
+/** Whether the product is the group's recommended plan. */
+const isFeatured = ref(false)
+
+/** Position inside the group, lowest first. */
+const sortOrder = ref(0)
+
 /** Available server groups (owned by the servers store). */
 const serverGroups = computed(() => serversStore.groups)
 
@@ -160,6 +166,8 @@ watch(() => props.product, (p) => {
     description.value = p.description ?? ''
     serverGroupId.value = p.serverGroupId ?? null
     isHidden.value = p.status === ProductStatus.Inactive
+    isFeatured.value = p.isFeatured
+    sortOrder.value = p.sortOrder
     resetPriceRows(p.prices)
   } else {
     type.value = ProductType.SharedHosting
@@ -171,6 +179,8 @@ watch(() => props.product, (p) => {
     description.value = ''
     serverGroupId.value = null
     isHidden.value = false
+    isFeatured.value = false
+    sortOrder.value = 0
     resetPriceRows()
   }
 }, { immediate: true })
@@ -280,6 +290,8 @@ const handleSubmit = (): void => {
     type: type.value,
     prices: buildPricesPayload(),
     serverGroupId: serverGroupId.value || null,
+    isFeatured: isFeatured.value,
+    sortOrder: Math.max(0, Math.trunc(Number(sortOrder.value)) || 0),
   })
 }
 </script>
@@ -380,6 +392,16 @@ const handleSubmit = (): void => {
         </template>
       </UiField>
 
+      <UiField :label="t('settings.productForm.sortOrder')" :hint="t('settings.productForm.sortOrderHint')">
+        <UiNumberInput
+          v-model="sortOrder"
+          :min="0"
+          :step="1"
+          :placeholder="t('settings.productForm.sortOrderPlaceholder')"
+          data-testid="product-form-sort-order"
+        />
+      </UiField>
+
       <!-- Pricing grid -->
       <UiField :label="t('settings.productForm.pricing')" :hint="t('settings.productForm.aBlankCycleLeavesThe')">
         <UiTable density="compact" class="rounded-xl border border-border" data-testid="product-form-prices">
@@ -425,6 +447,15 @@ const handleSubmit = (): void => {
           </UiTableBody>
         </UiTable>
       </UiField>
+
+      <!-- Recommended-plan toggle -->
+      <UiStack direction="row" align="center" justify="between">
+        <UiStack gap="xs">
+          <UiText tone="primary" size="md">{{ t('settings.productForm.featured') }}</UiText>
+          <UiText tone="muted" size="sm">{{ t('settings.productForm.featuredHint') }}</UiText>
+        </UiStack>
+        <UiToggle v-model="isFeatured" data-testid="product-form-featured" />
+      </UiStack>
 
       <!-- Hidden toggle -->
       <UiStack direction="row" align="center" justify="between">

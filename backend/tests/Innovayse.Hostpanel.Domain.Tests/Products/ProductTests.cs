@@ -81,4 +81,74 @@ public class ProductTests
 
         Assert.Equal(7, product.ServerGroupId);
     }
+
+    /// <summary>A new product is neither featured nor ordered until the operator says so.</summary>
+    [Fact]
+    public void Create_Defaults_NotFeaturedAndSortOrderZero()
+    {
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+
+        Assert.False(product.IsFeatured);
+        Assert.Equal(0, product.SortOrder);
+    }
+
+    /// <summary>Create carries the featured flag and the sort order it is given.</summary>
+    [Fact]
+    public void Create_WithFeaturedAndSortOrder_SetsBoth()
+    {
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m,
+            isFeatured: true, sortOrder: 3);
+
+        Assert.True(product.IsFeatured);
+        Assert.Equal(3, product.SortOrder);
+    }
+
+    /// <summary>Feature and Unfeature toggle the recommended-plan mark.</summary>
+    [Fact]
+    public void FeatureAndUnfeature_ToggleTheFlag()
+    {
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+
+        product.Feature();
+        Assert.True(product.IsFeatured);
+
+        product.Unfeature();
+        Assert.False(product.IsFeatured);
+    }
+
+    /// <summary>SetSortOrder moves the product inside its group.</summary>
+    [Fact]
+    public void SetSortOrder_ChangesThePosition()
+    {
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+
+        product.SetSortOrder(9);
+
+        Assert.Equal(9, product.SortOrder);
+    }
+
+    /// <summary>Update applies the featured flag and sort order when given.</summary>
+    [Fact]
+    public void Update_WithFeaturedAndSortOrder_ChangesBoth()
+    {
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+
+        product.Update("P", null, null, null, null, 5m, 50m, null, isFeatured: true, sortOrder: 4);
+
+        Assert.True(product.IsFeatured);
+        Assert.Equal(4, product.SortOrder);
+    }
+
+    /// <summary>Update leaves the featured flag and sort order alone when they are not given.</summary>
+    [Fact]
+    public void Update_WithoutFeaturedAndSortOrder_KeepsBoth()
+    {
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m,
+            isFeatured: true, sortOrder: 6);
+
+        product.Update("P2", null, null, null, null, 5m, 50m, null);
+
+        Assert.True(product.IsFeatured);
+        Assert.Equal(6, product.SortOrder);
+    }
 }

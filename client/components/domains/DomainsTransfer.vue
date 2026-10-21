@@ -3,7 +3,7 @@
     <!-- Hero with the transfer form -->
     <section class="relative py-10 md:py-24 lg:py-32 bg-ui-page overflow-hidden">
       <UiDecor class="inset-0">
-        <UiDecor class="top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/20 dark:bg-secondary-500/20 rounded-full blur-[150px] animate-blob" />
+        <UiDecor class="top-0 left-1/4 w-[500px] h-[500px] bg-secondary-500/20 rounded-full blur-[150px] animate-blob" />
         <UiDecor class="bottom-0 right-1/3 w-[400px] h-[400px] bg-primary-500/15 rounded-full blur-[130px] animate-blob animation-delay-2000" />
       </UiDecor>
 
@@ -18,8 +18,8 @@
             <span class="text-gray-900 dark:text-white">{{ $t('domains.tabTransfer') }}</span>
           </div>
 
-          <span class="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full glass border border-primary-500/20 dark:border-secondary-500/20 backdrop-blur-sm">
-            <ArrowLeftRight :size="14" :stroke-width="2" class="text-primary-700 dark:text-secondary-400" />
+          <span class="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full glass border border-secondary-500/20 backdrop-blur-sm">
+            <ArrowLeftRight :size="14" :stroke-width="2" class="text-secondary-700 dark:text-secondary-400" />
             <UiText as="span" size="sm" weight="medium" tone="muted">{{ $t('domains.tabTransfer') }}</UiText>
           </span>
 

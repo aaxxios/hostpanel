@@ -24,6 +24,8 @@ const product: Product = {
   pricing: { monthly: null, annual: null },
   prices: [],
   serverGroupId: null,
+  isFeatured: false,
+  sortOrder: 0,
 }
 
 /** Two stored lines. */

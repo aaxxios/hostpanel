@@ -28,6 +28,11 @@ namespace Innovayse.Hostpanel.Application.Products.Commands.UpdateProduct;
 /// Legacy single-currency annual price, sent by the pre-multi-currency admin form. Exists for
 /// one release; read only when <paramref name="Prices"/> is absent, as the base-currency price.
 /// </param>
+/// <param name="IsFeatured">
+/// Whether this is the group's recommended plan; null keeps the stored value. When true the
+/// handler clears the flag on the group's other products, so at most one stays featured.
+/// </param>
+/// <param name="SortOrder">Position inside the group, lowest first; null keeps the stored value.</param>
 public sealed record UpdateProductCommand(
     int Id,
     string Name,
@@ -38,4 +43,6 @@ public sealed record UpdateProductCommand(
     IReadOnlyList<ProductPriceDto>? Prices,
     int? ServerGroupId,
     decimal? MonthlyPrice = null,
-    decimal? AnnualPrice = null);
+    decimal? AnnualPrice = null,
+    bool? IsFeatured = null,
+    int? SortOrder = null);

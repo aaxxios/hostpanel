@@ -92,12 +92,15 @@ interface Props {
   placement?: `${UiPlacement}`
   /** `dropdown` always, or `responsive` (dropdown from xl, cards below). */
   layout?: `${UiLanguageLayout}`
+  /** Replaces the default tinted frame of the trigger (shape, spacing and colours); focus and display stay. */
+  triggerClass?: string
 }
 
 /** Props of the component with their defaults applied. */
 const props = withDefaults(defineProps<Props>(), {
   placement: UiPlacement.Bottom,
   layout: UiLanguageLayout.Dropdown,
+  triggerClass: undefined,
 })
 
 /** Flag image per locale code; unknown codes get the neutral flag. */
@@ -137,8 +140,7 @@ const currentLocale = computed(() =>
 
 /** Class list of the trigger. */
 const triggerClasses = computed(() => [
-  'items-center gap-2 px-3 py-2 rounded-lg',
-  PICKER_TRIGGER,
+  props.triggerClass ?? `items-center gap-2 px-3 py-2 rounded-lg ${PICKER_TRIGGER}`,
   FOCUS_RING,
   isResponsive.value ? 'hidden xl:flex' : 'flex',
 ].join(' '))

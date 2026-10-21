@@ -54,8 +54,13 @@ public sealed class CreateProductHandler
         // services grid still read real numbers: they mirror the base-currency prices.
         var product = Product.Create(
             cmd.GroupId, cmd.Name, cmd.Description, cmd.Website, cmd.Slug, cmd.PackageName, cmd.Type,
-            prices.BaseMonthly, prices.BaseAnnual, cmd.ServerGroupId);
+            prices.BaseMonthly, prices.BaseAnnual, cmd.ServerGroupId, cmd.IsFeatured, cmd.SortOrder);
         prices.ApplyTo(product);
+
+        if (cmd.IsFeatured)
+        {
+            await product.UnfeatureSiblingsAsync(_context, ct);
+        }
 
         _context.Products.Add(product);
         await _context.SaveChangesAsync(ct);

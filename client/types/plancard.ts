@@ -31,4 +31,9 @@ export interface PlanCard {
   priceAnnual: string
   /** Route to begin ordering this plan. */
   href: string
+  /**
+   * True for the plan the operator marked as recommended. The catalogue store lets at most one
+   * card in a list carry it (the first featured plan in display order), so a card can trust it.
+   */
+  isFeatured?: boolean
 }

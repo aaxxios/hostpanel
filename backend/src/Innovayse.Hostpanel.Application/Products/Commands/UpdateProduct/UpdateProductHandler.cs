@@ -59,7 +59,14 @@ public sealed class UpdateProductHandler
             cmd.Name, cmd.Description, cmd.Website, cmd.Slug, cmd.PackageName,
             product.PriceFor(prices.BaseCurrencyCode, BillingCycle.Monthly) ?? NoPrice,
             product.PriceFor(prices.BaseCurrencyCode, BillingCycle.Annual) ?? NoPrice,
-            cmd.ServerGroupId);
+            cmd.ServerGroupId,
+            cmd.IsFeatured,
+            cmd.SortOrder);
+
+        if (cmd.IsFeatured == true)
+        {
+            await product.UnfeatureSiblingsAsync(_context, ct);
+        }
 
         await _context.SaveChangesAsync(ct);
         return Result.Success();
