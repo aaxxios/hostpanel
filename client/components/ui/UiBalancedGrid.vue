@@ -1,5 +1,5 @@
 <template>
-  <component :is="as" class="ui-balanced-grid" :style="style" :data-columns="columns">
+  <component :is="as" :class="classes" :data-columns="columns">
     <slot />
   </component>
 </template>
@@ -30,37 +30,24 @@ const props = withDefaults(defineProps<Props>(), { as: 'div' })
 /** Columns on a desktop screen. */
 const columns = computed(() => balancedColumns(props.count))
 
-/** CSS variables the stylesheet reads. */
-const style = computed(() => ({
-  '--ui-bg-cols': String(columns.value),
-  '--ui-bg-cols-md': String(tabletColumns(props.count)),
-}))
+/** Classes that size a child to one column on a tablet-width screen, keyed by column count. */
+const TABLET_CHILD_CLASSES: Record<number, string> = {
+  1: 'sm:[&>*]:basis-full',
+  2: 'sm:[&>*]:basis-[calc((100%-1.5rem)/2)]',
+}
+
+/** Classes that size a child to one column on a desktop screen, keyed by column count. */
+const DESKTOP_CHILD_CLASSES: Record<number, string> = {
+  1: 'lg:[&>*]:basis-full',
+  2: 'lg:[&>*]:basis-[calc((100%-1.5rem)/2)]',
+  3: 'lg:[&>*]:basis-[calc((100%-3rem)/3)]',
+  4: 'lg:[&>*]:basis-[calc((100%-4.5rem)/4)]',
+}
+
+/** Classes of the root: a centred wrapping row whose children are sized to the column count. */
+const classes = computed(() => [
+  'ui-balanced-grid flex flex-wrap justify-center gap-6 [&>*]:min-w-0 [&>*]:flex-none [&>*]:basis-full',
+  TABLET_CHILD_CLASSES[tabletColumns(props.count)],
+  DESKTOP_CHILD_CLASSES[columns.value],
+])
 </script>
-
-<style>
-.ui-balanced-grid {
-  --ui-bg-gap: 1.5rem;
-  --ui-bg-active: 1;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--ui-bg-gap);
-}
-
-.ui-balanced-grid > * {
-  flex: 0 0 calc((100% - (var(--ui-bg-active) - 1) * var(--ui-bg-gap)) / var(--ui-bg-active));
-  min-width: 0;
-}
-
-@media (min-width: 640px) {
-  .ui-balanced-grid {
-    --ui-bg-active: var(--ui-bg-cols-md);
-  }
-}
-
-@media (min-width: 1024px) {
-  .ui-balanced-grid {
-    --ui-bg-active: var(--ui-bg-cols);
-  }
-}
-</style>
