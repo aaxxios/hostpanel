@@ -2,15 +2,15 @@
  * Test support shared by every portal template: stands in for the Nuxt composables the template
  * layout, page and section components call.
  *
- * Under Nuxt, `useLocalePath`, `useSwitchLocalePath`, `useAppColorMode`, `usePortalSettings`, `useAuthMode`, `useBrandLogo` and
- * `useSiteIdentity` are auto-imported. Vitest has no such step, so each is defined here as a
+ * Under Nuxt, `useLocalePath`, `useSwitchLocalePath`, `useAppColorMode`, `usePortalSettings`, `useAuthMode`, `useBrandLogo`,
+ * `useSiteIdentity` and `useSecurityFeatures` (no claim switched on) are auto-imported. Vitest has no such step, so each is defined here as a
  * global. The settings map is what an operator would have entered under Admin > Settings.
  * Template-specific stand-ins (the aurora auth store, say) build on {@link stubTemplateGlobals}.
  *
  * @module tests/helpers/templateGlobals
  */
 
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { vi } from 'vitest'
 
 /** Site name the identity composable reports unless a test says otherwise. */
@@ -48,5 +48,6 @@ export const stubTemplateGlobals = (options: TemplateGlobalsOptions = {}): void 
     hasDarkVariant: ref(Boolean(options.logoDark)),
     alt: ref(options.logoAlt ?? ''),
   }))
+  vi.stubGlobal('useSecurityFeatures', () => computed(() => []))
   vi.stubGlobal('useSiteIdentity', () => ({ name: ref(options.siteName ?? DEFAULT_SITE_NAME), tagline: ref('') }))
 }

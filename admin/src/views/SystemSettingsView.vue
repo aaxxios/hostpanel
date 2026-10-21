@@ -11,6 +11,8 @@ import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import BrandColorsCard from '@/components/settings/BrandColorsCard.vue'
 import BrandingCard from '@/components/settings/BrandingCard.vue'
+import HomeSectionsCard from '@/components/settings/HomeSectionsCard.vue'
+import HostingDetailsCard from '@/components/settings/HostingDetailsCard.vue'
 import PortalAppearanceCard from '@/components/settings/PortalAppearanceCard.vue'
 import SettingsLoading from '@/components/settings/SettingsLoading.vue'
 import SiteIdentityCard from '@/components/settings/SiteIdentityCard.vue'
@@ -119,6 +121,8 @@ const saveRow = async (setting: Setting): Promise<void> => {
       <SiteIdentityCard :settings="store.settings" :saving="saving" @save="onSave" />
       <StorefrontContentCard :settings="store.settings" :saving="saving" @save="onSave" />
       <PortalAppearanceCard :settings="store.settings" :saving="saving" @save="onSave" />
+      <HomeSectionsCard :settings="store.settings" :saving="saving" @save="onSave" />
+      <HostingDetailsCard :settings="store.settings" :saving="saving" @save="onSave" />
       <BrandColorsCard :settings="store.settings" :saving="saving" @save="onSave" />
       <TypographyCard :settings="store.settings" :saving="saving" @save="onSave" />
       <BrandingCard :settings="store.settings" :saving="saving" @save="onSave" />

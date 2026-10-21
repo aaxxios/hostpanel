@@ -87,6 +87,8 @@ export enum AppRoute {
   Storefront = '/storefront',
   /** The `/storefront/faqs` screen. */
   StorefrontFaqs = '/storefront/faqs',
+  /** The `/storefront/locations` screen. */
+  StorefrontLocations = '/storefront/locations',
   /** The `/storefront/partners` screen. */
   StorefrontPartners = '/storefront/partners',
   /** The `/storefront/projects` screen. */

@@ -50,6 +50,8 @@ namespace Innovayse.Hostpanel.Integration.Tests.Demo;
 /// <param name="TestimonialTranslations">Testimonial translation rows.</param>
 /// <param name="Partners">Partner rows.</param>
 /// <param name="PartnerTranslations">Partner translation rows.</param>
+/// <param name="ServerLocations">Server location rows.</param>
+/// <param name="ServerLocationTranslations">Server location translation rows.</param>
 /// <param name="Projects">Showcased project rows.</param>
 /// <param name="ProjectTranslations">Project translation rows.</param>
 /// <param name="Faqs">FAQ rows.</param>
@@ -64,4 +66,4 @@ internal sealed record Counts(
     int TicketTags, int Announcements, int NetworkIssues,
     int Slides, int SlideTranslations, int DownloadCategories, int Downloads, int ActivityLogs, int EmailLogs,
     int Testimonials, int TestimonialTranslations, int Partners, int PartnerTranslations,
-    int Projects, int ProjectTranslations, int Faqs, int FaqTranslations);
+    int ServerLocations, int ServerLocationTranslations, int Projects, int ProjectTranslations, int Faqs, int FaqTranslations);

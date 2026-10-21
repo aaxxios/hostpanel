@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Domain.Faqs;
 using Innovayse.Hostpanel.Domain.Faqs.Enums;
+using Innovayse.Hostpanel.Domain.Locations;
 using Innovayse.Hostpanel.Domain.Partners;
 using Innovayse.Hostpanel.Domain.Projects;
 using Innovayse.Hostpanel.Domain.Settings;
@@ -122,6 +123,32 @@ internal sealed class DemoStorefrontSeeder
         ["Nimbusline Data", "Нимбуслайн Дата", "Նիմբուսլայն Դատա"],
         ["Orchid Commerce", "Орхид Коммерс", "Օրքիդ Քոմերս"],
         ["Pinnacle Labs", "Пиннакл Лабс", "Փինաքլ Լաբս"],
+    ];
+
+    /// <summary>
+    /// The server locations: ISO country code, then the data-centre name, the city and the latency note in three
+    /// languages. The data centres are invented; the countries and cities are real places.
+    /// </summary>
+    private static readonly (string Country, string[] Name, string[] City, string[] Note)[] ServerLocations =
+    [
+        ("US", ["Atlantic Gate DC1", "Атлантик Гейт DC1", "Ատլանտիկ Գեյթ DC1"],
+            ["Ashburn", "Ашберн", "Աշբերն"],
+            ["About 8 ms from the US east coast", "Около 8 мс до восточного побережья США", "Մոտ 8 մվ ԱՄՆ արևելյան ափից"]),
+        ("DE", ["Rhine Core DC2", "Райн Кор DC2", "Ռայն Կոր DC2"],
+            ["Frankfurt", "Франкфурт", "Ֆրանկֆուրտ"],
+            ["About 12 ms from central Europe", "Около 12 мс до центральной Европы", "Մոտ 12 մվ Կենտրոնական Եվրոպայից"]),
+        ("NL", ["Canal Point DC3", "Канал Поинт DC3", "Քենալ Փոյնթ DC3"],
+            ["Amsterdam", "Амстердам", "Ամստերդամ"],
+            ["About 10 ms from western Europe", "Около 10 мс до западной Европы", "Մոտ 10 մվ Արևմտյան Եվրոպայից"]),
+        ("AM", ["Ararat Edge DC4", "Арарат Эдж DC4", "Արարատ Էջ DC4"],
+            ["Yerevan", "Ереван", "Երևան"],
+            ["About 5 ms from the Caucasus", "Около 5 мс до Кавказа", "Մոտ 5 մվ Կովկասից"]),
+        ("SG", ["Merlion Bay DC5", "Мерлион Бэй DC5", "Մերլիոն Բեյ DC5"],
+            ["Singapore", "Сингапур", "Սինգապուր"],
+            ["About 15 ms from south-east Asia", "Около 15 мс до Юго-Восточной Азии", "Մոտ 15 մվ Հարավարևելյան Ասիայից"]),
+        ("FI", ["Aurora Fjord DC6", "Аврора Фьорд DC6", "Աուրորա Ֆյորդ DC6"],
+            ["Helsinki", "Хельсинки", "Հելսինկի"],
+            ["About 14 ms from northern Europe", "Около 14 мс до Северной Европы", "Մոտ 14 մվ Հյուսիսային Եվրոպայից"]),
     ];
 
     /// <summary>The projects: slug, then the title and the one-line summary in three languages.</summary>
@@ -298,7 +325,7 @@ internal sealed class DemoStorefrontSeeder
     }
 
     /// <summary>
-    /// Seeds only the storefront content tables (testimonials, partners, projects, FAQs) that are still empty,
+    /// Seeds only the storefront content tables (testimonials, partners, server locations, projects, FAQs) that are still empty,
     /// leaving the settings alone. The development seeder calls this so a local storefront is fully populated
     /// without its locally edited settings being overwritten on every start.
     /// </summary>
@@ -308,6 +335,7 @@ internal sealed class DemoStorefrontSeeder
     {
         await SeedTestimonialsAsync(ct);
         await SeedPartnersAsync(ct);
+        await SeedLocationsAsync(ct);
         await SeedProjectsAsync(ct);
         await SeedFaqsAsync(ct);
     }
@@ -358,6 +386,31 @@ internal sealed class DemoStorefrontSeeder
             }
 
             _db.Partners.Add(row);
+        }
+
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Adds the server locations when there are none; every one is active and shown in the order written above.</summary>
+    /// <param name="ct">Cancels the save.</param>
+    /// <returns>A task that completes once the rows are saved.</returns>
+    private async Task SeedLocationsAsync(CancellationToken ct)
+    {
+        if (await _db.ServerLocations.AnyAsync(ct))
+        {
+            return;
+        }
+
+        for (var i = 0; i < ServerLocations.Length; i++)
+        {
+            var (country, name, city, note) = ServerLocations[i];
+            var row = ServerLocation.Create(country, i, true);
+            for (var l = 0; l < Locales.Length; l++)
+            {
+                row.SetTranslation(Locales[l], name[l], city[l], note[l]);
+            }
+
+            _db.ServerLocations.Add(row);
         }
 
         await _db.SaveChangesAsync(ct);

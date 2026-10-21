@@ -20,8 +20,9 @@ describe('ApiPath', () => {
   })
 
   it('names the storefront content and e-mail roots under /admin', () => {
-    expect([ApiPath.AdminFaqs, ApiPath.AdminPartners, ApiPath.AdminProjects, ApiPath.AdminTestimonials, ApiPath.AdminSlides]).toEqual([
+    expect([ApiPath.AdminFaqs, ApiPath.AdminLocations, ApiPath.AdminPartners, ApiPath.AdminProjects, ApiPath.AdminTestimonials, ApiPath.AdminSlides]).toEqual([
       '/admin/faqs',
+      '/admin/locations',
       '/admin/partners',
       '/admin/projects',
       '/admin/testimonials',

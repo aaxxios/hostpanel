@@ -199,6 +199,102 @@ public static class PortalSettingKeys
     /// <summary>The company story for Armenian visitors.</summary>
     public const string AboutTextHy = "portal.about.text.hy";
 
+    /// <summary>Whether the hero stats strip and trust bar section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionStats = "portal.sections.stats";
+
+    /// <summary>Whether the partners strip section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionPartners = "portal.sections.partners";
+
+    /// <summary>Whether the why-choose-us and services blocks section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionServices = "portal.sections.services";
+
+    /// <summary>Whether the how-it-works process section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionProcess = "portal.sections.process";
+
+    /// <summary>Whether the plan cards, products and pricing section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionPlans = "portal.sections.plans";
+
+    /// <summary>Whether the comparison table section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionComparison = "portal.sections.comparison";
+
+    /// <summary>Whether the dashboard preview section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionDashboard = "portal.sections.dashboard";
+
+    /// <summary>Whether the use cases section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionUseCases = "portal.sections.use_cases";
+
+    /// <summary>Whether the migration block section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionMigration = "portal.sections.migration";
+
+    /// <summary>Whether the portfolio projects section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionProjects = "portal.sections.projects";
+
+    /// <summary>Whether the testimonials section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionTestimonials = "portal.sections.testimonials";
+
+    /// <summary>Whether the frequently asked questions section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionFaq = "portal.sections.faq";
+
+    /// <summary>Whether the closing call to action section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionCta = "portal.sections.cta";
+
+    /// <summary>Whether the server locations section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionLocations = "portal.sections.locations";
+
+    /// <summary>Whether the performance figures section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionPerformance = "portal.sections.performance";
+
+    /// <summary>Whether the security features section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionSecurity = "portal.sections.security";
+
+    /// <summary>Whether the one-click application installer section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionApps = "portal.sections.apps";
+
+    /// <summary>Whether the guarantees section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionGuarantees = "portal.sections.guarantees";
+
+    /// <summary>Whether the support channels section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionSupport = "portal.sections.support";
+
+    /// <summary>Whether the trusted-by logo strip section is shown on the home page: <c>true</c> or <c>false</c>.</summary>
+    public const string SectionTrusted = "portal.sections.trusted";
+
+    /// <summary>Average server response time shown in the performance section, e.g. <c>180 ms</c>.</summary>
+    public const string StatsResponseTime = "portal.stats.response_time";
+
+    /// <summary>Number of sites hosted, shown in the performance section, e.g. <c>12,000+</c>.</summary>
+    public const string StatsSitesHosted = "portal.stats.sites_hosted";
+
+    /// <summary>Typical first support response time shown in the performance section, e.g. <c>15 min</c>.</summary>
+    public const string StatsSupportResponse = "portal.stats.support_response";
+
+    /// <summary>Whether the operator states the free-SSL claim: <c>true</c> or <c>false</c>.</summary>
+    public const string FeaturesSsl = "portal.features.ssl";
+
+    /// <summary>Whether the operator states the DDoS-protection claim: <c>true</c> or <c>false</c>.</summary>
+    public const string FeaturesDdos = "portal.features.ddos";
+
+    /// <summary>Number of applications the one-click installer offers, e.g. <c>150+</c>.</summary>
+    public const string InstallerAppCount = "portal.installer.app_count";
+
+    /// <summary>Length of the money-back guarantee in days, digits only, e.g. <c>30</c>.</summary>
+    public const string GuaranteeMoneyBackDays = "portal.guarantee.money_back_days";
+
+    /// <summary>Whether the operator states the no-hidden-fees guarantee: <c>true</c> or <c>false</c>.</summary>
+    public const string GuaranteeNoHiddenFees = "portal.guarantee.no_hidden_fees";
+
+    /// <summary>Typical live-chat response time shown on the chat support card, e.g. <c>2 min</c>.</summary>
+    public const string SupportResponseChat = "portal.support.response.chat";
+
+    /// <summary>Typical ticket response time shown on the ticket support card, e.g. <c>1 hour</c>.</summary>
+    public const string SupportResponseTicket = "portal.support.response.ticket";
+
+    /// <summary>Typical e-mail response time shown on the e-mail support card, e.g. <c>4 hours</c>.</summary>
+    public const string SupportResponseEmail = "portal.support.response.email";
+
+    /// <summary>Typical phone response time shown on the phone support card, e.g. <c>immediate</c>.</summary>
+    public const string SupportResponsePhone = "portal.support.response.phone";
+
     /// <summary>The template a fresh install starts with. Mirrors <c>DEFAULT_TEMPLATE</c> in <c>client/templates/types.ts</c>.</summary>
     public const StorefrontTemplate DefaultTemplate = StorefrontTemplate.Classic;
 
@@ -261,6 +357,10 @@ public static class PortalSettingKeys
                 new Regex("^https://[^\\s/]+(/[^\\s]*)?$", RegexOptions.CultureInvariant),
                 "an https:// address like https://chat.example.com",
                 v => v.TrimEnd('/')),
+            [GuaranteeMoneyBackDays] = new(
+                new Regex("^[0-9]{1,3}$", RegexOptions.CultureInvariant),
+                "a whole number of days like 30",
+                v => v),
         };
 
 
@@ -286,6 +386,29 @@ public static class PortalSettingKeys
             [FeaturesFirewall] = Booleans,
             [FeaturesMalware] = Booleans,
             [MigrationFree] = Booleans,
+            [SectionStats] = Booleans,
+            [SectionPartners] = Booleans,
+            [SectionServices] = Booleans,
+            [SectionProcess] = Booleans,
+            [SectionPlans] = Booleans,
+            [SectionComparison] = Booleans,
+            [SectionDashboard] = Booleans,
+            [SectionUseCases] = Booleans,
+            [SectionMigration] = Booleans,
+            [SectionProjects] = Booleans,
+            [SectionTestimonials] = Booleans,
+            [SectionFaq] = Booleans,
+            [SectionCta] = Booleans,
+            [SectionLocations] = Booleans,
+            [SectionPerformance] = Booleans,
+            [SectionSecurity] = Booleans,
+            [SectionApps] = Booleans,
+            [SectionGuarantees] = Booleans,
+            [SectionSupport] = Booleans,
+            [SectionTrusted] = Booleans,
+            [FeaturesSsl] = Booleans,
+            [FeaturesDdos] = Booleans,
+            [GuaranteeNoHiddenFees] = Booleans,
             [BrandFontHeading] = FontNames,
             [BrandFontBody] = FontNames,
         };
@@ -359,6 +482,38 @@ public static class PortalSettingKeys
         (AboutText,           "",       "Company story on the About page; a blank line starts a new paragraph. Empty hides the page."),
         (AboutTextRu,         "",       "Company story for Russian visitors. Empty uses the default text."),
         (AboutTextHy,         "",       "Company story for Armenian visitors. Empty uses the default text."),
+        (SectionStats, "true", "Show the hero stats strip and trust bar section on the home page: true or false."),
+        (SectionPartners, "true", "Show the partners strip section on the home page: true or false."),
+        (SectionServices, "true", "Show the why-choose-us and services blocks section on the home page: true or false."),
+        (SectionProcess, "true", "Show the how-it-works process section on the home page: true or false."),
+        (SectionPlans, "true", "Show the plan cards, products and pricing section on the home page: true or false."),
+        (SectionComparison, "true", "Show the comparison table section on the home page: true or false."),
+        (SectionDashboard, "true", "Show the dashboard preview section on the home page: true or false."),
+        (SectionUseCases, "true", "Show the use cases section on the home page: true or false."),
+        (SectionMigration, "true", "Show the migration block section on the home page: true or false."),
+        (SectionProjects, "false", "Show the portfolio projects section on the home page: true or false."),
+        (SectionTestimonials, "true", "Show the testimonials section on the home page: true or false."),
+        (SectionFaq, "true", "Show the frequently asked questions section on the home page: true or false."),
+        (SectionCta, "true", "Show the closing call to action section on the home page: true or false."),
+        (SectionLocations, "true", "Show the server locations section on the home page: true or false."),
+        (SectionPerformance, "true", "Show the performance figures section on the home page: true or false."),
+        (SectionSecurity, "true", "Show the security features section on the home page: true or false."),
+        (SectionApps, "true", "Show the one-click application installer section on the home page: true or false."),
+        (SectionGuarantees, "true", "Show the guarantees section on the home page: true or false."),
+        (SectionSupport, "true", "Show the support channels section on the home page: true or false."),
+        (SectionTrusted, "true", "Show the trusted-by logo strip section on the home page: true or false."),
+        (StatsResponseTime, "", "Average server response time shown in the performance section, e.g. 180 ms. Empty hides it."),
+        (StatsSitesHosted, "", "Number of sites hosted, shown in the performance section, e.g. 12,000+. Empty hides it."),
+        (StatsSupportResponse, "", "Typical first support response time shown in the performance section, e.g. 15 min. Empty hides it."),
+        (FeaturesSsl, "", "Show the SSL card in the security section: true or false. Empty hides it."),
+        (FeaturesDdos, "", "Show the DDoS protection card in the security section: true or false. Empty hides it."),
+        (InstallerAppCount, "", "Number of applications the one-click installer offers, e.g. 150+. Empty hides the count line."),
+        (GuaranteeMoneyBackDays, "", "Money-back guarantee length in days, digits only, e.g. 30. Empty hides the guarantee."),
+        (GuaranteeNoHiddenFees, "", "Show the no-hidden-fees guarantee: true or false. Empty hides it."),
+        (SupportResponseChat, "", "Typical live-chat response time, e.g. 2 min. Empty hides it."),
+        (SupportResponseTicket, "", "Typical ticket response time, e.g. 1 hour. Empty hides it."),
+        (SupportResponseEmail, "", "Typical e-mail response time, e.g. 4 hours. Empty hides it."),
+        (SupportResponsePhone, "", "Typical phone response time, e.g. immediate. Empty hides it."),
     ];
 
     /// <summary>

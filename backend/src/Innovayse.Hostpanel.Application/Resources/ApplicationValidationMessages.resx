@@ -1166,6 +1166,21 @@
   <data name="PartnerNameTooLong" xml:space="preserve">
     <value>The name can be at most {0} characters.</value>
   </data>
+  <data name="LocationNameRequired" xml:space="preserve">
+    <value>Enter the location name.</value>
+  </data>
+  <data name="LocationNameTooLong" xml:space="preserve">
+    <value>The name can be at most {0} characters.</value>
+  </data>
+  <data name="LocationCityTooLong" xml:space="preserve">
+    <value>The city can be at most {0} characters.</value>
+  </data>
+  <data name="LocationLatencyNoteTooLong" xml:space="preserve">
+    <value>The latency note can be at most {0} characters.</value>
+  </data>
+  <data name="LocationCountryCodeInvalid" xml:space="preserve">
+    <value>The country code must be two letters, for example DE.</value>
+  </data>
   <data name="ProjectSlugRequired" xml:space="preserve">
     <value>Enter the project's slug.</value>
   </data>

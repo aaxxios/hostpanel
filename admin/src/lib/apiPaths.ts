@@ -23,6 +23,8 @@ export enum ApiPath {
   AdminKnowledgebase = '/admin/knowledgebase',
   /** `/admin/knowledgebase/categories` collection and its members. */
   AdminKnowledgebaseCategories = '/admin/knowledgebase/categories',
+  /** `/admin/locations` collection and its members. */
+  AdminLocations = '/admin/locations',
   /** `/admin/migrations` collection and its members. */
   AdminMigrations = '/admin/migrations',
   /** `/admin/partners` collection and its members. */

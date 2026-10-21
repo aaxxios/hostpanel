@@ -9,6 +9,7 @@ import { FaqCategory } from '~/types/faqcategory'
 import type { FAQ } from '~/types/faq'
 import type { Partner } from '~/types/partner'
 import type { Project } from '~/types/project'
+import type { ServerLocation } from '~/types/serverlocation'
 import type { Testimonial } from '~/types/testimonial'
 
 /**
@@ -79,5 +80,21 @@ export const projectFixture = (id: number, overrides: Partial<Project> = {}): Pr
   imageUrls: [],
   url: 'https://example.test',
   sortOrder: id,
+  ...overrides,
+})
+
+/**
+ * Builds a server location.
+ *
+ * @param id The location id.
+ * @param overrides Fields that differ from the defaults.
+ * @returns The location.
+ */
+export const locationFixture = (id: number, overrides: Partial<ServerLocation> = {}): ServerLocation => ({
+  id,
+  countryCode: 'DE',
+  name: `Example location ${id}`,
+  city: 'Example City',
+  latencyNote: '20 ms',
   ...overrides,
 })

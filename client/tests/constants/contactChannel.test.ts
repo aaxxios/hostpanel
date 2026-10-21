@@ -5,11 +5,16 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { TELEGRAM_LINK_BASE, WHATSAPP_LINK_BASE } from '~/constants/contactChannel'
+import { MAILTO_PREFIX, TEL_PREFIX, TELEGRAM_LINK_BASE, WHATSAPP_LINK_BASE } from '~/constants/contactChannel'
 
 describe('contact channel bases', () => {
   it('are secure addresses that end where the handle or number begins', () => {
     expect(TELEGRAM_LINK_BASE).toBe('https://t.me/')
     expect(WHATSAPP_LINK_BASE).toBe('https://wa.me/')
+  })
+
+  it('has the mail and telephone link schemes', () => {
+    expect(MAILTO_PREFIX).toBe('mailto:')
+    expect(TEL_PREFIX).toBe('tel:')
   })
 })

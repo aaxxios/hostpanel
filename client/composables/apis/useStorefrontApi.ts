@@ -1,6 +1,6 @@
 /**
  * Endpoints under `/api/portal/public` for the storefront content the operator manages in the
- * admin: testimonials, partners, projects and FAQs.
+ * admin: testimonials, partners, projects, FAQs and server locations.
  *
  * Every function returns a plain `Promise` through `apiFetch`, so `stores/storefront.ts` can call
  * them from a store action, including the action a server-rendered page wraps in
@@ -13,6 +13,7 @@ import { apiFetch } from '~/composables/useApi'
 import type { FAQ } from '~/types/faq'
 import type { Partner } from '~/types/partner'
 import type { Project } from '~/types/project'
+import type { ServerLocation } from '~/types/serverlocation'
 import type { Testimonial } from '~/types/testimonial'
 
 /**
@@ -40,6 +41,15 @@ export const useStorefrontApi = () => {
     apiFetch<Partner[]>('/api/portal/public/partners')
 
   /**
+   * Reads the active server locations.
+   *
+   * @returns The locations in display order.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const fetchLocations = (): Promise<ServerLocation[]> =>
+    apiFetch<ServerLocation[]>('/api/portal/public/locations')
+
+  /**
    * Reads the active portfolio projects.
    *
    * @returns The projects in display order.
@@ -60,6 +70,7 @@ export const useStorefrontApi = () => {
   return {
     fetchTestimonials,
     fetchPartners,
+    fetchLocations,
     fetchProjects,
     fetchFaqs
   }

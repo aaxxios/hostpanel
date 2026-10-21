@@ -585,6 +585,9 @@ public static class HostpanelErrorCodes
     /// <summary>The id names no partner (404).</summary>
     public const string PARTNER_NOT_FOUND = "PARTNER_NOT_FOUND";
 
+    /// <summary>The id names no server location (404).</summary>
+    public const string LOCATION_NOT_FOUND = "LOCATION_NOT_FOUND";
+
     /// <summary>The id names no portfolio project (404).</summary>
     public const string PROJECT_NOT_FOUND = "PROJECT_NOT_FOUND";
 
@@ -837,6 +840,12 @@ public static class HostpanelErrorCodes
 
     /// <summary>The sort order of a partner is negative (400).</summary>
     public const string PARTNER_SORT_ORDER_NEGATIVE = Domain.Partners.PartnerErrors.SortOrderNegative;
+
+    /// <summary>The sort order of a server location is negative (400).</summary>
+    public const string LOCATION_SORT_ORDER_NEGATIVE = Domain.Locations.ServerLocationErrors.SortOrderNegative;
+
+    /// <summary>The country code of a server location is not two letters (400).</summary>
+    public const string LOCATION_COUNTRY_CODE_INVALID = Domain.Locations.ServerLocationErrors.CountryCodeInvalid;
 
     /// <summary>The sort order of a project is negative (400).</summary>
     public const string PROJECT_SORT_ORDER_NEGATIVE = Domain.Projects.ProjectErrors.SortOrderNegative;

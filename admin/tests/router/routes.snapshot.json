@@ -557,6 +557,18 @@
       {
         "path": "storefront/faqs/:id/edit",
         "component": "FaqFormView.vue"
+      },
+      {
+        "path": "storefront/locations",
+        "component": "LocationsView.vue"
+      },
+      {
+        "path": "storefront/locations/create",
+        "component": "LocationFormView.vue"
+      },
+      {
+        "path": "storefront/locations/:id/edit",
+        "component": "LocationFormView.vue"
       }
     ]
   },

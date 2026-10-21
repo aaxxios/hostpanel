@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import {
+  ACCENT_BRAND_CLASS,
   ACCENT_BUTTON_CLASSES,
   ACCENT_CLASSES,
   ACCENT_TILE_CLASSES,
@@ -60,5 +61,13 @@ describe('accent text contrast', () => {
   it('reads the ink colour on a solid accent button, never a fixed white', () => {
     expect(ACCENT_BUTTON_CLASSES[UiAccentAppearance.Solid]).toContain('var(--accent-ink')
     expect(ACCENT_BUTTON_CLASSES[UiAccentAppearance.Solid]).not.toContain('text-white')
+  })
+})
+
+describe('ACCENT_BRAND_CLASS', () => {
+  it('points the accent variable at the brand primary with a fallback', () => {
+    expect(ACCENT_BRAND_CLASS).toBe('[--accent:rgb(var(--brand-primary-500,2_119_182))]')
+    expect(ACCENT_BRAND_CLASS).toContain('--accent:')
+    expect(ACCENT_BRAND_CLASS).toContain('--brand-primary-500')
   })
 })

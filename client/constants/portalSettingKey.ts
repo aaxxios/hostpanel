@@ -120,4 +120,68 @@ export enum PortalSettingKey {
   AboutTextRu = 'portal.about.text.ru',
   /** Company story for Armenian visitors. */
   AboutTextHy = 'portal.about.text.hy',
+  /** Home section switch: stats strip. */
+  SectionStats = 'portal.sections.stats',
+  /** Home section switch: partners. */
+  SectionPartners = 'portal.sections.partners',
+  /** Home section switch: services. */
+  SectionServices = 'portal.sections.services',
+  /** Home section switch: process. */
+  SectionProcess = 'portal.sections.process',
+  /** Home section switch: plans. */
+  SectionPlans = 'portal.sections.plans',
+  /** Home section switch: comparison. */
+  SectionComparison = 'portal.sections.comparison',
+  /** Home section switch: dashboard. */
+  SectionDashboard = 'portal.sections.dashboard',
+  /** Home section switch: use cases. */
+  SectionUseCases = 'portal.sections.use_cases',
+  /** Home section switch: migration. */
+  SectionMigration = 'portal.sections.migration',
+  /** Home section switch: projects. */
+  SectionProjects = 'portal.sections.projects',
+  /** Home section switch: testimonials. */
+  SectionTestimonials = 'portal.sections.testimonials',
+  /** Home section switch: questions. */
+  SectionFaq = 'portal.sections.faq',
+  /** Home section switch: closing call to action. */
+  SectionCta = 'portal.sections.cta',
+  /** Home section switch: server locations. */
+  SectionLocations = 'portal.sections.locations',
+  /** Home section switch: performance. */
+  SectionPerformance = 'portal.sections.performance',
+  /** Home section switch: security. */
+  SectionSecurity = 'portal.sections.security',
+  /** Home section switch: one-click installer. */
+  SectionApps = 'portal.sections.apps',
+  /** Home section switch: guarantees. */
+  SectionGuarantees = 'portal.sections.guarantees',
+  /** Home section switch: support channels. */
+  SectionSupport = 'portal.sections.support',
+  /** Home section switch: trusted-by logo strip. */
+  SectionTrusted = 'portal.sections.trusted',
+  /** Performance figure: server response time. */
+  StatsResponseTime = 'portal.stats.response_time',
+  /** Performance figure: sites hosted. */
+  StatsSitesHosted = 'portal.stats.sites_hosted',
+  /** Performance figure: support response time. */
+  StatsSupportResponse = 'portal.stats.support_response',
+  /** Free SSL feature switch. */
+  FeaturesSsl = 'portal.features.ssl',
+  /** DDoS protection feature switch. */
+  FeaturesDdos = 'portal.features.ddos',
+  /** Number of apps the one-click installer offers. */
+  InstallerAppCount = 'portal.installer.app_count',
+  /** Money-back guarantee period in days. */
+  GuaranteeMoneyBackDays = 'portal.guarantee.money_back_days',
+  /** No-hidden-fees guarantee switch. */
+  GuaranteeNoHiddenFees = 'portal.guarantee.no_hidden_fees',
+  /** Chat response time. */
+  SupportResponseChat = 'portal.support.response.chat',
+  /** Ticket response time. */
+  SupportResponseTicket = 'portal.support.response.ticket',
+  /** Email response time. */
+  SupportResponseEmail = 'portal.support.response.email',
+  /** Phone response time. */
+  SupportResponsePhone = 'portal.support.response.phone',
 }
