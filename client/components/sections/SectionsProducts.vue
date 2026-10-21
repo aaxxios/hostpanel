@@ -2,10 +2,10 @@
   <section class="py-12 md:py-20 bg-ui-page relative overflow-hidden" data-testid="sections-products">
     <!-- Background decorations -->
     <UiDecor class="inset-0">
-      <UiDecor class="inset-0 bg-gradient-to-tr from-primary-500/5 dark:from-secondary-500/5 via-transparent to-cyan-500/5" />
-      <UiDecor class="top-0 left-0 w-1/2 h-1/2 bg-primary-500/10 dark:bg-secondary-500/10 rounded-full blur-[150px]" />
+      <UiDecor class="inset-0 bg-gradient-to-tr from-secondary-500/5 via-transparent to-cyan-500/5" />
+      <UiDecor class="top-0 left-0 w-1/2 h-1/2 bg-secondary-500/10 rounded-full blur-[150px]" />
       <UiDecor class="bottom-0 right-0 w-1/3 h-1/3 bg-cyan-500/10 rounded-full blur-[120px]" />
-      <UiDecor class="top-1/4 left-1/3 w-2 h-2 bg-primary-400/50 dark:bg-secondary-400/50 rounded-full animate-float [animation-delay:0.3s]" />
+      <UiDecor class="top-1/4 left-1/3 w-2 h-2 bg-secondary-600/50 dark:bg-secondary-400/50 rounded-full animate-float [animation-delay:0.3s]" />
       <UiDecor class="bottom-1/3 right-1/4 w-3 h-3 bg-cyan-400/40 rounded-full animate-float [animation-delay:1.8s]" />
       <UiDecor class="top-1/2 right-1/3 w-2 h-2 bg-primary-400/50 rounded-full animate-float [animation-delay:2.5s]" />
       <UiDecor class="top-1/3 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary-500/10 to-transparent" />
@@ -20,7 +20,7 @@
       />
 
       <!-- Products grid -->
-      <UiGrid cols="2" gap="lg" class="lg:grid-cols-4">
+      <UiBalancedGrid :count="products.length" data-testid="home-products-grid">
         <UiAccent v-for="(product, index) in products" :key="product.id" :color="product.color">
           <!-- The card sits on a dark photograph, so it always uses the dark palette. -->
           <div
@@ -92,14 +92,14 @@
             <UiDecor :class="[accent.borderMedium, 'bottom-0 right-0 w-16 h-16 border-r-2 border-b-2 rounded-br-2xl scale-0 group-hover:scale-100 transition-transform duration-500 origin-bottom-right']" />
           </div>
         </UiAccent>
-      </UiGrid>
+      </UiBalancedGrid>
 
       <!-- View all -->
       <div class="text-center mt-12 sm:mt-14 md:mt-16">
         <UiButton
           variant="outline"
           :to="localePath('/products')"
-          class="group hover:shadow-lg hover:shadow-primary-500/20 dark:hover:shadow-secondary-500/20 transition-all duration-300 md:px-6 md:py-3 md:text-lg"
+          class="group hover:shadow-lg hover:shadow-secondary-500/20 transition-all duration-300 md:px-6 md:py-3 md:text-lg"
           data-testid="home-products-all"
         >
           <span>{{ $t('products.products.viewAll') }}</span>
@@ -110,7 +110,7 @@
 
     <!-- Section corner decorations -->
     <UiDecor class="top-0 right-0 w-40 h-40 border-r-2 border-t-2 border-cyan-500/20" />
-    <UiDecor class="bottom-0 left-0 w-40 h-40 border-l-2 border-b-2 border-primary-500/20 dark:border-secondary-500/20" />
+    <UiDecor class="bottom-0 left-0 w-40 h-40 border-l-2 border-b-2 border-secondary-500/20" />
   </section>
 </template>
 
@@ -128,6 +128,7 @@
 import { revealDelay } from '~/utils/reveal'
 import { ArrowRight, CheckCircle } from 'lucide-vue-next'
 import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
+import { FAMILY_BULLET_LIMIT } from '~/constants/planFeatureLimit'
 import { productTypeIcon } from '~/constants/productTypeIcon'
 import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
@@ -149,7 +150,7 @@ const DOMAINS_CARD_COLOR = '#3b82f6'
 const DOMAINS_CARD_URL = '/domains'
 
 /** How many feature lines a card lists. */
-const CARD_FEATURE_LIMIT = 3
+const CARD_FEATURE_LIMIT = FAMILY_BULLET_LIMIT
 
 /** Accent classes the cards read (the colour itself is set by each card's UiAccent). */
 const accent = ACCENT_CLASSES
@@ -185,7 +186,8 @@ const products = computed<ProductCard[]>(() => {
   const items: ProductCard[] = [{
     id: DOMAINS_CARD_ID,
     name: t('domains.card.name'),
-    tagline: t('domains.card.tagline'),
+    // No tagline, like every other family card, so the cards read alike.
+    tagline: '',
     description: t('domains.card.description'),
     features: [t('domains.card.f1'), t('domains.card.f2'), t('domains.card.f3')],
     icon: DOMAINS_CARD_ICON,

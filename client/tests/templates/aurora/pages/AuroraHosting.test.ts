@@ -29,7 +29,7 @@ describe('AuroraHosting', () => {
 
     expect(mountWithKit(AuroraHosting, { props: { plans: PLANS } }).find('[data-testid="comparison-table"]').exists()).toBe(false)
     expect(
-      mountWithKit(AuroraHosting, { props: { plans: PLANS, comparisonRows: [{ label: 'Disk', values: ['1', '2', '3'] }] } })
+      mountWithKit(AuroraHosting, { props: { plans: PLANS, comparisonRows: [{ label: 'Disk', values: ['1', '2', '3'] }, { label: 'Sites', values: ['1', '2', '3'] }] } })
         .find('[data-testid="comparison-table"]').exists(),
     ).toBe(true)
   })

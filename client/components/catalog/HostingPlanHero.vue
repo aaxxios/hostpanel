@@ -1,14 +1,14 @@
 <template>
   <section class="relative py-12 md:py-28 bg-ui-page overflow-hidden" data-testid="hosting-plan-hero">
     <UiDecor class="inset-0">
-      <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/10 via-transparent to-primary-500/10 dark:to-secondary-500/10" />
+      <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/10 via-transparent to-secondary-500/10" />
       <UiDecor class="top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/20 rounded-full blur-[150px] animate-blob" />
-      <UiDecor class="bottom-0 right-1/4 w-[400px] h-[400px] bg-primary-500/20 dark:bg-secondary-500/20 rounded-full blur-[140px] animate-blob animation-delay-2000" />
+      <UiDecor class="bottom-0 right-1/4 w-[400px] h-[400px] bg-secondary-500/20 rounded-full blur-[140px] animate-blob animation-delay-2000" />
       <UiDecor class="inset-0 opacity-[0.02] pattern-grid-60" />
       <UiDecor class="top-1/4 left-1/3 w-2 h-2 bg-primary-400/60 rounded-full animate-float [animation-delay:0.5s]" />
-      <UiDecor class="bottom-1/3 right-1/4 w-3 h-3 bg-primary-400/50 dark:bg-secondary-400/50 rounded-full animate-float [animation-delay:1.5s]" />
+      <UiDecor class="bottom-1/3 right-1/4 w-3 h-3 bg-secondary-600/50 dark:bg-secondary-400/50 rounded-full animate-float [animation-delay:1.5s]" />
     </UiDecor>
-    <UiDecor class="top-0 right-0 w-48 h-48 border-r-2 border-t-2 border-primary-500/30 dark:border-secondary-500/30" />
+    <UiDecor class="top-0 right-0 w-48 h-48 border-r-2 border-t-2 border-secondary-500/30" />
     <UiDecor class="bottom-0 left-0 w-48 h-48 border-l-2 border-b-2 border-primary-500/30" />
 
     <UiContainer class="relative z-10">

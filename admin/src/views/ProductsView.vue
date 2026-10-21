@@ -144,6 +144,8 @@ const handleSave = async (payload: CreateProductPayload): Promise<void> => {
       packageName: payload.packageName,
       prices: payload.prices,
       serverGroupId: payload.serverGroupId,
+      isFeatured: payload.isFeatured,
+      sortOrder: payload.sortOrder,
     })
   } else {
     saved = (await store.createProduct(payload)) !== null

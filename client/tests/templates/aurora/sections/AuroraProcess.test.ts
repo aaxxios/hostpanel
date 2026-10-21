@@ -4,6 +4,8 @@
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import AuroraProcess from '~/templates/aurora/sections/AuroraProcess.vue'
+import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
+import { HomeSectionId } from '~/types/homesectionid'
 import { stubAuroraGlobals } from '../auroraGlobals'
 
 describe('AuroraProcess', () => {
@@ -23,7 +25,8 @@ describe('AuroraProcess', () => {
     const wrapper = mountWithKit(AuroraProcess)
 
     expect(wrapper.find('h2').text()).toBe('aurora.process.title')
-    expect(wrapper.attributes('id')).toBe('process')
+    expect(wrapper.attributes('id')).toBe(HomeSectionId.Process)
+    expect(wrapper.classes()).toContain(HOME_SECTION_SCROLL_MARGIN_CLASS)
   })
 
   it('keeps the intro column sticky from lg up and shows both calls to action', () => {

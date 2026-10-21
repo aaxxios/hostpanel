@@ -4,7 +4,7 @@
     <UiSection :contained="false" padding="lg" class="relative lg:py-32 bg-classic-page overflow-hidden">
       <UiStack gap="none" class="absolute inset-0 pointer-events-none">
         <UiStack gap="none" class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/20 rounded-full blur-[150px] animate-blob" />
-        <UiStack gap="none" class="absolute bottom-0 right-1/3 w-[400px] h-[400px] bg-primary-500/15 dark:bg-secondary-500/15 rounded-full blur-[130px] animate-blob animation-delay-2000" />
+        <UiStack gap="none" class="absolute bottom-0 right-1/3 w-[400px] h-[400px] bg-secondary-500/15 rounded-full blur-[130px] animate-blob animation-delay-2000" />
       </UiStack>
 
       <UiContainer class="relative z-10 text-center">
@@ -53,7 +53,7 @@
               <UiCard
                 v-if="!isTldSupported"
                 padding="none"
-                class="p-6 rounded-[2rem] border-2 border-amber-500/40 dark:border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 backdrop-blur-md"
+                class="p-6 rounded-[2rem] border-2 border-amber-500/40 bg-amber-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 backdrop-blur-md"
                 data-testid="classic-domains-unsupported"
               >
                 <UiStack direction="row" align="center" gap="md">
@@ -75,8 +75,8 @@
                 padding="none"
                 class="p-6 rounded-[2rem] border-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 backdrop-blur-md"
                 :class="result.available
-                  ? 'border-green-500/40 dark:border-green-500/40 bg-green-500/5 dark:bg-green-500/5'
-                  : 'border-red-500/40 dark:border-red-500/40 bg-red-500/5 dark:bg-red-500/5'"
+                  ? 'border-green-500/40 bg-green-500/5'
+                  : 'border-red-500/40 bg-red-500/5'"
                 data-testid="classic-domains-availability"
               >
                 <UiStack direction="row" align="center" gap="md">

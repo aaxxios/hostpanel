@@ -3,20 +3,20 @@
     <!-- Background cover -->
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-br from-blue-50 dark:from-gray-900 via-white dark:via-ui-page to-blue-50 dark:to-gray-900" />
-      <UiDecor class="inset-0 bg-gradient-to-r from-primary-600/20 via-transparent to-primary-600/20 dark:to-secondary-600/20" />
+      <UiDecor class="inset-0 bg-gradient-to-r from-primary-600/20 via-transparent to-secondary-600/20" />
 
       <!-- Glowing orbs -->
       <UiDecor class="top-0 left-1/4 w-96 h-96 bg-primary-500/30 rounded-full blur-[150px] animate-blob" />
-      <UiDecor class="bottom-0 right-1/4 w-80 h-80 bg-primary-500/30 dark:bg-secondary-500/30 rounded-full blur-[150px] animate-blob animation-delay-2000" />
+      <UiDecor class="bottom-0 right-1/4 w-80 h-80 bg-secondary-500/30 rounded-full blur-[150px] animate-blob animation-delay-2000" />
 
       <!-- Floating particles -->
       <UiDecor class="top-1/3 left-1/4 w-2 h-2 bg-primary-400/70 rounded-full animate-float [animation-delay:0.5s]" />
-      <UiDecor class="top-1/2 right-1/3 w-3 h-3 bg-primary-400/60 dark:bg-secondary-400/60 rounded-full animate-float [animation-delay:1.2s]" />
+      <UiDecor class="top-1/2 right-1/3 w-3 h-3 bg-secondary-600/60 dark:bg-secondary-400/60 rounded-full animate-float [animation-delay:1.2s]" />
       <UiDecor class="bottom-1/3 left-1/3 w-2 h-2 bg-cyan-400/70 rounded-full animate-float [animation-delay:2s]" />
 
       <!-- Border lines -->
       <UiDecor class="top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary-500/50 to-transparent" />
-      <UiDecor class="bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary-500/50 dark:via-secondary-500/50 to-transparent" />
+      <UiDecor class="bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-secondary-500/50 to-transparent" />
 
       <!-- Grid overlay -->
       <UiDecor class="inset-0 opacity-[0.02] pattern-grid-60" />
@@ -72,7 +72,7 @@
     </UiContainer>
 
     <!-- Decorative corner accents -->
-    <UiDecor class="top-0 right-0 w-48 h-48 border-r-2 border-t-2 border-primary-500/30 dark:border-secondary-500/30" />
+    <UiDecor class="top-0 right-0 w-48 h-48 border-r-2 border-t-2 border-secondary-500/30" />
     <UiDecor class="bottom-0 left-0 w-48 h-48 border-l-2 border-b-2 border-primary-500/30" />
   </section>
 </template>

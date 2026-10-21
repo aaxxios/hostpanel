@@ -4,7 +4,7 @@
     <UiSection :contained="false" padding="lg" class="relative lg:py-32 bg-classic-page overflow-hidden">
       <UiStack gap="none" class="absolute inset-0 pointer-events-none">
         <UiStack gap="none" class="absolute top-0 right-1/4 w-[500px] h-[500px] bg-cyan-500/20 rounded-full blur-[140px] animate-blob" />
-        <UiStack gap="none" class="absolute bottom-0 left-1/3 w-[400px] h-[400px] bg-primary-500/15 dark:bg-secondary-500/15 rounded-full blur-[130px] animate-blob animation-delay-2000" />
+        <UiStack gap="none" class="absolute bottom-0 left-1/3 w-[400px] h-[400px] bg-secondary-500/15 rounded-full blur-[130px] animate-blob animation-delay-2000" />
       </UiStack>
 
       <UiContainer class="relative z-10 text-center">
@@ -55,7 +55,7 @@
           <UiStack v-if="freePlan" gap="none" class="max-w-6xl mx-auto mb-16" data-testid="classic-hosting-free">
             <UiCard
               padding="none"
-              class="relative overflow-hidden rounded-[2.5rem] border-cyan-500/30 dark:border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-classic-surface to-primary-500/10 backdrop-blur-md p-8 md:p-12 shadow-halo-cyan-lg animate-reveal-up motion-reduce:animate-none"
+              class="relative overflow-hidden rounded-[2.5rem] border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-classic-surface to-primary-500/10 backdrop-blur-md p-8 md:p-12 shadow-halo-cyan-lg animate-reveal-up motion-reduce:animate-none"
             >
               <UiStack align="center" justify="between" gap="xl" class="relative z-10 lg:flex-row">
                 <UiStack gap="none" class="flex-1 text-center lg:text-left">
@@ -86,7 +86,7 @@
                 </UiStack>
                 <UiStack align="center" gap="lg" class="w-full lg:w-[320px] lg:items-end text-center lg:text-right">
                   <UiStack gap="none">
-                    <UiGradientText class="text-6xl font-black mb-1 uppercase tracking-tighter bg-gradient-to-b from-gray-900 to-gray-500 dark:from-white dark:to-gray-500">{{ $t('hosting.free') }}</UiGradientText>
+                    <UiGradientText class="text-6xl font-black mb-1 uppercase tracking-tighter bg-gradient-to-b from-gray-900 to-gray-500 dark:from-white">{{ $t('hosting.free') }}</UiGradientText>
                     <UiText size="xs" tone="subtle" weight="bold" class="uppercase tracking-widest">{{ $t('hosting.foreverFree') }}</UiText>
                   </UiStack>
                   <UiStack gap="sm" class="w-full">
@@ -225,7 +225,7 @@ data-testid="classic-hosting-plan-select"
 
             <UiCard
               padding="none"
-              class="relative rounded-3xl md:rounded-[3rem] border-primary-500/30 dark:border-primary-500/30 bg-gradient-to-br from-primary-500/10 via-classic-surface to-cyan-500/10 backdrop-blur-md p-8 md:p-12 shadow-halo-violet animate-reveal-up motion-reduce:animate-none"
+              class="relative rounded-3xl md:rounded-[3rem] border-primary-500/30 bg-gradient-to-br from-primary-500/10 via-classic-surface to-cyan-500/10 backdrop-blur-md p-8 md:p-12 shadow-halo-violet animate-reveal-up motion-reduce:animate-none"
             >
               <UiStack align="center" justify="between" gap="xl" class="relative z-10 lg:flex-row">
                 <UiStack gap="none" class="flex-1 text-center lg:text-left">
@@ -386,7 +386,6 @@ import { isFreePlan } from '~/utils/isFreePlan'
 import { UiHeadingLevel } from '~/utils/ui/enums'
 import type { HostingPlan } from '~/types/hostingplan'
 import type { SegmentedOption } from '~/types/segmentedoption'
-import { FeaturedFlag } from '~/types/featuredflag'
 import { PricingCycle } from '~/types/pricingcycle'
 
 /** Shown in a comparison cell for a plan that lists no features. */
@@ -396,12 +395,13 @@ const NO_VALUE = '—'
 const AGENCY_NAME_MARKER = 'agency'
 
 /**
- * Whether the operator flagged the plan as the featured one.
+ * Whether the plan is the one the operator marked as recommended. Only the first featured plan in
+ * the list counts, so legacy data holding several still shows a single badge.
  *
  * @param plan - The plan.
- * @returns True for a featured plan.
+ * @returns True for the featured plan.
  */
-const isFeatured = (plan: HostingPlan): boolean => plan.is_featured === FeaturedFlag.On
+const isFeatured = (plan: HostingPlan): boolean => plan.pid === plans.value.find(p => p.isFeatured === true)?.pid
 
 /** Translate function and the active locale. */
 const { t, locale } = useI18n()

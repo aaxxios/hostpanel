@@ -1,6 +1,6 @@
 <template>
   <UiStack
-    v-if="rows.length > 0"
+    v-if="visible"
     as="section"
     gap="none"
     data-testid="comparison-table"
@@ -27,7 +27,7 @@
             :class="value ? 'text-tx' : 'text-mut2'"
           >
             <!-- A plan that does not carry this line reads as absent, not as zero. -->
-            {{ value || '—' }}
+            {{ value || t('aurora.comparison.notIncluded') }}
           </UiTableTd>
         </UiTableRow>
       </UiTableBody>
@@ -45,9 +45,11 @@
  */
 import type { PlanCard } from '~/types/plancard'
 import type { ComparisonRow } from '~/types/comparisonrow'
+import { isComparable } from '~/utils/comparisonRows'
 import { BLOCK_TITLE_CLASS } from '~/templates/aurora/typography'
 
-withDefaults(defineProps<{
+/** Component props: the plan columns and the aligned comparison rows. */
+const props = withDefaults(defineProps<{
   /** The plans, one column each. */
   plans?: PlanCard[]
   /** Rows in display order, each with one value per plan. */
@@ -56,4 +58,7 @@ withDefaults(defineProps<{
 
 /** Translator for the active locale. */
 const { t } = useI18n()
+
+/** Whether the table adds value: the plans share enough lines to compare. */
+const visible = computed(() => isComparable(props.rows))
 </script>

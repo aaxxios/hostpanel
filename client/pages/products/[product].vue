@@ -19,7 +19,7 @@
     <SectionsCTA />
   </UiStack>
 
-  <UiStack v-else align="center" justify="center" class="min-h-dvh bg-ui-page" data-testid="product-not-found">
+  <UiStack v-else align="center" justify="center" class="min-h-[60dvh] bg-ui-page" data-testid="product-not-found">
     <!-- Not found -->
     <UiEmptyState :icon="Package" :title="$t('products.notFound')" :description="$t('products.notFoundDescription')">
       <UiButton :to="localePath('/products')" icon="mdi:arrow-left" data-testid="product-back">

@@ -1,5 +1,5 @@
 <template>
-  <UiSection id="process" padding="lg" :contained="false" class="relative border-t border-line">
+  <UiSection :id="HomeSectionId.Process" padding="lg" :contained="false" :class="[HOME_SECTION_SCROLL_MARGIN_CLASS, 'relative border-t border-line']">
     <UiSplit ratio="equal" gap="xl">
       <template #start>
         <UiStack gap="none" :class="STICKY_COLUMN_CLASS" data-testid="process-aside">
@@ -65,6 +65,8 @@
 
 <script setup lang="ts">
 /** aurora process section — four numbered steps beside a sticky intro with two calls to action. */
+import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
+import { HomeSectionId } from '~/types/homesectionid'
 import { BRAND_BUTTON, LINE_BUTTON } from '~/templates/aurora/buttons'
 import { STICKY_COLUMN_CLASS } from '~/templates/aurora/layoutClasses'
 import { EYEBROW_CLASS, SECTION_TITLE_CLASS } from '~/templates/aurora/typography'

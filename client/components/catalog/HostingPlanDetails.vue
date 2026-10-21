@@ -1,14 +1,14 @@
 <template>
   <section class="py-8 md:py-20 bg-ui-surface relative overflow-hidden" data-testid="hosting-plan-details">
     <UiDecor class="inset-0">
-      <UiDecor class="inset-0 bg-gradient-to-r from-primary-500/5 dark:from-secondary-500/5 via-transparent to-primary-500/5" />
+      <UiDecor class="inset-0 bg-gradient-to-r from-secondary-500/5 via-transparent to-primary-500/5" />
       <UiDecor class="top-1/3 left-1/4 w-[400px] h-[400px] bg-primary-500/10 rounded-full blur-[130px] animate-blob animation-delay-4000" />
-      <UiDecor class="bottom-1/4 right-1/4 w-[350px] h-[350px] bg-primary-500/10 dark:bg-secondary-500/10 rounded-full blur-[120px] animate-blob" />
+      <UiDecor class="bottom-1/4 right-1/4 w-[350px] h-[350px] bg-secondary-500/10 rounded-full blur-[120px] animate-blob" />
       <UiDecor class="top-0 left-1/3 w-px h-full bg-gradient-to-b from-transparent via-primary-500/10 to-transparent" />
-      <UiDecor class="top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-primary-500/10 dark:via-secondary-500/10 to-transparent" />
+      <UiDecor class="top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-secondary-500/10 to-transparent" />
       <UiDecor class="inset-0 opacity-[0.015] pattern-grid-60" />
     </UiDecor>
-    <UiDecor class="top-0 right-0 w-48 h-48 border-r-2 border-t-2 border-primary-500/25 dark:border-secondary-500/25" />
+    <UiDecor class="top-0 right-0 w-48 h-48 border-r-2 border-t-2 border-secondary-500/25" />
     <UiDecor class="bottom-0 left-0 w-48 h-48 border-l-2 border-b-2 border-primary-500/25" />
 
     <UiContainer class="relative z-10">

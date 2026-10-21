@@ -1,13 +1,15 @@
 /**
  * Unit tests for AuroraFaq: the questions come from the storefront store, every answer stays in
  * the page for crawlers, the first one is open, toggling follows the accordion, and the section
- * hides itself when there are no questions.
+ * hides itself when there are no questions. The list is cut to the home limit, and the link to the
+ * full FAQ page shows only when questions were left out.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { faqFixture } from '~/tests/helpers/storefrontFixtures'
+import { HOME_FAQ_LIMIT } from '~/constants/faq'
 import AuroraFaq from '~/templates/aurora/sections/AuroraFaq.vue'
 import { stubAuroraGlobals } from '../auroraGlobals'
 
@@ -68,6 +70,25 @@ describe('AuroraFaq', () => {
 
     expect(wrapper.find('[data-testid="ui-accordion-toggle-1"]').attributes('aria-expanded')).toBe('true')
     expect(wrapper.find('[data-testid="ui-accordion-toggle-0"]').attributes('aria-expanded')).toBe('false')
+  })
+
+  it('lists at most the home limit and links to the full FAQ page when more exist', async () => {
+    api.fetchFaqs.mockResolvedValue(Array.from({ length: HOME_FAQ_LIMIT + 3 }, (_, index) => faqFixture(index + 1)))
+
+    const wrapper = await mountSection()
+
+    expect(wrapper.findAll('[data-testid^="ui-accordion-toggle-"]')).toHaveLength(HOME_FAQ_LIMIT)
+    expect(wrapper.text()).not.toContain(`Example question ${HOME_FAQ_LIMIT + 1}?`)
+    expect(wrapper.find('[data-testid="faq-view-all"]').attributes('href')).toBe('/faq')
+  })
+
+  it('has no view-all link when every question fits the limit', async () => {
+    api.fetchFaqs.mockResolvedValue(Array.from({ length: HOME_FAQ_LIMIT }, (_, index) => faqFixture(index + 1)))
+
+    const wrapper = await mountSection()
+
+    expect(wrapper.findAll('[data-testid^="ui-accordion-toggle-"]')).toHaveLength(HOME_FAQ_LIMIT)
+    expect(wrapper.find('[data-testid="faq-view-all"]').exists()).toBe(false)
   })
 
   it('renders nothing when there are no questions', async () => {

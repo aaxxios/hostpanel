@@ -3,7 +3,7 @@
     <!-- Animated background -->
     <UiDecor class="inset-0 overflow-hidden">
       <UiDecor class="top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/30 rounded-full blur-[120px] animate-blob" />
-      <UiDecor class="top-1/3 right-1/4 w-[600px] h-[600px] bg-primary-500/30 dark:bg-secondary-500/30 rounded-full blur-[120px] animate-blob animation-delay-2000" />
+      <UiDecor class="top-1/3 right-1/4 w-[600px] h-[600px] bg-secondary-500/30 rounded-full blur-[120px] animate-blob animation-delay-2000" />
       <UiDecor class="bottom-0 left-1/2 w-[400px] h-[400px] bg-cyan-500/20 rounded-full blur-[120px] animate-blob animation-delay-4000" />
       <UiDecor class="inset-0 opacity-[0.02] pattern-grid-50" />
       <!-- Vignette for depth -->
@@ -31,7 +31,7 @@
             class="block animate-reveal-up motion-reduce:animate-none"
             :class="revealDelay(300 + index * 150)"
           >
-            <span :class="[GRADIENT_DELAYS[index % GRADIENT_DELAYS.length], 'block bg-gradient-to-r from-cyan-400 via-primary-400 to-primary-400 dark:to-secondary-400 bg-clip-text text-transparent animate-gradient bg-300 drop-shadow-2xl']">{{ line }}</span>
+            <span :class="[GRADIENT_DELAYS[index % GRADIENT_DELAYS.length], 'block bg-gradient-to-r from-cyan-400 via-primary-400 to-secondary-600 dark:to-secondary-400 bg-clip-text text-transparent animate-gradient bg-300 drop-shadow-2xl']">{{ line }}</span>
           </span>
         </UiHeading>
 
@@ -123,7 +123,7 @@
         :key="index"
         :class="[particle, 'w-1 h-1 bg-primary-500/30 rounded-full animate-float-particle']"
       />
-      <UiDecor class="top-12 right-12 w-48 h-48 border-r border-t border-primary-500/10 dark:border-secondary-500/10 rounded-tr-[40px] hidden md:block" />
+      <UiDecor class="top-12 right-12 w-48 h-48 border-r border-t border-secondary-500/10 rounded-tr-[40px] hidden md:block" />
       <UiDecor class="bottom-12 left-12 w-48 h-48 border-l border-b border-primary-500/10 rounded-bl-[40px] hidden md:block" />
     </UiDecor>
   </section>

@@ -9,6 +9,7 @@
  * @module utils/productFamilies
  */
 
+import { FAMILY_BULLET_LIMIT } from '~/constants/planFeatureLimit'
 import { PRICING_CYCLES } from '~/constants/pricingCycle'
 import { PricingCycle } from '~/types/pricingcycle'
 import type { PortalProduct } from '~/types/portalproduct'
@@ -20,8 +21,8 @@ import type { ProductPricingRow } from '~/types/productpricingrow'
 import type { ProductFeature } from '~/types/productfeature'
 import { familyConfig, familyKey, isDomainGroup, isFamilyGroup, nameToKey, parseDescription } from '~/utils/catalogGroups'
 
-/** How many feature lines a family card aggregates from its plans. */
-const FAMILY_FEATURE_LIMIT = 6
+/** How many bullets a family card lists; every card shows the same number so a row lines up. */
+const FAMILY_FEATURE_LIMIT = FAMILY_BULLET_LIMIT
 
 /** Formats an amount in the payer's currency. */
 export type MoneyFormatter = (amount: number) => string
@@ -107,6 +108,46 @@ export const specificationBullets = (lines: readonly ProductFeature[]): string[]
 }
 
 /**
+ * The plan whose features speak for a whole family: the cheapest one that has a price.
+ *
+ * A family card used to mix lines from different plans ("Websites: 1" beside "Accounts: 50"),
+ * which described no real plan. One plan's lines always agree with each other. Ties and plans
+ * with no price keep catalogue order, so the choice is stable.
+ *
+ * @param plans The family's plans.
+ * @returns The representative plan, or undefined for an empty family.
+ */
+export const representativePlan = (plans: readonly PortalProduct[]): PortalProduct | undefined => {
+  let best: PortalProduct | undefined
+  let bestAmount = Number.POSITIVE_INFINITY
+  for (const plan of plans) {
+    const amount = firstOfferedPrice(plan.pricing)?.amount ?? Number.POSITIVE_INFINITY
+    if (!best || amount < bestAmount) {
+      best = plan
+      bestAmount = amount
+    }
+  }
+  return best
+}
+
+/**
+ * The bullets of a family card, all taken from its representative plan.
+ *
+ * @param plan The representative plan.
+ * @param specifications Specification lines of the plan's group.
+ * @returns At most {@link FAMILY_FEATURE_LIMIT} bullets: the plan's own specification lines, or
+ * the feature lines of its description when it has none; empty when it has neither.
+ */
+export const familyBullets = (plan: PortalProduct | undefined, specifications: readonly ProductFeature[]): string[] => {
+  if (!plan) {
+    return []
+  }
+  const own = specificationBullets(specifications.filter(line => line.productId === plan.id))
+  const bullets = own.length > 0 ? own : parseDescription(plan.description || '').features.filter(Boolean)
+  return bullets.slice(0, FAMILY_FEATURE_LIMIT)
+}
+
+/**
  * The key a product answers to in an address: its slug, or its normalised name when it has none.
  *
  * @param product The catalogue product.
@@ -120,9 +161,8 @@ const productKeyOf = (product: PortalProduct): string => product.slug?.trim() ||
  * Each family group becomes a family named by its group and its parent product (the one whose slug
  * or name is the family key, when there is one) and priced by its other plans; a group whose only
  * product is the parent is priced by the parent alone, and a group with no products is left out.
- * The card's feature list is the unique feature lines of every plan's description; a group whose
- * descriptions hold none falls back to its specification lines, and the list is empty when neither
- * exists. A group that sells domain names is left out: the `leading` domains card stands for it, so
+ * The card's description is the group's own; its bullets all come from one representative plan
+ * (the cheapest, see {@link representativePlan}) so they agree with each other. A group that sells domain names is left out: the `leading` domains card stands for it, so
  * domains are shown once.
  *
  * @param groups The catalogue's product groups.
@@ -156,13 +196,6 @@ export const buildProductFamilies = (
       continue
     }
 
-    const featureSet = new Set<string>()
-    for (const product of inGroup) {
-      for (const feature of parseDescription(product.description || '').features) {
-        featureSet.add(feature)
-      }
-    }
-
     items.push({
       id: key,
       gid: group.id,
@@ -170,8 +203,9 @@ export const buildProductFamilies = (
       // A family has no tagline: the catalogue endpoint sends none. Only the static domains card
       // carries one, and it comes from the locale files.
       tagline: '',
-      description: parseDescription((parent ?? plans[0])?.description || '').summary,
-      features: (featureSet.size > 0 ? Array.from(featureSet).filter(Boolean) : specificationBullets(specifications(group.id))).slice(0, FAMILY_FEATURE_LIMIT),
+      // The family's own sentence comes from its group; a plan's blurb is only the fallback.
+      description: group.description?.trim() || parseDescription((parent ?? plans[0])?.description || '').summary,
+      features: familyBullets(representativePlan(plans), specifications(group.id)),
       pricing: buildPricingRows(plans, format, payerCode),
     })
   }

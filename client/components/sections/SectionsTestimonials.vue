@@ -2,11 +2,11 @@
   <section v-if="testimonials.length" class="py-20 bg-ui-page relative overflow-hidden" data-testid="sections-testimonials">
     <!-- Background decorations -->
     <UiDecor class="inset-0">
-      <UiDecor class="inset-0 bg-gradient-to-r from-primary-500/5 via-transparent to-primary-500/5 dark:to-secondary-500/5" />
+      <UiDecor class="inset-0 bg-gradient-to-r from-primary-500/5 via-transparent to-secondary-500/5" />
       <UiDecor class="top-0 left-0 w-1/2 h-1/2 bg-primary-500/10 rounded-full blur-[150px]" />
-      <UiDecor class="bottom-0 right-0 w-1/3 h-1/3 bg-primary-500/10 dark:bg-secondary-500/10 rounded-full blur-[120px]" />
+      <UiDecor class="bottom-0 right-0 w-1/3 h-1/3 bg-secondary-500/10 rounded-full blur-[120px]" />
       <UiDecor class="top-1/4 right-1/4 w-2 h-2 bg-primary-400/60 rounded-full animate-float [animation-delay:0.8s]" />
-      <UiDecor class="bottom-1/3 left-1/4 w-3 h-3 bg-primary-400/50 dark:bg-secondary-400/50 rounded-full animate-float [animation-delay:1.5s]" />
+      <UiDecor class="bottom-1/3 left-1/4 w-3 h-3 bg-secondary-600/50 dark:bg-secondary-400/50 rounded-full animate-float [animation-delay:1.5s]" />
       <UiDecor class="top-2/3 right-1/3 w-2 h-2 bg-cyan-400/60 rounded-full animate-float [animation-delay:2.3s]" />
       <UiDecor class="top-1/2 left-10 w-32 h-32 rounded-full border border-gray-200 dark:border-white/5" />
       <UiDecor class="bottom-1/4 right-20 w-24 h-24 rounded-full border border-gray-200 dark:border-white/5" />
@@ -15,7 +15,7 @@
     <UiContainer class="relative z-10">
       <MarketingSectionHeader class="mb-10" :badge="$t('testimonials.badge')" :subtitle="$t('testimonials.subtitle')">
         <template #title>
-          {{ $t('testimonials.heading') }} <span class="text-primary-700 dark:text-secondary-400">{{ $t('testimonials.headingHighlight') }}</span> {{ $t('testimonials.headingEnd') }}
+          {{ $t('testimonials.heading') }} <span class="text-secondary-700 dark:text-secondary-400">{{ $t('testimonials.headingHighlight') }}</span> {{ $t('testimonials.headingEnd') }}
         </template>
       </MarketingSectionHeader>
 
@@ -68,7 +68,7 @@
                       <div>
                         <div class="font-semibold text-gray-900 dark:text-white">{{ testimonial.name }}</div>
                         <div v-if="testimonial.role" class="text-xs text-gray-700 dark:text-gray-300">{{ testimonial.role }}</div>
-                        <div v-if="testimonial.company" class="text-xs text-primary-700 dark:text-secondary-400">{{ testimonial.company }}</div>
+                        <div v-if="testimonial.company" class="text-xs text-secondary-700 dark:text-secondary-400">{{ testimonial.company }}</div>
                       </div>
                     </div>
 
@@ -82,7 +82,7 @@
 
                 <!-- Corner decorations -->
                 <UiDecor class="top-0 left-0 w-14 h-14 border-l-2 border-t-2 border-primary-500/40 rounded-tl-xl" />
-                <UiDecor class="bottom-0 right-0 w-14 h-14 border-r-2 border-b-2 border-primary-500/40 dark:border-secondary-500/40 rounded-br-xl" />
+                <UiDecor class="bottom-0 right-0 w-14 h-14 border-r-2 border-b-2 border-secondary-500/40 rounded-br-xl" />
               </UiCard>
             </SwiperSlide>
           </Swiper>
@@ -101,7 +101,7 @@
     </UiContainer>
 
     <!-- Section corner decorations -->
-    <UiDecor class="top-0 right-0 w-40 h-40 border-r-2 border-t-2 border-primary-500/20 dark:border-secondary-500/20" />
+    <UiDecor class="top-0 right-0 w-40 h-40 border-r-2 border-t-2 border-secondary-500/20" />
     <UiDecor class="bottom-0 left-0 w-40 h-40 border-l-2 border-b-2 border-primary-500/20" />
   </section>
 </template>

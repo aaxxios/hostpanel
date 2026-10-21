@@ -38,6 +38,8 @@ const stored: Product = {
   pricing: { monthly: 10, annual: null },
   prices: [{ currencyCode: 'USD', monthly: 10, annual: null }],
   serverGroupId: null,
+  isFeatured: true,
+  sortOrder: 4,
 }
 
 /** Answers for the two lists the dialog loads on mount. */
@@ -111,7 +113,29 @@ describe('ProductFormModal', () => {
       type: 'Vps',
       prices: [{ currencyCode: 'USD', monthly: null, annual: null }],
       serverGroupId: null,
+      isFeatured: false,
+      sortOrder: 0,
     }]])
+  })
+
+  it('emits the recommended flag and the sort order the operator set', async () => {
+    stubRouteTable(lists)
+    const { wrapper } = await mountScreen(ProductFormModal, { product: null, groups, saving: false })
+
+    await wrapper.get('[data-testid="product-form-name"]').setValue('Plan')
+    await wrapper.get('[data-testid="product-form-featured"]').trigger('click')
+    await wrapper.get('[data-testid="product-form-sort-order"] input').setValue('7')
+    await wrapper.get('[data-testid="product-form"]').trigger('submit')
+
+    expect(wrapper.emitted('save')?.[0]?.[0]).toMatchObject({ isFeatured: true, sortOrder: 7 })
+  })
+
+  it('opens an existing product with its recommended flag and sort order', async () => {
+    stubRouteTable(lists)
+    const { wrapper } = await mountScreen(ProductFormModal, { product: stored, groups, saving: false })
+
+    expect(wrapper.get('[data-testid="product-form-featured"]').attributes('aria-checked')).toBe('true')
+    expect((wrapper.get('[data-testid="product-form-sort-order"] input').element as HTMLInputElement).value).toBe('4')
   })
 
   it('opens an existing product without the type cards and with its values', async () => {

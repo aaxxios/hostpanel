@@ -2,31 +2,93 @@
  * Unit tests for AuroraHeader: navigation, the brand mark or the uploaded logo pair, the cart
  * button, signed-in versus signed-out controls, and the narrow-screen menu.
  */
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { reactive } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import AuroraHeader from '~/templates/aurora/layout/AuroraHeader.vue'
+import { HomeSectionId } from '~/types/homesectionid'
 import { stubAuroraGlobals } from '../auroraGlobals'
+
+/**
+ * Stands in for the auto-imported `useRoute`.
+ *
+ * @param hash - The route hash to report.
+ */
+const stubRoute = (hash = ''): void => {
+  vi.stubGlobal('useRoute', () => reactive({ path: '/', hash }))
+}
 
 /** The language switcher and theme toggle have their own tests; here they only need to exist. */
 const STUBS = { UiLanguageSwitcher: true, UiThemeToggle: true }
 
 describe('AuroraHeader', () => {
+  beforeEach(() => {
+    stubRoute()
+  })
+
   it('links the five navigation entries through the ids the e2e specs use', () => {
     stubAuroraGlobals()
+    stubRoute()
     const wrapper = mountWithKit(AuroraHeader, { stubs: STUBS })
 
     expect(wrapper.find('[data-testid="nav-hosting"]').attributes('href')).toBe('/hosting')
     expect(wrapper.find('[data-testid="nav-domains"]').attributes('href')).toBe('/domains')
+    expect(wrapper.find('[data-testid="nav-services"]').attributes('href')).toBe('/#services')
+    expect(wrapper.find('[data-testid="nav-process"]').attributes('href')).toBe('/#process')
     expect(wrapper.find('[data-testid="nav-faq"]').attributes('href')).toBe('/faq')
     expect(wrapper.find('[data-testid="nav-cart"]').attributes('href')).toBe('/cart')
   })
 
   it('emphasises the current entry only', () => {
     stubAuroraGlobals()
+    stubRoute()
     const wrapper = mountWithKit(AuroraHeader, { props: { active: 'domains' }, stubs: STUBS })
 
     expect(wrapper.find('[data-testid="nav-domains"]').classes()).toContain('font-semibold')
     expect(wrapper.find('[data-testid="nav-hosting"]').classes()).not.toContain('font-semibold')
+    expect(wrapper.find('[data-testid="nav-domains"]').attributes('aria-current')).toBe('page')
+    expect(wrapper.find('[data-testid="nav-hosting"]').attributes('aria-current')).toBeUndefined()
+  })
+
+  it('marks the home-page section named by the route hash as current', () => {
+    stubAuroraGlobals()
+    stubRoute(`#${HomeSectionId.Process}`)
+    const wrapper = mountWithKit(AuroraHeader, { props: { active: 'hosting' }, stubs: STUBS })
+
+    expect(wrapper.find('[data-testid="nav-process"]').classes()).toEqual(expect.arrayContaining(['font-semibold', 'text-ac1']))
+    expect(wrapper.find('[data-testid="nav-hosting"]').classes()).not.toContain('font-semibold')
+  })
+
+  it('gives the entries and Sign in the primary text colour and a brand hover', () => {
+    stubAuroraGlobals()
+    stubRoute()
+    const wrapper = mountWithKit(AuroraHeader, { stubs: STUBS })
+
+    for (const id of ['nav-hosting', 'nav-sign-in']) {
+      expect(wrapper.find(`[data-testid="${id}"]`).classes()).toEqual(expect.arrayContaining(['text-tx', 'hover:text-ac1', 'hover:after:scale-x-100']))
+    }
+  })
+
+  it('draws the cart and the menu toggle in the same frame, with the count badge on the cart', () => {
+    stubAuroraGlobals()
+    stubRoute()
+    const wrapper = mountWithKit(AuroraHeader, { stubs: STUBS })
+
+    for (const id of ['nav-cart', 'nav-menu-toggle']) {
+      expect(wrapper.find(`[data-testid="${id}"]`).classes()).toEqual(expect.arrayContaining(['h-10', 'w-10', 'rounded-xl', 'border-line2']))
+    }
+    expect(wrapper.find('[data-testid="nav-cart"]').classes()).toContain('relative')
+  })
+
+  it('hands the pickers and the toggle the shared control frame', () => {
+    stubAuroraGlobals()
+    stubRoute()
+    const wrapper = mountWithKit(AuroraHeader, { stubs: { UiLanguageSwitcher: true, UiCurrencySwitcher: true } })
+
+    for (const name of ['UiLanguageSwitcher', 'UiCurrencySwitcher']) {
+      expect(wrapper.findComponent({ name }).props('triggerClass')).toEqual(expect.stringContaining('rounded-xl border border-line2'))
+    }
+    expect(wrapper.find('[data-testid="theme-toggle"]').classes()).toEqual(expect.arrayContaining(['h-10', 'w-10', 'rounded-xl', 'border-line2']))
   })
 
   it('draws the bundled cube mark and the site name, never a letter tile, when no logo is uploaded', () => {

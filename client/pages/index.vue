@@ -94,7 +94,7 @@ const { lookupResults: domainResults, lookupPending: domainPending, offeredTlds 
 const search = domainsStore.searchOfferedTlds
 
 /** The hosting plans as cards, each linking to its configure page. */
-const plans = computed(() => catalogStore.planCards(id => localePath(`/configure/${id}`)))
+const plans = computed(() => catalogStore.planCards(id => localePath(`/configure/${id}`), catalogStore.featuresFor(HOSTING_GROUP_ID)))
 
 onMounted(() => {
   currencyStore.init()

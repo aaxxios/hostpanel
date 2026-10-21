@@ -19,7 +19,7 @@
       </div>
 
       <!-- Catalogue grid -->
-      <UiGrid cols="3" gap="lg" class="md:gap-8">
+      <UiBalancedGrid :count="products.length" data-testid="product-grid">
         <UiAccent v-for="(product, index) in products" :key="product.id" :color="product.color">
           <UiCard
             hover
@@ -35,7 +35,7 @@
               <div class="relative flex items-start gap-4 mb-6">
                 <UiAccentTile :icon="product.icon" class="group-hover:scale-110" />
                 <div class="flex-1">
-                  <UiHeading :level="3" class="text-xl font-bold group-hover:text-primary-700 dark:group-hover:text-primary-300 transition-colors">
+                  <UiHeading :level="3" class="break-words text-xl font-bold group-hover:text-primary-700 dark:group-hover:text-primary-300 transition-colors">
                     {{ product.name }}
                   </UiHeading>
                   <!-- Only the static domains card carries a tagline; families have no such field. -->
@@ -44,12 +44,13 @@
               </div>
 
               <!-- Summary -->
-              <UiText tone="muted" size="sm" class="relative leading-relaxed mb-6 flex-1">{{ product.description }}</UiText>
+              <!-- Clamped: a long description never makes one card taller than the others in its row. -->
+              <UiText tone="muted" size="sm" class="relative leading-relaxed mb-6 flex-1 line-clamp-3 break-words">{{ product.description }}</UiText>
 
               <!-- Feature highlights -->
               <div v-if="product.features.length" class="relative space-y-2 mb-8">
-                <div v-for="(feature, featureIndex) in product.features.slice(0, 3)" :key="featureIndex" class="flex items-center gap-2">
-                  <CheckCircle :size="16" :stroke-width="2" :class="accent.text" />
+                <div v-for="(feature, featureIndex) in product.features.slice(0, FAMILY_BULLET_LIMIT)" :key="featureIndex" class="flex items-center gap-2">
+                  <CheckCircle :size="16" :stroke-width="2" :class="[accent.text, 'shrink-0']" />
                   <span class="text-xs text-gray-700 dark:text-gray-300 line-clamp-1">{{ feature }}</span>
                 </div>
               </div>
@@ -65,11 +66,11 @@
             </NuxtLink>
           </UiCard>
         </UiAccent>
-      </UiGrid>
+      </UiBalancedGrid>
     </UiContainer>
 
     <!-- Decorative rule -->
-    <UiDecor class="bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary-500/30 dark:via-secondary-500/30 to-transparent" />
+    <UiDecor class="bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-secondary-500/30 to-transparent" />
   </section>
 </template>
 
@@ -82,6 +83,7 @@
  * links there; one without links to its detail page. A family with no feature lines shows no list.
  */
 
+import { FAMILY_BULLET_LIMIT } from '~/constants/planFeatureLimit'
 import { revealDelay } from '~/utils/reveal'
 import { CheckCircle } from 'lucide-vue-next'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'

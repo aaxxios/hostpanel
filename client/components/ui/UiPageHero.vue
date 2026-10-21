@@ -3,11 +3,11 @@
     <UiBackdrop variant="aurora" />
     <div
       aria-hidden="true"
-      class="pointer-events-none absolute right-0 top-0 h-48 w-48 border-r-2 border-t-2 border-primary-500/30 dark:border-secondary-500/30"
+      class="pointer-events-none absolute right-0 top-0 h-48 w-48 border-r-2 border-t-2 border-secondary-500/30"
     />
     <div
       aria-hidden="true"
-      class="pointer-events-none absolute bottom-0 left-0 h-48 w-48 border-b-2 border-l-2 border-primary-500/30 dark:border-secondary-500/30"
+      class="pointer-events-none absolute bottom-0 left-0 h-48 w-48 border-b-2 border-l-2 border-secondary-500/30"
     />
 
     <UiContainer class="relative z-10 text-center">
@@ -33,7 +33,7 @@
           {{ title }}
           <UiGradientText
             v-if="highlight"
-            class="bg-gradient-to-r from-primary-600 to-primary-600 dark:from-primary-400 dark:to-secondary-400"
+            class="bg-gradient-to-r from-primary-600 to-secondary-600 dark:from-primary-400 dark:to-secondary-400"
           >
             {{ highlight }}
           </UiGradientText>

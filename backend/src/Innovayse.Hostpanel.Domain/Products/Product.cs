@@ -43,6 +43,21 @@ public sealed class Product : BaseEntity, IAggregateRoot
     /// <summary>Gets the optional FK to the server group used for provisioning.</summary>
     public int? ServerGroupId { get; private set; }
 
+    /// <summary>
+    /// Gets whether the operator marked this product as the group's recommended plan. The storefront
+    /// shows a "Recommended" badge and a highlighted card for it. At most one product per group
+    /// should carry the flag: the create and update handlers clear it on the group's other products
+    /// when it is set here, and the storefront falls back to the first featured product in
+    /// <see cref="SortOrder"/> order if legacy data ever holds more than one.
+    /// </summary>
+    public bool IsFeatured { get; private set; }
+
+    /// <summary>
+    /// Gets the operator-defined position inside the group, lowest first. Ties fall back to the
+    /// product name, so the default of <c>0</c> keeps the previous alphabetical order.
+    /// </summary>
+    public int SortOrder { get; private set; }
+
     /// <summary>Gets the UTC timestamp when the product was created.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
@@ -73,6 +88,8 @@ public sealed class Product : BaseEntity, IAggregateRoot
     /// <param name="monthlyPrice">Monthly price (≥ 0).</param>
     /// <param name="annualPrice">Annual price (≥ 0).</param>
     /// <param name="serverGroupId">Optional FK to the server group for provisioning.</param>
+    /// <param name="isFeatured">Whether the product is the group's recommended plan.</param>
+    /// <param name="sortOrder">Position inside the group, lowest first.</param>
     /// <returns>A new active <see cref="Product"/>.</returns>
     public static Product Create(
         int groupId,
@@ -84,7 +101,9 @@ public sealed class Product : BaseEntity, IAggregateRoot
         ProductType type,
         decimal monthlyPrice,
         decimal annualPrice,
-        int? serverGroupId = null)
+        int? serverGroupId = null,
+        bool isFeatured = false,
+        int sortOrder = 0)
     {
         var product = new Product
         {
@@ -99,6 +118,8 @@ public sealed class Product : BaseEntity, IAggregateRoot
             MonthlyPrice = monthlyPrice,
             AnnualPrice = annualPrice,
             ServerGroupId = serverGroupId,
+            IsFeatured = isFeatured,
+            SortOrder = sortOrder,
             CreatedAt = DateTimeOffset.UtcNow,
         };
         product.AddDomainEvent(new ProductCreatedEvent(0, name, groupId));
@@ -116,7 +137,19 @@ public sealed class Product : BaseEntity, IAggregateRoot
     /// <param name="monthlyPrice">New monthly price.</param>
     /// <param name="annualPrice">New annual price.</param>
     /// <param name="serverGroupId">Optional FK to the server group, or null to clear.</param>
-    public void Update(string name, string? description, string? website, string? slug, string? packageName, decimal monthlyPrice, decimal annualPrice, int? serverGroupId)
+    /// <param name="isFeatured">New recommended-plan flag, or null to keep the current one.</param>
+    /// <param name="sortOrder">New position inside the group, or null to keep the current one.</param>
+    public void Update(
+        string name,
+        string? description,
+        string? website,
+        string? slug,
+        string? packageName,
+        decimal monthlyPrice,
+        decimal annualPrice,
+        int? serverGroupId,
+        bool? isFeatured = null,
+        int? sortOrder = null)
     {
         Name = name;
         Description = description;
@@ -126,7 +159,26 @@ public sealed class Product : BaseEntity, IAggregateRoot
         MonthlyPrice = monthlyPrice;
         AnnualPrice = annualPrice;
         ServerGroupId = serverGroupId;
+        if (isFeatured.HasValue)
+        {
+            IsFeatured = isFeatured.Value;
+        }
+
+        if (sortOrder.HasValue)
+        {
+            SortOrder = sortOrder.Value;
+        }
     }
+
+    /// <summary>Marks the product as its group's recommended plan.</summary>
+    public void Feature() => IsFeatured = true;
+
+    /// <summary>Removes the recommended-plan mark.</summary>
+    public void Unfeature() => IsFeatured = false;
+
+    /// <summary>Moves the product to a position inside its group.</summary>
+    /// <param name="sortOrder">The new position, lowest first.</param>
+    public void SetSortOrder(int sortOrder) => SortOrder = sortOrder;
 
     /// <summary>Marks the product inactive so it cannot be ordered.</summary>
     public void Deactivate() => Status = ProductStatus.Inactive;

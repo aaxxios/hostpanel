@@ -21,6 +21,13 @@ describe('AuroraFooter', () => {
     expect(wrapper.find('a[href="/domains/transfer"]').exists()).toBe(true)
   })
 
+  it('keeps the product catalogue reachable from the company column', () => {
+    stubAuroraGlobals()
+    const labels = mountWithKit(AuroraFooter).findAll('a[href="/products"]').map((link) => link.text())
+
+    expect(labels).toContain('aurora.footer.services')
+  })
+
   it('labels the /knowledgebase link in the company column "knowledgebase", not "blog"', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(AuroraFooter)

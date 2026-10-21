@@ -1957,6 +1957,9 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsFeatured")
+                        .HasColumnType("boolean");
+
                     b.Property<decimal>("MonthlyPrice")
                         .HasColumnType("numeric(18,4)");
 
@@ -1975,6 +1978,9 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<string>("Slug")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Status")
                         .IsRequired()

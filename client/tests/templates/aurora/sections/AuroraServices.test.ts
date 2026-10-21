@@ -4,9 +4,27 @@
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import AuroraServices from '~/templates/aurora/sections/AuroraServices.vue'
+import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
+import { HomeSectionId } from '~/types/homesectionid'
 import { stubAuroraGlobals } from '../auroraGlobals'
 
 describe('AuroraServices', () => {
+  it('carries the anchor id the header links to, with room above it', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(AuroraServices)
+
+    expect(wrapper.attributes('id')).toBe(HomeSectionId.Services)
+    expect(wrapper.classes()).toContain(HOME_SECTION_SCROLL_MARGIN_CLASS)
+  })
+
+  it('keeps the full catalogue one click away', () => {
+    stubAuroraGlobals()
+    const link = mountWithKit(AuroraServices).find('[data-testid="services-view-all"]')
+
+    expect(link.attributes('href')).toBe('/products')
+    expect(link.text()).toBe('aurora.services.viewAll')
+  })
+
   it('renders the four services with their copy', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(AuroraServices)

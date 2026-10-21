@@ -1,5 +1,5 @@
 <template>
-  <UiStack gap="none" class="min-h-dvh bg-ui-page py-10 md:py-16" data-testid="configure">
+  <UiStack gap="none" class="bg-ui-page py-10 md:py-16" data-testid="configure">
     <UiContainer>
       <div class="mx-auto max-w-6xl">
         <UiLink :to="localePath('/products')" tone="muted" :underline="false" class="inline-flex items-center gap-2 text-sm mb-8" testid="configure-back">

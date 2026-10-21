@@ -80,22 +80,40 @@
       </UiStack>
     </UiCard>
 
-    <UiGrid v-if="paidPlans.length" cols="auto" gap="lg" class="mt-10">
+    <UiBalancedGrid v-if="paidPlans.length" :count="paidPlans.length" class="mt-10" data-testid="plan-grid">
       <UiCard
         v-for="plan in paidPlans"
         :key="plan.id"
         tone="bare"
         padding="xl"
         :data-testid="`plan-card-${plan.id}`"
-        class="flex h-full flex-col border-line bg-surf shadow-card transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-ac1"
+        class="relative flex h-full flex-col bg-surf shadow-card transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-ac1"
+        :class="plan.isFeatured ? 'border-ac1' : 'border-line'"
       >
-        <UiText as="span" size="inherit" tone="inherit" weight="bold" class="text-[17px] text-tx">{{ plan.name }}</UiText>
-        <UiText v-if="plan.description" size="sm" tone="inherit" class="mt-1.5 text-mut2">{{ plan.description }}</UiText>
+        <!-- The operator's recommended plan: a badge on the card edge and a brand-coloured border. -->
+        <UiBadge
+          v-if="plan.isFeatured"
+          variant="primary"
+          rounded
+          size="sm"
+          class="absolute -top-3 left-6 uppercase tracking-[0.1em]"
+          :data-testid="`plan-recommended-${plan.id}`"
+        >
+          {{ t('aurora.plans.recommended') }}
+        </UiBadge>
+        <UiText as="span" size="inherit" tone="inherit" weight="bold" class="break-words text-[17px] text-tx">{{ plan.name }}</UiText>
+        <!-- Clamped so a long description never makes one card taller than its row. -->
+        <UiText v-if="plan.description" size="sm" tone="inherit" class="mt-1.5 line-clamp-2 break-words text-mut2">{{ plan.description }}</UiText>
 
         <UiList v-if="plan.features.length" list-style="bare" class="mt-3.5 flex flex-col gap-2">
-          <UiListItem v-for="line in plan.features" :key="line" class="flex items-start gap-2">
+          <UiListItem v-for="line in visibleFeatures(plan)" :key="line" class="flex items-start gap-2">
             <Icon name="lucide:check" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-ok" />
-            <UiText as="span" size="inherit" tone="inherit" class="min-w-0 text-[13px] text-tx2">{{ line }}</UiText>
+            <UiText as="span" size="inherit" tone="inherit" class="min-w-0 break-words text-[13px] text-tx2">{{ line }}</UiText>
+          </UiListItem>
+          <UiListItem v-if="hiddenFeatureCount(plan) > 0" :data-testid="`plan-more-${plan.id}`">
+            <NuxtLink :to="plan.href" class="text-[13px] text-ac1 hover:underline">
+              {{ t('aurora.plans.moreFeatures', { count: hiddenFeatureCount(plan) }) }}
+            </NuxtLink>
           </UiListItem>
         </UiList>
 
@@ -121,7 +139,7 @@
           </UiButton>
         </UiStack>
       </UiCard>
-    </UiGrid>
+    </UiBalancedGrid>
 
     <!--
       A fallback, not a companion to the per-card lists above. An operator whose
@@ -156,6 +174,7 @@
  * Presentation only — plans and their formatted prices arrive as props, and the
  * billing-period toggle is reported upward rather than owned here.
  */
+import { PLAN_FEATURE_LIMIT } from '~/constants/planFeatureLimit'
 import { BRAND_BUTTON, LINE_BUTTON } from '~/templates/aurora/buttons'
 import { EYEBROW_CLASS, SECTION_TITLE_CLASS } from '~/templates/aurora/typography'
 import type { PlanCard } from '~/types/plancard'
@@ -169,7 +188,9 @@ const props = withDefaults(defineProps<{
   yearly?: boolean
   /** Off on the hosting page, whose own hero already states the same thing. */
   showHeader?: boolean
-}>(), { plans: () => [], yearly: false, showHeader: true })
+  /** Most feature lines one card lists; the rest collapse into a "+N more" link. */
+  maxFeatures?: number
+}>(), { plans: () => [], yearly: false, showHeader: true, maxFeatures: PLAN_FEATURE_LIMIT })
 
 /** Events this component raises. */
 const emit = defineEmits<{
@@ -188,6 +209,22 @@ const freePlan = computed(() => props.plans.find(plan => plan.isFree))
 
 /** Every other plan, compared on price in the grid. */
 const paidPlans = computed(() => props.plans.filter(plan => !plan.isFree))
+
+/**
+ * The feature lines a card lists.
+ *
+ * @param plan - The plan.
+ * @returns At most `maxFeatures` lines, so every card in a row stays the same height.
+ */
+const visibleFeatures = (plan: PlanCard): string[] => plan.features.slice(0, props.maxFeatures)
+
+/**
+ * How many feature lines a card leaves out.
+ *
+ * @param plan - The plan.
+ * @returns The number of lines behind the "+N more" link; zero when all fit.
+ */
+const hiddenFeatureCount = (plan: PlanCard): number => Math.max(0, plan.features.length - props.maxFeatures)
 
 /** Whether the shared "included in every plan" list stands in for per-plan feature lines. */
 const showIncluded = computed(() => props.plans.length > 0 && !props.plans.some(plan => plan.features.length))

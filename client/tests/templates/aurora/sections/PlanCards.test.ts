@@ -5,6 +5,8 @@
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import PlanCards from '~/templates/aurora/sections/PlanCards.vue'
+import { balancedColumns } from '~/utils/balancedGrid'
+import type { PlanCard } from '~/types/plancard'
 import { stubAuroraGlobals, PLANS } from '../auroraGlobals'
 
 describe('PlanCards', () => {
@@ -98,5 +100,69 @@ describe('PlanCards', () => {
 
     expect(mountWithKit(PlanCards, { props: { plans: bare } }).find('[data-testid="plans-included"]').exists()).toBe(true)
     expect(mountWithKit(PlanCards, { props: { plans: PLANS } }).find('[data-testid="plans-included"]').exists()).toBe(false)
+  })
+
+  /**
+   * Builds `count` paid plans.
+   *
+   * @param count - How many plans.
+   * @param overrides - Fields shared by every plan.
+   * @returns The plans.
+   */
+  const paid = (count: number, overrides: Partial<PlanCard> = {}): PlanCard[] =>
+    Array.from({ length: count }, (_, i) => ({ ...PLANS[0]!, id: 100 + i, name: `Plan ${i}`, href: `/configure/${100 + i}`, ...overrides }))
+
+  it.each([1, 2, 5, 7])('balances %i plans in one centred grid with equal-height cards', (count) => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(PlanCards, { props: { plans: paid(count) } })
+    const grid = wrapper.find('[data-testid="plan-grid"]').element as HTMLElement
+
+    expect(wrapper.findAll('[data-testid^="plan-card-"]')).toHaveLength(count)
+    expect(grid.style.getPropertyValue('--ui-bg-cols')).toBe(String(balancedColumns(count)))
+    expect(wrapper.find('[data-testid="plan-card-100"]').classes()).toContain('h-full')
+  })
+
+  it('caps the feature list and links the rest as "+N more"', () => {
+    stubAuroraGlobals()
+    const features = Array.from({ length: 9 }, (_, i) => `Feature ${i}`)
+    const wrapper = mountWithKit(PlanCards, { props: { plans: paid(1, { features }), maxFeatures: 4 } })
+    const card = wrapper.find('[data-testid="plan-card-100"]')
+
+    expect(card.text()).toContain('Feature 3')
+    expect(card.text()).not.toContain('Feature 4')
+    expect(card.find('[data-testid="plan-more-100"]').exists()).toBe(true)
+  })
+
+  it('shows no "+N more" link when every line fits', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(PlanCards, { props: { plans: paid(1, { features: ['a', 'b'] }) } })
+
+    expect(wrapper.find('[data-testid="plan-more-100"]').exists()).toBe(false)
+  })
+
+  it('clamps a very long description and lets a long name wrap', () => {
+    stubAuroraGlobals()
+    const long = 'word '.repeat(300)
+    const card = mountWithKit(PlanCards, { props: { plans: paid(1, { name: long, description: long }) } }).find('[data-testid="plan-card-100"]')
+
+    expect(card.find('.line-clamp-2').exists()).toBe(true)
+    expect(card.find('.break-words').exists()).toBe(true)
+  })
+
+  it('badges the recommended plan and frames it with the brand border token', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(PlanCards, { props: { plans: paid(2).map((plan, index) => ({ ...plan, isFeatured: index === 1 })) } })
+
+    expect(wrapper.find('[data-testid="plan-recommended-101"]').text()).toContain('aurora.plans.recommended')
+    expect(wrapper.find('[data-testid="plan-card-101"]').classes()).toContain('border-ac1')
+    expect(wrapper.find('[data-testid="plan-recommended-100"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="plan-card-100"]').classes()).toContain('border-line')
+  })
+
+  it('shows no recommended badge when no plan is featured', () => {
+    stubAuroraGlobals()
+    const wrapper = mountWithKit(PlanCards, { props: { plans: paid(2) } })
+
+    expect(wrapper.find('[data-testid^="plan-recommended-"]').exists()).toBe(false)
   })
 })

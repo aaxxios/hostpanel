@@ -21,7 +21,7 @@
         direction="row"
         align="center"
         wrap
-        class="hidden min-w-0 flex-auto gap-x-[26px] gap-y-3 text-[15px] text-mut xl:flex"
+        class="hidden min-w-0 flex-auto gap-x-[26px] gap-y-3 text-[15px] xl:flex"
       >
         <UiLink
           v-for="link in navLinks"
@@ -30,8 +30,8 @@
           tone="inherit"
           :underline="false"
           :testid="`nav-${link.key}`"
-          class="rounded-lg px-2 py-1 hover:text-ac1"
-          :class="active === link.key ? 'font-semibold text-tx' : 'font-normal'"
+          :aria-current="activeKey === link.key ? 'page' : undefined"
+          :class="[NAV_LINK, activeKey === link.key ? NAV_LINK_ACTIVE : 'font-normal']"
         >
           {{ link.label }}
         </UiLink>
@@ -39,9 +39,9 @@
 
       <UiStack direction="row" align="center" gap="xs" class="shrink-0">
         <AuroraAppLauncher />
-        <UiLanguageSwitcher />
-        <UiCurrencySwitcher />
-        <UiThemeToggle />
+        <UiLanguageSwitcher :trigger-class="PICKER_CONTROL" />
+        <UiCurrencySwitcher :trigger-class="PICKER_CONTROL" />
+        <UiThemeToggle :variant="UiIconButtonVariant.Bare" :size="UiSize.Lg" :class="ICON_CONTROL" />
 
         <UiButton
           variant="bare"
@@ -49,14 +49,14 @@
           :title="t('aurora.nav.cart')"
           :aria-label="t('aurora.nav.cart')"
           data-testid="nav-cart"
-          class="relative h-10 w-10 rounded-xl border border-line2 text-tx2"
+          :class="[ICON_CONTROL, 'relative']"
         >
           <Icon name="lucide:shopping-cart" class="h-[19px] w-[19px]" />
           <UiTile
             v-if="cartCount > 0"
             size="sm"
             rounded
-            class="absolute -right-1.5 -top-1.5 bg-brand font-extrabold text-on-brand"
+            class="absolute -right-2 -top-2 z-10 bg-brand font-extrabold text-on-brand ring-2 ring-page"
             data-testid="nav-cart-count"
           >
             {{ cartCount }}
@@ -81,7 +81,7 @@
             tone="inherit"
             :underline="false"
             testid="nav-sign-in"
-            class="hidden px-1.5 text-[15px] text-mut hover:text-ac1 sm:inline-flex"
+            :class="[NAV_LINK, 'hidden text-[15px] sm:inline-flex']"
           >
             {{ t('aurora.nav.login') }}
           </UiLink>
@@ -102,7 +102,7 @@
           :aria-label="t('aurora.nav.menu')"
           :aria-expanded="menuOpen"
           data-testid="nav-menu-toggle"
-          class="h-10 w-10 rounded-xl border border-line2 text-tx2 xl:hidden"
+          :class="[ICON_CONTROL, 'xl:hidden']"
           @click="menuOpen = !menuOpen"
         >
           <Icon name="lucide:menu" class="h-[19px] w-[19px]" />
@@ -125,7 +125,8 @@
           tone="inherit"
           :underline="false"
           :testid="`nav-mobile-${link.key}`"
-          class="rounded-xl px-2 py-3 text-base text-tx"
+          :aria-current="activeKey === link.key ? 'page' : undefined"
+          :class="['rounded-xl px-2 py-3 text-base transition-colors hover:text-ac1', activeKey === link.key ? 'font-semibold text-ac1' : 'text-tx']"
           @click="menuOpen = false"
         >
           {{ link.label }}
@@ -192,6 +193,10 @@ import AppLogoLockup from '~/components/AppLogoLockup.vue'
 import AuroraAppLauncher from '~/templates/aurora/layout/AppLauncher.vue'
 import AuroraAccountMenu from '~/templates/aurora/layout/AccountMenu.vue'
 import { CLIENT_DASHBOARD_PATH } from '~/constants/clientRoutes'
+import { homeSectionFromHash, homeSectionPath } from '~/constants/homeSections'
+import { HomeSectionId } from '~/types/homesectionid'
+import { HEADER_CONTROL, NAV_LINK, NAV_LINK_ACTIVE } from '~/templates/aurora/buttons'
+import { UiIconButtonVariant, UiSize } from '~/utils/ui/enums'
 import { useCartStore } from '~/stores/cart'
 
 /** Props of the header. */
@@ -208,6 +213,13 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 /** The cart store. */
 const cart = useCartStore()
+/** The current route; its hash marks the home-page section the visitor jumped to. */
+const route = useRoute()
+
+/** Frame of the icon-only header controls (cart, theme toggle, menu toggle). */
+const ICON_CONTROL = `${HEADER_CONTROL} w-10`
+/** Frame of the header pickers (language, currency): the same box with room for text. */
+const PICKER_CONTROL = `${HEADER_CONTROL} gap-2 px-3`
 
 // Where "Sign in" goes is a deployment decision, not a constant: `sso` starts the
 // OIDC flow against the platform identity provider, `local` opens this product's
@@ -224,13 +236,18 @@ const menuOpen = ref(false)
 /** Number of lines in the cart, shown on the cart button. */
 const cartCount = computed(() => cart.items.length)
 
+/**
+ * The entry to mark as current: the section named by the route hash (Services, Process) when
+ * there is one, otherwise the key the page passed in.
+ */
+const activeKey = computed(() => homeSectionFromHash(route.hash ?? '') ?? active.value)
 
 /** Navigation entries, in display order. */
 const navLinks = computed(() => [
   { key: 'hosting', label: t('aurora.nav.hosting'), to: localePath('/hosting') },
   { key: 'domains', label: t('aurora.nav.domains'), to: localePath('/domains') },
-  { key: 'services', label: t('aurora.nav.services'), to: localePath('/products') },
-  { key: 'process', label: t('aurora.nav.process'), to: localePath('/contact') },
+  { key: HomeSectionId.Services, label: t('aurora.nav.services'), to: homeSectionPath(localePath, HomeSectionId.Services) },
+  { key: HomeSectionId.Process, label: t('aurora.nav.process'), to: homeSectionPath(localePath, HomeSectionId.Process) },
   { key: 'faq', label: t('aurora.nav.faq'), to: localePath('/faq') },
 ])
 </script>

@@ -58,3 +58,29 @@ export const buildComparisonRows = (
       byProduct.get(id)?.find(line => line.label === label)?.value ?? ''),
   }))
 }
+
+/** Fewest shared rows a comparison table needs before it adds value. */
+export const MIN_COMMON_ROWS = 2
+
+/** Fewest plans that must carry a line for it to count as shared. */
+export const MIN_SHARED_PLANS = 2
+
+/**
+ * How many rows at least two plans have a value for.
+ *
+ * @param rows Aligned comparison rows.
+ * @returns The count of shared rows.
+ */
+export const commonRowCount = (rows: readonly ComparisonRow[]): number =>
+  rows.filter(row => row.values.filter(value => value.trim() !== '').length >= MIN_SHARED_PLANS).length
+
+/**
+ * Whether the plans share enough lines for a comparison table to be worth showing.
+ *
+ * Plans whose specifications barely overlap would render a wall of "not included"; the table is
+ * hidden instead, and the plan cards carry the information.
+ *
+ * @param rows Aligned comparison rows.
+ * @returns True when at least {@link MIN_COMMON_ROWS} rows are shared.
+ */
+export const isComparable = (rows: readonly ComparisonRow[]): boolean => commonRowCount(rows) >= MIN_COMMON_ROWS

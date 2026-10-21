@@ -1,5 +1,5 @@
 <template>
-  <UiSection id="services" padding="lg" :contained="false" class="relative border-t border-line">
+  <UiSection :id="HomeSectionId.Services" padding="lg" :contained="false" :class="[HOME_SECTION_SCROLL_MARGIN_CLASS, 'relative border-t border-line']">
     <UiText tone="inherit" size="inherit" :class="[EYEBROW_CLASS, 'text-ac2']">{{ t('aurora.services.eyebrow') }}</UiText>
     <UiHeading :level="2" size="bare" :class="[SECTION_TITLE_CLASS, 'mt-3 max-w-[680px]']">
       {{ t('aurora.services.title') }}
@@ -21,16 +21,34 @@
         </UiStack>
       </UiCard>
     </UiGrid>
+
+    <!-- The header's Services entry lands here, so the full catalogue stays one click away. -->
+    <UiStack direction="row" class="mt-8">
+      <UiButton
+        variant="bare"
+        :to="localePath('/products')"
+        data-testid="services-view-all"
+        :class="[LINE_BUTTON, 'px-6 py-3 text-[15px]']"
+      >
+        {{ t('aurora.services.viewAll') }}
+      </UiButton>
+    </UiStack>
   </UiSection>
 </template>
 
 <script setup lang="ts">
 /** aurora services grid — four editorial cards (hosting, servers, domains, billing), each with an icon on a gradient tile, no data dependency. */
 import { Cpu, Globe, Receipt, Server } from 'lucide-vue-next'
+import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
+import { HomeSectionId } from '~/types/homesectionid'
+import { LINE_BUTTON } from '~/templates/aurora/buttons'
 import { EYEBROW_CLASS, SECTION_TITLE_CLASS } from '~/templates/aurora/typography'
 
 /** Translator for the active locale. */
 const { t } = useI18n()
+
+/** Prefixes a path with the active locale. */
+const localePath = useLocalePath()
 
 /** The four services: stable key, tile icon (white on the gradient), copy, and a named token class for the tile gradient. */
 const services = computed(() => [
