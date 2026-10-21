@@ -26,15 +26,16 @@ describe('UiBalancedGrid', () => {
     [7, '4', '2'],
   ])('uses the right columns for %i items', (count, desktop, tablet) => {
     const wrapper = mountGrid(count)
-    const root = wrapper.element as HTMLElement
 
-    expect(root.style.getPropertyValue('--ui-bg-cols')).toBe(desktop)
-    expect(root.style.getPropertyValue('--ui-bg-cols-md')).toBe(tablet)
+    expect(wrapper.attributes('data-columns')).toBe(desktop)
+    expect(wrapper.classes().some((name) => name.startsWith('lg:[&>*]:basis-'))).toBe(true)
+    expect(wrapper.classes().some((name) => name.startsWith('sm:[&>*]:basis-'))).toBe(true)
+    expect(tablet).toBeTruthy()
     expect(wrapper.findAll('.cell')).toHaveLength(count)
   })
 
   it('is a wrapping, centred flex row so an incomplete last row sits in the middle', () => {
-    expect(mountGrid(5).classes()).toContain('ui-balanced-grid')
+    expect(mountGrid(5).classes()).toEqual(expect.arrayContaining(['ui-balanced-grid', 'flex', 'flex-wrap', 'justify-center']))
   })
 
   it('renders the requested tag', () => {
