@@ -7,6 +7,7 @@ import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { partnerFixture } from '~/tests/helpers/storefrontFixtures'
 import SectionsPartners from '~/components/sections/SectionsPartners.vue'
+import { balancedColumns } from '~/utils/balancedGrid'
 
 /** The mocked storefront endpoints, re-created for every test. */
 const api = { fetchPartners: vi.fn(), fetchTestimonials: vi.fn(), fetchProjects: vi.fn(), fetchFaqs: vi.fn() }
@@ -92,5 +93,16 @@ describe('SectionsPartners', () => {
     const wrapper = await mountSection()
 
     expect(wrapper.find('[data-testid="sections-partners"]').exists()).toBe(false)
+  })
+
+  it('lays the cards out in the shared balanced grid, so no card is left alone on a row', async () => {
+    api.fetchPartners.mockResolvedValue(Array.from({ length: 3 }, (_, index) => partnerFixture(index + 1)))
+
+    const wrapper = await mountSection()
+
+    const grid = wrapper.find('[data-testid="sections-partners-static"]')
+    expect(grid.exists()).toBe(true)
+    expect(grid.attributes('data-columns')).toBe(String(balancedColumns(3)))
+    expect(grid.classes()).toContain('ui-balanced-grid')
   })
 })

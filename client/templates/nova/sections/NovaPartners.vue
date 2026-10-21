@@ -2,7 +2,7 @@
   <UiSection v-if="items.length" padding="md" class="border-b border-nova-border bg-nova-bg" data-testid="nova-partners">
     <NovaSectionHeader :eyebrow="t('nova.partners.eyebrow')" :title="t('nova.partners.title')" />
 
-    <UiStack direction="row" wrap align="center" gap="md" class="mt-8">
+    <UiBalancedGrid :count="items.length" class="mt-8" data-testid="nova-partners-grid">
       <component
         :is="partner.url ? UiLink : UiStack"
         v-for="partner in items"
@@ -11,7 +11,7 @@
         :data-testid="`partner-${partner.id}`"
       >
         <UiCard padding="none" class="!border-nova-border !bg-nova-surface px-5 py-3">
-          <UiStack direction="row" align="center" gap="sm">
+          <UiStack direction="row" align="center" justify="center" gap="sm">
             <UiImage
               v-if="partner.logoUrl"
               :src="partner.logoUrl"
@@ -24,7 +24,7 @@
           </UiStack>
         </UiCard>
       </component>
-    </UiStack>
+    </UiBalancedGrid>
   </UiSection>
 </template>
 

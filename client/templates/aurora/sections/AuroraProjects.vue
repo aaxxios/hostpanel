@@ -7,7 +7,7 @@
       </UiHeading>
     </UiStack>
 
-    <UiGrid cols="3" gap="lg" class="mt-9">
+    <UiBalancedGrid :count="items.length" class="mt-9" data-testid="aurora-projects-grid">
       <UiCard
         v-for="project in items"
         :key="project.id"
@@ -47,7 +47,7 @@
           </UiLink>
         </UiStack>
       </UiCard>
-    </UiGrid>
+    </UiBalancedGrid>
   </UiSection>
 </template>
 
