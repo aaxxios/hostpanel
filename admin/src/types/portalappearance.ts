@@ -5,11 +5,11 @@
 
 /** The templates the portal ships. Mirrors `client/templates/types.ts` and `PortalSettingKeys.TemplateNames`. */
 export enum PortalTemplate {
-  /** The current default: dark and light, Armenian typography. */
+  /** Dark and light, Armenian typography. */
   Aurora = 'aurora',
   /** Editorial layout with a teal palette. */
   Nova = 'nova',
-  /** The original storefront design. */
+  /** The original storefront design, light and dark; the default on a fresh install. */
   Classic = 'classic',
 }
 

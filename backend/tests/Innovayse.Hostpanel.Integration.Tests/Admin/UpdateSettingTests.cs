@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Xunit;
 
@@ -35,7 +36,7 @@ public sealed class UpdateSettingTests(IntegrationTestFactory factory) : IClassF
         read.GetProperty("value").GetString().Should().Be("nova");
 
         // Leave the deployment's default template as it was for any other test that reads it.
-        await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = "aurora" });
+        await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = PortalSettingKeys.TemplateValue(PortalSettingKeys.DefaultTemplate) });
     }
 
     /// <summary>

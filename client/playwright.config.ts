@@ -107,7 +107,7 @@ export default defineConfig({
         NUXT_AUTH_MODE: 'local',
         NUXT_PUBLIC_AUTH_MODE: 'local',
         NUXT_PUBLIC_BASE_URL: BASE_URL,
-        // The shipped default template; pinned so a changed default cannot silently change which
+        // Pinned to aurora, not the shipped default (classic), so a changed default cannot silently change which
         // components these specs drive.
         NUXT_PUBLIC_PORTAL_TEMPLATE: 'aurora',
       },

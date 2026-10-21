@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import UiBalancedGrid from '~/components/ui/UiBalancedGrid.vue'
+import { balancedColumns, lastRowSize } from '~/utils/balancedGrid'
 
 /**
  * Mounts the grid with `count` cells.
@@ -42,5 +43,23 @@ describe('UiBalancedGrid', () => {
     const wrapper = mountWithKit(UiBalancedGrid, { props: { count: 1, as: 'ul' }, slots: { default: '<li>a</li>' } })
 
     expect(wrapper.element.tagName).toBe('UL')
+  })
+
+  it('sizes the cards inside display-contents wrappers such as UiAccent, so 7 cards lay out as 4 + 3', () => {
+    const wrapper = mountWithKit(UiBalancedGrid, {
+      props: { count: 7 },
+      slots: { default: Array.from({ length: 7 }, (_, i) => `<div class="contents"><div class="cell">${i}</div></div>`).join('') },
+    })
+
+    // A `display: contents` wrapper is not a flex item, so the width has to reach its child.
+    expect(wrapper.attributes('data-columns')).toBe('4')
+    expect(wrapper.classes()).toEqual(expect.arrayContaining([
+      'lg:[&>.contents>*]:basis-[calc((100%-4.5rem)/4)]',
+      'sm:[&>.contents>*]:basis-[calc((100%-1.5rem)/2)]',
+      '[&>.contents>*]:flex-none',
+      '[&>.contents>*]:min-w-0',
+    ]))
+    expect(balancedColumns(7)).toBe(4)
+    expect(lastRowSize(7, balancedColumns(7))).toBe(3)
   })
 })

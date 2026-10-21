@@ -68,7 +68,7 @@ const TOGGLE_KEY = SettingKey.ThemeUserToggle
 const settings = toRef(props, 'settings')
 
 /** Draft of the template row. */
-const templateDraft = useSettingDraft(settings, TEMPLATE_KEY, PortalTemplate.Aurora)
+const templateDraft = useSettingDraft(settings, TEMPLATE_KEY, PortalTemplate.Classic)
 
 /** Draft of the default colour mode row. */
 const themeDraft = useSettingDraft(settings, THEME_KEY, PortalThemeMode.Dark)

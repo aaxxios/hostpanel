@@ -10,7 +10,7 @@ import { TemplateName } from '~/types/templatename'
 export const TEMPLATE_NAMES: readonly TemplateName[] = Object.values(TemplateName)
 
 /** The template used when configuration is absent or unrecognised. */
-export const DEFAULT_TEMPLATE: TemplateName = TemplateName.Aurora
+export const DEFAULT_TEMPLATE: TemplateName = TemplateName.Classic
 
 /**
  * Narrows an untrusted configuration value to a template name.

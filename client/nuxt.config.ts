@@ -181,9 +181,9 @@ export default defineNuxtConfig({
       // NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY — empty leaves the card form uninitialised.
       stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
       mainUrl: process.env.NUXT_PUBLIC_MAIN_URL || '',
-      // Active portal template. Phase 4 lets an admin override this from settings;
-      // until then it is the only switch. Unknown values fall back to 'aurora'.
-      portalTemplate: process.env.NUXT_PUBLIC_PORTAL_TEMPLATE || 'aurora',
+      // Active portal template when the operator's portal.template setting is empty. Empty here
+      // (and anything unknown) resolves to DEFAULT_TEMPLATE in templates/types.ts, the one default.
+      portalTemplate: process.env.NUXT_PUBLIC_PORTAL_TEMPLATE || '',
       // The header logos and browser tab icon, settable from the admin panel.
       // Empty renders the template's built-in mark/wordmark and static favicon;
       // useBrandLogo() picks the dark variant in dark mode and falls back to the

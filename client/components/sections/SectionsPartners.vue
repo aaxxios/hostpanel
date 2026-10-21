@@ -17,8 +17,31 @@
         <UiHeading :level="3" size="subsection" class="text-xl">{{ $t('clients.heading') }}</UiHeading>
       </div>
 
+      <!-- A short list sits centred and wrapped; a marquee of two names reads as a half-empty strip. -->
+      <UiStack v-if="!marquee" direction="row" wrap justify="center" gap="md" class="py-4" data-testid="sections-partners-static">
+        <UiCard
+          v-for="partner in partners"
+          :key="partner.id"
+          padding="none"
+          class="px-4 py-2.5 sm:px-6 sm:py-3 group hover:border-primary-500/50 hover:shadow-lg transition-all duration-300"
+          :data-testid="`partner-${partner.id}`"
+        >
+          <UiStack direction="row" align="center" gap="xs">
+            <UiImage
+              v-if="partner.logoUrl"
+              :src="partner.logoUrl"
+              :alt="partner.name"
+              unoptimised
+              class="h-6 sm:h-8 w-auto flex-shrink-0"
+              :testid="`partner-logo-${partner.id}`"
+            />
+            <UiText as="span" tone="inherit" weight="semibold" class="text-sm sm:text-base text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-300 whitespace-nowrap">{{ partner.name }}</UiText>
+          </UiStack>
+        </UiCard>
+      </UiStack>
+
       <!-- Logos marquee -->
-      <div class="relative overflow-hidden">
+      <div v-else class="relative overflow-hidden" data-testid="sections-partners-marquee">
         <!-- Fade edges -->
         <UiDecor class="left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-ui-page to-transparent z-10" />
         <UiDecor class="right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-ui-page to-transparent z-10" />
@@ -77,6 +100,12 @@ useAsyncData('storefront:partners', () => storefront.loadPartners(), { watch: [l
 
 /** The partners to show, in display order. */
 const partners = computed(() => storefront.partners)
+
+/** Fewest partners that fill a scrolling strip; below it the logos sit centred instead. */
+const MARQUEE_MIN_PARTNERS = 6
+
+/** Whether there are enough partners to run the marquee. */
+const marquee = computed(() => partners.value.length >= MARQUEE_MIN_PARTNERS)
 
 /** The partners twice over, so the marquee loops without a gap. */
 const loopedPartners = computed(() => [...partners.value, ...partners.value])
