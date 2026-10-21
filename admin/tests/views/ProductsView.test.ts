@@ -38,6 +38,8 @@ const plan: Product = {
     { currencyCode: 'EUR', monthly: 4.1, annual: null },
   ],
   serverGroupId: null,
+  isFeatured: false,
+  sortOrder: 0,
 }
 
 /** Answers for everything the screen and its dialogs load. */

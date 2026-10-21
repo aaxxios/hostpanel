@@ -32,6 +32,8 @@ public sealed class CreateProductValidator : LocalizedValidator<CreateProductCom
             .WithMessage(L["ProductDescriptionTooLong", DescriptionMaxLength]);
         RuleFor(x => x.PackageName).MaximumLength(PackageNameMaxLength).When(x => x.PackageName is not null)
             .WithMessage(L["ProductPackageNameTooLong", PackageNameMaxLength]);
+        RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0)
+            .WithMessage(L["ProductSortOrderInvalid"]);
 
         // A new product must be sellable somewhere; an update may clear every price (see
         // UpdateProductValidator). Without a per-currency list the legacy pair must carry a figure.

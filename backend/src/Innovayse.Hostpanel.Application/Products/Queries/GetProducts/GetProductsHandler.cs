@@ -69,7 +69,7 @@ public sealed class GetProductsHandler
             query = query.Where(p => p.Status == ProductStatus.Active);
         }
 
-        var products = await query.OrderBy(p => p.Name).ToListAsync(ct);
+        var products = await query.OrderBy(p => p.SortOrder).ThenBy(p => p.Name).ToListAsync(ct);
 
         var dtos = products
             .Where(p => qry.IncludeUnsellable || p.SellsIn(currency))

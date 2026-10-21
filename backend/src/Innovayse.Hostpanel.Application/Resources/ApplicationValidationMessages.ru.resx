@@ -913,6 +913,9 @@
   <data name="ProductPackageNameTooLong" xml:space="preserve">
     <value>Название пакета не должно превышать {0} символов.</value>
   </data>
+  <data name="ProductSortOrderInvalid" xml:space="preserve">
+    <value>Порядок сортировки не может быть отрицательным.</value>
+  </data>
   <data name="ProductPriceRequired" xml:space="preserve">
     <value>Новому продукту требуется хотя бы одна цена.</value>
   </data>

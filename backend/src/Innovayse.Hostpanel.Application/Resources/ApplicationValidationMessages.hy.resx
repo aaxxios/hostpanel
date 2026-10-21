@@ -877,6 +877,9 @@
   <data name="ProductPackageNameTooLong" xml:space="preserve">
     <value>Փաթեթի անվանումը չպետք է գերազանցի {0} նիշը։</value>
   </data>
+  <data name="ProductSortOrderInvalid" xml:space="preserve">
+    <value>Դասավորության համարը չի կարող բացասական լինել։</value>
+  </data>
   <data name="ProductPriceRequired" xml:space="preserve">
     <value>Նոր ապրանքը պահանջում է առնվազն մեկ գին։</value>
   </data>

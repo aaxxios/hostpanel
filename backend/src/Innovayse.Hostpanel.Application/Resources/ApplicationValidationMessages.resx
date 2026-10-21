@@ -929,6 +929,9 @@
   <data name="ProductPackageNameTooLong" xml:space="preserve">
     <value>Keep the package name within {0} characters.</value>
   </data>
+  <data name="ProductSortOrderInvalid" xml:space="preserve">
+    <value>Sort order cannot be negative.</value>
+  </data>
   <data name="ProductPriceRequired" xml:space="preserve">
     <value>A new product needs at least one price.</value>
   </data>

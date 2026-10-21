@@ -122,4 +122,65 @@ public sealed class CreateProductTests(IntegrationTestFactory factory) : IClassF
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         await ProductsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.PRODUCT_GROUP_NOT_FOUND);
     }
+
+    /// <summary>The featured flag and sort order sent on create are stored and returned.</summary>
+    [Fact]
+    public async Task CreateProduct_FeaturedAndSortOrder_AreStoredAndReturned()
+    {
+        var client = await ProductsTestSeeds.AdminClientAsync(factory);
+        var groupId = await ProductsTestSeeds.CreateGroupAsync(client);
+
+        var created = await client.PostAsJsonAsync("/api/products", new
+        {
+            groupId,
+            name = "Recommended",
+            type = ProductType.SharedHosting,
+            monthlyPrice = 2.99m,
+            annualPrice = 29.99m,
+            isFeatured = true,
+            sortOrder = 7,
+        });
+        var id = await created.Content.ReadFromJsonAsync<int>();
+
+        var dto = await ProductsTestSeeds.GetProductAsync(client, id);
+        dto.GetProperty("isFeatured").GetBoolean().Should().BeTrue();
+        dto.GetProperty("sortOrder").GetInt32().Should().Be(7);
+    }
+
+    /// <summary>Featuring a new product clears the flag on the group's previously featured product.</summary>
+    [Fact]
+    public async Task CreateProduct_Featured_ClearsTheGroupsPreviousFeaturedProduct()
+    {
+        var client = await ProductsTestSeeds.AdminClientAsync(factory);
+        var groupId = await ProductsTestSeeds.CreateGroupAsync(client);
+        var first = await client.PostAsJsonAsync("/api/products", new
+        {
+            groupId, name = "First", type = ProductType.SharedHosting, monthlyPrice = 1m, annualPrice = 10m, isFeatured = true,
+        });
+        var firstId = await first.Content.ReadFromJsonAsync<int>();
+
+        var second = await client.PostAsJsonAsync("/api/products", new
+        {
+            groupId, name = "Second", type = ProductType.SharedHosting, monthlyPrice = 2m, annualPrice = 20m, isFeatured = true,
+        });
+        var secondId = await second.Content.ReadFromJsonAsync<int>();
+
+        (await ProductsTestSeeds.GetProductAsync(client, firstId)).GetProperty("isFeatured").GetBoolean().Should().BeFalse();
+        (await ProductsTestSeeds.GetProductAsync(client, secondId)).GetProperty("isFeatured").GetBoolean().Should().BeTrue();
+    }
+
+    /// <summary>A negative sort order is refused with 400.</summary>
+    [Fact]
+    public async Task CreateProduct_NegativeSortOrder_IsRefused()
+    {
+        var client = await ProductsTestSeeds.AdminClientAsync(factory);
+        var groupId = await ProductsTestSeeds.CreateGroupAsync(client);
+
+        var response = await client.PostAsJsonAsync("/api/products", new
+        {
+            groupId, name = "Bad", type = ProductType.SharedHosting, monthlyPrice = 1m, annualPrice = 10m, sortOrder = -1,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }

@@ -15,6 +15,8 @@ namespace Innovayse.Hostpanel.Application.Products.Common;
 /// <param name="Pricing">Monthly and annual pricing in the caller's currency.</param>
 /// <param name="Prices">Every stored price, one entry per currency the product sells in.</param>
 /// <param name="ServerGroupId">Optional FK to the server group for provisioning.</param>
+/// <param name="IsFeatured">Whether the product is the group's recommended plan.</param>
+/// <param name="SortOrder">Operator-defined position inside the group, lowest first.</param>
 public sealed record ProductDto(
     int Id,
     int GroupId,
@@ -27,4 +29,6 @@ public sealed record ProductDto(
     ProductStatus Status,
     ProductPricingDto Pricing,
     IReadOnlyList<ProductPriceDto> Prices,
-    int? ServerGroupId);
+    int? ServerGroupId,
+    bool IsFeatured,
+    int SortOrder);

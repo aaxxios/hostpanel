@@ -137,6 +137,125 @@ public sealed class UpdateProductTests(IntegrationTestFactory factory) : IClassF
             && p.GetProperty(BillingCycleNames.Monthly).GetDecimal() == 4.99m);
     }
 
+    /// <summary>Featuring a product on update clears the flag on its group's other featured product.</summary>
+    [Fact]
+    public async Task UpdateProduct_Featured_ClearsTheSiblingsFlag()
+    {
+        var client = await ProductsTestSeeds.AdminClientAsync(factory);
+        var groupId = await ProductsTestSeeds.CreateGroupAsync(client);
+        var a = await CreateAsync(client, groupId, "A", true);
+        var b = await CreateAsync(client, groupId, "B", false);
+
+        var updated = await client.PutAsJsonAsync($"/api/products/{b}", new
+        {
+            name = "B", monthlyPrice = 1m, annualPrice = 10m, isFeatured = true, sortOrder = 2,
+        });
+        updated.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await ProductsTestSeeds.GetProductAsync(client, a)).GetProperty("isFeatured").GetBoolean().Should().BeFalse();
+        var dto = await ProductsTestSeeds.GetProductAsync(client, b);
+        dto.GetProperty("isFeatured").GetBoolean().Should().BeTrue();
+        dto.GetProperty("sortOrder").GetInt32().Should().Be(2);
+    }
+
+    /// <summary>Featuring in one group leaves another group's featured product alone.</summary>
+    [Fact]
+    public async Task UpdateProduct_Featured_DoesNotTouchOtherGroups()
+    {
+        var client = await ProductsTestSeeds.AdminClientAsync(factory);
+        var groupOne = await ProductsTestSeeds.CreateGroupAsync(client);
+        var groupTwo = await ProductsTestSeeds.CreateGroupAsync(client);
+        var inOne = await CreateAsync(client, groupOne, "One", true);
+        var inTwo = await CreateAsync(client, groupTwo, "Two", false);
+
+        await client.PutAsJsonAsync($"/api/products/{inTwo}", new
+        {
+            name = "Two", monthlyPrice = 1m, annualPrice = 10m, isFeatured = true,
+        });
+
+        (await ProductsTestSeeds.GetProductAsync(client, inOne)).GetProperty("isFeatured").GetBoolean().Should().BeTrue();
+    }
+
+    /// <summary>An update that omits the flag and the order keeps what is stored.</summary>
+    [Fact]
+    public async Task UpdateProduct_WithoutFeaturedAndSortOrder_KeepsThem()
+    {
+        var client = await ProductsTestSeeds.AdminClientAsync(factory);
+        var groupId = await ProductsTestSeeds.CreateGroupAsync(client);
+        var id = await CreateAsync(client, groupId, "Keep", true);
+        await client.PutAsJsonAsync($"/api/products/{id}", new
+        {
+            name = "Keep", monthlyPrice = 1m, annualPrice = 10m, sortOrder = 5,
+        });
+
+        await client.PutAsJsonAsync($"/api/products/{id}", new
+        {
+            name = "Keep renamed", monthlyPrice = 1m, annualPrice = 10m,
+        });
+
+        var dto = await ProductsTestSeeds.GetProductAsync(client, id);
+        dto.GetProperty("isFeatured").GetBoolean().Should().BeTrue();
+        dto.GetProperty("sortOrder").GetInt32().Should().Be(5);
+    }
+
+    /// <summary>The product list is ordered by sort order first, then by name.</summary>
+    [Fact]
+    public async Task UpdateProduct_SortOrder_DrivesTheListOrder()
+    {
+        var client = await ProductsTestSeeds.AdminClientAsync(factory);
+        var groupId = await ProductsTestSeeds.CreateGroupAsync(client);
+        var alpha = await CreateAsync(client, groupId, "Alpha", false);
+        var beta = await CreateAsync(client, groupId, "Beta", false);
+        await client.PutAsJsonAsync($"/api/products/{alpha}", new
+        {
+            name = "Alpha", monthlyPrice = 1m, annualPrice = 10m, sortOrder = 2,
+        });
+        await client.PutAsJsonAsync($"/api/products/{beta}", new
+        {
+            name = "Beta", monthlyPrice = 1m, annualPrice = 10m, sortOrder = 1,
+        });
+
+        var list = await client.GetFromJsonAsync<System.Text.Json.JsonElement[]>($"/api/products?groupId={groupId}");
+
+        list!.Select(p => p.GetProperty("id").GetInt32()).Should().Equal(beta, alpha);
+    }
+
+    /// <summary>A negative sort order on update is refused with 400.</summary>
+    [Fact]
+    public async Task UpdateProduct_NegativeSortOrder_IsRefused()
+    {
+        var client = await ProductsTestSeeds.AdminClientAsync(factory);
+        var groupId = await ProductsTestSeeds.CreateGroupAsync(client);
+        var id = await CreateAsync(client, groupId, "Neg", false);
+
+        var response = await client.PutAsJsonAsync($"/api/products/{id}", new
+        {
+            name = "Neg", monthlyPrice = 1m, annualPrice = 10m, sortOrder = -3,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>Creates a hosting product in a group through the API.</summary>
+    /// <param name="client">The admin client.</param>
+    /// <param name="groupId">The group the product joins.</param>
+    /// <param name="name">The product name.</param>
+    /// <param name="featured">Whether it is created as the recommended plan.</param>
+    /// <returns>The new product's id.</returns>
+    private static async Task<int> CreateAsync(HttpClient client, int groupId, string name, bool featured)
+    {
+        var created = await client.PostAsJsonAsync("/api/products", new
+        {
+            groupId,
+            name,
+            type = ProductType.SharedHosting,
+            monthlyPrice = 1m,
+            annualPrice = 10m,
+            isFeatured = featured,
+        });
+        return await created.Content.ReadFromJsonAsync<int>();
+    }
+
     /// <summary>PUT /api/products/{id} without auth returns 401 Unauthorized.</summary>
     [Fact]
     public async Task Update_Returns401_WithoutAuth()
