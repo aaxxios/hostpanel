@@ -14,4 +14,6 @@ export enum StorefrontSection {
   Projects = 'projects',
   /** The questions and answers. */
   Faqs = 'faqs',
+  /** The server locations. */
+  Locations = 'locations',
 }

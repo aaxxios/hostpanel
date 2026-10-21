@@ -592,6 +592,9 @@
   <data name="PARTNER_NOT_FOUND" xml:space="preserve">
     <value>Такого партнёра нет.</value>
   </data>
+  <data name="LOCATION_NOT_FOUND" xml:space="preserve">
+    <value>Такой локации нет.</value>
+  </data>
   <data name="PROJECT_NOT_FOUND" xml:space="preserve">
     <value>Такого проекта нет.</value>
   </data>
@@ -606,6 +609,12 @@
   </data>
   <data name="PARTNER_SORT_ORDER_NEGATIVE" xml:space="preserve">
     <value>Порядок сортировки партнёра не может быть отрицательным.</value>
+  </data>
+  <data name="LOCATION_SORT_ORDER_NEGATIVE" xml:space="preserve">
+    <value>Порядок сортировки локации не может быть отрицательным.</value>
+  </data>
+  <data name="LOCATION_COUNTRY_CODE_INVALID" xml:space="preserve">
+    <value>Код страны локации состоит из двух букв.</value>
   </data>
   <data name="PROJECT_SORT_ORDER_NEGATIVE" xml:space="preserve">
     <value>Порядок сортировки проекта не может быть отрицательным.</value>

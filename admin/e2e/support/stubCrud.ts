@@ -21,8 +21,8 @@ const API_PREFIX = '/api'
 export interface StubEntity {
   /** Entry ID. */
   id: number
-  /** Creation time. */
-  createdAt: string
+  /** Creation time; absent on content types the API does not stamp. */
+  createdAt?: string
 }
 
 /** Options of {@link stubCrud}. */

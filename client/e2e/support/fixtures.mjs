@@ -208,6 +208,44 @@ export const PUBLIC_SETTINGS = [
   { key: 'portal.theme.user_toggle', value: 'true' },
   { key: 'portal.logo', value: '/logo.svg' },
   { key: 'portal.logo.dark', value: '/logo-dark.svg' },
+  // Every home section on and every figure, switch and response time set, as the demo seed does.
+  { key: 'portal.sections.stats', value: 'true' },
+  { key: 'portal.sections.partners', value: 'true' },
+  { key: 'portal.sections.services', value: 'true' },
+  { key: 'portal.sections.process', value: 'true' },
+  { key: 'portal.sections.plans', value: 'true' },
+  { key: 'portal.sections.comparison', value: 'true' },
+  { key: 'portal.sections.dashboard', value: 'true' },
+  { key: 'portal.sections.use_cases', value: 'true' },
+  { key: 'portal.sections.migration', value: 'true' },
+  { key: 'portal.sections.projects', value: 'true' },
+  { key: 'portal.sections.testimonials', value: 'true' },
+  { key: 'portal.sections.faq', value: 'true' },
+  { key: 'portal.sections.cta', value: 'true' },
+  { key: 'portal.sections.locations', value: 'true' },
+  { key: 'portal.sections.performance', value: 'true' },
+  { key: 'portal.sections.security', value: 'true' },
+  { key: 'portal.sections.apps', value: 'true' },
+  { key: 'portal.sections.guarantees', value: 'true' },
+  { key: 'portal.sections.support', value: 'true' },
+  { key: 'portal.sections.trusted', value: 'true' },
+  { key: 'portal.stats.response_time', value: '180 ms' },
+  { key: 'portal.stats.sites_hosted', value: '12,000+' },
+  { key: 'portal.stats.support_response', value: '15 min' },
+  { key: 'portal.stats.uptime', value: '99.9%' },
+  { key: 'portal.features.ssl', value: 'true' },
+  { key: 'portal.features.ddos', value: 'true' },
+  { key: 'portal.features.backups', value: 'true' },
+  { key: 'portal.features.malware', value: 'true' },
+  { key: 'portal.features.firewall', value: 'true' },
+  { key: 'portal.installer.app_count', value: '150+' },
+  { key: 'portal.guarantee.money_back_days', value: '30' },
+  { key: 'portal.guarantee.no_hidden_fees', value: 'true' },
+  { key: 'portal.migration.free', value: 'true' },
+  { key: 'portal.support.response.chat', value: '1 min' },
+  { key: 'portal.support.response.ticket', value: '1 hour' },
+  { key: 'portal.support.response.email', value: '4 hours' },
+  { key: 'portal.support.response.phone', value: '5 min' },
 ]
 
 /** What the contact form submits, reused by the spec to fill the form and to check what arrived. */
@@ -570,6 +608,12 @@ export const TESTIMONIALS = [
 /** Partners the public feed serves. */
 export const PARTNERS = [
   { id: 1, name: 'Example Co', logoUrl: null, url: 'https://example.test', sortOrder: 1 },
+]
+
+/** Server locations the public feed serves. */
+export const LOCATIONS = [
+  { id: 1, countryCode: 'DE', name: 'Example location one', city: 'Example City', latencyNote: '20 ms' },
+  { id: 2, countryCode: 'US', name: 'Example location two', city: null, latencyNote: null },
 ]
 
 /** Projects the public feed serves. */

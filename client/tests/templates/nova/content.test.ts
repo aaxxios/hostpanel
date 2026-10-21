@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import { GuaranteeKey } from '~/constants/guaranteeKey'
+import { InstallerAppCategory } from '~/constants/installerAppCategory'
+import { PerformanceStatKey } from '~/constants/performanceStatKey'
+import { SecurityFeatureKey } from '~/constants/securityFeatureKey'
+import { SupportChannel } from '~/constants/supportChannel'
 import {
   COMPARISON_LABEL_ORDER,
+  GUARANTEE_CARDS,
+  INSTALLER_CATEGORY_CARDS,
+  PERFORMANCE_STAT_CARDS,
+  SECURITY_FEATURE_CARDS,
+  SUPPORT_CHANNEL_CARDS,
   DASHBOARD_ROWS,
   FOOTER_COLUMNS,
   HERO_BENEFITS,
@@ -104,6 +114,24 @@ describe('nova content', () => {
         continue
       }
       expect(feature.requiresSetting, feature.key).toBeUndefined()
+    }
+  })
+})
+
+describe('nova section card tables', () => {
+  it.each([
+    ['security', SECURITY_FEATURE_CARDS, Object.values(SecurityFeatureKey)],
+    ['performance stats', PERFORMANCE_STAT_CARDS, Object.values(PerformanceStatKey)],
+    ['guarantees', GUARANTEE_CARDS, Object.values(GuaranteeKey)],
+    ['support channels', SUPPORT_CHANNEL_CARDS, Object.values(SupportChannel)],
+    ['installer categories', INSTALLER_CATEGORY_CARDS, Object.values(InstallerAppCategory)],
+  ])('has a card for every %s key, keyed by itself', (_name, cards, keys) => {
+    const table = cards as Record<string, Feature>
+
+    expect(Object.keys(table).sort()).toEqual([...keys].sort())
+    for (const key of keys) {
+      expect(table[key]!.key).toBe(key)
+      expect(table[key]!.titleKey).toMatch(/^nova./)
     }
   })
 })

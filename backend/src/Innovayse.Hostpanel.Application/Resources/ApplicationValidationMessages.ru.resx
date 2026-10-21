@@ -1150,6 +1150,21 @@
   <data name="PartnerNameTooLong" xml:space="preserve">
     <value>Название может содержать не более {0} символов.</value>
   </data>
+  <data name="LocationNameRequired" xml:space="preserve">
+    <value>Укажите название локации.</value>
+  </data>
+  <data name="LocationNameTooLong" xml:space="preserve">
+    <value>Название может содержать не более {0} символов.</value>
+  </data>
+  <data name="LocationCityTooLong" xml:space="preserve">
+    <value>Город может содержать не более {0} символов.</value>
+  </data>
+  <data name="LocationLatencyNoteTooLong" xml:space="preserve">
+    <value>Заметка о задержке может содержать не более {0} символов.</value>
+  </data>
+  <data name="LocationCountryCodeInvalid" xml:space="preserve">
+    <value>Код страны состоит из двух букв, например DE.</value>
+  </data>
   <data name="ProjectSlugRequired" xml:space="preserve">
     <value>Укажите идентификатор проекта для адреса.</value>
   </data>

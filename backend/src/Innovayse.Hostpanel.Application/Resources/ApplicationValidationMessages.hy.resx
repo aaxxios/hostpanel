@@ -1114,6 +1114,21 @@
   <data name="PartnerNameTooLong" xml:space="preserve">
     <value>Անվանումը կարող է պարունակել առավելագույնը {0} նիշ։</value>
   </data>
+  <data name="LocationNameRequired" xml:space="preserve">
+    <value>Նշեք տեղակայման անվանումը։</value>
+  </data>
+  <data name="LocationNameTooLong" xml:space="preserve">
+    <value>Անվանումը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="LocationCityTooLong" xml:space="preserve">
+    <value>Քաղաքի անվանումը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="LocationLatencyNoteTooLong" xml:space="preserve">
+    <value>Հապաղման նշումը կարող է պարունակել առավելագույնը {0} նիշ։</value>
+  </data>
+  <data name="LocationCountryCodeInvalid" xml:space="preserve">
+    <value>Երկրի կոդը պետք է լինի երկու տառ, օրինակ՝ DE։</value>
+  </data>
   <data name="ProjectSlugRequired" xml:space="preserve">
     <value>Նշեք նախագծի նույնացուցիչը հասցեի համար։</value>
   </data>

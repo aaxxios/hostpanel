@@ -1,24 +1,30 @@
 <template>
   <UiStack id="nova-main" as="div" gap="none" class="tpl-nova bg-nova-bg font-nova text-nova-ink" data-testid="nova-home">
     <NovaHero />
-    <NovaTrustBar />
-    <NovaPartners />
+    <NovaTrustBar v-if="isVisible(HomeSection.Stats)" />
+    <NovaPartners v-if="isVisible(HomeSection.Partners)" />
+    <NovaTrusted v-if="isVisible(HomeSection.Trusted)" />
     <NovaPricingSection
+      v-if="isVisible(HomeSection.Plans)"
       :plans="plans"
       :yearly="yearly"
       @update:yearly="value => emit('update:yearly', value)"
     />
-    <NovaComparisonTable :plans="plans" :rows="comparisonRows" />
-    <NovaWhyChooseUs />
-    <NovaPerformance />
-    <NovaSecurity />
-    <NovaDashboard />
-    <NovaMigration />
-    <NovaUseCases />
-    <NovaProjects />
-    <NovaTestimonials />
-    <NovaFaq />
-    <NovaFinalCta />
+    <NovaComparisonTable v-if="isVisible(HomeSection.Comparison)" :plans="plans" :rows="comparisonRows" />
+    <NovaWhyChooseUs v-if="isVisible(HomeSection.Services)" />
+    <NovaLocations v-if="isVisible(HomeSection.Locations)" />
+    <NovaPerformance v-if="isVisible(HomeSection.Performance)" />
+    <NovaSecurity v-if="isVisible(HomeSection.Security)" />
+    <NovaApps v-if="isVisible(HomeSection.Apps)" />
+    <NovaDashboard v-if="isVisible(HomeSection.Dashboard)" />
+    <NovaMigration v-if="isVisible(HomeSection.Migration)" />
+    <NovaGuarantees v-if="isVisible(HomeSection.Guarantees)" />
+    <NovaUseCases v-if="isVisible(HomeSection.UseCases)" />
+    <NovaProjects v-if="isVisible(HomeSection.Projects)" />
+    <NovaTestimonials v-if="isVisible(HomeSection.Testimonials)" />
+    <NovaSupport v-if="isVisible(HomeSection.Support)" />
+    <NovaFaq v-if="isVisible(HomeSection.Faq)" />
+    <NovaFinalCta v-if="isVisible(HomeSection.Cta)" />
   </UiStack>
 </template>
 
@@ -53,6 +59,12 @@ import NovaProjects from '~/templates/nova/sections/NovaProjects.vue'
 import NovaTestimonials from '~/templates/nova/sections/NovaTestimonials.vue'
 import NovaFaq from '~/templates/nova/sections/NovaFaq.vue'
 import NovaFinalCta from '~/templates/nova/sections/FinalCta.vue'
+import NovaLocations from '~/templates/nova/sections/NovaLocations.vue'
+import NovaApps from '~/templates/nova/sections/NovaApps.vue'
+import NovaGuarantees from '~/templates/nova/sections/NovaGuarantees.vue'
+import NovaSupport from '~/templates/nova/sections/NovaSupport.vue'
+import NovaTrusted from '~/templates/nova/sections/NovaTrusted.vue'
+import { HomeSection } from '~/constants/homeSection'
 import type { DomainResult } from '~/templates/aurora/types/domainresult'
 import type { PlanCard } from '~/types/plancard'
 import type { ComparisonRow } from '~/types/comparisonrow'
@@ -83,6 +95,9 @@ withDefaults(defineProps<{
   hasZones: true,
   priceHints: () => [],
 })
+
+/** Whether the operator has switched a home section on (Admin > Settings). */
+const { isVisible } = useHomeSections()
 
 /** Emits the page raises. */
 const emit = defineEmits<{

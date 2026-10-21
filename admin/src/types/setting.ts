@@ -71,6 +71,70 @@ export const SettingKey = {
   ChatWebsiteTokenRu: 'portal.chat.website_token.ru',
   /** Chat website token for Armenian. */
   ChatWebsiteTokenHy: 'portal.chat.website_token.hy',
+  /** Whether the stats section shows on the home page. */
+  SectionStats: 'portal.sections.stats',
+  /** Whether the partners section shows on the home page. */
+  SectionPartners: 'portal.sections.partners',
+  /** Whether the services section shows on the home page. */
+  SectionServices: 'portal.sections.services',
+  /** Whether the process section shows on the home page. */
+  SectionProcess: 'portal.sections.process',
+  /** Whether the plans section shows on the home page. */
+  SectionPlans: 'portal.sections.plans',
+  /** Whether the comparison section shows on the home page. */
+  SectionComparison: 'portal.sections.comparison',
+  /** Whether the dashboard section shows on the home page. */
+  SectionDashboard: 'portal.sections.dashboard',
+  /** Whether the use cases section shows on the home page. */
+  SectionUseCases: 'portal.sections.use_cases',
+  /** Whether the migration section shows on the home page. */
+  SectionMigration: 'portal.sections.migration',
+  /** Whether the projects section shows on the home page. */
+  SectionProjects: 'portal.sections.projects',
+  /** Whether the testimonials section shows on the home page. */
+  SectionTestimonials: 'portal.sections.testimonials',
+  /** Whether the faq section shows on the home page. */
+  SectionFaq: 'portal.sections.faq',
+  /** Whether the cta section shows on the home page. */
+  SectionCta: 'portal.sections.cta',
+  /** Whether the locations section shows on the home page. */
+  SectionLocations: 'portal.sections.locations',
+  /** Whether the performance section shows on the home page. */
+  SectionPerformance: 'portal.sections.performance',
+  /** Whether the security section shows on the home page. */
+  SectionSecurity: 'portal.sections.security',
+  /** Whether the apps section shows on the home page. */
+  SectionApps: 'portal.sections.apps',
+  /** Whether the guarantees section shows on the home page. */
+  SectionGuarantees: 'portal.sections.guarantees',
+  /** Whether the support section shows on the home page. */
+  SectionSupport: 'portal.sections.support',
+  /** Whether the trusted section shows on the home page. */
+  SectionTrusted: 'portal.sections.trusted',
+  /** Response time figure in the performance section. */
+  StatsResponseTime: 'portal.stats.response_time',
+  /** Sites hosted figure in the performance section. */
+  StatsSitesHosted: 'portal.stats.sites_hosted',
+  /** Support response figure in the performance section. */
+  StatsSupportResponse: 'portal.stats.support_response',
+  /** Whether the security section lists free SSL. */
+  FeaturesSsl: 'portal.features.ssl',
+  /** Whether the security section lists DDoS protection. */
+  FeaturesDdos: 'portal.features.ddos',
+  /** Number of apps the one-click installer offers. */
+  InstallerAppCount: 'portal.installer.app_count',
+  /** Days of the money back guarantee. */
+  GuaranteeMoneyBackDays: 'portal.guarantee.money_back_days',
+  /** Whether the guarantees list no hidden fees. */
+  GuaranteeNoHiddenFees: 'portal.guarantee.no_hidden_fees',
+  /** Chat response time. */
+  SupportResponseChat: 'portal.support.response.chat',
+  /** Ticket response time. */
+  SupportResponseTicket: 'portal.support.response.ticket',
+  /** Email response time. */
+  SupportResponseEmail: 'portal.support.response.email',
+  /** Phone response time. */
+  SupportResponsePhone: 'portal.support.response.phone',
 } as const
 
 /** One of the {@link SettingKey} values. */
@@ -110,6 +174,38 @@ export const SettingEnv: Record<SettingKey, string> = {
   [SettingKey.ChatWebsiteToken]: `${SETTING_ENV_PREFIX}CHAT_WEBSITE_TOKEN`,
   [SettingKey.ChatWebsiteTokenRu]: `${SETTING_ENV_PREFIX}CHAT_WEBSITE_TOKEN_RU`,
   [SettingKey.ChatWebsiteTokenHy]: `${SETTING_ENV_PREFIX}CHAT_WEBSITE_TOKEN_HY`,
+  [SettingKey.SectionStats]: `${SETTING_ENV_PREFIX}SECTIONS_STATS`,
+  [SettingKey.SectionPartners]: `${SETTING_ENV_PREFIX}SECTIONS_PARTNERS`,
+  [SettingKey.SectionServices]: `${SETTING_ENV_PREFIX}SECTIONS_SERVICES`,
+  [SettingKey.SectionProcess]: `${SETTING_ENV_PREFIX}SECTIONS_PROCESS`,
+  [SettingKey.SectionPlans]: `${SETTING_ENV_PREFIX}SECTIONS_PLANS`,
+  [SettingKey.SectionComparison]: `${SETTING_ENV_PREFIX}SECTIONS_COMPARISON`,
+  [SettingKey.SectionDashboard]: `${SETTING_ENV_PREFIX}SECTIONS_DASHBOARD`,
+  [SettingKey.SectionUseCases]: `${SETTING_ENV_PREFIX}SECTIONS_USE_CASES`,
+  [SettingKey.SectionMigration]: `${SETTING_ENV_PREFIX}SECTIONS_MIGRATION`,
+  [SettingKey.SectionProjects]: `${SETTING_ENV_PREFIX}SECTIONS_PROJECTS`,
+  [SettingKey.SectionTestimonials]: `${SETTING_ENV_PREFIX}SECTIONS_TESTIMONIALS`,
+  [SettingKey.SectionFaq]: `${SETTING_ENV_PREFIX}SECTIONS_FAQ`,
+  [SettingKey.SectionCta]: `${SETTING_ENV_PREFIX}SECTIONS_CTA`,
+  [SettingKey.SectionLocations]: `${SETTING_ENV_PREFIX}SECTIONS_LOCATIONS`,
+  [SettingKey.SectionPerformance]: `${SETTING_ENV_PREFIX}SECTIONS_PERFORMANCE`,
+  [SettingKey.SectionSecurity]: `${SETTING_ENV_PREFIX}SECTIONS_SECURITY`,
+  [SettingKey.SectionApps]: `${SETTING_ENV_PREFIX}SECTIONS_APPS`,
+  [SettingKey.SectionGuarantees]: `${SETTING_ENV_PREFIX}SECTIONS_GUARANTEES`,
+  [SettingKey.SectionSupport]: `${SETTING_ENV_PREFIX}SECTIONS_SUPPORT`,
+  [SettingKey.SectionTrusted]: `${SETTING_ENV_PREFIX}SECTIONS_TRUSTED`,
+  [SettingKey.StatsResponseTime]: `${SETTING_ENV_PREFIX}STATS_RESPONSE_TIME`,
+  [SettingKey.StatsSitesHosted]: `${SETTING_ENV_PREFIX}STATS_SITES_HOSTED`,
+  [SettingKey.StatsSupportResponse]: `${SETTING_ENV_PREFIX}STATS_SUPPORT_RESPONSE`,
+  [SettingKey.FeaturesSsl]: `${SETTING_ENV_PREFIX}FEATURES_SSL`,
+  [SettingKey.FeaturesDdos]: `${SETTING_ENV_PREFIX}FEATURES_DDOS`,
+  [SettingKey.InstallerAppCount]: `${SETTING_ENV_PREFIX}INSTALLER_APP_COUNT`,
+  [SettingKey.GuaranteeMoneyBackDays]: `${SETTING_ENV_PREFIX}GUARANTEE_MONEY_BACK_DAYS`,
+  [SettingKey.GuaranteeNoHiddenFees]: `${SETTING_ENV_PREFIX}GUARANTEE_NO_HIDDEN_FEES`,
+  [SettingKey.SupportResponseChat]: `${SETTING_ENV_PREFIX}SUPPORT_RESPONSE_CHAT`,
+  [SettingKey.SupportResponseTicket]: `${SETTING_ENV_PREFIX}SUPPORT_RESPONSE_TICKET`,
+  [SettingKey.SupportResponseEmail]: `${SETTING_ENV_PREFIX}SUPPORT_RESPONSE_EMAIL`,
+  [SettingKey.SupportResponsePhone]: `${SETTING_ENV_PREFIX}SUPPORT_RESPONSE_PHONE`,
 }
 
 /** Closed set of the strings a boolean setting or integration toggle is stored as. */

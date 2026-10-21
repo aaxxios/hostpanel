@@ -10,7 +10,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { faqFixture, partnerFixture, projectFixture, testimonialFixture } from '../helpers/storefrontFixtures'
+import { faqFixture, locationFixture, partnerFixture, projectFixture, testimonialFixture } from '../helpers/storefrontFixtures'
 import { FaqCategory } from '~/types/faqcategory'
 import { StorefrontSection } from '~/types/storefrontsection'
 
@@ -18,6 +18,7 @@ import { StorefrontSection } from '~/types/storefrontsection'
 const api = {
   fetchTestimonials: vi.fn(),
   fetchPartners: vi.fn(),
+  fetchLocations: vi.fn(),
   fetchProjects: vi.fn(),
   fetchFaqs: vi.fn()
 }
@@ -47,6 +48,7 @@ describe('useStorefrontStore', () => {
 
     expect(store.testimonials).toEqual([])
     expect(store.partners).toEqual([])
+    expect(store.locations).toEqual([])
     expect(store.projects).toEqual([])
     expect(store.faqs).toEqual([])
     expect(store.loading).toBe(false)
@@ -70,6 +72,15 @@ describe('useStorefrontStore', () => {
     await store.loadPartners()
 
     expect(store.partners.map(p => p.id)).toEqual([1, 2])
+  })
+
+  it('keeps the server locations', async () => {
+    api.fetchLocations.mockResolvedValue([locationFixture(1), locationFixture(2)])
+    const store = useStorefrontStore()
+
+    await store.loadLocations()
+
+    expect(store.locations.map(l => l.id)).toEqual([1, 2])
   })
 
   it('keeps the projects', async () => {
@@ -99,6 +110,7 @@ describe('useStorefrontStore', () => {
   it.each([
     ['loadTestimonials', 'fetchTestimonials', 'testimonials', StorefrontSection.Testimonials],
     ['loadPartners', 'fetchPartners', 'partners', StorefrontSection.Partners],
+    ['loadLocations', 'fetchLocations', 'locations', StorefrontSection.Locations],
     ['loadProjects', 'fetchProjects', 'projects', StorefrontSection.Projects],
     ['loadFaqs', 'fetchFaqs', 'faqs', StorefrontSection.Faqs]
   ] as const)('%s keeps the API sentence and an empty list when refused', async (load, fetcher, state, section) => {

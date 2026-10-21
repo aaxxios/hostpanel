@@ -26,6 +26,12 @@ describe('SettingEnv', () => {
     }
   })
 
+  it('names the section and hosting detail keys by their own variables', () => {
+    expect(SettingEnv[SettingKey.SectionUseCases]).toBe('NUXT_PUBLIC_PORTAL_SECTIONS_USE_CASES')
+    expect(SettingEnv[SettingKey.SupportResponsePhone]).toBe('NUXT_PUBLIC_PORTAL_SUPPORT_RESPONSE_PHONE')
+    expect(SettingKey.GuaranteeMoneyBackDays).toBe('portal.guarantee.money_back_days')
+  })
+
   it('names the tagline by its own variable, not the site name', () => {
     expect(SettingEnv[SettingKey.SiteTagline]).toBe('NUXT_PUBLIC_PORTAL_SITE_TAGLINE')
     expect(SettingEnv[SettingKey.ChatWebsiteTokenHy]).toBe('NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_HY')

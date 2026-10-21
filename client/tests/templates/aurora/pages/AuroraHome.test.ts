@@ -7,10 +7,11 @@ import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { faqFixture, testimonialFixture } from '~/tests/helpers/storefrontFixtures'
 import AuroraHome from '~/templates/aurora/pages/AuroraHome.vue'
+import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { stubAuroraGlobals, PLANS } from '../auroraGlobals'
 
 /** The mocked storefront endpoints, so the FAQ and testimonials sections have content to show. */
-const api = { fetchPartners: vi.fn().mockResolvedValue([]), fetchTestimonials: vi.fn(), fetchProjects: vi.fn().mockResolvedValue([]), fetchFaqs: vi.fn() }
+const api = { fetchPartners: vi.fn().mockResolvedValue([]), fetchTestimonials: vi.fn(), fetchProjects: vi.fn().mockResolvedValue([]), fetchFaqs: vi.fn(), fetchLocations: vi.fn().mockResolvedValue([]) }
 
 vi.mock('~/composables/apis/useStorefrontApi', () => ({
   /**
@@ -57,6 +58,41 @@ describe('AuroraHome', () => {
 
     expect(wrapper.find('#process').exists()).toBe(false)
     expect(wrapper.find('#faq').exists()).toBe(false)
+  })
+
+  it('hides a section whose homepage switch is off and keeps the others', async () => {
+    stubAuroraGlobals({ settings: { [PortalSettingKey.SectionStats]: 'false', [PortalSettingKey.SectionFaq]: 'false', [PortalSettingKey.SectionCta]: 'false' } })
+    const wrapper = mountWithKit(AuroraHome, { props: { plans: PLANS } })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="trust-bar"]').exists()).toBe(false)
+    expect(wrapper.find('#faq').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="aurora-cta"]').exists()).toBe(false)
+    expect(wrapper.find('#services').exists()).toBe(true)
+    expect(wrapper.find('#hosting').exists()).toBe(true)
+  })
+
+  it('needs both the prop and the switch for the process section', async () => {
+    stubAuroraGlobals({ settings: { [PortalSettingKey.SectionProcess]: 'false' } })
+    const switchedOff = mountWithKit(AuroraHome)
+    expect(switchedOff.find('#process').exists()).toBe(false)
+
+    stubAuroraGlobals()
+    const propOff = mountWithKit(AuroraHome, { props: { showProcess: false } })
+    expect(propOff.find('#process').exists()).toBe(false)
+
+    const both = mountWithKit(AuroraHome)
+    expect(both.find('#process').exists()).toBe(true)
+  })
+
+  it('shows the portfolio projects only when their switch is on', async () => {
+    stubAuroraGlobals({ settings: { [PortalSettingKey.SectionProjects]: 'true' } })
+    api.fetchProjects.mockResolvedValue([])
+    const wrapper = mountWithKit(AuroraHome)
+    await flushPromises()
+
+    expect(wrapper.exists()).toBe(true)
+    expect(api.fetchProjects).toHaveBeenCalled()
   })
 
   it('passes the search term of the card up to the page', async () => {

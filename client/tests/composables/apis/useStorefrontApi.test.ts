@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { expectLastRequest, startTransport } from '../../helpers/stubTransport'
 import type { ExpectedRequest } from '../../helpers/stubTransport'
 import type { StubServer } from '../../helpers/stubServer'
-import { faqFixture, partnerFixture, projectFixture, testimonialFixture } from '../../helpers/storefrontFixtures'
+import { faqFixture, locationFixture, partnerFixture, projectFixture, testimonialFixture } from '../../helpers/storefrontFixtures'
 import { useStorefrontApi } from '~/composables/apis/useStorefrontApi'
 
 /** The stub started by the current test. */
@@ -29,6 +29,7 @@ const api = useStorefrontApi()
 const rows: ExpectedRequest[] = [
   { name: 'fetchTestimonials reads the testimonials', call: () => api.fetchTestimonials(), method: 'GET', url: '/api/portal/public/testimonials' },
   { name: 'fetchPartners reads the partners', call: () => api.fetchPartners(), method: 'GET', url: '/api/portal/public/partners' },
+  { name: 'fetchLocations reads the server locations', call: () => api.fetchLocations(), method: 'GET', url: '/api/portal/public/locations' },
   { name: 'fetchProjects reads the projects', call: () => api.fetchProjects(), method: 'GET', url: '/api/portal/public/projects' },
   { name: 'fetchFaqs reads the questions', call: () => api.fetchFaqs(), method: 'GET', url: '/api/portal/public/faqs' },
 ]
@@ -47,6 +48,7 @@ describe('useStorefrontApi', () => {
       const bodies: Record<string, unknown> = {
         '/api/portal/public/testimonials': [testimonialFixture(1)],
         '/api/portal/public/partners': [partnerFixture(1)],
+        '/api/portal/public/locations': [locationFixture(1)],
         '/api/portal/public/projects': [projectFixture(1)],
         '/api/portal/public/faqs': [faqFixture(1)],
       }
@@ -55,6 +57,7 @@ describe('useStorefrontApi', () => {
 
     expect((await api.fetchTestimonials())[0]?.quote).toBe('Example quote 1.')
     expect((await api.fetchPartners())[0]?.name).toBe('Example Co 1')
+    expect((await api.fetchLocations())[0]?.countryCode).toBe('DE')
     expect((await api.fetchProjects())[0]?.slug).toBe('example-project-1')
     expect((await api.fetchFaqs())[0]?.question).toBe('Example question 1?')
   })

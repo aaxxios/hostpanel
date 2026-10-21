@@ -118,3 +118,11 @@ export const accentInk = (hex: string): string => {
   // White wins above a 4.5:1 ratio against the fill, i.e. luminance below about 0.18.
   return luminance < 0.18 ? 'white' : '#08090f'
 }
+
+/**
+ * Class that points `--accent` at the portal's primary brand colour, for a tile or panel that sits
+ * outside any `UiAccent` (a section card that has no catalogue colour of its own). Without it the
+ * accent classes have no colour to mix and the tile turns white, which vanishes on a light page.
+ * A complete literal, so Tailwind emits it; the fallback matches the Tailwind primary-500 default.
+ */
+export const ACCENT_BRAND_CLASS = '[--accent:rgb(var(--brand-primary-500,2_119_182))]'

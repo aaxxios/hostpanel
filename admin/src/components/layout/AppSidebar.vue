@@ -149,6 +149,7 @@ const navItems: NavItem[] = [
       { to: AppRoute.StorefrontPartners, labelKey: 'nav.storefrontChildren.partners' },
       { to: AppRoute.StorefrontProjects, labelKey: 'nav.storefrontChildren.projects' },
       { to: AppRoute.StorefrontFaqs, labelKey: 'nav.storefrontChildren.faqs' },
+      { to: AppRoute.StorefrontLocations, labelKey: 'nav.storefrontChildren.locations' },
     ],
   },
   {

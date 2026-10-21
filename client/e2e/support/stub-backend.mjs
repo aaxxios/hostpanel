@@ -38,6 +38,7 @@ import {
   ACCESS_TOKEN,
   ANNOUNCEMENT,
   FAQS,
+  LOCATIONS,
   PARTNERS,
   PROJECTS,
   TESTIMONIALS,
@@ -370,6 +371,10 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
   }
   if (isGet && path === '/api/public/partners') {
     send(res, 200, PARTNERS)
+    return true
+  }
+  if (isGet && path === '/api/public/locations') {
+    send(res, 200, LOCATIONS)
     return true
   }
   if (isGet && path === '/api/public/projects') {

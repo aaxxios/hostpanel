@@ -52,7 +52,7 @@ memory. What remains is short:
   `sso` mode (including the ones that answer 404 on purpose). Converting it is its own reviewed
   change, after the login flow is re-verified end to end. `HealthController` is **not** an
   exception: it derives from `BaseApiController` with `[AllowAnonymous]`.
-- **Anonymous public storefront feeds.** `/api/public/{faqs,partners,projects,testimonials}` (like `/api/public/slides` and
+- **Anonymous public storefront feeds.** `/api/public/{faqs,locations,partners,projects,testimonials}` (like `/api/public/slides` and
   `/api/public/demo` before them) are `[AllowAnonymous]` read-only queries: the storefront renders them before anyone has
   signed in, so they cannot carry the usual `[Authorize]` on every action. They stay on `BaseApiController`, dispatch one
   query, return only active, already-localised records and never expose an admin field; writes remain behind `Policies.Admin`.
@@ -353,9 +353,9 @@ Its own nginx exists for a standalone install.
 
 ## Storefront content — in the database, not in the code
 
-Testimonials, partners, projects and FAQs are rows in the database, each with English, Russian and Armenian
+Testimonials, partners, server locations, projects and FAQs are rows in the database, each with English, Russian and Armenian
 translations, managed in the admin under **Storefront content**. The public endpoints are
-`/api/public/{testimonials,partners,projects,faqs}`. The hero stats and badge read `portal.stats.*` and
+`/api/public/{testimonials,partners,locations,projects,faqs}`. The hero stats and badge read `portal.stats.*` and
 `portal.hero.badge`; the contact channels read `portal.contact.*`; the site name reads `portal.site.name`. The
 client hides any section that is empty, so an empty table is a valid state, not an error. Production runs a
 one-time import of the previous static content; the demo does not, because its seed is fixed.
@@ -624,7 +624,7 @@ OOM-killed on every attempt. The shards (the same split as `.github/workflows/ci
 `backend:test:integration:a` to `:d`, share a `resource_group` so only one runs at a time, and split
 by namespace with `--filter "FullyQualifiedName~Integration.Tests.<Ns>."`: A is Adapters, Admin,
 Audit, Auth, Clients, Common, Demo, Health, Identity, Security, Shared; B is Billing, Domains; C is
-Reports, Slides, Support, Faqs, Partners, Projects, Testimonials; D is Migration, Notifications, Orders, Persistence, Products,
+Reports, Slides, Support, Faqs, Locations, Partners, Projects, Testimonials; D is Migration, Notifications, Orders, Persistence, Products,
 Provisioning, Services. **A new top-level folder in `Integration.Tests/` must be added to one
 shard in `.gitlab-ci.yml` and in `ci.yml`, or its tests run nowhere.**
 

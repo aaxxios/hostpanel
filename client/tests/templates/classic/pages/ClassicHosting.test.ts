@@ -7,6 +7,7 @@ import { ref, watch } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import { at } from '~/tests/helpers/at'
 import { mountPage, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
+import { balancedColumns } from '~/utils/balancedGrid'
 import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
 import ClassicHosting from '~/templates/classic/pages/ClassicHosting.vue'
 import { useCartStore } from '~/stores/cart'
@@ -213,6 +214,21 @@ describe('ClassicHosting', () => {
     const wrapper = await mountHosting()
 
     expect(wrapper.find('[data-testid="classic-hosting-title"]').text()).toContain('hosting.title')
+  })
+
+  it('lays the other plans out in a balanced grid, so four plans are 4 in a row and not 3 + 1', async () => {
+    api.fetchProducts.mockResolvedValue([
+      { id: 2, pid: 2, name: 'Starter', description: 'a', pricing: { monthly: 5, annual: 50 } },
+      { id: 3, pid: 3, name: 'Business', description: 'b', pricing: { monthly: 15, annual: 150 } },
+      { id: 5, pid: 5, name: 'Pro', description: 'c', pricing: { monthly: 25, annual: 250 } },
+      { id: 6, pid: 6, name: 'Plus', description: 'd', pricing: { monthly: 35, annual: 350 } },
+    ])
+    const wrapper = await mountHosting()
+
+    const grid = wrapper.find('[data-testid="classic-hosting-plans"]')
+    expect(grid.classes()).toContain('ui-balanced-grid')
+    expect(grid.attributes('data-columns')).toBe(String(balancedColumns(4)))
+    expect(grid.findAll('[data-testid="classic-hosting-plan"]')).toHaveLength(4)
   })
 
   it('has the payer currency loaded for pricing', async () => {

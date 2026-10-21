@@ -10,7 +10,12 @@
  */
 
 import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
+import { GuaranteeKey } from '~/constants/guaranteeKey'
+import { InstallerAppCategory } from '~/constants/installerAppCategory'
+import { PerformanceStatKey } from '~/constants/performanceStatKey'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
+import { SecurityFeatureKey } from '~/constants/securityFeatureKey'
+import { SupportChannel } from '~/constants/supportChannel'
 import type { DashboardRow } from '~/templates/nova/types/dashboardrow'
 import type { Feature } from '~/templates/nova/types/feature'
 import type { MigrationStep } from '~/templates/nova/types/migrationstep'
@@ -161,19 +166,13 @@ export const PERFORMANCE_FEATURES: readonly Feature[] = [
 ]
 
 /**
- * The security section.
+ * The security statements that are true of every install.
  *
- * SSL certificates and two-factor sign-in are implemented in this codebase and
- * stated plainly. A firewall, a malware scanner and a backup schedule belong to
- * the operator's servers, so each waits on its setting.
+ * Two-factor sign-in with an audit log, and per-account isolation, are implemented in this
+ * codebase and stated plainly. The five operator-configured claims (SSL, backups, DDoS, malware,
+ * firewall) are not here: they wait on their settings and live in {@link SECURITY_FEATURE_CARDS}.
  */
 export const SECURITY_FEATURES: readonly Feature[] = [
-  {
-    key: 'ssl',
-    icon: 'lucide:lock',
-    titleKey: 'nova.security.sslTitle',
-    bodyKey: 'nova.security.sslBody',
-  },
   {
     key: 'account',
     icon: 'lucide:key-round',
@@ -186,28 +185,115 @@ export const SECURITY_FEATURES: readonly Feature[] = [
     titleKey: 'nova.security.isolationTitle',
     bodyKey: 'nova.security.isolationBody',
   },
-  {
-    key: 'backups',
+]
+
+/**
+ * The card of each operator-configured security claim.
+ *
+ * Which of them render is decided by `useSecurityFeatures()`; this table only says how each one
+ * looks, so the SSL, backup, firewall and malware wording that used to be listed in
+ * {@link SECURITY_FEATURES} is stated once, here.
+ */
+export const SECURITY_FEATURE_CARDS: Readonly<Record<SecurityFeatureKey, Feature>> = {
+  [SecurityFeatureKey.Ssl]: {
+    key: SecurityFeatureKey.Ssl,
+    icon: 'lucide:lock',
+    titleKey: 'nova.security.sslTitle',
+    bodyKey: 'nova.security.sslBody',
+  },
+  [SecurityFeatureKey.Backups]: {
+    key: SecurityFeatureKey.Backups,
     icon: 'lucide:database-backup',
     titleKey: 'nova.security.backupsTitle',
     bodyKey: 'nova.security.backupsBody',
-    requiresSetting: PortalSettingKey.FeaturesBackups,
   },
-  {
-    key: 'firewall',
-    icon: 'lucide:shield',
-    titleKey: 'nova.security.firewallTitle',
-    bodyKey: 'nova.security.firewallBody',
-    requiresSetting: PortalSettingKey.FeaturesFirewall,
+  [SecurityFeatureKey.Ddos]: {
+    key: SecurityFeatureKey.Ddos,
+    icon: 'lucide:shield-alert',
+    titleKey: 'nova.security.ddosTitle',
+    bodyKey: 'nova.security.ddosBody',
   },
-  {
-    key: 'malware',
+  [SecurityFeatureKey.Malware]: {
+    key: SecurityFeatureKey.Malware,
     icon: 'lucide:bug',
     titleKey: 'nova.security.malwareTitle',
     bodyKey: 'nova.security.malwareBody',
-    requiresSetting: PortalSettingKey.FeaturesMalware,
   },
-]
+  [SecurityFeatureKey.Firewall]: {
+    key: SecurityFeatureKey.Firewall,
+    icon: 'lucide:shield',
+    titleKey: 'nova.security.firewallTitle',
+    bodyKey: 'nova.security.firewallBody',
+  },
+}
+
+/** The tile of each performance figure: icon and label key. Values come from `usePerformanceStats()`. */
+export const PERFORMANCE_STAT_CARDS: Readonly<Record<PerformanceStatKey, Feature>> = {
+  [PerformanceStatKey.Uptime]: { key: PerformanceStatKey.Uptime, icon: 'lucide:activity', titleKey: 'nova.performance.statUptime' },
+  [PerformanceStatKey.ResponseTime]: { key: PerformanceStatKey.ResponseTime, icon: 'lucide:timer', titleKey: 'nova.performance.statResponseTime' },
+  [PerformanceStatKey.SitesHosted]: { key: PerformanceStatKey.SitesHosted, icon: 'lucide:globe', titleKey: 'nova.performance.statSitesHosted' },
+  [PerformanceStatKey.SupportResponse]: { key: PerformanceStatKey.SupportResponse, icon: 'lucide:headphones', titleKey: 'nova.performance.statSupportResponse' },
+}
+
+/** The card of each guarantee. The money-back body takes `{days}`. */
+export const GUARANTEE_CARDS: Readonly<Record<GuaranteeKey, Feature>> = {
+  [GuaranteeKey.FreeMigration]: {
+    key: GuaranteeKey.FreeMigration,
+    icon: 'lucide:truck',
+    titleKey: 'nova.guarantees.freeMigrationTitle',
+    bodyKey: 'nova.guarantees.freeMigrationBody',
+  },
+  [GuaranteeKey.MoneyBack]: {
+    key: GuaranteeKey.MoneyBack,
+    icon: 'lucide:badge-check',
+    titleKey: 'nova.guarantees.moneyBackTitle',
+    bodyKey: 'nova.guarantees.moneyBackBody',
+  },
+  [GuaranteeKey.NoHiddenFees]: {
+    key: GuaranteeKey.NoHiddenFees,
+    icon: 'lucide:receipt',
+    titleKey: 'nova.guarantees.noHiddenFeesTitle',
+    bodyKey: 'nova.guarantees.noHiddenFeesBody',
+  },
+}
+
+/** The card of each support channel. The title is the channel name; the body says what it is for. */
+export const SUPPORT_CHANNEL_CARDS: Readonly<Record<SupportChannel, Feature>> = {
+  [SupportChannel.Chat]: {
+    key: SupportChannel.Chat,
+    icon: 'lucide:message-circle',
+    titleKey: 'nova.support.chatTitle',
+    bodyKey: 'nova.support.chatBody',
+  },
+  [SupportChannel.Ticket]: {
+    key: SupportChannel.Ticket,
+    icon: 'lucide:ticket',
+    titleKey: 'nova.support.ticketTitle',
+    bodyKey: 'nova.support.ticketBody',
+  },
+  [SupportChannel.Email]: {
+    key: SupportChannel.Email,
+    icon: 'lucide:mail',
+    titleKey: 'nova.support.emailTitle',
+    bodyKey: 'nova.support.emailBody',
+  },
+  [SupportChannel.Phone]: {
+    key: SupportChannel.Phone,
+    icon: 'lucide:phone',
+    titleKey: 'nova.support.phoneTitle',
+    bodyKey: 'nova.support.phoneBody',
+  },
+}
+
+/** The one-click installer categories: icon and label key. */
+export const INSTALLER_CATEGORY_CARDS: Readonly<Record<InstallerAppCategory, Feature>> = {
+  [InstallerAppCategory.Cms]: { key: InstallerAppCategory.Cms, icon: 'lucide:layout-template', titleKey: 'nova.apps.cms' },
+  [InstallerAppCategory.Shop]: { key: InstallerAppCategory.Shop, icon: 'lucide:shopping-cart', titleKey: 'nova.apps.shop' },
+  [InstallerAppCategory.Forum]: { key: InstallerAppCategory.Forum, icon: 'lucide:messages-square', titleKey: 'nova.apps.forum' },
+  [InstallerAppCategory.Wiki]: { key: InstallerAppCategory.Wiki, icon: 'lucide:book-open', titleKey: 'nova.apps.wiki' },
+  [InstallerAppCategory.Blog]: { key: InstallerAppCategory.Blog, icon: 'lucide:pen-line', titleKey: 'nova.apps.blog' },
+  [InstallerAppCategory.Gallery]: { key: InstallerAppCategory.Gallery, icon: 'lucide:image', titleKey: 'nova.apps.gallery' },
+}
 
 /**
  * Rows of the control-panel preview.

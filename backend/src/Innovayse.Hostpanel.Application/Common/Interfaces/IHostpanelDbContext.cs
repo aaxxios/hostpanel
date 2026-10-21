@@ -5,6 +5,7 @@ using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Faqs;
 using Innovayse.Hostpanel.Domain.Hosting;
+using Innovayse.Hostpanel.Domain.Locations;
 using Innovayse.Hostpanel.Domain.Migration;
 using Innovayse.Hostpanel.Domain.Notifications;
 using Innovayse.Hostpanel.Domain.Orders;
@@ -189,6 +190,12 @@ public interface IHostpanelDbContext
 
     /// <summary>Gets the per-locale translations of the storefront partners.</summary>
     public DbSet<PartnerTranslation> PartnerTranslations { get; }
+
+    /// <summary>Gets the storefront server locations table.</summary>
+    public DbSet<ServerLocation> ServerLocations { get; }
+
+    /// <summary>Gets the per-locale translations of the storefront server locations.</summary>
+    public DbSet<ServerLocationTranslation> ServerLocationTranslations { get; }
 
     /// <summary>Gets the storefront portfolio projects table.</summary>
     public DbSet<Project> Projects { get; }
