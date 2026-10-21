@@ -4,10 +4,10 @@
  * @module types/templatename
  */
 export enum TemplateName {
-  /** The shipped default design. */
+  /** The glow-backed design, light and dark. */
   Aurora = 'aurora',
   /** The second design. */
   Nova = 'nova',
-  /** The dark-only classic design. */
+  /** The original storefront design, light and dark; the default (`DEFAULT_TEMPLATE`). */
   Classic = 'classic'
 }

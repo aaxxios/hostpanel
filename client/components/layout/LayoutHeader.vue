@@ -24,7 +24,9 @@
               :to="link.href"
               tone="muted"
               :underline="false"
-              class="text-sm lg:text-base text-gray-700 hover:text-primary-600 dark:hover:text-primary-400 font-medium"
+              class="relative text-sm lg:text-base font-medium rounded-md px-1 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-950 after:absolute after:inset-x-1 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-primary-500 after:transition-transform after:origin-left hover:after:scale-x-100"
+              :class="isActive(link.href) ? 'text-primary-600 dark:text-primary-400 after:scale-x-100' : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 after:scale-x-0'"
+              :aria-current="isActive(link.href) ? 'page' : undefined"
               data-testid="layout-nav-link"
             >
               {{ link.label }}
@@ -36,7 +38,8 @@
 data-testid="layout-header-trigger"
                 variant="ghost"
                 size="sm"
-                class="gap-1 text-sm lg:text-base font-medium hover:text-primary-600 dark:hover:text-primary-400"
+                class="gap-1 text-sm lg:text-base font-medium hover:text-primary-600 dark:hover:text-primary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-950"
+                :class="isGroupActive(link) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'"
               >
                 {{ link.label }}
                 <ChevronDown :size="14" class="transition-transform duration-200 group-hover:rotate-180" />
@@ -54,7 +57,9 @@ data-testid="layout-header-trigger"
                     :to="child.href"
                     tone="muted"
                     :underline="false"
-                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-white/10 rounded-none"
+                    class="flex items-center gap-3 px-4 py-3 text-sm rounded-none hover:bg-gray-100 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:bg-gray-100 dark:focus-visible:bg-white/10"
+                    :class="isActive(child.href) ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'"
+                    :aria-current="isActive(child.href) ? 'page' : undefined"
                     data-testid="layout-nav-child"
                   >
                     <component :is="navIcon(child.icon)" v-if="child.icon" :size="16" class="text-primary-600 dark:text-primary-400 flex-shrink-0" />
@@ -123,7 +128,9 @@ data-testid="layout-header-trigger"
                 :to="link.href"
                 tone="muted"
                 :underline="false"
-                class="block py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg text-sm sm:text-base text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-primary-600 dark:hover:text-primary-400 font-medium"
+                class="block py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg text-sm sm:text-base hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-primary-600 dark:hover:text-primary-400 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-950"
+                :class="isActive(link.href) ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'"
+                :aria-current="isActive(link.href) ? 'page' : undefined"
                 data-testid="layout-mobile-link"
                 @click="closeMobileMenu"
               >
@@ -270,6 +277,8 @@ import {
 import { useAuthStore } from '~/stores/auth'
 import { useCartStore } from '~/stores/cart'
 import { LogoSurface } from '~/utils/appLogo'
+import { HomeSectionId } from '~/types/homesectionid'
+import { homeSectionPath } from '~/constants/homeSections'
 import { NavIcon } from '~/types/navicon'
 import type { NavLink } from '~/types/navlink'
 import { AuthMode } from '~/types/authmode'
@@ -325,6 +334,8 @@ const navLinks = computed<NavLink[]>(() => [
       }
     ]
   },
+  { label: t('nav.services'), href: homeSectionPath(localePath, HomeSectionId.Services) },
+  { label: t('nav.process'), href: homeSectionPath(localePath, HomeSectionId.Process) },
   { label: t('nav.products'), href: localePath('/products') }
 ])
 
@@ -443,6 +454,31 @@ onUnmounted(() => {
 
 /** Current route; a change closes the mobile menu. */
 const route = useRoute()
+
+/**
+ * Whether a navigation target is the page being viewed. A section link matches the home path
+ * with its hash; any other link matches its own path or a page below it.
+ *
+ * @param href - The link target, possibly undefined for a group.
+ * @returns True for the current target.
+ */
+const isActive = (href: string | undefined): boolean => {
+  if (!href) {
+    return false
+  }
+  if (href.includes('#')) {
+    return `${route.path}${route.hash ?? ''}` === href
+  }
+  return route.path === href || route.path.startsWith(`${href}/`)
+}
+
+/**
+ * Whether one of a dropdown group's children is the page being viewed.
+ *
+ * @param link - The group entry.
+ * @returns True when a child is active.
+ */
+const isGroupActive = (link: NavLink): boolean => (link.children ?? []).some(child => isActive(child.href))
 watch(() => route.path, () => {
   closeMobileMenu()
 })

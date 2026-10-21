@@ -370,9 +370,9 @@ one-time import of the previous static content; the demo does not, because its s
 `useTemplate().slot('header')`, which resolves through `templates/registry.ts`. There are three
 templates — `aurora`, `nova`, `classic` — and the active one is decided by, in order: the
 operator's `portal.template` admin setting, then `NUXT_PUBLIC_PORTAL_TEMPLATE`, then the
-built-in default **`aurora`**; anything unrecognised falls back to `aurora` rather than
+built-in default **`classic`** (`DEFAULT_TEMPLATE`, mirrored by `PortalSettingKeys.DefaultTemplate`); anything unrecognised falls back to `classic` rather than
 rendering nothing. `components/layout/Header.vue` is reached only through
-`templates/classic/layout/Header.vue`, a two-line wrapper — so on a default deployment it is
+`templates/classic/layout/Header.vue`, a two-line wrapper — so on an aurora or nova deployment it is
 live code that nothing renders. Editing it and reloading changes nothing, and that has cost
 real time. Start from `templates/<active>/layout/Header.vue`.
 

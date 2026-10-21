@@ -65,10 +65,11 @@ const runAsyncData = async (_key: string, handler: () => Promise<unknown>, optio
 /**
  * Mounts the page and lets the currencies load.
  *
+ * @param props The page's props: the plan cards and comparison rows.
  * @returns The wrapper.
  */
-const mountHosting = async () => {
-  const wrapper = await mountPage(ClassicHosting)
+const mountHosting = async (props: Record<string, unknown> = {}) => {
+  const wrapper = await mountPage(ClassicHosting, { props })
   await flushPromises()
   return wrapper
 }
@@ -103,9 +104,9 @@ describe('ClassicHosting', () => {
     const cards = wrapper.findAll('[data-testid="classic-hosting-plan"]')
     expect(cards).toHaveLength(2)
     expect(at(cards, 0).text()).toContain('Starter')
-    expect(at(cards, 0).text()).toContain('hosting.mostPopular')
+    expect(at(cards, 0).find('[data-testid="classic-hosting-recommended"]').text()).toBe('hosting.recommended')
     expect(at(cards, 1).text()).toContain('Business')
-    expect(at(cards, 1).text()).not.toContain('hosting.mostPopular')
+    expect(at(cards, 1).find('[data-testid="classic-hosting-recommended"]').exists()).toBe(false)
   })
 
   it('shows the monthly price first and switches to the annual one from the tab', async () => {
@@ -158,19 +159,40 @@ describe('ClassicHosting', () => {
     expect(useCartStore().items).toEqual([])
   })
 
-  it('lists the plans in the comparison table in catalogue order with their own feature lines', async () => {
-    const wrapper = await mountHosting()
+  it('aligns the shared comparison rows to the page columns and marks a missing line as not included', async () => {
+    const cards = [{ id: 2, name: 'Starter' }, { id: 3, name: 'Business' }]
+    const comparisonRows = [
+      { label: 'Disk', values: ['5 GB', '20 GB'] },
+      { label: 'Emails', values: ['10', '50'] },
+      { label: 'Backups', values: ['', 'Daily'] },
+    ]
+    const wrapper = await mountHosting({ plans: cards, comparisonRows })
 
     const table = wrapper.find('[data-testid="classic-hosting-compare"]')
     const headings = table.findAll('thead th').map((cell) => cell.text())
-    expect(headings[1]).toContain('Free')
-    expect(headings[2]).toContain('Starter')
-    expect(headings[3]).toContain('Business')
-    expect(headings[4]).toContain('Agency')
-    const cells = table.findAll('[data-testid="classic-hosting-compare-features"]').map((cell) => cell.text())
-    expect(cells[0]).toContain('5 GB Bandwidth')
-    expect(cells[1]).toContain('10 Emails')
-    expect(cells[3]).toContain('Unlimited Websites')
+    expect(headings[1]).toContain('Starter')
+    expect(headings[2]).toContain('Business')
+    expect(table.find('[data-testid="classic-hosting-compare-row-Disk"]').text()).toContain('20 GB')
+    expect(table.find('[data-testid="classic-hosting-compare-row-Backups"]').text()).toContain('hosting.comparison.notIncluded')
+  })
+
+  it('hides the comparison table when the plans share too few lines', async () => {
+    const wrapper = await mountHosting({ plans: [{ id: 2, name: 'Starter' }], comparisonRows: [{ label: 'Disk', values: ['5 GB'] }] })
+
+    expect(wrapper.find('[data-testid="classic-hosting-compare"]').exists()).toBe(false)
+  })
+
+  it.each([
+    ['plans with zero features', []],
+    ['plans with disjoint labels', [
+      { label: 'Disk', values: ['5 GB', ''] },
+      { label: 'Emails', values: ['', '50'] },
+      { label: 'Backups', values: ['', 'Daily'] },
+    ]],
+  ])('renders no comparison table for %s', async (_name, comparisonRows) => {
+    const wrapper = await mountHosting({ plans: [{ id: 2, name: 'Starter' }, { id: 3, name: 'Business' }], comparisonRows })
+
+    expect(wrapper.find('[data-testid="classic-hosting-compare"]').exists()).toBe(false)
   })
 
   it('shows the failure sentence with a retry that reads again', async () => {

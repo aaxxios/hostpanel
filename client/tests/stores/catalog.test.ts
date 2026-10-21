@@ -10,6 +10,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { balancedColumns, lastRowSize } from '~/utils/balancedGrid'
 
 /** The mocked catalogue endpoints, re-created for every test. */
 const api = {
@@ -294,6 +295,27 @@ describe('useCatalogStore.planCards', () => {
     await store.loadHostingPlans()
 
     expect(store.planCards(id => `/${id}`).some(card => card.isFeatured)).toBe(false)
+  })
+
+  it('shows prod-shaped plans (no featured flag, default sort order) without a badge, ordered by price, in a balanced grid', async () => {
+    // Real operator plans: every sortOrder is the default 0, nothing is featured, the API order is arbitrary.
+    api.fetchProducts.mockResolvedValue([
+      { id: 14, name: 'Business', sortOrder: 0, pricing: { monthly: 15, annual: 150 } },
+      { id: 11, name: 'Free', sortOrder: 0, pricing: { monthly: 0, annual: 0 } },
+      { id: 16, name: 'Agency', sortOrder: 0, pricing: { monthly: 40, annual: 400 } },
+      { id: 12, name: 'Starter', sortOrder: 0, pricing: { monthly: 5, annual: 50 } },
+      { id: 15, name: 'Pro', sortOrder: 0, pricing: { monthly: 25, annual: 250 } },
+      { id: 13, name: 'Webmaster', sortOrder: 0, pricing: { monthly: 9, annual: 90 } }
+    ])
+    const store = useCatalogStore()
+    await store.loadHostingPlans()
+
+    const cards = store.planCards(id => `/${id}`)
+
+    expect(cards.map(card => card.name)).toEqual(['Free', 'Starter', 'Webmaster', 'Business', 'Pro', 'Agency'])
+    expect(cards.some(card => card.isFeatured)).toBe(false)
+    expect(balancedColumns(cards.length)).toBe(3)
+    expect(lastRowSize(cards.length, balancedColumns(cards.length))).toBe(3)
   })
 
   it('has no cards before the plans were read', () => {

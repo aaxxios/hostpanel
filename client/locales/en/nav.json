@@ -1,5 +1,7 @@
 {
   "nav": {
+    "services": "Services",
+    "process": "Process",
     "products": "Products",
     "hosting": "Hosting",
     "domains": "Domains",

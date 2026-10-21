@@ -4,7 +4,7 @@
     "title": "Fast & Reliable",
     "titleHighlight": "Web Hosting",
     "subtitle": "Choose the perfect hosting plan for your website. SSD storage, free SSL, support included.",
-    "mostPopular": "Most Popular",
+    "recommended": "Recommended",
     "perMonthFull": "/month",
     "getStarted": "Get Started",
     "addToCart": "Add to Cart",
@@ -29,7 +29,7 @@
     "comparison": {
       "title": "Compare Plans",
       "subtitle": "Choose the features that best fit your requirements.",
-      "includes": "What is included",
+      "notIncluded": "Not included",
       "feature": "Feature"
     },
     "customContact": "Contact us for custom solutions",

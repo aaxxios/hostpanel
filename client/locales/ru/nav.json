@@ -1,5 +1,7 @@
 {
   "nav": {
+    "services": "Услуги",
+    "process": "Процесс",
     "products": "Продукты",
     "hosting": "Хостинг",
     "domains": "Домены",

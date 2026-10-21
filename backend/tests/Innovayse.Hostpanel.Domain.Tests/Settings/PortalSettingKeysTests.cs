@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Domain.Settings;
+using Innovayse.Hostpanel.Domain.Settings.Enums;
 using Xunit;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Settings;
@@ -79,6 +80,14 @@ public class PortalSettingKeysTests
         Assert.True(PortalSettingKeys.AllowsEmpty(PortalSettingKeys.BrandPrimary));
         Assert.True(PortalSettingKeys.AllowsEmpty(PortalSettingKeys.BrandFontBody));
         Assert.False(PortalSettingKeys.AllowsEmpty("integration:cwp7:hostname"));
+    }
+
+    /// <summary>A fresh install seeds the classic template, spelled as the storefront matches it.</summary>
+    [Fact]
+    public void Defaults_SeedTheClassicTemplate()
+    {
+        Assert.Equal(StorefrontTemplate.Classic, PortalSettingKeys.DefaultTemplate);
+        Assert.Equal("classic", PortalSettingKeys.Defaults.Single(d => d.Key == PortalSettingKeys.Template).Value);
     }
 
     /// <summary>The template vocabulary matches what the storefront's registry can render.</summary>

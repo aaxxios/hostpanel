@@ -91,3 +91,25 @@ describe('isComparable', () => {
     expect(isComparable([{ label: 'A', values: ['1', '2'] }, { label: 'B', values: ['3', '4'] }])).toBe(true)
   })
 })
+
+describe('prod-shaped plans', () => {
+  /** The real operator plans, left to right. */
+  const planIds = [11, 12, 13, 14, 15, 16]
+
+  it('has no rows and no table when none of the six plans has a specification line', () => {
+    const rows = buildComparisonRows([], planIds)
+
+    expect(rows).toEqual([])
+    expect(isComparable(rows)).toBe(false)
+  })
+
+  it('has no table when every plan labels its lines differently', () => {
+    const features = planIds.map((id, index) => line(id, `Label ${index}`, `${index} GB`, 0))
+    const rows = buildComparisonRows(features, planIds)
+
+    // Every label is kept as a row, but no row is shared by two plans.
+    expect(rows).toHaveLength(6)
+    expect(commonRowCount(rows)).toBe(0)
+    expect(isComparable(rows)).toBe(false)
+  })
+})

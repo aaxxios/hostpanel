@@ -1,5 +1,5 @@
 <template>
-  <footer class="relative mt-20 overflow-hidden bg-classic-footer" data-testid="layout-footer">
+  <footer class="relative overflow-hidden bg-classic-footer" data-testid="layout-footer">
     <!-- Background decor -->
     <UiStack gap="none" class="absolute inset-0 pointer-events-none overflow-hidden">
       <UiStack gap="none" class="absolute -top-24 -left-24 w-96 h-96 bg-primary-600/5 dark:bg-primary-600/10 rounded-full blur-[120px]" />
@@ -131,6 +131,21 @@
                 </UiStack>
                 <UiText as="span" size="sm" tone="muted" data-testid="footer-address">{{ contactAddress }}</UiText>
               </UiStack>
+            </UiListItem>
+            <!-- No channel set yet: point at the contact page so the column is never empty. -->
+            <UiListItem v-if="!contactEmail && !contactPhone && !contactAddress" class="group">
+              <UiFooterLink
+                :to="localePath('/contact')"
+                :variant="UiFooterLinkVariant.Classic"
+                :underline="false"
+                class="gap-4 text-sm"
+                testid="footer-contact-page"
+              >
+                <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 group-hover:border-primary-500/30 group-hover:bg-primary-500/10">
+                  <Mail :size="18" class="text-primary-600 dark:text-primary-400 transition-transform group-hover:scale-110" />
+                </UiStack>
+                {{ $t('footer.contactPage') }}
+              </UiFooterLink>
             </UiListItem>
           </UiList>
 

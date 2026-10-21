@@ -1,7 +1,7 @@
 <template>
   <UiStack gap="none" class="overflow-x-hidden" data-testid="classic-hosting">
     <!-- Hero -->
-    <UiSection :contained="false" padding="lg" class="relative lg:py-32 bg-classic-page overflow-hidden">
+    <UiSection :contained="false" padding="lg" class="relative lg:pt-28 lg:pb-12 bg-classic-page overflow-hidden">
       <UiStack gap="none" class="absolute inset-0 pointer-events-none">
         <UiStack gap="none" class="absolute top-0 right-1/4 w-[500px] h-[500px] bg-cyan-500/20 rounded-full blur-[140px] animate-blob" />
         <UiStack gap="none" class="absolute bottom-0 left-1/3 w-[400px] h-[400px] bg-secondary-500/15 rounded-full blur-[130px] animate-blob animation-delay-2000" />
@@ -17,14 +17,14 @@
           {{ $t('hosting.title') }}
           <UiGradientText class="block pb-2 bg-gradient-to-r from-cyan-400 to-primary-400">{{ $t('hosting.titleHighlight') }}</UiGradientText>
         </UiHeading>
-        <UiText tone="muted" class="md:text-lg mb-10 max-w-2xl mx-auto">
+        <UiText tone="muted" class="md:text-lg max-w-2xl mx-auto">
           {{ $t('hosting.subtitle') }}
         </UiText>
       </UiContainer>
     </UiSection>
 
     <!-- Plans -->
-    <UiSection :contained="false" padding="md" class="relative md:py-20 bg-classic-page overflow-visible">
+    <UiSection :contained="false" padding="md" class="relative pt-0 md:pt-0 md:pb-20 bg-classic-page overflow-visible">
       <UiContainer class="relative z-10">
         <!-- Loading -->
         <UiGrid v-if="pending" cols="3" gap="lg" class="max-w-5xl mx-auto py-20 px-4" data-testid="classic-hosting-loading">
@@ -40,7 +40,7 @@
 
         <template v-else>
           <!-- Billing cycle tabs -->
-          <UiStack direction="row" justify="center" gap="none" class="sticky top-20 z-40 py-4 mb-16 md:mb-20 px-4">
+          <UiStack direction="row" justify="center" gap="none" class="sticky top-20 z-40 py-4 mb-8 md:mb-12 px-4">
             <UiSegmentedControl
               v-model="selectedCycle"
               :options="cycleOptions"
@@ -104,14 +104,14 @@
             </UiCard>
 
             <!-- Separator -->
-            <UiStack align="center" gap="none" class="text-center mt-24 mb-16">
+            <UiStack align="center" gap="none" class="text-center mt-16 mb-10">
               <UiText as="span" size="xs" tone="inherit" weight="bold" class="md:text-sm text-gray-600 dark:text-gray-400 font-black uppercase tracking-[0.3em] block mb-4">{{ $t('hosting.premiumSolutions') }}</UiText>
               <UiStack gap="none" class="w-24 h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent mx-auto" />
             </UiStack>
           </UiStack>
 
           <!-- Other plans grid -->
-          <UiStack direction="row" wrap justify="center" gap="lg" class="md:gap-8 mb-24" data-testid="classic-hosting-plans">
+          <UiStack direction="row" wrap justify="center" gap="lg" class="md:gap-8 mb-8" data-testid="classic-hosting-plans">
             <UiStack
               v-for="(plan, index) in otherPlans"
               :key="plan.pid"
@@ -120,17 +120,17 @@
               data-testid="classic-hosting-plan"
               :class="revealDelay(index * 100)"
             >
+              <!-- Outside the card: the card clips its overflow, which hid a badge sitting on its edge. -->
+              <UiStack v-if="isFeatured(plan)" gap="none" class="absolute -top-3 left-1/2 -translate-x-1/2 z-20" data-testid="classic-hosting-recommended">
+                <UiText as="span" size="xs" tone="inherit" weight="bold" class="px-5 py-1.5 bg-gradient-to-r from-cyan-500 to-primary-500 text-on-primary text-[10px] font-black rounded-full shadow-xl shadow-cyan-500/30 uppercase tracking-widest whitespace-nowrap">
+                  {{ $t('hosting.recommended') }}
+                </UiText>
+              </UiStack>
               <UiCard
                 padding="none"
                 class="relative h-full p-8 rounded-[2.5rem] transition-all duration-500 flex flex-col overflow-hidden group/card bg-white/[0.01] border-gray-200 dark:border-white/5"
                 :class="{ 'border-cyan-500/40 dark:border-cyan-500/40 bg-cyan-500/[0.03] shadow-halo-cyan-md': isFeatured(plan) }"
               >
-                <UiStack v-if="isFeatured(plan)" gap="none" class="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
-                  <UiText as="span" size="xs" tone="inherit" weight="bold" class="px-5 py-1.5 bg-gradient-to-r from-cyan-500 to-primary-500 text-white text-[10px] font-black rounded-full shadow-xl shadow-cyan-500/30 uppercase tracking-widest">
-                    {{ $t('hosting.mostPopular') }}
-                  </UiText>
-                </UiStack>
-
                 <UiStack gap="none" class="mb-8">
                   <UiLink data-testid="classic-hosting-plan-link" :to="localePath(`/hosting/${planSlug(plan)}`)" tone="inherit" :underline="false" class="block mb-2">
                     <UiHeading :level="UiHeadingLevel.H2" size="title" class="md:text-3xl font-black hover:text-cyan-700 dark:hover:text-cyan-400 transition-colors uppercase tracking-tighter leading-none">
@@ -182,7 +182,7 @@
                   </UiStack>
                 </UiStack>
 
-                <UiList list-style="plain" class="space-y-4 mb-10 flex-1">
+                <UiList v-if="planFeatures(plan).length" list-style="plain" class="space-y-4 mb-10 flex-1">
                   <UiListItem v-for="feature in planFeatures(plan)" :key="feature" class="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400 group-hover/card:text-gray-700 dark:group-hover/card:text-gray-300 transition-colors">
                     <UiStack direction="row" align="center" justify="center" gap="none" class="mt-1 w-5 h-5 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex-shrink-0">
                       <CheckCircle :size="12" class="text-cyan-700 dark:text-cyan-400 flex-shrink-0" />
@@ -191,7 +191,7 @@
                   </UiListItem>
                 </UiList>
 
-                <UiStack gap="sm">
+                <UiStack gap="sm" class="mt-auto">
                   <UiButton
                     variant="outline"
                     full-width
@@ -286,7 +286,7 @@ data-testid="classic-hosting-plan-select"
           </UiStack>
 
           <!-- Comparison table -->
-          <UiStack id="compare-plans" gap="none" class="mt-32 overflow-hidden" data-testid="classic-hosting-compare">
+          <UiStack v-if="comparable" id="compare-plans" gap="none" class="mt-16 overflow-hidden" data-testid="classic-hosting-compare">
             <UiStack align="center" gap="none" class="text-center mb-16">
               <UiHeading :level="UiHeadingLevel.H2" size="title" class="md:text-5xl font-black mb-4 uppercase tracking-tighter">{{ $t('hosting.comparison.title') }}</UiHeading>
               <UiText tone="muted" weight="medium" class="max-w-2xl mx-auto md:text-lg">{{ $t('hosting.comparison.subtitle') }}</UiText>
@@ -303,7 +303,7 @@ data-testid="classic-hosting-plan-select"
                           {{ $t('hosting.comparison.feature') }}
                         </UiStack>
                       </UiTableTh>
-                      <UiTableTh v-for="plan in plans" :key="plan.pid" align="center" class="!p-4 md:!p-8 relative group/col min-w-[120px]">
+                      <UiTableTh v-for="plan in comparedPlans" :key="plan.pid" align="center" class="!p-4 md:!p-8 relative group/col min-w-[120px]">
                         <UiStack gap="none" class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-500 to-primary-500 scale-x-0 group-hover/col:scale-x-100 transition-transform duration-500" />
                         <UiText size="xs" weight="bold" class="md:text-sm mb-2 group-hover/col:text-cyan-700 dark:group-hover/col:text-cyan-400 transition-colors uppercase tracking-widest leading-tight">
                           {{ formatPlanName(plan.name) }}
@@ -315,23 +315,26 @@ data-testid="classic-hosting-plan-select"
                     </UiTableRow>
                   </UiTableHead>
                   <UiTableBody>
-                    <!-- What each plan includes, exactly as the operator wrote it in the catalogue. -->
-                    <UiTableRow group class="hover:bg-gray-900/[0.03] dark:hover:bg-white/[0.03]">
-                      <UiTableTd class="!p-4 md:!p-6 !text-[10px] md:!text-sm text-gray-600 dark:text-gray-400 font-bold sticky left-0 bg-classic-surface/95 backdrop-blur-xl z-20 border-r border-gray-200 dark:border-white/5 align-top group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                        <UiText as="span" tone="inherit" size="inherit" class="whitespace-nowrap">{{ $t('hosting.comparison.includes') }}</UiText>
+                    <!-- One row per specification line, aligned by the shared comparisonRows logic. -->
+                    <UiTableRow v-for="row in comparisonRows" :key="row.label" group class="hover:bg-gray-900/[0.03] dark:hover:bg-white/[0.03]" :data-testid="`classic-hosting-compare-row-${row.label}`">
+                      <UiTableTd class="!p-4 md:!p-6 !text-[10px] md:!text-sm text-gray-600 dark:text-gray-400 font-bold sticky left-0 bg-classic-surface/95 backdrop-blur-xl z-20 border-r border-gray-200 dark:border-white/5 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                        {{ row.label }}
                       </UiTableTd>
-                      <UiTableTd v-for="plan in plans" :key="plan.pid" align="center" class="!p-4 md:!p-6 !text-[10px] md:!text-sm text-gray-600 dark:text-gray-400 align-top relative group-hover:text-gray-700 dark:group-hover:text-gray-200" data-testid="classic-hosting-compare-features">
-                        <UiList v-if="planFeatures(plan).length" list-style="bare">
-                          <UiListItem v-for="feature in planFeatures(plan)" :key="feature" :icon="Check">{{ feature }}</UiListItem>
-                        </UiList>
-                        <UiText v-else as="span" tone="inherit" class="text-gray-800 opacity-20 font-mono">{{ NO_VALUE }}</UiText>
+                      <UiTableTd
+                        v-for="(value, index) in row.values"
+                        :key="`${row.label}-${comparedPlans[index]?.pid ?? index}`"
+                        align="center"
+                        class="!p-4 md:!p-6 !text-[10px] md:!text-sm"
+                        :class="value ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-500'"
+                      >
+                        <!-- A plan that does not carry this line reads as absent, not as zero. -->
+                        {{ value || $t('hosting.comparison.notIncluded') }}
                       </UiTableTd>
                     </UiTableRow>
-
                     <!-- Bottom action row -->
                     <UiTableRow :hoverable="false">
                       <UiTableTd class="!p-4 md:!p-8 sticky left-0 bg-classic-surface/95 backdrop-blur-xl z-20 border-r border-gray-200 dark:border-white/5" />
-                      <UiTableTd v-for="plan in plans" :key="plan.pid" align="center" class="!p-4 md:!p-8 bg-white/[0.01]">
+                      <UiTableTd v-for="plan in comparedPlans" :key="plan.pid" align="center" class="!p-4 md:!p-8 bg-white/[0.01]">
                         <UiButton
                           :variant="cart.hasItem(plan.pid, selectedCycle) ? 'subtle' : 'outline'"
                           size="sm"
@@ -387,9 +390,17 @@ import { UiHeadingLevel } from '~/utils/ui/enums'
 import type { HostingPlan } from '~/types/hostingplan'
 import type { SegmentedOption } from '~/types/segmentedoption'
 import { PricingCycle } from '~/types/pricingcycle'
+import type { PlanCard } from '~/types/plancard'
+import type { ComparisonRow } from '~/types/comparisonrow'
+import { isComparable } from '~/utils/comparisonRows'
 
-/** Shown in a comparison cell for a plan that lists no features. */
-const NO_VALUE = '—'
+/** Component props: the page's plan cards and the comparison rows aligned to them. */
+const props = withDefaults(defineProps<{
+  /** The plans in comparison-column order; each row value lines up with one. */
+  plans?: PlanCard[]
+  /** Specification rows built by `buildComparisonRows` in pages/hosting/index.vue. */
+  comparisonRows?: ComparisonRow[]
+}>(), { plans: () => [], comparisonRows: () => [] })
 
 /** Fragment of a plan name that marks the agency plan; the catalogue has no flag for it. */
 const AGENCY_NAME_MARKER = 'agency'
@@ -401,7 +412,7 @@ const AGENCY_NAME_MARKER = 'agency'
  * @param plan - The plan.
  * @returns True for the featured plan.
  */
-const isFeatured = (plan: HostingPlan): boolean => plan.pid === plans.value.find(p => p.isFeatured === true)?.pid
+const isFeatured = (plan: HostingPlan): boolean => plan.pid === catalogPlans.value.find(p => p.isFeatured === true)?.pid
 
 /** Translate function and the active locale. */
 const { t, locale } = useI18n()
@@ -444,7 +455,16 @@ const { pending, refresh } = await useAsyncData('hosting:classic-plans', () => c
 const error = computed(() => catalogStore.error)
 
 /** All hosting plans. */
-const plans = computed<HostingPlan[]>(() => catalogStore.productsFor(hostingFilter) as HostingPlan[])
+const catalogPlans = computed<HostingPlan[]>(() => catalogStore.productsFor(hostingFilter) as HostingPlan[])
+
+/** Whether the plans share enough specification lines for the comparison table to add value. */
+const comparable = computed(() => isComparable(props.comparisonRows))
+
+/** The catalogue plans in the page's column order, so each column matches its row values. */
+const comparedPlans = computed<HostingPlan[]>(() =>
+  props.plans
+    .map(card => catalogPlans.value.find(plan => (plan.pid || plan.id) === card.id))
+    .filter((plan): plan is HostingPlan => plan !== undefined))
 
 /**
  * Whether a plan is the agency one.
@@ -455,13 +475,13 @@ const plans = computed<HostingPlan[]>(() => catalogStore.productsFor(hostingFilt
 const isAgencyPlan = (plan: HostingPlan): boolean => plan.name.toLowerCase().includes(AGENCY_NAME_MARKER)
 
 /** The free plan, shown in its own banner; free means a zero price, as in the catalogue store. */
-const freePlan = computed(() => plans.value.find(p => isFreePlan(p.pricing)))
+const freePlan = computed(() => catalogPlans.value.find(p => isFreePlan(p.pricing)))
 
 /** The agency plan, shown in its own banner. */
-const agencyPlan = computed(() => plans.value.find(p => !isFreePlan(p.pricing) && isAgencyPlan(p)))
+const agencyPlan = computed(() => catalogPlans.value.find(p => !isFreePlan(p.pricing) && isAgencyPlan(p)))
 
 /** Every plan that is neither the free nor the agency one - the grid. */
-const otherPlans = computed(() => plans.value.filter(p => !isFreePlan(p.pricing) && !isAgencyPlan(p)))
+const otherPlans = computed(() => catalogPlans.value.filter(p => !isFreePlan(p.pricing) && !isAgencyPlan(p)))
 
 /** The billing cycle the prices are shown for. */
 const selectedCycle = ref<PricingCycle>(PricingCycle.Monthly)
@@ -486,7 +506,7 @@ const planPrice = (plan: HostingPlan, cycle: PricingCycle): number | null => cyc
 
 /** Cycles at least one plan is priced in - the segments of the cycle switch. */
 const cycleOptions = computed<SegmentedOption<PricingCycle>[]>(() =>
-  PRICING_CYCLES.filter(key => plans.value.some(p => planPrice(p, key) !== null))
+  PRICING_CYCLES.filter(key => catalogPlans.value.some(p => planPrice(p, key) !== null))
     .map(key => ({ value: key, label: cycleLabel(key), testid: `classic-hosting-cycle-${key}` })))
 
 /**

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Innovayse.Hostpanel.Domain.Settings.Enums;
 
 namespace Innovayse.Hostpanel.Domain.Settings;
 /// <summary>
@@ -27,7 +28,7 @@ namespace Innovayse.Hostpanel.Domain.Settings;
 /// </remarks>
 public static class PortalSettingKeys
 {
-    /// <summary>Active storefront template: <c>aurora</c>, <c>nova</c> or <c>classic</c>.</summary>
+    /// <summary>Active storefront template: <c>classic</c>, <c>aurora</c> or <c>nova</c>; see <see cref="StorefrontTemplate"/>.</summary>
     public const string Template = "portal.template";
 
     /// <summary>Header logo for light backgrounds. The original key, kept for existing installs.</summary>
@@ -198,9 +199,17 @@ public static class PortalSettingKeys
     /// <summary>The company story for Armenian visitors.</summary>
     public const string AboutTextHy = "portal.about.text.hy";
 
-    /// <summary>The template names the storefront can render. Mirrors <c>client/templates/types.ts</c>.</summary>
+    /// <summary>The template a fresh install starts with. Mirrors <c>DEFAULT_TEMPLATE</c> in <c>client/templates/types.ts</c>.</summary>
+    public const StorefrontTemplate DefaultTemplate = StorefrontTemplate.Classic;
+
+    /// <summary>The template names the storefront can render, derived from <see cref="StorefrontTemplate"/>.</summary>
     public static readonly IReadOnlySet<string> TemplateNames =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "aurora", "nova", "classic" };
+        new HashSet<string>(Enum.GetValues<StorefrontTemplate>().Select(TemplateValue), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The value <c>portal.template</c> stores for a template: its member name in lower case.</summary>
+    /// <param name="template">The template.</param>
+    /// <returns>The stored spelling, e.g. <c>classic</c>.</returns>
+    public static string TemplateValue(StorefrontTemplate template) => template.ToString().ToLowerInvariant();
 
     /// <summary>The colour modes an operator can set as the default.</summary>
     public static readonly IReadOnlySet<string> ThemeModes =
@@ -293,7 +302,7 @@ public static class PortalSettingKeys
     /// </summary>
     public static readonly IReadOnlyList<(string Key, string Value, string Description)> Defaults =
     [
-        (Template,            "aurora", "Active storefront template: aurora, nova or classic."),
+        (Template,            TemplateValue(DefaultTemplate), "Active storefront template: classic, aurora or nova."),
         (SiteName,            "",       "Site name used in the browser title, social previews and image alt text. Empty shows the built-in name."),
         (SiteTagline,         "",       "One-line description used as the default meta description. Empty hides it."),
         (ThemeDefault,        "dark",   "Colour mode for a visitor who has not chosen one: light, dark or system."),

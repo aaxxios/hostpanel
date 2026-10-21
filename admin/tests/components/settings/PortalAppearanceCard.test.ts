@@ -20,7 +20,15 @@ describe('PortalAppearanceCard', () => {
     const { wrapper } = await mountScreen(PortalAppearanceCard, { settings: rows })
 
     expect(selectText(wrapper, 'portal-template')).toBe('Aurora')
-    expect(wrapper.text()).toContain('Current default')
+    expect(wrapper.text()).toContain('Glow-backed design')
+  })
+
+  it('falls back to the classic template when the row is empty', async () => {
+    const empty = rows.map((r) => (r.key === 'portal.template' ? { ...r, value: '' } : r))
+    const { wrapper } = await mountScreen(PortalAppearanceCard, { settings: empty })
+
+    expect(selectText(wrapper, 'portal-template')).toBe('Classic')
+    expect(wrapper.text()).toContain('the original storefront design')
   })
 
   it('saves a different template', async () => {

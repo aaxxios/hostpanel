@@ -49,9 +49,9 @@ render at all, because nothing serves customer quotes yet.
 
 1. The `portal.template` setting, editable in **Admin → Settings → Portal appearance**
 2. The `NUXT_PUBLIC_PORTAL_TEMPLATE` environment variable
-3. `aurora`
+3. `classic` (`DEFAULT_TEMPLATE` in `client/templates/types.ts`)
 
-An unrecognised value falls back to `aurora` rather than leaving the site blank, so a
+An unrecognised value falls back to `classic` rather than leaving the site blank, so a
 typo in the admin field cannot take the storefront down.
 
 **Adding a template.** Create `client/templates/<name>/` with `layout/Header.vue`,
