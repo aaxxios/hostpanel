@@ -40,9 +40,9 @@ const header = slot(TemplateSlot.Header)
 /** The active template's footer component. */
 const footer = slot(TemplateSlot.Footer)
 
-// Stamps the active template on <html> so global CSS can scope to it. The body
-// surface is the reason: aurora follows the theme tokens, classic keeps its
-// fixed dark. See assets/styles/global.css.
+// Stamps the active template on <html> so global CSS can scope to it (nova's body
+// tokens). Every template's body follows the colour-mode tokens; see
+// assets/styles/global.css.
 useHead({ htmlAttrs: { 'data-template': name } })
 
 // The colour mode is not restored here any more: plugins/color-mode.ts renders the

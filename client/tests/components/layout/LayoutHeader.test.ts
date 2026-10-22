@@ -3,7 +3,7 @@
  * client-area entry in both states, sign-out and the scroll-driven bar style.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, nextTick } from 'vue'
+import { defineComponent, h, nextTick, ref } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
@@ -61,6 +61,15 @@ describe('LayoutHeader', () => {
     // Put back the setup's empty route, which the active-state tests replace.
     vi.stubGlobal('useRoute', () => ({ params: {}, query: {}, path: '/', fullPath: '/', meta: {} }))
     document.body.style.overflow = ''
+  })
+
+  it('offers the light/dark switch in both the desktop bar and the mobile bar', () => {
+    // The shared public-page stub only knows `isDark`; the switch also reads the operator's toggle setting.
+    vi.stubGlobal('useAppColorMode', () => ({ isDark: ref(false), applied: ref('light'), userToggleEnabled: ref(true), toggle: vi.fn() }))
+    const wrapper = mountHeader()
+
+    // One in the desktop widget group, one beside the burger; CSS shows only one at a time.
+    expect(wrapper.findAll('[data-testid="theme-toggle"]')).toHaveLength(2)
   })
 
   it('renders the logo linking home', () => {

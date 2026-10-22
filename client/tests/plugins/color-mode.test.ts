@@ -97,6 +97,18 @@ describe('color-mode plugin', () => {
     expect(themeColors.map(tag => (tag.content as Ref<string>).value)).toEqual(['#f4f8fa', '#f4f8fa'])
   })
 
+  it('gives classic a light page colour of its own, so the toggle reaches the browser chrome', async () => {
+    // Classic is the default template: no `portal.template` setting resolves to it.
+    applied.value = ColorMode.Light
+    await loadPlugin()
+
+    const light = (useHeadMock.mock.calls[0]![0] as HeadInput).meta.filter(tag => tag.name === 'theme-color')
+    expect(light.map(tag => (tag.content as Ref<string>).value)).toEqual(['#f4f5fa', '#f4f5fa'])
+
+    applied.value = ColorMode.Dark
+    expect(light.map(tag => (tag.content as Ref<string>).value)).toEqual(['#08090f', '#08090f'])
+  })
+
   it('gives each device scheme its own theme-color while no mode is chosen', async () => {
     settings['portal.template'] = 'nova'
     await loadPlugin()

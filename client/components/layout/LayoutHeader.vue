@@ -83,6 +83,9 @@ data-testid="layout-header-trigger"
 
           <UiCurrencySwitcher />
 
+          <!-- Light/dark switch: hidden by the component when the operator turns the toggle off -->
+          <UiThemeToggle />
+
           <LayoutCartButton />
 
           <!-- Global Account widget mount point (App Launcher widget injects here) -->
@@ -91,6 +94,8 @@ data-testid="layout-header-trigger"
 
         <!-- Mobile: cart and burger grouped on the right -->
         <UiStack direction="row" align="center" gap="xs" class="xl:hidden">
+          <UiThemeToggle />
+
           <LayoutCartButton />
 
           <UiIconButton
