@@ -18,7 +18,7 @@
         <UiTile
           :icon="Folder"
           size="xl"
-          class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300"
+          class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:text-classic-brand"
         />
         <UiStack gap="none">
           <UiHeading :level="1" size="section" data-testid="kb-category-heading">
@@ -50,7 +50,7 @@
         class="overflow-hidden"
         data-testid="kb-category-articles"
       >
-        <UiStack gap="none" class="divide-y divide-gray-100 dark:divide-white/5">
+        <UiStack gap="none" class="divide-y divide-gray-100 dark:divide-white/5 [.tpl-classic_&]:divide-classic-border">
           <KbArticleRow v-for="article in articles" :key="article.id" :article="article" />
         </UiStack>
       </UiCard>

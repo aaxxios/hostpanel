@@ -7,11 +7,11 @@
     :class="isNova ? 'bg-gradient-to-b from-nova-surface-2 to-nova-bg' : ''"
   >
     <template v-if="isAurora">
-      <div class="absolute -top-40 -left-40 h-[32rem] w-[32rem] rounded-full bg-glow1 opacity-70 blur-3xl" />
-      <div class="absolute -bottom-40 -right-40 h-[32rem] w-[32rem] rounded-full bg-glow2 opacity-70 blur-3xl" />
+      <div class="ui-backdrop-glow absolute -top-40 -left-40 h-[32rem] w-[32rem] rounded-full bg-glow1 opacity-70 blur-3xl" />
+      <div class="ui-backdrop-glow absolute -bottom-40 -right-40 h-[32rem] w-[32rem] rounded-full bg-glow2 opacity-70 blur-3xl" />
     </template>
     <div v-else-if="isGrid" class="absolute inset-0 pattern-grid-50" />
-    <div v-else-if="isDots" class="absolute inset-0 pattern-dots-30" />
+    <div v-else-if="isDots" class="ui-backdrop-dots absolute inset-0 pattern-dots-30" />
   </div>
 </template>
 

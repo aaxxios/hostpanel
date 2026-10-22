@@ -9,7 +9,7 @@ import type { PortalProductGroup } from '~/types/portalproductgroup'
 import { familyColor } from '~/utils/catalogGroups'
 import type { ProductFamily } from '~/types/productfamily'
 import type { ProductFeature } from '~/types/productfeature'
-import { buildPricingRows, buildProductFamilies, cycleAmount, familyBullets, findProductDetail, firstOfferedPrice, representativePlan, specificationBullets } from '~/utils/productFamilies'
+import { buildPricingRows, buildProductFamilies, cycleAmount, familyBullets, familyCardBullets, familyProductType, findProductDetail, firstOfferedPrice, representativePlan, specificationBullets } from '~/utils/productFamilies'
 
 /**
  * Builds a catalogue product.
@@ -277,5 +277,48 @@ describe('cycleAmount', () => {
     expect(cycleAmount({ monthly: 5, annual: null }, PricingCycle.Annual)).toBeNull()
     expect(cycleAmount(null, PricingCycle.Monthly)).toBeNull()
     expect(cycleAmount(undefined, PricingCycle.Monthly)).toBeNull()
+  })
+})
+
+describe('familyCardBullets', () => {
+  it('uses the cheapest plan when it lists something', () => {
+    const cheap = product({ id: 1, groupId: 1, name: 'A', description: '✔ Cheap one', pricing: { monthly: 3, annual: null } })
+    const dear = product({ id: 2, groupId: 1, name: 'B', description: '✔ Dear one', pricing: { monthly: 9, annual: null } })
+
+    expect(familyCardBullets([dear, cheap], [])).toEqual(['Cheap one'])
+  })
+
+  it('walks up to the next plan when the cheapest lists nothing, so the card is not left bare', () => {
+    const bare = product({ id: 1, groupId: 1, name: 'A', description: 'Just a sentence.', pricing: { monthly: 3, annual: null } })
+    const listed = product({ id: 2, groupId: 1, name: 'B', description: '✔ Fast disks', pricing: { monthly: 9, annual: null } })
+
+    expect(familyCardBullets([listed, bare], [])).toEqual(['Fast disks'])
+  })
+
+  it('answers no bullets when no plan lists anything', () => {
+    expect(familyCardBullets([product({ id: 1, groupId: 1, name: 'A', description: 'Plain.' })], [])).toEqual([])
+    expect(familyCardBullets([], [])).toEqual([])
+  })
+})
+
+describe('family cover data', () => {
+  it('reads the family type from its products, and hosting from its group', () => {
+    const vps = product({ id: 1, groupId: 2, name: 'V', type: 'Vps' })
+
+    expect(familyProductType(group(2, 'Cloud'), [vps])).toBe('Vps')
+    expect(familyProductType(group(1, 'Web Hosting'), [vps])).toBe('SharedHosting')
+    expect(familyProductType(group(2, 'Cloud'), [])).toBeNull()
+  })
+
+  it('carries the type, the operator image and the featured flag onto the family', () => {
+    const plans = [
+      product({ id: 11, groupId: 3, name: 'Starter', slug: 'starter', type: 'Vps', pricing: { monthly: 10, annual: null } }),
+      product({ id: 12, groupId: 3, name: 'Pro', slug: 'pro', type: 'Vps', isFeatured: true, pricing: { monthly: 20, annual: null } }),
+    ]
+    const withImage = buildProductFamilies([group(3, 'Alpha Suite', { imageUrl: ' /uploads/a.webp ', productCount: 2 })], plans, dollars, 'USD')
+    const without = buildProductFamilies([group(3, 'Alpha Suite', { productCount: 2 })], plans.slice(0, 1), dollars, 'USD')
+
+    expect(withImage[0]).toMatchObject({ type: 'Vps', image: '/uploads/a.webp', featured: true })
+    expect(without[0]).toMatchObject({ type: 'Vps', image: null, featured: false })
   })
 })

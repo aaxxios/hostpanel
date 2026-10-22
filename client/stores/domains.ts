@@ -99,6 +99,9 @@ export const useDomainsStore = defineStore('domains', () => {
   /** Whether a storefront search is in flight. */
   const lookupPending = ref(false)
 
+  /** The name the last storefront search was run for, so the search field can show it. */
+  const lookupTerm = ref('')
+
   /** The currency the price rows are quoted in, shaped for {@link formatMoney}. */
   const rowCurrency = computed(() =>
     currencyStore.moneyCurrencyFor(catalogStore.tldPricing?.currency?.code))
@@ -161,6 +164,7 @@ export const useDomainsStore = defineStore('domains', () => {
     if (!base) {
       return
     }
+    lookupTerm.value = term.trim()
 
     lookupPending.value = true
     try {
@@ -600,6 +604,7 @@ export const useDomainsStore = defineStore('domains', () => {
   }
 
   return {
+    lookupTerm,
     searchResult,
     searchError,
     searching,

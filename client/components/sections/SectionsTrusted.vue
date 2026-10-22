@@ -1,26 +1,14 @@
 <template>
   <section v-if="partners.length" class="py-6 sm:py-8 bg-ui-page border-y border-gray-200 dark:border-white/10" data-testid="sections-trusted">
     <UiContainer>
-      <UiStack direction="row" align="center" justify="center" gap="md" wrap>
+      <UiStack align="center" gap="md">
         <UiText size="sm" tone="subtle" class="uppercase tracking-wider" data-testid="sections-trusted-label">{{ $t('hostingSections.trusted.label') }}</UiText>
-        <UiStack
-          v-for="partner in partners"
-          :key="partner.id"
-          direction="row"
-          align="center"
-          gap="xs"
-          :data-testid="`trusted-${partner.id}`"
-        >
-          <UiImage
-            v-if="partner.logoUrl"
-            :src="partner.logoUrl"
-            :alt="partner.name"
-            unoptimised
-            class="h-6 w-auto opacity-70"
-            :testid="`trusted-logo-${partner.id}`"
-          />
-          <UiText v-else as="span" tone="muted" weight="semibold" size="sm" class="whitespace-nowrap">{{ partner.name }}</UiText>
-        </UiStack>
+        <UiLogoWall
+          :items="partners"
+          testid-prefix="trusted"
+          :layout="UiLogoWallLayout.Row"
+          class="text-gray-500 dark:text-gray-400"
+        />
       </UiStack>
     </UiContainer>
   </section>
@@ -33,6 +21,7 @@
  * the strip renders nothing.
  */
 import { useStorefrontStore } from '~/stores/storefront'
+import { UiLogoWallLayout } from '~/utils/ui/logoWall'
 
 /** The active language; the partners are re-read when it changes. */
 const { locale } = useI18n()

@@ -70,7 +70,7 @@
             <UiHeading
               :level="2"
               size="subsection"
-              class="mb-2 transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400"
+              class="mb-2 transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400 group-hover:[.tpl-classic_&]:text-classic-brand"
             >
               {{ item.title }}
             </UiHeading>

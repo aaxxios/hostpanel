@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { reactive } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
-import MarketingSectionHeader from '~/components/marketing/MarketingSectionHeader.vue'
+import { CLASSIC_COMPONENTS } from '~/tests/helpers/classicKit'
 import SectionsLocations from '~/components/sections/SectionsLocations.vue'
 import type { ServerLocation } from '~/types/serverlocation'
 
@@ -44,7 +44,7 @@ const locationFixture = (id: number, overrides: Partial<ServerLocation> = {}): S
  * @returns The wrapper.
  */
 const mountSection = async () => {
-  const wrapper = mountWithKit(SectionsLocations, { components: { MarketingSectionHeader } })
+  const wrapper = mountWithKit(SectionsLocations, { components: CLASSIC_COMPONENTS })
   await flushPromises()
   return wrapper
 }

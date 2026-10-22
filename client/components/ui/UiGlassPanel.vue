@@ -1,7 +1,7 @@
 <template>
   <div
     data-testid="ui-glass-panel"
-    class="rounded-[2rem] sm:rounded-[3rem] bg-black/30 backdrop-blur-xl p-6 sm:p-10 md:p-14 lg:p-16 border border-white/10 shadow-drop-glass"
+    class="ui-glass rounded-[2rem] sm:rounded-[3rem] bg-black/30 backdrop-blur-xl p-6 sm:p-10 md:p-14 lg:p-16 border border-white/10 shadow-drop-glass"
   >
     <slot />
   </div>

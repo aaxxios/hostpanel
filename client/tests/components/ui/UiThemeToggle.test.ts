@@ -67,4 +67,12 @@ describe('ThemeToggle', () => {
     expect(wrapper.find('[data-testid="theme-toggle-moon"]').classes()).toEqual(expect.arrayContaining(['hidden', 'dark:block']))
     expect(wrapper.find('[data-testid="theme-toggle-sun"]').classes()).toEqual(expect.arrayContaining(['block', 'dark:hidden']))
   })
+
+  it('takes the larger glyph and the screen frame when asked for the large bare button', () => {
+    const wrapper = mountWithKit(ThemeToggle, { props: { variant: 'bare', size: 'lg' }, attrs: { class: 'h-10 border-classic-border' } })
+
+    const button = wrapper.find('[data-testid="theme-toggle"]')
+    expect(button.classes()).toEqual(expect.arrayContaining(['w-10', 'h-10', 'border-classic-border']))
+    expect(wrapper.find('[data-testid="theme-toggle-sun"]').attributes('width')).toBe('20')
+  })
 })

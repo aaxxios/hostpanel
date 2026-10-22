@@ -1,24 +1,227 @@
 /*
- * classic template surface tokens.
+ * classic template tokens and the kit look.
  *
- * The classic pages paint their page background and a few raised surfaces with colours the
- * generic gray scale does not hold (a near-black dark mode). They are stored as space-separated
- * `r g b` triplets so Tailwind's opacity modifier keeps working (`bg-classic-surface/95`), and
- * `tailwind.config.ts` exposes them as `classic-*` colours. The light value sits in `:root`, the
- * dark one under `.dark`; the summary card is dark in both modes, as the checkout always drew it.
+ * Classic is a clean, trustworthy hosting provider: white and neutral surfaces, ONE solid brand
+ * colour, modest radii, restrained shadows and a neutral charcoal dark mode. The colours are
+ * stored as space-separated `r g b` triplets so Tailwind's opacity modifier keeps working
+ * (`bg-classic-surface/95`), and `tailwind.config.ts` exposes them as `classic-*` colours. The
+ * light value sits in `:root`, the dark one under `.dark`; the summary card is dark in both modes.
+ *
+ * Contrast (WCAG AA, guarded by tests/assets/css/templates/classic.test.ts): ink, muted and brand
+ * keep at least 4.5:1 on page and surface in both modes, and on-brand keeps it on brand.
+ *
+ * The shared kit (components/ui) carries hook classes (`ui-btn`, `ui-card`, `ui-field`, ...) that
+ * do nothing by themselves. The second half of this file restyles them where classic is the
+ * active template: under `.tpl-classic` (the layout root) and under `html[data-template='classic']`
+ * (so teleported dialogs and drawers, which live outside the layout root, match).
  */
 :root {
-  --classic-page: 249 250 251;
+  --classic-page: 247 248 250;
   --classic-surface: 255 255 255;
-  --classic-footer: 243 244 246;
+  --classic-footer: 255 255 255;
+  --classic-surface-2: 241 244 248;
+  --classic-border: 217 222 230;
+  --classic-ink: 15 23 42;
+  --classic-muted: 71 85 105;
+  --classic-brand: var(--brand-primary-700, 37 99 235);
+  --classic-brand-hover: var(--brand-primary-800, 29 78 216);
+  --classic-brand-soft: var(--brand-primary-50, 235 243 255);
+  --classic-on-brand: 255 255 255;
   --classic-summary-from: 26 26 36;
   --classic-summary-to: 18 18 23;
 }
 
 .dark {
-  --classic-page: 10 10 15;
-  --classic-surface: 10 10 15;
-  --classic-footer: 5 5 8;
+  --classic-page: 24 24 27;
+  --classic-surface: 32 32 36;
+  --classic-footer: 41 41 46;
+  --classic-surface-2: 41 41 46;
+  --classic-border: 63 63 70;
+  --classic-ink: 244 244 245;
+  --classic-muted: 161 161 170;
+  --classic-brand: var(--brand-primary-400, 96 165 250);
+  --classic-brand-hover: var(--brand-primary-300, 147 197 253);
+  --classic-brand-soft: 30 41 59;
+  --classic-on-brand: 9 9 11;
+}
+
+/*
+ * Kit look under classic. The kit's own surface tokens and the brand gradient are re-pointed at
+ * the classic tokens, so every `bg-ui-surface` and `bg-brand` (tabs, segments, tiles) turns solid
+ * and neutral with no change to the component that uses it.
+ */
+:is(.tpl-classic, html[data-template='classic']) {
+  --ui-surface: rgb(var(--classic-surface));
+  --ui-popover: rgb(var(--classic-surface));
+  --ui-page: rgb(var(--classic-page));
+  --ui-raised: rgb(var(--classic-surface));
+  --brand-grad: linear-gradient(rgb(var(--classic-brand)), rgb(var(--classic-brand)));
+}
+
+/* Buttons: solid brand, modest radius, no gradient or lift. */
+:is(.tpl-classic, html[data-template='classic']) .ui-btn {
+  border-radius: 0.375rem;
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-primary {
+  background-color: rgb(var(--classic-brand));
+  color: rgb(var(--classic-on-brand));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-primary:hover:not(:disabled),
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-primary:active:not(:disabled) {
+  background-color: rgb(var(--classic-brand-hover));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-secondary {
+  background-color: rgb(var(--classic-surface-2));
+  color: rgb(var(--classic-ink));
+  border: 1px solid rgb(var(--classic-border));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-secondary:hover:not(:disabled) {
+  background-color: rgb(var(--classic-border));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-outline {
+  border: 1px solid rgb(var(--classic-brand));
+  color: rgb(var(--classic-brand));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-outline:hover:not(:disabled),
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-subtle:hover:not(:disabled),
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-ghost:hover:not(:disabled) {
+  background-color: rgb(var(--classic-brand-soft));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-subtle {
+  background-color: rgb(var(--classic-brand-soft));
+  border: 1px solid transparent;
+  color: rgb(var(--classic-brand));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-ghost {
+  color: rgb(var(--classic-ink));
+}
+
+/* Cards, panels and tiles: neutral surface, hairline border, restrained shadow. */
+:is(.tpl-classic, html[data-template='classic']) .ui-card,
+:is(.tpl-classic, html[data-template='classic']) .ui-accent-panel,
+:is(.tpl-classic, html[data-template='classic']) .ui-glass {
+  border-radius: 0.5rem;
+  border-width: 1px;
+  border-color: rgb(var(--classic-border));
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-glass,
+:is(.tpl-classic, html[data-template='classic']) .ui-accent-panel {
+  background-color: rgb(var(--classic-surface));
+  color: rgb(var(--classic-ink));
+  backdrop-filter: none;
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-accent-panel:hover,
+:is(.tpl-classic, html[data-template='classic']) .ui-accent-panel.md\:scale-105 {
+  transform: none;
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-accent-tile,
+:is(.tpl-classic, html[data-template='classic']) .ui-tile:not(.rounded-full) {
+  border-radius: 0.5rem;
+  box-shadow: none;
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-accent-btn {
+  border-radius: 0.375rem;
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-accent-btn:hover:not(:disabled) {
+  transform: none;
+}
+
+/* Badges: small square-ish chips; the primary tone is the brand tint. */
+:is(.tpl-classic, html[data-template='classic']) .ui-badge:not(.rounded-full) {
+  border-radius: 0.25rem;
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-badge.ui-badge-primary {
+  background-color: rgb(var(--classic-brand-soft));
+  color: rgb(var(--classic-brand));
+}
+
+/* Fields: neutral surface, modest radius, brand focus. */
+:is(.tpl-classic, html[data-template='classic']) .ui-field {
+  border-radius: 0.375rem;
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-field:not(.ui-field-error) {
+  background-color: rgb(var(--classic-surface));
+  border-color: rgb(var(--classic-border));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-field:not(.ui-field-error):focus-visible {
+  border-color: rgb(var(--classic-brand));
+  --tw-ring-color: rgb(var(--classic-brand) / 0.35);
+}
+
+/* Sections, hero and text: no gradients, corner marks, glow or dots. */
+:is(.tpl-classic, html[data-template='classic']) .ui-section-muted {
+  background-color: rgb(var(--classic-surface-2));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-hero-corner,
+:is(.tpl-classic, html[data-template='classic']) .ui-decor,
+:is(.tpl-classic, html[data-template='classic']) .ui-backdrop-glow,
+:is(.tpl-classic, html[data-template='classic']) .ui-backdrop-dots {
+  display: none;
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-gradient-text {
+  background-image: none;
+  color: rgb(var(--classic-brand));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-link-primary {
+  color: rgb(var(--classic-brand));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-link-primary:hover {
+  color: rgb(var(--classic-brand-hover));
+}
+
+/* Tabs, accordion and the small controls: the brand colour, hairlines, modest radii. */
+:is(.tpl-classic, html[data-template='classic']) .ui-tab.ui-tab-active {
+  border-color: rgb(var(--classic-brand));
+  color: rgb(var(--classic-brand));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-accordion-item {
+  border-color: rgb(var(--classic-border));
+  background-color: rgb(var(--classic-surface));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-check.ui-check-on {
+  background-color: rgb(var(--classic-brand));
+  border-color: rgb(var(--classic-brand));
+  color: rgb(var(--classic-on-brand));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-check.ui-check-on svg {
+  color: rgb(var(--classic-on-brand));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-radio.ui-radio-on {
+  border-color: rgb(var(--classic-brand));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-radio-dot {
+  background-color: rgb(var(--classic-brand));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-toggle.ui-toggle-on {
+  background-color: rgb(var(--classic-brand));
+  border-color: rgb(var(--classic-brand));
 }
 
 /* A short sideways shake that draws the eye to the checkout error box. */

@@ -18,61 +18,13 @@
       </div>
 
       <!-- A short list sits centred and wrapped; a marquee of two names reads as a half-empty strip. -->
-      <UiBalancedGrid v-if="!marquee" :count="partners.length" class="py-4" data-testid="sections-partners-static">
-        <UiCard
-          v-for="partner in partners"
-          :key="partner.id"
-          padding="none"
-          class="px-4 py-2.5 sm:px-6 sm:py-3 group hover:border-primary-500/50 hover:shadow-lg transition-all duration-300"
-          :data-testid="`partner-${partner.id}`"
-        >
-          <UiStack direction="row" align="center" justify="center" gap="xs">
-            <UiImage
-              v-if="partner.logoUrl"
-              :src="partner.logoUrl"
-              :alt="partner.name"
-              unoptimised
-              class="h-6 sm:h-8 w-auto flex-shrink-0"
-              :testid="`partner-logo-${partner.id}`"
-            />
-            <UiText as="span" tone="inherit" weight="semibold" class="text-sm sm:text-base text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-300 whitespace-nowrap">{{ partner.name }}</UiText>
-          </UiStack>
-        </UiCard>
-      </UiBalancedGrid>
-
-      <!-- Logos marquee -->
-      <div v-else class="relative overflow-hidden" data-testid="sections-partners-marquee">
-        <!-- Fade edges -->
-        <UiDecor class="left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-ui-page to-transparent z-10" />
-        <UiDecor class="right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-ui-page to-transparent z-10" />
-
-        <!-- Scrolling logos (the list is doubled so the loop has no gap) -->
-        <div class="flex animate-marquee hover:[animation-play-state:paused] py-4">
-          <div
-            v-for="(partner, index) in loopedPartners"
-            :key="index"
-            class="flex-shrink-0 mx-3 sm:mx-6 flex items-center justify-center"
-          >
-            <UiCard
-              padding="none"
-              class="px-4 py-2.5 sm:px-6 sm:py-3 group hover:border-primary-500/50 hover:scale-105 hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-300"
-              :data-testid="`partner-${partner.id}`"
-            >
-              <div class="flex items-center gap-2">
-                <UiImage
-                  v-if="partner.logoUrl"
-                  :src="partner.logoUrl"
-                  :alt="partner.name"
-                  unoptimised
-                  class="h-6 sm:h-8 w-auto flex-shrink-0"
-                  :testid="`partner-logo-${partner.id}`"
-                />
-                <span class="text-sm sm:text-base font-semibold text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-300 whitespace-nowrap">{{ partner.name }}</span>
-              </div>
-            </UiCard>
-          </div>
-        </div>
-      </div>
+      <UiLogoWall
+        :items="partners"
+        testid-prefix="partner"
+        :layout="marquee ? UiLogoWallLayout.Marquee : UiLogoWallLayout.Grid"
+        class="text-gray-500 dark:text-gray-400"
+        :data-testid="marquee ? 'sections-partners-marquee' : 'sections-partners-static'"
+      />
     </UiContainer>
 
     <!-- Decorative corner accents -->
@@ -83,11 +35,12 @@
 
 <script setup lang="ts">
 /**
- * Partners section: a marquee of partner logos and names. The partners come from the storefront
+ * Partners section: partner logos in a balanced grid, or a marquee when there are many (a plain wordmark for a partner without a logo). The partners come from the storefront
  * store (`GET /api/portal/public/partners`, localised by the API); with none the section renders
  * nothing.
  */
 import { useStorefrontStore } from '~/stores/storefront'
+import { UiLogoWallLayout } from '~/utils/ui/logoWall'
 
 /** The active language; the partners are re-read when it changes. */
 const { locale } = useI18n()
@@ -106,7 +59,4 @@ const MARQUEE_MIN_PARTNERS = 6
 
 /** Whether there are enough partners to run the marquee. */
 const marquee = computed(() => partners.value.length >= MARQUEE_MIN_PARTNERS)
-
-/** The partners twice over, so the marquee loops without a gap. */
-const loopedPartners = computed(() => [...partners.value, ...partners.value])
 </script>

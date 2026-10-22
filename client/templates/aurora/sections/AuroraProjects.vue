@@ -1,9 +1,9 @@
 <template>
   <UiSection v-if="items.length" id="projects" padding="lg" :contained="false" class="relative border-t border-line" data-testid="aurora-projects">
     <UiStack gap="none">
-      <UiText tone="inherit" size="inherit" :class="[EYEBROW_CLASS, 'text-ac3']">{{ t('aurora.projects.eyebrow') }}</UiText>
+      <UiText tone="inherit" size="inherit" :class="[EYEBROW_CLASS, 'text-ac3']">{{ t('storefront.projects.eyebrow') }}</UiText>
       <UiHeading :level="2" size="bare" :class="[SECTION_TITLE_CLASS, 'mt-3']">
-        {{ t('aurora.projects.title') }}
+        {{ t('storefront.projects.title') }}
       </UiHeading>
     </UiStack>
 
@@ -21,17 +21,16 @@
           :src="project.imageUrls[0]"
           :alt="project.title"
           unoptimised
-          class="h-44 w-full"
+          class="h-44 w-full object-top"
           :testid="`project-image-${project.id}`"
         />
-        <UiTile
+        <UiCoverFallback
           v-else
-          size="lg"
+          :title="project.title"
+          :slug="project.slug"
           :data-testid="`project-placeholder-${project.id}`"
-          class="h-44 w-full rounded-none bg-brand font-display text-4xl font-bold text-on-brand"
-        >
-          {{ project.title.charAt(0) }}
-        </UiTile>
+          class="h-44 w-full bg-brand text-on-brand"
+        />
         <UiStack gap="sm" class="p-6">
           <UiHeading :level="3" size="bare" class="font-display text-xl font-bold text-tx">{{ project.title }}</UiHeading>
           <UiText v-if="project.summary" size="sm" tone="inherit" class="text-mut2">{{ project.summary }}</UiText>
@@ -43,7 +42,7 @@
             :testid="`project-link-${project.id}`"
             class="font-semibold text-ac1"
           >
-            {{ t('aurora.projects.visit') }}
+            {{ t('storefront.projects.visit') }}
           </UiLink>
         </UiStack>
       </UiCard>
@@ -53,7 +52,7 @@
 
 <script setup lang="ts">
 /**
- * aurora projects grid: a card per portfolio project with its first image (a lettered tile when it
+ * aurora projects grid: a card per portfolio project with its first image (a patterned cover with the initials and a site type icon when it
  * has none), title, summary and a link to the live site. The projects come from the storefront
  * store (`GET /api/public/projects`); with none the section renders nothing.
  */

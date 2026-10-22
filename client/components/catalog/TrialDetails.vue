@@ -1,10 +1,10 @@
 <template>
   <UiAccent :color="color">
     <!-- Features -->
-    <section v-if="features.length > 0" class="py-16 bg-ui-surface" data-testid="trial-features">
+    <section v-if="features.length > 0" :class="[brandFallback, 'py-16 bg-ui-surface [.tpl-classic_&]:[--accent:rgb(var(--classic-brand))] [.tpl-classic_&]:bg-classic-surface-2 [.tpl-classic_&]:py-12']" data-testid="trial-features">
       <UiContainer>
         <div class="mx-auto max-w-4xl">
-          <UiHeading :level="2" class="text-center mb-10">{{ $t('trial.featuresTitle', { product: name }) }}</UiHeading>
+          <UiHeading :level="2" class="text-center mb-10 [.tpl-classic_&]:font-semibold [.tpl-classic_&]:text-classic-ink">{{ $t('trial.featuresTitle', { product: name }) }}</UiHeading>
           <UiGrid cols="1" gap="md" class="md:grid-cols-2">
             <UiCard
               v-for="(feature, index) in features"
@@ -22,7 +22,7 @@
     </section>
 
     <!-- Perks -->
-    <section class="py-16" data-testid="trial-perks">
+    <section :class="[brandFallback, 'py-16 [.tpl-classic_&]:[--accent:rgb(var(--classic-brand))] [.tpl-classic_&]:bg-classic-page [.tpl-classic_&]:py-12']" data-testid="trial-perks">
       <UiContainer>
         <div class="mx-auto max-w-4xl">
           <UiGrid cols="1" gap="lg" class="md:grid-cols-3">
@@ -61,7 +61,7 @@
 import { revealDelay } from '~/utils/reveal'
 import { CheckCircle, Clock, CreditCard, Headphones, Rocket } from 'lucide-vue-next'
 import { TrialPerk } from '~/types/trialperk'
-import { ACCENT_CLASSES } from '~/utils/ui/accent'
+import { ACCENT_BRAND_CLASS, ACCENT_CLASSES, isAccentColor } from '~/utils/ui/accent'
 
 /** Props of TrialDetails. */
 interface Props {
@@ -75,10 +75,14 @@ interface Props {
   features: string[]
 }
 
-defineProps<Props>()
+/** The component props. */
+const props = defineProps<Props>()
 
 /** Accent classes the body reads (the colour itself is set by the surrounding UiAccent). */
 const accent = ACCENT_CLASSES
+
+/** Points the accent at the portal brand colour when the product has no valid colour of its own. */
+const brandFallback = computed(() => (isAccentColor(props.color) ? '' : ACCENT_BRAND_CLASS))
 
 /** The perks in display order, each with the icon that stands for it. */
 const perks = [

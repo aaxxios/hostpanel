@@ -33,7 +33,7 @@ const { name: siteName } = useSiteIdentity()
 const SECTION_DEFINITIONS = [
   { id: 'purpose', icon: 'mdi:target-variant', paragraphs: 1 },
   { id: 'abuse', icon: 'mdi:alert-octagon-outline', paragraphs: 5 },
-  { id: 'saas', icon: 'mdi:application-cog-outline', paragraphs: 4 },
+  { id: 'apps', icon: 'mdi:application-cog-outline', paragraphs: 4 },
   { id: 'hosting', icon: 'mdi:server-security', paragraphs: 2 },
   { id: 'enforcement', icon: 'mdi:gavel', paragraphs: 2 }
 ]

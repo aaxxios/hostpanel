@@ -93,6 +93,11 @@ export function useInvoices() {
 - Always use `:key` on `v-for` — use stable unique ID, never index
 - `v-if` and `v-for` never on the same element — use `<template>` wrapper
 - Always use `v-bind` shorthand (`:`) and `v-on` shorthand (`@`)
+- **No native form popups.** A choice from a list is the kit's custom `UiSelect` (an accessible
+  WAI-ARIA select-only combobox + listbox styled with the design tokens), never a native
+  `<select>` / `<option>` / `<datalist>`; the same holds for date/time/colour pickers — kit
+  components only. The OS dropdown cannot be themed (light/dark, radius, scrollbar) and differs
+  per browser. A native `<select>` in a screen or domain component is a review failure.
 
 ```vue
 <!-- CORRECT -->

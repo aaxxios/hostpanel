@@ -32,6 +32,13 @@ describe('CartContent', () => {
     stubPublicPageRuntime()
   })
 
+  it('drops the glow wash and the gradient checkout button under the classic template', () => {
+    const wrapper = mountContent()
+
+    expect(wrapper.find('[data-testid="cart-checkout"]').classes()).toContain('[.tpl-classic_&]:bg-none')
+    expect(wrapper.find('[data-testid="cart-content"] [data-testid="ui-decor"]').classes()).toContain('[.tpl-classic_&]:hidden')
+  })
+
   it('shows the empty notice with a link to the hosting plans when there are no lines', () => {
     const wrapper = mountContent({ items: [], totalLabel: '' })
 

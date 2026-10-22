@@ -56,10 +56,10 @@ const PADDING_CLASSES: Record<UiCardPadding, string> = {
 const cardClasses = computed(() => {
   // A bare card paints nothing, so a screen with its own palette sets surface and border colour.
   const base = props.tone === UiCardTone.Bare
-    ? 'rounded-2xl border'
+    ? 'ui-card rounded-2xl border'
     // A whisper of shadow lifts the white card off the light page; the dark page has no room
     // for a shadow, so there the hairline alone carries the edge.
-    : 'rounded-2xl bg-ui-surface border border-gray-200 shadow-sm dark:border-white/10 dark:shadow-none'
+    : 'ui-card rounded-2xl bg-ui-surface border border-gray-200 shadow-sm dark:border-white/10 dark:shadow-none'
   const hoverClass = props.hover && props.tone !== UiCardTone.Bare
     ? 'transition-colors duration-200 hover:border-gray-300 dark:hover:border-white/20'
     : ''

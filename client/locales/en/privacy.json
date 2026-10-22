@@ -28,7 +28,7 @@
           "1": "Ongoing maintenance and technical support for your services through the client portal.",
           "2": "Issuing invoices, processing payments and sending renewal and billing notices.",
           "3": "Identifying and preventing technical issues or security threats on our platforms.",
-          "4": "Communicating project milestones and administrative updates via the client portal or direct channels."
+          "4": "Communicating order and service status updates via the client portal or direct channels."
         }
       },
       "sharing": {
@@ -59,7 +59,7 @@
         },
         "list": {
           "0": "A complete record of all personal data we hold about you.",
-          "1": "Immediate correction of any inaccurate contact or project information.",
+          "1": "Immediate correction of any inaccurate contact or service information.",
           "2": "Permanent deletion of your account and data, subject to legal retention rules.",
           "3": "A pause on your data processing for marketing purposes."
         }

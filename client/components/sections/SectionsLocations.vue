@@ -1,29 +1,29 @@
 <template>
-  <section v-if="locations.length" class="py-12 md:py-20 bg-ui-page" data-testid="sections-locations">
+  <section v-if="locations.length" class="py-14 md:py-20 bg-classic-surface border-y border-classic-border" data-testid="sections-locations">
     <UiContainer>
-      <MarketingSectionHeader
+      <ClassicSectionHeader
         class="mb-12"
-        :badge="$t('hostingSections.locations.badge')"
+        :eyebrow="$t('hostingSections.locations.badge')"
         :title="$t('hostingSections.locations.title')"
         :subtitle="$t('hostingSections.locations.subtitle')"
       />
 
       <UiBalancedGrid :count="locations.length" :class="gridWidth" data-testid="sections-locations-grid">
-        <UiCard
+        <ClassicCard
           v-for="location in locations"
           :key="location.id"
           hover
           :data-testid="`location-${location.id}`"
         >
           <UiStack direction="row" align="center" gap="md">
-            <UiBadge variant="primary" size="lg" class="font-mono tracking-wider flex-shrink-0" :data-testid="`location-code-${location.id}`">{{ location.countryCode }}</UiBadge>
+            <UiBadge variant="primary" size="lg" class="font-mono tracking-wider flex-shrink-0 !rounded-md !bg-classic-brand-soft !text-classic-brand" :data-testid="`location-code-${location.id}`">{{ location.countryCode }}</UiBadge>
             <div class="min-w-0">
-              <UiHeading :level="3" size="subsection" class="truncate">{{ location.name }}</UiHeading>
-              <UiText v-if="location.city" tone="muted" size="sm" class="truncate" :data-testid="`location-city-${location.id}`">{{ location.city }}</UiText>
-              <UiText v-if="location.latencyNote" tone="subtle" size="sm" :data-testid="`location-latency-${location.id}`">{{ location.latencyNote }}</UiText>
+              <UiHeading :level="3" size="bare" class="truncate text-lg font-semibold text-classic-ink">{{ location.name }}</UiHeading>
+              <UiText v-if="location.city" tone="inherit" size="sm" class="truncate text-classic-muted" :data-testid="`location-city-${location.id}`">{{ location.city }}</UiText>
+              <UiText v-if="location.latencyNote" tone="inherit" size="sm" class="text-classic-muted" :data-testid="`location-latency-${location.id}`">{{ location.latencyNote }}</UiText>
             </div>
           </UiStack>
-        </UiCard>
+        </ClassicCard>
       </UiBalancedGrid>
     </UiContainer>
   </section>

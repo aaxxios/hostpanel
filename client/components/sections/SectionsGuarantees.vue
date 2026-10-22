@@ -1,26 +1,26 @@
 <template>
-  <section v-if="guarantees.length" class="py-12 md:py-20 bg-ui-page" data-testid="sections-guarantees">
+  <section v-if="guarantees.length" class="py-14 md:py-20 bg-classic-surface border-y border-classic-border" data-testid="sections-guarantees">
     <UiContainer>
-      <MarketingSectionHeader
+      <ClassicSectionHeader
         class="mb-12"
-        :badge="$t('hostingSections.guarantees.badge')"
+        :eyebrow="$t('hostingSections.guarantees.badge')"
         :title="$t('hostingSections.guarantees.title')"
         :subtitle="$t('hostingSections.guarantees.subtitle')"
       />
 
       <UiBalancedGrid :count="guarantees.length" data-testid="sections-guarantees-grid">
-        <UiCard
+        <ClassicCard
           v-for="guarantee in guarantees"
           :key="guarantee.key"
           hover
           :data-testid="`guarantee-${guarantee.key}`"
         >
           <UiStack gap="sm">
-            <UiAccentTile :icon="GUARANTEE_ICONS[guarantee.key]" :class="ACCENT_BRAND_CLASS" />
-            <UiHeading :level="3" size="subsection">{{ $t(`hostingSections.guarantees.items.${guarantee.key}.title`, { days: guarantee.days ?? 0 }) }}</UiHeading>
-            <UiText tone="muted" size="sm">{{ $t(`hostingSections.guarantees.items.${guarantee.key}.description`, { days: guarantee.days ?? 0 }) }}</UiText>
+            <ClassicIconTile :icon="GUARANTEE_ICONS[guarantee.key]" />
+            <UiHeading :level="3" size="bare" class="text-lg font-semibold text-classic-ink">{{ $t(`hostingSections.guarantees.items.${guarantee.key}.title`, { days: guarantee.days ?? 0 }) }}</UiHeading>
+            <UiText tone="inherit" size="sm" class="text-classic-muted">{{ $t(`hostingSections.guarantees.items.${guarantee.key}.description`, { days: guarantee.days ?? 0 }) }}</UiText>
           </UiStack>
-        </UiCard>
+        </ClassicCard>
       </UiBalancedGrid>
     </UiContainer>
   </section>
@@ -32,7 +32,6 @@
  * when the operator set it. With none set the section renders nothing.
  */
 import { GuaranteeKey } from '~/constants/guaranteeKey'
-import { ACCENT_BRAND_CLASS } from '~/utils/ui/accent'
 
 /** The guarantees on offer, in display order. */
 const guarantees = useGuarantees()

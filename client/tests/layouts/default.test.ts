@@ -68,4 +68,10 @@ describe('layouts/default', () => {
 
     expect(useHead).toHaveBeenCalledWith({ htmlAttrs: { 'data-template': 'nova' } })
   })
+
+  it('scopes the layout root with the active template class', () => {
+    const wrapper = mountLayout()
+
+    expect(wrapper.classes()).toContain('tpl-nova')
+  })
 })

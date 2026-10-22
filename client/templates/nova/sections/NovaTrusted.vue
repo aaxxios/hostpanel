@@ -9,25 +9,13 @@
       {{ t('nova.trusted.title') }}
     </UiText>
 
-    <UiStack direction="row" wrap align="center" justify="center" gap="lg" class="mt-6" data-testid="nova-trusted-strip">
-      <component
-        :is="partner.url ? UiLink : UiStack"
-        v-for="partner in items"
-        :key="partner.id"
-        v-bind="partner.url ? { href: partner.url, tone: 'inherit', underline: false } : {}"
-        :data-testid="`trusted-${partner.id}`"
-      >
-        <UiImage
-          v-if="partner.logoUrl"
-          :src="partner.logoUrl"
-          :alt="partner.name"
-          unoptimised
-          class="h-8 w-auto opacity-70 grayscale transition hover:opacity-100 hover:grayscale-0"
-          :testid="`trusted-logo-${partner.id}`"
-        />
-        <UiText v-else as="span" tone="inherit" weight="semibold" class="whitespace-nowrap text-nova-muted">{{ partner.name }}</UiText>
-      </component>
-    </UiStack>
+    <UiLogoWall
+      :items="items"
+      testid-prefix="trusted"
+      :layout="UiLogoWallLayout.Row"
+      class="mt-6 text-nova-muted"
+      data-testid="nova-trusted-strip"
+    />
   </UiSection>
 </template>
 
@@ -38,8 +26,7 @@
  * partners section shows; with none the strip renders nothing.
  */
 import { useStorefrontStore } from '~/stores/storefront'
-import UiLink from '~/components/ui/UiLink.vue'
-import UiStack from '~/components/ui/UiStack.vue'
+import { UiLogoWallLayout } from '~/utils/ui/logoWall'
 
 /** Translator and the active language. */
 const { t, locale } = useI18n()

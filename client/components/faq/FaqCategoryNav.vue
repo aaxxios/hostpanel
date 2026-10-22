@@ -11,6 +11,7 @@
       :to="localePath('/faq')"
       variant="subtle"
       size="sm"
+      :class="CLASSIC_CHIP"
       data-testid="faq-category-all"
     >
       {{ t('faq.categories.all') }}
@@ -21,6 +22,7 @@
       :to="localePath(`/faq/${category.slug}`)"
       :variant="category.value === active ? 'primary' : 'subtle'"
       size="sm"
+      :class="category.value === active ? CLASSIC_CHIP_ACTIVE : CLASSIC_CHIP"
       :data-testid="`faq-category-${category.slug}`"
     >
       {{ category.label }}
@@ -34,7 +36,8 @@
  *
  * Real links rather than client-side tabs, so every topic page is reachable (and crawlable) from
  * the FAQ landing page. On a topic page the current topic is highlighted and an "All" link leads
- * back to the landing page.
+ * back to the landing page. Under the classic template the links are flat bordered chips and the
+ * current topic a solid brand chip; aurora and nova keep the kit's subtle and primary buttons.
  */
 import { FaqCategory } from '~/types/faqcategory'
 import { faqCategorySlug } from '~/utils/faqCategory'
@@ -51,6 +54,12 @@ withDefaults(defineProps<Props>(), {
   active: undefined,
   showAll: false
 })
+
+/** Classic-only look of a topic link: white chip, hairline border, charcoal text, brand on hover. */
+const CLASSIC_CHIP = '[.tpl-classic_&]:rounded-md [.tpl-classic_&]:border [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-surface [.tpl-classic_&]:text-classic-ink [.tpl-classic_&]:hover:border-classic-brand [.tpl-classic_&]:hover:bg-classic-brand-soft'
+
+/** Classic-only look of the current topic: solid brand fill. */
+const CLASSIC_CHIP_ACTIVE = '[.tpl-classic_&]:rounded-md [.tpl-classic_&]:border [.tpl-classic_&]:border-classic-brand [.tpl-classic_&]:bg-classic-brand [.tpl-classic_&]:text-classic-on-brand [.tpl-classic_&]:hover:bg-classic-brand-hover'
 
 /** Translates a key in the active language. */
 const { t } = useI18n()

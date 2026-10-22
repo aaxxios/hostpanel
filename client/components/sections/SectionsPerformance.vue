@@ -1,27 +1,26 @@
 <template>
-  <section v-if="stats.length" class="py-12 md:py-20 bg-ui-page" data-testid="sections-performance">
+  <section v-if="stats.length" class="py-14 md:py-20 bg-classic-surface border-y border-classic-border" data-testid="sections-performance">
     <UiContainer>
-      <MarketingSectionHeader
+      <ClassicSectionHeader
         class="mb-12"
-        :badge="$t('hostingSections.performance.badge')"
+        :eyebrow="$t('hostingSections.performance.badge')"
         :title="$t('hostingSections.performance.title')"
         :subtitle="$t('hostingSections.performance.subtitle')"
       />
 
       <UiBalancedGrid :count="stats.length" data-testid="sections-performance-grid">
-        <UiCard
+        <ClassicCard
           v-for="stat in stats"
           :key="stat.key"
-          hover
           class="text-center"
           :data-testid="`performance-${stat.key}`"
         >
           <UiStack align="center" gap="sm">
-            <UiAccentTile :icon="STAT_ICONS[stat.key]" :class="ACCENT_BRAND_CLASS" />
-            <UiText as="p" tone="inherit" weight="bold" class="text-3xl md:text-4xl text-gray-900 dark:text-white" :data-testid="`performance-value-${stat.key}`">{{ stat.value }}</UiText>
-            <UiText tone="muted" size="sm">{{ $t(`hostingSections.performance.stats.${stat.key}`) }}</UiText>
+            <ClassicIconTile :icon="STAT_ICONS[stat.key]" />
+            <UiText as="p" tone="inherit" weight="bold" class="text-3xl md:text-4xl tabular-nums text-classic-ink" :data-testid="`performance-value-${stat.key}`">{{ stat.value }}</UiText>
+            <UiText tone="inherit" size="sm" class="text-classic-muted">{{ $t(`hostingSections.performance.stats.${stat.key}`) }}</UiText>
           </UiStack>
-        </UiCard>
+        </ClassicCard>
       </UiBalancedGrid>
     </UiContainer>
   </section>
@@ -33,7 +32,6 @@
  * support response) as large numbers. Only set figures show; with none the section renders nothing.
  */
 import { PerformanceStatKey } from '~/constants/performanceStatKey'
-import { ACCENT_BRAND_CLASS } from '~/utils/ui/accent'
 
 /** The published figures, in display order. */
 const stats = usePerformanceStats()

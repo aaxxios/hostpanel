@@ -1,7 +1,7 @@
 <template>
-  <section v-if="faqs.length" class="py-12 md:py-20 bg-ui-surface relative overflow-hidden" data-testid="sections-faq">
-    <!-- Background -->
-    <UiDecor class="inset-0">
+  <section v-if="faqs.length" :class="sectionClasses" data-testid="sections-faq">
+    <!-- Background (aurora and nova only; the classic template stays flat) -->
+    <UiDecor v-if="!isClassic" class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-secondary-500/5" />
       <UiDecor class="top-1/4 right-1/4 w-96 h-96 bg-primary-500/15 rounded-full blur-[140px] animate-blob" />
       <UiDecor class="bottom-1/3 left-1/3 w-80 h-80 bg-secondary-500/10 rounded-full blur-[130px] animate-blob animation-delay-2000" />
@@ -14,8 +14,15 @@
     </UiDecor>
 
     <UiContainer class="relative z-10">
+      <ClassicSectionHeader
+        v-if="showHeader && isClassic"
+        class="mb-12"
+        :eyebrow="$t('faq.badge')"
+        :title="$t('faq.title')"
+        :subtitle="$t('faq.subtitle')"
+      />
       <MarketingSectionHeader
-        v-if="showHeader"
+        v-else-if="showHeader"
         class="mb-12"
         :badge="$t('faq.badge')"
         :title="$t('faq.title')"
@@ -50,8 +57,21 @@
           </UiButton>
         </div>
 
-        <!-- Contact card -->
-        <UiCard class="relative text-center overflow-hidden group hover:border-primary-500/50 transition-all duration-300" padding="xl" data-testid="faq-contact">
+        <!-- Contact card, classic: flat, with a solid brand button -->
+        <ClassicCard v-if="isClassic" class="text-center" padding="xl" data-testid="faq-contact">
+          <UiStack align="center" gap="sm">
+            <ClassicIconTile icon="mdi:message-text-outline" />
+            <UiHeading :level="3" size="bare" class="text-xl font-semibold text-classic-ink">{{ $t('faq.cta.title') }}</UiHeading>
+            <UiText tone="inherit" size="sm" class="mb-3 max-w-md text-classic-muted">{{ $t('faq.cta.description') }}</UiText>
+            <UiButton :to="localePath('/contact')" data-testid="faq-contact-button">
+              <MessageSquare :size="18" :stroke-width="2" class="mr-2" />
+              {{ $t('faq.cta.button') }}
+            </UiButton>
+          </UiStack>
+        </ClassicCard>
+
+        <!-- Contact card, aurora and nova -->
+        <UiCard v-else class="relative text-center overflow-hidden group hover:border-primary-500/50 transition-all duration-300" padding="xl" data-testid="faq-contact">
           <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/20 to-secondary-500/10" />
           <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/10 to-secondary-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <UiDecor class="top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-3xl" />
@@ -71,8 +91,8 @@
     </UiContainer>
 
     <!-- Section corner decorations -->
-    <UiDecor class="top-0 right-0 w-40 h-40 border-r-2 border-t-2 border-secondary-500/25" />
-    <UiDecor class="bottom-0 left-0 w-40 h-40 border-l-2 border-b-2 border-primary-500/25" />
+    <UiDecor v-if="!isClassic" class="top-0 right-0 w-40 h-40 border-r-2 border-t-2 border-secondary-500/25" />
+    <UiDecor v-if="!isClassic" class="bottom-0 left-0 w-40 h-40 border-l-2 border-b-2 border-primary-500/25" />
   </section>
 </template>
 
@@ -84,13 +104,15 @@
  * none the section renders nothing. Choosing a
  * category reloads the list and opens its first question; before any choice every question is
  * closed. With a `limit` the section is a preview that links to the full FAQ page, but only
- * when the limit actually hides some questions.
+ * when the limit actually hides some questions. The aurora and nova templates keep their glow
+ * background and gradient contact card; the classic template gets a flat surface and a plain card.
  */
 import { ArrowRight, MessageCircle, MessageSquare } from 'lucide-vue-next'
 import { useStorefrontStore } from '~/stores/storefront'
 import { FaqCategory } from '~/types/faqcategory'
 import { faqCategorySlug } from '~/utils/faqCategory'
 import type { ChipTab } from '~/types/chiptab'
+import { TemplateName } from '~/types/templatename'
 
 /** Props of SectionsFAQ. */
 interface Props {
@@ -108,6 +130,17 @@ const props = withDefaults(defineProps<Props>(), {
   showCategories: true,
   showHeader: true,
 })
+
+/** The active portal template. */
+const { name: templateName } = useTemplate()
+
+/** Whether the classic template is active, which paints the section flat. */
+const isClassic = computed(() => templateName.value === TemplateName.Classic)
+
+/** Classes of the section: flat charcoal-or-white for classic, the decorated surface otherwise. */
+const sectionClasses = computed(() => isClassic.value
+  ? 'py-14 md:py-20 bg-classic-surface border-y border-classic-border'
+  : 'py-12 md:py-20 bg-ui-surface relative overflow-hidden')
 
 /** The "every category" choice of the tabs. */
 const ALL_CATEGORIES = 'all'

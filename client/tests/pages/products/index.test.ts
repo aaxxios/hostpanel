@@ -10,6 +10,7 @@ import { testimonialFixture } from '~/tests/helpers/storefrontFixtures'
 import ProductsPage from '~/pages/products/index.vue'
 import CatalogProductsHero from '~/components/catalog/ProductsHero.vue'
 import CatalogProductFamilyGrid from '~/components/catalog/ProductFamilyGrid.vue'
+import CatalogProductFamilyCard from '~/components/catalog/ProductFamilyCard.vue'
 import CatalogProductsComparison from '~/components/catalog/ProductsComparison.vue'
 import CatalogProductsBenefits from '~/components/catalog/ProductsBenefits.vue'
 import CatalogProductsTestimonials from '~/components/catalog/ProductsTestimonials.vue'
@@ -79,6 +80,7 @@ const mountProducts = async () => {
     components: {
       CatalogProductsHero,
       CatalogProductFamilyGrid,
+      CatalogProductFamilyCard,
       CatalogProductsComparison,
       CatalogProductsBenefits,
       CatalogProductsTestimonials,

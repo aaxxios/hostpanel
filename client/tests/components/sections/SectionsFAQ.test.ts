@@ -5,11 +5,14 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
+import { ref } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import { faqFixture } from '~/tests/helpers/storefrontFixtures'
 import SectionsFAQ from '~/components/sections/SectionsFAQ.vue'
 import MarketingSectionHeader from '~/components/marketing/MarketingSectionHeader.vue'
+import { CLASSIC_COMPONENTS } from '~/tests/helpers/classicKit'
+import { TemplateName } from '~/types/templatename'
 import { FaqCategory } from '~/types/faqcategory'
 import { faqCategorySlug } from '~/utils/faqCategory'
 
@@ -24,6 +27,11 @@ vi.mock('~/composables/apis/useStorefrontApi', () => ({
    */
   useStorefrontApi: () => api,
 }))
+
+/** The template the stubbed composable reports. */
+const activeTemplate = ref<TemplateName>(TemplateName.Aurora)
+
+vi.stubGlobal('useTemplate', () => ({ name: activeTemplate }))
 
 /** Three general questions and two about products. */
 const FAQS = [
@@ -41,7 +49,7 @@ const FAQS = [
  * @returns The wrapper.
  */
 const mountFaq = async (props: Record<string, unknown> = {}) => {
-  const wrapper = mountWithKit(SectionsFAQ, { props, components: { MarketingSectionHeader } })
+  const wrapper = mountWithKit(SectionsFAQ, { props, components: { MarketingSectionHeader, ...CLASSIC_COMPONENTS } })
   await flushPromises()
   return wrapper
 }
@@ -112,6 +120,29 @@ describe('SectionsFAQ', () => {
 
   it('links the contact card to the contact page', async () => {
     expect((await mountFaq()).find('[data-testid="faq-contact-button"]').attributes('href')).toBe('/en/contact')
+  })
+
+  it('keeps the glow background and the gradient contact card on aurora', async () => {
+    activeTemplate.value = TemplateName.Aurora
+
+    const wrapper = await mountFaq()
+
+    expect(wrapper.find('[data-testid="section-header"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sections-faq"]').classes()).toContain('bg-ui-surface')
+    expect(wrapper.html()).toContain('blur-')
+  })
+
+  it('paints the classic template flat: no glow, no gradient, a plain contact card', async () => {
+    activeTemplate.value = TemplateName.Classic
+
+    const wrapper = await mountFaq()
+
+    expect(wrapper.find('[data-testid="classic-section-header"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="sections-faq"]').classes()).toContain('bg-classic-surface')
+    expect(wrapper.html()).not.toContain('blur-')
+    expect(wrapper.find('[data-testid="faq-contact"]').html()).not.toContain('gradient')
+    expect(wrapper.find('[data-testid="faq-contact"]').classes()).toContain('bg-classic-surface')
+    expect(wrapper.find('[data-testid="faq-contact-button"]').attributes('href')).toBe('/en/contact')
   })
 
   it('renders nothing when there are no questions', async () => {

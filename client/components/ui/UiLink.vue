@@ -49,7 +49,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 /** Colour utilities per tone. */
 const TONE_CLASSES: Record<UiLinkTone, string> = {
-  [UiLinkTone.Primary]: 'text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300',
+  [UiLinkTone.Primary]: 'ui-link-primary text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300',
   [UiLinkTone.Muted]: 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white',
   [UiLinkTone.Inherit]: 'hover:opacity-80',
 }

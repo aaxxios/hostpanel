@@ -1,28 +1,16 @@
 <template>
-  <UiSection v-if="items.length" padding="sm" :contained="false" class="relative border-t border-line" data-testid="aurora-trusted">
+  <UiSection v-if="items.length" padding="sm" :contained="false" class="relative" data-testid="aurora-trusted">
     <UiStack gap="none" align="center" class="text-center">
       <UiText tone="inherit" size="inherit" :class="[EYEBROW_CLASS, 'text-mut']">{{ t('aurora.trusted.title') }}</UiText>
     </UiStack>
 
-    <UiStack direction="row" align="center" justify="center" gap="lg" class="mt-6 flex-wrap" data-testid="aurora-trusted-strip">
-      <component
-        :is="partner.url ? UiLink : UiStack"
-        v-for="partner in items"
-        :key="partner.id"
-        v-bind="partner.url ? { href: partner.url, tone: 'inherit', underline: false } : {}"
-        :data-testid="`trusted-${partner.id}`"
-      >
-        <UiImage
-          v-if="partner.logoUrl"
-          :src="partner.logoUrl"
-          :alt="partner.name"
-          unoptimised
-          class="h-8 w-auto opacity-70 transition-opacity hover:opacity-100"
-          :testid="`trusted-logo-${partner.id}`"
-        />
-        <UiText v-else as="span" tone="inherit" weight="semibold" class="whitespace-nowrap text-mut2">{{ partner.name }}</UiText>
-      </component>
-    </UiStack>
+    <UiLogoWall
+      :items="items"
+      testid-prefix="trusted"
+      :layout="UiLogoWallLayout.Row"
+      class="mt-6 text-mut2"
+      data-testid="aurora-trusted-strip"
+    />
   </UiSection>
 </template>
 
@@ -34,8 +22,7 @@
  */
 import { EYEBROW_CLASS } from '~/templates/aurora/typography'
 import { useStorefrontStore } from '~/stores/storefront'
-import UiLink from '~/components/ui/UiLink.vue'
-import UiStack from '~/components/ui/UiStack.vue'
+import { UiLogoWallLayout } from '~/utils/ui/logoWall'
 
 /** Translator and the active language. */
 const { t, locale } = useI18n()

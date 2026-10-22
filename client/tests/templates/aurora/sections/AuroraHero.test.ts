@@ -53,6 +53,15 @@ describe('AuroraHero', () => {
     expect(empty.find('[data-testid="hero-stats"]').exists()).toBe(false)
   })
 
+  it('lays the figures out as one even stat group', () => {
+    stubAuroraGlobals()
+    vi.stubGlobal('usePortalSettings', () => ({ get: (key: string) => (key.startsWith('portal.stats') ? 'Europe, North America' : '') }))
+    const wrapper = mountWithKit(AuroraHero)
+
+    expect(wrapper.find('[data-testid="hero-stats"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="ui-stat-group-item"]')).toHaveLength(3)
+  })
+
   it('paints the primary button with the brand gradient and the brand tint text', () => {
     stubAuroraGlobals()
     const classes = mountWithKit(AuroraHero).find('[data-testid="hero-cta-primary"]').classes()

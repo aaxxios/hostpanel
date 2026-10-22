@@ -19,13 +19,13 @@
           :key="section.id"
           gap="md"
           :data-testid="`legal-section-${section.id}`"
-          class="animate-reveal-up motion-reduce:animate-none"
+          class="animate-reveal-up motion-reduce:animate-none [.tpl-classic_&]:animate-none [.tpl-classic_&]:border-t [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:pt-8 first:[.tpl-classic_&]:border-t-0 first:[.tpl-classic_&]:pt-0"
           :class="revealDelay(index * 100)"
         >
           <UiStack direction="row" align="center" gap="md">
             <UiTile
               size="xl"
-              class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300"
+              class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:text-classic-brand"
               data-testid="legal-section-marker"
             >
               <Icon v-if="section.icon" :name="section.icon" size="22" />
@@ -97,7 +97,7 @@
           v-if="contactTitle"
           padding="xl"
           data-testid="legal-contact"
-          class="animate-reveal-up motion-reduce:animate-none"
+          class="animate-reveal-up motion-reduce:animate-none [.tpl-classic_&]:animate-none [.tpl-classic_&]:rounded-lg [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-surface-2 [.tpl-classic_&]:shadow-none"
           :class="revealDelay(200)"
         >
           <UiHeading :level="3" size="section" class="mb-4">
@@ -130,6 +130,9 @@
  *
  * The page owns its copy and SEO; this component only lays the text out, so the five documents
  * can not drift apart in how they look.
+ *
+ * Under the classic template (the `tpl-classic` root class) the sections are ruled blocks with a
+ * square brand-tint marker and the contact card is a flat neutral panel.
  */
 
 import { revealDelay } from '~/utils/reveal'

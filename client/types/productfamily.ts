@@ -30,4 +30,10 @@ export interface ProductFamily {
   features: string[]
   /** One pricing row per plan. */
   pricing: ProductPricingRow[]
+  /** Service type the family sells, as `ProductType` serialises; picks the generated cover. Absent when unknown. */
+  type?: string | null
+  /** Cover image an operator uploaded for the group; replaces the generated cover when set. */
+  image?: string | null
+  /** True when one of the family's plans is its group's recommended plan; the card wears a badge. */
+  featured?: boolean
 }

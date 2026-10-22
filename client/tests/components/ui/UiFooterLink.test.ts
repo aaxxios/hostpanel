@@ -28,17 +28,18 @@ describe('UiFooterLink', () => {
   it.each([
     [UiFooterLinkVariant.Aurora, 'text-mut', 'hover:text-ac1', 'focus-visible:text-ac1'],
     [UiFooterLinkVariant.Nova, 'text-nova-muted', 'hover:text-nova-brand', 'focus-visible:text-nova-brand'],
-    [UiFooterLinkVariant.Classic, 'text-gray-600', 'hover:text-primary-700', 'focus-visible:text-primary-700'],
+    [UiFooterLinkVariant.Classic, 'text-classic-muted', 'hover:text-classic-brand', 'focus-visible:text-classic-brand'],
   ])('uses the %s theme tokens for rest, hover and focus', (variant, rest, hover, focus) => {
     const classes = mountWithKit(UiFooterLink, { props: { href: '/x', variant } }).classes()
 
     expect(classes).toEqual(expect.arrayContaining([rest, hover, focus, 'transition-colors']))
   })
 
-  it('gives the classic variant a dark-mode colour pair', () => {
+  it('colours the classic variant from the theme tokens only, so one class pair serves both modes', () => {
     const classes = mountWithKit(UiFooterLink, { props: { href: '/x', variant: UiFooterLinkVariant.Classic } }).classes()
 
-    expect(classes).toEqual(expect.arrayContaining(['dark:text-gray-400', 'dark:hover:text-primary-400']))
+    expect(classes).toEqual(expect.arrayContaining(['text-classic-muted', 'focus-visible:ring-classic-brand']))
+    expect(classes.some((name) => name.startsWith('dark:'))).toBe(false)
   })
 
   it('draws a sliding underline on hover and focus unless switched off', () => {

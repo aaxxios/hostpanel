@@ -1,26 +1,17 @@
 <template>
-  <UiStack gap="none" class="bg-classic-page text-gray-900 dark:text-white selection:bg-cyan-500/30" data-testid="classic-checkout">
-    <!-- Hero header -->
-    <UiStack gap="none" class="relative py-12 md:py-20 overflow-hidden border-b border-gray-200 dark:border-white/5">
-      <UiStack gap="none" class="absolute inset-0 pointer-events-none">
-        <UiStack gap="none" class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/10 rounded-full blur-[140px] animate-pulse" />
-        <UiStack gap="none" class="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[140px] animate-pulse animation-delay-2000" />
-      </UiStack>
-
-      <UiContainer class="relative z-10">
-        <UiStack
-          align="center"
-          gap="none"
-          class="max-w-4xl mx-auto text-center animate-reveal-up motion-reduce:animate-none"
-        >
-          <UiStack direction="row" align="center" gap="xs" class="inline-flex px-3 py-1 mb-6 rounded-full glass border border-gray-200 dark:border-white/10">
-            <ShieldCheck :size="14" class="text-cyan-700 dark:text-cyan-400" />
-            <UiText as="span" size="xs" tone="inherit" weight="semibold" class="tracking-wider uppercase text-cyan-700 dark:text-cyan-400">{{ $t('checkout.secureCheckout') }}</UiText>
+  <UiStack gap="none" class="bg-classic-page text-classic-ink" data-testid="classic-checkout">
+    <!-- Page header: a flat band with a hairline, no backdrop -->
+    <UiStack gap="none" class="border-b border-classic-border bg-classic-surface-2 py-10 md:py-14">
+      <UiContainer>
+        <UiStack gap="none" class="max-w-4xl">
+          <UiStack direction="row" align="center" gap="xs" class="mb-4 inline-flex self-start rounded-md bg-classic-brand-soft px-3 py-1">
+            <ShieldCheck :size="14" class="text-classic-brand" />
+            <UiText as="span" size="xs" tone="inherit" weight="semibold" class="uppercase tracking-wider text-classic-brand">{{ $t('checkout.secureCheckout') }}</UiText>
           </UiStack>
-          <UiHeading :level="UiHeadingLevel.H1" size="display" class="mb-6 font-black tracking-tight">
-            <UiGradientText class="bg-gradient-to-r from-gray-900 via-gray-900 to-gray-600 dark:from-white dark:via-white dark:to-white/60">{{ $t('checkout.title') }}</UiGradientText>
+          <UiHeading :level="UiHeadingLevel.H1" size="title" class="mb-3 !font-semibold !text-classic-ink">
+            {{ $t('checkout.title') }}
           </UiHeading>
-          <UiText tone="muted" size="lg" weight="medium" class="max-w-xl mx-auto">
+          <UiText tone="inherit" size="lg" class="max-w-xl text-classic-muted">
             {{ $t('checkout.subtitle') }}
           </UiText>
         </UiStack>
@@ -28,13 +19,14 @@
     </UiStack>
 
     <!-- Main content -->
-    <UiSection :contained="false" padding="md" class="relative md:py-20">
-      <UiContainer class="relative z-10">
+    <UiSection :contained="false" padding="md" class="relative">
+      <UiContainer>
         <!-- Empty cart state -->
         <UiCard
           v-if="cart.isEmpty"
           padding="none"
-          class="max-w-2xl mx-auto py-8 rounded-3xl backdrop-blur-sm animate-reveal-up motion-reduce:animate-none"
+          tone="bare"
+          class="mx-auto max-w-2xl rounded-lg border-classic-border bg-classic-surface py-8 shadow-sm"
           data-testid="checkout-empty"
         >
           <UiEmptyState :icon="ShoppingCart" :title="$t('cart.empty')" :description="$t('cart.emptyDesc')">
@@ -45,18 +37,18 @@
         </UiCard>
 
         <!-- Checkout grid -->
-        <UiGrid v-else cols="1" gap="xl" class="lg:grid-cols-12 items-start" data-testid="checkout-grid">
+        <UiGrid v-else cols="1" gap="xl" class="items-start lg:grid-cols-12" data-testid="checkout-grid">
           <!-- Left column: steps -->
-          <UiStack gap="xl" class="lg:col-span-7">
+          <UiStack gap="lg" class="lg:col-span-7">
             <!-- Account section -->
-            <UiCard padding="none" class="p-8 md:p-10 rounded-[32px] backdrop-blur-xl relative group transition-all duration-500 hover:border-gray-300 dark:hover:border-white/20" data-testid="checkout-account">
-              <UiStack direction="row" align="center" gap="md" class="mb-8">
-                <UiStack direction="row" align="center" justify="center" gap="none" class="w-12 h-12 rounded-2xl bg-primary-500/20 border border-primary-500/30 text-primary-600 dark:text-primary-400 group-hover:scale-110 transition-transform duration-500">
-                  <User :size="24" :stroke-width="2" />
+            <UiCard padding="none" tone="bare" class="rounded-lg border-classic-border bg-classic-surface p-6 shadow-sm md:p-8" data-testid="checkout-account">
+              <UiStack direction="row" align="center" gap="md" class="mb-6">
+                <UiStack direction="row" align="center" justify="center" gap="none" class="h-10 w-10 shrink-0 rounded-md bg-classic-brand-soft text-classic-brand">
+                  <User :size="20" :stroke-width="2" />
                 </UiStack>
                 <UiStack gap="none">
-                  <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="text-xl font-bold">{{ $t('checkout.account') }}</UiHeading>
-                  <UiText size="sm" tone="muted">{{ $t('checkout.identifyPrompt') }}</UiText>
+                  <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="!text-lg !font-semibold !text-classic-ink">{{ $t('checkout.account') }}</UiHeading>
+                  <UiText size="sm" tone="inherit" class="text-classic-muted">{{ $t('checkout.identifyPrompt') }}</UiText>
                 </UiStack>
               </UiStack>
 
@@ -67,11 +59,11 @@
                 align="center"
                 justify="between"
                 gap="md"
-                class="p-5 rounded-2xl bg-green-500/5 border border-green-500/20"
+                class="rounded-md border border-classic-border bg-classic-surface-2 p-4"
                 data-testid="checkout-signed-in"
               >
                 <UiStack direction="row" align="center" gap="md">
-                  <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-full bg-green-400/20 text-green-600 dark:text-green-400">
+                  <UiStack direction="row" align="center" justify="center" gap="none" class="h-9 w-9 rounded-full bg-green-500/15 text-green-700 dark:text-green-400">
                     <CheckCircle :size="18" />
                   </UiStack>
                   <UiStack gap="none">
@@ -79,18 +71,18 @@
                     <UiText size="sm" tone="success" data-testid="checkout-user-email">{{ userEmail }}</UiText>
                   </UiStack>
                 </UiStack>
-                <UiButton variant="ghost" size="sm" class="text-xs font-bold text-gray-600 dark:text-gray-400" data-testid="checkout-not-you" @click="handleLogout">
+                <UiButton variant="ghost" size="sm" class="text-xs font-semibold" data-testid="checkout-not-you" @click="handleLogout">
                   {{ $t('checkout.notYou') }}
                 </UiButton>
               </UiStack>
 
               <!-- Guest form -->
               <UiStack v-else gap="lg" data-testid="checkout-guest-form">
-                <UiStack direction="row" align="center" gap="sm" class="p-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/10 mb-2">
-                  <Info :size="16" class="text-cyan-700 dark:text-cyan-400 shrink-0" />
-                  <UiText size="sm" tone="muted">
+                <UiStack direction="row" align="center" gap="sm" class="rounded-md border border-classic-border bg-classic-surface-2 p-4">
+                  <Info :size="16" class="shrink-0 text-classic-brand" />
+                  <UiText size="sm" tone="inherit" class="text-classic-muted">
                     {{ $t('checkout.guestNotice') }}
-                    <UiLink :to="localePath(CLIENT_LOGIN_PATH)" tone="inherit" class="text-cyan-700 dark:text-cyan-400 font-bold hover:underline ml-1" :underline="false" data-testid="checkout-sign-in">
+                    <UiLink :to="localePath(CLIENT_LOGIN_PATH)" tone="inherit" class="ml-1 font-semibold text-classic-brand hover:underline" :underline="false" data-testid="checkout-sign-in">
                       {{ $t('checkout.signIn') }}
                     </UiLink>
                   </UiText>
@@ -150,22 +142,22 @@
             </UiCard>
 
             <!-- Payment method section -->
-            <UiCard padding="none" class="p-8 md:p-10 rounded-[32px] backdrop-blur-xl group transition-all duration-500 hover:border-gray-300 dark:hover:border-white/20" data-testid="checkout-payment">
-              <UiStack direction="row" align="center" gap="md" class="mb-8">
-                <UiStack direction="row" align="center" justify="center" gap="none" class="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-700 dark:text-cyan-400 group-hover:scale-110 transition-transform duration-500">
-                  <CreditCard :size="24" :stroke-width="2" />
+            <UiCard padding="none" tone="bare" class="rounded-lg border-classic-border bg-classic-surface p-6 shadow-sm md:p-8" data-testid="checkout-payment">
+              <UiStack direction="row" align="center" gap="md" class="mb-6">
+                <UiStack direction="row" align="center" justify="center" gap="none" class="h-10 w-10 shrink-0 rounded-md bg-classic-brand-soft text-classic-brand">
+                  <CreditCard :size="20" :stroke-width="2" />
                 </UiStack>
                 <UiStack gap="none">
-                  <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="text-xl font-bold">{{ $t('checkout.paymentMethod') }}</UiHeading>
-                  <UiText size="sm" tone="muted">{{ $t('checkout.choosePayment') }}</UiText>
+                  <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="!text-lg !font-semibold !text-classic-ink">{{ $t('checkout.paymentMethod') }}</UiHeading>
+                  <UiText size="sm" tone="inherit" class="text-classic-muted">{{ $t('checkout.choosePayment') }}</UiText>
                 </UiStack>
               </UiStack>
 
               <UiGrid v-if="methodsPending" cols="2" gap="sm" data-testid="checkout-methods-loading">
-                <UiSkeleton v-for="i in 3" :key="i" shape="block" class="h-14 rounded-2xl" />
+                <UiSkeleton v-for="i in 3" :key="i" shape="block" class="h-14 rounded-md" />
               </UiGrid>
 
-              <UiText v-else-if="!paymentMethods.length" tone="subtle" class="italic p-6 text-center border border-dashed border-gray-200 dark:border-white/10 rounded-2xl" data-testid="checkout-no-methods">
+              <UiText v-else-if="!paymentMethods.length" tone="subtle" class="rounded-md border border-dashed border-classic-border p-6 text-center italic" data-testid="checkout-no-methods">
                 {{ $t('checkout.noPaymentMethods') }}
               </UiText>
 
@@ -174,16 +166,17 @@
                   v-for="method in paymentMethods"
                   :key="method.module"
                   padding="sm"
-                  class="cursor-pointer transition-all duration-300"
+                  tone="bare"
+                  class="cursor-pointer rounded-md transition-colors duration-200"
                   :class="selectedMethod === method.module
-                    ? 'border-cyan-500/60 bg-cyan-500/10 shadow-halo-cyan-sm'
-                    : 'hover:border-gray-300 dark:hover:border-white/20'"
+                    ? 'border-classic-brand bg-classic-brand-soft'
+                    : 'border-classic-border bg-classic-surface hover:border-classic-brand/50'"
                   :data-testid="`checkout-method-${method.module}`"
                   @click="selectedMethod = method.module"
                 >
                   <UiStack gap="sm">
-                    <UiStack direction="row" align="center" justify="center" gap="none" class="w-8 h-8 rounded-lg bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10">
-                      <CreditCard :size="16" :class="selectedMethod === method.module ? 'text-cyan-700 dark:text-cyan-400' : 'text-gray-600 dark:text-gray-400'" />
+                    <UiStack direction="row" align="center" justify="center" gap="none" class="h-8 w-8 rounded-md border border-classic-border bg-classic-surface">
+                      <CreditCard :size="16" :class="selectedMethod === method.module ? 'text-classic-brand' : 'text-classic-muted'" />
                     </UiStack>
                     <UiRadio
                       v-model="selectedMethod"
@@ -212,58 +205,57 @@
             </UiCard>
           </UiStack>
 
-          <!-- Right column: summary -->
-          <UiStack as="aside" gap="lg" class="lg:col-span-5 sticky top-24">
+          <!-- Right column: summary. A light panel with a solid brand rule, readable in both modes. -->
+          <UiStack as="aside" gap="lg" class="sticky top-24 lg:col-span-5">
             <UiCard
               padding="none"
-              class="p-8 bg-gradient-to-br from-classic-summary-from to-classic-summary-to border-white/10 rounded-[32px] shadow-2xl relative overflow-hidden ring-1 ring-white/10 text-white"
+              tone="bare"
+              class="rounded-lg border-classic-border border-t-4 border-t-classic-brand bg-classic-surface p-6 shadow-md md:p-8"
               data-testid="checkout-summary"
             >
-              <!-- Decorative background -->
-              <UiStack gap="none" class="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-[80px]" />
-
-              <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="relative text-xl font-bold mb-8 flex items-center gap-3 !text-white">
-                <Receipt :size="20" class="text-cyan-400" />
+              <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="mb-6 flex items-center gap-3 !text-lg !font-semibold !text-classic-ink">
+                <Receipt :size="20" class="text-classic-brand" />
                 {{ $t('checkout.yourOrder') }}
               </UiHeading>
 
-              <UiAlert v-if="staleItems.length" variant="warning" class="relative mb-4" data-testid="checkout-stale">
+              <UiAlert v-if="staleItems.length" variant="warning" class="mb-4" data-testid="checkout-stale">
                 {{ $t('cart.staleCurrencyNotice') }}
               </UiAlert>
 
-              <UiStack gap="md" class="relative mb-8">
-                <UiCard
+              <UiStack gap="sm" class="mb-6">
+                <UiStack
                   v-for="item in cart.itemsInCurrency(currencyStore.payerCode)"
                   :key="item.pid"
-                  padding="sm"
-                  class="bg-white/5 border-white/10 dark:border-white/5"
+                  direction="row"
+                  align="start"
+                  justify="between"
+                  gap="md"
+                  class="rounded-md border border-classic-border bg-classic-surface-2 p-3"
                   data-testid="checkout-item"
                 >
-                  <UiStack direction="row" align="start" justify="between" gap="md">
-                    <UiStack direction="row" align="center" gap="sm">
-                      <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 shrink-0">
-                        <Server :size="18" />
-                      </UiStack>
-                      <UiStack gap="none">
-                        <UiText size="sm" tone="inherit" weight="bold" truncate class="w-32 md:w-full">{{ item.name }}</UiText>
-                        <UiText size="xs" tone="inherit" weight="bold" class="text-[10px] uppercase tracking-widest text-cyan-400/60 mt-0.5">{{ item.cycleLabel }}</UiText>
-                      </UiStack>
+                  <UiStack direction="row" align="center" gap="sm">
+                    <UiStack direction="row" align="center" justify="center" gap="none" class="h-9 w-9 shrink-0 rounded-md bg-classic-brand-soft text-classic-brand">
+                      <Server :size="18" />
                     </UiStack>
-                    <UiText size="sm" tone="inherit" weight="bold" class="font-black whitespace-nowrap">{{ itemPrice(item) }}</UiText>
+                    <UiStack gap="none">
+                      <UiText size="sm" tone="inherit" weight="semibold" truncate class="w-32 md:w-full">{{ item.name }}</UiText>
+                      <UiText size="xs" tone="inherit" class="mt-0.5 text-classic-muted">{{ item.cycleLabel }}</UiText>
+                    </UiStack>
                   </UiStack>
-                </UiCard>
+                  <UiText size="sm" tone="inherit" weight="semibold" class="whitespace-nowrap">{{ itemPrice(item) }}</UiText>
+                </UiStack>
               </UiStack>
 
               <!-- Total divider -->
-              <UiStack gap="none" class="relative h-px bg-white/10 my-6" />
+              <UiDivider class="my-5" />
 
-              <UiStack direction="row" align="center" justify="between" gap="none" class="relative mb-8">
-                <UiText tone="inherit" weight="medium" class="text-gray-400">{{ $t('cart.total') }}</UiText>
-                <UiText as="span" tone="inherit" weight="bold" class="text-3xl font-black text-white" data-testid="checkout-total">{{ totalLabel }}</UiText>
+              <UiStack direction="row" align="center" justify="between" gap="none" class="mb-6">
+                <UiText tone="inherit" weight="medium" class="text-classic-muted">{{ $t('cart.total') }}</UiText>
+                <UiText as="span" tone="inherit" weight="bold" class="text-2xl text-classic-ink" data-testid="checkout-total">{{ totalLabel }}</UiText>
               </UiStack>
 
               <!-- Error box -->
-              <UiAlert v-if="orderError" variant="error" class="relative mb-6 animate-shake" data-testid="checkout-error">
+              <UiAlert v-if="orderError" variant="error" class="mb-6 animate-shake" data-testid="checkout-error">
                 {{ orderError }}
               </UiAlert>
 
@@ -275,31 +267,31 @@
                 full-width
                 :loading="submitting"
                 :disabled="submitting || cart.isEmpty || !selectedMethod"
-                class="relative !h-16 rounded-2xl text-lg font-bold shadow-2xl shadow-cyan-500/20 bg-gradient-to-tr from-cyan-600 to-primary-600 hover:from-cyan-500 hover:to-primary-500 transition-all duration-300"
+                class="!h-12 text-base font-semibold"
                 data-testid="checkout-submit"
                 @click="submitOrder"
               >
-                <Lock v-if="!submitting" :size="20" class="mr-2" />
+                <Lock v-if="!submitting" :size="18" class="mr-2" />
                 {{ submitting ? submittingLabel : $t('checkout.placeOrder') }}
               </UiButton>
 
-              <UiText size="xs" tone="inherit" weight="medium" class="relative mt-6 flex items-center justify-center gap-2 text-gray-400">
-                <ShieldCheck :size="14" class="text-green-500" />
+              <UiText size="xs" tone="inherit" weight="medium" class="mt-5 flex items-center justify-center gap-2 text-classic-muted">
+                <ShieldCheck :size="14" class="text-green-600 dark:text-green-400" />
                 {{ $t('cart.secureCheckout') }}
               </UiText>
             </UiCard>
 
             <!-- Help card -->
-            <UiCard padding="md" class="rounded-3xl" data-testid="checkout-help">
+            <UiCard padding="md" tone="bare" class="rounded-lg border-classic-border bg-classic-surface" data-testid="checkout-help">
               <UiStack direction="row" align="center" gap="md">
-                <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-full bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400">
+                <UiStack direction="row" align="center" justify="center" gap="none" class="h-10 w-10 rounded-md bg-classic-surface-2 text-classic-muted">
                   <HelpCircle :size="20" />
                 </UiStack>
                 <UiStack gap="none">
-                  <UiText size="sm" weight="bold">{{ $t('checkout.needHelp') }}</UiText>
-                  <UiText size="xs" tone="subtle">{{ $t('checkout.supportAlways') }}</UiText>
+                  <UiText size="sm" weight="semibold">{{ $t('checkout.needHelp') }}</UiText>
+                  <UiText size="xs" tone="inherit" class="text-classic-muted">{{ $t('checkout.supportAlways') }}</UiText>
                 </UiStack>
-                <UiLink :to="localePath('/contact')" :underline="false" class="ml-auto text-xs font-bold" data-testid="checkout-contact">
+                <UiLink :to="localePath('/contact')" :underline="false" class="ml-auto text-xs font-semibold" data-testid="checkout-contact">
                   {{ $t('checkout.contactUs') }}
                 </UiLink>
               </UiStack>
@@ -316,6 +308,9 @@
  * ClassicCheckout - the classic template's checkout: the account step (signed-in summary or
  * guest form), the payment-method step with the card form, and the order summary with the
  * submit button.
+ *
+ * Drawn with the classic tokens only: a flat header band, white bordered panels, one solid brand
+ * colour for icons, the selected method and the submit button. No gradients, glows or blurs.
  *
  * The order flow lives in `stores/checkout.ts`, shared with the other checkout template; this
  * glue around it (guest form, card element reference, router) is `composables/useCheckoutPage.ts`,

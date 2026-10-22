@@ -36,26 +36,15 @@
       </UiButton>
     </UiStack>
 
-    <UiStack
+    <UiStatGroup
       v-if="stats.length > 0"
-      direction="row"
-      wrap
-      gap="none"
-      class="mt-11 gap-y-6 border-t border-line pt-7"
+      :stats="stats"
+      value-class="text-tx"
+      label-class="text-mut"
+      divider-class="border-line"
+      class="mt-11 w-full border-t border-line pt-7"
       data-testid="hero-stats"
-    >
-      <UiStack
-        v-for="(stat, index) in stats"
-        :key="stat.label"
-        gap="none"
-        class="min-w-[110px] pr-8"
-        :class="index > 0 ? 'border-l border-line pl-8' : ''"
-        data-testid="hero-stat"
-      >
-        <UiText as="span" size="inherit" tone="inherit" weight="bold" class="text-[26px] leading-none text-tx">{{ stat.value }}</UiText>
-        <UiText as="span" size="sm" tone="inherit" class="mt-2 text-mut">{{ stat.label }}</UiText>
-      </UiStack>
-    </UiStack>
+    />
   </UiStack>
 </template>
 

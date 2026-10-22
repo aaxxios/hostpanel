@@ -1,5 +1,5 @@
 <template>
-  <section class="relative py-12 md:py-28 bg-ui-page overflow-hidden" data-testid="hosting-plan-hero">
+  <section class="relative py-12 md:py-28 bg-ui-page overflow-hidden [.tpl-classic_&]:border-b [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-surface-2 [.tpl-classic_&]:py-10 md:[.tpl-classic_&]:py-14" data-testid="hosting-plan-hero">
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/10 via-transparent to-secondary-500/10" />
       <UiDecor class="top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/20 rounded-full blur-[150px] animate-blob" />
@@ -36,19 +36,19 @@
         class="animate-reveal-up motion-reduce:animate-none"
       >
         <!-- There is no "popular" badge or tagline: `ProductDto` has no field for either. -->
-        <UiHeading :level="1" size="display" class="mb-4 leading-tight" data-testid="hosting-plan-name">{{ plan.name }}</UiHeading>
+        <UiHeading :level="1" size="display" class="mb-4 leading-tight [.tpl-classic_&]:text-3xl [.tpl-classic_&]:font-semibold [.tpl-classic_&]:text-classic-ink md:[.tpl-classic_&]:text-4xl" data-testid="hosting-plan-name">{{ plan.name }}</UiHeading>
 
         <!-- Summary parsed out of the description; interpolated, never HTML. -->
-        <UiText v-if="summary" tone="muted" size="lg" class="mb-8 max-w-2xl" data-testid="hosting-plan-summary">{{ summary }}</UiText>
+        <UiText v-if="summary" tone="muted" size="lg" class="mb-8 max-w-2xl [.tpl-classic_&]:text-classic-muted" data-testid="hosting-plan-summary">{{ summary }}</UiText>
 
         <div class="flex flex-wrap items-end gap-6">
           <div class="flex items-baseline gap-1.5">
-            <div class="text-5xl font-bold text-gray-900 dark:text-white" data-testid="hosting-plan-price">{{ price }}</div>
-            <div class="text-gray-600 dark:text-gray-400 text-sm">{{ $t('hosting.perMonthFull') }}</div>
+            <div class="text-5xl font-bold text-gray-900 dark:text-white [.tpl-classic_&]:text-classic-ink" data-testid="hosting-plan-price">{{ price }}</div>
+            <div class="text-gray-600 dark:text-gray-400 text-sm [.tpl-classic_&]:text-classic-muted">{{ $t('hosting.perMonthFull') }}</div>
           </div>
           <UiButton
             size="lg"
-            class="px-8 py-4 font-bold bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 hover:scale-[1.02] shadow-lg shadow-primary-500/30"
+            class="px-8 py-4 font-bold bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 hover:scale-[1.02] shadow-lg shadow-primary-500/30 [.tpl-classic_&]:bg-none [.tpl-classic_&]:shadow-none [.tpl-classic_&]:hover:scale-100 [.tpl-classic_&]:font-semibold"
             data-testid="hosting-plan-order"
             @click="emit('order')"
           >

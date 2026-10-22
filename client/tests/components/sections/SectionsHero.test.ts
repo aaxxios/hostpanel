@@ -1,12 +1,12 @@
 /**
- * Unit tests for SectionsHero: the headline, the calls to action, the operator-set figures (hidden
- * while empty, counted up on load and on hover when they are plain numbers) and the scroll hint.
+ * Unit tests for SectionsHero: the hosting headline, the domain search as the main action, the
+ * secondary plans action, the operator badge and the operator-set figures (hidden while empty).
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick, reactive } from 'vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import SectionsHero from '~/components/sections/SectionsHero.vue'
+import SectionsDomainSearch from '~/components/sections/SectionsDomainSearch.vue'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 
 /**
@@ -18,122 +18,70 @@ const stubSettings = (settings: Record<string, string>): void => {
   vi.stubGlobal('usePortalSettings', () => ({ get: (key: string) => settings[key] ?? '' }))
 }
 
-/** All three figures set: a counted one with a sign, a decimal one and a plain number. */
+/** All three figures set. */
 const ALL_FIGURES: Record<string, string> = {
   [PortalSettingKey.StatsClients]: '150+',
   [PortalSettingKey.StatsUptime]: '99.9%',
   [PortalSettingKey.StatsRegions]: '3',
 }
 
+/** Mounts the hero with the domain search registered as the auto-import Nuxt would provide. */
+const mountHero = () => mountWithKit(SectionsHero, { components: { SectionsDomainSearch } })
+
 describe('SectionsHero', () => {
   beforeEach(() => {
     stubPublicPageRuntime()
     stubSettings(ALL_FIGURES)
-    vi.useFakeTimers()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
   })
 
   it('shows the headline as the page heading, with the badge and subtitle', () => {
-    const wrapper = mountWithKit(SectionsHero)
+    const wrapper = mountHero()
 
-    expect(wrapper.find('h1').exists()).toBe(true)
     expect(wrapper.find('h1').text()).toContain('hero.title')
-    expect(wrapper.text()).toContain('hero.badge')
+    expect(wrapper.find('[data-testid="hero-badge"]').text()).toBe('hero.badge')
     expect(wrapper.text()).toContain('hero.subtitle')
   })
 
-  it('links the two calls to action to the contact page and the hosting plans', () => {
-    const wrapper = mountWithKit(SectionsHero)
+  it('prefers the operator badge line over the translated default', () => {
+    stubSettings({ [PortalSettingKey.HeroBadge]: 'Hosting since 2010' })
 
-    expect(wrapper.find('[data-testid="hero-primary"]').attributes('href')).toBe('/en/contact')
+    expect(mountHero().find('[data-testid="hero-badge"]').text()).toBe('Hosting since 2010')
+  })
+
+  it('offers the domain search as the main action and the hosting plans as the secondary one', () => {
+    const wrapper = mountHero()
+
+    expect(wrapper.find('[data-testid="sections-domain-search"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="hero-secondary"]').attributes('href')).toBe('/en/hosting')
   })
 
-  it('captions each configured figure with its own label', () => {
-    const wrapper = mountWithKit(SectionsHero)
+  it('shows each configured figure with its caption', () => {
+    const group = mountHero().find('[data-testid="hero-stats"]')
 
-    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain('hero.stats.clients')
-    expect(wrapper.find('[data-testid="hero-stat-1"]').text()).toContain('hero.stats.uptime')
-    expect(wrapper.find('[data-testid="hero-stat-2"]').text()).toContain('hero.stats.regions')
-  })
-
-  it('starts a countable figure at zero and runs it up to the configured value after a moment', async () => {
-    const wrapper = mountWithKit(SectionsHero)
-    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain('0+')
-
-    await vi.advanceTimersByTimeAsync(800 + 2500)
-
-    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain('150+')
-    expect(wrapper.find('[data-testid="hero-stat-2"]').text()).toContain('3')
-  })
-
-  it('shows a figure that is not a plain number exactly as the operator wrote it', async () => {
-    const wrapper = mountWithKit(SectionsHero)
-    expect(wrapper.find('[data-testid="hero-stat-1"]').text()).toContain('99.9%')
-
-    await vi.advanceTimersByTimeAsync(800 + 2500)
-
-    expect(wrapper.find('[data-testid="hero-stat-1"]').text()).toContain('99.9%')
+    expect(group.text()).toContain('150+')
+    expect(group.text()).toContain('hero.stats.clients')
+    expect(group.text()).toContain('99.9%')
+    expect(group.text()).toContain('hero.stats.uptime')
+    expect(group.text()).toContain('hero.stats.regions')
   })
 
   it('leaves out a figure whose setting is empty and hides the block when none is set', () => {
     stubSettings({ [PortalSettingKey.StatsUptime]: '99.9%' })
-    const partial = mountWithKit(SectionsHero)
+    const partial = mountHero()
 
-    expect(partial.findAll('[data-testid^="hero-stat-"]')).toHaveLength(1)
-    expect(partial.find('[data-testid="hero-stat-0"]').text()).toContain('hero.stats.uptime')
+    expect(partial.findAll('[data-testid="ui-stat-group-item"]')).toHaveLength(1)
     expect(partial.text()).not.toContain('hero.stats.clients')
 
     stubSettings({})
-    const none = mountWithKit(SectionsHero)
 
-    expect(none.find('[data-testid="hero-stats"]').exists()).toBe(false)
+    expect(mountHero().find('[data-testid="hero-stats"]').exists()).toBe(false)
   })
 
-  it('runs a counter up from hover without waiting for the load animation', async () => {
-    const wrapper = mountWithKit(SectionsHero)
+  it('draws no gradient or glow decoration', () => {
+    const html = mountHero().html()
 
-    await wrapper.find('[data-testid="hero-stat-0"]').trigger('mouseenter')
-    await vi.advanceTimersByTimeAsync(2000)
-
-    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain('150+')
-  })
-
-  it('scrolls down by one screen from the scroll hint', async () => {
-    const scrollTo = vi.fn()
-    window.scrollTo = scrollTo as unknown as typeof window.scrollTo
-    const wrapper = mountWithKit(SectionsHero)
-
-    await wrapper.find('[data-testid="hero-scroll"]').trigger('click')
-
-    expect(scrollTo).toHaveBeenCalledWith({ top: window.innerHeight, behavior: 'smooth' })
-  })
-
-  it('stops the counters when it is removed', async () => {
-    const clear = vi.spyOn(globalThis, 'clearInterval')
-    const wrapper = mountWithKit(SectionsHero)
-    await wrapper.find('[data-testid="hero-stat-0"]').trigger('mouseenter')
-
-    wrapper.unmount()
-
-    expect(clear).toHaveBeenCalled()
-  })
-
-  it('re-initialises the counters when the figures arrive after the first render', async () => {
-    const settings = reactive<Record<string, string>>({})
-    vi.stubGlobal('usePortalSettings', () => ({ get: (key: string) => settings[key] ?? '' }))
-    const wrapper = mountWithKit(SectionsHero)
-    expect(wrapper.find('[data-testid="hero-stats"]').exists()).toBe(false)
-
-    Object.assign(settings, ALL_FIGURES)
-    await nextTick()
-    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).not.toContain('undefined')
-
-    await vi.advanceTimersByTimeAsync(800 + 2500)
-    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).toContain('150+')
-    expect(wrapper.find('[data-testid="hero-stat-0"]').text()).not.toContain('undefined')
+    expect(html).not.toContain('bg-gradient')
+    expect(html).not.toContain('blur-')
+    expect(html).not.toContain('animate-blob')
   })
 })
