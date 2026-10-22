@@ -45,7 +45,7 @@ describe('NovaPartners', () => {
 
     expect(wrapper.find('[data-testid="partner-logo-1"]').attributes('src')).toBe('https://cdn.example.test/a.png')
     expect(wrapper.find('[data-testid="partner-logo-2"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="partner-1"]').text()).toContain('Alpha')
+    expect(wrapper.find('[data-testid="partner-logo-1"]').attributes('alt')).toBe('Alpha')
     expect(wrapper.find('[data-testid="partner-2"]').text()).toContain('Beta')
   })
 
@@ -74,5 +74,20 @@ describe('NovaPartners', () => {
     expect(grid.exists()).toBe(true)
     expect(grid.attributes('data-columns')).toBe(String(balancedColumns(5)))
     expect(grid.classes()).toContain('ui-balanced-grid')
+  })
+
+  it('runs the logos as a looping marquee once the list is long', async () => {
+    api.fetchPartners.mockResolvedValue(Array.from({ length: 8 }, (_, index) => partnerFixture(index + 1)))
+
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('.animate-marquee').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="partner-1"]')).toHaveLength(2)
+  })
+
+  it('mutes the logos so they work on both themes and gain colour on hover', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.find('[data-testid="partner-logo-1"]').classes()).toEqual(expect.arrayContaining(['grayscale', 'group-hover:grayscale-0']))
   })
 })

@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 181 44" role="img" aria-label="Marlowe Pay">
+  <g transform="translate(0 0)"><rect x="3" y="9" width="38" height="26" rx="5" fill="none" stroke="#8b95a7" stroke-width="4"/><rect x="3" y="15" width="38" height="6" fill="#8b95a7"/><rect x="9" y="27" width="10" height="3" rx="1.5" fill="#8b95a7"/></g>
+  <text x="54" y="29" textLength="125" lengthAdjust="spacingAndGlyphs" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="21" font-weight="700" letter-spacing="0.3" fill="#8b95a7">Marlowe Pay</text>
+</svg>

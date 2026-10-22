@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="bosphorus portfolio">
+  <rect width="640" height="400" fill="#ede9fe"/>
+  <rect x="24" y="22" width="592" height="366" rx="12" fill="#ffffff"/>
+  <path d="M24 34 a12 12 0 0 1 12 -12 h568 a12 12 0 0 1 12 12 v22 h-592 z" fill="#eef1f6"/>
+  <circle cx="44" cy="39" r="5" fill="#f87171"/><circle cx="60" cy="39" r="5" fill="#fbbf24"/><circle cx="76" cy="39" r="5" fill="#4ade80"/>
+  <rect x="104" y="31" width="300" height="16" rx="8" fill="#ffffff"/>
+  <clipPath id="w"><rect x="24" y="22" width="592" height="366" rx="12"/></clipPath>
+  <g clip-path="url(#w)"><rect x="24" y="56" width="592" height="44" rx="0" fill="#faf5ff"/><rect x="44" y="70" width="80" height="16" rx="4" fill="#4c1d95"/><rect x="430" y="72" width="40" height="12" rx="6" fill="#a78bfa"/><rect x="484" y="72" width="40" height="12" rx="6" fill="#a78bfa"/><rect x="538" y="72" width="50" height="12" rx="6" fill="#7c3aed"/><rect x="40" y="116" width="270" height="160" rx="10" fill="#c4b5fd"/><circle cx="120" cy="200" r="48" fill="#7c3aed"/><rect x="190" y="150" width="90" height="90" rx="8" fill="#ddd6fe"/><rect x="330" y="116" width="270" height="76" rx="10" fill="#fbcfe8"/><rect x="330" y="204" width="130" height="72" rx="10" fill="#99f6e4"/><rect x="472" y="204" width="128" height="72" rx="10" fill="#fde68a"/><rect x="40" y="292" width="190" height="80" rx="10" fill="#e9d5ff"/><rect x="244" y="292" width="190" height="80" rx="10" fill="#bbf7d0"/><rect x="448" y="292" width="152" height="80" rx="10" fill="#bae6fd"/></g>
+</svg>

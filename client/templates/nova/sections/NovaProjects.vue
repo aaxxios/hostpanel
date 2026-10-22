@@ -1,6 +1,6 @@
 <template>
   <UiSection v-if="items.length" padding="lg" class="border-b border-nova-border bg-nova-surface" data-testid="nova-projects">
-    <NovaSectionHeader :eyebrow="t('nova.projects.eyebrow')" :title="t('nova.projects.title')" />
+    <NovaSectionHeader :eyebrow="t('storefront.projects.eyebrow')" :title="t('storefront.projects.title')" />
 
     <UiBalancedGrid as="ul" :count="items.length" class="mt-10" data-testid="nova-projects-grid">
       <li v-for="project in items" :key="project.id" class="h-full" :data-testid="`project-${project.id}`">
@@ -10,17 +10,16 @@
             :src="project.imageUrls[0]"
             :alt="project.title"
             unoptimised
-            class="h-44 w-full"
+            class="h-44 w-full object-top"
             :testid="`project-image-${project.id}`"
           />
-          <UiTile
+          <UiCoverFallback
             v-else
-            size="lg"
+            :title="project.title"
+            :slug="project.slug"
             :data-testid="`project-placeholder-${project.id}`"
-            class="h-44 w-full rounded-none bg-nova-brand text-4xl font-bold text-white"
-          >
-            {{ project.title.charAt(0) }}
-          </UiTile>
+            class="h-44 w-full bg-nova-brand text-white"
+          />
           <UiStack gap="sm" class="flex-1 p-6">
             <UiHeading :level="3" size="bare" class="text-lg font-bold text-nova-ink">{{ project.title }}</UiHeading>
             <UiText v-if="project.summary" size="sm" tone="inherit" class="text-nova-muted">{{ project.summary }}</UiText>
@@ -32,7 +31,7 @@
               :testid="`project-link-${project.id}`"
               class="font-semibold text-nova-brand"
             >
-              {{ t('nova.projects.visit') }}
+              {{ t('storefront.projects.visit') }}
             </UiLink>
           </UiStack>
         </UiCard>
@@ -43,7 +42,7 @@
 
 <script setup lang="ts">
 /**
- * nova projects grid: a card per portfolio project with its first image (a lettered tile when it
+ * nova projects grid: a card per portfolio project with its first image (a patterned cover with the initials and a site type icon when it
  * has none), title, summary and a link to the live site. The projects come from the storefront
  * store (`GET /api/public/projects`); with none the section renders nothing.
  */
