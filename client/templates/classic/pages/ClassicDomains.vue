@@ -17,7 +17,7 @@
 
           <UiHeading :level="UiHeadingLevel.H1" size="title" class="mb-3 text-3xl font-semibold leading-tight text-classic-ink md:text-4xl" data-testid="classic-domains-title">
             {{ $t('domains.title') }}
-            <span class="text-classic-brand">{{ $t('domains.titleHighlight') }}</span>
+            <UiText as="span" tone="inherit" class="text-classic-brand">{{ $t('domains.titleHighlight') }}</UiText>
           </UiHeading>
 
           <!-- Register: search bar -->
