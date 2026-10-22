@@ -285,7 +285,17 @@ try
         // to serve (no handler, no database), and every route where an unauthenticated flood is
         // actually expensive — the credential endpoints, the contact form, the registrar lookups
         // — is [AllowAnonymous], so authorisation does not short-circuit it and the budget applies.
-        app.UseRateLimiter();
+        //
+        // Not in Testing: every partition there is NoLimiter (RateLimitingExtensions), so the
+        // middleware would limit nothing, but it still builds two PartitionedRateLimiters whose
+        // idle-sweep timers nothing ever stops. The ASP.NET Core middleware has no disposal hook, so
+        // a host that is torn down leaves both timers running, and the execution context they
+        // captured while the host was being built keeps the whole disposed host reachable. A test
+        // run builds a host per test class and ran out of memory on those (issue 373).
+        if (!app.Environment.IsEnvironment(EnvironmentNames.Testing))
+        {
+            app.UseRateLimiter();
+        }
     }
     else
     {
@@ -305,8 +315,13 @@ try
 
         // Between authentication and authorisation, which is where it belongs: User is populated,
         // so the per-subject partition works, and a request that authorisation is about to refuse
-        // has already spent budget rather than being free to repeat.
-        app.UseRateLimiter();
+        // has already spent budget rather than being free to repeat. Not in Testing, for the reason
+        // given on the SSO branch above.
+        if (!app.Environment.IsEnvironment(EnvironmentNames.Testing))
+        {
+            app.UseRateLimiter();
+        }
+
         app.UseAuthorization();
     }
 

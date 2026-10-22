@@ -54,9 +54,10 @@ jobs:
             dotnet test "tests/Innovayse.$suite.Tests" -c Release --no-build
           done
 
-  # The Integration suite starts a PostgreSQL container and a full API host for every test class
-  # (about 430 of them), so one testhost running all of it outlives any sensible job limit and
-  # holds memory the whole time. It is split by top-level test folder into four shards that run
+  # The Integration suite starts a full API host for every test class (about 430 of them), each on
+  # a database of its own on one shared PostgreSQL container. The test project's
+  # integration.runsettings (picked up by dotnet test) bounds its native memory, and the suite is
+  # split for speed by top-level test folder into four shards that run
   # in parallel, mirroring backend:test:integration:a-d in .gitlab-ci.yml (which runs them one at a time). Every
   # folder under Integration.Tests belongs to exactly one shard; a new folder must be added to
   # one of them or its tests run nowhere. (Fixtures/ holds fakes only, no tests.)
@@ -86,8 +87,6 @@ jobs:
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"
-      # Keeps glibc from giving every thread its own arena; the testhost runs many.
-      MALLOC_ARENA_MAX: "2"
       # Ryuk stays on in CI so a killed shard cannot leave PostgreSQL containers behind.
       TESTCONTAINERS_RYUK_DISABLED: "false"
     steps:

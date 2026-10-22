@@ -31,13 +31,22 @@
   background: linear-gradient(90deg, #0ea5e9, #a855f7);
 }
 
-/* Full-screen product slider: white dots over the photograph. */
+/*
+ * Full-screen product slider: the dots sit on a small surface pill, so they read over a photograph
+ * and over the plain page colour alike. The colours are the classic tokens, which follow the mode.
+ */
 .products-slider .swiper-pagination {
   bottom: 20px !important;
+  left: 50% !important;
+  width: fit-content !important;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgb(var(--classic-surface) / 0.85);
   pointer-events: auto;
 }
 
@@ -45,7 +54,7 @@
   width: 6px !important;
   height: 6px !important;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.45) !important;
+  background: rgb(var(--classic-ink) / 0.35) !important;
   opacity: 1 !important;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -55,11 +64,11 @@
 }
 
 .products-slider .swiper-pagination-bullet:hover {
-  background: rgba(255, 255, 255, 0.7) !important;
+  background: rgb(var(--classic-ink) / 0.6) !important;
 }
 
 .products-slider .swiper-pagination-bullet-active {
-  background: white !important;
+  background: rgb(var(--classic-brand)) !important;
   transform: scale(1.2);
 }
 
