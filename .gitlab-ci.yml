@@ -77,8 +77,8 @@ variables:
     # cancelled", and every Integration.Tests case fails in IntegrationTestFactory.InitializeAsync
     # before a Postgres container is even requested -- twice in a row on 2026-10-05.
     #
-    # Ryuk only removes containers a crashed run leaves behind. IntegrationTestFactory.DisposeAsync
-    # disposes its Postgres on every normal exit, so without Ryuk a leak needs a killed job, and
+    # Ryuk only removes containers a crashed run leaves behind. SharedPostgresServer disposes the
+    # one Postgres of the run when the test process exits, so without Ryuk a leak needs a killed job, and
     # what it leaves is one Postgres container on the builder host to remove by hand.
     TESTCONTAINERS_RYUK_DISABLED: "true"
   script:
@@ -253,20 +253,17 @@ backend:test:
 # them or its tests run nowhere. (Fixtures/ holds fakes only, no tests.) The split is the
 # same as the four shards of .github/workflows/ci.yml.
 #
-# One testhost grows to several gigabytes (the EF model, a Postgres container and a full API
-# host per test class) and the builder has 12 GB shared with other products' pipelines. With two
-# half-suite shards running together the kernel OOM-killed the testhost every time ("Test host
-# process crashed", or a 500/timeout in whichever test was in flight). A quarter of the suite
-# per host, one host at a time (resource_group), plus a bounded glibc arena count, keeps each
-# host far below that.
+# Each test class starts a full API host on a database of its own on one shared Postgres
+# container, and the test project's integration.runsettings (picked up by dotnet test) sets the
+# glibc arena limit and runs two classes at a time, so one testhost stays under 4 GB for the
+# whole suite (issue 373). The builder has 12 GB shared with other products' pipelines, so the
+# shards still run one at a time (resource_group); the split keeps each job short.
 .test-integration:
   extends: .test-dotnet
   resource_group: hostpanel-integration
   variables:
     SERVICE: backend
     TEST_PROJECTS: Innovayse.Hostpanel.Integration.Tests
-    # Keeps glibc from giving every thread its own arena; the testhost runs many.
-    MALLOC_ARENA_MAX: "2"
   rules:
     - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [backend/**/*]
