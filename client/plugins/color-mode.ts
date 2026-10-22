@@ -17,12 +17,12 @@ type PageColors = Record<ColorMode, string>
 /**
  * Page background per template and mode, for `<meta name="theme-color">` — the colour
  * the browser paints its own chrome on mobile. Read from the template stylesheets'
- * page tokens; classic has no light palette and stays dark either way.
+ * page tokens. Classic paints the shared `--page` token (aurora.css), so it takes aurora's pair.
  */
 const PAGE_COLORS: Record<TemplateName, PageColors> = {
   [TemplateName.Aurora]: { [ColorMode.Dark]: '#08090f', [ColorMode.Light]: '#f4f5fa' },
   [TemplateName.Nova]: { [ColorMode.Dark]: '#08191f', [ColorMode.Light]: '#f4f8fa' },
-  [TemplateName.Classic]: { [ColorMode.Dark]: '#0a0a0f', [ColorMode.Light]: '#0a0a0f' },
+  [TemplateName.Classic]: { [ColorMode.Dark]: '#08090f', [ColorMode.Light]: '#f4f5fa' },
 }
 
 /**
