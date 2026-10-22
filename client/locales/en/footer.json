@@ -1,30 +1,47 @@
 {
   "footer": {
-    "description": "Web hosting, domains, servers, billing and a client portal, backed by support.",
+    "tagline": "Fast, reliable web hosting and domains, with real people on support.",
+    "cta": {
+      "title": "Ready to put your site online?",
+      "text": "Find a domain or pick a hosting plan and be live in minutes.",
+      "plans": "Get started"
+    },
     "columns": {
-      "navigation": "Navigation",
-      "services": "Services",
-      "contact": "Contact"
+      "hosting": "Hosting",
+      "domains": "Domains",
+      "company": "Company",
+      "support": "Support",
+      "legal": "Legal"
     },
-    "nav": {
-      "home": "Home",
-      "announcements": "Announcements",
-      "knowledgebase": "Knowledgebase",
+    "hosting": {
+      "all": "All plans"
+    },
+    "domains": {
+      "register": "Register a domain",
+      "transfer": "Transfer a domain",
+      "pricing": "Domain pricing"
+    },
+    "company": {
+      "about": "About us",
+      "contact": "Contact",
+      "announcements": "Announcements"
+    },
+    "support": {
+      "help": "Help centre",
       "faq": "FAQ",
-      "contact": "Contact"
+      "ticket": "Contact support"
     },
-    "services": {
-      "plans": "Hosting Plans"
+    "trust": {
+      "secure": "Secure connection",
+      "payments": "Safe payments",
+      "guarantee": "Money back guarantee"
     },
     "bottom": {
       "rights": "All rights reserved.",
       "privacy": "Privacy Policy",
       "cookies": "Cookie Policy",
       "terms": "Terms of Service",
-      "refund": "Refund Policy",
-      "secure": "Secure SSL"
-    },
-    "contactPage": "Write to us",
-    "backToTop": "Back to top"
+      "refund": "Refund Policy"
+    }
   }
 }

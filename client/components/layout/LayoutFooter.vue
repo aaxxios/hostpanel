@@ -1,211 +1,128 @@
 <template>
-  <footer class="relative overflow-hidden bg-classic-footer" data-testid="layout-footer">
-    <!-- Background decor -->
-    <UiStack gap="none" class="absolute inset-0 pointer-events-none overflow-hidden">
-      <UiStack gap="none" class="absolute -top-24 -left-24 w-96 h-96 bg-primary-600/5 dark:bg-primary-600/10 rounded-full blur-[120px]" />
-      <UiStack gap="none" class="absolute -bottom-24 -right-24 w-96 h-96 bg-secondary-600/5 dark:bg-secondary-600/10 rounded-full blur-[120px]" />
-      <UiStack gap="none" class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-white/10 to-transparent" />
+  <footer
+    class="relative border-t border-classic-border bg-classic-footer shadow-[0_-12px_32px_-20px_rgba(17,24,39,0.18)] dark:shadow-none"
+    data-testid="layout-footer"
+  >
+    <!-- Top band: one line of copy and the two ways in. -->
+    <UiStack class="border-b border-classic-border" gap="none" data-testid="footer-cta">
+      <UiContainer class="py-8">
+        <UiStack gap="md" align="start" class="md:flex-row md:items-center md:justify-between">
+          <UiStack gap="xs" class="min-w-0">
+            <UiHeading :level="UiHeadingLevel.H2" size="bare" class="text-xl font-semibold text-classic-ink">
+              {{ $t('footer.cta.title') }}
+            </UiHeading>
+            <UiText tone="inherit" size="sm" class="text-classic-muted">
+              {{ $t('footer.cta.text') }}
+            </UiText>
+          </UiStack>
+          <UiStack gap="sm" align="start" class="w-full sm:flex-row sm:items-center md:w-auto">
+            <SectionsDomainSearch class="w-full sm:min-w-[24rem] sm:flex-1 md:w-[28rem] md:flex-none" />
+            <UiButton :to="localePath('/products')" :variant="UiButtonVariant.Outline" data-testid="footer-cta-plans">
+              {{ $t('footer.cta.plans') }}
+            </UiButton>
+          </UiStack>
+        </UiStack>
+      </UiContainer>
     </UiStack>
 
-    <UiContainer class="relative z-10 pt-20 pb-10">
-      <!-- Main footer content -->
-      <UiGrid cols="1" gap="xl" class="sm:grid-cols-2 lg:grid-cols-4 mb-16">
-        <!-- Column 1: logo and vision -->
-        <UiStack gap="none">
-          <UiStack direction="row" align="center" gap="none" class="mb-8 group cursor-pointer">
-            <!-- Follows the colour mode, like the footer surface behind it. -->
-            <AppLogo
-              :surface="LogoSurface.Auto"
-              :width="240"
-              :height="80"
-              loading="lazy"
-              img-class="h-12 md:h-14 w-auto max-w-[240px] object-contain transition-transform duration-500 group-hover:scale-105"
-            />
+    <UiContainer class="py-12">
+      <UiGrid cols="1" gap="xl" class="sm:grid-cols-3 lg:grid-cols-7">
+        <!-- Brand block -->
+        <UiStack gap="none" class="min-w-0 sm:col-span-3 lg:col-span-2" data-testid="footer-brand">
+          <UiStack direction="row" align="center" gap="sm" class="text-classic-ink">
+            <AppLogoLockup img-class="h-9 w-auto max-w-[180px] object-contain" mark-class="h-9 w-9" name-class="text-lg font-bold" />
           </UiStack>
-          <UiText tone="muted" class="leading-relaxed mb-10 max-w-sm">
-            {{ $t('footer.description') }}
+          <UiText tone="inherit" size="sm" class="mt-4 max-w-xs leading-relaxed text-classic-muted">
+            {{ $t('footer.tagline') }}
           </UiText>
 
-          <!-- Social icons with the magnetic effect -->
-          <UiStack v-if="socialLinks.length" direction="row" align="center" gap="lg">
-            <UiMagnetic v-for="social in socialLinks" :key="social.name" :strength="0.4">
-              <UiLink
-                :href="social.href"
-                external
-                tone="muted"
-                :underline="false"
-                class="w-12 h-12 rounded-xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 flex items-center justify-center hover:text-primary-700 dark:hover:text-on-primary hover:bg-primary-500/20 hover:border-primary-500/50 transition-all duration-300 group/social"
-                :aria-label="social.name"
-                :title="social.name"
-                data-testid="footer-social-link"
-              >
-                <Icon :name="social.icon" class="text-2xl transition-transform group-hover/social:scale-110" />
-              </UiLink>
-            </UiMagnetic>
+          <UiStack gap="xs" class="mt-5">
+            <UiFooterLink v-if="contactEmail" :href="`mailto:${contactEmail}`" :variant="UiFooterLinkVariant.Classic" class="text-sm" testid="footer-email">
+              {{ contactEmail }}
+            </UiFooterLink>
+            <UiFooterLink v-if="contactPhone" :href="`tel:${contactPhoneLink}`" :variant="UiFooterLinkVariant.Classic" class="text-sm" testid="footer-phone">
+              {{ contactPhone }}
+            </UiFooterLink>
+            <UiText v-if="contactAddress" tone="inherit" size="sm" class="text-classic-muted" data-testid="footer-address">
+              {{ contactAddress }}
+            </UiText>
           </UiStack>
-        </UiStack>
 
-        <!-- Column 2: navigation -->
-        <UiStack gap="none">
-          <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="mb-8 tracking-tight flex items-center gap-3 font-bold">
-            <UiStack gap="none" class="w-2 h-2 rounded-full bg-primary-500 shadow-dot-primary" />
-            {{ $t('footer.columns.navigation') }}
-          </UiHeading>
-          <UiList list-style="plain" class="space-y-4">
-            <UiListItem v-for="link in navigationLinks" :key="link.href">
-              <UiFooterLink
-                :to="link.href"
-                :variant="UiFooterLinkVariant.Classic"
-                :underline="false"
-                class="text-sm duration-300 group"
-                testid="footer-nav-link"
-              >
-                <UiStack gap="none" as="span" class="w-0 group-hover:w-4 h-px bg-primary-500 mr-0 group-hover:mr-3 transition-all duration-300 opacity-0 group-hover:opacity-100" />
-                {{ link.label }}
-              </UiFooterLink>
-            </UiListItem>
-          </UiList>
-        </UiStack>
-
-        <!-- Column 3: services -->
-        <UiStack gap="none">
-          <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="mb-8 tracking-tight flex items-center gap-3 font-bold">
-            <UiStack gap="none" class="w-2 h-2 rounded-full bg-secondary-500 shadow-dot-secondary" />
-            {{ $t('footer.columns.services') }}
-          </UiHeading>
-          <UiList list-style="plain" class="space-y-4">
-            <UiListItem v-for="service in serviceLinks" :key="service.href">
-              <UiFooterLink
-                :to="service.href"
-                :variant="UiFooterLinkVariant.Classic"
-                :underline="false"
-                class="text-sm duration-300 group"
-                testid="footer-service-link"
-              >
-                <UiStack gap="none" as="span" class="w-0 group-hover:w-4 h-px bg-secondary-500 mr-0 group-hover:mr-3 transition-all duration-300 opacity-0 group-hover:opacity-100" />
-                {{ service.label }}
-              </UiFooterLink>
-            </UiListItem>
-          </UiList>
-        </UiStack>
-
-        <!-- Column 4: contact and back to top -->
-        <UiStack gap="none">
-          <UiHeading :level="UiHeadingLevel.H3" size="subsection" class="mb-8 tracking-tight flex items-center gap-3 font-bold">
-            <UiStack gap="none" class="w-2 h-2 rounded-full bg-cyan-500 shadow-dot-cyan" />
-            {{ $t('footer.columns.contact') }}
-          </UiHeading>
-          <UiList list-style="plain" class="space-y-6">
-            <UiListItem v-if="contactEmail" class="group">
-              <UiFooterLink
-                :href="`mailto:${contactEmail}`"
-                :variant="UiFooterLinkVariant.Classic"
-                :underline="false"
-                class="gap-4 text-sm"
-                testid="footer-email"
-              >
-                <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 group-hover:border-primary-500/30 group-hover:bg-primary-500/10">
-                  <Mail :size="18" class="text-primary-600 dark:text-primary-400 transition-transform group-hover:scale-110" />
-                </UiStack>
-                {{ contactEmail }}
-              </UiFooterLink>
-            </UiListItem>
-            <UiListItem v-if="contactPhone" class="group">
-              <UiFooterLink
-                :href="`tel:${contactPhoneLink}`"
-                :variant="UiFooterLinkVariant.Classic"
-                :underline="false"
-                class="gap-4 text-sm"
-                testid="footer-phone"
-              >
-                <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 group-hover:border-secondary-500/30 group-hover:bg-secondary-500/10">
-                  <Phone :size="18" class="text-secondary-600 dark:text-secondary-400 transition-transform group-hover:scale-110" />
-                </UiStack>
-                {{ contactPhone }}
-              </UiFooterLink>
-            </UiListItem>
-            <UiListItem v-if="contactAddress" class="group">
-              <UiStack direction="row" align="center" gap="lg">
-                <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 group-hover:border-cyan-500/30 group-hover:bg-cyan-500/10">
-                  <MapPin :size="18" class="text-cyan-600 dark:text-cyan-400 transition-transform group-hover:scale-110" />
-                </UiStack>
-                <UiText as="span" size="sm" tone="muted" data-testid="footer-address">{{ contactAddress }}</UiText>
+          <!-- Generic trust marks only: icons and plain words, no third party logos. -->
+          <UiList list-style="plain" class="mt-6 space-y-2.5" data-testid="footer-trust">
+            <UiListItem v-for="mark in trustMarks" :key="mark.key">
+              <UiStack direction="row" align="center" gap="xs" class="text-classic-muted">
+                <component :is="mark.icon" :size="16" class="shrink-0" aria-hidden="true" />
+                <UiText as="span" tone="inherit" size="xs">{{ mark.label }}</UiText>
               </UiStack>
             </UiListItem>
-            <!-- No channel set yet: point at the contact page so the column is never empty. -->
-            <UiListItem v-if="!contactEmail && !contactPhone && !contactAddress" class="group">
-              <UiFooterLink
-                :to="localePath('/contact')"
-                :variant="UiFooterLinkVariant.Classic"
-                :underline="false"
-                class="gap-4 text-sm"
-                testid="footer-contact-page"
-              >
-                <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-lg bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 group-hover:border-primary-500/30 group-hover:bg-primary-500/10">
-                  <Mail :size="18" class="text-primary-600 dark:text-primary-400 transition-transform group-hover:scale-110" />
-                </UiStack>
-                {{ $t('footer.contactPage') }}
-              </UiFooterLink>
-            </UiListItem>
           </UiList>
-
-          <!-- Back to top button -->
-          <UiStack direction="row" justify="end" gap="none" class="mt-12">
-            <UiMagnetic :strength="0.5">
-              <UiIconButton
-                :icon="ChevronUp"
-                :label="$t('footer.backToTop')"
-                size="lg"
-                class="w-14 h-14 rounded-full bg-white dark:bg-white/[0.03] shadow-drop-badge"
-                testid="footer-back-to-top"
-                @click="scrollToTop"
-              />
-            </UiMagnetic>
-          </UiStack>
         </UiStack>
+
+        <LayoutFooterColumn
+          v-for="column in columns"
+          :key="column.key"
+          :column="column.key"
+          :title="column.title"
+          :links="column.links"
+        />
       </UiGrid>
+    </UiContainer>
 
-      <!-- Bottom bar -->
-      <UiCard padding="xl" class="relative rounded-[2rem] bg-white dark:bg-white/[0.02] backdrop-blur-xl">
-        <UiStack align="center" justify="between" gap="lg" class="md:flex-row">
-          <UiText size="sm" tone="subtle" weight="medium">
-            © {{ currentYear }} <UiText as="span" size="sm" weight="medium">{{ BRAND_NAME }}</UiText>. {{ $t('footer.bottom.rights') }}
+    <!-- Bottom row: copyright on the left, pickers and theme on the right. -->
+    <UiStack gap="none" class="border-t border-classic-border" data-testid="footer-bottom">
+      <UiContainer class="py-5">
+        <UiStack gap="md" align="start" class="sm:flex-row sm:items-center sm:justify-between">
+          <UiText tone="inherit" size="sm" class="text-classic-muted">
+            © {{ currentYear }} {{ BRAND_NAME }}. {{ $t('footer.bottom.rights') }}
           </UiText>
-
-          <UiStack direction="row" align="center" justify="center" wrap gap="lg">
-            <UiFooterLink
-              v-for="legal in legalLinks"
-              :key="legal.to"
-              :to="legal.to"
-              :variant="UiFooterLinkVariant.Classic"
-              class="text-sm font-medium"
-              testid="footer-legal-link"
-            >
-              {{ legal.label }}
-            </UiFooterLink>
-          </UiStack>
-
-          <!-- Trusted badge -->
-          <UiStack direction="row" align="center" gap="sm" class="px-4 py-2 rounded-full bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5">
-            <UiStack gap="none" class="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <UiText as="span" size="xs" tone="muted" weight="bold" class="uppercase tracking-widest">{{ $t('footer.bottom.secure') }}</UiText>
+          <UiStack direction="row" wrap align="center" gap="sm">
+            <UiLanguageSwitcher :placement="UiPlacement.Top" />
+            <UiCurrencySwitcher :placement="UiPlacement.Top" />
+            <UiThemeToggle />
           </UiStack>
         </UiStack>
-      </UiCard>
-    </UiContainer>
+      </UiContainer>
+    </UiStack>
   </footer>
 </template>
 
 <script setup lang="ts">
 /**
- * LayoutFooter - the site footer with four columns: logo and social icons, navigation links,
- * service links, and contact details with a back-to-top button, above a bar of legal links.
+ * LayoutFooter - the classic storefront footer: a call-to-action band, a brand block with the
+ * operator's contact details, five link columns (hosting plan groups from the catalogue, domains,
+ * company, support, legal) and a bottom row with the copyright, language and currency pickers and
+ * the theme toggle. It sits on the classic footer surface with a visible top border so it reads
+ * as its own block in both colour modes.
  */
-import { PortalSettingKey } from '~/constants/portalSettingKey'
-import { ChevronUp, Mail, MapPin, Phone } from 'lucide-vue-next'
-import type { SocialLink } from '~/types/sociallink'
-import { LogoSurface } from '~/utils/appLogo'
-import { UiFooterLinkVariant, UiHeadingLevel } from '~/utils/ui/enums'
+import { CreditCard, Lock, ShieldCheck } from 'lucide-vue-next'
+import type { Component } from 'vue'
+import AppLogoLockup from '~/components/AppLogoLockup.vue'
+import LayoutFooterColumn from '~/components/layout/LayoutFooterColumn.vue'
+import { useCatalogStore } from '~/stores/catalog'
+import type { FooterLink } from '~/types/footerlink'
+import { familyKey } from '~/utils/catalogGroups'
+import { UiButtonVariant, UiFooterLinkVariant, UiHeadingLevel, UiPlacement } from '~/utils/ui/enums'
+
+/** One trust mark: a generic icon and its label. */
+interface TrustMark {
+  /** Stable key. */
+  key: string
+  /** Generic icon component. */
+  icon: Component
+  /** Translated label. */
+  label: string
+}
+
+/** One link column of the footer. */
+interface FooterColumn {
+  /** Stable key, used in test ids. */
+  key: string
+  /** Translated heading. */
+  title: string
+  /** The column's links. */
+  links: FooterLink[]
+}
 
 /** Translate function. */
 const { t } = useI18n()
@@ -216,55 +133,78 @@ const localePath = useLocalePath()
 /** Company name shown in the copyright line: the operator's site name. */
 const { name: BRAND_NAME } = useSiteIdentity()
 
-/** Reads an operator setting by its key, falling back to the matching runtime config value. */
-const { get } = usePortalSettings()
+/** Operator contact channels: email, phone as typed, phone for a `tel:` link, and address. */
+const { email: contactEmail, phone: contactPhone, phoneLink: contactPhoneLink, address: contactAddress } = useContactDetails()
 
-/** Contact address shown and linked in the contact column; empty hides the row. */
-const contactEmail = computed(() => get(PortalSettingKey.ContactEmail, 'portalContactEmail'))
+/** The public catalogue, source of the hosting plan groups. */
+const catalog = useCatalogStore()
 
-/** Contact phone as the operator wrote it, and in the form a `tel:` link needs; empty hides the row. */
-const { phone: contactPhone, phoneLink: contactPhoneLink, address: contactAddress } = useContactDetails()
-
-/** Scrolls the page back to the top. */
-const scrollToTop = (): void => {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
-  })
-}
-
-/** Navigation column links. */
-const navigationLinks = computed(() => [
-  { label: t('footer.nav.home'), href: localePath('/') },
-  { label: t('footer.nav.announcements'), href: localePath('/announcements') },
-  { label: t('footer.nav.knowledgebase'), href: localePath('/knowledgebase') },
-  { label: t('footer.nav.faq'), href: localePath('/faq') },
-  { label: t('footer.nav.contact'), href: localePath('/contact') }
+/** Generic payment and trust marks; icons only, never a third party logo. */
+const trustMarks = computed<TrustMark[]>(() => [
+  { key: 'secure', icon: Lock, label: t('footer.trust.secure') },
+  { key: 'payments', icon: CreditCard, label: t('footer.trust.payments') },
+  { key: 'guarantee', icon: ShieldCheck, label: t('footer.trust.guarantee') },
 ])
 
-/** Services column links. */
-const serviceLinks = computed(() => [
-  { label: t('footer.services.plans'), href: localePath('/products') }
+/** Hosting column: the all-plans entry, then every plan group the storefront shows. */
+const hostingLinks = computed<FooterLink[]>(() => [
+  { key: 'all', label: t('footer.hosting.all'), to: localePath('/products') },
+  ...catalog.familyGroups.map((group) => ({
+    key: `group-${group.id}`,
+    label: group.name,
+    to: localePath(`/products/${familyKey(group)}`),
+  })),
 ])
 
-/** Legal links of the bottom bar. */
-const legalLinks = computed(() => [
-  { label: t('footer.bottom.privacy'), to: localePath('/privacy') },
-  { label: t('footer.bottom.cookies'), to: localePath('/cookie-policy') },
-  { label: t('footer.bottom.terms'), to: localePath('/terms') },
-  { label: t('footer.bottom.refund'), to: localePath('/refund-policy') }
+/** The link columns, in display order. */
+const columns = computed<FooterColumn[]>(() => [
+  { key: 'hosting', title: t('footer.columns.hosting'), links: hostingLinks.value },
+  {
+    key: 'domains',
+    title: t('footer.columns.domains'),
+    links: [
+      { key: 'register', label: t('footer.domains.register'), to: localePath('/domains') },
+      { key: 'transfer', label: t('footer.domains.transfer'), to: localePath('/domains/transfer') },
+      { key: 'pricing', label: t('footer.domains.pricing'), to: localePath('/domains') },
+    ],
+  },
+  {
+    key: 'company',
+    title: t('footer.columns.company'),
+    links: [
+      { key: 'about', label: t('footer.company.about'), to: localePath('/about') },
+      { key: 'contact', label: t('footer.company.contact'), to: localePath('/contact') },
+      { key: 'announcements', label: t('footer.company.announcements'), to: localePath('/announcements') },
+    ],
+  },
+  {
+    key: 'support',
+    title: t('footer.columns.support'),
+    links: [
+      { key: 'help', label: t('footer.support.help'), to: localePath('/knowledgebase') },
+      { key: 'faq', label: t('footer.support.faq'), to: localePath('/faq') },
+      { key: 'ticket', label: t('footer.support.ticket'), to: localePath('/contact') },
+    ],
+  },
+  {
+    key: 'legal',
+    title: t('footer.columns.legal'),
+    links: [
+      { key: 'privacy', label: t('footer.bottom.privacy'), to: localePath('/privacy') },
+      { key: 'cookies', label: t('footer.bottom.cookies'), to: localePath('/cookie-policy') },
+      { key: 'terms', label: t('footer.bottom.terms'), to: localePath('/terms') },
+      { key: 'refund', label: t('footer.bottom.refund'), to: localePath('/refund-policy') },
+    ],
+  },
 ])
-
-/**
- * Social media profiles the operator configured; the name doubles as the accessible label.
- * A profile with no URL is dropped, so an install that sets none renders no icons at all.
- */
-const socialLinks = computed<SocialLink[]>(() => [
-  { name: 'Twitter', href: get(PortalSettingKey.SocialTwitter, 'portalSocialTwitter'), icon: 'mdi:twitter' },
-  { name: 'LinkedIn', href: get(PortalSettingKey.SocialLinkedin, 'portalSocialLinkedin'), icon: 'mdi:linkedin' },
-  { name: 'Facebook', href: get(PortalSettingKey.SocialFacebook, 'portalSocialFacebook'), icon: 'mdi:facebook' },
-].filter(entry => entry.href))
 
 /** Current year for the copyright line. */
 const currentYear = new Date().getFullYear()
+
+/** Reads the plan groups once in the browser when no page has loaded them yet. */
+onMounted(async () => {
+  if (catalog.productGroups.length === 0) {
+    await catalog.loadProductGroups()
+  }
+})
 </script>

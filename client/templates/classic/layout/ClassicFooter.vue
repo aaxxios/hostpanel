@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 /**
- * ClassicFooter - the classic template's footer slot: the site's original footer,
- * `components/layout/LayoutFooter.vue`, unchanged.
+ * ClassicFooter - the classic template's footer slot: the storefront footer,
+ * `components/layout/LayoutFooter.vue`.
  */
 </script>

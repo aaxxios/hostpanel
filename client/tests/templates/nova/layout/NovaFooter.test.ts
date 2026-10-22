@@ -9,6 +9,15 @@ import { FOOTER_COLUMNS } from '~/templates/nova/content'
 import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
 
 describe('NovaFooter', () => {
+  it('is a separate block: the nova footer token surface, a visible top border and a soft shadow', () => {
+    stubTemplateGlobals()
+    const classes = mountWithKit(NovaFooter).find('footer').classes()
+
+    expect(classes).toEqual(expect.arrayContaining(['bg-[color:var(--n-footer)]', 'border-t', 'border-nova-border']))
+    expect(classes).not.toContain('bg-nova-bg')
+    expect(classes.some((name) => name.startsWith('shadow-'))).toBe(true)
+  })
+
   it('renders every column with all of its links', () => {
     stubTemplateGlobals()
     const wrapper = mountWithKit(NovaFooter)
