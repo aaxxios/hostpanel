@@ -162,3 +162,13 @@ export const setPortalSetting = async (request: APIRequestContext, key: string, 
 export const enableDemoMode = async (request: APIRequestContext): Promise<void> => {
   await request.post(`${STUB_URL}/__e2e/demo`, { data: { enabled: true } })
 }
+
+/**
+ * Switches the stub's home-page slides on until the next {@link resetStub}; the feed is empty by default.
+ *
+ * @param request Playwright's API request context.
+ * @returns Resolves once the stub serves the slides.
+ */
+export const enableSlides = async (request: APIRequestContext): Promise<void> => {
+  await request.post(`${STUB_URL}/__e2e/slides`, { data: { enabled: true } })
+}

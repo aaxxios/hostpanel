@@ -630,3 +630,44 @@ export const PROJECTS = [
   { id: 3, slug: 'bluebird-shop', title: 'Bluebird Shop', summary: 'An online store with a fast checkout.', description: null, imageUrls: ['/demo/projects/bluebird-shop.svg'], url: null, sortOrder: 3 },
   { id: 4, slug: 'harborline-tracking', title: 'Harborline Tracking', summary: 'A shipment tracking dashboard.', description: null, imageUrls: ['/demo/projects/harborline-tracking.svg'], url: null, sortOrder: 4 },
 ]
+
+/**
+ * The home-page slides the public feed serves when a spec switches them on: one on a photograph
+ * and one with no image, so the slider is checked on both kinds of background.
+ */
+export const SLIDES = [
+  {
+    id: 1,
+    iconName: 'server',
+    brandColor: '#2563eb',
+    imageUrl: '/og-image.jpg',
+    demoUrl: null,
+    learnMoreUrl: '/products',
+    productId: null,
+    monthlyPrice: null,
+    annualPrice: null,
+    title: 'Example slide with a photograph',
+    tagline: 'Fast hosting',
+    description: 'A slide whose background is an image under a dark scrim.',
+    features: ['Free SSL', 'Daily backups'],
+    ctaText: null,
+    ctaUrl: null,
+  },
+  {
+    id: 2,
+    iconName: 'web',
+    brandColor: '#0d9488',
+    imageUrl: '',
+    demoUrl: null,
+    learnMoreUrl: '/products',
+    productId: null,
+    monthlyPrice: null,
+    annualPrice: null,
+    title: 'Example slide without an image',
+    tagline: 'Plain background',
+    description: 'A slide with no image follows the active colour mode.',
+    features: [],
+    ctaText: null,
+    ctaUrl: null,
+  },
+]

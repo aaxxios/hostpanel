@@ -11,7 +11,7 @@
  * Playwright starts it as the first `webServer` entry (see `playwright.config.ts`); the Nuxt
  * server is started with `API_URL` pointing here.
  *
- * Besides the backend routes it exposes five test-only endpoints:
+ * Besides the backend routes it exposes six test-only endpoints:
  * - `GET  /__e2e/requests` -- every request received so far (method, path, body and the
  *   `X-Language` it carried), so a spec can assert that a form submission really reached the
  *   backend with the right body and in the right language;
@@ -21,6 +21,8 @@
  *   the next reset, so a spec can render the storefront in each template;
  * - `POST /__e2e/demo`     -- switches demo mode on; it is off by default, so only the spec that covers
  *   the demo banner and the sign-in hint turns it on, until the next reset;
+ * - `POST /__e2e/slides`   -- switches the home-page slides on; the feed is empty by default (the home shows the
+ *   text hero), so only the spec that covers the slider turns them on, until the next reset;
  * - `POST /__e2e/email-verified` -- sets whether the signed-in address reads as confirmed (it does by default),
  *   so only the spec for the verification banner turns it off, until the next reset;
  * - `POST /__e2e/reset`    -- clears the log, the scripted answers, the settings overrides, demo mode and
@@ -41,6 +43,7 @@ import {
   LOCATIONS,
   PARTNERS,
   PROJECTS,
+  SLIDES,
   TESTIMONIALS,
   BAD_CONTACT_EMAIL,
   BAD_CONTACT_EMAIL_MESSAGE,
@@ -143,6 +146,9 @@ const settingOverrides = new Map()
 
 /** Whether the stub reports a demo; off by default, a spec turns it on, a reset turns it off. */
 let demoEnabled = false
+
+/** Whether the stub serves home-page slides; off by default, a spec turns it on, a reset turns it off. */
+let slidesEnabled = false
 
 /** Whether the stub reports the signed-in address as confirmed; on by default, a spec turns it off, a reset turns it on. */
 let emailVerified = true
@@ -383,6 +389,10 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
   }
 
   // Demo mode -- anonymous, off unless a spec switched it on; the next reset is always DEMO_RESET_IN_MS from now.
+  if (isGet && path === '/api/slides') {
+    send(res, 200, slidesEnabled ? SLIDES : [])
+    return true
+  }
   if (isGet && path === '/api/public/demo') {
     send(res, 200, { enabled: demoEnabled, nextResetAt: new Date(Date.now() + DEMO_RESET_IN_MS).toISOString(), accounts: DEMO_ACCOUNTS })
     return true
@@ -732,6 +742,7 @@ const server = createServer(async (req, res) => {
     scripted.clear()
     settingOverrides.clear()
     demoEnabled = false
+    slidesEnabled = false
     emailVerified = true
     tickets = seedTickets()
     profile = { ...CLIENT }
@@ -760,6 +771,12 @@ const server = createServer(async (req, res) => {
   if (path === '/__e2e/demo') {
     const demo = await readJson(req)
     demoEnabled = demo.enabled === true
+    send(res, 204)
+    return
+  }
+  if (path === '/__e2e/slides') {
+    const slides = await readJson(req)
+    slidesEnabled = slides.enabled === true
     send(res, 204)
     return
   }
