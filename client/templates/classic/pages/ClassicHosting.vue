@@ -10,7 +10,7 @@
 
         <UiHeading :level="UiHeadingLevel.H1" size="title" class="mb-3 text-3xl font-semibold leading-tight text-classic-ink md:text-4xl" data-testid="classic-hosting-title">
           {{ $t('hosting.title') }}
-          <span class="text-classic-brand">{{ $t('hosting.titleHighlight') }}</span>
+          <UiText as="span" tone="inherit" class="text-classic-brand">{{ $t('hosting.titleHighlight') }}</UiText>
         </UiHeading>
         <UiText tone="inherit" class="max-w-2xl text-classic-muted md:text-lg">
           {{ $t('hosting.subtitle') }}
