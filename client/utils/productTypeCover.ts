@@ -12,8 +12,13 @@
 
 import { ProductType } from '~/types/producttype'
 
-/** Mask classes shared by every cover: centred, cropped to fill, no tiling. */
-const COVER_MASK_BASE = '[mask-size:cover] [mask-position:center] [mask-repeat:no-repeat]'
+/**
+ * Mask classes shared by every cover: centred, scaled to fit whole, no tiling. `contain`, not `cover`:
+ * the illustrations are drawn on a 400 x 160 canvas and the cover box is far wider than that on a
+ * large card, so `cover` blew the art up to the box width and cut its top and bottom off. Fitting it
+ * whole shows every illustration in full at any card width; the rest of the box keeps its tint.
+ */
+const COVER_MASK_BASE = '[mask-size:contain] [mask-position:center] [mask-repeat:no-repeat]'
 
 /** Cover used when a family's type is unknown or has no illustration of its own. */
 export const DEFAULT_COVER_CLASS = `[mask-image:url(/covers/generic.svg)] ${COVER_MASK_BASE}`

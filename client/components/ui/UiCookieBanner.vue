@@ -1,9 +1,13 @@
 <template>
-  <!-- Spacer in the page flow: the bar is fixed, so without it the bar would cover the last lines and form actions -->
+  <!--
+    Clearance in the page flow, on a phone only: there the card spans the full width and sits over the last lines
+    of the page, so the page ends above it. From `sm` the card is a small corner card that floats over the page,
+    and a spacer would only show as an empty band under the footer.
+  -->
   <div
     v-if="showBanner"
     aria-hidden="true"
-    class="h-[var(--cookie-banner-height,0px)] shrink-0"
+    class="h-[var(--cookie-banner-height,0px)] shrink-0 sm:hidden"
     data-testid="cookie-banner-spacer"
   />
 
@@ -72,7 +76,10 @@
  * (full width less a gutter on a phone), small enough that it never sits over the page's content.
  *
  * Mounted by the `default` and `client` layouts only, so auth pages (no layout) never show it.
- * While visible it also renders a spacer so the bar does not cover content.
+ * From `sm` it floats over the page like a toast and takes no space in the flow (an in-flow spacer used
+ * to leave a blank band of its height under the footer on every page). On a phone, where the card spans
+ * the width, a spacer (hidden from `sm`) keeps the last lines of the page above it. While visible it
+ * publishes its height, so the floating contact button lifts clear of it.
  *
  * Shown only until a choice is made. The choice itself lives in `useCookieConsent`, where
  * `plugins/tracking.client.ts` reads it: this banner records the answer, the tag loader acts on it.
@@ -88,7 +95,7 @@ const localePath = useLocalePath()
 /** Whether the banner is showing. */
 const showBanner = ref(false)
 
-/** The banner's root element; measured so the spacer and the contact button match its real height. */
+/** The banner's root element; measured so the phone spacer and the contact button match its real height. */
 const bannerRef = ref<HTMLElement | null>(null)
 
 /** Watches the banner's size; null while it is not shown. */

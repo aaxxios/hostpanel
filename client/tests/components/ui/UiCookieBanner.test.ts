@@ -31,7 +31,7 @@ describe('CookieBanner', () => {
     expect(wrapper.text()).toContain('cookieBanner.title')
   })
 
-  it('publishes its measured height for the spacer and the contact button, and clears it on dismissal', async () => {
+  it('publishes its measured height for the phone spacer and the contact button, and clears it on dismissal', async () => {
     const wrapper = mountWithKit(CookieBanner)
     await nextTick()
 
@@ -100,10 +100,16 @@ describe('CookieBanner', () => {
     expect(classes.some((c) => c.startsWith('dark:bg-ui-surface/'))).toBe(false)
   })
 
-  it('renders a spacer with the bar so it never covers content, and drops both together', async () => {
+  it('reserves room in the page flow on a phone only, so no blank band is left under the footer from sm up', async () => {
     const wrapper = mountWithKit(CookieBanner)
     await nextTick()
-    expect(wrapper.find('[data-testid="cookie-banner-spacer"]').exists()).toBe(true)
+
+    // The full-width phone card covers the end of the page, so the spacer is there; the corner card
+    // from `sm` floats over the page and its spacer is hidden.
+    expect(wrapper.find('[data-testid="cookie-banner"]').classes()).toContain('fixed')
+    const spacer = wrapper.find('[data-testid="cookie-banner-spacer"]')
+    expect(spacer.exists()).toBe(true)
+    expect(spacer.classes()).toContain('sm:hidden')
 
     await wrapper.find('[data-testid="cookie-banner-accept-all"]').trigger('click')
     await nextTick()

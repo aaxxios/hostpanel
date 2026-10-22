@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Run settings for the integration run (wired in by RunSettingsFilePath in the project file).
+
+  Starting an API host makes Wolverine compile its handler code with Roslyn, which copies the metadata of
+  every loaded assembly into native memory. glibc gives each thread its own malloc arena and keeps freed
+  pages in it, so with a dozen threads compiling the test process held gigabytes of arenas it was not
+  using and was killed at the 6 GiB the verify container is capped at (issue 373). One arena and a low
+  trim threshold keep freed pages reusable and give them back. Measured on ten host starts after a full
+  collection: 1231 MB resident by default, 767 MB with one arena.
+-->
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <MALLOC_ARENA_MAX>1</MALLOC_ARENA_MAX>
+      <MALLOC_TRIM_THRESHOLD_>131072</MALLOC_TRIM_THRESHOLD_>
+      <MALLOC_MMAP_THRESHOLD_>131072</MALLOC_MMAP_THRESHOLD_>
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>

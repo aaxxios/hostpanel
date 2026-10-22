@@ -36,6 +36,20 @@ describe('PRODUCT_TYPE_COVER', () => {
     expect(files).not.toContain('generic.svg')
   })
 
+  it('fits every illustration whole, never cropped to fill a wide cover box', () => {
+    for (const classes of [...Object.values(PRODUCT_TYPE_COVER), DEFAULT_COVER_CLASS]) {
+      expect(classes).toContain('[mask-size:contain]')
+      expect(classes).not.toContain('[mask-size:cover]')
+    }
+  })
+
+  it('draws every illustration inside its own canvas, so fitting it whole shows all of it', () => {
+    for (const classes of [...Object.values(PRODUCT_TYPE_COVER), DEFAULT_COVER_CLASS]) {
+      const svg = readFileSync(resolve(COVERS_DIR, COVER_FILE.exec(classes)?.[1] ?? ''), 'utf8')
+      expect(svg).toMatch(/viewBox="0 0 400 160"/)
+    }
+  })
+
   it('keeps the illustrations as black shapes, so the accent can fill them through a mask', () => {
     for (const classes of [...Object.values(PRODUCT_TYPE_COVER), DEFAULT_COVER_CLASS]) {
       const svg = readFileSync(resolve(COVERS_DIR, COVER_FILE.exec(classes)?.[1] ?? ''), 'utf8')

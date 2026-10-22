@@ -130,10 +130,31 @@ describe('ProductsFullSlider', () => {
     expect(wrapper.find('[data-testid="sections-hero"]').exists()).toBe(true)
   })
 
-  it('always uses the dark palette, because it sits on photographs', async () => {
+  it('follows the colour mode itself: the panel is never forced into the dark palette', async () => {
     const wrapper = await mountSlider()
 
-    expect(wrapper.find('[data-testid="products-slider"]').classes()).toContain('dark')
+    const panel = wrapper.find('[data-testid="products-slider"]')
+    expect(panel.classes()).not.toContain('dark')
+    expect(panel.classes()).toContain('bg-classic-page')
+  })
+
+  it('puts only a slide with a photograph in the dark palette, under a dark scrim', async () => {
+    api.fetchSlides.mockResolvedValue([slide(1), slide(2, { imageUrl: '' })])
+    const wrapper = await mountSlider()
+
+    const slides = wrapper.findAll('[data-testid="ui-accent"]').map((node) => node.element.parentElement as HTMLElement)
+    expect(slides[0]?.classList.contains('dark')).toBe(true)
+    expect(slides[1]?.classList.contains('dark')).toBe(false)
+    expect(wrapper.find('[data-testid="slider-background-1"] .bg-black\\/60').exists()).toBe(true)
+  })
+
+  it('draws no dark scrim over a slide without an image, so it is the plain page colour', async () => {
+    api.fetchSlides.mockResolvedValue([slide(1, { imageUrl: '' })])
+    const wrapper = await mountSlider()
+
+    const background = wrapper.find('[data-testid="slider-background-1"]')
+    expect(background.classes()).toContain('bg-classic-page')
+    expect(background.find('.bg-black\\/60').exists()).toBe(false)
   })
 
   it('scrolls to the bottom of the section from the scroll-down button', async () => {

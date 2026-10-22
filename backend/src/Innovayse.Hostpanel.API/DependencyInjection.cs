@@ -177,13 +177,23 @@ public static class DependencyInjection
             });
         });
 
-        // Domain scheduled jobs — daily expiry check (09:00 UTC) and auto-renew (10:00 UTC)
-        services.AddHostedService<DomainScheduledJobsStartup>();
+        // The two cron startups below each hand Wolverine a message to deliver hours from now. Wolverine
+        // keeps that delay as a timer in the process-wide timer queue and does not cancel it when the
+        // host stops, so in a process that starts and stops many hosts (the integration tests) every
+        // stopped host stays reachable from the timer, with its whole service graph and the code
+        // Wolverine compiled for it. The tests drive the crons by dispatching their messages directly
+        // and never wait for the clock, so the Testing environment does not schedule them (issue 373).
+        if (!environment.IsEnvironment(EnvironmentNames.Testing))
+        {
+            // Domain scheduled jobs — daily expiry check (09:00 UTC) and auto-renew (10:00 UTC)
+            services.AddHostedService<DomainScheduledJobsStartup>();
 
-        // Billing scheduled jobs — daily billable items cron processing (06:00 UTC)
-        services.AddHostedService<BillingScheduledJobsStartup>();
+            // Billing scheduled jobs — daily billable items cron processing (06:00 UTC)
+            services.AddHostedService<BillingScheduledJobsStartup>();
+        }
 
         // Demo data reset — schedules the first run only when Demo:Enabled is true; a no-op otherwise.
+        // Registered in every environment because the demo tests read the reset time it publishes.
         services.AddHostedService<DemoScheduledJobsStartup>();
 
         // Rate limiting, and the forwarded-header handling it depends on. Registered as one call

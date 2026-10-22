@@ -2,6 +2,8 @@
   <PropertyGroup>
     <!-- Settings inherited from Directory.Build.props -->
     <IsPackable>false</IsPackable>
+    <!-- Native-memory settings for the test host, see the file (issue 373). -->
+    <RunSettingsFilePath>$(MSBuildProjectDirectory)/integration.runsettings</RunSettingsFilePath>
   </PropertyGroup>
   <ItemGroup>
     <Using Include="Xunit" />
@@ -29,5 +31,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Fixtures\model-diff-baseline.txt" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Caps how many test classes run at once: each starts an API host, and starting one compiles Wolverine's handler code, which takes gigabytes of native memory for a moment (issue 373). -->
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -1,12 +1,12 @@
 <template>
-  <!-- The slider sits on photographs under a flat dark scrim, so it always uses the dark palette. -->
+  <!-- The panel follows the theme. A slide with a photograph sits under a flat dark scrim and uses the dark palette for its own copy; a slide with no image is the plain page colour in either mode. -->
   <!-- No slides configured: the text hero, so the top of the home page is never an empty viewport. -->
   <SectionsHero v-if="!sliderItems.length" />
-  <section v-else ref="sectionRef" class="dark products-slider relative h-[75dvh] sm:h-[85dvh] md:h-dvh w-full overflow-hidden" data-testid="products-slider">
+  <section v-else ref="sectionRef" class="products-slider relative h-[75dvh] sm:h-[85dvh] md:h-dvh w-full overflow-hidden bg-classic-page" data-testid="products-slider">
     <ClientOnly>
       <!-- Before hydration: the first slide, rendered at once so the page is never blank -->
       <template #fallback>
-        <div class="absolute inset-0">
+        <div :class="[firstSlide?.image ? 'dark' : '', 'absolute inset-0']">
           <NuxtImg
             v-if="firstSlide?.image"
             :src="firstSlide.image"
@@ -19,9 +19,9 @@
             :preload="true"
             class="h-full w-full object-cover"
           />
-          <div class="absolute inset-0 bg-black/60" />
+          <div v-if="firstSlide?.image" class="absolute inset-0 bg-black/60" />
         </div>
-        <UiAccent v-if="firstSlide" :color="firstSlide.color">
+        <UiAccent v-if="firstSlide" :color="firstSlide.color" :class="firstSlide.image ? 'dark' : ''">
           <UiContainer class="relative z-10 flex h-full items-center justify-center">
             <UiCard padding="lg" class="max-w-4xl text-center mb-10 sm:mb-0">
               <UiAccentTile :icon="`mdi:${firstSlide.icon}`" size="xl" class="mb-6 sm:mb-8 mx-auto" />
@@ -51,10 +51,10 @@
         :speed="800"
         class="h-full w-full"
       >
-        <SwiperSlide v-for="(item, index) in sliderItems" :key="item.id" class="relative h-full w-full">
+        <SwiperSlide v-for="(item, index) in sliderItems" :key="item.id" :class="[item.image ? 'dark' : '', 'relative h-full w-full']">
           <UiAccent :color="item.color">
             <!-- Background with a Ken Burns effect -->
-            <div :class="[item.image ? '' : 'bg-classic-page', 'absolute inset-0 overflow-hidden']">
+            <div :class="[item.image ? '' : 'bg-classic-page', 'absolute inset-0 overflow-hidden']" :data-testid="`slider-background-${item.id}`">
               <UiImage
                 v-if="item.image"
                 :src="item.image"
@@ -63,7 +63,8 @@
                 :fetchpriority="index === 0 ? 'high' : 'auto'"
                 class="h-full w-full animate-ken-burns"
               />
-              <div class="absolute inset-0 bg-black/60" />
+              <!-- The scrim keeps the copy readable on a photograph; with no image there is nothing to darken -->
+              <div v-if="item.image" class="absolute inset-0 bg-black/60" />
             </div>
 
             <!-- Content -->
@@ -172,7 +173,9 @@
  *
  * Fetches the slides from the backend through the catalogue store and shows them in a Swiper
  * carousel with a Ken Burns background, a solid classic panel and staggered feature badges. Every slide
- * keeps its own brand colour (`UiAccent`). Before the browser takes over, the first slide
+ * keeps its own brand colour (`UiAccent`). The panel follows the colour mode like the rest of the page: only a
+ * slide that has a photograph is put in the dark palette (`dark`), because its copy sits on the dark scrim; a slide
+ * without an image is the page colour in light and in dark. Before the browser takes over, the first slide
  * is rendered by the server so the page is never blank. With no slide at all it renders the
  * text hero (`SectionsHero`) in its place, so the page never opens on an empty, full-height band.
  */
