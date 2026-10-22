@@ -20,52 +20,7 @@
 
       <!-- Catalogue grid -->
       <UiBalancedGrid :count="products.length" data-testid="product-grid">
-        <UiAccent v-for="(product, index) in products" :key="product.id" :color="product.color">
-          <UiCard
-            hover
-            class="group relative h-full sm:p-7 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-none transition-all duration-300 animate-reveal-up motion-reduce:animate-none"
-            :data-testid="`product-card-${product.id}`"
-            :class="revealDelay(index * 100)"
-          >
-            <NuxtLink :to="hrefFor(product)" class="flex flex-col h-full" :data-testid="`product-link-${product.id}`">
-              <!-- Radial glow on hover -->
-              <UiDecor class="inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--accent)_8%,transparent),transparent_70%)]" />
-
-              <!-- Header -->
-              <div class="relative flex items-start gap-4 mb-6">
-                <UiAccentTile :icon="product.icon" class="group-hover:scale-110" />
-                <div class="flex-1">
-                  <UiHeading :level="3" class="break-words text-xl font-bold group-hover:text-primary-700 dark:group-hover:text-primary-300 transition-colors">
-                    {{ product.name }}
-                  </UiHeading>
-                  <!-- Only the static domains card carries a tagline; families have no such field. -->
-                  <span v-if="product.tagline" :class="[accent.text, 'block text-xs uppercase tracking-wider font-bold mb-2']">{{ product.tagline }}</span>
-                </div>
-              </div>
-
-              <!-- Summary -->
-              <!-- Clamped: a long description never makes one card taller than the others in its row. -->
-              <UiText tone="muted" size="sm" class="relative leading-relaxed mb-6 flex-1 line-clamp-3 break-words">{{ product.description }}</UiText>
-
-              <!-- Feature highlights -->
-              <div v-if="product.features.length" class="relative space-y-2 mb-8">
-                <div v-for="(feature, featureIndex) in product.features.slice(0, FAMILY_BULLET_LIMIT)" :key="featureIndex" class="flex items-center gap-2">
-                  <CheckCircle :size="16" :stroke-width="2" :class="[accent.text, 'shrink-0']" />
-                  <span class="text-xs text-gray-700 dark:text-gray-300 line-clamp-1">{{ feature }}</span>
-                </div>
-              </div>
-
-              <!-- Action (the whole card is the link) -->
-              <span :class="[accent.tintStrong, accent.borderMedium, 'relative inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-gray-900 dark:text-white border transition-all duration-300 overflow-hidden group/btn']">
-                <span class="relative z-10 flex items-center gap-2 group-hover/btn:translate-x-1 transition-transform">
-                  {{ $t('products.pricing.cta.learnMore') }}
-                  <Icon name="mdi:arrow-right" :size="18" />
-                </span>
-                <UiDecor as="span" class="inset-0 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 bg-[linear-gradient(to_right,color-mix(in_srgb,var(--accent)_25%,transparent),color-mix(in_srgb,var(--accent)_12%,transparent))]" />
-              </span>
-            </NuxtLink>
-          </UiCard>
-        </UiAccent>
+        <CatalogProductFamilyCard v-for="(product, index) in products" :key="product.id" :product="product" :index="index" />
       </UiBalancedGrid>
     </UiContainer>
 
@@ -78,15 +33,11 @@
 /**
  * The catalogue of the products page: a row of family shortcuts and one card per family.
  *
- * Every family is coloured by its own accent (`UiAccent`), so a card, its icon tile and its
- * check marks share one colour without the page knowing it. A family that has a `learnMoreUrl`
- * links there; one without links to its detail page. A family with no feature lines shows no list.
+ * Each card is a `ProductFamilyCard`, coloured by its family's own accent. A family that has a
+ * `learnMoreUrl` links there; one without links to its detail page.
  */
 
-import { FAMILY_BULLET_LIMIT } from '~/constants/planFeatureLimit'
 import { revealDelay } from '~/utils/reveal'
-import { CheckCircle } from 'lucide-vue-next'
-import { ACCENT_CLASSES } from '~/utils/ui/accent'
 import type { ProductFamily } from '~/types/productfamily'
 
 /** Props of ProductFamilyGrid. */
@@ -100,11 +51,8 @@ defineProps<Props>()
 /** Prefixes a path with the active language. */
 const localePath = useLocalePath()
 
-/** Accent classes the card reads (the colour itself is set by the surrounding UiAccent). */
-const accent = ACCENT_CLASSES
-
 /**
- * The localized address a family links to.
+ * The localized address a family's shortcut links to.
  *
  * @param product The family.
  * @returns Its learn-more page, or its detail page when it has none.

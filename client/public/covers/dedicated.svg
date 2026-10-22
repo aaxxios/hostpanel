@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 160" preserveAspectRatio="xMidYMid slice">
+  <g fill="#000">
+    <rect x="110" y="16" width="180" height="128" rx="10" fill-opacity=".22"/>
+    <rect x="122" y="26" width="156" height="24" rx="5" fill-opacity=".85"/>
+    <rect x="122" y="56" width="156" height="24" rx="5" fill-opacity=".7"/>
+    <rect x="122" y="86" width="156" height="24" rx="5" fill-opacity=".55"/>
+    <rect x="122" y="116" width="156" height="18" rx="5" fill-opacity=".4"/>
+    <circle cx="136" cy="38" r="4" fill-opacity=".3"/>
+    <circle cx="136" cy="68" r="4" fill-opacity=".3"/>
+    <circle cx="136" cy="98" r="4" fill-opacity=".3"/>
+    <rect x="200" y="34" width="68" height="8" rx="4" fill-opacity=".3"/>
+    <rect x="200" y="64" width="68" height="8" rx="4" fill-opacity=".3"/>
+    <rect x="200" y="94" width="68" height="8" rx="4" fill-opacity=".3"/>
+    <rect x="46" y="96" width="38" height="48" rx="6" fill-opacity=".25"/>
+    <rect x="316" y="76" width="38" height="68" rx="6" fill-opacity=".25"/>
+  </g>
+</svg>
