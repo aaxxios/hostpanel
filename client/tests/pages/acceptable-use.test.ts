@@ -33,6 +33,13 @@ describe('pages/acceptable-use', () => {
     expect(abuse.text()).toContain('aup.sections.abuse.content.4')
   })
 
+  it('names the hosted-applications section as hosting copy, not a software-as-a-service one', async () => {
+    const wrapper = await mountPage(Page)
+
+    expect(wrapper.find('[data-testid="legal-section-apps"]').text()).toContain('aup.sections.apps.title')
+    expect(wrapper.find('[data-testid="legal-section-saas"]').exists()).toBe(false)
+  })
+
   it('paints the report button as a warning and puts the shield before its label', async () => {
     const wrapper = await mountPage(Page)
 

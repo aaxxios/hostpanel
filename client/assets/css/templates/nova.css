@@ -24,6 +24,8 @@ html[data-template='nova'].dark,
   --n-bg: #08191f;
   --n-surface: #0e2731;
   --n-surface-2: #14333f;
+  /* The footer block: lighter than --n-bg so it reads as its own raised surface. */
+  --n-footer: #0f2c38;
   --n-ink: #edf6f8;
   --n-muted: #a2bcc5;
   /* Brand and accent read the operator's colours (plugins/brand-tokens.ts) — a light tint
@@ -44,6 +46,7 @@ html[data-template='nova'].light,
   --n-bg: #f4f8fa;
   --n-surface: #ffffff;
   --n-surface-2: #eaf2f5;
+  --n-footer: #ffffff;
   --n-ink: #0a2029;
   --n-muted: #4a6470;
   --n-brand: rgb(var(--brand-primary-600, 47 79 216));
@@ -83,9 +86,16 @@ html[data-template='nova'].light,
     animation: none;
   }
 
-  .tpl-nova *,
-  .tpl-nova *::before,
-  .tpl-nova *::after {
+  /*
+   * Only nova's own sections: the layout root carries .tpl-nova too, and the shared cart drawer,
+   * cookie banner and floating actions under it keep their own motion handling.
+   */
+  :is(header, main, footer).tpl-nova *,
+  :is(header, main, footer).tpl-nova *::before,
+  :is(header, main, footer).tpl-nova *::after,
+  .tpl-nova :is(header, main, footer) *,
+  .tpl-nova :is(header, main, footer) *::before,
+  .tpl-nova :is(header, main, footer) *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

@@ -39,4 +39,13 @@ describe('ArticleRow', () => {
     expect(wrapper.find('[data-testid="kb-article-excerpt"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="kb-article-views"]').exists()).toBe(false)
   })
+
+  it('carries the classic look through template-scoped classes and keeps the kit look otherwise', () => {
+    const wrapper = mountWithKit(ArticleRow, { props: { article: { id: 7, title: 'T', excerpt: 'E', views: 1 } } })
+
+    expect(wrapper.classes()).toContain('[.tpl-classic_&]:hover:bg-classic-surface-2')
+    expect(wrapper.classes()).toContain('hover:bg-gray-50')
+    expect(wrapper.find('[data-testid="kb-article-title"]').classes()).toContain('[.tpl-classic_&]:text-classic-ink')
+    expect(wrapper.find('[data-testid="kb-article-excerpt"]').classes()).toContain('[.tpl-classic_&]:text-classic-muted')
+  })
 })

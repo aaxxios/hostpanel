@@ -4,8 +4,10 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
+import type { MountWithKitOptions } from '~/tests/helpers/mountWithKit'
 import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import ProductFamilyGrid from '~/components/catalog/ProductFamilyGrid.vue'
+import CatalogProductFamilyCard from '~/components/catalog/ProductFamilyCard.vue'
 import { balancedColumns } from '~/utils/balancedGrid'
 import type { ProductFamily } from '~/types/productfamily'
 
@@ -29,20 +31,29 @@ const family = (overrides: Partial<ProductFamily> = {}): ProductFamily => ({
   ...overrides,
 })
 
+/**
+ * Mounts the grid with the card registered under the name Nuxt auto-imports it as.
+ *
+ * @param options Props and attributes for the grid.
+ * @returns The wrapper.
+ */
+const mountGrid = (options: MountWithKitOptions) =>
+  mountWithKit(ProductFamilyGrid, { ...options, components: { CatalogProductFamilyCard } })
+
 describe('ProductFamilyGrid', () => {
   beforeEach(() => {
     stubPublicPageRuntime()
   })
 
   it('renders a shortcut and a card for every family', () => {
-    const wrapper = mountWithKit(ProductFamilyGrid, { props: { products: [family(), family({ id: 'gamma-tool', name: 'Gamma Tool' })] } })
+    const wrapper = mountGrid({ props: { products: [family(), family({ id: 'gamma-tool', name: 'Gamma Tool' })] } })
 
     expect(wrapper.findAll('[data-testid^="product-nav-"]')).toHaveLength(2)
     expect(wrapper.findAll('[data-testid^="product-card-"]')).toHaveLength(2)
   })
 
   it('links a family to its learn-more page, or to its detail page when it has none', () => {
-    const wrapper = mountWithKit(ProductFamilyGrid, {
+    const wrapper = mountGrid({
       props: { products: [family(), family({ id: 'gamma-tool', name: 'Gamma Tool', learnMoreUrl: '' })] },
     })
 
@@ -51,14 +62,14 @@ describe('ProductFamilyGrid', () => {
   })
 
   it('paints each card in its family accent colour', () => {
-    const wrapper = mountWithKit(ProductFamilyGrid, { props: { products: [family()] } })
+    const wrapper = mountGrid({ props: { products: [family()] } })
 
     const accent = wrapper.find('[data-testid="ui-accent"]').element as HTMLElement
     expect(accent.style.getPropertyValue('--accent')).toBe('#8b5cf6')
   })
 
   it('shows at most three features and a tagline only when the family has one', () => {
-    const wrapper = mountWithKit(ProductFamilyGrid, {
+    const wrapper = mountGrid({
       props: { products: [family(), family({ id: 'domains', name: 'Domains', tagline: 'Find yours', features: [] })] },
     })
 
@@ -72,21 +83,21 @@ describe('ProductFamilyGrid', () => {
   })
 
   it('renders no feature list and no placeholder for a family with none', () => {
-    const wrapper = mountWithKit(ProductFamilyGrid, { props: { products: [family({ features: [] })] } })
+    const wrapper = mountGrid({ props: { products: [family({ features: [] })] } })
 
     const card = wrapper.find('[data-testid="product-card-alpha-suite"]')
     expect(card.text()).not.toContain('products.products.badge')
   })
 
   it('hands the full icon name to the tile', () => {
-    const wrapper = mountWithKit(ProductFamilyGrid, { props: { products: [family()] } })
+    const wrapper = mountGrid({ props: { products: [family()] } })
 
     expect(wrapper.html()).not.toContain('mdi:mdi:')
   })
 
   it.each([1, 2, 5, 7])('balances %i families in one centred grid', (count) => {
     const products = Array.from({ length: count }, (_, i) => family({ id: `f${i}`, name: `Family ${i}` }))
-    const wrapper = mountWithKit(ProductFamilyGrid, { props: { products } })
+    const wrapper = mountGrid({ props: { products } })
     const grid = wrapper.find('[data-testid="product-grid"]').element as HTMLElement
 
     expect(wrapper.findAll('[data-testid^="product-card-"]')).toHaveLength(count)
@@ -95,12 +106,12 @@ describe('ProductFamilyGrid', () => {
 
   it('keeps cards the same height with very long text: clamped description, three bullets, wrapped name', () => {
     const long = 'word '.repeat(300)
-    const wrapper = mountWithKit(ProductFamilyGrid, {
+    const wrapper = mountGrid({
       props: { products: [family({ name: long, description: long, features: [long, long, long, long, long] })] },
     })
     const card = wrapper.find('[data-testid="product-card-alpha-suite"]')
 
-    expect(card.classes()).toContain('h-full')
+    expect(card.classes()).toContain('self-stretch')
     expect(card.find('.line-clamp-3').exists()).toBe(true)
     expect(card.find('h3').classes()).toContain('break-words')
     expect(card.findAll('.line-clamp-1')).toHaveLength(3)

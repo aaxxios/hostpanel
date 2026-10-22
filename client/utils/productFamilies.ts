@@ -19,7 +19,9 @@ import type { ProductDetail } from '~/types/productdetail'
 import type { ProductFamily } from '~/types/productfamily'
 import type { ProductPricingRow } from '~/types/productpricingrow'
 import type { ProductFeature } from '~/types/productfeature'
-import { familyConfig, familyKey, isDomainGroup, isFamilyGroup, nameToKey, parseDescription } from '~/utils/catalogGroups'
+import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
+import { ProductType } from '~/types/producttype'
+import { dominantProductType, familyConfig, familyKey, isDomainGroup, isFamilyGroup, nameToKey, parseDescription } from '~/utils/catalogGroups'
 
 /** How many bullets a family card lists; every card shows the same number so a row lines up. */
 const FAMILY_FEATURE_LIMIT = FAMILY_BULLET_LIMIT
@@ -148,6 +150,45 @@ export const familyBullets = (plan: PortalProduct | undefined, specifications: r
 }
 
 /**
+ * The plan whose bullets speak for a family: the cheapest one that has any.
+ *
+ * A cheapest plan with neither specification lines nor feature lines in its description would
+ * leave the whole card without bullets while a sibling plan has them, so the choice walks the plans
+ * from the cheapest up and takes the first that lists something. When none does, the cheapest wins
+ * and the card simply shows no list.
+ *
+ * @param plans The family's plans.
+ * @param specifications Specification lines of the family's group.
+ * @returns The bullets of the chosen plan, at most {@link FAMILY_FEATURE_LIMIT}.
+ */
+export const familyCardBullets = (plans: readonly PortalProduct[], specifications: readonly ProductFeature[]): string[] => {
+  const cheapest = representativePlan(plans)
+  const first = familyBullets(cheapest, specifications)
+  if (first.length > 0) {
+    return first
+  }
+  const byPrice = [...plans].sort((a, b) =>
+    (firstOfferedPrice(a.pricing)?.amount ?? Number.POSITIVE_INFINITY) - (firstOfferedPrice(b.pricing)?.amount ?? Number.POSITIVE_INFINITY))
+  for (const plan of byPrice) {
+    const bullets = familyBullets(plan, specifications)
+    if (bullets.length > 0) {
+      return bullets
+    }
+  }
+  return []
+}
+
+/**
+ * The service type a family sells, which picks its generated cover.
+ *
+ * @param group The family's group.
+ * @param products The group's products.
+ * @returns The hosting type for the hosting group, otherwise the products' dominant type; null when unknown.
+ */
+export const familyProductType = (group: PortalProductGroup, products: readonly PortalProduct[]): string | null =>
+  group.id === HOSTING_GROUP_ID ? ProductType.SharedHosting : dominantProductType(products)
+
+/**
  * The key a product answers to in an address: its slug, or its normalised name when it has none.
  *
  * @param product The catalogue product.
@@ -205,8 +246,11 @@ export const buildProductFamilies = (
       tagline: '',
       // The family's own sentence comes from its group; a plan's blurb is only the fallback.
       description: group.description?.trim() || parseDescription((parent ?? plans[0])?.description || '').summary,
-      features: familyBullets(representativePlan(plans), specifications(group.id)),
+      features: familyCardBullets(plans, specifications(group.id)),
       pricing: buildPricingRows(plans, format, payerCode),
+      type: familyProductType(group, inGroup),
+      image: group.imageUrl?.trim() || null,
+      featured: plans.some((plan) => plan.isFeatured === true),
     })
   }
   return items

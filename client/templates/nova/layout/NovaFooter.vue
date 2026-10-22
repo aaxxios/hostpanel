@@ -1,6 +1,6 @@
 <template>
   <!-- pb-24 clears the fixed contact button the layout mounts over this corner. -->
-  <footer class="tpl-nova border-t border-nova-border bg-nova-bg pb-24 pt-14 font-nova text-nova-ink">
+  <footer class="tpl-nova border-t border-nova-border bg-[color:var(--n-footer)] shadow-[0_-12px_32px_-20px_rgba(10,32,41,0.22)] pb-24 pt-14 font-nova text-nova-ink">
     <UiContainer>
       <div class="grid gap-10 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
         <div>

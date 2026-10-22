@@ -42,4 +42,20 @@ describe('TrialHero', () => {
 
     expect(accent.style.getPropertyValue('--accent')).toBe('#10b981')
   })
+
+  it('takes the portal brand accent when the colour is not a valid hex', () => {
+    const wrapper = mountWithKit(TrialHero, {
+      props: { name: 'X', icon: 'mdi:cube-outline', color: '', trialUrl: '/p', learnMoreUrl: '/p' },
+    })
+
+    expect(wrapper.find('[data-testid="trial-hero"]').classes().join(' ')).toContain('--brand-primary-500')
+  })
+
+  it('wears the classic look under the classic template and keeps the aurora classes', () => {
+    const classes = mountHero().find('[data-testid="trial-hero"]').classes().join(' ')
+
+    expect(classes).toContain('[.tpl-classic_&]:bg-classic-surface-2')
+    expect(classes).toContain('[.tpl-classic_&]:[--accent:rgb(var(--classic-brand))]')
+    expect(classes).toContain('md:py-32')
+  })
 })

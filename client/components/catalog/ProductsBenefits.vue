@@ -11,7 +11,7 @@
         <template #title>
           <i18n-t keypath="products.benefits.title" tag="span">
             <template #benefitsHighlight>
-              <span class="bg-gradient-to-r from-secondary-600 dark:from-secondary-400 to-cyan-400 bg-clip-text text-transparent">{{ $t('products.benefits.benefitsHighlight') }}</span>
+              <span class="bg-gradient-to-r from-secondary-600 dark:from-secondary-400 to-cyan-400 bg-clip-text text-transparent [.tpl-classic_&]:bg-none [.tpl-classic_&]:text-classic-brand">{{ $t('products.benefits.benefitsHighlight') }}</span>
             </template>
           </i18n-t>
         </template>
@@ -24,17 +24,17 @@
           :key="benefit.key"
           :class="revealDelay(index * 100)"
           padding="lg"
-          class="relative group h-full text-center animate-reveal-up motion-reduce:animate-none hover:border-secondary-500/40 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-none transition-all duration-300"
+          class="relative group h-full text-center animate-reveal-up motion-reduce:animate-none hover:border-secondary-500/40 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-none transition-all duration-300 [.tpl-classic_&]:hover:border-classic-border [.tpl-classic_&]:hover:translate-y-0 [.tpl-classic_&]:hover:shadow-sm"
           :data-testid="`benefit-${benefit.key}`"
         >
           <UiDecor class="inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-secondary-500/10 to-cyan-500/5" />
 
-          <span class="relative inline-flex w-12 h-12 rounded-xl bg-gradient-to-br from-secondary-500/25 to-cyan-500/15 items-center justify-center mb-4 group-hover:scale-105 transition-transform duration-300 border border-secondary-500/25">
-            <Icon :name="benefit.icon" class="text-2xl text-secondary-700 dark:text-secondary-400" />
+          <span class="relative inline-flex w-12 h-12 rounded-xl bg-gradient-to-br from-secondary-500/25 to-cyan-500/15 items-center justify-center mb-4 group-hover:scale-105 transition-transform duration-300 border border-secondary-500/25 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-0 [.tpl-classic_&]:bg-none [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:group-hover:scale-100">
+            <Icon :name="benefit.icon" class="text-2xl text-secondary-700 dark:text-secondary-400 [.tpl-classic_&]:text-classic-brand" />
           </span>
 
-          <UiHeading :level="3" class="relative text-lg mb-3">{{ benefit.title }}</UiHeading>
-          <UiText tone="muted" size="sm" class="relative leading-relaxed">{{ benefit.description }}</UiText>
+          <UiHeading :level="3" class="relative text-lg mb-3 [.tpl-classic_&]:font-semibold [.tpl-classic_&]:text-classic-ink">{{ benefit.title }}</UiHeading>
+          <UiText tone="muted" size="sm" class="relative leading-relaxed [.tpl-classic_&]:text-classic-muted">{{ benefit.description }}</UiText>
 
           <UiDecor class="bottom-0 left-1/2 -translate-x-1/2 h-1 w-0 group-hover:w-24 bg-gradient-to-r from-secondary-500 to-cyan-500 transition-all duration-500 rounded-full" />
         </UiCard>
@@ -49,7 +49,7 @@
           :class="[item.hoverBorder, 'group text-center transition-colors animate-reveal-up motion-reduce:animate-none', revealDelay((index + 1) * 100)]"
           :data-testid="`reassurance-${item.key}`"
         >
-          <component :is="item.icon" :size="32" :stroke-width="2" :class="[item.iconColor, 'mx-auto mb-3 group-hover:scale-110 transition-transform']" />
+          <component :is="item.icon" :size="32" :stroke-width="2" :class="[item.iconColor, 'mx-auto mb-3 group-hover:scale-110 transition-transform [.tpl-classic_&]:text-classic-brand [.tpl-classic_&]:group-hover:scale-100']" />
           <UiText size="sm" weight="semibold" class="mb-1">{{ $t(`products.benefits.additional.${item.key}.title`) }}</UiText>
           <UiText size="xs" tone="subtle">{{ $t(`products.benefits.additional.${item.key}.description`) }}</UiText>
         </UiCard>

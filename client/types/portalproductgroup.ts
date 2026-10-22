@@ -15,6 +15,8 @@ export interface PortalProductGroup {
   name: string
   /** Optional description. */
   description?: string | null
+  /** Cover image the operator uploaded for the group, when the backend sends one; absent otherwise. */
+  imageUrl?: string | null
   /** Whether the operator keeps the group visible in the storefront. */
   isActive: boolean
   /** Number of products in the group. */

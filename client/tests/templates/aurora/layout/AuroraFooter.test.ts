@@ -8,6 +8,14 @@ import AuroraFooter from '~/templates/aurora/layout/AuroraFooter.vue'
 import { stubAuroraGlobals } from '../auroraGlobals'
 
 describe('AuroraFooter', () => {
+  it('is a separate block: the footer token surface, a visible top border and a soft shadow', () => {
+    stubAuroraGlobals()
+    const classes = mountWithKit(AuroraFooter).find('footer').classes()
+
+    expect(classes).toEqual(expect.arrayContaining(['bg-[color:var(--footer)]', 'border-t', 'border-line2']))
+    expect(classes.some((name) => name.startsWith('shadow-'))).toBe(true)
+  })
+
   it('renders the three link columns with their destinations', () => {
     stubAuroraGlobals()
     const wrapper = mountWithKit(AuroraFooter)

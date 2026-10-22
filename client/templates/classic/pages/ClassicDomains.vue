@@ -1,39 +1,34 @@
 <template>
-  <UiStack gap="none" class="overflow-x-hidden" data-testid="classic-domains">
-    <!-- Hero / search -->
-    <UiSection :contained="false" padding="lg" class="relative lg:py-32 bg-classic-page overflow-hidden">
-      <UiStack gap="none" class="absolute inset-0 pointer-events-none">
-        <UiStack gap="none" class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/20 rounded-full blur-[150px] animate-blob" />
-        <UiStack gap="none" class="absolute bottom-0 right-1/3 w-[400px] h-[400px] bg-secondary-500/15 rounded-full blur-[130px] animate-blob animation-delay-2000" />
-      </UiStack>
-
-      <UiContainer class="relative z-10 text-center">
-        <UiStack gap="none" class="mx-auto max-w-4xl">
+  <UiStack gap="none" class="overflow-x-hidden bg-classic-page" data-testid="classic-domains">
+    <!-- Hero / search: flat band, left aligned -->
+    <UiSection :contained="false" padding="lg" class="border-b border-classic-border bg-classic-surface-2 py-10 md:py-14">
+      <UiContainer>
+        <UiStack gap="none" class="max-w-4xl">
           <!-- Breadcrumbs -->
           <UiBreadcrumbs
             :items="[{ label: $t('domains.badge') }]"
-            container-class="mb-10 flex justify-center opacity-60 hover:opacity-100 transition-opacity"
+            container-class="mb-6 flex"
           />
 
-          <UiStack direction="row" align="center" gap="xs" class="inline-flex self-center px-4 py-2 mb-8 rounded-full glass border border-primary-500/20 backdrop-blur-sm">
-            <Globe :size="14" :stroke-width="2" class="text-primary-600 dark:text-primary-400" />
-            <UiText as="span" size="xs" tone="muted" weight="bold" class="md:text-sm font-black uppercase tracking-[0.2em]">{{ $t('domains.badge') }}</UiText>
+          <UiStack direction="row" align="center" gap="xs" class="inline-flex self-start px-3 py-1.5 mb-4 rounded-md bg-classic-brand-soft">
+            <Globe :size="14" :stroke-width="2" class="text-classic-brand" />
+            <UiText as="span" size="xs" tone="inherit" weight="medium" class="uppercase tracking-wider text-classic-brand">{{ $t('domains.badge') }}</UiText>
           </UiStack>
 
-          <UiHeading :level="UiHeadingLevel.H1" size="title" class="md:text-6xl font-black mb-6 leading-tight uppercase tracking-tighter" data-testid="classic-domains-title">
+          <UiHeading :level="UiHeadingLevel.H1" size="title" class="mb-3 text-3xl font-semibold leading-tight text-classic-ink md:text-4xl" data-testid="classic-domains-title">
             {{ $t('domains.title') }}
-            <UiGradientText class="block pb-2 bg-gradient-to-r from-primary-400 to-cyan-400">{{ $t('domains.titleHighlight') }}</UiGradientText>
+            <span class="text-classic-brand">{{ $t('domains.titleHighlight') }}</span>
           </UiHeading>
 
           <!-- Register: search bar -->
-          <UiStack gap="none" class="mt-12 max-w-2xl mx-auto w-full">
+          <UiStack gap="none" class="mt-6 max-w-2xl w-full">
             <!-- Tab switcher -->
-            <UiStack direction="row" justify="center" gap="sm" class="mb-8">
-              <UiButton variant="primary" size="sm" class="!rounded-xl shadow-lg shadow-primary-500/20" data-testid="classic-domains-tab-register">
+            <UiStack direction="row" gap="sm" class="mb-5">
+              <UiButton variant="primary" size="sm" data-testid="classic-domains-tab-register">
                 <Globe :size="14" :stroke-width="2" class="mr-2" />
                 {{ $t('domains.tabRegister') }}
               </UiButton>
-              <UiButton variant="subtle" size="sm" :to="localePath('/domains/transfer')" class="!rounded-xl" data-testid="classic-domains-tab-transfer">
+              <UiButton variant="secondary" size="sm" :to="localePath('/domains/transfer')" data-testid="classic-domains-tab-transfer">
                 <ArrowLeftRight :size="14" :stroke-width="2" class="mr-2" />
                 {{ $t('domains.tabTransfer') }}
               </UiButton>
@@ -48,21 +43,21 @@
             />
 
             <!-- Availability result -->
-            <UiStack v-if="result" gap="none" class="mt-8 transition-all duration-300" data-testid="classic-domains-result">
+            <UiStack v-if="result" gap="none" class="mt-6" data-testid="classic-domains-result">
               <!-- TLD not supported -->
               <UiCard
                 v-if="!isTldSupported"
                 padding="none"
-                class="p-6 rounded-[2rem] border-2 border-amber-500/40 bg-amber-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 backdrop-blur-md"
+                class="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-amber-500/50"
                 data-testid="classic-domains-unsupported"
               >
                 <UiStack direction="row" align="center" gap="md">
-                  <UiStack direction="row" align="center" justify="center" gap="none" class="w-12 h-12 rounded-2xl border bg-amber-500/10 border-amber-500/30">
-                    <AlertCircle :size="24" class="text-amber-600 dark:text-amber-400" />
+                  <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-md bg-amber-500/10">
+                    <AlertCircle :size="22" class="text-amber-600 dark:text-amber-400" />
                   </UiStack>
                   <UiStack gap="none" class="text-left">
-                    <UiText weight="bold" class="text-xl font-black uppercase tracking-tight">{{ result.domain }}</UiText>
-                    <UiText size="xs" tone="inherit" weight="bold" class="uppercase tracking-widest mt-1 text-amber-600 dark:text-amber-400">
+                    <UiText tone="inherit" weight="semibold" class="text-lg text-classic-ink">{{ result.domain }}</UiText>
+                    <UiText size="xs" tone="inherit" weight="medium" class="mt-0.5 text-amber-700 dark:text-amber-400">
                       {{ $t('domains.tldNotSupported') }}
                     </UiText>
                   </UiStack>
@@ -73,10 +68,8 @@
               <UiCard
                 v-else
                 padding="none"
-                class="p-6 rounded-[2rem] border-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 backdrop-blur-md"
-                :class="result.available
-                  ? 'border-green-500/40 bg-green-500/5'
-                  : 'border-red-500/40 bg-red-500/5'"
+                class="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                :class="result.available ? 'border-green-600/50' : 'border-red-600/50'"
                 data-testid="classic-domains-availability"
               >
                 <UiStack direction="row" align="center" gap="md">
@@ -85,19 +78,19 @@
                     align="center"
                     justify="center"
                     gap="none"
-                    class="w-12 h-12 rounded-2xl border transition-all"
-                    :class="result.available ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'"
+                    class="w-10 h-10 rounded-md"
+                    :class="result.available ? 'bg-green-500/10' : 'bg-red-500/10'"
                   >
-                    <CheckCircle v-if="result.available" :size="24" class="text-green-600 dark:text-green-400" />
-                    <XCircle v-else :size="24" class="text-red-600 dark:text-red-400" />
+                    <CheckCircle v-if="result.available" :size="22" class="text-green-600 dark:text-green-400" />
+                    <XCircle v-else :size="22" class="text-red-600 dark:text-red-400" />
                   </UiStack>
                   <UiStack gap="none" class="text-left">
-                    <UiText weight="bold" class="text-xl font-black uppercase tracking-tight">{{ result.domain }}</UiText>
+                    <UiText tone="inherit" weight="semibold" class="text-lg text-classic-ink">{{ result.domain }}</UiText>
                     <UiText
                       size="xs"
                       :tone="result.available ? 'success' : 'danger'"
-                      weight="bold"
-                      class="uppercase tracking-widest mt-1"
+                      weight="medium"
+                      class="mt-0.5"
                     >
                       {{ result.available ? $t('domains.available') : $t('domains.taken') }}
                     </UiText>
@@ -108,7 +101,7 @@
                     v-if="result.available"
                     variant="primary"
                     size="lg"
-                    class="flex-1 sm:flex-none px-8 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-black uppercase tracking-widest hover:shadow-xl hover:shadow-green-500/20 active:scale-95"
+                    class="flex-1 sm:flex-none px-8"
                     :disabled="cart.hasDomainItem(result.domain, DomainOrderAction.Register) || !canAddDomain(result.domain)"
                     data-testid="classic-domains-register"
                     @click="addDomainToCart(result.domain)"
@@ -119,7 +112,6 @@
                     v-else
                     variant="outline"
                     full-width
-                    class="!rounded-2xl !h-12"
                     :to="localePath('/domains/transfer') + (result?.domain ? `?domain=${result.domain}` : '')"
                     data-testid="classic-domains-transfer"
                   >
@@ -140,24 +132,23 @@
     </UiSection>
 
     <!-- TLD pricing table -->
-    <UiSection :contained="false" padding="md" class="relative md:py-24 bg-classic-page overflow-hidden">
-      <UiContainer class="relative z-10">
+    <UiSection :contained="false" padding="md" class="md:py-14">
+      <UiContainer>
         <UiStack gap="none" class="mx-auto max-w-6xl">
-          <UiStack align="center" gap="none" class="text-center mb-16">
-            <UiText as="span" size="xs" tone="primary" weight="bold" class="font-black text-primary-500 uppercase tracking-[0.3em] block mb-4 italic">{{ $t('domains.pricing.browseByCategory') }}</UiText>
-            <UiHeading :level="UiHeadingLevel.H2" size="title" class="md:text-5xl font-black mb-4 uppercase tracking-tighter">{{ $t('domains.pricing.title') }}</UiHeading>
-            <UiStack gap="none" class="w-24 h-px bg-gradient-to-r from-transparent via-primary-500 to-transparent mx-auto mt-6" />
+          <UiStack gap="none" class="mb-8">
+            <UiText as="span" size="xs" tone="inherit" weight="semibold" class="block mb-2 uppercase tracking-wider text-classic-brand">{{ $t('domains.pricing.browseByCategory') }}</UiText>
+            <UiHeading :level="UiHeadingLevel.H2" size="title" class="text-2xl font-semibold text-classic-ink md:text-3xl">{{ $t('domains.pricing.title') }}</UiHeading>
           </UiStack>
 
-          <UiGrid v-if="pricingPending" cols="4" gap="lg" class="py-20" data-testid="classic-domains-loading">
-            <UiSkeleton v-for="i in 8" :key="i" shape="block" class="h-32 rounded-3xl" />
+          <UiGrid v-if="pricingPending" cols="4" gap="lg" class="py-12" data-testid="classic-domains-loading">
+            <UiSkeleton v-for="i in 8" :key="i" shape="block" class="h-28 rounded-lg" />
           </UiGrid>
 
           <template v-else-if="tldPricing">
             <!-- Category filter -->
             <UiChipTabs
               v-if="allCategories.length"
-              class="mb-12"
+              class="mb-8"
               :tabs="categoryTabs"
               :model-value="activeCategory ?? ALL_CATEGORY"
               :label="$t('domains.pricing.browseByCategory')"
@@ -166,39 +157,38 @@
             />
 
             <!-- Desktop: table -->
-            <UiCard padding="none" class="hidden md:block rounded-[2.5rem] bg-white/[0.01] overflow-hidden backdrop-blur-3xl shadow-2xl">
+            <UiCard padding="none" class="hidden md:block overflow-hidden">
               <UiTable class="border-0 rounded-none">
                 <UiTableHead>
-                  <UiTableRow :hoverable="false" class="bg-white dark:bg-white/5">
-                    <UiTableTh class="!py-8 !px-10 font-black text-xs uppercase tracking-widest opacity-50">{{ $t('domains.pricing.extension') }}</UiTableTh>
-                    <UiTableTh align="center" class="font-black text-xs uppercase tracking-widest opacity-50">{{ $t('domains.pricing.register') }}</UiTableTh>
-                    <UiTableTh align="center" class="font-black text-xs uppercase tracking-widest opacity-50">{{ $t('domains.pricing.transfer') }}</UiTableTh>
-                    <UiTableTh align="center" class="font-black text-xs uppercase tracking-widest opacity-50">{{ $t('domains.pricing.renew') }}</UiTableTh>
-                    <UiTableTh class="!pr-10" />
+                  <UiTableRow :hoverable="false" class="bg-classic-surface-2">
+                    <UiTableTh class="!py-4 !px-6 text-xs font-semibold uppercase tracking-wider text-classic-muted">{{ $t('domains.pricing.extension') }}</UiTableTh>
+                    <UiTableTh align="center" class="text-xs font-semibold uppercase tracking-wider text-classic-muted">{{ $t('domains.pricing.register') }}</UiTableTh>
+                    <UiTableTh align="center" class="text-xs font-semibold uppercase tracking-wider text-classic-muted">{{ $t('domains.pricing.transfer') }}</UiTableTh>
+                    <UiTableTh align="center" class="text-xs font-semibold uppercase tracking-wider text-classic-muted">{{ $t('domains.pricing.renew') }}</UiTableTh>
+                    <UiTableTh class="!pr-6" />
                   </UiTableRow>
                 </UiTableHead>
                 <UiTableBody>
-                  <UiTableRow v-for="[ext, tld] in displayedTlds" :key="ext" group class="hover:bg-gray-900/[0.03] dark:hover:bg-white/[0.03]" data-testid="classic-domains-row">
-                    <UiTableTd class="!py-8 !px-10">
-                      <UiText as="span" weight="bold" class="text-2xl font-black group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors tracking-tighter uppercase">.{{ ext }}</UiText>
+                  <UiTableRow v-for="[ext, tld] in displayedTlds" :key="ext" group class="hover:bg-classic-surface-2" data-testid="classic-domains-row">
+                    <UiTableTd class="!py-4 !px-6">
+                      <UiText as="span" tone="inherit" weight="semibold" class="text-xl text-classic-ink group-hover:text-classic-brand transition-colors">.{{ ext }}</UiText>
                     </UiTableTd>
                     <UiTableTd align="center">
-                      <UiText as="span" weight="bold" class="block text-xl font-black tabular-nums tracking-tight">{{ formatPrice(tld.register[ONE_YEAR_KEY]) }}</UiText>
-                      <UiText as="span" size="xs" tone="subtle" weight="bold" class="text-[10px] uppercase tracking-widest">{{ $t('domains.pricing.perYear') }}</UiText>
+                      <UiText as="span" tone="inherit" weight="semibold" class="block text-lg tabular-nums text-classic-ink">{{ formatPrice(tld.register[ONE_YEAR_KEY]) }}</UiText>
+                      <UiText as="span" size="xs" tone="inherit" class="text-classic-muted">{{ $t('domains.pricing.perYear') }}</UiText>
                     </UiTableTd>
                     <UiTableTd align="center">
-                      <UiText as="span" weight="bold" class="block text-xl font-black tabular-nums tracking-tight">{{ formatPrice(tld.transfer?.[ONE_YEAR_KEY]) }}</UiText>
-                      <UiText as="span" size="xs" tone="subtle" weight="bold" class="text-[10px] uppercase tracking-widest">{{ $t('domains.pricing.perYear') }}</UiText>
+                      <UiText as="span" tone="inherit" weight="semibold" class="block text-lg tabular-nums text-classic-ink">{{ formatPrice(tld.transfer?.[ONE_YEAR_KEY]) }}</UiText>
+                      <UiText as="span" size="xs" tone="inherit" class="text-classic-muted">{{ $t('domains.pricing.perYear') }}</UiText>
                     </UiTableTd>
                     <UiTableTd align="center">
-                      <UiText as="span" weight="bold" class="block text-xl font-black tabular-nums tracking-tight">{{ formatPrice(tld.renew?.[ONE_YEAR_KEY]) }}</UiText>
-                      <UiText as="span" size="xs" tone="subtle" weight="bold" class="text-[10px] uppercase tracking-widest">{{ $t('domains.pricing.perYear') }}</UiText>
+                      <UiText as="span" tone="inherit" weight="semibold" class="block text-lg tabular-nums text-classic-ink">{{ formatPrice(tld.renew?.[ONE_YEAR_KEY]) }}</UiText>
+                      <UiText as="span" size="xs" tone="inherit" class="text-classic-muted">{{ $t('domains.pricing.perYear') }}</UiText>
                     </UiTableTd>
-                    <UiTableTd align="right" class="!pr-10">
+                    <UiTableTd align="right" class="!pr-6">
                       <UiButton
                         size="sm"
                         variant="outline"
-                        class="!rounded-xl group-hover:!bg-primary-500 group-hover:!text-on-primary transition-all uppercase text-[10px] font-black tracking-widest"
                         data-testid="classic-domains-quick-search"
                         @click="quickSearch(ext)"
                       >
@@ -207,7 +197,7 @@
                     </UiTableTd>
                   </UiTableRow>
                   <UiTableRow v-if="!displayedTlds.length" :hoverable="false">
-                    <UiTableTd colspan="5" align="center" class="text-gray-600 dark:text-gray-400 py-20 font-medium italic">
+                    <UiTableTd colspan="5" align="center" class="py-14 text-classic-muted">
                       {{ $t('domains.pricing.noResults') }}
                     </UiTableTd>
                   </UiTableRow>
@@ -216,41 +206,38 @@
             </UiCard>
 
             <!-- Mobile: card layout -->
-            <UiGrid cols="1" gap="lg" class="md:hidden">
+            <UiGrid cols="1" gap="md" class="md:hidden">
               <UiCard
                 v-for="[ext, tld] in displayedTlds"
                 :key="ext"
                 padding="none"
                 hover
-                class="rounded-3xl bg-white/[0.01] p-6 hover:border-primary-500/30 transition-all group active:scale-[0.98]"
+                class="p-5 group"
                 data-testid="classic-domains-card"
               >
-                <UiStack direction="row" align="center" justify="between" gap="none" class="mb-6">
-                  <UiText as="span" weight="bold" class="text-2xl font-black group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors tracking-tighter uppercase">.{{ ext }}</UiText>
-                  <UiStack gap="none" class="p-2 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/5 opacity-40">
-                    <Globe :size="16" />
-                  </UiStack>
+                <UiStack direction="row" align="center" justify="between" gap="none" class="mb-4">
+                  <UiText as="span" tone="inherit" weight="semibold" class="text-xl text-classic-ink">.{{ ext }}</UiText>
+                  <Globe :size="16" class="text-classic-muted" />
                 </UiStack>
 
-                <UiStack direction="row" gap="xs" class="mb-8 p-4 rounded-2xl bg-white/[0.03] border border-gray-200 dark:border-white/5">
+                <UiStack direction="row" gap="xs" class="mb-4 p-3 rounded-md bg-classic-surface-2 border border-classic-border">
                   <UiStack gap="none" class="flex-1 text-center">
-                    <UiText as="span" size="xs" tone="subtle" weight="bold" class="block font-black uppercase tracking-widest mb-1 opacity-50">{{ $t('domains.pricing.register') }}</UiText>
-                    <UiText as="span" size="sm" weight="bold" class="block font-black tabular-nums">{{ formatPrice(tld.register[ONE_YEAR_KEY]) }}</UiText>
+                    <UiText as="span" size="xs" tone="inherit" class="block mb-1 text-classic-muted">{{ $t('domains.pricing.register') }}</UiText>
+                    <UiText as="span" size="sm" tone="inherit" weight="semibold" class="block tabular-nums text-classic-ink">{{ formatPrice(tld.register[ONE_YEAR_KEY]) }}</UiText>
                   </UiStack>
-                  <UiStack gap="none" class="flex-1 text-center border-x border-gray-200 dark:border-white/5">
-                    <UiText as="span" size="xs" tone="subtle" weight="bold" class="block font-black uppercase tracking-widest mb-1 opacity-50">{{ $t('domains.pricing.transfer') }}</UiText>
-                    <UiText as="span" size="sm" weight="bold" class="block font-black tabular-nums">{{ formatPrice(tld.transfer?.[ONE_YEAR_KEY]) }}</UiText>
+                  <UiStack gap="none" class="flex-1 text-center border-x border-classic-border">
+                    <UiText as="span" size="xs" tone="inherit" class="block mb-1 text-classic-muted">{{ $t('domains.pricing.transfer') }}</UiText>
+                    <UiText as="span" size="sm" tone="inherit" weight="semibold" class="block tabular-nums text-classic-ink">{{ formatPrice(tld.transfer?.[ONE_YEAR_KEY]) }}</UiText>
                   </UiStack>
                   <UiStack gap="none" class="flex-1 text-center">
-                    <UiText as="span" size="xs" tone="subtle" weight="bold" class="block font-black uppercase tracking-widest mb-1 opacity-50">{{ $t('domains.pricing.renew') }}</UiText>
-                    <UiText as="span" size="sm" weight="bold" class="block font-black tabular-nums">{{ formatPrice(tld.renew?.[ONE_YEAR_KEY]) }}</UiText>
+                    <UiText as="span" size="xs" tone="inherit" class="block mb-1 text-classic-muted">{{ $t('domains.pricing.renew') }}</UiText>
+                    <UiText as="span" size="sm" tone="inherit" weight="semibold" class="block tabular-nums text-classic-ink">{{ formatPrice(tld.renew?.[ONE_YEAR_KEY]) }}</UiText>
                   </UiStack>
                 </UiStack>
 
                 <UiButton
-                  variant="subtle"
+                  variant="primary"
                   full-width
-                  class="!h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-500 hover:text-on-primary hover:border-transparent"
                   data-testid="classic-domains-card-search"
                   @click="quickSearch(ext)"
                 >
@@ -258,28 +245,28 @@
                 </UiButton>
               </UiCard>
 
-              <UiText v-if="!displayedTlds.length" tone="subtle" class="py-20 text-center italic">
+              <UiText v-if="!displayedTlds.length" tone="inherit" class="py-14 text-center text-classic-muted">
                 {{ $t('domains.pricing.noResults') }}
               </UiText>
             </UiGrid>
           </template>
 
           <!-- Promo boxes -->
-          <UiGrid cols="2" gap="xl" class="mt-24">
+          <UiGrid cols="2" gap="lg" class="mt-14">
             <!-- Add web hosting -->
-            <UiCard padding="none" class="rounded-[2.5rem] border-gray-200 bg-gradient-to-br from-white/[0.03] to-transparent p-10 hover:border-primary-400/20 transition-all group" data-testid="classic-domains-promo-hosting">
-              <UiStack gap="none" class="text-center md:text-left items-center md:items-start">
-                <UiStack direction="row" align="center" justify="center" gap="none" class="w-16 h-16 rounded-3xl bg-primary-500/10 border border-primary-500/20 mb-6 group-hover:scale-110 transition-transform">
-                  <Server :size="32" class="text-primary-600 dark:text-primary-400" />
+            <UiCard padding="none" class="p-8" data-testid="classic-domains-promo-hosting">
+              <UiStack gap="none" class="items-start">
+                <UiStack direction="row" align="center" justify="center" gap="none" class="w-12 h-12 rounded-md bg-classic-brand-soft mb-4">
+                  <Server :size="24" class="text-classic-brand" />
                 </UiStack>
-                <UiHeading :level="UiHeadingLevel.H3" size="section" class="mb-2 font-black uppercase tracking-tighter">{{ $t('domains.promoHostingTitle') }}</UiHeading>
-                <UiText size="sm" tone="primary" weight="bold" class="mb-4 uppercase tracking-widest">{{ $t('domains.promoHostingSubtitle') }}</UiText>
-                <UiText tone="subtle" class="mb-8 leading-relaxed italic">{{ $t('domains.promoHostingDesc') }}</UiText>
+                <UiHeading :level="UiHeadingLevel.H3" size="section" class="mb-1 text-xl font-semibold text-classic-ink">{{ $t('domains.promoHostingTitle') }}</UiHeading>
+                <UiText size="sm" tone="inherit" weight="medium" class="mb-3 text-classic-brand">{{ $t('domains.promoHostingSubtitle') }}</UiText>
+                <UiText tone="inherit" class="mb-6 leading-relaxed text-classic-muted">{{ $t('domains.promoHostingDesc') }}</UiText>
                 <UiButton
                   :to="localePath('/hosting')"
                   variant="primary"
                   size="lg"
-                  class="gap-3 px-8 !py-4 rounded-2xl bg-primary-500 hover:bg-primary-600 text-xs font-black uppercase tracking-widest shadow-xl shadow-primary-500/20 hover:scale-105 active:scale-95"
+                  class="gap-3 px-8"
                   data-testid="classic-domains-promo-hosting-link"
                 >
                   {{ $t('domains.promoHostingBtn') }}
@@ -289,25 +276,25 @@
             </UiCard>
 
             <!-- Transfer -->
-            <UiCard padding="none" class="rounded-[2.5rem] border-gray-200 bg-gradient-to-bl from-white/[0.03] to-transparent p-10 hover:border-cyan-400/20 transition-all group" data-testid="classic-domains-promo-transfer">
-              <UiStack gap="none" class="text-center md:text-left items-center md:items-start h-full">
-                <UiStack direction="row" align="center" justify="center" gap="none" class="w-16 h-16 rounded-3xl bg-cyan-500/10 border border-cyan-500/20 mb-6 group-hover:scale-110 transition-transform">
-                  <ArrowLeftRight :size="32" class="text-cyan-700 dark:text-cyan-400" />
+            <UiCard padding="none" class="p-8" data-testid="classic-domains-promo-transfer">
+              <UiStack gap="none" class="items-start h-full">
+                <UiStack direction="row" align="center" justify="center" gap="none" class="w-12 h-12 rounded-md bg-classic-brand-soft mb-4">
+                  <ArrowLeftRight :size="24" class="text-classic-brand" />
                 </UiStack>
-                <UiHeading :level="UiHeadingLevel.H3" size="section" class="mb-2 font-black uppercase tracking-tighter">{{ $t('domains.promoTransferTitle') }}</UiHeading>
-                <UiText tone="subtle" class="mb-8 leading-relaxed flex-1 italic">{{ $t('domains.promoTransferDesc') }}</UiText>
-                <UiStack gap="none" class="mt-auto items-center md:items-start">
+                <UiHeading :level="UiHeadingLevel.H3" size="section" class="mb-1 text-xl font-semibold text-classic-ink">{{ $t('domains.promoTransferTitle') }}</UiHeading>
+                <UiText tone="inherit" class="mb-6 leading-relaxed flex-1 text-classic-muted">{{ $t('domains.promoTransferDesc') }}</UiText>
+                <UiStack gap="none" class="mt-auto items-start">
                   <UiButton
                     :to="localePath('/domains/transfer')"
                     variant="outline"
                     size="lg"
-                    class="gap-3 px-8 !py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl hover:border-cyan-500 hover:bg-cyan-500 hover:text-white hover:scale-105 active:scale-95"
+                    class="gap-3 px-8"
                     data-testid="classic-domains-promo-transfer-link"
                   >
                     <ArrowLeftRight :size="16" class="mr-2" />
                     {{ $t('domains.promoTransferBtn') }}
                   </UiButton>
-                  <UiText size="xs" tone="subtle" weight="bold" class="text-[10px] mt-4 uppercase tracking-widest">{{ $t('domains.promoTransferNote') }}</UiText>
+                  <UiText size="xs" tone="inherit" class="mt-3 text-classic-muted">{{ $t('domains.promoTransferNote') }}</UiText>
                 </UiStack>
               </UiStack>
             </UiCard>
@@ -327,6 +314,7 @@
  * The availability search and the cart actions go through the stores; the price table is read
  * through the catalogue store in the payer's own currency and never converted.
  */
+import { DOMAIN_SEARCH_QUERY_PARAM } from '~/constants/domainSearchQuery'
 import { Globe, CheckCircle, XCircle, ArrowLeftRight, Server, ArrowRight, AlertCircle } from 'lucide-vue-next'
 import { useCartStore } from '~/stores/cart'
 import { useCurrencyStore } from '~/stores/currency'
@@ -378,7 +366,7 @@ const domainProductId = ref<number | null>(null)
 // the same head. Nothing template-specific was removed here.
 
 /** The text in the search box. */
-const searchQuery = ref(typeof route.query.domain === 'string' ? route.query.domain : '')
+const searchQuery = ref(typeof route.query[DOMAIN_SEARCH_QUERY_PARAM] === 'string' ? route.query[DOMAIN_SEARCH_QUERY_PARAM] : '')
 
 /** Whether an availability search is in flight (owned by the store). */
 const searching = computed(() => domainsStore.searching)

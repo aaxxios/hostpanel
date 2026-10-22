@@ -19,8 +19,8 @@
     :size="size"
     @click="toggle"
   >
-    <Moon :size="16" :stroke-width="2" class="hidden dark:block" data-testid="theme-toggle-moon" />
-    <Sun :size="16" :stroke-width="2" class="block dark:hidden" data-testid="theme-toggle-sun" />
+    <Moon :size="iconSize" :stroke-width="2" class="hidden dark:block" data-testid="theme-toggle-moon" />
+    <Sun :size="iconSize" :stroke-width="2" class="block dark:hidden" data-testid="theme-toggle-sun" />
   </UiIconButton>
 </template>
 
@@ -45,10 +45,13 @@ interface Props {
 }
 
 /** Props of the component with their defaults applied. */
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   variant: UiIconButtonVariant.Subtle,
   size: UiSize.Md,
 })
+
+/** Pixel size of the glyph: the large button (the classic header's control height) takes the larger icon. */
+const iconSize = computed(() => (props.size === UiSize.Lg ? 20 : 16))
 
 /** Translator for the strings this component builds itself. */
 const { t } = useI18n()

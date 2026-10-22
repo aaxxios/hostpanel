@@ -146,7 +146,9 @@ export default defineNuxtConfig({
     apiUrl: process.env.API_URL || 'http://localhost:5000',
     ssoUrl: process.env.SSO_URL || 'http://sso-api:8080',
     ssoClientId: process.env.SSO_CLIENT_ID || 'hostpanel',
-    ssoClientSecret: process.env.SSO_CLIENT_SECRET || '',
+    // Filled at runtime from NUXT_SSO_CLIENT_SECRET, which compose feeds from CLIENT_HOSTPANEL_SECRET:
+    // the same credential the API reads, so it has one variable name.
+    ssoClientSecret: '',
     // Empty (no development host baked in) unless configured: SSO sign-in cannot work without it, and a
     // silent default would ship to production. Set SSO_CALLBACK_URL to the portal's callback address.
     ssoCallbackUrl: process.env.SSO_CALLBACK_URL || '',

@@ -2,7 +2,7 @@
   "trial": {
     "badge": "Free Trial",
     "title": "Try {product} Free",
-    "subtitle": "Get full access and see why teams love it.",
+    "subtitle": "Get full access during the trial and see it run for yourself.",
     "cta": "Start Free Trial",
     "learnMore": "Learn More",
     "noCc": "Start your trial today.",
@@ -18,7 +18,7 @@
       },
       "support": {
         "title": "Full Support",
-        "desc": "Our team is here to help you succeed"
+        "desc": "Our support team helps you get set up"
       }
     },
     "seo": {

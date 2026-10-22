@@ -1,65 +1,38 @@
 <template>
-  <section class="py-12 md:py-20 bg-ui-page relative overflow-hidden" data-testid="sections-why-choose-us">
-    <!-- Background -->
-    <UiDecor class="inset-0">
-      <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-cyan-500/5" />
-      <UiDecor class="top-1/2 left-0 w-1/3 h-1/2 bg-primary-500/10 rounded-full blur-[150px]" />
-      <UiDecor class="bottom-0 right-0 w-1/4 h-1/3 bg-secondary-500/10 rounded-full blur-[120px]" />
-      <UiDecor class="top-1/4 right-1/4 w-2 h-2 bg-primary-400/50 rounded-full animate-float [animation-delay:0.5s]" />
-      <UiDecor class="top-1/3 left-1/4 w-3 h-3 bg-secondary-600/40 dark:bg-secondary-400/40 rounded-full animate-float [animation-delay:1.2s]" />
-      <UiDecor class="bottom-1/3 right-1/3 w-2 h-2 bg-cyan-400/50 rounded-full animate-float [animation-delay:2s]" />
-      <UiDecor class="inset-0 opacity-[0.015] pattern-grid-50" />
-    </UiDecor>
-
-    <UiContainer class="relative z-10">
-      <MarketingSectionHeader class="mb-16" :badge="$t('whyChooseUs.badge')" :subtitle="$t('whyChooseUs.subtitle')">
-        <template #title>
-          <i18n-t keypath="whyChooseUs.title" tag="span">
-            <template #results>
-              <span class="text-primary-600 dark:text-primary-400">{{ $t('whyChooseUs.titleHighlight') }}</span>
-            </template>
-          </i18n-t>
-        </template>
-      </MarketingSectionHeader>
+  <section class="py-14 md:py-20 bg-classic-surface border-y border-classic-border" data-testid="sections-why-choose-us">
+    <UiContainer>
+      <ClassicSectionHeader
+        class="mb-12"
+        :eyebrow="$t('whyChooseUs.badge')"
+        :title="$t('whyChooseUs.title')"
+        :subtitle="$t('whyChooseUs.subtitle')"
+      />
 
       <!-- Advantages -->
       <UiGrid cols="2" gap="lg" class="lg:grid-cols-4">
-        <UiCard
-          v-for="(advantage, index) in advantages"
+        <ClassicCard
+          v-for="advantage in advantages"
           :key="advantage.key"
-          class="relative flex flex-col items-center text-center group hover:border-primary-500/30 hover:-translate-y-2 transition-all duration-300 animate-reveal-up motion-reduce:animate-none"
+          hover
+          class="h-full"
           :data-testid="`advantage-${advantage.key}`"
-          :class="revealDelay(index * 100)"
         >
-          <!-- Hover glow -->
-          <UiDecor class="inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary-500/10 to-cyan-500/5" />
-
-          <!-- Icon -->
-          <div class="relative w-16 h-16 rounded-xl bg-gradient-to-br from-primary-500/20 to-cyan-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-            <UiDecor class="inset-0 rounded-xl border border-primary-500/30 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500" />
-            <Icon :name="advantage.icon" class="relative text-3xl text-primary-600 dark:text-primary-400 group-hover:rotate-12 transition-transform duration-300" />
-          </div>
-
-          <UiHeading :level="3" size="subsection" class="relative mb-2">{{ advantage.title }}</UiHeading>
-          <UiText tone="muted" size="sm" class="relative leading-relaxed">{{ advantage.description }}</UiText>
-
-          <UiDecor class="bottom-0 left-1/2 -translate-x-1/2 h-1 w-0 group-hover:w-16 bg-gradient-to-r from-primary-500 to-cyan-500 rounded-full transition-all duration-500" />
-          <UiDecor class="top-0 left-0 w-10 h-10 border-l-2 border-t-2 border-primary-500/50 rounded-tl-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </UiCard>
+          <UiStack gap="sm">
+            <ClassicIconTile :icon="advantage.icon" />
+            <UiHeading :level="3" size="bare" class="text-lg font-semibold text-classic-ink">{{ advantage.title }}</UiHeading>
+            <UiText tone="inherit" size="sm" class="leading-relaxed text-classic-muted">{{ advantage.description }}</UiText>
+          </UiStack>
+        </ClassicCard>
       </UiGrid>
     </UiContainer>
-
-    <!-- Section decorative corners -->
-    <UiDecor class="top-0 right-0 w-32 h-32 border-r-2 border-t-2 border-secondary-500/25" />
-    <UiDecor class="bottom-0 left-0 w-32 h-32 border-l-2 border-b-2 border-primary-500/25" />
   </section>
 </template>
 
 <script setup lang="ts">
 /**
- * Why Choose Us section highlighting the company's four advantages.
+ * Why Choose Us section: the four reasons to host with us (fast servers, reliable uptime,
+ * round-the-clock support, trusted by customers) as flat cards with a soft brand icon tile.
  */
-import { revealDelay } from '~/utils/reveal'
 
 const { t } = useI18n()
 
@@ -85,7 +58,7 @@ const advantages = computed(() => [
   },
   {
     key: 'provenResults',
-    icon: 'mdi:trending-up',
+    icon: 'mdi:account-group',
     title: t('whyChooseUs.advantages.provenResults.title'),
     description: t('whyChooseUs.advantages.provenResults.description'),
   },

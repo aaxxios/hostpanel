@@ -80,4 +80,10 @@ const categoryTabs = computed<ChipTab[]>(() => props.categories.map(entry => ({
 
 /** What the visitor has typed (v-model of the field). */
 const query = ref(props.initialQuery)
+
+// A search started from elsewhere (a name in the address, the home page search) lands here
+// after the field was drawn, so the field follows the name the store last searched for.
+watch(() => props.initialQuery, (next) => {
+  query.value = next
+})
 </script>

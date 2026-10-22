@@ -1,5 +1,5 @@
 <template>
-  <UiStack gap="none" class="bg-ui-page py-10 md:py-16" data-testid="configure">
+  <UiStack gap="none" class="bg-ui-page py-10 md:py-16 [.tpl-classic_&]:[--accent:rgb(var(--classic-brand))]" data-testid="configure">
     <UiContainer>
       <div class="mx-auto max-w-6xl">
         <UiLink :to="localePath('/products')" tone="muted" :underline="false" class="inline-flex items-center gap-2 text-sm mb-8" testid="configure-back">
@@ -47,7 +47,7 @@
               <UiHeading :level="2" size="label" class="mb-4 tracking-widest">{{ $t('configure.includedFeatures') }}</UiHeading>
               <UiList list-style="plain">
                 <UiListItem v-for="feature in features" :key="feature" class="flex items-center gap-2 text-sm">
-                  <CheckCircle :size="15" :stroke-width="2" class="text-cyan-700 dark:text-cyan-400 flex-shrink-0" />
+                  <CheckCircle :size="15" :stroke-width="2" class="text-cyan-700 dark:text-cyan-400 flex-shrink-0 [.tpl-classic_&]:text-classic-brand" />
                   {{ feature }}
                 </UiListItem>
               </UiList>
@@ -61,7 +61,7 @@
                   v-for="option in cycles"
                   :key="option.cycle"
                   padding="sm"
-                  :class="[selectedCycle === option.cycle ? 'ring-2 ring-cyan-500/60' : '', 'flex items-center justify-between cursor-pointer transition-all duration-200']"
+                  :class="[selectedCycle === option.cycle ? 'ring-2 ring-cyan-500/60 [.tpl-classic_&]:ring-1 [.tpl-classic_&]:ring-classic-brand [.tpl-classic_&]:border-classic-brand' : '', 'flex items-center justify-between cursor-pointer transition-all duration-200']"
                   :data-testid="`configure-cycle-${option.cycle}`"
                   @click="emit('update:selectedCycle', option.cycle)"
                 >
@@ -81,7 +81,7 @@
           <!-- Order summary -->
           <div class="sticky top-24">
             <UiCard padding="none" class="overflow-hidden" data-testid="configure-summary">
-              <div class="px-6 py-4 bg-white dark:bg-white/5 border-b border-gray-200 dark:border-white/10">
+              <div class="px-6 py-4 bg-white dark:bg-white/5 border-b border-gray-200 dark:border-white/10 [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-surface-2">
                 <UiHeading :level="2" size="subsection">{{ $t('configure.orderSummary') }}</UiHeading>
               </div>
 
@@ -116,7 +116,7 @@
                 <UiButton
                   size="lg"
                   full-width
-                  class="py-4 font-bold bg-gradient-to-r from-cyan-600 to-primary-600 hover:from-cyan-500 hover:to-primary-500 hover:scale-[1.02] shadow-lg"
+                  class="py-4 font-bold bg-gradient-to-r from-cyan-600 to-primary-600 hover:from-cyan-500 hover:to-primary-500 hover:scale-[1.02] shadow-lg [.tpl-classic_&]:bg-none [.tpl-classic_&]:shadow-none [.tpl-classic_&]:hover:scale-100 [.tpl-classic_&]:font-semibold"
                   data-testid="configure-continue"
                   @click="emit('continue')"
                 >

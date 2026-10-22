@@ -4,6 +4,7 @@
     :price-rows="priceRows"
     :results="results"
     :pending="pending"
+    :query="lookupTerm"
     :categories="categories"
     :active-category="activeCategory"
     :in-cart="cartDomains"
@@ -22,6 +23,7 @@
  * renders and reports what the visitor clicked.
  */
 import { APP_LOCALES } from '~/constants/appLocales'
+import { DOMAIN_SEARCH_QUERY_PARAM } from '~/constants/domainSearchQuery'
 import { SCHEMA_ORG_CONTEXT } from '~/constants/schemaOrg'
 import { useCartStore } from '~/stores/cart'
 import { useCatalogStore } from '~/stores/catalog'
@@ -30,6 +32,7 @@ import { useDomainsStore } from '~/stores/domains'
 import { ALL_CATEGORY } from '~/templates/aurora/types/allcategory'
 import { SeoPageType } from '~/types/seopagetype'
 import { TemplateSlot } from '~/types/templateslot'
+import { TemplateName } from '~/types/templatename'
 import { DOMAIN_BILLING_CYCLE } from '~/constants/pricingCycle'
 import { CartItemType } from '~/types/cartitemtype'
 import { DomainOrderAction } from '~/types/domainorderaction'
@@ -40,7 +43,9 @@ const { t, locale } = useI18n()
 /** Operator-set site name that the SEO copy interpolates as `{site}`. */
 const { name: siteName } = useSiteIdentity()
 /** The template registry: resolves the component the active template provides for a slot. */
-const { slot } = useTemplate()
+const { slot, name: templateName } = useTemplate()
+/** The current route; `?domain=` carries a name typed in a search bar elsewhere. */
+const route = useRoute()
 /** The cart: its lines, totals and persistence. */
 const cart = useCartStore()
 /** The payer's currency and the currencies prices can be shown in. */
@@ -84,7 +89,7 @@ await useAsyncData('domains:tld-pricing', () => catalogStore.loadTldPricing(), {
 })
 
 /** Price table, categories and name lookup state of the domains store. */
-const { priceRows, categories, lookupResults: results, lookupPending: pending } = storeToRefs(domainsStore)
+const { priceRows, categories, lookupResults: results, lookupPending: pending, lookupTerm } = storeToRefs(domainsStore)
 
 /** Runs a lookup for the typed name across the offered extensions. */
 const search = domainsStore.searchOfferedTlds
@@ -96,6 +101,13 @@ onMounted(() => {
   cart.init()
   currencyStore.init()
   currencyStore.load()
+
+  // A name arriving in the address is looked up at once. The classic template reads the same
+  // parameter itself and runs its own single-name search, so it is left to do that.
+  const typed = route.query[DOMAIN_SEARCH_QUERY_PARAM]
+  if (templateName.value !== TemplateName.Classic && typeof typed === 'string' && typed.trim()) {
+    void search(typed)
+  }
 })
 
 // The cart needs a product to hang a domain order on; the catalogue store finds it.

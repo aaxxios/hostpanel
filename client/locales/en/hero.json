@@ -1,17 +1,18 @@
 {
   "hero": {
     "badge": "Hosting, domains and servers in one place",
-    "title": "Host.\nManage.\nGrow.",
-    "subtitle": "Web hosting, domains, servers and billing in one client portal, backed by support",
-    "scroll": "Scroll to explore",
+    "title": "Fast, reliable hosting for your website",
+    "subtitle": "Web hosting, domains and servers with real support, in one client portal",
     "cta": {
-      "primary": "Get Started",
-      "secondary": "View Plans"
+      "secondary": "See hosting plans"
     },
     "stats": {
       "clients": "Happy Clients",
       "uptime": "Uptime",
       "regions": "Regions"
+    },
+    "search": {
+      "placeholder": "Find your domain name"
     }
   }
 }

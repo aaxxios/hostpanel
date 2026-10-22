@@ -75,7 +75,7 @@ const tagAttrs = computed(() => {
 
 /** Class list of the root element. */
 const classes = computed(() => [
-  'inline-flex items-center justify-center gap-2 font-semibold whitespace-nowrap transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
+  'ui-accent-btn inline-flex items-center justify-center gap-2 font-semibold whitespace-nowrap transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
   props.pill ? 'rounded-full' : 'rounded-xl',
   FOCUS_RING_OFFSET,
   // The offset gap is painted in the surface colour so the ring reads on light and dark.

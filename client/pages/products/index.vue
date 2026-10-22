@@ -74,6 +74,7 @@ const domainsFamily = computed<ProductFamily>(() => ({
   description: t('domains.card.description'),
   features: [t('domains.card.f1'), t('domains.card.f2'), t('domains.card.f3')],
   pricing: [],
+  type: ProductType.Domain,
 }))
 
 /** The domains card followed by one family per catalogue group. */

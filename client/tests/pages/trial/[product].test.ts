@@ -100,7 +100,9 @@ describe('trial page', () => {
     const wrapper = await mountTrial('mystery')
 
     const accent = wrapper.find('[data-testid="ui-accent"]').element as HTMLElement
-    expect(accent.style.getPropertyValue('--accent')).toBe('#6366f1')
+    // No colour of its own: no inline accent, the sections take the portal brand accent instead.
+    expect(accent.style.getPropertyValue('--accent')).toBe('')
+    expect(wrapper.find('[data-testid="trial-hero"]').classes().join(' ')).toContain('--brand-primary-500')
     expect(wrapper.find('[data-testid="trial-learn-more"]').attributes('href')).toBe('/en/products')
     expect(wrapper.find('[data-testid="trial-features"]').exists()).toBe(false)
   })

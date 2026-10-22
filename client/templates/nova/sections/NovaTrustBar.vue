@@ -1,24 +1,13 @@
 <template>
   <section :aria-label="t('nova.trust.performance')" class="border-b border-nova-border bg-nova-surface">
-    <UiList
-      list-style="bare"
-      class="container-custom flex flex-wrap items-center justify-center gap-x-8 gap-y-4 py-6"
-    >
-      <!--
-        The uptime figure is the operator's own published number and appears only
-        when they have entered one. This project has nothing that measures
-        uptime, so a default here would be a number somebody made up.
-      -->
-      <li v-if="uptime" class="flex items-center gap-2.5 text-[15px] text-nova-ink">
-        <Icon name="lucide:activity" class="h-[18px] w-[18px] text-nova-success" aria-hidden="true" />
-        <span><strong class="font-bold">{{ uptime }}</strong> {{ t('nova.trust.uptimeLabel') }}</span>
-      </li>
-
-      <li v-for="item in items" :key="item.key" class="flex items-center gap-2.5 text-[15px] text-nova-ink">
-        <Icon :name="item.icon" class="h-[18px] w-[18px] text-nova-brand" aria-hidden="true" />
-        {{ t(item.titleKey) }}
-      </li>
-    </UiList>
+    <UiContainer class="py-2">
+      <UiTrustBar
+        :items="entries"
+        surface-class=""
+        text-class="text-nova-ink"
+        chip-class="bg-nova-brand/10 text-nova-brand"
+      />
+    </UiContainer>
   </section>
 </template>
 
@@ -44,4 +33,13 @@ const { get } = usePortalSettings()
 const items = useVisibleFeatures(TRUST_ITEMS)
 /** The operator's published uptime figure; empty hides the line. */
 const uptime = computed(() => get(PortalSettingKey.StatsUptime, 'portalStatsUptime'))
+
+/**
+ * Bar entries: the uptime line first, only when the operator entered a figure (this project
+ * measures nothing, so a default would be a number somebody made up), then the visible lines.
+ */
+const entries = computed(() => [
+  ...(uptime.value ? [{ key: 'uptime', icon: 'lucide:activity', label: t('nova.trust.uptimeLabel'), value: uptime.value }] : []),
+  ...items.value.map(item => ({ key: item.key, icon: item.icon, label: t(item.titleKey) })),
+])
 </script>

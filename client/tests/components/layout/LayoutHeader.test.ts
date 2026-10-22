@@ -1,200 +1,263 @@
 /**
- * Unit tests for LayoutHeader: the desktop navigation, the dropdown group, the mobile menu, the
- * client-area entry in both states, sign-out and the scroll-driven bar style.
+ * Unit tests for the classic LayoutHeader: the logo lockup, the catalogue-driven navigation, the
+ * shared controls, the signed-out and signed-in states, the drawer and the scroll shadow.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
-import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
-import LayoutCartButton from '~/components/layout/LayoutCartButton.vue'
+import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
 import LayoutHeader from '~/components/layout/LayoutHeader.vue'
 import { useAuthStore } from '~/stores/auth'
 import type { ClientUser } from '~/types/clientuser'
+import type { PortalProduct } from '~/types/portalproduct'
+import type { PortalProductGroup } from '~/types/portalproductgroup'
+import { ProductType } from '~/types/producttype'
 
-/** The mocked sign-out call of the auth API. */
-const logoutMock = vi.fn()
+/** Groups the stubbed catalogue API returns: hosting and a VPS group. */
+const GROUPS: PortalProductGroup[] = [
+  { id: 1, name: 'Web hosting', isActive: true, productCount: 2 },
+  { id: 9, name: 'Cloud servers', isActive: true, productCount: 1 },
+]
+
+/** Products the stubbed catalogue API returns. */
+const PRODUCTS = [
+  { id: 10, groupId: 1, type: ProductType.SharedHosting },
+  { id: 90, groupId: 9, type: ProductType.Vps },
+] as PortalProduct[]
+
+/** The mocked catalogue reads. */
+const catalogApi = {
+  fetchProductGroups: vi.fn(),
+  fetchProducts: vi.fn(),
+}
+
+vi.mock('~/composables/apis/useCatalogApi', () => ({
+  /**
+   * Stands in for the catalogue API composable so the store runs without transport.
+   *
+   * @returns The two reads the header triggers.
+   */
+  useCatalogApi: () => catalogApi,
+}))
 
 vi.mock('~/composables/apis/useAuthApi', () => ({
   /**
    * Stands in for the auth API composable so the store runs without transport.
    *
-   * @returns Only the endpoint the header reaches for.
+   * @returns Inert endpoints.
    */
-  useAuthApi: () => ({ logout: logoutMock, ssoLogout: logoutMock })
+  useAuthApi: () => ({ logout: vi.fn(), ssoLogout: vi.fn(), fetchUser: vi.fn() }),
 }))
 
-/** Stand-in for the logo component, which needs the brand plugin. */
-const AppLogoStub = defineComponent({
-  name: 'AppLogo',
-  setup: () => () => h('img', { 'data-testid': 'app-logo-stub' }),
-})
-
-/** Stand-in for the kit's language switcher, which needs the i18n runtime. */
+/** Stand-in for the language switcher, which needs the i18n runtime. */
 const LanguageSwitcherStub = defineComponent({
   name: 'UiLanguageSwitcher',
   setup: () => () => h('div', { 'data-testid': 'language-switcher-stub' }),
+})
+
+/** Stand-in for the currency switcher, which needs the currency store's transport. */
+const CurrencySwitcherStub = defineComponent({
+  name: 'UiCurrencySwitcher',
+  setup: () => () => h('div', { 'data-testid': 'currency-switcher-stub' }),
 })
 
 /** A signed-in client. */
 const client = { id: 1, firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.test' } as ClientUser
 
 /**
- * Mounts the header with the logo and language switcher stood in for.
+ * Mounts the header with the pickers stood in for and lets the catalogue read settle.
  *
  * @returns The wrapper.
  */
-const mountHeader = () => mountWithKit(LayoutHeader, {
-  components: { AppLogo: AppLogoStub, LayoutCartButton, UiLanguageSwitcher: LanguageSwitcherStub },
-  attachToBody: true,
-})
+const mountHeader = async () => {
+  const wrapper = mountWithKit(LayoutHeader, {
+    components: { UiLanguageSwitcher: LanguageSwitcherStub, UiCurrencySwitcher: CurrencySwitcherStub },
+    attachToBody: true,
+  })
+  await flushPromises()
+  return wrapper
+}
+
+/**
+ * The test ids of the desktop navigation's direct links.
+ *
+ * @param wrapper - The mounted header.
+ * @returns Their `data-testid` attributes in order.
+ */
+const desktopLinkKeys = (wrapper: Awaited<ReturnType<typeof mountHeader>>): (string | undefined)[] =>
+  wrapper.find('[data-testid="layout-desktop-nav"]').findAll('a').map((link) => link.attributes('data-testid'))
 
 describe('LayoutHeader', () => {
   beforeEach(() => {
-    stubPublicPageRuntime()
+    stubTemplateGlobals()
     vi.stubGlobal('useRuntimeConfig', () => ({ public: {} }))
-    logoutMock.mockReset()
+    catalogApi.fetchProductGroups.mockReset().mockResolvedValue(GROUPS)
+    catalogApi.fetchProducts.mockReset().mockResolvedValue(PRODUCTS)
     window.localStorage.clear()
   })
 
   afterEach(() => {
     // Put back the setup's empty route, which the active-state tests replace.
     vi.stubGlobal('useRoute', () => ({ params: {}, query: {}, path: '/', fullPath: '/', meta: {} }))
-    document.body.style.overflow = ''
+    document.body.classList.remove('overflow-hidden')
   })
 
-  it('offers the light/dark switch in both the desktop bar and the mobile bar', () => {
-    // The shared public-page stub only knows `isDark`; the switch also reads the operator's toggle setting.
-    vi.stubGlobal('useAppColorMode', () => ({ isDark: ref(false), applied: ref('light'), userToggleEnabled: ref(true), toggle: vi.fn() }))
-    const wrapper = mountHeader()
+  it('draws the mark and the site name beside it, linking home', async () => {
+    const wrapper = await mountHeader()
 
-    // One in the desktop widget group, one beside the burger; CSS shows only one at a time.
-    expect(wrapper.findAll('[data-testid="theme-toggle"]')).toHaveLength(2)
+    const logo = wrapper.find('[data-testid="layout-logo"]')
+    expect(logo.attributes('href')).toBe('/')
+    expect(logo.text()).toBe('Acme Host')
+    expect(logo.find('[data-testid="app-logo-mark"]').exists()).toBe(true)
   })
 
-  it('renders the logo linking home', () => {
-    const wrapper = mountHeader()
+  it('draws the uploaded logo instead of the mark', async () => {
+    stubTemplateGlobals({ logo: '/api/uploads/logo.png' })
+    const wrapper = await mountHeader()
 
-    expect(wrapper.find('[data-testid="layout-logo"]').attributes('href')).toBe('/en/')
-    expect(wrapper.find('[data-testid="app-logo-stub"]').exists()).toBe(true)
+    const logo = wrapper.find('[data-testid="layout-logo"]')
+    expect(logo.find('[data-testid="app-logo-light"]').attributes('src')).toBe('/api/uploads/logo.png')
+    expect(logo.find('[data-testid="app-logo-mark"]').exists()).toBe(false)
   })
 
-  it('lists the hosting group with its two children and the products link', () => {
-    const wrapper = mountHeader()
+  it('shows hosting, domains, products and support, and adds VPS once the catalogue has it', async () => {
+    const wrapper = await mountHeader()
 
-    const children = wrapper.findAll('[data-testid="layout-nav-child"]').map((link) => link.attributes('href'))
-    expect(children).toEqual(['/en/hosting', '/en/domains'])
-    const links = wrapper.find('[data-testid="layout-desktop-nav"]').findAll('[data-testid="layout-nav-link"]').map((link) => link.attributes('href'))
-    expect(links).toEqual(['/en/#services', '/en/#process', '/en/products'])
-    expect(wrapper.find('[data-testid="layout-desktop-nav"]').text()).toContain('nav.hostingDesc')
-  })
-
-  it('marks the products link as the current page on a products route', () => {
-    vi.stubGlobal('useRoute', () => ({ params: {}, query: {}, path: '/en/products/vps', fullPath: '/en/products/vps', hash: '', meta: {} }))
-    const wrapper = mountHeader()
-
-    const links = wrapper.find('[data-testid="layout-desktop-nav"]').findAll('[data-testid="layout-nav-link"]')
-    expect(links.map((link) => link.attributes('aria-current'))).toEqual([undefined, undefined, 'page'])
-  })
-
-  it('marks a section link as current when the home hash names it', () => {
-    vi.stubGlobal('useRoute', () => ({ params: {}, query: {}, path: '/en/', fullPath: '/en/#process', hash: '#process', meta: {} }))
-    const wrapper = mountHeader()
-
-    const links = wrapper.find('[data-testid="layout-desktop-nav"]').findAll('[data-testid="layout-nav-link"]')
-    expect(links.map((link) => link.attributes('aria-current'))).toEqual([undefined, 'page', undefined])
-  })
-
-  it('keeps the mobile menu closed until the burger is pressed', async () => {
-    const wrapper = mountHeader()
-    expect(wrapper.find('[data-testid="layout-mobile-menu"]').exists()).toBe(false)
-
-    await wrapper.find('[data-testid="layout-mobile-toggle"]').trigger('click')
-
-    expect(wrapper.find('[data-testid="layout-mobile-menu"]').exists()).toBe(true)
-    expect(document.body.style.overflow).toBe('hidden')
-  })
-
-  it('closes the mobile menu and releases the page scroll when pressed again', async () => {
-    const wrapper = mountHeader()
-    const toggle = wrapper.find('[data-testid="layout-mobile-toggle"]')
-
-    await toggle.trigger('click')
-    await toggle.trigger('click')
-
-    expect(wrapper.find('[data-testid="layout-mobile-menu"]').exists()).toBe(false)
-    expect(document.body.style.overflow).toBe('')
-  })
-
-  it('expands a mobile group to show its children', async () => {
-    const wrapper = mountHeader()
-    await wrapper.find('[data-testid="layout-mobile-toggle"]').trigger('click')
-    expect(wrapper.findAll('[data-testid="layout-mobile-child"]')).toHaveLength(0)
-
-    await wrapper.find('[data-testid="layout-mobile-group"]').trigger('click')
-
-    expect(wrapper.findAll('[data-testid="layout-mobile-child"]')).toHaveLength(2)
-  })
-
-  it('links a signed-out visitor to the sign-in page', async () => {
-    const wrapper = mountHeader()
-    await wrapper.find('[data-testid="layout-mobile-toggle"]').trigger('click')
-
-    expect(wrapper.find('[data-testid="layout-client-area-link"]').attributes('href')).toBe('/en/client/login')
-    expect(wrapper.find('[data-testid="layout-mobile-client-group"]').exists()).toBe(false)
-  })
-
-  it('links straight to the single-sign-on endpoint in SSO mode', async () => {
-    vi.stubGlobal('useRuntimeConfig', () => ({ public: { authMode: 'sso' } }))
-    const wrapper = mountHeader()
-    await wrapper.find('[data-testid="layout-mobile-toggle"]').trigger('click')
-
-    expect(wrapper.find('[data-testid="layout-client-area-link"]').attributes('href')).toBe('/api/portal/auth/sso/authorize')
-  })
-
-  it('shows the account links for a signed-in client', async () => {
-    const wrapper = mountHeader()
-    useAuthStore().user = client
-    await wrapper.find('[data-testid="layout-mobile-toggle"]').trigger('click')
-
-    const group = wrapper.find('[data-testid="layout-mobile-client-group"]')
-    expect(group.text()).toContain('Ada')
-    await group.trigger('click')
-
-    const hrefs = wrapper.findAll('[data-testid="layout-client-link"]').map((link) => link.attributes('href'))
-    expect(hrefs).toEqual([
-      '/en/client/dashboard',
-      '/en/client/services',
-      '/en/client/domains',
-      '/en/client/invoices',
-      '/en/client/tickets',
-      '/en/client/account',
+    expect(wrapper.find('[data-testid="header-nav-hosting"]').exists()).toBe(true)
+    expect(desktopLinkKeys(wrapper)).toEqual([
+      'header-nav-hosting',
+      'header-nav-domains',
+      'header-nav-vps',
+      'header-nav-products',
     ])
+    expect(wrapper.find('[data-testid="header-nav-vps"]').attributes('href')).toBe('/products/cloud-servers')
+    expect(wrapper.find('[data-testid="header-nav-support-trigger"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="header-nav-servers"]').exists()).toBe(false)
   })
 
-  it('signs the client out and goes to the sign-in page', async () => {
-    const wrapper = mountHeader()
+  it('leaves VPS and Servers out when the catalogue read fails', async () => {
+    catalogApi.fetchProductGroups.mockRejectedValue(new Error('offline'))
+    const wrapper = await mountHeader()
+
+    expect(desktopLinkKeys(wrapper)).toEqual(['header-nav-hosting', 'header-nav-domains', 'header-nav-products'])
+  })
+
+  it('marks the current page in the bar', async () => {
+    vi.stubGlobal('useRoute', () => ({ params: {}, query: {}, path: '/domains', fullPath: '/domains', hash: '', meta: {} }))
+    const wrapper = await mountHeader()
+
+    expect(wrapper.find('[data-testid="header-nav-domains"]').attributes('aria-current')).toBe('page')
+    expect(wrapper.find('[data-testid="header-nav-products"]').attributes('aria-current')).toBeUndefined()
+  })
+
+  it('offers the light/dark switch and the cart in both the desktop and the small-screen bar', async () => {
+    // The shared stub only knows `isDark`; the switch also reads the operator's toggle setting.
+    vi.stubGlobal('useAppColorMode', () => ({ isDark: ref(false), applied: ref('light'), userToggleEnabled: ref(true), toggle: vi.fn() }))
+    const wrapper = await mountHeader()
+
+    expect(wrapper.findAll('[data-testid="theme-toggle"]')).toHaveLength(2)
+    expect(wrapper.findAll('[data-testid="layout-cart-button"]')).toHaveLength(2)
+  })
+
+  it('gives the theme toggle, cart and pickers the same control frame', async () => {
+    vi.stubGlobal('useAppColorMode', () => ({ isDark: ref(false), applied: ref('light'), userToggleEnabled: ref(true), toggle: vi.fn() }))
+    const wrapper = await mountHeader()
+
+    for (const testid of ['theme-toggle', 'layout-cart-button']) {
+      const classes = wrapper.find(`[data-testid="${testid}"]`).classes()
+      expect(classes).toContain('h-10')
+      expect(classes).toContain('rounded-lg')
+      expect(classes).toContain('border-classic-border')
+    }
+    expect(wrapper.find('[data-testid="language-switcher-stub"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="currency-switcher-stub"]').exists()).toBe(true)
+  })
+
+  it('offers sign in and get started to a visitor', async () => {
+    const wrapper = await mountHeader()
+
+    expect(wrapper.find('[data-testid="layout-sign-in"]').attributes('href')).toBe('/client/login')
+    expect(wrapper.find('[data-testid="layout-get-started"]').attributes('href')).toBe('/hosting')
+    expect(wrapper.find('[data-testid="header-account"]').exists()).toBe(false)
+  })
+
+  it('swaps them for the account menu when a client is signed in', async () => {
+    const wrapper = await mountHeader()
     useAuthStore().user = client
-    await wrapper.find('[data-testid="layout-mobile-toggle"]').trigger('click')
-    await wrapper.find('[data-testid="layout-mobile-client-group"]').trigger('click')
+    await nextTick()
 
-    await wrapper.find('[data-testid="layout-logout"]').trigger('click')
-    await flushPromises()
-
-    expect(logoutMock).toHaveBeenCalledTimes(1)
-    expect(navigateTo).toHaveBeenCalledWith('/en/client/login')
-    expect(wrapper.find('[data-testid="layout-mobile-menu"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="header-account"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="layout-sign-in"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="layout-get-started"]').exists()).toBe(false)
   })
 
-  it('turns translucent once the page has scrolled', async () => {
-    const wrapper = mountHeader()
+  it('keeps the drawer closed until the menu button is pressed', async () => {
+    const wrapper = await mountHeader()
+    const toggle = wrapper.find('[data-testid="layout-mobile-toggle"]')
+    expect(wrapper.find('[data-testid="header-drawer-nav"]').exists()).toBe(false)
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+
+    await toggle.trigger('click')
+
+    expect(wrapper.find('[data-testid="header-drawer-nav"]').exists()).toBe(true)
+    expect(toggle.attributes('aria-expanded')).toBe('true')
+  })
+
+  it('holds every navigation entry and the sign-in pair in the drawer', async () => {
+    const wrapper = await mountHeader()
+    await wrapper.find('[data-testid="layout-mobile-toggle"]').trigger('click')
+
+    const drawer = wrapper.find('[data-testid="header-drawer-nav"]')
+    expect(drawer.find('[data-testid="header-drawer-hosting"]').exists()).toBe(true)
+    expect(drawer.find('[data-testid="header-drawer-vps"]').exists()).toBe(true)
+    expect(drawer.find('[data-testid="header-drawer-child-faq"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="header-drawer-sign-in"]').exists()).toBe(true)
+  })
+
+  it('loads the catalogue families once, during setup, not after mount', async () => {
+    await mountHeader()
+
+    expect(catalogApi.fetchProductGroups).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders the widget mounts instead of the local account part when the widget is served', async () => {
+    // The header imports the composable directly, so the deployment is described through the runtime config it reads.
+    vi.stubGlobal('useRuntimeConfig', () => ({ public: { authMode: 'sso', mainUrl: 'https://portal.example.com' } }))
+    const wrapper = await mountHeader()
+
+    expect(wrapper.find('#inno-launcher-mount').exists()).toBe(true)
+    expect(wrapper.find('#inno-account-mount').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="layout-sign-in"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="header-account"]').exists()).toBe(false)
+  })
+
+  it('does not render the widget mounts on a deployment without it', async () => {
+    const wrapper = await mountHeader()
+
+    expect(wrapper.find('#inno-launcher-mount').exists()).toBe(false)
+    expect(wrapper.find('#inno-account-mount').exists()).toBe(false)
+  })
+
+  it('reinitialises the widget after mount when it is present', async () => {
+    const reinit = vi.fn()
+    vi.stubGlobal('InnoWidget', { reinit })
+    await mountHeader()
+
+    expect(reinit).toHaveBeenCalledTimes(1)
+    vi.stubGlobal('InnoWidget', undefined)
+  })
+
+  it('gets a shadow once the page has scrolled', async () => {
+    const wrapper = await mountHeader()
     const header = wrapper.find('[data-testid="layout-header"]')
-    expect(header.classes()).not.toContain('backdrop-blur-lg')
+    expect(header.classes()).not.toContain('shadow-sm')
 
     Object.defineProperty(window, 'scrollY', { value: 120, configurable: true })
     window.dispatchEvent(new Event('scroll'))
     await nextTick()
 
-    expect(header.classes()).toContain('backdrop-blur-lg')
+    expect(header.classes()).toContain('shadow-sm')
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
   })
 })

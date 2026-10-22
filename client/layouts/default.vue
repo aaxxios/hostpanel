@@ -1,5 +1,5 @@
 <template>
-  <UiStack gap="none" class="min-h-dvh bg-page" data-testid="default-layout">
+  <UiStack gap="none" :class="[scopeClass, 'min-h-dvh bg-page']" data-testid="default-layout">
     <!-- Demo-mode notice; renders nothing outside a demo -->
     <LayoutDemoBanner />
 
@@ -30,9 +30,16 @@
  * Default layout with the active template's header and footer.
  * Applied to all pages unless a custom layout is specified.
  */
+import { computed, toValue } from 'vue'
 import { TemplateSlot } from '~/types/templateslot'
 
 const { name, slot } = useTemplate()
+
+/**
+ * Template scope class (`tpl-classic`, `tpl-aurora`, `tpl-nova`) on the layout root, so the
+ * stylesheets can restyle the shared kit per template.
+ */
+const scopeClass = computed(() => `tpl-${toValue(name)}`)
 
 /** The active template's header component. */
 const header = slot(TemplateSlot.Header)

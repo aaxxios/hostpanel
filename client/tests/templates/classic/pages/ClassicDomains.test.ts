@@ -258,4 +258,12 @@ describe('ClassicDomains', () => {
     expect(wrapper.find('[data-testid="classic-domains-promo-hosting-link"]').attributes('href')).toBe('/en/hosting')
     expect(wrapper.find('[data-testid="classic-domains-promo-transfer-link"]').attributes('href')).toBe('/en/domains/transfer')
   })
+
+  it('uses classic tokens only: no gradients, blur glows or aurora colour families', async () => {
+    const wrapper = await mountDomains()
+    const html = wrapper.find('[data-testid="classic-domains"]').html()
+
+    expect(html).not.toMatch(/bg-gradient|blur-\[|animate-blob|shadow-halo|cyan-|violet-|secondary-/)
+    expect(html).toContain('classic-')
+  })
 })

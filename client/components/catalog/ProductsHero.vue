@@ -1,5 +1,5 @@
 <template>
-  <section class="relative py-12 md:py-32 lg:py-40 bg-ui-page overflow-hidden" data-testid="products-hero">
+  <section class="relative py-12 md:py-32 lg:py-40 bg-ui-page overflow-hidden [.tpl-classic_&]:border-b [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-surface-2 [.tpl-classic_&]:py-12 md:[.tpl-classic_&]:py-14 lg:[.tpl-classic_&]:py-16" data-testid="products-hero">
     <!-- Animated background -->
     <UiDecor class="inset-0">
       <UiDecor class="top-0 right-1/4 w-[600px] h-[600px] bg-secondary-500/25 rounded-full blur-[150px] animate-blob" />
@@ -14,34 +14,28 @@
     <UiContainer class="relative z-10">
       <div class="max-w-4xl mx-auto text-center">
         <!-- Badge -->
-        <span class="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full glass border border-secondary-500/20 backdrop-blur-sm">
-          <span class="relative flex h-2 w-2">
+        <span class="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full glass border border-secondary-500/20 backdrop-blur-sm [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-0 [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:backdrop-blur-none">
+          <span class="relative flex h-2 w-2 [.tpl-classic_&]:hidden">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary-600 dark:bg-secondary-400 opacity-75" />
             <span class="relative inline-flex rounded-full h-2 w-2 bg-secondary-500" />
           </span>
-          <UiText as="span" size="sm" weight="medium" tone="muted">{{ $t('products.hero.badge') }}</UiText>
+          <UiText as="span" size="sm" weight="medium" tone="muted" class="[.tpl-classic_&]:text-classic-brand">{{ $t('products.hero.badge') }}</UiText>
         </span>
 
         <!-- Headline -->
-        <UiHeading :level="1" class="text-5xl md:text-6xl lg:text-7xl mb-8 leading-[1.1]">
-          <span class="block text-primary-600 dark:text-primary-400">{{ $t('products.hero.headline1') }}</span>
-          <span class="block text-gray-900 dark:text-white mt-4">{{ $t('products.hero.headline2') }}</span>
+        <UiHeading :level="1" class="text-5xl md:text-6xl lg:text-7xl mb-8 leading-[1.1] [.tpl-classic_&]:mb-4 [.tpl-classic_&]:text-4xl [.tpl-classic_&]:font-semibold md:[.tpl-classic_&]:text-5xl lg:[.tpl-classic_&]:text-5xl">
+          <span class="block text-primary-600 dark:text-primary-400 [.tpl-classic_&]:text-classic-brand">{{ $t('products.hero.headline1') }}</span>
+          <span class="block text-gray-900 dark:text-white mt-4 [.tpl-classic_&]:mt-1 [.tpl-classic_&]:text-classic-ink">{{ $t('products.hero.headline2') }}</span>
         </UiHeading>
 
         <!-- Subtitle -->
-        <UiText tone="muted" size="lg" class="text-xl mb-12 leading-relaxed max-w-3xl mx-auto">
-          <i18n-t keypath="products.hero.subtitle" tag="span">
-            <template #whiteLabel>
-              <span class="text-secondary-700 dark:text-secondary-400 font-semibold">{{ $t('products.hero.whiteLabelHighlight') }}</span>
-            </template>
-          </i18n-t>
-        </UiText>
+        <UiText tone="muted" size="lg" class="text-xl mb-12 leading-relaxed max-w-3xl mx-auto [.tpl-classic_&]:mb-8 [.tpl-classic_&]:text-lg [.tpl-classic_&]:text-classic-muted">{{ $t('products.hero.subtitle') }}</UiText>
 
         <!-- Calls to action -->
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-12 sm:mb-14 md:mb-16">
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-12 sm:mb-14 md:mb-16 [.tpl-classic_&]:mb-8 sm:[.tpl-classic_&]:mb-8 md:[.tpl-classic_&]:mb-8">
           <UiButton
             size="lg"
-            class="w-full sm:w-auto group md:px-8 md:py-4 font-semibold bg-gradient-to-r from-secondary-600 to-cyan-600 hover:scale-105 hover:shadow-2xl hover:shadow-secondary-500/50"
+            class="w-full sm:w-auto group md:px-8 md:py-4 font-semibold bg-gradient-to-r from-secondary-600 to-cyan-600 hover:scale-105 hover:shadow-2xl hover:shadow-secondary-500/50 [.tpl-classic_&]:bg-none [.tpl-classic_&]:hover:scale-100 [.tpl-classic_&]:hover:shadow-none"
             data-testid="products-hero-view"
             @click="scrollToProducts"
           >
@@ -52,30 +46,30 @@
           <UiButton
             variant="outline"
             size="lg"
-            :to="localePath('/contact')"
-            class="w-full sm:w-auto md:px-8 md:py-4 font-semibold hover:scale-105"
-            data-testid="products-hero-demo"
+            :to="localePath('/hosting')"
+            class="w-full sm:w-auto md:px-8 md:py-4 font-semibold hover:scale-105 [.tpl-classic_&]:hover:scale-100"
+            data-testid="products-hero-compare"
           >
-            <Calendar :size="20" :stroke-width="2" class="mr-2" />
-            {{ $t('products.hero.cta.bookDemo') }}
+            <Server :size="20" :stroke-width="2" class="mr-2" />
+            {{ $t('products.hero.cta.comparePlans') }}
           </UiButton>
         </div>
 
         <!-- Trust badges -->
         <div
-          class="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600 dark:text-gray-400 animate-reveal-up motion-reduce:animate-none"
+          class="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600 dark:text-gray-400 animate-reveal-up motion-reduce:animate-none [.tpl-classic_&]:text-classic-muted"
           :class="revealDelay(400)"
         >
           <div class="flex items-center gap-2">
-            <ShieldCheck :size="20" :stroke-width="2" class="text-green-600 dark:text-green-400" />
-            <span>{{ $t('products.hero.trustBadges.soc2') }}</span>
+            <Headphones :size="20" :stroke-width="2" class="text-green-600 dark:text-green-400 [.tpl-classic_&]:text-classic-brand" />
+            <span>{{ $t('products.hero.trustBadges.support') }}</span>
           </div>
           <div class="flex items-center gap-2">
-            <Lock :size="20" :stroke-width="2" class="text-cyan-700 dark:text-cyan-400" />
+            <Lock :size="20" :stroke-width="2" class="text-cyan-700 dark:text-cyan-400 [.tpl-classic_&]:text-classic-brand" />
             <span>{{ $t('products.hero.trustBadges.encryption') }}</span>
           </div>
           <div class="flex items-center gap-2">
-            <Trophy :size="20" :stroke-width="2" class="text-secondary-700 dark:text-secondary-400" />
+            <Trophy :size="20" :stroke-width="2" class="text-secondary-700 dark:text-secondary-400 [.tpl-classic_&]:text-classic-brand" />
             <span>{{ $t('products.hero.trustBadges.uptime') }}</span>
           </div>
         </div>
@@ -92,12 +86,11 @@
 /**
  * Hero of the products page: badge, headline, the two calls to action and the trust badges.
  *
- * "View Products" scrolls to the catalogue section of the same page (`products-section`); "Book a
- * Demo" goes to the contact page. Everything it shows is a locale key.
+ * "View Products" scrolls to the catalogue section of the same page (`products-section`); "Compare hosting plans" goes to the hosting page. Everything it shows is a locale key.
  */
 
 import { revealDelay } from '~/utils/reveal'
-import { ArrowDown, Calendar, Lock, ShieldCheck, Trophy } from 'lucide-vue-next'
+import { ArrowDown, Headphones, Lock, Server, Trophy } from 'lucide-vue-next'
 
 /** Id of the catalogue section the first call to action scrolls to. */
 const CATALOG_SECTION_ID = 'products-section'

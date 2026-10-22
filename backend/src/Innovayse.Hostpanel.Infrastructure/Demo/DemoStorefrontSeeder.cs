@@ -117,7 +117,7 @@ internal sealed class DemoStorefrontSeeder
         ["Harbor Media", "Харбор Медиа", "Հարբոր Մեդիա"],
         ["Irislane Analytics", "Айрислейн Аналитикс", "Այրիսլեյն Անալիտիքս"],
         ["Jadeline Cloud", "Джейдлайн Клауд", "Ջեյդլայն Քլաուդ"],
-        ["Kelpie Security", "Келпи Секьюрити", "Քելփի Սեքյուրիթի"],
+        ["Vantor Security", "Вантор Секьюрити", "Վանտոր Սեքյուրիթի"],
         ["Lumora Networks", "Люмора Нетворкс", "Լյումորա Նեթվորքս"],
         ["Marlowe Payments", "Марлоу Пейментс", "Մարլոու Փեյմենթս"],
         ["Nimbusline Data", "Нимбуслайн Дата", "Նիմբուսլայն Դատա"],
@@ -150,6 +150,12 @@ internal sealed class DemoStorefrontSeeder
             ["Helsinki", "Хельсинки", "Հելսինկի"],
             ["About 14 ms from northern Europe", "Около 14 мс до Северной Европы", "Մոտ 14 մվ Հյուսիսային Եվրոպայից"]),
     ];
+
+    /// <summary>Folder, under the client's public assets, that holds the partner logo files named after the partner slug.</summary>
+    private const string PartnerLogoFolder = "/demo/partners/";
+
+    /// <summary>Folder, under the client's public assets, that holds the project preview files named after the project slug.</summary>
+    private const string ProjectImageFolder = "/demo/projects/";
 
     /// <summary>The projects: slug, then the title and the one-line summary in three languages.</summary>
     private static readonly (string Slug, string[] Title, string[] Summary)[] Projects =
@@ -367,7 +373,7 @@ internal sealed class DemoStorefrontSeeder
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Adds the partners when there are none; they carry no logo file, only a name and a link.</summary>
+    /// <summary>Adds the partners when there are none; each carries a bundled logo file, a name and a link.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
     private async Task SeedPartnersAsync(CancellationToken ct)
@@ -379,7 +385,7 @@ internal sealed class DemoStorefrontSeeder
 
         for (var i = 0; i < Partners.Length; i++)
         {
-            var row = Partner.Create(null, $"https://partner-{i + 1}.example", i, true);
+            var row = Partner.Create(PartnerLogoUrl(Partners[i][0]), $"https://partner-{i + 1}.example", i, true);
             for (var l = 0; l < Locales.Length; l++)
             {
                 row.SetTranslation(Locales[l], Partners[i][l]);
@@ -416,7 +422,26 @@ internal sealed class DemoStorefrontSeeder
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Adds the projects when there are none; they carry no pictures, only text and a link.</summary>
+    /// <summary>
+    /// The bundled logo address of a partner: its English name in lower case with the spaces turned into hyphens,
+    /// under <see cref="PartnerLogoFolder"/>, as an SVG file.
+    /// </summary>
+    /// <param name="englishName">The partner's name in English.</param>
+    /// <returns>The site-relative address of the partner's logo.</returns>
+    internal static string PartnerLogoUrl(string englishName)
+    {
+        return $"{PartnerLogoFolder}{englishName.ToLowerInvariant().Replace(' ', '-')}.svg";
+    }
+
+    /// <summary>The bundled preview address of a project: its slug under <see cref="ProjectImageFolder"/>, as an SVG file.</summary>
+    /// <param name="slug">The project's slug.</param>
+    /// <returns>The site-relative address of the project's preview picture.</returns>
+    internal static string ProjectImageUrl(string slug)
+    {
+        return $"{ProjectImageFolder}{slug}.svg";
+    }
+
+    /// <summary>Adds the projects when there are none; each carries a bundled preview picture, text and a link.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
     private async Task SeedProjectsAsync(CancellationToken ct)
@@ -429,7 +454,7 @@ internal sealed class DemoStorefrontSeeder
         for (var i = 0; i < Projects.Length; i++)
         {
             var (slug, title, summary) = Projects[i];
-            var row = Project.Create(slug, $"https://{slug}.example", [], i, true);
+            var row = Project.Create(slug, $"https://{slug}.example", [ProjectImageUrl(slug)], i, true);
             for (var l = 0; l < Locales.Length; l++)
             {
                 row.SetTranslation(Locales[l], title[l], summary[l], null);

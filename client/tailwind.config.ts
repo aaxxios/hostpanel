@@ -95,6 +95,18 @@ export default <Partial<Config>>{
           page: 'rgb(var(--classic-page) / <alpha-value>)',
           surface: 'rgb(var(--classic-surface) / <alpha-value>)',
           footer: 'rgb(var(--classic-footer) / <alpha-value>)',
+          // Raised or muted panel inside a surface: table heads, alternating bands, input wells.
+          'surface-2': 'rgb(var(--classic-surface-2) / <alpha-value>)',
+          // Hairlines and card borders.
+          border: 'rgb(var(--classic-border) / <alpha-value>)',
+          // Body and heading text, and the quieter supporting text.
+          ink: 'rgb(var(--classic-ink) / <alpha-value>)',
+          muted: 'rgb(var(--classic-muted) / <alpha-value>)',
+          // The one solid brand colour, its hover shade, its soft tint and the text drawn on it.
+          brand: 'rgb(var(--classic-brand) / <alpha-value>)',
+          'brand-hover': 'rgb(var(--classic-brand-hover) / <alpha-value>)',
+          'brand-soft': 'rgb(var(--classic-brand-soft) / <alpha-value>)',
+          'on-brand': 'rgb(var(--classic-on-brand) / <alpha-value>)',
           'summary-from': 'rgb(var(--classic-summary-from) / <alpha-value>)',
           'summary-to': 'rgb(var(--classic-summary-to) / <alpha-value>)',
         },

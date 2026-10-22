@@ -8,7 +8,7 @@ import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import ProductsHero from '~/components/catalog/ProductsHero.vue'
 
 /** Mounts the hero with the translation component stood in for. */
-const mountHero = () => mountWithKit(ProductsHero, { stubs: { 'i18n-t': true } })
+const mountHero = () => mountWithKit(ProductsHero)
 
 describe('ProductsHero', () => {
   beforeEach(() => {
@@ -26,14 +26,22 @@ describe('ProductsHero', () => {
     expect(wrapper.text()).toContain('products.hero.badge')
     expect(wrapper.text()).toContain('products.hero.headline1')
     expect(wrapper.text()).toContain('products.hero.headline2')
-    expect(wrapper.text()).toContain('products.hero.trustBadges.soc2')
+    expect(wrapper.text()).toContain('products.hero.trustBadges.support')
     expect(wrapper.text()).toContain('products.hero.trustBadges.uptime')
   })
 
-  it('links Book a Demo to the contact page', () => {
+  it('links Compare hosting plans to the hosting page', () => {
     const wrapper = mountHero()
 
-    expect(wrapper.find('[data-testid="products-hero-demo"]').attributes('href')).toBe('/en/contact')
+    expect(wrapper.find('[data-testid="products-hero-compare"]').attributes('href')).toBe('/en/hosting')
+  })
+
+  it('carries no SaaS copy: no white-label slot and no demo action', () => {
+    const wrapper = mountHero()
+
+    expect(wrapper.text()).not.toContain('whiteLabel')
+    expect(wrapper.find('[data-testid="products-hero-demo"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('products.hero.cta.comparePlans')
   })
 
   it('scrolls the catalogue section into view from View Products', async () => {

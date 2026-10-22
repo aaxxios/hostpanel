@@ -1,5 +1,5 @@
 <template>
-  <component :is="as" class="bg-clip-text text-transparent" data-testid="ui-gradient-text">
+  <component :is="as" class="ui-gradient-text bg-clip-text text-transparent" data-testid="ui-gradient-text">
     <slot />
   </component>
 </template>

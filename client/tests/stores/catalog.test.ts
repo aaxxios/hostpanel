@@ -189,6 +189,19 @@ describe('useCatalogStore product families', () => {
     expect(store.familyProducts).toEqual([])
   })
 
+  it('shares one read between callers that ask while it is in flight, and reads again afterwards', async () => {
+    api.fetchProductGroups.mockResolvedValue([groups[1]])
+    const store = useCatalogStore()
+
+    const [first, second] = await Promise.all([store.loadFamilies(), store.loadFamilies()])
+
+    expect(first).toBe(second)
+    expect(api.fetchProductGroups).toHaveBeenCalledTimes(1)
+
+    await store.loadFamilies()
+    expect(api.fetchProductGroups).toHaveBeenCalledTimes(2)
+  })
+
   it('keeps the API sentence and no families when the groups cannot be read', async () => {
     api.fetchProductGroups.mockRejectedValue(refusal)
     const store = useCatalogStore()

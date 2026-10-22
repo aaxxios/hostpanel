@@ -78,4 +78,20 @@ describe('NovaProjects', () => {
     expect(grid.attributes('data-columns')).toBe(String(balancedColumns(5)))
     expect(grid.classes()).toContain('ui-balanced-grid')
   })
+
+  it('fills a project without an image with the patterned cover, initials and a site type icon', async () => {
+    api.fetchProjects.mockResolvedValue([projectFixture(3, { title: 'Pine Shop', slug: 'pine-shop', imageUrls: [] })])
+
+    const wrapper = await mountSection()
+
+    const cover = wrapper.find('[data-testid="project-placeholder-3"]')
+    expect(cover.find('[data-testid="ui-cover-fallback-initials"]').text()).toBe('PS')
+    expect(cover.find('[data-testid="ui-cover-fallback-icon"]').attributes('data-site-type')).toBe('shop')
+  })
+
+  it('reads the shared storefront heading keys', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.text()).toContain('storefront.projects.title')
+  })
 })

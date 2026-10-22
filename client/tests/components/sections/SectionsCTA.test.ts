@@ -1,63 +1,46 @@
 /**
- * Unit tests for SectionsCTA: the headline, the e-mail field and the simulated submit with its
- * confirmation.
+ * Unit tests for SectionsCTA: the hosting headline, the domain search and the plans action.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
+import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import SectionsCTA from '~/components/sections/SectionsCTA.vue'
+
+/** Mounts the band. */
+const mountCta = () => mountWithKit(SectionsCTA)
 
 describe('SectionsCTA', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
+    stubPublicPageRuntime()
   })
 
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it('shows the headline and the badge', () => {
-    const wrapper = mountWithKit(SectionsCTA)
+  it('shows the headline and the subtitle', () => {
+    const wrapper = mountCta()
 
     expect(wrapper.find('h2').text()).toBe('cta.title')
-    expect(wrapper.text()).toContain('cta.badge')
     expect(wrapper.text()).toContain('cta.subtitle')
   })
 
   it('is never rendered hidden: the content block enters with a CSS animation, not an initial opacity', () => {
-    const block = mountWithKit(SectionsCTA).find('.max-w-3xl')
+    const block = mountCta().find('.max-w-3xl')
 
     expect(block.attributes('style') ?? '').not.toContain('opacity')
     expect(block.classes()).toContain('animate-reveal-up')
   })
 
-  it('gives the e-mail field a placeholder and an e-mail type', () => {
-    const input = mountWithKit(SectionsCTA).find('[data-testid="cta-email"]')
+  it('offers the hosting plans as the main action, a contact link and no domain search', () => {
+    const wrapper = mountCta()
 
-    expect(input.attributes('placeholder')).toBe('cta.placeholder')
-    expect(input.attributes('type')).toBe('email')
+    expect(wrapper.find('[data-testid="sections-domain-search"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="cta-contact"]').attributes('href')).toBe('/en/contact')
+    expect(wrapper.find('[data-testid="cta-plans"]').attributes('href')).toBe('/en/hosting')
   })
 
-  it('does nothing when the field is empty', async () => {
-    const wrapper = mountWithKit(SectionsCTA)
+  it('draws no gradient or glow decoration', () => {
+    const html = mountCta().html()
 
-    await wrapper.find('[data-testid="cta-form"]').trigger('submit')
-    await vi.advanceTimersByTimeAsync(1500)
-
-    expect(wrapper.find('[data-testid="cta-success"]').exists()).toBe(false)
-  })
-
-  it('confirms after a moment, clears the field and hides the confirmation again', async () => {
-    const wrapper = mountWithKit(SectionsCTA)
-    await wrapper.find('[data-testid="cta-email"]').setValue('visitor@example.test')
-
-    await wrapper.find('[data-testid="cta-form"]').trigger('submit')
-    expect(wrapper.find('[data-testid="cta-success"]').exists()).toBe(false)
-
-    await vi.advanceTimersByTimeAsync(1000)
-    expect(wrapper.find('[data-testid="cta-success"]').text()).toContain('cta.success')
-    expect((wrapper.find('[data-testid="cta-email"]').element as HTMLInputElement).value).toBe('')
-
-    await vi.advanceTimersByTimeAsync(3000)
-    expect(wrapper.find('[data-testid="cta-success"]').exists()).toBe(false)
+    expect(html).not.toContain('bg-gradient')
+    expect(html).not.toContain('blur-')
+    expect(html).not.toContain('animate-blob')
   })
 })

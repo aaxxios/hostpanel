@@ -49,7 +49,7 @@ const props = withDefaults(defineProps<Props>(), {
 const VARIANT_CLASSES: Record<UiFooterLinkVariant, string> = {
   [UiFooterLinkVariant.Aurora]: 'text-mut hover:text-ac1 focus-visible:text-ac1 focus-visible:ring-ac1',
   [UiFooterLinkVariant.Nova]: 'text-nova-muted hover:text-nova-brand focus-visible:text-nova-brand focus-visible:ring-nova-brand',
-  [UiFooterLinkVariant.Classic]: 'text-gray-600 hover:text-primary-700 focus-visible:text-primary-700 focus-visible:ring-primary-500 dark:text-gray-400 dark:hover:text-primary-400 dark:focus-visible:text-primary-400',
+  [UiFooterLinkVariant.Classic]: 'text-classic-muted hover:text-classic-brand focus-visible:text-classic-brand focus-visible:ring-classic-brand',
 }
 
 /** Shared layout, transition and keyboard focus ring. */

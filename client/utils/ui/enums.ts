@@ -477,6 +477,6 @@ export enum UiFooterLinkVariant {
   Aurora = 'aurora',
   /** nova tokens: muted text, brand on hover. */
   Nova = 'nova',
-  /** classic: the generic gray and primary scales, with a light and a dark value each. */
+  /** classic: the classic surface tokens, which carry a light and a dark value each. */
   Classic = 'classic',
 }

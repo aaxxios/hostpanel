@@ -3,7 +3,7 @@
     <div
       v-for="(item, index) in items"
       :key="index"
-      class="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden"
+      class="ui-accordion-item border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden"
     >
       <!-- Accordion header -->
       <button

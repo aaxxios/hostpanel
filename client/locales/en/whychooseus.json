@@ -1,25 +1,24 @@
 {
   "whyChooseUs": {
-    "badge": "Why Choose Us",
-    "title": "We Deliver {results}, Not Just Services",
-    "titleHighlight": "Results",
-    "subtitle": "We've mastered the art of turning ideas into profitable digital products.",
+    "badge": "Why choose us",
+    "title": "Hosting you can rely on",
+    "subtitle": "Fast servers, honest pricing and a support team that answers.",
     "advantages": {
       "fastDelivery": {
-        "title": "Fast Delivery",
-        "description": "We deliver projects on time without compromising quality. Agile methodology ensures rapid iterations."
+        "title": "Fast servers",
+        "description": "SSD storage and tuned servers keep your pages loading quickly."
       },
       "qualityGuaranteed": {
-        "title": "Quality Guaranteed",
-        "description": "Every project goes through rigorous testing and quality assurance before delivery."
+        "title": "Reliable uptime",
+        "description": "Redundant infrastructure and constant monitoring keep your site online."
       },
       "support": {
-        "title": "Dedicated Support",
-        "description": "Dedicated support team available to assist with any issues."
+        "title": "Round-the-clock support",
+        "description": "Our support team is available any time to help with your account and your site."
       },
       "provenResults": {
-        "title": "Proven Results",
-        "description": "Our clients see measurable improvements and ROI from the partnership."
+        "title": "Trusted by customers",
+        "description": "Thousands of sites run on our servers every day."
       }
     }
   }

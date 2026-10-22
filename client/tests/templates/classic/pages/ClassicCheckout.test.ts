@@ -205,8 +205,18 @@ describe('ClassicCheckout', () => {
     const card = wrapper.find(`[data-testid="checkout-method-${PAYMENT_MODULE_STRIPE}"]`)
     expect(bank.text()).toContain('Bank transfer')
     expect(card.text()).toContain('Card')
-    expect(bank.classes()).toContain('bg-cyan-500/10')
-    expect(card.classes()).not.toContain('bg-cyan-500/10')
+    expect(bank.classes()).toContain('bg-classic-brand-soft')
+    expect(card.classes()).not.toContain('bg-classic-brand-soft')
+  })
+
+  it('draws with the classic tokens only, no gradients, glows or cyan', async () => {
+    const wrapper = await mountCheckout()
+
+    const html = wrapper.html()
+    expect(html).not.toContain('bg-gradient')
+    expect(html).not.toContain('cyan-')
+    expect(html).not.toContain('blur-')
+    expect(wrapper.find('[data-testid="checkout-summary"]').classes()).toContain('border-t-classic-brand')
   })
 
   it('says so when no gateway is on, and cannot be submitted', async () => {

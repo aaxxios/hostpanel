@@ -44,4 +44,16 @@ describe('FaqCategoryNav', () => {
     expect(active).toContain('bg-primary-700')
     expect(other).not.toContain('bg-primary-700')
   })
+
+  it('adds the classic chip look to every link, aurora keeping the kit buttons', () => {
+    const wrapper = mountWithKit(FaqCategoryNav, { props: { active: FaqCategory.Products, showAll: true } })
+
+    const active = wrapper.find('[data-testid="faq-category-products"]').classes()
+    const other = wrapper.find('[data-testid="faq-category-general"]').classes()
+    expect(active).toContain('[.tpl-classic_&]:bg-classic-brand')
+    expect(other).toContain('[.tpl-classic_&]:bg-classic-surface')
+    expect(other).not.toContain('[.tpl-classic_&]:bg-classic-brand')
+    expect(wrapper.find('[data-testid="faq-category-all"]').classes()).toContain('[.tpl-classic_&]:border-classic-border')
+    expect(active).toContain('bg-primary-700')
+  })
 })

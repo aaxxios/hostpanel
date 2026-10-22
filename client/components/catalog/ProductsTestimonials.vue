@@ -5,7 +5,7 @@
         <template #title>
           <i18n-t keypath="products.testimonials.title" tag="span">
             <template #thousands>
-              <span class="text-secondary-700 dark:text-secondary-400">{{ $t('products.testimonials.thousandsHighlight') }}</span>
+              <span class="text-secondary-700 dark:text-secondary-400 [.tpl-classic_&]:text-classic-brand">{{ $t('products.testimonials.thousandsHighlight') }}</span>
             </template>
           </i18n-t>
         </template>
@@ -15,15 +15,15 @@
         <UiCard
           v-for="(testimonial, index) in items"
           :key="testimonial.id"
-          class="group hover:border-secondary-500/30 hover:-translate-y-2 transition-all duration-300 animate-reveal-up motion-reduce:animate-none"
+          class="group hover:border-secondary-500/30 hover:-translate-y-2 transition-all duration-300 animate-reveal-up motion-reduce:animate-none [.tpl-classic_&]:hover:border-classic-border [.tpl-classic_&]:hover:translate-y-0"
           :data-testid="`product-testimonial-${testimonial.id}`"
           :class="revealDelay(index * 100)"
         >
           <div class="flex gap-1 mb-4">
-            <Star v-for="star in testimonial.rating" :key="star" :size="14" :stroke-width="2" fill="currentColor" class="text-secondary-700 dark:text-secondary-400" />
+            <Star v-for="star in testimonial.rating" :key="star" :size="14" :stroke-width="2" fill="currentColor" class="text-secondary-700 dark:text-secondary-400 [.tpl-classic_&]:text-classic-brand" />
           </div>
 
-          <UiText size="sm" class="mb-4 italic leading-relaxed text-gray-700 dark:text-gray-300">"{{ testimonial.text }}"</UiText>
+          <UiText size="sm" class="mb-4 italic leading-relaxed text-gray-700 dark:text-gray-300 [.tpl-classic_&]:not-italic [.tpl-classic_&]:text-classic-ink">"{{ testimonial.text }}"</UiText>
 
           <div class="flex items-center gap-3">
             <UiAvatar :first-name="testimonial.name" />

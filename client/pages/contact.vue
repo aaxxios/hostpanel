@@ -16,7 +16,7 @@
         <template #start>
           <UiStack
             gap="lg"
-            class="w-full min-w-0 animate-reveal-up motion-reduce:animate-none"
+            class="w-full min-w-0 animate-reveal-up motion-reduce:animate-none [.tpl-classic_&]:animate-none"
           >
             <!-- Office Info Card -->
             <UiCard v-if="address" hover data-testid="contact-office">
@@ -24,7 +24,7 @@
                 <UiTile
                   :icon="Building2"
                   size="xl"
-                  class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300"
+                  class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:text-classic-brand"
                 />
                 <UiStack gap="none">
                   <UiHeading :level="3" class="mb-1">
@@ -50,13 +50,13 @@
                   :href="`mailto:${contactEmail}`"
                   tone="inherit"
                   :underline="false"
-                  class="group flex items-center gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
+                  class="group flex items-center gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5 hover:[.tpl-classic_&]:bg-classic-surface-2"
                   testid="contact-email-link"
                 >
                   <UiTile
                     :icon="Mail"
                     size="xl"
-                    class="bg-primary-500/20 text-primary-700 dark:text-primary-300"
+                    class="bg-primary-500/20 text-primary-700 dark:text-primary-300 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:text-classic-brand"
                   />
                   <UiStack gap="none">
                     <UiText as="span" size="xs" tone="muted">
@@ -66,7 +66,7 @@
                       as="span"
                       size="sm"
                       weight="semibold"
-                      class="transition-colors group-hover:text-primary-700 dark:group-hover:text-primary-300"
+                      class="transition-colors group-hover:text-primary-700 dark:group-hover:text-primary-300 group-hover:[.tpl-classic_&]:text-classic-brand"
                     >
                       {{ contactEmail }}
                     </UiText>
@@ -79,13 +79,13 @@
                   :href="`tel:${contactPhoneLink}`"
                   tone="inherit"
                   :underline="false"
-                  class="group flex items-center gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5"
+                  class="group flex items-center gap-3 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-white/5 hover:[.tpl-classic_&]:bg-classic-surface-2"
                   testid="contact-phone-link"
                 >
                   <UiTile
                     :icon="Phone"
                     size="xl"
-                    class="bg-secondary-500/20 text-secondary-700 dark:text-secondary-400"
+                    class="bg-secondary-500/20 text-secondary-700 dark:text-secondary-400 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:text-classic-brand"
                   />
                   <UiStack gap="none">
                     <UiText as="span" size="xs" tone="muted">
@@ -95,7 +95,7 @@
                       as="span"
                       size="sm"
                       weight="semibold"
-                      class="transition-colors group-hover:text-secondary-700 dark:group-hover:text-secondary-300"
+                      class="transition-colors group-hover:text-secondary-700 dark:group-hover:text-secondary-300 group-hover:[.tpl-classic_&]:text-classic-brand"
                     >
                       {{ contactPhone }}
                     </UiText>
@@ -114,7 +114,7 @@
                   <UiTile
                     :icon="Clock"
                     size="xl"
-                    class="bg-cyan-500/20 text-cyan-700 dark:text-cyan-400"
+                    class="bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:text-classic-brand"
                   />
                   <UiStack gap="none">
                     <UiText as="span" size="xs" tone="muted">
@@ -141,10 +141,10 @@
                   external
                   tone="inherit"
                   :underline="false"
-                  class="group flex items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 hover:border-cyan-500/50"
+                  class="group flex items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 hover:border-cyan-500/50 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-surface-2 hover:[.tpl-classic_&]:border-classic-brand"
                   testid="contact-telegram"
                 >
-                  <Send :size="24" :stroke-width="2" class="text-cyan-700 dark:text-cyan-400" />
+                  <Send :size="24" :stroke-width="2" class="text-cyan-700 dark:text-cyan-400 [.tpl-classic_&]:text-classic-brand" />
                   <UiText as="span" size="sm" weight="semibold">
                     {{ t('contact.info.quickConnect.telegram') }}
                   </UiText>
@@ -156,10 +156,10 @@
                   external
                   tone="inherit"
                   :underline="false"
-                  class="group flex items-center justify-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 p-4 hover:border-green-500/50"
+                  class="group flex items-center justify-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 p-4 hover:border-green-500/50 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-surface-2 hover:[.tpl-classic_&]:border-classic-brand"
                   testid="contact-whatsapp"
                 >
-                  <MessageCircle :size="24" :stroke-width="2" class="text-green-600 dark:text-green-400" />
+                  <MessageCircle :size="24" :stroke-width="2" class="text-green-600 dark:text-green-400 [.tpl-classic_&]:text-classic-brand" />
                   <UiText as="span" size="sm" weight="semibold">
                     {{ t('contact.info.quickConnect.whatsapp') }}
                   </UiText>
@@ -176,7 +176,7 @@
         <template #end>
           <UiCard
             padding="xl"
-            class="relative overflow-hidden animate-reveal-up motion-reduce:animate-none"
+            class="relative overflow-hidden animate-reveal-up motion-reduce:animate-none [.tpl-classic_&]:animate-none [.tpl-classic_&]:rounded-lg"
           >
             <UiHeading :level="2" class="mb-6">
               {{ t('contact.form.title') }}
@@ -263,7 +263,7 @@
                 size="lg"
                 full-width
                 :loading="contactLoading"
-                class="hover:shadow-xl hover:shadow-primary-500/50"
+                class="hover:shadow-xl hover:shadow-primary-500/50 hover:[.tpl-classic_&]:shadow-none"
               >
                 <Send v-if="!contactLoading" :size="18" :stroke-width="2" class="mr-2" />
                 {{ t('contact.form.submit') }}

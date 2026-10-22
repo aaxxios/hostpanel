@@ -1,5 +1,5 @@
 <template>
-  <!-- The slider sits on photographs under a dark overlay, so it always uses the dark palette. -->
+  <!-- The slider sits on photographs under a flat dark scrim, so it always uses the dark palette. -->
   <!-- No slides configured: the text hero, so the top of the home page is never an empty viewport. -->
   <SectionsHero v-if="!sliderItems.length" />
   <section v-else ref="sectionRef" class="dark products-slider relative h-[75dvh] sm:h-[85dvh] md:h-dvh w-full overflow-hidden" data-testid="products-slider">
@@ -19,14 +19,14 @@
             :preload="true"
             class="h-full w-full object-cover"
           />
-          <div class="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/90" />
+          <div class="absolute inset-0 bg-black/60" />
         </div>
         <UiAccent v-if="firstSlide" :color="firstSlide.color">
           <UiContainer class="relative z-10 flex h-full items-center justify-center">
-            <UiGlassPanel class="max-w-4xl text-center mb-10 sm:mb-0">
+            <UiCard padding="lg" class="max-w-4xl text-center mb-10 sm:mb-0">
               <UiAccentTile :icon="`mdi:${firstSlide.icon}`" size="xl" class="mb-6 sm:mb-8 mx-auto" />
-              <UiHeading :level="2" class="mb-4 sm:mb-6 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-none">{{ firstSlide.name }}</UiHeading>
-              <UiText tone="primary" class="mb-4 sm:mb-6 text-lg sm:text-xl md:text-2xl font-semibold tracking-wide uppercase italic">{{ firstSlide.tagline }}</UiText>
+              <UiHeading :level="2" class="mb-4 sm:mb-6 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">{{ firstSlide.name }}</UiHeading>
+              <UiText tone="primary" class="mb-4 sm:mb-6 text-lg sm:text-xl md:text-2xl font-semibold">{{ firstSlide.tagline }}</UiText>
               <UiText tone="muted" class="mb-6 sm:mb-8 text-sm sm:text-base md:text-lg leading-relaxed font-light line-clamp-3 px-4">{{ firstSlide.description }}</UiText>
               <div class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mt-8">
                 <UiAccentButton :to="localePath(firstSlide.learnMoreUrl)" size="lg" class="w-full sm:w-auto sm:px-10 sm:py-4 font-bold" data-testid="slider-fallback-cta">
@@ -34,7 +34,7 @@
                   <ArrowRight :size="18" :stroke-width="3" />
                 </UiAccentButton>
               </div>
-            </UiGlassPanel>
+            </UiCard>
           </UiContainer>
         </UiAccent>
       </template>
@@ -54,7 +54,7 @@
         <SwiperSlide v-for="(item, index) in sliderItems" :key="item.id" class="relative h-full w-full">
           <UiAccent :color="item.color">
             <!-- Background with a Ken Burns effect -->
-            <div :class="[item.image ? '' : 'bg-[radial-gradient(ellipse_at_60%_40%,color-mix(in_srgb,var(--accent)_19%,transparent)_0%,var(--ui-page)_70%)]', 'absolute inset-0 overflow-hidden']">
+            <div :class="[item.image ? '' : 'bg-classic-page', 'absolute inset-0 overflow-hidden']">
               <UiImage
                 v-if="item.image"
                 :src="item.image"
@@ -63,24 +63,21 @@
                 :fetchpriority="index === 0 ? 'high' : 'auto'"
                 class="h-full w-full animate-ken-burns"
               />
-              <div class="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/90" />
-              <UiDecor class="inset-0 opacity-[0.03] slider-grain" />
+              <div class="absolute inset-0 bg-black/60" />
             </div>
 
             <!-- Content -->
             <UiContainer class="relative z-10 flex h-full items-center justify-center">
-              <UiGlassPanel
-                class="max-w-4xl text-center mb-10 sm:mb-0 animate-reveal-up motion-reduce:animate-none"
-              >
+              <UiCard padding="lg" class="max-w-4xl text-center mb-10 sm:mb-0 animate-reveal-up motion-reduce:animate-none">
                 <UiAccentTile
                   :icon="`mdi:${item.icon}`"
                   size="xl"
-                  :class="[FLOAT_DELAYS[index % FLOAT_DELAYS.length], 'mb-6 sm:mb-8 mx-auto animate-float']"
+                  class="mb-6 sm:mb-8 mx-auto"
                 />
 
                 <UiHeading
                   :level="2"
-                  class="mb-4 sm:mb-6 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-none drop-shadow-lg animate-reveal-up motion-reduce:animate-none"
+                  class="mb-4 sm:mb-6 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight animate-reveal-up motion-reduce:animate-none"
                   :class="revealDelay(400)"
                 >
                   {{ item.name }}
@@ -88,7 +85,7 @@
 
                 <UiText
                   tone="primary"
-                  class="mb-4 sm:mb-6 text-lg sm:text-xl md:text-2xl font-semibold tracking-wide uppercase italic ml-2 animate-reveal-up motion-reduce:animate-none"
+                  class="mb-4 sm:mb-6 text-lg sm:text-xl md:text-2xl font-semibold animate-reveal-up motion-reduce:animate-none"
                   :class="revealDelay(550)"
                 >
                   {{ item.tagline }}
@@ -107,7 +104,7 @@
                   <span
                     v-for="(feature, featureIndex) in item.features"
                     :key="feature"
-                    :class="[accent.tintStrong, accent.borderMedium, 'inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs sm:text-sm font-bold text-white backdrop-blur-md border transition-all hover:scale-110 cursor-default', 'animate-reveal-up motion-reduce:animate-none', revealDelay(800 + featureIndex * 100)]"
+                    :class="[accent.tintStrong, accent.borderMedium, 'inline-flex items-center gap-2 rounded-md px-4 py-1.5 text-xs sm:text-sm font-bold text-classic-ink border cursor-default', 'animate-reveal-up motion-reduce:animate-none', revealDelay(800 + featureIndex * 100)]"
                   >
                     <CheckCircle :size="14" :stroke-width="3" :class="accent.text" />
                     {{ feature }}
@@ -133,7 +130,7 @@
                     </UiButton>
                   </UiMagnetic>
                 </div>
-              </UiGlassPanel>
+              </UiCard>
             </UiContainer>
           </UiAccent>
         </SwiperSlide>
@@ -145,7 +142,7 @@
         :icon="ChevronLeft"
         :label="$t('common.previous')"
         size="lg"
-        class="swiper-button-prev-custom absolute left-4 md:left-8 top-1/2 z-20 -translate-y-1/2 rounded-full backdrop-blur-md hover:scale-110 hidden md:flex"
+        class="swiper-button-prev-custom absolute left-4 md:left-8 top-1/2 z-20 -translate-y-1/2 rounded-md hidden md:flex"
         testid="slider-prev"
       />
       <UiIconButton
@@ -153,7 +150,7 @@
         :icon="ChevronRight"
         :label="$t('common.next')"
         size="lg"
-        class="swiper-button-next-custom absolute right-4 md:right-8 top-1/2 z-20 -translate-y-1/2 rounded-full backdrop-blur-md hover:scale-110 hidden md:flex"
+        class="swiper-button-next-custom absolute right-4 md:right-8 top-1/2 z-20 -translate-y-1/2 rounded-md hidden md:flex"
         testid="slider-next"
       />
     </ClientOnly>
@@ -162,7 +159,7 @@
     <UiIconButton
       :icon="ChevronDown"
       :label="$t('common.scrollDown')"
-      class="absolute bottom-10 left-1/2 z-30 -translate-x-1/2 animate-bounce rounded-full backdrop-blur-md hidden sm:flex"
+      class="absolute bottom-10 left-1/2 z-30 -translate-x-1/2 rounded-md hidden sm:flex"
       testid="slider-scroll"
       @click="scrollDown"
     />
@@ -174,8 +171,8 @@
  * Full-screen product slider hero section.
  *
  * Fetches the slides from the backend through the catalogue store and shows them in a Swiper
- * carousel with a Ken Burns background, a floating icon and staggered feature badges. Every slide
- * is painted in its own brand colour (`UiAccent`). Before the browser takes over, the first slide
+ * carousel with a Ken Burns background, a solid classic panel and staggered feature badges. Every slide
+ * keeps its own brand colour (`UiAccent`). Before the browser takes over, the first slide
  * is rendered by the server so the page is never blank. With no slide at all it renders the
  * text hero (`SectionsHero`) in its place, so the page never opens on an empty, full-height band.
  */
@@ -192,9 +189,6 @@ import { ACCENT_CLASSES } from '~/utils/ui/accent'
 
 /** Alt text of that image when there is no slide at all: the operator's site name. */
 const { name: SITE_NAME } = useSiteIdentity()
-
-/** Float delay of the icon on each slide in turn, so the icons do not bob in step. */
-const FLOAT_DELAYS = ['[animation-delay:0s]', '[animation-delay:0.2s]', '[animation-delay:0.4s]', '[animation-delay:0.6s]', '[animation-delay:0.8s]', '[animation-delay:1s]']
 
 /** Accent classes the slides read (the colour itself is set by each slide's UiAccent). */
 const accent = ACCENT_CLASSES

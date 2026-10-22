@@ -357,6 +357,41 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
     }
 
     /// <summary>
+    /// Every demo partner has its own bundled logo file named after the partner, so the partner strips show logos,
+    /// and the renamed security partner carries its new name in all three languages.
+    /// </summary>
+    [Fact]
+    public async Task Seed_GivesEveryPartnerItsOwnLogoAsync()
+    {
+        var host = DemoTestHost.Enabled(factory);
+        await ResetAsync(host);
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var partners = await db.Partners.Include(p => p.Translations).ToListAsync();
+        partners.Should().OnlyContain(p => p.LogoUrl != null && p.LogoUrl.StartsWith("/demo/partners/") && p.LogoUrl.EndsWith(".svg"));
+        partners.Select(p => p.LogoUrl).Should().OnlyHaveUniqueItems();
+        partners.SelectMany(p => p.Translations).Select(t => t.Name).Where(name => name.Contains("Vantor") || name.Contains("Вантор") || name.Contains("Վանտոր")).Should().HaveCount(3);
+        partners.Should().Contain(p => p.LogoUrl == "/demo/partners/vantor-security.svg");
+    }
+
+    /// <summary>Every demo project has its own bundled preview picture named after its slug.</summary>
+    [Fact]
+    public async Task Seed_GivesEveryProjectItsOwnPreviewImageAsync()
+    {
+        var host = DemoTestHost.Enabled(factory);
+        await ResetAsync(host);
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var projects = await db.Projects.ToListAsync();
+        projects.Should().NotBeEmpty();
+        projects.Should().OnlyContain(p => p.ImageUrls.Length == 1);
+        projects.Select(p => p.ImageUrls[0]).Should().BeEquivalentTo(projects.Select(p => $"/demo/projects/{p.Slug}.svg"));
+        projects.Select(p => p.ImageUrls[0]).Should().OnlyHaveUniqueItems();
+    }
+
+    /// <summary>
     /// The content-only entry the development seeder uses adds nothing to tables that already hold rows and never
     /// touches the settings, so a developer's local edits survive a restart.
     /// </summary>

@@ -5,7 +5,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, ref } from 'vue'
 import { mountPage, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import type { PublicPageSpies } from '~/tests/helpers/publicPage'
 import DomainsPage from '~/pages/domains/index.vue'
@@ -16,6 +16,8 @@ import type { BillingCurrency } from '~/types/currency'
 import type { TldPricing } from '~/types/tldpricing'
 import { CartItemType } from '~/types/cartitemtype'
 import { DomainOrderAction } from '~/types/domainorderaction'
+import { DOMAIN_SEARCH_QUERY_PARAM } from '~/constants/domainSearchQuery'
+import { TemplateName } from '~/types/templatename'
 
 /** The mocked catalogue endpoints, re-created for every test. */
 const catalogApi = { fetchProducts: vi.fn(), fetchTldPricing: vi.fn(), checkDomain: vi.fn() }
@@ -104,7 +106,8 @@ let spies: PublicPageSpies
  *
  * @returns The wrapper.
  */
-const mountDomains = async () => {
+const mountDomains = async (template: TemplateName = TemplateName.Aurora) => {
+  vi.stubGlobal('useTemplate', () => ({ slot: () => TemplateDomains, name: ref(template) }))
   const wrapper = await mountPage(DomainsPage)
   await flushPromises()
   return wrapper
@@ -184,6 +187,26 @@ describe('domains page', () => {
     await flushPromises()
 
     expect(useCartStore().items).toEqual([])
+  })
+
+  it('looks the typed name up at once when the address carries it', async () => {
+    spies = stubPublicPageRuntime({ query: { [DOMAIN_SEARCH_QUERY_PARAM]: 'example.com' } })
+    catalogApi.checkDomain.mockReset()
+    catalogApi.checkDomain.mockResolvedValue({ available: true })
+
+    await mountDomains()
+
+    expect(catalogApi.checkDomain).toHaveBeenCalledWith('example.com')
+  })
+
+  it('looks nothing up without a name, and leaves the search to the classic template', async () => {
+    catalogApi.checkDomain.mockReset()
+    await mountDomains()
+    expect(catalogApi.checkDomain).not.toHaveBeenCalled()
+
+    spies = stubPublicPageRuntime({ query: { [DOMAIN_SEARCH_QUERY_PARAM]: 'example.com' } })
+    await mountDomains(TemplateName.Classic)
+    expect(catalogApi.checkDomain).not.toHaveBeenCalled()
   })
 
   it('sets the canonical head and publishes the collection page schema', async () => {

@@ -1,24 +1,24 @@
 <template>
-  <section v-if="channels.length" class="py-12 md:py-20 bg-ui-page" data-testid="sections-support">
+  <section v-if="channels.length" class="py-14 md:py-20 bg-classic-page" data-testid="sections-support">
     <UiContainer>
-      <MarketingSectionHeader
+      <ClassicSectionHeader
         class="mb-12"
-        :badge="$t('hostingSections.support.badge')"
+        :eyebrow="$t('hostingSections.support.badge')"
         :title="$t('hostingSections.support.title')"
         :subtitle="$t('hostingSections.support.subtitle')"
       />
 
       <UiBalancedGrid :count="channels.length" :class="gridWidth" data-testid="sections-support-grid">
-        <UiCard
+        <ClassicCard
           v-for="item in channels"
           :key="item.channel"
           hover
           :data-testid="`support-${item.channel}`"
         >
           <UiStack gap="sm">
-            <UiAccentTile :icon="CHANNEL_ICONS[item.channel]" :class="ACCENT_BRAND_CLASS" />
-            <UiHeading :level="3" size="subsection">{{ $t(`hostingSections.support.channels.${item.channel}.title`) }}</UiHeading>
-            <UiText tone="muted" size="sm">{{ $t(`hostingSections.support.channels.${item.channel}.description`) }}</UiText>
+            <ClassicIconTile :icon="CHANNEL_ICONS[item.channel]" />
+            <UiHeading :level="3" size="bare" class="text-lg font-semibold text-classic-ink">{{ $t(`hostingSections.support.channels.${item.channel}.title`) }}</UiHeading>
+            <UiText tone="inherit" size="sm" class="text-classic-muted">{{ $t(`hostingSections.support.channels.${item.channel}.description`) }}</UiText>
             <UiBadge v-if="item.responseTime" variant="success" rounded :data-testid="`support-response-${item.channel}`">
               {{ $t('hostingSections.support.responseTime', { time: item.responseTime }) }}
             </UiBadge>
@@ -26,7 +26,7 @@
               {{ item.value ?? $t(`hostingSections.support.channels.${item.channel}.action`) }}
             </UiLink>
           </UiStack>
-        </UiCard>
+        </ClassicCard>
       </UiBalancedGrid>
     </UiContainer>
   </section>
@@ -38,7 +38,6 @@
  * time the operator promises for each. Only configured channels show.
  */
 import { SupportChannel } from '~/constants/supportChannel'
-import { ACCENT_BRAND_CLASS } from '~/utils/ui/accent'
 
 /** The support channels on offer, in display order. */
 const channels = useSupportChannels()

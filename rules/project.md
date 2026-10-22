@@ -334,6 +334,9 @@ Its own nginx exists for a standalone install.
   Only this product implements both, and most "why is there a second way to do this" in the
   auth code is this switch. Under `sso` the API refuses to start without
   `CLIENT_HOSTPANEL_SECRET` rather than come up and hand every visitor an anonymous session.
+  That one credential has one variable name: the client portal receives it as
+  `NUXT_SSO_CLIENT_SECRET`, fed from `CLIENT_HOSTPANEL_SECRET` in every compose file, so there is
+  no separate client-secret variable.
 - **`ASPNETCORE_ENVIRONMENT` is set by the deploy job, never by a host's `.env`.**
   `docker/docker-compose.dev.yml` passes it through from `docker/.env`: `Development` is right for a laptop and was what
   deployed hosts silently inherited. A Development API serves developer exception pages and
