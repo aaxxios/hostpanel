@@ -1,5 +1,5 @@
 <template>
-  <section class="py-8 md:py-20 bg-ui-surface relative overflow-hidden" data-testid="products-comparison">
+  <section class="py-8 md:py-20 bg-ui-surface relative overflow-hidden [.tpl-classic_&]:bg-classic-surface-2" data-testid="products-comparison">
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-secondary-500/5" />
       <UiDecor class="top-1/2 right-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-[150px]" />
@@ -10,7 +10,7 @@
         <template #title>
           <i18n-t keypath="products.comparison.headline" tag="span">
             <template #perfectMatch>
-              <span class="text-primary-600 dark:text-primary-400">{{ $t('products.comparison.perfectMatchHighlight') }}</span>
+              <span class="text-primary-600 dark:text-primary-400 [.tpl-classic_&]:text-classic-brand">{{ $t('products.comparison.perfectMatchHighlight') }}</span>
             </template>
           </i18n-t>
         </template>
@@ -28,10 +28,10 @@
                 <div class="text-gray-600 dark:text-gray-400 font-semibold text-sm mb-1">{{ $t('products.comparison.headers.starter') }}</div>
                 <div class="text-xs text-gray-600 dark:text-gray-400">{{ $t('products.comparison.headers.starterDesc') }}</div>
               </th>
-              <th class="p-6 text-center bg-gradient-to-b from-primary-500/10 to-transparent">
+              <th class="p-6 text-center bg-gradient-to-b from-primary-500/10 to-transparent [.tpl-classic_&]:bg-none [.tpl-classic_&]:bg-classic-brand-soft">
                 <div class="inline-flex flex-col">
                   <div class="text-gray-900 dark:text-white font-bold text-sm mb-1">{{ $t('products.comparison.headers.professional') }}</div>
-                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary-500 text-on-primary inline-block">{{ $t('products.comparison.headers.professionalBadge') }}</span>
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary-500 text-on-primary inline-block [.tpl-classic_&]:rounded [.tpl-classic_&]:bg-classic-brand [.tpl-classic_&]:text-classic-on-brand">{{ $t('products.comparison.headers.professionalBadge') }}</span>
                 </div>
               </th>
               <th class="p-6 text-center">
@@ -64,7 +64,7 @@
               <td class="p-6 text-center">
                 <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ product.pricing[0]?.price }}</div>
               </td>
-              <td class="p-6 text-center bg-primary-500/5">
+              <td class="p-6 text-center bg-primary-500/5 [.tpl-classic_&]:bg-classic-brand-soft">
                 <UiAccent :color="product.color">
                   <div :class="[accent.text, 'text-2xl font-bold']">{{ product.pricing[1]?.price }}</div>
                 </UiAccent>

@@ -6,8 +6,8 @@
   >
     <template #header>
       <UiStack direction="row" align="center" gap="sm">
-        <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-xl bg-primary-500/10 border border-primary-500/20">
-          <ShoppingCart :size="20" class="text-primary-400" />
+        <UiStack direction="row" align="center" justify="center" gap="none" class="w-10 h-10 rounded-xl bg-primary-500/10 border border-primary-500/20 [html[data-template=classic]_&]:rounded-md [html[data-template=classic]_&]:border-classic-border [html[data-template=classic]_&]:bg-classic-brand-soft">
+          <ShoppingCart :size="20" class="text-primary-400 [html[data-template=classic]_&]:text-classic-brand" />
         </UiStack>
         <UiStack gap="none">
           <UiHeading :level="UiHeadingLevel.H2" size="subsection" class="text-xl font-bold leading-tight">{{ $t('cart.title') }}</UiHeading>
@@ -45,8 +45,8 @@
         data-testid="cart-drawer-item"
       >
         <UiStack direction="row" gap="md">
-          <UiStack direction="row" align="center" justify="center" gap="none" class="w-12 h-12 flex-shrink-0 rounded-xl bg-cyan-500/10 border border-cyan-500/20 group-hover:scale-110 transition-transform">
-            <Server :size="22" class="text-cyan-400" />
+          <UiStack direction="row" align="center" justify="center" gap="none" class="w-12 h-12 flex-shrink-0 rounded-xl bg-cyan-500/10 border border-cyan-500/20 group-hover:scale-110 transition-transform [html[data-template=classic]_&]:rounded-md [html[data-template=classic]_&]:border-classic-border [html[data-template=classic]_&]:bg-classic-brand-soft [html[data-template=classic]_&]:group-hover:scale-100">
+            <Server :size="22" class="text-cyan-400 [html[data-template=classic]_&]:text-classic-brand" />
           </UiStack>
           <UiStack gap="none" class="flex-1 min-w-0">
             <UiText weight="bold" truncate class="pr-6">{{ item.name }}</UiText>
@@ -75,7 +75,7 @@
           </UiStack>
           <UiStack direction="row" align="center" justify="between" gap="none" class="pt-2 border-t border-gray-200 dark:border-white/5">
             <UiText size="lg" weight="bold">{{ $t('cart.total') }}</UiText>
-            <UiGradientText class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-primary-400" data-testid="cart-drawer-total">{{ totalLabel }}</UiGradientText>
+            <UiGradientText class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-primary-400 [html[data-template=classic]_&]:bg-none [html[data-template=classic]_&]:text-classic-ink [html[data-template=classic]_&]:text-2xl [html[data-template=classic]_&]:font-bold" data-testid="cart-drawer-total">{{ totalLabel }}</UiGradientText>
           </UiStack>
         </UiStack>
 
@@ -84,7 +84,7 @@
             variant="primary"
             size="lg"
             full-width
-            class="!h-14 font-black uppercase tracking-widest shadow-xl shadow-cyan-500/20"
+            class="!h-14 font-black uppercase tracking-widest shadow-xl shadow-cyan-500/20 [html[data-template=classic]_&]:!h-12 [html[data-template=classic]_&]:font-semibold [html[data-template=classic]_&]:normal-case [html[data-template=classic]_&]:tracking-normal [html[data-template=classic]_&]:shadow-none"
             data-testid="cart-drawer-checkout"
             @click="handleCheckout"
           >
@@ -94,7 +94,7 @@
           <UiButton
             variant="ghost"
             size="sm"
-            class="text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-red-400 uppercase tracking-widest"
+            class="text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-red-400 uppercase tracking-widest [html[data-template=classic]_&]:normal-case [html[data-template=classic]_&]:tracking-normal"
             data-testid="cart-drawer-clear"
             @click="cart.clear()"
           >
@@ -119,6 +119,9 @@
  *
  * The panel, backdrop, close button and Escape handling are the kit's `UiDrawer`; this component
  * supplies the cart content and closes the drawer whenever the route changes.
+ *
+ * The drawer is teleported to the body, outside the layout root, so its classic styling is scoped on
+ * `html[data-template=classic]` rather than on the `tpl-classic` root class.
  */
 import { ShoppingCart, Server, Trash2, CreditCard, Lock } from 'lucide-vue-next'
 import { useCartStore } from '~/stores/cart'

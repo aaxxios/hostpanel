@@ -1,29 +1,29 @@
 <template>
-  <section class="py-12 md:py-20 bg-ui-page" data-testid="sections-apps">
+  <section class="py-14 md:py-20 bg-classic-page" data-testid="sections-apps">
     <UiContainer>
-      <MarketingSectionHeader
+      <ClassicSectionHeader
         class="mb-6"
-        :badge="$t('hostingSections.apps.badge')"
+        :eyebrow="$t('hostingSections.apps.badge')"
         :title="$t('hostingSections.apps.title')"
         :subtitle="$t('hostingSections.apps.subtitle')"
       />
 
-      <UiText v-if="installer.count" tone="muted" class="text-center mb-10" data-testid="sections-apps-count">
+      <UiText v-if="installer.count" tone="inherit" class="text-center mb-10 text-classic-muted" data-testid="sections-apps-count">
         {{ $t('hostingSections.apps.count', { count: installer.count }) }}
       </UiText>
 
       <UiBalancedGrid :count="installer.categories.length" class="mt-6" data-testid="sections-apps-grid">
-        <UiCard
+        <ClassicCard
           v-for="category in installer.categories"
           :key="category"
           hover
           :data-testid="`app-${category}`"
         >
           <UiStack direction="row" align="center" gap="md">
-            <UiAccentTile :icon="CATEGORY_ICONS[category]" :class="ACCENT_BRAND_CLASS" />
-            <UiHeading :level="3" size="subsection">{{ $t(`hostingSections.apps.categories.${category}`) }}</UiHeading>
+            <ClassicIconTile :icon="CATEGORY_ICONS[category]" />
+            <UiHeading :level="3" size="bare" class="text-lg font-semibold text-classic-ink">{{ $t(`hostingSections.apps.categories.${category}`) }}</UiHeading>
           </UiStack>
-        </UiCard>
+        </ClassicCard>
       </UiBalancedGrid>
     </UiContainer>
   </section>
@@ -35,7 +35,6 @@
  * many apps it offers. The section is shown whenever its toggle is on.
  */
 import { InstallerAppCategory } from '~/constants/installerAppCategory'
-import { ACCENT_BRAND_CLASS } from '~/utils/ui/accent'
 
 /** The installer's app count and its categories. */
 const installer = useInstallerApps()

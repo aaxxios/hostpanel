@@ -107,4 +107,10 @@ describe('UiButton', () => {
     expect(classes).toContain('dark:text-primary-400')
     expect(classes).toContain('dark:border-primary-400')
   })
+
+  it('carries the template hook classes classic.css restyles', () => {
+    const wrapper = mountWithKit(UiButton, { props: { variant: UiButtonVariant.Primary } })
+
+    expect(wrapper.classes()).toEqual(expect.arrayContaining(['ui-btn', 'ui-btn-primary']))
+  })
 })

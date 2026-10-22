@@ -1,5 +1,5 @@
 <template>
-  <section class="py-8 md:py-20 bg-ui-surface relative overflow-hidden" data-testid="hosting-plan-details">
+  <section class="py-8 md:py-20 bg-ui-surface relative overflow-hidden [.tpl-classic_&]:bg-classic-page md:[.tpl-classic_&]:py-12" data-testid="hosting-plan-details">
     <UiDecor class="inset-0">
       <UiDecor class="inset-0 bg-gradient-to-r from-secondary-500/5 via-transparent to-primary-500/5" />
       <UiDecor class="top-1/3 left-1/4 w-[400px] h-[400px] bg-primary-500/10 rounded-full blur-[130px] animate-blob animation-delay-4000" />
@@ -51,7 +51,7 @@
               class="flex items-center gap-3 animate-reveal-up motion-reduce:animate-none"
               :class="revealDelay(index * 50)"
             >
-              <CheckCircle :size="16" :stroke-width="2" class="text-primary-600 dark:text-primary-400 flex-shrink-0" />
+              <CheckCircle :size="16" :stroke-width="2" class="text-primary-600 dark:text-primary-400 flex-shrink-0 [.tpl-classic_&]:text-classic-brand" />
               <span class="text-sm">{{ feature }}</span>
             </UiListItem>
           </UiGrid>
@@ -64,7 +64,7 @@
         >
           <UiButton
             size="lg"
-            class="px-10 py-4 font-bold bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 hover:scale-[1.02] shadow-lg shadow-primary-500/30"
+            class="px-10 py-4 font-bold bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 hover:scale-[1.02] shadow-lg shadow-primary-500/30 [.tpl-classic_&]:bg-none [.tpl-classic_&]:shadow-none [.tpl-classic_&]:hover:scale-100 [.tpl-classic_&]:font-semibold"
             data-testid="hosting-plan-order-bottom"
             @click="emit('order')"
           >

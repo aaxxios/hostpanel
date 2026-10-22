@@ -1,25 +1,24 @@
 {
   "process": {
-    "badge": "Our Process",
-    "heading": "How We",
-    "headingHighlight": "Work",
-    "description": "A streamlined process designed to deliver exceptional results efficiently",
+    "badge": "How it works",
+    "title": "From order to live site in four steps",
+    "description": "Choose a plan, add a domain and your site is online the same day.",
     "steps": {
       "discovery": {
-        "title": "Discovery",
-        "description": "We analyze your business needs, target audience, and competitors to create a comprehensive strategy."
+        "title": "Choose a plan",
+        "description": "Compare shared, VPS and dedicated plans and pick the resources that fit your site."
       },
       "design": {
-        "title": "Design",
-        "description": "Our designers create stunning UI/UX mockups that align with your brand and user expectations."
+        "title": "Pick a domain",
+        "description": "Register a new domain or point an existing one to your hosting account."
       },
       "development": {
-        "title": "Development",
-        "description": "Our engineers build your solution using cutting-edge technologies with clean, scalable code."
+        "title": "Set up your site",
+        "description": "Install a CMS in one click, upload your files or let us migrate your site for free."
       },
       "launch": {
-        "title": "Launch & Support",
-        "description": "We deploy your project and provide ongoing support, maintenance, and optimization."
+        "title": "Go live and stay supported",
+        "description": "Your site is online with SSL and backups, and our team is on hand around the clock."
       }
     }
   }

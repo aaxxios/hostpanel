@@ -321,6 +321,7 @@ describe('useDomainsStore storefront lookup', () => {
       { name: 'my-site.io', price: '—', status: 'taken' }
     ])
     expect(store.lookupPending).toBe(false)
+    expect(store.lookupTerm).toBe('My Site.xyz')
   })
 
   it('does not search for blank text', async () => {
@@ -330,6 +331,7 @@ describe('useDomainsStore storefront lookup', () => {
 
     expect(catalogApi.checkDomain).not.toHaveBeenCalled()
     expect(store.lookupResults).toEqual([])
+    expect(store.lookupTerm).toBe('')
   })
 })
 

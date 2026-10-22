@@ -17,6 +17,7 @@
             :categories="categories"
             :active="activeCategory"
             :has-zones="priceRows.length > 0"
+            :initial-query="query"
             @search="term => emit('search', term)"
             @update:category="value => emit('update:category', value)"
           />
@@ -63,6 +64,8 @@ withDefaults(defineProps<{
   activeCategory?: string
   /** Domains already in the cart. */
   inCart?: string[]
+  /** The name the last search ran for; the search field shows it. */
+  query?: string
 }>(), {
   priceRows: () => [],
   results: () => [],
@@ -70,6 +73,7 @@ withDefaults(defineProps<{
   categories: () => [],
   activeCategory: ALL_CATEGORY,
   inCart: () => [],
+  query: '',
 })
 
 /** Events this component raises. */

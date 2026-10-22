@@ -1,14 +1,25 @@
 {
   "nav": {
-    "services": "Services",
-    "process": "Process",
     "products": "Products",
     "hosting": "Hosting",
     "domains": "Domains",
     "clientArea": "Client Area",
-    "hostingDesc": "Shared, VPS and dedicated plans",
-    "domainsDesc": "Search & register domain names",
+    "hostingDesc": "Shared web hosting plans",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "allHosting": "All hosting plans",
+    "vps": "VPS",
+    "servers": "Servers",
+    "support": "Support",
+    "help": "Help center",
+    "helpDesc": "Guides and how-to articles",
+    "faq": "FAQ",
+    "faqDesc": "Quick answers to common questions",
+    "contact": "Contact us",
+    "contactDesc": "Talk to our team",
+    "signIn": "Sign in",
+    "getStarted": "Get started",
+    "menu": "Menu",
+    "primary": "Main navigation",
+    "preferences": "Preferences"
   }
 }

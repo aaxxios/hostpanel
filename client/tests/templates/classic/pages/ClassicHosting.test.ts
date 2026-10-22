@@ -236,4 +236,12 @@ describe('ClassicHosting', () => {
 
     expect(useCurrencyStore().payerCode).toBe('USD')
   })
+
+  it('uses classic tokens only: no gradients, blur glows or aurora colour families', async () => {
+    const wrapper = await mountHosting()
+    const html = wrapper.find('[data-testid="classic-hosting"]').html()
+
+    expect(html).not.toMatch(/bg-gradient|blur-\[|animate-blob|shadow-halo|cyan-|violet-|secondary-/)
+    expect(html).toContain('classic-')
+  })
 })

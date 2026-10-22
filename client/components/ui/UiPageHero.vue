@@ -1,16 +1,16 @@
 <template>
-  <section class="relative overflow-hidden py-12 md:py-24" data-testid="ui-page-hero">
-    <UiBackdrop variant="aurora" />
+  <section class="relative overflow-hidden py-12 md:py-24 [.tpl-classic_&]:border-b [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-surface-2 [.tpl-classic_&]:py-10 md:[.tpl-classic_&]:py-14" data-testid="ui-page-hero">
+    <UiBackdrop variant="aurora" class="[.tpl-classic_&]:hidden" />
     <div
       aria-hidden="true"
-      class="pointer-events-none absolute right-0 top-0 h-48 w-48 border-r-2 border-t-2 border-secondary-500/30"
+      class="ui-hero-corner pointer-events-none absolute right-0 top-0 h-48 w-48 border-r-2 border-t-2 border-secondary-500/30"
     />
     <div
       aria-hidden="true"
-      class="pointer-events-none absolute bottom-0 left-0 h-48 w-48 border-b-2 border-l-2 border-secondary-500/30"
+      class="ui-hero-corner pointer-events-none absolute bottom-0 left-0 h-48 w-48 border-b-2 border-l-2 border-secondary-500/30"
     />
 
-    <UiContainer class="relative z-10 text-center">
+    <UiContainer class="relative z-10 text-center [.tpl-classic_&]:text-left">
       <div
       class="animate-reveal-up motion-reduce:animate-none"
       >
@@ -19,7 +19,7 @@
           v-if="badge"
           variant="primary"
           rounded
-          class="mb-6"
+          class="mb-6 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-0 [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:text-classic-brand"
           data-testid="ui-page-hero-badge"
         >
           {{ badge }}
@@ -27,13 +27,13 @@
         <UiHeading
           :level="1"
           size="display"
-          class="mb-6 break-words"
+          class="mb-6 break-words [.tpl-classic_&]:mb-3 [.tpl-classic_&]:text-3xl [.tpl-classic_&]:font-semibold [.tpl-classic_&]:text-classic-ink md:[.tpl-classic_&]:text-4xl"
           data-testid="ui-page-hero-title"
         >
           {{ title }}
           <UiGradientText
             v-if="highlight"
-            class="bg-gradient-to-r from-primary-600 to-secondary-600 dark:from-primary-400 dark:to-secondary-400"
+            class="bg-gradient-to-r from-primary-600 to-secondary-600 dark:from-primary-400 dark:to-secondary-400 [.tpl-classic_&]:bg-none [.tpl-classic_&]:text-classic-brand"
           >
             {{ highlight }}
           </UiGradientText>
@@ -42,7 +42,7 @@
           v-if="subtitle"
           size="lg"
           tone="muted"
-          class="mx-auto max-w-3xl"
+          class="mx-auto max-w-3xl [.tpl-classic_&]:mx-0 [.tpl-classic_&]:text-classic-muted"
           data-testid="ui-page-hero-subtitle"
         >
           {{ subtitle }}
@@ -60,6 +60,9 @@
  * default slot for what belongs under them (category links, a "last updated" line).
  *
  * The `breadcrumbs` slot sits above the badge. The whole block fades in on first paint.
+ *
+ * Under the classic template (the `tpl-classic` root class) the same markup is a flat, left-aligned
+ * band: no backdrop, no corner frames, no gradient word, a solid brand badge and a hairline below.
  */
 
 /** Props of UiPageHero. */

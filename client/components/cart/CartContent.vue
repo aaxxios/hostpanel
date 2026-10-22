@@ -1,6 +1,6 @@
 <template>
   <section class="py-10 md:py-16 bg-ui-page relative overflow-hidden" data-testid="cart-content">
-    <UiDecor class="inset-0">
+    <UiDecor class="inset-0 [.tpl-classic_&]:hidden">
       <UiDecor class="inset-0 bg-gradient-to-bl from-primary-500/5 via-transparent to-cyan-500/5" />
     </UiDecor>
 
@@ -44,8 +44,8 @@
               data-testid="cart-item"
             >
               <div class="flex items-center gap-4 min-w-0">
-                <span class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center flex-shrink-0">
-                  <Server :size="18" :stroke-width="2" class="text-cyan-700 dark:text-cyan-400" />
+                <span class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center flex-shrink-0 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-brand-soft">
+                  <Server :size="18" :stroke-width="2" class="text-cyan-700 dark:text-cyan-400 [.tpl-classic_&]:text-classic-brand" />
                 </span>
                 <div class="min-w-0">
                   <div class="font-semibold text-gray-900 dark:text-white truncate" data-testid="cart-item-name">{{ item.name }}</div>
@@ -79,7 +79,7 @@
               </div>
               <div class="border-t border-gray-200 dark:border-white/10 pt-3 mt-3 flex justify-between font-bold text-base">
                 <span class="text-gray-900 dark:text-white">{{ $t('cart.total') }}</span>
-                <span class="text-cyan-700 dark:text-cyan-400" data-testid="cart-total">{{ totalLabel }}</span>
+                <span class="text-cyan-700 dark:text-cyan-400 [.tpl-classic_&]:text-classic-ink" data-testid="cart-total">{{ totalLabel }}</span>
               </div>
             </div>
           </UiCard>
@@ -94,7 +94,7 @@
             <UiButton
               :to="localePath('/checkout')"
               size="lg"
-              class="order-1 sm:order-2 flex-1 py-4 font-bold bg-gradient-to-r from-cyan-600 to-primary-600 hover:from-cyan-500 hover:to-primary-500 hover:scale-[1.02] shadow-lg shadow-cyan-500/20"
+              class="order-1 sm:order-2 flex-1 py-4 font-bold bg-gradient-to-r from-cyan-600 to-primary-600 hover:from-cyan-500 hover:to-primary-500 hover:scale-[1.02] shadow-lg shadow-cyan-500/20 [.tpl-classic_&]:bg-none [.tpl-classic_&]:shadow-none hover:[.tpl-classic_&]:scale-100"
               data-testid="cart-checkout"
             >
               <CreditCard :size="20" :stroke-width="2" class="mr-2" />
@@ -115,7 +115,8 @@
 <script setup lang="ts">
 /**
  * The body of the cart page: the empty notice, or the lines, the order summary and the checkout
- * actions.
+ * actions. Under the classic template (the `tpl-classic` root class) the glow wash is dropped and
+ * the checkout button is a solid brand button.
  *
  * Presentational: the page owns the cart store and the currency, and passes the lines, how many of
  * them are priced in a stale currency, the formatted total and a function that formats one line.

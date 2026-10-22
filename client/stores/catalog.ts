@@ -253,6 +253,9 @@ export const useCatalogStore = defineStore('catalog', () => {
     return productGroups.value
   }
 
+  /** The family read in flight, shared by every caller until it settles; null when none runs. */
+  let familiesInFlight: Promise<PortalProduct[]> | null = null
+
   /**
    * Reads the product groups, then the products of every family group.
    *
@@ -261,9 +264,22 @@ export const useCatalogStore = defineStore('catalog', () => {
    *
    * @returns The family products; empty when there is no family or a read failed.
    */
-  const loadFamilies = async (): Promise<PortalProduct[]> => {
-    await loadProductGroups()
-    return familyFilter.value.gids ? loadProducts(familyFilter.value) : []
+  const loadFamilies = (): Promise<PortalProduct[]> => {
+    // The header and the page both ask for the families while one render runs; they share the
+    // read in flight instead of sending it twice. The promise lives in the store, so under SSR it
+    // is per request, never shared between visitors.
+    if (familiesInFlight) {
+      return familiesInFlight
+    }
+    familiesInFlight = (async () => {
+      try {
+        await loadProductGroups()
+        return familyFilter.value.gids ? await loadProducts(familyFilter.value) : []
+      } finally {
+        familiesInFlight = null
+      }
+    })()
+    return familiesInFlight
   }
 
   /**

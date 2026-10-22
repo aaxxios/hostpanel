@@ -106,14 +106,15 @@ const buttonClasses = computed(() => {
   // `transition`, not `transition-all`: `focus:outline-none` sets a transparent outline, and
   // animating every property fades that outline in from the text colour, so a mouse press
   // flashes a visible outline the focus rules say only the keyboard may draw.
-  const base = 'inline-flex items-center justify-center font-medium rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+  // `ui-btn` and `ui-btn-<variant>` are template hooks: classic.css restyles them under .tpl-classic.
+  const base = 'ui-btn inline-flex items-center justify-center font-medium rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
   const width = props.fullWidth ? 'w-full' : ''
   // A bare button carries no palette and no padding step: the screen owns both, and the offset
   // ring (drawn in the page colour) would show as a halo on a surface it does not know.
   if (props.variant === UiButtonVariant.Bare) {
     return [base, FOCUS_RING, width].filter(Boolean).join(' ')
   }
-  return [base, FOCUS_RING_OFFSET, OFFSET_SURFACE, VARIANT_CLASSES[props.variant as UiButtonVariant], BUTTON_SIZE_CLASSES[props.size as UiSize], width]
+  return [base, `ui-btn-${props.variant}`, FOCUS_RING_OFFSET, OFFSET_SURFACE, VARIANT_CLASSES[props.variant as UiButtonVariant], BUTTON_SIZE_CLASSES[props.size as UiSize], width]
     .filter(Boolean)
     .join(' ')
 })

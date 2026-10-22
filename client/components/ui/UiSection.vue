@@ -50,6 +50,6 @@ const PADDING_CLASSES: Record<UiSectionPadding, string> = {
 /** Class list of the root element. */
 const classes = computed(() => [
   PADDING_CLASSES[props.padding as UiSectionPadding],
-  props.tone === UiSectionTone.Muted ? 'bg-gray-50 dark:bg-white/[0.02]' : '',
+  props.tone === UiSectionTone.Muted ? 'ui-section-muted bg-gray-50 dark:bg-white/[0.02]' : '',
 ].filter(Boolean).join(' '))
 </script>

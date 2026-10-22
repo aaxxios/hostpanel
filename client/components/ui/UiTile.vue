@@ -61,7 +61,7 @@ const iconSize = computed(() => ICON_SIZES[props.size as UiTileSize])
 
 /** Class list of the root element: shape, size and, when a tone is set, its tint. */
 const classes = computed(() => [
-  'grid shrink-0 place-items-center font-medium',
+  'ui-tile grid shrink-0 place-items-center font-medium',
   SIZE_CLASSES[props.size as UiTileSize],
   props.rounded ? 'rounded-full' : 'rounded-xl',
   props.tone ? ICON_TONE_CLASSES[props.tone as UiTone] : '',

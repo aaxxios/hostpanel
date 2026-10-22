@@ -108,10 +108,11 @@ export const BUTTON_SIZE_CLASSES: Record<UiSize, string> = {
  * @returns The Tailwind classes for border, background and ring.
  */
 export const fieldStateClasses = (state: { error?: boolean; disabled?: boolean; open?: boolean }): string => {
-  const frame = 'block w-full border rounded-lg transition-all duration-200 text-gray-900 dark:text-white'
+  // `ui-field` (and `ui-field-error`) are template hooks that classic.css restyles.
+  const frame = 'ui-field block w-full border rounded-lg transition-all duration-200 text-gray-900 dark:text-white'
   let look: string
   if (state.error) {
-    look = 'border-red-400 dark:border-red-500/50 focus-visible:border-red-500 focus-visible:ring-red-500/50 dark:focus-visible:ring-red-400/50 bg-red-50 dark:bg-red-500/5'
+    look = 'ui-field-error border-red-400 dark:border-red-500/50 focus-visible:border-red-500 focus-visible:ring-red-500/50 dark:focus-visible:ring-red-400/50 bg-red-50 dark:bg-red-500/5'
   } else if (state.open) {
     look = 'border-primary-500 ring-2 ring-primary-500/50 bg-white dark:bg-white/5'
   } else {

@@ -2,13 +2,13 @@
   "aup": {
     "badge": "Infrastructure Security",
     "title": "Acceptable Use Policy",
-    "subtitle": "Guidelines to ensure a safe, secure, and professional environment for all {site} hosting and SaaS users.",
+    "subtitle": "Guidelines to ensure a safe, secure, and professional environment for all {site} hosting customers.",
     "lastUpdated": "Last updated",
     "sections": {
       "purpose": {
         "title": "Purpose of Policy",
         "content": {
-          "0": "The Acceptable Use Policy (AUP) clarifies the limitations on the use of {site}'s network, hosting infrastructure, and SaaS products. It is designed to protect our services, our clients, and the broader internet community from irresponsible or illegal activities."
+          "0": "The Acceptable Use Policy (AUP) clarifies the limitations on the use of {site}'s network, hosting infrastructure, and hosted applications. It is designed to protect our services, our clients, and the broader internet community from irresponsible or illegal activities."
         }
       },
       "abuse": {
@@ -17,17 +17,17 @@
           "0": "Users are strictly prohibited from using {site} services for:",
           "1": "Spamming: Sending unsolicited bulk emails or marketing messages without verified consent.",
           "2": "Security Threats: Attempting to bypass authentication, scanning for vulnerabilities, or launching DDoS attacks against any system.",
-          "3": "Resource Abuse: Excessive use of server resources that degrades performance for other clients on shared hosting or SaaS platforms.",
+          "3": "Resource Abuse: Excessive use of server resources that degrades performance for other clients on shared hosting or cloud servers.",
           "4": "Illegal Content: Storing or distributing copyrighted material without authorization, or hosting content that promotes violence or illegal acts."
         }
       },
-      "saas": {
-        "title": "SaaS Platform Use",
+      "apps": {
+        "title": "Control Panel and Applications",
         "content": {
-          "0": "For the hosted software products we operate:",
+          "0": "For the control panel and the applications we provide:",
           "1": "You may not share administrative accounts with unauthorized third parties.",
-          "2": "Automated scraping of data from our platforms is prohibited unless through an authorized API.",
-          "3": "Any attempt to reverse engineer or modify the SaaS source code is a violation of our intellectual property."
+          "2": "Automated scraping of data from our control panel is prohibited unless through an authorized API.",
+          "3": "Any attempt to reverse engineer or modify the control panel source code is a violation of our intellectual property."
         }
       },
       "hosting": {

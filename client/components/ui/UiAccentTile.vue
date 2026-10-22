@@ -32,7 +32,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 /** Class list of the square. */
 const boxClasses = computed(() => [
-  'flex items-center justify-center flex-shrink-0 transition-transform duration-500',
+  'ui-accent-tile flex items-center justify-center flex-shrink-0 transition-transform duration-500',
   ACCENT_TILE_CLASSES[props.size as UiAccentTileSize].box,
   ACCENT_CLASSES.tint,
   ACCENT_CLASSES.borderMedium,

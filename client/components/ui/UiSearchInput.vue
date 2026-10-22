@@ -67,7 +67,7 @@ const clearClasses = `absolute right-2.5 top-1/2 -translate-y-1/2 rounded text-g
 
 /** Class list of the input. */
 const inputClasses = computed(() => [
-  'w-full pl-8 pr-7 rounded-lg border bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 focus-visible:border-primary-500 transition-all duration-200',
+  'ui-field w-full pl-8 pr-7 rounded-lg border bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 focus-visible:border-primary-500 transition-all duration-200',
   FOCUS_RING,
   props.size === UiSize.Md ? 'py-2 text-base' : 'py-1.5 text-sm',
 ].join(' '))

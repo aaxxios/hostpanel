@@ -19,6 +19,16 @@ describe('DomainSearchBar', () => {
     expect(wrapper.find('[data-testid="domain-search-submit"]').attributes('type')).toBe('submit')
   })
 
+  it('shows the name a search started elsewhere ran for, and follows it when it changes', async () => {
+    const wrapper = mountWithKit(DomainSearchBar, { props: { initialQuery: 'first-site' } })
+    const input = wrapper.find('[data-testid="domain-search-input"]')
+    expect((input.element as HTMLInputElement).value).toBe('first-site')
+
+    await wrapper.setProps({ initialQuery: 'second-site' })
+
+    expect((input.element as HTMLInputElement).value).toBe('second-site')
+  })
+
   it('gives the field a placeholder and disables it without priced extensions', () => {
     stubAuroraGlobals()
     const input = mountWithKit(DomainSearchBar, { props: { hasZones: false } }).find('[data-testid="domain-search-input"]')

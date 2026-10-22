@@ -29,8 +29,8 @@ import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
 import { FAMILY_ICON, familyConfig, familyKey, parseDescription } from '~/utils/catalogGroups'
 
-/** Accent colour of a product that matches no catalogue group. */
-const UNKNOWN_PRODUCT_COLOR = '#6366f1'
+/** Colour of a product that matches no catalogue group: empty, so the trial components fall back to the portal brand accent. */
+const UNKNOWN_PRODUCT_COLOR = ''
 
 /** The current route. */
 const route = useRoute()

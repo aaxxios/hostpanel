@@ -20,11 +20,11 @@
       :aria-checked="selected"
       :disabled="disabled"
       :data-testid="testid"
-      class="flex-shrink-0 w-5 h-5 rounded-full border-2 transition-all duration-150 flex items-center justify-center"
+      class="ui-radio flex-shrink-0 w-5 h-5 rounded-full border-2 transition-all duration-150 flex items-center justify-center"
       :class="[
         FOCUS_RING,
         selected
-          ? 'border-primary-500 dark:border-primary-400 bg-transparent'
+          ? 'ui-radio-on border-primary-500 dark:border-primary-400 bg-transparent'
           : 'bg-transparent border-gray-400 dark:border-gray-500 hover:border-primary-500 dark:hover:border-primary-400',
         disabled ? 'cursor-not-allowed' : 'cursor-pointer',
       ]"
@@ -32,7 +32,7 @@
     >
       <span
         v-if="selected"
-        class="w-2.5 h-2.5 rounded-full bg-primary-500 dark:bg-primary-400"
+        class="ui-radio-dot w-2.5 h-2.5 rounded-full bg-primary-500 dark:bg-primary-400"
       />
     </button>
 

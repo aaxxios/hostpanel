@@ -69,7 +69,7 @@
             class="overflow-hidden"
             data-testid="kb-search-results"
           >
-            <UiStack gap="none" class="divide-y divide-gray-100 dark:divide-white/5">
+            <UiStack gap="none" class="divide-y divide-gray-100 dark:divide-white/5 [.tpl-classic_&]:divide-classic-border">
               <KbArticleRow v-for="article in searchResults" :key="article.id" :article="article" />
             </UiStack>
           </UiCard>
@@ -80,7 +80,7 @@
           <!-- Categories grid -->
           <UiStack gap="lg" data-testid="kb-categories">
             <UiHeading :level="2" size="subsection" class="flex items-center gap-2">
-              <FolderOpen :size="20" :stroke-width="2" class="text-primary-700 dark:text-primary-400" />
+              <FolderOpen :size="20" :stroke-width="2" class="text-primary-700 dark:text-primary-400 [.tpl-classic_&]:text-classic-brand" />
               {{ t('kb.categories') }}
             </UiHeading>
 
@@ -104,17 +104,17 @@
                     <UiTile
                       :icon="Folder"
                       size="xl"
-                      class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300"
+                      class="border border-primary-500/20 bg-primary-500/10 text-primary-700 dark:text-primary-300 [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:text-classic-brand"
                     />
                     <UiText
                       as="span"
                       weight="semibold"
-                      class="transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400"
+                      class="transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400 group-hover:[.tpl-classic_&]:text-classic-brand"
                     >
                       {{ cat.name }}
                     </UiText>
                   </UiStack>
-                  <UiBadge variant="primary" size="sm" rounded>
+                  <UiBadge variant="primary" size="sm" rounded class="[.tpl-classic_&]:rounded-md [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:text-classic-brand">
                     {{ cat.articlecount }} {{ cat.articlecount === 1 ? t('kb.article') : t('kb.articles') }}
                   </UiBadge>
                 </UiStack>
@@ -138,7 +138,7 @@
             </UiText>
 
             <UiCard v-else padding="none" class="overflow-hidden">
-              <UiStack gap="none" class="divide-y divide-gray-100 dark:divide-white/5">
+              <UiStack gap="none" class="divide-y divide-gray-100 dark:divide-white/5 [.tpl-classic_&]:divide-classic-border">
                 <KbArticleRow v-for="article in popularArticles" :key="article.id" :article="article" />
               </UiStack>
             </UiCard>

@@ -4,13 +4,13 @@
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import SectionsProcess from '~/components/sections/SectionsProcess.vue'
-import MarketingSectionHeader from '~/components/marketing/MarketingSectionHeader.vue'
+import { CLASSIC_COMPONENTS } from '~/tests/helpers/classicKit'
 import { PROCESS_STEPS as processSteps } from '~/constants/processStep'
 import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
 import { HomeSectionId } from '~/types/homesectionid'
 
 /** Mounts the section. */
-const mountProcess = () => mountWithKit(SectionsProcess, { components: { MarketingSectionHeader } })
+const mountProcess = () => mountWithKit(SectionsProcess, { components: CLASSIC_COMPONENTS })
 
 describe('SectionsProcess', () => {
   it('carries the process anchor the header links to, with room above it', () => {
@@ -38,7 +38,15 @@ describe('SectionsProcess', () => {
     const wrapper = mountProcess()
 
     expect(wrapper.text()).toContain('process.badge')
-    expect(wrapper.text()).toContain('process.headingHighlight')
+    expect(wrapper.text()).toContain('process.title')
     expect(wrapper.text()).toContain('process.description')
+  })
+
+  it('shows each step icon on a flat brand tile', () => {
+    const first = processSteps[0]
+
+    const tile = mountProcess().find(`[data-testid="process-step-${first?.id}"] [data-testid="classic-icon-tile"]`)
+    expect(tile.exists()).toBe(true)
+    expect(tile.find(`[data-icon="${first?.icon}"]`).exists()).toBe(true)
   })
 })

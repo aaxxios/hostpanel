@@ -1,6 +1,6 @@
 <template>
   <UiAccent :color="product.color">
-    <section class="py-10 md:py-24 bg-ui-page relative overflow-hidden" data-testid="product-detail">
+    <section class="py-10 md:py-24 bg-ui-page relative overflow-hidden [.tpl-classic_&]:[--accent:rgb(var(--classic-brand))] [.tpl-classic_&]:py-10 md:[.tpl-classic_&]:py-14" data-testid="product-detail">
       <!-- Animated background -->
       <UiDecor class="inset-0">
         <UiDecor class="inset-0 bg-gradient-to-br from-primary-500/10 via-transparent to-secondary-500/10" />
@@ -83,7 +83,7 @@
                 >
                   <UiAccentPanel :highlighted="index === POPULAR_PLAN_INDEX">
                     <span v-if="index === POPULAR_PLAN_INDEX" class="absolute -top-[7px] left-1/2 -translate-x-1/2 z-10">
-                      <span :class="[accent.fill, 'px-4 py-1 text-xs font-bold rounded-full text-white shadow-lg whitespace-nowrap']">{{ $t('products.pricing.popular') }}</span>
+                      <span :class="[accent.fill, 'px-4 py-1 text-xs font-bold rounded-full text-white shadow-lg whitespace-nowrap [.tpl-classic_&]:rounded-md [.tpl-classic_&]:shadow-none [.tpl-classic_&]:text-classic-on-brand']">{{ $t('products.pricing.popular') }}</span>
                     </span>
 
                     <span :class="[index === POPULAR_PLAN_INDEX ? accent.text : 'text-gray-600 dark:text-gray-400', 'block text-xs uppercase tracking-wider mb-2 font-bold']">{{ plan.tier }}</span>
@@ -129,7 +129,7 @@
               <!-- Guarantee and calls to action -->
               <UiCard padding="md" class="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 w-full">
                 <div class="flex items-center gap-2 sm:gap-3 text-center sm:text-left">
-                  <ShieldCheck :size="28" :stroke-width="2" class="text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <ShieldCheck :size="28" :stroke-width="2" class="text-green-600 dark:text-green-400 flex-shrink-0 [.tpl-classic_&]:text-classic-brand" />
                   <div>
                     <div class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white break-words">{{ $t('products.pricing.guarantee.title') }}</div>
                     <div class="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 break-words">{{ $t('products.pricing.guarantee.subtitle') }}</div>

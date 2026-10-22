@@ -58,10 +58,10 @@ const emit = defineEmits<{
 
 /** Class list of the track: primary when on; a clearly bordered grey when off so it reads on a white and on a dark page. */
 const trackClasses = computed(() => [
-  'relative w-12 h-6 rounded-full border transition-all duration-300 flex-shrink-0 disabled:cursor-not-allowed disabled:opacity-70',
+  'ui-toggle relative w-12 h-6 rounded-full border transition-all duration-300 flex-shrink-0 disabled:cursor-not-allowed disabled:opacity-70',
   FOCUS_RING,
   props.modelValue
-    ? 'bg-primary-500 border-primary-600 dark:border-primary-400'
+    ? 'ui-toggle-on bg-primary-500 border-primary-600 dark:border-primary-400'
     : 'bg-gray-400 dark:bg-white/20 border-gray-500 hover:bg-gray-500 dark:hover:bg-white/30',
 ].join(' '))
 </script>

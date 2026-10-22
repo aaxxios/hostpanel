@@ -37,6 +37,14 @@ describe('TrialDetails', () => {
     }
   })
 
+  it('wears the classic look under the classic template, and the brand accent without a colour', () => {
+    const wrapper = mountDetails()
+    const classes = wrapper.find('[data-testid="trial-perks"]').classes().join(' ')
+
+    expect(classes).toContain('[.tpl-classic_&]:bg-classic-page')
+    expect(classes).not.toContain('--brand-primary-500')
+  })
+
   it('offers the trial again at the bottom', () => {
     const cta = mountDetails().find('[data-testid="trial-cta-bottom"]')
 

@@ -45,7 +45,8 @@ const SIZE_CLASSES: Record<UiSize, string> = {
 
 /** Class list of the root element. */
 const badgeClasses = computed(() => [
-  'inline-flex items-center font-medium',
+  'ui-badge inline-flex items-center font-medium',
+  `ui-badge-${props.variant}`,
   BADGE_TONE_CLASSES[props.variant as UiTone],
   SIZE_CLASSES[props.size as UiSize],
   props.rounded ? 'rounded-full' : 'rounded',

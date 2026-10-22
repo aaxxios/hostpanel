@@ -54,6 +54,15 @@ describe('UiPageHero', () => {
     expect(html.indexOf('Home')).toBeLessThan(html.indexOf('Contact'))
   })
 
+  it('carries the classic-scoped overrides that flatten the band', () => {
+    const wrapper = mountWithKit(UiPageHero, { props: { title: 'Contact', badge: 'Hi', highlight: 'Now' } })
+
+    expect(wrapper.find('[data-testid="ui-page-hero"]').classes()).toContain('[.tpl-classic_&]:bg-classic-surface-2')
+    expect(wrapper.find('[data-testid="ui-backdrop"]').classes()).toContain('[.tpl-classic_&]:hidden')
+    expect(wrapper.find('[data-testid="ui-page-hero-badge"]').classes()).toContain('[.tpl-classic_&]:bg-classic-brand-soft')
+    expect(wrapper.find('[data-testid="ui-gradient-text"]').classes()).toContain('[.tpl-classic_&]:bg-none')
+  })
+
   it('hides its decoration from assistive technology', () => {
     const wrapper = mountWithKit(UiPageHero, { props: { title: 'Contact' } })
 

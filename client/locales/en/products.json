@@ -2,27 +2,21 @@
   "products": {
     "hero": {
       "badge": "Reliable Hosting Solutions",
-      "headline1": "Build Less.",
-      "headline2": "Launch Faster.",
-      "subtitle": "Skip months of development. Get a production-ready hosting platform with {whiteLabel}, built-in payments, and enterprise features.",
-      "whiteLabelHighlight": "white-label capabilities",
+      "headline1": "Hosting, domains and servers",
+      "headline2": "for every website.",
+      "subtitle": "Pick the hosting, domain, SSL and server plans your site needs, with clear prices and support that answers.",
       "cta": {
         "viewProducts": "View Products",
-        "bookDemo": "Book a Demo"
+        "comparePlans": "Compare hosting plans"
       },
       "trustBadges": {
-        "soc2": "Security focused",
+        "support": "Support that answers",
         "encryption": "Encrypted connections",
         "uptime": "Reliable uptime"
       }
     },
     "products": {
-      "badge": "Products & Services",
-      "title": "Our Products",
-      "subtitle": "Ready-to-use solutions built with cutting-edge technology",
-      "viewAll": "Explore All Products",
       "keyFeatures": "Key Features",
-      "viewDemo": "View Demo",
       "featured": "Featured"
     },
     "pricing": {

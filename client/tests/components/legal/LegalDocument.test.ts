@@ -27,6 +27,16 @@ describe('LegalDocument', () => {
     vi.stubGlobal('useLocalePath', () => (path: string) => `/en${path}`)
   })
 
+  it('scopes a ruled, square-marker look to the classic template', () => {
+    const wrapper = mountWithKit(LegalDocument, {
+      props: { title: 'Terms', sections: SECTIONS, contactTitle: 'Questions?' },
+    })
+
+    expect(wrapper.find('[data-testid="legal-section-intro"]').classes()).toContain('[.tpl-classic_&]:border-classic-border')
+    expect(wrapper.find('[data-testid="legal-section-marker"]').classes()).toContain('[.tpl-classic_&]:bg-classic-brand-soft')
+    expect(wrapper.find('[data-testid="legal-contact"]').classes()).toContain('[.tpl-classic_&]:bg-classic-surface-2')
+  })
+
   it('shows the title as the h1 and the last-updated line', () => {
     const wrapper = mountWithKit(LegalDocument, {
       props: { title: 'Terms', meta: 'Last Updated: 2026-03-12', sections: SECTIONS },

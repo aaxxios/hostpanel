@@ -608,6 +608,13 @@ export const TESTIMONIALS = [
 /** Partners the public feed serves. */
 export const PARTNERS = [
   { id: 1, name: 'Example Co', logoUrl: null, url: 'https://example.test', sortOrder: 1 },
+  { id: 2, name: 'Alderstone Group', logoUrl: '/demo/partners/alderstone-group.svg', url: null, sortOrder: 2 },
+  { id: 3, name: 'Beacon Labs', logoUrl: '/demo/partners/beacon-labs.svg', url: null, sortOrder: 3 },
+  { id: 4, name: 'Cobalt Works', logoUrl: '/demo/partners/cobalt-works.svg', url: null, sortOrder: 4 },
+  { id: 5, name: 'Delta Studio', logoUrl: '/demo/partners/delta-studio.svg', url: null, sortOrder: 5 },
+  { id: 6, name: 'Ember Foods', logoUrl: '/demo/partners/ember-foods.svg', url: null, sortOrder: 6 },
+  { id: 7, name: 'Fjord Logistics', logoUrl: '/demo/partners/fjord-logistics.svg', url: null, sortOrder: 7 },
+  { id: 8, name: 'Granite Bank', logoUrl: '/demo/partners/granite-bank.svg', url: null, sortOrder: 8 },
 ]
 
 /** Server locations the public feed serves. */
@@ -619,4 +626,7 @@ export const LOCATIONS = [
 /** Projects the public feed serves. */
 export const PROJECTS = [
   { id: 1, slug: 'example-project', title: 'Example project', summary: null, description: null, imageUrls: [], url: 'https://example.test', sortOrder: 1 },
+  { id: 2, slug: 'northwind-portal', title: 'Northwind Portal', summary: 'A customer portal with online payments.', description: null, imageUrls: ['/demo/projects/northwind-portal.svg'], url: null, sortOrder: 2 },
+  { id: 3, slug: 'bluebird-shop', title: 'Bluebird Shop', summary: 'An online store with a fast checkout.', description: null, imageUrls: ['/demo/projects/bluebird-shop.svg'], url: null, sortOrder: 3 },
+  { id: 4, slug: 'harborline-tracking', title: 'Harborline Tracking', summary: 'A shipment tracking dashboard.', description: null, imageUrls: ['/demo/projects/harborline-tracking.svg'], url: null, sortOrder: 4 },
 ]

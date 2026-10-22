@@ -1,26 +1,26 @@
 <template>
-  <section v-if="features.length" class="py-12 md:py-20 bg-ui-page" data-testid="sections-security">
+  <section v-if="features.length" class="py-14 md:py-20 bg-classic-page" data-testid="sections-security">
     <UiContainer>
-      <MarketingSectionHeader
+      <ClassicSectionHeader
         class="mb-12"
-        :badge="$t('hostingSections.security.badge')"
+        :eyebrow="$t('hostingSections.security.badge')"
         :title="$t('hostingSections.security.title')"
         :subtitle="$t('hostingSections.security.subtitle')"
       />
 
       <UiBalancedGrid :count="features.length" data-testid="sections-security-grid">
-        <UiCard
+        <ClassicCard
           v-for="feature in features"
           :key="feature"
           hover
           :data-testid="`security-${feature}`"
         >
           <UiStack gap="sm">
-            <UiAccentTile :icon="FEATURE_ICONS[feature]" :class="ACCENT_BRAND_CLASS" />
-            <UiHeading :level="3" size="subsection">{{ $t(`hostingSections.security.features.${feature}.title`) }}</UiHeading>
-            <UiText tone="muted" size="sm">{{ $t(`hostingSections.security.features.${feature}.description`) }}</UiText>
+            <ClassicIconTile :icon="FEATURE_ICONS[feature]" />
+            <UiHeading :level="3" size="bare" class="text-lg font-semibold text-classic-ink">{{ $t(`hostingSections.security.features.${feature}.title`) }}</UiHeading>
+            <UiText tone="inherit" size="sm" class="text-classic-muted">{{ $t(`hostingSections.security.features.${feature}.description`) }}</UiText>
           </UiStack>
-        </UiCard>
+        </ClassicCard>
       </UiBalancedGrid>
     </UiContainer>
   </section>
@@ -32,7 +32,6 @@
  * malware scanning, firewall). Only enabled features show; with none the section renders nothing.
  */
 import { SecurityFeatureKey } from '~/constants/securityFeatureKey'
-import { ACCENT_BRAND_CLASS } from '~/utils/ui/accent'
 
 /** The enabled protections, in display order. */
 const features = useSecurityFeatures()

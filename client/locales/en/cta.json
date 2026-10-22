@@ -1,10 +1,8 @@
 {
   "cta": {
-    "badge": "Let's Work Together",
-    "title": "Ready to innovate?",
-    "subtitle": "Let's discuss your project and bring your ideas to life",
-    "placeholder": "Enter your email",
-    "button": "Get Started",
-    "success": "Thank you! We'll get back to you soon."
+    "title": "Ready to launch your site?",
+    "subtitle": "Pick a hosting plan and go live today, or talk to us if you need a hand",
+    "button": "See hosting plans",
+    "secondary": "Talk to us"
   }
 }

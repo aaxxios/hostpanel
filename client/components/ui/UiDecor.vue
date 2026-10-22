@@ -1,5 +1,5 @@
 <template>
-  <component :is="as" aria-hidden="true" data-testid="ui-decor" class="absolute pointer-events-none">
+  <component :is="as" aria-hidden="true" data-testid="ui-decor" class="ui-decor absolute pointer-events-none">
     <slot />
   </component>
 </template>

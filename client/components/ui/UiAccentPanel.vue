@@ -25,7 +25,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 /** Class list of the root element. */
 const classes = computed(() => [
-  'relative flex flex-col h-full p-6 rounded-2xl border-2 transition-all duration-300 hover:-translate-y-2',
+  'ui-accent-panel relative flex flex-col h-full p-6 rounded-2xl border-2 transition-all duration-300 hover:-translate-y-2',
   props.highlighted
     ? `md:scale-105 shadow-[0_0_50px_color-mix(in_srgb,var(--accent)_21%,transparent)] ${ACCENT_CLASSES.border} ${ACCENT_CLASSES.tint}`
     : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03]',

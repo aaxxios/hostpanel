@@ -8,7 +8,7 @@ import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { testimonialFixture } from '~/tests/helpers/storefrontFixtures'
 import SectionsTestimonials from '~/components/sections/SectionsTestimonials.vue'
-import MarketingSectionHeader from '~/components/marketing/MarketingSectionHeader.vue'
+import { CLASSIC_COMPONENTS } from '~/tests/helpers/classicKit'
 
 vi.mock('swiper/vue', async () => {
   const { defineComponent, h } = await import('vue')
@@ -41,7 +41,7 @@ vi.mock('~/composables/apis/useStorefrontApi', () => ({
  * @returns The wrapper.
  */
 const mountSection = async () => {
-  const wrapper = mountWithKit(SectionsTestimonials, { components: { MarketingSectionHeader } })
+  const wrapper = mountWithKit(SectionsTestimonials, { components: CLASSIC_COMPONENTS })
   await flushPromises()
   return wrapper
 }
@@ -57,7 +57,7 @@ describe('SectionsTestimonials', () => {
 
   it('carries every quote in the server-render fallback, where the browser-only carousel is absent', async () => {
     const wrapper = mountWithKit(SectionsTestimonials, {
-      components: { MarketingSectionHeader },
+      components: CLASSIC_COMPONENTS,
       stubs: { ClientOnly: { template: '<div><slot name="fallback" /></div>' } },
     })
     await flushPromises()
@@ -96,15 +96,15 @@ describe('SectionsTestimonials', () => {
   it('draws as many stars as the rating', async () => {
     const wrapper = await mountSection()
 
-    expect(wrapper.find('[data-testid="testimonial-1"]').findAll('svg.animate-pulse')).toHaveLength(5)
-    expect(wrapper.find('[data-testid="testimonial-2"]').findAll('svg.animate-pulse')).toHaveLength(3)
+    expect(wrapper.find('[data-testid="testimonial-1"]').findAll('svg.text-classic-brand')).toHaveLength(5)
+    expect(wrapper.find('[data-testid="testimonial-2"]').findAll('svg.text-classic-brand')).toHaveLength(3)
   })
 
-  it('puts the gradient on dark mode only, so the quote stays readable on the light surface', async () => {
+  it('draws the quote on a flat classic card with no gradient', async () => {
     const slide = (await mountSection()).find('[data-testid="testimonial-1"]')
 
-    expect(slide.classes().some((name) => name.startsWith('dark:from-'))).toBe(true)
-    expect(slide.classes().some((name) => name === 'bg-gradient-to-br')).toBe(false)
+    expect(slide.classes()).toContain('bg-classic-surface')
+    expect(slide.classes().some((name) => name.includes('gradient') || name.startsWith('dark:from-'))).toBe(false)
   })
 
   it('draws no oversized decorative quote glyph', async () => {

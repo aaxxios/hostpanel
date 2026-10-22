@@ -19,6 +19,8 @@
   --line2: rgba(255, 255, 255, 0.1);
   --surf: rgba(255, 255, 255, 0.025);
   --panel: #101220;
+  /* The footer block: clearly lighter than --page so it reads as its own raised surface. */
+  --footer: #1a1e36;
   --input: rgba(8, 9, 15, 0.8);
   /* The accents read the operator's brand (plugins/brand-tokens.ts): a light tint of the
      primary and of the accent on the dark surface, the template's own literals when unset. */
@@ -62,6 +64,7 @@
   --line2: rgba(20, 22, 42, 0.16);
   --surf: #ffffff;
   --panel: #ffffff;
+  --footer: #ffffff;
   --input: #ffffff;
   --ac1: rgb(var(--brand-primary-700, 29 78 216));
   --ac2: rgb(var(--brand-accent-700, 126 34 206));
