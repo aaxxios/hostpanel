@@ -41,7 +41,7 @@
       </UiGrid>
 
       <!-- Reassurances -->
-      <UiGrid cols="1" gap="lg" class="max-w-4xl mx-auto md:grid-cols-3">
+      <UiGrid cols="1" gap="lg" class="md:grid-cols-3">
         <UiCard
           v-for="(item, index) in reassurances"
           :key="item.key"
@@ -64,8 +64,8 @@
 
 <script setup lang="ts">
 /**
- * The benefits block of the products page: four platform benefits and three reassurances (free
- * trial, guarantee, lifetime updates).
+ * The benefits block of the products page: four reasons to host with us (speed, security, human
+ * support, an easy start) and three reassurances (trial, refund policy, clear pricing).
  *
  * The cards enter with a CSS keyframe (`animate-reveal-up`) rather than a scroll-triggered
  * directive: the markup is never rendered hidden, so the content shows in server HTML, before
@@ -73,23 +73,23 @@
  */
 
 import { revealDelay } from '~/utils/reveal'
-import { CheckCircle, Infinity as InfinityIcon, ShieldCheck } from 'lucide-vue-next'
+import { BadgeCheck, CheckCircle, ShieldCheck } from 'lucide-vue-next'
 
 /** Translation helpers and the active language. */
 const { t } = useI18n()
 
-/** The four platform benefits, in display order. */
+/** The four customer benefits, in display order. */
 const benefits = computed(() => [
-  { key: 'whiteLabel', icon: 'mdi:palette', title: t('products.benefits.whiteLabel.title'), description: t('products.benefits.whiteLabel.description') },
+  { key: 'speed', icon: 'mdi:rocket-launch', title: t('products.benefits.speed.title'), description: t('products.benefits.speed.description') },
+  { key: 'security', icon: 'mdi:shield-lock', title: t('products.benefits.security.title'), description: t('products.benefits.security.description') },
   { key: 'support', icon: 'mdi:headset', title: t('products.benefits.support.title'), description: t('products.benefits.support.description') },
-  { key: 'updates', icon: 'mdi:refresh', title: t('products.benefits.updates.title'), description: t('products.benefits.updates.description') },
-  { key: 'api', icon: 'mdi:code-tags', title: t('products.benefits.api.title'), description: t('products.benefits.api.description') },
+  { key: 'migration', icon: 'mdi:cloud-upload', title: t('products.benefits.migration.title'), description: t('products.benefits.migration.description') },
 ])
 
 /** The three reassurances under the benefits; each names the `products.benefits.additional.*` group it reads. */
 const reassurances = [
   { key: 'trial', icon: CheckCircle, iconColor: 'text-green-600 dark:text-green-400', hoverBorder: 'hover:border-green-500/30' },
   { key: 'guarantee', icon: ShieldCheck, iconColor: 'text-blue-600 dark:text-blue-400', hoverBorder: 'hover:border-blue-500/30' },
-  { key: 'lifetime', icon: InfinityIcon, iconColor: 'text-purple-600 dark:text-purple-400', hoverBorder: 'hover:border-purple-500/30' },
+  { key: 'pricing', icon: BadgeCheck, iconColor: 'text-purple-600 dark:text-purple-400', hoverBorder: 'hover:border-purple-500/30' },
 ]
 </script>

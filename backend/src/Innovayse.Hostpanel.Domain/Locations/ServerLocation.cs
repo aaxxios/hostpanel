@@ -5,11 +5,11 @@ namespace Innovayse.Hostpanel.Domain.Locations;
 
 /// <summary>
 /// A data-centre location shown on the storefront, with per-locale translations.
-/// Stored in the <c>server_locations</c> table.
+/// Stored in the <c>ServerLocations</c> table.
 /// </summary>
 public sealed class ServerLocation : BaseEntity, IAggregateRoot
 {
-    /// <summary>Length of an ISO 3166 alpha-2 country code — matches the <c>server_locations.CountryCode</c> column.</summary>
+    /// <summary>Length of an ISO 3166 alpha-2 country code — matches the <c>ServerLocations.CountryCode</c> column.</summary>
     public const int CountryCodeLength = 2;
 
     /// <summary>Gets the ISO 3166 alpha-2 country code, upper case.</summary>

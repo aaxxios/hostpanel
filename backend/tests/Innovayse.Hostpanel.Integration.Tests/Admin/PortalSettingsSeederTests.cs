@@ -17,14 +17,14 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 /// Runs the seeder against a real database through <see cref="IHostpanelDbContext"/>. This class
 /// does not share its Postgres
 /// container with any other test class (no <c>ICollectionFixture</c> in this suite), so clearing
-/// the <c>settings</c> table here cannot affect another class's assertions.
+/// the <c>Settings</c> table here cannot affect another class's assertions.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class PortalSettingsSeederTests(IntegrationTestFactory factory)
     : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>
-    /// Deletes every row in the <c>settings</c> table, undoing the seeding
+    /// Deletes every row in the <c>Settings</c> table, undoing the seeding
     /// <see cref="IntegrationTestFactory.InitializeAsync"/> already performed, so a test can
     /// observe the seeder's behaviour on a genuinely empty table.
     /// </summary>

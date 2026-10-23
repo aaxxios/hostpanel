@@ -9,7 +9,6 @@ public sealed class AnnouncementConfiguration : IEntityTypeConfiguration<Announc
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Announcement> builder)
     {
-        builder.ToTable("announcements");
 
         builder.HasKey(x => x.Id);
 

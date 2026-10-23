@@ -20,9 +20,9 @@ namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 /// </summary>
 /// <remarks>
 /// <para>
-/// These exist because <c>subject_roles</c> and Identity's <c>AspNetUserRoles</c> were two
+/// These exist because <c>SubjectRoles</c> and Identity's <c>AspNetUserRoles</c> were two
 /// disjoint stores in local mode. The composition root registered exactly one JWT scheme there
-/// and gave it no <c>Events</c>, so nothing ever read <c>subject_roles</c> back — a locally
+/// and gave it no <c>Events</c>, so nothing ever read <c>SubjectRoles</c> back — a locally
 /// signed-in person's roles came only from the claims baked into their token at sign-in.
 /// </para>
 /// <para>
@@ -45,7 +45,7 @@ public sealed class LocalModeSubjectRoleTests(IntegrationTestFactory factory)
     : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>
-    /// A role granted in <c>subject_roles</c> after the token was minted authorizes on the very
+    /// A role granted in <c>SubjectRoles</c> after the token was minted authorizes on the very
     /// next request, without a fresh sign-in.
     /// </summary>
     /// <remarks>
@@ -79,7 +79,7 @@ public sealed class LocalModeSubjectRoleTests(IntegrationTestFactory factory)
             "/api/products/groups", new { name = $"after-{Guid.NewGuid():N}", description = (string?)null });
         after.StatusCode.Should().NotBe(
             HttpStatusCode.Forbidden,
-            "the role now sits in subject_roles, and every JWT scheme merges that store onto the "
+            "the role now sits in SubjectRoles, and every JWT scheme merges that store onto the "
             + "principal at validation — this was 403 forever before SubjectRoleClaimsEnricher");
         after.StatusCode.Should().Be(HttpStatusCode.Created);
 

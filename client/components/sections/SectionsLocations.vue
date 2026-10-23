@@ -8,7 +8,7 @@
         :subtitle="$t('hostingSections.locations.subtitle')"
       />
 
-      <UiBalancedGrid :count="locations.length" :class="gridWidth" data-testid="sections-locations-grid">
+      <UiBalancedGrid :count="locations.length" data-testid="sections-locations-grid">
         <ClassicCard
           v-for="location in locations"
           :key="location.id"
@@ -49,10 +49,4 @@ useAsyncData('storefront:locations', () => storefront.loadLocations(), { watch: 
 
 /** The locations to show, in display order. */
 const locations = computed(() => storefront.locations)
-
-/** Width caps by card count, so a lone card does not stretch across the whole page. */
-const GRID_WIDTH_BY_COUNT: Record<number, string> = { 1: 'mx-auto max-w-xl', 2: 'mx-auto max-w-4xl' }
-
-/** Classes that cap the grid width for the current number of locations. */
-const gridWidth = computed(() => GRID_WIDTH_BY_COUNT[locations.value.length] ?? '')
 </script>

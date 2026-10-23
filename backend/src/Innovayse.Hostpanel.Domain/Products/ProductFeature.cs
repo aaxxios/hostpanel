@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Domain.Products;
 /// <summary>
 /// One line of a product's specification, such as "Disk" / "10 GB".
 /// Belongs to a <see cref="Product"/>.
-/// Stored in the <c>product_features</c> table.
+/// Stored in the <c>ProductFeatures</c> table.
 /// </summary>
 /// <remarks>
 /// <para>

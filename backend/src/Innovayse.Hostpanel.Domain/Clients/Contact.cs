@@ -4,7 +4,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 namespace Innovayse.Hostpanel.Domain.Clients;
 /// <summary>
 /// An additional contact linked to a <see cref="Client"/> account.
-/// Stored in the <c>contacts</c> table.
+/// Stored in the <c>Contacts</c> table.
 /// </summary>
 public sealed class Contact : BaseEntity
 {

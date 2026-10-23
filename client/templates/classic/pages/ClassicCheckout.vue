@@ -3,7 +3,7 @@
     <!-- Page header: a flat band with a hairline, no backdrop -->
     <UiStack gap="none" class="border-b border-classic-border bg-classic-surface-2 py-10 md:py-14">
       <UiContainer>
-        <UiStack gap="none" class="max-w-4xl">
+        <UiStack gap="none">
           <UiStack direction="row" align="center" gap="xs" class="mb-4 inline-flex self-start rounded-md bg-classic-brand-soft px-3 py-1">
             <ShieldCheck :size="14" class="text-classic-brand" />
             <UiText as="span" size="xs" tone="inherit" weight="semibold" class="uppercase tracking-wider text-classic-brand">{{ $t('checkout.secureCheckout') }}</UiText>
@@ -11,7 +11,7 @@
           <UiHeading :level="UiHeadingLevel.H1" size="title" class="mb-3 !font-semibold !text-classic-ink">
             {{ $t('checkout.title') }}
           </UiHeading>
-          <UiText tone="inherit" size="lg" class="max-w-xl text-classic-muted">
+          <UiText tone="inherit" size="lg" class="max-w-[75ch] text-classic-muted">
             {{ $t('checkout.subtitle') }}
           </UiText>
         </UiStack>
@@ -26,7 +26,7 @@
           v-if="cart.isEmpty"
           padding="none"
           tone="bare"
-          class="mx-auto max-w-2xl rounded-lg border-classic-border bg-classic-surface py-8 shadow-sm"
+          class="rounded-lg border-classic-border bg-classic-surface py-8 shadow-sm"
           data-testid="checkout-empty"
         >
           <UiEmptyState :icon="ShoppingCart" :title="$t('cart.empty')" :description="$t('cart.emptyDesc')">

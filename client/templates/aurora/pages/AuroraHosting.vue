@@ -8,7 +8,7 @@
         <UiHeading :level="1" size="bare" :class="[PAGE_TITLE_CLASS, 'mt-3.5']" data-testid="hosting-title">
           {{ t('aurora.hostingPage.title') }}
         </UiHeading>
-        <UiText size="inherit" tone="inherit" class="mx-auto mt-4 max-w-[580px] text-[17px] leading-relaxed text-mut">
+        <UiText size="inherit" tone="inherit" class="mx-auto mt-4 max-w-[75ch] text-[17px] leading-relaxed text-mut">
           {{ t('aurora.hostingPage.lead') }}
         </UiText>
       </UiStack>

@@ -107,6 +107,12 @@ export default <Partial<Config>>{
           'brand-hover': 'rgb(var(--classic-brand-hover) / <alpha-value>)',
           'brand-soft': 'rgb(var(--classic-brand-soft) / <alpha-value>)',
           'on-brand': 'rgb(var(--classic-on-brand) / <alpha-value>)',
+          // Solid fill of primary actions and active tabs (a deeper step than the text brand in dark),
+          // its hover and pressed shades, and the visible border of outline controls and idle chips.
+          fill: 'rgb(var(--classic-fill) / <alpha-value>)',
+          'fill-hover': 'rgb(var(--classic-fill-hover) / <alpha-value>)',
+          'fill-pressed': 'rgb(var(--classic-fill-pressed) / <alpha-value>)',
+          'border-strong': 'rgb(var(--classic-border-strong) / <alpha-value>)',
           'summary-from': 'rgb(var(--classic-summary-from) / <alpha-value>)',
           'summary-to': 'rgb(var(--classic-summary-to) / <alpha-value>)',
         },
@@ -212,6 +218,8 @@ export default <Partial<Config>>{
       keyframes: {
         // Entrance reveal: runs in CSS so the content is in the markup and visible without any script.
         'reveal-up': { '0%': { opacity: '0', transform: 'translateY(24px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+        // Entrance for content that must never be invisible (a page header): slides only, opacity stays 1.
+        'slide-up': { '0%': { transform: 'translateY(16px)' }, '100%': { transform: 'translateY(0)' } },
         sheen: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(100%)' } },
         marquee: { '0%': { transform: 'translateX(0)' }, '100%': { transform: 'translateX(-50%)' } },
         'ken-burns': { '0%, 100%': { transform: 'scale(1)' }, '50%': { transform: 'scale(1.1)' } },
@@ -232,6 +240,7 @@ export default <Partial<Config>>{
       },
       animation: {
         'reveal-up': 'reveal-up 0.5s ease-out backwards',
+        'slide-up': 'slide-up 0.5s ease-out backwards',
         sheen: 'sheen 3s linear infinite',
         marquee: 'marquee 30s linear infinite',
         'ken-burns': 'ken-burns 20s ease-in-out infinite',

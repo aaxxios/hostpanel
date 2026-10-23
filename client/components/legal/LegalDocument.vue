@@ -12,14 +12,45 @@
       </UiText>
     </UiPageHero>
 
+    <!--
+      The document sits in the shared container, the same width as the hero above it. From `lg` a
+      sticky table of contents takes the left rail and the sections the rest; on a phone it is one
+      column and the contents list is left out.
+    -->
     <UiSection padding="md">
-      <UiStack gap="xl" class="mx-auto w-full max-w-4xl">
+      <UiGrid cols="1" gap="xl" class="lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start" data-testid="legal-layout">
+        <UiStack
+          v-if="sections.length > 1"
+          as="nav"
+          gap="xs"
+          :aria-label="t('legal.toc')"
+          class="sticky top-24 hidden lg:flex"
+          data-testid="legal-toc"
+        >
+          <UiHeading :level="2" size="label" class="mb-2">
+            {{ t('legal.toc') }}
+          </UiHeading>
+          <UiLink
+            v-for="(section, index) in sections"
+            :key="section.id"
+            :href="`#legal-section-${section.id}`"
+            tone="muted"
+            :underline="false"
+            class="py-1 text-sm leading-snug"
+            :testid="`legal-toc-${section.id}`"
+          >
+            {{ index + 1 }}. {{ section.title }}
+          </UiLink>
+        </UiStack>
+
+        <UiStack gap="xl" class="min-w-0">
         <UiStack
           v-for="(section, index) in sections"
+          :id="`legal-section-${section.id}`"
           :key="section.id"
           gap="md"
           :data-testid="`legal-section-${section.id}`"
-          class="animate-reveal-up motion-reduce:animate-none [.tpl-classic_&]:animate-none [.tpl-classic_&]:border-t [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:pt-8 first:[.tpl-classic_&]:border-t-0 first:[.tpl-classic_&]:pt-0"
+          class="scroll-mt-24 animate-reveal-up motion-reduce:animate-none [.tpl-classic_&]:animate-none [.tpl-classic_&]:border-t [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:pt-8 first:[.tpl-classic_&]:border-t-0 first:[.tpl-classic_&]:pt-0"
           :class="revealDelay(index * 100)"
         >
           <UiStack direction="row" align="center" gap="md">
@@ -44,7 +75,7 @@
               :key="paragraphIndex"
               tone="muted"
               size="lg"
-              class="leading-relaxed"
+              class="max-w-[75ch] leading-relaxed"
             >
               {{ paragraph }}
             </UiText>
@@ -103,7 +134,7 @@
           <UiHeading :level="3" size="section" class="mb-4">
             {{ contactTitle }}
           </UiHeading>
-          <UiText tone="muted" size="lg" class="mb-6 max-w-2xl">
+          <UiText tone="muted" size="lg" class="mb-6 max-w-[75ch]">
             {{ contactDescription }}
           </UiText>
           <UiButton
@@ -117,7 +148,8 @@
             <ArrowRight :size="20" :stroke-width="2" class="ml-2" />
           </UiButton>
         </UiCard>
-      </UiStack>
+        </UiStack>
+      </UiGrid>
     </UiSection>
   </UiStack>
 </template>
@@ -130,6 +162,10 @@
  *
  * The page owns its copy and SEO; this component only lays the text out, so the five documents
  * can not drift apart in how they look.
+ *
+ * The sections share the page container with the hero. From `lg` a sticky table of contents sits
+ * on the left; paragraphs keep a reading measure of about 75 characters (`max-w-[75ch]`, on the
+ * text only, never on the layout). Below `lg` the document is a single column.
  *
  * Under the classic template (the `tpl-classic` root class) the sections are ruled blocks with a
  * square brand-tint marker and the contact card is a flat neutral panel.
@@ -174,6 +210,9 @@ withDefaults(defineProps<Props>(), {
   contactDanger: false,
   contactIcon: undefined,
 })
+
+/** Translates a key in the active language. */
+const { t } = useI18n()
 
 /** Localised path builder from the i18n module. */
 const localePath = useLocalePath()

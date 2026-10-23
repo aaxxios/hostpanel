@@ -22,7 +22,7 @@ describe('SectionsCTA', () => {
   })
 
   it('is never rendered hidden: the content block enters with a CSS animation, not an initial opacity', () => {
-    const block = mountCta().find('.max-w-3xl')
+    const block = mountCta().find('.animate-reveal-up')
 
     expect(block.attributes('style') ?? '').not.toContain('opacity')
     expect(block.classes()).toContain('animate-reveal-up')

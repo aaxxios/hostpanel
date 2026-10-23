@@ -7,11 +7,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
 /// <summary>EF Core configuration for the <see cref="TldConfig"/> entity.</summary>
 public sealed class TldConfigConfiguration : IEntityTypeConfiguration<TldConfig>
 {
-    /// <summary>Configures the <c>tld_configs</c> table mapping.</summary>
+    /// <summary>Configures the <c>TldConfigs</c> table mapping.</summary>
     /// <param name="builder">The entity type builder.</param>
     public void Configure(EntityTypeBuilder<TldConfig> builder)
     {
-        builder.ToTable("tld_configs");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Tld).IsRequired().HasMaxLength(50);

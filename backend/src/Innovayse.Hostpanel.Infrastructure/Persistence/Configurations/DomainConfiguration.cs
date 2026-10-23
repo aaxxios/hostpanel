@@ -6,11 +6,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
 /// <summary>EF Core configuration for the <see cref="Domain"/> aggregate.</summary>
 public sealed class DomainConfiguration : IEntityTypeConfiguration<RegisteredDomain>
 {
-    /// <summary>Configures the <c>domains</c> table mapping.</summary>
+    /// <summary>Configures the <c>Domains</c> table mapping.</summary>
     /// <param name="builder">The entity type builder.</param>
     public void Configure(EntityTypeBuilder<RegisteredDomain> builder)
     {
-        builder.ToTable("domains");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.ClientId).IsRequired();

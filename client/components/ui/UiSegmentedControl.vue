@@ -67,10 +67,10 @@ const emit = defineEmits<{
 }>()
 
 /** Pill track: equal-width columns, a hairline frame and a translucent fill that suits any surface. */
-const TRACK_CLASSES = 'inline-grid grid-flow-col auto-cols-fr gap-1 rounded-full border border-gray-200 bg-black/[0.04] p-1 dark:border-white/10 dark:bg-white/5'
+const TRACK_CLASSES = 'ui-segmented inline-grid grid-flow-col auto-cols-fr gap-1 rounded-full border border-gray-200 bg-black/[0.04] p-1 dark:border-white/10 dark:bg-white/5'
 
 /** Structure shared by every segment; the focus ring is inset so it follows the pill and never halos. */
-const SEGMENT_BASE = 'inline-flex items-center justify-center whitespace-nowrap rounded-full text-center font-semibold leading-none transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-offset-0'
+const SEGMENT_BASE = 'ui-segment inline-flex items-center justify-center whitespace-nowrap rounded-full text-center font-semibold leading-none transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-offset-0'
 
 /** Padding and type size per size step. */
 const SEGMENT_SIZE_CLASSES: Record<UiSize, string> = {
@@ -80,7 +80,7 @@ const SEGMENT_SIZE_CLASSES: Record<UiSize, string> = {
 }
 
 /** The chosen segment: brand gradient with its contrast text; the ring takes the same colour so it reads on the gradient. */
-const SEGMENT_ACTIVE = 'bg-brand text-on-brand shadow-md focus-visible:ring-on-brand/80'
+const SEGMENT_ACTIVE = 'ui-segment-active bg-brand text-on-brand shadow-md focus-visible:ring-on-brand/80'
 
 /** An available segment: readable token text that brightens on hover; its ring uses the brand. */
 const SEGMENT_IDLE = 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white focus-visible:ring-primary-500'

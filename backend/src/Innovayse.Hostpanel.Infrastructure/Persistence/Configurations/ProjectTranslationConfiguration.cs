@@ -10,7 +10,6 @@ public sealed class ProjectTranslationConfiguration : IEntityTypeConfiguration<P
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<ProjectTranslation> builder)
     {
-        builder.ToTable("project_translations");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.ProjectId).IsRequired();
         builder.Property(x => x.Locale).IsRequired().HasMaxLength(ProjectTranslation.LocaleMaxLength);

@@ -9,7 +9,6 @@ public sealed class KbCategoryConfiguration : IEntityTypeConfiguration<KbCategor
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<KbCategory> builder)
     {
-        builder.ToTable("kb_categories");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Name).IsRequired().HasMaxLength(255);

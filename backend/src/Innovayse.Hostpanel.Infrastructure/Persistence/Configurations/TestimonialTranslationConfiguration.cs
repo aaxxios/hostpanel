@@ -10,7 +10,6 @@ public sealed class TestimonialTranslationConfiguration : IEntityTypeConfigurati
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<TestimonialTranslation> builder)
     {
-        builder.ToTable("testimonial_translations");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.TestimonialId).IsRequired();
         builder.Property(x => x.Locale).IsRequired().HasMaxLength(TestimonialTranslation.LocaleMaxLength);

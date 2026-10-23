@@ -10,7 +10,6 @@ public sealed class ServerLocationConfiguration : IEntityTypeConfiguration<Serve
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<ServerLocation> builder)
     {
-        builder.ToTable("server_locations");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.CountryCode).IsRequired().HasMaxLength(ServerLocation.CountryCodeLength);
         builder.Property(x => x.SortOrder).IsRequired();

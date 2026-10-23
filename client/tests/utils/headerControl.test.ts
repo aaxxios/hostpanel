@@ -27,7 +27,9 @@ describe('header control classes', () => {
   it('paints hover and active states from classic tokens', () => {
     expect(HEADER_CONTROL).toContain('hover:border-classic-brand')
     expect(HEADER_NAV_IDLE).toContain('hover:bg-classic-surface-2')
-    expect(HEADER_NAV_ACTIVE).toContain('text-classic-brand')
-    expect(HEADER_PRIMARY).toContain('hover:bg-classic-brand-hover')
+    expect(HEADER_NAV_ACTIVE).toContain('bg-classic-fill')
+    expect(HEADER_NAV_ACTIVE).toContain('text-classic-on-brand')
+    expect(HEADER_PRIMARY).toContain('hover:bg-classic-fill-hover')
+    expect(HEADER_PRIMARY).toContain('active:bg-classic-fill-pressed')
   })
 })

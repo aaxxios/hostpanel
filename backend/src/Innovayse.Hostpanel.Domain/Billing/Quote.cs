@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Domain.Billing;
 /// A quotation (estimate) issued to a client for products or services.
 /// Owns a collection of <see cref="QuoteItem"/> line items.
 /// Can be accepted by the client and converted to an invoice.
-/// Stored in the <c>quotes</c> table.
+/// Stored in the <c>Quotes</c> table.
 /// </summary>
 public sealed class Quote : BaseEntity, IAggregateRoot
 {

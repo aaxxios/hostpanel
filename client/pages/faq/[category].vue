@@ -18,7 +18,7 @@
 
     <!-- FAQs for this category -->
     <UiSection padding="lg">
-      <UiStack class="mx-auto w-full max-w-3xl" gap="xl">
+      <UiStack class="w-full" gap="xl">
         <!-- Empty state -->
         <UiEmptyState
           v-if="categoryFaqs.length === 0"

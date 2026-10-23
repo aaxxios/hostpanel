@@ -1,6 +1,6 @@
 <template>
   <UiSection v-if="features.length" padding="lg" class="border-b border-nova-border" data-testid="nova-security">
-    <div class="max-w-[620px]">
+    <div class="max-w-[75ch]">
       <NovaSectionHeader
         :eyebrow="t('nova.security.eyebrow')"
         :title="t('nova.security.title')"

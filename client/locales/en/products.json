@@ -16,13 +16,11 @@
       }
     },
     "products": {
-      "keyFeatures": "Key Features",
       "featured": "Featured"
     },
     "pricing": {
       "title": "Choose Your Plan",
       "trial": "Start Free Trial",
-      "contactSales": "Contact Sales",
       "cycles": {
         "monthly": "Monthly",
         "quarterly": "Quarterly",
@@ -32,14 +30,22 @@
         "triennially": "3 Years"
       },
       "popular": "⭐ Most Popular",
-      "guarantee": {
-        "title": "Refund policy",
-        "subtitle": "No questions asked"
+      "period": {
+        "monthly": "/mo",
+        "annually": "/yr"
       },
+      "save": "Save {percent}%",
+      "more": "+{count} more",
       "cta": {
         "viewDemo": "View Demo",
         "learnMore": "Learn More"
       }
+    },
+    "help": {
+      "title": "Not sure which plan fits?",
+      "subtitle": "Compare the plans side by side, or ask our support team to help you choose.",
+      "compare": "Compare plans",
+      "contact": "Contact support"
     },
     "comparison": {
       "title": "Compare Plans",
@@ -47,35 +53,31 @@
       "perfectMatchHighlight": "Perfect Match",
       "subtitle": "Compare the plans and pick the one that fits",
       "headers": {
-        "product": "Product",
-        "starter": "Starter",
-        "starterDesc": "For individuals",
-        "professional": "Professional",
-        "professionalBadge": "Popular",
-        "enterprise": "Enterprise",
-        "enterpriseDesc": "For teams"
+        "feature": "Feature",
+        "popular": "Popular"
       },
-      "footer": "Enterprise plans include custom pricing and dedicated support."
+      "groupsLabel": "Plan groups",
+      "notIncluded": "Not included"
     },
     "benefits": {
-      "title": "Enterprise-grade {benefitsHighlight}",
-      "benefitsHighlight": "Benefits",
-      "subtitle": "Everything you need to launch, run and grow your hosting business",
-      "whiteLabel": {
-        "title": "White-label",
-        "description": "Full customization with your branding. Run it under your own brand."
+      "title": "Why host with {benefitsHighlight}",
+      "benefitsHighlight": "us",
+      "subtitle": "Fast, secure hosting with support that answers",
+      "speed": {
+        "title": "Fast and reliable",
+        "description": "SSD storage and a stable network keep your site quick and online."
+      },
+      "security": {
+        "title": "Secure by default",
+        "description": "Regular backups and protection against common threats."
       },
       "support": {
-        "title": "Expert Support",
-        "description": "Expert support team ready to help."
+        "title": "Real human support",
+        "description": "Questions go to people who answer, not to a bot."
       },
-      "updates": {
-        "title": "Free Updates",
-        "description": "Continuous improvements and new features at no extra cost."
-      },
-      "api": {
-        "title": "API Access",
-        "description": "Full API documentation. Build custom integrations and workflows."
+      "migration": {
+        "title": "Easy to get started",
+        "description": "Order in minutes and move your site over with our help."
       },
       "additional": {
         "trial": {
@@ -86,9 +88,9 @@
           "title": "Refund Policy",
           "description": "See our refund terms"
         },
-        "lifetime": {
-          "title": "Lifetime Updates",
-          "description": "Always get latest features"
+        "pricing": {
+          "title": "Clear pricing",
+          "description": "Prices shown in your currency"
         }
       }
     },

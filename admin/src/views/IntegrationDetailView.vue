@@ -59,7 +59,7 @@ const hint = INTEGRATION_META[slug as IntegrationSlug]?.hint
  */
 const endpointHost = computed<string | undefined>(() => {
   const cfg = store.current?.config ?? {}
-  const raw = cfg.gateway_url ?? cfg.host ?? cfg.api_url
+  const raw = cfg.gateway_url?.value || cfg.host?.value || cfg.api_url?.value
   if (!raw) {
     return undefined
   }

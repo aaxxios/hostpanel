@@ -1,9 +1,13 @@
+using Innovayse.Hostpanel.Application.Admin.Common;
+using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Shared.Models;
+using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Admin.Commands.UpdateSetting;
 
@@ -27,13 +31,33 @@ public sealed class UpdateSettingHandler
     /// <summary>Unit of work for persisting changes.</summary>
     private readonly IUnitOfWork _uow;
 
+    /// <summary>Loaded plugins, whose manifests declare which of their fields are secret.</summary>
+    private readonly IPluginRegistry _plugins;
+
+    /// <summary>The acting admin, named in the audit line of a secret change.</summary>
+    private readonly ICurrentUserService _currentUser;
+
+    /// <summary>Receives the audit line of a secret change (key only, never the value).</summary>
+    private readonly ILogger<UpdateSettingHandler> _logger;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="uow">Unit of work for persisting changes.</param>
-    public UpdateSettingHandler(IHostpanelDbContext context, IUnitOfWork uow)
+    /// <param name="plugins">Loaded plugins, whose manifests declare which of their fields are secret.</param>
+    /// <param name="currentUser">The acting admin, named in the audit line of a secret change.</param>
+    /// <param name="logger">Receives the audit line of a secret change.</param>
+    public UpdateSettingHandler(
+        IHostpanelDbContext context,
+        IUnitOfWork uow,
+        IPluginRegistry plugins,
+        ICurrentUserService currentUser,
+        ILogger<UpdateSettingHandler> logger)
     {
         _context = context;
         _uow = uow;
+        _plugins = plugins;
+        _currentUser = currentUser;
+        _logger = logger;
     }
 
     /// <summary>
@@ -56,9 +80,17 @@ public sealed class UpdateSettingHandler
             return Result.FailureCode(HostpanelErrorCodes.SETTING_NOT_FOUND);
         }
 
+        if (SettingSecrecy.From(_plugins).IsSecret(setting.Key))
+        {
+            return await UpdateSecretAsync(setting, command, ct);
+        }
+
+        // An explicit clear of a plain setting is the same as saving it empty.
+        var requested = command.Clear ? string.Empty : command.Value;
+
         // Trimmed for every key: a trailing space typed into the admin table is never what an
         // operator meant, and for a URL or a handle it is the difference between working and not.
-        var value = (command.Value ?? string.Empty).Trim();
+        var value = (requested ?? string.Empty).Trim();
 
         // Empty means "unset" for a key that seeds empty — the storefront then uses its
         // built-in default — and skips both checks below. A key that seeds with a value never
@@ -98,6 +130,38 @@ public sealed class UpdateSettingHandler
 
         setting.UpdateValue(value);
         await _uow.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Writes a secret setting: a clear empties it, a non-blank value replaces it, and an empty or
+    /// absent value keeps what is stored. The admin panel never holds the stored value, so an
+    /// empty field on save means "unchanged", never "erase".
+    /// </summary>
+    /// <param name="setting">The tracked secret setting.</param>
+    /// <param name="command">The update command.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Success; a secret has no vocabulary to refuse a value against.</returns>
+    private async Task<Result> UpdateSecretAsync(Setting setting, UpdateSettingCommand command, CancellationToken ct)
+    {
+        SecretSettingChange change;
+        if (command.Clear)
+        {
+            setting.UpdateValue(string.Empty);
+            change = SecretSettingChange.Cleared;
+        }
+        else if (!string.IsNullOrWhiteSpace(command.Value))
+        {
+            setting.UpdateValue(command.Value.Trim());
+            change = SecretSettingChange.Replaced;
+        }
+        else
+        {
+            return Result.Success();
+        }
+
+        await _uow.SaveChangesAsync(ct);
+        SecretSettingAudit.Record(_logger, setting.Key, change, _currentUser.UserId);
         return Result.Success();
     }
 

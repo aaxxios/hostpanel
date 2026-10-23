@@ -14,6 +14,7 @@
           class="flex min-w-0 shrink-0 items-center gap-2.5 rounded-lg text-classic-ink focus-visible:ring-classic-brand"
           testid="layout-logo"
         >
+          <!-- Logo image cap: intrinsically small UI, not page layout. -->
           <AppLogoLockup
             img-class="h-9 w-auto max-w-[160px] object-contain"
             mark-class="h-9 w-9"
@@ -112,7 +113,7 @@
  * LayoutHeader - the classic template's site header.
  *
  * A white bar with one brand colour: the shared logo lockup, the catalogue-driven navigation
- * (Hosting as a dropdown of plan groups, Domains, VPS and Servers when the catalogue sells them,
+ * (Hosting as a dropdown of the plan groups including VPS and dedicated servers, Domains,
  * Products, Support), then language and currency pickers, theme toggle, cart and either the
  * account menu (signed in) or Sign in plus Get started (signed out); where the optional shell
  * header widget is served, its two mount points replace that last part. Every control shares one
@@ -186,7 +187,7 @@ const handleScroll = (): void => {
 }
 
 // Read during server rendering (the server awaits it and ships the state to the browser), so the
-// VPS and Servers entries are in the first paint. The store guard skips the read when a page has
+// Hosting dropdown entries are in the first paint. The store guard skips the read when a page has
 // already loaded the families, so the catalogue is requested once.
 useAsyncData('header:families', async () => {
   if (familyProducts.value.length === 0) {

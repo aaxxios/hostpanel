@@ -6,11 +6,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
 /// <summary>EF Core configuration for the <see cref="EmailLog"/> entity.</summary>
 public sealed class EmailLogConfiguration : IEntityTypeConfiguration<EmailLog>
 {
-    /// <summary>Configures the <c>email_logs</c> table mapping.</summary>
+    /// <summary>Configures the <c>EmailLogs</c> table mapping.</summary>
     /// <param name="builder">The entity type builder.</param>
     public void Configure(EntityTypeBuilder<EmailLog> builder)
     {
-        builder.ToTable("email_logs");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.To).HasMaxLength(255).IsRequired();

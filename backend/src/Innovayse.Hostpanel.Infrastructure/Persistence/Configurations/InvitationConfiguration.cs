@@ -6,11 +6,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
 /// <summary>EF Core configuration for <see cref="Invitation"/>.</summary>
 public sealed class InvitationConfiguration : IEntityTypeConfiguration<Invitation>
 {
-    /// <summary>Configures the <c>invitations</c> table schema.</summary>
+    /// <summary>Configures the <c>Invitations</c> table schema.</summary>
     /// <param name="builder">The entity type builder.</param>
     public void Configure(EntityTypeBuilder<Invitation> builder)
     {
-        builder.ToTable("invitations");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Token).IsRequired().HasMaxLength(64);
         builder.Property(x => x.Email).IsRequired().HasMaxLength(256);

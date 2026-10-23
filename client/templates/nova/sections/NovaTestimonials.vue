@@ -4,7 +4,7 @@
 
     <!-- Compact cards at up to three per row; fewer quotes than columns stay centred at the normal width. -->
     <UiStack as="ul" direction="row" wrap justify="center" gap="md" class="mt-8">
-      <li v-for="testimonial in testimonials" :key="testimonial.id" class="w-full max-w-md sm:w-[calc((100%-1.25rem)/2)] sm:max-w-none lg:w-[calc((100%-2.5rem)/3)]">
+      <li v-for="testimonial in testimonials" :key="testimonial.id" class="w-full sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-2.5rem)/3)]">
         <UiCard padding="md" class="flex h-full flex-col !border-nova-border !bg-nova-bg">
           <figure class="flex h-full flex-col">
             <Icon name="lucide:quote" class="h-4 w-4 text-nova-brand" aria-hidden="true" />

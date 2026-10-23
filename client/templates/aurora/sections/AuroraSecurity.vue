@@ -1,7 +1,7 @@
 <template>
   <UiSection v-if="features.length" padding="lg" :contained="false" class="relative border-t border-line" data-testid="aurora-security">
     <UiText tone="inherit" size="inherit" :class="[EYEBROW_CLASS, 'text-ac3']">{{ t('aurora.security.eyebrow') }}</UiText>
-    <UiHeading :level="2" size="bare" :class="[SECTION_TITLE_CLASS, 'mt-3 max-w-[680px]']">
+    <UiHeading :level="2" size="bare" :class="[SECTION_TITLE_CLASS, 'mt-3']">
       {{ t('aurora.security.title') }}
     </UiHeading>
 

@@ -182,3 +182,5 @@ public static class MigrationJobExtensions
 | Repository interface | `INounRepository` | `IInvoiceRepository` |
 | Repository impl | `NounRepository` | `InvoiceRepository` |
 | Extension class | `NounExtensions` | `MigrationJobExtensions` |
+
+- Every database identifier we own is PascalCase: tables (plural), columns, primary/foreign keys, indexes (`IX_<Table>_<Cols>`), unique/check constraints (`CK_<Table>_<Rule>`), schemas we create. No snake_case or lower case; see "Database identifiers" in `project.md`.

@@ -9,7 +9,6 @@ public sealed class ContactConfiguration : IEntityTypeConfiguration<Contact>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Contact> builder)
     {
-        builder.ToTable("contacts");
 
         builder.HasKey(x => x.Id);
 

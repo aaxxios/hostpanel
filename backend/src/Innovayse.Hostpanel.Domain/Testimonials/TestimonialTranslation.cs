@@ -4,17 +4,17 @@ namespace Innovayse.Hostpanel.Domain.Testimonials;
 
 /// <summary>
 /// A locale-specific translation for a <see cref="Testimonial"/>.
-/// Stored in the <c>testimonial_translations</c> table.
+/// Stored in the <c>TestimonialTranslations</c> table.
 /// </summary>
 public sealed class TestimonialTranslation : BaseEntity
 {
-    /// <summary>Longest a locale code may be — matches the <c>testimonial_translations.Locale</c> column.</summary>
+    /// <summary>Longest a locale code may be — matches the <c>TestimonialTranslations.Locale</c> column.</summary>
     public const int LocaleMaxLength = 10;
 
-    /// <summary>Longest Role may be — matches the <c>testimonial_translations.Role</c> column.</summary>
+    /// <summary>Longest Role may be — matches the <c>TestimonialTranslations.Role</c> column.</summary>
     public const int RoleMaxLength = 200;
 
-    /// <summary>Longest Quote may be — matches the <c>testimonial_translations.Quote</c> column.</summary>
+    /// <summary>Longest Quote may be — matches the <c>TestimonialTranslations.Quote</c> column.</summary>
     public const int QuoteMaxLength = 2000;
 
     /// <summary>Gets the FK to the parent <see cref="Testimonial"/>.</summary>

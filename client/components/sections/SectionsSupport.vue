@@ -8,7 +8,7 @@
         :subtitle="$t('hostingSections.support.subtitle')"
       />
 
-      <UiBalancedGrid :count="channels.length" :class="gridWidth" data-testid="sections-support-grid">
+      <UiBalancedGrid :count="channels.length" data-testid="sections-support-grid">
         <ClassicCard
           v-for="item in channels"
           :key="item.channel"
@@ -49,10 +49,4 @@ const CHANNEL_ICONS: Record<SupportChannel, string> = {
   [SupportChannel.Email]: 'mdi:email-outline',
   [SupportChannel.Phone]: 'mdi:phone-outline',
 }
-
-/** Width caps by card count, so a lone card does not stretch across the whole page. */
-const GRID_WIDTH_BY_COUNT: Record<number, string> = { 1: 'mx-auto max-w-xl', 2: 'mx-auto max-w-4xl' }
-
-/** Classes that cap the grid width for the current number of channels. */
-const gridWidth = computed(() => GRID_WIDTH_BY_COUNT[channels.value.length] ?? '')
 </script>

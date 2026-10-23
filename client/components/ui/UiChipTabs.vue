@@ -19,7 +19,7 @@
         @keydown="onKeydown($event, index)"
       >
         {{ tab.label }}
-        <span v-if="tab.count !== undefined" class="ml-1.5 font-mono text-[0.85em] opacity-60">{{ tab.count }}</span>
+        <span v-if="tab.count !== undefined" class="ui-chip-count ml-1.5 font-mono text-[0.85em] opacity-60">{{ tab.count }}</span>
       </button>
     </div>
   </div>
@@ -69,11 +69,11 @@ const SCROLLER_CLASSES = 'no-scrollbar w-full max-w-full overflow-x-auto overscr
 /** The row: as wide as the chips need, but never narrower than the box, so `justify-center` centres without clipping the first chip. */
 const LIST_CLASSES = 'flex w-max min-w-full justify-center gap-2 px-1'
 
-/** Structure shared by every chip; the focus ring is inset so it follows the pill and is never clipped by the scroll box. */
-const TAB_BASE = 'inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-3.5 py-2 text-[13px] font-semibold leading-none transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-offset-0'
+/** Structure shared by every chip (`ui-chip` is the template hook classic.css restyles); the focus ring is inset so it follows the pill and is never clipped by the scroll box. */
+const TAB_BASE = 'ui-chip inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-3.5 py-2 text-[13px] font-semibold leading-none transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-offset-0'
 
 /** The chosen chip: brand gradient with its contrast text; the ring takes the same colour so it reads on the gradient. */
-const TAB_ACTIVE = 'border-transparent bg-brand text-on-brand shadow-md focus-visible:ring-on-brand/80'
+const TAB_ACTIVE = 'ui-chip-active border-transparent bg-brand text-on-brand shadow-md focus-visible:ring-on-brand/80'
 
 /** An available chip: readable token text and a hairline frame that brighten on hover; its ring uses the brand. */
 const TAB_IDLE = 'border-gray-200 text-gray-600 hover:bg-black/[0.04] hover:text-gray-900 focus-visible:ring-primary-500 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white'

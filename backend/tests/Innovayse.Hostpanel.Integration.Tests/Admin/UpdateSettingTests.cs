@@ -22,6 +22,51 @@ public sealed class UpdateSettingTests(IntegrationTestFactory factory) : IClassF
     /// <summary>An id no seeded or created setting ever takes.</summary>
     private const int NoSuchSettingId = 999_999_999;
 
+    /// <summary>An empty or absent value for a secret setting keeps the stored secret.</summary>
+    [Fact]
+    public async Task SecretKey_EmptyValue_KeepsTheStoredSecretAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await SecretSettingTestSeeds.StoreAsync(factory, "integration:plesk:password", "stored-panel-password");
+
+        var empty = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = string.Empty });
+        var absent = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { });
+
+        empty.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        absent.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await SecretSettingTestSeeds.ReadAsync(factory, "integration:plesk:password")).Should().Be("stored-panel-password");
+    }
+
+    /// <summary>A new value for a secret setting replaces the stored one, and is not echoed back.</summary>
+    [Fact]
+    public async Task SecretKey_NewValue_ReplacesTheStoredSecretAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await SecretSettingTestSeeds.StoreAsync(factory, "integration:enom:api_key", "old-registrar-key");
+
+        var update = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = "new-registrar-key" });
+
+        update.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await SecretSettingTestSeeds.ReadAsync(factory, "integration:enom:api_key")).Should().Be("new-registrar-key");
+        var read = await client.GetFromJsonAsync<JsonElement>($"/api/admin/settings/{id}");
+        read.GetRawText().Should().NotContain("new-registrar-key");
+    }
+
+    /// <summary>An explicit clear removes a secret setting's value.</summary>
+    [Fact]
+    public async Task SecretKey_Clear_RemovesTheStoredSecretAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await SecretSettingTestSeeds.StoreAsync(factory, "integration:resellerclub:api_key", "reseller-key");
+
+        var update = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { clear = true });
+
+        update.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await SecretSettingTestSeeds.ReadAsync(factory, "integration:resellerclub:api_key")).Should().BeEmpty();
+        var read = await client.GetFromJsonAsync<JsonElement>($"/api/admin/settings/{id}");
+        read.GetProperty("hasValue").GetBoolean().Should().BeFalse();
+    }
+
     /// <summary>A value from the key's own vocabulary is stored, in its canonical spelling.</summary>
     [Fact]
     public async Task TemplateKey_StoresTheCanonicalSpellingAsync()

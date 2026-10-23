@@ -5,13 +5,13 @@ namespace Innovayse.Hostpanel.Domain.Partners;
 
 /// <summary>
 /// A partner or client logo shown on the storefront, with per-locale translations.
-/// Stored in the <c>partners</c> table.
+/// Stored in the <c>Partners</c> table.
 /// </summary>
 public sealed class Partner : BaseEntity, IAggregateRoot
 {
-    /// <summary>Longest LogoUrl may be — matches the <c>partners.LogoUrl</c> column.</summary>
+    /// <summary>Longest LogoUrl may be — matches the <c>Partners.LogoUrl</c> column.</summary>
     public const int LogoUrlMaxLength = 500;
-    /// <summary>Longest Url may be — matches the <c>partners.Url</c> column.</summary>
+    /// <summary>Longest Url may be — matches the <c>Partners.Url</c> column.</summary>
     public const int UrlMaxLength = 500;
 
     /// <summary>Gets the URL of the partner's logo image, or <c>null</c>.</summary>

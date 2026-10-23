@@ -4,17 +4,17 @@ namespace Innovayse.Hostpanel.Domain.Faqs;
 
 /// <summary>
 /// A locale-specific translation for a <see cref="Faq"/>.
-/// Stored in the <c>faq_translations</c> table.
+/// Stored in the <c>FaqTranslations</c> table.
 /// </summary>
 public sealed class FaqTranslation : BaseEntity
 {
-    /// <summary>Longest a locale code may be — matches the <c>faq_translations.Locale</c> column.</summary>
+    /// <summary>Longest a locale code may be — matches the <c>FaqTranslations.Locale</c> column.</summary>
     public const int LocaleMaxLength = 10;
 
-    /// <summary>Longest Question may be — matches the <c>faq_translations.Question</c> column.</summary>
+    /// <summary>Longest Question may be — matches the <c>FaqTranslations.Question</c> column.</summary>
     public const int QuestionMaxLength = 500;
 
-    /// <summary>Longest Answer may be — matches the <c>faq_translations.Answer</c> column.</summary>
+    /// <summary>Longest Answer may be — matches the <c>FaqTranslations.Answer</c> column.</summary>
     public const int AnswerMaxLength = 4000;
 
     /// <summary>Gets the FK to the parent <see cref="Faq"/>.</summary>

@@ -2,7 +2,7 @@
   <div class="flex flex-col sm:flex-row gap-3">
     <UiInput
       class="flex-1"
-      size="lg"
+      :size="size"
       :model-value="modelValue"
       :placeholder="placeholder"
       :disabled="loading"
@@ -11,14 +11,14 @@
       @keydown.enter="$emit('search')"
     />
     <UiButton
-      size="lg"
+      :size="size"
       class="gap-2"
       :disabled="loading"
       :loading="loading"
       data-testid="search-bar-submit"
       @click="$emit('search')"
     >
-      <Search v-if="!loading" :size="20" :stroke-width="2" />
+      <Search v-if="!loading" :size="size === UiSize.Lg ? 20 : 18" :stroke-width="2" />
       {{ buttonLabel ?? $t('ui.searchButton') }}
     </UiButton>
   </div>
@@ -26,10 +26,12 @@
 
 <script setup lang="ts">
 /**
- * SearchBar (`UiSearchBar`) - a large search field with a submit button, for hero-style searches
- * (domain lookup, knowledge base). Enter in the field and the button both emit `search`.
+ * SearchBar (`UiSearchBar`) - a search field with a submit button, for hero-style searches
+ * (domain lookup, knowledge base). Enter in the field and the button both emit `search`. The field
+ * and the button share one `size` step, so they have the same height and type size.
  */
 import { Search } from 'lucide-vue-next'
+import { UiSize } from '~/utils/ui/enums'
 
 /** Props of SearchBar. */
 interface Props {
@@ -41,6 +43,8 @@ interface Props {
   loading?: boolean
   /** Button text; defaults to the translated "Search". */
   buttonLabel?: string
+  /** Size step of the field and the button (large in a hero, medium in a band). */
+  size?: `${UiSize}`
 }
 
 withDefaults(defineProps<Props>(), {
@@ -48,6 +52,7 @@ withDefaults(defineProps<Props>(), {
   placeholder: '',
   loading: false,
   buttonLabel: undefined,
+  size: UiSize.Lg,
 })
 
 defineEmits<{

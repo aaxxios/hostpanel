@@ -17,7 +17,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.1")
+                .HasAnnotation("ProductVersion", "9.0.21")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -65,7 +65,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("CreatedAt");
 
-                    b.ToTable("activity_logs", (string)null);
+                    b.ToTable("ActivityLogs");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Auth.SubjectRole", b =>
@@ -82,7 +82,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("Role");
 
-                    b.ToTable("subject_roles", (string)null);
+                    b.ToTable("SubjectRoles");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.BillableItem", b =>
@@ -132,7 +132,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("billable_items", (string)null);
+                    b.ToTable("BillableItems");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.Currency", b =>
@@ -184,7 +184,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("\"IsBase\" = true");
 
-                    b.ToTable("currencies", (string)null);
+                    b.ToTable("Currencies");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.Invoice", b =>
@@ -269,7 +269,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("invoices", (string)null);
+                    b.ToTable("Invoices");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.InvoiceItem", b =>
@@ -306,7 +306,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("InvoiceId");
 
-                    b.ToTable("invoice_items", (string)null);
+                    b.ToTable("InvoiceItems");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.InvoiceTransaction", b =>
@@ -354,7 +354,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("InvoiceId");
 
-                    b.ToTable("invoice_transactions", (string)null);
+                    b.ToTable("InvoiceTransactions");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.Quote", b =>
@@ -405,7 +405,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("quotes", (string)null);
+                    b.ToTable("Quotes");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.QuoteItem", b =>
@@ -440,7 +440,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("QuoteId");
 
-                    b.ToTable("quote_items", (string)null);
+                    b.ToTable("QuoteItems");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.Transaction", b =>
@@ -499,7 +499,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("ClientId");
 
-                    b.ToTable("transactions", (string)null);
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Clients.Client", b =>
@@ -657,7 +657,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("clients", (string)null);
+                    b.ToTable("Clients");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Clients.ClientUser", b =>
@@ -691,7 +691,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("UserId", "ClientId")
                         .IsUnique();
 
-                    b.ToTable("client_users", (string)null);
+                    b.ToTable("ClientUsers");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Clients.Contact", b =>
@@ -782,7 +782,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("ClientId");
 
-                    b.ToTable("contacts", (string)null);
+                    b.ToTable("Contacts");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Clients.Invitation", b =>
@@ -835,7 +835,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("Token")
                         .IsUnique();
 
-                    b.ToTable("invitations", (string)null);
+                    b.ToTable("Invitations");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Domains.DnsRecord", b =>
@@ -874,7 +874,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("DomainId");
 
-                    b.ToTable("dns_records", (string)null);
+                    b.ToTable("DnsRecords");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Domains.DomainReminder", b =>
@@ -905,7 +905,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("DomainId");
 
-                    b.ToTable("domain_reminders", (string)null);
+                    b.ToTable("DomainReminders");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Domains.EmailForwardingRule", b =>
@@ -938,7 +938,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("DomainId");
 
-                    b.ToTable("email_forwarding_rules", (string)null);
+                    b.ToTable("EmailForwardingRules");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Domains.Nameserver", b =>
@@ -961,7 +961,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("DomainId");
 
-                    b.ToTable("nameservers", (string)null);
+                    b.ToTable("Nameservers");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Domains.RegisteredDomain", b =>
@@ -1086,7 +1086,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("domains", (string)null);
+                    b.ToTable("Domains");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Domains.TldConfig", b =>
@@ -1164,7 +1164,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("Tld")
                         .IsUnique();
 
-                    b.ToTable("tld_configs", (string)null);
+                    b.ToTable("TldConfigs");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Faqs.Faq", b =>
@@ -1195,7 +1195,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("SortOrder");
 
-                    b.ToTable("faqs", (string)null);
+                    b.ToTable("Faqs");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Faqs.FaqTranslation", b =>
@@ -1229,7 +1229,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("FaqId", "Locale")
                         .IsUnique();
 
-                    b.ToTable("faq_translations", (string)null);
+                    b.ToTable("FaqTranslations");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Hosting.DiskUsageStat", b =>
@@ -1275,7 +1275,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("Domain")
                         .IsUnique();
 
-                    b.ToTable("disk_usage_stats", (string)null);
+                    b.ToTable("DiskUsageStats");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Locations.ServerLocation", b =>
@@ -1306,7 +1306,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("SortOrder");
 
-                    b.ToTable("server_locations", (string)null);
+                    b.ToTable("ServerLocations");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Locations.ServerLocationTranslation", b =>
@@ -1343,7 +1343,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("ServerLocationId", "Locale")
                         .IsUnique();
 
-                    b.ToTable("server_location_translations", (string)null);
+                    b.ToTable("ServerLocationTranslations");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Migration.MigrationJob", b =>
@@ -1645,7 +1645,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("Key")
                         .IsUnique();
 
-                    b.ToTable("migration_jobs", (string)null);
+                    b.ToTable("MigrationJobs");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Migration.MigrationLog", b =>
@@ -1687,7 +1687,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("JobId", "Action");
 
-                    b.ToTable("migration_logs", (string)null);
+                    b.ToTable("MigrationLogs");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Notifications.EmailLog", b =>
@@ -1724,7 +1724,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("email_logs", (string)null);
+                    b.ToTable("EmailLogs");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Notifications.EmailTemplate", b =>
@@ -1761,7 +1761,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("email_templates", (string)null);
+                    b.ToTable("EmailTemplates");
 
                     b.HasData(
                         new
@@ -1878,7 +1878,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("OrderNumber")
                         .IsUnique();
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Orders.OrderItem", b =>
@@ -1938,7 +1938,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("OrderItems", (string)null);
+                    b.ToTable("OrderItems");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Partners.Partner", b =>
@@ -1972,7 +1972,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("SortOrder");
 
-                    b.ToTable("partners", (string)null);
+                    b.ToTable("Partners");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Partners.PartnerTranslation", b =>
@@ -2001,7 +2001,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("PartnerId", "Locale")
                         .IsUnique();
 
-                    b.ToTable("partner_translations", (string)null);
+                    b.ToTable("PartnerTranslations");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Products.Product", b =>
@@ -2065,7 +2065,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Products.ProductFeature", b =>
@@ -2096,7 +2096,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("ProductId", "SortOrder");
 
-                    b.ToTable("product_features", (string)null);
+                    b.ToTable("ProductFeatures");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Products.ProductGroup", b =>
@@ -2121,7 +2121,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("product_groups", (string)null);
+                    b.ToTable("ProductGroups");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Products.ProductPrice", b =>
@@ -2153,7 +2153,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("ProductId", "CurrencyCode", "Cycle")
                         .IsUnique();
 
-                    b.ToTable("product_prices", (string)null);
+                    b.ToTable("ProductPrices");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Projects.Project", b =>
@@ -2195,7 +2195,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("SortOrder");
 
-                    b.ToTable("projects", (string)null);
+                    b.ToTable("Projects");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Projects.ProjectTranslation", b =>
@@ -2232,7 +2232,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("ProjectId", "Locale")
                         .IsUnique();
 
-                    b.ToTable("project_translations", (string)null);
+                    b.ToTable("ProjectTranslations");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Servers.Server", b =>
@@ -2365,7 +2365,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("ServerGroupId");
 
-                    b.ToTable("servers", (string)null);
+                    b.ToTable("Servers");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Servers.ServerGroup", b =>
@@ -2391,7 +2391,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("server_groups", (string)null);
+                    b.ToTable("ServerGroups");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Services.CancellationRequest", b =>
@@ -2424,7 +2424,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("cancellation_requests", (string)null);
+                    b.ToTable("CancellationRequests");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Services.ClientService", b =>
@@ -2525,7 +2525,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("client_services", (string)null);
+                    b.ToTable("ClientServices");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Settings.Setting", b =>
@@ -2555,7 +2555,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("Key")
                         .IsUnique();
 
-                    b.ToTable("settings", (string)null);
+                    b.ToTable("Settings");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Slides.Slide", b =>
@@ -2618,7 +2618,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("SortOrder");
 
-                    b.ToTable("slides", (string)null);
+                    b.ToTable("Slides");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Slides.SlideTranslation", b =>
@@ -2666,7 +2666,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("SlideId", "Locale")
                         .IsUnique();
 
-                    b.ToTable("slide_translations", (string)null);
+                    b.ToTable("SlideTranslations");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Ssl.SslCheck", b =>
@@ -2703,7 +2703,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("DomainName")
                         .IsUnique();
 
-                    b.ToTable("ssl_checks", (string)null);
+                    b.ToTable("SslChecks");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.Announcement", b =>
@@ -2731,7 +2731,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("announcements", (string)null);
+                    b.ToTable("Announcements");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.Department", b =>
@@ -2757,7 +2757,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("departments", (string)null);
+                    b.ToTable("Departments");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.Download", b =>
@@ -2809,7 +2809,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("downloads", (string)null);
+                    b.ToTable("Downloads");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.DownloadCategory", b =>
@@ -2840,7 +2840,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("ParentCategoryId");
 
-                    b.ToTable("download_categories", (string)null);
+                    b.ToTable("DownloadCategories");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.KbArticle", b =>
@@ -2874,7 +2874,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("IsPublished");
 
-                    b.ToTable("kb_articles", (string)null);
+                    b.ToTable("KbArticles");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.KbCategory", b =>
@@ -2905,7 +2905,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("kb_categories", (string)null);
+                    b.ToTable("KbCategories");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.NetworkIssue", b =>
@@ -2957,7 +2957,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("network_issues", (string)null);
+                    b.ToTable("NetworkIssues");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.PredefinedReply", b =>
@@ -2984,7 +2984,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("predefined_replies", (string)null);
+                    b.ToTable("PredefinedReplies");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.PredefinedReplyCategory", b =>
@@ -3005,7 +3005,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("predefined_reply_categories", (string)null);
+                    b.ToTable("PredefinedReplyCategories");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.Ticket", b =>
@@ -3070,7 +3070,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("tickets", (string)null);
+                    b.ToTable("Tickets");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.TicketReply", b =>
@@ -3103,7 +3103,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("TicketId");
 
-                    b.ToTable("ticket_replies", (string)null);
+                    b.ToTable("TicketReplies");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.TicketTag", b =>
@@ -3129,7 +3129,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("TicketId", "Name")
                         .IsUnique();
 
-                    b.ToTable("ticket_tags", (string)null);
+                    b.ToTable("TicketTags");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Testimonials.Testimonial", b =>
@@ -3174,7 +3174,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("SortOrder");
 
-                    b.ToTable("testimonials", (string)null);
+                    b.ToTable("Testimonials");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Testimonials.TestimonialTranslation", b =>
@@ -3207,7 +3207,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasIndex("TestimonialId", "Locale")
                         .IsUnique();
 
-                    b.ToTable("testimonial_translations", (string)null);
+                    b.ToTable("TestimonialTranslations");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Infrastructure.Auth.AppUser", b =>

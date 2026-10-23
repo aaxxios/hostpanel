@@ -23,7 +23,7 @@
       v-if="lead"
       size="inherit"
       tone="inherit"
-      class="mt-3 max-w-[620px] text-[16px] leading-[1.7] text-nova-muted"
+      class="mt-3 max-w-[75ch] text-[16px] leading-[1.7] text-nova-muted"
     >
       {{ lead }}
     </UiText>

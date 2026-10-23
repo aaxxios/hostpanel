@@ -4,11 +4,11 @@
       <UiHeading
         :level="1"
         size="bare"
-        class="max-w-[720px] text-[clamp(1.9rem,4.5vw,3rem)] font-extrabold leading-tight tracking-tight text-nova-ink"
+        class="text-[clamp(1.9rem,4.5vw,3rem)] font-extrabold leading-tight tracking-tight text-nova-ink"
       >
         {{ t('nova.plans.title') }}
       </UiHeading>
-      <UiText size="inherit" tone="inherit" class="mt-4 max-w-[620px] text-[17px] leading-[1.7] text-nova-muted">
+      <UiText size="inherit" tone="inherit" class="mt-4 max-w-[75ch] text-[17px] leading-[1.7] text-nova-muted">
         {{ t('nova.plans.lead') }}
       </UiText>
     </UiSection>

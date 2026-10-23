@@ -6,11 +6,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
 /// <summary>EF Core configuration for the <see cref="TicketTag"/> entity.</summary>
 public sealed class TicketTagConfiguration : IEntityTypeConfiguration<TicketTag>
 {
-    /// <summary>Configures the <c>ticket_tags</c> table mapping.</summary>
+    /// <summary>Configures the <c>TicketTags</c> table mapping.</summary>
     /// <param name="builder">Builder for the ticket tag entity.</param>
     public void Configure(EntityTypeBuilder<TicketTag> builder)
     {
-        builder.ToTable("ticket_tags");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.TicketId).IsRequired();
         builder.Property(x => x.Name).IsRequired().HasMaxLength(100);

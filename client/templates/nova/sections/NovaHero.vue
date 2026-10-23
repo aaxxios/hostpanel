@@ -25,7 +25,7 @@
           {{ t('nova.hero.title') }}
         </UiHeading>
 
-        <UiText size="inherit" tone="inherit" class="mt-5 max-w-[560px] text-[17px] leading-[1.7] text-nova-muted">
+        <UiText size="inherit" tone="inherit" class="mt-5 max-w-[75ch] text-[17px] leading-[1.7] text-nova-muted">
           {{ t('nova.hero.lead', { site: siteName }) }}
         </UiText>
 

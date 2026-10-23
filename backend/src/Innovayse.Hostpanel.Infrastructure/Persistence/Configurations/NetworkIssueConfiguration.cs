@@ -9,7 +9,6 @@ public sealed class NetworkIssueConfiguration : IEntityTypeConfiguration<Network
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<NetworkIssue> builder)
     {
-        builder.ToTable("network_issues");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Title).IsRequired().HasMaxLength(500);

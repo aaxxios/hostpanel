@@ -1,5 +1,6 @@
 /**
- * Unit tests for ProductsBenefits: the four platform benefits and the three reassurances.
+ * Unit tests for ProductsBenefits: the four customer benefits and the three reassurances, with no
+ * reseller copy left.
  */
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
@@ -13,16 +14,24 @@ describe('ProductsBenefits', () => {
   it('renders the four benefits with their titles and descriptions', () => {
     const wrapper = mountBenefits()
 
-    for (const key of ['whiteLabel', 'support', 'updates', 'api']) {
+    for (const key of ['speed', 'security', 'support', 'migration']) {
       const card = wrapper.find(`[data-testid="benefit-${key}"]`)
       expect(card.text()).toContain(`products.benefits.${key}.title`)
       expect(card.text()).toContain(`products.benefits.${key}.description`)
     }
   })
 
+  it('has no reseller benefits', () => {
+    const wrapper = mountBenefits()
+
+    for (const key of ['whiteLabel', 'api', 'updates']) {
+      expect(wrapper.find(`[data-testid="benefit-${key}"]`).exists()).toBe(false)
+    }
+  })
+
   it('is never rendered hidden: no scroll-triggered initial state, a CSS entrance instead', () => {
     const wrapper = mountBenefits()
-    const card = wrapper.find('[data-testid="benefit-api"]')
+    const card = wrapper.find('[data-testid="benefit-speed"]')
 
     expect(card.attributes('style') ?? '').not.toContain('opacity')
     expect(card.classes()).toContain('animate-reveal-up')
@@ -31,17 +40,11 @@ describe('ProductsBenefits', () => {
   it('renders the three reassurances', () => {
     const wrapper = mountBenefits()
 
-    for (const key of ['trial', 'guarantee', 'lifetime']) {
+    for (const key of ['trial', 'guarantee', 'pricing']) {
       const card = wrapper.find(`[data-testid="reassurance-${key}"]`)
       expect(card.text()).toContain(`products.benefits.additional.${key}.title`)
       expect(card.text()).toContain(`products.benefits.additional.${key}.description`)
     }
-  })
-
-  it('describes white-label without naming the site', () => {
-    const wrapper = mountBenefits()
-
-    expect(wrapper.find('[data-testid="benefit-whiteLabel"]').text()).toContain('products.benefits.whiteLabel.description')
   })
 
   it('shows the subtitle under the header', () => {

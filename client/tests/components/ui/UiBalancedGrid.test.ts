@@ -63,3 +63,19 @@ describe('UiBalancedGrid', () => {
     expect(lastRowSize(7, balancedColumns(7))).toBe(3)
   })
 })
+
+describe('UiBalancedGrid minColumns', () => {
+  it('keeps a lone card at the width of a column in a three column grid, centred', () => {
+    const wrapper = mountWithKit(UiBalancedGrid, { props: { count: 1, minColumns: 3 }, slots: { default: '<div class="cell">0</div>' } })
+
+    expect(wrapper.attributes('data-columns')).toBe('3')
+    expect(wrapper.classes()).toEqual(expect.arrayContaining(['justify-center', 'lg:[&>*]:basis-[calc((100%-3rem)/3)]', 'sm:[&>*]:basis-[calc((100%-1.5rem)/2)]']))
+    expect(wrapper.classes()).not.toContain('lg:[&>*]:basis-full')
+  })
+
+  it('does not narrow a grid that already has more columns', () => {
+    const wrapper = mountWithKit(UiBalancedGrid, { props: { count: 4, minColumns: 3 }, slots: { default: '<div>0</div>' } })
+
+    expect(wrapper.attributes('data-columns')).toBe('4')
+  })
+})

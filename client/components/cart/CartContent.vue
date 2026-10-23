@@ -5,7 +5,7 @@
     </UiDecor>
 
     <UiContainer class="relative z-10">
-      <div class="mx-auto max-w-3xl">
+      <div>
         <!-- Empty cart -->
         <UiEmptyState
           v-if="items.length === 0"

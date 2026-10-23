@@ -11,6 +11,7 @@ describe('resolveAppLogo', () => {
       dark: STATIC_LOGO_DARK,
       uploaded: false,
       swap: true,
+      plate: false,
     })
   })
 
@@ -26,6 +27,16 @@ describe('resolveAppLogo', () => {
     expect(resolveAppLogo(same, LogoSurface.Auto)).toMatchObject({ uploaded: true, swap: false })
     expect(resolveAppLogo(split, LogoSurface.Auto)).toMatchObject({ dark: '/u/b.png', swap: true })
     expect(resolveAppLogo(split, LogoSurface.Dark).dark).toBe('/u/b.png')
+  })
+
+  it('asks for a light plate only when a lone upload can land on a dark background', () => {
+    const same = { light: '/u/a.png', dark: '/u/a.png', hasDarkVariant: false }
+    const split = { light: '/u/a.png', dark: '/u/b.png', hasDarkVariant: true }
+    expect(resolveAppLogo(same, LogoSurface.Auto).plate).toBe(true)
+    expect(resolveAppLogo(same, LogoSurface.Dark).plate).toBe(true)
+    expect(resolveAppLogo(split, LogoSurface.Auto).plate).toBe(false)
+    expect(resolveAppLogo(split, LogoSurface.Dark).plate).toBe(false)
+    expect(resolveAppLogo(empty, LogoSurface.Dark).plate).toBe(false)
   })
 })
 

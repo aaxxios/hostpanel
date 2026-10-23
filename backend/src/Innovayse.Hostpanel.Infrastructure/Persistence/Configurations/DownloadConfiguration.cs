@@ -9,7 +9,6 @@ public sealed class DownloadConfiguration : IEntityTypeConfiguration<Download>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Download> builder)
     {
-        builder.ToTable("downloads");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Title).IsRequired().HasMaxLength(500);

@@ -27,6 +27,7 @@ import UiTableHeader from '@/components/ui/UiTableHeader.vue'
 import UiTableRow from '@/components/ui/UiTableRow.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { Icon } from '@/lib/icons'
+import { storefrontAssetUrl } from '@/lib/runtimeConfig'
 import { useSlidesStore } from '@/stores/slides'
 import type { Slide } from '@/types/slide'
 import { SlideAudience } from '@/types/slideaudience'
@@ -245,7 +246,7 @@ const formatDateRange = (from: string | null, until: string | null): string => {
               <UiTableCell>
                 <UiImage
                   v-if="slide.imageUrl"
-                  :src="slide.imageUrl"
+                  :src="storefrontAssetUrl(slide.imageUrl)"
                   :alt="slide.translations[0]?.title ?? t('settings.slides.slide')"
                   fit="cover"
                   rounded="md"

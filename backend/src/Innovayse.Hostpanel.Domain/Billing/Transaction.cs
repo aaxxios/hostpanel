@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Domain.Billing;
 /// <summary>
 /// Represents a financial transaction on a client's account.
 /// Tracks money in (payments), money out (refunds/withdrawals), fees, and credit adjustments.
-/// Stored in the <c>transactions</c> table.
+/// Stored in the <c>Transactions</c> table.
 /// </summary>
 public sealed class Transaction : BaseEntity
 {

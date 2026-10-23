@@ -10,7 +10,6 @@ public sealed class ActivityLogConfiguration : IEntityTypeConfiguration<Activity
     /// <param name="builder">Entity type builder.</param>
     public void Configure(EntityTypeBuilder<ActivityLog> builder)
     {
-        builder.ToTable("activity_logs");
         builder.HasKey(l => l.Id);
         builder.Property(l => l.ClientId).IsRequired();
         builder.Property(l => l.Description).IsRequired().HasMaxLength(1000);

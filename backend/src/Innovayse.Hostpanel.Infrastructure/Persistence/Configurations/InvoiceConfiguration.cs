@@ -9,11 +9,10 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
     /// <summary>Column width for a three-character ISO 4217 currency code.</summary>
     private const int CurrencyCodeLength = 3;
 
-    /// <summary>Configures the <c>invoices</c> table mapping.</summary>
+    /// <summary>Configures the <c>Invoices</c> table mapping.</summary>
     /// <param name="builder">The entity type builder.</param>
     public void Configure(EntityTypeBuilder<Invoice> builder)
     {
-        builder.ToTable("invoices");
         builder.HasKey(x => x.Id);
 
         // Optimistic concurrency via PostgreSQL's system `xmin` column — no migration needed,

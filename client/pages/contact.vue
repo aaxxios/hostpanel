@@ -11,7 +11,7 @@
     <!-- Contact Section -->
     <UiSection padding="md">
       <!-- The info column comes first in the DOM so it leads on phones; `reverse` puts the form on the left from `lg` up. -->
-      <UiSplit reverse gap="xl" class="mx-auto w-full max-w-6xl">
+      <UiSplit reverse gap="xl" class="w-full">
         <!-- Right: Contact Info -->
         <template #start>
           <UiStack

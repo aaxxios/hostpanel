@@ -6,7 +6,7 @@
  * instead of an empty page.
  */
 import { expect, test } from './support/test'
-import { PLAN, PLAN_PRO } from './support/fixtures.mjs'
+import { HOSTING_GROUP, PLAN, PLAN_PRO } from './support/fixtures.mjs'
 import { resetStub, waitForHydration } from './support/helpers'
 
 test.beforeEach(async ({ request }) => {
@@ -18,7 +18,8 @@ test('the product page lists the plans of the family with their prices', async (
   await waitForHydration(page)
 
   await expect(page.getByTestId('product-page')).toBeVisible()
-  await expect(page.getByTestId('product-name')).toHaveText(PLAN.name)
+  // The header names the family (its group), not its first plan.
+  await expect(page.getByTestId('product-name')).toHaveText(HOSTING_GROUP.name)
   await expect(page.getByTestId(`product-plan-${PLAN.id}`)).toContainText(PLAN.name)
   await expect(page.getByTestId(`product-plan-${PLAN.id}`).getByTestId('product-plan-price')).toContainText('5.00')
   await expect(page.getByTestId(`product-plan-${PLAN_PRO.id}`).getByTestId('product-plan-price')).toContainText('15.00')

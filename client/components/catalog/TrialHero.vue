@@ -17,7 +17,7 @@
         <UiHeading :level="1" size="display" class="mb-4 leading-tight [.tpl-classic_&]:text-3xl [.tpl-classic_&]:font-semibold [.tpl-classic_&]:text-classic-ink md:[.tpl-classic_&]:text-4xl" data-testid="trial-title">
           {{ $t('trial.title', { product: name }) }}
         </UiHeading>
-        <UiText tone="muted" size="lg" class="mb-10 max-w-2xl mx-auto [.tpl-classic_&]:text-classic-muted">{{ $t('trial.subtitle') }}</UiText>
+        <UiText tone="muted" size="lg" class="mb-10 max-w-[75ch] mx-auto [.tpl-classic_&]:text-classic-muted">{{ $t('trial.subtitle') }}</UiText>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
           <UiAccentButton :href="trialUrl" size="lg" class="px-8 py-4 font-bold" data-testid="trial-cta">

@@ -4,14 +4,14 @@ namespace Innovayse.Hostpanel.Domain.Partners;
 
 /// <summary>
 /// A locale-specific translation for a <see cref="Partner"/>.
-/// Stored in the <c>partner_translations</c> table.
+/// Stored in the <c>PartnerTranslations</c> table.
 /// </summary>
 public sealed class PartnerTranslation : BaseEntity
 {
-    /// <summary>Longest a locale code may be — matches the <c>partner_translations.Locale</c> column.</summary>
+    /// <summary>Longest a locale code may be — matches the <c>PartnerTranslations.Locale</c> column.</summary>
     public const int LocaleMaxLength = 10;
 
-    /// <summary>Longest Name may be — matches the <c>partner_translations.Name</c> column.</summary>
+    /// <summary>Longest Name may be — matches the <c>PartnerTranslations.Name</c> column.</summary>
     public const int NameMaxLength = 200;
 
     /// <summary>Gets the FK to the parent <see cref="Partner"/>.</summary>

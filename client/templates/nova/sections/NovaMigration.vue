@@ -1,6 +1,6 @@
 <template>
   <UiSection padding="lg" class="border-b border-nova-border">
-    <div class="max-w-[640px]">
+    <div class="max-w-[75ch]">
       <NovaSectionHeader
         :eyebrow="t('nova.migration.eyebrow')"
         :title="t('nova.migration.title', { site: siteName })"

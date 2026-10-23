@@ -46,6 +46,40 @@ describe('useSchemaOrg', () => {
     expect(useSchemaOrg().baseUrl).toBe('')
   })
 
+  it('describes a product family as a Product with one priced Offer per plan', () => {
+    stubRuntime()
+    const { productFamilySchema } = useSchemaOrg()
+
+    const schema = productFamilySchema({
+      name: 'Web Hosting',
+      description: 'Fast hosting',
+      url: '/products/web-hosting',
+      offers: [
+        { name: 'Starter', price: 4.99, priceCurrency: 'USD', billingDuration: 'P1M', url: '/products/web-hosting' },
+        { name: 'Pro', price: 99, priceCurrency: 'USD', billingDuration: 'P1Y', url: `${BASE}/products/web-hosting` },
+      ],
+    })
+
+    expect(schema).toMatchObject({ '@type': 'Product', name: 'Web Hosting', url: `${BASE}/products/web-hosting`, brand: { '@id': `${BASE}/#organization` } })
+    expect(schema.offers).toHaveLength(2)
+    expect(schema.offers?.[0]).toMatchObject({
+      '@type': 'Offer',
+      name: 'Starter',
+      price: 4.99,
+      priceCurrency: 'USD',
+      url: `${BASE}/products/web-hosting`,
+      priceSpecification: { '@type': 'UnitPriceSpecification', price: 4.99, priceCurrency: 'USD', billingDuration: 'P1M' },
+    })
+    expect(schema.offers?.[1]?.priceSpecification.billingDuration).toBe('P1Y')
+  })
+
+  it('publishes no offers for a family with no priced plan', () => {
+    stubRuntime()
+    const schema = useSchemaOrg().productFamilySchema({ name: 'Web Hosting', description: 'd', url: '/p', offers: [] })
+
+    expect(schema).not.toHaveProperty('offers')
+  })
+
   it('publishes no offer, rating or served area the operator never stated', () => {
     stubRuntime()
     const { productSchema, serviceSchema } = useSchemaOrg()

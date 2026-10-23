@@ -5,15 +5,15 @@ namespace Innovayse.Hostpanel.Domain.Testimonials;
 
 /// <summary>
 /// A client testimonial shown on the storefront, with per-locale translations.
-/// Stored in the <c>testimonials</c> table.
+/// Stored in the <c>Testimonials</c> table.
 /// </summary>
 public sealed class Testimonial : BaseEntity, IAggregateRoot
 {
-    /// <summary>Longest Name may be — matches the <c>testimonials.Name</c> column.</summary>
+    /// <summary>Longest Name may be — matches the <c>Testimonials.Name</c> column.</summary>
     public const int NameMaxLength = 200;
-    /// <summary>Longest Company may be — matches the <c>testimonials.Company</c> column.</summary>
+    /// <summary>Longest Company may be — matches the <c>Testimonials.Company</c> column.</summary>
     public const int CompanyMaxLength = 200;
-    /// <summary>Longest AvatarUrl may be — matches the <c>testimonials.AvatarUrl</c> column.</summary>
+    /// <summary>Longest AvatarUrl may be — matches the <c>Testimonials.AvatarUrl</c> column.</summary>
     public const int AvatarUrlMaxLength = 500;
 
     /// <summary>Lowest star rating allowed.</summary>

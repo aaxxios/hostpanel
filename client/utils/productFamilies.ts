@@ -16,6 +16,7 @@ import type { PortalProduct } from '~/types/portalproduct'
 import type { PortalProductGroup } from '~/types/portalproductgroup'
 import type { PortalProductPricing } from '~/types/portalproductpricing'
 import type { ProductDetail } from '~/types/productdetail'
+import type { ProductPlan } from '~/types/productplan'
 import type { ProductFamily } from '~/types/productfamily'
 import type { ProductPricingRow } from '~/types/productpricingrow'
 import type { ProductFeature } from '~/types/productfeature'
@@ -25,6 +26,9 @@ import { dominantProductType, familyConfig, familyKey, isDomainGroup, isFamilyGr
 
 /** How many bullets a family card lists; every card shows the same number so a row lines up. */
 const FAMILY_FEATURE_LIMIT = FAMILY_BULLET_LIMIT
+
+/** Fewest plans a family needs before one of them can be called the middle one. */
+const MIN_PLANS_FOR_MIDDLE = 3
 
 /** Formats an amount in the payer's currency. */
 export type MoneyFormatter = (amount: number) => string
@@ -61,6 +65,38 @@ export const firstOfferedPrice = (pricing: PortalProductPricing | null | undefin
     }
   }
   return null
+}
+
+/**
+ * The cheapest per-month price a product offers, for ordering; products with no price sort last.
+ *
+ * @param product The product.
+ * @returns The monthly price, else the annual price per month, else infinity.
+ */
+export const orderingPrice = (product: PortalProduct): number =>
+  product.pricing?.monthly ?? (product.pricing?.annual != null ? product.pricing.annual / 12 : Number.POSITIVE_INFINITY)
+
+/**
+ * Orders plans for display. The API returns products in no meaningful order (the database's), so
+ * the operator's `sortOrder` wins when the product carries one and the monthly price, cheapest
+ * first, decides otherwise.
+ *
+ * @param a First plan.
+ * @param b Second plan.
+ * @returns Negative when `a` comes first.
+ */
+export const comparePlans = (a: PortalProduct, b: PortalProduct): number => {
+  const orderA = a.sortOrder ?? Number.POSITIVE_INFINITY
+  const orderB = b.sortOrder ?? Number.POSITIVE_INFINITY
+  if (orderA !== orderB) {
+    return orderA < orderB ? -1 : 1
+  }
+  const priceA = orderingPrice(a)
+  const priceB = orderingPrice(b)
+  if (priceA === priceB) {
+    return 0
+  }
+  return priceA < priceB ? -1 : 1
 }
 
 /**
@@ -257,17 +293,27 @@ export const buildProductFamilies = (
 }
 
 /**
- * Finds the product a detail page is about and shapes it.
+ * Finds the product family a detail page is about and shapes it.
  *
- * The product is matched by its slug (or its normalised name), then by the family key of a group;
- * its plans are the other products of the same group.
+ * The family is matched by the slug (or normalised name) of one of its products, then by the key of
+ * its group. The page shows the FAMILY: its name and description are the group's, never those of
+ * whichever product happened to match; the group's description falls back to the parent product's
+ * blurb only when the operator wrote none. Its plans are the products of the group other than the
+ * parent (the parent alone when it is the only product), in the order of the plan cards.
  *
  * @param groups The catalogue's product groups.
  * @param list The catalogue products of the family groups.
  * @param productId The route parameter, e.g. `alpha-suite`.
- * @returns The product, or null when no product matches.
+ * @param specifications The specification lines read for a group, by its id; they back the key
+ * bullets of a family whose descriptions list none.
+ * @returns The family, or null when no product matches.
  */
-export const findProductDetail = (groups: PortalProductGroup[], list: PortalProduct[], productId: string): ProductDetail | null => {
+export const findProductDetail = (
+  groups: PortalProductGroup[],
+  list: PortalProduct[],
+  productId: string,
+  specifications: (groupId: number) => readonly ProductFeature[] = () => [],
+): ProductDetail | null => {
   const families = groups.filter(isFamilyGroup)
   const inFamilies = list.filter((product) => families.some((group) => group.id === Number(product.groupId)))
 
@@ -285,28 +331,57 @@ export const findProductDetail = (groups: PortalProductGroup[], list: PortalProd
   }
 
   const key = familyKey(group)
-  const config = familyConfig(group, inFamilies.filter((product) => Number(product.groupId) === group.id))
-  const { summary, features } = parseDescription(found.description || '')
+  const inGroup = inFamilies.filter((product) => Number(product.groupId) === group.id)
+  const config = familyConfig(group, inGroup)
+  const parent = inGroup.find((product) => productKeyOf(product) === key)
+  const subPlans = inGroup.filter((product) => product !== parent)
+  // With no sub-plans the parent product is the single plan.
+  const planProducts = (subPlans.length > 0 ? subPlans : (parent ? [parent] : [])).sort(comparePlans)
+  const parentFeatures = parent ? parseDescription(parent.description || '').features.filter(Boolean) : []
 
-  const plans = inFamilies
-    .filter((product) => Number(product.groupId) === group.id && productKeyOf(product) !== key)
-    .map((plan) => ({
-      pid: plan.pid as number,
-      tier: plan.name,
-      pricing: plan.pricing ?? null,
-      features: parseDescription(plan.description || '').features,
-    }))
+  const plans: ProductPlan[] = planProducts.map((plan) => ({
+    id: plan.id,
+    pid: plan.pid as number,
+    tier: plan.name,
+    pricing: plan.pricing ?? null,
+    description: parseDescription(plan.description || '').summary,
+    features: parseDescription(plan.description || '').features,
+    isFeatured: plan.isFeatured === true,
+  }))
 
   return {
     id: key,
+    gid: group.id,
     pid: found.pid,
-    name: found.name,
+    // The family is named by its group, as on its card in the products list.
+    name: group.name,
     icon: config.icon,
     color: config.color,
     demoUrl: config.demoUrl,
     learnMoreUrl: config.learnMoreUrl,
-    description: summary,
-    features,
+    description: group.description?.trim() || parseDescription((parent ?? planProducts[0] ?? found).description || '').summary,
+    features: parentFeatures.length > 0 ? parentFeatures : familyCardBullets(planProducts, specifications(group.id)),
     plans,
   }
+}
+
+/**
+ * The plan a detail page draws as the recommended one.
+ *
+ * The operator's featured plan wins (the first one that is not free); without one, the middle plan
+ * of three or more is recommended, as on the other pricing pages. Fewer than three plans have no
+ * middle to point at, so none is recommended.
+ *
+ * @param plans The family's plans, in display order.
+ * @returns The `pid` of the recommended plan, or null when there is none.
+ */
+export const recommendedPlanPid = (plans: readonly ProductPlan[]): number | null => {
+  const featured = plans.find((plan) => plan.isFeatured && plan.pricing?.monthly !== 0)
+  if (featured) {
+    return featured.pid
+  }
+  if (plans.length < MIN_PLANS_FOR_MIDDLE) {
+    return null
+  }
+  return plans[Math.floor((plans.length - 1) / 2)]?.pid ?? null
 }

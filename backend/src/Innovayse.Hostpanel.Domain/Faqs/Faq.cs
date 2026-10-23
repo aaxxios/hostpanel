@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Domain.Faqs;
 
 /// <summary>
 /// A frequently asked question shown on the storefront, with per-locale translations.
-/// Stored in the <c>faqs</c> table.
+/// Stored in the <c>Faqs</c> table.
 /// </summary>
 public sealed class Faq : BaseEntity, IAggregateRoot
 {

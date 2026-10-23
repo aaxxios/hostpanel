@@ -7,4 +7,10 @@
 export interface AppRuntimeConfig {
   /** Public base path the SPA is served under, e.g. `/` or `/admin`. */
   basePath: string
+  /**
+   * Public origin of the storefront, e.g. `https://host.example.com`, or `''` when unknown.
+   * Image paths the storefront stores as root-relative (`/demo/...`) live there, not on the
+   * admin's own origin.
+   */
+  clientBaseUrl: string
 }

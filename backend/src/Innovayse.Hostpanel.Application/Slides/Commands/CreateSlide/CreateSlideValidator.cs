@@ -9,13 +9,13 @@ namespace Innovayse.Hostpanel.Application.Slides.Commands.CreateSlide;
 /// <summary>Validates <see cref="CreateSlideCommand"/> before it reaches the handler.</summary>
 public sealed class CreateSlideValidator : LocalizedValidator<CreateSlideCommand>
 {
-    /// <summary>Longest an icon name may be — matches the <c>slides.IconName</c> column.</summary>
+    /// <summary>Longest an icon name may be — matches the <c>Slides.IconName</c> column.</summary>
     private const int IconNameMaxLength = 100;
 
-    /// <summary>Longest a brand color may be — matches the <c>slides.BrandColor</c> column.</summary>
+    /// <summary>Longest a brand color may be — matches the <c>Slides.BrandColor</c> column.</summary>
     private const int BrandColorMaxLength = 20;
 
-    /// <summary>Longest an image URL may be — matches the <c>slides.ImageUrl</c> column.</summary>
+    /// <summary>Longest an image URL may be — matches the <c>Slides.ImageUrl</c> column.</summary>
     private const int ImageUrlMaxLength = 500;
 
     /// <summary>Longest a demo or learn-more link may be — matches their columns.</summary>

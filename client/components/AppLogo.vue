@@ -9,7 +9,7 @@
       :fit="UiImageFit.Contain"
       unoptimised
       testid="app-logo-light"
-      :class="[imgClass, plan.swap ? 'dark:hidden' : '']"
+      :class="[imgClass, plan.swap ? 'dark:hidden' : plateClass]"
     />
     <UiImage
       v-if="plan.swap || !plan.light"
@@ -19,7 +19,7 @@
       :fit="UiImageFit.Contain"
       unoptimised
       testid="app-logo-dark"
-      :class="[imgClass, plan.swap ? 'hidden dark:block' : '']"
+      :class="[imgClass, plan.swap ? 'hidden dark:block' : plateClass]"
     />
   </template>
   <template v-else>
@@ -57,7 +57,7 @@
  * always-dark surface only the dark-background wordmark is rendered.
  */
 import { UiImageFit, UiImageLoading } from '~/utils/ui/enums'
-import { LogoSurface, resolveAppLogo } from '~/utils/appLogo'
+import { LOGO_PLATE_CLASSES, LOGO_PLATE_CLASSES_DARK_MODE, LogoSurface, resolveAppLogo } from '~/utils/appLogo'
 
 /** Props of the logo with their defaults applied. */
 const props = withDefaults(
@@ -84,4 +84,15 @@ const plan = computed(() => resolveAppLogo(
   { light: light.value, dark: dark.value, hasDarkVariant: hasDarkVariant.value },
   props.surface,
 ))
+
+/**
+ * The plate behind a lone upload: always on an always-dark surface, only in dark mode on the
+ * page-mode surface, and nothing when a dark variant (or the bundled pair) already reads.
+ */
+const plateClass = computed(() => {
+  if (!plan.value.plate) {
+    return ''
+  }
+  return props.surface === LogoSurface.Dark ? LOGO_PLATE_CLASSES : LOGO_PLATE_CLASSES_DARK_MODE
+})
 </script>

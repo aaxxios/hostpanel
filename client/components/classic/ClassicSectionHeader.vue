@@ -6,7 +6,7 @@
     <UiHeading :level="2" size="bare" class="text-3xl md:text-4xl font-bold tracking-tight text-classic-ink" data-testid="classic-section-header-title">
       {{ title }}
     </UiHeading>
-    <UiText v-if="subtitle" tone="inherit" size="lg" class="max-w-2xl text-classic-muted" data-testid="classic-section-header-subtitle">
+    <UiText v-if="subtitle" tone="inherit" size="lg" class="max-w-[75ch] text-classic-muted" data-testid="classic-section-header-subtitle">
       {{ subtitle }}
     </UiText>
   </UiStack>

@@ -10,7 +10,6 @@ public sealed class PartnerConfiguration : IEntityTypeConfiguration<Partner>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Partner> builder)
     {
-        builder.ToTable("partners");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.LogoUrl).HasMaxLength(Partner.LogoUrlMaxLength);
         builder.Property(x => x.Url).HasMaxLength(Partner.UrlMaxLength);

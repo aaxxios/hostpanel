@@ -6,11 +6,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
 /// <summary>EF Core configuration for the <see cref="DnsRecord"/> entity.</summary>
 public sealed class DnsRecordConfiguration : IEntityTypeConfiguration<DnsRecord>
 {
-    /// <summary>Configures the <c>dns_records</c> table mapping.</summary>
+    /// <summary>Configures the <c>DnsRecords</c> table mapping.</summary>
     /// <param name="builder">The entity type builder.</param>
     public void Configure(EntityTypeBuilder<DnsRecord> builder)
     {
-        builder.ToTable("dns_records");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.DomainId).IsRequired();
