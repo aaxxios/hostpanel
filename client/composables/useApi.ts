@@ -94,6 +94,12 @@ interface WithDefault<T> {
   default: () => T
 }
 
+/** The header `server/middleware/csrf.ts` requires on every state-changing `/api/` request. */
+const CSRF_HEADER = 'X-Requested-With'
+
+/** The value the CSRF guard accepts. */
+const CSRF_HEADER_VALUE = 'XMLHttpRequest'
+
 /** The i18n instance as far as {@link apiFetch} reads it. */
 interface LocaleHolder {
   /** The active locale. */
@@ -241,6 +247,11 @@ export const apiFetch = async <T = unknown>(
       ...opts,
       headers: {
         [LANGUAGE_HEADER]: resolveLanguage(locale),
+        // Stamped here and not left to the `csrf-header` plugin: during SSR the fetcher is
+        // `useRequestFetch()`, a different function from the global `$fetch` that plugin wraps,
+        // so a state-changing call made while rendering (a domain search seeded from the URL)
+        // reached the CSRF guard without the header and was refused with 403.
+        [CSRF_HEADER]: CSRF_HEADER_VALUE,
         ...(opts.headers as Record<string, string> | undefined ?? {})
       }
     })
