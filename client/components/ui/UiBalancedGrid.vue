@@ -14,7 +14,7 @@
  * two on a tablet. Children stretch to the tallest in their row.
  */
 import { computed } from 'vue'
-import { balancedColumns, tabletColumns } from '~/utils/balancedGrid'
+import { BALANCED_MAX_COLUMNS, BALANCED_TABLET_COLUMNS, balancedColumns, tabletColumns } from '~/utils/balancedGrid'
 
 /** Props of UiBalancedGrid. */
 interface Props {
@@ -22,13 +22,21 @@ interface Props {
   count: number
   /** Tag to render (use `ul` for a list of cards). */
   as?: string
+  /**
+   * The fewest columns the card width is computed for. A grid of one or two cards then keeps the
+   * width of a card in a fuller grid and is centred, instead of stretching across the container.
+   */
+  minColumns?: number
 }
 
 /** Props of the component with their defaults applied. */
-const props = withDefaults(defineProps<Props>(), { as: 'div' })
+const props = withDefaults(defineProps<Props>(), { as: 'div', minColumns: 1 })
 
-/** Columns on a desktop screen. */
-const columns = computed(() => balancedColumns(props.count))
+/** Columns on a desktop screen, never fewer than the `minColumns` the card width is kept for (capped at the widest row). */
+const columns = computed(() => Math.min(BALANCED_MAX_COLUMNS, Math.max(balancedColumns(props.count), props.minColumns)))
+
+/** Columns on a tablet-width screen, held at `minColumns` too, so a lone card is not stretched there either. */
+const tablet = computed(() => Math.min(BALANCED_TABLET_COLUMNS, Math.max(tabletColumns(props.count), props.minColumns)))
 
 /**
  * Classes that size a child to one column on a tablet-width screen, keyed by column count.
@@ -54,7 +62,7 @@ const DESKTOP_CHILD_CLASSES: Record<number, string> = {
 const classes = computed(() => [
   'ui-balanced-grid flex flex-wrap justify-center gap-6 [&>*]:min-w-0 [&>*]:flex-none [&>*]:basis-full',
   '[&>.contents>*]:min-w-0 [&>.contents>*]:flex-none [&>.contents>*]:basis-full',
-  TABLET_CHILD_CLASSES[tabletColumns(props.count)],
+  TABLET_CHILD_CLASSES[tablet.value],
   DESKTOP_CHILD_CLASSES[columns.value],
 ])
 </script>

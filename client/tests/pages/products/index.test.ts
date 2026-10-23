@@ -134,13 +134,25 @@ describe('products page', () => {
     expect(wrapper.find('[data-testid="product-card-domains"]').html()).toContain('mdi:earth')
   })
 
-  it('lists a family with priced plans in the comparison table, in the payer currency', async () => {
+  it('compares the real plans of a family with shared specification lines, in the payer currency', async () => {
+    api.fetchProductFeatures.mockResolvedValue([
+      { id: 1, productId: 11, label: 'Disk', value: '10 GB', sortOrder: 0 },
+      { id: 2, productId: 12, label: 'Disk', value: '50 GB', sortOrder: 0 },
+      { id: 3, productId: 11, label: 'Mail', value: '1', sortOrder: 1 },
+      { id: 4, productId: 12, label: 'Mail', value: '10', sortOrder: 1 },
+    ])
     const wrapper = await mountProducts()
 
-    const row = wrapper.find('[data-testid="comparison-row-alpha-suite"]')
-    expect(row.exists()).toBe(true)
-    expect(row.text()).toContain('10.00')
-    expect(wrapper.find('[data-testid="comparison-row-domains"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="comparison-plan-11"]').text()).toContain('Starter')
+    expect(wrapper.find('[data-testid="comparison-price-11"]').text()).toContain('10.00')
+    expect(wrapper.find('[data-testid="comparison-price-12"]').text()).toContain('20.00')
+    expect(wrapper.find('[data-testid="comparison-row-0"]').text()).toContain('50 GB')
+  })
+
+  it('hides the comparison table when the plans share no specification lines', async () => {
+    const wrapper = await mountProducts()
+
+    expect(wrapper.find('[data-testid="products-comparison"]').exists()).toBe(false)
   })
 
   it('renders the hero, the benefits and the testimonials around the catalogue', async () => {

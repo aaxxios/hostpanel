@@ -12,7 +12,7 @@
     <UiDecor class="bottom-0 left-0 w-48 h-48 border-l-2 border-b-2 border-primary-500/25" />
 
     <UiContainer class="relative z-10">
-      <UiStack class="mx-auto max-w-4xl" gap="lg">
+      <UiStack gap="lg">
         <!-- Billing cycles -->
         <UiCard
           v-if="cycles.length"

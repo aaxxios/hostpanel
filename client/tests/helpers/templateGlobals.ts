@@ -43,8 +43,9 @@ export const stubTemplateGlobals = (options: TemplateGlobalsOptions = {}): void 
   vi.stubGlobal('useAppColorMode', () => ({ isDark: ref(true), applied: ref('dark'), userToggleEnabled: ref(true), toggle: vi.fn() }))
   vi.stubGlobal('useAuthMode', () => ({ signInHref: ref('/client/login') }))
   vi.stubGlobal('useBrandLogo', () => ({
-    light: ref(options.logo ?? ''),
-    dark: ref(options.logoDark ?? ''),
+    // Each side falls back to the other, as `resolveBrandLogos` does for the real composable.
+    light: ref(options.logo || options.logoDark || ''),
+    dark: ref(options.logoDark || options.logo || ''),
     hasDarkVariant: ref(Boolean(options.logoDark)),
     alt: ref(options.logoAlt ?? ''),
   }))

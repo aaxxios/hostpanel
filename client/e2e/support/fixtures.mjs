@@ -71,16 +71,73 @@ export const DOMAIN_PRODUCT = {
   ],
 }
 
+/**
+ * Builds one catalogue plan of an extra family group, so the home page has more families than it
+ * shows.
+ *
+ * @param {number} id Product id.
+ * @param {number} groupId Group the plan belongs to.
+ * @param {string} name Plan name.
+ * @param {number} monthly Monthly price in USD.
+ * @param {string} type Product type the catalogue reports.
+ * @returns {object} The plan, priced in USD and AMD.
+ */
+const familyPlan = (id, groupId, name, monthly, type) => ({
+  id,
+  groupId,
+  name,
+  description: `${name} plan for the end-to-end suite`,
+  status: 'Active',
+  type,
+  pricing: { monthly, annual: monthly * 10 },
+  prices: [
+    { currencyCode: 'USD', monthly, annual: monthly * 10 },
+    { currencyCode: 'AMD', monthly: monthly * 400, annual: monthly * 4000 },
+  ],
+})
+
+/** Plans of the extra families: five VPS plans (an odd count, to test the centred last row), then one each for dedicated servers, email and SSL. */
+export const EXTRA_FAMILY_PLANS = [
+  familyPlan(21, 2, 'E2E VPS Small', 9, 'Vps'),
+  familyPlan(22, 2, 'E2E VPS Medium', 18, 'Vps'),
+  familyPlan(23, 2, 'E2E VPS Large', 36, 'Vps'),
+  familyPlan(24, 2, 'E2E VPS Pro', 72, 'Vps'),
+  familyPlan(25, 2, 'E2E VPS Max', 144, 'Vps'),
+  familyPlan(31, 3, 'E2E Dedicated One', 80, 'Dedicated'),
+  familyPlan(41, 4, 'E2E Mailbox', 3, 'Email'),
+  familyPlan(51, 5, 'E2E SSL Basic', 12, 'Ssl'),
+]
+
 /** Every product the catalogue endpoint serves. */
-export const PRODUCTS = [PLAN, PLAN_PRO, DOMAIN_PRODUCT]
+export const PRODUCTS = [PLAN, PLAN_PRO, DOMAIN_PRODUCT, ...EXTRA_FAMILY_PLANS]
+
+/** The hosting product group, the family the product page is headed by. */
+export const HOSTING_GROUP = { id: 1, name: 'Web Hosting', description: null, isActive: true, productCount: 2 }
 
 /**
  * The catalogue's product groups as `GET /api/products/groups` serves them. The hosting group is a
  * product family; the domain group is switched off, so no family page lists the domain product.
  */
 export const PRODUCT_GROUPS = [
-  { id: 1, name: 'Web Hosting', description: null, isActive: true, productCount: 2 },
+  HOSTING_GROUP,
+  { id: 2, name: 'VPS Hosting', description: 'Virtual servers with root access for the end-to-end suite', isActive: true, productCount: 5 },
+  { id: 3, name: 'Dedicated Servers', description: null, isActive: true, productCount: 1 },
+  { id: 4, name: 'Business Email', description: null, isActive: true, productCount: 1 },
+  { id: 5, name: 'SSL Certificates', description: null, isActive: true, productCount: 1 },
   { id: 9, name: 'E2E Domain Registration', description: null, isActive: false, productCount: 1 },
+]
+
+/**
+ * The specification lines of the hosting group, as `GET /api/product-features` serves them: the
+ * same labels for both plans, so the plan comparison has rows to show.
+ */
+export const HOSTING_SPECIFICATIONS = [
+  { id: 1, productId: PLAN.id, label: 'Disk space', value: '10 GB', sortOrder: 1 },
+  { id: 2, productId: PLAN_PRO.id, label: 'Disk space', value: '50 GB', sortOrder: 1 },
+  { id: 3, productId: PLAN.id, label: 'Websites', value: '1', sortOrder: 2 },
+  { id: 4, productId: PLAN_PRO.id, label: 'Websites', value: '10', sortOrder: 2 },
+  { id: 5, productId: PLAN.id, label: 'Free SSL', value: 'Yes', sortOrder: 3 },
+  { id: 6, productId: PLAN_PRO.id, label: 'Free SSL', value: 'Yes', sortOrder: 3 },
 ]
 
 /** The enabled billing currencies: USD is the base one, so a guest is priced in it until they pick AMD. */

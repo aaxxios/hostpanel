@@ -9,7 +9,7 @@
       />
 
       <!-- Products grid: the shared family card, so the home page and the products page match -->
-      <UiBalancedGrid :count="products.length" data-testid="home-products-grid">
+      <UiBalancedGrid :count="products.length" :min-columns="HOME_PRODUCT_FAMILY_LIMIT" data-testid="home-products-grid">
         <CatalogProductFamilyCard v-for="(product, index) in products" :key="product.id" :product="product" :index="index" />
       </UiBalancedGrid>
 
@@ -26,8 +26,10 @@
 
 <script setup lang="ts">
 /**
- * Products section of the home page: one card per product family, drawn by the shared
- * `ProductFamilyCard` (generated cover, Featured badge, always-visible bullets).
+ * Products section of the home page: the first {@link HOME_PRODUCT_FAMILY_LIMIT} product families
+ * (featured first, then catalogue order), drawn by the shared `ProductFamilyCard` (generated
+ * cover, Featured badge, always-visible bullets). "View all plans" leads to the rest. The grid
+ * keeps the width of a three column card, so one or two cards are centred rather than stretched.
  *
  * Data: the catalogue API (product groups and their products, shaped by `buildProductFamilies`:
  * the group names the family, one `description` field gives the summary and the features) and
@@ -39,12 +41,14 @@
 import { HomeSectionId } from '~/types/homesectionid'
 import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
 import { ArrowRight } from 'lucide-vue-next'
+import { HOME_PRODUCT_FAMILY_LIMIT } from '~/constants/homeProducts'
 import { FAMILY_BULLET_LIMIT } from '~/constants/planFeatureLimit'
 import { productTypeIcon } from '~/constants/productTypeIcon'
 import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
 import type { ProductFamily } from '~/types/productfamily'
 import { ProductType } from '~/types/producttype'
+import { topProductFamilies } from '~/utils/homeProductFamilies'
 import { buildProductFamilies } from '~/utils/productFamilies'
 
 /** Id of the domains card, which is not a catalogue family. */
@@ -76,17 +80,8 @@ onMounted(() => {
   currencyStore.load()
 })
 
-await useAsyncData('products:families', async () => {
-  const products = await catalogStore.loadFamilies()
-  // Specification lines back the bullets of a family whose descriptions list none.
-  await Promise.all(catalogStore.familyGroups.map((group) => catalogStore.loadProductFeatures(group.id)))
-  return products
-}, {
-  watch: [() => currencyStore.payerCode, locale],
-})
-
-/** The cards: the static domains entry, then one per catalogue family that has products. */
-const products = computed<ProductFamily[]>(() => {
+/** Every card in order: the static domains entry, then one per catalogue family that has products. */
+const allFamilies = computed<ProductFamily[]>(() => {
   const items: ProductFamily[] = [{
     id: DOMAINS_CARD_ID,
     gid: null,
@@ -111,5 +106,19 @@ const products = computed<ProductFamily[]>(() => {
   }
 
   return items
+})
+
+/** The cards shown: the first few of {@link allFamilies}, featured first. */
+const products = computed<ProductFamily[]>(() => topProductFamilies(allFamilies.value))
+
+await useAsyncData('products:families', async () => {
+  const loaded = await catalogStore.loadFamilies()
+  // Specification lines back the bullets of a family whose descriptions list none. Only the
+  // families the home shows need them, so the read stays at a few requests however many groups exist.
+  const shownGroupIds = products.value.flatMap((family) => (family.gid === null ? [] : [family.gid]))
+  await Promise.all(shownGroupIds.map((groupId) => catalogStore.loadProductFeatures(groupId)))
+  return loaded
+}, {
+  watch: [() => currencyStore.payerCode, locale],
 })
 </script>

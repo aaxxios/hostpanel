@@ -9,7 +9,8 @@ import type { PortalProductGroup } from '~/types/portalproductgroup'
 import { familyColor } from '~/utils/catalogGroups'
 import type { ProductFamily } from '~/types/productfamily'
 import type { ProductFeature } from '~/types/productfeature'
-import { buildPricingRows, buildProductFamilies, cycleAmount, familyBullets, familyCardBullets, familyProductType, findProductDetail, firstOfferedPrice, representativePlan, specificationBullets } from '~/utils/productFamilies'
+import type { ProductPlan } from '~/types/productplan'
+import { buildPricingRows, buildProductFamilies, cycleAmount, familyBullets, familyCardBullets, familyProductType, findProductDetail, firstOfferedPrice, recommendedPlanPid, representativePlan, specificationBullets } from '~/utils/productFamilies'
 
 /**
  * Builds a catalogue product.
@@ -239,19 +240,67 @@ describe('buildProductFamilies', () => {
 })
 
 describe('findProductDetail', () => {
-  it('finds a product by its slug and shapes its plans', () => {
+  it('finds a family by the slug of a product and shapes its plans', () => {
     const detail = findProductDetail(groups, learnGroup, 'alpha-suite')
 
-    expect(detail).toMatchObject({ id: 'alpha-suite', name: 'Alpha Suite', color: familyColor('alpha-suite'), description: 'Learn online' })
+    expect(detail).toMatchObject({ id: 'alpha-suite', gid: 3, name: 'Alpha Suite', color: familyColor('alpha-suite'), description: 'Learn online' })
     expect(detail?.plans.map((plan) => plan.tier)).toEqual(['Starter', 'Pro'])
-    expect(detail?.plans[0]?.pricing).toEqual({ monthly: 10, annual: 100 })
+    expect(detail?.plans[0]).toMatchObject({ id: 11, pid: 11, pricing: { monthly: 10, annual: 100 }, features: ['One site'], description: '', isFeatured: false })
+  })
+
+  it('names the page after the family, never after the plan the address matched', () => {
+    const hosting = [group(1, 'Web Hosting', { description: 'Fast, secure hosting.', productCount: 2 })]
+    const plans = [
+      product({ id: 21, groupId: 1, name: 'Starter Hosting', slug: 'starter-hosting', description: 'Starter blurb<br />✔ 1 site' }),
+      product({ id: 22, groupId: 1, name: 'Business Hosting', slug: 'business-hosting', description: 'Business blurb' }),
+    ]
+
+    for (const address of ['web-hosting', 'starter-hosting', 'business-hosting']) {
+      expect(findProductDetail(hosting, plans, address)).toMatchObject({ name: 'Web Hosting', description: 'Fast, secure hosting.' })
+    }
+  })
+
+  it('falls back to the parent product blurb only when the group has no description', () => {
+    expect(findProductDetail(groups, learnGroup, 'alpha-suite')?.description).toBe('Learn online')
+    expect(findProductDetail([group(3, 'Alpha Suite', { description: '  Our suite.  ', productCount: 3 })], learnGroup, 'alpha-suite')?.description).toBe('Our suite.')
   })
 
   it('falls back to the first product of the family group when the slug differs', () => {
     const detail = findProductDetail(groups, [product({ id: 40, groupId: 3, name: 'Odd name', slug: 'odd' })], 'alpha-suite')
 
     expect(detail?.id).toBe('alpha-suite')
-    expect(detail?.name).toBe('Odd name')
+    expect(detail?.name).toBe('Alpha Suite')
+    expect(detail?.plans.map((plan) => plan.tier)).toEqual(['Odd name'])
+  })
+
+  it('takes the key bullets from the parent product, else from the cheapest plan that lists some', () => {
+    expect(findProductDetail(groups, learnGroup, 'alpha-suite')?.features).toEqual(['Courses', 'Exams'])
+
+    const noParent = findProductDetail(groups, learnGroup.slice(1), 'alpha-suite')
+    expect(noParent?.features).toEqual(['One site'])
+  })
+
+  it('backs the bullets with the specification lines when no description lists any', () => {
+    const lines: ProductFeature[] = [{ id: 1, productId: 11, label: 'Disk', value: '10 GB', sortOrder: 1 }]
+    const bare = [product({ id: 11, groupId: 3, name: 'Starter', slug: 'starter', pricing: { monthly: 10, annual: null } })]
+
+    expect(findProductDetail(groups, bare, 'alpha-suite', () => lines)?.features).toEqual(['Disk: 10 GB'])
+  })
+
+  it('lists the plans in the order of the plan cards: the operator order first, then the cheapest', () => {
+    const list = [
+      product({ id: 61, groupId: 3, name: 'Dear', slug: 'dear', pricing: { monthly: 30, annual: null } }),
+      product({ id: 62, groupId: 3, name: 'Cheap', slug: 'cheap', pricing: { monthly: 5, annual: null } }),
+      product({ id: 63, groupId: 3, name: 'Pinned', slug: 'pinned', pricing: { monthly: 50, annual: null }, sortOrder: 1 }),
+    ]
+
+    expect(findProductDetail(groups, list, 'cheap')?.plans.map((plan) => plan.tier)).toEqual(['Pinned', 'Cheap', 'Dear'])
+  })
+
+  it('shows the parent as the single plan of a family that has no other product', () => {
+    const only = [product({ id: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', pricing: { monthly: 9, annual: null } })]
+
+    expect(findProductDetail(groups, only, 'alpha-suite')?.plans.map((plan) => plan.tier)).toEqual(['Alpha Suite'])
   })
 
   it('answers null when nothing matches', () => {
@@ -265,6 +314,37 @@ describe('findProductDetail', () => {
 
   it('does not match a family whose group is switched off', () => {
     expect(findProductDetail([group(3, 'Alpha Suite', { isActive: false })], learnGroup, 'alpha-suite')).toBeNull()
+  })
+})
+
+describe('recommendedPlanPid', () => {
+  /**
+   * Builds a plan.
+   *
+   * @param pid Order id.
+   * @param overrides Fields that differ from the defaults.
+   * @returns The plan.
+   */
+  const plan = (pid: number, overrides: Partial<ProductPlan> = {}): ProductPlan => ({
+    id: pid, pid, tier: `Plan ${pid}`, pricing: { monthly: pid, annual: null }, description: '', features: [], isFeatured: false, ...overrides,
+  })
+
+  it('prefers the plan the operator featured', () => {
+    expect(recommendedPlanPid([plan(1), plan(2), plan(3, { isFeatured: true })])).toBe(3)
+  })
+
+  it('never recommends a free plan as the featured one', () => {
+    expect(recommendedPlanPid([plan(1, { isFeatured: true, pricing: { monthly: 0, annual: null } }), plan(2), plan(3)])).toBe(2)
+  })
+
+  it('points at the middle plan of three or more when nobody featured one', () => {
+    expect(recommendedPlanPid([plan(1), plan(2), plan(3)])).toBe(2)
+    expect(recommendedPlanPid([plan(1), plan(2), plan(3), plan(4)])).toBe(2)
+  })
+
+  it('has no middle to point at with fewer than three plans', () => {
+    expect(recommendedPlanPid([plan(1), plan(2)])).toBeNull()
+    expect(recommendedPlanPid([])).toBeNull()
   })
 })
 

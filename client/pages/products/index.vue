@@ -2,7 +2,7 @@
   <UiStack gap="none" data-testid="products-page">
     <CatalogProductsHero />
     <CatalogProductFamilyGrid :products="products" />
-    <CatalogProductsComparison :products="products" />
+    <CatalogProductsComparison :groups="comparisonGroups" />
     <CatalogProductsBenefits />
     <CatalogProductsTestimonials />
     <SectionsCTA />
@@ -25,7 +25,9 @@ import { useCartStore } from '~/stores/cart'
 import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
 import { formatMoney } from '~/utils/formatMoney'
+import { buildComparisonGroups } from '~/utils/comparisonGroups'
 import { buildProductFamilies } from '~/utils/productFamilies'
+import type { ComparisonGroup } from '~/types/comparisongroup'
 import type { ProductFamily } from '~/types/productfamily'
 import { ProductType } from '~/types/producttype'
 import { SeoPageType } from '~/types/seopagetype'
@@ -85,6 +87,15 @@ const products = computed<ProductFamily[]>(() =>
     (amount) => formatMoney(amount, payerCurrency.value),
     currencyStore.payerCode,
     [domainsFamily.value],
+    catalogStore.featuresFor,
+  ))
+
+/** The groups whose plans are comparable, for the comparison table: real plans, prices and specification lines. */
+const comparisonGroups = computed<ComparisonGroup[]>(() =>
+  buildComparisonGroups(
+    catalogStore.familyGroups,
+    catalogStore.familyProducts,
+    (amount) => formatMoney(amount, payerCurrency.value),
     catalogStore.featuresFor,
   ))
 

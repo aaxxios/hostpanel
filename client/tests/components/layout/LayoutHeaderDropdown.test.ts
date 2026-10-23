@@ -54,7 +54,7 @@ describe('LayoutHeaderDropdown', () => {
 
     expect(wrapper.find('[data-testid="header-nav-child-faq"]').attributes('aria-current')).toBe('page')
     expect(wrapper.find('[data-testid="header-nav-child-help"]').attributes('aria-current')).toBeUndefined()
-    expect(wrapper.find('[data-testid="header-nav-support-trigger"]').classes()).toContain('text-classic-brand')
+    expect(wrapper.find('[data-testid="header-nav-support-trigger"]').classes()).toEqual(expect.arrayContaining(['bg-classic-fill', 'text-classic-on-brand']))
   })
 
   it('closes on Escape and gives focus back to the trigger', async () => {

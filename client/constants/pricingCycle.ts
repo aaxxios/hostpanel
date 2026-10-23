@@ -19,5 +19,14 @@ export const PRICING_CYCLE_I18N_KEY: Record<PricingCycle, string> = {
   [PricingCycle.Annual]: 'annually',
 }
 
+/** Months in a year, which turns an annual price into a per-month one. */
+export const MONTHS_PER_YEAR = 12
+
+/** Maps a cycle to the ISO 8601 duration one payment covers, for the structured data of an offer. */
+export const PRICING_CYCLE_ISO_DURATION: Record<PricingCycle, string> = {
+  [PricingCycle.Monthly]: 'P1M',
+  [PricingCycle.Annual]: 'P1Y',
+}
+
 /** The billing cycle a domain registration is added to the cart with: domains are sold by the year. */
 export const DOMAIN_BILLING_CYCLE = 'annually'

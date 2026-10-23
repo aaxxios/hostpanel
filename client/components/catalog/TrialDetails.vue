@@ -3,7 +3,7 @@
     <!-- Features -->
     <section v-if="features.length > 0" :class="[brandFallback, 'py-16 bg-ui-surface [.tpl-classic_&]:[--accent:rgb(var(--classic-brand))] [.tpl-classic_&]:bg-classic-surface-2 [.tpl-classic_&]:py-12']" data-testid="trial-features">
       <UiContainer>
-        <div class="mx-auto max-w-4xl">
+        <div>
           <UiHeading :level="2" class="text-center mb-10 [.tpl-classic_&]:font-semibold [.tpl-classic_&]:text-classic-ink">{{ $t('trial.featuresTitle', { product: name }) }}</UiHeading>
           <UiGrid cols="1" gap="md" class="md:grid-cols-2">
             <UiCard
@@ -24,7 +24,7 @@
     <!-- Perks -->
     <section :class="[brandFallback, 'py-16 [.tpl-classic_&]:[--accent:rgb(var(--classic-brand))] [.tpl-classic_&]:bg-classic-page [.tpl-classic_&]:py-12']" data-testid="trial-perks">
       <UiContainer>
-        <div class="mx-auto max-w-4xl">
+        <div>
           <UiGrid cols="1" gap="lg" class="md:grid-cols-3">
             <UiCard
               v-for="(perk, index) in perks"

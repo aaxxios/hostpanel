@@ -388,3 +388,43 @@ describe('useCatalogStore reference data', () => {
     expect(store.tldPricing).toBeNull()
   })
 })
+
+describe('useCatalogStore keeps what it read when a refresh fails', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    payer.code = 'USD'
+    Object.values(api).forEach(fn => fn.mockReset())
+  })
+
+  it('keeps the groups and the family products after a refused refresh', async () => {
+    api.fetchProductGroups.mockResolvedValueOnce([{ id: 1, name: 'Web Hosting', isActive: true, productCount: 1 }])
+    api.fetchProducts.mockResolvedValueOnce([{ id: 10, groupId: 1, name: 'Plan' }])
+    const store = useCatalogStore()
+    await store.loadFamilies()
+
+    api.fetchProductGroups.mockRejectedValue(new Error('down'))
+    api.fetchProducts.mockRejectedValue(new Error('down'))
+    const again = await store.loadFamilies()
+
+    expect(store.familyGroups).toHaveLength(1)
+    expect(again).toHaveLength(1)
+    expect(store.familyProducts).toHaveLength(1)
+    expect(store.error).not.toBe('')
+  })
+
+  it('does not hand a caller the read that was started for another currency', async () => {
+    api.fetchProductGroups.mockResolvedValue([{ id: 1, name: 'Web Hosting', isActive: true, productCount: 1 }])
+    api.fetchProducts.mockResolvedValue([])
+    const store = useCatalogStore()
+
+    const usd = store.loadFamilies()
+    payer.code = 'AMD'
+    const amd = store.loadFamilies()
+    await Promise.all([usd, amd])
+
+    // Two reads ran: the second caller was not given the first one's promise.
+    expect(api.fetchProductGroups).toHaveBeenCalledTimes(2)
+    expect(api.fetchProducts).toHaveBeenCalledTimes(2)
+    expect(store.familyProducts).toEqual([])
+  })
+})

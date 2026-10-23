@@ -3,8 +3,9 @@
  *
  * Pure functions: the header passes in the translator, the locale prefixer and what the catalogue
  * store holds, and gets back the entries to draw. Hosting is a dropdown of the catalogue's plan
- * groups, VPS and Servers appear only when the catalogue sells them, and Support groups the help
- * pages.
+ * groups (shared hosting, VPS, dedicated servers and the other service groups it sells, each with a
+ * short description), and Support groups the help pages. The top level stays short on purpose: it
+ * leaves room for the controls on the right of the bar.
  *
  * @module utils/headerNav
  */
@@ -35,13 +36,15 @@ export interface HeaderNavInput {
   products: readonly PortalProduct[]
 }
 
-/** Service types whose groups are listed in the Hosting dropdown beside the hosting plans. */
-const HOSTING_MENU_TYPES: ReadonlySet<string> = new Set<string>([
-  ProductType.SharedHosting,
-  ProductType.Email,
-  ProductType.Ssl,
-  ProductType.Backup,
-])
+/** Short description line of a Hosting dropdown entry, by the service type its group sells. */
+const HOSTING_MENU_DESC_KEYS: Readonly<Record<string, string>> = {
+  [ProductType.SharedHosting]: 'nav.hostingDesc',
+  [ProductType.Vps]: 'nav.vpsDesc',
+  [ProductType.Dedicated]: 'nav.serversDesc',
+  [ProductType.Email]: 'nav.emailDesc',
+  [ProductType.Ssl]: 'nav.sslDesc',
+  [ProductType.Backup]: 'nav.backupDesc',
+}
 
 /** Route of the domain search page. */
 const DOMAINS_PATH = '/domains'
@@ -86,8 +89,7 @@ export const isHeaderItemActive = (path: string, item: HeaderNavItem): boolean =
  * Builds the header entries.
  *
  * @param input - Translator, locale prefixer and the catalogue state.
- * @returns The entries in display order: Hosting, Domains, VPS and Servers when sold, Products,
- * Support.
+ * @returns The entries in display order: Hosting, Domains, Products, Support.
  */
 export const buildHeaderNav = ({ t, localePath, groups, products }: HeaderNavInput): HeaderNavItem[] => {
   const families = groups.filter(isFamilyGroup)
@@ -121,8 +123,13 @@ export const buildHeaderNav = ({ t, localePath, groups, products }: HeaderNavInp
   const hostingChildren: HeaderNavChild[] = [
     { key: 'hosting-all', label: t('nav.allHosting'), desc: t('nav.hostingDesc'), to: localePath(HOSTING_FAMILY_URL) },
     ...families
-      .filter(group => group.id !== HOSTING_GROUP_ID && HOSTING_MENU_TYPES.has(typeOf(group)))
-      .map(group => ({ key: `group-${group.id}`, label: group.name, to: pageOf(group) })),
+      .flatMap((group) => {
+        const descKey = HOSTING_MENU_DESC_KEYS[typeOf(group)]
+        // A group of a type the menu has no sentence for, and the hosting group itself, get no entry.
+        return group.id !== HOSTING_GROUP_ID && descKey
+          ? [{ key: `group-${group.id}`, label: group.name, desc: t(descKey), to: pageOf(group) }]
+          : []
+      }),
   ]
 
   const items: HeaderNavItem[] = [
@@ -132,14 +139,6 @@ export const buildHeaderNav = ({ t, localePath, groups, products }: HeaderNavInp
     { key: 'domains', label: t('nav.domains'), to: localePath(DOMAINS_PATH) },
   ]
 
-  const vps = families.find(group => typeOf(group) === ProductType.Vps)
-  if (vps) {
-    items.push({ key: 'vps', label: t('nav.vps'), to: pageOf(vps) })
-  }
-  const servers = families.find(group => typeOf(group) === ProductType.Dedicated)
-  if (servers) {
-    items.push({ key: 'servers', label: t('nav.servers'), to: pageOf(servers) })
-  }
 
   items.push(
     { key: 'products', label: t('nav.products'), to: localePath(PRODUCTS_PATH) },

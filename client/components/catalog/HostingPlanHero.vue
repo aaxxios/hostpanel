@@ -39,7 +39,7 @@
         <UiHeading :level="1" size="display" class="mb-4 leading-tight [.tpl-classic_&]:text-3xl [.tpl-classic_&]:font-semibold [.tpl-classic_&]:text-classic-ink md:[.tpl-classic_&]:text-4xl" data-testid="hosting-plan-name">{{ plan.name }}</UiHeading>
 
         <!-- Summary parsed out of the description; interpolated, never HTML. -->
-        <UiText v-if="summary" tone="muted" size="lg" class="mb-8 max-w-2xl [.tpl-classic_&]:text-classic-muted" data-testid="hosting-plan-summary">{{ summary }}</UiText>
+        <UiText v-if="summary" tone="muted" size="lg" class="mb-8 max-w-[75ch] [.tpl-classic_&]:text-classic-muted" data-testid="hosting-plan-summary">{{ summary }}</UiText>
 
         <div class="flex flex-wrap items-end gap-6">
           <div class="flex items-baseline gap-1.5">

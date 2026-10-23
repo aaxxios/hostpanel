@@ -65,6 +65,7 @@ import {
   KB_ARTICLES,
   ORDER,
   PRODUCT_GROUPS,
+  HOSTING_SPECIFICATIONS,
   productsIn,
   PUBLIC_SETTINGS,
   SAVED_CARD,
@@ -281,11 +282,14 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     return true
   }
   if (isGet && path === '/api/products') {
-    send(res, 200, productsIn(query.get('currency')))
+    // Like the real endpoint: `groupId` selects one group, `gids` a comma separated list, neither the whole catalogue.
+    const groupIds = (query.get('gids') ?? query.get('groupId') ?? '').split(',').filter(Boolean).map(Number)
+    const wanted = productsIn(query.get('currency')).filter((product) => groupIds.length === 0 || groupIds.includes(product.groupId))
+    send(res, 200, wanted)
     return true
   }
   if (isGet && path === '/api/product-features') {
-    send(res, 200, [])
+    send(res, 200, query.get('groupId') === '1' || query.get('gid') === '1' ? HOSTING_SPECIFICATIONS : [])
     return true
   }
   if (isGet && path === '/api/domains/tld-pricing') {
