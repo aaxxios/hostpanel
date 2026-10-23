@@ -416,10 +416,16 @@ const activeCurrencyPrefix = computed(() => payerCurrency.value.prefix ?? '')
 /** Filter that picks the hosting group out of the catalogue. */
 const hostingFilter = { gid: HOSTING_GROUP_ID }
 
+/** The Nuxt instance, kept so a read that starts later still runs inside its context. */
+const nuxtApp = useNuxtApp()
+
 // The hosting plans are read in the payer's currency; the read runs again once `payerCode`
-// resolves or changes, and `refresh` retries after a failure.
+// resolves or changes, and `refresh` retries after a failure. The read runs inside the Nuxt
+// context: during the server render the layout's own async setup interleaves with this page's,
+// and a read that starts outside the context cannot reach the request (NUXT_E1001) and left the
+// page on its error state.
 /** Whether the plans are loading, and the retry action. */
-const { pending, refresh } = await useAsyncData('hosting:classic-plans', () => catalogStore.loadProducts(hostingFilter), {
+const { pending, refresh } = await useAsyncData('hosting:classic-plans', () => nuxtApp.runWithContext(() => catalogStore.loadProducts(hostingFilter)), {
   watch: [() => currencyStore.payerCode, locale]
 })
 
