@@ -78,8 +78,8 @@ const installAutoImports = (): void => {
   /** `useRouter` stand-in: navigation is recorded by the spy, not performed. */
   define('useRouter', () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }))
 
-  /** `useNuxtApp` stand-in: an app that has finished hydrating. */
-  define('useNuxtApp', () => ({ isHydrating: false }))
+  /** `useNuxtApp` stand-in: an app that has finished hydrating, and that runs a callback at once. */
+  define('useNuxtApp', () => ({ isHydrating: false, runWithContext: <T>(callback: () => T): T => callback() }))
 
   /** `onNuxtReady` stand-in: the app is ready at once, so the callback runs now. */
   define('onNuxtReady', (callback: () => void) => {

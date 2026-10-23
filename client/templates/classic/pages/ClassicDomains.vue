@@ -419,10 +419,13 @@ onMounted(async () => {
 /** Catalogue store: the TLD price table. */
 const catalogStore = useCatalogStore()
 
+/** The Nuxt instance, kept so a read that starts later still runs inside its context. */
+const nuxtApp = useNuxtApp()
+
 // The price table is read in the payer's currency; the read runs again once `payerCode`
-// resolves or changes.
+// resolves or changes. The read runs inside the Nuxt context, for the reason given on the hosting page.
 /** Whether the price table is still loading. */
-const { pending: pricingPending } = await useAsyncData('domains:classic-tld-pricing', () => catalogStore.loadTldPricing(), {
+const { pending: pricingPending } = await useAsyncData('domains:classic-tld-pricing', () => nuxtApp.runWithContext(() => catalogStore.loadTldPricing()), {
   watch: [() => currencyStore.payerCode, locale]
 })
 
