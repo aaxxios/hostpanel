@@ -6,11 +6,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
 /// <summary>EF Core configuration for the <see cref="InvoiceTransaction"/> entity.</summary>
 public sealed class InvoiceTransactionConfiguration : IEntityTypeConfiguration<InvoiceTransaction>
 {
-    /// <summary>Configures the <c>invoice_transactions</c> table mapping.</summary>
+    /// <summary>Configures the <c>InvoiceTransactions</c> table mapping.</summary>
     /// <param name="builder">The entity type builder.</param>
     public void Configure(EntityTypeBuilder<InvoiceTransaction> builder)
     {
-        builder.ToTable("invoice_transactions");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.InvoiceId).IsRequired();

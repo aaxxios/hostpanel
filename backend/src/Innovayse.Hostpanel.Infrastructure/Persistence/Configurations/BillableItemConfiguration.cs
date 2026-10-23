@@ -9,7 +9,6 @@ public sealed class BillableItemConfiguration : IEntityTypeConfiguration<Billabl
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<BillableItem> builder)
     {
-        builder.ToTable("billable_items");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.ClientId).IsRequired();

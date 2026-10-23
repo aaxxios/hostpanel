@@ -10,7 +10,6 @@ public sealed class ServerConfiguration : IEntityTypeConfiguration<Server>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Server> builder)
     {
-        builder.ToTable("servers");
         builder.HasKey(x => x.Id);
 
         var converter = EncryptionServiceHolder.CreateConverter();

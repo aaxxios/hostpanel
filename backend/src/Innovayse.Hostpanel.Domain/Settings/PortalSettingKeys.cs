@@ -3,7 +3,7 @@ using Innovayse.Hostpanel.Domain.Settings.Enums;
 
 namespace Innovayse.Hostpanel.Domain.Settings;
 /// <summary>
-/// The <c>portal.*</c> keys in the <c>settings</c> table: what the storefront reads to decide
+/// The <c>portal.*</c> keys in the <c>Settings</c> table: what the storefront reads to decide
 /// its template, colour mode, branding, identity and contact channels.
 /// </summary>
 /// <remarks>

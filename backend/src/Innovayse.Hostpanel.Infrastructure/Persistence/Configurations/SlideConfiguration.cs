@@ -9,7 +9,6 @@ public sealed class SlideConfiguration : IEntityTypeConfiguration<Slide>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Slide> builder)
     {
-        builder.ToTable("slides");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.IconName).IsRequired().HasMaxLength(100);
         builder.Property(x => x.BrandColor).IsRequired().HasMaxLength(20);

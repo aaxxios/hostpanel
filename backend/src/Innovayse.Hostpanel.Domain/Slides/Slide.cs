@@ -5,7 +5,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 namespace Innovayse.Hostpanel.Domain.Slides;
 /// <summary>
 /// A homepage slider slide with per-locale translations.
-/// Stored in the <c>slides</c> table.
+/// Stored in the <c>Slides</c> table.
 /// </summary>
 public sealed class Slide : BaseEntity, IAggregateRoot
 {

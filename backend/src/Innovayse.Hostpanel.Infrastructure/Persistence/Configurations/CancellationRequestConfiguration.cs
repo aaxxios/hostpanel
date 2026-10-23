@@ -9,7 +9,6 @@ public sealed class CancellationRequestConfiguration : IEntityTypeConfiguration<
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<CancellationRequest> builder)
     {
-        builder.ToTable("cancellation_requests");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.ServiceId).IsRequired();
         builder.Property(x => x.Type).IsRequired().HasConversion<string>().HasMaxLength(30);

@@ -9,7 +9,6 @@ public sealed class DiskUsageStatConfiguration : IEntityTypeConfiguration<DiskUs
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<DiskUsageStat> builder)
     {
-        builder.ToTable("disk_usage_stats");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.ServerName).IsRequired().HasMaxLength(253);
         builder.Property(x => x.Domain).IsRequired().HasMaxLength(253);

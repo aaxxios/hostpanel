@@ -10,7 +10,6 @@ public sealed class FaqTranslationConfiguration : IEntityTypeConfiguration<FaqTr
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<FaqTranslation> builder)
     {
-        builder.ToTable("faq_translations");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.FaqId).IsRequired();
         builder.Property(x => x.Locale).IsRequired().HasMaxLength(FaqTranslation.LocaleMaxLength);

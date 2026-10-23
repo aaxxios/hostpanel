@@ -9,7 +9,6 @@ public sealed class SlideTranslationConfiguration : IEntityTypeConfiguration<Sli
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<SlideTranslation> builder)
     {
-        builder.ToTable("slide_translations");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.SlideId).IsRequired();
         builder.Property(x => x.Locale).IsRequired().HasMaxLength(10);

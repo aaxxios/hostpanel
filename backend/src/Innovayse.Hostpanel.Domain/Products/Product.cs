@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Domain.Products;
 /// <summary>
 /// A product in the catalogue that clients can order as a service.
 /// Belongs to a <see cref="ProductGroup"/>.
-/// Stored in the <c>products</c> table.
+/// Stored in the <c>Products</c> table.
 /// </summary>
 public sealed class Product : BaseEntity, IAggregateRoot
 {

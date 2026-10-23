@@ -9,7 +9,6 @@ public sealed class ServerGroupConfiguration : IEntityTypeConfiguration<ServerGr
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<ServerGroup> builder)
     {
-        builder.ToTable("server_groups");
 
         builder.HasKey(x => x.Id);
 

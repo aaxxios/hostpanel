@@ -21,13 +21,13 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// <c>Testing</c> environment (migrations and seeding there are the test factory's own job), so
 /// nothing before this file ever exercised it against a real database. This class does not share
 /// its Postgres container with any other test class (no <c>ICollectionFixture</c> in this suite),
-/// so clearing the <c>departments</c> table here cannot affect another class's assertions.
+/// so clearing the <c>Departments</c> table here cannot affect another class's assertions.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DefaultDepartmentsSeederTests(IntegrationTestFactory factory)
     : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>Deletes every row in the <c>departments</c> table so a test starts from empty.</summary>
+    /// <summary>Deletes every row in the <c>Departments</c> table so a test starts from empty.</summary>
     /// <param name="context">The data context to clear.</param>
     private static async Task ClearDepartmentsAsync(IHostpanelDbContext context)
     {

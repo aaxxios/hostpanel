@@ -6,11 +6,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
 /// <summary>EF Core configuration for the <see cref="Setting"/> aggregate.</summary>
 public sealed class SettingConfiguration : IEntityTypeConfiguration<Setting>
 {
-    /// <summary>Configures the <c>settings</c> table mapping.</summary>
+    /// <summary>Configures the <c>Settings</c> table mapping.</summary>
     /// <param name="builder">The entity type builder.</param>
     public void Configure(EntityTypeBuilder<Setting> builder)
     {
-        builder.ToTable("settings");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Key)

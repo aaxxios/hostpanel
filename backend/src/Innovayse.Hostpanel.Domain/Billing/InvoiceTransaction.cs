@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Domain.Billing;
 /// <summary>
 /// A financial transaction recorded against an <see cref="Invoice"/>.
 /// Represents payments, refunds, or credits. Owned by the Invoice aggregate.
-/// Stored in the <c>invoice_transactions</c> table.
+/// Stored in the <c>InvoiceTransactions</c> table.
 /// </summary>
 public sealed class InvoiceTransaction : BaseEntity
 {

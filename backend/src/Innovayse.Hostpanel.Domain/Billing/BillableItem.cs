@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Domain.Billing;
 /// <summary>
 /// A billable item — a product or service that can be added to an invoice.
 /// Can be one-time or recurring, invoiced or waiting to be invoiced (Uninvoiced Items).
-/// Stored in the <c>billable_items</c> table.
+/// Stored in the <c>BillableItems</c> table.
 /// </summary>
 public sealed class BillableItem : BaseEntity, IAggregateRoot
 {

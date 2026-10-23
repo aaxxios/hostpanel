@@ -9,7 +9,6 @@ public sealed class PredefinedReplyConfiguration : IEntityTypeConfiguration<Pred
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<PredefinedReply> builder)
     {
-        builder.ToTable("predefined_replies");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Name).IsRequired().HasMaxLength(255);

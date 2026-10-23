@@ -9,10 +9,10 @@ namespace Innovayse.Hostpanel.Application.Slides.Common;
 /// <summary>Validates one <see cref="SlideTranslationDto"/>; shared by the create and update validators.</summary>
 public sealed class SlideTranslationValidator : LocalizedValidator<SlideTranslationDto>
 {
-    /// <summary>Longest a locale code may be — matches the <c>slide_translations.Locale</c> column.</summary>
+    /// <summary>Longest a locale code may be — matches the <c>SlideTranslations.Locale</c> column.</summary>
     private const int LocaleMaxLength = 10;
 
-    /// <summary>Longest a title may be — matches the <c>slide_translations.Title</c> column.</summary>
+    /// <summary>Longest a title may be — matches the <c>SlideTranslations.Title</c> column.</summary>
     private const int TitleMaxLength = 200;
 
     /// <summary>

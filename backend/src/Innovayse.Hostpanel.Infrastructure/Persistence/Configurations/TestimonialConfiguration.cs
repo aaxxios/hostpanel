@@ -10,7 +10,6 @@ public sealed class TestimonialConfiguration : IEntityTypeConfiguration<Testimon
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Testimonial> builder)
     {
-        builder.ToTable("testimonials");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Name).IsRequired().HasMaxLength(Testimonial.NameMaxLength);
         builder.Property(x => x.Company).HasMaxLength(Testimonial.CompanyMaxLength);

@@ -9,7 +9,6 @@ public sealed class ClientConfiguration : IEntityTypeConfiguration<Client>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Client> builder)
     {
-        builder.ToTable("clients");
 
         builder.HasKey(x => x.Id);
 

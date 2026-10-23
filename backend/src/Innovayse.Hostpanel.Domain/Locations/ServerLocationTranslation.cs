@@ -4,20 +4,20 @@ namespace Innovayse.Hostpanel.Domain.Locations;
 
 /// <summary>
 /// A locale-specific translation for a <see cref="ServerLocation"/>.
-/// Stored in the <c>server_location_translations</c> table.
+/// Stored in the <c>ServerLocationTranslations</c> table.
 /// </summary>
 public sealed class ServerLocationTranslation : BaseEntity
 {
-    /// <summary>Longest a locale code may be — matches the <c>server_location_translations.Locale</c> column.</summary>
+    /// <summary>Longest a locale code may be — matches the <c>ServerLocationTranslations.Locale</c> column.</summary>
     public const int LocaleMaxLength = 10;
 
-    /// <summary>Longest Name may be — matches the <c>server_location_translations.Name</c> column.</summary>
+    /// <summary>Longest Name may be — matches the <c>ServerLocationTranslations.Name</c> column.</summary>
     public const int NameMaxLength = 120;
 
-    /// <summary>Longest City may be — matches the <c>server_location_translations.City</c> column.</summary>
+    /// <summary>Longest City may be — matches the <c>ServerLocationTranslations.City</c> column.</summary>
     public const int CityMaxLength = 120;
 
-    /// <summary>Longest LatencyNote may be — matches the <c>server_location_translations.LatencyNote</c> column.</summary>
+    /// <summary>Longest LatencyNote may be — matches the <c>ServerLocationTranslations.LatencyNote</c> column.</summary>
     public const int LatencyNoteMaxLength = 200;
 
     /// <summary>Gets the FK to the parent <see cref="ServerLocation"/>.</summary>

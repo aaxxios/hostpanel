@@ -90,7 +90,7 @@ public static class AuthenticationRegistration
                         NameClaimType = Innovayse.Hostpanel.Shared.Constants.JwtClaims.Sub,
                     };
 
-                    // Local mode had no Events at all, so nothing here ever read subject_roles —
+                    // Local mode had no Events at all, so nothing here ever read SubjectRoles —
                     // the store every grant in this product writes to. Roles came only from the
                     // claims baked into the token at sign-in, which are Identity's AspNetUserRoles,
                     // leaving the two stores disjoint: setup, admin-created clients and
@@ -169,7 +169,7 @@ public static class AuthenticationRegistration
                     // updated, so a name or address changed in the SSO never reached here.
                     //
                     // The role merge itself is shared with both locally issued schemes rather than
-                    // written inline here — it was the only reader of subject_roles in the process,
+                    // written inline here — it was the only reader of SubjectRoles in the process,
                     // which is what made that store SSO-only in practice.
                     opts.Events = new JwtBearerEvents
                     {
@@ -193,7 +193,7 @@ public static class AuthenticationRegistration
                     // Same merge as the SSO scheme above. This one had no Events either, and the
                     // ForwardDefaultSelector sends every token this product minted itself here —
                     // so the admin panel's own credential was the one credential in SSO mode that
-                    // could not see a role granted through subject_roles.
+                    // could not see a role granted through SubjectRoles.
                     opts.Events = new JwtBearerEvents
                     {
                         OnTokenValidated = Innovayse.Hostpanel.API.Auth.SubjectRoleClaimsEnricher.OnTokenValidated(),

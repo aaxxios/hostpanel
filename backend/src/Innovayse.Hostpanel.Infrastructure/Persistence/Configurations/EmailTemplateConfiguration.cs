@@ -6,11 +6,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
 /// <summary>EF Core configuration for the <see cref="EmailTemplate"/> aggregate.</summary>
 public sealed class EmailTemplateConfiguration : IEntityTypeConfiguration<EmailTemplate>
 {
-    /// <summary>Configures the <c>email_templates</c> table mapping.</summary>
+    /// <summary>Configures the <c>EmailTemplates</c> table mapping.</summary>
     /// <param name="builder">The entity type builder.</param>
     public void Configure(EntityTypeBuilder<EmailTemplate> builder)
     {
-        builder.ToTable("email_templates");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Slug).HasMaxLength(100).IsRequired();

@@ -9,7 +9,6 @@ public sealed class ProductGroupConfiguration : IEntityTypeConfiguration<Product
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<ProductGroup> builder)
     {
-        builder.ToTable("product_groups");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Name).IsRequired().HasMaxLength(100);
         builder.Property(x => x.Description).HasMaxLength(500);

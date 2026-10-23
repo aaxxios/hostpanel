@@ -9,7 +9,6 @@ public sealed class SslCheckConfiguration : IEntityTypeConfiguration<SslCheck>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<SslCheck> builder)
     {
-        builder.ToTable("ssl_checks");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.DomainName).IsRequired().HasMaxLength(253);
         builder.HasIndex(x => x.DomainName).IsUnique();

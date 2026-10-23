@@ -9,7 +9,6 @@ public sealed class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<OrderItem> builder)
     {
-        builder.ToTable("OrderItems");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.OrderId).IsRequired();
         builder.Property(x => x.ProductId).IsRequired();

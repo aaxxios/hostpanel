@@ -10,7 +10,6 @@ public sealed class FaqConfiguration : IEntityTypeConfiguration<Faq>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Faq> builder)
     {
-        builder.ToTable("faqs");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Category).IsRequired().HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.SortOrder).IsRequired();

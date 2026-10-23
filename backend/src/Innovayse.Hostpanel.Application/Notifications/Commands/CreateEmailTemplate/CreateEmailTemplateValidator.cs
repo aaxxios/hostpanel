@@ -8,13 +8,13 @@ namespace Innovayse.Hostpanel.Application.Notifications.Commands.CreateEmailTemp
 /// <summary>Validator for <see cref="CreateEmailTemplateCommand"/>.</summary>
 public sealed class CreateEmailTemplateValidator : LocalizedValidator<CreateEmailTemplateCommand>
 {
-    /// <summary>Longest accepted slug, matching the <c>email_templates</c> column.</summary>
+    /// <summary>Longest accepted slug, matching the <c>EmailTemplates</c> column.</summary>
     private const int SlugMaxLength = 100;
 
-    /// <summary>Longest accepted subject line, matching the <c>email_templates</c> column.</summary>
+    /// <summary>Longest accepted subject line, matching the <c>EmailTemplates</c> column.</summary>
     private const int SubjectMaxLength = 500;
 
-    /// <summary>Longest accepted description, matching the <c>email_templates</c> column.</summary>
+    /// <summary>Longest accepted description, matching the <c>EmailTemplates</c> column.</summary>
     private const int DescriptionMaxLength = 500;
 
     /// <summary>Initializes validator with localization service.</summary>

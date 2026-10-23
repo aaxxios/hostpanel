@@ -4,7 +4,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 namespace Innovayse.Hostpanel.Domain.Slides;
 /// <summary>
 /// A locale-specific translation for a <see cref="Slide"/>.
-/// Stored in the <c>slide_translations</c> table.
+/// Stored in the <c>SlideTranslations</c> table.
 /// </summary>
 public sealed class SlideTranslation : BaseEntity
 {

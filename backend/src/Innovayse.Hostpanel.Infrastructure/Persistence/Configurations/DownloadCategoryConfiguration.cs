@@ -9,7 +9,6 @@ public sealed class DownloadCategoryConfiguration : IEntityTypeConfiguration<Dow
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<DownloadCategory> builder)
     {
-        builder.ToTable("download_categories");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Name).IsRequired().HasMaxLength(255);

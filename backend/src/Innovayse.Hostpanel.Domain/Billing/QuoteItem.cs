@@ -2,7 +2,7 @@ namespace Innovayse.Hostpanel.Domain.Billing;
 
 /// <summary>
 /// A line item within a quote, representing a product or service being quoted.
-/// Owned by <see cref="Quote"/>, stored in the <c>quote_items</c> table.
+/// Owned by <see cref="Quote"/>, stored in the <c>QuoteItems</c> table.
 /// </summary>
 public sealed class QuoteItem
 {

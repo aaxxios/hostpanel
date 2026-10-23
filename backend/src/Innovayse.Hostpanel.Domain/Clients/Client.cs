@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Domain.Clients;
 /// Aggregate root for a client account.
 /// Linked to an ASP.NET Core Identity user via <see cref="UserId"/>.
 /// Contains the billing address inline and a collection of additional contacts.
-/// Stored in the <c>clients</c> table.
+/// Stored in the <c>Clients</c> table.
 /// </summary>
 public sealed class Client : BaseEntity, IAggregateRoot
 {

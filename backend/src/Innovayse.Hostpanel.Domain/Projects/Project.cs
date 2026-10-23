@@ -5,13 +5,13 @@ namespace Innovayse.Hostpanel.Domain.Projects;
 
 /// <summary>
 /// A portfolio project shown on the storefront, with per-locale translations.
-/// Stored in the <c>projects</c> table.
+/// Stored in the <c>Projects</c> table.
 /// </summary>
 public sealed class Project : BaseEntity, IAggregateRoot
 {
-    /// <summary>Longest Slug may be — matches the <c>projects.Slug</c> column.</summary>
+    /// <summary>Longest Slug may be — matches the <c>Projects.Slug</c> column.</summary>
     public const int SlugMaxLength = 100;
-    /// <summary>Longest Url may be — matches the <c>projects.Url</c> column.</summary>
+    /// <summary>Longest Url may be — matches the <c>Projects.Url</c> column.</summary>
     public const int UrlMaxLength = 500;
     /// <summary>Most images a project may carry.</summary>
     public const int MaxImages = 10;
