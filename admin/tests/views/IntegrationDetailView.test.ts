@@ -59,7 +59,8 @@ describe('IntegrationDetailView', () => {
     })
     const wrapper = await mountDetail('stripe')
 
-    await wrapper.get('[data-testid="integration-field-secretKey"]').setValue('sk_new')
+    await wrapper.get('[data-testid="integration-field-secretKey-replace"]').trigger('click')
+    await wrapper.get('[data-testid="integration-field-secretKey-input"]').setValue('sk_new')
     await wrapper.get('[data-testid="integration-save"]').trigger('click')
     await flushPromises()
 

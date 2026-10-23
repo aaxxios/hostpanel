@@ -9,8 +9,8 @@ import { mountScreen } from '../../helpers/mount'
 
 /** Both identity rows, as the API seeds them. */
 const rows: Setting[] = [
-  { id: 1, key: 'portal.site.name', value: 'Acme Hosting' },
-  { id: 2, key: 'portal.site.tagline', value: 'Fast and calm' },
+  { id: 1, key: 'portal.site.name', value: 'Acme Hosting', isSecret: false, hasValue: true },
+  { id: 2, key: 'portal.site.tagline', value: 'Fast and calm', isSecret: false, hasValue: true },
 ]
 
 describe('SiteIdentityCard', () => {

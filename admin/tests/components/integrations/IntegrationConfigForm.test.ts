@@ -1,6 +1,7 @@
 /**
  * Mount tests for IntegrationConfigForm: one control per described field, edits go into the save
- * payload (toggles as "true"/"false"), and the test button asks the parent to test.
+ * payload (toggles as "true"/"false"), a secret is write only (masked, replaced or cleared, never
+ * pre-filled), and the test button asks the parent to test.
  */
 import { describe, expect, it } from 'vitest'
 import IntegrationConfigForm from '@/components/integrations/IntegrationConfigForm.vue'
@@ -26,10 +27,56 @@ describe('IntegrationConfigForm', () => {
     expect(wrapper.find('[data-testid="integration-field-live"]').exists()).toBe(true)
   })
 
+  it('shows a stored secret masked, with no value in any input', () => {
+    const wrapper = mountForm()
+
+    expect(wrapper.get('[data-testid="integration-field-secretKey-masked"]').text()).toContain('set')
+    expect(wrapper.find('[data-testid="integration-field-secretKey-input"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="integration-field-secretKey-replace"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="integration-field-secretKey-clear"]').exists()).toBe(true)
+  })
+
+  it('leaves an untouched secret out of the save payload', async () => {
+    const wrapper = mountForm()
+
+    await wrapper.get('[data-testid="integration-save"]').trigger('click')
+
+    const payload = wrapper.emitted('save')?.[0]?.[0] as { config: Record<string, string>; clearFields?: string[] }
+    expect(payload.config).not.toHaveProperty('secretKey')
+    expect(payload.clearFields).toBeUndefined()
+  })
+
+  it('opens an empty password input on replace and sends the typed secret', async () => {
+    const wrapper = mountForm()
+
+    await wrapper.get('[data-testid="integration-field-secretKey-replace"]').trigger('click')
+    const input = wrapper.get('[data-testid="integration-field-secretKey-input"]')
+    expect(input.attributes('type')).toBe('password')
+    expect((input.element as HTMLInputElement).value).toBe('')
+    await input.setValue('sk_live_new')
+    await wrapper.get('[data-testid="integration-save"]').trigger('click')
+
+    const payload = wrapper.emitted('save')?.[0]?.[0] as { config: Record<string, string> }
+    expect(payload.config.secretKey).toBe('sk_live_new')
+  })
+
+  it('sends a cleared secret as clearFields', async () => {
+    const wrapper = mountForm()
+
+    await wrapper.get('[data-testid="integration-field-secretKey-clear"]').trigger('click')
+    expect(wrapper.find('[data-testid="integration-field-secretKey-pending-clear"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="integration-save"]').trigger('click')
+
+    const payload = wrapper.emitted('save')?.[0]?.[0] as { config: Record<string, string>; clearFields?: string[] }
+    expect(payload.clearFields).toEqual(['secretKey'])
+    expect(payload.config).not.toHaveProperty('secretKey')
+  })
+
   it('emits the edited values and the toggled switch on save', async () => {
     const wrapper = mountForm()
 
-    await wrapper.get('[data-testid="integration-field-secretKey"]').setValue('sk_live_new')
+    await wrapper.get('[data-testid="integration-field-secretKey-replace"]').trigger('click')
+    await wrapper.get('[data-testid="integration-field-secretKey-input"]').setValue('sk_live_new')
     await wrapper.get('[data-testid="integration-field-live"]').trigger('click')
     await wrapper.get('[data-testid="integration-save"]').trigger('click')
 

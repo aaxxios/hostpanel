@@ -20,14 +20,20 @@ export const integrationDto = (overrides: Partial<IntegrationDto> = {}): Integra
 })
 
 /**
- * Builds an integration detail with one text, one select, one textarea and one toggle field.
+ * Builds an integration detail with one stored secret, one select, one textarea and one toggle
+ * field. The secret carries no value, as the API sends it.
  *
  * @param overrides - Fields to change on the default detail.
  * @returns The detail.
  */
 export const integrationDetail = (overrides: Partial<IntegrationDetailDto> = {}): IntegrationDetailDto => ({
   ...integrationDto(),
-  config: { secretKey: 'sk_test', mode: 'Test', note: 'hello', live: 'false' },
+  config: {
+    secretKey: { value: null, isSecret: true, hasValue: true },
+    mode: { value: 'Test', isSecret: false, hasValue: true },
+    note: { value: 'hello', isSecret: false, hasValue: true },
+    live: { value: 'false', isSecret: false, hasValue: true },
+  },
   fieldDefinitions: [
     { key: 'secretKey', label: 'Secret key', type: 'password', required: true },
     { key: 'mode', label: 'Mode', type: 'select', required: false, options: ['Live', 'Test'] },

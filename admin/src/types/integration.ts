@@ -80,13 +80,20 @@ export interface FieldDefinitionDto {
   options?: string[]
 }
 
+/** The stored state of one integration field. */
+export interface IntegrationFieldValue {
+  /** The stored value; always null for a secret, whose value the API never sends. */
+  value: string | null
+  /** Whether the field holds a secret; it is then write only. */
+  isSecret: boolean
+  /** Whether a non-blank value is stored. */
+  hasValue: boolean
+}
+
 /** Full config for a single integration returned by GET /api/admin/integrations/:slug. */
 export interface IntegrationDetailDto extends IntegrationDto {
-  /**
-   * Key-value pairs of configuration fields.
-   * Secret values are masked (e.g. "sk_live_••••••••").
-   */
-  config: Record<string, string>
+  /** Field key to its stored state; a secret field answers only whether it is set. */
+  config: Record<string, IntegrationFieldValue>
   /**
    * Ordered field definitions for dynamic form rendering.
    * Source of truth for which fields to show and their input types.
@@ -98,8 +105,13 @@ export interface IntegrationDetailDto extends IntegrationDto {
 export interface IntegrationConfigPayload {
   /** Whether the integration should be enabled after save. */
   isEnabled: boolean
-  /** Full (unmasked) config values the admin has edited. */
+  /**
+   * Field values to store. A secret field is sent only when the admin typed a replacement; an
+   * empty or absent secret keeps the stored value.
+   */
   config: Record<string, string>
+  /** Field keys whose stored value is removed (the explicit Clear of a secret). */
+  clearFields?: string[]
 }
 
 /** Result returned by POST /api/admin/integrations/:slug/test. */

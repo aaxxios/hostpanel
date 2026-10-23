@@ -14,11 +14,16 @@ public sealed class GetSettingsHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>Loaded plugins, whose manifests declare which of their fields are secret.</summary>
+    private readonly IPluginRegistry _plugins;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetSettingsHandler(IHostpanelDbContext context)
+    /// <param name="plugins">Loaded plugins, whose manifests declare which of their fields are secret.</param>
+    public GetSettingsHandler(IHostpanelDbContext context, IPluginRegistry plugins)
     {
         _context = context;
+        _plugins = plugins;
     }
 
     /// <summary>
@@ -26,12 +31,14 @@ public sealed class GetSettingsHandler
     /// </summary>
     /// <param name="query">The get settings query.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success with every configured setting. This use case refuses nothing.</returns>
+    /// <returns>Success with every configured setting, secret values withheld. This use case refuses nothing.</returns>
     public async Task<Result<IReadOnlyList<SettingDto>>> HandleAsync(GetSettingsQuery query, CancellationToken ct)
     {
         // Was ISettingRepository.ListAsync -- read-only, so no tracking is needed.
         var settings = await _context.Settings.AsNoTracking().OrderBy(s => s.Key).ToListAsync(ct);
-        IReadOnlyList<SettingDto> dtos = settings.Select(s => s.ToDto()).ToList();
+        // A secret row is listed with isSecret and hasValue only; its value never leaves the server.
+        var secrecy = SettingSecrecy.From(_plugins);
+        IReadOnlyList<SettingDto> dtos = settings.Select(s => s.ToDto(secrecy)).ToList();
 
         return Result<IReadOnlyList<SettingDto>>.Success(dtos);
     }

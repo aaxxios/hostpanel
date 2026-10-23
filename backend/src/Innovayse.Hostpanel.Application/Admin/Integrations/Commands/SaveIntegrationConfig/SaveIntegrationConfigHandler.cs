@@ -1,9 +1,13 @@
+using Innovayse.Hostpanel.Application.Admin.Common;
+using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 using Innovayse.Hostpanel.Application.Admin.Integrations.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Shared.Models;
+using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Admin.Integrations.Commands.SaveIntegrationConfig;
 
@@ -13,12 +17,6 @@ namespace Innovayse.Hostpanel.Application.Admin.Integrations.Commands.SaveIntegr
 /// </summary>
 public sealed class SaveIntegrationConfigHandler
 {
-    /// <summary>
-    /// Placeholder value sent by the admin panel when a secret field was not changed. Receiving
-    /// this value means "do not overwrite the stored secret."
-    /// </summary>
-    private const string MaskPlaceholder = "••••••••";
-
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
@@ -28,16 +26,36 @@ public sealed class SaveIntegrationConfigHandler
     /// </summary>
     private readonly IMemoryCache _cache;
 
+    /// <summary>Loaded plugins, whose manifests declare which of their fields are secret.</summary>
+    private readonly IPluginRegistry _plugins;
+
+    /// <summary>The acting admin, named in the audit line of a secret change.</summary>
+    private readonly ICurrentUserService _currentUser;
+
+    /// <summary>Receives the audit line of a secret change (key only, never the value).</summary>
+    private readonly ILogger<SaveIntegrationConfigHandler> _logger;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="cache">
     /// Invalidates the cached hosting-panel server-info results a saved credential change would make
     /// stale.
     /// </param>
-    public SaveIntegrationConfigHandler(IHostpanelDbContext context, IMemoryCache cache)
+    /// <param name="plugins">Loaded plugins, whose manifests declare which of their fields are secret.</param>
+    /// <param name="currentUser">The acting admin, named in the audit line of a secret change.</param>
+    /// <param name="logger">Receives the audit line of a secret change.</param>
+    public SaveIntegrationConfigHandler(
+        IHostpanelDbContext context,
+        IMemoryCache cache,
+        IPluginRegistry plugins,
+        ICurrentUserService currentUser,
+        ILogger<SaveIntegrationConfigHandler> logger)
     {
         _context = context;
         _cache = cache;
+        _plugins = plugins;
+        _currentUser = currentUser;
+        _logger = logger;
     }
 
     /// <summary>
@@ -60,22 +78,55 @@ public sealed class SaveIntegrationConfigHandler
             $"Whether the {slug} integration is enabled.",
             ct);
 
-        // Upsert each supplied field, skipping masked placeholders.
+        var secrecy = SettingSecrecy.From(_plugins);
+        var clear = new HashSet<string>(command.ClearFields ?? [], StringComparer.OrdinalIgnoreCase);
+        var audit = new List<(string Key, SecretSettingChange Change)>();
+
         foreach (var (fieldKey, fieldValue) in command.Config)
         {
-            if (fieldValue == MaskPlaceholder)
+            if (clear.Contains(fieldKey))
             {
-                continue; // Admin panel sent back a masked value -- do not overwrite stored secret.
+                continue; // Cleared below; a clear wins over a value sent alongside it.
             }
 
-            await UpsertAsync(
-                IntegrationSettingKeys.FieldKey(slug, fieldKey),
-                fieldValue,
-                $"{slug} integration field: {fieldKey}.",
-                ct);
+            var key = IntegrationSettingKeys.FieldKey(slug, fieldKey);
+            var isSecret = secrecy.IsSecret(key);
+
+            // The admin panel never receives a secret, so an empty secret field means "unchanged".
+            if (isSecret && string.IsNullOrWhiteSpace(fieldValue))
+            {
+                continue;
+            }
+
+            await UpsertAsync(key, fieldValue ?? string.Empty, $"{slug} integration field: {fieldKey}.", ct);
+            if (isSecret)
+            {
+                audit.Add((key, SecretSettingChange.Replaced));
+            }
+        }
+
+        foreach (var fieldKey in clear)
+        {
+            var key = IntegrationSettingKeys.FieldKey(slug, fieldKey);
+            var existing = await _context.Settings.FirstOrDefaultAsync(s => s.Key == key, ct);
+            if (existing is null || existing.Value.Length == 0)
+            {
+                continue;
+            }
+
+            existing.UpdateValue(string.Empty);
+            if (secrecy.IsSecret(key))
+            {
+                audit.Add((key, SecretSettingChange.Cleared));
+            }
         }
 
         await _context.SaveChangesAsync(ct);
+
+        foreach (var (key, change) in audit)
+        {
+            SecretSettingAudit.Record(_logger, key, change, _currentUser.UserId);
+        }
 
         // A saved hosting-panel credential invalidates the cached live server-info result the
         // read side serves for 5 minutes, so the operator sees the new credentials take effect

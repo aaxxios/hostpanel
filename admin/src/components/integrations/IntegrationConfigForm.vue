@@ -4,11 +4,16 @@
  *
  * Renders the fields the API describes in `integration.fieldDefinitions`, each as the kit control
  * its `type` asks for. Emits `save` and `test` to the parent, which owns the requests.
+ *
+ * A secret field (the API marks it `isSecret` and never sends its value) is write only: it shows a
+ * masked placeholder with Replace and Clear, its value is sent only when the admin typed a
+ * replacement, and Clear is sent as an explicit `clearFields` entry.
  */
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { INTEGRATION_META } from '@/types/integrationmeta'
 import type { FieldDefinitionDto, IntegrationConfigPayload, IntegrationDetailDto, IntegrationSlug } from '@/types/integration'
+import SecretSettingField from '@/components/settings/SecretSettingField.vue'
 import { IntegrationFieldType } from '@/types/integration'
 import { SettingToggle } from '@/types/setting'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -49,8 +54,31 @@ const emit = defineEmits<{
 /** Static metadata for this integration (logo and tile colour). */
 const meta = INTEGRATION_META[props.integration.slug as IntegrationSlug]
 
-/** Local copy of config values the admin is editing. */
-const localConfig = ref<Record<string, string>>({ ...props.integration.config })
+/**
+ * The editable values of the plain fields of an integration; secret fields are left out because
+ * the API sends no value for them.
+ *
+ * @param detail - The integration detail.
+ * @returns Field key to stored value, plain fields only.
+ */
+const plainValuesOf = (detail: IntegrationDetailDto): Record<string, string> => {
+  const values: Record<string, string> = {}
+  for (const [key, state] of Object.entries(detail.config)) {
+    if (!state.isSecret) {
+      values[key] = state.value ?? ''
+    }
+  }
+  return values
+}
+
+/** Local copy of the plain config values the admin is editing. */
+const localConfig = ref<Record<string, string>>(plainValuesOf(props.integration))
+
+/** Replacements typed for secret fields, by field key; empty means "keep the stored secret". */
+const secretDrafts = ref<Record<string, string>>({})
+
+/** Secret field keys the admin cleared; sent as `clearFields` on save. */
+const clearedFields = ref<string[]>([])
 
 /** Local toggle for enabled/disabled state. */
 const isEnabled = ref(props.integration.isEnabled)
@@ -59,11 +87,56 @@ const isEnabled = ref(props.integration.isEnabled)
 watch(
   () => props.integration,
   (next) => {
-    localConfig.value = { ...next.config }
+    localConfig.value = plainValuesOf(next)
+    secretDrafts.value = {}
+    clearedFields.value = []
     isEnabled.value = next.isEnabled
   },
   { deep: true },
 )
+
+/**
+ * Whether a field holds a secret, as the API classifies it.
+ *
+ * @param field - The field definition.
+ * @returns True for a write-only field.
+ */
+const isSecretField = (field: FieldDefinitionDto): boolean => props.integration.config[field.key]?.isSecret === true
+
+/**
+ * Whether a secret field still has a stored value: set on the server and not cleared here.
+ *
+ * @param field - The field definition.
+ * @returns True when the masked placeholder should show.
+ */
+const secretIsSet = (field: FieldDefinitionDto): boolean =>
+  props.integration.config[field.key]?.hasValue === true && !clearedFields.value.includes(field.key)
+
+/**
+ * Marks a secret field for clearing on save and drops any replacement typed for it.
+ *
+ * @param key - The field key.
+ */
+const clearSecret = (key: string): void => {
+  delete secretDrafts.value[key]
+  if (!clearedFields.value.includes(key)) {
+    clearedFields.value = [...clearedFields.value, key]
+  }
+}
+
+/**
+ * Records a replacement typed for a secret field. Typing undoes a pending clear, because the new
+ * value replaces the stored one anyway.
+ *
+ * @param key - The field key.
+ * @param value - The typed value.
+ */
+const setSecret = (key: string, value: string): void => {
+  secretDrafts.value[key] = value
+  if (value.length > 0) {
+    clearedFields.value = clearedFields.value.filter((k) => k !== key)
+  }
+}
 
 /**
  * Stores a value the admin picked in a select.
@@ -94,9 +167,20 @@ const setToggle = (key: string, on: boolean): void => {
   localConfig.value[key] = on ? SettingToggle.On : SettingToggle.Off
 }
 
-/** Builds and emits the save payload. */
+/** Builds and emits the save payload: plain values, typed secret replacements and the clears. */
 const handleSave = (): void => {
-  emit('save', { isEnabled: isEnabled.value, config: { ...localConfig.value } })
+  const config: Record<string, string> = { ...localConfig.value }
+  for (const [key, value] of Object.entries(secretDrafts.value)) {
+    // An empty secret would keep the stored one anyway; leaving it out says so plainly.
+    if (value.length > 0) {
+      config[key] = value
+    }
+  }
+  const payload: IntegrationConfigPayload = { isEnabled: isEnabled.value, config }
+  if (clearedFields.value.length > 0) {
+    payload.clearFields = [...clearedFields.value]
+  }
+  emit('save', payload)
 }
 </script>
 
@@ -134,8 +218,28 @@ const handleSave = (): void => {
             :class="field.type === IntegrationFieldType.Textarea ? 'md:col-span-2' : ''"
           >
             <template #default="{ id }">
+              <UiStack v-if="isSecretField(field)" gap="xs">
+                <SecretSettingField
+                  :id="id"
+                  :has-value="secretIsSet(field)"
+                  :model-value="secretDrafts[field.key] ?? ''"
+                  :disabled="loading"
+                  :testid="`integration-field-${field.key}`"
+                  @update:model-value="setSecret(field.key, $event)"
+                  @clear="clearSecret(field.key)"
+                />
+                <UiText
+                  v-if="clearedFields.includes(field.key)"
+                  tone="muted"
+                  size="sm"
+                  :data-testid="`integration-field-${field.key}-pending-clear`"
+                >
+                  {{ t('settings.secret.pendingClear') }}
+                </UiText>
+              </UiStack>
+
               <UiTextarea
-                v-if="field.type === IntegrationFieldType.Textarea"
+                v-else-if="field.type === IntegrationFieldType.Textarea"
                 :id="id"
                 v-model="localConfig[field.key]"
                 rows="3"
