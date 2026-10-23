@@ -113,6 +113,13 @@ describe('internalApiCall language', () => {
     expect(backendRequests()[0]?.headers['authorization']).toBe('Bearer old')
   })
 
+  it('sends the CSRF header on an anonymous state-changing call, which the backend refuses without it', async () => {
+    await internalApiCall(makeEvent(), '/domains/check', { method: 'POST', body: { domain: 'a.am' }, anonymous: true })
+
+    expect(backendRequests()[0]?.headers['x-requested-with']).toBe('XMLHttpRequest')
+    expect(backendRequests()[0]?.headers['authorization']).toBeUndefined()
+  })
+
   it('sends the default language when the browser sent none or an unsupported one', async () => {
     await internalApiCall(makeEvent(), '/clients/me')
     await internalApiCall(makeEvent({ 'x-language': 'zz' }), '/clients/me')
