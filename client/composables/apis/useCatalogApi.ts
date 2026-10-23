@@ -27,6 +27,25 @@ import type { TldPricing } from '~/types/tldpricing'
  */
 export const useCatalogApi = () => {
   /**
+   * The Nuxt app this surface was created in. A store action that awaits one read and then starts
+   * the next runs the second read outside the render, where `useNuxtApp()` and `useRequestFetch()`
+   * throw NUXT_E1001 on the server; the read then failed without ever reaching the backend and the
+   * home page showed one family card. Each read is therefore run inside this app's context.
+   */
+  const nuxtApp = useNuxtApp()
+
+  /**
+   * Runs one `apiFetch` inside the captured Nuxt context.
+   *
+   * @param url - Endpoint URL.
+   * @param opts - `$fetch` options.
+   * @returns The parsed reply.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const read = <T>(url: string, opts?: Parameters<typeof apiFetch>[1]): Promise<T> =>
+    nuxtApp.runWithContext(() => apiFetch<T>(url, opts))
+
+  /**
    * Reads the product catalogue.
    *
    * @param query - Filters to apply. Omit for the whole catalogue.
@@ -34,7 +53,7 @@ export const useCatalogApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const fetchProducts = <T = PortalProduct>(query?: PortalProductQuery): Promise<T[]> =>
-    apiFetch<T[]>('/api/portal/public/products', { query })
+    read<T[]>('/api/portal/public/products', { query })
 
   /**
    * Reads the product groups the storefront shows as product families.
@@ -43,7 +62,7 @@ export const useCatalogApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const fetchProductGroups = (): Promise<PortalProductGroup[]> =>
-    apiFetch<PortalProductGroup[]>('/api/portal/public/product-groups')
+    read<PortalProductGroup[]>('/api/portal/public/product-groups')
 
   /**
    * Reads the specification lines behind the plan comparison table.
@@ -53,7 +72,7 @@ export const useCatalogApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const fetchProductFeatures = (groupId: number): Promise<ProductFeature[]> =>
-    apiFetch<ProductFeature[]>('/api/portal/public/product-features', { query: { gid: groupId } })
+    read<ProductFeature[]>('/api/portal/public/product-features', { query: { gid: groupId } })
 
   /**
    * Reads the billing currencies.
@@ -62,7 +81,7 @@ export const useCatalogApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const fetchCurrencies = (): Promise<PortalCurrency[]> =>
-    apiFetch<PortalCurrency[]>('/api/portal/public/currencies')
+    read<PortalCurrency[]>('/api/portal/public/currencies')
 
   /**
    * Reads the TLD price table.
@@ -73,7 +92,7 @@ export const useCatalogApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const fetchTldPricing = (currency?: string): Promise<TldPricing> =>
-    apiFetch<TldPricing>('/api/portal/public/tld-pricing', { query: currency ? { currency } : {} })
+    read<TldPricing>('/api/portal/public/tld-pricing', { query: currency ? { currency } : {} })
 
   /**
    * Reads the marketing slides on the home page.
@@ -83,7 +102,7 @@ export const useCatalogApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const fetchSlides = (lang: string): Promise<SlidePublic[]> =>
-    apiFetch<SlidePublic[]>('/api/portal/public/slides', { query: { lang } })
+    read<SlidePublic[]>('/api/portal/public/slides', { query: { lang } })
 
   /**
    * Asks whether one domain is available.
@@ -96,7 +115,7 @@ export const useCatalogApi = () => {
    * @throws Whatever `apiFetch` throws — a registrar that is unreachable included.
    */
   const checkDomain = (domain: string): Promise<DomainCheckResult> =>
-    apiFetch<DomainCheckResult>('/api/portal/public/domain-check', {
+    read<DomainCheckResult>('/api/portal/public/domain-check', {
       method: 'POST',
       body: { domain }
     })
@@ -108,7 +127,7 @@ export const useCatalogApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const fetchCountries = (): Promise<CountryOption[]> =>
-    apiFetch<CountryOption[]>('/api/portal/public/countries')
+    read<CountryOption[]>('/api/portal/public/countries')
 
   return {
     fetchProducts,

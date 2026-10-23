@@ -7,7 +7,7 @@
  * @module tests/composables/apis/useCatalogApi.test
  */
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { expectLastRequest, startTransport } from '../../helpers/stubTransport'
 import type { ExpectedRequest } from '../../helpers/stubTransport'
 import type { StubServer } from '../../helpers/stubServer'
@@ -60,5 +60,28 @@ describe('useCatalogApi', () => {
     stub = await startTransport(() => ({ status: 400, body: { type: 'X', detail: 'No.' } }))
 
     await expect(api.checkDomain('a.am')).rejects.toMatchObject({ data: { detail: 'No.' } })
+  })
+
+  it('runs every read inside the Nuxt context it was created in, so a read started after an await still works', async () => {
+    const original = (globalThis as Record<string, unknown>).useNuxtApp
+    const runWithContext = vi.fn(<T>(callback: () => T): T => callback())
+    vi.stubGlobal('useNuxtApp', () => ({ isHydrating: false, runWithContext }))
+    const scoped = useCatalogApi()
+    // From here the ambient context is gone, as it is for the second read of a server render.
+    vi.stubGlobal('useNuxtApp', () => {
+      throw new Error('NUXT_E1001')
+    })
+    stub = await startTransport()
+
+    try {
+      await scoped.fetchProductGroups()
+      await scoped.fetchProducts({ gids: '1,2' })
+    }
+    finally {
+      vi.stubGlobal('useNuxtApp', original)
+    }
+
+    expect(runWithContext).toHaveBeenCalledTimes(2)
+    expectLastRequest(stub, { name: 'last read', call: () => scoped.fetchProducts(), method: 'GET', url: '/api/portal/public/products?gids=1,2' })
   })
 })
