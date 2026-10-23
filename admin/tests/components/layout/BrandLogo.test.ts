@@ -76,6 +76,15 @@ describe('BrandLogo', () => {
     expect(lightImage(onlyDark).attributes('src')).toBe('/d.png')
   })
 
+  it('lays a light plate behind a lone light-background upload in the dark theme only', () => {
+    const lone = mountLogo('/l.png', '')
+    expect(darkImage(lone).classes()).toContain('bg-white/90')
+    expect(lightImage(lone).classes()).not.toContain('bg-white/90')
+
+    expect(darkImage(mountLogo('/l.png', '/d.png')).classes()).not.toContain('bg-white/90')
+    expect(darkImage(mountLogo('', '')).classes()).not.toContain('bg-white/90')
+  })
+
   it('names the brand for screen readers', () => {
     const wrapper = mountLogo('', '')
 

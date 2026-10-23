@@ -1,5 +1,6 @@
 <template>
   <UiLink to="/" tone="inherit" :underline="false" testid="auth-logo" class="mb-6 inline-block">
+    <!-- Logo image cap: intrinsically small UI, not page layout. -->
     <AppLogo
       :surface="LogoSurface.Auto"
       :width="160"

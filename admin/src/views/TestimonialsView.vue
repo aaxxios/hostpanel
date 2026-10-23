@@ -17,6 +17,7 @@ import UiTableCell from '@/components/ui/UiTableCell.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { useStorefrontList } from '@/composables/useStorefrontList'
 import { Icon } from '@/lib/icons'
+import { storefrontAssetUrl } from '@/lib/runtimeConfig'
 import { displayTranslation } from '@/lib/storefrontTranslations'
 import { useTestimonialsStore } from '@/stores/testimonials'
 import type { Testimonial } from '@/types/testimonial'
@@ -122,7 +123,7 @@ const navigateEdit = (item: Testimonial): void => {
         <UiStack direction="row" align="center" gap="sm">
           <UiImage
             v-if="item.avatarUrl"
-            :src="item.avatarUrl"
+            :src="storefrontAssetUrl(item.avatarUrl)"
             :alt="item.name"
             fit="cover"
             rounded="md"

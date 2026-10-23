@@ -17,6 +17,7 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiUploadZone from '@/components/ui/UiUploadZone.vue'
 import { Icon } from '@/lib/icons'
+import { storefrontAssetUrl } from '@/lib/runtimeConfig'
 import { ILLUSTRATION_ACCEPT } from '@/lib/mimeTypes'
 
 const { t } = useI18n()
@@ -79,7 +80,7 @@ const onSelect = async (file: File): Promise<void> => {
         class="group relative h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-border"
       >
         <UiImage
-          :src="modelValue"
+          :src="storefrontAssetUrl(modelValue)"
           :alt="label"
           fit="cover"
           class="h-full w-full"

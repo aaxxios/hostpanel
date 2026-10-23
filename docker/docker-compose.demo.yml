@@ -155,6 +155,8 @@ services:
       file: docker-compose.prod.yml
       service: hostpanel-admin
     container_name: hostpanel-demo-admin
+    environment:
+      CLIENT_BASE_URL: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
     networks: !override
       default: {}
       edge:
