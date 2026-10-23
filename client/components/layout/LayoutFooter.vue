@@ -16,8 +16,8 @@
             </UiText>
           </UiStack>
           <UiStack gap="sm" align="start" class="w-full sm:flex-row sm:items-center md:w-auto">
-            <SectionsDomainSearch class="w-full sm:min-w-[24rem] sm:flex-1 md:w-[28rem] md:flex-none" />
-            <UiButton :to="localePath('/products')" :variant="UiButtonVariant.Outline" data-testid="footer-cta-plans">
+            <SectionsDomainSearch size="md" class="w-full sm:min-w-[24rem] sm:flex-1 md:w-[28rem] md:flex-none" />
+            <UiButton :to="localePath('/products')" :variant="UiButtonVariant.Outline" size="md" data-testid="footer-cta-plans">
               {{ $t('footer.cta.plans') }}
             </UiButton>
           </UiStack>
@@ -30,9 +30,10 @@
         <!-- Brand block -->
         <UiStack gap="none" class="min-w-0 sm:col-span-3 lg:col-span-2" data-testid="footer-brand">
           <UiStack direction="row" align="center" gap="sm" class="text-classic-ink">
+            <!-- Logo image cap: intrinsically small UI, not page layout. -->
             <AppLogoLockup img-class="h-9 w-auto max-w-[180px] object-contain" mark-class="h-9 w-9" name-class="text-lg font-bold" />
           </UiStack>
-          <UiText tone="inherit" size="sm" class="mt-4 max-w-xs leading-relaxed text-classic-muted">
+          <UiText tone="inherit" size="sm" class="mt-4 leading-relaxed text-classic-muted">
             {{ $t('footer.tagline') }}
           </UiText>
 

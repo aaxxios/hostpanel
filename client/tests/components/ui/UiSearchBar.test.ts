@@ -40,6 +40,19 @@ describe('SearchBar', () => {
     expect(custom.find('[data-testid="search-bar-submit"]').text()).toBe('Check')
   })
 
+  it('gives the field and the button the same size step, large by default', () => {
+    const large = mountWithKit(SearchBar, { props: { placeholder: 'x' } })
+    const medium = mountWithKit(SearchBar, { props: { placeholder: 'x', size: 'md' } })
+    /** Reads the minimum-height class of the element with the given test id. */
+    const height = (wrapper: typeof large, id: string): string | undefined =>
+      wrapper.find(`[data-testid="${id}"]`).classes().find(c => c.startsWith('min-h-'))
+
+    expect(height(large, 'search-bar-input')).toBe('min-h-14')
+    expect(height(large, 'search-bar-submit')).toBe('min-h-14')
+    expect(height(medium, 'search-bar-input')).toBe('min-h-11')
+    expect(height(medium, 'search-bar-submit')).toBe('min-h-11')
+  })
+
   it('disables the field and the button while loading', () => {
     const wrapper = mountWithKit(SearchBar, { props: { loading: true, placeholder: 'x' } })
 

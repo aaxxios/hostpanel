@@ -104,6 +104,16 @@ describe('UiChipTabs', () => {
     wrapper.unmount()
   })
 
+  it('carries the template hooks: ui-chip on every chip, ui-chip-active on the chosen one, ui-chip-count on the count', () => {
+    const wrapper = mountTabs('all')
+
+    expect(wrapper.find('[data-testid="chip-all"]').classes()).toEqual(expect.arrayContaining(['ui-chip', 'ui-chip-active']))
+    expect(wrapper.find('[data-testid="chip-tech"]').classes()).toContain('ui-chip')
+    expect(wrapper.find('[data-testid="chip-tech"]').classes()).not.toContain('ui-chip-active')
+    expect(wrapper.find('[data-testid="chip-all"] .ui-chip-count').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   it('scrolls inside its own box instead of widening the page', () => {
     const wrapper = mountTabs('all')
     const box = wrapper.find('[data-testid="chips"]').classes()

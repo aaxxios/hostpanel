@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import UiButton from '~/components/ui/UiButton.vue'
 import { UiButtonVariant, UiSize } from '~/utils/ui/enums'
+import { BUTTON_SIZE_CLASSES, CONTROL_SIZE_CLASSES } from '~/utils/ui/tones'
 
 describe('UiButton', () => {
   it('renders a type=button button with its slot', () => {
@@ -14,6 +15,21 @@ describe('UiButton', () => {
     expect(wrapper.element.tagName).toBe('BUTTON')
     expect(wrapper.attributes('type')).toBe('button')
     expect(wrapper.text()).toBe('Save')
+  })
+
+  it('never wraps its label, in every variant and size', () => {
+    for (const variant of Object.values(UiButtonVariant)) {
+      expect(mountWithKit(UiButton, { props: { variant } }).classes()).toContain('whitespace-nowrap')
+    }
+  })
+
+  it('shares each size step minimum height with the text controls so a row lines up', () => {
+    for (const size of Object.values(UiSize)) {
+      /** Reads the minimum-height class out of a class list. */
+      const height = (classes: string): string => classes.split(' ').find(c => c.startsWith('min-h-'))!
+
+      expect(height(BUTTON_SIZE_CLASSES[size])).toBe(height(CONTROL_SIZE_CLASSES[size]))
+    }
   })
 
   it.each([

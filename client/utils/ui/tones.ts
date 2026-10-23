@@ -81,18 +81,22 @@ export const ALERT_TONE_CLASSES: Record<UiAlertVariant, AlertToneClasses> = {
   },
 }
 
-/** Padding and type size of a text control per size step. */
+/**
+ * Height, padding and type size of a text control per size step. The minimum heights (36, 44 and
+ * 56px) are the same as {@link BUTTON_SIZE_CLASSES}, so a field and a button of one size line up in
+ * a row whatever border the button draws; the padding keeps the natural height just below them.
+ */
 export const CONTROL_SIZE_CLASSES: Record<UiSize, string> = {
-  [UiSize.Sm]: 'px-3 py-1.5 text-sm',
-  [UiSize.Md]: 'px-4 py-2.5 text-base',
-  [UiSize.Lg]: 'px-5 py-3 text-lg',
+  [UiSize.Sm]: 'min-h-9 px-3 py-1.5 text-sm',
+  [UiSize.Md]: 'min-h-11 px-4 py-2 text-base',
+  [UiSize.Lg]: 'min-h-14 px-5 py-3 text-lg',
 }
 
-/** Padding and type size of a button per size step (a touch tighter than a field). */
+/** Height, padding and type size of a button per size step; the heights match {@link CONTROL_SIZE_CLASSES}. */
 export const BUTTON_SIZE_CLASSES: Record<UiSize, string> = {
-  [UiSize.Sm]: 'px-3 py-1.5 text-sm',
-  [UiSize.Md]: 'px-4 py-2 text-base',
-  [UiSize.Lg]: 'px-6 py-3 text-lg',
+  [UiSize.Sm]: 'min-h-9 px-3 py-1.5 text-sm',
+  [UiSize.Md]: 'min-h-11 px-4 py-2 text-base',
+  [UiSize.Lg]: 'min-h-14 px-6 py-3 text-lg',
 }
 
 /**
