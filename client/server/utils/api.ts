@@ -19,6 +19,7 @@
 import type { H3Event } from 'h3'
 import { LANGUAGE_HEADER, resolveLanguage } from '~/utils/transportLanguage'
 import { SessionCookie } from '~/constants/sessionCookie'
+import { CSRF_HEADER, CSRF_HEADER_VALUE } from '~/constants/csrfHeader'
 import { ACCESS_TOKEN_FALLBACK_MAX_AGE, AUTHED_FLAG_MAX_AGE } from '~/server/utils/auth-cookie'
 
 /** The SSO token endpoint's reply to a refresh-token grant. */
@@ -270,6 +271,8 @@ export const internalApiCall = async <T>(
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       [LANGUAGE_HEADER]: backendLanguage(event),
+      // The backend's SSO build refuses an anonymous state-changing call without it (a bearer call is exempt).
+      [CSRF_HEADER]: CSRF_HEADER_VALUE,
       ...options.headers,
     }
     if (bearerToken) {

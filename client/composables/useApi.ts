@@ -47,6 +47,7 @@ import type { AsyncData, UseFetchOptions } from 'nuxt/app'
 import type { FetchError } from 'ofetch'
 import { DEFAULT_APP_LOCALE } from '~/constants/appLocales'
 import { LANGUAGE_HEADER, resolveLanguage } from '~/utils/transportLanguage'
+import { CSRF_HEADER, CSRF_HEADER_VALUE } from '~/constants/csrfHeader'
 
 /**
  * The key list `useFetch` uses to describe a picked subset of a response.
@@ -93,12 +94,6 @@ interface WithDefault<T> {
   /** Factory for the value held before the first response and after a failure. */
   default: () => T
 }
-
-/** The header `server/middleware/csrf.ts` requires on every state-changing `/api/` request. */
-const CSRF_HEADER = 'X-Requested-With'
-
-/** The value the CSRF guard accepts. */
-const CSRF_HEADER_VALUE = 'XMLHttpRequest'
 
 /** The i18n instance as far as {@link apiFetch} reads it. */
 interface LocaleHolder {
