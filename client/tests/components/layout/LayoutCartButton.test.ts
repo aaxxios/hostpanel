@@ -41,7 +41,7 @@ describe('LayoutCartButton', () => {
     const classes = wrapper.find('[data-testid="layout-cart-button"]').classes()
     expect(classes).toContain('h-10')
     expect(classes).toContain('rounded-lg')
-    expect(classes).toContain('border-classic-border')
+    expect(classes).toContain('border-classic-border-strong')
   })
 
   it('shows no badge while the cart is empty', () => {

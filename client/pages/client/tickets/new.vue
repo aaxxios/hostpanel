@@ -59,6 +59,9 @@
  * New support ticket: department, subject, priority and message, sent through the support store.
  * A refusal is rendered from the store's `ticketError`; an accepted ticket swaps the form for a
  * confirmation.
+ *
+ * The form keeps a short column (a width cap, an allowed exception: form fields are intrinsically
+ * narrow, so this is not page layout; the page width itself comes from the shared container).
  */
 import { CLIENT_TICKETS_PATH } from '~/constants/clientRoutes'
 import { CheckCircle, Send } from 'lucide-vue-next'

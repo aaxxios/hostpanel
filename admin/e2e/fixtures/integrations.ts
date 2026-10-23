@@ -18,7 +18,10 @@ export const stripe: IntegrationDto = {
 /** The same integration with the fields its configuration form renders. */
 export const stripeDetail: IntegrationDetailDto = {
   ...stripe,
-  config: { secretKey: '', publishableKey: '' },
+  config: {
+    secretKey: { value: null, isSecret: true, hasValue: false },
+    publishableKey: { value: '', isSecret: false, hasValue: false },
+  },
   fieldDefinitions: [
     { key: 'secretKey', label: 'Secret key', type: 'password', required: true },
     { key: 'publishableKey', label: 'Publishable key', type: 'text', required: false },

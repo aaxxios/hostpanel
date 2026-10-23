@@ -9,7 +9,6 @@ public sealed class SubjectRoleConfiguration : IEntityTypeConfiguration<SubjectR
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<SubjectRole> builder)
     {
-        builder.ToTable("subject_roles");
 
         // The pair is the key, which is what makes a repeated grant a no-op at the
         // database rather than something every caller has to remember to check for.

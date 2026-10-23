@@ -27,7 +27,7 @@
           />
           <div
             v-else
-            :class="[accent.fill, coverClass, 'absolute inset-0 opacity-80 [.tpl-classic_&]:bg-classic-brand [.tpl-classic_&]:opacity-60']"
+            :class="[accent.fill, coverClass, 'absolute inset-0 opacity-80 [.tpl-classic_&]:bg-classic-fill [.tpl-classic_&]:opacity-60']"
             data-testid="product-cover-art"
           />
           <UiBadge
@@ -69,7 +69,7 @@
           </div>
 
           <!-- Action (the whole card is the link) -->
-          <span :class="[accent.tintStrong, accent.borderMedium, 'relative mt-5 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-gray-900 dark:text-white border transition-all duration-300 overflow-hidden group/btn [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-transparent [.tpl-classic_&]:bg-classic-brand [.tpl-classic_&]:font-semibold [.tpl-classic_&]:text-classic-on-brand [.tpl-classic_&]:group-hover:bg-classic-brand-hover']">
+          <span :class="[accent.tintStrong, accent.borderMedium, 'relative mt-5 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-gray-900 dark:text-white border transition-all duration-300 overflow-hidden group/btn [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-transparent [.tpl-classic_&]:bg-classic-fill [.tpl-classic_&]:font-semibold [.tpl-classic_&]:text-classic-on-brand [.tpl-classic_&]:group-hover:bg-classic-fill-hover']">
             <span class="relative z-10 flex items-center gap-2 group-hover/btn:translate-x-1 [.tpl-classic_&]:group-hover/btn:translate-x-0 transition-transform">
               {{ $t('products.pricing.cta.learnMore') }}
               <Icon name="mdi:arrow-right" :size="18" />

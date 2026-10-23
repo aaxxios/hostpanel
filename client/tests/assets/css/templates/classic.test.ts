@@ -100,9 +100,46 @@ describe('classic tokens', () => {
           expect(contrast(channels(block, fg), channels(block, bg))).toBeGreaterThanOrEqual(4.5)
         }
       }
-      expect(contrast(channels(block, 'on-brand'), channels(block, 'brand'))).toBeGreaterThanOrEqual(4.5)
       expect(contrast(channels(block, 'brand'), channels(block, 'brand-soft'))).toBeGreaterThanOrEqual(4.5)
     }
+  })
+
+  it('keeps white text at AA on every solid fill state (rest, hover, pressed) in both modes', () => {
+    for (const block of [light, dark]) {
+      expect(channels(block, 'on-brand')).toEqual([255, 255, 255])
+      for (const fill of ['fill', 'fill-hover', 'fill-pressed']) {
+        expect(contrast(channels(block, 'on-brand'), channels(block, fill))).toBeGreaterThanOrEqual(4.5)
+      }
+    }
+  })
+
+  it('keeps the solid fill and the strong border distinct from the page and surface (3:1 for the border)', () => {
+    for (const block of [light, dark]) {
+      for (const bg of ['page', 'surface']) {
+        expect(contrast(channels(block, 'border-strong'), channels(block, bg))).toBeGreaterThanOrEqual(3)
+        expect(contrast(channels(block, 'fill'), channels(block, bg))).toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
+
+  it('uses a deeper fill than the text brand in dark, never the pastel brand step', () => {
+    expect(dark).toMatch(/--classic-fill:\s*var\(--brand-primary-600,/)
+    expect(luminance(channels(dark, 'fill'))).toBeLessThan(luminance(channels(dark, 'brand')))
+  })
+
+  it('paints primary buttons, chips, segments and the active nav entry from the fill token with on-brand text', () => {
+    for (const hook of ['.ui-btn.ui-btn-primary', '.ui-chip.ui-chip-active', '.ui-segment.ui-segment-active', '.ui-nav-item.ui-nav-item-active']) {
+      const rule = new RegExp(`${hook.replace(/\./g, '\\.')} \\{([^}]*)\\}`).exec(css)
+      expect(rule, hook).not.toBeNull()
+      expect(rule![1]).toContain('background-color: rgb(var(--classic-fill))')
+      expect(rule![1]).toContain('color: rgb(var(--classic-on-brand))')
+    }
+  })
+
+  it('draws outline and secondary buttons and idle chips with the strong border token', () => {
+    expect(css).toMatch(/\.ui-btn\.ui-btn-outline \{[^}]*border: 1px solid rgb\(var\(--classic-border-strong\)\)/)
+    expect(css).toMatch(/\.ui-btn\.ui-btn-secondary \{[^}]*border: 1px solid rgb\(var\(--classic-border-strong\)\)/)
+    expect(css).toMatch(/\.ui-chip:not\(\.ui-chip-active\) \{[^}]*border-color: rgb\(var\(--classic-border-strong\)\)/)
   })
 
   it('restyles the kit only under the classic scope, with no gradient or glow', () => {
@@ -113,7 +150,7 @@ describe('classic tokens', () => {
     for (const selector of selectors.filter(rule => rule.includes('.ui-'))) {
       expect(selector).toContain(":is(.tpl-classic, html[data-template='classic'])")
     }
-    expect(kit).toContain('--brand-grad: linear-gradient(rgb(var(--classic-brand)), rgb(var(--classic-brand)))')
+    expect(kit).toContain('--brand-grad: linear-gradient(rgb(var(--classic-fill)), rgb(var(--classic-fill)))')
     expect(kit).not.toMatch(/radial-gradient|blur\(/)
   })
 })

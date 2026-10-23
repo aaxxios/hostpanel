@@ -16,7 +16,7 @@
         align="center"
         justify="center"
         gap="none"
-        class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-classic-brand text-classic-on-brand text-[10px] font-bold"
+        class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-classic-fill text-classic-on-brand text-[10px] font-bold"
         data-testid="layout-cart-count"
       >
         {{ cart.count }}

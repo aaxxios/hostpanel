@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Domain.Services;
 /// <summary>
 /// Represents a service instance owned by a client.
 /// Links a <see cref="ClientId"/> to a product and tracks provisioning state.
-/// Stored in the <c>client_services</c> table.
+/// Stored in the <c>ClientServices</c> table.
 /// </summary>
 public sealed class ClientService : BaseEntity, IAggregateRoot
 {

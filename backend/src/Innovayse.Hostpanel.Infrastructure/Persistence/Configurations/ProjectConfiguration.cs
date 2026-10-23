@@ -10,7 +10,6 @@ public sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Project> builder)
     {
-        builder.ToTable("projects");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Slug).IsRequired().HasMaxLength(Project.SlugMaxLength);
         builder.Property(x => x.Url).HasMaxLength(Project.UrlMaxLength);

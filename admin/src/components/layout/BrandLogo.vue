@@ -32,9 +32,18 @@ const darkSrc = computed<string>(() => branding.logoOnDarkUrl || '/logo-dark.svg
 
 /** Logo for the light theme: the operator's, else the built-in dark-text wordmark. */
 const lightSrc = computed<string>(() => branding.logoOnLightUrl || '/logo.svg')
+
+/**
+ * A light plate behind the dark-theme image when the operator's only upload is the
+ * light-background logo, which would otherwise sit on the dark sidebar unreadable. A dark
+ * variant, or no upload at all (the built-in light-text wordmark), needs none.
+ */
+const darkPlate = computed<string>(() =>
+  branding.logoUrl && !branding.logoDarkUrl ? 'rounded-md bg-white/90 px-2 py-1' : '',
+)
 </script>
 
 <template>
-  <UiImage :src="darkSrc" :alt="t('shared.brandName')" :class="[imgClass, 'light:hidden']" data-testid="brand-logo-dark" />
+  <UiImage :src="darkSrc" :alt="t('shared.brandName')" :class="[imgClass, darkPlate, 'light:hidden']" data-testid="brand-logo-dark" />
   <UiImage :src="lightSrc" :alt="t('shared.brandName')" :class="[imgClass, 'hidden light:block']" data-testid="brand-logo-light" />
 </template>

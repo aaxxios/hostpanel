@@ -142,6 +142,16 @@ describe('apiFetch', () => {
     expect(stub?.requests[0]?.headers['x-requested-with']).toBe('XMLHttpRequest')
   })
 
+  it('stamps the CSRF header itself, whichever fetcher runs and whether or not a plugin wrapped it', async () => {
+    // A bare fetcher with no `csrf-header` plugin: during SSR the fetcher is `useRequestFetch()`,
+    // which that plugin never wraps, and the domain check was refused with 403 because of it.
+    await arrange('en')
+
+    await apiFetch('/api/portal/public/domain-check', { method: 'POST', body: { domain: 'example.com' } })
+
+    expect(stub?.requests[0]?.headers['x-requested-with']).toBe('XMLHttpRequest')
+  })
+
   it('answers in the default language when there is no Nuxt instance', async () => {
     stub = await startStubServer()
     vi.stubGlobal('$fetch', ofetch.create({ baseURL: stub.baseUrl }))

@@ -69,6 +69,7 @@ export const stubPublicPageRuntime = (options: PublicPageOptions = {}): PublicPa
     localBusinessSchema: () => ({ '@type': 'LocalBusiness' }),
     websiteSchema: () => ({ '@type': 'WebSite' }),
     productSchema: () => ({ '@type': 'Product' }),
+    productFamilySchema: (family: unknown) => ({ '@type': 'Product', family }),
     breadcrumbSchema: (items: unknown[]) => ({ '@type': 'BreadcrumbList', items }),
     faqSchema: (items: unknown[]) => ({ '@type': 'FAQPage', items }),
     injectSchema: spies.injectSchema,

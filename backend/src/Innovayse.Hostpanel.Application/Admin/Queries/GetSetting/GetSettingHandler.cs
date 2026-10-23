@@ -15,11 +15,16 @@ public sealed class GetSettingHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>Loaded plugins, whose manifests declare which of their fields are secret.</summary>
+    private readonly IPluginRegistry _plugins;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetSettingHandler(IHostpanelDbContext context)
+    /// <param name="plugins">Loaded plugins, whose manifests declare which of their fields are secret.</param>
+    public GetSettingHandler(IHostpanelDbContext context, IPluginRegistry plugins)
     {
         _context = context;
+        _plugins = plugins;
     }
 
     /// <summary>
@@ -37,6 +42,6 @@ public sealed class GetSettingHandler
             return Result<SettingDto>.FailureCode(HostpanelErrorCodes.SETTING_NOT_FOUND);
         }
 
-        return Result<SettingDto>.Success(setting.ToDto());
+        return Result<SettingDto>.Success(setting.ToDto(SettingSecrecy.From(_plugins)));
     }
 }

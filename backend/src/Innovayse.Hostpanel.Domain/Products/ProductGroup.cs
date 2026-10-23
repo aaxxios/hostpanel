@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Domain.Products;
 /// <summary>
 /// Groups related products (e.g., "Shared Hosting", "VPS", "SSL Certificates").
 /// An aggregate root — owns the list of products in the catalogue.
-/// Stored in the <c>product_groups</c> table.
+/// Stored in the <c>ProductGroups</c> table.
 /// </summary>
 public sealed class ProductGroup : BaseEntity, IAggregateRoot
 {

@@ -12,7 +12,7 @@
     </UiDecor>
 
     <UiContainer class="relative z-10">
-      <div class="max-w-4xl mx-auto text-center">
+      <div class="text-center">
         <!-- Badge -->
         <span class="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full glass border border-secondary-500/20 backdrop-blur-sm [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-0 [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:backdrop-blur-none">
           <span class="relative flex h-2 w-2 [.tpl-classic_&]:hidden">
@@ -29,7 +29,7 @@
         </UiHeading>
 
         <!-- Subtitle -->
-        <UiText tone="muted" size="lg" class="text-xl mb-12 leading-relaxed max-w-3xl mx-auto [.tpl-classic_&]:mb-8 [.tpl-classic_&]:text-lg [.tpl-classic_&]:text-classic-muted">{{ $t('products.hero.subtitle') }}</UiText>
+        <UiText tone="muted" size="lg" class="text-xl mb-12 leading-relaxed max-w-[75ch] mx-auto [.tpl-classic_&]:mb-8 [.tpl-classic_&]:text-lg [.tpl-classic_&]:text-classic-muted">{{ $t('products.hero.subtitle') }}</UiText>
 
         <!-- Calls to action -->
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-12 sm:mb-14 md:mb-16 [.tpl-classic_&]:mb-8 sm:[.tpl-classic_&]:mb-8 md:[.tpl-classic_&]:mb-8">

@@ -8,6 +8,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { countAny, countInputsWithoutPlaceholder, countVHtml, template } from './auditCounts.mjs'
 
 /** Admin root: the folder above `scripts/`. */
 const root = fileURLToPath(new URL('..', import.meta.url))
@@ -52,25 +53,11 @@ const vueFiles = files.filter((f) => f.rel.endsWith('.vue'))
  */
 const count = (set, pattern) => set.reduce((sum, f) => sum + (f.text.match(pattern)?.length ?? 0), 0)
 
-/**
- * Extracts the `<template>` part of a Vue file.
- *
- * @param {string} text - Vue source.
- * @returns {string} The template text, or an empty string.
- */
-const template = (text) => text.match(/<template>([\s\S]*)<\/template>/)?.[1] ?? ''
-
 /** Template text of every screen file. */
 const screenTemplates = screens.map((f) => ({ text: template(f.text) }))
 
 /** Input-like opening tags without a placeholder. */
-const inputsWithoutPlaceholder = vueFiles.reduce((sum, f) => {
-  const tags = template(f.text).match(/<(input|textarea|select|UiInput|UiTextarea|UiSelect|UiNumberInput|UiNativeSelect|UiTextField)\b[^>]*>/g) ?? []
-  return (
-    sum +
-    tags.filter((tag) => !/placeholder/.test(tag) && !/v-bind="/.test(tag) && !/type="(checkbox|radio|file|hidden)"/.test(tag)).length
-  )
-}, 0)
+const inputsWithoutPlaceholder = vueFiles.reduce((sum, f) => sum + countInputsWithoutPlaceholder(f.text), 0)
 
 /** Bare text lines in templates: a line that is only words, not a tag, binding or comment. */
 const bareText = screenTemplates.reduce(
@@ -101,8 +88,8 @@ const report = {
   'function declarations': count(files, /^\s*(export\s+)?(async\s+)?function\s+\w+/gm),
   'style= attributes': count(vueFiles, /\sstyle="/g),
   '<style> blocks': count(vueFiles, /<style[\s>]/g),
-  'v-html': count(vueFiles, /v-html/g),
-  'any': count(files, /:\s*any\b|\bas\s+any\b|<any>/g),
+  'v-html': countVHtml(vueFiles.map((f) => f.text)),
+  'any': countAny(files.map((f) => f.text)),
   'inputs without placeholder': inputsWithoutPlaceholder,
   'vue files using t()': vueFiles.filter((f) => /(?<![\w$])\$?t\(/.test(f.text)).length,
   'bare text lines': bareText,

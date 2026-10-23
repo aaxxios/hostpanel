@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Domain.Domains;
 /// <summary>
 /// Aggregate root representing a domain name registration owned by a client.
 /// Owns collections of <see cref="Nameserver"/> and <see cref="DnsRecord"/> entities.
-/// Stored in the <c>domains</c> table.
+/// Stored in the <c>Domains</c> table.
 /// </summary>
 public sealed class RegisteredDomain : BaseEntity, IAggregateRoot
 {

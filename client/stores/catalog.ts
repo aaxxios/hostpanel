@@ -29,7 +29,7 @@ import type { SlidePublic } from '~/types/slidepublic'
 import type { TldPricing } from '~/types/tldpricing'
 import { isFamilyGroup, parseDescription } from '~/utils/catalogGroups'
 import { formatMoney } from '~/utils/formatMoney'
-import { specificationBullets } from '~/utils/productFamilies'
+import { comparePlans, specificationBullets } from '~/utils/productFamilies'
 
 /**
  * Central store for the public catalogue.
@@ -102,14 +102,19 @@ export const useCatalogStore = defineStore('catalog', () => {
    * Reads a product list in the payer's currency and keeps it.
    *
    * @param filter - Which products to read.
-   * @returns The products; empty after a failure ({@link error} holds the sentence).
+   * @returns The products; after a failure ({@link error} holds the sentence) the list already
+   * kept for this filter and currency, empty when there is none. A failed read never replaces a
+   * list that was read before, so a refused refresh cannot empty a page that is already showing it.
    */
   const loadProducts = async (filter: CatalogFilter = {}): Promise<PortalProduct[]> => {
     const key = productKey(filter)
     const list = await guarded(
       () => api.fetchProducts({ ...filter, currency: currencyStore.payerCode ?? undefined }),
-      [] as PortalProduct[]
+      null
     )
+    if (list === null) {
+      return productsByKey.value[key] ?? []
+    }
     productsByKey.value = { ...productsByKey.value, [key]: list }
     return list
   }
@@ -122,38 +127,6 @@ export const useCatalogStore = defineStore('catalog', () => {
    */
   const productsFor = (filter: CatalogFilter = {}): PortalProduct[] =>
     productsByKey.value[productKey(filter)] ?? []
-
-  /**
-   * The cheapest per-month price a product offers, for ordering; products with no price sort last.
-   *
-   * @param product - The product.
-   * @returns The monthly price, else the annual price per month, else infinity.
-   */
-  const orderingPrice = (product: PortalProduct): number =>
-    product.pricing?.monthly ?? (product.pricing?.annual != null ? product.pricing.annual / 12 : Number.POSITIVE_INFINITY)
-
-  /**
-   * Orders plans for display. The API returns products in no meaningful order (the database's), so
-   * the operator's `sortOrder` wins when the product carries one and the monthly price, cheapest
-   * first, decides otherwise.
-   *
-   * @param a - First plan.
-   * @param b - Second plan.
-   * @returns Negative when `a` comes first.
-   */
-  const comparePlans = (a: PortalProduct, b: PortalProduct): number => {
-    const orderA = a.sortOrder ?? Number.POSITIVE_INFINITY
-    const orderB = b.sortOrder ?? Number.POSITIVE_INFINITY
-    if (orderA !== orderB) {
-      return orderA < orderB ? -1 : 1
-    }
-    const priceA = orderingPrice(a)
-    const priceB = orderingPrice(b)
-    if (priceA === priceB) {
-      return 0
-    }
-    return priceA < priceB ? -1 : 1
-  }
 
   /** The hosting plans in display order, in the payer's currency; what the plan cards and the home page show. */
   const hostingPlans = computed(() => [...productsFor({ gid: HOSTING_GROUP_ID })].sort(comparePlans))
@@ -246,15 +219,24 @@ export const useCatalogStore = defineStore('catalog', () => {
   /**
    * Reads the product groups and keeps them.
    *
-   * @returns The groups; empty after a failure ({@link error} holds the sentence).
+   * @returns The groups; after a failure ({@link error} holds the sentence) the groups already
+   * kept, empty when there are none. A failed read never replaces groups that were read before:
+   * the home page refreshes them after hydration, and an empty list there removed every family
+   * card but the static domains one.
    */
   const loadProductGroups = async (): Promise<PortalProductGroup[]> => {
-    productGroups.value = await guarded(() => api.fetchProductGroups(), [] as PortalProductGroup[])
+    const groups = await guarded(() => api.fetchProductGroups(), null)
+    if (groups !== null) {
+      productGroups.value = groups
+    }
     return productGroups.value
   }
 
-  /** The family read in flight, shared by every caller until it settles; null when none runs. */
-  let familiesInFlight: Promise<PortalProduct[]> | null = null
+  /**
+   * The family read in flight and the currency it was started for, shared by every caller that
+   * asks for the same currency until it settles; null when none runs.
+   */
+  let familiesInFlight: { currency: string | null, read: Promise<PortalProduct[]> } | null = null
 
   /**
    * Reads the product groups, then the products of every family group.
@@ -268,18 +250,25 @@ export const useCatalogStore = defineStore('catalog', () => {
     // The header and the page both ask for the families while one render runs; they share the
     // read in flight instead of sending it twice. The promise lives in the store, so under SSR it
     // is per request, never shared between visitors.
-    if (familiesInFlight) {
-      return familiesInFlight
+    // A read started for another currency is not shared: it would fill the list of that currency
+    // and leave the one the caller now needs empty.
+    if (familiesInFlight && familiesInFlight.currency === currencyStore.payerCode) {
+      return familiesInFlight.read
     }
-    familiesInFlight = (async () => {
-      try {
+    const flight: { currency: string | null, read: Promise<PortalProduct[]> } = {
+      currency: currencyStore.payerCode,
+      read: (async () => {
         await loadProductGroups()
         return familyFilter.value.gids ? await loadProducts(familyFilter.value) : []
-      } finally {
-        familiesInFlight = null
-      }
-    })()
-    return familiesInFlight
+      })().finally(() => {
+        // Only the read that is still the shared one clears it; a newer read for another currency stays.
+        if (familiesInFlight === flight) {
+          familiesInFlight = null
+        }
+      }),
+    }
+    familiesInFlight = flight
+    return flight.read
   }
 
   /**

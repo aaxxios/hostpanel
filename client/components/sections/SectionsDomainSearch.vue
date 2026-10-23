@@ -3,6 +3,7 @@
     v-model="query"
     :placeholder="$t('hero.search.placeholder')"
     :button-label="$t('domains.search')"
+    :size="size"
     data-testid="sections-domain-search"
     @search="search"
   />
@@ -17,6 +18,18 @@
  */
 
 import { DOMAIN_SEARCH_QUERY_PARAM } from '~/constants/domainSearchQuery'
+import { UiSize } from '~/utils/ui/enums'
+
+/** Props of SectionsDomainSearch. */
+interface Props {
+  /** Size step of the field and the button: large in the hero, medium in the footer band. */
+  size?: `${UiSize}`
+}
+
+/** Props of the component with their defaults applied. */
+withDefaults(defineProps<Props>(), {
+  size: UiSize.Lg,
+})
 
 /** Prefixes a path with the active language. */
 const localePath = useLocalePath()

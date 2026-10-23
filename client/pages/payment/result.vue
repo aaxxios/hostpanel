@@ -1,5 +1,6 @@
 <template>
   <UiStack align="center" justify="center" gap="none" class="min-h-[60dvh] px-4 py-16" data-testid="payment-result">
+    <!-- Result card: an intrinsically small card, not page layout. -->
     <UiCard padding="xl" class="w-full max-w-md text-center rounded-3xl [.tpl-classic_&]:rounded-lg [.tpl-classic_&]:shadow-sm">
       <!-- Verifying -->
       <template v-if="state === GatewayPaymentState.Verifying">

@@ -5,6 +5,7 @@
     its links leave the tab order. Desktop: a normal flex child that fills the height and scrolls
     internally.
   -->
+  <!-- Drawer width on a phone: intrinsically small UI. -->
   <aside
     ref="asideRef"
     class="absolute inset-y-0 left-0 z-20 flex w-64 max-w-[85vw] flex-col border-r border-gray-200 bg-ui-surface transition-[transform,visibility] duration-300 dark:border-white/10 lg:relative lg:inset-y-auto lg:z-auto lg:max-w-none lg:flex-shrink-0 lg:translate-x-0 lg:visible"

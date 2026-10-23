@@ -11,10 +11,10 @@ import { requestsOf, stubRouteTable } from '../../helpers/routes'
 
 /** The four branding rows, as the API seeds them. */
 const rows: Setting[] = [
-  { id: 11, key: 'portal.logo', value: '' },
-  { id: 12, key: 'portal.logo.dark', value: '/uploads/dark.png' },
-  { id: 13, key: 'portal.logo.mark', value: '' },
-  { id: 14, key: 'portal.favicon', value: '' },
+  { id: 11, key: 'portal.logo', value: '', isSecret: false, hasValue: false },
+  { id: 12, key: 'portal.logo.dark', value: '/uploads/dark.png', isSecret: false, hasValue: true },
+  { id: 13, key: 'portal.logo.mark', value: '', isSecret: false, hasValue: false },
+  { id: 14, key: 'portal.favicon', value: '', isSecret: false, hasValue: false },
 ]
 
 /** A file standing in for the picked image. */

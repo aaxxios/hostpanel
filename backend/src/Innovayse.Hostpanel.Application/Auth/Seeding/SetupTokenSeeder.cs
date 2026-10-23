@@ -60,7 +60,7 @@ public static class SetupTokenSeeder
     /// installation was bootstrapped through the gate.
     /// </para>
     /// </summary>
-    public const string SettingKey = "auth:setup-token";
+    public const string SettingKey = SecretSettingKeys.SetupToken;
 
     /// <summary>Description written on the settings row, for an operator reading the table.</summary>
     private const string SettingDescription =

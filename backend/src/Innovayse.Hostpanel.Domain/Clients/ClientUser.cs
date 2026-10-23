@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Domain.Clients;
 /// <summary>
 /// Represents a non-owner user linked to a client account with granular permissions.
 /// The account owner is identified by <see cref="Client.UserId"/> and always has all permissions.
-/// Additional users are stored in the <c>client_users</c> table.
+/// Additional users are stored in the <c>ClientUsers</c> table.
 /// </summary>
 public sealed class ClientUser : BaseEntity
 {

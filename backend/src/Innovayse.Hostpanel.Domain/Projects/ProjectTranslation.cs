@@ -4,20 +4,20 @@ namespace Innovayse.Hostpanel.Domain.Projects;
 
 /// <summary>
 /// A locale-specific translation for a <see cref="Project"/>.
-/// Stored in the <c>project_translations</c> table.
+/// Stored in the <c>ProjectTranslations</c> table.
 /// </summary>
 public sealed class ProjectTranslation : BaseEntity
 {
-    /// <summary>Longest a locale code may be — matches the <c>project_translations.Locale</c> column.</summary>
+    /// <summary>Longest a locale code may be — matches the <c>ProjectTranslations.Locale</c> column.</summary>
     public const int LocaleMaxLength = 10;
 
-    /// <summary>Longest Title may be — matches the <c>project_translations.Title</c> column.</summary>
+    /// <summary>Longest Title may be — matches the <c>ProjectTranslations.Title</c> column.</summary>
     public const int TitleMaxLength = 200;
 
-    /// <summary>Longest Summary may be — matches the <c>project_translations.Summary</c> column.</summary>
+    /// <summary>Longest Summary may be — matches the <c>ProjectTranslations.Summary</c> column.</summary>
     public const int SummaryMaxLength = 500;
 
-    /// <summary>Longest Description may be — matches the <c>project_translations.Description</c> column.</summary>
+    /// <summary>Longest Description may be — matches the <c>ProjectTranslations.Description</c> column.</summary>
     public const int DescriptionMaxLength = 4000;
 
     /// <summary>Gets the FK to the parent <see cref="Project"/>.</summary>

@@ -35,6 +35,7 @@ import UiToggle from '@/components/ui/UiToggle.vue'
 import UiUploadZone from '@/components/ui/UiUploadZone.vue'
 import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 import { Icon } from '@/lib/icons'
+import { storefrontAssetUrl } from '@/lib/runtimeConfig'
 import { enumValueOf } from '@/lib/enumValue'
 import { useSettingsStore } from '@/stores/settings'
 import { useSlidesStore } from '@/stores/slides'
@@ -490,7 +491,7 @@ const handleCancel = (): void => {
               class="group relative h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-border"
             >
               <UiImage
-                :src="imageUrl"
+                :src="storefrontAssetUrl(imageUrl)"
                 :alt="t('settings.slideForm.slidePreview')"
                 fit="cover"
                 class="h-full w-full"

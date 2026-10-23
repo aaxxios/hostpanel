@@ -10,7 +10,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Integrations;
 
 /// <summary>
 /// <c>GET /api/admin/integrations/{slug}</c>: an admin reads one integration's full configuration
-/// with secret fields masked, an unrecognised slug is refused <c>INTEGRATION_NOT_FOUND</c>, a
+/// with secret fields answered as set or not set and never by value, an unrecognised slug is refused <c>INTEGRATION_NOT_FOUND</c>, a
 /// caller with only the Client role is refused, and the route is closed to a caller with no
 /// credential.
 /// </summary>
@@ -18,9 +18,9 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Integrations;
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetIntegrationTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>Saving the card gateway's secret key, then reading it back, shows the value masked.</summary>
+    /// <summary>Saving the card gateway's secret key, then reading it back, shows only that it is set.</summary>
     [Fact]
-    public async Task SaveThenGet_MasksTheSecretAsync()
+    public async Task SaveThenGet_WithholdsTheSecretAsync()
     {
         var client = await IntegrationsTestSeeds.AdminClientAsync(factory);
 
@@ -33,9 +33,11 @@ public sealed class GetIntegrationTests(IntegrationTestFactory factory) : IClass
 
         var get = await client.GetFromJsonAsync<JsonElement>("/api/admin/integrations/stripe");
         get.GetProperty("isEnabled").GetBoolean().Should().BeTrue();
-        var secret = get.GetProperty("config").GetProperty("secret_key").GetString();
-        secret.Should().NotBe("sk_live_should_never_be_echoed_back");
-        secret.Should().Be("••••••••");
+        get.GetRawText().Should().NotContain("sk_live_should_never_be_echoed_back");
+        var secret = get.GetProperty("config").GetProperty("secret_key");
+        secret.GetProperty("isSecret").GetBoolean().Should().BeTrue();
+        secret.GetProperty("hasValue").GetBoolean().Should().BeTrue();
+        secret.GetProperty("value").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     /// <summary>An unrecognised slug answers 404 with <c>INTEGRATION_NOT_FOUND</c>.</summary>

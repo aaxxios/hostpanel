@@ -10,7 +10,6 @@ public sealed class ClientServiceConfiguration : IEntityTypeConfiguration<Client
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<ClientService> builder)
     {
-        builder.ToTable("client_services");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.ClientId).IsRequired();
         builder.Property(x => x.ProductId).IsRequired();

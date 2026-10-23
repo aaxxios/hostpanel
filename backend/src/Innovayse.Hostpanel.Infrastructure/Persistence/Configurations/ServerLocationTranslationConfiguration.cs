@@ -10,7 +10,6 @@ public sealed class ServerLocationTranslationConfiguration : IEntityTypeConfigur
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<ServerLocationTranslation> builder)
     {
-        builder.ToTable("server_location_translations");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.ServerLocationId).IsRequired();
         builder.Property(x => x.Locale).IsRequired().HasMaxLength(ServerLocationTranslation.LocaleMaxLength);

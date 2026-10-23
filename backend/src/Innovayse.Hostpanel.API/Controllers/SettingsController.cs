@@ -29,7 +29,7 @@ public sealed class SettingsController : BaseApiController
         _bus = bus;
     }
 
-    /// <summary>Returns all configuration settings.</summary>
+    /// <summary>Returns all configuration settings; a secret one carries no value.</summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>200 with every setting; 401; 403.</returns>
     [HttpGet]
@@ -40,7 +40,7 @@ public sealed class SettingsController : BaseApiController
         return HandleResult(outcome);
     }
 
-    /// <summary>Returns a single setting by ID.</summary>
+    /// <summary>Returns a single setting by ID; a secret one carries no value.</summary>
     /// <param name="id">Setting primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>200 with the setting; 404 with <c>SETTING_NOT_FOUND</c>; 401; 403.</returns>
@@ -55,7 +55,10 @@ public sealed class SettingsController : BaseApiController
 
     /// <summary>Updates the value of an existing setting.</summary>
     /// <param name="id">Setting primary key; wins over any id in the body.</param>
-    /// <param name="command">The new value.</param>
+    /// <param name="command">
+    /// The new value, or <c>clear</c> to remove a secret. An empty value for a secret keeps the
+    /// stored one.
+    /// </param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 on success; 404 with <c>SETTING_NOT_FOUND</c>; 400 with <c>INVALID_SETTING_VALUE</c>

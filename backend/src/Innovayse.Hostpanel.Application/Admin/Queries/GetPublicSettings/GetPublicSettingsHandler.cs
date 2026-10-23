@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Admin.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Shared.Models;
@@ -20,11 +21,16 @@ public sealed class GetPublicSettingsHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>Loaded plugins, whose manifests declare which of their fields are secret.</summary>
+    private readonly IPluginRegistry _plugins;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetPublicSettingsHandler(IHostpanelDbContext context)
+    /// <param name="plugins">Loaded plugins, whose manifests declare which of their fields are secret.</param>
+    public GetPublicSettingsHandler(IHostpanelDbContext context, IPluginRegistry plugins)
     {
         _context = context;
+        _plugins = plugins;
     }
 
     /// <summary>
@@ -43,8 +49,13 @@ public sealed class GetPublicSettingsHandler
         // Was ISettingRepository.ListAsync -- read-only, so no tracking is needed.
         var settings = await _context.Settings.AsNoTracking().OrderBy(s => s.Key).ToListAsync(ct);
 
+        // The allow-list never names a secret (PortalSettingKeys tests hold that), and the secrecy
+        // check is the second door: an anonymous response must not be one list edit from a leak.
+        var secrecy = SettingSecrecy.From(_plugins);
         IReadOnlyList<PublicSettingDto> dtos = settings
-            .Where(s => PortalSettingKeys.Public.Contains(s.Key) && !string.IsNullOrWhiteSpace(s.Value))
+            .Where(s => PortalSettingKeys.Public.Contains(s.Key)
+                && !secrecy.IsSecret(s.Key)
+                && !string.IsNullOrWhiteSpace(s.Value))
             .Select(s => new PublicSettingDto(s.Key, s.Value))
             .ToList();
 

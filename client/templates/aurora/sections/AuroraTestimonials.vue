@@ -51,7 +51,7 @@
           aria-roledescription="slide"
           :aria-label="t('aurora.testimonials.slide', { current: item.position, total: items.length })"
           data-testid="testimonial-card"
-          class="w-full max-w-md flex-col border-line2 bg-card p-5 shadow-panel sm:w-[calc((100%-1.25rem)/2)] sm:max-w-none lg:w-[calc((100%-2.5rem)/3)]"
+          class="w-full flex-col border-line2 bg-card p-5 shadow-panel sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-2.5rem)/3)]"
           :class="SLOT_CLASSES[slot]"
         >
           <UiStack

@@ -4,7 +4,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 namespace Innovayse.Hostpanel.Domain.Billing;
 /// <summary>
 /// A single line item on an <see cref="Invoice"/>.
-/// Owned by the Invoice aggregate; stored in the <c>invoice_items</c> table.
+/// Owned by the Invoice aggregate; stored in the <c>InvoiceItems</c> table.
 /// </summary>
 public sealed class InvoiceItem : BaseEntity
 {

@@ -121,22 +121,21 @@ describe('LayoutHeader', () => {
     expect(logo.find('[data-testid="app-logo-mark"]').exists()).toBe(false)
   })
 
-  it('shows hosting, domains, products and support, and adds VPS once the catalogue has it', async () => {
+  it('shows Hosting and Support as dropdowns, with VPS inside Hosting and no top-level VPS entry', async () => {
     const wrapper = await mountHeader()
 
-    expect(wrapper.find('[data-testid="header-nav-hosting"]').exists()).toBe(true)
-    expect(desktopLinkKeys(wrapper)).toEqual([
-      'header-nav-hosting',
-      'header-nav-domains',
-      'header-nav-vps',
-      'header-nav-products',
-    ])
-    expect(wrapper.find('[data-testid="header-nav-vps"]').attributes('href')).toBe('/products/cloud-servers')
+    expect(wrapper.find('[data-testid="header-nav-hosting-trigger"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="header-nav-support-trigger"]').exists()).toBe(true)
+    expect(desktopLinkKeys(wrapper)).toEqual(['header-nav-domains', 'header-nav-products'])
+    expect(wrapper.find('[data-testid="header-nav-vps"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="header-nav-servers"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="header-nav-hosting-trigger"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="header-nav-child-group-9"]').attributes('href')).toBe('/products/cloud-servers')
   })
 
-  it('leaves VPS and Servers out when the catalogue read fails', async () => {
+  it('keeps Hosting a plain link when the catalogue read fails', async () => {
     catalogApi.fetchProductGroups.mockRejectedValue(new Error('offline'))
     const wrapper = await mountHeader()
 
@@ -168,7 +167,7 @@ describe('LayoutHeader', () => {
       const classes = wrapper.find(`[data-testid="${testid}"]`).classes()
       expect(classes).toContain('h-10')
       expect(classes).toContain('rounded-lg')
-      expect(classes).toContain('border-classic-border')
+      expect(classes).toContain('border-classic-border-strong')
     }
     expect(wrapper.find('[data-testid="language-switcher-stub"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="currency-switcher-stub"]').exists()).toBe(true)
@@ -210,7 +209,7 @@ describe('LayoutHeader', () => {
 
     const drawer = wrapper.find('[data-testid="header-drawer-nav"]')
     expect(drawer.find('[data-testid="header-drawer-hosting"]').exists()).toBe(true)
-    expect(drawer.find('[data-testid="header-drawer-vps"]').exists()).toBe(true)
+    expect(drawer.find('[data-testid="header-drawer-child-group-9"]').attributes('href')).toBe('/products/cloud-servers')
     expect(drawer.find('[data-testid="header-drawer-child-faq"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="header-drawer-sign-in"]').exists()).toBe(true)
   })

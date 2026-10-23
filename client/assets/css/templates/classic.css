@@ -8,7 +8,10 @@
  * light value sits in `:root`, the dark one under `.dark`; the summary card is dark in both modes.
  *
  * Contrast (WCAG AA, guarded by tests/assets/css/templates/classic.test.ts): ink, muted and brand
- * keep at least 4.5:1 on page and surface in both modes, and on-brand keeps it on brand.
+ * (the text and link colour) keep at least 4.5:1 on page and surface in both modes. Solid fills (primary
+ * buttons, active tabs and chips, the active nav entry) use the deeper `fill` step with white
+ * `on-brand` text, also at least 4.5:1, so dark mode never shows a pale pastel fill with dark text.
+ * `border-strong` is the visible border of outline controls and idle chips (3:1 on page and surface).
  *
  * The shared kit (components/ui) carries hook classes (`ui-btn`, `ui-card`, `ui-field`, ...) that
  * do nothing by themselves. The second half of this file restyles them where classic is the
@@ -27,6 +30,10 @@
   --classic-brand-hover: var(--brand-primary-800, 29 78 216);
   --classic-brand-soft: var(--brand-primary-50, 235 243 255);
   --classic-on-brand: 255 255 255;
+  --classic-fill: var(--brand-primary-700, 37 99 235);
+  --classic-fill-hover: var(--brand-primary-800, 29 78 216);
+  --classic-fill-pressed: var(--brand-primary-900, 30 64 175);
+  --classic-border-strong: 113 125 145;
   --classic-summary-from: 26 26 36;
   --classic-summary-to: 18 18 23;
 }
@@ -42,7 +49,11 @@
   --classic-brand: var(--brand-primary-400, 96 165 250);
   --classic-brand-hover: var(--brand-primary-300, 147 197 253);
   --classic-brand-soft: 30 41 59;
-  --classic-on-brand: 9 9 11;
+  --classic-on-brand: 255 255 255;
+  --classic-fill: var(--brand-primary-600, 37 99 235);
+  --classic-fill-hover: var(--brand-primary-700, 29 78 216);
+  --classic-fill-pressed: var(--brand-primary-800, 30 64 175);
+  --classic-border-strong: 113 113 122;
 }
 
 /*
@@ -55,53 +66,86 @@
   --ui-popover: rgb(var(--classic-surface));
   --ui-page: rgb(var(--classic-page));
   --ui-raised: rgb(var(--classic-surface));
-  --brand-grad: linear-gradient(rgb(var(--classic-brand)), rgb(var(--classic-brand)));
+  --brand-grad: linear-gradient(rgb(var(--classic-fill)), rgb(var(--classic-fill)));
 }
 
-/* Buttons: solid brand, modest radius, no gradient or lift. */
+/*
+ * Buttons: solid brand fill with white text, modest radius, no gradient or lift. Hover and pressed
+ * step through the fill ramp, the keyboard ring is the text brand (visible on both surfaces), and
+ * outline and secondary buttons carry the visible `border-strong`.
+ */
 :is(.tpl-classic, html[data-template='classic']) .ui-btn {
   border-radius: 0.375rem;
 }
 
+:is(.tpl-classic, html[data-template='classic']) .ui-btn:focus-visible {
+  --tw-ring-color: rgb(var(--classic-brand));
+}
+
 :is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-primary {
-  background-color: rgb(var(--classic-brand));
+  background-color: rgb(var(--classic-fill));
   color: rgb(var(--classic-on-brand));
 }
 
-:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-primary:hover:not(:disabled),
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-primary:hover:not(:disabled) {
+  background-color: rgb(var(--classic-fill-hover));
+}
+
 :is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-primary:active:not(:disabled) {
-  background-color: rgb(var(--classic-brand-hover));
+  background-color: rgb(var(--classic-fill-pressed));
 }
 
 :is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-secondary {
   background-color: rgb(var(--classic-surface-2));
   color: rgb(var(--classic-ink));
-  border: 1px solid rgb(var(--classic-border));
+  border: 1px solid rgb(var(--classic-border-strong));
 }
 
 :is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-secondary:hover:not(:disabled) {
   background-color: rgb(var(--classic-border));
 }
 
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-secondary:active:not(:disabled) {
+  background-color: rgb(var(--classic-border-strong) / 0.35);
+}
+
 :is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-outline {
-  border: 1px solid rgb(var(--classic-brand));
+  background-color: transparent;
+  border: 1px solid rgb(var(--classic-border-strong));
+  color: rgb(var(--classic-ink));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-outline:hover:not(:disabled) {
+  background-color: rgb(var(--classic-brand-soft));
+  border-color: rgb(var(--classic-brand));
   color: rgb(var(--classic-brand));
 }
 
-:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-outline:hover:not(:disabled),
-:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-subtle:hover:not(:disabled),
-:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-ghost:hover:not(:disabled) {
-  background-color: rgb(var(--classic-brand-soft));
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-outline:active:not(:disabled) {
+  background-color: rgb(var(--classic-brand) / 0.2);
 }
 
 :is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-subtle {
   background-color: rgb(var(--classic-brand-soft));
-  border: 1px solid transparent;
+  border: 1px solid rgb(var(--classic-brand) / 0.4);
   color: rgb(var(--classic-brand));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-subtle:hover:not(:disabled) {
+  background-color: rgb(var(--classic-brand-soft));
+  border-color: rgb(var(--classic-brand));
 }
 
 :is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-ghost {
   color: rgb(var(--classic-ink));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-ghost:hover:not(:disabled) {
+  background-color: rgb(var(--classic-surface-2));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-btn.ui-btn-ghost:active:not(:disabled) {
+  background-color: rgb(var(--classic-border));
 }
 
 /* Cards, panels and tiles: neutral surface, hairline border, restrained shadow. */
@@ -196,14 +240,93 @@
   color: rgb(var(--classic-brand));
 }
 
+:is(.tpl-classic, html[data-template='classic']) .ui-tab:not(.ui-tab-active) {
+  color: rgb(var(--classic-muted));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-tab:not(.ui-tab-active):hover {
+  border-color: rgb(var(--classic-border-strong));
+  color: rgb(var(--classic-ink));
+}
+
+/*
+ * Chips (UiChipTabs): the chosen chip is the solid brand fill with white text, an idle chip is a
+ * surface with the visible border and a muted count badge that turns translucent white on the fill.
+ */
+:is(.tpl-classic, html[data-template='classic']) .ui-chip {
+  border-radius: 0.375rem;
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-chip:not(.ui-chip-active) {
+  background-color: rgb(var(--classic-surface));
+  border-color: rgb(var(--classic-border-strong));
+  color: rgb(var(--classic-muted));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-chip:not(.ui-chip-active):hover {
+  background-color: rgb(var(--classic-surface-2));
+  color: rgb(var(--classic-ink));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-chip.ui-chip-active {
+  background-color: rgb(var(--classic-fill));
+  border-color: rgb(var(--classic-fill));
+  color: rgb(var(--classic-on-brand));
+  box-shadow: none;
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-chip.ui-chip-active:hover {
+  background-color: rgb(var(--classic-fill-hover));
+  border-color: rgb(var(--classic-fill-hover));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-chip .ui-chip-count {
+  border-radius: 9999px;
+  padding: 0.0625rem 0.375rem;
+  opacity: 1;
+  background-color: rgb(var(--classic-surface-2));
+  color: rgb(var(--classic-muted));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-chip-active .ui-chip-count {
+  background-color: rgb(255 255 255 / 0.2);
+  color: rgb(var(--classic-on-brand));
+}
+
+/* Segmented control (UiSegmentedControl): a bordered track, the chosen segment a solid brand fill. */
+:is(.tpl-classic, html[data-template='classic']) .ui-segmented {
+  background-color: rgb(var(--classic-surface-2));
+  border-color: rgb(var(--classic-border-strong));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-segment:not(.ui-segment-active) {
+  color: rgb(var(--classic-muted));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-segment:not(.ui-segment-active):hover {
+  color: rgb(var(--classic-ink));
+}
+
+:is(.tpl-classic, html[data-template='classic']) .ui-segment.ui-segment-active {
+  background-color: rgb(var(--classic-fill));
+  color: rgb(var(--classic-on-brand));
+  box-shadow: none;
+}
+
+/* The current entry of a nav group (UiNavItem): the solid brand fill with white text. */
+:is(.tpl-classic, html[data-template='classic']) .ui-nav-item.ui-nav-item-active {
+  background-color: rgb(var(--classic-fill));
+  color: rgb(var(--classic-on-brand));
+}
+
 :is(.tpl-classic, html[data-template='classic']) .ui-accordion-item {
   border-color: rgb(var(--classic-border));
   background-color: rgb(var(--classic-surface));
 }
 
 :is(.tpl-classic, html[data-template='classic']) .ui-check.ui-check-on {
-  background-color: rgb(var(--classic-brand));
-  border-color: rgb(var(--classic-brand));
+  background-color: rgb(var(--classic-fill));
+  border-color: rgb(var(--classic-fill));
   color: rgb(var(--classic-on-brand));
 }
 
@@ -220,8 +343,8 @@
 }
 
 :is(.tpl-classic, html[data-template='classic']) .ui-toggle.ui-toggle-on {
-  background-color: rgb(var(--classic-brand));
-  border-color: rgb(var(--classic-brand));
+  background-color: rgb(var(--classic-fill));
+  border-color: rgb(var(--classic-fill));
 }
 
 /* A short sideways shake that draws the eye to the checkout error box. */

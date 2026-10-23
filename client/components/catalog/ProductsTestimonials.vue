@@ -11,7 +11,7 @@
         </template>
       </MarketingSectionHeader>
 
-      <UiGrid cols="1" gap="lg" class="max-w-5xl mx-auto md:grid-cols-3">
+      <UiGrid cols="1" gap="lg" class="md:grid-cols-3">
         <UiCard
           v-for="(testimonial, index) in items"
           :key="testimonial.id"

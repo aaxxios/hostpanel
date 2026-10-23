@@ -15,7 +15,6 @@ public sealed class ProductPriceConfiguration : IEntityTypeConfiguration<Product
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<ProductPrice> builder)
     {
-        builder.ToTable("product_prices");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.ProductId).IsRequired();
         builder.Property(x => x.CurrencyCode).IsRequired().HasMaxLength(IsoCodeLength);

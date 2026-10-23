@@ -37,6 +37,24 @@ describe('AppLogo', () => {
     expect(wrapper.find('[data-testid="app-logo-dark"]').attributes('src')).toBe('/api/uploads/dark.png')
   })
 
+  it('lays a light plate behind a lone upload in dark mode, and not behind a dark variant', () => {
+    stubTemplateGlobals({ logo: '/api/uploads/light.png' })
+    const lone = mountWithKit(AppLogo)
+    expect(lone.get('[data-testid="app-logo-light"]').classes()).toEqual(expect.arrayContaining(['dark:bg-white/90']))
+
+    stubTemplateGlobals({ logo: '/api/uploads/light.png', logoDark: '/api/uploads/dark.png' })
+    const pair = mountWithKit(AppLogo)
+    expect(pair.get('[data-testid="app-logo-light"]').classes()).not.toContain('dark:bg-white/90')
+    expect(pair.get('[data-testid="app-logo-dark"]').classes()).not.toContain('dark:bg-white/90')
+  })
+
+  it('always plates a lone upload on an always-dark surface', () => {
+    stubTemplateGlobals({ logo: '/api/uploads/light.png' })
+    const wrapper = mountWithKit(AppLogo, { props: { surface: LogoSurface.Dark } })
+
+    expect(wrapper.get('[data-testid="app-logo-dark"]').classes()).toContain('bg-white/90')
+  })
+
   it('renders only the dark-background wordmark on an always-dark surface', () => {
     const wrapper = mountWithKit(AppLogo, { props: { surface: LogoSurface.Dark } })
 

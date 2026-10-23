@@ -8,7 +8,7 @@
       </UiDecor>
 
       <UiContainer class="relative z-10 text-center">
-        <div class="mx-auto max-w-3xl">
+        <div>
           <!-- Breadcrumb -->
           <div class="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-6">
             <UiLink :to="localePath('/domains')" tone="muted" :underline="false" class="hover:text-primary-600 dark:hover:text-primary-400" testid="domains-transfer-crumb">
@@ -45,7 +45,7 @@
           </div>
 
           <!-- Transfer form -->
-          <div class="text-left max-w-xl mx-auto">
+          <div class="text-left">
             <UiCard class="space-y-4" data-testid="domains-transfer-form">
               <UiHeading :level="2" size="subsection">{{ $t('domains.transferFormTitle') }}</UiHeading>
               <UiInput
@@ -88,7 +88,7 @@
     <!-- Promo: back to registration -->
     <section class="py-10 bg-ui-page">
       <UiContainer>
-        <div class="mx-auto max-w-3xl">
+        <div>
           <UiCard class="flex items-start justify-between gap-4" data-testid="domains-transfer-promo">
             <div>
               <UiHeading :level="2" size="subsection" class="mb-1">{{ $t('domains.title') }} {{ $t('domains.titleHighlight') }}</UiHeading>

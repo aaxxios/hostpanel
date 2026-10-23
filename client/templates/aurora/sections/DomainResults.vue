@@ -1,6 +1,6 @@
 <template>
   <UiStack as="section" gap="none" class="relative pb-[clamp(56px,8vw,84px)]">
-    <UiStack gap="xs" class="mx-auto w-full max-w-[980px]">
+    <UiStack gap="xs" class="w-full">
       <UiText v-if="!hasZones" tone="inherit" class="text-center text-[15px] text-mut2" data-testid="domain-results-no-zones">
         {{ t('aurora.domainSearch.noZones') }}
       </UiText>

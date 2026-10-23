@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Domain.Billing;
 /// <summary>
 /// An invoice issued to a client for services or products.
 /// Owns a collection of <see cref="InvoiceItem"/> line items and <see cref="InvoiceTransaction"/> records.
-/// Stored in the <c>invoices</c> table.
+/// Stored in the <c>Invoices</c> table.
 /// </summary>
 public sealed class Invoice : BaseEntity, IAggregateRoot
 {

@@ -9,7 +9,6 @@ public sealed class MigrationJobConfiguration : IEntityTypeConfiguration<Migrati
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<MigrationJob> builder)
     {
-        builder.ToTable("migration_jobs");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Key).IsRequired().HasMaxLength(64);

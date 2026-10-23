@@ -33,6 +33,32 @@ interface SchemaProduct {
   image?: string
 }
 
+/** One purchasable plan of a product family, as an offer. */
+interface SchemaPlanOffer {
+  /** Plan name. */
+  name: string
+  /** Price of one billing period, in the currency below. */
+  price: number
+  /** ISO 4217 code of the currency the price is in. */
+  priceCurrency: string
+  /** ISO 8601 duration one payment covers, e.g. `P1M`. */
+  billingDuration: string
+  /** Address of the page the plan can be ordered from, absolute or site-relative. */
+  url: string
+}
+
+/** A product family with an offer per plan. */
+interface SchemaProductFamily {
+  /** Family name. */
+  name: string
+  /** Short description. */
+  description: string
+  /** Address of the family page, absolute or site-relative. */
+  url: string
+  /** The plans on sale; a plan without a price is left out by the caller. */
+  offers: SchemaPlanOffer[]
+}
+
 /** One step of a breadcrumb trail. */
 interface SchemaBreadcrumb {
   /** Label of the step. */
@@ -171,6 +197,41 @@ export const useSchemaOrg = () => {
   }
 
   /**
+   * Product schema for a product family: one `Offer` per plan, each priced for one billing period.
+   * The figures are the catalogue's own, in the payer's currency; a family with no priced plan
+   * publishes no `offers` at all rather than an empty list.
+   */
+  const productFamilySchema = (family: SchemaProductFamily) => {
+    return {
+      '@context': SCHEMA_ORG_CONTEXT,
+      '@type': 'Product',
+      name: family.name,
+      description: family.description,
+      url: family.url.startsWith('http') ? family.url : `${baseUrl}${family.url}`,
+      brand: {
+        '@id': `${baseUrl}/#organization`
+      },
+      ...(family.offers.length > 0
+        ? {
+            offers: family.offers.map(offer => ({
+              '@type': 'Offer',
+              name: offer.name,
+              url: offer.url.startsWith('http') ? offer.url : `${baseUrl}${offer.url}`,
+              price: offer.price,
+              priceCurrency: offer.priceCurrency,
+              priceSpecification: {
+                '@type': 'UnitPriceSpecification',
+                price: offer.price,
+                priceCurrency: offer.priceCurrency,
+                billingDuration: offer.billingDuration
+              }
+            }))
+          }
+        : {})
+    }
+  }
+
+  /**
    * BreadcrumbList schema
    */
   const breadcrumbSchema = (items: SchemaBreadcrumb[]) => {
@@ -228,6 +289,7 @@ export const useSchemaOrg = () => {
     websiteSchema,
     serviceSchema,
     productSchema,
+    productFamilySchema,
     breadcrumbSchema,
     faqSchema,
     injectSchema

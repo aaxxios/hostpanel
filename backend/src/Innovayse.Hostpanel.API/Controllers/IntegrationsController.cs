@@ -15,7 +15,8 @@ namespace Innovayse.Hostpanel.API.Controllers;
 
 /// <summary>
 /// Staff administration of third-party integration configurations. Credentials are stored as
-/// key-value settings; secret fields are masked on read.
+/// key-value settings; a secret field is write only and reads back as <c>isSecret</c> and
+/// <c>hasValue</c>, never as its value.
 /// </summary>
 [Route("api/admin/integrations")]
 [Authorize(Policy = Policies.Admin)]
@@ -43,7 +44,7 @@ public sealed class IntegrationsController : BaseApiController
         return HandleResult(outcome);
     }
 
-    /// <summary>The full configuration for one integration, with secret fields masked.</summary>
+    /// <summary>The full configuration for one integration; secret fields carry no value.</summary>
     /// <param name="slug">URL-safe integration identifier, e.g. card.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>200 with the integration's detail; 404 when the slug is not recognised; 401; 403.</returns>
@@ -58,7 +59,10 @@ public sealed class IntegrationsController : BaseApiController
 
     /// <summary>Saves (upserts) the configuration for one integration.</summary>
     /// <param name="slug">URL-safe integration identifier; wins over any slug in the body.</param>
-    /// <param name="command">Whether the integration is enabled and its field values.</param>
+    /// <param name="command">
+    /// Whether the integration is enabled, its field values and the fields to clear. An empty
+    /// secret field keeps the stored value.
+    /// </param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>204 on success; 400 when a field is refused; 401; 403.</returns>
     [HttpPut("{slug}")]

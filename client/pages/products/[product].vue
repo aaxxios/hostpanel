@@ -7,16 +7,17 @@
       :price-for="priceFor"
       :is-in-cart="isInCart"
       :trial-url-for="planCtaUrl"
+      :comparison-rows="comparisonRows"
       @add-to-cart="addPlanToCart"
       @trial="handlePricingCta"
-      @demo="openDemo"
     >
       <template #breadcrumbs>
-        <UiBreadcrumbs :items="breadcrumbItems" />
+        <UiBreadcrumbs :items="breadcrumbItems" class="mb-6" />
+      </template>
+      <template #faq>
+        <SectionsFAQ :limit="FAQ_PREVIEW_LIMIT" :show-categories="false" />
       </template>
     </CatalogProductDetail>
-
-    <SectionsCTA />
   </UiStack>
 
   <UiStack v-else align="center" justify="center" class="min-h-[60dvh] bg-ui-page" data-testid="product-not-found">
@@ -31,22 +32,24 @@
 
 <script setup lang="ts">
 /**
- * Product detail page - one product with its plans, prices and calls to action.
+ * Product detail page - one product family with its plans, prices and calls to action.
  * Route: /products/[product]
  *
  * The page reads the catalogue through the catalogue store (prices are in the payer's currency, so
- * the read runs again when it or the language changes), finds the product with `findProductDetail`
- * and hands it to `CatalogProductDetail`. It owns the cart, the external order links and the head.
+ * the read runs again when it or the language changes) and the family's specification lines, finds
+ * the family with `findProductDetail` and hands it to `CatalogProductDetail`. It owns the cart, the
+ * external order links, the head and the family's structured data (a `Product` with an `Offer` per plan).
  */
 import { Package } from 'lucide-vue-next'
-import { PRICING_CYCLES, PRICING_CYCLE_I18N_KEY } from '~/constants/pricingCycle'
+import { PRICING_CYCLES, PRICING_CYCLE_I18N_KEY, PRICING_CYCLE_ISO_DURATION } from '~/constants/pricingCycle'
 import { useCartStore } from '~/stores/cart'
 import { useCatalogStore } from '~/stores/catalog'
 import { useCurrencyStore } from '~/stores/currency'
 import { PricingCycle } from '~/types/pricingcycle'
 import type { ProductPlan } from '~/types/productplan'
+import { buildComparisonRows } from '~/utils/comparisonRows'
 import { formatMoney } from '~/utils/formatMoney'
-import { findProductDetail } from '~/utils/productFamilies'
+import { findProductDetail, firstOfferedPrice } from '~/utils/productFamilies'
 import { buildSeoLinks, localizedUrl } from '~/utils/seoLinks'
 import { shareImageMeta } from '~/utils/shareImage'
 
@@ -60,7 +63,7 @@ const localePath = useLocalePath()
 /** The current route. */
 const route = useRoute()
 /** Schema.org builders and the head injector. */
-const { productSchema, breadcrumbSchema, injectSchema } = useSchemaOrg()
+const { productFamilySchema, breadcrumbSchema, injectSchema } = useSchemaOrg()
 /** The cart: its lines, totals and persistence. */
 const cart = useCartStore()
 /** The payer's currency and the currencies prices can be shown in. */
@@ -74,12 +77,30 @@ const baseUrl = useRuntimeConfig().public.baseUrl
 /** Route param, e.g. `alpha-suite`. */
 const productId = route.params.product as string
 
-await useAsyncData('products:families', () => catalogStore.loadFamilies(), {
+/** How many questions the page's FAQ block previews before it links to the full FAQ. */
+const FAQ_PREVIEW_LIMIT = 5
+
+/** The family the route names, shaped for the page; null when no product matches. */
+const productData = computed(() =>
+  findProductDetail(catalogStore.familyGroups, catalogStore.familyProducts, productId, catalogStore.featuresFor))
+
+await useAsyncData(`product:${productId}`, async () => {
+  const list = await catalogStore.loadFamilies()
+  // The specification lines back the key bullets and the comparison of the family's plans.
+  const family = findProductDetail(catalogStore.familyGroups, catalogStore.familyProducts, productId)
+  if (family) {
+    await catalogStore.loadProductFeatures(family.gid)
+  }
+  return list
+}, {
   watch: [() => currencyStore.payerCode, locale],
 })
 
-/** The product the route names, shaped for the page; null when no product matches. */
-const productData = computed(() => findProductDetail(catalogStore.familyGroups, catalogStore.familyProducts, productId))
+/** The specification rows of the family's plans, aligned to the plan cards; the page shows them when they are comparable. */
+const comparisonRows = computed(() => {
+  const family = productData.value
+  return family ? buildComparisonRows(catalogStore.featuresFor(family.gid), family.plans.map((plan) => plan.id)) : []
+})
 
 /** The cycles at least one plan is priced for. */
 const availableCycles = computed<PricingCycle[]>(() =>
@@ -131,16 +152,6 @@ onMounted(() => {
   currencyStore.init()
   currencyStore.load()
 })
-
-/**
- * Opens the product's demo in a new tab.
- */
-const openDemo = (): void => {
-  const url = productData.value?.demoUrl
-  if (url) {
-    window.open(url, '_blank')
-  }
-}
 
 /**
  * Base URL of the billing-portal instance this deployment fronts, or an empty string.
@@ -204,6 +215,25 @@ const productPath = computed(() => `/products/${productId}`)
 /** Canonical address of this page in the current language. */
 const productCanonical = computed(() => localizedUrl(baseUrl, productPath.value, locale.value))
 
+/**
+ * One offer per plan that has a price, for the family's structured data.
+ *
+ * Each plan is offered at the first cycle it is priced for (monthly when it has one), in the payer's
+ * currency exactly as the catalogue sent it; nothing is published while the currency is unresolved.
+ */
+const familyOffers = computed(() => {
+  const currency = currencyStore.payerCode
+  if (!currency) {
+    return []
+  }
+  return (productData.value?.plans ?? []).flatMap((plan) => {
+    const offered = firstOfferedPrice(plan.pricing)
+    return offered
+      ? [{ name: plan.tier, price: offered.amount, priceCurrency: currency, billingDuration: PRICING_CYCLE_ISO_DURATION[offered.cycle], url: productCanonical.value }]
+      : []
+  })
+})
+
 watchEffect(() => {
   const product = productData.value
   if (!product) {
@@ -227,7 +257,12 @@ watchEffect(() => {
   })
 
   injectSchema([
-    productSchema({ name: product.name, description: metaDescription, url: productCanonical.value }),
+    productFamilySchema({
+      name: product.name,
+      description: metaDescription,
+      url: productCanonical.value,
+      offers: familyOffers.value,
+    }),
     breadcrumbSchema([
       { name: 'Home', url: baseUrl },
       { name: t('common.products'), url: `${baseUrl}/products` },

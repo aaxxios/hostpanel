@@ -9,7 +9,7 @@
       <!-- Search bar -->
       <UiForm
         spacing="none"
-        class="mx-auto mt-10 max-w-3xl"
+        class="mt-10"
         data-testid="kb-search-form"
         @submit="doSearch"
       >
@@ -34,7 +34,7 @@
 
     <!-- Content -->
     <UiSection padding="md">
-      <UiStack gap="xl" class="mx-auto w-full max-w-5xl">
+      <UiStack gap="xl" class="w-full">
         <!-- Search results -->
         <template v-if="searched">
           <UiStack direction="row" justify="between" align="center">

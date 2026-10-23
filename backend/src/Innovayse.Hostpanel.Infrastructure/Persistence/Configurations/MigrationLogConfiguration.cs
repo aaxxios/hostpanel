@@ -9,7 +9,6 @@ public sealed class MigrationLogConfiguration : IEntityTypeConfiguration<Migrati
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<MigrationLog> builder)
     {
-        builder.ToTable("migration_logs");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.JobId).IsRequired();

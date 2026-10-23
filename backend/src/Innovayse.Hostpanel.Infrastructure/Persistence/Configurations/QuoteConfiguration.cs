@@ -9,7 +9,6 @@ public sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Quote> builder)
     {
-        builder.ToTable("quotes");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.ClientId).IsRequired();

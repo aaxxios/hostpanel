@@ -6,7 +6,7 @@
     </UiDecor>
 
     <UiContainer class="relative z-10 text-center [.tpl-classic_&]:text-left">
-      <div class="mx-auto max-w-2xl [.tpl-classic_&]:mx-0 [.tpl-classic_&]:max-w-none">
+      <div>
         <span class="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full glass border border-primary-500/20 backdrop-blur-sm [.tpl-classic_&]:rounded-md [.tpl-classic_&]:border-0 [.tpl-classic_&]:bg-classic-brand-soft [.tpl-classic_&]:backdrop-blur-none">
           <ShoppingCart :size="14" :stroke-width="2" class="text-primary-600 dark:text-primary-400 [.tpl-classic_&]:text-classic-brand" />
           <UiText as="span" size="sm" weight="medium" tone="muted">{{ $t('cart.title') }}</UiText>

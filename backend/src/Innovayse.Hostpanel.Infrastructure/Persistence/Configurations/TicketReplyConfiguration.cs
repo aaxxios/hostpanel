@@ -6,11 +6,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
 /// <summary>EF Core configuration for the <see cref="TicketReply"/> entity.</summary>
 public sealed class TicketReplyConfiguration : IEntityTypeConfiguration<TicketReply>
 {
-    /// <summary>Configures the <c>ticket_replies</c> table mapping.</summary>
+    /// <summary>Configures the <c>TicketReplies</c> table mapping.</summary>
     /// <param name="builder">The entity type builder.</param>
     public void Configure(EntityTypeBuilder<TicketReply> builder)
     {
-        builder.ToTable("ticket_replies");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Message).IsRequired();

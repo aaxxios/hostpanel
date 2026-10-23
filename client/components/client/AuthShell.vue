@@ -8,6 +8,7 @@
     <!-- Demo notice: auth pages use no layout, so the shell carries the banner itself. -->
     <LayoutDemoBanner class="absolute inset-x-0 top-0 z-20" />
 
+    <!-- Auth card width: an intrinsically small card, not page layout. -->
     <div class="relative z-10 w-full max-w-md">
       <div class="mb-8 text-center">
         <ClientAuthLogo v-if="showLogo" />

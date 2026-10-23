@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Admin.Common;
 using Innovayse.Hostpanel.Application.Admin.Integrations.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
@@ -8,16 +9,10 @@ namespace Innovayse.Hostpanel.Application.Admin.Integrations.Queries.GetIntegrat
 
 /// <summary>
 /// Handles <see cref="GetIntegrationQuery"/> by loading all settings for the given slug and
-/// returning them with secret values masked alongside field definitions.
+/// returning them alongside field definitions, with secret values withheld.
 /// </summary>
 public sealed class GetIntegrationHandler
 {
-    /// <summary>
-    /// Substring patterns that identify a field as a secret. Any field key containing one of these
-    /// strings (case-insensitive) will be masked.
-    /// </summary>
-    private static readonly string[] SecretMarkers = ["key", "secret", "password", "token"];
-
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
@@ -34,13 +29,13 @@ public sealed class GetIntegrationHandler
     }
 
     /// <summary>
-    /// Loads the configuration for the requested integration or plugin, masks secret fields, and
+    /// Loads the configuration for the requested integration or plugin, withholds secret values, and
     /// returns field definitions for dynamic form rendering.
     /// </summary>
     /// <param name="query">Query containing the integration slug.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// The integration detail with masked config and field definitions, or
+    /// The integration detail with its field states and definitions, or
     /// <c>INTEGRATION_NOT_FOUND</c> when the slug names neither a built-in integration nor a
     /// loaded plugin.
     /// </returns>
@@ -71,30 +66,20 @@ public sealed class GetIntegrationHandler
         var settings = await IntegrationSettingsLookup.LoadAsync(_context, prefix, ct);
         var isEnabled = settings.IsEnabled(query.Slug);
 
-        var config = new Dictionary<string, string>(fields.Count);
+        var secrecy = SettingSecrecy.From(_plugins);
+        var config = new Dictionary<string, IntegrationFieldValueDto>(fields.Count);
         foreach (var field in fields)
         {
-            config[field.Key] = MaskIfSecret(field.Key, settings.GetValue(query.Slug, field.Key) ?? string.Empty);
+            var key = IntegrationSettingKeys.FieldKey(query.Slug, field.Key);
+            var value = settings.GetValue(query.Slug, field.Key);
+            var hasValue = !string.IsNullOrWhiteSpace(value);
+
+            // A secret is answered with whether it is set, never with its value or a mask of it.
+            config[field.Key] = secrecy.IsSecret(key)
+                ? new IntegrationFieldValueDto(null, IsSecret: true, hasValue)
+                : new IntegrationFieldValueDto(value ?? string.Empty, IsSecret: false, hasValue);
         }
 
         return Result<IntegrationDetailDto>.Success(new IntegrationDetailDto(query.Slug, isEnabled, config, fields));
-    }
-
-    /// <summary>
-    /// Returns "••••••••" when <paramref name="fieldKey"/> is a secret field and
-    /// <paramref name="value"/> is non-empty; otherwise returns <paramref name="value"/> unchanged.
-    /// </summary>
-    /// <param name="fieldKey">The field key to inspect.</param>
-    /// <param name="value">The raw stored value.</param>
-    /// <returns>The original value or the masked placeholder.</returns>
-    private static string MaskIfSecret(string fieldKey, string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        var isSecret = SecretMarkers.Any(m => fieldKey.Contains(m, StringComparison.OrdinalIgnoreCase));
-        return isSecret ? "••••••••" : value;
     }
 }

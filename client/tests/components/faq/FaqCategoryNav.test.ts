@@ -50,10 +50,10 @@ describe('FaqCategoryNav', () => {
 
     const active = wrapper.find('[data-testid="faq-category-products"]').classes()
     const other = wrapper.find('[data-testid="faq-category-general"]').classes()
-    expect(active).toContain('[.tpl-classic_&]:bg-classic-brand')
+    expect(active).toContain('[.tpl-classic_&]:bg-classic-fill')
     expect(other).toContain('[.tpl-classic_&]:bg-classic-surface')
-    expect(other).not.toContain('[.tpl-classic_&]:bg-classic-brand')
-    expect(wrapper.find('[data-testid="faq-category-all"]').classes()).toContain('[.tpl-classic_&]:border-classic-border')
+    expect(other).not.toContain('[.tpl-classic_&]:bg-classic-fill')
+    expect(wrapper.find('[data-testid="faq-category-all"]').classes()).toContain('[.tpl-classic_&]:border-classic-border-strong')
     expect(active).toContain('bg-primary-700')
   })
 })

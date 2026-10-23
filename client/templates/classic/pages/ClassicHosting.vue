@@ -10,9 +10,9 @@
 
         <UiHeading :level="UiHeadingLevel.H1" size="title" class="mb-3 text-3xl font-semibold leading-tight text-classic-ink md:text-4xl" data-testid="classic-hosting-title">
           {{ $t('hosting.title') }}
-          <UiText as="span" tone="inherit" class="text-classic-brand">{{ $t('hosting.titleHighlight') }}</UiText>
+          <UiText as="span" size="inherit" tone="inherit" weight="semibold" class="text-classic-brand">{{ $t('hosting.titleHighlight') }}</UiText>
         </UiHeading>
-        <UiText tone="inherit" class="max-w-2xl text-classic-muted md:text-lg">
+        <UiText tone="inherit" class="max-w-[75ch] text-classic-muted md:text-lg">
           {{ $t('hosting.subtitle') }}
         </UiText>
       </UiContainer>
@@ -22,7 +22,7 @@
     <UiSection :contained="false" padding="md" class="relative pt-8 md:pt-10 md:pb-16">
       <UiContainer>
         <!-- Loading -->
-        <UiGrid v-if="pending" cols="3" gap="lg" class="max-w-5xl mx-auto py-12" data-testid="classic-hosting-loading">
+        <UiGrid v-if="pending" cols="3" gap="lg" class="py-12" data-testid="classic-hosting-loading">
           <UiSkeleton v-for="i in 3" :key="i" shape="block" class="h-[420px] rounded-lg" />
         </UiGrid>
 
@@ -47,7 +47,7 @@
           </UiStack>
 
           <!-- Free hosting -->
-          <UiStack v-if="freePlan" gap="none" class="max-w-6xl mx-auto mb-12" data-testid="classic-hosting-free">
+          <UiStack v-if="freePlan" gap="none" class="mb-12" data-testid="classic-hosting-free">
             <UiCard padding="none" class="p-6 md:p-8">
               <UiStack align="center" justify="between" gap="xl" class="lg:flex-row">
                 <UiStack gap="none" class="flex-1 text-center lg:text-left">
@@ -59,7 +59,7 @@
                     {{ formatPlanName(freePlan.name) }}
                   </UiHeading>
                   <!-- Interpolated, never `v-html`: the raw field is unsanitised operator HTML. -->
-                  <UiText v-if="planSummary(freePlan)" tone="inherit" class="mb-5 max-w-2xl mx-auto lg:mx-0 leading-relaxed text-classic-muted">
+                  <UiText v-if="planSummary(freePlan)" tone="inherit" class="mb-5 max-w-[75ch] mx-auto lg:mx-0 leading-relaxed text-classic-muted">
                     {{ planSummary(freePlan) }}
                   </UiText>
                   <UiStack direction="row" wrap justify="center" gap="sm" class="lg:justify-start">
@@ -113,7 +113,7 @@
             >
               <!-- Outside the card: the card clips its overflow, which hid a badge sitting on its edge. -->
               <UiStack v-if="isFeatured(plan)" gap="none" class="absolute -top-3 left-1/2 -translate-x-1/2 z-20" data-testid="classic-hosting-recommended">
-                <UiText as="span" size="xs" tone="inherit" weight="semibold" class="px-3 py-1 bg-classic-brand text-classic-on-brand rounded-md uppercase tracking-wider whitespace-nowrap">
+                <UiText as="span" size="xs" tone="inherit" weight="semibold" class="px-3 py-1 bg-classic-fill text-classic-on-brand rounded-md uppercase tracking-wider whitespace-nowrap">
                   {{ $t('hosting.recommended') }}
                 </UiText>
               </UiStack>
@@ -203,7 +203,7 @@
           </UiBalancedGrid>
 
           <!-- Agency section -->
-          <UiStack v-if="agencyPlan" gap="none" class="max-w-6xl mx-auto mb-16" data-testid="classic-hosting-agency">
+          <UiStack v-if="agencyPlan" gap="none" class="mb-16" data-testid="classic-hosting-agency">
             <UiStack align="center" gap="none" class="text-center mb-6">
               <UiText as="span" size="xs" tone="inherit" weight="semibold" class="block uppercase tracking-wider text-classic-muted">{{ $t('hosting.enterpriseSolutions') }}</UiText>
             </UiStack>
@@ -219,7 +219,7 @@
                     {{ formatPlanName(agencyPlan.name) }}
                   </UiHeading>
                   <!-- Interpolated, never `v-html`: the raw field is unsanitised operator HTML. -->
-                  <UiText v-if="planSummary(agencyPlan)" tone="inherit" class="mb-5 max-w-2xl mx-auto lg:mx-0 leading-relaxed text-classic-muted">
+                  <UiText v-if="planSummary(agencyPlan)" tone="inherit" class="mb-5 max-w-[75ch] mx-auto lg:mx-0 leading-relaxed text-classic-muted">
                     {{ planSummary(agencyPlan) }}
                   </UiText>
                   <UiStack direction="row" wrap justify="center" gap="sm" class="lg:justify-start">
@@ -265,7 +265,7 @@
           <UiStack v-if="comparable" id="compare-plans" gap="none" class="mt-12 overflow-hidden" data-testid="classic-hosting-compare">
             <UiStack align="center" gap="none" class="text-center mb-8">
               <UiHeading :level="UiHeadingLevel.H2" size="title" class="mb-3 text-2xl font-semibold text-classic-ink md:text-3xl">{{ $t('hosting.comparison.title') }}</UiHeading>
-              <UiText tone="inherit" class="max-w-2xl mx-auto text-classic-muted md:text-lg">{{ $t('hosting.comparison.subtitle') }}</UiText>
+              <UiText tone="inherit" class="max-w-[75ch] mx-auto text-classic-muted md:text-lg">{{ $t('hosting.comparison.subtitle') }}</UiText>
             </UiStack>
 
             <UiCard padding="none" class="relative overflow-hidden">

@@ -23,7 +23,7 @@
         </div>
         <UiAccent v-if="firstSlide" :color="firstSlide.color" :class="firstSlide.image ? 'dark' : ''">
           <UiContainer class="relative z-10 flex h-full items-center justify-center">
-            <UiCard padding="lg" class="max-w-4xl text-center mb-10 sm:mb-0">
+            <UiCard padding="lg" class="text-center mb-10 sm:mb-0">
               <UiAccentTile :icon="`mdi:${firstSlide.icon}`" size="xl" class="mb-6 sm:mb-8 mx-auto" />
               <UiHeading :level="2" class="mb-4 sm:mb-6 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">{{ firstSlide.name }}</UiHeading>
               <UiText tone="primary" class="mb-4 sm:mb-6 text-lg sm:text-xl md:text-2xl font-semibold">{{ firstSlide.tagline }}</UiText>
@@ -69,7 +69,7 @@
 
             <!-- Content -->
             <UiContainer class="relative z-10 flex h-full items-center justify-center">
-              <UiCard padding="lg" class="max-w-4xl text-center mb-10 sm:mb-0 animate-reveal-up motion-reduce:animate-none">
+              <UiCard padding="lg" class="text-center mb-10 sm:mb-0 animate-reveal-up motion-reduce:animate-none">
                 <UiAccentTile
                   :icon="`mdi:${item.icon}`"
                   size="xl"

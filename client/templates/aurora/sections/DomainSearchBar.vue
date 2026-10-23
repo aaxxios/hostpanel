@@ -1,6 +1,6 @@
 <template>
   <div>
-    <UiForm data-testid="domain-search-bar-form" spacing="none" class="mx-auto max-w-[720px]" @submit="emit('search', query)">
+    <UiForm data-testid="domain-search-bar-form" spacing="none" class="mx-auto" @submit="emit('search', query)">
       <UiStack direction="row" wrap justify="center" align="end" gap="xs">
         <UiInput
           v-model="query"

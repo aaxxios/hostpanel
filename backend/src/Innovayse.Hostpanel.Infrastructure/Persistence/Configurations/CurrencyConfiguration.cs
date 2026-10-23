@@ -21,7 +21,6 @@ public sealed class CurrencyConfiguration : IEntityTypeConfiguration<Domain.Bill
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Domain.Billing.Currency> builder)
     {
-        builder.ToTable("currencies");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Code).IsRequired().HasMaxLength(IsoCodeLength);
         builder.HasIndex(x => x.Code).IsUnique();

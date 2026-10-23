@@ -3,6 +3,10 @@
  * System settings view — the storefront's identity, content, appearance and branding cards, then the
  * key-value list of every other global setting.
  *
+ * A secret row (an integration credential, the setup token) is write only: the API sends whether it
+ * is set, never its value, so the row shows a masked placeholder with Replace and Clear instead of
+ * the stored text.
+ *
  * Only the first load replaces the page with a loading state: every save re-fetches the list, and
  * swapping the cards for a spinner and back would unmount them and drop every unsaved draft in the
  * other cards.
@@ -14,6 +18,7 @@ import BrandingCard from '@/components/settings/BrandingCard.vue'
 import HomeSectionsCard from '@/components/settings/HomeSectionsCard.vue'
 import HostingDetailsCard from '@/components/settings/HostingDetailsCard.vue'
 import PortalAppearanceCard from '@/components/settings/PortalAppearanceCard.vue'
+import SecretSettingField from '@/components/settings/SecretSettingField.vue'
 import SettingsLoading from '@/components/settings/SettingsLoading.vue'
 import SiteIdentityCard from '@/components/settings/SiteIdentityCard.vue'
 import StorefrontContentCard from '@/components/settings/StorefrontContentCard.vue'
@@ -51,6 +56,12 @@ const saving = ref(false)
  */
 const drafts = ref<Record<number, string>>({})
 
+/**
+ * Bumped after every saved table row. It keys the secret controls, so a saved replacement closes
+ * its input and shows the masked placeholder again even though the row's "set" state is unchanged.
+ */
+const savedVersion = ref(0)
+
 onMounted(store.fetchSettings)
 
 /**
@@ -71,21 +82,44 @@ const onSave = async (id: number, value: string): Promise<boolean> => {
 }
 
 /**
- * Current text for a row: the operator's unsaved edit, or the stored value.
+ * Current text for a row: the operator's unsaved edit, or the stored value. A secret row starts
+ * empty, because its stored value never reaches the browser.
  *
  * @param setting - The settings row.
  * @returns The text the input shows.
  */
-const draftOf = (setting: Setting): string => drafts.value[setting.id] ?? setting.value ?? ''
+const draftOf = (setting: Setting): string => drafts.value[setting.id] ?? (setting.isSecret ? '' : setting.value ?? '')
 
 /**
- * Whether a row has an edit worth saving.
+ * Whether a row has an edit worth saving. For a secret only a typed replacement counts: an empty
+ * value would keep the stored one, so there is nothing to save.
  *
  * @param setting - The settings row.
  * @returns True when the draft differs from the stored value.
  */
-const isDirty = (setting: Setting): boolean =>
-  setting.id in drafts.value && drafts.value[setting.id] !== (setting.value ?? '')
+const isDirty = (setting: Setting): boolean => {
+  if (!(setting.id in drafts.value)) {
+    return false
+  }
+  if (setting.isSecret) {
+    return (drafts.value[setting.id] ?? '').trim().length > 0
+  }
+  return drafts.value[setting.id] !== (setting.value ?? '')
+}
+
+/**
+ * Removes a secret row's stored value and drops any typed replacement.
+ *
+ * @param setting - The secret settings row.
+ */
+const clearRow = async (setting: Setting): Promise<void> => {
+  saving.value = true
+  const cleared = await store.clearSetting(setting.id)
+  saving.value = false
+  if (cleared) {
+    delete drafts.value[setting.id]
+  }
+}
 
 /**
  * Saves one row and drops its draft, so the input falls back to the stored value.
@@ -103,6 +137,7 @@ const saveRow = async (setting: Setting): Promise<void> => {
   }
   if (await onSave(setting.id, draft)) {
     delete drafts.value[setting.id]
+    savedVersion.value += 1
   }
 }
 </script>
@@ -145,7 +180,20 @@ const saveRow = async (setting: Setting): Promise<void> => {
               <UiTableCell class="font-mono text-text-primary">{{ setting.key }}</UiTableCell>
               <UiTableCell>
                 <UiStack direction="row" align="center" gap="sm">
+                  <SecretSettingField
+                    v-if="setting.isSecret"
+                    :key="`${setting.id}-${savedVersion}`"
+                    :has-value="setting.hasValue"
+                    :model-value="draftOf(setting)"
+                    size="sm"
+                    :disabled="saving"
+                    :testid="`setting-secret-${setting.id}`"
+                    class="min-w-48 flex-1"
+                    @update:model-value="drafts[setting.id] = $event"
+                    @clear="clearRow(setting)"
+                  />
                   <UiInput
+                    v-else
                     :model-value="draftOf(setting)"
                     type="text"
                     size="sm"

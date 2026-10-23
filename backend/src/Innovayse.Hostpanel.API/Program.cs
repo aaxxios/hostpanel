@@ -100,17 +100,17 @@ try
         // threw before the API had finished starting, and the container never came up.
         //
         // Nothing is lost by skipping it. Every grant this product makes is written to
-        // subject_roles, and SubjectRoleClaimsEnricher merges that store onto the principal
+        // SubjectRoles, and SubjectRoleClaimsEnricher merges that store onto the principal
         // on every JWT scheme in both modes — so a role granted there authorizes in both.
         //
-        // This comment used to say authorization was decided by subject_roles in both modes
+        // This comment used to say authorization was decided by SubjectRoles in both modes
         // full stop, and that was not true: no scheme registered under AUTH_MODE=local read
         // the store at all, so local authorization was decided solely by the claims baked
         // into the token at sign-in. It is worth stating precisely, because the two role
         // tables still are not one. AspNetRoles remains scaffolding for the local
         // UserManager, and the roles it holds also reach the principal — via the token
         // LocalAuthController mints from IUserService.GetRolesAsync. A local deployment
-        // therefore authorizes on the union of the two, with subject_roles the only one a
+        // therefore authorizes on the union of the two, with SubjectRoles the only one a
         // grant made after sign-in can land in.
         if (isLocalMode)
         {

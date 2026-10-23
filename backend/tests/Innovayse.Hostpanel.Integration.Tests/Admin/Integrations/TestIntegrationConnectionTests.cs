@@ -220,7 +220,10 @@ public sealed class TestIntegrationConnectionTests(IntegrationTestFactory factor
     /// <summary>Saves the Name.am credentials through the admin Integrations route.</summary>
     /// <param name="client">An admin client.</param>
     /// <param name="email">The account e-mail to store.</param>
-    /// <param name="password">The account password to store; blank leaves the field unfilled.</param>
+    /// <param name="password">
+    /// The account password to store; blank clears it explicitly, because a blank secret on its own keeps what an
+    /// earlier test in this class stored (the database is shared by the class).
+    /// </param>
     /// <returns>A task that completes when the save was accepted.</returns>
     private static async Task SaveNameAmConfigAsync(HttpClient client, string email, string password)
     {
@@ -232,6 +235,7 @@ public sealed class TestIntegrationConnectionTests(IntegrationTestFactory factor
                 ["email"] = email,
                 ["password"] = password,
             },
+            clearFields = password.Length == 0 ? new[] { "password" } : Array.Empty<string>(),
         });
 
         saved.IsSuccessStatusCode.Should().BeTrue();

@@ -76,9 +76,10 @@ const tagAttrs = computed(() => {
 
 /** Class list of the entry. */
 const classes = computed(() => {
-  const base = 'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500'
+  // `ui-nav-item` and `ui-nav-item-active` are template hooks: classic.css paints the current entry as a solid fill.
+  const base = 'ui-nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500'
   if (props.active) {
-    return `${base} bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 font-medium`
+    return `${base} ui-nav-item-active bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 font-medium`
   }
   if (props.disabled) {
     return `${base} text-gray-400 dark:text-gray-500 cursor-not-allowed`

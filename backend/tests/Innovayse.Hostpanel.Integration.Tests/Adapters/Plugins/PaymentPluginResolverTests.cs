@@ -18,7 +18,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Plugins;
 /// <remarks>
 /// The resolver reads <c>AppDbContext</c>, so these tests run against a real database. Every test names its own module id (a fresh
 /// <see cref="Guid"/> per call) so the settings each test writes never collide with another
-/// test's rows under <c>settings.key</c>'s unique index.
+/// test's rows under <c>Settings.Key</c>'s unique index.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class PaymentPluginResolverTests(IntegrationTestFactory factory)

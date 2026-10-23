@@ -9,7 +9,6 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Order> builder)
     {
-        builder.ToTable("Orders");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.OrderNumber).IsRequired().HasMaxLength(20);
         builder.HasIndex(x => x.OrderNumber).IsUnique();

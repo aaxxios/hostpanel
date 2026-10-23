@@ -90,6 +90,18 @@ public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbConte
     /// <summary>Gets the domain renewal reminder emails table.</summary>
     public DbSet<DomainReminder> DomainReminders => Set<DomainReminder>();
 
+    /// <summary>
+    /// Gets the DNS records table. Records are reached through their domain; the set exists so
+    /// the table takes its PascalCase name from this property like every other table here.
+    /// </summary>
+    public DbSet<DnsRecord> DnsRecords => Set<DnsRecord>();
+
+    /// <summary>Gets the domain nameservers table, named by this property like every other table.</summary>
+    public DbSet<Nameserver> Nameservers => Set<Nameserver>();
+
+    /// <summary>Gets the email forwarding rules table, named by this property like every other table.</summary>
+    public DbSet<EmailForwardingRule> EmailForwardingRules => Set<EmailForwardingRule>();
+
     /// <summary>Gets the billable items table.</summary>
     public DbSet<BillableItem> BillableItems => Set<BillableItem>();
 
@@ -119,6 +131,12 @@ public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbConte
 
     /// <summary>Gets the support tickets table.</summary>
     public DbSet<Ticket> Tickets => Set<Ticket>();
+
+    /// <summary>Gets the ticket replies table, named by this property like every other table.</summary>
+    public DbSet<TicketReply> TicketReplies => Set<TicketReply>();
+
+    /// <summary>Gets the ticket tags table, named by this property like every other table.</summary>
+    public DbSet<TicketTag> TicketTags => Set<TicketTag>();
 
     /// <summary>Gets the support departments table.</summary>
     public DbSet<Department> Departments => Set<Department>();

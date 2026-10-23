@@ -9,7 +9,7 @@
       />
 
       <!-- Carousel -->
-      <div class="relative max-w-xl mx-auto">
+      <div class="relative">
         <ClientOnly>
           <Swiper
             :modules="modules"

@@ -8,10 +8,10 @@ namespace Innovayse.Hostpanel.Application.Notifications.Commands.UpdateEmailTemp
 /// <summary>Validator for <see cref="UpdateEmailTemplateCommand"/>.</summary>
 public sealed class UpdateEmailTemplateValidator : LocalizedValidator<UpdateEmailTemplateCommand>
 {
-    /// <summary>Longest accepted subject line, matching the <c>email_templates</c> column.</summary>
+    /// <summary>Longest accepted subject line, matching the <c>EmailTemplates</c> column.</summary>
     private const int SubjectMaxLength = 500;
 
-    /// <summary>Longest accepted description, matching the <c>email_templates</c> column.</summary>
+    /// <summary>Longest accepted description, matching the <c>EmailTemplates</c> column.</summary>
     private const int DescriptionMaxLength = 500;
 
     /// <summary>Initializes validator with localization service.</summary>

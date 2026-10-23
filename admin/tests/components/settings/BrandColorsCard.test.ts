@@ -9,8 +9,8 @@ import { mountScreen } from '../../helpers/mount'
 
 /** Both colour rows, as the API seeds them. */
 const rows: Setting[] = [
-  { id: 1, key: 'portal.brand.primary', value: '#0ea5e9' },
-  { id: 2, key: 'portal.brand.accent', value: '' },
+  { id: 1, key: 'portal.brand.primary', value: '#0ea5e9', isSecret: false, hasValue: true },
+  { id: 2, key: 'portal.brand.accent', value: '', isSecret: false, hasValue: false },
 ]
 
 describe('BrandColorsCard', () => {

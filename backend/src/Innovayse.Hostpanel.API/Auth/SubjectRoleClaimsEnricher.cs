@@ -9,11 +9,11 @@ namespace Innovayse.Hostpanel.API.Auth;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Every grant in this product writes to <c>subject_roles</c> — <c>AuthController.SetupAsync</c>,
+/// Every grant in this product writes to <c>SubjectRoles</c> — <c>AuthController.SetupAsync</c>,
 /// <c>AdminCreateClientHandler</c>, <c>PlaceOrderHandler</c>, <c>AcceptInvitationHandler</c> and
 /// <c>MigrationPullWorker</c> all call <see cref="ISubjectRoleStore.AddAsync"/>. Only the SSO
 /// scheme ever read it back, so a credential this product issued itself carried whatever roles
-/// were baked into it at sign-in and nothing else. That made <c>subject_roles</c> and Identity's
+/// were baked into it at sign-in and nothing else. That made <c>SubjectRoles</c> and Identity's
 /// <c>AspNetUserRoles</c> two disjoint stores under <c>AUTH_MODE=local</c>: a role granted after
 /// the token was minted — which is every grant listed above — never reached a
 /// <c>[Authorize(Roles = …)]</c> route, and <c>POST /api/auth/setup</c> wrote an Admin row that
@@ -21,7 +21,7 @@ namespace Innovayse.Hostpanel.API.Auth;
 /// </para>
 /// <para>
 /// Attaching this to every JWT scheme in both modes is what makes the composition root's own
-/// claim — that authorization is decided by <c>subject_roles</c> in both modes — true. It is
+/// claim — that authorization is decided by <c>SubjectRoles</c> in both modes — true. It is
 /// deliberately mode-agnostic: it knows about a role store, not about who issued the token, so
 /// it sits above the <c>AUTH_MODE</c> port pair rather than inside either implementation.
 /// </para>

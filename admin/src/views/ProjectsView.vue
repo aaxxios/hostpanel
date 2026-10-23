@@ -17,6 +17,7 @@ import UiTableCell from '@/components/ui/UiTableCell.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { useStorefrontList } from '@/composables/useStorefrontList'
 import { Icon } from '@/lib/icons'
+import { storefrontAssetUrl } from '@/lib/runtimeConfig'
 import { displayTranslation } from '@/lib/storefrontTranslations'
 import { useProjectsStore } from '@/stores/projects'
 import type { Project } from '@/types/project'
@@ -112,7 +113,7 @@ const navigateEdit = (item: Project): void => {
       <UiTableCell>
         <UiImage
           v-if="item.imageUrls[0]"
-          :src="item.imageUrls[0]"
+          :src="storefrontAssetUrl(item.imageUrls[0])"
           :alt="projectName(item)"
           fit="cover"
           rounded="md"

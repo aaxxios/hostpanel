@@ -36,6 +36,9 @@
  * Hosting setup page: loads the service and shows the setup wizard, or says why there is nothing
  * to set up (the service could not be read, or it is already configured). The service is read
  * through the service management store.
+ *
+ * The form keeps a short column (a width cap, an allowed exception: form fields are intrinsically
+ * narrow, so this is not page layout; the page width itself comes from the shared container).
  */
 import { CLIENT_SERVICES_PATH, clientServicePath } from '~/constants/clientRoutes'
 import { AlertCircle, CheckCircle } from 'lucide-vue-next'

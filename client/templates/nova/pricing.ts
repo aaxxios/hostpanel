@@ -6,6 +6,7 @@
 
 import type { PlanCard } from '~/types/plancard'
 import type { NovaPlan } from '~/templates/nova/types/novaplan'
+import { savingPercent } from '~/utils/yearlySaving'
 
 /** A plan that has a usable monthly price, as the popular-badge rule ranks it. */
 interface PricedPlan {
@@ -62,15 +63,7 @@ export const yearlyDiscountPercent = (
   priceMonthly: string | undefined | null,
   priceAnnual: string | undefined | null,
 ): number | null => {
-  const monthly = parseAmount(priceMonthly)
-  const annual = parseAmount(priceAnnual)
-
-  if (monthly === null || annual === null || monthly <= 0) {
-    return null
-  }
-
-  const percent = Math.round((1 - annual / monthly) * 100)
-  return percent > 0 ? percent : null
+  return savingPercent(parseAmount(priceMonthly), parseAmount(priceAnnual))
 }
 
 /**

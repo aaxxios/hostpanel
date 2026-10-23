@@ -1,5 +1,14 @@
 {
   "systemSettings": "System Settings",
+  "secret": {
+    "set": "••••••, set",
+    "notSet": "Not set",
+    "replace": "Replace",
+    "clear": "Clear",
+    "cancel": "Cancel",
+    "placeholder": "Type the new value",
+    "pendingClear": "Cleared when you save"
+  },
   "table": {
     "key": "Key",
     "value": "Value",
