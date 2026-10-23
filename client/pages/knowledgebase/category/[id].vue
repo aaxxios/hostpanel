@@ -1,6 +1,6 @@
 <template>
   <UiSection padding="lg" data-testid="kb-category-page">
-    <UiStack class="mx-auto w-full max-w-4xl" gap="lg">
+    <UiStack class="w-full" gap="lg">
       <!-- Back link -->
       <UiLink
         :to="localePath('/knowledgebase')"

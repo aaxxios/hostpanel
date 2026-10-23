@@ -13,7 +13,7 @@
       </UiText>
     </UiHeading>
 
-    <UiText size="lg" tone="inherit" class="mt-6 max-w-[520px] leading-[1.65] text-mut">
+    <UiText size="lg" tone="inherit" class="mt-6 max-w-[75ch] leading-[1.65] text-mut">
       {{ t('aurora.hero.lead') }}
     </UiText>
 

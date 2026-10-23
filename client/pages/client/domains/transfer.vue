@@ -79,6 +79,9 @@
  * Domain transfer: the form that orders the transfer of a domain in (name, EPP code, period,
  * payment method) and, once the order is placed, a link to its invoice. The order, its in-flight
  * flag and the API's refusal belong to the domains store.
+ *
+ * The form keeps a short column (a width cap, an allowed exception: form fields are intrinsically
+ * narrow, so this is not page layout; the page width itself comes from the shared container).
  */
 import { CLIENT_DOMAINS_PATH, clientInvoicePath } from '~/constants/clientRoutes'
 import { ArrowLeftRight, CheckCircle, CreditCard } from 'lucide-vue-next'

@@ -118,4 +118,39 @@ describe('LegalDocument', () => {
     expect(card.text()).toContain('Write to us')
     expect(wrapper.find('[data-testid="legal-contact-link"]').attributes('href')).toBe('/en/contact')
   })
+
+  it('lays the document out in the shared container with no max-w cap on the layout', () => {
+    const wrapper = mountWithKit(LegalDocument, { props: { title: 'Terms', sections: SECTIONS, contactTitle: 'Questions?' } })
+
+    const layout = wrapper.find('[data-testid="legal-layout"]')
+    expect(wrapper.findAll('.container-custom').length).toBeGreaterThanOrEqual(2)
+    expect(layout.classes().some(name => name.startsWith('max-w-'))).toBe(false)
+    expect(layout.classes()).toContain('lg:grid-cols-[14rem_minmax(0,1fr)]')
+    expect(wrapper.find('[data-testid="legal-layout"] [data-testid="legal-section-intro"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="legal-contact"]').exists()).toBe(true)
+  })
+
+  it('keeps a reading measure on the paragraphs only', () => {
+    const wrapper = mountWithKit(LegalDocument, { props: { title: 'Terms', sections: SECTIONS } })
+
+    const paragraph = wrapper.find('[data-testid="legal-section-intro"] p')
+    expect(paragraph.classes()).toContain('max-w-[75ch]')
+  })
+
+  it('draws a sticky table of contents from lg up that links every section', () => {
+    const wrapper = mountWithKit(LegalDocument, { props: { title: 'Terms', sections: SECTIONS } })
+
+    const toc = wrapper.find('[data-testid="legal-toc"]')
+    expect(toc.element.tagName).toBe('NAV')
+    expect(toc.classes()).toEqual(expect.arrayContaining(['sticky', 'hidden', 'lg:flex']))
+    expect(wrapper.find('[data-testid="legal-toc-intro"]').attributes('href')).toBe('#legal-section-intro')
+    expect(wrapper.find('[data-testid="legal-toc-full"]').text()).toContain('Everything')
+    expect(wrapper.find('#legal-section-full').exists()).toBe(true)
+  })
+
+  it('leaves the contents list out for a single section', () => {
+    const wrapper = mountWithKit(LegalDocument, { props: { title: 'Terms', sections: [SECTIONS[0]] } })
+
+    expect(wrapper.find('[data-testid="legal-toc"]').exists()).toBe(false)
+  })
 })

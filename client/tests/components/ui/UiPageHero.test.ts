@@ -69,4 +69,22 @@ describe('UiPageHero', () => {
     expect(wrapper.find('[data-testid="ui-backdrop"]').attributes('aria-hidden')).toBe('true')
     expect(wrapper.findAll('[aria-hidden="true"]').length).toBeGreaterThanOrEqual(3)
   })
+
+  it('never fades the header in from transparent: it slides only, and classic does not animate it', () => {
+    const wrapper = mountWithKit(UiPageHero, { props: { title: 'Contact', subtitle: 'Lead' } })
+
+    const block = wrapper.find('h1').element.parentElement!
+    expect(block.className).not.toContain('animate-reveal-up')
+    expect(block.className).toContain('animate-slide-up')
+    expect(block.className).toContain('[.tpl-classic_&]:animate-none')
+    expect(block.className).toContain('motion-reduce:animate-none')
+    expect(block.getAttribute('style') ?? '').not.toContain('opacity')
+  })
+
+  it('keeps the lead sentence to a reading measure and the title and badge uncapped', () => {
+    const wrapper = mountWithKit(UiPageHero, { props: { title: 'Contact', badge: 'Hi', subtitle: 'Lead' } })
+
+    expect(wrapper.find('[data-testid="ui-page-hero-subtitle"]').classes()).toContain('max-w-[75ch]')
+    expect(wrapper.find('h1').classes().some(name => name.startsWith('max-w-'))).toBe(false)
+  })
 })

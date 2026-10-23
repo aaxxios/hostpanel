@@ -9,7 +9,7 @@
 
     <!-- Content -->
     <UiSection padding="md">
-      <UiStack class="mx-auto w-full max-w-3xl" gap="lg">
+      <UiStack class="w-full" gap="lg">
         <!-- Month filter -->
         <UiChipTabs
           v-if="months.length > 1"

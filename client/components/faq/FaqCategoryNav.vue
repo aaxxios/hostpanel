@@ -56,10 +56,10 @@ withDefaults(defineProps<Props>(), {
 })
 
 /** Classic-only look of a topic link: white chip, hairline border, charcoal text, brand on hover. */
-const CLASSIC_CHIP = '[.tpl-classic_&]:rounded-md [.tpl-classic_&]:border [.tpl-classic_&]:border-classic-border [.tpl-classic_&]:bg-classic-surface [.tpl-classic_&]:text-classic-ink [.tpl-classic_&]:hover:border-classic-brand [.tpl-classic_&]:hover:bg-classic-brand-soft'
+const CLASSIC_CHIP = '[.tpl-classic_&]:rounded-md [.tpl-classic_&]:border [.tpl-classic_&]:border-classic-border-strong [.tpl-classic_&]:bg-classic-surface [.tpl-classic_&]:text-classic-ink [.tpl-classic_&]:hover:border-classic-brand [.tpl-classic_&]:hover:bg-classic-brand-soft'
 
 /** Classic-only look of the current topic: solid brand fill. */
-const CLASSIC_CHIP_ACTIVE = '[.tpl-classic_&]:rounded-md [.tpl-classic_&]:border [.tpl-classic_&]:border-classic-brand [.tpl-classic_&]:bg-classic-brand [.tpl-classic_&]:text-classic-on-brand [.tpl-classic_&]:hover:bg-classic-brand-hover'
+const CLASSIC_CHIP_ACTIVE = '[.tpl-classic_&]:rounded-md [.tpl-classic_&]:border [.tpl-classic_&]:border-classic-fill [.tpl-classic_&]:bg-classic-fill [.tpl-classic_&]:text-classic-on-brand [.tpl-classic_&]:hover:bg-classic-fill-hover'
 
 /** Translates a key in the active language. */
 const { t } = useI18n()

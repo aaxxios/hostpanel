@@ -1,10 +1,10 @@
 <template>
   <section class="py-14 md:py-20 bg-classic-surface-2 border-y border-classic-border" data-testid="sections-cta">
     <UiContainer>
-      <div class="max-w-3xl mx-auto text-center animate-reveal-up motion-reduce:animate-none">
+      <div class="text-center animate-reveal-up motion-reduce:animate-none">
         <UiHeading :level="2" class="text-3xl md:text-4xl mb-4 text-classic-ink">{{ $t('cta.title') }}</UiHeading>
 
-        <UiText size="lg" class="mb-8 max-w-xl mx-auto text-classic-muted">{{ $t('cta.subtitle') }}</UiText>
+        <UiText size="lg" class="mb-8 max-w-[75ch] mx-auto text-classic-muted">{{ $t('cta.subtitle') }}</UiText>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
           <UiButton :to="localePath('/hosting')" size="lg" data-testid="cta-plans">

@@ -40,7 +40,7 @@
           <UiHeading :level="3" size="bare" class="mt-3.5 font-display text-[clamp(24px,3.4vw,32px)] font-bold -tracking-[0.02em] text-tx">
             {{ freePlan.name }}
           </UiHeading>
-          <UiText v-if="freePlan.description" tone="inherit" class="mt-2 max-w-[560px] text-[15px] leading-relaxed text-mut">
+          <UiText v-if="freePlan.description" tone="inherit" class="mt-2 max-w-[75ch] text-[15px] leading-relaxed text-mut">
             {{ freePlan.description }}
           </UiText>
 

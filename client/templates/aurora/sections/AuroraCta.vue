@@ -12,7 +12,7 @@
     <UiHeading :level="2" size="bare" class="relative font-display text-[clamp(28px,4.4vw,42px)] font-bold -tracking-[0.02em] text-tx">
       {{ t('aurora.cta.title') }}
     </UiHeading>
-    <UiText size="inherit" tone="inherit" class="relative mx-auto mt-4 max-w-[560px] text-[18px] leading-relaxed text-tx2">
+    <UiText size="inherit" tone="inherit" class="relative mx-auto mt-4 max-w-[75ch] text-[18px] leading-relaxed text-tx2">
       {{ t('aurora.cta.lead') }}
     </UiText>
     <UiStack direction="row" wrap justify="center" class="relative mt-8">

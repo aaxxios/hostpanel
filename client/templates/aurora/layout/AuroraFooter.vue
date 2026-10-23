@@ -8,9 +8,10 @@
       <UiGrid cols="auto" gap="xl">
         <UiStack gap="none" class="min-w-0">
           <UiStack direction="row" align="center" gap="sm" class="text-tx">
+            <!-- Logo image cap: intrinsically small UI, not page layout. -->
             <AppLogoLockup img-class="h-[34px] w-auto max-w-[140px]" mark-class="h-9 w-9" name-class="text-lg font-bold" />
           </UiStack>
-          <UiText tone="inherit" class="mt-4 max-w-[300px] leading-relaxed text-mut2">
+          <UiText tone="inherit" class="mt-4 leading-relaxed text-mut2">
             {{ t('aurora.footer.tagline') }}
           </UiText>
 
@@ -23,7 +24,7 @@
             method="post"
             target="_blank"
             data-testid="newsletter-form"
-            class="mt-[22px] max-w-[340px]"
+            class="mt-[22px]"
           >
             <UiStack direction="row" wrap align="end" gap="xs">
               <UiInput

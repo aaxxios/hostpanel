@@ -97,19 +97,13 @@ describe('SectionsLocations', () => {
     expect(wrapper.find('[data-testid="sections-locations"]').exists()).toBe(false)
   })
 
-  it('caps the grid width for one and two locations and leaves more uncapped', async () => {
-    const cases: Array<[number, string | null]> = [[1, 'max-w-xl'], [2, 'max-w-4xl'], [3, null]]
-    for (const [count, cap] of cases) {
+  it('never caps the grid width: the shared container sets it for any number of locations', async () => {
+    for (const count of [1, 2, 3]) {
       store.locations = Array.from({ length: count }, (_, index) => locationFixture(index + 1))
       const wrapper = await mountSection()
       const classes = wrapper.find('[data-testid="sections-locations-grid"]').classes()
 
-      if (cap) {
-        expect(classes).toContain(cap)
-      } else {
-        expect(classes).not.toContain('max-w-xl')
-        expect(classes).not.toContain('max-w-4xl')
-      }
+      expect(classes.some(name => name.startsWith('max-w-'))).toBe(false)
     }
   })
 })

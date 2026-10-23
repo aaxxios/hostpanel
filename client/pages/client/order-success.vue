@@ -1,5 +1,6 @@
 <template>
   <UiStack align="center" justify="center" class="min-h-[60dvh] px-4" data-testid="order-success">
+    <!-- Confirmation card: an intrinsically small card, not page layout. -->
     <UiStack gap="lg" class="w-full max-w-md">
       <ClientOutcomePanel
         :icon="CheckCircle"

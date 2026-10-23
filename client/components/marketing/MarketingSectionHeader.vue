@@ -9,7 +9,7 @@
     <UiHeading :level="2" class="text-3xl md:text-5xl mb-4" data-testid="section-header-title">
       <slot name="title">{{ title }}</slot>
     </UiHeading>
-    <UiText v-if="subtitle" tone="muted" size="lg" class="max-w-2xl mx-auto" data-testid="section-header-subtitle">
+    <UiText v-if="subtitle" tone="muted" size="lg" class="max-w-[75ch] mx-auto" data-testid="section-header-subtitle">
       {{ subtitle }}
     </UiText>
   </div>

@@ -64,19 +64,13 @@ describe('SectionsSupport', () => {
     expect(wrapper.html()).not.toContain('--accent')
   })
 
-  it('caps the grid width for one and two cards and leaves more uncapped', () => {
-    const cases: Array<[number, string | null]> = [[1, 'max-w-xl'], [2, 'max-w-4xl'], [3, null]]
-    for (const [count, cap] of cases) {
+  it('never caps the grid width: the shared container sets it for any number of cards', () => {
+    for (const count of [1, 2, 3]) {
       channels.value = [SupportChannel.Ticket, SupportChannel.Email, SupportChannel.Chat].slice(0, count).map((channel) => ({ channel }))
       const wrapper = mountWithKit(SectionsSupport, { components: CLASSIC_COMPONENTS })
       const classes = wrapper.find('[data-testid="sections-support-grid"]').classes()
 
-      if (cap) {
-        expect(classes).toContain(cap)
-      } else {
-        expect(classes).not.toContain('max-w-xl')
-        expect(classes).not.toContain('max-w-4xl')
-      }
+      expect(classes.some(name => name.startsWith('max-w-'))).toBe(false)
     }
   })
 })

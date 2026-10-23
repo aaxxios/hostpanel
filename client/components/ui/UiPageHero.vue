@@ -11,9 +11,12 @@
     />
 
     <UiContainer class="relative z-10 text-center [.tpl-classic_&]:text-left">
-      <div
-      class="animate-reveal-up motion-reduce:animate-none"
-      >
+      <!--
+        The header slides in but is never transparent: a fade from opacity 0 left the title, badge
+        and subtitle invisible whenever the animation was held back (a background tab, a slow first
+        paint, a capture). Classic is flat and does not animate the band at all.
+      -->
+      <div class="animate-slide-up motion-reduce:animate-none [.tpl-classic_&]:animate-none">
         <slot name="breadcrumbs" />
         <UiBadge
           v-if="badge"
@@ -42,7 +45,7 @@
           v-if="subtitle"
           size="lg"
           tone="muted"
-          class="mx-auto max-w-3xl [.tpl-classic_&]:mx-0 [.tpl-classic_&]:text-classic-muted"
+          class="mx-auto max-w-[75ch] [.tpl-classic_&]:mx-0 [.tpl-classic_&]:text-classic-muted"
           data-testid="ui-page-hero-subtitle"
         >
           {{ subtitle }}
@@ -59,7 +62,8 @@
  * badge, the h1 title (with an optional gradient-highlighted word), a lead sentence, and a
  * default slot for what belongs under them (category links, a "last updated" line).
  *
- * The `breadcrumbs` slot sits above the badge. The whole block fades in on first paint.
+ * The `breadcrumbs` slot sits above the badge. The whole block slides up on first paint without
+ * ever dropping below full opacity (classic does not animate it).
  *
  * Under the classic template (the `tpl-classic` root class) the same markup is a flat, left-aligned
  * band: no backdrop, no corner frames, no gradient word, a solid brand badge and a hairline below.

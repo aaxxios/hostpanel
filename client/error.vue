@@ -11,7 +11,7 @@
 
     <!-- Error Content -->
     <UiContainer class="relative z-10">
-      <UiStack gap="lg" class="mx-auto max-w-2xl text-center">
+      <UiStack gap="lg" class="text-center">
         <!-- Error Code -->
         <UiHeading
           :level="1"

@@ -21,7 +21,7 @@
         >
           {{ $t('checkout.title') }}
         </UiHeading>
-        <UiText size="inherit" tone="inherit" class="mt-3 max-w-[560px] text-[17px] leading-relaxed text-mut">
+        <UiText size="inherit" tone="inherit" class="mt-3 max-w-[75ch] text-[17px] leading-relaxed text-mut">
           {{ $t('checkout.subtitle') }}
         </UiText>
         <UiStack direction="row" align="center" gap="xs" class="mt-3.5 text-sm text-mut">
@@ -37,7 +37,7 @@
           tone="bare"
           padding="none"
           data-testid="checkout-empty"
-          class="mx-auto w-full max-w-2xl border-line bg-surf py-20 text-center"
+          class="w-full border-line bg-surf py-20 text-center"
         >
           <UiStack align="center" gap="none">
             <UiTile

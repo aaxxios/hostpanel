@@ -266,4 +266,20 @@ describe('ClassicDomains', () => {
     expect(html).not.toMatch(/bg-gradient|blur-\[|animate-blob|shadow-halo|cyan-|violet-|secondary-/)
     expect(html).toContain('classic-')
   })
+
+  it('draws the highlighted title word at the heading size in the brand colour', async () => {
+    const wrapper = await mountDomains()
+
+    const highlight = wrapper.find('[data-testid="classic-domains-title"] span')
+    expect(highlight.text()).toContain('domains.titleHighlight')
+    expect(highlight.classes()).toContain('text-classic-brand')
+    expect(highlight.classes()).not.toContain('text-base')
+  })
+
+  it('keeps every section in the shared container and never caps the search', async () => {
+    const wrapper = await mountDomains()
+
+    expect(wrapper.findAll('.container-custom').length).toBeGreaterThanOrEqual(2)
+    expect(wrapper.html()).not.toMatch(/max-w-(2xl|3xl|4xl|5xl|6xl)/)
+  })
 })

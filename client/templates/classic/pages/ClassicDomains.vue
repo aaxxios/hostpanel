@@ -3,7 +3,7 @@
     <!-- Hero / search: flat band, left aligned -->
     <UiSection :contained="false" padding="lg" class="border-b border-classic-border bg-classic-surface-2 py-10 md:py-14">
       <UiContainer>
-        <UiStack gap="none" class="max-w-4xl">
+        <UiStack gap="none">
           <!-- Breadcrumbs -->
           <UiBreadcrumbs
             :items="[{ label: $t('domains.badge') }]"
@@ -17,11 +17,11 @@
 
           <UiHeading :level="UiHeadingLevel.H1" size="title" class="mb-3 text-3xl font-semibold leading-tight text-classic-ink md:text-4xl" data-testid="classic-domains-title">
             {{ $t('domains.title') }}
-            <UiText as="span" tone="inherit" class="text-classic-brand">{{ $t('domains.titleHighlight') }}</UiText>
+            <UiText as="span" size="inherit" tone="inherit" weight="semibold" class="text-classic-brand">{{ $t('domains.titleHighlight') }}</UiText>
           </UiHeading>
 
           <!-- Register: search bar -->
-          <UiStack gap="none" class="mt-6 max-w-2xl w-full">
+          <UiStack gap="none" class="mt-6 w-full">
             <!-- Tab switcher -->
             <UiStack direction="row" gap="sm" class="mb-5">
               <UiButton variant="primary" size="sm" data-testid="classic-domains-tab-register">
@@ -134,7 +134,7 @@
     <!-- TLD pricing table -->
     <UiSection :contained="false" padding="md" class="md:py-14">
       <UiContainer>
-        <UiStack gap="none" class="mx-auto max-w-6xl">
+        <UiStack gap="none">
           <UiStack gap="none" class="mb-8">
             <UiText as="span" size="xs" tone="inherit" weight="semibold" class="block mb-2 uppercase tracking-wider text-classic-brand">{{ $t('domains.pricing.browseByCategory') }}</UiText>
             <UiHeading :level="UiHeadingLevel.H2" size="title" class="text-2xl font-semibold text-classic-ink md:text-3xl">{{ $t('domains.pricing.title') }}</UiHeading>

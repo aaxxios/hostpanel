@@ -1,7 +1,7 @@
 <template>
   <UiSection :id="HomeSectionId.Services" padding="lg" :contained="false" :class="[HOME_SECTION_SCROLL_MARGIN_CLASS, 'relative border-t border-line']">
     <UiText tone="inherit" size="inherit" :class="[EYEBROW_CLASS, 'text-ac2']">{{ t('aurora.services.eyebrow') }}</UiText>
-    <UiHeading :level="2" size="bare" :class="[SECTION_TITLE_CLASS, 'mt-3 max-w-[680px]']">
+    <UiHeading :level="2" size="bare" :class="[SECTION_TITLE_CLASS, 'mt-3']">
       {{ t('aurora.services.title') }}
     </UiHeading>
 

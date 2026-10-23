@@ -7,14 +7,14 @@
       <UiHeading
         :level="2"
         size="bare"
-        class="mx-auto max-w-[620px] text-[clamp(1.7rem,4vw,2.7rem)] font-extrabold leading-tight tracking-tight text-nova-ink"
+        class="mx-auto text-[clamp(1.7rem,4vw,2.7rem)] font-extrabold leading-tight tracking-tight text-nova-ink"
       >
         {{ t('nova.finalCta.title') }}
       </UiHeading>
       <UiText
         size="inherit"
         tone="inherit"
-        class="mx-auto mt-4 max-w-[520px] text-[17px] leading-[1.7] text-nova-muted"
+        class="mx-auto mt-4 max-w-[75ch] text-[17px] leading-[1.7] text-nova-muted"
       >
         {{ t('nova.finalCta.lead') }}
       </UiText>

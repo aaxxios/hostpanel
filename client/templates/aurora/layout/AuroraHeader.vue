@@ -9,6 +9,7 @@
         class="flex items-center gap-3 text-tx"
       >
         <!-- The operator's upload when there is one, otherwise the cube mark and the site name. -->
+        <!-- Logo image cap: intrinsically small UI, not page layout. -->
         <AppLogoLockup
           img-class="h-[34px] w-auto max-w-[140px]"
           mark-class="h-9 w-9"

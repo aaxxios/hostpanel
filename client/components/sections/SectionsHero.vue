@@ -1,7 +1,7 @@
 <template>
   <section class="bg-classic-page border-b border-classic-border" data-testid="sections-hero">
     <UiContainer class="py-16 md:py-24">
-      <div class="text-center max-w-3xl mx-auto">
+      <div class="text-center">
         <!-- Eyebrow badge: the operator's line when set -->
         <span class="inline-flex items-center px-3 py-1 mb-6 rounded-md bg-classic-brand-soft text-classic-brand text-sm font-medium" data-testid="hero-badge">
           {{ badge }}
@@ -11,12 +11,12 @@
           {{ $t('hero.title') }}
         </UiHeading>
 
-        <UiText size="lg" class="md:text-xl mb-10 max-w-2xl mx-auto text-classic-muted">
+        <UiText size="lg" class="md:text-xl mb-10 max-w-[75ch] mx-auto text-classic-muted">
           {{ $t('hero.subtitle') }}
         </UiText>
 
         <!-- Main action: the domain search -->
-        <div class="max-w-2xl mx-auto mb-5">
+        <div class="mb-5">
           <SectionsDomainSearch />
         </div>
 

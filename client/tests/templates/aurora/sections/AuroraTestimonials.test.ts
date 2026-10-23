@@ -94,10 +94,10 @@ describe('AuroraTestimonials', () => {
     expect(wrapper.find('[data-testid="testimonial-quote-mark"]').exists()).toBe(false)
   })
 
-  it('keeps cards at their column width, centred, instead of stretching them', async () => {
+  it('sizes cards by their column width and never by a max-w cap', async () => {
     const card = visibleCard(await mountSection())
 
-    expect(card.classes()).toContain('max-w-md')
+    expect(card.classes().some(name => name.startsWith('max-w-'))).toBe(false)
     expect(card.classes()).toContain('sm:w-[calc((100%-1.25rem)/2)]')
     expect(card.classes()).toContain('lg:w-[calc((100%-2.5rem)/3)]')
     expect(card.element.parentElement!.className).toContain('justify-center')

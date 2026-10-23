@@ -5,9 +5,10 @@
       <div class="grid gap-10 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
         <div>
           <UiStack direction="row" align="center" gap="sm">
+            <!-- Logo image cap: intrinsically small UI, not page layout. -->
             <AppLogoLockup img-class="h-8 w-auto max-w-[120px]" mark-class="h-8 w-8" name-class="text-base font-bold" />
           </UiStack>
-          <UiText size="inherit" tone="inherit" class="mt-4 max-w-[320px] text-[15px] leading-relaxed text-nova-muted">
+          <UiText size="inherit" tone="inherit" class="mt-4 text-[15px] leading-relaxed text-nova-muted">
             {{ t('nova.footer.tagline') }}
           </UiText>
 
