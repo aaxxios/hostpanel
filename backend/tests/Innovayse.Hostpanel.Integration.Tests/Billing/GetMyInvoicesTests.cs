@@ -64,4 +64,21 @@ public sealed class GetMyInvoicesTests(IntegrationTestFactory factory) : IClassF
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         body.EnumerateArray().Select(i => i.GetProperty("id").GetInt32()).Should().Contain(invoiceId);
     }
+
+    /// <summary>An invoice still in draft is being prepared by staff, so the client's own list leaves it out.</summary>
+    [Fact]
+    public async Task GetMine_HidesAnInvoiceStillInDraft()
+    {
+        var (owner, ownerClientId) = await BillingTestSeeds.RegisterClientAsync(factory, null, "owner-draft");
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+        var issuedId = await BillingTestSeeds.CreateInvoiceAsync(admin, ownerClientId, 10m);
+        var draftId = await BillingTestSeeds.CreateInvoiceAsync(admin, ownerClientId, 20m, isDraft: true);
+
+        var response = await owner.GetAsync("/api/me/invoices");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var ids = body.EnumerateArray().Select(i => i.GetProperty("id").GetInt32()).ToList();
+        ids.Should().Contain(issuedId).And.NotContain(draftId);
+    }
 }

@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Billing.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Services.Common;
+using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -70,13 +71,13 @@ public sealed class GetMyServiceInvoicesHandler
             .AsNoTracking()
             .Include(x => x.Items)
             .Include(x => x.Transactions)
-            .Where(x => x.ClientId == clientId && x.Items.Any(i => i.ClientServiceId == query.ServiceId))
+            .Where(x => x.ClientId == clientId && x.Status != InvoiceStatus.Draft && x.Items.Any(i => i.ClientServiceId == query.ServiceId))
             .OrderByDescending(x => x.InvoiceDate)
             .ToListAsync(ct);
 
         // Was IInvoiceRepository.CountUnattributedByClientAsync.
         var unattributed = await _context.Invoices
-            .Where(x => x.ClientId == clientId && !x.Items.Any(i => i.ClientServiceId != null))
+            .Where(x => x.ClientId == clientId && x.Status != InvoiceStatus.Draft && !x.Items.Any(i => i.ClientServiceId != null))
             .CountAsync(ct);
 
         return Result<ServiceInvoicesDto>.Success(new ServiceInvoicesDto(

@@ -19,6 +19,7 @@ namespace Innovayse.Hostpanel.Application.Services.Queries.GetMyServices;
 /// <param name="ServerName">Display name of the assigned server, or <see langword="null"/> if not assigned.</param>
 /// <param name="ServerHostname">Hostname of the assigned server, or <see langword="null"/> if not assigned.</param>
 /// <param name="ServerIp">IP address of the assigned server, or <see langword="null"/> if not assigned.</param>
+/// <param name="CreatedAt">When the service was ordered, shown as its registration date.</param>
 public record ClientServiceDto(
     int Id,
     int ProductId,
@@ -34,4 +35,5 @@ public record ClientServiceDto(
     int? ServerId,
     string? ServerName,
     string? ServerHostname,
-    string? ServerIp);
+    string? ServerIp,
+    DateTimeOffset CreatedAt);

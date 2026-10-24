@@ -46,6 +46,10 @@ public sealed class CancellationRequest : BaseEntity
         };
     }
 
+    /// <summary>Moves the request to the moment it was really made, for requests seeded from history.</summary>
+    /// <param name="createdAt">The moment the request was made (UTC).</param>
+    public void Backdate(DateTimeOffset createdAt) => CreatedAt = createdAt;
+
     /// <summary>
     /// Closes this cancellation request, marking it as processed.
     /// </summary>

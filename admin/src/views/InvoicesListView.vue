@@ -34,7 +34,7 @@ import { Icon } from '@/lib/icons'
 import { INVOICE_STATUS_OPTIONS } from '@/lib/constants'
 import { formatDate } from '@/lib/format'
 import { invoiceStatusTone } from '@/lib/tones'
-import { formatUsdPlain } from '@/lib/money'
+import { formatPlainAmount } from '@/lib/money'
 import { useBillingStore } from '@/stores/billing'
 import { pageFirstRow, pageLastRow } from '@/lib/paging'
 import { InvoiceBulkAction, InvoiceStatus } from '@/types/invoice'
@@ -281,7 +281,7 @@ onMounted(() => load(1))
             <UiTableCell>{{ clientLabel(invoice.clientName, invoice.clientId) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(invoice.createdAt) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(invoice.dueDate) }}</UiTableCell>
-            <UiTableCell>{{ formatUsdPlain(invoice.total) }}</UiTableCell>
+            <UiTableCell>{{ formatPlainAmount(invoice.total, invoice.currency) }}</UiTableCell>
             <UiTableCell muted>{{ invoice.paymentMethod || '—' }}</UiTableCell>
             <UiTableCell>
               <UiBadge :tone="invoiceStatusTone(invoice.status)">{{ invoice.status }}</UiBadge>

@@ -38,6 +38,10 @@ public sealed class EmailLog : BaseEntity
         Id = id;
     }
 
+    /// <summary>Moves the send time to the moment the message was really sent, for log lines seeded from history.</summary>
+    /// <param name="sentAt">The moment the message was sent (UTC).</param>
+    public void Backdate(DateTimeOffset sentAt) => SentAt = sentAt;
+
     /// <summary>
     /// Creates a new email log entry recording the result of a send attempt.
     /// </summary>

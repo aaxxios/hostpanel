@@ -12,7 +12,7 @@ import { ProductType } from '~/types/producttype'
 import { familyKey } from '~/utils/catalogGroups'
 import { productTypeIcon } from '~/constants/productTypeIcon'
 import { SUPPORT_LINK_ICON, SupportLinkKey } from '~/constants/headerNavIcon'
-import { buildHeaderNav, hostingEntryDescription, isHeaderItemActive, isHeaderPathActive } from '~/utils/headerNav'
+import { buildHeaderNav, hostingEntryDescription, activeHeaderKey, isHeaderPathActive } from '~/utils/headerNav'
 
 /** The `pages` directory of the client, where a route must have a file. */
 const PAGES_DIR = resolve(__dirname, '../../pages')
@@ -198,11 +198,36 @@ describe('isHeaderPathActive', () => {
   })
 })
 
-describe('isHeaderItemActive', () => {
-  it('is active when a child of the group is the current page', () => {
-    const support = nav().find((item) => item.key === 'support')!
+describe('activeHeaderKey', () => {
+  /** A catalogue whose Hosting dropdown holds a mailbox group living under `/products`. */
+  const mailNav = (): HeaderNavItem[] =>
+    nav([group(1, 'Web hosting'), group(7, 'Business Email')], [product(7, ProductType.Email)])
 
-    expect(isHeaderItemActive('/en/faq', support)).toBe(true)
-    expect(isHeaderItemActive('/en/domains', support)).toBe(false)
+  it('is the group whose child is the current page', () => {
+    expect(activeHeaderKey('/en/faq', nav())).toBe('support')
+    expect(activeHeaderKey('/en/domains', nav())).toBe('domains')
+  })
+
+  it('is undefined when nothing matches', () => {
+    expect(activeHeaderKey('/en/cart', nav())).toBeUndefined()
+  })
+
+  it('picks Hosting, not Products, for a page of a Hosting dropdown group under /products', () => {
+    expect(activeHeaderKey('/en/products/business-email', mailNav())).toBe('hosting')
+    expect(activeHeaderKey('/en/products/business-email/plans', mailNav())).toBe('hosting')
+  })
+
+  it('picks Products for any other page under /products', () => {
+    expect(activeHeaderKey('/en/products', mailNav())).toBe('products')
+    expect(activeHeaderKey('/en/products/something-else', mailNav())).toBe('products')
+  })
+
+  it('lets the earlier entry win a tie', () => {
+    const items: HeaderNavItem[] = [
+      { key: 'a', label: 'A', to: '/en/x' },
+      { key: 'b', label: 'B', to: '/en/x' },
+    ]
+
+    expect(activeHeaderKey('/en/x', items)).toBe('a')
   })
 })

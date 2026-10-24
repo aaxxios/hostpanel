@@ -240,6 +240,11 @@ export default defineNuxtConfig({
       portalContactTimezone: process.env.NUXT_PUBLIC_PORTAL_CONTACT_TIMEZONE || '',
       // Office address and an https map embed address for the contact page and footer; each is hidden when empty.
       portalContactAddress: process.env.NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS || '',
+      // Per-language address and hours; empty uses the default ones above.
+      portalContactAddressRu: process.env.NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS_RU || '',
+      portalContactAddressHy: process.env.NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS_HY || '',
+      portalContactHoursRu: process.env.NUXT_PUBLIC_PORTAL_CONTACT_HOURS_RU || '',
+      portalContactHoursHy: process.env.NUXT_PUBLIC_PORTAL_CONTACT_HOURS_HY || '',
       portalContactMapUrl: process.env.NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL || '',
       // Home hero figures and badge; each is hidden when empty.
       portalStatsClients: process.env.NUXT_PUBLIC_PORTAL_STATS_CLIENTS || '',

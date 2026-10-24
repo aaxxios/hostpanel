@@ -1,0 +1,39 @@
+/**
+ * Unit tests for the payment method mapper: wire fields to the shape the screens render.
+ */
+import { describe, expect, it } from 'vitest'
+import { PaymentMethodType } from '~/types/payment'
+import { brandName, formatSavedExpiry, toPaymentMethod } from '~/utils/paymentMethodMapper'
+
+describe('toPaymentMethod', () => {
+  it('maps a card to a masked label, formatted expiry and the default flag', () => {
+    const method = toPaymentMethod({
+      id: 'pm_1', type: PaymentMethodType.Card, brand: 'visa', last4: '4242', expiryMonth: 8, expiryYear: 2030, isDefault: true
+    })
+
+    expect(method).toMatchObject({
+      id: 'pm_1', description: 'Visa •••• 4242', card_last_four: '4242', card_expiry: '08/30', card_type: 'visa', bank_name: null, is_default: true
+    })
+  })
+
+  it('reads a bank account brand as the bank name', () => {
+    const method = toPaymentMethod({ id: 'pm_2', type: PaymentMethodType.BankAccount, brand: 'First Bank', last4: '6789', isDefault: false })
+
+    expect(method).toMatchObject({ description: 'First Bank •••• 6789', bank_name: 'First Bank', card_type: null, card_expiry: null })
+  })
+})
+
+describe('brandName', () => {
+  it('names known networks and capitalises unknown ones', () => {
+    expect(brandName('mastercard')).toBe('Mastercard')
+    expect(brandName('amex')).toBe('American Express')
+    expect(brandName('elo')).toBe('Elo')
+  })
+})
+
+describe('formatSavedExpiry', () => {
+  it('pads the month and shortens the year, or is null when a part is missing', () => {
+    expect(formatSavedExpiry(3, 2027)).toBe('03/27')
+    expect(formatSavedExpiry(null, 2027)).toBeNull()
+  })
+})

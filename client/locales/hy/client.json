@@ -470,9 +470,14 @@
       "remove": "Հեռացնել",
       "removeConfirm": "Հեռացնե՞լ վճարման եղանակը",
       "removeConfirmDesc": "Այս գործողությունը չի կարող հետարկվել։",
-      "cardEnding": "ավարտվում է",
       "expires": "Ժամկետը լրանում է",
       "statusActive": "Ակտիվ",
+      "defaultBadge": "Լռելյայն",
+      "type": {
+        "card": "Քարտ",
+        "bankAccount": "Բանկային հաշիվ",
+        "other": "Վճարման եղանակ"
+      },
       "removeSuccess": "Վճարման եղանակը հեռացվեց",
       "defaultSet": "Լռելյայն վճարման եղանակը թարմացվեց"
     },

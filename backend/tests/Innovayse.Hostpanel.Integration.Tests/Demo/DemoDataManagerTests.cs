@@ -288,6 +288,9 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
         settings[PortalSettingKeys.ContactEmail].Should().Be(DemoPortalSettingsSeeder.DefaultContactEmail, "no contact email is configured");
         settings[PortalSettingKeys.ContactPhone].Should().Be(DemoPortalSettingsSeeder.DefaultContactPhone, "no contact phone is configured");
         settings[PortalSettingKeys.SiteTagline].Should().NotBeNullOrEmpty();
+        settings[PortalSettingKeys.ContactMapUrl].Should().Be(DemoStorefrontSeeder.MapEmbedUrl, "the contact map must be a real embeddable page");
+        settings[PortalSettingKeys.ContactAddress].Should().Be("1 Market Street, Fairhaven", "one seeder owns the contact address");
+        settings[PortalSettingKeys.StatsClients].Should().Be("500+", "one seeder owns the hero figures");
         settings[PortalSettingKeys.ContactHours].Should().NotBeNullOrEmpty("the contact page shows its hours row");
         settings[PortalSettingKeys.StatsClients].Should().NotBeNullOrEmpty("the hero shows its figures");
         new[]

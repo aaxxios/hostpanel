@@ -397,4 +397,18 @@ public sealed class RegisteredDomainTests
         domain.ClearDomainEvents();
         return domain;
     }
+
+    /// <summary>Backdate moves the registration date and leaves the expiry alone.</summary>
+    [Fact]
+    public void Backdate_ShouldMoveTheRegistrationDateOnly()
+    {
+        var expiresAt = DateTimeOffset.UtcNow.AddMonths(3);
+        var domain = RegisteredDomain.Register(1, "example.com", expiresAt, true, false);
+        var registeredAt = new DateTimeOffset(2025, 12, 1, 9, 0, 0, TimeSpan.Zero);
+
+        domain.Backdate(registeredAt);
+
+        domain.RegisteredAt.Should().Be(registeredAt);
+        domain.ExpiresAt.Should().Be(expiresAt);
+    }
 }

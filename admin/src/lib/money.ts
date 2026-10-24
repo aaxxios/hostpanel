@@ -110,6 +110,16 @@ export const formatUsd = (amount: number | null | undefined = 0): string => `$${
 export const formatUsdPlain = (amount: number | null | undefined = 0): string => `${(amount ?? 0).toFixed(2)} USD`
 
 /**
+ * Formats an amount followed by the code of the currency it is in and no symbol, as the billing tables read.
+ *
+ * @param amount - Numeric value; a missing amount reads as zero.
+ * @param currency - ISO 4217 currency code the amount is in; USD when the API did not say.
+ * @returns For example "12.50 USD" or "53160.00 AMD".
+ */
+export const formatPlainAmount = (amount: number | null | undefined = 0, currency: string | null | undefined = CurrencyCode.Usd): string =>
+  `${(amount ?? 0).toFixed(2)} ${currency || CurrencyCode.Usd}`
+
+/**
  * Formats a price with its currency symbol and code.
  *
  * @param price - Numeric price value.

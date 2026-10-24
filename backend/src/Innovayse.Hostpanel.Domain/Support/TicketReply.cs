@@ -35,6 +35,10 @@ public sealed class TicketReply : BaseEntity
         CreatedAt = DateTimeOffset.UtcNow;
     }
 
+    /// <summary>Moves this reply to the moment it was really written, for replies seeded from history.</summary>
+    /// <param name="writtenAt">The moment the reply was written (UTC).</param>
+    internal void Backdate(DateTimeOffset writtenAt) => CreatedAt = writtenAt;
+
     /// <summary>
     /// Creates a new <see cref="TicketReply"/> with the provided content and author.
     /// </summary>

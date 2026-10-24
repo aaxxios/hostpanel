@@ -20,6 +20,12 @@ internal sealed class DemoPortalSettingsSeeder
     /// <summary>The contact phone shown when <see cref="DemoOptions.ContactPhone"/> is empty; a fictional 555 number.</summary>
     internal const string DefaultContactPhone = "+1 555 0100";
 
+    /// <summary>The slug of the welcome mail the migrations seed.</summary>
+    private const string WelcomeTemplateSlug = "welcome";
+
+    /// <summary>The welcome mail's subject in the demo, which names the demo site like the rest of the demo's copy.</summary>
+    private const string WelcomeSubject = "Welcome to Hostpanel Demo!";
+
     /// <summary>The fictional company story shown on the demo's About page, in English.</summary>
     private const string AboutEn =
         "Hostpanel Demo is a fictional hosting company that exists only to show what this panel can do.\n\n"
@@ -58,13 +64,15 @@ internal sealed class DemoPortalSettingsSeeder
         (PortalSettingKeys.BrandFontBody, "inter"),
         // The storefront hides every row whose setting is empty, so the demo fills each one with a fictional value
         // to show the contact page, the hero figures, the nova claims and the About page complete.
-        (PortalSettingKeys.ContactAddress, "15 Example Street, Northvale 00001"),
+        (PortalSettingKeys.ContactAddress, "1 Market Street, Fairhaven"),
         (PortalSettingKeys.ContactHours, "Mon-Fri 09:00-18:00"),
         (PortalSettingKeys.ContactTimezone, "UTC"),
+        (PortalSettingKeys.ContactAddressRu, "Рыночная улица, 1, Фэрхейвен"),
+        (PortalSettingKeys.ContactAddressHy, "Շուկայի փողոց 1, Ֆերհեյվեն"),
+        (PortalSettingKeys.ContactHoursRu, "Пн-Пт 09:00-18:00"),
+        (PortalSettingKeys.ContactHoursHy, "Երկ-Ուրբ 09:00-18:00"),
         (PortalSettingKeys.LegalTaxId, "DEMO-000-0000"),
-        (PortalSettingKeys.StatsClients, "1,200+"),
-        (PortalSettingKeys.StatsUptime, "99.9%"),
-        (PortalSettingKeys.StatsRegions, "Europe, North America, Asia"),
+        // The hero figures (clients, uptime, regions) and the contact map are owned by DemoStorefrontSeeder, which runs after this one.
         (PortalSettingKeys.FeaturesBackups, "true"),
         (PortalSettingKeys.FeaturesStorage, "true"),
         (PortalSettingKeys.FeaturesCaching, "true"),
@@ -158,6 +166,13 @@ internal sealed class DemoPortalSettingsSeeder
             {
                 row.UpdateValue(value);
             }
+        }
+
+        // The mail templates come from the migrations with the product's own wording; the demo's welcome mail names the demo.
+        var welcome = await _db.EmailTemplates.FirstOrDefaultAsync(t => t.Slug == WelcomeTemplateSlug, ct);
+        if (welcome is not null && welcome.Subject != WelcomeSubject)
+        {
+            welcome.Update(WelcomeSubject, welcome.Body, welcome.Description);
         }
 
         await _db.SaveChangesAsync(ct);

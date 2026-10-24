@@ -115,12 +115,6 @@ internal sealed class DemoBillingSeeder
         };
     }
 
-    /// <summary>The first month, counted back from the current one, a customer is billed in; later joiners have shorter histories.</summary>
-    /// <param name="position">The customer's position in the id order, the demo client first.</param>
-    /// <returns>Months back, at most <see cref="DemoAnchor.HistoryMonths"/> minus one.</returns>
-    private static int FirstMonthBack(int position) =>
-        position == 0 ? DemoAnchor.HistoryMonths - 1 : Math.Min(DemoAnchor.HistoryMonths - 1, 3 + ((position * 5) % 9));
-
     /// <summary>Seeds every customer's invoices, newest last, with the payments and refunds on the settled ones.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
@@ -140,7 +134,7 @@ internal sealed class DemoBillingSeeder
         {
             var client = clients[c];
             var clientServices = services.GetValueOrDefault(client.Id) ?? [];
-            for (var monthsBack = FirstMonthBack(c); monthsBack >= 0; monthsBack--)
+            for (var monthsBack = DemoAnchor.FirstBillingMonthBack(c); monthsBack >= 0; monthsBack--)
             {
                 var status = StatusFor(client, c, monthsBack);
                 if (status is null)

@@ -99,7 +99,8 @@ public sealed class GetMyServicesHandler
                     svc.ServerId,
                     serverName,
                     serverHostname,
-                    serverIp);
+                    serverIp,
+                    svc.CreatedAt);
             })
             .ToList();
 

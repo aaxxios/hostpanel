@@ -120,6 +120,14 @@ export enum PortalSettingKey {
   AboutTextRu = 'portal.about.text.ru',
   /** Company story for Armenian visitors. */
   AboutTextHy = 'portal.about.text.hy',
+  /** Office address for Russian visitors. */
+  ContactAddressRu = 'portal.contact.address.ru',
+  /** Office address for Armenian visitors. */
+  ContactAddressHy = 'portal.contact.address.hy',
+  /** Support working hours for Russian visitors. */
+  ContactHoursRu = 'portal.contact.hours.ru',
+  /** Support working hours for Armenian visitors. */
+  ContactHoursHy = 'portal.contact.hours.hy',
   /** Home section switch: stats strip. */
   SectionStats = 'portal.sections.stats',
   /** Home section switch: partners. */

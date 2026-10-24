@@ -1,5 +1,5 @@
 /**
- * Tests for `GET /api/portal/client/emails/:id`: it calls the backend `GET /me/emails/7` with the session bearer, forwards the reader language and returns the backend's answer untouched.
+ * Tests for `GET /api/portal/client/emails/:id`: it calls the backend `GET /me/emails/7` with the session bearer, forwards the reader language and returns the message in the shape the email page reads (id, date, subject, message).
  *
  * @module tests/server/api/portal/client/emails/[id].get.test
  */
@@ -25,18 +25,21 @@ afterEach(async () => {
 })
 
 describe('GET /api/portal/client/emails/:id', () => {
-  it('calls the backend endpoint and returns its answer', async () => {
-    backend.respondWith(() => ({ body: { ok: true } }))
+  it('calls the backend endpoint and maps its answer to id, date, subject and message', async () => {
+    backend.respondWith(() => ({
+      body: { id: 7, to: 'a@b.test', subject: 'Invoice', body: '<p>Hello</p>', sentAt: '2026-02-03T00:00:00Z', success: true, error: null },
+    }))
 
     const result = await route.default(makeEvent({ params: { id: '7' }, cookies: { auth_token: 'jwt' } }))
 
-    expect(result).toEqual({ ok: true })
+    expect(result).toEqual({ id: '7', date: '2026-02-03T00:00:00Z', subject: 'Invoice', message: '<p>Hello</p>' })
     expect(backend.requests[0]?.method).toBe('GET')
     expect(backend.requests[0]?.url).toBe('/api/me/emails/7')
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
   })
 
   it('forwards the reader language to the backend', async () => {
+    backend.respondWith(() => ({ body: { id: 7, subject: 'Invoice', body: '', sentAt: '2026-02-03T00:00:00Z' } }))
     const event = makeEvent({ params: { id: '7' }, headers: { 'x-language': 'hy' }, cookies: { auth_token: 'jwt' } })
 
     await route.default(event)

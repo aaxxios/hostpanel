@@ -517,9 +517,14 @@
       "remove": "Remove",
       "removeConfirm": "Remove payment method?",
       "removeConfirmDesc": "This action cannot be undone.",
-      "cardEnding": "ending in",
       "expires": "Expires",
       "statusActive": "Active",
+      "defaultBadge": "Default",
+      "type": {
+        "card": "Card",
+        "bankAccount": "Bank account",
+        "other": "Payment method"
+      },
       "removeSuccess": "Payment method removed",
       "setDefault": "Set as Default",
       "defaultSet": "Default payment method updated"

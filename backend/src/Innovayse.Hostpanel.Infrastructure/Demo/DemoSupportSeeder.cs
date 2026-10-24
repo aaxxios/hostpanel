@@ -25,56 +25,75 @@ internal sealed class DemoSupportSeeder
     /// <summary>The name staff replies are signed with.</summary>
     private const string AgentName = "Support Team";
 
-    /// <summary>The tags put on tickets, rotated.</summary>
-    private static readonly string[] TagNames = ["billing", "urgent", "dns", "ssl", "migration", "vps", "email", "refund"];
+    /// <summary>The name of the default department that handles technical problems.</summary>
+    private const string TechnicalDepartment = "Technical Support";
 
-    /// <summary>The subjects and opening messages of the tickets, in order and repeating past the end; the first ones belong to the demo client.</summary>
-    private static readonly (string Subject, string Message)[] TicketTopics =
+    /// <summary>The name of the default department that handles invoices and payments.</summary>
+    private const string BillingDepartment = "Billing";
+
+    /// <summary>The name of the default department that handles plans and quotes.</summary>
+    private const string SalesDepartment = "Sales";
+
+    /// <summary>The name of the default department that handles everything else.</summary>
+    private const string GeneralDepartment = "General";
+
+    /// <summary>The tags that fit the tickets of each department, rotated; a ticket is only ever tagged from its own department's list.</summary>
+    private static readonly Dictionary<string, string[]> TagsByDepartment = new()
+    {
+        [TechnicalDepartment] = ["dns", "ssl", "email", "vps", "urgent"],
+        [BillingDepartment] = ["billing", "refund"],
+        [SalesDepartment] = ["migration", "vps"],
+        [GeneralDepartment] = ["email", "migration"],
+        [ExtraDepartment] = ["urgent", "ssl"],
+    };
+
+    /// <summary>The subjects, opening messages and handling departments of the tickets, in order and repeating past the end; the first ones belong to the demo client.</summary>
+    private static readonly (string Subject, string Message, string Department)[] TicketTopics =
     [
-        ("My site is loading slowly since yesterday", "The pages of my site have taken several seconds to load since yesterday evening. I have not changed anything on my side. Could you take a look?"),
-        ("Question about the invoice for last month", "Could you tell me why the invoice for last month includes a domain renewal line?"),
-        ("Please add an extra mailbox to my plan", "We hired a new colleague and need one more mailbox on our domain. What is the quickest way to add it?"),
-        ("Need help pointing my domain to an external service", "I need to add a CNAME record for a third-party service and I am not sure which values to use."),
-        ("Request to upgrade to a VPS", "I would like to move from shared hosting to a VPS. What are the steps and the new monthly price?"),
-        ("Certificate warning on my site", "Visitors see a security warning on my site since this morning. Please check the certificate."),
-        ("Email is bouncing for one recipient", "Messages to one customer come back as undeliverable. Other recipients are fine."),
-        ("Restore a file deleted by mistake", "I removed a folder from my account this morning and would like it restored from last night's backup."),
-        ("Transfer a domain from another provider", "I started a transfer yesterday and have not received any confirmation. Can you check the status?"),
-        ("Charged twice for the same service", "My card statement shows two charges for the same hosting renewal. Please look into it."),
-        ("How do I enable two-factor sign-in?", "I cannot find the setting for two-factor sign-in in my account. Where is it?"),
-        ("Server unreachable from my office", "My dedicated server answers from home but not from the office network. Could a firewall rule be blocking us?"),
-        ("Change the billing contact", "Our accountant has changed. Please send invoices to the new address from now on."),
-        ("Increase the disk quota", "My account is close to its disk limit. What are the options for more space?"),
-        ("Reverse DNS for my mail server", "Our outgoing mail is flagged because the reverse DNS does not match. Can you set it for our address?"),
-        ("Website shows a database error", "Since an update this afternoon the site shows a database connection error."),
-        ("Cancel auto-renew for an old domain", "We no longer need one of our domains. Please turn off auto-renew for it."),
-        ("Quote for a managed migration", "We plan to move twelve sites from another host. Could you quote a managed migration?"),
-        ("Abuse report received about my account", "I received a notice that a site on my account sent spam. I believe it was hacked. What should I do?"),
-        ("Slow response from the control panel", "The control panel takes a long time to open in the evening. Is there a known issue?"),
-        ("Add a staging copy of my site", "We would like a staging copy of our shop to test changes before they go live. Is that possible on our plan?"),
-        ("Cron job does not run", "A scheduled task I set up last week has never run. The command works when I start it by hand."),
-        ("Need a copy of a paid invoice", "Our auditor asks for a copy of an invoice we paid in spring. Where can I download it?"),
-        ("Move my VPS to another region", "Most of our visitors are now in North America. Can the VPS be moved closer to them?"),
-        ("Upload limit too small", "Uploading a large video to the site fails. Can the upload size limit be raised?"),
-        ("Domain shows as expired", "One of our domains shows as expired although auto-renew was on. What happened?"),
-        ("Set up mail on a new phone", "A colleague needs the mailbox on a new phone. Which server settings should she use?"),
-        ("Too many failed sign-in alerts", "We get alerts about failed sign-ins on our account every night. Is someone trying to break in?"),
-        ("Change the primary domain of a service", "We rebranded and want the hosting service to use the new domain as its main one."),
-        ("Invoice in the wrong currency", "Our latest invoice is in dollars but we pay in drams. Can it be reissued?"),
-        ("Snapshot before an upgrade", "Please take a snapshot of the VPS before we upgrade the operating system tonight."),
-        ("Website redirects to the wrong page", "After moving to secure connections the home page redirects to an old landing page."),
-        ("Add a second admin to our account", "Our new office manager needs access to billing and tickets. How do we add her?"),
-        ("Bandwidth warning received", "We got a notice that the service is close to its monthly bandwidth. What happens if we go over?"),
-        ("Unable to connect over SSH", "SSH to the server times out since this morning. The website itself still loads."),
-        ("Refund for an unused add-on", "We ordered a dedicated IP by mistake and never used it. Could it be refunded?"),
-        ("Wildcard certificate installation", "We bought a wildcard certificate and need help installing it on three subdomains."),
-        ("Mailbox is full", "One mailbox stopped receiving mail because it is full. Can it be enlarged or archived?"),
-        ("Database import fails", "Importing a database dump stops halfway with a timeout. Is there another way to import it?"),
-        ("Question about the reseller plan", "How many client accounts can we create on the reseller plan, and can they have their own branding?"),
-        ("PHP version for an old site", "One of our older sites needs an older PHP version. Can it run side by side with the others?"),
-        ("Order stuck in pending", "We placed an order two days ago and it still shows as pending. Is anything missing on our side?"),
-        ("Block traffic from one address", "One address keeps flooding our contact form. Can you block it at the server level?"),
-        ("Close our old account", "We have moved everything to a new account. Please close the old one once the last invoice is settled."),
+        ("My site is loading slowly since yesterday", "The pages of my site have taken several seconds to load since yesterday evening. I have not changed anything on my side. Could you take a look?", TechnicalDepartment),
+        ("Question about the invoice for last month", "Could you tell me why the invoice for last month includes a domain renewal line?", BillingDepartment),
+        ("Please add an extra mailbox to my plan", "We hired a new colleague and need one more mailbox on our domain. What is the quickest way to add it?", SalesDepartment),
+        ("Need help pointing my domain to an external service", "I need to add a CNAME record for a third-party service and I am not sure which values to use.", TechnicalDepartment),
+        ("Request to upgrade to a VPS", "I would like to move from shared hosting to a VPS. What are the steps and the new monthly price?", SalesDepartment),
+        ("Certificate warning on my site", "Visitors see a security warning on my site since this morning. Please check the certificate.", TechnicalDepartment),
+        ("Email is bouncing for one recipient", "Messages to one customer come back as undeliverable. Other recipients are fine.", TechnicalDepartment),
+        ("Restore a file deleted by mistake", "I removed a folder from my account this morning and would like it restored from last night's backup.", TechnicalDepartment),
+        ("Transfer a domain from another provider", "I started a transfer yesterday and have not received any confirmation. Can you check the status?", GeneralDepartment),
+        ("Charged twice for the same service", "My card statement shows two charges for the same hosting renewal. Please look into it.", BillingDepartment),
+        ("How do I enable two-factor sign-in?", "I cannot find the setting for two-factor sign-in in my account. Where is it?", GeneralDepartment),
+        ("Server unreachable from my office", "My dedicated server answers from home but not from the office network. Could a firewall rule be blocking us?", TechnicalDepartment),
+        ("Change the billing contact", "Our accountant has changed. Please send invoices to the new address from now on.", BillingDepartment),
+        ("Increase the disk quota", "My account is close to its disk limit. What are the options for more space?", SalesDepartment),
+        ("Reverse DNS for my mail server", "Our outgoing mail is flagged because the reverse DNS does not match. Can you set it for our address?", TechnicalDepartment),
+        ("Website shows a database error", "Since an update this afternoon the site shows a database connection error.", TechnicalDepartment),
+        ("Cancel auto-renew for an old domain", "We no longer need one of our domains. Please turn off auto-renew for it.", GeneralDepartment),
+        ("Quote for a managed migration", "We plan to move twelve sites from another host. Could you quote a managed migration?", SalesDepartment),
+        ("Abuse report received about my account", "I received a notice that a site on my account sent spam. I believe it was hacked. What should I do?", ExtraDepartment),
+        ("Slow response from the control panel", "The control panel takes a long time to open in the evening. Is there a known issue?", TechnicalDepartment),
+        ("Add a staging copy of my site", "We would like a staging copy of our shop to test changes before they go live. Is that possible on our plan?", TechnicalDepartment),
+        ("Cron job does not run", "A scheduled task I set up last week has never run. The command works when I start it by hand.", TechnicalDepartment),
+        ("Need a copy of a paid invoice", "Our auditor asks for a copy of an invoice we paid in spring. Where can I download it?", BillingDepartment),
+        ("Move my VPS to another region", "Most of our visitors are now in North America. Can the VPS be moved closer to them?", SalesDepartment),
+        ("Upload limit too small", "Uploading a large video to the site fails. Can the upload size limit be raised?", TechnicalDepartment),
+        ("Domain shows as expired", "One of our domains shows as expired although auto-renew was on. What happened?", GeneralDepartment),
+        ("Set up mail on a new phone", "A colleague needs the mailbox on a new phone. Which server settings should she use?", TechnicalDepartment),
+        ("Too many failed sign-in alerts", "We get alerts about failed sign-ins on our account every night. Is someone trying to break in?", ExtraDepartment),
+        ("Change the primary domain of a service", "We rebranded and want the hosting service to use the new domain as its main one.", GeneralDepartment),
+        ("Invoice in the wrong currency", "Our latest invoice is in dollars but we pay in drams. Can it be reissued?", BillingDepartment),
+        ("Snapshot before an upgrade", "Please take a snapshot of the VPS before we upgrade the operating system tonight.", TechnicalDepartment),
+        ("Website redirects to the wrong page", "After moving to secure connections the home page redirects to an old landing page.", TechnicalDepartment),
+        ("Add a second admin to our account", "Our new office manager needs access to billing and tickets. How do we add her?", GeneralDepartment),
+        ("Bandwidth warning received", "We got a notice that the service is close to its monthly bandwidth. What happens if we go over?", SalesDepartment),
+        ("Unable to connect over SSH", "SSH to the server times out since this morning. The website itself still loads.", TechnicalDepartment),
+        ("Refund for an unused add-on", "We ordered a dedicated IP by mistake and never used it. Could it be refunded?", BillingDepartment),
+        ("Wildcard certificate installation", "We bought a wildcard certificate and need help installing it on three subdomains.", TechnicalDepartment),
+        ("Mailbox is full", "One mailbox stopped receiving mail because it is full. Can it be enlarged or archived?", TechnicalDepartment),
+        ("Database import fails", "Importing a database dump stops halfway with a timeout. Is there another way to import it?", TechnicalDepartment),
+        ("Question about the reseller plan", "How many client accounts can we create on the reseller plan, and can they have their own branding?", SalesDepartment),
+        ("PHP version for an old site", "One of our older sites needs an older PHP version. Can it run side by side with the others?", TechnicalDepartment),
+        ("Order stuck in pending", "We placed an order two days ago and it still shows as pending. Is anything missing on our side?", SalesDepartment),
+        ("Block traffic from one address", "One address keeps flooding our contact form. Can you block it at the server level?", ExtraDepartment),
+        ("Close our old account", "We have moved everything to a new account. Please close the old one once the last invoice is settled.", GeneralDepartment),
     ];
 
     /// <summary>What staff say in a thread, in turn.</summary>
@@ -280,8 +299,9 @@ internal sealed class DemoSupportSeeder
     private async Task SeedTicketsAsync(int demoClientId, CancellationToken ct)
     {
         var departments = await _db.Departments.OrderBy(d => d.Id).ToListAsync(ct);
+        var demoClient = await _db.Clients.FirstOrDefaultAsync(c => c.Id == demoClientId, ct);
         var otherClients = await _db.Clients.Where(c => c.Id != demoClientId).OrderBy(c => c.Id).ToListAsync(ct);
-        if (departments.Count == 0 || otherClients.Count == 0)
+        if (departments.Count == 0 || otherClients.Count == 0 || demoClient is null)
         {
             return;
         }
@@ -289,9 +309,13 @@ internal sealed class DemoSupportSeeder
         var priorities = new[] { TicketPriority.High, TicketPriority.Medium, TicketPriority.Low };
         for (var n = 0; n < TicketCount; n++)
         {
-            var (subject, message) = TicketTopics[n % TicketTopics.Length];
-            var clientId = n < DemoClientTickets ? demoClientId : otherClients[(n - DemoClientTickets) % otherClients.Count].Id;
-            var ticket = Ticket.Create(clientId, subject, message, departments[n % departments.Count].Id, priorities[n % priorities.Length]);
+            var (subject, message, departmentName) = TicketTopics[n % TicketTopics.Length];
+            var owner = n < DemoClientTickets ? demoClient : otherClients[(n - DemoClientTickets) % otherClients.Count];
+
+            // A ticket goes to the department that handles its subject; a deployment whose departments were renamed falls back to the first one.
+            var department = departments.FirstOrDefault(d => d.Name == departmentName) ?? departments[0];
+            var ticket = Ticket.Create(owner.Id, subject, message, department.Id, priorities[n % priorities.Length]);
+            var customer = $"{owner.FirstName} {owner.LastName}".Trim();
 
             var shape = n % 5;
             if (shape >= 1)
@@ -301,25 +325,26 @@ internal sealed class DemoSupportSeeder
 
             if (shape is 2 or 3)
             {
-                ticket.AddReply(ClientReplies[n % ClientReplies.Length], "Customer", false);
+                ticket.AddReply(ClientReplies[n % ClientReplies.Length], customer, false);
                 ticket.AddReply(StaffReplies[(n + 2) % StaffReplies.Length], AgentName, true);
             }
 
             if (shape == 2)
             {
-                ticket.AddReply(ClientReplies[(n + 1) % ClientReplies.Length], "Customer", false);
+                ticket.AddReply(ClientReplies[(n + 1) % ClientReplies.Length], customer, false);
             }
 
             if (shape is 3 or 4)
             {
                 ticket.Close();
-                ticket.LeaveFeedback(6 + (n % 5), shape == 3 ? "Quick and helpful, thank you." : null, "Customer");
+                ticket.LeaveFeedback(6 + (n % 5), shape == 3 ? "Quick and helpful, thank you." : null, customer);
             }
 
-            ticket.AddTag(TagNames[n % TagNames.Length]);
+            var tags = TagsByDepartment.GetValueOrDefault(department.Name) ?? TagsByDepartment[GeneralDepartment];
+            ticket.AddTag(tags[n % tags.Length]);
             if (n % 3 == 0)
             {
-                ticket.AddTag(TagNames[(n + 3) % TagNames.Length]);
+                ticket.AddTag(tags[(n + 1) % tags.Length]);
             }
 
             if (n % 6 == 0)
@@ -327,6 +352,8 @@ internal sealed class DemoSupportSeeder
                 ticket.ToggleFlag();
             }
 
+            // The ticket was opened days ago and each message followed hours after the last, not all at the moment of seeding.
+            ticket.Backdate(_today.AddDays(-(2 + ((n * 7) % 58))).AddHours(8 + (n % 9)), TimeSpan.FromHours(2 + (n % 4)));
             _db.Tickets.Add(ticket);
         }
 
@@ -367,9 +394,14 @@ internal sealed class DemoSupportSeeder
             ("Upcoming: new client area", "We are preparing a redesigned client area. This note is a draft and is not yet shown to customers.", false),
         ];
 
-        foreach (var (title, content, published) in announcements)
+        // The list runs from the oldest to the newest, so the first one was posted about five months ago and the last
+        // (the draft) a few days ago; every announcement gets its own day instead of the moment of seeding.
+        for (var n = 0; n < announcements.Length; n++)
         {
-            _db.Announcements.Add(Announcement.Create(title, content, published));
+            var (title, content, published) = announcements[n];
+            var announcement = Announcement.Create(title, content, published);
+            announcement.Backdate(_today.AddDays(-(3 + ((announcements.Length - 1 - n) * 6))).AddHours(9 + (n % 8)));
+            _db.Announcements.Add(announcement);
         }
 
         await _db.SaveChangesAsync(ct);
@@ -380,29 +412,30 @@ internal sealed class DemoSupportSeeder
     /// <returns>A task that completes once the rows are saved.</returns>
     private async Task SeedNetworkIssuesAsync(CancellationToken ct)
     {
-        (string Title, NetworkIssueType Type, string? Server, NetworkIssuePriority Priority, NetworkIssueStatus Status, int StartedDaysAgo, string Description)[] issues =
+        (string Title, NetworkIssueType Type, string? Server, NetworkIssuePriority Priority, NetworkIssueStatus Status, int StartedDaysAgo, string Description, int ResolvedAfterMinutes)[] issues =
         [
-            ("Packet loss on the Frankfurt uplink", NetworkIssueType.Server, "Shared EU-01", NetworkIssuePriority.High, NetworkIssueStatus.Investigating, 0, "<p>Some customers see slow loading. Our engineers are checking the upstream link.</p>"),
-            ("Planned switch replacement", NetworkIssueType.Other, null, NetworkIssuePriority.Medium, NetworkIssueStatus.Scheduled, -3, "<p>We replace a core switch this weekend. Expect up to ten minutes of interruption.</p>"),
-            ("Control panel login errors", NetworkIssueType.Server, "VPS EU-01", NetworkIssuePriority.Low, NetworkIssueStatus.Reported, 1, "<p>A few users could not sign in to the control panel. We are collecting reports.</p>"),
-            ("Mail delivery delays", NetworkIssueType.Other, null, NetworkIssuePriority.Medium, NetworkIssueStatus.Resolved, 9, "<p>Outgoing mail was delayed by up to an hour. The queue has been cleared.</p>"),
-            ("Disk failure on a storage node", NetworkIssueType.Server, "Dedicated EU-01", NetworkIssuePriority.Critical, NetworkIssueStatus.Resolved, 21, "<p>A failed disk was replaced and the array rebuilt. No data was lost.</p>"),
-            ("DNS resolver slowdown", NetworkIssueType.Other, null, NetworkIssuePriority.High, NetworkIssueStatus.Resolved, 40, "<p>Name resolution was slow for about two hours. A resolver was restarted and monitoring added.</p>"),
-            ("Backup jobs running late", NetworkIssueType.Server, "Shared EU-02", NetworkIssuePriority.Low, NetworkIssueStatus.Investigating, 1, "<p>Last night's backups finished later than usual. Engineers are checking the storage throughput.</p>"),
-            ("Kernel updates on virtual servers", NetworkIssueType.Server, "VPS US-01", NetworkIssuePriority.Medium, NetworkIssueStatus.Scheduled, -7, "<p>Host nodes will be patched and rebooted one by one. Each server restarts once, for about five minutes.</p>"),
-            ("Webmail sign-in slow", NetworkIssueType.Other, null, NetworkIssuePriority.Low, NetworkIssueStatus.Reported, 0, "<p>Some users report that webmail takes long to open. We are gathering details.</p>"),
-            ("Power maintenance in one rack", NetworkIssueType.Server, "Dedicated US-01", NetworkIssuePriority.High, NetworkIssueStatus.Resolved, 60, "<p>Power supplies were replaced during the announced window. All servers came back as planned.</p>"),
-            ("Certificate renewals delayed", NetworkIssueType.Other, null, NetworkIssuePriority.Medium, NetworkIssueStatus.Resolved, 75, "<p>Automatic renewals were held back for a few hours. Every certificate was renewed before expiry.</p>"),
-            ("Brief outage on the billing pages", NetworkIssueType.Other, null, NetworkIssuePriority.Critical, NetworkIssueStatus.Resolved, 95, "<p>The billing pages were unavailable for twelve minutes after a deployment. The change was rolled back.</p>"),
+            ("Packet loss on the Frankfurt uplink", NetworkIssueType.Server, "Shared EU-01", NetworkIssuePriority.High, NetworkIssueStatus.Investigating, 0, "<p>Some customers see slow loading. Our engineers are checking the upstream link.</p>", 0),
+            ("Planned switch replacement", NetworkIssueType.Other, null, NetworkIssuePriority.Medium, NetworkIssueStatus.Scheduled, -3, "<p>We replace a core switch this weekend. Expect up to ten minutes of interruption.</p>", 0),
+            ("Control panel login errors", NetworkIssueType.Server, "VPS EU-01", NetworkIssuePriority.Low, NetworkIssueStatus.Reported, 1, "<p>A few users could not sign in to the control panel. We are collecting reports.</p>", 0),
+            ("Mail delivery delays", NetworkIssueType.Other, null, NetworkIssuePriority.Medium, NetworkIssueStatus.Resolved, 9, "<p>Outgoing mail was delayed by up to an hour. The queue has been cleared.</p>", 90),
+            ("Disk failure on a storage node", NetworkIssueType.Server, "Dedicated EU-01", NetworkIssuePriority.Critical, NetworkIssueStatus.Resolved, 21, "<p>A failed disk was replaced and the array rebuilt. No data was lost.</p>", 420),
+            ("DNS resolver slowdown", NetworkIssueType.Other, null, NetworkIssuePriority.High, NetworkIssueStatus.Resolved, 40, "<p>Name resolution was slow for about two hours. A resolver was restarted and monitoring added.</p>", 150),
+            ("Backup jobs running late", NetworkIssueType.Server, "Shared EU-02", NetworkIssuePriority.Low, NetworkIssueStatus.Investigating, 1, "<p>Last night's backups finished later than usual. Engineers are checking the storage throughput.</p>", 0),
+            ("Kernel updates on virtual servers", NetworkIssueType.Server, "VPS US-01", NetworkIssuePriority.Medium, NetworkIssueStatus.Scheduled, -7, "<p>Host nodes will be patched and rebooted one by one. Each server restarts once, for about five minutes.</p>", 0),
+            ("Webmail sign-in slow", NetworkIssueType.Other, null, NetworkIssuePriority.Low, NetworkIssueStatus.Reported, 0, "<p>Some users report that webmail takes long to open. We are gathering details.</p>", 0),
+            ("Power maintenance in one rack", NetworkIssueType.Server, "Dedicated US-01", NetworkIssuePriority.High, NetworkIssueStatus.Resolved, 60, "<p>Power supplies were replaced during the announced window. All servers came back as planned.</p>", 240),
+            ("Certificate renewals delayed", NetworkIssueType.Other, null, NetworkIssuePriority.Medium, NetworkIssueStatus.Resolved, 75, "<p>Automatic renewals were held back for a few hours. Every certificate was renewed before expiry.</p>", 300),
+            ("Brief outage on the billing pages", NetworkIssueType.Other, null, NetworkIssuePriority.Critical, NetworkIssueStatus.Resolved, 95, "<p>The billing pages were unavailable for twelve minutes after a deployment. The change was rolled back.</p>", 12),
         ];
 
-        foreach (var (title, type, server, priority, status, startedDaysAgo, description) in issues)
+        foreach (var (title, type, server, priority, status, startedDaysAgo, description, resolvedAfterMinutes) in issues)
         {
             var start = _today.AddDays(-startedDaysAgo);
             var issue = NetworkIssue.Create(title, type, server, priority, start, description);
             if (status == NetworkIssueStatus.Resolved)
             {
-                issue.Resolve();
+                // Resolved when the work was done, a few minutes or hours after it began, not at the moment of seeding.
+                issue.Update(title, type, server, priority, status, start, start.AddMinutes(resolvedAfterMinutes), description);
             }
             else if (status != NetworkIssueStatus.Reported)
             {

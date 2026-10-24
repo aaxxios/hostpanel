@@ -86,7 +86,8 @@ internal sealed class DemoServerSeeder
                 PrimaryNameserver, "192.0.2.1", SecondaryNameserver, "192.0.2.2",
                 null, null, null, null, null, null));
             server.AssignToGroup(groupId);
-            server.RecordConnectionTest(online, online ? 12 + (i * 4) : null);
+            // Between a quarter and three quarters full, so an account count never passes the server's own limit.
+            server.RecordConnectionTest(online, online ? max * (25 + ((i * 11) % 50)) / 100 : null);
             _db.Servers.Add(server);
         }
 

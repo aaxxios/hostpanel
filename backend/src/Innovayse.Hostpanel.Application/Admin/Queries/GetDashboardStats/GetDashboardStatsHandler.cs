@@ -42,13 +42,18 @@ public sealed class GetDashboardStatsHandler
         var now = DateTimeOffset.UtcNow;
         var thirtyDaysAgo = now - MonthlyWindow;
 
+        // Invoices are issued in each client's own currency, so a figure that adds them up first converts every
+        // total to the base currency; adding drams to dollars as if they were the same unit overstates revenue a thousand times.
+        var rates = await _context.Currencies.AsNoTracking().ToDictionaryAsync(c => c.Code, c => c.RateToBase, ct);
+        decimal InBase(Invoice invoice) => invoice.Total * rates.GetValueOrDefault(invoice.Currency, 1m);
+
         var totalRevenue = allInvoices
             .Where(i => i.Status == InvoiceStatus.Paid)
-            .Sum(i => i.Total);
+            .Sum(InBase);
 
         var monthlyRevenue = allInvoices
             .Where(i => i.Status == InvoiceStatus.Paid && i.PaidAt >= thirtyDaysAgo)
-            .Sum(i => i.Total);
+            .Sum(InBase);
 
         var overdueInvoices = allInvoices.Count(i => i.Status == InvoiceStatus.Overdue);
 

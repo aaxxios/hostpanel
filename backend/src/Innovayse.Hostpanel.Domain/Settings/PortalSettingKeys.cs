@@ -295,6 +295,18 @@ public static class PortalSettingKeys
     /// <summary>Typical phone response time shown on the phone support card, e.g. <c>immediate</c>.</summary>
     public const string SupportResponsePhone = "portal.support.response.phone";
 
+    /// <summary>Office address for Russian visitors. Empty uses <see cref="ContactAddress"/>.</summary>
+    public const string ContactAddressRu = "portal.contact.address.ru";
+
+    /// <summary>Office address for Armenian visitors. Empty uses <see cref="ContactAddress"/>.</summary>
+    public const string ContactAddressHy = "portal.contact.address.hy";
+
+    /// <summary>Support working hours for Russian visitors. Empty uses <see cref="ContactHours"/>.</summary>
+    public const string ContactHoursRu = "portal.contact.hours.ru";
+
+    /// <summary>Support working hours for Armenian visitors. Empty uses <see cref="ContactHours"/>.</summary>
+    public const string ContactHoursHy = "portal.contact.hours.hy";
+
     /// <summary>The template a fresh install starts with. Mirrors <c>DEFAULT_TEMPLATE</c> in <c>client/templates/types.ts</c>.</summary>
     public const StorefrontTemplate DefaultTemplate = StorefrontTemplate.Classic;
 
@@ -357,6 +369,14 @@ public static class PortalSettingKeys
                 new Regex("^https://[^\\s/]+(/[^\\s]*)?$", RegexOptions.CultureInvariant),
                 "an https:// address like https://chat.example.com",
                 v => v.TrimEnd('/')),
+            [ContactEmail] = new(
+                new Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", RegexOptions.CultureInvariant),
+                "an address like support@example.com",
+                v => v),
+            [ContactMapUrl] = new(
+                new Regex("^https://[^\\s/]+(/[^\\s]*)?$", RegexOptions.CultureInvariant),
+                "an https:// address like https://maps.example.com/embed",
+                v => v),
             [GuaranteeMoneyBackDays] = new(
                 new Regex("^[0-9]{1,3}$", RegexOptions.CultureInvariant),
                 "a whole number of days like 30",
@@ -472,6 +492,10 @@ public static class PortalSettingKeys
         (SocialTwitter,       "",       "Twitter profile URL. Empty hides the icon."),
         (ContactHours,        "",       "Support working hours shown on the contact page. Empty hides the row."),
         (ContactTimezone,     "",       "Time zone the working hours are stated in, shown beside them. Ignored while the hours are empty."),
+        (ContactAddressRu,    "",       "Office address for Russian visitors. Empty uses the default address."),
+        (ContactAddressHy,    "",       "Office address for Armenian visitors. Empty uses the default address."),
+        (ContactHoursRu,      "",       "Support working hours for Russian visitors. Empty uses the default hours."),
+        (ContactHoursHy,      "",       "Support working hours for Armenian visitors. Empty uses the default hours."),
         (FeaturesBackups,     "",       "Show the backups claims on the nova template: true or false. Empty hides them."),
         (FeaturesStorage,     "",       "Show the storage claim on the nova template: true or false. Empty hides it."),
         (FeaturesCaching,     "",       "Show the caching claim on the nova template: true or false. Empty hides it."),

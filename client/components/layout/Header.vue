@@ -34,14 +34,14 @@
           data-testid="layout-desktop-nav"
         >
           <template v-for="item in navItems" :key="item.key">
-            <LayoutHeaderDropdown v-if="item.children" :item="item" :path="route.path" />
+            <LayoutHeaderDropdown v-if="item.children" :item="item" :path="route.path" :active="item.key === activeKey" />
             <UiLink
               v-else
               :to="item.to"
               tone="inherit"
               :underline="false"
-              :class="[HEADER_NAV_ITEM, isHeaderPathActive(route.path, item.to) ? HEADER_NAV_ACTIVE : HEADER_NAV_IDLE]"
-              :aria-current="isHeaderPathActive(route.path, item.to) ? 'page' : undefined"
+              :class="[HEADER_NAV_ITEM, item.key === activeKey ? HEADER_NAV_ACTIVE : HEADER_NAV_IDLE]"
+              :aria-current="item.key === activeKey ? 'page' : undefined"
               :testid="`header-nav-${item.key}`"
             >
               {{ item.label }}
@@ -132,7 +132,7 @@ import { useHeaderWidget } from '~/composables/useHeaderWidget'
 import { useCartStore } from '~/stores/cart'
 import { useCatalogStore } from '~/stores/catalog'
 import { HEADER_CONTROL, HEADER_NAV_ACTIVE, HEADER_NAV_IDLE, HEADER_NAV_ITEM, HEADER_PRIMARY } from '~/utils/headerControl'
-import { buildHeaderNav, isHeaderPathActive } from '~/utils/headerNav'
+import { activeHeaderKey, buildHeaderNav } from '~/utils/headerNav'
 
 /** Scroll distance (px) after which the bar gets its shadow. */
 const SCROLL_SHADOW_THRESHOLD = 8
@@ -180,6 +180,9 @@ const navItems = computed(() => buildHeaderNav({
   groups: familyGroups.value,
   products: familyProducts.value,
 }))
+
+/** Key of the one entry that stands for the current page. */
+const activeKey = computed(() => activeHeaderKey(route.path, navItems.value))
 
 /** Records the scroll position for the bar's shadow. */
 const handleScroll = (): void => {
