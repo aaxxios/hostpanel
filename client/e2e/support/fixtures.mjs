@@ -247,15 +247,15 @@ export const INVOICE = {
   transactions: [],
 }
 
-/** The saved card the pay page preselects. */
+/** The saved card the pay page preselects, in the camelCase shape the backend sends. */
 export const SAVED_CARD = {
   id: 'pm_e2e',
   type: 'card',
-  description: 'Visa 4242',
-  gateway_name: 'stripe',
-  card_last_four: '4242',
-  card_expiry: '12/30',
-  card_type: 'Visa',
+  brand: 'visa',
+  last4: '4242',
+  expiryMonth: 12,
+  expiryYear: 2030,
+  isDefault: false,
 }
 
 /** Operator settings the storefront reads; a light default and an uploaded light/dark logo pair. */

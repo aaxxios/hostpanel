@@ -9,7 +9,7 @@ import TransferPage from '~/pages/client/domains/transfer.vue'
 const domainsApi = vi.hoisted(() => ({ createTransferOrder: vi.fn() }))
 
 /** The mocked billing endpoints the store reaches. */
-const billingApi = vi.hoisted(() => ({ fetchPaymentMethods: vi.fn() }))
+const billingApi = vi.hoisted(() => ({ fetchGatewayMethods: vi.fn() }))
 
 vi.mock('~/composables/apis/useDomainsApi', () => ({ useDomainsApi: () => domainsApi }))
 vi.mock('~/composables/apis/useBillingApi', () => ({ useBillingApi: () => billingApi }))
@@ -17,14 +17,14 @@ vi.mock('~/composables/apis/useClientApi', () => ({ useClientApi: () => ({}) }))
 vi.mock('~/composables/apis/useCatalogApi', () => ({ useCatalogApi: () => ({}) }))
 vi.mock('~/composables/apis/useCurrencyApi', () => ({ useCurrencyApi: () => ({}) }))
 
-/** A saved card. */
-const card = { id: 'pm_1', type: 'card', description: 'Visa', gateway_name: 'stripe', card_last_four: '4242' }
+/** A gateway. */
+const card = { module: 'stripe', displayName: 'Stripe' }
 
 describe('domain transfer page', () => {
   beforeEach(() => {
     domainsApi.createTransferOrder.mockReset()
-    billingApi.fetchPaymentMethods.mockReset()
-    billingApi.fetchPaymentMethods.mockResolvedValue([card])
+    billingApi.fetchGatewayMethods.mockReset()
+    billingApi.fetchGatewayMethods.mockResolvedValue([card])
     stubClientRuntime({ query: { domain: 'moving.org', eppcode: 'AUTH-1' } })
   })
 
@@ -49,7 +49,7 @@ describe('domain transfer page', () => {
   })
 
   it('says so, and cannot order, when there is no payment method', async () => {
-    billingApi.fetchPaymentMethods.mockResolvedValue([])
+    billingApi.fetchGatewayMethods.mockResolvedValue([])
 
     const wrapper = await mountPage(TransferPage)
 

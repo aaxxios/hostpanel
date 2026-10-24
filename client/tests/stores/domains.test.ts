@@ -32,7 +32,7 @@ const domainsApi = {
 const catalogApi = { checkDomain: vi.fn(), fetchProducts: vi.fn() }
 
 /** The mocked billing endpoints. */
-const billingApi = { fetchPaymentMethods: vi.fn() }
+const billingApi = { fetchPaymentMethods: vi.fn(), fetchGatewayMethods: vi.fn() }
 
 /** The mocked client endpoints. */
 const clientApi = { fetchContacts: vi.fn(), fetchMeOnce: vi.fn() }
@@ -381,8 +381,8 @@ describe('useDomainsStore detail reads', () => {
     expect(await useDomainsStore().loadPrimaryProfile()).toBeNull()
   })
 
-  it('keeps the saved payment methods, and an empty list when they cannot be read', async () => {
-    billingApi.fetchPaymentMethods.mockResolvedValueOnce([{ id: 'pm_1', gateway_name: 'stripe' }]).mockRejectedValueOnce(refusal)
+  it('keeps the gateways, and an empty list when they cannot be read', async () => {
+    billingApi.fetchGatewayMethods.mockResolvedValueOnce([{ module: 'stripe', displayName: 'Stripe' }]).mockRejectedValueOnce(refusal)
     const store = useDomainsStore()
 
     await store.loadPaymentMethods()
