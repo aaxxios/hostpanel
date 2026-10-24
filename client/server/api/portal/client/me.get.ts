@@ -7,8 +7,11 @@
  * Billing fields (company, address, payment method, language, email preferences) still
  * come from the legacy-style C# backend /clients/me, the same record `PUT` (below) writes
  * to -- without this, a real sso-mode client's edits would save but never read back.
- * A staff/admin identity with no linked client record (checked via /clients/me 400/404)
- * gets identity fields only, with billing fields left at their empty defaults.
+ * A staff/admin identity with no linked client record (/clients/me answers 403 when the
+ * identity lacks the Client role, 404 when it has the role but no record) gets identity
+ * fields only, with billing fields left at their empty defaults, and `hasClientProfile: false`
+ * so the portal can show the "not a customer account" notice without first sending every
+ * customer-only request and logging the browser's console error for each refusal.
  *
  * In local mode: everything, including identity, comes from /clients/me.
  *
@@ -26,6 +29,10 @@
 
 import { AuthMode } from '~/types/authmode'
 import { SessionCookie } from '~/constants/sessionCookie'
+
+/** Statuses `/clients/me` answers with when the identity is not a customer account (no Client role, no client record). */
+const NOT_A_CUSTOMER_STATUSES: ReadonlySet<number> = new Set([403, 404])
+
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const authMode = config.authMode as string ?? AuthMode.Sso
@@ -44,8 +51,13 @@ export default defineEventHandler(async (event) => {
     }
     const identity = await res.json() as Record<string, unknown>
 
+    /** True only when the backend said this identity is not a customer; any other failure leaves it unknown. */
+    let notACustomer = false
     const billing = await internalApiCall<Record<string, unknown>>(event, '/clients/me')
-      .catch(() => null)
+      .catch((err: { statusCode?: number }) => {
+        notACustomer = NOT_A_CUSTOMER_STATUSES.has(err?.statusCode ?? 0)
+        return null
+      })
 
     return {
       id: identity.id,
@@ -71,6 +83,9 @@ export default defineEventHandler(async (event) => {
       // configured", and both correctly render an amount with no symbol rather than a guess.
       currency: (billing?.currency as string | null | undefined) ?? null,
       permissions: 8191,
+      // False only on a definite "not a customer" answer. A transient failure leaves it true
+      // (unknown), so the customer sections still get their chance to load.
+      hasClientProfile: !notACustomer,
       email_preferences: billing && {
         general: billing.notifyGeneral ? 1 : 0,
         invoice: billing.notifyInvoice ? 1 : 0,

@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.GetMyServiceInvoices;
 /// Two fields rather than a bare list, because a bare list cannot be read honestly. An empty
 /// list means "no invoice line is recorded against this service" — and that is <b>not</b> the
 /// same claim as "this service was never charged". Every invoice raised before
-/// <c>invoice_items.client_service_id</c> existed carries no link, no backfill was written for
+/// <c>InvoiceItems.ClientServiceId</c> existed carries no link, no backfill was written for
 /// them, and none could be: an invoice line is a description, a unit price and a quantity, so
 /// inferring which service an old line was for would be a guess rendered as fact on a page a
 /// customer uses to check a charge.
