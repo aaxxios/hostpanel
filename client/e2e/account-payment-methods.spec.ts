@@ -21,7 +21,7 @@ test.beforeEach(async ({ page, context, request, baseURL }) => {
 })
 
 test('the saved card is listed with its last digits and no add button is offered', async ({ page }) => {
-  await expect(page.getByTestId(`account-payment-${SAVED_CARD.id}`)).toContainText(SAVED_CARD.card_last_four)
+  await expect(page.getByTestId(`account-payment-${SAVED_CARD.id}`)).toContainText(SAVED_CARD.last4)
   await expect(page.getByTestId('account-payment-add')).toHaveCount(0)
 })
 

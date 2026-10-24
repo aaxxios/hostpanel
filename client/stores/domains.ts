@@ -40,7 +40,7 @@ import type { DomainContactFields } from '~/types/domaincontactfields'
 import type { DomainDetail } from '~/types/domaindetail'
 import type { WhoisRecord } from '~/types/whoisrecord'
 import type { DomainOrderResult } from '~/types/domainorderresult'
-import type { PaymentMethod } from '~/types/payment'
+import type { GatewayMethod } from '~/types/gatewaymethod'
 import { apiErrorMessage } from '~/lib/errorHandler'
 
 /** How many extensions the storefront search offers. */
@@ -239,21 +239,22 @@ export const useDomainsStore = defineStore('domains', () => {
     return primaryProfile.value
   }
 
-  /** The saved payment methods the order forms offer; empty until {@link loadPaymentMethods}. */
-  const paymentMethods = ref<PaymentMethod[]>([])
+  /** The gateways the order forms may bill through; empty until {@link loadPaymentMethods}. */
+  const paymentMethods = ref<GatewayMethod[]>([])
 
   /** Whether the saved payment methods are being read. */
   const paymentMethodsLoading = ref(false)
 
   /**
-   * Reads the saved payment methods for an order form.
+   * Reads the gateways an order form may bill through. The order endpoints expect a gateway
+   * module name, which a saved card does not carry, so this reads the gateway list.
    *
-   * @returns The methods; an empty list when they could not be read, so the form stays blank.
+   * @returns The gateways; an empty list when they could not be read, so the form stays blank.
    */
-  const loadPaymentMethods = async (): Promise<PaymentMethod[]> => {
+  const loadPaymentMethods = async (): Promise<GatewayMethod[]> => {
     paymentMethodsLoading.value = true
     try {
-      paymentMethods.value = await billing.fetchPaymentMethods()
+      paymentMethods.value = await billing.fetchGatewayMethods()
     } catch {
       paymentMethods.value = []
     } finally {

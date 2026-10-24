@@ -11,7 +11,7 @@ import type { DomainDetail } from '~/types/domaindetail'
 const domainsApi = vi.hoisted(() => ({ createRenewOrder: vi.fn() }))
 
 /** The mocked billing endpoints the store reaches. */
-const billingApi = vi.hoisted(() => ({ fetchPaymentMethods: vi.fn() }))
+const billingApi = vi.hoisted(() => ({ fetchGatewayMethods: vi.fn() }))
 
 vi.mock('~/composables/apis/useDomainsApi', () => ({ useDomainsApi: () => domainsApi }))
 vi.mock('~/composables/apis/useBillingApi', () => ({ useBillingApi: () => billingApi }))
@@ -30,8 +30,8 @@ const domain = (overrides: Partial<DomainDetail> = {}): DomainDetail => ({
   ...overrides
 } as DomainDetail)
 
-/** A saved card the panel offers. */
-const card = { id: 'pm_1', type: 'card', description: 'Visa', gateway_name: 'stripe', card_last_four: '4242' }
+/** A gateway the panel offers. */
+const card = { module: 'stripe', displayName: 'Stripe' }
 
 /**
  * Mounts the panel and waits for the payment methods to arrive.
@@ -48,8 +48,8 @@ const mountPanel = async (overrides: Partial<DomainDetail> = {}) => {
 describe('DomainRenewPanel', () => {
   beforeEach(() => {
     domainsApi.createRenewOrder.mockReset()
-    billingApi.fetchPaymentMethods.mockReset()
-    billingApi.fetchPaymentMethods.mockResolvedValue([card])
+    billingApi.fetchGatewayMethods.mockReset()
+    billingApi.fetchGatewayMethods.mockResolvedValue([card])
   })
 
   it.each([

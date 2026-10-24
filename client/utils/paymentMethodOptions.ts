@@ -1,5 +1,5 @@
 /**
- * Turning the client's saved payment methods into select options.
+ * Turning the payment gateways into select options.
  *
  * The domain renewal form and the domain transfer form offer the same list, labelled the same
  * way, so the mapping is shared.
@@ -7,27 +7,27 @@
  * @module utils/paymentMethodOptions
  */
 
-import type { PaymentMethod } from '~/types/payment'
+import type { GatewayMethod } from '~/types/gatewaymethod'
 
 /** One choice of a select list. */
 export interface PaymentMethodOption {
   /** Text shown to the reader. */
   label: string
-  /** The gateway name the order endpoints expect. */
+  /** The gateway module name the order endpoints expect. */
   value: string
 }
 
 /**
- * Maps payment methods to select options.
+ * Maps gateways to select options.
  *
- * A card shows its description followed by its last four digits; any other method shows its
- * description alone. The value is the gateway name.
+ * The label is the gateway's display name (its module name when it has none); the value is the
+ * module name the order endpoints expect.
  *
- * @param methods - The saved payment methods; an absent list reads as none.
- * @returns The options, in the order the API returned the methods.
+ * @param methods - The gateways; an absent list reads as none.
+ * @returns The options, in the order the API returned the gateways.
  */
-export const toPaymentMethodOptions = (methods: PaymentMethod[] | null | undefined): PaymentMethodOption[] =>
+export const toPaymentMethodOptions = (methods: GatewayMethod[] | null | undefined): PaymentMethodOption[] =>
   (methods ?? []).map((method) => ({
-    label: method.card_last_four ? `${method.description} •••• ${method.card_last_four}` : method.description,
-    value: method.gateway_name
+    label: method.displayName || method.module,
+    value: method.module
   }))

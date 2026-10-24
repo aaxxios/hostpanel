@@ -2,11 +2,11 @@
  * Flow: transferring a domain in.
  *
  * The public transfer page hands the typed name and authorisation code on to the client-area form;
- * the form orders the transfer with the saved payment method and leads to the invoice the order
+ * the form orders the transfer with the first gateway and leads to the invoice the order
  * raised. A refused order keeps the form with the backend's sentence.
  */
 import { expect, test } from './support/test'
-import { DOMAIN_ORDER, TRANSFER } from './support/fixtures.mjs'
+import { DOMAIN_ORDER, GATEWAY_METHODS, TRANSFER } from './support/fixtures.mjs'
 import { resetStub, scriptStub, signIn, stubRequests, waitForHydration } from './support/helpers'
 
 test.beforeEach(async ({ context, request, baseURL }) => {
@@ -43,7 +43,7 @@ test('the transfer is ordered and leads to its invoice', async ({ page, request 
   await expect(page.getByTestId('transfer-pay-invoice')).toHaveAttribute('href', `/client/invoices/${DOMAIN_ORDER.invoiceId}`)
 
   const order = (await stubRequests(request)).find(r => r.method === 'POST' && r.path === '/api/me/domains/transfer-order')
-  expect(order?.body).toMatchObject({ domainName: TRANSFER.domain, eppCode: TRANSFER.eppCode, years: 1, paymentMethod: 'stripe' })
+  expect(order?.body).toMatchObject({ domainName: TRANSFER.domain, eppCode: TRANSFER.eppCode, years: 1, paymentMethod: GATEWAY_METHODS[0]?.module })
 })
 
 test('a refused transfer keeps the form and shows the backend sentence', async ({ page, request }) => {
