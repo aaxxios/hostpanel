@@ -1,35 +1,20 @@
 /**
- * Tests for `utils/paymentMethodOptions.ts`: the label of a card and of any other method.
+ * Tests for `utils/paymentMethodOptions.ts`: the label and value of a gateway option.
  */
 import { describe, expect, it } from 'vitest'
 import { toPaymentMethodOptions } from '~/utils/paymentMethodOptions'
-import type { PaymentMethod } from '~/types/payment'
-
-/**
- * Builds a payment method with the fields the mapping reads.
- *
- * @param overrides - Fields to set.
- * @returns A payment method.
- */
-const method = (overrides: Partial<PaymentMethod>): PaymentMethod => ({
-  id: 'pm_1',
-  type: 'card',
-  description: 'Visa',
-  gateway_name: 'stripe',
-  ...overrides
-})
 
 describe('toPaymentMethodOptions', () => {
-  it('adds the last four digits to a card', () => {
-    const [option] = toPaymentMethodOptions([method({ card_last_four: '4242' })])
+  it('labels a gateway with its display name and sends its module name', () => {
+    const [option] = toPaymentMethodOptions([{ module: 'stripe', displayName: 'Card payment' }])
 
-    expect(option).toEqual({ label: 'Visa •••• 4242', value: 'stripe' })
+    expect(option).toEqual({ label: 'Card payment', value: 'stripe' })
   })
 
-  it('shows the description alone for a method without a card', () => {
-    const [option] = toPaymentMethodOptions([method({ description: 'Bank account', gateway_name: 'bank' })])
+  it('falls back to the module name when the gateway has no display name', () => {
+    const [option] = toPaymentMethodOptions([{ module: 'bank_transfer', displayName: '' }])
 
-    expect(option).toEqual({ label: 'Bank account', value: 'bank' })
+    expect(option).toEqual({ label: 'bank_transfer', value: 'bank_transfer' })
   })
 
   it.each([undefined, null])('reads %s as no methods', (value) => {

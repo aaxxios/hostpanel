@@ -7,7 +7,7 @@
  * renewal order with the invoice it raises.
  */
 import { expect, test } from './support/test'
-import { DOMAIN, DOMAIN_NAMESERVERS, DOMAIN_ORDER, EPP_CODE, NEW_NAMESERVERS, REGISTRANT_CONTACT, WHOIS_RECORD } from './support/fixtures.mjs'
+import { DOMAIN, DOMAIN_NAMESERVERS, DOMAIN_ORDER, EPP_CODE, GATEWAY_METHODS, NEW_NAMESERVERS, REGISTRANT_CONTACT, WHOIS_RECORD } from './support/fixtures.mjs'
 import { required, resetStub, scriptStub, signIn, stubRequests, waitForHydration } from './support/helpers'
 
 /** The stub's path for one action on the domain under test. */
@@ -113,7 +113,7 @@ test('the nameservers are read and custom ones are saved', async ({ page, reques
   expect(saved?.body).toMatchObject({ nameservers: NEW_NAMESERVERS })
 })
 
-test('a renewal is ordered with the saved method and leads to its invoice', async ({ page, request }) => {
+test('a renewal is ordered with the gateway and leads to its invoice', async ({ page, request }) => {
   await page.goto(`/client/domains/${DOMAIN.id}`)
   await waitForHydration(page)
   await page.getByTestId('domain-action-renew').click()
@@ -126,7 +126,7 @@ test('a renewal is ordered with the saved method and leads to its invoice', asyn
   await expect(page.getByTestId('domain-renew-pay')).toHaveAttribute('href', `/client/invoices/${DOMAIN_ORDER.invoiceId}`)
 
   const order = (await stubRequests(request)).find(r => r.method === 'POST' && r.path === domainPath('renew'))
-  expect(order?.body).toMatchObject({ years: 1, paymentMethod: 'stripe' })
+  expect(order?.body).toMatchObject({ years: 1, paymentMethod: GATEWAY_METHODS[0]?.module })
 })
 
 test('the contact tab shows the registry record and saves the registrant contact wrapped in `contact`', async ({ page, request }) => {
