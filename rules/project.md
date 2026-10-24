@@ -662,6 +662,16 @@ shard in `.gitlab-ci.yml` and in `ci.yml`, or its tests run nowhere.**
 - A rename happens only through a migration that renames in place (`RenameTable`, `RenameColumn`,
   `RenameIndex`, and `ALTER TABLE ... RENAME CONSTRAINT` through `Sql`) and keeps every row. Never
   drop and recreate.
+- Database identifiers are PascalCase, always, and the architecture guard test enforces it: tables, columns, primary/foreign
+  keys, indexes, unique and check constraints, sequences, views and enum type names, for example
+  `"TeamMembers"`, `"OrganizationId"`, `PK_TeamMembers`,
+  `FK_TeamMembers_Organizations_OrganizationId`, `IX_TeamMembersSortOrder`,
+  `CK_TeamMembersSortOrderNotNegative`. Never snake_case or lower case, and never an EF naming
+  convention plugin that lowercases (no `UseSnakeCaseNamingConvention`). Raw SQL quotes every
+  identifier in PascalCase. Only PostgreSQL built-ins (types like `jsonb`/`citext`, extensions
+  like `pg_trgm`, operator classes like `gin_trgm_ops`) keep their own lower-case names. JSON
+  stored inside a column keeps the camelCase wire shape. A migration or configuration that emits a
+  non-PascalCase identifier is a review failure.
 
 ## Debt — recorded, not endorsed
 
@@ -675,19 +685,6 @@ Never spread one of these, and never restructure as a side effect of a feature.
   place a vendor is named. Persisted *data* is neutral: `Client.CardGatewayCustomerId` and the ledger
   payment method `Card` (the `ConformanceFixes` migration renamed the column and rewrote old
   `Stripe` ledger rows).
-- **The snake_case schema debt is cleared.** The tables were created snake_case (`ticket_tags`,
-  `invoices`, ...) except `Orders`/`OrderItems`; the `PascalCaseDatabaseIdentifiers` migration renamed
-  every table, key, index and identity sequence in place. See *Database identifiers* above.
-- **Explicit list.** Database identifiers are PascalCase, always: tables, columns, primary/foreign
-  keys, indexes, unique and check constraints, sequences, views and enum type names, for example
-  `"TeamMembers"`, `"OrganizationId"`, `PK_TeamMembers`,
-  `FK_TeamMembers_Organizations_OrganizationId`, `IX_TeamMembersSortOrder`,
-  `CK_TeamMembersSortOrderNotNegative`. Never snake_case or lower case, and never an EF naming
-  convention plugin that lowercases (no `UseSnakeCaseNamingConvention`). Raw SQL quotes every
-  identifier in PascalCase. Only PostgreSQL built-ins (types like `jsonb`/`citext`, extensions
-  like `pg_trgm`, operator classes like `gin_trgm_ops`) keep their own lower-case names. JSON
-  stored inside a column keeps the camelCase wire shape. A migration or configuration that emits a
-  non-PascalCase identifier is a review failure.
 - **`ClientRegisteredIntegrationEvent` carries five parameters nothing fills.**
   `LocalAuthController.RegisterAsync` publishes four arguments and stops, so `IpAddress`,
   `UserAgent`, `DeviceType`, `OperatingSystem` and `Browser` arrive null and `Client.Create`

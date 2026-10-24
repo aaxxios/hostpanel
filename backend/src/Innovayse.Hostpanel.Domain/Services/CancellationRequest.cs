@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Domain.Services;
 /// <summary>
 /// Represents a client's request to cancel one of their services.
 /// Linked to a <see cref="ClientService"/> via <see cref="ServiceId"/>.
-/// Stored in the <c>cancellation_requests</c> table.
+/// Stored in the <c>CancellationRequests</c> table.
 /// </summary>
 public sealed class CancellationRequest : BaseEntity
 {

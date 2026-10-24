@@ -26,7 +26,7 @@ public sealed class GetTicketTagsHandler
         ArgumentNullException.ThrowIfNull(query);
 
         // Every tag belongs to exactly one ticket, so flattening through the navigation reaches
-        // the same rows the old repository read directly off the ticket_tags table.
+        // the same rows the old repository read directly off the TicketTags table.
         var tags = _context.Tickets.AsNoTracking().SelectMany(t => t.Tags);
 
         if (query.From.HasValue || query.To.HasValue)
