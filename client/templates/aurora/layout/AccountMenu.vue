@@ -82,7 +82,7 @@
  *
  * The public header used to render "Sign in" / "Get started" to everyone,
  * because it never consulted the session at all: the auth store was wired into
- * the client-area shell and into the legacy `components/layout/LayoutHeader.vue`, but
+ * the client-area shell and into the legacy `components/layout/Header.vue`, but
  * the active template's header read neither. This is the treatment that belongs
  * beside the apps launcher — avatar, account destinations, sign out.
  *

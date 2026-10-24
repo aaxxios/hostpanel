@@ -28,7 +28,7 @@
       >
         <!-- The operator's upload when there is one, otherwise the cube mark and the site name. -->
         <!-- Logo image cap: intrinsically small UI, not page layout. -->
-        <AppLogoLockup
+        <LogoLockup
           img-class="h-9 w-auto max-w-[120px] object-contain"
           mark-class="h-9 w-9"
           name-class="text-lg font-bold tracking-tight"
@@ -218,7 +218,7 @@
  * `role="dialog"` or hide the rest of the page from assistive technology.
  */
 import type { ComponentPublicInstance } from 'vue'
-import AppLogoLockup from '~/components/AppLogoLockup.vue'
+import LogoLockup from '~/components/LogoLockup.vue'
 import NovaCta from '~/templates/nova/sections/NovaCta.vue'
 import { NAV_ITEMS } from '~/templates/nova/content'
 import { useCartStore } from '~/stores/cart'

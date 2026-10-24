@@ -10,7 +10,9 @@ import type { PortalProduct } from '~/types/portalproduct'
 import type { PortalProductGroup } from '~/types/portalproductgroup'
 import { ProductType } from '~/types/producttype'
 import { familyKey } from '~/utils/catalogGroups'
-import { buildHeaderNav, isHeaderItemActive, isHeaderPathActive } from '~/utils/headerNav'
+import { productTypeIcon } from '~/constants/productTypeIcon'
+import { SUPPORT_LINK_ICON, SupportLinkKey } from '~/constants/headerNavIcon'
+import { buildHeaderNav, hostingEntryDescription, isHeaderItemActive, isHeaderPathActive } from '~/utils/headerNav'
 
 /** The `pages` directory of the client, where a route must have a file. */
 const PAGES_DIR = resolve(__dirname, '../../pages')
@@ -99,6 +101,38 @@ describe('buildHeaderNav', () => {
     expect(hosting.children?.slice(1).map((child) => child.desc)).toEqual(['nav.vpsDesc', 'nav.serversDesc'])
   })
 
+  it('takes every Hosting icon from the shared product type map, so it matches the product cards', () => {
+    const hosting = nav(
+      [group(1, 'Web hosting'), group(7, 'Mailboxes'), group(8, 'Certificates'), group(9, 'Cloud servers'), group(10, 'Metal')],
+      [product(7, ProductType.Email), product(8, ProductType.Ssl), product(9, ProductType.Vps), product(10, ProductType.Dedicated)],
+    )[0]!
+
+    expect(hosting.children?.map((child) => child.icon)).toEqual([
+      productTypeIcon(ProductType.SharedHosting),
+      productTypeIcon(ProductType.Email),
+      productTypeIcon(ProductType.Ssl),
+      productTypeIcon(ProductType.Vps),
+      productTypeIcon(ProductType.Dedicated),
+    ])
+  })
+
+  it('gives the Support links their own icons', () => {
+    const support = nav().find((item) => item.key === 'support')!
+
+    expect(support.children?.map((child) => child.icon)).toEqual([
+      SUPPORT_LINK_ICON[SupportLinkKey.Help],
+      SUPPORT_LINK_ICON[SupportLinkKey.Faq],
+      SUPPORT_LINK_ICON[SupportLinkKey.Contact],
+    ])
+  })
+
+  it('shows the group description when the catalogue has one, else the line for its type', () => {
+    const described: PortalProductGroup = { ...group(10, 'Metal'), description: 'Bare metal in our own racks<br /><br />More' }
+    const hosting = nav([group(1, 'Web hosting'), described, group(9, 'Cloud servers')], [product(10, ProductType.Dedicated), product(9, ProductType.Vps)])[0]!
+
+    expect(hosting.children?.map((child) => child.desc)).toEqual(['nav.hostingDesc', 'Bare metal in our own racks', 'nav.vpsDesc'])
+  })
+
   it('ignores a group that is inactive or empty', () => {
     const items = nav(
       [{ ...group(9, 'Cloud servers'), isActive: false }, { ...group(10, 'Metal'), productCount: 0 }],
@@ -112,6 +146,20 @@ describe('buildHeaderNav', () => {
     const support = nav().find((item) => item.key === 'support')!
 
     expect(support.children?.map((child) => child.to)).toEqual(['/en/knowledgebase', '/en/faq', '/en/contact'])
+  })
+})
+
+describe('hostingEntryDescription', () => {
+  it('falls back to the type line for a missing, empty or blank description', () => {
+    for (const description of [undefined, null, '', '   ', '<br />']) {
+      expect(hostingEntryDescription({ ...group(10, 'Metal'), description }, 'nav.serversDesc', t)).toBe('nav.serversDesc')
+    }
+  })
+
+  it('uses only the first paragraph of the description, as plain text', () => {
+    const described = { ...group(10, 'Metal'), description: 'Fast &amp; dedicated\n\nSecond paragraph' }
+
+    expect(hostingEntryDescription(described, 'nav.serversDesc', t)).toBe('Fast & dedicated')
   })
 })
 

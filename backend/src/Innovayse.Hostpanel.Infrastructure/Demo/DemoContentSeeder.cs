@@ -24,6 +24,9 @@ internal sealed class DemoContentSeeder
     /// <summary>The locales every slide is translated into, in the order the tables below use.</summary>
     private static readonly string[] Locales = ["en", "ru", "hy"];
 
+    /// <summary>The storefront folder the bundled slide covers are served from.</summary>
+    private const string SlideImageFolder = "/demo/slides/";
+
     /// <summary>The data context the rows are added to and saved through.</summary>
     private readonly AppDbContext _db;
 
@@ -37,6 +40,14 @@ internal sealed class DemoContentSeeder
     {
         _db = db;
         _today = today;
+    }
+
+    /// <summary>The bundled cover address of a demo slide: its key under <see cref="SlideImageFolder"/>, as an SVG file.</summary>
+    /// <param name="key">The slide's key, such as <c>cloud-vps</c>.</param>
+    /// <returns>The site-relative address of the slide's cover picture.</returns>
+    internal static string SlideImageUrl(string key)
+    {
+        return $"{SlideImageFolder}{key}.svg";
     }
 
     /// <summary>Seeds the slides and downloads that are not there yet.</summary>
@@ -60,47 +71,47 @@ internal sealed class DemoContentSeeder
     /// <returns>A task that completes once the rows are saved.</returns>
     private async Task SeedSlidesAsync(CancellationToken ct)
     {
-        // The image is left empty on purpose: the storefront hides a slide's picture when there is none, and the
-        // demo ships no stock photos that could be mistaken for real customers' material.
+        // Each slide carries an original illustration drawn for it (client/public/demo/slides), not a stock
+        // photo that could be mistaken for a real customer's material; the storefront shows it as the slide's cover.
         (string Icon, string Color, string Image, string LearnMore, bool Active, SlideAudience Audience, bool Windowed, (string Title, string Tagline, string Description, string[] Features)[] Text)[] slides =
         [
-            ("cloud-check", "#0ea5e9", "", "/hosting", true, SlideAudience.All, false,
+            ("cloud-check", "#0ea5e9", SlideImageUrl("web-hosting"), "/hosting", true, SlideAudience.All, false,
             [
                 ("Web Hosting", "Fast and reliable hosting", "Launch your website on high-performance servers with free SSL and daily backups.", ["Free SSL certificate", "99.9% uptime", "Daily backups", "24/7 support"]),
                 ("Веб-хостинг", "Быстрый и надёжный хостинг", "Разместите сайт на производительных серверах с бесплатным SSL и ежедневными резервными копиями.", ["Бесплатный SSL", "99,9% аптайм", "Ежедневные копии", "Поддержка 24/7"]),
                 ("Վեբ հոսթինգ", "Արագ և հուսալի հոսթինգ", "Տեղադրեք ձեր կայքը բարձր արտադրողականությամբ սերվերների վրա՝ անվճար SSL-ով և ամենօրյա պահուստավորմամբ։", ["Անվճար SSL", "99,9% աշխատանք", "Ամենօրյա պահուստ", "Աջակցություն 24/7"]),
             ]),
-            ("earth", "#3b82f6", "", "/domains", true, SlideAudience.All, false,
+            ("earth", "#3b82f6", SlideImageUrl("domains"), "/domains", true, SlideAudience.All, false,
             [
                 ("Domain Registration", "Find and register your domain", "Search and register your domain name at competitive prices with instant activation.", ["Free DNS management", "WHOIS privacy", "Auto-renewal"]),
                 ("Регистрация доменов", "Найдите и зарегистрируйте домен", "Ищите и регистрируйте домен по конкурентным ценам с мгновенной активацией.", ["Бесплатное управление DNS", "Скрытие данных WHOIS", "Автопродление"]),
                 ("Դոմեյնների գրանցում", "Գտեք և գրանցեք ձեր դոմեյնը", "Որոնեք և գրանցեք ձեր դոմեյնը մրցունակ գներով՝ անմիջական ակտիվացմամբ։", ["Անվճար DNS կառավարում", "WHOIS գաղտնիություն", "Ավտոմատ երկարաձգում"]),
             ]),
-            ("server", "#6366f1", "", "/vps", true, SlideAudience.All, false,
+            ("server", "#6366f1", SlideImageUrl("cloud-vps"), "/vps", true, SlideAudience.All, false,
             [
                 ("Cloud VPS", "Full control, instant setup", "Isolated virtual servers with root access and NVMe storage, ready in minutes.", ["Root access", "NVMe storage", "Instant setup", "Snapshots"]),
                 ("Облачный VPS", "Полный контроль, мгновенный запуск", "Изолированные виртуальные серверы с root-доступом и NVMe-накопителями, готовые за минуты.", ["Root-доступ", "NVMe-диски", "Мгновенный запуск", "Снимки"]),
                 ("Ամպային VPS", "Լիարժեք վերահսկողություն", "Մեկուսացված վիրտուալ սերվերներ root հասանելիությամբ և NVMe կրիչներով՝ պատրաստ րոպեների ընթացքում։", ["Root հասանելիություն", "NVMe կրիչ", "Արագ գործարկում", "Պատկերներ"]),
             ]),
-            ("shield-check", "#10b981", "", "/ssl", true, SlideAudience.Guest, false,
+            ("shield-check", "#10b981", SlideImageUrl("ssl"), "/ssl", true, SlideAudience.Guest, false,
             [
                 ("SSL Certificates", "Protect your site", "Certificates that encrypt the connection and build trust with your visitors.", ["Domain and organisation validation", "Wildcard option", "Warranty included"]),
                 ("SSL-сертификаты", "Защитите свой сайт", "Сертификаты, которые шифруют соединение и повышают доверие посетителей.", ["Проверка домена и организации", "Wildcard-вариант", "Гарантия включена"]),
                 ("SSL վկայագրեր", "Պաշտպանեք ձեր կայքը", "Վկայագրեր, որոնք գաղտնագրում են կապը և մեծացնում այցելուների վստահությունը։", ["Դոմեյնի և կազմակերպության ստուգում", "Wildcard տարբերակ", "Երաշխիք"]),
             ]),
-            ("email", "#f59e0b", "", "/email", true, SlideAudience.All, true,
+            ("email", "#f59e0b", SlideImageUrl("email"), "/email", true, SlideAudience.All, true,
             [
                 ("Business Email", "Mail on your own domain", "Professional mailboxes with spam protection and shared calendars.", ["Spam filter", "Shared calendars", "Mobile sync"]),
                 ("Деловая почта", "Почта на вашем домене", "Профессиональные почтовые ящики с защитой от спама и общими календарями.", ["Защита от спама", "Общие календари", "Синхронизация с телефоном"]),
                 ("Բիզնես փոստ", "Փոստ ձեր դոմեյնում", "Մասնագիտական փոստարկղեր սպամի պաշտպանությամբ և ընդհանուր օրացույցներով։", ["Սպամի զտիչ", "Ընդհանուր օրացույցներ", "Համաժամացում հեռախոսի հետ"]),
             ]),
-            ("server-network", "#ef4444", "", "/dedicated", true, SlideAudience.All, false,
+            ("server-network", "#ef4444", SlideImageUrl("dedicated"), "/dedicated", true, SlideAudience.All, false,
             [
                 ("Dedicated Servers", "Maximum power", "Single-tenant hardware for demanding workloads, with no noisy neighbours.", ["Up to 24 cores", "NVMe arrays", "Private network"]),
                 ("Выделенные серверы", "Максимальная мощность", "Отдельное оборудование для требовательных проектов без соседей.", ["До 24 ядер", "Массивы NVMe", "Частная сеть"]),
                 ("Նվիրված սերվերներ", "Առավելագույն հզորություն", "Առանձին սարքավորում պահանջկոտ ծրագրերի համար՝ առանց այլ օգտատերերի հետ կիսելու։", ["Մինչև 24 միջուկ", "NVMe զանգվածներ", "Մասնավոր ցանց"]),
             ]),
-            ("tag", "#8b5cf6", "", "/offers", false, SlideAudience.All, false,
+            ("tag", "#8b5cf6", SlideImageUrl("offers"), "/offers", false, SlideAudience.All, false,
             [
                 ("Seasonal Offer", "Switched off", "A seasonal offer that is prepared but not shown to visitors yet.", ["Prepared in advance"]),
                 ("Сезонное предложение", "Отключено", "Сезонное предложение, которое подготовлено, но пока не показывается посетителям.", ["Подготовлено заранее"]),

@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
-import LayoutHeaderDropdown from '~/components/layout/LayoutHeaderDropdown.vue'
+import LayoutHeaderDropdown from '~/components/layout/HeaderDropdown.vue'
 import type { HeaderNavItem } from '~/types/headernavitem'
 
 /** A two-link group. */
@@ -12,8 +12,8 @@ const item: HeaderNavItem = {
   key: 'support',
   label: 'Support',
   children: [
-    { key: 'help', label: 'Help center', desc: 'Guides', to: '/en/knowledgebase' },
-    { key: 'faq', label: 'FAQ', to: '/en/faq' },
+    { key: 'help', label: 'Help center', icon: 'mdi:book-open-variant', desc: 'Guides', to: '/en/knowledgebase' },
+    { key: 'faq', label: 'FAQ', icon: 'mdi:frequently-asked-questions', to: '/en/faq' },
   ],
 }
 
@@ -46,6 +46,27 @@ describe('LayoutHeaderDropdown', () => {
     const links = wrapper.findAll('[role="menuitem"]')
     expect(links.map((link) => link.attributes('href'))).toEqual(['/en/knowledgebase', '/en/faq'])
     expect(links[0]!.text()).toContain('Guides')
+  })
+
+  it('leads every row with its icon in a tinted tile, and fills the tile of the current row', async () => {
+    const wrapper = mountDropdown('/en/faq')
+    await wrapper.find('[data-testid="header-nav-support-trigger"]').trigger('click')
+
+    const help = wrapper.find('[data-testid="header-nav-child-help-icon"]')
+    const faq = wrapper.find('[data-testid="header-nav-child-faq-icon"]')
+    expect(help.find('[data-icon="mdi:book-open-variant"]').exists()).toBe(true)
+    expect(faq.find('[data-icon="mdi:frequently-asked-questions"]').exists()).toBe(true)
+    expect(help.classes()).toContain('bg-classic-brand-soft')
+    expect(faq.classes()).toContain('bg-classic-fill')
+  })
+
+  it('gives every row the same height and a hover and focus state, with or without a description', async () => {
+    const wrapper = mountDropdown()
+    await wrapper.find('[data-testid="header-nav-support-trigger"]').trigger('click')
+
+    for (const row of wrapper.findAll('[role="menuitem"]')) {
+      expect(row.classes()).toEqual(expect.arrayContaining(['group', 'min-h-[60px]', 'hover:bg-classic-surface-2', 'focus-visible:bg-classic-surface-2']))
+    }
   })
 
   it('marks the current link and tints the trigger when a child is the page', async () => {

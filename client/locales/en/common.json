@@ -37,7 +37,7 @@
     "home": "Home",
     "products": "Products",
     "backToProducts": "Back to Products",
-    "scrollDown": "Scroll Down",
+    "goToSlide": "Go to slide {n}",
     "scrollHorizontal": "Scroll to explore",
     "retry": "Retry",
     "breadcrumb": "Breadcrumb"

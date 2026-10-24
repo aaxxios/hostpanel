@@ -16,7 +16,6 @@
 @import './templates/nova.css';
 @import './templates/classic.css';
 @import './ui.css';
-@import './marketing.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

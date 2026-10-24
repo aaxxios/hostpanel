@@ -19,9 +19,8 @@ vi.mock('swiper/vue', async () => {
     SwiperSlide: defineComponent({ name: 'SwiperSlide', setup: (_props, { slots }) => () => h('div', slots.default?.()) }),
   }
 })
-vi.mock('swiper/modules', () => ({ Autoplay: {}, Pagination: {} }))
+vi.mock('swiper/modules', () => ({ Autoplay: {} }))
 vi.mock('swiper/css', () => ({}))
-vi.mock('swiper/css/pagination', () => ({}))
 
 /** The mocked storefront endpoints, re-created for every test. */
 const api = { fetchPartners: vi.fn(), fetchTestimonials: vi.fn(), fetchProjects: vi.fn(), fetchFaqs: vi.fn() }
@@ -65,6 +64,13 @@ describe('SectionsTestimonials', () => {
     const items = wrapper.find('[data-testid="testimonials-fallback"]').findAll('li')
     expect(items).toHaveLength(2)
     expect(wrapper.find('[data-testid="swiper"]').exists()).toBe(false)
+  })
+
+  it('shows one kit dot per testimonial under the carousel', async () => {
+    const wrapper = await mountSection()
+
+    expect(wrapper.findAll('[data-testid^="carousel-dot-"]')).toHaveLength(2)
+    expect(wrapper.find('[data-testid="carousel-dot-0"]').attributes('aria-current')).toBe('true')
   })
 
   it('renders a slide per testimonial with its quote, author, role and company', async () => {

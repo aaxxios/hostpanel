@@ -1,5 +1,5 @@
 /**
- * Which logo `AppLogo` shows, kept free of Nuxt so the rule can be unit-tested.
+ * Which logo `Logo` shows, kept free of Nuxt so the rule can be unit-tested.
  *
  * @module utils/appLogo
  */
@@ -33,7 +33,7 @@ export const LOGO_PLATE_CLASSES = 'rounded-md bg-white/90 px-2 py-1'
 /** {@link LOGO_PLATE_CLASSES} applied only while the page is in dark mode (the `dark:` variant). */
 export const LOGO_PLATE_CLASSES_DARK_MODE = 'dark:rounded-md dark:bg-white/90 dark:px-2 dark:py-1'
 
-/** What `AppLogo` renders. */
+/** What `Logo` renders. */
 export interface AppLogoPlan {
   /** Wordmark URL for light backgrounds; `''` when the surface is always dark. */
   light: string

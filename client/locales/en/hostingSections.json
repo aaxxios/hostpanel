@@ -1,8 +1,5 @@
 {
   "hostingSections": {
-    "trusted": {
-      "label": "Trusted by"
-    },
     "locations": {
       "badge": "Locations",
       "title": "Servers close to your visitors",

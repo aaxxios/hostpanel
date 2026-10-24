@@ -11,6 +11,7 @@
  */
 
 import { ProductType } from '~/types/producttype'
+import { SlideCoverKind } from '~/types/slidecoverkind'
 
 /**
  * Mask classes shared by every cover: centred, scaled to fit whole, no tiling. `contain`, not `cover`:
@@ -44,3 +45,52 @@ export const PRODUCT_TYPE_COVER: Readonly<Record<ProductType, string>> = {
  */
 export const productTypeCover = (type: string | null | undefined): string =>
   PRODUCT_TYPE_COVER[type as ProductType] ?? DEFAULT_COVER_CLASS
+
+/** The cover of a home-page slide: its own picture, or the illustration of its topic. */
+export type SlideCover =
+  | { kind: SlideCoverKind.Image, src: string }
+  | { kind: SlideCoverKind.Art, classes: string }
+
+/** Storefront path segments that name a product family or type, by the type they sell. */
+const SLIDE_LINK_TYPES: ReadonlyArray<readonly [string, ProductType]> = [
+  ['hosting', ProductType.SharedHosting],
+  ['vps', ProductType.Vps],
+  ['dedicated', ProductType.Dedicated],
+  ['domain', ProductType.Domain],
+  ['ssl', ProductType.Ssl],
+  ['email', ProductType.Email],
+  ['mail', ProductType.Email],
+  ['backup', ProductType.Backup],
+  ['addon', ProductType.Addon],
+]
+
+/**
+ * The product type a slide's link points at, read from the first segment of its path
+ * (`/vps`, `/en/domains`, `/products/ssl`): the language prefix and `products` are skipped.
+ *
+ * @param link The slide's learn-more or call-to-action link; may be missing.
+ * @returns The type the link names, or null when it names none.
+ */
+export const slideLinkType = (link: string | null | undefined): ProductType | null => {
+  const segments = ((link ?? '').split(/[?#]/)[0] ?? '').split('/').filter(Boolean)
+  const topic = segments.find((segment) => segment !== 'products' && !/^[a-z]{2}$/.test(segment))
+  if (!topic) {
+    return null
+  }
+  return SLIDE_LINK_TYPES.find(([stem]) => topic.toLowerCase().startsWith(stem))?.[1] ?? null
+}
+
+/**
+ * Chooses the cover beside a slide, in this order: the slide's uploaded picture; the illustration of
+ * the product type its link points at; the generic hosting illustration.
+ *
+ * @param image The slide's uploaded picture URL; empty or missing when there is none.
+ * @param link The slide's learn-more or call-to-action link.
+ * @returns The cover to draw.
+ */
+export const slideCover = (image: string | null | undefined, link: string | null | undefined): SlideCover => {
+  if (image && image.trim()) {
+    return { kind: SlideCoverKind.Image, src: image }
+  }
+  return { kind: SlideCoverKind.Art, classes: productTypeCover(slideLinkType(link)) }
+}

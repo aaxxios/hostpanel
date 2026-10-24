@@ -246,7 +246,7 @@ describe('client login page (demo mode)', () => {
     const demo = useDemoStore()
     demo.enabled = enabled
     demo.accounts = [{ role: DemoAccountRole.Admin, email: 'admin@demo.test', password: 'x' }, CLIENT]
-    return mountPage(LoginPage, { pinia, components: { AppLogo: APP_LOGO_STUB } })
+    return mountPage(LoginPage, { pinia, components: { Logo: APP_LOGO_STUB } })
   }
 
   it('offers no demo account outside a demo', async () => {

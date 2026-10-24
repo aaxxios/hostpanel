@@ -38,11 +38,17 @@
             :to="child.to"
             tone="inherit"
             :underline="false"
-            :class="[ROW, isHeaderPathActive(path, child.to) ? HEADER_NAV_ACTIVE : HEADER_NAV_IDLE]"
+            :class="[ROW, 'group gap-3', isHeaderPathActive(path, child.to) ? HEADER_NAV_ACTIVE : HEADER_NAV_IDLE]"
             :aria-current="isHeaderPathActive(path, child.to) ? 'page' : undefined"
             :testid="`header-drawer-child-${child.key}`"
             @click="close"
           >
+            <UiIconTile
+              :icon="child.icon"
+              size="sm"
+              :tone="isHeaderPathActive(path, child.to) ? 'inverse' : 'soft'"
+              :data-testid="`header-drawer-child-${child.key}-icon`"
+            />
             {{ child.label }}
           </UiLink>
         </UiStack>

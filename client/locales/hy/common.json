@@ -37,7 +37,7 @@
     "home": "Գլխավոր",
     "products": "Ապրանքներ",
     "backToProducts": "Վերադառնալ ապրանքներ",
-    "scrollDown": "Ոլորել ներքև",
+    "goToSlide": "Անցնել {n}-րդ սլայդին",
     "scrollHorizontal": "Ոլորեք տեսնելու համար",
     "retry": "Կրկնել",
     "breadcrumb": "Նավիգացիոն շղթա"

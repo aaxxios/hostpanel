@@ -10,7 +10,7 @@
       >
         <!-- The operator's upload when there is one, otherwise the cube mark and the site name. -->
         <!-- Logo image cap: intrinsically small UI, not page layout. -->
-        <AppLogoLockup
+        <LogoLockup
           img-class="h-[34px] w-auto max-w-[140px]"
           mark-class="h-9 w-9"
           name-class="text-lg font-bold"
@@ -190,7 +190,7 @@
  * Two things it does read: whether there is a session, which decides between the
  * account menu and the sign-in pair, and the configured sign-in destination.
  */
-import AppLogoLockup from '~/components/AppLogoLockup.vue'
+import LogoLockup from '~/components/LogoLockup.vue'
 import AuroraAppLauncher from '~/templates/aurora/layout/AppLauncher.vue'
 import AuroraAccountMenu from '~/templates/aurora/layout/AccountMenu.vue'
 import { CLIENT_DASHBOARD_PATH } from '~/constants/clientRoutes'

@@ -41,7 +41,7 @@ for (const mode of ['light', 'dark'] as const) {
       await resetStub(request)
     })
 
-    test('the slider panel follows the mode, and a slide with no image has no dark scrim', async ({ page }) => {
+    test('the slider panel follows the mode, and each slide has a cover beside its text', async ({ page }) => {
       await page.goto('/')
       await waitForHydration(page)
 
@@ -55,13 +55,12 @@ for (const mode of ['light', 'dark'] as const) {
         expect(luminance(panelColour)).toBeLessThan(LIGHT_LUMINANCE)
       }
 
-      // The slide with no image: no scrim, and its backdrop is the page colour of the mode.
-      const plain = page.getByTestId('slider-background-2')
-      await expect(plain.locator('.bg-black\\/60')).toHaveCount(0)
-      const plainColour = await plain.evaluate((element) => getComputedStyle(element).backgroundColor)
-      expect(luminance(plainColour) > LIGHT_LUMINANCE).toBe(mode === 'light')
-      // The slide with a photograph keeps its scrim for the copy's contrast.
-      await expect(page.getByTestId('slider-background-1').locator('.bg-black\\/60')).toHaveCount(1)
+      // The slide with no image: the illustration of its topic as the cover, no scrim, the page colour behind it.
+      await expect(page.getByTestId('slider-cover-art-2')).toHaveCount(1)
+      await expect(page.getByTestId('slider-slide-2').locator('.bg-black\\/60')).toHaveCount(0)
+      // The slide with a picture shows it as the cover, also without a scrim: the picture is beside the copy, not under it.
+      await expect(page.getByTestId('slider-cover-image-1')).toHaveCount(1)
+      await expect(page.getByTestId('slider-slide-1').locator('.bg-black\\/60')).toHaveCount(0)
     })
 
     test('the domain card cover is fitted whole, and the page ends at the footer', async ({ page }) => {

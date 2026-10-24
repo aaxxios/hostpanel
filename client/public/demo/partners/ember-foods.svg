@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 181 44" role="img" aria-label="Ember Foods">
-  <g transform="translate(0 0)"><path d="M22 4 C30 14 38 20 38 28 A16 16 0 0 1 6 28 C6 20 14 16 22 4 Z" fill="#8b95a7"/></g>
-  <text x="54" y="29" textLength="125" lengthAdjust="spacingAndGlyphs" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="21" font-weight="700" letter-spacing="0.3" fill="#8b95a7">Ember Foods</text>
+  <g transform="translate(0 0)"><path d="M22 4 C30 14 38 20 38 28 A16 16 0 0 1 6 28 C6 20 14 16 22 4 Z" fill="#ea580c"/></g>
+  <text x="54" y="29" textLength="125" lengthAdjust="spacingAndGlyphs" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="21" font-weight="700" letter-spacing="0.3" fill="#1e293b">Ember Foods</text>
 </svg>

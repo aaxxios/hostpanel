@@ -8,13 +8,13 @@ import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent, h, ref } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
-import LayoutFooter from '~/components/layout/LayoutFooter.vue'
+import LayoutFooter from '~/components/layout/Footer.vue'
 import { useCatalogStore } from '~/stores/catalog'
 import type { PortalProductGroup } from '~/types/portalproductgroup'
 
-vi.mock('~/components/AppLogoLockup.vue', () => ({
+vi.mock('~/components/LogoLockup.vue', () => ({
   default: defineComponent({
-    name: 'AppLogoLockup',
+    name: 'LogoLockup',
     setup: () => () => h('span', { 'data-testid': 'app-logo-stub' }),
   }),
 }))
