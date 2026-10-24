@@ -11,12 +11,14 @@
  */
 
 import { HOSTING_GROUP_ID } from '~/constants/catalogGroup'
+import { SUPPORT_LINK_ICON, SupportLinkKey } from '~/constants/headerNavIcon'
+import { productTypeIcon } from '~/constants/productTypeIcon'
 import type { HeaderNavChild } from '~/types/headernavchild'
 import type { HeaderNavItem } from '~/types/headernavitem'
 import type { PortalProduct } from '~/types/portalproduct'
 import type { PortalProductGroup } from '~/types/portalproductgroup'
 import { ProductType } from '~/types/producttype'
-import { dominantProductType, familyConfig, HOSTING_FAMILY_URL, isFamilyGroup } from '~/utils/catalogGroups'
+import { dominantProductType, familyConfig, HOSTING_FAMILY_URL, isFamilyGroup, parseDescription } from '~/utils/catalogGroups'
 
 /** Translates a message key. */
 export type HeaderTranslate = (key: string) => string
@@ -45,6 +47,21 @@ const HOSTING_MENU_DESC_KEYS: Readonly<Record<string, string>> = {
   [ProductType.Ssl]: 'nav.sslDesc',
   [ProductType.Backup]: 'nav.backupDesc',
 }
+
+/**
+ * The description line under a Hosting dropdown entry.
+ *
+ * The group's own short description wins when the operator wrote one (its first paragraph, as
+ * plain text); otherwise the line written for the service type the group sells, so the row never
+ * just repeats its title.
+ *
+ * @param group - The catalogue group.
+ * @param fallbackKey - Message key of the line for the group's service type.
+ * @param t - Translator for the active locale.
+ * @returns The description to show.
+ */
+export const hostingEntryDescription = (group: PortalProductGroup, fallbackKey: string, t: HeaderTranslate): string =>
+  parseDescription(group.description ?? '').summary || t(fallbackKey)
 
 /** Route of the domain search page. */
 const DOMAINS_PATH = '/domains'
@@ -121,13 +138,25 @@ export const buildHeaderNav = ({ t, localePath, groups, products }: HeaderNavInp
   const pageOf = (group: PortalProductGroup): string => localePath(familyConfig(group, productsOf(group)).learnMoreUrl)
 
   const hostingChildren: HeaderNavChild[] = [
-    { key: 'hosting-all', label: t('nav.allHosting'), desc: t('nav.hostingDesc'), to: localePath(HOSTING_FAMILY_URL) },
+    {
+      key: 'hosting-all',
+      label: t('nav.allHosting'),
+      icon: productTypeIcon(ProductType.SharedHosting),
+      desc: t('nav.hostingDesc'),
+      to: localePath(HOSTING_FAMILY_URL),
+    },
     ...families
       .flatMap((group) => {
         const descKey = HOSTING_MENU_DESC_KEYS[typeOf(group)]
         // A group of a type the menu has no sentence for, and the hosting group itself, get no entry.
         return group.id !== HOSTING_GROUP_ID && descKey
-          ? [{ key: `group-${group.id}`, label: group.name, desc: t(descKey), to: pageOf(group) }]
+          ? [{
+            key: `group-${group.id}`,
+            label: group.name,
+            icon: productTypeIcon(typeOf(group)),
+            desc: hostingEntryDescription(group, descKey, t),
+            to: pageOf(group),
+          }]
           : []
       }),
   ]
@@ -146,9 +175,9 @@ export const buildHeaderNav = ({ t, localePath, groups, products }: HeaderNavInp
       key: 'support',
       label: t('nav.support'),
       children: [
-        { key: 'help', label: t('nav.help'), desc: t('nav.helpDesc'), to: localePath(HELP_PATH) },
-        { key: 'faq', label: t('nav.faq'), desc: t('nav.faqDesc'), to: localePath(FAQ_PATH) },
-        { key: 'contact', label: t('nav.contact'), desc: t('nav.contactDesc'), to: localePath(CONTACT_PATH) },
+        { key: SupportLinkKey.Help, label: t('nav.help'), icon: SUPPORT_LINK_ICON[SupportLinkKey.Help], desc: t('nav.helpDesc'), to: localePath(HELP_PATH) },
+        { key: SupportLinkKey.Faq, label: t('nav.faq'), icon: SUPPORT_LINK_ICON[SupportLinkKey.Faq], desc: t('nav.faqDesc'), to: localePath(FAQ_PATH) },
+        { key: SupportLinkKey.Contact, label: t('nav.contact'), icon: SUPPORT_LINK_ICON[SupportLinkKey.Contact], desc: t('nav.contactDesc'), to: localePath(CONTACT_PATH) },
       ],
     },
   )

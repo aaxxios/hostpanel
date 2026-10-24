@@ -15,7 +15,7 @@
           testid="layout-logo"
         >
           <!-- Logo image cap: intrinsically small UI, not page layout. -->
-          <AppLogoLockup
+          <LogoLockup
             img-class="h-9 w-auto max-w-[160px] object-contain"
             mark-class="h-9 w-9"
             name-class="truncate text-lg font-bold tracking-tight"
@@ -122,11 +122,11 @@
  */
 import { storeToRefs } from 'pinia'
 import { Menu } from 'lucide-vue-next'
-import AppLogoLockup from '~/components/AppLogoLockup.vue'
-import LayoutCartButton from '~/components/layout/LayoutCartButton.vue'
-import LayoutHeaderAccount from '~/components/layout/LayoutHeaderAccount.vue'
-import LayoutHeaderDrawer from '~/components/layout/LayoutHeaderDrawer.vue'
-import LayoutHeaderDropdown from '~/components/layout/LayoutHeaderDropdown.vue'
+import LogoLockup from '~/components/LogoLockup.vue'
+import LayoutCartButton from '~/components/layout/CartButton.vue'
+import LayoutHeaderAccount from '~/components/layout/HeaderAccount.vue'
+import LayoutHeaderDrawer from '~/components/layout/HeaderDrawer.vue'
+import LayoutHeaderDropdown from '~/components/layout/HeaderDropdown.vue'
 import { useAuthStore } from '~/stores/auth'
 import { useHeaderWidget } from '~/composables/useHeaderWidget'
 import { useCartStore } from '~/stores/cart'

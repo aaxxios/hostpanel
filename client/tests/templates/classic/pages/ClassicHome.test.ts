@@ -12,7 +12,6 @@ import ClassicHome from '~/templates/classic/pages/ClassicHome.vue'
 /** Names of the section components the home page composes, in the order they appear. */
 const SECTION_NAMES = [
   'SectionsProductsFullSlider',
-  'SectionsTrusted',
   'SectionsPerformance',
   'SectionsProducts',
   'SectionsWhyChooseUs',
@@ -95,7 +94,6 @@ describe('ClassicHome', () => {
 
   it('hides each toggleable section when its toggle is off', () => {
     const toggled: Array<[HomeSection, string]> = [
-      [HomeSection.Trusted, 'SectionsTrusted'],
       [HomeSection.Performance, 'SectionsPerformance'],
       [HomeSection.Plans, 'SectionsProducts'],
       [HomeSection.Services, 'SectionsWhyChooseUs'],
@@ -105,7 +103,6 @@ describe('ClassicHome', () => {
       [HomeSection.Process, 'SectionsProcess'],
       [HomeSection.Testimonials, 'SectionsTestimonials'],
       [HomeSection.Support, 'SectionsSupport'],
-      [HomeSection.Partners, 'SectionsPartners'],
       [HomeSection.Faq, 'SectionsFAQ'],
       [HomeSection.Cta, 'SectionsCTA'],
     ]
@@ -116,6 +113,24 @@ describe('ClassicHome', () => {
       const wrapper = mountWithKit(ClassicHome, { components })
 
       expect(wrapper.find(`[data-section="${name}"]`).exists()).toBe(false)
+    }
+  })
+
+  it('shows the partners once, and hides them only when both the Partners and Trusted switches are off', () => {
+    const cases: Array<[HomeSection[], boolean]> = [
+      [[], true],
+      [[HomeSection.Partners], true],
+      [[HomeSection.Trusted], true],
+      [[HomeSection.Partners, HomeSection.Trusted], false],
+    ]
+
+    for (const [off, shown] of cases) {
+      switchedOff.value = new Set(off)
+
+      const wrapper = mountWithKit(ClassicHome, { components })
+
+      expect(wrapper.findAll('[data-section="SectionsPartners"]')).toHaveLength(shown ? 1 : 0)
+      expect(wrapper.find('[data-section="SectionsTrusted"]').exists()).toBe(false)
     }
   })
 

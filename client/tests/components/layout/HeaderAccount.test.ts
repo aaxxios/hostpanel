@@ -6,7 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
-import LayoutHeaderAccount from '~/components/layout/LayoutHeaderAccount.vue'
+import LayoutHeaderAccount from '~/components/layout/HeaderAccount.vue'
 import { useAuthStore } from '~/stores/auth'
 import type { ClientUser } from '~/types/clientuser'
 

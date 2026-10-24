@@ -38,7 +38,7 @@ vi.mock('~/composables/apis/useAuthApi', () => ({
 }))
 
 const { default: ClientLayout } = await import('~/layouts/client.vue')
-const { default: LayoutDemoBanner } = await import('~/components/layout/LayoutDemoBanner.vue')
+const { default: LayoutDemoBanner } = await import('~/components/layout/DemoBanner.vue')
 const { Permission, usePermissions } = await import('~/composables/usePermissions')
 const { useAuthStore } = await import('~/stores/auth')
 const { useClientStore } = await import('~/stores/client')

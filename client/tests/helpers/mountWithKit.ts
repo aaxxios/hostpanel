@@ -20,7 +20,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import type { Pinia } from 'pinia'
 import { Suspense, defineComponent, h } from 'vue'
 import type { Component } from 'vue'
-import LayoutDemoBanner from '~/components/layout/LayoutDemoBanner.vue'
+import LayoutDemoBanner from '~/components/layout/DemoBanner.vue'
 
 /** Every kit component file, loaded once. */
 const KIT_MODULES = import.meta.glob<{ default: Component }>('../../components/ui/*.vue', { eager: true })

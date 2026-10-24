@@ -1,5 +1,5 @@
 <template>
-  <AppLogo v-if="uploaded" :img-class="imgClass" />
+  <Logo v-if="uploaded" :img-class="imgClass" />
   <template v-else>
     <!-- Decorative: the site name beside it is the accessible name. -->
     <UiImage
@@ -26,7 +26,7 @@
  * (a demo, an operator who has not uploaded a logo yet) still reads as its own name. The one
  * place that rule lives; the templates only size it.
  */
-import AppLogo from '~/components/AppLogo.vue'
+import Logo from '~/components/Logo.vue'
 import { STATIC_LOGO_MARK } from '~/utils/appLogo'
 import { UiImageFit, UiImageLoading } from '~/utils/ui/enums'
 

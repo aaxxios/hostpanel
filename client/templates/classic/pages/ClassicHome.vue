@@ -6,9 +6,6 @@
     <!-- Hero: products full-screen slider (not toggleable) -->
     <SectionsProductsFullSlider />
 
-    <!-- Trusted-by logo strip -->
-    <SectionsTrusted v-if="isVisible(HomeSection.Trusted)" />
-
     <!-- Performance figures -->
     <SectionsPerformance v-if="isVisible(HomeSection.Performance)" />
 
@@ -39,8 +36,8 @@
     <!-- Support channels -->
     <SectionsSupport v-if="isVisible(HomeSection.Support)" />
 
-    <!-- Partners / clients logos -->
-    <SectionsPartners v-if="isVisible(HomeSection.Partners)" />
+    <!-- Partners / clients logos: one section for both the Partners and the Trusted by switches -->
+    <SectionsPartners v-if="isVisible(HomeSection.Partners) || isVisible(HomeSection.Trusted)" />
 
     <!-- FAQ -->
     <SectionsFAQ v-if="isVisible(HomeSection.Faq)" :limit="HOME_FAQ_LIMIT" :show-categories="false" />

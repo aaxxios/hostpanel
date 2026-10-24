@@ -1,9 +1,9 @@
 /**
- * Helpers for the client auth, layout and dashboard screens: the `AppLogo` stand-in, the Nuxt
+ * Helpers for the client auth, layout and dashboard screens: the `Logo` stand-in, the Nuxt
  * auto-imports those screens use, and a page mount that includes both.
  *
  * `mountClient` and `mountPage` (see `mountClient.ts`) register the kit and every
- * `components/client` component; `AppLogo` lives outside that folder and reads the brand
+ * `components/client` component; `Logo` lives outside that folder and reads the brand
  * settings, so it is replaced by a plain image here.
  *
  * @module tests/helpers/authScreens
@@ -17,9 +17,9 @@ import { mountClient, mountPage } from '~/tests/helpers/mountClient'
 import type { MountWithKitOptions } from '~/tests/helpers/mountWithKit'
 import { stubLocalePath, stubRoute } from '~/tests/helpers/runtimeStubs'
 
-/** `AppLogo` stand-in: an image carrying a test id. */
+/** `Logo` stand-in: an image carrying a test id. */
 export const APP_LOGO_STUB = defineComponent({
-  name: 'AppLogo',
+  name: 'Logo',
   setup() {
     return () => h('img', { 'data-testid': 'app-logo' })
   },
@@ -61,20 +61,20 @@ export const stubAuthRuntime = (options: AuthRuntimeOptions = {}): AuthRuntimeSp
 }
 
 /**
- * Mounts a component with the `AppLogo` stand-in registered.
+ * Mounts a component with the `Logo` stand-in registered.
  *
  * @param component The component under test.
  * @param options Props, slots, attributes and stubs, as for {@link mountClient}.
  * @returns The Vue Test Utils wrapper.
  */
 export const mountWithLogo = (component: Component, options: MountWithKitOptions = {}): VueWrapper =>
-  mountClient(component, { ...options, components: { AppLogo: APP_LOGO_STUB, ...options.components } })
+  mountClient(component, { ...options, components: { Logo: APP_LOGO_STUB, ...options.components } })
 
 /**
- * Mounts a page inside `Suspense` with the `AppLogo` stand-in registered.
+ * Mounts a page inside `Suspense` with the `Logo` stand-in registered.
  *
  * @param page The page under test.
  * @returns The wrapper, after the page has settled.
  */
 export const mountAuthPage = (page: Component): Promise<VueWrapper> =>
-  mountPage(page, { components: { AppLogo: APP_LOGO_STUB } })
+  mountPage(page, { components: { Logo: APP_LOGO_STUB } })

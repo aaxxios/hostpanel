@@ -17,8 +17,9 @@
             :space-between="30"
             :loop="testimonials.length > 1"
             :autoplay="{ delay: TESTIMONIAL_AUTOPLAY_MS, disableOnInteraction: false, pauseOnMouseEnter: true }"
-            :pagination="{ clickable: true }"
-            class="testimonials-swiper"
+            class="pb-4"
+            @swiper="onSwiper"
+            @slide-change="onSlideChange"
           >
             <SwiperSlide v-for="testimonial in testimonials" :key="testimonial.id">
               <ClassicCard :data-testid="`testimonial-${testimonial.id}`">
@@ -52,6 +53,9 @@
               </ClassicCard>
             </SwiperSlide>
           </Swiper>
+          <div v-if="testimonials.length > 1" class="mt-4 flex justify-center">
+            <UiCarouselDots :count="testimonials.length" :active="active" @select="select" />
+          </div>
           <!-- The carousel only exists in the browser; the server render carries every quote as plain text. -->
           <template #fallback>
             <UiStack as="ul" gap="none" class="sr-only" data-testid="testimonials-fallback">
@@ -78,15 +82,18 @@
  */
 import { Star } from 'lucide-vue-next'
 import { Swiper, SwiperSlide } from 'swiper/vue'
-import { Autoplay, Pagination } from 'swiper/modules'
+import { Autoplay } from 'swiper/modules'
 import { TESTIMONIAL_AUTOPLAY_MS } from '~/constants/uiDefaults'
 import 'swiper/css'
-import 'swiper/css/pagination'
+import { useCarouselDots } from '~/composables/useCarouselDots'
 import { useStorefrontStore } from '~/stores/storefront'
 import { getInitials } from '~/utils/design'
 
 /** Swiper modules the carousel uses. */
-const modules = [Autoplay, Pagination]
+const modules = [Autoplay]
+
+/** The dots' position and handlers, driven from the carousel. */
+const { active, onSwiper, onSlideChange, select } = useCarouselDots()
 
 /** The active language; the quotes are re-read when it changes. */
 const { locale } = useI18n()

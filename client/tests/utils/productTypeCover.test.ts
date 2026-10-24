@@ -5,8 +5,9 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_COVER_CLASS, PRODUCT_TYPE_COVER, productTypeCover } from '~/utils/productTypeCover'
+import { DEFAULT_COVER_CLASS, PRODUCT_TYPE_COVER, productTypeCover, slideCover, slideLinkType } from '~/utils/productTypeCover'
 import { ProductType } from '~/types/producttype'
+import { SlideCoverKind } from '~/types/slidecoverkind'
 
 /** Matches the file name inside a cover's `url(...)`. */
 const COVER_FILE = /url\(\/covers\/([a-z-]+\.svg)\)/
@@ -64,5 +65,37 @@ describe('productTypeCover', () => {
     expect(productTypeCover('Mystery')).toBe(DEFAULT_COVER_CLASS)
     expect(productTypeCover(undefined)).toBe(DEFAULT_COVER_CLASS)
     expect(productTypeCover(null)).toBe(DEFAULT_COVER_CLASS)
+  })
+})
+
+describe('slideLinkType', () => {
+  it('reads the product type from the first topic segment, skipping the language and the products prefix', () => {
+    expect(slideLinkType('/vps')).toBe(ProductType.Vps)
+    expect(slideLinkType('/en/domains')).toBe(ProductType.Domain)
+    expect(slideLinkType('/products/ssl?x=1')).toBe(ProductType.Ssl)
+    expect(slideLinkType('/hosting')).toBe(ProductType.SharedHosting)
+    expect(slideLinkType('/dedicated#top')).toBe(ProductType.Dedicated)
+  })
+
+  it('names no type for a link that is missing or about something else', () => {
+    expect(slideLinkType(null)).toBeNull()
+    expect(slideLinkType('')).toBeNull()
+    expect(slideLinkType('/offers')).toBeNull()
+  })
+})
+
+describe('slideCover', () => {
+  it('prefers the uploaded picture over any generated cover', () => {
+    expect(slideCover('/uploads/a.jpg', '/vps')).toEqual({ kind: SlideCoverKind.Image, src: '/uploads/a.jpg' })
+  })
+
+  it('uses the illustration of the linked product type when there is no picture', () => {
+    expect(slideCover('', '/vps')).toEqual({ kind: SlideCoverKind.Art, classes: PRODUCT_TYPE_COVER[ProductType.Vps] })
+    expect(slideCover('   ', '/en/ssl')).toEqual({ kind: SlideCoverKind.Art, classes: PRODUCT_TYPE_COVER[ProductType.Ssl] })
+  })
+
+  it('uses the generic cover when the link names no type, or there is no link', () => {
+    expect(slideCover(null, '/offers')).toEqual({ kind: SlideCoverKind.Art, classes: DEFAULT_COVER_CLASS })
+    expect(slideCover(undefined, undefined)).toEqual({ kind: SlideCoverKind.Art, classes: DEFAULT_COVER_CLASS })
   })
 })
