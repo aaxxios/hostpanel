@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 193 44" role="img" aria-label="Harbor Media">
-  <g transform="translate(0 0)"><circle cx="22" cy="22" r="18" fill="none" stroke="#8b95a7" stroke-width="4"/><path d="M17 14 L31 22 L17 30 Z" fill="#8b95a7"/></g>
-  <text x="54" y="29" textLength="137" lengthAdjust="spacingAndGlyphs" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="21" font-weight="700" letter-spacing="0.3" fill="#8b95a7">Harbor Media</text>
+  <g transform="translate(0 0)"><circle cx="22" cy="22" r="18" fill="none" stroke="#db2777" stroke-width="4"/><path d="M17 14 L31 22 L17 30 Z" fill="#fb923c"/></g>
+  <text x="54" y="29" textLength="137" lengthAdjust="spacingAndGlyphs" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="21" font-weight="700" letter-spacing="0.3" fill="#1e293b">Harbor Media</text>
 </svg>

@@ -51,6 +51,8 @@ describe('UiLogoWall', () => {
     const wrapper = mountWithKit(UiLogoWall, { props: { items: items(4), testidPrefix: 'partner', layout: UiLogoWallLayout.Marquee } })
 
     expect(wrapper.find('.animate-marquee').classes()).toContain('hover:[animation-play-state:paused]')
+    expect(wrapper.classes().join(' ')).toContain('mask-image')
+    expect(wrapper.find('[data-testid="partner-logo-1"]').classes()).toContain('group-hover:grayscale-0')
     expect(wrapper.findAll('[data-testid="partner-1"]')).toHaveLength(2)
     const hidden = wrapper.findAll('[aria-hidden="true"]')
     expect(hidden).toHaveLength(4)

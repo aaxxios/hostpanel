@@ -36,11 +36,16 @@
         tone="inherit"
         :underline="false"
         role="menuitem"
-        :class="[HEADER_MENU_ROW, isHeaderPathActive(path, child.to) ? 'bg-classic-brand-soft' : '']"
+        :class="[HEADER_ICON_ROW, isHeaderPathActive(path, child.to) ? 'bg-classic-brand-soft' : '']"
         :aria-current="isHeaderPathActive(path, child.to) ? 'page' : undefined"
         :testid="`header-nav-child-${child.key}`"
         @click="close"
       >
+        <UiIconTile
+          :icon="child.icon"
+          :tone="isHeaderPathActive(path, child.to) ? 'solid' : 'soft'"
+          :data-testid="`header-nav-child-${child.key}-icon`"
+        />
         <UiStack gap="none" as="span" class="min-w-0">
           <UiText
             as="span"
@@ -51,7 +56,7 @@
           >
             {{ child.label }}
           </UiText>
-          <UiText v-if="child.desc" as="span" size="xs" tone="inherit" class="mt-0.5 text-classic-muted">
+          <UiText v-if="child.desc" as="span" size="xs" tone="inherit" truncate class="mt-0.5 text-classic-muted">
             {{ child.desc }}
           </UiText>
         </UiStack>
@@ -67,12 +72,13 @@
  * Opens and closes on click, so it works the same for a mouse, a finger and the keyboard. The
  * panel closes on Escape (focus returns to the trigger), on a click outside, when focus leaves
  * it, and when a link is chosen. The trigger reads as current when any of its links is the page
- * being viewed.
+ * being viewed. Every row leads with an icon tile (`child.icon`), so the Hosting and Support
+ * entries read at a glance.
  */
 import { ChevronDown } from 'lucide-vue-next'
 import type { ComponentPublicInstance } from 'vue'
 import type { HeaderNavItem } from '~/types/headernavitem'
-import { HEADER_MENU_ROW, HEADER_NAV_ACTIVE, HEADER_NAV_IDLE, HEADER_NAV_ITEM } from '~/utils/headerControl'
+import { HEADER_ICON_ROW, HEADER_NAV_ACTIVE, HEADER_NAV_IDLE, HEADER_NAV_ITEM } from '~/utils/headerControl'
 import { isHeaderItemActive, isHeaderPathActive } from '~/utils/headerNav'
 
 /** Props of LayoutHeaderDropdown. */

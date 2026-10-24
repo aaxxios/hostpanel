@@ -31,7 +31,7 @@
         <UiStack gap="none" class="min-w-0 sm:col-span-3 lg:col-span-2" data-testid="footer-brand">
           <UiStack direction="row" align="center" gap="sm" class="text-classic-ink">
             <!-- Logo image cap: intrinsically small UI, not page layout. -->
-            <AppLogoLockup img-class="h-9 w-auto max-w-[180px] object-contain" mark-class="h-9 w-9" name-class="text-lg font-bold" />
+            <LogoLockup img-class="h-9 w-auto max-w-[180px] object-contain" mark-class="h-9 w-9" name-class="text-lg font-bold" />
           </UiStack>
           <UiText tone="inherit" size="sm" class="mt-4 leading-relaxed text-classic-muted">
             {{ $t('footer.tagline') }}
@@ -98,8 +98,8 @@
  */
 import { CreditCard, Lock, ShieldCheck } from 'lucide-vue-next'
 import type { Component } from 'vue'
-import AppLogoLockup from '~/components/AppLogoLockup.vue'
-import LayoutFooterColumn from '~/components/layout/LayoutFooterColumn.vue'
+import LogoLockup from '~/components/LogoLockup.vue'
+import LayoutFooterColumn from '~/components/layout/FooterColumn.vue'
 import { useCatalogStore } from '~/stores/catalog'
 import type { FooterLink } from '~/types/footerlink'
 import { familyKey } from '~/utils/catalogGroups'

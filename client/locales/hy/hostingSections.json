@@ -1,8 +1,5 @@
 {
   "hostingSections": {
-    "trusted": {
-      "label": "Մեզ վստահում են"
-    },
     "locations": {
       "badge": "Տեղակայումներ",
       "title": "Սերվերներ ձեր այցելուներին մոտ",

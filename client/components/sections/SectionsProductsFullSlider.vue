@@ -1,42 +1,12 @@
 <template>
-  <!-- The panel follows the theme. A slide with a photograph sits under a flat dark scrim and uses the dark palette for its own copy; a slide with no image is the plain page colour in either mode. -->
+  <!-- The panel is the page colour in either mode; the cover beside each slide carries the picture. -->
   <!-- No slides configured: the text hero, so the top of the home page is never an empty viewport. -->
   <SectionsHero v-if="!sliderItems.length" />
-  <section v-else ref="sectionRef" class="products-slider relative h-[75dvh] sm:h-[85dvh] md:h-dvh w-full overflow-hidden bg-classic-page" data-testid="products-slider">
+  <section v-else class="relative h-[90dvh] sm:h-[85dvh] md:h-[calc(100dvh-4.5rem)] md:max-h-[44rem] w-full overflow-hidden bg-classic-page" data-testid="products-slider">
     <ClientOnly>
       <!-- Before hydration: the first slide, rendered at once so the page is never blank -->
       <template #fallback>
-        <div :class="[firstSlide?.image ? 'dark' : '', 'absolute inset-0']">
-          <NuxtImg
-            v-if="firstSlide?.image"
-            :src="firstSlide.image"
-            :alt="firstSlide.name || SITE_NAME"
-            width="1920"
-            height="1080"
-            format="webp"
-            quality="80"
-            sizes="100vw"
-            :preload="true"
-            class="h-full w-full object-cover"
-          />
-          <div v-if="firstSlide?.image" class="absolute inset-0 bg-black/60" />
-        </div>
-        <UiAccent v-if="firstSlide" :color="firstSlide.color" :class="firstSlide.image ? 'dark' : ''">
-          <UiContainer class="relative z-10 flex h-full items-center justify-center">
-            <UiCard padding="lg" class="text-center mb-10 sm:mb-0">
-              <UiAccentTile :icon="`mdi:${firstSlide.icon}`" size="xl" class="mb-6 sm:mb-8 mx-auto" />
-              <UiHeading :level="2" class="mb-4 sm:mb-6 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">{{ firstSlide.name }}</UiHeading>
-              <UiText tone="primary" class="mb-4 sm:mb-6 text-lg sm:text-xl md:text-2xl font-semibold">{{ firstSlide.tagline }}</UiText>
-              <UiText tone="muted" class="mb-6 sm:mb-8 text-sm sm:text-base md:text-lg leading-relaxed font-light line-clamp-3 px-4">{{ firstSlide.description }}</UiText>
-              <div class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mt-8">
-                <UiAccentButton :to="localePath(firstSlide.learnMoreUrl)" size="lg" class="w-full sm:w-auto sm:px-10 sm:py-4 font-bold" data-testid="slider-fallback-cta">
-                  {{ $t('products.pricing.cta.learnMore') }}
-                  <ArrowRight :size="18" :stroke-width="3" />
-                </UiAccentButton>
-              </div>
-            </UiCard>
-          </UiContainer>
-        </UiAccent>
+        <SectionsProductsSlide v-if="firstSlide" :item="firstSlide" eager />
       </template>
 
       <Swiper
@@ -46,96 +16,25 @@
         :space-between="0"
         :autoplay="sliderItems.length > 1 ? { delay: 5000, disableOnInteraction: false } : false"
         :navigation="{ nextEl: '.swiper-button-next-custom', prevEl: '.swiper-button-prev-custom' }"
-        :pagination="{ clickable: true }"
-        :loop="sliderItems.length > 1"
+                :loop="sliderItems.length > 1"
         :speed="800"
         class="h-full w-full"
+        @swiper="onSwiper"
+        @slide-change="onSlideChange"
       >
-        <SwiperSlide v-for="(item, index) in sliderItems" :key="item.id" :class="[item.image ? 'dark' : '', 'relative h-full w-full']">
-          <UiAccent :color="item.color">
-            <!-- Background with a Ken Burns effect -->
-            <div :class="[item.image ? '' : 'bg-classic-page', 'absolute inset-0 overflow-hidden']" :data-testid="`slider-background-${item.id}`">
-              <UiImage
-                v-if="item.image"
-                :src="item.image"
-                :alt="item.name"
-                :loading="index === 0 ? 'eager' : 'lazy'"
-                :fetchpriority="index === 0 ? 'high' : 'auto'"
-                class="h-full w-full animate-ken-burns"
-              />
-              <!-- The scrim keeps the copy readable on a photograph; with no image there is nothing to darken -->
-              <div v-if="item.image" class="absolute inset-0 bg-black/60" />
-            </div>
-
-            <!-- Content -->
-            <UiContainer class="relative z-10 flex h-full items-center justify-center">
-              <UiCard padding="lg" class="text-center mb-10 sm:mb-0 animate-reveal-up motion-reduce:animate-none">
-                <UiAccentTile
-                  :icon="`mdi:${item.icon}`"
-                  size="xl"
-                  class="mb-6 sm:mb-8 mx-auto"
-                />
-
-                <UiHeading
-                  :level="2"
-                  class="mb-4 sm:mb-6 text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight animate-reveal-up motion-reduce:animate-none"
-                  :class="revealDelay(400)"
-                >
-                  {{ item.name }}
-                </UiHeading>
-
-                <UiText
-                  tone="primary"
-                  class="mb-4 sm:mb-6 text-lg sm:text-xl md:text-2xl font-semibold animate-reveal-up motion-reduce:animate-none"
-                  :class="revealDelay(550)"
-                >
-                  {{ item.tagline }}
-                </UiText>
-
-                <UiText
-                  tone="muted"
-                  class="mb-6 sm:mb-8 text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed font-light line-clamp-3 md:line-clamp-none px-4 animate-reveal-up motion-reduce:animate-none"
-                  :class="revealDelay(700)"
-                >
-                  {{ item.description }}
-                </UiText>
-
-                <!-- Features, one after another -->
-                <div v-if="item.features.length" class="mb-8 mt-4 flex flex-wrap justify-center gap-3">
-                  <span
-                    v-for="(feature, featureIndex) in item.features"
-                    :key="feature"
-                    :class="[accent.tintStrong, accent.borderMedium, 'inline-flex items-center gap-2 rounded-md px-4 py-1.5 text-xs sm:text-sm font-bold text-classic-ink border cursor-default', 'animate-reveal-up motion-reduce:animate-none', revealDelay(800 + featureIndex * 100)]"
-                  >
-                    <CheckCircle :size="14" :stroke-width="3" :class="accent.text" />
-                    {{ feature }}
-                  </span>
-                </div>
-
-                <!-- Calls to action -->
-                <div
-                  class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mt-8 animate-reveal-up motion-reduce:animate-none"
-                  :class="revealDelay(1000)"
-                >
-                  <UiMagnetic :strength="0.2">
-                    <UiAccentButton :to="localePath(item.learnMoreUrl)" size="lg" class="w-full sm:w-auto sm:px-10 sm:py-4 font-bold" :data-testid="`slider-cta-${item.id}`">
-                      <span class="truncate">{{ $t('products.pricing.cta.learnMore') }}</span>
-                      <ArrowRight :size="18" :stroke-width="3" class="flex-shrink-0" />
-                    </UiAccentButton>
-                  </UiMagnetic>
-
-                  <UiMagnetic v-if="item.demoUrl" :strength="0.15">
-                    <UiButton :href="item.demoUrl" target="_blank" rel="noopener noreferrer" variant="subtle" size="lg" class="w-full sm:w-auto sm:px-10 sm:py-4 font-bold" :data-testid="`slider-demo-${item.id}`">
-                      <span class="truncate">{{ $t('products.pricing.cta.viewDemo') }}</span>
-                      <PlayCircle :size="18" :stroke-width="2.5" class="ml-2 text-primary-400 flex-shrink-0" />
-                    </UiButton>
-                  </UiMagnetic>
-                </div>
-              </UiCard>
-            </UiContainer>
-          </UiAccent>
+        <SwiperSlide v-for="(item, index) in sliderItems" :key="item.id" class="relative h-full w-full">
+          <SectionsProductsSlide :item="item" :eager="index === 0" />
         </SwiperSlide>
       </Swiper>
+
+      <!-- Pagination: kit dots driven from the carousel (Swiper's own bullets are off) -->
+      <UiCarouselDots
+        v-if="sliderItems.length > 1"
+        :count="sliderItems.length"
+        :active="active"
+        class="absolute bottom-5 left-1/2 z-20 -translate-x-1/2"
+        @select="select"
+      />
 
       <!-- Navigation arrows, desktop only -->
       <UiIconButton
@@ -155,15 +54,6 @@
         testid="slider-next"
       />
     </ClientOnly>
-
-    <!-- Scroll down; hidden on mobile to avoid overlapping the content -->
-    <UiIconButton
-      :icon="ChevronDown"
-      :label="$t('common.scrollDown')"
-      class="absolute bottom-10 left-1/2 z-30 -translate-x-1/2 rounded-md hidden sm:flex"
-      testid="slider-scroll"
-      @click="scrollDown"
-    />
   </section>
 </template>
 
@@ -172,48 +62,36 @@
  * Full-screen product slider hero section.
  *
  * Fetches the slides from the backend through the catalogue store and shows them in a Swiper
- * carousel with a Ken Burns background, a solid classic panel and staggered feature badges. Every slide
- * keeps its own brand colour (`UiAccent`). The panel follows the colour mode like the rest of the page: only a
- * slide that has a photograph is put in the dark palette (`dark`), because its copy sits on the dark scrim; a slide
- * without an image is the page colour in light and in dark. Before the browser takes over, the first slide
+ * carousel. Each slide is a split (`SectionsProductsSlide`): the text on the left and a cover
+ * illustration on the right, the cover above the text on a phone. Every slide keeps its own brand colour
+ * (`UiAccent`) and the panel follows the colour mode. Before the browser takes over, the first slide
  * is rendered by the server so the page is never blank. With no slide at all it renders the
  * text hero (`SectionsHero`) in its place, so the page never opens on an empty, full-height band.
+ * The pagination is the kit's `UiCarouselDots`, driven from the carousel; Swiper's own bullets are off.
  */
 
-import { revealDelay } from '~/utils/reveal'
-import { ArrowRight, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, PlayCircle } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { Swiper, SwiperSlide } from 'swiper/vue'
-import { Autoplay, Navigation, Pagination } from 'swiper/modules'
+import { Autoplay, Navigation } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/navigation'
-import 'swiper/css/pagination'
+import { useCarouselDots } from '~/composables/useCarouselDots'
 import { useCatalogStore } from '~/stores/catalog'
-import { ACCENT_CLASSES } from '~/utils/ui/accent'
-
-/** Alt text of that image when there is no slide at all: the operator's site name. */
-const { name: SITE_NAME } = useSiteIdentity()
-
-/** Accent classes the slides read (the colour itself is set by each slide's UiAccent). */
-const accent = ACCENT_CLASSES
+import type { SliderItem } from '~/types/slideritem'
 
 /** Translation helpers and the active language. */
 const { locale } = useI18n()
-/** Prefixes a path with the active language. */
-const localePath = useLocalePath()
 /** The catalogue: products, plans, slides and TLD prices. */
 const catalogStore = useCatalogStore()
 
 /** Swiper modules the carousel uses. */
-const modules = [Autoplay, Navigation, Pagination]
-
-/** The section element, measured by {@link scrollDown}. */
-const sectionRef = ref<HTMLElement | null>(null)
+const modules = [Autoplay, Navigation]
 
 // The slides are re-read when the language changes.
 await useAsyncData('home:slides', () => catalogStore.loadSlides(locale.value), { watch: [locale] })
 
 /** The slides shaped for the template. */
-const sliderItems = computed(() => (catalogStore.slides ?? []).map((slide) => ({
+const sliderItems = computed(() => (catalogStore.slides ?? []).map((slide): SliderItem => ({
   id: String(slide.id),
   name: slide.title,
   tagline: slide.tagline ?? '',
@@ -229,13 +107,6 @@ const sliderItems = computed(() => (catalogStore.slides ?? []).map((slide) => ({
 /** The first slide, which the server-rendered fallback shows. */
 const firstSlide = computed(() => sliderItems.value[0])
 
-/** Scrolls the viewport down to the bottom of this section. */
-const scrollDown = (): void => {
-  const section = sectionRef.value
-  if (!section) {
-    return
-  }
-  const bottom = section.getBoundingClientRect().bottom + window.scrollY
-  window.scrollTo({ top: bottom, behavior: 'smooth' })
-}
+/** The dots' position and handlers, driven from the carousel. */
+const { active, onSwiper, onSlideChange, select } = useCarouselDots()
 </script>

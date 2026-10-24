@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
-import LayoutHeaderDrawer from '~/components/layout/LayoutHeaderDrawer.vue'
+import LayoutHeaderDrawer from '~/components/layout/HeaderDrawer.vue'
 import { useAuthStore } from '~/stores/auth'
 import type { ClientUser } from '~/types/clientuser'
 import type { HeaderNavItem } from '~/types/headernavitem'
@@ -39,8 +39,8 @@ const items: HeaderNavItem[] = [
     key: 'support',
     label: 'Support',
     children: [
-      { key: 'help', label: 'Help center', to: '/en/knowledgebase' },
-      { key: 'faq', label: 'FAQ', to: '/en/faq' },
+      { key: 'help', label: 'Help center', icon: 'mdi:book-open-variant', to: '/en/knowledgebase' },
+      { key: 'faq', label: 'FAQ', icon: 'mdi:frequently-asked-questions', to: '/en/faq' },
     ],
   },
 ]
@@ -85,6 +85,14 @@ describe('LayoutHeaderDrawer', () => {
 
     expect(wrapper.find('[data-testid="header-drawer-child-faq"]').attributes('aria-current')).toBe('page')
     expect(wrapper.find('[data-testid="header-drawer-domains"]').attributes('aria-current')).toBeUndefined()
+  })
+
+  it('draws the icon tile of every group link, inverted on the current page', () => {
+    const wrapper = mountDrawer('/en/faq')
+
+    expect(wrapper.find('[data-testid="header-drawer-child-help-icon"] [data-icon="mdi:book-open-variant"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="header-drawer-child-help-icon"]').classes()).toContain('bg-classic-brand-soft')
+    expect(wrapper.find('[data-testid="header-drawer-child-faq-icon"]').classes()).toContain('bg-classic-on-brand/20')
   })
 
   it('carries the preference pickers', () => {

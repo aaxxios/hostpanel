@@ -10,6 +10,8 @@ export interface HeaderNavChild {
   key: string
   /** Visible label. */
   label: string
+  /** Nuxt Icon name drawn in the tile beside the label. */
+  icon: string
   /** Short description shown under the label; absent when the link needs none. */
   desc?: string
   /** Localised route the link goes to. */

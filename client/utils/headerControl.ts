@@ -31,3 +31,10 @@ export const HEADER_PRIMARY = `inline-flex h-10 items-center justify-center whit
 
 /** Row of a dropdown or drawer link. */
 export const HEADER_MENU_ROW = `flex items-start gap-3 rounded-md px-3 py-2.5 text-classic-ink transition-colors hover:bg-classic-surface-2 focus-visible:bg-classic-surface-2 ${HEADER_FOCUS}`
+
+/**
+ * Row of a dropdown link that carries an icon tile: a fixed 60px height so every row is the same
+ * whether or not it has a description, the tile centred on the left, and the `group` the tile
+ * reads to fill in on hover and keyboard focus.
+ */
+export const HEADER_ICON_ROW = `group flex min-h-[60px] items-center gap-3 rounded-md px-3 py-2.5 text-classic-ink transition-colors hover:bg-classic-surface-2 focus-visible:bg-classic-surface-2 ${HEADER_FOCUS}`

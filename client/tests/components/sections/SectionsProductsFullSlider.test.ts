@@ -5,23 +5,33 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
-import { mountPage, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
+import { mountPage, registerPageComponents, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
+import SectionsProductsSlide from '~/components/sections/SectionsProductsSlide.vue'
 import ProductsFullSlider from '~/components/sections/SectionsProductsFullSlider.vue'
 import type { SlidePublic } from '~/types/slidepublic'
+
+/** The slide jumps the stand-in carousel was asked for. */
+const slideToLoop = vi.hoisted(() => vi.fn())
 
 vi.mock('swiper/vue', async () => {
   const { defineComponent, h } = await import('vue')
   return {
-    /** Stand-in carousel: renders its slides in a plain element. */
-    Swiper: defineComponent({ name: 'Swiper', setup: (_props, { slots }) => () => h('div', { 'data-testid': 'swiper' }, slots.default?.()) }),
+    /** Stand-in carousel: renders its slides in a plain element and reports a fake instance on the second slide. */
+    Swiper: defineComponent({
+      name: 'Swiper',
+      emits: ['swiper'],
+      setup: (_props, { slots, emit }) => {
+        emit('swiper', { realIndex: 1, slideToLoop })
+        return () => h('div', { 'data-testid': 'swiper' }, slots.default?.())
+      },
+    }),
     /** Stand-in slide. */
     SwiperSlide: defineComponent({ name: 'SwiperSlide', setup: (_props, { slots }) => () => h('div', slots.default?.()) }),
   }
 })
-vi.mock('swiper/modules', () => ({ Autoplay: {}, Navigation: {}, Pagination: {} }))
+vi.mock('swiper/modules', () => ({ Autoplay: {}, Navigation: {} }))
 vi.mock('swiper/css', () => ({}))
 vi.mock('swiper/css/navigation', () => ({}))
-vi.mock('swiper/css/pagination', () => ({}))
 
 /** The mocked catalogue endpoints, re-created for every test. */
 const api = { fetchSlides: vi.fn() }
@@ -76,6 +86,8 @@ const mountSlider = async () => {
 describe('ProductsFullSlider', () => {
   beforeEach(() => {
     stubPublicPageRuntime()
+    slideToLoop.mockReset()
+    registerPageComponents({ SectionsProductsSlide })
     api.fetchSlides.mockReset()
     api.fetchSlides.mockResolvedValue([slide(1), slide(2, { demoUrl: 'https://demo.test', brandColor: '#10b981' })])
   })
@@ -138,33 +150,62 @@ describe('ProductsFullSlider', () => {
     expect(panel.classes()).toContain('bg-classic-page')
   })
 
-  it('puts only a slide with a photograph in the dark palette, under a dark scrim', async () => {
-    api.fetchSlides.mockResolvedValue([slide(1), slide(2, { imageUrl: '' })])
+  it('lays each slide out as a split: text on the left, the cover on the right, the cover first on a phone', async () => {
     const wrapper = await mountSlider()
 
-    const slides = wrapper.findAll('[data-testid="ui-accent"]').map((node) => node.element.parentElement as HTMLElement)
-    expect(slides[0]?.classList.contains('dark')).toBe(true)
-    expect(slides[1]?.classList.contains('dark')).toBe(false)
-    expect(wrapper.find('[data-testid="slider-background-1"] .bg-black\\/60').exists()).toBe(true)
+    const grid = wrapper.find('[data-testid="slider-slide-1"]')
+    expect(grid.classes()).toEqual(expect.arrayContaining(['grid', 'grid-cols-1', 'md:grid-cols-2', 'h-full']))
+    const cover = wrapper.find('[data-testid="slider-cover-1"]')
+    const text = wrapper.find('[data-testid="slider-text-1"]')
+    expect(cover.classes()).toContain('md:order-2')
+    expect(text.classes()).toContain('md:order-1')
+    // The cover comes first in the markup, so a phone shows it above the text.
+    expect(grid.element.firstElementChild).toBe(cover.element)
   })
 
-  it('draws no dark scrim over a slide without an image, so it is the plain page colour', async () => {
-    api.fetchSlides.mockResolvedValue([slide(1, { imageUrl: '' })])
+  it('shows the uploaded picture as the cover, and keeps the panel in the page colour with no scrim', async () => {
     const wrapper = await mountSlider()
 
-    const background = wrapper.find('[data-testid="slider-background-1"]')
-    expect(background.classes()).toContain('bg-classic-page')
-    expect(background.find('.bg-black\\/60').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="slider-cover-image-1"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="slider-cover-art-1"]').exists()).toBe(false)
+    expect(wrapper.html()).not.toContain('bg-black')
+    expect(wrapper.find('[data-testid="products-slider"]').classes()).not.toContain('dark')
   })
 
-  it('scrolls to the bottom of the section from the scroll-down button', async () => {
-    const scrollTo = vi.fn()
-    window.scrollTo = scrollTo as unknown as typeof window.scrollTo
+  it('falls back to the illustration of the slide topic when it has no picture, and to the generic one otherwise', async () => {
+    api.fetchSlides.mockResolvedValue([
+      slide(1, { imageUrl: '', learnMoreUrl: '/vps' }),
+      slide(2, { imageUrl: '', learnMoreUrl: '/offers' }),
+    ])
     const wrapper = await mountSlider()
 
-    await wrapper.find('[data-testid="slider-scroll"]').trigger('click')
+    expect(wrapper.find('[data-testid="slider-cover-art-1"]').classes().join(' ')).toContain('/covers/vps.svg')
+    expect(wrapper.find('[data-testid="slider-cover-art-2"]').classes().join(' ')).toContain('/covers/generic.svg')
+  })
 
-    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
+  it('has no scroll-down button', async () => {
+    const wrapper = await mountSlider()
+
+    expect(wrapper.find('[data-testid="slider-scroll"]').exists()).toBe(false)
+  })
+
+  it('drives the kit dots from the carousel: the active dot follows it, and a dot press moves it', async () => {
+    const wrapper = await mountSlider()
+
+    // The stand-in carousel reports the second slide as active.
+    expect(wrapper.find('[data-testid="carousel-dot-1"]').attributes('aria-current')).toBe('true')
+    expect(wrapper.find('[data-testid="carousel-dot-0"]').attributes('aria-current')).toBeUndefined()
+
+    await wrapper.find('[data-testid="carousel-dot-0"]').trigger('click')
+
+    expect(slideToLoop).toHaveBeenCalledWith(0)
+  })
+
+  it('shows no dots for a single slide', async () => {
+    api.fetchSlides.mockResolvedValue([slide(1)])
+    const wrapper = await mountSlider()
+
+    expect(wrapper.find('[data-testid="carousel-dots"]').exists()).toBe(false)
   })
 
   it('renders no image for a slide whose image is empty', async () => {

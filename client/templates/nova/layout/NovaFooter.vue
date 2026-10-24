@@ -6,7 +6,7 @@
         <div>
           <UiStack direction="row" align="center" gap="sm">
             <!-- Logo image cap: intrinsically small UI, not page layout. -->
-            <AppLogoLockup img-class="h-8 w-auto max-w-[120px]" mark-class="h-8 w-8" name-class="text-base font-bold" />
+            <LogoLockup img-class="h-8 w-auto max-w-[120px]" mark-class="h-8 w-8" name-class="text-base font-bold" />
           </UiStack>
           <UiText size="inherit" tone="inherit" class="mt-4 text-[15px] leading-relaxed text-nova-muted">
             {{ t('nova.footer.tagline') }}
@@ -110,7 +110,7 @@
  *
  * Live chat is not repeated here: the layout already mounts UiFloatingActions.
  */
-import AppLogoLockup from '~/components/AppLogoLockup.vue'
+import LogoLockup from '~/components/LogoLockup.vue'
 import { UiFooterLinkVariant } from '~/utils/ui/enums'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { TELEGRAM_LINK_BASE } from '~/constants/contactChannel'

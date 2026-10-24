@@ -689,15 +689,15 @@ export const PROJECTS = [
 ]
 
 /**
- * The home-page slides the public feed serves when a spec switches them on: one on a photograph
- * and one with no image, so the slider is checked on both kinds of background.
+ * The home-page slides the public feed serves when a spec switches them on: one with an uploaded
+ * cover picture and one with none, so the slider is checked on both kinds of cover.
  */
 export const SLIDES = [
   {
     id: 1,
     iconName: 'server',
     brandColor: '#2563eb',
-    imageUrl: '/og-image.jpg',
+    imageUrl: '/demo/slides/cloud-vps.svg',
     demoUrl: null,
     learnMoreUrl: '/products',
     productId: null,
@@ -716,7 +716,7 @@ export const SLIDES = [
     brandColor: '#0d9488',
     imageUrl: '',
     demoUrl: null,
-    learnMoreUrl: '/products',
+    learnMoreUrl: '/vps',
     productId: null,
     monthlyPrice: null,
     annualPrice: null,

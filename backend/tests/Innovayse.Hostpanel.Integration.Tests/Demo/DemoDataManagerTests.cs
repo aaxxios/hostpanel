@@ -391,6 +391,22 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
         projects.Select(p => p.ImageUrls[0]).Should().OnlyHaveUniqueItems();
     }
 
+    /// <summary>Every demo slide carries its own bundled cover picture, so the slider never falls back to a blank cover.</summary>
+    /// <returns>A task that completes when the check has run.</returns>
+    [Fact]
+    public async Task Seed_GivesEverySlideItsOwnCoverImageAsync()
+    {
+        var host = DemoTestHost.Enabled(factory);
+        await ResetAsync(host);
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var slides = await db.Slides.ToListAsync();
+        slides.Should().NotBeEmpty();
+        slides.Should().OnlyContain(s => s.ImageUrl.StartsWith("/demo/slides/", StringComparison.Ordinal) && s.ImageUrl.EndsWith(".svg", StringComparison.Ordinal));
+        slides.Select(s => s.ImageUrl).Should().OnlyHaveUniqueItems();
+    }
+
     /// <summary>
     /// The content-only entry the development seeder uses adds nothing to tables that already hold rows and never
     /// touches the settings, so a developer's local edits survive a restart.

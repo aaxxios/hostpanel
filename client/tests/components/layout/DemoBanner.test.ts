@@ -2,13 +2,13 @@
  * Unit tests for `LayoutDemoBanner`: hidden outside a demo; inside one it shows the label, the
  * countdown to the next reset and the data-resets note.
  *
- * @module tests/components/layout/LayoutDemoBanner.test
+ * @module tests/components/layout/DemoBanner.test
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
-import LayoutDemoBanner from '~/components/layout/LayoutDemoBanner.vue'
+import LayoutDemoBanner from '~/components/layout/DemoBanner.vue'
 import { useDemoStore } from '~/stores/demo'
 
 /** The moment the fake clock is frozen at. */

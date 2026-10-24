@@ -3,7 +3,7 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
-import LayoutCartButton from '~/components/layout/LayoutCartButton.vue'
+import LayoutCartButton from '~/components/layout/CartButton.vue'
 import { useCartStore } from '~/stores/cart'
 import type { CartItem } from '~/types/cartitem'
 

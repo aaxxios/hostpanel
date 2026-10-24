@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 193 44" role="img" aria-label="Cobalt Works">
-  <g transform="translate(0 0)"><rect x="4" y="4" width="36" height="36" rx="8" fill="none" stroke="#8b95a7" stroke-width="4"/><rect x="14" y="14" width="16" height="16" rx="3" fill="#8b95a7"/></g>
-  <text x="54" y="29" textLength="137" lengthAdjust="spacingAndGlyphs" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="21" font-weight="700" letter-spacing="0.3" fill="#8b95a7">Cobalt Works</text>
+  <g transform="translate(0 0)"><rect x="4" y="4" width="36" height="36" rx="8" fill="none" stroke="#1d4ed8" stroke-width="4"/><rect x="14" y="14" width="16" height="16" rx="3" fill="#38bdf8"/></g>
+  <text x="54" y="29" textLength="137" lengthAdjust="spacingAndGlyphs" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="21" font-weight="700" letter-spacing="0.3" fill="#1e293b">Cobalt Works</text>
 </svg>

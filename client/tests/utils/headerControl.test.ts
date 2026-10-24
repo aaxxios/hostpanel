@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import {
-  HEADER_CONTROL, HEADER_FOCUS, HEADER_MENU_ROW, HEADER_NAV_ACTIVE, HEADER_NAV_IDLE, HEADER_NAV_ITEM, HEADER_PRIMARY,
+  HEADER_CONTROL, HEADER_FOCUS, HEADER_ICON_ROW, HEADER_MENU_ROW, HEADER_NAV_ACTIVE, HEADER_NAV_IDLE, HEADER_NAV_ITEM, HEADER_PRIMARY,
 } from '~/utils/headerControl'
 
 describe('header control classes', () => {
@@ -19,7 +19,7 @@ describe('header control classes', () => {
   it('draws a keyboard focus ring in light and dark', () => {
     expect(HEADER_FOCUS).toContain('focus-visible:ring-classic-brand')
     expect(HEADER_FOCUS).toContain('dark:focus-visible:ring-classic-brand')
-    for (const classes of [HEADER_CONTROL, HEADER_NAV_ITEM, HEADER_PRIMARY, HEADER_MENU_ROW]) {
+    for (const classes of [HEADER_CONTROL, HEADER_NAV_ITEM, HEADER_PRIMARY, HEADER_MENU_ROW, HEADER_ICON_ROW]) {
       expect(classes).toContain(HEADER_FOCUS)
     }
   })

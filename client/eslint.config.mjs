@@ -112,5 +112,12 @@ export default withNuxt(
       'vue/multi-word-component-names': 'off'
     }
   },
+  {
+    // `Logo` is the brand mark itself and is named for what it is; `LogoLockup` is its sibling.
+    files: ['components/Logo.vue'],
+    rules: {
+      'vue/multi-word-component-names': ['error', { ignores: ['Logo'] }]
+    }
+  },
   ...conformance
 )

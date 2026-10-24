@@ -37,7 +37,7 @@
     "home": "Главная",
     "products": "Продукты",
     "backToProducts": "Назад к продуктам",
-    "scrollDown": "Прокрутите вниз",
+    "goToSlide": "Перейти к слайду {n}",
     "scrollHorizontal": "Прокрутите вбок",
     "retry": "Повторить",
     "breadcrumb": "Навигационная цепочка"

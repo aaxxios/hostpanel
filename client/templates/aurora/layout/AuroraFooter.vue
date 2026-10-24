@@ -9,7 +9,7 @@
         <UiStack gap="none" class="min-w-0">
           <UiStack direction="row" align="center" gap="sm" class="text-tx">
             <!-- Logo image cap: intrinsically small UI, not page layout. -->
-            <AppLogoLockup img-class="h-[34px] w-auto max-w-[140px]" mark-class="h-9 w-9" name-class="text-lg font-bold" />
+            <LogoLockup img-class="h-[34px] w-auto max-w-[140px]" mark-class="h-9 w-9" name-class="text-lg font-bold" />
           </UiStack>
           <UiText tone="inherit" class="mt-4 leading-relaxed text-mut2">
             {{ t('aurora.footer.tagline') }}
@@ -124,7 +124,7 @@
  * shows a subscribe button that goes nowhere. Live chat is not duplicated here —
  * the layout already mounts UiFloatingActions.
  */
-import AppLogoLockup from '~/components/AppLogoLockup.vue'
+import LogoLockup from '~/components/LogoLockup.vue'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { TELEGRAM_LINK_BASE } from '~/constants/contactChannel'
 import { UiFooterLinkVariant } from '~/utils/ui/enums'

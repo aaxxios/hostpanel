@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
-import LayoutFooterColumn from '~/components/layout/LayoutFooterColumn.vue'
+import LayoutFooterColumn from '~/components/layout/FooterColumn.vue'
 
 /** Props every test starts from. */
 const props = {
