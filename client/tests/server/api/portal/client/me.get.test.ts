@@ -103,6 +103,28 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
     expect(result['currency']).toBeNull()
   })
 
+  it('flags a customer account as having a client profile', async () => {
+    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+
+    expect(result['hasClientProfile']).toBe(true)
+  })
+
+  it.each([403, 404])('flags the identity as not a customer when the billing profile answers %i', async (status) => {
+    backend.respondWith(request => (request.url === '/api/account/profile' ? answer(request) : { status, body: { type: 'FORBIDDEN', detail: 'No.' } }))
+
+    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+
+    expect(result['hasClientProfile']).toBe(false)
+  })
+
+  it('does not flag the identity when the billing profile fails for another reason', async () => {
+    backend.respondWith(request => (request.url === '/api/account/profile' ? answer(request) : { status: 500, body: {} }))
+
+    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+
+    expect(result['hasClientProfile']).toBe(true)
+  })
+
   it('refuses with 401 without calling anything when there is no session', async () => {
     const error = await refusal(() => route.default(makeEvent()))
 
