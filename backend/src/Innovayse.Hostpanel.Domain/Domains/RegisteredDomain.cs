@@ -447,6 +447,10 @@ public sealed class RegisteredDomain : BaseEntity, IAggregateRoot
         Status = status;
     }
 
+    /// <summary>Moves the registration date to the moment the domain was really registered, for domains seeded from history.</summary>
+    /// <param name="registeredAt">The moment the domain was registered (UTC).</param>
+    public void Backdate(DateTimeOffset registeredAt) => RegisteredAt = registeredAt;
+
     /// <summary>
     /// Enables or disables DNS management for this domain.
     /// </summary>

@@ -49,6 +49,10 @@ public sealed class Announcement : BaseEntity
         return new Announcement(title, content, isPublished);
     }
 
+    /// <summary>Moves the creation date to the moment the announcement was really written, for announcements seeded from history.</summary>
+    /// <param name="createdAt">The moment the announcement was written (UTC).</param>
+    public void Backdate(DateTimeOffset createdAt) => CreatedAt = createdAt;
+
     /// <summary>
     /// Updates the title, content, and published state of this announcement.
     /// </summary>

@@ -108,6 +108,8 @@ export interface TicketListItem {
   lastReplyAt: string | null
   /** Whether this ticket has been flagged by staff. */
   isFlagged: boolean
+  /** Full name of the client who opened the ticket; absent when the API did not resolve it. */
+  clientName?: string | null
   /** FK to the client who opened the ticket. */
   clientId: number
 }

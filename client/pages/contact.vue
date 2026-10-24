@@ -37,8 +37,8 @@
               </UiStack>
             </UiCard>
 
-            <!-- Contact Methods -->
-            <UiCard>
+            <!-- Contact Methods; the whole card goes when the operator set none of its rows. -->
+            <UiCard v-if="contactEmail || contactPhone || workingHours" data-testid="contact-methods">
               <UiHeading :level="3" class="mb-4">
                 {{ t('contact.info.contactMethods.title') }}
               </UiHeading>

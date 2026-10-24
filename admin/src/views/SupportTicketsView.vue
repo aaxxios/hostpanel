@@ -319,7 +319,7 @@ onMounted(() => {
               </UiLink>
             </UiTableCell>
             <UiTableCell muted>{{ ticket.departmentName ?? '—' }}</UiTableCell>
-            <UiTableCell muted>{{ t('support.supportTickets.clientClientid', { clientId: ticket.clientId }) }}</UiTableCell>
+            <UiTableCell muted>{{ ticket.clientName ?? t('support.supportTickets.clientClientid', { clientId: ticket.clientId }) }}</UiTableCell>
             <UiTableCell><SupportTicketStatusBadge :status="ticket.status" /></UiTableCell>
             <UiTableCell muted>{{ formatElapsed(ticket.lastReplyAt) }}</UiTableCell>
           </UiTableRow>

@@ -10,7 +10,8 @@ import { useBillingStore } from '@/stores/billing'
 import { INVOICE_STATUS_OPTIONS } from '@/lib/constants'
 import { invoiceStatusTone } from '@/lib/tones'
 import { formatDate } from '@/lib/format'
-import { formatMoney } from '@/lib/money'
+import { formatSymbolPrice } from '@/lib/money'
+import { CurrencyCode } from '@/types/currency'
 import { InvoiceBulkAction, InvoiceOpenAction } from '@/types/invoice'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
@@ -512,7 +513,7 @@ onMounted(() => fetchInvoices())
               <UiTableCell muted>{{ formatDate(invoice.invoiceDate) }}</UiTableCell>
               <UiTableCell muted>{{ formatDate(invoice.dueDate) }}</UiTableCell>
               <UiTableCell muted>{{ invoice.paidAt ? formatDate(invoice.paidAt) : '-' }}</UiTableCell>
-              <UiTableCell>{{ formatMoney(invoice.total) }}</UiTableCell>
+              <UiTableCell>{{ formatSymbolPrice(invoice.total, invoice.currency ?? CurrencyCode.Usd) }}</UiTableCell>
               <UiTableCell muted>{{ invoice.paymentMethod || '-' }}</UiTableCell>
               <UiTableCell>
                 <UiBadge :tone="invoiceStatusTone(invoice.status)" small>{{ invoice.status }}</UiBadge>

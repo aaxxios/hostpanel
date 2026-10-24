@@ -1,38 +1,52 @@
 /**
- * Unit tests for PaymentMethodRow: the description line and the two emitted actions.
+ * Unit tests for PaymentMethodRow: the label, translated type, expiry, default badge and the two emitted actions.
  */
 import { describe, expect, it } from 'vitest'
 import { mountAccount } from '~/tests/helpers/mountAccount'
 import PaymentMethodRow from '~/components/account/PaymentMethodRow.vue'
+import { PaymentMethodType } from '~/types/payment'
 import type { PaymentMethod } from '~/types/payment'
 
-/** A saved card. */
+/** A saved card that is not the default. */
 const method: PaymentMethod = {
-  id: '9', type: 'card', description: 'My card', gateway_name: 'stripe', card_last_four: '4242', card_expiry: '12/30'
+  id: '9', type: PaymentMethodType.Card, description: 'Visa •••• 4242', gateway_name: 'card',
+  card_last_four: '4242', card_expiry: '12/30', card_type: 'visa', is_default: false
 }
 
 describe('PaymentMethodRow', () => {
-  it('shows the description, type, last four digits and expiry', () => {
+  it('shows the brand with the masked number and the expiry', () => {
     const text = mountAccount(PaymentMethodRow, { props: { method } }).text()
 
-    expect(text).toContain('My card')
-    expect(text).toContain('card')
-    expect(text).toContain('4242')
+    expect(text).toContain('Visa •••• 4242')
     expect(text).toContain('12/30')
   })
 
-  it('falls back to the gateway name without a description', () => {
-    const wrapper = mountAccount(PaymentMethodRow, { props: { method: { ...method, description: '' } } })
+  it('shows the translated type label, never the raw type value', () => {
+    const wrapper = mountAccount(PaymentMethodRow, { props: { method } })
 
-    expect(wrapper.text()).toContain('stripe')
+    expect(wrapper.find('[data-testid="account-payment-type"]').text()).toBe('client.payment.type.card')
   })
 
-  it('shows the bank name for a bank account', () => {
-    const wrapper = mountAccount(PaymentMethodRow, {
-      props: { method: { id: '1', type: 'bank', description: 'Bank', gateway_name: 'sepa', bank_name: 'First Bank' } }
-    })
+  it('translates a bank account and an unknown type', () => {
+    const bank = mountAccount(PaymentMethodRow, { props: { method: { ...method, type: PaymentMethodType.BankAccount } } })
+    const other = mountAccount(PaymentMethodRow, { props: { method: { ...method, type: 'sepa_debit' } } })
 
-    expect(wrapper.text()).toContain('First Bank')
+    expect(bank.find('[data-testid="account-payment-type"]').text()).toBe('client.payment.type.bankAccount')
+    expect(other.find('[data-testid="account-payment-type"]').text()).toBe('client.payment.type.other')
+  })
+
+  it('marks the default method and hides "set default" on it', () => {
+    const wrapper = mountAccount(PaymentMethodRow, { props: { method: { ...method, is_default: true } } })
+
+    expect(wrapper.find('[data-testid="account-payment-default-badge"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="account-payment-default-9"]').exists()).toBe(false)
+  })
+
+  it('offers "set default" and no badge on a method that is not the default', () => {
+    const wrapper = mountAccount(PaymentMethodRow, { props: { method } })
+
+    expect(wrapper.find('[data-testid="account-payment-default-badge"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="account-payment-default-9"]').exists()).toBe(true)
   })
 
   it('emits the id for "set default"', async () => {

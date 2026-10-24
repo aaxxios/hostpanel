@@ -28,7 +28,7 @@ afterEach(async () => {
 describe('GET /api/portal/client/services', () => {
   it('maps the backend rows with the bearer and the reader language', async () => {
     backend.respondWith(() => ({
-      body: [{ id: 4, productId: 12, productName: 'Hosting S', domain: 'a.test', price: '9.99', billingCycle: 'Monthly', nextRenewalAt: '2026-05-01', status: 'Suspended', username: 'u1' }],
+      body: [{ id: 4, productId: 12, productName: 'Hosting S', domain: 'a.test', price: '9.99', billingCycle: 'Monthly', nextRenewalAt: '2026-05-01', status: 'Suspended', username: 'u1', createdAt: '2026-01-05T09:00:00Z' }],
     }))
 
     const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' }, headers: { 'x-language': 'ru' } })) as Record<string, unknown>[]
@@ -39,6 +39,7 @@ describe('GET /api/portal/client/services', () => {
     expect(result[0]).toMatchObject({
       id: 4,
       pid: 12,
+      regdate: '2026-01-05T09:00:00Z',
       name: 'Hosting S',
       translated_name: 'Hosting S',
       domain: 'a.test',

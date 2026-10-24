@@ -11,6 +11,7 @@
 import { TELEGRAM_LINK_BASE, WHATSAPP_LINK_BASE } from '~/constants/contactChannel'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { HTTPS_PREFIX } from '~/constants/urlScheme'
+import { useLocalizedSetting } from '~/composables/useLocalizedSetting'
 
 /**
  * Reads the contact details and derives the link forms the pages need.
@@ -19,6 +20,7 @@ import { HTTPS_PREFIX } from '~/constants/urlScheme'
  */
 export const useContactDetails = () => {
   const { get } = usePortalSettings()
+  const { getLocalized } = useLocalizedSetting()
 
   /** Address enquiries are sent to; empty when unset. */
   const email = computed(() => get(PortalSettingKey.ContactEmail, 'portalContactEmail'))
@@ -41,8 +43,12 @@ export const useContactDetails = () => {
     return digits ? `${WHATSAPP_LINK_BASE}${digits}` : ''
   })
 
-  /** Office address as the operator wrote it; empty when unset. */
-  const address = computed(() => get(PortalSettingKey.ContactAddress, 'portalContactAddress'))
+  /** Office address as the operator wrote it, in the visitor's language when one is set; empty when unset. */
+  const address = computed(() => getLocalized({
+    default: { key: PortalSettingKey.ContactAddress, envKey: 'portalContactAddress' },
+    ru: { key: PortalSettingKey.ContactAddressRu, envKey: 'portalContactAddressRu' },
+    hy: { key: PortalSettingKey.ContactAddressHy, envKey: 'portalContactAddressHy' }
+  }))
 
   /** Address of the embedded map; only an `https` address is accepted, otherwise empty. */
   const mapUrl = computed(() => {

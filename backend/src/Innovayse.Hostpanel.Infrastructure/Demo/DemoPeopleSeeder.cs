@@ -46,15 +46,20 @@ internal sealed class DemoPeopleSeeder
     /// <summary>The published demo accounts.</summary>
     private readonly DemoOptions _options;
 
+    /// <summary>The anchor signup dates are measured from.</summary>
+    private readonly DateTimeOffset _today;
+
     /// <summary>Creates the seeder.</summary>
     /// <param name="db">The data context the clients are added to and saved through.</param>
     /// <param name="users">Creates and looks up accounts.</param>
     /// <param name="options">The published demo accounts.</param>
-    public DemoPeopleSeeder(AppDbContext db, UserManager<AppUser> users, DemoOptions options)
+    /// <param name="today">The anchor signup dates are measured from.</param>
+    public DemoPeopleSeeder(AppDbContext db, UserManager<AppUser> users, DemoOptions options, DateTimeOffset today)
     {
         _db = db;
         _users = users;
         _options = options;
+        _today = today;
     }
 
     /// <summary>Seeds the administrator, the staff and the clients that are not there yet.</summary>
@@ -70,6 +75,7 @@ internal sealed class DemoPeopleSeeder
                 _options.ClientEmail!, _options.ClientPassword!, "Demo", "Client", "Brightleaf Studio LLC",
                 "+1 555 0110", "15 Harbour Street", "Northvale", null, "00001", "US", "USD",
                 ClientStatus.Active, 120m),
+            DemoAnchor.SignupDate(0, _today),
             ct);
         if (demoCreated)
         {
@@ -152,6 +158,7 @@ internal sealed class DemoPeopleSeeder
                 new DemoClientProfile(
                     email, NewGeneratedPassword(), first, last, company, phone, street, city, state, postCode, country, currency,
                     status, credit),
+                DemoAnchor.SignupDate(i + 1, _today),
                 ct);
 
             if (created)
@@ -333,9 +340,10 @@ internal sealed class DemoPeopleSeeder
 
     /// <summary>Creates a client with its account, address, billing contact, state and credit when it does not exist yet.</summary>
     /// <param name="profile">What to create.</param>
+    /// <param name="signedUpAt">The moment the customer signed up, so the account is dated like the history that follows it.</param>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>The client, and whether this call created it.</returns>
-    private async Task<(Client Client, bool Created)> EnsureClientAsync(DemoClientProfile profile, CancellationToken ct)
+    private async Task<(Client Client, bool Created)> EnsureClientAsync(DemoClientProfile profile, DateTimeOffset signedUpAt, CancellationToken ct)
     {
         var user = await EnsureAccountAsync(profile.Email, profile.Password, profile.FirstName, profile.LastName, Roles.Client, ct);
 
@@ -349,6 +357,7 @@ internal sealed class DemoPeopleSeeder
         client.Update(profile.FirstName, profile.LastName, profile.Company, profile.Phone);
         client.UpdateAddress(profile.Street, null, profile.City, profile.State, profile.PostCode, profile.Country);
         client.SetCurrency(profile.Currency);
+        client.Backdate(signedUpAt);
         if (profile.Credit > 0)
         {
             client.AddCredit(profile.Credit);

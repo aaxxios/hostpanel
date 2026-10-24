@@ -101,6 +101,8 @@
     "searchDescription": "Поиск по описанию...",
     "lengthRecordsFound": "Найдено записей: {length}",
     "invoiced": "Выставлено",
+    "typeOneTime": "Разовое",
+    "typeRecurring": "Повторяющееся",
     "noItemsFound": "Позиции не найдены.",
     "uninvoiced": "Не выставлено",
     "activeRecurring": "Активные повторяющиеся",

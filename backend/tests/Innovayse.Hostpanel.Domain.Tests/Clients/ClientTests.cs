@@ -274,4 +274,17 @@ public class ClientTests
         Assert.Equal("USD", client.Currency);
         Assert.Equal("bank_transfer", client.PaymentMethod);
     }
+
+    /// <summary>Backdate moves the signup date and leaves the account's state alone.</summary>
+    [Fact]
+    public void Backdate_ShouldMoveTheSignupDateOnly()
+    {
+        var client = Client.Create("user-1", "John", "Doe", "john@example.com");
+        var signedUp = new DateTimeOffset(2025, 12, 1, 9, 0, 0, TimeSpan.Zero);
+
+        client.Backdate(signedUp);
+
+        Assert.Equal(signedUp, client.CreatedAt);
+        Assert.Equal(ClientStatus.Active, client.Status);
+    }
 }

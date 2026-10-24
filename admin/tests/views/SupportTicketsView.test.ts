@@ -81,4 +81,13 @@ describe('SupportTicketsView', () => {
 
     expect(wrapper.get('[data-testid="support-tickets-error"]').text()).toBe('Not allowed.')
   })
+
+  it('names the client who opened the ticket and falls back to the client number', async () => {
+    stubPathRoutes([{ path: '/tickets?', body: { items: [{ ...ticket, clientName: 'Ada Lovelace' }, { ...ticket, id: 6, clientId: 9 }], totalCount: 2 } }])
+
+    const wrapper = await mountView(SupportTicketsView)
+
+    expect(wrapper.get('[data-testid="support-tickets-row-5"]').text()).toContain('Ada Lovelace')
+    expect(wrapper.get('[data-testid="support-tickets-row-6"]').text()).toContain('Client #9')
+  })
 })

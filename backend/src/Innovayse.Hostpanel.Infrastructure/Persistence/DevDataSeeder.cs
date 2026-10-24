@@ -963,7 +963,7 @@ public sealed class DevDataSeeder
                 "[\"Free DNS management\",\"WHOIS privacy protection\",\"Auto-renewal options\"]",
                 "Get Started"),
             ("cloud-vps", "server", "#8b5cf6", DemoContentSeeder.SlideImageUrl("cloud-vps"),
-                null, "/vps",
+                null, "/products/cloud-vps",
                 "Cloud VPS", "Full Control, Instant Setup",
                 "Isolated virtual servers with root access and NVMe storage, ready within minutes of your order.",
                 "[\"Root access\",\"NVMe storage\",\"Snapshots included\"]",

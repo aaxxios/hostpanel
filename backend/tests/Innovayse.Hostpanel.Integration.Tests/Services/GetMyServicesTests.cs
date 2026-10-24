@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using FluentAssertions;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Xunit;
@@ -44,5 +45,20 @@ public sealed class GetMyServicesTests(IntegrationTestFactory factory) : IClassF
         var response = await client.GetAsync("/api/me/services");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>Each service carries the day it was ordered, which the client area shows as its registration date.</summary>
+    [Fact]
+    public async Task GetMyServicesAsync_CarriesTheDateTheServiceWasOrderedAsync()
+    {
+        var (client, clientId) = await ServicesTestSeeds.RegisterOwnerAsync(factory, "get-my-services-date");
+        var serviceId = await ServicesTestSeeds.SeedPendingServiceAsync(factory, clientId);
+
+        var response = await client.GetAsync("/api/me/services");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var row = body.RootElement.EnumerateArray().Single(s => s.GetProperty("id").GetInt32() == serviceId);
+        row.GetProperty("createdAt").GetDateTimeOffset().Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromMinutes(5));
     }
 }

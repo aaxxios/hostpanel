@@ -185,6 +185,10 @@ public sealed class Quote : BaseEntity, IAggregateRoot
         Stage = QuoteStage.Dead;
     }
 
+    /// <summary>Moves the creation date to the moment the quote was really written, for quotes seeded from history.</summary>
+    /// <param name="createdAt">The moment the quote was written (UTC).</param>
+    public void Backdate(DateTimeOffset createdAt) => CreatedAt = createdAt;
+
     /// <summary>
     /// Updates the quote's mutable details.
     /// </summary>

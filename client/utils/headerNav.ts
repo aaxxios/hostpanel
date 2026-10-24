@@ -93,14 +93,34 @@ export const isHeaderPathActive = (path: string, href: string | undefined): bool
 }
 
 /**
- * Whether an entry, or any member of its group, is the page being viewed.
+ * The length of the longest target of an entry (its own or a member's) that matches the page, or
+ * zero when none does. A longer match is a more specific one.
  *
  * @param path - The current route path.
  * @param item - The navigation entry.
- * @returns True when the entry or one of its children is current.
+ * @returns The match length, zero for no match.
  */
-export const isHeaderItemActive = (path: string, item: HeaderNavItem): boolean =>
-  isHeaderPathActive(path, item.to) || (item.children ?? []).some(child => isHeaderPathActive(path, child.to))
+const headerMatchLength = (path: string, item: HeaderNavItem): number =>
+  [item.to, ...(item.children ?? []).map(child => child.to)]
+    .filter((href): href is string => isHeaderPathActive(path, href))
+    .reduce((longest, href) => Math.max(longest, href.length), 0)
+
+/**
+ * The one top-level entry that stands for the page being viewed.
+ *
+ * Several entries can match a path (a Hosting dropdown member lives under `/products/<slug>`, and
+ * Products matches the whole `/products` prefix), so the entry with the most specific target, the
+ * longest matching one, wins. On a tie the earlier entry wins.
+ *
+ * @param path - The current route path.
+ * @param items - The navigation entries in display order.
+ * @returns The key of the active entry, or undefined when none matches.
+ */
+export const activeHeaderKey = (path: string, items: readonly HeaderNavItem[]): string | undefined =>
+  items.reduce<{ key?: string, length: number }>((best, item) => {
+    const length = headerMatchLength(path, item)
+    return length > best.length ? { key: item.key, length } : best
+  }, { length: 0 }).key
 
 /**
  * Builds the header entries.

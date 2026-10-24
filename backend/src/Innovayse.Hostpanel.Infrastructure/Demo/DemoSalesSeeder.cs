@@ -26,6 +26,9 @@ internal sealed class DemoSalesSeeder
     /// <summary>How many orders are seeded.</summary>
     private const int OrderCount = 160;
 
+    /// <summary>How many days a quote stays valid after it is written.</summary>
+    private const int QuoteValidityDays = 30;
+
     /// <summary>The quote stages handed out in turn; every stage the entity can reach appears.</summary>
     private static readonly QuoteStage[] QuoteStages =
     [
@@ -128,7 +131,11 @@ internal sealed class DemoSalesSeeder
             // The demo client gets the first four so its portal shows quotes in several stages.
             var client = clients[n < 4 ? 0 : (n - 3) % clients.Count];
             var stage = QuoteStages[n % QuoteStages.Length];
-            var expiry = stage == QuoteStage.Expired ? _today.AddDays(-(5 + n)) : _today.AddDays(10 + (n * 3));
+
+            // A quote is valid for thirty days from the day it was written. An expired one was written a month and a half or
+            // more ago, every other one in the last three weeks, so no quote is dated after its own expiry.
+            var written = _today.AddDays(-(stage == QuoteStage.Expired ? 45 + ((n * 7) % 50) : 1 + ((n * 3) % 20)));
+            var expiry = written.AddDays(QuoteValidityDays);
 
             var quote = Quote.Create(
                 client.Id, $"Proposal {n + 1}: hosting services for {client.CompanyName}", expiry,
@@ -168,6 +175,7 @@ internal sealed class DemoSalesSeeder
                     break;
             }
 
+            quote.Backdate(written);
             _db.Quotes.Add(quote);
         }
 
@@ -268,7 +276,9 @@ internal sealed class DemoSalesSeeder
             }
 
             // Spread across the year so the order report has a trend, oldest first.
-            order.Backdate(_today.AddDays(-(5 + (((OrderCount - n) * 13) % 350))));
+            // An order is never older than the account that placed it.
+            var placed = _today.AddDays(-(5 + (((OrderCount - n) * 13) % 350)));
+            order.Backdate(placed > client.CreatedAt ? placed : client.CreatedAt.AddDays(1 + (n % 10)));
             _db.Orders.Add(order);
         }
 

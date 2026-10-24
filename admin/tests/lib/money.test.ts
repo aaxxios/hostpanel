@@ -16,6 +16,7 @@ import {
   formatMoneyWhole,
   formatPrice,
   formatReportAmount,
+  formatPlainAmount,
   formatSymbolPrice,
   formatUsd,
   formatUsdPlain,
@@ -58,6 +59,18 @@ describe('billing sums', () => {
     expect(formatUsd(undefined)).toBe('$0.00 USD')
     expect(formatUsdPlain(null)).toBe('0.00 USD')
     expect(formatUsd()).toBe('$0.00 USD')
+  })
+})
+
+describe('plain amounts with a currency code', () => {
+  it('writes the number and the code of the currency it is in', () => {
+    expect(formatPlainAmount(12.5, 'USD')).toBe('12.50 USD')
+    expect(formatPlainAmount(53160, 'AMD')).toBe('53160.00 AMD')
+  })
+
+  it('reads a missing code as dollars and a missing amount as zero', () => {
+    expect(formatPlainAmount(3)).toBe('3.00 USD')
+    expect(formatPlainAmount(undefined, null)).toBe('0.00 USD')
   })
 })
 

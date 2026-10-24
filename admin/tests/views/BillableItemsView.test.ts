@@ -98,4 +98,18 @@ describe('BillableItemsView', () => {
 
     expect(wrapper.get('[data-testid="billing-billable-items-error"]').text()).toContain('Items are unavailable.')
   })
+
+  it('prints a billable item type as a name, not the value the API sends', async () => {
+    stubRoutes({
+      'GET /api/billing/billable-items': () =>
+        json({ items: [item(), item({ id: 6, type: 'Recurring' })], totalCount: 2, page: 1, pageSize: 100 }),
+      'GET /api/clients': noClients,
+    })
+    const wrapper = await mountList()
+
+    const rows = wrapper.findAll('[data-testid="billing-billable-items-table"] tbody tr')
+    expect(rows[0]?.text()).toContain('One time')
+    expect(rows[0]?.text()).not.toContain('OneTime')
+    expect(rows[1]?.text()).toContain('Recurring')
+  })
 })

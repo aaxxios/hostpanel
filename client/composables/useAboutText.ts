@@ -10,7 +10,7 @@
  */
 
 import { PortalSettingKey } from '~/constants/portalSettingKey'
-import { AppLocale } from '~/types/applocale'
+import { useLocalizedSetting } from '~/composables/useLocalizedSetting'
 
 /** A blank line, possibly holding spaces, is where one paragraph ends and the next begins. */
 const PARAGRAPH_BREAK = /\n\s*\n/
@@ -21,18 +21,14 @@ const PARAGRAPH_BREAK = /\n\s*\n/
  * @returns The reactive list of paragraphs; empty when the operator set no story.
  */
 export const useAboutText = () => {
-  const { get } = usePortalSettings()
-  const { locale } = useI18n()
+  const { getLocalized } = useLocalizedSetting()
 
   /** The story in the active language, falling back to the default text. */
-  const text = computed(() => {
-    const perLocale = locale.value === AppLocale.Ru
-      ? get(PortalSettingKey.AboutTextRu, 'portalAboutTextRu')
-      : locale.value === AppLocale.Hy
-        ? get(PortalSettingKey.AboutTextHy, 'portalAboutTextHy')
-        : ''
-    return perLocale || get(PortalSettingKey.AboutText, 'portalAboutText')
-  })
+  const text = computed(() => getLocalized({
+    default: { key: PortalSettingKey.AboutText, envKey: 'portalAboutText' },
+    ru: { key: PortalSettingKey.AboutTextRu, envKey: 'portalAboutTextRu' },
+    hy: { key: PortalSettingKey.AboutTextHy, envKey: 'portalAboutTextHy' }
+  }))
 
   /** The story split into its paragraphs, blank ones dropped. */
   const paragraphs = computed(() =>

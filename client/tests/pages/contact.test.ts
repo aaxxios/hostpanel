@@ -163,6 +163,7 @@ describe('pages/contact', () => {
     expect(wrapper.find('[data-testid="contact-whatsapp"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="contact-map"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="contact-office"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="contact-methods"]').exists()).toBe(false)
   })
 
   it('links the consent text to the localised privacy page', async () => {

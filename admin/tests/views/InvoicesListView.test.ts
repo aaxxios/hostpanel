@@ -74,4 +74,22 @@ describe('InvoicesListView', () => {
 
     expect(wrapper.get('[data-testid="billing-invoices-error"]').text()).toContain('Billing is disabled.')
   })
+
+  it('prints each invoice total in the currency the invoice is issued in', async () => {
+    stubRoutes({
+      'GET /api/billing?': () =>
+        json({
+          items: [invoiceFixture({ id: 1, total: 12.5 }), invoiceFixture({ id: 2, total: 53160, currency: 'AMD' })],
+          totalCount: 2,
+          page: 1,
+          pageSize: 25,
+        }),
+    })
+    const wrapper = await mountList()
+
+    const rows = wrapper.findAll('[data-testid="billing-invoices-table"] tbody tr')
+    expect(rows[0]?.text()).toContain('12.50 USD')
+    expect(rows[1]?.text()).toContain('53160.00 AMD')
+    expect(rows[1]?.text()).not.toContain('USD')
+  })
 })

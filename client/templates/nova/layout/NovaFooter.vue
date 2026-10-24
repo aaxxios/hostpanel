@@ -86,7 +86,7 @@
           </li>
           <li v-if="phone">
             <UiFooterLink
-              :href="`tel:${phoneHref}`"
+              :href="`tel:${phoneLink}`"
               :variant="UiFooterLinkVariant.Nova"
               testid="nova-footer-phone"
             >
@@ -113,7 +113,7 @@
 import LogoLockup from '~/components/LogoLockup.vue'
 import { UiFooterLinkVariant } from '~/utils/ui/enums'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
-import { TELEGRAM_LINK_BASE } from '~/constants/contactChannel'
+import { useContactDetails } from '~/composables/useContactDetails'
 import { FOOTER_COLUMNS } from '~/templates/nova/content'
 
 /** Name the footer signs with: the operator's site name. */
@@ -129,21 +129,10 @@ const { get } = usePortalSettings()
 /** Current year, for the copyright line. */
 const year = new Date().getFullYear()
 
-/** Operator contact email; empty hides the entry. */
-const contactEmail = computed(() => get(PortalSettingKey.ContactEmail, 'portalContactEmail'))
-/** Operator contact phone; empty hides the entry. */
-const phone = computed(() => get(PortalSettingKey.ContactPhone, 'portalContactPhone'))
+/** Operator contact email, phone (as written and as a dialable number) and Telegram link; each empty when unset. */
+const { email: contactEmail, phone, phoneLink, telegramUrl } = useContactDetails()
 /** Operator tax id; empty hides the entry. */
 const taxId = computed(() => get(PortalSettingKey.LegalTaxId, 'portalLegalTaxId'))
-
-/** `tel:` accepts digits and a leading plus; everything else is presentation. */
-const phoneHref = computed(() => phone.value.replace(/[^0-9+]/g, ''))
-
-/** Telegram is stored as a handle rather than a URL — the chat actions need it that way. */
-const telegramUrl = computed(() => {
-  const handle = get(PortalSettingKey.ContactTelegram, 'portalTelegram')
-  return handle ? `${TELEGRAM_LINK_BASE}${handle}` : ''
-})
 
 /** The social profiles the operator configured, in display order. */
 const socials = computed(() => [

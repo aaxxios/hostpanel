@@ -87,31 +87,31 @@ internal sealed class DemoContentSeeder
                 ("Регистрация доменов", "Найдите и зарегистрируйте домен", "Ищите и регистрируйте домен по конкурентным ценам с мгновенной активацией.", ["Бесплатное управление DNS", "Скрытие данных WHOIS", "Автопродление"]),
                 ("Դոմեյնների գրանցում", "Գտեք և գրանցեք ձեր դոմեյնը", "Որոնեք և գրանցեք ձեր դոմեյնը մրցունակ գներով՝ անմիջական ակտիվացմամբ։", ["Անվճար DNS կառավարում", "WHOIS գաղտնիություն", "Ավտոմատ երկարաձգում"]),
             ]),
-            ("server", "#6366f1", SlideImageUrl("cloud-vps"), "/vps", true, SlideAudience.All, false,
+            ("server", "#6366f1", SlideImageUrl("cloud-vps"), "/products/cloud-vps", true, SlideAudience.All, false,
             [
                 ("Cloud VPS", "Full control, instant setup", "Isolated virtual servers with root access and NVMe storage, ready in minutes.", ["Root access", "NVMe storage", "Instant setup", "Snapshots"]),
                 ("Облачный VPS", "Полный контроль, мгновенный запуск", "Изолированные виртуальные серверы с root-доступом и NVMe-накопителями, готовые за минуты.", ["Root-доступ", "NVMe-диски", "Мгновенный запуск", "Снимки"]),
                 ("Ամպային VPS", "Լիարժեք վերահսկողություն", "Մեկուսացված վիրտուալ սերվերներ root հասանելիությամբ և NVMe կրիչներով՝ պատրաստ րոպեների ընթացքում։", ["Root հասանելիություն", "NVMe կրիչ", "Արագ գործարկում", "Պատկերներ"]),
             ]),
-            ("shield-check", "#10b981", SlideImageUrl("ssl"), "/ssl", true, SlideAudience.Guest, false,
+            ("shield-check", "#10b981", SlideImageUrl("ssl"), "/products/ssl-certificates", true, SlideAudience.Guest, false,
             [
                 ("SSL Certificates", "Protect your site", "Certificates that encrypt the connection and build trust with your visitors.", ["Domain and organisation validation", "Wildcard option", "Warranty included"]),
                 ("SSL-сертификаты", "Защитите свой сайт", "Сертификаты, которые шифруют соединение и повышают доверие посетителей.", ["Проверка домена и организации", "Wildcard-вариант", "Гарантия включена"]),
                 ("SSL վկայագրեր", "Պաշտպանեք ձեր կայքը", "Վկայագրեր, որոնք գաղտնագրում են կապը և մեծացնում այցելուների վստահությունը։", ["Դոմեյնի և կազմակերպության ստուգում", "Wildcard տարբերակ", "Երաշխիք"]),
             ]),
-            ("email", "#f59e0b", SlideImageUrl("email"), "/email", true, SlideAudience.All, true,
+            ("email", "#f59e0b", SlideImageUrl("email"), "/products/business-email", true, SlideAudience.All, true,
             [
                 ("Business Email", "Mail on your own domain", "Professional mailboxes with spam protection and shared calendars.", ["Spam filter", "Shared calendars", "Mobile sync"]),
                 ("Деловая почта", "Почта на вашем домене", "Профессиональные почтовые ящики с защитой от спама и общими календарями.", ["Защита от спама", "Общие календари", "Синхронизация с телефоном"]),
                 ("Բիզնես փոստ", "Փոստ ձեր դոմեյնում", "Մասնագիտական փոստարկղեր սպամի պաշտպանությամբ և ընդհանուր օրացույցներով։", ["Սպամի զտիչ", "Ընդհանուր օրացույցներ", "Համաժամացում հեռախոսի հետ"]),
             ]),
-            ("server-network", "#ef4444", SlideImageUrl("dedicated"), "/dedicated", true, SlideAudience.All, false,
+            ("server-network", "#ef4444", SlideImageUrl("dedicated"), "/products/dedicated-servers", true, SlideAudience.All, false,
             [
                 ("Dedicated Servers", "Maximum power", "Single-tenant hardware for demanding workloads, with no noisy neighbours.", ["Up to 24 cores", "NVMe arrays", "Private network"]),
                 ("Выделенные серверы", "Максимальная мощность", "Отдельное оборудование для требовательных проектов без соседей.", ["До 24 ядер", "Массивы NVMe", "Частная сеть"]),
                 ("Նվիրված սերվերներ", "Առավելագույն հզորություն", "Առանձին սարքավորում պահանջկոտ ծրագրերի համար՝ առանց այլ օգտատերերի հետ կիսելու։", ["Մինչև 24 միջուկ", "NVMe զանգվածներ", "Մասնավոր ցանց"]),
             ]),
-            ("tag", "#8b5cf6", SlideImageUrl("offers"), "/offers", false, SlideAudience.All, false,
+            ("tag", "#8b5cf6", SlideImageUrl("offers"), "/products", false, SlideAudience.All, false,
             [
                 ("Seasonal Offer", "Switched off", "A seasonal offer that is prepared but not shown to visitors yet.", ["Prepared in advance"]),
                 ("Сезонное предложение", "Отключено", "Сезонное предложение, которое подготовлено, но пока не показывается посетителям.", ["Подготовлено заранее"]),
@@ -181,14 +181,17 @@ internal sealed class DemoContentSeeder
             ("Staff onboarding notes", "Internal notes, not shown to customers.", "PDF Document", "staff-onboarding.pdf", internalDocs.Id, true, true, 4),
         ];
 
-        foreach (var (title, description, type, file, category, clientsOnly, hidden, count) in downloads)
+        for (var n = 0; n < downloads.Length; n++)
         {
+            var (title, description, type, file, category, clientsOnly, hidden, count) = downloads[n];
             var download = Download.Create(title, description, type, file, category, clientsOnly, false, hidden);
             for (var i = 0; i < count; i++)
             {
                 download.IncrementDownloadCount();
             }
 
+            // Published over the last year, each on its own day, not all at the moment of seeding.
+            download.Backdate(_today.AddDays(-(20 + ((n * 17) % 330))));
             _db.Downloads.Add(download);
         }
 

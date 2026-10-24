@@ -59,4 +59,14 @@ describe('useBillingApi', () => {
 
     expect(placed).toEqual({ orderId: 42, invoiceId: 77, paymentToken: 'tok' })
   })
+
+  it('maps the camelCase saved methods to the client shape', async () => {
+    stub = await startTransport(() => ({
+      body: [{ id: 'pm_1', type: 'card', brand: 'mastercard', last4: '4444', expiryMonth: 9, expiryYear: 2029, isDefault: true }]
+    }))
+
+    const [method] = await api.fetchPaymentMethods()
+
+    expect(method).toMatchObject({ id: 'pm_1', description: 'Mastercard •••• 4444', card_expiry: '09/29', is_default: true })
+  })
 })

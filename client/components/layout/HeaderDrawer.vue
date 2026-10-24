@@ -13,8 +13,8 @@
           :to="item.to"
           tone="inherit"
           :underline="false"
-          :class="[ROW, isHeaderPathActive(path, item.to) ? HEADER_NAV_ACTIVE : HEADER_NAV_IDLE]"
-          :aria-current="isHeaderPathActive(path, item.to) ? 'page' : undefined"
+          :class="[ROW, item.key === activeKey ? HEADER_NAV_ACTIVE : HEADER_NAV_IDLE]"
+          :aria-current="item.key === activeKey ? 'page' : undefined"
           :testid="`header-drawer-${item.key}`"
           @click="close"
         >
@@ -148,10 +148,10 @@ import type { HeaderNavItem } from '~/types/headernavitem'
 import { useAuthStore } from '~/stores/auth'
 import { HEADER_CONTROL, HEADER_NAV_ACTIVE, HEADER_NAV_IDLE, HEADER_PRIMARY } from '~/utils/headerControl'
 import { buildAccountLinks } from '~/utils/headerAccountLinks'
-import { isHeaderPathActive } from '~/utils/headerNav'
+import { activeHeaderKey, isHeaderPathActive } from '~/utils/headerNav'
 
 /** Props of LayoutHeaderDrawer. */
-defineProps<{
+const props = defineProps<{
   /** Whether the drawer is open (v-model). */
   modelValue: boolean
   /** The navigation entries to list. */
@@ -165,6 +165,9 @@ const emit = defineEmits<{
   /** The drawer asked to open or close. */
   'update:modelValue': [value: boolean]
 }>()
+
+/** Key of the one top-level entry that stands for the current page. */
+const activeKey = computed(() => activeHeaderKey(props.path, props.items))
 
 /** Look of every link row: a tall tap target with the bar's radius. */
 const ROW = 'flex min-h-[44px] items-center rounded-lg px-3 text-base font-medium transition-colors focus-visible:ring-classic-brand'

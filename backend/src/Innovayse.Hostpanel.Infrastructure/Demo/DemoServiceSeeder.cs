@@ -139,7 +139,9 @@ internal sealed class DemoServiceSeeder
                 var host = i == 0 ? DemoSites.HostOf(client) : $"{SitePrefixes[(c + i) % SitePrefixes.Length]}.{DemoSites.HostOf(client)}";
                 var reference = status == ServiceStatus.Pending ? null : $"demo-account-{client.Id}-{i}";
 
+                // Ordered a few days after the customer signed up, one service after another, not at the moment of seeding.
                 var service = ClientService.Create(client.Id, product.Id, cycleName);
+                service.Backdate(client.CreatedAt.AddDays(2 + (3 * i)));
                 if (status != ServiceStatus.Pending)
                 {
                     service.Activate(reference!);
@@ -276,25 +278,34 @@ internal sealed class DemoServiceSeeder
             var service = services[n];
             var reason = CancellationReasons[n % CancellationReasons.Length];
 
+            // A request for a terminated service was made the day before it ended; the others were made in the last few weeks.
+            var madeAt = service.TerminatedAt?.AddDays(-1) ?? _today.AddDays(-(1 + ((n * 7) % 35))).AddHours(9 + (n % 8));
+
             if (service.Status == ServiceStatus.Terminated)
             {
                 var request = CancellationRequest.Create(service.Id, CancellationType.Immediate, reason);
+                request.Backdate(madeAt);
                 request.Close();
                 _db.CancellationRequests.Add(request);
             }
             else if (service.Status == ServiceStatus.Suspended)
             {
-                _db.CancellationRequests.Add(CancellationRequest.Create(service.Id, CancellationType.EndOfBillingPeriod, reason));
+                var request = CancellationRequest.Create(service.Id, CancellationType.EndOfBillingPeriod, reason);
+                request.Backdate(madeAt);
+                _db.CancellationRequests.Add(request);
             }
             else if (service.Status == ServiceStatus.Active && n % 6 == 0)
             {
                 var type = n % 12 == 0 ? CancellationType.Immediate : CancellationType.EndOfBillingPeriod;
-                _db.CancellationRequests.Add(CancellationRequest.Create(service.Id, type, reason));
+                var request = CancellationRequest.Create(service.Id, type, reason);
+                request.Backdate(madeAt);
+                _db.CancellationRequests.Add(request);
             }
             else if (service.Status == ServiceStatus.Active && n % 9 == 4)
             {
                 // A customer who changed their mind: the request is closed and the service stays active.
                 var withdrawn = CancellationRequest.Create(service.Id, CancellationType.EndOfBillingPeriod, "Withdrawn: " + reason);
+                withdrawn.Backdate(madeAt);
                 withdrawn.Close();
                 _db.CancellationRequests.Add(withdrawn);
             }

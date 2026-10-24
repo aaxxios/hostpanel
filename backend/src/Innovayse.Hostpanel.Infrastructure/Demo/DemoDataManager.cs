@@ -43,6 +43,9 @@ internal sealed class DemoDataManager : IDemoDataManager
     /// <summary>The configured contact addresses of the default support departments.</summary>
     private readonly IOptions<DefaultDepartmentsOptions> _departmentOptions;
 
+    /// <summary>What visitors changed on the sample payment methods; forgotten on a reset.</summary>
+    private readonly DemoCardState _cardState;
+
     /// <summary>Structured logger.</summary>
     private readonly ILogger<DemoDataManager> _logger;
 
@@ -53,6 +56,7 @@ internal sealed class DemoDataManager : IDemoDataManager
     /// <param name="unitOfWork">Unit of work the shared deployment seeders save through.</param>
     /// <param name="options">The demo switch and the published accounts.</param>
     /// <param name="departmentOptions">The configured contact addresses of the default support departments.</param>
+    /// <param name="cardState">What visitors changed on the sample payment methods; forgotten on a reset.</param>
     /// <param name="logger">Structured logger.</param>
     public DemoDataManager(
         AppDbContext db,
@@ -61,6 +65,7 @@ internal sealed class DemoDataManager : IDemoDataManager
         IUnitOfWork unitOfWork,
         IOptions<DemoOptions> options,
         IOptions<DefaultDepartmentsOptions> departmentOptions,
+        DemoCardState cardState,
         ILogger<DemoDataManager> logger)
     {
         _db = db;
@@ -69,6 +74,7 @@ internal sealed class DemoDataManager : IDemoDataManager
         _unitOfWork = unitOfWork;
         _options = options;
         _departmentOptions = departmentOptions;
+        _cardState = cardState;
         _logger = logger;
     }
 
@@ -107,6 +113,9 @@ internal sealed class DemoDataManager : IDemoDataManager
 
             await transaction.CommitAsync(ct);
         });
+
+        // The sample methods come back exactly as seeded; only after the commit, so a failed reset keeps them.
+        _cardState.Clear();
     }
 
     /// <summary>Runs every seeder in dependency order.</summary>
@@ -123,7 +132,7 @@ internal sealed class DemoDataManager : IDemoDataManager
         var today = DemoAnchor.Today();
 
         await new DemoCatalogueSeeder(_db).SeedAsync(ct);
-        var demoClientId = await new DemoPeopleSeeder(_db, _users, _options.Value).SeedAsync(ct);
+        var demoClientId = await new DemoPeopleSeeder(_db, _users, _options.Value, today).SeedAsync(ct);
         await new DemoServerSeeder(_db, today).SeedAsync(ct);
         await new DemoServiceSeeder(_db, today).SeedAsync(ct);
         await new DemoDomainSeeder(_db, today).SeedAsync(ct);
@@ -131,7 +140,7 @@ internal sealed class DemoDataManager : IDemoDataManager
         await new DemoSalesSeeder(_db, today).SeedAsync(ct);
         await new DemoSupportSeeder(_db, today).SeedAsync(demoClientId, ct);
         await new DemoContentSeeder(_db, today).SeedAsync(ct);
-        await new DemoLogSeeder(_db).SeedAsync(ct);
+        await new DemoLogSeeder(_db, today).SeedAsync(ct);
 
         // After the shared seeder created its empty rows at the top of this method.
         await new DemoPortalSettingsSeeder(_db, _options.Value).SeedAsync(ct);

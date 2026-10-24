@@ -5,15 +5,18 @@
  * @module tests/composables/useContactDetails.test
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
 import { useContactDetails } from '~/composables/useContactDetails'
 
 /**
  * Stubs the settings reader with a fixed set of values.
  *
  * @param values Setting key to value.
+ * @param locale The visitor's language.
  */
-const stubSettings = (values: Record<string, string>): void => {
+const stubSettings = (values: Record<string, string>, locale = 'en'): void => {
   vi.stubGlobal('usePortalSettings', () => ({ get: (key: string) => values[key] ?? '' }))
+  vi.stubGlobal('useI18n', () => ({ locale: ref(locale) }))
 }
 
 describe('useContactDetails', () => {
@@ -59,5 +62,13 @@ describe('useContactDetails', () => {
     stubSettings({ 'portal.contact.map_url': 'http://maps.example.test/embed' })
 
     expect(useContactDetails().mapUrl.value).toBe('')
+  })
+
+  it('reads the address in the visitor language and falls back to the default one', () => {
+    stubSettings({ 'portal.contact.address': '1 Example Street', 'portal.contact.address.ru': 'ул. Примерная, 1' }, 'ru')
+    expect(useContactDetails().address.value).toBe('ул. Примерная, 1')
+
+    stubSettings({ 'portal.contact.address': '1 Example Street', 'portal.contact.address.ru': 'ул. Примерная, 1' }, 'hy')
+    expect(useContactDetails().address.value).toBe('1 Example Street')
   })
 })

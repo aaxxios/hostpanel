@@ -120,6 +120,48 @@ public sealed class UpdateSettingTests(IntegrationTestFactory factory) : IClassF
             .Should().Contain("#1a73e8");
     }
 
+    /// <summary>The contact email refuses a value that is not an address.</summary>
+    [Fact]
+    public async Task ContactEmail_NotAnAddress_RefusesWithDetailAndErrorsAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await AdminTestSeeds.FindSettingIdAsync(client, "portal.contact.email");
+
+        var response = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = "not-an-address" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        body.RootElement.GetProperty("type").GetString().Should().Be(HostpanelErrorCodes.INVALID_SETTING_VALUE);
+        body.RootElement.GetProperty("errors").GetProperty("portal.contact.email")[0].GetString()
+            .Should().Contain("support@example.com");
+    }
+
+    /// <summary>The map address refuses a plain http address.</summary>
+    [Fact]
+    public async Task ContactMapUrl_Http_RefusesAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await AdminTestSeeds.FindSettingIdAsync(client, "portal.contact.map_url");
+
+        var response = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = "http://maps.example.com/embed" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>A per-language address is free text, stored trimmed like the default one.</summary>
+    [Fact]
+    public async Task ContactAddressRu_StoresTrimmedFreeTextAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await AdminTestSeeds.FindSettingIdAsync(client, "portal.contact.address.ru");
+
+        var update = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = "  ул. Примерная, 1  " });
+        update.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var read = await client.GetFromJsonAsync<JsonElement>($"/api/admin/settings/{id}");
+        read.GetProperty("value").GetString().Should().Be("ул. Примерная, 1");
+    }
+
     /// <summary>Free text with no vocabulary or shape is stored trimmed, unchanged otherwise.</summary>
     [Fact]
     public async Task SiteName_StoresTrimmedFreeTextAsync()

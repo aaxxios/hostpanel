@@ -11,6 +11,7 @@ namespace Innovayse.Hostpanel.Application.Support.Common;
 /// <param name="LastReplyAt">UTC timestamp of the most recent reply, if any.</param>
 /// <param name="IsFlagged">Whether this ticket has been flagged by staff.</param>
 /// <param name="ClientId">FK to the client who opened the ticket.</param>
+/// <param name="ClientName">Full name of that client when the list resolves it (the staff list does); <c>null</c> otherwise, and the caller renders its own fallback.</param>
 public record TicketListItemDto(
     int Id,
     string Subject,
@@ -21,4 +22,5 @@ public record TicketListItemDto(
     string? DepartmentName,
     DateTimeOffset? LastReplyAt,
     bool IsFlagged,
-    int ClientId);
+    int ClientId,
+    string? ClientName);

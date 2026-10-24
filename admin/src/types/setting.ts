@@ -41,6 +41,18 @@ export const SettingKey = {
   ContactAddress: 'portal.contact.address',
   /** Link to the address on a map. */
   ContactMapUrl: 'portal.contact.map_url',
+  /** Support working hours. */
+  ContactHours: 'portal.contact.hours',
+  /** Time zone the working hours are stated in. */
+  ContactTimezone: 'portal.contact.timezone',
+  /** Postal address for Russian visitors. */
+  ContactAddressRu: 'portal.contact.address.ru',
+  /** Postal address for Armenian visitors. */
+  ContactAddressHy: 'portal.contact.address.hy',
+  /** Support working hours for Russian visitors. */
+  ContactHoursRu: 'portal.contact.hours.ru',
+  /** Support working hours for Armenian visitors. */
+  ContactHoursHy: 'portal.contact.hours.hy',
   /** The storefront template. */
   Template: 'portal.template',
   /** Default colour mode of the storefront. */
@@ -161,6 +173,12 @@ export const SettingEnv: Record<SettingKey, string> = {
   [SettingKey.ContactTelegram]: `${SETTING_ENV_PREFIX}CONTACT_TELEGRAM`,
   [SettingKey.ContactAddress]: `${SETTING_ENV_PREFIX}CONTACT_ADDRESS`,
   [SettingKey.ContactMapUrl]: `${SETTING_ENV_PREFIX}CONTACT_MAP_URL`,
+  [SettingKey.ContactHours]: `${SETTING_ENV_PREFIX}CONTACT_HOURS`,
+  [SettingKey.ContactTimezone]: `${SETTING_ENV_PREFIX}CONTACT_TIMEZONE`,
+  [SettingKey.ContactAddressRu]: `${SETTING_ENV_PREFIX}CONTACT_ADDRESS_RU`,
+  [SettingKey.ContactAddressHy]: `${SETTING_ENV_PREFIX}CONTACT_ADDRESS_HY`,
+  [SettingKey.ContactHoursRu]: `${SETTING_ENV_PREFIX}CONTACT_HOURS_RU`,
+  [SettingKey.ContactHoursHy]: `${SETTING_ENV_PREFIX}CONTACT_HOURS_HY`,
   [SettingKey.Template]: `${SETTING_ENV_PREFIX}TEMPLATE`,
   [SettingKey.ThemeDefault]: `${SETTING_ENV_PREFIX}THEME_DEFAULT`,
   [SettingKey.ThemeUserToggle]: `${SETTING_ENV_PREFIX}THEME_USER_TOGGLE`,

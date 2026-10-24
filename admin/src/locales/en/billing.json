@@ -101,6 +101,8 @@
     "searchDescription": "Search description...",
     "lengthRecordsFound": "{length} Records Found",
     "invoiced": "Invoiced",
+    "typeOneTime": "One time",
+    "typeRecurring": "Recurring",
     "noItemsFound": "No items found.",
     "uninvoiced": "Uninvoiced",
     "activeRecurring": "Active Recurring",

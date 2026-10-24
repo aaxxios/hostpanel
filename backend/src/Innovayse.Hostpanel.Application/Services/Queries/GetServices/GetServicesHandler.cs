@@ -76,7 +76,7 @@ public sealed class GetServicesHandler
             currencyMap[clientId] = await _payerCurrency.ForClientAsync(clientId, ct);
         }
 
-        // Batch-resolve linked domain names
+        // Batch-resolve linked domain names; a service that runs on a site of its own, not on a registered domain, shows its own domain
         var serviceIds = services.Select(s => s.Id).ToList();
         var domainMap = await _context.Domains
             .Where(d => d.LinkedServiceId != null && serviceIds.Contains(d.LinkedServiceId.Value))
@@ -95,7 +95,7 @@ public sealed class GetServicesHandler
                     svc.ClientId,
                     clientMap.GetValueOrDefault(svc.ClientId),
                     product?.Name,
-                    domainMap.GetValueOrDefault(svc.Id),
+                    domainMap.GetValueOrDefault(svc.Id) ?? svc.Domain,
                     price,
                     currency.Code,
                     svc.BillingCycle,

@@ -4,13 +4,14 @@ using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.GetMyInvoices;
 
-/// <summary>Returns the calling client's invoices, newest first.</summary>
+/// <summary>Returns the calling client's invoices, newest first. A draft is still being prepared by staff and is not shown.</summary>
 public sealed class GetMyInvoicesHandler
 {
     /// <summary>The module's data context, for resolving the caller's client record and their invoices.</summary>
@@ -54,7 +55,7 @@ public sealed class GetMyInvoicesHandler
             .AsNoTracking()
             .Include(x => x.Items)
             .Include(x => x.Transactions)
-            .Where(x => x.ClientId == client.Id)
+            .Where(x => x.ClientId == client.Id && x.Status != InvoiceStatus.Draft)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(ct);
 

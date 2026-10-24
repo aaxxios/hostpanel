@@ -150,6 +150,15 @@ describe('LayoutHeader', () => {
     expect(wrapper.find('[data-testid="header-nav-products"]').attributes('aria-current')).toBeUndefined()
   })
 
+  it('marks only Hosting, not Products, on a page of a Hosting dropdown group under /products', async () => {
+    vi.stubGlobal('useRoute', () => ({ params: {}, query: {}, path: '/products/cloud-servers', fullPath: '/products/cloud-servers', hash: '', meta: {} }))
+    const wrapper = await mountHeader()
+
+    expect(wrapper.find('[data-testid="header-nav-hosting-trigger"]').classes()).toContain('text-classic-on-brand')
+    expect(wrapper.find('[data-testid="header-nav-products"]').attributes('aria-current')).toBeUndefined()
+    expect(wrapper.find('[data-testid="header-nav-products"]').classes()).not.toContain('text-classic-on-brand')
+  })
+
   it('offers the light/dark switch and the cart in both the desktop and the small-screen bar', async () => {
     // The shared stub only knows `isDark`; the switch also reads the operator's toggle setting.
     vi.stubGlobal('useAppColorMode', () => ({ isDark: ref(false), applied: ref('light'), userToggleEnabled: ref(true), toggle: vi.fn() }))

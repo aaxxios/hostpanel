@@ -75,6 +75,13 @@ public sealed class ListTicketsHandler
         var departments = await _context.Departments.AsNoTracking().ToListAsync(ct);
         var deptMap = departments.ToDictionary(d => d.Id, d => d.Name);
 
+        var clientIds = tickets.Select(t => t.ClientId).Distinct().ToList();
+        var clientNames = await _context.Clients
+            .AsNoTracking()
+            .Where(c => clientIds.Contains(c.Id))
+            .Select(c => new { c.Id, Name = (c.FirstName + " " + c.LastName).Trim() })
+            .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
+
         var items = tickets
             .Select(t => new TicketListItemDto(
                 t.Id,
@@ -86,7 +93,8 @@ public sealed class ListTicketsHandler
                 t.DepartmentId.HasValue && deptMap.TryGetValue(t.DepartmentId.Value, out var name) ? name : null,
                 t.Replies.Count > 0 ? t.Replies.Max(r => r.CreatedAt) : null,
                 t.IsFlagged,
-                t.ClientId))
+                t.ClientId,
+                clientNames.GetValueOrDefault(t.ClientId)))
             .ToList();
 
         return Result.Success(new PagedResult<TicketListItemDto>(items, totalCount, page, pageSize));

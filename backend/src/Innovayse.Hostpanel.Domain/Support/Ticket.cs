@@ -121,6 +121,32 @@ public sealed class Ticket : BaseEntity, IAggregateRoot
     }
 
     /// <summary>
+    /// Moves the whole history of the ticket into the past, for tickets seeded from history rather than opened now:
+    /// the ticket is opened at <paramref name="openedAt"/>, each reply follows the one before it by
+    /// <paramref name="gap"/>, and feedback, when it was left, comes one gap after the last reply.
+    /// </summary>
+    /// <param name="openedAt">The moment the ticket was really opened (UTC).</param>
+    /// <param name="gap">The time between one message and the next; must be positive.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="gap"/> is zero or negative.</exception>
+    public void Backdate(DateTimeOffset openedAt, TimeSpan gap)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(gap, TimeSpan.Zero);
+
+        CreatedAt = openedAt;
+        var at = openedAt;
+        foreach (var reply in _replies)
+        {
+            at += gap;
+            reply.Backdate(at);
+        }
+
+        if (FeedbackAt is not null)
+        {
+            FeedbackAt = at + gap;
+        }
+    }
+
+    /// <summary>
     /// Assigns this ticket to a staff member.
     /// </summary>
     /// <param name="staffId">FK to the staff member being assigned.</param>

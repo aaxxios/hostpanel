@@ -15,6 +15,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <param name="InvoiceDate">Invoice issue date (UTC).</param>
 /// <param name="PaidAt">Payment timestamp, null if unpaid.</param>
 /// <param name="PaymentMethod">Configured payment method label.</param>
+/// <param name="Currency">ISO 4217 code of the currency the invoice is issued in, which the amounts above are in.</param>
 public record InvoiceListItemDto(
     int Id,
     int ClientId,
@@ -27,4 +28,5 @@ public record InvoiceListItemDto(
     decimal Tax,
     DateTimeOffset InvoiceDate,
     DateTimeOffset? PaidAt,
-    string? PaymentMethod);
+    string? PaymentMethod,
+    string Currency);

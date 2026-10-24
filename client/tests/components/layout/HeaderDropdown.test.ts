@@ -21,9 +21,10 @@ const item: HeaderNavItem = {
  * Mounts the dropdown in the document so outside clicks and focus work.
  *
  * @param path - The current page path.
+ * @param active - Whether the group is the header's active entry.
  * @returns The wrapper.
  */
-const mountDropdown = (path = '/en/') => mountWithKit(LayoutHeaderDropdown, { props: { item, path }, attachToBody: true })
+const mountDropdown = (path = '/en/', active = false) => mountWithKit(LayoutHeaderDropdown, { props: { item, path, active }, attachToBody: true })
 
 describe('LayoutHeaderDropdown', () => {
   it('keeps the panel closed until the trigger is pressed', async () => {
@@ -69,8 +70,8 @@ describe('LayoutHeaderDropdown', () => {
     }
   })
 
-  it('marks the current link and tints the trigger when a child is the page', async () => {
-    const wrapper = mountDropdown('/en/faq')
+  it('marks the current link and tints the trigger when it is the active entry', async () => {
+    const wrapper = mountDropdown('/en/faq', true)
     await wrapper.find('[data-testid="header-nav-support-trigger"]').trigger('click')
 
     expect(wrapper.find('[data-testid="header-nav-child-faq"]').attributes('aria-current')).toBe('page')
@@ -105,5 +106,11 @@ describe('LayoutHeaderDropdown', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('[data-testid="header-nav-support-panel"]').exists()).toBe(false)
+  })
+
+  it('leaves the trigger idle when the parent says another entry is active, even if a child matches', () => {
+    const wrapper = mountDropdown('/en/faq', false)
+
+    expect(wrapper.find('[data-testid="header-nav-support-trigger"]').classes()).not.toContain('bg-classic-fill')
   })
 })

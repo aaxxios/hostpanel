@@ -30,7 +30,7 @@ import UiTableRow from '@/components/ui/UiTableRow.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { useClientOptions } from '@/composables/useClientOptions'
 import { Icon } from '@/lib/icons'
-import { quoteStageTone } from '@/lib/tones'
+import { quoteStageTone, statusLabel } from '@/lib/tones'
 import { QUOTE_STAGE_OPTIONS } from '@/lib/constants'
 import { formatDate } from '@/lib/format'
 import { formatUsdPlain } from '@/lib/money'
@@ -216,7 +216,7 @@ onMounted(() => {
             <UiTableCell>{{ clientLabel(quote.clientName, quote.clientId) }}</UiTableCell>
             <UiTableCell>{{ quote.subject }}</UiTableCell>
             <UiTableCell>
-              <UiBadge :tone="quoteStageTone(quote.stage)">{{ quote.stage }}</UiBadge>
+              <UiBadge :tone="quoteStageTone(quote.stage)">{{ statusLabel(QUOTE_STAGE_OPTIONS, quote.stage) }}</UiBadge>
             </UiTableCell>
             <UiTableCell>{{ formatUsdPlain(quote.total) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(quote.validUntil) }}</UiTableCell>

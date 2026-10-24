@@ -188,6 +188,10 @@ public sealed class Client : BaseEntity, IAggregateRoot
         return client;
     }
 
+    /// <summary>Moves the signup date to the moment the customer really joined, for accounts seeded from history.</summary>
+    /// <param name="createdAt">The moment the account was created (UTC).</param>
+    public void Backdate(DateTimeOffset createdAt) => CreatedAt = createdAt;
+
     /// <summary>
     /// Updates the client's profile information.
     /// </summary>

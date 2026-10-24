@@ -79,6 +79,10 @@ public sealed class Download : BaseEntity
         };
     }
 
+    /// <summary>Moves the creation date to the moment the file was really published, for downloads seeded from history.</summary>
+    /// <param name="createdAt">The moment the download was published (UTC).</param>
+    public void Backdate(DateTimeOffset createdAt) => CreatedAt = createdAt;
+
     /// <summary>
     /// Updates the details of this download.
     /// </summary>
