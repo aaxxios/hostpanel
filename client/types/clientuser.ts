@@ -70,6 +70,12 @@ export interface ClientUser {
    * backend could never fill.
    */
   currency?: string | null
+  /**
+   * False when the backend said this identity is not a customer account (a staff login with
+   * no Client role or no client record), so every customer-only request would be refused.
+   * Absent or true means the account may load its services, invoices, domains and tickets.
+   */
+  hasClientProfile?: boolean
   /** User permissions as bit-flags integer (8191 = All). */
   permissions: number
   /** Whether TOTP two-factor authentication is switched on for this account. */

@@ -214,6 +214,14 @@ export const useClientStore = defineStore('client', {
           }
           this.user = me
           this.userLoaded = true
+          // The identity already says whether this is a customer account, so the screens can
+          // show the notice without sending requests the API is certain to refuse (each one a
+          // 403 in the browser console). No API sentence exists for this path; the notice
+          // falls back to its own.
+          if (me.hasClientProfile === false) {
+            this.clientProfileMissing = true
+            this.clientProfileMessage = null
+          }
         } catch (err) {
           if (this.userEpoch !== epoch) {
             return
@@ -248,6 +256,22 @@ export const useClientStore = defineStore('client', {
       }
     },
 
+    /**
+     * Whether the signed-in identity is a customer account, learned from the identity itself.
+     *
+     * The customer-only sections wait on this before sending their request: a staff identity
+     * is refused by every one of them, and a refused request is a console error in the
+     * browser however calmly the store handles it. Joins the identity request already in
+     * flight rather than starting another. When the identity could not be read at all this
+     * answers true, so the section still tries and reports its own failure.
+     *
+     * @returns False when the identity is known not to be a customer account.
+     */
+    async isCustomerAccount(): Promise<boolean> {
+      await this.fetchUser()
+      return !this.clientProfileMissing
+    },
+
     // ── Services ──────────────────────────────────────────────────────────
 
     /**
@@ -263,6 +287,9 @@ export const useClientStore = defineStore('client', {
       this.servicesLoading = true
       this.servicesError = null
       try {
+        if (!(await this.isCustomerAccount())) {
+          return
+        }
         this.services = await useClientApi().fetchServices()
         this.servicesLoaded = true
       } catch (err) {
@@ -295,6 +322,9 @@ export const useClientStore = defineStore('client', {
       this.invoicesLoading = true
       this.invoicesError = null
       try {
+        if (!(await this.isCustomerAccount())) {
+          return
+        }
         this.invoices = await useClientApi().fetchInvoices()
         this.invoicesLoaded = true
       } catch (err) {
@@ -327,6 +357,9 @@ export const useClientStore = defineStore('client', {
       this.domainsLoading = true
       this.domainsError = null
       try {
+        if (!(await this.isCustomerAccount())) {
+          return
+        }
         this.domains = await useClientApi().fetchDomains()
         this.domainsLoaded = true
       } catch (err) {
@@ -359,6 +392,9 @@ export const useClientStore = defineStore('client', {
       this.ticketsLoading = true
       this.ticketsError = null
       try {
+        if (!(await this.isCustomerAccount())) {
+          return
+        }
         this.tickets = await useClientApi().fetchTickets()
         this.ticketsLoaded = true
       } catch (err) {

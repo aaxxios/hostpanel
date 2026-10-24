@@ -17,6 +17,18 @@ import { createPinia, setActivePinia } from 'pinia'
 /** The mocked `/api/portal/client/me` call, re-created for every test. */
 const fetchMe = vi.fn()
 
+/** The mocked ticket list call, re-created for every test. */
+const fetchTickets = vi.fn()
+
+/** The mocked service list call, re-created for every test. */
+const fetchServices = vi.fn()
+
+/** The mocked invoice list call, re-created for every test. */
+const fetchInvoices = vi.fn()
+
+/** The mocked domain list call, re-created for every test. */
+const fetchDomains = vi.fn()
+
 /** The mocked `/api/portal/client/emails/{id}` call, re-created for every test. */
 const fetchEmail = vi.fn()
 
@@ -26,7 +38,7 @@ vi.mock('~/composables/apis/useClientApi', () => ({
    *
    * @returns Only the endpoint functions these tests reach for.
    */
-  useClientApi: () => ({ fetchMe, fetchEmail }),
+  useClientApi: () => ({ fetchMe, fetchEmail, fetchTickets, fetchServices, fetchInvoices, fetchDomains }),
 }))
 
 const { useClientStore } = await import('~/stores/client')
@@ -163,6 +175,58 @@ describe('useClientStore.fetchUser', () => {
 
     expect(fetchMe).toHaveBeenCalledTimes(2)
     expect(store.user).toEqual(next)
+  })
+})
+
+describe('useClientStore customer-only sections for an identity that is not a customer', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fetchMe.mockReset()
+    fetchTickets.mockReset()
+    fetchServices.mockReset()
+    fetchInvoices.mockReset()
+    fetchDomains.mockReset()
+  })
+
+  it('sets the missing-profile state from the identity and never sends the refused requests', async () => {
+    fetchMe.mockResolvedValue({ ...profile, hasClientProfile: false })
+    const store = useClientStore()
+
+    await Promise.all([store.fetchTickets(), store.fetchServices(), store.fetchInvoices(), store.fetchDomains()])
+
+    expect(store.clientProfileMissing).toBe(true)
+    expect(store.clientProfileMessage).toBeNull()
+    expect(fetchTickets).not.toHaveBeenCalled()
+    expect(fetchServices).not.toHaveBeenCalled()
+    expect(fetchInvoices).not.toHaveBeenCalled()
+    expect(fetchDomains).not.toHaveBeenCalled()
+    // One shared identity request served all four sections, and none is left spinning or red.
+    expect(fetchMe).toHaveBeenCalledTimes(1)
+    expect(store.ticketsLoading).toBe(false)
+    expect(store.ticketsError).toBeNull()
+  })
+
+  it('loads the tickets of a customer account after the identity confirms it', async () => {
+    fetchMe.mockResolvedValue({ ...profile, hasClientProfile: true })
+    fetchTickets.mockResolvedValue([{ id: 7 }])
+    const store = useClientStore()
+
+    await store.fetchTickets()
+
+    expect(store.clientProfileMissing).toBe(false)
+    expect(fetchTickets).toHaveBeenCalledTimes(1)
+    expect(store.tickets).toEqual([{ id: 7 }])
+  })
+
+  it('still tries the section when the identity itself could not be read', async () => {
+    fetchMe.mockRejectedValue({ statusCode: 500 })
+    fetchTickets.mockResolvedValue([])
+    const store = useClientStore()
+
+    await store.fetchTickets()
+
+    expect(fetchTickets).toHaveBeenCalledTimes(1)
+    expect(store.ticketsLoaded).toBe(true)
   })
 })
 
