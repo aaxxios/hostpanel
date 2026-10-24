@@ -159,4 +159,17 @@ public class ClientServiceTests
 
         Assert.Equal(ServicesErrors.ServiceNotSuspended, ex.Code);
     }
+
+    /// <summary>Verifies that <see cref="ClientService.Backdate"/> moves the creation date and keeps the status.</summary>
+    [Fact]
+    public void Backdate_MovesTheCreationDateOnly()
+    {
+        var svc = ClientService.Create(1, 2, BillingCycleNames.Monthly);
+        var ordered = new DateTimeOffset(2026, 1, 5, 9, 0, 0, TimeSpan.Zero);
+
+        svc.Backdate(ordered);
+
+        Assert.Equal(ordered, svc.CreatedAt);
+        Assert.Equal(ServiceStatus.Pending, svc.Status);
+    }
 }

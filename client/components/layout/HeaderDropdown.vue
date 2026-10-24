@@ -2,7 +2,7 @@
   <UiStack ref="rootRef" gap="none" class="relative" :data-testid="`header-nav-${item.key}`" @focusout="onFocusOut">
     <UiButton
       variant="bare"
-      :class="[HEADER_NAV_ITEM, groupActive ? HEADER_NAV_ACTIVE : HEADER_NAV_IDLE, open ? 'bg-classic-surface-2' : '']"
+      :class="[HEADER_NAV_ITEM, active ? HEADER_NAV_ACTIVE : HEADER_NAV_IDLE, open ? 'bg-classic-surface-2' : '']"
       :aria-expanded="open"
       aria-haspopup="menu"
       :aria-controls="panelId"
@@ -79,7 +79,7 @@ import { ChevronDown } from 'lucide-vue-next'
 import type { ComponentPublicInstance } from 'vue'
 import type { HeaderNavItem } from '~/types/headernavitem'
 import { HEADER_ICON_ROW, HEADER_NAV_ACTIVE, HEADER_NAV_IDLE, HEADER_NAV_ITEM } from '~/utils/headerControl'
-import { isHeaderItemActive, isHeaderPathActive } from '~/utils/headerNav'
+import { isHeaderPathActive } from '~/utils/headerNav'
 
 /** Props of LayoutHeaderDropdown. */
 const props = defineProps<{
@@ -87,6 +87,8 @@ const props = defineProps<{
   item: HeaderNavItem
   /** Path of the page being viewed, to mark the current link. */
   path: string
+  /** Whether this group is the header's one active entry; decided by the parent across all entries. */
+  active: boolean
 }>()
 
 /** Id of the panel, referenced by the trigger's `aria-controls`. */
@@ -97,9 +99,6 @@ const open = ref(false)
 
 /** The root element: outside clicks and focus leaving are measured against it. */
 const rootRef = ref<ComponentPublicInstance | null>(null)
-
-/** Whether the trigger stands for the page being viewed. */
-const groupActive = computed(() => isHeaderItemActive(props.path, props.item))
 
 /** Opens a closed panel and closes an open one. */
 const toggle = (): void => {

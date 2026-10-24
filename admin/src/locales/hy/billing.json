@@ -101,6 +101,8 @@
     "searchDescription": "Որոնում ըստ նկարագրության...",
     "lengthRecordsFound": "Գտնվել է գրառում՝ {length}",
     "invoiced": "Հաշվարկված",
+    "typeOneTime": "Միանվագ",
+    "typeRecurring": "Կրկնվող",
     "noItemsFound": "Դիրքեր չեն գտնվել։",
     "uninvoiced": "Չհաշվարկված",
     "activeRecurring": "Ակտիվ կրկնվող",

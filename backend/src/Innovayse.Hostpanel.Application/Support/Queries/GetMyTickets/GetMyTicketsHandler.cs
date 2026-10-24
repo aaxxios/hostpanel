@@ -64,7 +64,8 @@ public sealed class GetMyTicketsHandler
                 null,
                 t.Replies.Count > 0 ? t.Replies.Max(r => r.CreatedAt) : (DateTimeOffset?)null,
                 t.IsFlagged,
-                t.ClientId))
+                t.ClientId,
+                null))
             .ToListAsync(ct);
 
         return Result.Success<IReadOnlyList<TicketListItemDto>>(tickets);

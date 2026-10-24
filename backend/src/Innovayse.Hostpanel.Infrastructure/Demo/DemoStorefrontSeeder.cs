@@ -13,14 +13,17 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// <summary>
 /// Seeds the public storefront's own content for the demo: fictional customer testimonials, partners,
 /// showcased projects and frequently asked questions, each in English, Russian and Armenian, plus the hero
-/// figures and the office address. Everything is invented — the people, companies and addresses are made up
-/// and every link is on a reserved <c>.example</c> domain. Each dataset is added only when its table is empty,
+/// figures and the contact map. The office address belongs to <see cref="DemoPortalSettingsSeeder"/>, which owns every contact line. Everything is invented — the people, companies and addresses are made up
+/// and every link is on a reserved <c>.example</c> domain, except the contact map, which must be a real embeddable page. Each dataset is added only when its table is empty,
 /// through the entity's factory and behaviour methods, with fixed counts, so a second run changes nothing.
 /// </summary>
 internal sealed class DemoStorefrontSeeder
 {
     /// <summary>The locale codes every translated row carries, in the order the triples below are written.</summary>
     private static readonly string[] Locales = ["en", "ru", "hy"];
+
+    /// <summary>The embeddable map the contact page frames; a real, frame-friendly map page so the block shows a map and not a broken frame.</summary>
+    internal const string MapEmbedUrl = "https://www.openstreetmap.org/export/embed.html?bbox=-0.13%2C51.50%2C-0.10%2C51.52&layer=mapnik";
 
     /// <summary>The storefront settings the demo sets, by key.</summary>
     private static readonly (string Key, string Value)[] Settings =
@@ -29,8 +32,7 @@ internal sealed class DemoStorefrontSeeder
         (PortalSettingKeys.StatsClients, "500+"),
         (PortalSettingKeys.StatsUptime, "99.9%"),
         (PortalSettingKeys.StatsRegions, "Europe, North America"),
-        (PortalSettingKeys.ContactAddress, "1 Market Street, Fairhaven"),
-        (PortalSettingKeys.ContactMapUrl, "https://maps.example/embed?q=fairhaven"),
+        (PortalSettingKeys.ContactMapUrl, MapEmbedUrl),
     ];
 
     /// <summary>The bundled sample portraits a testimonial may show; the rest show the client's initials.</summary>
@@ -491,7 +493,7 @@ internal sealed class DemoStorefrontSeeder
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Sets the hero figures and the office address on the rows the shared settings seeder created.</summary>
+    /// <summary>Sets the hero figures and the contact map on the rows the shared settings seeder created.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the settings are saved.</returns>
     private async Task SeedSettingsAsync(CancellationToken ct)

@@ -66,4 +66,17 @@ describe('QuotesListView', () => {
 
     expect(wrapper.get('[data-testid="billing-quotes-error"]').text()).toContain('Quotes are unavailable.')
   })
+
+  it('prints a quote stage as a name, not the value the API sends', async () => {
+    stubRoutes({
+      'GET /api/billing/quotes': () =>
+        json({ items: [quoteRowFixture({ stage: 'OnHold' })], totalCount: 1, page: 1, pageSize: 25 }),
+      'GET /api/clients': () => json({ items: [], totalCount: 0 }),
+    })
+    const wrapper = await mountList()
+
+    const table = wrapper.get('[data-testid="billing-quotes-table"]').text()
+    expect(table).toContain('On Hold')
+    expect(table).not.toContain('OnHold')
+  })
 })

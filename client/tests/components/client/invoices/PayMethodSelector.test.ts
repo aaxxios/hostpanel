@@ -18,7 +18,7 @@ describe('PayMethodSelector', () => {
   it('lists the saved cards with their last digits and expiry', () => {
     const wrapper = mountClient(PayMethodSelector, { props: { savedMethods: cards, canUseNewCard: false, modelValue: 'pm_1' } })
 
-    expect(wrapper.text()).toContain('visa •••• 4242')
+    expect(wrapper.text()).toContain('Visa •••• 4242')
     expect(wrapper.text()).toContain('12/30')
     expect(wrapper.find('[data-testid="pay-method-pm_2"]').exists()).toBe(true)
   })

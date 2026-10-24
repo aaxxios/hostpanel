@@ -7,8 +7,9 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>
 /// Seeds the two logs the admin panel lists: the activity log (what staff and the system did to each customer
-/// account) and the email log (what was sent, with a few failures). Both entities stamp the current time on
-/// creation, so only the content, not the timestamps, is fixed; the counts and the text are the same every reset.
+/// account) and the email log (what was sent, with a few failures). Each line is dated through the entity's backdating
+/// method, counted from the anchor and never earlier than the customer's signup, so the logs read as history; the
+/// counts, the text and the offsets are the same every reset.
 /// </summary>
 internal sealed class DemoLogSeeder
 {
@@ -60,11 +61,28 @@ internal sealed class DemoLogSeeder
     /// <summary>The data context the rows are added to and saved through.</summary>
     private readonly AppDbContext _db;
 
+    /// <summary>The anchor dates are measured from.</summary>
+    private readonly DateTimeOffset _today;
+
     /// <summary>Creates the seeder.</summary>
     /// <param name="db">The data context the rows are added to and saved through.</param>
-    public DemoLogSeeder(AppDbContext db)
+    /// <param name="today">The anchor dates are measured from.</param>
+    public DemoLogSeeder(AppDbContext db, DateTimeOffset today)
     {
         _db = db;
+        _today = today;
+    }
+
+    /// <summary>A moment some days before the anchor, pushed forward to the day after the customer signed up if it falls earlier.</summary>
+    /// <param name="client">The customer the line is about.</param>
+    /// <param name="daysAgo">How many days before the anchor the line was written.</param>
+    /// <param name="hour">The hour of that day.</param>
+    /// <returns>The moment to stamp on the line.</returns>
+    private DateTimeOffset MomentFor(Domain.Clients.Client client, int daysAgo, int hour)
+    {
+        var moment = _today.AddDays(-daysAgo).AddHours(hour);
+        var earliest = client.CreatedAt.AddDays(1);
+        return moment > earliest ? moment : earliest;
     }
 
     /// <summary>Seeds the logs that are empty.</summary>
@@ -84,8 +102,10 @@ internal sealed class DemoLogSeeder
             {
                 var client = clients[n % clients.Count];
                 var (id, name, email) = Staff[n % Staff.Length];
-                _db.ActivityLogs.Add(ActivityLog.Create(
-                    client.Id, Activities[n % Activities.Length], id, name, email, $"203.0.113.{20 + (n % 60)}"));
+                var entry = ActivityLog.Create(
+                    client.Id, Activities[n % Activities.Length], id, name, email, $"203.0.113.{20 + (n % 60)}");
+                entry.Backdate(MomentFor(client, 1 + ((n * 7) % 150), 8 + (n % 10)));
+                _db.ActivityLogs.Add(entry);
             }
         }
 
@@ -106,9 +126,11 @@ internal sealed class DemoLogSeeder
                 var to = addresses.TryGetValue(client.UserId, out var address)
                     ? address
                     : $"{DemoSites.LabelOf(client)}@demo.example";
-                _db.EmailLogs.Add(EmailLog.Create(
+                var sent = EmailLog.Create(
                     to, subject, body, !failed,
-                    failed ? "Recipient mailbox unavailable." : null));
+                    failed ? "Recipient mailbox unavailable." : null);
+                sent.Backdate(MomentFor(client, 1 + ((n * 5) % 110), 7 + (n % 12)));
+                _db.EmailLogs.Add(sent);
             }
         }
 

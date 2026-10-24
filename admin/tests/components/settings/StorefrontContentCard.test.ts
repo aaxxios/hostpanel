@@ -19,6 +19,12 @@ const rows: Setting[] = [
   { id: 8, key: 'portal.contact.telegram', value: '@acme', isSecret: false, hasValue: true },
   { id: 9, key: 'portal.contact.address', value: '1 Main St', isSecret: false, hasValue: true },
   { id: 10, key: 'portal.contact.map_url', value: 'https://maps.example.com/x', isSecret: false, hasValue: true },
+  { id: 11, key: 'portal.contact.hours', value: 'Mon-Fri 09:00-18:00', isSecret: false, hasValue: true },
+  { id: 12, key: 'portal.contact.hours.ru', value: 'Пн-Пт 09:00-18:00', isSecret: false, hasValue: true },
+  { id: 13, key: 'portal.contact.hours.hy', value: 'Երկ-Ուրբ 09:00-18:00', isSecret: false, hasValue: true },
+  { id: 14, key: 'portal.contact.timezone', value: 'UTC+4', isSecret: false, hasValue: true },
+  { id: 15, key: 'portal.contact.address.ru', value: 'ул. Примерная, 1', isSecret: false, hasValue: true },
+  { id: 16, key: 'portal.contact.address.hy', value: 'Օրինակ փողոց 1', isSecret: false, hasValue: true },
 ]
 
 /**
@@ -45,6 +51,12 @@ describe('StorefrontContentCard', () => {
     expect(valueOf(wrapper, 'storefront-contact-telegram')).toBe('@acme')
     expect(valueOf(wrapper, 'storefront-contact-address')).toBe('1 Main St')
     expect(valueOf(wrapper, 'storefront-contact-map-url')).toBe('https://maps.example.com/x')
+    expect(valueOf(wrapper, 'storefront-contact-hours')).toBe('Mon-Fri 09:00-18:00')
+    expect(valueOf(wrapper, 'storefront-contact-hours-ru')).toBe('Пн-Пт 09:00-18:00')
+    expect(valueOf(wrapper, 'storefront-contact-hours-hy')).toBe('Երկ-Ուրբ 09:00-18:00')
+    expect(valueOf(wrapper, 'storefront-contact-timezone')).toBe('UTC+4')
+    expect(valueOf(wrapper, 'storefront-contact-address-ru')).toBe('ул. Примерная, 1')
+    expect(valueOf(wrapper, 'storefront-contact-address-hy')).toBe('Օրինակ փողոց 1')
   })
 
   it('keeps Save disabled until a field changes, then emits that row only', async () => {
@@ -73,7 +85,53 @@ describe('StorefrontContentCard', () => {
     const { wrapper } = await mountScreen(StorefrontContentCard, { settings: [rows[0] as Setting] })
 
     expect(wrapper.find('[data-testid="storefront-hero-badge"]').exists()).toBe(false)
-    expect(wrapper.findAll('[data-testid="setting-not-seeded"]')).toHaveLength(9)
+    expect(wrapper.findAll('[data-testid="setting-not-seeded"]')).toHaveLength(15)
     expect(wrapper.text()).toContain('portal.hero.badge')
+  })
+
+  it('saves the working hours and the Russian address as their own rows', async () => {
+    const { wrapper } = await mountScreen(StorefrontContentCard, { settings: rows })
+
+    await wrapper.get('[data-testid="storefront-contact-hours"]').setValue('Daily 08:00-20:00')
+    await wrapper.get('[data-testid="storefront-save-contact-hours"]').trigger('click')
+    await wrapper.get('[data-testid="storefront-contact-address-ru"]').setValue('ул. Новая, 2')
+    await wrapper.get('[data-testid="storefront-contact-address-ru"]').trigger('keyup.enter')
+
+    expect(wrapper.emitted('save')).toEqual([[11, 'Daily 08:00-20:00'], [15, 'ул. Новая, 2']])
+  })
+
+  it('refuses a malformed email before any save and says why', async () => {
+    const { wrapper } = await mountScreen(StorefrontContentCard, { settings: rows })
+    const email = wrapper.get('[data-testid="storefront-contact-email"]')
+
+    await email.setValue('not-an-address')
+    await email.trigger('keyup.enter')
+    await wrapper.get('[data-testid="storefront-save-contact-email"]').trigger('click')
+
+    expect(wrapper.emitted('save')).toBeUndefined()
+    expect(wrapper.find('[data-testid="storefront-contact-email-invalid"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="storefront-save-contact-email"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('refuses a map address that is not https', async () => {
+    const { wrapper } = await mountScreen(StorefrontContentCard, { settings: rows })
+
+    await wrapper.get('[data-testid="storefront-contact-map-url"]').setValue('http://maps.example.com/x')
+
+    expect(wrapper.find('[data-testid="storefront-contact-map-url-invalid"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="storefront-save-contact-map-url"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('accepts a valid email and lets an empty one clear the field', async () => {
+    const { wrapper } = await mountScreen(StorefrontContentCard, { settings: rows })
+    const email = wrapper.get('[data-testid="storefront-contact-email"]')
+
+    await email.setValue('help@example.org')
+    expect(wrapper.find('[data-testid="storefront-contact-email-invalid"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="storefront-save-contact-email"]').trigger('click')
+    await email.setValue('')
+    await wrapper.get('[data-testid="storefront-save-contact-email"]').trigger('click')
+
+    expect(wrapper.emitted('save')).toEqual([[5, 'help@example.org'], [5, '']])
   })
 })

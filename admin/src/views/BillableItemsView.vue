@@ -94,6 +94,15 @@ const statusOptions = computed(() => [
 ])
 
 /**
+ * The name of a billable item's type, as the operator reads it.
+ *
+ * @param type - The type the API sent.
+ * @returns The translated name.
+ */
+const typeLabel = (type: string): string =>
+  type === BillableItemType.Recurring ? t('billing.billableItems.typeRecurring') : t('billing.billableItems.typeOneTime')
+
+/**
  * Tells whether an item passes the status filter.
  *
  * @param item - A billable item.
@@ -285,7 +294,7 @@ onMounted(() => {
             <UiTableCell>{{ clientLabel(item.clientName, item.clientId) }}</UiTableCell>
             <UiTableCell>{{ item.description }}</UiTableCell>
             <UiTableCell>{{ item.currency }} {{ item.amount.toFixed(2) }}</UiTableCell>
-            <UiTableCell muted>{{ item.type }}</UiTableCell>
+            <UiTableCell muted>{{ typeLabel(item.type) }}</UiTableCell>
             <UiTableCell>
               <UiBadge :tone="item.isInvoiced ? 'success' : 'danger'">
                 {{ item.isInvoiced ? t('shared.yes') : t('shared.no') }}

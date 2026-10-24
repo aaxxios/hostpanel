@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
@@ -91,5 +92,43 @@ public sealed class GetDashboardStatsTests(IntegrationTestFactory factory) : ICl
         var response = await factory.CreateClient().GetAsync("/api/admin/dashboard/stats");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>
+    /// Revenue adds invoices up in the base currency: a paid invoice in a currency worth half the base adds half
+    /// its total, not the whole of it, so a mixed-currency demo does not report a thousand times its real revenue.
+    /// </summary>
+    [Fact]
+    public async Task RevenueIsCountedInTheBaseCurrencyAsync()
+    {
+        async Task<decimal> TotalRevenueAsync()
+        {
+            var admin = await AdminTestSeeds.AdminClientAsync(factory);
+            var response = await admin.GetAsync("/api/admin/dashboard/stats");
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+            return body.GetProperty("totalRevenue").GetDecimal();
+        }
+
+        var before = await TotalRevenueAsync();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            context.Currencies.Add(Currency.Create("ZQD", "999", string.Empty, " ZQD", 2, 0.5m, isBase: false));
+            var client = Client.Create($"user-{Guid.NewGuid():N}", "Ada", "Lovelace", $"ada-{Guid.NewGuid():N}@example.test");
+            context.Clients.Add(client);
+            await context.SaveChangesAsync(CancellationToken.None);
+
+            var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(14), "ZQD");
+            invoice.AddItem("Hosting", 100m, 1);
+            invoice.AddPayment(DateTimeOffset.UtcNow, "Card", $"tx-{Guid.NewGuid():N}", 100m, 0m, null);
+            context.Invoices.Add(invoice);
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        var after = await TotalRevenueAsync();
+
+        (after - before).Should().Be(50m);
     }
 }

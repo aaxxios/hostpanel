@@ -87,6 +87,21 @@ describe('LayoutHeaderDrawer', () => {
     expect(wrapper.find('[data-testid="header-drawer-domains"]').attributes('aria-current')).toBeUndefined()
   })
 
+  it('marks Products idle when the page belongs to a group link under /products', () => {
+    const nested: HeaderNavItem[] = [
+      { key: 'hosting', label: 'Hosting', children: [{ key: 'mail', label: 'Mail', icon: 'mdi:email', to: '/en/products/mail' }] },
+      { key: 'products', label: 'Products', to: '/en/products' },
+    ]
+    const wrapper = mountWithKit(LayoutHeaderDrawer, {
+      props: { modelValue: true, items: nested, path: '/en/products/mail' },
+      components: { UiLanguageSwitcher: LanguageSwitcherStub, UiCurrencySwitcher: CurrencySwitcherStub },
+      attachToBody: true,
+    })
+
+    expect(wrapper.find('[data-testid="header-drawer-child-mail"]').attributes('aria-current')).toBe('page')
+    expect(wrapper.find('[data-testid="header-drawer-products"]').attributes('aria-current')).toBeUndefined()
+  })
+
   it('draws the icon tile of every group link, inverted on the current page', () => {
     const wrapper = mountDrawer('/en/faq')
 

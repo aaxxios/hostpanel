@@ -36,6 +36,10 @@ public sealed class ActivityLog : BaseEntity
         Id = id;
     }
 
+    /// <summary>Moves the entry to the moment the action was really performed, for log lines seeded from history.</summary>
+    /// <param name="performedAt">The moment the action was performed (UTC).</param>
+    public void Backdate(DateTimeOffset performedAt) => CreatedAt = performedAt;
+
     /// <summary>Creates a new activity log entry.</summary>
     /// <param name="clientId">FK to the client account.</param>
     /// <param name="description">Human-readable description of the action.</param>

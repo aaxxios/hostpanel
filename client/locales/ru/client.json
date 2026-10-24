@@ -517,12 +517,17 @@
       "remove": "Удалить",
       "removeConfirm": "Удалить метод оплаты?",
       "removeConfirmDesc": "Это действие нельзя отменить.",
-      "cardEnding": "заканчивается на",
       "expires": "Истекает",
       "statusActive": "Активен",
       "removeSuccess": "Метод оплаты удалён",
       "setDefault": "По умолчанию",
-      "defaultSet": "Метод оплаты по умолчанию обновлён"
+      "defaultSet": "Метод оплаты по умолчанию обновлён",
+      "defaultBadge": "По умолчанию",
+      "type": {
+        "card": "Карта",
+        "bankAccount": "Банковский счёт",
+        "other": "Способ оплаты"
+      }
     },
     "users": {
       "currentUsers": "Пользователи аккаунта",

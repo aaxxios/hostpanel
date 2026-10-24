@@ -149,6 +149,15 @@ internal sealed class DemoDomainSeeder
                 break;
         }
 
+        // Registered a year before it expires (or when the owner signed up, if that was later); a domain still waiting
+        // to be registered or transferred was ordered just now and keeps today's date.
+        if (status is not (DomainStatus.PendingTransfer or DomainStatus.PendingRegistration))
+        {
+            var anniversary = expiresAt.AddYears(-1);
+            var earliest = client.CreatedAt.AddDays(1 + (sequence % 5));
+            domain.Backdate(anniversary > earliest ? anniversary : earliest);
+        }
+
         var configured = status is DomainStatus.Active or DomainStatus.Expired or DomainStatus.Redemption or DomainStatus.Transferred;
         if (configured)
         {

@@ -45,6 +45,7 @@
  */
 import { NEW_CARD } from '~/constants/payMethod'
 import type { PaymentMethod } from '~/types/payment'
+import { brandName } from '~/utils/paymentMethodMapper'
 
 /** Props of PayMethodSelector. */
 interface Props {
@@ -77,9 +78,9 @@ const cardClass = (id: string): string => (props.modelValue === id ? 'border-pri
  * The text of a saved card's option: its network and last four digits.
  *
  * @param method - The saved payment method.
- * @returns For example `visa •••• 4242`.
+ * @returns For example `Visa •••• 4242`.
  */
-const methodLabel = (method: PaymentMethod): string => `${method.card_type ?? ''} •••• ${method.card_last_four ?? ''}`.trim()
+const methodLabel = (method: PaymentMethod): string => `${method.card_type ? brandName(method.card_type) : ''} •••• ${method.card_last_four ?? ''}`.trim()
 
 /**
  * Reports a chosen option.

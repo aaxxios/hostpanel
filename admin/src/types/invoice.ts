@@ -84,6 +84,8 @@ export interface Invoice {
   gatewayTransactionId?: string
   /** Display name of the owning client; null when unresolved. */
   clientName: string | null
+  /** ISO 4217 code of the currency the invoice is issued in; absent on an answer that does not carry it. */
+  currency?: string
   /** Line items on the invoice. */
   items: InvoiceItem[]
   /** Payment/refund/credit transactions. */

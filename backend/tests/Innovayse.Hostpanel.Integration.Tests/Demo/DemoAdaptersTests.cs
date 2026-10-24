@@ -29,21 +29,66 @@ public sealed class DemoAdaptersTests
         first.TransactionId.Should().Be("demo-charge-17").And.Be(second.TransactionId);
     }
 
-    /// <summary>The card gateway is configured, verifies every intent and holds one default sample card.</summary>
+    /// <summary>The card gateway is configured and verifies every intent.</summary>
     [Fact]
-    public async Task CardGateway_AcceptsEveryIntentAndHoldsOneSampleCardAsync()
+    public async Task CardGateway_AcceptsEveryIntentAsync()
     {
-        var gateway = new DemoCardPaymentGateway();
+        var gateway = new DemoCardPaymentGateway(new DemoCardState());
 
         var intent = await gateway.CreatePaymentIntentAsync(
             10m, "USD", new Dictionary<string, string> { ["invoiceId"] = "5" }, CancellationToken.None);
         var verified = await gateway.VerifyPaymentIntentAsync(intent, CancellationToken.None);
-        var cards = await gateway.ListPaymentMethodsAsync("any-customer", CancellationToken.None);
 
         gateway.IsConfigured.Should().BeTrue();
         intent.Should().Be("demo-intent-5-usd");
         verified.Success.Should().BeTrue();
-        cards.Should().ContainSingle(c => c.IsDefault && c.Last4 == "0000");
+    }
+
+    /// <summary>A customer holds a Visa, a Mastercard and a bank account, with brand, last four, expiry and exactly one default.</summary>
+    [Fact]
+    public async Task CardGateway_HoldsRealisticSampleMethodsWithOneDefaultAsync()
+    {
+        var gateway = new DemoCardPaymentGateway(new DemoCardState());
+
+        var methods = await gateway.ListPaymentMethodsAsync("cust-sample", CancellationToken.None);
+
+        methods.Should().HaveCount(3);
+        methods.Should().ContainSingle(m => m.IsDefault);
+        methods.Should().ContainSingle(m => m.Type == "card" && m.Brand == "visa" && m.Last4 == "4242" && m.ExpiryMonth == 12 && m.IsDefault);
+        methods.Should().ContainSingle(m => m.Type == "card" && m.Brand == "mastercard" && m.Last4 == "4444" && m.ExpiryYear > DateTimeOffset.UtcNow.Year);
+        methods.Should().ContainSingle(m => m.Type == "us_bank_account" && m.Last4 == "6789" && m.ExpiryMonth == null);
+        methods.Select(m => m.Id).Should().OnlyHaveUniqueItems().And.OnlyContain(id => id.EndsWith("cust-sample"));
+        methods.Should().OnlyContain(m => m.Last4!.Length == 4);
+    }
+
+    /// <summary>Choosing another default moves the marker, and only for that customer.</summary>
+    [Fact]
+    public async Task CardGateway_RemembersTheChosenDefaultPerCustomerAsync()
+    {
+        var gateway = new DemoCardPaymentGateway(new DemoCardState());
+        var before = await gateway.ListPaymentMethodsAsync("cust-default", CancellationToken.None);
+        var mastercard = before.Single(m => m.Brand == "mastercard");
+
+        await gateway.SetDefaultPaymentMethodAsync("cust-default", mastercard.Id, CancellationToken.None);
+        var after = await gateway.ListPaymentMethodsAsync("cust-default", CancellationToken.None);
+        var other = await gateway.ListPaymentMethodsAsync("cust-default-other", CancellationToken.None);
+
+        after.Single(m => m.IsDefault).Brand.Should().Be("mastercard");
+        other.Single(m => m.IsDefault).Brand.Should().Be("visa");
+    }
+
+    /// <summary>A removed method disappears, and when it was the default the first remaining one takes over.</summary>
+    [Fact]
+    public async Task CardGateway_RemovedDefaultPassesToTheNextMethodAsync()
+    {
+        var gateway = new DemoCardPaymentGateway(new DemoCardState());
+        var before = await gateway.ListPaymentMethodsAsync("cust-remove", CancellationToken.None);
+
+        await gateway.DetachPaymentMethodAsync(before.Single(m => m.IsDefault).Id, CancellationToken.None);
+        var after = await gateway.ListPaymentMethodsAsync("cust-remove", CancellationToken.None);
+
+        after.Should().HaveCount(2).And.NotContain(m => m.Brand == "visa");
+        after.Should().ContainSingle(m => m.IsDefault && m.Brand == "mastercard");
     }
 
     /// <summary>The hosted-page gateway sends the customer straight back and then reports the order paid.</summary>

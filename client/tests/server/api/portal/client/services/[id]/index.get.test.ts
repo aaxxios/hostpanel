@@ -30,7 +30,7 @@ describe('GET /api/portal/client/services/:id', () => {
     backend.respondWith(() => ({
       body: [
         { id: 3, productId: 1, productName: 'Other' },
-        { id: 7, productId: 2, productName: 'Hosting M', serverId: 5, serverName: 'srv', serverIp: '1.2.3.4', serverHostname: 'srv.test', price: '5.00', paymentMethod: 'card', status: 'Active' },
+        { id: 7, productId: 2, productName: 'Hosting M', serverId: 5, serverName: 'srv', serverIp: '1.2.3.4', serverHostname: 'srv.test', price: '5.00', paymentMethod: 'card', status: 'Active', createdAt: '2026-01-05T09:00:00Z' },
       ],
     }))
 
@@ -42,6 +42,7 @@ describe('GET /api/portal/client/services/:id', () => {
     expect(result).toMatchObject({
       id: 7,
       pid: 2,
+      regdate: '2026-01-05T09:00:00Z',
       name: 'Hosting M',
       serverid: 5,
       servername: 'srv',

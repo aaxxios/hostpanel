@@ -19,6 +19,6 @@ public static class InvoiceMappingExtensions
 
         return source.Select(inv => new InvoiceListItemDto(
             inv.Id, inv.ClientId, string.Empty, inv.Status, inv.DueDate, inv.CreatedAt,
-            inv.Total, inv.SubTotal, inv.Tax, inv.InvoiceDate, inv.PaidAt, inv.PaymentMethod));
+            inv.Total, inv.SubTotal, inv.Tax, inv.InvoiceDate, inv.PaidAt, inv.PaymentMethod, inv.Currency));
     }
 }

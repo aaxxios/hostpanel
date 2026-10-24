@@ -22,6 +22,22 @@ internal static class DemoAnchor
         return new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
     }
 
+    /// <summary>The first month, counted back from the current one, a customer is billed in; later joiners have shorter histories.</summary>
+    /// <param name="position">The customer's position in the id order, the demo client first.</param>
+    /// <returns>Months back, at most <see cref="HistoryMonths"/> minus one.</returns>
+    internal static int FirstBillingMonthBack(int position) =>
+        position == 0 ? HistoryMonths - 1 : Math.Min(HistoryMonths - 1, 3 + ((position * 5) % 9));
+
+    /// <summary>
+    /// The day a customer signed up: three weeks before the first invoice, so nothing in the customer's history
+    /// (services, domains, orders, invoices, quotes, mail) is dated before the account existed.
+    /// </summary>
+    /// <param name="position">The customer's position in the id order, the demo client first.</param>
+    /// <param name="today">The anchor.</param>
+    /// <returns>The signup moment.</returns>
+    internal static DateTimeOffset SignupDate(int position, DateTimeOffset today) =>
+        today.AddMonths(-FirstBillingMonthBack(position)).AddDays(-(21 + (position % 7))).AddHours(9 + (position % 8));
+
     /// <summary>A fresh generator on the fixed seed, so each seeder draws the same sequence every time.</summary>
     /// <returns>A generator seeded with <see cref="RandomSeed"/>.</returns>
     internal static Random NewRandom() => new(RandomSeed);

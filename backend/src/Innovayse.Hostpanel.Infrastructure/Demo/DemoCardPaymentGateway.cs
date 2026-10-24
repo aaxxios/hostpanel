@@ -5,25 +5,43 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>
 /// Card gateway for the public demo: reports itself configured, accepts every payment intent and
-/// holds one fixed sample card per customer. Identifiers are derived from the input, never random,
-/// and nothing leaves the process.
+/// holds three fixed sample methods per customer (two cards and a bank account) in the shape a real
+/// gateway reports them. Only the last four digits ever exist, and test-style ones. Setting a default
+/// or removing a method is remembered (in <see cref="DemoCardState"/>) until the demo reset so the demo list reacts to it.
+/// Identifiers are derived from the input, never random, and nothing leaves the process.
 /// </summary>
 internal sealed class DemoCardPaymentGateway : ICardPaymentGateway
 {
-    /// <summary>The identifier of the one sample card.</summary>
-    private const string SampleCardId = "demo-card-sample";
+    /// <summary>The identifier prefix of the sample Visa card; the customer id follows it, so an id names its owner.</summary>
+    private const string VisaCardId = "demo-card-visa:";
 
-    /// <summary>Card network shown for the sample card.</summary>
-    private const string SampleBrand = "Demo Card";
+    /// <summary>The identifier prefix of the sample Mastercard.</summary>
+    private const string MastercardId = "demo-card-mastercard:";
 
-    /// <summary>Last four digits shown for the sample card.</summary>
-    private const string SampleLast4 = "0000";
+    /// <summary>The identifier prefix of the sample bank account.</summary>
+    private const string BankAccountId = "demo-bank-account:";
 
-    /// <summary>Expiry month of the sample card.</summary>
-    private const int SampleExpiryMonth = 12;
+    /// <summary>The gateway type of a card.</summary>
+    private const string CardType = "card";
 
-    /// <summary>Years from now the sample card expires, so it never reads as expired.</summary>
-    private const int SampleExpiryYearsAhead = 3;
+    /// <summary>The gateway type of a bank account.</summary>
+    private const string BankAccountType = "us_bank_account";
+
+    /// <summary>Years from now the Visa card expires, so it never reads as expired.</summary>
+    private const int VisaExpiryYearsAhead = 3;
+
+    /// <summary>Years from now the Mastercard expires.</summary>
+    private const int MastercardExpiryYearsAhead = 2;
+
+    /// <summary>What visitors changed on the sample methods; cleared by the demo reset.</summary>
+    private readonly DemoCardState _state;
+
+    /// <summary>Creates the gateway.</summary>
+    /// <param name="state">What visitors changed on the sample methods.</param>
+    public DemoCardPaymentGateway(DemoCardState state)
+    {
+        _state = state;
+    }
 
     /// <inheritdoc/>
     public bool IsConfigured => true;
@@ -47,20 +65,40 @@ internal sealed class DemoCardPaymentGateway : ICardPaymentGateway
     /// <inheritdoc/>
     public Task<IReadOnlyList<CardPaymentMethodDto>> ListPaymentMethodsAsync(string customerId, CancellationToken ct)
     {
-        IReadOnlyList<CardPaymentMethodDto> cards =
+        var year = DateTimeOffset.UtcNow.Year;
+        (string Id, string Type, string Brand, string Last4, int? Month, int? Year)[] samples =
         [
-            new CardPaymentMethodDto(
-                SampleCardId, "card", SampleBrand, SampleLast4, SampleExpiryMonth,
-                DateTimeOffset.UtcNow.Year + SampleExpiryYearsAhead, true),
+            ($"{VisaCardId}{customerId}", CardType, "visa", "4242", 12, year + VisaExpiryYearsAhead),
+            ($"{MastercardId}{customerId}", CardType, "mastercard", "4444", 8, year + MastercardExpiryYearsAhead),
+            ($"{BankAccountId}{customerId}", BankAccountType, "Demo Bank", "6789", null, null),
         ];
 
-        return Task.FromResult(cards);
+        var remaining = samples.Where(s => !_state.IsRemoved(s.Id)).ToList();
+
+        // The chosen default wins while it still exists; otherwise the first remaining method is the default.
+        var defaultId = _state.TryGetDefault(customerId, out var chosen) && remaining.Any(s => s.Id == chosen)
+            ? chosen
+            : remaining.FirstOrDefault().Id;
+
+        IReadOnlyList<CardPaymentMethodDto> methods = remaining
+            .Select(s => new CardPaymentMethodDto(s.Id, s.Type, s.Brand, s.Last4, s.Month, s.Year, s.Id == defaultId))
+            .ToList();
+
+        return Task.FromResult(methods);
     }
 
     /// <inheritdoc/>
-    public Task SetDefaultPaymentMethodAsync(string customerId, string paymentMethodId, CancellationToken ct) =>
-        Task.CompletedTask;
+    public Task SetDefaultPaymentMethodAsync(string customerId, string paymentMethodId, CancellationToken ct)
+    {
+        _state.ChooseDefault(customerId, paymentMethodId);
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
-    public Task DetachPaymentMethodAsync(string paymentMethodId, CancellationToken ct) => Task.CompletedTask;
+    /// <remarks>Remembered by method id in the shared state, which the demo reset clears.</remarks>
+    public Task DetachPaymentMethodAsync(string paymentMethodId, CancellationToken ct)
+    {
+        _state.Remove(paymentMethodId);
+        return Task.CompletedTask;
+    }
 }

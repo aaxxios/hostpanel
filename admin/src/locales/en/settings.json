@@ -48,7 +48,8 @@
     },
     "contactEmail": {
       "label": "Contact email",
-      "hint": "support{'@'}example.com"
+      "hint": "support{'@'}example.com",
+      "invalid": "Enter a valid email address."
     },
     "contactPhone": {
       "label": "Contact phone",
@@ -68,7 +69,32 @@
     },
     "contactMapUrl": {
       "label": "Map URL",
-      "hint": "https://maps.example.com/..."
+      "hint": "https://www.openstreetmap.org/export/embed.html?bbox=0,0,1,1",
+      "invalid": "Enter an address that starts with https://."
+    },
+    "contactHours": {
+      "label": "Working hours",
+      "hint": "Mon-Fri 09:00-18:00"
+    },
+    "contactHoursRu": {
+      "label": "Working hours (Russian)",
+      "hint": "Shown to Russian visitors; empty uses the default hours"
+    },
+    "contactHoursHy": {
+      "label": "Working hours (Armenian)",
+      "hint": "Shown to Armenian visitors; empty uses the default hours"
+    },
+    "contactTimezone": {
+      "label": "Time zone",
+      "hint": "UTC+4"
+    },
+    "contactAddressRu": {
+      "label": "Address (Russian)",
+      "hint": "Shown to Russian visitors; empty uses the default address"
+    },
+    "contactAddressHy": {
+      "label": "Address (Armenian)",
+      "hint": "Shown to Armenian visitors; empty uses the default address"
     }
   },
   "portalAppearance": {

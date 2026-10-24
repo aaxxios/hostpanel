@@ -48,4 +48,18 @@ public sealed class QuoteTests
 
         act.Should().Throw<DomainRuleException>().Which.Code.Should().Be(BillingErrors.QuoteItemNotFound);
     }
+
+    /// <summary>Backdate moves the creation date of the quote and nothing else.</summary>
+    [Fact]
+    public void Backdate_MovesTheCreationDateOnly()
+    {
+        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7));
+        var written = new DateTimeOffset(2026, 2, 3, 10, 0, 0, TimeSpan.Zero);
+
+        quote.Backdate(written);
+
+        quote.CreatedAt.Should().Be(written);
+        quote.Subject.Should().Be("Test");
+        quote.Stage.Should().Be(QuoteStage.Draft);
+    }
 }

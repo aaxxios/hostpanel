@@ -133,6 +133,11 @@ Related operator settings, all optional and hidden when empty:
 `portal.legal.tax_id`, `portal.social.{facebook,instagram,twitter,linkedin,youtube}`, and the
 support hours `portal.contact.hours` with their zone `portal.contact.timezone`.
 
+The email, phone, address, map, hours and zone are all editable in **Admin → Settings → Storefront**;
+the email and the map address are checked when saved. The address and the hours can also be set
+per language with the `.ru` and `.hy` variants (`portal.contact.address.ru`, `portal.contact.hours.hy`, and so on);
+a language without its own value shows the default one.
+
 The nova template states a hardware or commercial claim only when the operator switches it on
 (`true`; empty or `false` hides it): `portal.features.{backups,storage,caching,cdn,firewall,malware}`
 and `portal.migration.free`. The uptime line in its trust bar prints `portal.stats.uptime`.

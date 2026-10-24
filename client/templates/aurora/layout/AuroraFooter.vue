@@ -106,7 +106,7 @@
             {{ contactEmail }}
           </UiFooterLink>
           <UiText v-if="contactEmail && phone" as="span" size="sm" tone="inherit">·</UiText>
-          <UiFooterLink v-if="phone" testid="aurora-footer-phone" :href="phoneHref" :variant="UiFooterLinkVariant.Aurora">
+          <UiFooterLink v-if="phone" testid="aurora-footer-phone" :href="`tel:${phoneLink}`" :variant="UiFooterLinkVariant.Aurora">
             {{ phone }}
           </UiFooterLink>
         </UiStack>
@@ -126,7 +126,7 @@
  */
 import LogoLockup from '~/components/LogoLockup.vue'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
-import { TELEGRAM_LINK_BASE } from '~/constants/contactChannel'
+import { useContactDetails } from '~/composables/useContactDetails'
 import { UiFooterLinkVariant } from '~/utils/ui/enums'
 
 const { t } = useI18n()
@@ -139,23 +139,12 @@ const { name: siteName } = useSiteIdentity()
 
 /** Subscribe endpoint of the newsletter provider; empty hides the block. */
 const newsletterUrl = computed(() => get(PortalSettingKey.NewsletterActionUrl, 'portalNewsletterUrl'))
-/** Public contact e-mail; empty hides it. */
-const contactEmail = computed(() => get(PortalSettingKey.ContactEmail, 'portalContactEmail'))
-/** Public phone number; empty hides it. */
-const phone = computed(() => get(PortalSettingKey.ContactPhone, 'portalContactPhone'))
+/** Public contact e-mail, phone (as written and as a dialable number) and Telegram link; each empty when unset. */
+const { email: contactEmail, phone, phoneLink, telegramUrl } = useContactDetails()
 /** Legal tax identifier; empty hides it. */
 const taxId = computed(() => get(PortalSettingKey.LegalTaxId, 'portalLegalTaxId'))
 /** Current year for the copyright line. */
 const year = new Date().getFullYear()
-
-/** `tel:` link target: the phone number with spacing and punctuation removed. */
-const phoneHref = computed(() => `tel:${phone.value.replace(/[^0-9+]/g, '')}`)
-
-/** Telegram is stored as a handle, not a URL, because the chat actions need it that way. */
-const telegramUrl = computed(() => {
-  const handle = get(PortalSettingKey.ContactTelegram, 'portalTelegram')
-  return handle ? `${TELEGRAM_LINK_BASE}${handle}` : ''
-})
 
 /**
  * Social profiles the operator has configured. Each is omitted when unset, so an

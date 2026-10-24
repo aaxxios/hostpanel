@@ -26,7 +26,7 @@ import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
 import { Icon } from '@/lib/icons'
-import { quoteStageTone } from '@/lib/tones'
+import { quoteStageTone, statusLabel } from '@/lib/tones'
 import { QUOTE_STAGE_OPTIONS } from '@/lib/constants'
 import { formatDate } from '@/lib/format'
 import { useQuotesStore } from '@/stores/quotes'
@@ -205,7 +205,7 @@ onMounted(() => {
 
     <template v-else>
       <UiPageHeader :title="isNew ? t('billing.quoteDetail.newQuote') : t('billing.quoteDetail.quoteNumber', { id: quoteId })">
-        <UiBadge v-if="!isNew" :tone="quoteStageTone(stage)" data-testid="billing-quote-stage">{{ stage }}</UiBadge>
+        <UiBadge v-if="!isNew" :tone="quoteStageTone(stage)" data-testid="billing-quote-stage">{{ statusLabel(QUOTE_STAGE_OPTIONS, stage) }}</UiBadge>
         <template #actions>
           <UiButton variant="ghost" data-testid="billing-quote-back" @click="goBack">
             <UiIcon :markup="Icon.Back" size="sm" />

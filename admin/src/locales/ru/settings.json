@@ -48,7 +48,8 @@
     },
     "contactEmail": {
       "label": "Контактный email",
-      "hint": "support{'@'}example.com"
+      "hint": "support{'@'}example.com",
+      "invalid": "Укажите корректный адрес электронной почты."
     },
     "contactPhone": {
       "label": "Контактный телефон",
@@ -68,7 +69,32 @@
     },
     "contactMapUrl": {
       "label": "Ссылка на карту",
-      "hint": "https://maps.example.com/..."
+      "hint": "https://www.openstreetmap.org/export/embed.html?bbox=0,0,1,1",
+      "invalid": "Укажите адрес, который начинается с https://."
+    },
+    "contactHours": {
+      "label": "Часы работы",
+      "hint": "Пн-Пт 09:00-18:00"
+    },
+    "contactHoursRu": {
+      "label": "Часы работы (русский)",
+      "hint": "Для русскоязычных посетителей; пусто, чтобы использовать основные часы"
+    },
+    "contactHoursHy": {
+      "label": "Часы работы (армянский)",
+      "hint": "Для армяноязычных посетителей; пусто, чтобы использовать основные часы"
+    },
+    "contactTimezone": {
+      "label": "Часовой пояс",
+      "hint": "UTC+4"
+    },
+    "contactAddressRu": {
+      "label": "Адрес (русский)",
+      "hint": "Для русскоязычных посетителей; пусто, чтобы использовать основной адрес"
+    },
+    "contactAddressHy": {
+      "label": "Адрес (армянский)",
+      "hint": "Для армяноязычных посетителей; пусто, чтобы использовать основной адрес"
     }
   },
   "portalAppearance": {

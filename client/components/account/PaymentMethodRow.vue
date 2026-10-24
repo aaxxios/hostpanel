@@ -6,18 +6,20 @@
         <UiStack direction="row" align="center" gap="xs" wrap>
           <UiText size="sm" weight="medium">{{ method.description || method.gateway_name }}</UiText>
           <UiBadge variant="success" size="sm" rounded>{{ $t('client.payment.statusActive') }}</UiBadge>
+          <UiBadge v-if="method.is_default" variant="primary" size="sm" rounded data-testid="account-payment-default-badge">
+            {{ $t('client.payment.defaultBadge') }}
+          </UiBadge>
         </UiStack>
         <UiText size="xs" tone="subtle">
-          <span>{{ method.type }}</span>
-          <span v-if="method.card_last_four"> · {{ $t('client.payment.cardEnding') }} {{ method.card_last_four }}</span>
+          <span data-testid="account-payment-type">{{ typeLabel }}</span>
           <span v-if="method.card_expiry"> · {{ $t('client.payment.expires') }} {{ method.card_expiry }}</span>
-          <span v-if="method.bank_name"> · {{ method.bank_name }}</span>
         </UiText>
       </UiStack>
     </UiStack>
 
     <UiStack direction="row" align="center" gap="xs">
       <UiButton
+        v-if="!method.is_default"
         size="sm"
         variant="outline"
         :loading="settingDefault"
@@ -51,6 +53,7 @@
  */
 
 import { CreditCard, Star, Trash2 } from 'lucide-vue-next'
+import { PaymentMethodType } from '~/types/payment'
 import type { PaymentMethod } from '~/types/payment'
 
 /** Props of {@link PaymentMethodRow}. */
@@ -63,10 +66,23 @@ interface Props {
   removing?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+/** The props of the component. */
+const props = withDefaults(defineProps<Props>(), {
   settingDefault: false,
   removing: false
 })
+
+/** Translator for the method type label. */
+const { t } = useI18n()
+
+/** Locale key of the label for each known method type. */
+const TYPE_LABEL_KEYS: Record<PaymentMethodType, string> = {
+  [PaymentMethodType.Card]: 'client.payment.type.card',
+  [PaymentMethodType.BankAccount]: 'client.payment.type.bankAccount'
+}
+
+/** The translated name of the method's type; a type the client does not know reads as "other". */
+const typeLabel = computed<string>(() => t(TYPE_LABEL_KEYS[props.method.type as PaymentMethodType] ?? 'client.payment.type.other'))
 
 /** Events of {@link PaymentMethodRow}. */
 const emit = defineEmits<{

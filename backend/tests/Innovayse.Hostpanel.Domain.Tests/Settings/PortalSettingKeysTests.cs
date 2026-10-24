@@ -247,4 +247,59 @@ public class PortalSettingKeysTests
 
         Assert.Equal(valid, pattern.Regex.IsMatch(value));
     }
+
+    /// <summary>The per-language address and hours are seeded empty and public, beside the default ones.</summary>
+    [Fact]
+    public void ContactLocaleKeys_AreSeededEmptyAndPublic()
+    {
+        string[] keys =
+        [
+            PortalSettingKeys.ContactAddressRu,
+            PortalSettingKeys.ContactAddressHy,
+            PortalSettingKeys.ContactHoursRu,
+            PortalSettingKeys.ContactHoursHy,
+        ];
+
+        Assert.Equal(
+            ["portal.contact.address.ru", "portal.contact.address.hy", "portal.contact.hours.ru", "portal.contact.hours.hy"],
+            keys);
+        foreach (var key in keys)
+        {
+            Assert.Contains(key, PortalSettingKeys.Public);
+            Assert.True(PortalSettingKeys.AllowsEmpty(key), $"{key} must seed empty so the default text is used");
+        }
+    }
+
+    /// <summary>The contact email accepts one address with a dotted domain and nothing else.</summary>
+    /// <param name="value">The value to test.</param>
+    /// <param name="valid">Whether the shape should accept it.</param>
+    [Theory]
+    [InlineData("support@example.com", true)]
+    [InlineData("a.b+c@mail.example.org", true)]
+    [InlineData("support", false)]
+    [InlineData("support@example", false)]
+    [InlineData("two words@example.com", false)]
+    [InlineData("a@b@example.com", false)]
+    public void ContactEmail_PatternAcceptsOnlyAnAddress(string value, bool valid)
+    {
+        var pattern = PortalSettingKeys.Patterns[PortalSettingKeys.ContactEmail];
+
+        Assert.Equal(valid, pattern.Regex.IsMatch(value));
+    }
+
+    /// <summary>The map address accepts an https address and refuses any other scheme.</summary>
+    /// <param name="value">The value to test.</param>
+    /// <param name="valid">Whether the shape should accept it.</param>
+    [Theory]
+    [InlineData("https://maps.example.com/embed?x=1", true)]
+    [InlineData("https://maps.example.com", true)]
+    [InlineData("http://maps.example.com/embed", false)]
+    [InlineData("javascript:alert(1)", false)]
+    [InlineData("maps.example.com", false)]
+    public void ContactMapUrl_PatternAcceptsOnlyHttps(string value, bool valid)
+    {
+        var pattern = PortalSettingKeys.Patterns[PortalSettingKeys.ContactMapUrl];
+
+        Assert.Equal(valid, pattern.Regex.IsMatch(value));
+    }
 }

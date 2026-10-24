@@ -112,6 +112,10 @@ public sealed class ClientService : BaseEntity, IAggregateRoot
         return svc;
     }
 
+    /// <summary>Moves the creation date to the moment the service was really ordered, for services seeded from history.</summary>
+    /// <param name="createdAt">The moment the service was ordered (UTC).</param>
+    public void Backdate(DateTimeOffset createdAt) => CreatedAt = createdAt;
+
     /// <summary>
     /// Marks the service as active after successful provisioning.
     /// Sets the provisioning reference and calculates the first renewal date.

@@ -68,7 +68,8 @@ public sealed class ListClientTicketsHandler
                     department != null ? department.Name : null,
                     x.Ticket.Replies.Count > 0 ? x.Ticket.Replies.Max(r => r.CreatedAt) : (DateTimeOffset?)null,
                     x.Ticket.IsFlagged,
-                    x.Ticket.ClientId))
+                    x.Ticket.ClientId,
+                    null))
             .ToListAsync(ct);
 
         return Result.Success(new PagedResult<TicketListItemDto>(items, totalCount, page, pageSize));

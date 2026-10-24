@@ -10,8 +10,9 @@
 import { apiFetch } from '~/composables/useApi'
 import type { ClientInvoice } from '~/types/clientinvoice'
 import type { GatewayMethod } from '~/types/gatewaymethod'
-import type { PaymentMethod } from '~/types/payment'
+import type { PaymentMethod, PaymentMethodWire } from '~/types/payment'
 import { PaymentTarget } from '~/types/paymenttarget'
+import { toPaymentMethod } from '~/utils/paymentMethodMapper'
 
 /**
  * The billing surface, one function per endpoint.
@@ -32,11 +33,13 @@ export const useBillingApi = () => {
   /**
    * Reads the client's saved cards and bank accounts as a one-shot call.
    *
-   * @returns Every saved payment method on the account.
+   * @returns Every saved payment method on the account, mapped from the API's camelCase to {@link PaymentMethod}.
    * @throws Whatever `apiFetch` throws.
    */
-  const fetchPaymentMethods = (): Promise<PaymentMethod[]> =>
-    apiFetch<PaymentMethod[]>('/api/portal/client/payment-methods')
+  const fetchPaymentMethods = async (): Promise<PaymentMethod[]> => {
+    const wire = await apiFetch<PaymentMethodWire[]>('/api/portal/client/payment-methods')
+    return Array.isArray(wire) ? wire.map(toPaymentMethod) : []
+  }
 
   /**
    * Reads the gateways an order may be paid through.

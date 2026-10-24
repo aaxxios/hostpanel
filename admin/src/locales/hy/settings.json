@@ -48,7 +48,8 @@
     },
     "contactEmail": {
       "label": "Կոնտակտային email",
-      "hint": "support{'@'}example.com"
+      "hint": "support{'@'}example.com",
+      "invalid": "Մուտքագրեք վավեր էլ. փոստի հասցե։"
     },
     "contactPhone": {
       "label": "Կոնտակտային հեռախոս",
@@ -68,7 +69,32 @@
     },
     "contactMapUrl": {
       "label": "Քարտեզի հղում",
-      "hint": "https://maps.example.com/..."
+      "hint": "https://www.openstreetmap.org/export/embed.html?bbox=0,0,1,1",
+      "invalid": "Մուտքագրեք https://-ով սկսվող հասցե։"
+    },
+    "contactHours": {
+      "label": "Աշխատանքային ժամեր",
+      "hint": "Երկ-Ուրբ 09:00-18:00"
+    },
+    "contactHoursRu": {
+      "label": "Աշխատանքային ժամեր (ռուսերեն)",
+      "hint": "Ռուսալեզու այցելուների համար. դատարկի դեպքում օգտագործվում են հիմնական ժամերը"
+    },
+    "contactHoursHy": {
+      "label": "Աշխատանքային ժամեր (հայերեն)",
+      "hint": "Հայալեզու այցելուների համար. դատարկի դեպքում օգտագործվում են հիմնական ժամերը"
+    },
+    "contactTimezone": {
+      "label": "Ժամային գոտի",
+      "hint": "UTC+4"
+    },
+    "contactAddressRu": {
+      "label": "Հասցե (ռուսերեն)",
+      "hint": "Ռուսալեզու այցելուների համար. դատարկի դեպքում օգտագործվում է հիմնական հասցեն"
+    },
+    "contactAddressHy": {
+      "label": "Հասցե (հայերեն)",
+      "hint": "Հայալեզու այցելուների համար. դատարկի դեպքում օգտագործվում է հիմնական հասցեն"
     }
   },
   "portalAppearance": {
