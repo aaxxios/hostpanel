@@ -312,7 +312,20 @@ describe('useCheckoutStore cart helpers', () => {
     store.selectedMethod = 'stripe'
     expect(store.submittingLabel).toBe('checkout.processing')
     store.selectedMethod = 'inecobank'
-    expect(store.submittingLabel).toBe('checkout.redirectingToBank')
+    expect(store.submittingLabel).toBe('checkout.redirecting')
+  })
+
+  it('explains the bank hand-off in a separate hint, only while a hosted gateway order is in flight', () => {
+    const store = useCheckoutStore()
+
+    store.selectedMethod = 'inecobank'
+    expect(store.submittingHint).toBe('')
+    store.submitting = true
+    expect(store.submittingHint).toBe('checkout.redirectingToBank')
+    store.selectedMethod = 'stripe'
+    expect(store.submittingHint).toBe('')
+    store.selectedMethod = ''
+    expect(store.submittingHint).toBe('')
   })
 
   it('changes the guest currency only once the visitor accepts an emptied cart', () => {

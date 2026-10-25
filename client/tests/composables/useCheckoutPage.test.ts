@@ -40,6 +40,7 @@ const buildStores = (destination: { kind: CheckoutDestinationKind, target: strin
     staleItems: ref([]),
     totalLabel: ref(''),
     submittingLabel: ref(''),
+    submittingHint: ref(''),
     paymentMethods: ref([]),
     selectedMethod: ref(''),
     submitting: ref(false),

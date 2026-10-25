@@ -73,13 +73,25 @@ export const useCheckoutStore = defineStore('checkout', () => {
     return formatMoney(cart.items.length ? cart.total(currencyStore.payerCode) : 0, currency)
   })
 
-  /** Submit-button label while the order is being placed: a hosted gateway hands off to the bank. */
-  const submittingLabel = computed(() =>
+  /** Whether the chosen method is a hosted gateway, which hands the browser off to the bank. */
+  const isHostedGateway = computed(() =>
     selectedMethod.value !== PAYMENT_MODULE_STRIPE
       && selectedMethod.value !== PAYMENT_MODULE_BANK_TRANSFER
-      && selectedMethod.value
-      ? translate('checkout.redirectingToBank')
+      && selectedMethod.value !== '')
+
+  /** Short submit-button label while the order is being placed; the sentence lives in {@link submittingHint}. */
+  const submittingLabel = computed(() =>
+    isHostedGateway.value
+      ? translate('checkout.redirecting')
       : translate('checkout.processing'))
+
+  /**
+   * Longer explanation shown under the submit button while a hosted gateway hands off to the bank.
+   * Empty when nothing is in flight or the method does not leave the site, so the line only exists
+   * when there is something to say.
+   */
+  const submittingHint = computed(() =>
+    submitting.value && isHostedGateway.value ? translate('checkout.redirectingToBank') : '')
 
   /**
    * Formats one cart item's price, in the currency it was actually added in.
@@ -281,6 +293,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
     staleItems,
     totalLabel,
     submittingLabel,
+    submittingHint,
     itemPrice,
     changeGuestCurrency,
     loadPaymentMethods,

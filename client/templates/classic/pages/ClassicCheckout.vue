@@ -162,31 +162,18 @@
               </UiText>
 
               <UiGrid v-else cols="2" gap="md" data-testid="checkout-methods">
-                <UiCard
+                <CheckoutGatewayOption
                   v-for="method in paymentMethods"
                   :key="method.module"
-                  padding="sm"
-                  tone="bare"
-                  class="cursor-pointer rounded-md transition-colors duration-200"
-                  :class="selectedMethod === method.module
-                    ? 'border-classic-brand bg-classic-brand-soft'
-                    : 'border-classic-border bg-classic-surface hover:border-classic-brand/50'"
-                  :data-testid="`checkout-method-${method.module}`"
-                  @click="selectedMethod = method.module"
-                >
-                  <UiStack gap="sm">
-                    <UiStack direction="row" align="center" justify="center" gap="none" class="h-8 w-8 rounded-md border border-classic-border bg-classic-surface">
-                      <CreditCard :size="16" :class="selectedMethod === method.module ? 'text-classic-brand' : 'text-classic-muted'" />
-                    </UiStack>
-                    <UiRadio
-                      v-model="selectedMethod"
-                      name="payment-method"
-                      :value="method.module"
-                      :label="method.displayName"
-                      :testid="`checkout-method-radio-${method.module}`"
-                    />
-                  </UiStack>
-                </UiCard>
+                  v-model="selectedMethod"
+                  :method="method"
+                  name="payment-method"
+                  :testid="`checkout-method-${method.module}`"
+                  active-class="border-classic-brand bg-classic-brand-soft"
+                  idle-class="border-classic-border bg-classic-surface hover:border-classic-brand/50"
+                  accent-class="text-classic-brand"
+                  muted-class="text-classic-muted"
+                />
               </UiGrid>
 
               <!-- Card form -->
@@ -263,17 +250,18 @@
                    empty because every gateway is switched off in the admin. -->
               <UiButton
                 variant="primary"
-                size="lg"
+                size="md"
                 full-width
                 :loading="submitting"
                 :disabled="submitting || cart.isEmpty || !selectedMethod"
-                class="!h-12 text-base font-semibold"
+                class="!h-12 font-semibold"
                 data-testid="checkout-submit"
                 @click="submitOrder"
               >
                 <Lock v-if="!submitting" :size="18" class="mr-2" />
                 {{ submitting ? submittingLabel : $t('checkout.placeOrder') }}
               </UiButton>
+              <CheckoutSubmitHint :message="submittingHint" />
 
               <UiText size="xs" tone="inherit" weight="medium" class="mt-5 flex items-center justify-center gap-2 text-classic-muted">
                 <ShieldCheck :size="14" class="text-green-600 dark:text-green-400" />
@@ -334,6 +322,7 @@ const {
   staleItems,
   totalLabel,
   submittingLabel,
+  submittingHint,
   paymentMethods,
   selectedMethod,
   submitting,
