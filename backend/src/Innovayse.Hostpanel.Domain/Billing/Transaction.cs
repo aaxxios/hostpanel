@@ -39,8 +39,8 @@ public sealed class Transaction : BaseEntity
     /// <summary>Gets whether this transaction was added to or deducted from the client's credit balance.</summary>
     public bool AddedToCredit { get; private set; }
 
-    /// <summary>Gets the ISO 4217 currency code for this transaction (e.g. "USD", "AMD"); null when not specified.</summary>
-    public string? Currency { get; private set; }
+    /// <summary>Gets the ISO 4217 currency code the transaction's amounts are in (e.g. "USD"). Set at creation, never changed.</summary>
+    public string Currency { get; private set; } = string.Empty;
 
     /// <summary>EF Core parameterless constructor — do not call directly.</summary>
     private Transaction() { }
@@ -58,9 +58,9 @@ public sealed class Transaction : BaseEntity
     /// <param name="amountOut">Amount debited (≥ 0).</param>
     /// <param name="fees">Transaction fees (≥ 0).</param>
     /// <param name="addedToCredit">Whether this affects the client's credit balance.</param>
-    /// <param name="currency">ISO 4217 currency code (e.g. "USD"); null when not specified.</param>
+    /// <param name="currency">ISO 4217 currency code the amounts are in (e.g. "USD"); the related invoice's currency when there is one.</param>
     /// <returns>A new <see cref="Transaction"/>.</returns>
-    /// <exception cref="ArgumentException">Thrown when both <paramref name="amountIn"/> and <paramref name="amountOut"/> are 0.</exception>
+    /// <exception cref="ArgumentException">Thrown when both <paramref name="amountIn"/> and <paramref name="amountOut"/> are 0, or the currency is not a three-letter code.</exception>
     public static Transaction Create(
         int clientId,
         DateTimeOffset date,
@@ -72,7 +72,7 @@ public sealed class Transaction : BaseEntity
         decimal amountOut,
         decimal fees,
         bool addedToCredit,
-        string? currency = null)
+        string currency)
     {
         if (amountIn <= 0 && amountOut <= 0)
         {
@@ -91,7 +91,7 @@ public sealed class Transaction : BaseEntity
             AmountOut = amountOut,
             Fees = fees,
             AddedToCredit = addedToCredit,
-            Currency = currency,
+            Currency = CurrencyCode.Normalise(currency),
         };
     }
 

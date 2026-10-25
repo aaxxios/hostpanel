@@ -14,6 +14,7 @@ export const draftQuote: QuoteListItem = {
   dateCreated: '2026-10-01T00:00:00Z',
   validUntil: '2026-11-01T00:00:00Z',
   total: 240,
+  currency: 'USD',
   stage: QuoteStage.Draft,
 }
 

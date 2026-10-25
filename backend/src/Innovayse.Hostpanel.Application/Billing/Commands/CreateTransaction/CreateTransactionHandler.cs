@@ -19,13 +19,19 @@ public sealed class CreateTransactionHandler
     /// <summary>Current request context, providing the acting admin's identity and IP for the audit trail.</summary>
     private readonly ICurrentUserService _ctx;
 
+    /// <summary>Resolves the currency of a transaction that settles no invoice: the client's.</summary>
+    private readonly IPayerCurrencyResolver _payerCurrency;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="ctx">Current request context providing admin identity and IP.</param>
-    public CreateTransactionHandler(IHostpanelDbContext context, ICurrentUserService ctx)
+    /// <param name="payerCurrency">Resolves the currency of a transaction that settles no invoice.</param>
+    public CreateTransactionHandler(
+        IHostpanelDbContext context, ICurrentUserService ctx, IPayerCurrencyResolver payerCurrency)
     {
         _context = context;
         _ctx = ctx;
+        _payerCurrency = payerCurrency;
     }
 
     /// <summary>Handles <see cref="CreateTransactionCommand"/>.</summary>
@@ -39,6 +45,15 @@ public sealed class CreateTransactionHandler
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
+        // The amounts are in the currency of the invoice they settle; with no invoice, the client's.
+        var invoiceCurrency = cmd.InvoiceId is { } invoiceId
+            ? await _context.Invoices.AsNoTracking()
+                .Where(i => i.Id == invoiceId)
+                .Select(i => i.Currency)
+                .FirstOrDefaultAsync(ct)
+            : null;
+        var currency = invoiceCurrency ?? (await _payerCurrency.ForClientAsync(cmd.ClientId, ct)).Code;
+
         var transaction = Transaction.Create(
             cmd.ClientId,
             cmd.Date,
@@ -49,7 +64,8 @@ public sealed class CreateTransactionHandler
             cmd.AmountIn,
             cmd.AmountOut,
             cmd.Fees,
-            cmd.AddToCredit);
+            cmd.AddToCredit,
+            currency);
 
         _context.Transactions.Add(transaction);
 

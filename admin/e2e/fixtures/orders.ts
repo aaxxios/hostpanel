@@ -17,6 +17,7 @@ export const pendingOrder: OrderListItem = {
   status: OrderStatus.Pending,
   paymentMethod: 'PayPal',
   total: 12.5,
+  currency: 'USD',
   invoiceId: null,
   itemCount: 2,
   createdAt: '2026-10-10T10:00:00Z',

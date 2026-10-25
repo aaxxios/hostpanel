@@ -34,7 +34,7 @@ import UiTextarea from '@/components/ui/UiTextarea.vue'
 import { Icon } from '@/lib/icons'
 import { INVOICE_STATUS_OPTIONS, ORDER_STATUS_OPTIONS } from '@/lib/constants'
 import { capitalize, formatDateTime } from '@/lib/format'
-import { formatMoney } from '@/lib/money'
+import { formatPlainAmount } from '@/lib/money'
 import { invoiceStatusTone, orderItemStatusTone, orderStatusTone, statusLabel } from '@/lib/tones'
 import { OrderStatus } from '@/types/order'
 import { useOrdersStore } from '@/stores/orders'
@@ -219,7 +219,7 @@ onMounted(async () => {
                 </template>
               </OrderFact>
               <OrderFact :label="t('shared.total')">
-                {{ formatMoney(store.currentOrder.total) }}
+                {{ formatPlainAmount(store.currentOrder.total, store.currentOrder.currency) }}
               </OrderFact>
             </template>
             <UiText v-else tone="muted" size="md">
@@ -252,8 +252,8 @@ onMounted(async () => {
               <UiTableCell>{{ item.productName }}</UiTableCell>
               <UiTableCell>{{ capitalize(item.billingCycle) }}</UiTableCell>
               <UiTableCell>{{ item.domain ?? item.hostname ?? '—' }}</UiTableCell>
-              <UiTableCell>{{ formatMoney(item.firstPaymentAmount) }}</UiTableCell>
-              <UiTableCell>{{ formatMoney(item.recurringAmount) }}</UiTableCell>
+              <UiTableCell>{{ formatPlainAmount(item.firstPaymentAmount, store.currentOrder.currency) }}</UiTableCell>
+              <UiTableCell>{{ formatPlainAmount(item.recurringAmount, store.currentOrder.currency) }}</UiTableCell>
               <UiTableCell>
                 <UiBadge :tone="orderItemStatusTone(item.status)" small>
                   {{ statusLabel(ORDER_STATUS_OPTIONS, item.status) }}

@@ -74,6 +74,7 @@ public sealed class GetOrderHandler
             order.Status.ToString(),
             order.PaymentMethod,
             order.Items.Sum(i => i.FirstPaymentAmount),
+            order.Currency,
             order.InvoiceId,
             invoiceStatus,
             order.IpAddress,

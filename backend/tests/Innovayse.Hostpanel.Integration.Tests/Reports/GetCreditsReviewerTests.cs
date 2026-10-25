@@ -27,7 +27,7 @@ public sealed class GetCreditsReviewerTests(IntegrationTestFactory factory) : IC
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var tx = Transaction.Create(
                 clientId, DateTimeOffset.UtcNow, "Refund credit", $"tx-{Guid.NewGuid():N}",
-                invoiceId: null, paymentMethod: "manual", amountIn: 25m, amountOut: 0m, fees: 0m, addedToCredit: true);
+                invoiceId: null, paymentMethod: "manual", amountIn: 25m, amountOut: 0m, fees: 0m, addedToCredit: true, currency: "USD");
             db.Transactions.Add(tx);
             await db.SaveChangesAsync();
         }

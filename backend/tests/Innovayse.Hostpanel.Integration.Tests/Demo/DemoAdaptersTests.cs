@@ -95,7 +95,7 @@ public sealed class DemoAdaptersTests
     [Fact]
     public async Task PaymentPlugin_ReturnsToTheShopAndReportsPaidAsync()
     {
-        var plugin = new DemoPaymentPlugin("840", ["840", "051"]);
+        var plugin = new DemoPaymentPlugin("840", ["840", "978"]);
 
         var session = await plugin.CreatePaymentAsync(
             new PaymentRequest("INV9-1", 1000, "https://shop.example/return", null, null), CancellationToken.None);
@@ -141,7 +141,7 @@ public sealed class DemoAdaptersTests
         sso.Should().StartWith("https://");
     }
 
-    /// <summary>The fixed rate table gives dram prices consistent with the seeded exchange rate.</summary>
+    /// <summary>The fixed rate table gives euro prices consistent with the seeded exchange rate.</summary>
     [Fact]
     public async Task ExchangeRates_AreFixedAndConsistentAsync()
     {
@@ -149,7 +149,7 @@ public sealed class DemoAdaptersTests
 
         var rates = await source.RatesToAsync("USD", ["AMD", "EUR", "XXX"], CancellationToken.None);
 
-        rates["AMD"].Should().Be(DemoCatalogueSeeder.DramsPerDollar);
-        rates.Should().ContainKey("EUR").And.NotContainKey("XXX");
+        rates["EUR"].Should().Be(DemoCatalogueSeeder.EurosPerDollar);
+        rates.Should().ContainKey("AMD").And.NotContainKey("XXX");
     }
 }

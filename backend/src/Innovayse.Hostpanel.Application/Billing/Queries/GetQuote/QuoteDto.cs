@@ -16,6 +16,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.GetQuote;
 /// <param name="AdminNotes">Optional admin-only internal notes.</param>
 /// <param name="SubTotal">Sum of all line item amounts before tax.</param>
 /// <param name="Total">Grand total of the quote.</param>
+/// <param name="Currency">ISO 4217 code the quote's amounts are in.</param>
 /// <param name="Items">Line items on the quote.</param>
 public sealed record QuoteDto(
     int Id,
@@ -31,4 +32,5 @@ public sealed record QuoteDto(
     string? AdminNotes,
     decimal SubTotal,
     decimal Total,
+    string Currency,
     IReadOnlyList<QuoteItemDto> Items);

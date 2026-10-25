@@ -48,6 +48,7 @@ export const quoteRowFixture = (overrides: Partial<QuoteListItem> = {}): QuoteLi
   dateCreated: '2026-10-01T00:00:00Z',
   validUntil: '2099-12-31T00:00:00Z',
   total: 250,
+  currency: 'USD',
   stage: 'Delivered',
   ...overrides,
 })
@@ -71,5 +72,6 @@ export const transactionFixture = (overrides: Partial<Transaction> = {}): Transa
   amountOut: 0,
   fees: 3.5,
   addedToCredit: false,
+  currency: 'USD',
   ...overrides,
 })

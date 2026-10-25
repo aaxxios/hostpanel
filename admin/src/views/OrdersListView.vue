@@ -30,7 +30,7 @@ import UiText from '@/components/ui/UiText.vue'
 import { Icon } from '@/lib/icons'
 import { ORDER_STATUS_OPTIONS } from '@/lib/constants'
 import { formatDate } from '@/lib/format'
-import { formatMoney } from '@/lib/money'
+import { formatPlainAmount } from '@/lib/money'
 import { OrderStatus } from '@/types/order'
 import { orderStatusTone, statusLabel } from '@/lib/tones'
 import { useOrdersStore } from '@/stores/orders'
@@ -154,7 +154,7 @@ onMounted(() => store.fetchAll())
               </UiBadge>
             </UiTableCell>
             <UiTableCell>{{ order.paymentMethod }}</UiTableCell>
-            <UiTableCell>{{ formatMoney(order.total) }}</UiTableCell>
+            <UiTableCell>{{ formatPlainAmount(order.total, order.currency) }}</UiTableCell>
             <UiTableCell muted>{{ order.itemCount }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(order.createdAt) }}</UiTableCell>
             <UiTableCell>

@@ -118,7 +118,7 @@ internal sealed class DemoSalesSeeder
     /// <param name="usd">The price in dollars.</param>
     /// <returns>The same price in the customer's billing currency.</returns>
     private static decimal InCurrencyOf(Domain.Clients.Client client, decimal usd) =>
-        client.Currency == DemoCatalogueSeeder.LocalCurrency ? DemoCatalogueSeeder.ToDrams(usd) : usd;
+        client.Currency == DemoCatalogueSeeder.LocalCurrency ? DemoCatalogueSeeder.ToEuros(usd) : usd;
 
     /// <summary>Seeds quotes with two or three lines each, moved to the stage the table gives.</summary>
     /// <param name="clients">All customers, the demo client first.</param>
@@ -139,6 +139,7 @@ internal sealed class DemoSalesSeeder
 
             var quote = Quote.Create(
                 client.Id, $"Proposal {n + 1}: hosting services for {client.CompanyName}", expiry,
+                client.Currency ?? DemoCatalogueSeeder.BaseCurrency,
                 "Prices exclude any domain fees.", "Thank you for considering us. This proposal covers the work below.",
                 "Valid until the expiry date shown.", "Prepared by the sales team.");
 
@@ -244,7 +245,8 @@ internal sealed class DemoSalesSeeder
             var price = product.PriceFor(currency, cycle) ?? 0m;
             var status = OrderStatuses[n % OrderStatuses.Length];
 
-            var order = Order.Create($"DEMO-{1000 + n}", client.Id, PaymentMethodNames.Card, $"203.0.113.{10 + n}");
+            var order = Order.Create(
+                $"DEMO-{1000 + n}", client.Id, PaymentMethodNames.Card, $"203.0.113.{10 + n}", currency);
             order.AddItem(product.Id, product.Name, cycleName, price, price, DemoSites.HostOf(client), null);
             if (n % 5 == 0 && domainProduct is not null)
             {

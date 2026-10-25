@@ -27,6 +27,30 @@ public static class CurrencyExtensions
         await context.Currencies.AsNoTracking().FirstOrDefaultAsync(c => c.IsBase, ct)
         ?? throw new InvalidOperationException("No base currency is configured.");
 
+    /// <summary>Loads the multiplier that turns an amount in each configured currency into the base currency.</summary>
+    /// <remarks>
+    /// The one place the rates are read for any figure that adds amounts from different currencies
+    /// (dashboard revenue, transaction totals), so they all convert the same way.
+    /// </remarks>
+    /// <param name="context">The module's data context.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Rate to base by currency code.</returns>
+    public static async Task<IReadOnlyDictionary<string, decimal>> GetRatesToBaseAsync(
+        this IHostpanelDbContext context, CancellationToken ct) =>
+        await context.Currencies.AsNoTracking().ToDictionaryAsync(c => c.Code, c => c.RateToBase, ct);
+
+    /// <summary>Converts an amount to the base currency.</summary>
+    /// <param name="ratesToBase">The rates from <see cref="GetRatesToBaseAsync"/>.</param>
+    /// <param name="amount">The amount in <paramref name="currency"/>.</param>
+    /// <param name="currency">ISO 4217 alpha code the amount is in; a code with no row is taken as already in the base.</param>
+    /// <returns>The amount in the base currency.</returns>
+    public static decimal ToBase(this IReadOnlyDictionary<string, decimal> ratesToBase, decimal amount, string currency)
+    {
+        ArgumentNullException.ThrowIfNull(ratesToBase);
+
+        return amount * ratesToBase.GetValueOrDefault(currency, 1m);
+    }
+
     /// <summary>Whether a code names a currency this panel is currently offering to clients.</summary>
     /// <remarks>
     /// "Offering" is both halves: configured, and switched on. A currency an operator set up and

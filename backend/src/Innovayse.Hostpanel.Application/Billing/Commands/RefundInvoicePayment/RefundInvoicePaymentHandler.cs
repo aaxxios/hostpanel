@@ -96,7 +96,8 @@ public sealed class RefundInvoicePaymentHandler
             0m,
             refundAmount,
             0m,
-            addedToCredit: addToCredit);
+            addedToCredit: addToCredit,
+            invoice.Currency);
         _context.Transactions.Add(clientTx);
 
         if (addToCredit)

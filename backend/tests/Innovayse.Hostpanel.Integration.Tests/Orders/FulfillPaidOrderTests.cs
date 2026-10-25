@@ -71,7 +71,7 @@ public sealed class FulfillPaidOrderTests(IntegrationTestFactory factory) : ICla
     private static async Task<int> SeedPendingOrderAsync(
         IHostpanelDbContext context, int clientId, Action<Order> configureItems)
     {
-        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], clientId, "bank-gateway", ipAddress: null);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], clientId, "bank-gateway", ipAddress: null, currency: "USD");
         configureItems(order);
         context.Orders.Add(order);
 

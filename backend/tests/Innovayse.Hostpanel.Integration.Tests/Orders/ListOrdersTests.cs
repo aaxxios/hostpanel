@@ -26,6 +26,20 @@ public sealed class ListOrdersTests(IntegrationTestFactory factory) : IClassFixt
         list.GetProperty("items").EnumerateArray().Should().Contain(o => o.GetProperty("id").GetInt32() == orderId);
     }
 
+    /// <summary>The list says which currency each order's total is in, so the admin can show a unit.</summary>
+    [Fact]
+    public async Task ListCarriesTheOrdersCurrency()
+    {
+        var orderId = await OrdersTestSeeds.SeedOrderAsync(factory);
+        var admin = await OrdersTestSeeds.AdminClientAsync(factory);
+
+        var list = await admin.GetFromJsonAsync<JsonElement>("/api/orders?page=1&pageSize=100");
+
+        list.GetProperty("items").EnumerateArray()
+            .Single(o => o.GetProperty("id").GetInt32() == orderId)
+            .GetProperty("currency").GetString().Should().Be("USD");
+    }
+
     /// <summary>Listing orders is not for anonymous callers.</summary>
     [Fact]
     public async Task RefusesAnonymous()

@@ -37,6 +37,9 @@ public sealed class Quote : BaseEntity, IAggregateRoot
     /// <summary>Gets the admin-only internal notes (not visible to client).</summary>
     public string? AdminNotes { get; private set; }
 
+    /// <summary>Gets the ISO 4217 alpha code every amount on this quote is in. Set at creation, never changed.</summary>
+    public string Currency { get; private set; } = string.Empty;
+
     /// <summary>Gets the running total of all line items.</summary>
     public decimal Total { get; private set; }
 
@@ -55,12 +58,14 @@ public sealed class Quote : BaseEntity, IAggregateRoot
     /// <param name="clientId">FK to the client being quoted.</param>
     /// <param name="subject">Quote subject/title.</param>
     /// <param name="expiryDate">Quote expiry date (UTC).</param>
+    /// <param name="currency">ISO 4217 alpha code the quote's amounts are in (the client's billing currency).</param>
     /// <param name="notes">Optional notes or terms.</param>
     /// <param name="proposalText">Optional proposal text shown at the top.</param>
     /// <param name="customerNotes">Optional customer-facing footer notes.</param>
     /// <param name="adminNotes">Optional admin-only internal notes.</param>
     /// <returns>A new <see cref="Quote"/> with <see cref="QuoteStage.Draft"/> stage.</returns>
-    public static Quote Create(int clientId, string subject, DateTimeOffset expiryDate, string? notes = null, string? proposalText = null, string? customerNotes = null, string? adminNotes = null)
+    /// <exception cref="ArgumentException">The currency is not a three-letter code.</exception>
+    public static Quote Create(int clientId, string subject, DateTimeOffset expiryDate, string currency, string? notes = null, string? proposalText = null, string? customerNotes = null, string? adminNotes = null)
     {
         return new Quote
         {
@@ -68,6 +73,7 @@ public sealed class Quote : BaseEntity, IAggregateRoot
             Subject = subject,
             Stage = QuoteStage.Draft,
             ExpiryDate = expiryDate,
+            Currency = CurrencyCode.Normalise(currency),
             Notes = notes,
             ProposalText = proposalText,
             CustomerNotes = customerNotes,
@@ -247,7 +253,7 @@ public sealed class Quote : BaseEntity, IAggregateRoot
     /// <returns>A new draft <see cref="Quote"/> with copies of all line items.</returns>
     public Quote Duplicate()
     {
-        var copy = Quote.Create(ClientId, Subject, ExpiryDate, Notes, ProposalText, CustomerNotes, AdminNotes);
+        var copy = Quote.Create(ClientId, Subject, ExpiryDate, Currency, Notes, ProposalText, CustomerNotes, AdminNotes);
         foreach (var item in _items)
         {
             copy.AddItem(item.Description, item.UnitPrice, item.Quantity, item.DiscountPercent, item.Taxed);

@@ -13,6 +13,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <param name="AmountOut">Amount debited from the account.</param>
 /// <param name="Fees">Transaction fees charged.</param>
 /// <param name="AddedToCredit">Whether this affected the client's credit balance.</param>
+/// <param name="Currency">ISO 4217 code the transaction's amounts are in.</param>
 public record TransactionDto(
     int Id,
     int ClientId,
@@ -25,4 +26,5 @@ public record TransactionDto(
     decimal AmountIn,
     decimal AmountOut,
     decimal Fees,
-    bool AddedToCredit);
+    bool AddedToCredit,
+    string Currency);

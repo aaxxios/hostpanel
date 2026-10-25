@@ -65,6 +65,25 @@ public static class BillingTestSeeds
         return client.Id;
     }
 
+    /// <summary>Makes sure a currency row exists, so a client stamped with it is billed in it.</summary>
+    /// <param name="host">The host whose database to seed against.</param>
+    /// <param name="code">The ISO 4217 alpha code.</param>
+    /// <param name="numeric">The ISO 4217 numeric code, unique per currency.</param>
+    /// <param name="rateToBase">What one unit of the currency is worth in the base currency.</param>
+    public static async Task EnsureCurrencyAsync(
+        WebApplicationFactory<Program> host, string code, string numeric, decimal rateToBase)
+    {
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        if (await context.Currencies.AnyAsync(c => c.Code == code, CancellationToken.None))
+        {
+            return;
+        }
+
+        context.Currencies.Add(Currency.Create(code, numeric, string.Empty, " " + code, 2, rateToBase, isBase: false));
+        await context.SaveChangesAsync(CancellationToken.None);
+    }
+
     /// <summary>
     /// Registers a new client user over HTTP, logs in, and waits for the Wolverine handler that
     /// creates the corresponding <see cref="Client"/> row.

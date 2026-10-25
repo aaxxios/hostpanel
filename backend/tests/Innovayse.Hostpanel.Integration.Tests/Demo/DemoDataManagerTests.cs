@@ -204,16 +204,16 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
 
         var currencies = await db.Currencies.ToListAsync();
         currencies.Should().ContainSingle(c => c.Code == "USD" && c.IsBase);
-        currencies.Should().ContainSingle(c => c.Code == "AMD" && !c.IsBase && c.RateToBase > 0);
+        currencies.Should().ContainSingle(c => c.Code == "EUR" && !c.IsBase && c.RateToBase > 0);
 
         var products = await db.Products.Include(p => p.Prices).Where(p => p.Type != ProductType.Domain).ToListAsync();
         products.Should().NotBeEmpty().And.OnlyContain(p =>
             p.Prices.Any(x => x.CurrencyCode == "USD" && x.Cycle == BillingCycle.Monthly)
             && p.Prices.Any(x => x.CurrencyCode == "USD" && x.Cycle == BillingCycle.Annual)
-            && p.Prices.Any(x => x.CurrencyCode == "AMD" && x.Cycle == BillingCycle.Monthly)
-            && p.Prices.Any(x => x.CurrencyCode == "AMD" && x.Cycle == BillingCycle.Annual));
+            && p.Prices.Any(x => x.CurrencyCode == "EUR" && x.Cycle == BillingCycle.Monthly)
+            && p.Prices.Any(x => x.CurrencyCode == "EUR" && x.Cycle == BillingCycle.Annual));
         (await db.Products.CountAsync(p => p.Status == ProductStatus.Inactive)).Should().BeGreaterThan(0);
-        (await db.TldConfigs.Select(t => t.SellCurrency).Distinct().ToListAsync()).Should().Contain(["USD", "AMD"]);
+        (await db.TldConfigs.Select(t => t.SellCurrency).Distinct().ToListAsync()).Should().Contain(["USD", "EUR"]);
         (await db.TldConfigs.Where(t => t.IsEnabled).CountAsync()).Should().BeGreaterThanOrEqualTo(15);
 
         (await db.Clients.Select(c => c.Status).Distinct().ToListAsync())

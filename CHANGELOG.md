@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The demo site name is "Hostpanel Demo".
 - The fallback site name is "Hostpanel"; no operator brand is hard-coded.
 - Innovayse.Auth is upgraded to 3.1.0.
+- Orders, quotes and transactions now record the currency their amounts are in, and the admin lists show each amount with it (#461).
+- The admin transactions totals add every currency up in the base currency and no longer show 0 across all clients (#461).
 
 ### Removed
 

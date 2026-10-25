@@ -375,6 +375,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
                     b.Property<string>("CustomerNotes")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
@@ -466,6 +471,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Currency")
+                        .IsRequired()
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
 
@@ -1842,6 +1848,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
 
                     b.Property<int?>("InvoiceId")
                         .HasColumnType("integer");
