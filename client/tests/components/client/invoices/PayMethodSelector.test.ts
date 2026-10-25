@@ -26,14 +26,14 @@ describe('PayMethodSelector', () => {
   it('marks the chosen card', () => {
     const wrapper = mountClient(PayMethodSelector, { props: { savedMethods: cards, canUseNewCard: false, modelValue: 'pm_2' } })
 
-    expect(wrapper.find('[data-testid="pay-method-pm_2"]').attributes('aria-checked')).toBe('true')
-    expect(wrapper.find('[data-testid="pay-method-pm_1"]').attributes('aria-checked')).toBe('false')
+    expect(wrapper.find('[data-testid="pay-method-pm_2"]').attributes('data-state')).toBe('checked')
+    expect(wrapper.find('[data-testid="pay-method-pm_1"]').attributes('data-state')).toBe('unchecked')
   })
 
   it('emits the card that was clicked', async () => {
     const wrapper = mountClient(PayMethodSelector, { props: { savedMethods: cards, canUseNewCard: false, modelValue: 'pm_1' } })
 
-    await wrapper.find('[data-testid="pay-method-pm_2"]').trigger('click')
+    await wrapper.find('[data-testid="pay-method-pm_2-input"]').setValue(true)
 
     expect(wrapper.emitted('update:modelValue')).toEqual([['pm_2']])
   })
@@ -44,7 +44,7 @@ describe('PayMethodSelector', () => {
 
     expect(without.find('[data-testid="pay-method-new"]').exists()).toBe(false)
 
-    await withNew.find('[data-testid="pay-method-new"]').trigger('click')
+    await withNew.find('[data-testid="pay-method-new-input"]').setValue(true)
     expect(withNew.emitted('update:modelValue')).toEqual([[NEW_CARD]])
   })
 

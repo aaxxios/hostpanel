@@ -12,7 +12,8 @@
     "signIn": "Sign in",
     "placeOrder": "Place Order",
     "processing": "Processing...",
-    "redirectingToBank": "Redirecting to the bank's secure payment page…",
+    "redirecting": "Redirecting",
+    "redirectingToBank": "You are being redirected to the bank's secure payment page.",
     "noPaymentMethods": "No payment methods available. Please contact support.",
     "fields": {
       "firstname": "First Name",
@@ -42,6 +43,10 @@
     "secureCheckout": "Secure Checkout",
     "identifyPrompt": "How should we identify you?",
     "choosePayment": "Select your preferred payment way",
+    "gatewayKinds": {
+      "card": "Pay by card",
+      "bankTransfer": "Pay by bank transfer"
+    },
     "needHelp": "Need Help?",
     "supportAlways": "Our support is here to help",
     "contactUs": "Contact Us",
