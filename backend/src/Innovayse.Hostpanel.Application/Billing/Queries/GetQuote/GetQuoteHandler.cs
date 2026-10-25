@@ -61,6 +61,7 @@ public sealed class GetQuoteHandler
             quote.AdminNotes,
             quote.Total,
             quote.Total,
+            quote.Currency,
             itemDtos);
 
         return Result<QuoteDto>.Success(dto);

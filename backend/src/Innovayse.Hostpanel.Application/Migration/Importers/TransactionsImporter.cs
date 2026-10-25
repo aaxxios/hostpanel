@@ -18,6 +18,7 @@ namespace Innovayse.Hostpanel.Application.Migration.Importers;
 /// <param name="pager">Pages through the source plugin's <c>transactions</c> dataset.</param>
 /// <param name="logWriter">Writes one migration log row per record.</param>
 /// <param name="clientResolver">Resolves each record's client email to a local client id.</param>
+/// <param name="payerCurrency">Decides the currency a record with no currency of its own is in.</param>
 /// <param name="logger">Logs a skipped or failed record.</param>
 public sealed class TransactionsImporter(
     IHostpanelDbContext context,
@@ -25,6 +26,7 @@ public sealed class TransactionsImporter(
     MigrationRecordPager pager,
     MigrationLogWriter logWriter,
     MigrationClientResolver clientResolver,
+    IPayerCurrencyResolver payerCurrency,
     ILogger<TransactionsImporter> logger) : IMigrationEntityImporter
 {
     /// <inheritdoc/>
@@ -57,6 +59,10 @@ public sealed class TransactionsImporter(
                         continue;
                     }
 
+                    // A record without a currency is in what the migrated client is billed in.
+                    var currency = string.IsNullOrWhiteSpace(rec.Currency)
+                        ? (await payerCurrency.ForClientAsync(clientId.Value, ct)).Code
+                        : rec.Currency;
                     var transaction = Transaction.Create(
                         clientId.Value,
                         rec.Date,
@@ -68,7 +74,7 @@ public sealed class TransactionsImporter(
                         rec.AmountOut,
                         rec.Fees,
                         false,
-                        rec.Currency);
+                        currency);
 
                     context.Transactions.Add(transaction);
                     await uow.SaveChangesAsync(ct);

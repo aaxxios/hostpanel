@@ -64,6 +64,7 @@ public sealed class ListOrdersHandler
                 o.Status.ToString(),
                 o.PaymentMethod,
                 o.Items.Sum(i => i.FirstPaymentAmount),
+                o.Currency,
                 o.InvoiceId,
                 o.Items.Count,
                 o.CreatedAt))

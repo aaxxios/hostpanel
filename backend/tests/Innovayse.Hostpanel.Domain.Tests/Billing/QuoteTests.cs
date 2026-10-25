@@ -15,7 +15,7 @@ public sealed class QuoteTests
     [Fact]
     public void AddItem_WhenStageIsDead_ThrowsWithQuoteNotEditable()
     {
-        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7));
+        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "USD");
         quote.UpdateDetails(quote.Subject, QuoteStage.Dead, quote.ExpiryDate, quote.Notes);
 
         var act = () => quote.AddItem("SSL", 5m, 1);
@@ -27,7 +27,7 @@ public sealed class QuoteTests
     [Fact]
     public void Accept_WhenStageIsDead_ThrowsWithQuoteNotAcceptable()
     {
-        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7));
+        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "USD");
         quote.UpdateDetails(quote.Subject, QuoteStage.Dead, quote.ExpiryDate, quote.Notes);
 
         var act = quote.Accept;
@@ -42,18 +42,48 @@ public sealed class QuoteTests
     [Fact]
     public void RemoveItem_WhenIdUnknown_ThrowsWithQuoteItemNotFound()
     {
-        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7));
+        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "USD");
 
         var act = () => quote.RemoveItem(999);
 
         act.Should().Throw<DomainRuleException>().Which.Code.Should().Be(BillingErrors.QuoteItemNotFound);
     }
 
+    /// <summary>The currency given at creation is what the quote reports, upper-cased.</summary>
+    [Fact]
+    public void Create_StampsTheCurrency()
+    {
+        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "eur");
+
+        quote.Currency.Should().Be("EUR");
+    }
+
+    /// <summary>A quote without a three-letter currency is refused.</summary>
+    /// <param name="currency">A missing or malformed code.</param>
+    [Theory]
+    [InlineData("")]
+    [InlineData("US")]
+    public void Create_RefusesAMalformedCurrency(string currency)
+    {
+        var act = () => Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: currency);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    /// <summary>A duplicate is priced in the same currency as the original.</summary>
+    [Fact]
+    public void Duplicate_KeepsTheCurrency()
+    {
+        var original = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "GBP");
+
+        original.Duplicate().Currency.Should().Be("GBP");
+    }
+
     /// <summary>Backdate moves the creation date of the quote and nothing else.</summary>
     [Fact]
     public void Backdate_MovesTheCreationDateOnly()
     {
-        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7));
+        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "USD");
         var written = new DateTimeOffset(2026, 2, 3, 10, 0, 0, TimeSpan.Zero);
 
         quote.Backdate(written);

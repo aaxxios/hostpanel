@@ -164,7 +164,8 @@ public sealed class PlaceOrderHandler
             .ToListAsync(ct);
         var productMap = products.ToDictionary(p => p.Id);
 
-        var order = Order.Create(orderNumber, clientId.Value, cmd.PaymentMethod, _caller.IpAddress);
+        var order = Order.Create(
+            orderNumber, clientId.Value, cmd.PaymentMethod, _caller.IpAddress, currency.Value.Code);
 
         // Pre-fetch TLD pricing if any domain items exist. The table is asked for in the payer's
         // currency, so every figure comes back converted from the TLD's sell currency with the

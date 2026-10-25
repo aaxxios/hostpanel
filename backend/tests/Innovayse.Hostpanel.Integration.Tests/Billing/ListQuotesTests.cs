@@ -29,6 +29,26 @@ public sealed class ListQuotesTests(IntegrationTestFactory factory) : IClassFixt
             .Select(i => i.GetProperty("id").GetInt32()).Should().Contain(quoteId);
     }
 
+    /// <summary>A quote is priced in its client's currency, and the list and the detail both say so.</summary>
+    [Fact]
+    public async Task QuoteCarriesTheClientsCurrency()
+    {
+        await BillingTestSeeds.EnsureCurrencyAsync(factory, "ZQM", "997", 0.5m);
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+        var clientId = await BillingTestSeeds.SeedClientAsync(factory, "ZQM");
+        var quoteId = await BillingTestSeeds.CreateQuoteAsync(admin, clientId, 90m);
+
+        var list = await admin.GetAsync("/api/billing/quotes?page=1&pageSize=100");
+        var detail = await admin.GetAsync($"/api/billing/quotes/{quoteId}");
+
+        using var listBody = JsonDocument.Parse(await list.Content.ReadAsStringAsync());
+        listBody.RootElement.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetInt32() == quoteId)
+            .GetProperty("currency").GetString().Should().Be("ZQM");
+        using var detailBody = JsonDocument.Parse(await detail.Content.ReadAsStringAsync());
+        detailBody.RootElement.GetProperty("currency").GetString().Should().Be("ZQM");
+    }
+
     /// <summary>Listing quotes is not for anonymous callers.</summary>
     [Fact]
     public async Task ListRefusesAnonymous()

@@ -19,6 +19,8 @@ export interface OrderListItem {
   paymentMethod: string
   /** Total order amount. */
   total: number
+  /** ISO 4217 code the order's amounts are in. */
+  currency: string
   /** Linked invoice ID, if any. */
   invoiceId: number | null
   /** Number of items in the order. */

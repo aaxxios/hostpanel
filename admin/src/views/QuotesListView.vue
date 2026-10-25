@@ -33,7 +33,7 @@ import { Icon } from '@/lib/icons'
 import { quoteStageTone, statusLabel } from '@/lib/tones'
 import { QUOTE_STAGE_OPTIONS } from '@/lib/constants'
 import { formatDate } from '@/lib/format'
-import { formatUsdPlain } from '@/lib/money'
+import { formatPlainAmount } from '@/lib/money'
 import { useQuotesStore } from '@/stores/quotes'
 import type { QuoteListItem } from '@/types/quote'
 import { AppRoute, quotePath } from '@/lib/routes'
@@ -218,7 +218,7 @@ onMounted(() => {
             <UiTableCell>
               <UiBadge :tone="quoteStageTone(quote.stage)">{{ statusLabel(QUOTE_STAGE_OPTIONS, quote.stage) }}</UiBadge>
             </UiTableCell>
-            <UiTableCell>{{ formatUsdPlain(quote.total) }}</UiTableCell>
+            <UiTableCell>{{ formatPlainAmount(quote.total, quote.currency) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(quote.validUntil) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(quote.dateCreated) }}</UiTableCell>
           </UiTableRow>

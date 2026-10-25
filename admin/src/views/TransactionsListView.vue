@@ -37,7 +37,7 @@ import UiText from '@/components/ui/UiText.vue'
 import { Icon } from '@/lib/icons'
 import { TRANSACTION_METHOD_OPTIONS } from '@/lib/constants'
 import { formatDate, toIsoDay } from '@/lib/format'
-import { formatUsdPlain } from '@/lib/money'
+import { formatPlainAmount } from '@/lib/money'
 import { useTransactionsStore } from '@/stores/billingTransactions'
 import type { Transaction } from '@/types/transaction'
 import { AppRoute, transactionEditPath } from '@/lib/routes'
@@ -134,9 +134,10 @@ const shownTransactions = computed<Transaction[]>(() => store.transactions.filte
  * Formats an amount for a table cell, a dash when there is none.
  *
  * @param value - The amount.
- * @returns Two decimals, or a dash for zero.
+ * @param currency - ISO 4217 code the amount is in.
+ * @returns The amount with its currency, or a dash for zero.
  */
-const cell = (value: number): string => (value > 0 ? value.toFixed(2) : '—')
+const cell = (value: number, currency: string): string => (value > 0 ? formatPlainAmount(value, currency) : '—')
 
 /** Clears every filter. */
 const clearFilters = (): void => {
@@ -233,10 +234,10 @@ onMounted(() => load(1))
     </UiAlert>
 
     <UiGrid :columns="4">
-      <UiStatTile :label="t('billing.transactionsList.totalIncome')" :value="formatUsdPlain(store.summary.totalIn)" tone="success" data-testid="billing-transactions-total-in" />
-      <UiStatTile :label="t('billing.transactionsList.totalExpenditure')" :value="formatUsdPlain(store.summary.totalOut)" tone="danger" data-testid="billing-transactions-total-out" />
-      <UiStatTile :label="t('billing.transactionsList.totalFees')" :value="formatUsdPlain(store.summary.totalFees)" data-testid="billing-transactions-total-fees" />
-      <UiStatTile :label="t('shared.balance')" :value="formatUsdPlain(store.summary.balance)" tone="primary" data-testid="billing-transactions-balance" />
+      <UiStatTile :label="t('billing.transactionsList.totalIncome')" :value="formatPlainAmount(store.summary.totalIn, store.summary.currency)" tone="success" data-testid="billing-transactions-total-in" />
+      <UiStatTile :label="t('billing.transactionsList.totalExpenditure')" :value="formatPlainAmount(store.summary.totalOut, store.summary.currency)" tone="danger" data-testid="billing-transactions-total-out" />
+      <UiStatTile :label="t('billing.transactionsList.totalFees')" :value="formatPlainAmount(store.summary.totalFees, store.summary.currency)" data-testid="billing-transactions-total-fees" />
+      <UiStatTile :label="t('shared.balance')" :value="formatPlainAmount(store.summary.balance, store.summary.currency)" tone="primary" data-testid="billing-transactions-balance" />
     </UiGrid>
 
     <UiCard padding="md">
@@ -278,11 +279,11 @@ onMounted(() => load(1))
             <UiTableCell>{{ transaction.paymentMethod || t('billing.transactionsList.manual') }}</UiTableCell>
             <UiTableCell>{{ transaction.description }}</UiTableCell>
             <UiTableCell>
-              <UiText :tone="transaction.amountIn > 0 ? 'success' : 'muted'">{{ cell(transaction.amountIn) }}</UiText>
+              <UiText :tone="transaction.amountIn > 0 ? 'success' : 'muted'">{{ cell(transaction.amountIn, transaction.currency) }}</UiText>
             </UiTableCell>
-            <UiTableCell>{{ (transaction.fees || 0).toFixed(2) }}</UiTableCell>
+            <UiTableCell>{{ formatPlainAmount(transaction.fees, transaction.currency) }}</UiTableCell>
             <UiTableCell>
-              <UiText :tone="transaction.amountOut > 0 ? 'danger' : 'muted'">{{ cell(transaction.amountOut) }}</UiText>
+              <UiText :tone="transaction.amountOut > 0 ? 'danger' : 'muted'">{{ cell(transaction.amountOut, transaction.currency) }}</UiText>
             </UiTableCell>
             <UiTableCell align="right">
               <UiStack direction="row" gap="xs" justify="end">

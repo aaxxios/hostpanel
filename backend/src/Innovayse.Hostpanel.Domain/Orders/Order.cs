@@ -1,6 +1,7 @@
 using System.Buffers.Text;
 using System.Security.Cryptography;
 using System.Text;
+using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Domain.Orders.Events;
 using Innovayse.Hostpanel.SharedKernel.Domain;
@@ -29,6 +30,9 @@ public sealed class Order : BaseEntity, IAggregateRoot
 
     /// <summary>Gets the current lifecycle status.</summary>
     public OrderStatus Status { get; private set; }
+
+    /// <summary>Gets the ISO 4217 alpha code the order's amounts are in. Set at creation, never changed.</summary>
+    public string Currency { get; private set; } = string.Empty;
 
     /// <summary>Gets the payment gateway module name selected at checkout.</summary>
     public string PaymentMethod { get; private set; } = string.Empty;
@@ -79,13 +83,16 @@ public sealed class Order : BaseEntity, IAggregateRoot
     /// <param name="clientId">FK to the client placing the order.</param>
     /// <param name="paymentMethod">Payment gateway module name.</param>
     /// <param name="ipAddress">Client's IP address at checkout.</param>
+    /// <param name="currency">ISO 4217 alpha code the order's amounts are in (the client's billing currency).</param>
     /// <returns>A new pending <see cref="Order"/>.</returns>
-    public static Order Create(string orderNumber, int clientId, string paymentMethod, string? ipAddress)
+    /// <exception cref="ArgumentException">The currency is not a three-letter code.</exception>
+    public static Order Create(string orderNumber, int clientId, string paymentMethod, string? ipAddress, string currency)
     {
         var order = new Order
         {
             OrderNumber = orderNumber,
             ClientId = clientId,
+            Currency = CurrencyCode.Normalise(currency),
             PaymentMethod = paymentMethod,
             IpAddress = ipAddress,
             Status = OrderStatus.Pending,

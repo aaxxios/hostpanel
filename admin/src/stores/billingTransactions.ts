@@ -11,6 +11,7 @@ import { useTransactionsApi } from '@/composables/apis/useTransactionsApi'
 import { runAction } from '@/lib/runAction'
 import type { CreateTransactionPayload, Transaction, UpdateTransactionPayload } from '@/types/transaction'
 import { LEDGER_PAGE_SIZE } from '@/lib/limits'
+import { CurrencyCode } from '@/types/currency'
 
 /** Lists, creates, edits and deletes ledger transactions with their summary totals. */
 export const useTransactionsStore = defineStore('billingTransactions', () => {
@@ -40,8 +41,8 @@ export const useTransactionsStore = defineStore('billingTransactions', () => {
   /** Items per page. */
   const pageSize = ref(LEDGER_PAGE_SIZE)
 
-  /** Financial summary totals of the whole ledger. */
-  const summary = reactive({ totalIn: 0, totalOut: 0, totalFees: 0, balance: 0 })
+  /** Financial summary totals of the whole ledger, in the base currency named by `currency`. */
+  const summary = reactive({ totalIn: 0, totalOut: 0, totalFees: 0, balance: 0, currency: CurrencyCode.Usd as string })
 
   /**
    * Runs one request with the loading flag and the error state around it.
@@ -87,6 +88,7 @@ export const useTransactionsStore = defineStore('billingTransactions', () => {
       summary.totalOut = result.value.totalOut
       summary.totalFees = result.value.totalFees
       summary.balance = result.value.balance
+      summary.currency = result.value.currency
     }
   }
 

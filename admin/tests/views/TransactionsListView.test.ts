@@ -26,6 +26,7 @@ const ledger = () =>
     totalOut: 20,
     totalFees: 3.5,
     balance: 96.5,
+    currency: 'EUR',
   })
 
 /**
@@ -48,10 +49,31 @@ describe('TransactionsListView', () => {
     stubRoutes({ 'GET /api/transactions?': ledger })
     const wrapper = await mountLedger()
 
-    expect(wrapper.get('[data-testid="billing-transactions-total-in"]').text()).toContain('120.00 USD')
-    expect(wrapper.get('[data-testid="billing-transactions-balance"]').text()).toContain('96.50 USD')
+    expect(wrapper.get('[data-testid="billing-transactions-total-in"]').text()).toContain('120.00 EUR')
+    expect(wrapper.get('[data-testid="billing-transactions-balance"]').text()).toContain('96.50 EUR')
     expect(wrapper.findAll('[data-testid="billing-transactions-table"] tbody tr')).toHaveLength(2)
     expect(wrapper.get('[data-testid="billing-transaction-edit-9"]').attributes('href')).toBe('/billing/transactions/9/edit')
+  })
+
+  it('prints each row in its own currency while the tiles stay in the base currency', async () => {
+    stubRoutes({
+      'GET /api/transactions?': () =>
+        json({
+          transactions: { items: [transactionFixture({ amountIn: 5000, fees: 100, currency: 'AMD' })], totalCount: 1, page: 1, pageSize: 25 },
+          totalIn: 12,
+          totalOut: 0,
+          totalFees: 0.25,
+          balance: 11.75,
+          currency: 'EUR',
+        }),
+    })
+    const wrapper = await mountLedger()
+
+    const row = wrapper.get('[data-testid="billing-transactions-table"] tbody tr').text()
+    expect(row).toContain('5000.00 AMD')
+    expect(row).toContain('100.00 AMD')
+    expect(wrapper.get('[data-testid="billing-transactions-total-in"]').text()).toContain('12.00 EUR')
+    expect(wrapper.get('[data-testid="billing-transactions-total-fees"]').text()).toContain('0.25 EUR')
   })
 
   it('narrows the page by description', async () => {

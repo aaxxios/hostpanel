@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Billing.Extensions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
@@ -42,30 +43,23 @@ public sealed class ListTransactionsHandler
             .Paginate(query.Page, query.PageSize)
             .ToListAsync(ct);
 
-        decimal totalIn = 0m;
-        decimal totalOut = 0m;
-        decimal totalFees = 0m;
-        if (query.ClientId.HasValue)
-        {
-            var summary = await _context.Transactions
-                .AsNoTracking()
-                .Where(t => t.ClientId == query.ClientId.Value)
-                .GroupBy(_ => 1)
-                .Select(g => new
-                {
-                    TotalIn = g.Sum(t => t.AmountIn),
-                    TotalOut = g.Sum(t => t.AmountOut),
-                    TotalFees = g.Sum(t => t.Fees),
-                })
-                .FirstOrDefaultAsync(ct);
-
-            if (summary is not null)
+        // Rows are in their own currencies, so each currency is summed on its own and only then converted
+        // to the base currency; adding drams to dollars as if they were one unit misstates every tile.
+        var perCurrency = await filtered
+            .GroupBy(t => t.Currency)
+            .Select(g => new
             {
-                totalIn = summary.TotalIn;
-                totalOut = summary.TotalOut;
-                totalFees = summary.TotalFees;
-            }
-        }
+                Currency = g.Key,
+                TotalIn = g.Sum(t => t.AmountIn),
+                TotalOut = g.Sum(t => t.AmountOut),
+                TotalFees = g.Sum(t => t.Fees),
+            })
+            .ToListAsync(ct);
+        var rates = await _context.GetRatesToBaseAsync(ct);
+        var totalIn = perCurrency.Sum(c => rates.ToBase(c.TotalIn, c.Currency));
+        var totalOut = perCurrency.Sum(c => rates.ToBase(c.TotalOut, c.Currency));
+        var totalFees = perCurrency.Sum(c => rates.ToBase(c.TotalFees, c.Currency));
+        var baseCurrency = await _context.GetBaseCurrencyAsync(ct);
 
         var clientIds = items.Select(t => t.ClientId).Distinct().ToList();
         var clientMap = await _context.Clients
@@ -78,13 +72,13 @@ public sealed class ListTransactionsHandler
             t.Id, t.ClientId,
             clientMap.TryGetValue(t.ClientId, out var name) ? name : null,
             t.Date, t.Description, t.TransactionId,
-            t.InvoiceId, t.PaymentMethod, t.AmountIn, t.AmountOut, t.Fees, t.AddedToCredit))
+            t.InvoiceId, t.PaymentMethod, t.AmountIn, t.AmountOut, t.Fees, t.AddedToCredit, t.Currency))
             .ToList();
 
         var paged = new PagedResult<TransactionDto>(dtos, totalCount, query.Page, query.PageSize);
         var balance = totalIn - totalOut - totalFees;
 
         return Result<TransactionsResultDto>.Success(
-            new TransactionsResultDto(paged, totalIn, totalOut, totalFees, balance));
+            new TransactionsResultDto(paged, totalIn, totalOut, totalFees, balance, baseCurrency.Code));
     }
 }

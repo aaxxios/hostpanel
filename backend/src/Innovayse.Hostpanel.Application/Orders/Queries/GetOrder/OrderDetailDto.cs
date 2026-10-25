@@ -10,6 +10,7 @@ namespace Innovayse.Hostpanel.Application.Orders.Queries.GetOrder;
 /// <param name="Status">Current lifecycle status as a string.</param>
 /// <param name="PaymentMethod">Payment gateway module name selected at checkout.</param>
 /// <param name="Total">Sum of all item first-payment amounts.</param>
+/// <param name="Currency">ISO 4217 code the order's amounts are in.</param>
 /// <param name="InvoiceId">FK to the linked invoice, or null if not yet created.</param>
 /// <param name="InvoiceStatus">Status of the linked invoice, or null if no invoice.</param>
 /// <param name="IpAddress">Client's IP address at checkout time.</param>
@@ -24,6 +25,7 @@ public sealed record OrderDetailDto(
     string Status,
     string PaymentMethod,
     decimal Total,
+    string Currency,
     int? InvoiceId,
     string? InvoiceStatus,
     string? IpAddress,

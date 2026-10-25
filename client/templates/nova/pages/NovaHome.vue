@@ -2,8 +2,7 @@
   <UiStack id="nova-main" as="div" gap="none" class="tpl-nova bg-nova-bg font-nova text-nova-ink" data-testid="nova-home">
     <NovaHero />
     <NovaTrustBar v-if="isVisible(HomeSection.Stats)" />
-    <NovaPartners v-if="isVisible(HomeSection.Partners)" />
-    <NovaTrusted v-if="isVisible(HomeSection.Trusted)" />
+    <NovaPartners v-if="isPartnersVisible(isVisible)" />
     <NovaPricingSection
       v-if="isVisible(HomeSection.Plans)"
       :plans="plans"
@@ -63,8 +62,8 @@ import NovaLocations from '~/templates/nova/sections/NovaLocations.vue'
 import NovaApps from '~/templates/nova/sections/NovaApps.vue'
 import NovaGuarantees from '~/templates/nova/sections/NovaGuarantees.vue'
 import NovaSupport from '~/templates/nova/sections/NovaSupport.vue'
-import NovaTrusted from '~/templates/nova/sections/NovaTrusted.vue'
 import { HomeSection } from '~/constants/homeSection'
+import { isPartnersVisible } from '~/utils/partnersVisible'
 import type { DomainResult } from '~/templates/aurora/types/domainresult'
 import type { PlanCard } from '~/types/plancard'
 import type { ComparisonRow } from '~/types/comparisonrow'

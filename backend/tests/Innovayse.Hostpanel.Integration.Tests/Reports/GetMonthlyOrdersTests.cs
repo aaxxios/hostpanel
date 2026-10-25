@@ -40,7 +40,7 @@ public sealed class GetMonthlyOrdersTests(IntegrationTestFactory factory) : ICla
             await db.SaveChangesAsync();
             productId = product.Id;
 
-            var order = Order.Create($"ORD{Guid.NewGuid():N}"[..20], clientId, "manual", null);
+            var order = Order.Create($"ORD{Guid.NewGuid():N}"[..20], clientId, "manual", null, "USD");
             order.AddItem(productId, product.Name, BillingCycleNames.Monthly, 10m, 10m, null, null);
             order.Accept();
             db.Orders.Add(order);

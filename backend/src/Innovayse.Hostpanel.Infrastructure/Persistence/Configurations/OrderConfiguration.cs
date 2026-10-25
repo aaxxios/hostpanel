@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Orders;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -14,6 +15,7 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(x => x.OrderNumber).IsUnique();
         builder.Property(x => x.ClientId).IsRequired();
         builder.Property(x => x.Status).IsRequired().HasConversion<string>();
+        builder.Property(x => x.Currency).IsRequired().HasMaxLength(CurrencyCode.Length);
         builder.Property(x => x.PaymentMethod).IsRequired().HasMaxLength(50);
         builder.Property(x => x.InvoiceId);
         builder.Property(x => x.IpAddress).HasMaxLength(45);

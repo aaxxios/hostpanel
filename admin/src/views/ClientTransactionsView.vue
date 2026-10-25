@@ -8,7 +8,7 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useClientTransactionsStore } from '@/stores/clientTransactions'
 import { formatDate } from '@/lib/format'
-import { formatMoney } from '@/lib/money'
+import { formatPlainAmount } from '@/lib/money'
 import AddTransactionModal from '@/components/clients/AddTransactionModal.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -151,22 +151,22 @@ onMounted(() => fetchTransactions())
       <UiGrid :columns="4">
         <UiStatTile
           :label="t('clients.clientTransactions.totalIn')"
-          :value="formatMoney(store.summary.totalIn)"
+          :value="formatPlainAmount(store.summary.totalIn, store.summary.currency)"
           :tone="UiTone.Success"
         />
         <UiStatTile
           :label="t('clients.clientTransactions.totalFees')"
-          :value="formatMoney(store.summary.totalFees)"
+          :value="formatPlainAmount(store.summary.totalFees, store.summary.currency)"
           :tone="UiTone.Warning"
         />
         <UiStatTile
           :label="t('clients.clientTransactions.totalOut')"
-          :value="formatMoney(store.summary.totalOut)"
+          :value="formatPlainAmount(store.summary.totalOut, store.summary.currency)"
           :tone="UiTone.Danger"
         />
         <UiStatTile
           :label="t('shared.balance')"
-          :value="formatMoney(store.summary.balance)"
+          :value="formatPlainAmount(store.summary.balance, store.summary.currency)"
           :tone="UiTone.Primary"
         />
       </UiGrid>
@@ -195,12 +195,12 @@ onMounted(() => fetchTransactions())
               <UiTableCell muted>{{ tx.paymentMethod }}</UiTableCell>
               <UiTableCell muted>{{ tx.description }}</UiTableCell>
               <UiTableCell>
-                <UiText :tone="tx.amountIn > 0 ? UiTextTone.Success : UiTextTone.Muted">{{ formatMoney(tx.amountIn) }}</UiText>
+                <UiText :tone="tx.amountIn > 0 ? UiTextTone.Success : UiTextTone.Muted">{{ formatPlainAmount(tx.amountIn, tx.currency) }}</UiText>
               </UiTableCell>
               <UiTableCell>
-                <UiText :tone="tx.amountOut > 0 ? UiTextTone.Danger : UiTextTone.Muted">{{ formatMoney(tx.amountOut) }}</UiText>
+                <UiText :tone="tx.amountOut > 0 ? UiTextTone.Danger : UiTextTone.Muted">{{ formatPlainAmount(tx.amountOut, tx.currency) }}</UiText>
               </UiTableCell>
-              <UiTableCell muted>{{ formatMoney(tx.fees) }}</UiTableCell>
+              <UiTableCell muted>{{ formatPlainAmount(tx.fees, tx.currency) }}</UiTableCell>
               <UiTableCell>
                 <UiIconButton
                   :label="t('shared.delete')"

@@ -21,6 +21,7 @@ namespace Innovayse.Hostpanel.Application.Migration.Importers;
 /// <param name="logWriter">Writes one migration log row per record.</param>
 /// <param name="clientResolver">Resolves each record's client email to a local client id.</param>
 /// <param name="productLookup">Loads the products a record's line items are matched against.</param>
+/// <param name="payerCurrency">Decides the currency an order with no currency of its own is in.</param>
 /// <param name="logger">Logs a skipped or failed record.</param>
 public sealed class OrdersImporter(
     IHostpanelDbContext context,
@@ -29,6 +30,7 @@ public sealed class OrdersImporter(
     MigrationLogWriter logWriter,
     MigrationClientResolver clientResolver,
     MigrationProductLookup productLookup,
+    IPayerCurrencyResolver payerCurrency,
     ILogger<OrdersImporter> logger) : IMigrationEntityImporter
 {
     /// <inheritdoc/>
@@ -61,7 +63,9 @@ public sealed class OrdersImporter(
                         continue;
                     }
 
-                    var order = Order.Create(rec.OrderNumber, clientId.Value, rec.PaymentMethod, null);
+                    // The source record carries no currency, so the order is in what the migrated client is billed in.
+                    var currency = (await payerCurrency.ForClientAsync(clientId.Value, ct)).Code;
+                    var order = Order.Create(rec.OrderNumber, clientId.Value, rec.PaymentMethod, null, currency);
 
                     if (rec.Items is { Count: > 0 })
                     {

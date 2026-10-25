@@ -3,7 +3,9 @@
  */
 import { computed } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
+import { partnerFixture } from '~/tests/helpers/storefrontFixtures'
 import NovaHome from '~/templates/nova/pages/NovaHome.vue'
 import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
 import { HomeSection } from '~/constants/homeSection'
@@ -12,6 +14,18 @@ import { SupportChannel } from '~/constants/supportChannel'
 import { GuaranteeKey } from '~/constants/guaranteeKey'
 import { PerformanceStatKey } from '~/constants/performanceStatKey'
 import { SecurityFeatureKey } from '~/constants/securityFeatureKey'
+
+/** The mocked storefront endpoints; only the partners carry content. */
+const api = { fetchPartners: vi.fn(), fetchTestimonials: vi.fn(), fetchProjects: vi.fn(), fetchFaqs: vi.fn(), fetchLocations: vi.fn() }
+
+vi.mock('~/composables/apis/useStorefrontApi', () => ({
+  /**
+   * Stands in for the storefront API composable so the store runs without transport.
+   *
+   * @returns The mocked endpoints.
+   */
+  useStorefrontApi: () => api,
+}))
 
 /**
  * Stands in for the section composables the page's sections call, with every section on unless
@@ -42,6 +56,11 @@ const SECTION_TEST_IDS: Partial<Record<HomeSection, string>> = {
 
 describe('NovaHome', () => {
   beforeEach(() => {
+    for (const endpoint of Object.values(api)) {
+      endpoint.mockReset()
+      endpoint.mockResolvedValue([])
+    }
+    api.fetchPartners.mockResolvedValue([partnerFixture(1), partnerFixture(2)])
     stubSections()
   })
 
@@ -101,6 +120,25 @@ describe('NovaHome', () => {
     stubSections([section])
 
     expect(mountWithKit(NovaHome).find(`[data-testid="${testId}"]`).exists()).toBe(false)
+  })
+
+  it('shows one partners section while either the Partners or the Trusted switch is on', async () => {
+    const cases: Array<[HomeSection[], number]> = [
+      [[], 1],
+      [[HomeSection.Partners], 1],
+      [[HomeSection.Trusted], 1],
+      [[HomeSection.Partners, HomeSection.Trusted], 0],
+    ]
+
+    for (const [hidden, count] of cases) {
+      stubTemplateGlobals()
+      stubSections(hidden)
+      const wrapper = mountWithKit(NovaHome)
+      await flushPromises()
+
+      expect(wrapper.findAll('[data-testid="nova-partners"]')).toHaveLength(count)
+      expect(wrapper.find('[data-testid="nova-trusted"]').exists()).toBe(false)
+    }
   })
 
   it('keeps the hero when every section is hidden', () => {

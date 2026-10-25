@@ -343,7 +343,7 @@ public sealed class DevDataSeeder
                     var tx = Transaction.Create(
                         client.Id, date, "Monthly hosting payment",
                         "txn_" + Rng.Next(100000, 999999), null, PaymentMethodNames.Card,
-                        amount, 0m, Math.Round(amount * 0.029m, 2), false);
+                        amount, 0m, Math.Round(amount * 0.029m, 2), false, SeedInvoiceCurrency);
                     _db.Transactions.Add(tx);
                 }
             }
@@ -364,7 +364,8 @@ public sealed class DevDataSeeder
             {
                 var subject = quoteSubjects[Rng.Next(quoteSubjects.Length)];
                 var expiryDate = DateTimeOffset.UtcNow.AddDays(30 + Rng.Next(30));
-                var quote = Quote.Create(client.Id, subject, expiryDate, "Please review and accept this quote.");
+                var quote = Quote.Create(
+                    client.Id, subject, expiryDate, SeedInvoiceCurrency, "Please review and accept this quote.");
                 quote.AddItem("Setup Fee", 99.00m, 1);
                 quote.AddItem("Monthly Hosting (12 months)", 29.99m, 12);
                 if (Rng.Next(2) == 0)
@@ -547,7 +548,8 @@ public sealed class DevDataSeeder
                     var gateway = gateways[Rng.Next(gateways.Length)];
                     var orderDate = MonthsAgo(month, Rng.Next(1, 28));
 
-                    var order = Order.Create($"ORD-{Rng.Next(10000, 99999)}", client.Id, gateway, null);
+                    var order = Order.Create(
+                        $"ORD-{Rng.Next(10000, 99999)}", client.Id, gateway, null, SeedInvoiceCurrency);
                     var monthlyPrice = product.PriceFor(SeedInvoiceCurrency, BillingCycle.Monthly) ?? 0m;
                     order.AddItem(product.Id, product.Name, "monthly", monthlyPrice, monthlyPrice, null, null);
                     order.Accept();

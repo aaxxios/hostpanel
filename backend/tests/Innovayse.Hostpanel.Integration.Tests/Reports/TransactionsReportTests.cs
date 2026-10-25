@@ -28,7 +28,7 @@ public sealed class TransactionsReportTests(IntegrationTestFactory factory) : IC
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var tx = Transaction.Create(
                 clientId, DateTimeOffset.UtcNow, "Hosting payment", $"tx-{Guid.NewGuid():N}",
-                invoiceId: null, paymentMethod: "manual", amountIn: 30m, amountOut: 0m, fees: 1m, addedToCredit: false);
+                invoiceId: null, paymentMethod: "manual", amountIn: 30m, amountOut: 0m, fees: 1m, addedToCredit: false, currency: "USD");
             db.Transactions.Add(tx);
             await db.SaveChangesAsync();
         }

@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Billing.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
@@ -44,8 +45,8 @@ public sealed class GetDashboardStatsHandler
 
         // Invoices are issued in each client's own currency, so a figure that adds them up first converts every
         // total to the base currency; adding drams to dollars as if they were the same unit overstates revenue a thousand times.
-        var rates = await _context.Currencies.AsNoTracking().ToDictionaryAsync(c => c.Code, c => c.RateToBase, ct);
-        decimal InBase(Invoice invoice) => invoice.Total * rates.GetValueOrDefault(invoice.Currency, 1m);
+        var rates = await _context.GetRatesToBaseAsync(ct);
+        decimal InBase(Invoice invoice) => rates.ToBase(invoice.Total, invoice.Currency);
 
         var totalRevenue = allInvoices
             .Where(i => i.Status == InvoiceStatus.Paid)

@@ -12,6 +12,7 @@ import { useTransactionsApi } from '@/composables/apis/useTransactionsApi'
 import { runAction } from '@/lib/runAction'
 import type { CreateClientTransactionPayload, Transaction } from '@/types/transaction'
 import { LEDGER_PAGE_SIZE } from '@/lib/limits'
+import { CurrencyCode } from '@/types/currency'
 
 /** Lists, creates and deletes the transactions of a client. */
 export const useClientTransactionsStore = defineStore('clientTransactions', () => {
@@ -33,6 +34,8 @@ export const useClientTransactionsStore = defineStore('clientTransactions', () =
     totalFees: 0,
     /** Calculated balance: TotalIn - TotalOut - TotalFees. */
     balance: 0,
+    /** ISO 4217 code of the base currency the totals are expressed in. */
+    currency: CurrencyCode.Usd as string,
   })
 
   /** True while a request is in flight. */
@@ -63,6 +66,7 @@ export const useClientTransactionsStore = defineStore('clientTransactions', () =
       summary.totalOut = result.value.totalOut
       summary.totalFees = result.value.totalFees
       summary.balance = result.value.balance
+      summary.currency = result.value.currency
     }
   }
 
