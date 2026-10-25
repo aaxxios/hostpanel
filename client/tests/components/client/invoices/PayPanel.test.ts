@@ -42,7 +42,7 @@ describe('PayPanel', () => {
   it('preselects the first saved card and offers to submit', () => {
     const wrapper = mountPanel({ savedMethods: [card] })
 
-    expect(wrapper.find('[data-testid="pay-method-pm_1"]').attributes('aria-checked')).toBe('true')
+    expect(wrapper.find('[data-testid="pay-method-pm_1"]').attributes('data-state')).toBe('checked')
     expect(wrapper.find('[data-testid="invoice-pay-submit"]').exists()).toBe(true)
   })
 

@@ -7,12 +7,14 @@ import { defineComponent, h } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import { mountPage, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import ClassicCheckout from '~/templates/classic/pages/ClassicCheckout.vue'
+import GatewayOption from '~/components/checkout/GatewayOption.vue'
+import SubmitHint from '~/components/checkout/SubmitHint.vue'
 import { useAuthStore } from '~/stores/auth'
 import { useCartStore } from '~/stores/cart'
 import type { BillingCurrency } from '~/types/currency'
 import type { CartItem } from '~/types/cartitem'
 import type { ClientUser } from '~/types/clientuser'
-import { PAYMENT_MODULE_BANK_TRANSFER, PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
+import { PAYMENT_MODULE_BANK_TRANSFER, PAYMENT_MODULE_INECOBANK, PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
 
 /** The mocked billing endpoints, re-created for every test. */
 const billing = { fetchGatewayMethods: vi.fn(), createOrder: vi.fn() }
@@ -117,7 +119,7 @@ const line = (pid: number, amount: number, currency = 'USD'): CartItem => ({
  */
 const mountCheckout = async (items: CartItem[] = [line(1, 5), line(2, 7)]) => {
   const wrapper = await mountPage(ClassicCheckout, {
-    components: { CheckoutStripeCardForm: StripeCardFormStub, UiPhoneInput: PhoneInputStub },
+    components: { CheckoutStripeCardForm: StripeCardFormStub, CheckoutGatewayOption: GatewayOption, CheckoutSubmitHint: SubmitHint, UiPhoneInput: PhoneInputStub },
   })
   useCartStore().items = items
   await flushPromises()
@@ -204,7 +206,9 @@ describe('ClassicCheckout', () => {
     const bank = wrapper.find(`[data-testid="checkout-method-${PAYMENT_MODULE_BANK_TRANSFER}"]`)
     const card = wrapper.find(`[data-testid="checkout-method-${PAYMENT_MODULE_STRIPE}"]`)
     expect(bank.text()).toContain('Bank transfer')
+    expect(bank.text()).toContain('checkout.gatewayKinds.bankTransfer')
     expect(card.text()).toContain('Card')
+    expect(card.text()).toContain('checkout.gatewayKinds.card')
     expect(bank.classes()).toContain('bg-classic-brand-soft')
     expect(card.classes()).not.toContain('bg-classic-brand-soft')
   })
@@ -231,7 +235,7 @@ describe('ClassicCheckout', () => {
     const wrapper = await mountCheckout()
     expect(wrapper.find('[data-testid="checkout-card-form"]').exists()).toBe(false)
 
-    await wrapper.find(`[data-testid="checkout-method-${PAYMENT_MODULE_STRIPE}"]`).trigger('click')
+    await wrapper.find(`[data-testid="checkout-method-${PAYMENT_MODULE_STRIPE}-input"]`).setValue(true)
 
     expect(wrapper.find('[data-testid="checkout-card-form"]').exists()).toBe(true)
   })
@@ -258,6 +262,26 @@ describe('ClassicCheckout', () => {
     }))
     expect(navigateTo).toHaveBeenCalledWith('/en/client/invoices/12/pay')
     expect(useCartStore().items).toEqual([])
+  })
+
+  it('keeps the busy label short and explains the bank hand-off in a polite line under the button', async () => {
+    billing.fetchGatewayMethods.mockResolvedValue([{ module: PAYMENT_MODULE_INECOBANK, displayName: 'Bank card' }])
+    // An order that never settles keeps the page in its busy state.
+    billing.createOrder.mockReturnValue(new Promise(() => undefined))
+    const wrapper = await mountCheckout()
+    await fillGuestForm(wrapper)
+    expect(wrapper.find('[data-testid="checkout-submit-hint"]').text()).toBe('')
+
+    await wrapper.find('[data-testid="checkout-submit"]').trigger('click')
+    await flushPromises()
+
+    const button = wrapper.find('[data-testid="checkout-submit"]')
+    expect(button.text()).toBe('checkout.redirecting')
+    expect(button.classes()).toContain('text-base')
+    expect(button.classes()).not.toContain('text-lg')
+    const hint = wrapper.find('[data-testid="checkout-submit-hint"]')
+    expect(hint.text()).toBe('checkout.redirectingToBank')
+    expect(hint.attributes('aria-live')).toBe('polite')
   })
 
   it('shows the refusal sentence and stays on the page when the order is refused', async () => {

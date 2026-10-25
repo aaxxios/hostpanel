@@ -9,6 +9,8 @@ import type { Ref } from 'vue'
 import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import AuroraCheckout from '~/templates/aurora/pages/AuroraCheckout.vue'
+import GatewayOption from '~/components/checkout/GatewayOption.vue'
+import SubmitHint from '~/components/checkout/SubmitHint.vue'
 import { CheckoutDestinationKind } from '~/types/checkoutdestinationkind'
 import { stubAuroraGlobals } from '../auroraGlobals'
 
@@ -37,6 +39,12 @@ interface FakeCheckout {
   error: Ref<string>
   /** Module of the chosen payment method; empty means none. */
   selectedMethod: Ref<string>
+  /** Whether an order is in flight. */
+  submitting: Ref<boolean>
+  /** Short label the button shows while an order is in flight. */
+  submittingLabel: Ref<string>
+  /** Sentence shown under the button while an order is in flight. */
+  submittingHint: Ref<string>
   /** Spy standing in for the store's order action. */
   placeOrder: ReturnType<typeof vi.fn>
 }
@@ -73,20 +81,27 @@ const buildStores = (options: { empty?: boolean, methods?: { module: string, dis
   const error = ref('')
   /** The payment method the fake store has selected. */
   const selectedMethod = ref('paypal')
+  /** Whether the fake store is placing an order. */
+  const submitting = ref(false)
+  /** The button label the fake store shows while placing an order. */
+  const submittingLabel = ref('checkout.processing')
+  /** The line under the button the fake store shows while placing an order. */
+  const submittingHint = ref('')
   fakes.checkout = {
     staleItems: ref<unknown[]>([]),
     totalLabel: ref('$9.99'),
-    submittingLabel: ref('checkout.processing'),
+    submittingLabel,
+    submittingHint,
     paymentMethods: ref(options.methods ?? [{ module: 'stripe', displayName: 'Card' }, { module: 'paypal', displayName: 'PayPal' }]),
     selectedMethod,
-    submitting: ref(false),
+    submitting,
     error,
     itemPrice: () => '$9.99',
     changeGuestCurrency: vi.fn(),
     loadPaymentMethods: vi.fn(async () => undefined),
     placeOrder,
   }
-  return { error, selectedMethod, placeOrder }
+  return { error, selectedMethod, submitting, submittingLabel, submittingHint, placeOrder }
 }
 
 /**
@@ -96,7 +111,7 @@ const buildStores = (options: { empty?: boolean, methods?: { module: string, dis
  */
 const mountPage = async () => {
   const Host = defineComponent({ render: () => h(Suspense, null, { default: () => h(AuroraCheckout) }) })
-  const wrapper = mountWithKit(Host, { components: { CheckoutStripeCardForm: StripeCardFormStub } })
+  const wrapper = mountWithKit(Host, { components: { CheckoutStripeCardForm: StripeCardFormStub, CheckoutGatewayOption: GatewayOption, CheckoutSubmitHint: SubmitHint } })
   await flushPromises()
   return wrapper
 }
@@ -185,6 +200,24 @@ describe('AuroraCheckout', () => {
 
     expect(placeOrder).toHaveBeenCalledTimes(1)
     expect(navigateTo).toHaveBeenCalledWith('/client/order-success')
+  })
+
+  it('keeps the busy label short on the button and puts the sentence in a polite line under it', async () => {
+    stubAuroraGlobals()
+    const store = buildStores()
+    store.submitting.value = true
+    store.submittingLabel.value = 'checkout.redirecting'
+    store.submittingHint.value = 'checkout.redirectingToBank'
+    const wrapper = await mountPage()
+
+    const button = wrapper.find('[data-testid="checkout-place-order"]')
+    expect(button.text()).toBe('checkout.redirecting')
+    expect(button.text()).not.toContain('checkout.redirectingToBank')
+    expect(button.classes()).toContain('text-base')
+    expect(button.classes()).not.toContain('text-lg')
+    const hint = wrapper.find('[data-testid="checkout-submit-hint"]')
+    expect(hint.text()).toBe('checkout.redirectingToBank')
+    expect(hint.attributes('aria-live')).toBe('polite')
   })
 
   it('disables the button while no payment method is selected', async () => {

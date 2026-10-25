@@ -10,3 +10,6 @@ export const PAYMENT_MODULE_STRIPE = 'stripe'
 
 /** Module id for the built-in manual bank transfer payment method. */
 export const PAYMENT_MODULE_BANK_TRANSFER = 'bank_transfer'
+
+/** Module id of the Inecobank card gateway, a plugin rather than a built-in; it is known here only to pick its icon. */
+export const PAYMENT_MODULE_INECOBANK = 'inecobank'
