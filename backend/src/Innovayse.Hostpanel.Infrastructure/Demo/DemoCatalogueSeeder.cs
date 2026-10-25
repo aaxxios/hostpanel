@@ -11,7 +11,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>
 /// Seeds what a storefront sells and prices it in: currencies with their exchange rates, product
-/// groups and products priced in USD and AMD for both billing cycles the domain knows (monthly and
+/// groups and products priced in USD and EUR for both billing cycles the domain knows (monthly and
 /// annual), one feature list per product whose labels are identical across the plans of a group so a comparison table is never sparse, and TLD pricing. Every row goes through the entity's
 /// <c>Create</c> and behaviour methods, never a setter, and each dataset is added only when its
 /// table is empty so a second run changes nothing.
@@ -21,14 +21,14 @@ internal sealed class DemoCatalogueSeeder
     /// <summary>The code of the base currency every rate is quoted against.</summary>
     internal const string BaseCurrency = "USD";
 
-    /// <summary>The code of the local currency the catalogue is also priced in.</summary>
-    internal const string LocalCurrency = "AMD";
+    /// <summary>The code of the second currency the catalogue is also priced in.</summary>
+    internal const string LocalCurrency = "EUR";
 
-    /// <summary>How many drams one dollar buys; the fixed demo exchange rate.</summary>
-    internal const decimal DramsPerDollar = 385m;
+    /// <summary>How many euros one dollar buys; the fixed demo exchange rate.</summary>
+    internal const decimal EurosPerDollar = 0.92m;
 
-    /// <summary>Rounding step, in drams, applied to converted prices so they read like list prices.</summary>
-    private const decimal DramRounding = 100m;
+    /// <summary>The amount, in euros, subtracted from a rounded converted price so it ends in .99 like a list price.</summary>
+    private const decimal PsychologicalStep = 0.01m;
 
     /// <summary>Separates the features of one product in the catalogue table.</summary>
     private const char FeatureSeparator = ';';
@@ -56,11 +56,13 @@ internal sealed class DemoCatalogueSeeder
         _db = db;
     }
 
-    /// <summary>Converts a dollar price to the rounded dram list price.</summary>
+    /// <summary>Converts a dollar price to the euro list price, rounded to a whole euro less one cent (x.99).</summary>
     /// <param name="usd">The price in dollars.</param>
-    /// <returns>The price in drams, rounded to the nearest hundred.</returns>
-    internal static decimal ToDrams(decimal usd) =>
-        Math.Round(usd * DramsPerDollar / DramRounding, MidpointRounding.AwayFromZero) * DramRounding;
+    /// <returns>The price in euros, ending in .99, or zero when the dollar price is zero.</returns>
+    internal static decimal ToEuros(decimal usd) =>
+        usd <= 0m
+            ? 0m
+            : Math.Max(1m, Math.Round(usd * EurosPerDollar, MidpointRounding.AwayFromZero)) - PsychologicalStep;
 
     /// <summary>Seeds currencies, products and TLD pricing that are not there yet.</summary>
     /// <param name="ct">Cancels the save.</param>
@@ -71,9 +73,9 @@ internal sealed class DemoCatalogueSeeder
         {
             _db.Currencies.Add(CurrencyEntity.Create(BaseCurrency, "840", "$", string.Empty, 2, 1m, true));
 
-            // One dram is worth 1/385 of a dollar; the rate column keeps eight decimals.
+            // One euro is worth 1/0.92 of a dollar; the rate column keeps eight decimals.
             _db.Currencies.Add(CurrencyEntity.Create(
-                LocalCurrency, "051", string.Empty, " ֏", 0, Math.Round(1m / DramsPerDollar, 8), false));
+                LocalCurrency, "978", "€", string.Empty, 2, Math.Round(1m / EurosPerDollar, 8), false));
             await _db.SaveChangesAsync(ct);
         }
 
@@ -204,8 +206,8 @@ internal sealed class DemoCatalogueSeeder
                     isFeatured: FeaturedSlugs.Contains(slug), sortOrder: positions[slug]);
                 product.SetPrice(BaseCurrency, BillingCycle.Monthly, monthly);
                 product.SetPrice(BaseCurrency, BillingCycle.Annual, annual);
-                product.SetPrice(LocalCurrency, BillingCycle.Monthly, ToDrams(monthly));
-                product.SetPrice(LocalCurrency, BillingCycle.Annual, ToDrams(annual));
+                product.SetPrice(LocalCurrency, BillingCycle.Monthly, ToEuros(monthly));
+                product.SetPrice(LocalCurrency, BillingCycle.Annual, ToEuros(annual));
 
                 // The one product that is no longer sold stays listed so the admin sees an inactive row.
                 if (slug == "dedicated-legacy")
@@ -235,7 +237,7 @@ internal sealed class DemoCatalogueSeeder
         }
     }
 
-    /// <summary>Seeds TLD pricing: dollar-priced global extensions across several categories and a dram-priced local one.</summary>
+    /// <summary>Seeds TLD pricing: dollar-priced global extensions across several categories and a euro-priced regional one.</summary>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
     private async Task SeedTldsAsync(CancellationToken ct)
@@ -259,7 +261,7 @@ internal sealed class DemoCatalogueSeeder
             ("tech", BaseCurrency, 8.99m, 44.99m, 8.99m, ["tech"], true),
             ("cloud", BaseCurrency, 12.99m, 21.99m, 12.99m, ["tech"], true),
             ("eu", BaseCurrency, 7.99m, 9.99m, 7.99m, ["regional"], true),
-            ("local", LocalCurrency, 9500m, 9500m, 9500m, ["local"], true),
+            ("de", LocalCurrency, 8.99m, 10.99m, 8.99m, ["regional"], true),
             ("xxx", BaseCurrency, 89.99m, 94.99m, 89.99m, ["adult"], false),
         ];
 

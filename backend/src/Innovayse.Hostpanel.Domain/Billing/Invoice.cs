@@ -49,9 +49,6 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// <summary>Gets the final total (SubTotal + Tax − Credit).</summary>
     public decimal Total { get; private set; }
 
-    /// <summary>Length of an ISO 4217 alpha code.</summary>
-    private const int CurrencyCodeLength = 3;
-
     /// <summary>
     /// ISO 4217 alpha code every amount on this invoice is in. Set at creation, never changed.
     /// </summary>
@@ -104,7 +101,7 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
         var invoice = new Invoice
         {
             ClientId = clientId,
-            Currency = NormaliseCurrency(currency),
+            Currency = CurrencyCode.Normalise(currency),
             Status = InvoiceStatus.Draft,
             InvoiceDate = now,
             DueDate = dueDate,
@@ -157,20 +154,6 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
         }
 
         return invoice;
-    }
-
-    /// <summary>Validates and upper-cases a currency code.</summary>
-    /// <param name="currency">The raw code.</param>
-    /// <returns>The code in upper case.</returns>
-    /// <exception cref="ArgumentException">The code is not three letters.</exception>
-    private static string NormaliseCurrency(string currency)
-    {
-        if (string.IsNullOrWhiteSpace(currency) || currency.Length != CurrencyCodeLength)
-        {
-            throw new ArgumentException("An invoice needs a three-letter ISO 4217 currency.", nameof(currency));
-        }
-
-        return currency.ToUpperInvariant();
     }
 
     /// <summary>Sets the external system ID for migration deduplication.</summary>

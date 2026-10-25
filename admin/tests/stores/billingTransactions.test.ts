@@ -19,6 +19,7 @@ const ledger = {
   totalOut: 2,
   totalFees: 1,
   balance: 7,
+  currency: 'EUR',
 }
 
 /** Fields a transaction body carries. */
@@ -49,7 +50,7 @@ describe('billingTransactionsStore', () => {
     await store.fetchAll(2, 10)
     expect(store.transactions).toEqual([{ id: 1 }])
     expect(store.totalCount).toBe(4)
-    expect(store.summary).toEqual({ totalIn: 10, totalOut: 2, totalFees: 1, balance: 7 })
+    expect(store.summary).toEqual({ totalIn: 10, totalOut: 2, totalFees: 1, balance: 7, currency: 'EUR' })
     expect(store.page).toBe(2)
     expect(callOf(mock).url).toBe('/api/transactions?page=2&pageSize=10')
   })

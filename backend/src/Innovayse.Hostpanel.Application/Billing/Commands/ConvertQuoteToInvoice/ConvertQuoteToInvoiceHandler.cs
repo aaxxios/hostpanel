@@ -15,16 +15,11 @@ public sealed class ConvertQuoteToInvoiceHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Resolves the currency the quoted client is billed in, stamped on the invoice.</summary>
-    private readonly IPayerCurrencyResolver _payerCurrency;
-
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    /// <param name="payerCurrency">The currency the quoted client is billed in, stamped on the invoice.</param>
-    public ConvertQuoteToInvoiceHandler(IHostpanelDbContext context, IPayerCurrencyResolver payerCurrency)
+    public ConvertQuoteToInvoiceHandler(IHostpanelDbContext context)
     {
         _context = context;
-        _payerCurrency = payerCurrency;
     }
 
     /// <summary>Handles the command.</summary>
@@ -48,8 +43,8 @@ public sealed class ConvertQuoteToInvoiceHandler
         }
 
         var itemData = quote.GetInvoiceItemData();
-        var currency = (await _payerCurrency.ForClientAsync(quote.ClientId, ct)).Code;
-        var invoice = Invoice.CreateDraft(quote.ClientId, quote.ExpiryDate, currency);
+        // The quote's prices are in the quote's own currency, so the invoice bills in it too.
+        var invoice = Invoice.CreateDraft(quote.ClientId, quote.ExpiryDate, quote.Currency);
 
         foreach (var (description, unitPrice, quantity) in itemData)
         {

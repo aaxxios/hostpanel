@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
-import { faqFixture, testimonialFixture } from '~/tests/helpers/storefrontFixtures'
+import { faqFixture, partnerFixture, testimonialFixture } from '~/tests/helpers/storefrontFixtures'
 import AuroraHome from '~/templates/aurora/pages/AuroraHome.vue'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { stubAuroraGlobals, PLANS } from '../auroraGlobals'
@@ -70,6 +70,26 @@ describe('AuroraHome', () => {
     expect(wrapper.find('[data-testid="aurora-cta"]').exists()).toBe(false)
     expect(wrapper.find('#services').exists()).toBe(true)
     expect(wrapper.find('#hosting').exists()).toBe(true)
+  })
+
+  it('shows one partners section while either the Partners or the Trusted switch is on', async () => {
+    const cases: Array<[Record<string, string>, number]> = [
+      [{}, 1],
+      [{ [PortalSettingKey.SectionPartners]: 'false' }, 1],
+      [{ [PortalSettingKey.SectionTrusted]: 'false' }, 1],
+      [{ [PortalSettingKey.SectionPartners]: 'false', [PortalSettingKey.SectionTrusted]: 'false' }, 0],
+    ]
+
+    for (const [settings, count] of cases) {
+      api.fetchPartners.mockResolvedValue([partnerFixture(1), partnerFixture(2)])
+      stubAuroraGlobals({ settings })
+      const wrapper = mountWithKit(AuroraHome)
+      await flushPromises()
+
+      expect(wrapper.findAll('[data-testid="aurora-partners"]')).toHaveLength(count)
+      expect(wrapper.find('[data-testid="aurora-trusted"]').exists()).toBe(false)
+    }
+    api.fetchPartners.mockResolvedValue([])
   })
 
   it('needs both the prop and the switch for the process section', async () => {

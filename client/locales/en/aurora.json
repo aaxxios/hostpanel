@@ -225,9 +225,6 @@
       "email": "Email",
       "phone": "Phone",
       "response": "Typical response: {time}"
-    },
-    "trusted": {
-      "title": "Trusted by"
     }
   }
 }

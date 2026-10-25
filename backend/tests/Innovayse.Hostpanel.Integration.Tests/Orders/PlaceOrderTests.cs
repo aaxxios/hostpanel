@@ -382,6 +382,11 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var invoice = await db.Invoices.AsNoTracking().SingleAsync(i => i.Id == invoiceId);
         invoice.Currency.Should().Be("AMD");
+        var orderCurrency = await db.Orders.AsNoTracking()
+            .Where(o => o.InvoiceId == invoiceId)
+            .Select(o => o.Currency)
+            .SingleAsync();
+        orderCurrency.Should().Be("AMD");
         invoice.SubTotal.Should().Be(expectedAmd);
         expectedAmd.Should().NotBe(usdSellPrice);
     }

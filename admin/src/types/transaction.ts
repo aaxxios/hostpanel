@@ -30,6 +30,8 @@ export interface Transaction {
   fees: number
   /** Whether this transaction affected client credit balance. */
   addedToCredit: boolean
+  /** ISO 4217 code the amounts are in. */
+  currency: string
 }
 
 /** Response from the transactions list endpoint with summary totals. */
@@ -44,6 +46,8 @@ export interface TransactionsResult {
   totalFees: number
   /** Calculated balance: TotalIn - TotalOut - TotalFees. */
   balance: number
+  /** ISO 4217 code of the base currency the four totals are expressed in. */
+  currency: string
 }
 
 /** Fields every transaction body carries. */

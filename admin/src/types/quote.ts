@@ -32,6 +32,8 @@ export interface QuoteListItem {
   validUntil: string
   /** Total quoted amount. */
   total: number
+  /** ISO 4217 code the quote's amounts are in. */
+  currency: string
   /** Current stage of the quote. */
   stage: QuoteStage
 }
@@ -74,6 +76,8 @@ export interface Quote {
   subTotal: number
   /** Total quoted amount. */
   total: number
+  /** ISO 4217 code the quote's amounts are in. */
+  currency: string
   /** Proposal/sales text sent to the client. */
   proposalText?: string
   /** Notes visible to the customer. */

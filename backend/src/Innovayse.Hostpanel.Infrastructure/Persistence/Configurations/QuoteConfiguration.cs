@@ -19,6 +19,7 @@ public sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
         builder.Property(x => x.ProposalText).HasMaxLength(4000);
         builder.Property(x => x.CustomerNotes).HasMaxLength(4000);
         builder.Property(x => x.AdminNotes).HasMaxLength(4000);
+        builder.Property(x => x.Currency).IsRequired().HasMaxLength(CurrencyCode.Length);
         builder.Property(x => x.Total).HasColumnType("numeric(18,4)").IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
 

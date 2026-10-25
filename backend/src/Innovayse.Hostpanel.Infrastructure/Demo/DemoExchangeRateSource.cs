@@ -13,8 +13,8 @@ internal sealed class DemoExchangeRateSource : IExchangeRateSource
     private static readonly IReadOnlyDictionary<string, decimal> PerDollar = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
     {
         ["USD"] = 1m,
-        ["AMD"] = DemoCatalogueSeeder.DramsPerDollar,
-        ["EUR"] = 0.92m,
+        ["AMD"] = 385m,
+        ["EUR"] = DemoCatalogueSeeder.EurosPerDollar,
         ["RUB"] = 92m,
     };
 

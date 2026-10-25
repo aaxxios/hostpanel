@@ -79,7 +79,7 @@ public static class OrdersTestSeeds
         db.Products.Add(product);
         await db.SaveChangesAsync();
 
-        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank_transfer", ipAddress: null);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank_transfer", ipAddress: null, currency: "USD");
         order.AddItem(product.Id, "Starter Hosting", BillingCycleNames.Monthly, 10m, 10m, domain: null, hostname: null);
 
         if (status == OrderStatus.Cancelled)
@@ -121,7 +121,7 @@ public static class OrdersTestSeeds
         db.Products.Add(product);
         await db.SaveChangesAsync();
 
-        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank_transfer", ipAddress: null);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank_transfer", ipAddress: null, currency: "USD");
         order.AddItem(product.Id, "Vanishing Hosting", BillingCycleNames.Monthly, 10m, 10m, domain: null, hostname: null);
         db.Orders.Add(order);
         await db.SaveChangesAsync();
@@ -166,7 +166,7 @@ public static class OrdersTestSeeds
         db.Clients.Add(client);
         await db.SaveChangesAsync();
 
-        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank-gateway", ipAddress: null);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank-gateway", ipAddress: null, currency: "USD");
         order.AddItem(1, "Starter Hosting", BillingCycleNames.Monthly, 25m, 25m, domain: null, hostname: null);
         db.Orders.Add(order);
 
@@ -193,7 +193,7 @@ public static class OrdersTestSeeds
         db.Clients.Add(client);
         await db.SaveChangesAsync();
 
-        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank-gateway", ipAddress: null);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank-gateway", ipAddress: null, currency: "USD");
         order.AddItem(1, "Starter Hosting", BillingCycleNames.Monthly, 25m, 25m, domain: null, hostname: null);
         db.Orders.Add(order);
         await db.SaveChangesAsync();

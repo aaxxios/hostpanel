@@ -18,6 +18,7 @@ const pendingOrder = {
   status: 'Pending',
   paymentMethod: 'PayPal',
   total: 12.5,
+  currency: 'EUR',
   invoiceId: null,
   itemCount: 2,
   createdAt: '2026-03-04T10:00:00Z',
@@ -48,8 +49,18 @@ describe('OrdersListView', () => {
 
     expect(wrapper.get('[data-testid="orders-row-1"]').text()).toContain('ORD-0001')
     expect(wrapper.get('[data-testid="orders-row-1"]').text()).toContain('Ada Lovelace')
-    expect(wrapper.get('[data-testid="orders-row-1"]').text()).toContain('$12.50')
+    expect(wrapper.get('[data-testid="orders-row-1"]').text()).toContain('12.50 EUR')
     expect(wrapper.get('[data-testid="orders-view-1"]').attributes('href')).toBe('/orders/1')
+  })
+
+  it('prints each order total in the currency of that order', async () => {
+    stubRoutes({
+      'GET /api/orders': () => json({ items: [pendingOrder, { ...activeOrder, total: 4800, currency: 'AMD' }], totalCount: 2 }),
+    })
+    const wrapper = await mountList()
+
+    expect(wrapper.get('[data-testid="orders-row-1"]').text()).toContain('12.50 EUR')
+    expect(wrapper.get('[data-testid="orders-row-2"]').text()).toContain('4800.00 AMD')
   })
 
   it('offers accept and cancel only on a pending order', async () => {

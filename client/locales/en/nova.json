@@ -258,9 +258,6 @@
       "phoneBody": "Talk to a person about anything that is hard to explain in writing.",
       "responseTime": "Typical reply: {time}",
       "open": "Contact us"
-    },
-    "trusted": {
-      "title": "Trusted by"
     }
   }
 }

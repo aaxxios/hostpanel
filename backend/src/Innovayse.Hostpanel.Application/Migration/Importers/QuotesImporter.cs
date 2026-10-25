@@ -19,6 +19,7 @@ namespace Innovayse.Hostpanel.Application.Migration.Importers;
 /// <param name="pager">Pages through the source plugin's <c>quotes</c> dataset.</param>
 /// <param name="logWriter">Writes one migration log row per record.</param>
 /// <param name="clientResolver">Resolves each record's client email to a local client id.</param>
+/// <param name="payerCurrency">Decides the currency a quote with no currency of its own is in.</param>
 /// <param name="logger">Logs a skipped or failed record.</param>
 public sealed class QuotesImporter(
     IHostpanelDbContext context,
@@ -26,6 +27,7 @@ public sealed class QuotesImporter(
     MigrationRecordPager pager,
     MigrationLogWriter logWriter,
     MigrationClientResolver clientResolver,
+    IPayerCurrencyResolver payerCurrency,
     ILogger<QuotesImporter> logger) : IMigrationEntityImporter
 {
     /// <inheritdoc/>
@@ -58,7 +60,9 @@ public sealed class QuotesImporter(
                         continue;
                     }
 
-                    var quote = Quote.Create(clientId.Value, rec.Subject, rec.ExpiryDate,
+                    // The source record carries no currency, so the quote is in what the migrated client is billed in.
+                    var currency = (await payerCurrency.ForClientAsync(clientId.Value, ct)).Code;
+                    var quote = Quote.Create(clientId.Value, rec.Subject, rec.ExpiryDate, currency,
                         proposalText: rec.ProposalText,
                         customerNotes: rec.CustomerNotes);
 

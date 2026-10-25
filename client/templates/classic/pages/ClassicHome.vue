@@ -37,7 +37,7 @@
     <SectionsSupport v-if="isVisible(HomeSection.Support)" />
 
     <!-- Partners / clients logos: one section for both the Partners and the Trusted by switches -->
-    <SectionsPartners v-if="isVisible(HomeSection.Partners) || isVisible(HomeSection.Trusted)" />
+    <SectionsPartners v-if="isPartnersVisible(isVisible)" />
 
     <!-- FAQ -->
     <SectionsFAQ v-if="isVisible(HomeSection.Faq)" :limit="HOME_FAQ_LIMIT" :show-categories="false" />
@@ -56,6 +56,7 @@
  */
 import { HOME_FAQ_LIMIT } from '~/constants/faq'
 import { HomeSection } from '~/constants/homeSection'
+import { isPartnersVisible } from '~/utils/partnersVisible'
 import { UiHeadingLevel } from '~/utils/ui/enums'
 
 /** Whether a home section is switched on. */

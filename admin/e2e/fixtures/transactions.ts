@@ -18,6 +18,7 @@ export const newTransaction: Transaction = {
   amountOut: 0,
   fees: 0,
   addedToCredit: false,
+  currency: 'USD',
 }
 
 /** A ledger with nothing in it. */
@@ -27,6 +28,7 @@ export const ledgerEmpty: TransactionsResult = {
   totalOut: 0,
   totalFees: 0,
   balance: 0,
+  currency: 'USD',
 }
 
 /** The ledger once the entry exists. */
@@ -36,4 +38,5 @@ export const ledgerAfterAdd: TransactionsResult = {
   totalOut: 0,
   totalFees: 0,
   balance: 100,
+  currency: 'USD',
 }

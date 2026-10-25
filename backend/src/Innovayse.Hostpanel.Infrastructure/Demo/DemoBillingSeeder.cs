@@ -25,7 +25,7 @@ internal sealed class DemoBillingSeeder
     /// <summary>The card processing fee as a share of the payment, rounded to cents.</summary>
     private const decimal CardFeeRate = 0.029m;
 
-    /// <summary>Value-added tax applied to invoices of customers billed in the local currency.</summary>
+    /// <summary>Value-added tax applied to invoices of customers billed in the second currency (a fictional EU style VAT).</summary>
     private const decimal LocalTaxRate = 20m;
 
     /// <summary>How often, in months, a domain renewal line is added to the monthly invoice.</summary>
@@ -180,7 +180,7 @@ internal sealed class DemoBillingSeeder
         invoice.AddItem($"{product?.Name ?? "Hosting"} - monthly", price, 1, service?.Id);
         if (monthsBack % DomainRenewalEvery == 0)
         {
-            var renewal = currency == DemoCatalogueSeeder.BaseCurrency ? 14.99m : 5800m;
+            var renewal = currency == DemoCatalogueSeeder.BaseCurrency ? 14.99m : DemoCatalogueSeeder.ToEuros(14.99m);
             invoice.AddItem($"Domain renewal - {DemoSites.HostOf(client)}", renewal, 1);
         }
 
@@ -259,7 +259,8 @@ internal sealed class DemoBillingSeeder
         {
             _db.Transactions.Add(Transaction.Create(
                 client.Id, _today.AddDays(-20), "Account credit top-up", $"demo_credit_{client.Id}", null,
-                PaymentMethodNames.Card, client.CreditBalance, 0m, 0m, true, client.Currency));
+                PaymentMethodNames.Card, client.CreditBalance, 0m, 0m, true,
+                client.Currency ?? DemoCatalogueSeeder.BaseCurrency));
         }
 
         await _db.SaveChangesAsync(ct);

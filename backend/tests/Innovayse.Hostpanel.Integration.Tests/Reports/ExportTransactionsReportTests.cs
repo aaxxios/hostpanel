@@ -27,7 +27,7 @@ public sealed class ExportTransactionsReportTests(IntegrationTestFactory factory
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var tx = Transaction.Create(
                 clientId, DateTimeOffset.UtcNow, "Export test", $"tx-{Guid.NewGuid():N}",
-                invoiceId: null, paymentMethod: "manual", amountIn: 12m, amountOut: 0m, fees: 0m, addedToCredit: false);
+                invoiceId: null, paymentMethod: "manual", amountIn: 12m, amountOut: 0m, fees: 0m, addedToCredit: false, currency: "USD");
             db.Transactions.Add(tx);
             await db.SaveChangesAsync();
         }

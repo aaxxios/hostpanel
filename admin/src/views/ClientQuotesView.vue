@@ -10,7 +10,7 @@ import { useQuotesStore } from '@/stores/quotes'
 import { QUOTE_STAGE_OPTIONS } from '@/lib/constants'
 import { formatDate } from '@/lib/format'
 import { statusLabel, quoteStageTone } from '@/lib/tones'
-import { formatUsd } from '@/lib/money'
+import { formatPlainAmount } from '@/lib/money'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -175,7 +175,7 @@ onMounted(() => fetchQuotes())
             <UiTableCell>{{ quote.subject }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(quote.dateCreated) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(quote.validUntil) }}</UiTableCell>
-            <UiTableCell>{{ formatUsd(quote.total) }}</UiTableCell>
+            <UiTableCell>{{ formatPlainAmount(quote.total, quote.currency) }}</UiTableCell>
             <UiTableCell>
               <UiBadge :tone="quoteStageTone(quote.stage)" small>
                 {{ statusLabel(QUOTE_STAGE_OPTIONS, quote.stage) }}

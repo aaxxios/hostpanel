@@ -45,6 +45,16 @@ describe('QuotesListView', () => {
     expect(wrapper.get('[data-testid="billing-quotes-create"]').attributes('href')).toBe('/billing/quotes/add')
   })
 
+  it('prints the quote total in the currency of the quote', async () => {
+    stubRoutes({
+      'GET /api/billing/quotes': () => json({ items: [quoteRowFixture({ total: 250, currency: 'EUR' })], totalCount: 1, page: 1, pageSize: 25 }),
+      'GET /api/clients': () => json({ items: [], totalCount: 0 }),
+    })
+    const wrapper = await mountList()
+
+    expect(wrapper.get('[data-testid="billing-quotes-table"]').text()).toContain('250.00 EUR')
+  })
+
   it('narrows the page by subject while typing and restores it on clear', async () => {
     stubRoutes({ 'GET /api/billing/quotes': quotesPage, 'GET /api/clients': () => json({ items: [], totalCount: 0 }) })
     const wrapper = await mountList()

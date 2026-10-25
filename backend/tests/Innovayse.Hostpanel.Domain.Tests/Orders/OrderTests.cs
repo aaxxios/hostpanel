@@ -9,11 +9,32 @@ namespace Innovayse.Hostpanel.Domain.Tests.Orders;
 /// <summary>Unit tests for the <see cref="Order"/> aggregate's status invariant.</summary>
 public sealed class OrderTests
 {
+    /// <summary>The currency given at creation is what the order reports, upper-cased.</summary>
+    [Fact]
+    public void Create_StampsTheCurrency()
+    {
+        var order = Order.Create("ORD-0001", clientId: 1, paymentMethod: "manual", ipAddress: null, currency: "eur");
+
+        order.Currency.Should().Be("EUR");
+    }
+
+    /// <summary>An order without a three-letter currency is refused.</summary>
+    /// <param name="currency">A missing or malformed code.</param>
+    [Theory]
+    [InlineData("")]
+    [InlineData("US")]
+    public void Create_RefusesAMalformedCurrency(string currency)
+    {
+        var act = () => Order.Create("ORD-0001", clientId: 1, paymentMethod: "manual", ipAddress: null, currency: currency);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
     /// <summary>Accept on a non-Pending order throws <see cref="DomainRuleException"/> with <c>ORDER_NOT_PENDING</c>.</summary>
     [Fact]
     public void Accept_WhenNotPending_ThrowsWithOrderNotPending()
     {
-        var order = Order.Create("ORD-0001", clientId: 1, paymentMethod: "manual", ipAddress: null);
+        var order = Order.Create("ORD-0001", clientId: 1, paymentMethod: "manual", ipAddress: null, currency: "USD");
         order.Accept();
 
         var act = order.Accept;
@@ -25,7 +46,7 @@ public sealed class OrderTests
     [Fact]
     public void Cancel_WhenNotPending_ThrowsWithOrderNotPending()
     {
-        var order = Order.Create("ORD-0002", clientId: 1, paymentMethod: "manual", ipAddress: null);
+        var order = Order.Create("ORD-0002", clientId: 1, paymentMethod: "manual", ipAddress: null, currency: "USD");
         order.Accept();
 
         var act = order.Cancel;
@@ -37,7 +58,7 @@ public sealed class OrderTests
     [Fact]
     public void MarkFraud_WhenNotPending_ThrowsWithOrderNotPending()
     {
-        var order = Order.Create("ORD-0003", clientId: 1, paymentMethod: "manual", ipAddress: null);
+        var order = Order.Create("ORD-0003", clientId: 1, paymentMethod: "manual", ipAddress: null, currency: "USD");
         order.Accept();
 
         var act = order.MarkFraud;
@@ -49,7 +70,7 @@ public sealed class OrderTests
     [Fact]
     public void Create_AlwaysIssuesAPaymentToken()
     {
-        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null);
+        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null, "USD");
 
         Assert.False(string.IsNullOrWhiteSpace(order.PaymentToken));
     }
@@ -61,8 +82,8 @@ public sealed class OrderTests
     [Fact]
     public void Create_IssuesADifferentTokenPerOrder()
     {
-        var first = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null);
-        var second = Order.Create("ORD-0002", 1, PaymentMethodNames.Card, null);
+        var first = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null, "USD");
+        var second = Order.Create("ORD-0002", 1, PaymentMethodNames.Card, null, "USD");
 
         Assert.NotEqual(first.PaymentToken, second.PaymentToken);
     }
@@ -74,7 +95,7 @@ public sealed class OrderTests
     [Fact]
     public void Create_IssuesATokenOfAtLeastFortyThreeCharacters()
     {
-        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null);
+        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null, "USD");
 
         Assert.True(
             order.PaymentToken.Length >= 43,
@@ -85,7 +106,7 @@ public sealed class OrderTests
     [Fact]
     public void MatchesPaymentToken_WithTheIssuedToken_ReturnsTrue()
     {
-        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null);
+        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null, "USD");
 
         Assert.True(order.MatchesPaymentToken(order.PaymentToken));
     }
@@ -94,8 +115,8 @@ public sealed class OrderTests
     [Fact]
     public void MatchesPaymentToken_WithAnotherOrdersToken_ReturnsFalse()
     {
-        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null);
-        var other = Order.Create("ORD-0002", 1, PaymentMethodNames.Card, null);
+        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null, "USD");
+        var other = Order.Create("ORD-0002", 1, PaymentMethodNames.Card, null, "USD");
 
         Assert.False(order.MatchesPaymentToken(other.PaymentToken));
     }
@@ -111,7 +132,7 @@ public sealed class OrderTests
     [InlineData("")]
     public void MatchesPaymentToken_WithNoToken_ReturnsFalse(string? token)
     {
-        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null);
+        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null, "USD");
 
         Assert.False(order.MatchesPaymentToken(token));
     }
@@ -120,7 +141,7 @@ public sealed class OrderTests
     [Fact]
     public void MatchesPaymentToken_WithAPrefixOfTheToken_ReturnsFalse()
     {
-        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null);
+        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null, "USD");
 
         Assert.False(order.MatchesPaymentToken(order.PaymentToken[..^1]));
     }
@@ -129,7 +150,7 @@ public sealed class OrderTests
     [Fact]
     public void Backdate_MovesCreatedAt()
     {
-        var order = Order.Create("DEMO-1", 1, "card", null);
+        var order = Order.Create("DEMO-1", 1, "card", null, "USD");
         var earlier = DateTimeOffset.UtcNow.AddMonths(-5);
 
         order.Backdate(earlier);

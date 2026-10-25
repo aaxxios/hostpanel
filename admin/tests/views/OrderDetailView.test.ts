@@ -19,6 +19,7 @@ const pendingOrder = {
   status: 'Pending',
   paymentMethod: 'PayPal',
   total: 30,
+  currency: 'EUR',
   invoiceId: 41,
   invoiceStatus: 'Unpaid',
   itemCount: 1,
@@ -65,6 +66,8 @@ describe('OrderDetailView', () => {
     expect(wrapper.get('[data-testid="order-invoice-link"]').attributes('href')).toBe('/billing/41')
     expect(wrapper.get('[data-testid="order-item-1"]').text()).toContain('Shared Hosting')
     expect(wrapper.get('[data-testid="order-item-1"]').text()).toContain('Monthly')
+    expect(wrapper.get('[data-testid="order-item-1"]').text()).toContain('30.00 EUR')
+    expect(wrapper.text()).toContain('30.00 EUR')
     expect((wrapper.get('[data-testid="order-notes-input"]').element as HTMLTextAreaElement).value).toBe('Call the client')
   })
 

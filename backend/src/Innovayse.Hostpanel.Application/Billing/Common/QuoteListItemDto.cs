@@ -10,6 +10,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <param name="DateCreated">Creation timestamp (UTC).</param>
 /// <param name="ValidUntil">Quote expiry date (UTC).</param>
 /// <param name="Total">Grand total of the quote.</param>
+/// <param name="Currency">ISO 4217 code the quote's amounts are in.</param>
 /// <param name="Stage">Current lifecycle stage.</param>
 public sealed record QuoteListItemDto(
     int Id,
@@ -19,4 +20,5 @@ public sealed record QuoteListItemDto(
     DateTimeOffset DateCreated,
     DateTimeOffset ValidUntil,
     decimal Total,
+    string Currency,
     QuoteStage Stage);

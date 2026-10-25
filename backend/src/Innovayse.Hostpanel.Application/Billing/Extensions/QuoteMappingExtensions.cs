@@ -18,6 +18,6 @@ public static class QuoteMappingExtensions
         ArgumentNullException.ThrowIfNull(source);
 
         return source.Select(q => new QuoteListItemDto(
-            q.Id, q.ClientId, string.Empty, q.Subject, q.CreatedAt, q.ExpiryDate, q.Total, q.Stage));
+            q.Id, q.ClientId, string.Empty, q.Subject, q.CreatedAt, q.ExpiryDate, q.Total, q.Currency, q.Stage));
     }
 }

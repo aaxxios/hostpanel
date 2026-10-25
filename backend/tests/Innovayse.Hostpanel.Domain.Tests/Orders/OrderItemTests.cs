@@ -10,7 +10,7 @@ public sealed class OrderItemTests
     [Fact]
     public void AddItem_WithDomainAction_StoresDomainFields()
     {
-        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null);
+        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null, "USD");
 
         order.AddItem(
             productId: 99,
@@ -34,7 +34,7 @@ public sealed class OrderItemTests
     [Fact]
     public void AddItem_WithTransferAction_StoresEppCode()
     {
-        var order = Order.Create("ORD-0002", 1, PaymentMethodNames.Card, null);
+        var order = Order.Create("ORD-0002", 1, PaymentMethodNames.Card, null, "USD");
 
         order.AddItem(
             productId: 99,
@@ -57,7 +57,7 @@ public sealed class OrderItemTests
     [Fact]
     public void AddItem_WithoutDomainAction_LeavesFieldsNull()
     {
-        var order = Order.Create("ORD-0003", 1, PaymentMethodNames.Card, null);
+        var order = Order.Create("ORD-0003", 1, PaymentMethodNames.Card, null, "USD");
 
         order.AddItem(
             productId: 5,

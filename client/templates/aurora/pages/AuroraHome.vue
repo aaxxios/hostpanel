@@ -26,8 +26,7 @@
       </UiSection>
 
       <AuroraTrustBar v-if="isVisible(HomeSection.Stats)" />
-      <AuroraTrusted v-if="isVisible(HomeSection.Trusted)" />
-      <AuroraPartners v-if="isVisible(HomeSection.Partners)" />
+      <AuroraPartners v-if="isPartnersVisible(isVisible)" />
 
       <AuroraPlanCards
         v-if="isVisible(HomeSection.Plans)"
@@ -74,8 +73,8 @@ import AuroraSecurity from '~/templates/aurora/sections/AuroraSecurity.vue'
 import AuroraApps from '~/templates/aurora/sections/AuroraApps.vue'
 import AuroraGuarantees from '~/templates/aurora/sections/AuroraGuarantees.vue'
 import AuroraSupport from '~/templates/aurora/sections/AuroraSupport.vue'
-import AuroraTrusted from '~/templates/aurora/sections/AuroraTrusted.vue'
 import { HomeSection } from '~/constants/homeSection'
+import { isPartnersVisible } from '~/utils/partnersVisible'
 import { useHomeSections } from '~/composables/useHomeSections'
 import type { DomainResult } from '~/templates/aurora/types/domainresult'
 import type { PlanCard } from '~/types/plancard'

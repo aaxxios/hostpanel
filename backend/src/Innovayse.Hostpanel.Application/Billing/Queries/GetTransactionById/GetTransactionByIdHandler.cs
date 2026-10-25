@@ -44,6 +44,6 @@ public sealed class GetTransactionByIdHandler
 
         return Result<TransactionDto>.Success(new TransactionDto(
             t.Id, t.ClientId, clientName, t.Date, t.Description, t.TransactionId,
-            t.InvoiceId, t.PaymentMethod, t.AmountIn, t.AmountOut, t.Fees, t.AddedToCredit));
+            t.InvoiceId, t.PaymentMethod, t.AmountIn, t.AmountOut, t.Fees, t.AddedToCredit, t.Currency));
     }
 }
