@@ -20,6 +20,8 @@
     <PackageReference Include="coverlet.collector" />
     <!-- Moq backs the Clients/* validator tests; HTTP adapters are tested against Fixtures/StubHttpServer, never a mocked HttpMessageHandler. -->
     <PackageReference Include="Moq" />
+    <!-- Reads the invoice PDFs back so Adapters/Pdf and the PDF endpoint tests assert on their text. -->
+    <PackageReference Include="PdfPig" />
     <!-- Options<T> wrapping for the Adapters/Integrations/* provider settings in the tests moved from Infrastructure.Tests. -->
   </ItemGroup>
   <ItemGroup>

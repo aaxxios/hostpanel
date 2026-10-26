@@ -52,6 +52,8 @@
     <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Otp.NET" />
+    <!-- Invoice PDFs are rendered in Pdf/MigraDocInvoicePdfRenderer.cs. -->
+    <PackageReference Include="PDFsharp-MigraDoc" />
     <PackageReference Include="Serilog.AspNetCore" />
     <!-- Branding uploads are rendered in ImageProcessing/SkiaBrandingImageProcessor.cs. -->
     <PackageReference Include="SkiaSharp" />
@@ -62,6 +64,10 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="WolverineFx" />
     <PackageReference Include="WolverineFx.Postgresql" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Invoice PDF fonts, read by Pdf/PdfFonts.cs. The production image has no system fonts. -->
+    <EmbeddedResource Include="Pdf\Fonts\*.ttf" LogicalName="Innovayse.Hostpanel.Infrastructure.Pdf.Fonts.%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <!-- PaymentPluginResolverTests moved here from Infrastructure.Tests (A6 Task 5, ruling 2):

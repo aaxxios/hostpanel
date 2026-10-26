@@ -169,6 +169,10 @@ public static class DependencyInjection
         services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.IBrandingStorage,
             Innovayse.Hostpanel.Infrastructure.Storage.FileSystemBrandingStorage>();
 
+        // Invoice PDFs: stateless, and the fonts it embeds are loaded once per process.
+        services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.IInvoicePdfRenderer,
+            Innovayse.Hostpanel.Infrastructure.Pdf.MigraDocInvoicePdfRenderer>();
+
         // Where people live decides almost everything below. Read from configuration once,
         // here, so there is one answer rather than a scattering of Auth:Mode checks that
         // can disagree.
