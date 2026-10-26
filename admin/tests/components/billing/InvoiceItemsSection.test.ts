@@ -54,6 +54,55 @@ describe('InvoiceItemsSection', () => {
     expect(wrapper.emitted('updated')).toHaveLength(1)
   })
 
+  it('sends a removed line as a deletion and keeps the quantity and price of the others', async () => {
+    const mock = stubRoutes({
+      'PUT /api/billing/1/items': () => new Response(null, { status: 204 }),
+      'GET /api/billing/1': () => json(invoiceFixture()),
+    })
+    const invoice = invoiceFixture({
+      items: [
+        { id: 11, description: 'Hosting', unitPrice: 10, quantity: 3, amount: 30 },
+        { id: 12, description: 'Setup', unitPrice: 5, quantity: 1, amount: 5 },
+      ],
+    })
+    const wrapper = mountWithApp(InvoiceItemsSection, { props: { invoice } })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="billing-invoice-item-remove-1"]').trigger('click')
+    await wrapper.get('[data-testid="billing-invoice-items-save"]').trigger('click')
+    await flushPromises()
+
+    const put = mock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === 'PUT')
+    expect(JSON.parse(String((put?.[1] as RequestInit | undefined)?.body))).toEqual({
+      items: [
+        { id: 11, description: 'Hosting', unitPrice: 10, quantity: 3, isDeleted: false },
+        { id: 12, description: '', unitPrice: 0, quantity: 1, isDeleted: true },
+      ],
+    })
+  })
+
+  it('keeps unsaved line edits when the invoice is reloaded by another save', async () => {
+    const wrapper = mountWithApp(InvoiceItemsSection, { props: { invoice: invoiceFixture() } })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="billing-invoice-item-description-0"]').setValue('Edited line')
+    await wrapper.setProps({ invoice: invoiceFixture({ notes: 'saved elsewhere' }) })
+
+    expect((wrapper.get('[data-testid="billing-invoice-item-description-0"]').element as HTMLTextAreaElement).value)
+      .toBe('Edited line')
+  })
+
+  it('shows the reloaded lines once the editor is clean', async () => {
+    const wrapper = mountWithApp(InvoiceItemsSection, { props: { invoice: invoiceFixture() } })
+
+    await wrapper.setProps({
+      invoice: invoiceFixture({ items: [{ id: 11, description: 'Renamed', unitPrice: 100, quantity: 1, amount: 100 }] }),
+    })
+
+    expect((wrapper.get('[data-testid="billing-invoice-item-description-0"]').element as HTMLTextAreaElement).value)
+      .toBe('Renamed')
+  })
+
   it('previews the tax on taxed lines when a tax percentage is given', async () => {
     const wrapper = mountWithApp(InvoiceItemsSection, {
       props: { invoice: invoiceFixture({ taxRate: 10 }), taxPercent: 10 },

@@ -224,6 +224,18 @@ export const CLIENT = {
 /** Credentials the stub accepts on sign-in. */
 export const CLIENT_CREDENTIALS = { email: CLIENT.email, password: 'correct-horse' }
 
+/**
+ * A second customer whose account has two-factor on: the stub answers their password step with a
+ * challenge instead of a session, and finishes it on {@link TWO_FACTOR_LOGIN_CODE}.
+ */
+export const TWO_FACTOR_CREDENTIALS = { email: 'two-factor@example.com', password: 'correct-horse' }
+
+/** The challenge token the stub hands out with the two-factor sign-in step. */
+export const TWO_FACTOR_PENDING_TOKEN = 'e2e-pending-token'
+
+/** The only code the stub accepts on the second sign-in step. */
+export const TWO_FACTOR_LOGIN_CODE = '654321'
+
 /** The unpaid invoice the pay flow settles. */
 export const INVOICE = {
   id: 501,

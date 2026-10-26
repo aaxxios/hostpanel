@@ -53,10 +53,10 @@ interface EditableLine {
   id?: number
   /** Charge description. */
   description: string
-  /** Line amount. */
-  amount: number
-  /** Whether tax applies to the line. */
-  taxed: boolean
+  /** Number of units. */
+  quantity: number
+  /** Price of one unit. */
+  unitPrice: number
   /** Whether the line is ticked for the bulk delete. */
   selected: boolean
 }
@@ -75,11 +75,39 @@ interface TotalRow {
 
 const store = useBillingStore()
 
+/**
+ * Total of one editable line.
+ *
+ * @param line - The line.
+ * @returns Quantity times unit price.
+ */
+const lineTotal = (line: EditableLine): number => line.quantity * line.unitPrice
+
 /** The editable copy of the invoice lines. */
 const lines = ref<EditableLine[]>([])
 
 /** True while the lines are being saved. */
 const saving = ref(false)
+
+/** Ids of existing lines the operator removed; they are sent as deletions on save. */
+const removedIds = ref<number[]>([])
+
+/** Serialised editor state the last time it matched the stored invoice. */
+const baseline = ref('')
+
+/**
+ * Serialises what the operator can change, so an edit can be told from an untouched editor.
+ *
+ * @returns The lines' editable fields and the removed ids as one string.
+ */
+const snapshot = (): string =>
+  JSON.stringify([
+    lines.value.map((line) => [line.id ?? null, line.description, line.quantity, line.unitPrice]),
+    removedIds.value,
+  ])
+
+/** True when the editor holds changes that are not saved yet. */
+const dirty = computed<boolean>(() => snapshot() !== baseline.value)
 
 /** True when the invoice carries a tax rate, so a line defaults to taxed. */
 const invoiceIsTaxed = computed<boolean>(() => (props.invoice.taxRate ?? 0) > 0)
@@ -91,13 +119,10 @@ const allSelected = computed<boolean>(() => lines.value.length > 0 && lines.valu
 const selectedCount = computed<number>(() => lines.value.filter((line) => line.selected).length)
 
 /** Sub-total of the editable lines. */
-const previewSubTotal = computed<number>(() => lines.value.reduce((sum, line) => sum + line.amount, 0))
+const previewSubTotal = computed<number>(() => lines.value.reduce((sum, line) => sum + lineTotal(line), 0))
 
-/** Tax previewed on the taxed editable lines at `taxPercent`. */
-const previewTax = computed<number>(() => {
-  const taxable = lines.value.filter((line) => line.taxed).reduce((sum, line) => sum + line.amount, 0)
-  return taxable * (props.taxPercent / MAX_PERCENT)
-})
+/** Tax previewed on the sub-total at `taxPercent`; the invoice taxes its whole sub-total. */
+const previewTax = computed<number>(() => previewSubTotal.value * (props.taxPercent / MAX_PERCENT))
 
 /** Total due after the invoice credit, as the editor previews it. */
 const previewTotal = computed<number>(() => previewSubTotal.value + previewTax.value - (props.invoice.credit ?? 0))
@@ -131,15 +156,17 @@ const populate = (): void => {
   lines.value = (props.invoice.items ?? []).map((item) => ({
     id: item.id,
     description: item.description,
-    amount: item.amount,
-    taxed: item.taxed ?? invoiceIsTaxed.value,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
     selected: false,
   }))
+  removedIds.value = []
+  baseline.value = snapshot()
 }
 
 /** Appends a blank line. */
 const addLine = (): void => {
-  lines.value.push({ description: '', amount: 0, taxed: false, selected: false })
+  lines.value.push({ description: '', quantity: 1, unitPrice: 0, selected: false })
 }
 
 /**
@@ -148,7 +175,10 @@ const addLine = (): void => {
  * @param index - Position of the line.
  */
 const removeLine = (index: number): void => {
-  lines.value.splice(index, 1)
+  const [removed] = lines.value.splice(index, 1)
+  if (removed?.id !== undefined) {
+    removedIds.value.push(removed.id)
+  }
 }
 
 /** Ticks every line, or clears the ticks when all were ticked. */
@@ -161,22 +191,34 @@ const toggleAll = (): void => {
 
 /** Drops every ticked line from the editor (saved with the rest). */
 const deleteSelected = (): void => {
+  const gone = lines.value.filter((line) => line.selected)
+  removedIds.value.push(...gone.flatMap((line) => (line.id === undefined ? [] : [line.id])))
   lines.value = lines.value.filter((line) => !line.selected)
 }
 
 /** Saves the edited lines through the store and tells the parent when they were accepted. */
 const save = async (): Promise<void> => {
   saving.value = true
-  const items: InvoiceItemUpdate[] = lines.value.map((line) => ({
+  // The API changes only the lines it is told about, so a removed line must be sent as a deletion.
+  const kept: InvoiceItemUpdate[] = lines.value.map((line) => ({
     id: line.id ?? null,
     description: line.description,
-    unitPrice: line.amount,
-    quantity: 1,
+    unitPrice: line.unitPrice,
+    quantity: line.quantity,
     isDeleted: false,
   }))
-  const ok = await store.updateItems(props.invoice.id, items)
+  const removed: InvoiceItemUpdate[] = removedIds.value.map((id) => ({
+    id,
+    description: '',
+    unitPrice: 0,
+    quantity: 1,
+    isDeleted: true,
+  }))
+  const ok = await store.updateItems(props.invoice.id, [...kept, ...removed])
   saving.value = false
   if (ok) {
+    // Mark the editor clean so the reloaded invoice (new ids for added lines) replaces the lines.
+    baseline.value = snapshot()
     emit('updated')
   }
 }
@@ -190,7 +232,16 @@ const save = async (): Promise<void> => {
 const isTaxed = (taxed: boolean | undefined): boolean => taxed ?? invoiceIsTaxed.value
 
 onMounted(populate)
-watch(() => props.invoice, populate)
+
+// Another section of the screen saving reloads the invoice; unsaved line edits must survive that.
+watch(
+  () => props.invoice,
+  () => {
+    if (!dirty.value) {
+      populate()
+    }
+  },
+)
 </script>
 
 <template>
@@ -235,7 +286,7 @@ watch(() => props.invoice, populate)
           v-else
           density="compact"
           :empty="lines.length === 0"
-          :colspan="5"
+          :colspan="6"
           data-testid="billing-invoice-items-editor"
         >
           <UiTableHead>
@@ -249,8 +300,9 @@ watch(() => props.invoice, populate)
                 />
               </UiTableHeader>
               <UiTableHeader>{{ t('shared.description') }}</UiTableHeader>
+              <UiTableHeader>{{ t('shared.qty') }}</UiTableHeader>
+              <UiTableHeader>{{ t('billing.quoteDetail.unitPrice') }}</UiTableHeader>
               <UiTableHeader align="right">{{ t('shared.amount') }}</UiTableHeader>
-              <UiTableHeader align="center">{{ t('shared.taxed') }}</UiTableHeader>
               <UiTableHeader />
             </UiTableRow>
           </UiTableHead>
@@ -271,11 +323,26 @@ watch(() => props.invoice, populate)
                   :data-testid="`billing-invoice-item-description-${index}`"
                 />
               </UiTableCell>
-              <UiTableCell align="right">
-                <UiNumberInput v-model="line.amount" :step="0.01" :min="0" placeholder="0.00" />
+              <UiTableCell>
+                <UiNumberInput
+                  v-model="line.quantity"
+                  :step="1"
+                  :min="1"
+                  placeholder="1"
+                  :data-testid="`billing-invoice-item-quantity-${index}`"
+                />
               </UiTableCell>
-              <UiTableCell align="center">
-                <UiCheckbox v-model="line.taxed" :aria-label="t('shared.taxed')" />
+              <UiTableCell>
+                <UiNumberInput
+                  v-model="line.unitPrice"
+                  :step="0.01"
+                  :min="0"
+                  placeholder="0.00"
+                  :data-testid="`billing-invoice-item-price-${index}`"
+                />
+              </UiTableCell>
+              <UiTableCell align="right">
+                {{ formatUsdPlain(lineTotal(line)) }}
               </UiTableCell>
               <UiTableCell align="right">
                 <UiIconButton
