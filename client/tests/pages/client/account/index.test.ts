@@ -8,6 +8,7 @@
 import { defineComponent, h } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountPage } from '~/tests/helpers/mountClient'
+import { Permission } from '~/composables/usePermissions'
 
 /** Loaders the page triggers, re-created per test. */
 const loaders = {
@@ -20,7 +21,15 @@ const loaders = {
   loadPaymentMethods: vi.fn(),
 }
 
-vi.mock('~/stores/client', () => ({ useClientStore: () => ({ fetchUser: loaders.fetchUser }) }))
+/** The permissions the signed-in person holds; everything unless a test narrows it. */
+const held = { value: Permission.All as number }
+
+vi.mock('~/stores/client', () => ({
+  useClientStore: () => ({
+    fetchUser: loaders.fetchUser,
+    mayDo: (flag: number) => flag === 0 || (held.value & flag) === flag,
+  }),
+}))
 vi.mock('~/stores/catalog', () => ({ useCatalogStore: () => ({ loadCountries: loaders.loadCountries }) }))
 vi.mock('~/stores/account', () => ({
   useAccountStore: () => ({
@@ -61,6 +70,7 @@ const stubRouteWith = (query: Record<string, string>): void => {
 }
 
 beforeEach(() => {
+  held.value = Permission.All
   for (const loader of Object.values(loaders)) {
     loader.mockReset()
     loader.mockResolvedValue(undefined)
@@ -100,5 +110,37 @@ describe('client account page', () => {
     for (const loader of Object.values(loaders)) {
       expect(loader).toHaveBeenCalledTimes(1)
     }
+  })
+})
+
+describe('client account page permissions', () => {
+  it('lists only the tabs the person may open', async () => {
+    held.value = Permission.ViewEmails | Permission.ViewPayInvoices
+
+    const wrapper = await mountPage(AccountPage, { components: TAB_STUBS })
+
+    expect(wrapper.text()).toContain('client.account.tabDetails')
+    expect(wrapper.text()).toContain('client.account.tabEmails')
+    expect(wrapper.text()).toContain('client.account.tabPayment')
+    expect(wrapper.text()).not.toContain('client.contacts.title')
+    expect(wrapper.text()).not.toContain('client.account.tabUsers')
+  })
+
+  it('opens the details tab when ?tab= names a tab the person may not open', async () => {
+    held.value = Permission.ViewEmails
+    stubRouteWith({ tab: 'users' })
+
+    const wrapper = await mountPage(AccountPage, { components: TAB_STUBS })
+
+    expect(wrapper.find('[data-testid="tab-details"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="tab-users"]').exists()).toBe(false)
+  })
+
+  it('offers the team tab only with full access', async () => {
+    held.value = Permission.All
+
+    const wrapper = await mountPage(AccountPage, { components: TAB_STUBS })
+
+    expect(wrapper.text()).toContain('client.account.tabUsers')
   })
 })

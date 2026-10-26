@@ -15,6 +15,7 @@ import QRCode from 'qrcode'
 import { useAuthApi } from '~/composables/apis/useAuthApi'
 import { useBillingApi } from '~/composables/apis/useBillingApi'
 import { useClientApi } from '~/composables/apis/useClientApi'
+import { Permission } from '~/composables/usePermissions'
 import { useClientStore } from '~/stores/client'
 import { ActionOutcome } from '~/types/actionoutcome'
 import { ContactSaveOutcome } from '~/types/contactsaveoutcome'
@@ -76,9 +77,14 @@ export const useAccountStore = defineStore('account', () => {
   /**
    * Reads the team members.
    *
-   * @returns Nothing; a failure leaves the list empty.
+   * @returns Nothing; a failure, or a person without the permission, leaves the list empty.
    */
   const loadUsers = async (): Promise<void> => {
+    // The team list is for a person with full access; anyone else would only be refused.
+    if (!useClientStore().mayDo(Permission.All)) {
+      users.value = []
+      return
+    }
     usersLoading.value = true
     try {
       users.value = await clientApi.fetchUsers()
@@ -95,6 +101,10 @@ export const useAccountStore = defineStore('account', () => {
    * @returns Nothing; a failure leaves the list empty.
    */
   const loadContacts = async (): Promise<void> => {
+    if (!useClientStore().mayDo(Permission.ViewManageContacts)) {
+      contacts.value = []
+      return
+    }
     contactsLoading.value = true
     try {
       contacts.value = await clientApi.fetchContacts()
@@ -111,6 +121,10 @@ export const useAccountStore = defineStore('account', () => {
    * @returns Nothing; a failure leaves the list empty.
    */
   const loadEmails = async (): Promise<void> => {
+    if (!useClientStore().mayDo(Permission.ViewEmails)) {
+      emails.value = []
+      return
+    }
     emailsLoading.value = true
     try {
       emails.value = await clientApi.fetchEmails()
@@ -128,6 +142,10 @@ export const useAccountStore = defineStore('account', () => {
    * @returns Nothing.
    */
   const loadPaymentMethods = async (): Promise<void> => {
+    if (!useClientStore().mayDo(Permission.ViewPayInvoices)) {
+      paymentMethods.value = []
+      return
+    }
     paymentLoading.value = true
     paymentLoadError.value = null
     try {

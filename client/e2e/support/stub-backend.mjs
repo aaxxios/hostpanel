@@ -38,6 +38,7 @@
 import { createServer } from 'node:http'
 import {
   ACCESS_TOKEN,
+  ACCOUNT,
   ANNOUNCEMENT,
   FAQS,
   LOCATIONS,
@@ -414,6 +415,10 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
   }
 
   // Client area -- the stub trusts any bearer; the specs do not test authorisation here.
+  if (isGet && path === '/api/auth/me') {
+    send(res, 200, ACCOUNT)
+    return true
+  }
   if (isGet && path === '/api/clients/me') {
     send(res, 200, profile)
     return true

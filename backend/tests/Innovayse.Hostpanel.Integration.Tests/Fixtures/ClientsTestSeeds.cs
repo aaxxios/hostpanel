@@ -177,16 +177,77 @@ public static class ClientsTestSeeds
     /// <param name="factory">The factory whose database to seed against.</param>
     /// <param name="clientId">The client the invitation is for.</param>
     /// <param name="email">The invitee's email address.</param>
+    /// <param name="permissions">The permissions the invitation grants; <c>ViewDomains</c> when not given.</param>
     /// <returns>The invitation's unguessable acceptance token.</returns>
-    public static async Task<string> SeedInvitationAsync(IntegrationTestFactory factory, int clientId, string email)
+    public static async Task<string> SeedInvitationAsync(
+        IntegrationTestFactory factory,
+        int clientId,
+        string email,
+        Domain.Clients.Enums.ClientPermission permissions = Domain.Clients.Enums.ClientPermission.ViewDomains)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
 
-        var invitation = Invitation.Create(clientId, email, "Invited", "Person", Domain.Clients.Enums.ClientPermission.ViewDomains);
+        var invitation = Invitation.Create(clientId, email, "Invited", "Person", permissions);
         db.Invitations.Add(invitation);
         await db.SaveChangesAsync(CancellationToken.None);
         return invitation.Token;
+    }
+
+    /// <summary>
+    /// Creates a signed-in user who owns no client record and is linked to none: the caller of a
+    /// linked-user test before any invitation has been accepted.
+    /// </summary>
+    /// <param name="factory">The factory whose host owns the identity store.</param>
+    /// <param name="label">Distinguishes the created address between callers in the same test.</param>
+    /// <returns>The user's authenticated client, subject and email.</returns>
+    public static async Task<(HttpClient Client, string UserId, string Email)> CreateUnlinkedUserAsync(
+        IntegrationTestFactory factory, string label)
+    {
+        var (userId, email) = await CreateUnlinkedSubjectAsync(factory, label);
+        var http = factory.CreateClient();
+        var token = await factory.GetClientTokenAsync(email, TestPassword);
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return (http, userId, email);
+    }
+
+    /// <summary>
+    /// Links a signed-in user to a client account through the real invitation flow: an invitation
+    /// carrying the permissions is accepted over HTTP, which also grants the client role.
+    /// </summary>
+    /// <param name="factory">The factory whose database to seed against.</param>
+    /// <param name="user">The user's authenticated client.</param>
+    /// <param name="email">The user's email address, which the invitation names.</param>
+    /// <param name="clientId">The account to link to.</param>
+    /// <param name="permissions">The permissions the link grants.</param>
+    /// <returns>A task that completes once the invitation is accepted.</returns>
+    public static async Task LinkUserAsync(
+        IntegrationTestFactory factory,
+        HttpClient user,
+        string email,
+        int clientId,
+        Domain.Clients.Enums.ClientPermission permissions)
+    {
+        var token = await SeedInvitationAsync(factory, clientId, email, permissions);
+        var accepted = await user.PostAsJsonAsync("/api/auth/accept-invite", new { token });
+        accepted.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// Creates a user who owns no client record and is linked, with the given permissions, to a freshly
+    /// seeded client account: the "other user of the account" the permission checks are about.
+    /// </summary>
+    /// <param name="factory">The factory whose database to seed against.</param>
+    /// <param name="label">Distinguishes the created address between callers in the same test.</param>
+    /// <param name="permissions">The permissions the link grants.</param>
+    /// <returns>The linked user's authenticated client.</returns>
+    public static async Task<HttpClient> LinkedUserAsync(
+        IntegrationTestFactory factory, string label, Domain.Clients.Enums.ClientPermission permissions)
+    {
+        var (user, _, email) = await CreateUnlinkedUserAsync(factory, label);
+        var (clientId, _) = await SeedClientAsync(factory);
+        await LinkUserAsync(factory, user, email, clientId, permissions);
+        return user;
     }
 
     /// <summary>Reads the <c>type</c> field of a refusal answered by <c>BaseApiController</c>.</summary>

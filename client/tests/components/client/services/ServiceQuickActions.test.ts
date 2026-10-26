@@ -3,6 +3,8 @@
  */
 import { describe, expect, it } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
+import { grantPermissions } from '~/tests/helpers/grantPermissions'
+import { Permission } from '~/composables/usePermissions'
 import ServiceQuickActions from '~/components/client/services/ServiceQuickActions.vue'
 
 describe('ServiceQuickActions', () => {
@@ -24,5 +26,25 @@ describe('ServiceQuickActions', () => {
     expect(wrapper.emitted('cpanel')).toHaveLength(1)
     expect(wrapper.emitted('invoices')).toHaveLength(1)
     expect(wrapper.emitted('cancel')).toHaveLength(1)
+  })
+})
+
+describe('ServiceQuickActions permissions', () => {
+  it('shows only the shortcuts the person may use', async () => {
+    const wrapper = mountClient(ServiceQuickActions, { props: { hasServer: true, ssoLoading: false } })
+    await grantPermissions(Permission.ViewProductsServices | Permission.ViewPayInvoices)
+
+    expect(wrapper.find('[data-testid="service-quick-invoices"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="service-quick-cpanel"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="service-quick-cancel"]').exists()).toBe(false)
+  })
+
+  it('shows the control panel and cancel shortcuts with their permissions', async () => {
+    const wrapper = mountClient(ServiceQuickActions, { props: { hasServer: true, ssoLoading: false } })
+    await grantPermissions(Permission.AllowSingleSignOn | Permission.PlaceNewOrders)
+
+    expect(wrapper.find('[data-testid="service-quick-cpanel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="service-quick-cancel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="service-quick-invoices"]').exists()).toBe(false)
   })
 })

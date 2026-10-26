@@ -161,6 +161,14 @@ folder per use case under `Application/<Feature>/{Commands,Queries}/<UseCase>/`.
   field errors grouped under `errors`. Validators exist on both commands and queries.
 - **No identity on a message** (`NoIdentityOnMessagesTests`); handlers read it from
   `ICurrentUserService` (`Shared/MultiTenancy/`).
+- **Client portal permissions are enforced on the server, per action.** Every action behind `Policies.Client` carries
+  exactly one of `[RequiresClientPermission(ClientPermission.X)]` or `[AvailableToEveryClientUser]`
+  (`API/Authorization/`; `ClientPortalPermissionTests` fails otherwise). The filter asks `IClientAccess`, which reads the
+  caller from `ICurrentUserService`: the owner of a client record holds every permission, a linked user holds the
+  stored grant, anyone else holds none, and a refusal is 403 `CLIENT_PERMISSION_DENIED`. The action-to-permission
+  table is in the remarks of `RequiresClientPermissionAttribute`. The use cases behind the portal still resolve the
+  caller's own client record (`FindReadOnlyByUserIdAsync`), so a linked user with no record of their own passes the
+  gate and is then answered by the use case; letting them act on the account they are linked to is a separate change.
 - **Architecture tests** (`Architecture.Tests`): `ControllerBase`, `ExplicitConstructor`,
   `NoRequestTypes`, `NoIdentityOnMessages`, `PortPlacement`, `EnumPlacement`, `NoVendorNames`,
   plus resource coverage, kernel purity, SDK contract and use-case shape. Application types carry

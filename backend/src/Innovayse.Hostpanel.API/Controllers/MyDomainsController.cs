@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.API.Authorization;
+using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.Hostpanel.Application.Domains.Commands.AddMyDomainDnsRecord;
 using Innovayse.Hostpanel.Application.Domains.Commands.AddMyDomainEmailForwardingRule;
@@ -68,10 +70,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 with the list of domain DTOs; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c> when the caller
-    /// has no client record; 401; 403 for a caller who is not a client.
+    /// has no client record; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewDomains</c>.
     /// </returns>
     [HttpGet]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewDomains)]
     [ProducesResponseType(typeof(IReadOnlyList<DomainDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyDomainsAsync(CancellationToken ct)
@@ -85,10 +89,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 with the domain DTO; 404 with <c>DOMAIN_NOT_FOUND</c> when it is not the caller's; 401;
-    /// 403 for a caller who is not a client.
+    /// 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewDomains</c>.
     /// </returns>
     [HttpGet("{id:int}")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewDomains)]
     [ProducesResponseType(typeof(DomainDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByIdAsync(int id, CancellationToken ct)
@@ -103,10 +109,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 on success; 404 with <c>DOMAIN_NOT_FOUND</c> when the domain is not the caller's; 502
-    /// when the registrar rejects the update; 401; 403 for a caller who is not a client.
+    /// when the registrar rejects the update; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPut("{id:int}/auto-renew")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]
@@ -123,10 +131,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 on success; 404 with <c>DOMAIN_NOT_FOUND</c> when the domain is not the caller's; 502
-    /// when the registrar rejects the update; 401; 403 for a caller who is not a client.
+    /// when the registrar rejects the update; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPut("{id:int}/whois-privacy")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]
@@ -146,10 +156,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 on success; 404 with <c>DOMAIN_NOT_FOUND</c> when the domain is not the caller's; 502
-    /// when the registrar rejects the update; 401; 403 for a caller who is not a client.
+    /// when the registrar rejects the update; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPut("{id:int}/lock")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]
@@ -165,10 +177,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 with the ordered nameserver list; 404 with <c>DOMAIN_NOT_FOUND</c> when it is not the
-    /// caller's; 401; 403 for a caller who is not a client.
+    /// caller's; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewDomains</c>.
     /// </returns>
     [HttpGet("{id:int}/nameservers")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewDomains)]
     [ProducesResponseType(typeof(IReadOnlyList<NameserverDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetNameserversAsync(int id, CancellationToken ct)
@@ -185,10 +199,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <returns>
     /// 204 on success; 400 when fewer than 2 nameservers are given; 404 with
     /// <c>DOMAIN_NOT_FOUND</c> when the domain is not the caller's; 502 when the registrar rejects
-    /// the update; 401; 403 for a caller who is not a client.
+    /// the update; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPut("{id:int}/nameservers")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
@@ -206,10 +222,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <returns>
     /// 200 with the WHOIS record; 404 with <c>DOMAIN_NOT_FOUND</c> when the domain is not the
     /// caller's, or <c>DOMAIN_WHOIS_NOT_FOUND</c> when the registrar has no record for the name;
-    /// 401; 403 for a caller who is not a client.
+    /// 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewDomains</c>.
     /// </returns>
     [HttpGet("{id:int}/whois")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewDomains)]
     [EnableRateLimiting(RateLimitPolicies.Upstream)]
     [ProducesResponseType(typeof(WhoisDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
@@ -225,10 +243,11 @@ public sealed class MyDomainsController : BaseApiController
     /// <returns>
     /// 200 with the contact; 404 with <c>DOMAIN_NOT_FOUND</c> when the domain is not the caller's,
     /// or <c>DOMAIN_CONTACT_NOT_FOUND</c> when the registrar holds no contact for it; 401; 403 for
-    /// a caller who is not a client.
+    /// a caller who is not a client; 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewDomains</c>.
     /// </returns>
     [HttpGet("{id:int}/contact")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewDomains)]
     [EnableRateLimiting(RateLimitPolicies.Upstream)]
     [ProducesResponseType(typeof(DomainContactDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
@@ -244,10 +263,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 on success; 404 with <c>DOMAIN_NOT_FOUND</c> when the domain is not the caller's; 502
-    /// when the registrar rejects the update; 401; 403 for a caller who is not a client.
+    /// when the registrar rejects the update; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPut("{id:int}/whois")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]
@@ -267,10 +288,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <returns>
     /// 200 with the EPP authorization code; 404 with <c>DOMAIN_NOT_FOUND</c> when it is not the
     /// caller's; 400 when the domain carries no registrar reference; 502 when the registrar
-    /// rejects the request or returns no code; 401; 403 for a caller who is not a client.
+    /// rejects the request or returns no code; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPost("{id:int}/epp")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]
@@ -296,10 +319,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <returns>
     /// 201 with the new order and the invoice raised for it -- the registrar is not called until
     /// that invoice is paid; 503 with <c>DOMAIN_PRODUCT_NOT_CONFIGURED</c> when this installation
-    /// sells no domain product; 401; 403 for a caller who is not a client.
+    /// sells no domain product; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>PlaceNewOrders</c>.
     /// </returns>
     [HttpPost("transfer-order")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.PlaceNewOrders)]
     [ProducesResponseType(typeof(PlaceOrderResultDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> TransferInAsync([FromBody] TransferMyDomainCommand command, CancellationToken ct)
@@ -325,10 +350,12 @@ public sealed class MyDomainsController : BaseApiController
     /// 201 with the new order and the invoice raised for it -- the registrar is not called until
     /// that invoice is paid; 404 with <c>DOMAIN_NOT_FOUND</c> when the domain is not the caller's;
     /// 503 with <c>DOMAIN_PRODUCT_NOT_CONFIGURED</c> when this installation sells no domain
-    /// product; 401; 403 for a caller who is not a client.
+    /// product; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>PlaceNewOrders</c>.
     /// </returns>
     [HttpPost("{id:int}/renew")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.PlaceNewOrders)]
     [ProducesResponseType(typeof(PlaceOrderResultDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status503ServiceUnavailable)]
@@ -346,10 +373,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <returns>
     /// 201 with a link to the domain; 400 when a field is refused; 404 with
     /// <c>DOMAIN_NOT_FOUND</c> when it is not the caller's; 502 when the registrar rejects the
-    /// addition; 401; 403 for a caller who is not a client.
+    /// addition; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPost("{id:int}/dns")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
@@ -369,10 +398,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <returns>
     /// 204 on success; 404 with <c>DOMAIN_NOT_FOUND</c> when it is not the caller's, or
     /// <c>DNS_RECORD_NOT_FOUND</c> when the record id names no record on that domain; 502 when the
-    /// registrar rejects the update; 401; 403 for a caller who is not a client.
+    /// registrar rejects the update; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPut("{id:int}/dns/{recordId:int}")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]
@@ -390,10 +421,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <returns>
     /// 204 on success; 404 with <c>DOMAIN_NOT_FOUND</c> when it is not the caller's, or
     /// <c>DNS_RECORD_NOT_FOUND</c> when the record id names no record on that domain; 502 when the
-    /// registrar rejects the deletion; 401; 403 for a caller who is not a client.
+    /// registrar rejects the deletion; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpDelete("{id:int}/dns/{recordId:int}")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]
@@ -409,10 +442,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 on success; 404 with <c>DOMAIN_NOT_FOUND</c> when the domain is not the caller's; 502
-    /// when the registrar rejects the update; 401; 403 for a caller who is not a client.
+    /// when the registrar rejects the update; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPut("{id:int}/dns-management")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]
@@ -429,10 +464,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 on success; 404 with <c>DOMAIN_NOT_FOUND</c> when the domain is not the caller's; 502
-    /// when the registrar rejects the update; 401; 403 for a caller who is not a client.
+    /// when the registrar rejects the update; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPut("{id:int}/email-forwarding-toggle")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]
@@ -450,10 +487,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <returns>
     /// 201 on success; 400 when a field is refused; 404 with <c>DOMAIN_NOT_FOUND</c> when the
     /// domain is not the caller's; 502 when the registrar rejects the addition; 401; 403 for a
-    /// caller who is not a client.
+    /// caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPost("{id:int}/email-forwarding")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
@@ -473,10 +512,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <returns>
     /// 204 on success; 404 with <c>DOMAIN_NOT_FOUND</c> when it is not the caller's, or
     /// <c>EMAIL_FORWARDING_RULE_NOT_FOUND</c> when the rule id names no rule on that domain; 502
-    /// when the registrar rejects the update; 401; 403 for a caller who is not a client.
+    /// when the registrar rejects the update; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpPut("{id:int}/email-forwarding/{ruleId:int}")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]
@@ -494,10 +535,12 @@ public sealed class MyDomainsController : BaseApiController
     /// <returns>
     /// 204 on success; 404 with <c>DOMAIN_NOT_FOUND</c> when it is not the caller's, or
     /// <c>EMAIL_FORWARDING_RULE_NOT_FOUND</c> when the rule id names no rule on that domain; 502
-    /// when the registrar rejects the deletion; 401; 403 for a caller who is not a client.
+    /// when the registrar rejects the deletion; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ManageDomainSettings</c>.
     /// </returns>
     [HttpDelete("{id:int}/email-forwarding/{ruleId:int}")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ManageDomainSettings)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]

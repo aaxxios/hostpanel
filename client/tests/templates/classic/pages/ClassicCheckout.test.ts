@@ -79,7 +79,7 @@ const StripeCardFormStub = defineComponent({
   },
 })
 
-/** Stand-in for the phone field, which wraps a third-party widget. */
+/** Stand-in for the phone field, which keeps its country picker out of this test. */
 const PhoneInputStub = defineComponent({
   name: 'UiPhoneInput',
   props: { modelValue: { type: String, default: '' } },

@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - The demo runs on its own network and cannot reach production services.
+- The client portal now enforces the permissions of linked users on the server: every portal action requires the permission it belongs to, the account owner keeps full access, and a refusal is a 403 with `CLIENT_PERMISSION_DENIED` (#467). The portal reads the real permissions and hides what the user cannot use.
 
 ## [0.3.1] - 2026-10-18
 

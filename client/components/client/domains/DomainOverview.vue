@@ -26,7 +26,7 @@
     </UiCard>
 
     <!-- Hidden while the domain is still pending. -->
-    <UiCard v-if="!isPending" padding="md" data-testid="domain-quick-actions">
+    <UiCard v-if="!isPending && actions.length" padding="md" data-testid="domain-quick-actions">
       <UiHeading :level="3" size="subsection" class="!text-sm mb-3">{{ $t('client.domains.whatToday') }}</UiHeading>
       <UiStack gap="xs" align="start">
         <UiButton
@@ -54,6 +54,8 @@
 import { computed } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 import type { DomainDetail } from '~/types/domaindetail'
+import { Permission } from '~/composables/usePermissions'
+import { useClientStore } from '~/stores/client'
 import { DomainTab } from '~/types/domaintab'
 import { formatCurrency } from '~/utils/formatCurrency'
 import { formatDate } from '~/utils/formatDate'
@@ -82,13 +84,16 @@ const emit = defineEmits<{
   navigate: [tab: DomainTab]
 }>()
 
-/** The shortcuts: the panel each opens and its sentence. */
+/** The client store, which knows what the signed-in person may do. */
+const store = useClientStore()
+
+/** The shortcuts the person may use: the panel each opens and its sentence. */
 const actions = computed(() => [
-  { tab: DomainTab.Nameservers, label: t('client.domains.quickNameservers') },
-  { tab: DomainTab.Contact, label: t('client.domains.quickContact') },
-  { tab: DomainTab.Lock, label: t('client.domains.quickLock') },
-  { tab: DomainTab.Renew, label: t('client.domains.quickRenew') },
-])
+  { tab: DomainTab.Nameservers, label: t('client.domains.quickNameservers'), permission: Permission.ManageDomainSettings },
+  { tab: DomainTab.Contact, label: t('client.domains.quickContact'), permission: Permission.ManageDomainSettings },
+  { tab: DomainTab.Lock, label: t('client.domains.quickLock'), permission: Permission.ManageDomainSettings },
+  { tab: DomainTab.Renew, label: t('client.domains.quickRenew'), permission: Permission.PlaceNewOrders },
+].filter(action => store.mayDo(action.permission)))
 
 /**
  * Formats an amount in the domain's own currency.

@@ -15,7 +15,6 @@
       "label": "Pagination"
     },
     "search": "Search…",
-    "phoneNumber": "Enter phone number",
     "close": "Close",
     "loading": "Loading",
     "showPassword": "Show password",
@@ -27,7 +26,10 @@
     "language": "Language",
     "currency": "Currency",
     "currencyFixed": "Your currency is set on your account and cannot be changed here.",
-    "phoneExample": "00 000 000"
+    "phoneExample": "00 000 000",
+    "phoneCountry": "Country calling code",
+    "searchCountry": "Search country or code",
+    "noCountries": "No country found"
   },
   "common": {
     "cancel": "Cancel",

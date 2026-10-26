@@ -3,6 +3,8 @@
  */
 import { describe, expect, it } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
+import { grantPermissions } from '~/tests/helpers/grantPermissions'
+import { Permission } from '~/composables/usePermissions'
 import ServiceSidebar from '~/components/client/services/ServiceSidebar.vue'
 import type { ServiceDetail } from '~/types/servicedetail'
 import { ServiceStatus } from '~/types/servicestatus'
@@ -67,5 +69,37 @@ describe('ServiceSidebar', () => {
 
     expect(wrapper.emitted('cpanel')).toHaveLength(1)
     expect(wrapper.find('[data-testid="service-sso-error"]').text()).toBe('No answer')
+  })
+})
+
+describe('ServiceSidebar permissions', () => {
+  it('offers only the overview and the webmail link to a person with no service permission', async () => {
+    const wrapper = mountSidebar()
+    await grantPermissions(Permission.ViewProductsServices)
+
+    expect(wrapper.find('[data-testid="service-tab-overview"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="service-tab-password"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="service-tab-cancel"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="service-open-ticket"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="service-link-cpanel"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="service-link-webmail"]').exists()).toBe(true)
+  })
+
+  it('offers the password panel with ViewModifyPasswords and the control panel with AllowSingleSignOn', async () => {
+    const wrapper = mountSidebar()
+    await grantPermissions(Permission.ViewProductsServices | Permission.ViewModifyPasswords | Permission.AllowSingleSignOn)
+
+    expect(wrapper.find('[data-testid="service-tab-password"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="service-link-cpanel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="service-tab-cancel"]').exists()).toBe(false)
+  })
+
+  it('offers cancelling and the setup with PlaceNewOrders, and a new ticket with ViewOpenSupportTickets', async () => {
+    const wrapper = mountSidebar({ service: service({ status: ServiceStatus.Pending }) })
+    await grantPermissions(Permission.PlaceNewOrders | Permission.ViewOpenSupportTickets)
+
+    expect(wrapper.find('[data-testid="service-tab-cancel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="service-nav-setup"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="service-open-ticket"]').exists()).toBe(true)
   })
 })

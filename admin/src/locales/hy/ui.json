@@ -46,6 +46,10 @@
   "uiSelect": {
     "noResults": "Արդյունքներ չկան"
   },
+  "phoneInput": {
+    "countryCode": "Երկրի կոդ",
+    "searchCountry": "Որոնել երկիր կամ կոդ"
+  },
   "selectCountry": "Ընտրեք երկիրը",
   "dialog": {
     "close": "Փակել",

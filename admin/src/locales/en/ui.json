@@ -46,6 +46,10 @@
   "uiSelect": {
     "noResults": "No results"
   },
+  "phoneInput": {
+    "countryCode": "Country calling code",
+    "searchCountry": "Search country or code"
+  },
   "selectCountry": "Select country",
   "dialog": {
     "close": "Close",

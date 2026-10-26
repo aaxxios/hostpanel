@@ -538,6 +538,9 @@
   <data name="CLIENT_USER_NOT_LINKED" xml:space="preserve">
     <value>This user is not linked to this client.</value>
   </data>
+  <data name="CLIENT_PERMISSION_DENIED" xml:space="preserve">
+    <value>Your account does not have permission to do this. Ask the account owner to grant you access.</value>
+  </data>
   <data name="CLIENT_TRANSFER_SAME_OWNER" xml:space="preserve">
     <value>This user is already the account owner.</value>
   </data>

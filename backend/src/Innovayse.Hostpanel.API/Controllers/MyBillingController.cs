@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.API.Authorization;
+using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment;
 using Innovayse.Hostpanel.Application.Billing.Commands.CompleteMyGatewayPayment;
 using Innovayse.Hostpanel.Application.Billing.Commands.PayMyInvoice;
@@ -41,9 +43,13 @@ public sealed class MyBillingController : BaseApiController
 
     /// <summary>Returns all invoices belonging to the authenticated client.</summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the caller's invoices; 401 without a session.</returns>
+    /// <returns>
+    /// 200 with the caller's invoices; 401 without a session;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewPayInvoices</c>.
+    /// </returns>
     [HttpGet]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewPayInvoices)]
     [ProducesResponseType(typeof(IReadOnlyList<InvoiceDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMineAsync(CancellationToken ct)
     {
@@ -54,9 +60,13 @@ public sealed class MyBillingController : BaseApiController
     /// <summary>Returns a single invoice belonging to the authenticated client.</summary>
     /// <param name="id">Invoice primary key.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the invoice; 401; 404 with <c>INVOICE_NOT_FOUND</c> when it is not the caller's.</returns>
+    /// <returns>
+    /// 200 with the invoice; 401; 404 with <c>INVOICE_NOT_FOUND</c> when it is not the caller's;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewPayInvoices</c>.
+    /// </returns>
     [HttpGet("{id:int}")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewPayInvoices)]
     [ProducesResponseType(typeof(InvoiceDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByIdAsync(int id, CancellationToken ct)
@@ -70,10 +80,12 @@ public sealed class MyBillingController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 on success; 401; 404 with <c>INVOICE_NOT_FOUND</c> when it is not the caller's; any
-    /// refusal the shared payment write answers with.
+    /// refusal the shared payment write answers with;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewPayInvoices</c>.
     /// </returns>
     [HttpPost("{id:int}/pay")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewPayInvoices)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> PayAsync(int id, CancellationToken ct)
@@ -86,9 +98,13 @@ public sealed class MyBillingController : BaseApiController
     /// <param name="id">Invoice primary key.</param>
     /// <param name="command">The payment module and return URL; its invoice id comes from the route.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 OK with the redirect URL; 401; 404 with <c>INVOICE_NOT_FOUND</c> when it is not the caller's.</returns>
+    /// <returns>
+    /// 200 OK with the redirect URL; 401; 404 with <c>INVOICE_NOT_FOUND</c> when it is not the caller's;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewPayInvoices</c>.
+    /// </returns>
     [HttpPost("{id:int}/gateway-payment/start")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewPayInvoices)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
@@ -105,9 +121,13 @@ public sealed class MyBillingController : BaseApiController
     /// <summary>Verifies a hosted-gateway payment for the authenticated client's invoice.</summary>
     /// <param name="id">Invoice primary key.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 OK with the payment state; 401; 404 with <c>INVOICE_NOT_FOUND</c> when it is not the caller's.</returns>
+    /// <returns>
+    /// 200 OK with the payment state; 401; 404 with <c>INVOICE_NOT_FOUND</c> when it is not the caller's;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewPayInvoices</c>.
+    /// </returns>
     [HttpPost("{id:int}/gateway-payment/complete")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewPayInvoices)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CompleteGatewayPaymentAsync(int id, CancellationToken ct)

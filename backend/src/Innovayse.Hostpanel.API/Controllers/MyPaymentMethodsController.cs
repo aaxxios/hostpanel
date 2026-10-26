@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.API.Authorization;
+using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Application.Billing.Commands.RemovePaymentMethod;
 using Innovayse.Hostpanel.Application.Billing.Commands.SetDefaultPaymentMethod;
 using Innovayse.Hostpanel.Application.Billing.Common;
@@ -38,10 +40,11 @@ public sealed class MyPaymentMethodsController : BaseApiController
     /// <returns>
     /// 200 with the saved payment methods, empty when none have been added yet; 404 with
     /// <c>CLIENT_PROFILE_NOT_FOUND</c> when the caller has no client record; 401; 403 for a
-    /// caller who is not a client.
+    /// caller who is not a client; 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewPayInvoices</c>.
     /// </returns>
     [HttpGet]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewPayInvoices)]
     [ProducesResponseType(typeof(IReadOnlyList<CardPaymentMethodDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyPaymentMethodsAsync(CancellationToken ct)
@@ -58,10 +61,12 @@ public sealed class MyPaymentMethodsController : BaseApiController
     /// <returns>
     /// 204 when made the default; 400 when <c>SetAsDefault</c> is not <see langword="true"/> or
     /// with <c>NO_SAVED_PAYMENT_METHODS</c>/<c>PAYMENT_METHOD_NOT_OWNED</c>; 404 with
-    /// <c>CLIENT_PROFILE_NOT_FOUND</c>; 401; 403 for a caller who is not a client.
+    /// <c>CLIENT_PROFILE_NOT_FOUND</c>; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewPayInvoices</c>.
     /// </returns>
     [HttpPut("{id}")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewPayInvoices)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMyPaymentMethodAsync(
@@ -76,10 +81,12 @@ public sealed class MyPaymentMethodsController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 when removed; 400 with <c>NO_SAVED_PAYMENT_METHODS</c>/<c>PAYMENT_METHOD_NOT_OWNED</c>;
-    /// 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>; 401; 403 for a caller who is not a client.
+    /// 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>; 401; 403 for a caller who is not a client;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewPayInvoices</c>.
     /// </returns>
     [HttpDelete("{id}")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewPayInvoices)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveMyPaymentMethodAsync(string id, CancellationToken ct)

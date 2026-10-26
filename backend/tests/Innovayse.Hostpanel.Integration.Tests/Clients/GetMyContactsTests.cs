@@ -31,9 +31,9 @@ public sealed class GetMyContactsTests(IntegrationTestFactory factory) : IClassF
         listed.GetArrayLength().Should().Be(1);
     }
 
-    /// <summary>A caller with the Client role but no client row answers 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>.</summary>
+    /// <summary>A caller with the Client role but no client row owns no account and is linked to none, so the permission gate refuses with 403 <c>CLIENT_PERMISSION_DENIED</c>.</summary>
     [Fact]
-    public async Task GetMyContactsWithNoClientRowRefusesNotFound()
+    public async Task GetMyContactsWithNoClientRowIsRefusedByThePermissionGate()
     {
         var (client, clientId, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "get-my-contacts-orphaned");
         using (var scope = factory.Services.CreateScope())
@@ -44,8 +44,8 @@ public sealed class GetMyContactsTests(IntegrationTestFactory factory) : IClassF
 
         var response = await client.GetAsync("/api/clients/me/contacts");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_PROFILE_NOT_FOUND);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_PERMISSION_DENIED);
     }
 
     /// <summary>The route is not for anonymous callers.</summary>
