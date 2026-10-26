@@ -434,6 +434,7 @@
       "heading": "Հաշիվ №{id}",
       "issued": "Թողարկված",
       "payNow": "Վճարել հիմա",
+      "downloadPdf": "Ներբեռնել PDF",
       "dueDate": "Վճարման ժամկետ",
       "datePaid": "Վճարման ամսաթիվ",
       "paymentMethod": "Վճարման եղանակ",

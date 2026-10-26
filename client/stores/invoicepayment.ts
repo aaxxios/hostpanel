@@ -197,9 +197,18 @@ export const useInvoicePaymentStore = defineStore('invoicePayment', () => {
     }
   }
 
+  /**
+   * Builds the address of an invoice's PDF download for the page to link to.
+   *
+   * @param id - Invoice id.
+   * @returns The address.
+   */
+  const invoicePdfUrl = (id: string): string => billing.invoicePdfUrl(id)
+
   return {
     invoice,
     invoiceLoading,
+    invoicePdfUrl,
     invoiceError,
     savedMethods,
     gatewayMethods,

@@ -69,4 +69,8 @@ describe('useBillingApi', () => {
 
     expect(method).toMatchObject({ id: 'pm_1', description: 'Mastercard •••• 4444', card_expiry: '09/29', is_default: true })
   })
+
+  it('builds the address of an invoice PDF download', () => {
+    expect(useBillingApi().invoicePdfUrl('41')).toBe('/api/portal/client/invoices/41/pdf')
+  })
 })

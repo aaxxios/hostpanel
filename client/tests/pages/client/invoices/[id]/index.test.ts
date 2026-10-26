@@ -8,7 +8,10 @@ import InvoicePage from '~/pages/client/invoices/[id]/index.vue'
 import { InvoiceStatus } from '~/types/invoicestatus'
 
 /** The mocked billing endpoints the store reaches. */
-const billingApi = vi.hoisted(() => ({ fetchInvoice: vi.fn() }))
+const billingApi = vi.hoisted(() => ({
+  fetchInvoice: vi.fn(),
+  invoicePdfUrl: (id: string) => `/api/portal/client/invoices/${id}/pdf`,
+}))
 
 vi.mock('~/composables/apis/useBillingApi', () => ({ useBillingApi: () => billingApi }))
 
@@ -77,5 +80,26 @@ describe('invoice page', () => {
     const wrapper = await mountPage(InvoicePage)
 
     expect(wrapper.find('[data-testid="ui-empty-state"]').text()).toContain('client.invoices.notFound')
+  })
+
+  it('offers the invoice as a PDF download', async () => {
+    billingApi.fetchInvoice.mockResolvedValue(invoice())
+
+    const wrapper = await mountPage(InvoicePage)
+
+    const link = wrapper.find('[data-testid="invoice-download"]')
+    expect(link.exists()).toBe(true)
+    expect(link.attributes('href')).toBe('/api/portal/client/invoices/41/pdf')
+    expect(link.attributes('download')).toBeDefined()
+    expect(link.text()).toContain('client.invoices.downloadPdf')
+  })
+
+  it('offers no PDF download for a draft', async () => {
+    billingApi.fetchInvoice.mockResolvedValue(invoice({ status: InvoiceStatus.Draft }))
+
+    const wrapper = await mountPage(InvoicePage)
+
+    expect(wrapper.find('[data-testid="invoice-header"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="invoice-download"]').exists()).toBe(false)
   })
 })

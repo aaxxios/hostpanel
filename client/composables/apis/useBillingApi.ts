@@ -217,8 +217,20 @@ export const useBillingApi = () => {
       body: { ...body, paymentToken }
     })
 
+  /**
+   * Builds the address of an invoice's PDF download.
+   *
+   * A download is a browser navigation, not a request `apiFetch` can make; the session cookie
+   * goes with it like any other same-origin request.
+   *
+   * @param id - Invoice id.
+   * @returns The address to link to.
+   */
+  const invoicePdfUrl = (id: string): string => `/api/portal/client/invoices/${id}/pdf`
+
   return {
     fetchInvoice,
+    invoicePdfUrl,
     fetchPaymentMethods,
     fetchGatewayMethods,
     createOrder,
