@@ -80,6 +80,24 @@ interface BackendErrorBody {
 }
 
 /**
+ * Reads the backend's refusal body. A file request reads every answer as bytes, refusals
+ * included, so a binary body is decoded as the JSON it is.
+ *
+ * @param data - The `$fetch` rejection's `data`.
+ * @returns The refusal body, or undefined when there is none or it is not JSON.
+ */
+const errorBody = (data: unknown): BackendErrorBody | undefined => {
+  if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+    try {
+      return JSON.parse(Buffer.from(data as ArrayBuffer).toString('utf8')) as BackendErrorBody
+    } catch {
+      return undefined
+    }
+  }
+  return data as BackendErrorBody | undefined
+}
+
+/**
  * Turns a failed backend call into the H3 error this route rethrows to the browser.
  *
  * The sentence (`detail`, else `title`) travels in `statusMessage`; the backend's code (`type`),
@@ -99,7 +117,7 @@ interface BackendErrorBody {
  * @returns An H3 error ready to be thrown.
  */
 const backendError = (status: number, err: UpstreamError) => {
-  const data = err?.data as BackendErrorBody | undefined
+  const data = errorBody(err?.data)
 
   return createError({
     statusCode: status,
@@ -133,6 +151,110 @@ const upstreamStatus = (err: UpstreamFailure): number => {
 }
 
 /**
+ * Builds the headers of one backend call; the language is read from the incoming request.
+ *
+ * @param event - H3 event of the incoming browser request.
+ * @param options - The call's options; extra headers are merged in last.
+ * @param bearerToken - Access token to send, absent for an anonymous call.
+ * @returns The header map.
+ */
+const backendHeaders = (event: H3Event, options: InternalApiOptions, bearerToken: string | undefined): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    [LANGUAGE_HEADER]: backendLanguage(event),
+    // The backend's SSO build refuses an anonymous state-changing call without it (a bearer call is exempt).
+    [CSRF_HEADER]: CSRF_HEADER_VALUE,
+    ...options.headers,
+  }
+  if (bearerToken) {
+    headers['Authorization'] = `Bearer ${bearerToken}`
+  }
+  return headers
+}
+
+/** Watches one backend answer for a renewed access token; passed to `$fetch` as `onResponse`. */
+type RenewalWatcher = (context: { response: Response }) => void
+
+/**
+ * Runs one backend call with the session's bearer token: a renewed access token the backend
+ * offers is stored in the session, a 401 refreshes the token and retries once, and any failure
+ * becomes the H3 error the route rethrows to the browser.
+ *
+ * @param event - H3 event of the incoming browser request.
+ * @param endpoint - API path after `/api`; auth endpoints are never retried, to avoid loops.
+ * @param options - The call's options; `anonymous` sends no token and never refreshes.
+ * @param send - Sends the request once with the given token, passing `watchRenewal` as `onResponse`.
+ * @returns Whatever `send` resolves with.
+ * @throws H3Error forwarding any upstream HTTP error status
+ */
+const withSession = async <T>(
+  event: H3Event,
+  endpoint: string,
+  options: InternalApiOptions,
+  send: (bearerToken: string | undefined, watchRenewal: RenewalWatcher) => Promise<T>
+): Promise<T> => {
+  const token = options.anonymous ? undefined : await resolveAccessToken(event)
+
+  /**
+   * Sends one attempt and keeps the renewed access token the backend offered on it, if any.
+   *
+   * @param bearerToken - Access token to send, absent for an anonymous call.
+   * @returns Whatever `send` resolves with.
+   */
+  const attempt = async (bearerToken: string | undefined): Promise<T> => {
+    /** The renewed access token the backend offered on this attempt, if any. */
+    const renewal: { token: string | null } = { token: null }
+    try {
+      return await send(bearerToken, ({ response }) => {
+        renewal.token = response.headers.get(RENEWED_TOKEN_HEADER)
+      })
+    } finally {
+      // Only a bearer call belongs to a session; an anonymous call has nothing to renew.
+      if (renewal.token && bearerToken) {
+        await updateAccessToken(event, renewal.token)
+      }
+    }
+  }
+
+  try {
+    return await attempt(token)
+  } catch (err: unknown) {
+    const failure = err as UpstreamFailure
+    const status = upstreamStatus(failure)
+
+    // On 401: attempt token refresh and retry (skip for auth endpoints to avoid loops)
+    const isAuthEndpoint = endpoint.startsWith('/auth/')
+    if (status === 401 && !isAuthEndpoint && !options.anonymous) {
+      const newToken = await refreshSession(event)
+      if (newToken) {
+        try {
+          return await attempt(newToken)
+        } catch (retryErr: unknown) {
+          const retryFailure = retryErr as UpstreamFailure
+          throw backendError(upstreamStatus(retryFailure), retryFailure)
+        }
+      }
+    }
+
+    throw backendError(status, failure)
+  }
+}
+
+/**
+ * The backend address for an endpoint.
+ *
+ * @param endpoint - API path after `/api`, e.g. `/clients/me`.
+ * @returns The absolute URL.
+ */
+const backendUrl = (endpoint: string): string => {
+  // Bound to a plain `string` first. Passed as a template literal, Nitro tries to match the URL
+  // against its own route table and answers with `TypedInternalResponse<...>` rather than `T` --
+  // even though this address is the external C# API and matches no Nitro route at all.
+  const url: string = `${getApiUrl()}/api${endpoint}`
+  return url
+}
+
+/**
  * Make an authenticated request to the internal C# backend API.
  *
  * On 401 responses, automatically attempts a token refresh and retries
@@ -145,85 +267,56 @@ const upstreamStatus = (err: UpstreamFailure): number => {
  * @returns Parsed JSON response typed as `T`
  * @throws H3Error forwarding any upstream HTTP error status
  */
-export const internalApiCall = async <T>(
+export const internalApiCall = <T>(
   event: H3Event,
   endpoint: string,
   options: InternalApiOptions = {}
 ): Promise<T> => {
-  const apiUrl = getApiUrl()
-  const token = options.anonymous ? undefined : await resolveAccessToken(event)
+  const url = backendUrl(endpoint)
 
-  /**
-   * Builds the headers for one attempt; the language is read once per attempt from the incoming request.
-   *
-   * @param bearerToken - Access token to send, absent for an anonymous call.
-   * @returns The header map.
-   */
-  const buildHeaders = (bearerToken: string | undefined): Record<string, string> => {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      [LANGUAGE_HEADER]: backendLanguage(event),
-      // The backend's SSO build refuses an anonymous state-changing call without it (a bearer call is exempt).
-      [CSRF_HEADER]: CSRF_HEADER_VALUE,
-      ...options.headers,
+  return withSession(event, endpoint, options, (bearerToken, watchRenewal) =>
+    $fetch<T>(url, {
+      method: options.method ?? 'GET',
+      headers: backendHeaders(event, options, bearerToken),
+      body: options.body,
+      onResponse: watchRenewal,
+    })
+  )
+}
+
+/** A file the backend answered with, ready for a route to hand to the browser. */
+export interface BinaryResponse {
+  /** The file's bytes. A Buffer, because H3 serialises a bare ArrayBuffer as `{}`. */
+  body: Buffer
+  /** The backend's `Content-Type`. */
+  contentType: string
+  /** The backend's `Content-Disposition` (file name and attachment), or null when it sent none. */
+  contentDisposition: string | null
+}
+
+/**
+ * Makes an authenticated GET to the backend for a file rather than JSON, with the same token
+ * refresh and error forwarding as `internalApiCall`.
+ *
+ * @param event - H3 event from the Nuxt server route handler
+ * @param endpoint - API path after `/api`, e.g. `/me/invoices/7/pdf`
+ * @returns The file's bytes and the headers a download needs
+ * @throws H3Error forwarding any upstream HTTP error status, with the backend's code and sentence
+ */
+export const internalApiBinaryCall = (event: H3Event, endpoint: string): Promise<BinaryResponse> => {
+  const url = backendUrl(endpoint)
+
+  return withSession(event, endpoint, {}, async (bearerToken, watchRenewal) => {
+    const response = await $fetch.raw<ArrayBuffer>(url, {
+      method: 'GET',
+      headers: backendHeaders(event, {}, bearerToken),
+      responseType: 'arrayBuffer',
+      onResponse: watchRenewal,
+    })
+    return {
+      body: Buffer.from(response._data ?? new ArrayBuffer(0)),
+      contentType: response.headers.get('content-type') ?? 'application/octet-stream',
+      contentDisposition: response.headers.get('content-disposition'),
     }
-    if (bearerToken) {
-      headers['Authorization'] = `Bearer ${bearerToken}`
-    }
-    return headers
-  }
-
-  // Bound to a plain `string` first. Passed as a template literal, Nitro tries to match the URL
-  // against its own route table and answers with `TypedInternalResponse<...>` rather than `T` --
-  // even though this address is the external C# API and matches no Nitro route at all.
-  const url: string = `${apiUrl}/api${endpoint}`
-
-  /**
-   * Sends the request once with the given token.
-   *
-   * @param bearerToken - Access token to send, absent for an anonymous call.
-   * @returns The parsed response.
-   */
-  const makeRequest = async (bearerToken: string | undefined): Promise<T> => {
-    /** The renewed access token the backend offered on this attempt, if any. */
-    const renewal: { token: string | null } = { token: null }
-    try {
-      return await $fetch<T>(url, {
-        method: options.method ?? 'GET',
-        headers: buildHeaders(bearerToken),
-        body: options.body,
-        onResponse: ({ response }) => {
-          renewal.token = response.headers.get(RENEWED_TOKEN_HEADER)
-        },
-      })
-    } finally {
-      // Only a bearer call belongs to a session; an anonymous call has nothing to renew.
-      if (renewal.token && bearerToken) {
-        await updateAccessToken(event, renewal.token)
-      }
-    }
-  }
-
-  try {
-    return await makeRequest(token)
-  } catch (err: unknown) {
-    const failure = err as UpstreamFailure
-    const status = upstreamStatus(failure)
-
-    // On 401: attempt token refresh and retry (skip for auth endpoints to avoid loops)
-    const isAuthEndpoint = endpoint.startsWith('/auth/')
-    if (status === 401 && !isAuthEndpoint && !options.anonymous) {
-      const newToken = await refreshSession(event)
-      if (newToken) {
-        try {
-          return await makeRequest(newToken)
-        } catch (retryErr: unknown) {
-          const retryFailure = retryErr as UpstreamFailure
-          throw backendError(upstreamStatus(retryFailure), retryFailure)
-        }
-      }
-    }
-
-    throw backendError(status, failure)
-  }
+  })
 }

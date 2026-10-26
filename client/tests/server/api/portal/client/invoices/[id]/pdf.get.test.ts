@@ -1,0 +1,84 @@
+/**
+ * Tests for `GET /api/portal/client/invoices/:id/pdf`: it calls the backend `GET /me/invoices/7/pdf`
+ * with the session bearer and hands the PDF bytes and download headers back unchanged.
+ *
+ * @module tests/server/api/portal/client/invoices/[id]/pdf.get.test
+ */
+
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { makeEvent, refusal, signedIn, startBackend, storedSession } from '../../../../../../helpers/bffHarness'
+import type { RouteModule } from '../../../../../../helpers/bffHarness'
+import type { StubServer } from '../../../../../../helpers/stubServer'
+
+/** The stub playing the C# API. */
+let backend: StubServer
+
+/** The route under test. */
+let route: RouteModule
+
+/** What the stub answers with: a PDF as the backend sends it. */
+const pdfReply = () => ({
+  body: '%PDF-1.4 test',
+  headers: { 'content-type': 'application/pdf', 'content-disposition': 'attachment; filename=invoice-7.pdf' },
+})
+
+beforeEach(async () => {
+  backend = await startBackend()
+  route = await import('~/server/api/portal/client/invoices/[id]/pdf.get')
+})
+
+afterEach(async () => {
+  await backend.close()
+})
+
+describe('GET /api/portal/client/invoices/:id/pdf', () => {
+  it('forwards to the backend with the bearer token', async () => {
+    backend.respondWith(pdfReply)
+
+    await route.default(makeEvent({ params: { id: '7' }, cookies: await signedIn('jwt') }))
+
+    expect(backend.requests[0]?.method).toBe('GET')
+    expect(backend.requests[0]?.url).toBe('/api/me/invoices/7/pdf')
+    expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
+  })
+
+  it('returns the PDF bytes and download headers unchanged', async () => {
+    backend.respondWith(pdfReply)
+    const event = makeEvent({ params: { id: '7' }, cookies: await signedIn('jwt') })
+
+    const result = await route.default(event)
+
+    expect(Buffer.isBuffer(result)).toBe(true)
+    expect((result as Buffer).toString('latin1')).toBe('%PDF-1.4 test')
+    expect(event.responseHeaders).toMatchObject({
+      'content-type': 'application/pdf',
+      'content-disposition': 'attachment; filename=invoice-7.pdf',
+    })
+  })
+
+  it('passes a 404 refusal through with its code and sentence', async () => {
+    backend.respondWith(() => ({ status: 404, body: { type: 'INVOICE_NOT_FOUND', detail: 'Invoice not found.' } }))
+
+    const error = await refusal(async () => route.default(makeEvent({ params: { id: '7' }, cookies: await signedIn('jwt') })))
+
+    expect(error).toMatchObject({ statusCode: 404, statusMessage: 'Invoice not found.', data: { code: 'INVOICE_NOT_FOUND' } })
+  })
+
+  it('refreshes the session once on a 401 and retries', async () => {
+    backend.respondWith((request) => {
+      if (request.url === '/connect/token') {
+        return { body: { access_token: 'fresh', expires_in: 900 } }
+      }
+      return request.headers['authorization'] === 'Bearer fresh' ? pdfReply() : { status: 401, body: {} }
+    })
+    const cookies = await signedIn('old', { refreshToken: 'r' })
+    const event = makeEvent({ params: { id: '7' }, cookies })
+
+    const result = await route.default(event)
+
+    expect((result as Buffer).toString('latin1')).toBe('%PDF-1.4 test')
+    const backendAuth = backend.requests.filter((r) => r.url.startsWith('/api/')).map((r) => r.headers['authorization'])
+    expect(backendAuth).toEqual(['Bearer old', 'Bearer fresh'])
+    expect(await storedSession(cookies)).toMatchObject({ accessToken: 'fresh', refreshToken: 'r' })
+  })
+})
