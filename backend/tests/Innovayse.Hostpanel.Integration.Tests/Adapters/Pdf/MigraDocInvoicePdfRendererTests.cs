@@ -6,6 +6,7 @@ using Innovayse.Hostpanel.Infrastructure.Storage.Settings;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using SkiaSharp;
 using UglyToad.PdfPig;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Pdf;
@@ -237,6 +238,163 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
 
         CompactText(document).Should().Contain("Service60");
         Compact(document.GetPage(total).Text).Should().Contain("Total");
+    }
+
+    /// <summary>A paid invoice is stamped PAID with the date it was paid.</summary>
+    [Fact]
+    public async Task Render_StampsPaidWithDate()
+    {
+        var model = SampleModel() with
+        {
+            Status = InvoiceStatus.Paid,
+            PaidAt = new DateTimeOffset(2026, 10, 20, 12, 0, 0, TimeSpan.Zero),
+        };
+
+        using var document = await RenderAsync(model);
+
+        var text = Compact(document.GetPage(1).Text);
+        text.Should().Contain("PAID");
+        text.Should().Contain("2026-10-20");
+    }
+
+    /// <summary>A draft invoice is stamped DRAFT.</summary>
+    [Fact]
+    public async Task Render_StampsDraft()
+    {
+        using var document = await RenderAsync(SampleModel() with { Status = InvoiceStatus.Draft });
+
+        CompactText(document).Should().Contain("DRAFT");
+    }
+
+    /// <summary>An unpaid invoice carries no stamp.</summary>
+    [Fact]
+    public async Task Render_NoStampForUnpaid()
+    {
+        using var document = await RenderAsync(SampleModel());
+
+        var text = CompactText(document);
+        text.Should().NotContain("PAID");
+        text.Should().NotContain("DRAFT");
+    }
+
+    /// <summary>A logo uploaded to the branding directory is drawn on the first page.</summary>
+    [Fact]
+    public async Task Render_DrawsLocalLogo()
+    {
+        WriteFile("uploads/branding/abc/logo.png", Png(200, 80));
+
+        using var document = await RenderAsync(SampleModel() with { LogoPath = "/uploads/branding/abc/logo.png" });
+
+        document.GetPage(1).GetImages().Should().HaveCount(1);
+    }
+
+    /// <summary>
+    /// With a logo the seller block is taller than the dates beside it, and the bill-to block
+    /// still starts below all of it rather than printing over the seller's last line.
+    /// </summary>
+    [Fact]
+    public async Task Render_StartsBillToBelowSellerWithLogo()
+    {
+        WriteFile("uploads/branding/abc/logo.png", Png(320, 90));
+
+        using var document = await RenderAsync(SampleModel() with
+        {
+            LogoPath = "/uploads/branding/abc/logo.png",
+            Seller = new InvoicePdfParty("Fairhaven Hosting", ["1 Market Street", "Fairhaven 0010", "Armenia", "Tax ID: 123456"]),
+        });
+
+        // PdfPig's y grows upwards: below means a smaller top.
+        var words = document.GetPage(1).GetWords().ToList();
+        var sellerLast = words.Single(w => w.Text == "123456");
+        var billTo = words.First(w => w.Text == "Bill");
+        billTo.BoundingBox.Top.Should().BeLessThan(sellerLast.BoundingBox.Bottom);
+    }
+
+    /// <summary>
+    /// A logo file the process cannot read (say, a restored volume with the wrong owner) prints the
+    /// invoice without a logo rather than failing every download.
+    /// </summary>
+    [Fact]
+    public async Task Render_SkipsUnreadableLogo()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        WriteFile("uploads/branding/locked/logo.png", Png(200, 80));
+        var path = Path.Combine(_webRoot, "web", "uploads/branding/locked/logo.png");
+        File.SetUnixFileMode(path, UnixFileMode.None);
+        bool readable;
+        try
+        {
+            using var probe = File.OpenRead(path);
+            readable = true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            readable = false;
+        }
+
+        if (readable)
+        {
+            // Running as root: the file is readable after all, so there is nothing to test.
+            return;
+        }
+
+        using var document = await RenderAsync(SampleModel() with { LogoPath = "/uploads/branding/locked/logo.png" });
+
+        document.GetPage(1).GetImages().Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// A logo setting that is external, escapes the branding directory, names a missing file or
+    /// names a file that is not an image prints the invoice without a logo instead of failing.
+    /// </summary>
+    /// <param name="logoPath">The <c>portal.logo</c> value.</param>
+    [Theory]
+    [InlineData("https://cdn.example.com/logo.png")]
+    [InlineData("/uploads/branding/../../secret.png")]
+    [InlineData("/uploads/branding/missing/logo.png")]
+    [InlineData("/uploads/branding/corrupt/logo.png")]
+    [InlineData("/somewhere-else/logo.png")]
+    public async Task Render_SkipsUnusableLogo(string logoPath)
+    {
+        // Real files behind the traversal and outside-the-directory cases, so only the guard stops them.
+        WriteFile("../secret.png", Png(200, 80));
+        WriteFile("secret.png", Png(200, 80));
+        WriteFile("somewhere-else/logo.png", Png(200, 80));
+        WriteFile("uploads/branding/corrupt/logo.png", "not an image"u8.ToArray());
+
+        using var document = await RenderAsync(SampleModel() with { LogoPath = logoPath });
+
+        document.GetPage(1).GetImages().Should().BeEmpty();
+    }
+
+    /// <summary>Writes a file under the test's web root, creating its directory.</summary>
+    /// <param name="relativePath">Path below the web root.</param>
+    /// <param name="content">The bytes to write.</param>
+    private void WriteFile(string relativePath, byte[] content)
+    {
+        var path = Path.GetFullPath(Path.Combine(_webRoot, "web", relativePath));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllBytes(path, content);
+    }
+
+    /// <summary>Draws a solid PNG.</summary>
+    /// <param name="width">Width in pixels.</param>
+    /// <param name="height">Height in pixels.</param>
+    /// <returns>The encoded image.</returns>
+    private static byte[] Png(int width, int height)
+    {
+        using var bitmap = new SKBitmap(width, height);
+        using (var canvas = new SKCanvas(bitmap))
+        {
+            canvas.Clear(SKColors.SteelBlue);
+        }
+
+        using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
     }
 
     /// <summary>

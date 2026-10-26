@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Infrastructure.Storage.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
@@ -19,8 +20,14 @@ namespace Innovayse.Hostpanel.Infrastructure.Pdf;
 /// <remarks>
 /// <para>
 /// MigraDoc does the layout: wrapping, the items table with its header repeated on every page it
-/// runs onto, page breaks and the page-number footer. Text is set as text, so the PDF stays
-/// searchable and selectable.
+/// runs onto, page breaks and the page-number footer. The PAID or DRAFT stamp is the one thing
+/// drawn afterwards, straight onto the first page with PDFsharp, because MigraDoc cannot rotate
+/// text. Text is set as text, so the PDF stays searchable and selectable.
+/// </para>
+/// <para>
+/// The logo is read only from the branding upload directory under the web root. A
+/// <c>portal.logo</c> that is a URL, or a path that leads anywhere else, is left out: rendering
+/// never reaches the network and never opens a file outside that directory.
 /// </para>
 /// </remarks>
 public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
@@ -49,10 +56,19 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// <summary>Size of the invoice number in the header.</summary>
     private const double TitleSize = 18;
 
+    /// <summary>Size of the PAID or DRAFT stamp.</summary>
+    private const double StampSize = 40;
+
+    /// <summary>Rotation of the stamp, in degrees.</summary>
+    private const double StampAngle = -20;
+
+    /// <summary>Vertical centre of the stamp: across the table on a typical first page.</summary>
+    private const double StampCentreY = PageHeight * 0.385;
+
     /// <summary>Thickness of table rules.</summary>
     private const double RuleWidth = 0.75;
 
-    /// <summary>Space between the totals rule and the total.</summary>
+    /// <summary>Space below the logo and between the totals rule and the total.</summary>
     private const double RuleGap = 6;
 
     /// <summary>Space above and below the text of a table row.</summary>
@@ -103,6 +119,12 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// <summary>Width of the totals block at the bottom right.</summary>
     private const double TotalsWidth = 220;
 
+    /// <summary>Largest width the logo is drawn at.</summary>
+    private const double LogoMaxWidth = 160;
+
+    /// <summary>Largest height the logo is drawn at.</summary>
+    private const double LogoMaxHeight = 60;
+
     /// <summary>The date format every date on the invoice uses.</summary>
     private const string DateFormat = "yyyy-MM-dd";
 
@@ -114,6 +136,12 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
 
     /// <summary>Colour of table rules.</summary>
     private static readonly Color Rule = new(0xD1, 0xD5, 0xDB);
+
+    /// <summary>Colour of the PAID stamp, translucent so the page shows through.</summary>
+    private static readonly XColor PaidStamp = XColor.FromArgb(0x55, 0x16, 0xA3, 0x4A);
+
+    /// <summary>Colour of the DRAFT stamp, translucent so the page shows through.</summary>
+    private static readonly XColor DraftStamp = XColor.FromArgb(0x55, 0x6B, 0x72, 0x80);
 
     /// <summary>Where the web root is, for finding an uploaded logo.</summary>
     private readonly IWebHostEnvironment _env;
@@ -163,7 +191,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
         setup.BottomMargin = Margin + FooterHeight;
         setup.FooterDistance = Margin - SmallSize;
 
-        AddHeader(section, model);
+        AddHeader(section, model, LoadLogo(model.LogoPath));
         AddParty(section.Elements, "Bill to", model.BillTo).Format.SpaceBefore = SectionGap;
         AddItems(section, model);
         AddTotals(section, model);
@@ -172,6 +200,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
         var renderer = new PdfDocumentRenderer { Document = document };
         renderer.RenderDocument();
         using var pdf = renderer.PdfDocument;
+        DrawStamp(pdf.Pages[0], model);
 
         using var output = new MemoryStream();
         pdf.Save(output, false);
@@ -261,13 +290,14 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     }
 
     /// <summary>
-    /// Adds the seller on the left and the invoice number, dates and status on the right,
+    /// Adds the logo and seller on the left and the invoice number, dates and status on the right,
     /// as one borderless table row so a long seller address wraps beside the dates instead of over
     /// them, and whatever follows starts below the taller side.
     /// </summary>
     /// <param name="section">The section being built.</param>
     /// <param name="model">The invoice.</param>
-    private static void AddHeader(Section section, InvoicePdfModel model)
+    /// <param name="logo">The logo's PNG bytes and size in points, or null for none.</param>
+    private static void AddHeader(Section section, InvoicePdfModel model, (byte[] Png, double Width, double Height)? logo)
     {
         var table = section.AddTable();
         table.LeftPadding = 0;
@@ -278,7 +308,16 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
         table.AddColumn(HeaderRightBlockWidth);
         var row = table.AddRow();
 
-        AddParty(row.Cells[0].Elements, null, model.Seller);
+        var seller = row.Cells[0];
+        if (logo is { } image)
+        {
+            var picture = seller.AddImage("base64:" + Convert.ToBase64String(image.Png));
+            picture.LockAspectRatio = false;
+            picture.Width = image.Width;
+            picture.Height = image.Height;
+        }
+
+        AddParty(seller.Elements, null, model.Seller, firstSpaceBefore: logo is null ? 0 : RuleGap);
 
         var details = row.Cells[1].Elements;
         AddText(details, $"Invoice #{model.InvoiceId}", bold: true, TitleSize, alignment: ParagraphAlignment.Right)
@@ -419,6 +458,35 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
         footer.AddNumPagesField();
     }
 
+    /// <summary>Stamps the first page PAID (with the date) or DRAFT; other statuses get no stamp.</summary>
+    /// <param name="page">The rendered first page.</param>
+    /// <param name="model">The invoice.</param>
+    private static void DrawStamp(PdfSharp.Pdf.PdfPage page, InvoicePdfModel model)
+    {
+        var (text, color) = model.Status switch
+        {
+            InvoiceStatus.Paid => (
+                model.PaidAt is { } paidAt ? $"PAID {paidAt.ToString(DateFormat, CultureInfo.InvariantCulture)}" : "PAID",
+                PaidStamp),
+            InvoiceStatus.Draft => ("DRAFT", DraftStamp),
+            _ => (null, XColors.Transparent),
+        };
+        if (text is null)
+        {
+            return;
+        }
+
+        using var graphics = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append);
+        var centre = new XPoint(PageWidth / 2, StampCentreY);
+        graphics.RotateAtTransform(StampAngle, centre);
+        graphics.DrawString(
+            text,
+            new XFont(PdfFonts.Primary, StampSize, XFontStyleEx.Bold),
+            new XSolidBrush(color),
+            centre,
+            XStringFormats.Center);
+    }
+
     /// <summary>Turns an enum name into words: <c>PaymentPending</c> becomes <c>Payment pending</c>.</summary>
     /// <param name="name">The enum member's name.</param>
     /// <returns>The words, first letter capitalised.</returns>
@@ -429,4 +497,47 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// <returns>The compiled expression.</returns>
     [GeneratedRegex("(?<=[a-z])[A-Z]")]
     private static partial Regex WordBoundary();
+
+    /// <summary>
+    /// Reads the logo when <paramref name="logoPath"/> names an image inside the branding upload
+    /// directory; otherwise logs why at Debug and returns null.
+    /// </summary>
+    /// <param name="logoPath">The <c>portal.logo</c> value as stored.</param>
+    /// <returns>The image bytes and the size to draw it at, or null to print without a logo.</returns>
+    private (byte[] Png, double Width, double Height)? LoadLogo(string? logoPath)
+    {
+        if (string.IsNullOrWhiteSpace(logoPath))
+        {
+            return null;
+        }
+
+        if (Uri.TryCreate(logoPath, UriKind.Absolute, out var uri) && uri.Scheme is not "file")
+        {
+            _logger.LogDebug("Invoice PDF logo skipped: {LogoPath} is not a local upload.", logoPath);
+            return null;
+        }
+
+        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+        var baseDir = Path.GetFullPath(Path.Combine(webRoot, _branding.RelativePath)) + Path.DirectorySeparatorChar;
+        var relative = logoPath.Split('?', 2)[0].TrimStart('/');
+        var full = Path.GetFullPath(Path.Combine(webRoot, relative));
+        if (!full.StartsWith(baseDir, StringComparison.Ordinal) || !File.Exists(full))
+        {
+            _logger.LogDebug("Invoice PDF logo skipped: {LogoPath} is not a file in the branding directory.", logoPath);
+            return null;
+        }
+
+        try
+        {
+            var bytes = File.ReadAllBytes(full);
+            using var image = XImage.FromStream(new MemoryStream(bytes));
+            var scale = Math.Min(1, Math.Min(LogoMaxWidth / image.PixelWidth, LogoMaxHeight / image.PixelHeight));
+            return (bytes, image.PixelWidth * scale, image.PixelHeight * scale);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or NotSupportedException or IOException or UnauthorizedAccessException)
+        {
+            _logger.LogDebug(ex, "Invoice PDF logo skipped: {LogoPath} could not be read or decoded.", logoPath);
+            return null;
+        }
+    }
 }
