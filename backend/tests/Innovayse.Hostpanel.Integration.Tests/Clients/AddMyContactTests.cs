@@ -29,9 +29,9 @@ public sealed class AddMyContactTests(IntegrationTestFactory factory) : IClassFi
         listed.EnumerateArray().Single().GetProperty("firstName").GetString().Should().Be("Billing");
     }
 
-    /// <summary>A caller with the Client role but no client row answers 404.</summary>
+    /// <summary>A caller with the Client role but no client row owns no account and is linked to none, so the permission gate refuses before any write with 403 <c>CLIENT_PERMISSION_DENIED</c>.</summary>
     [Fact]
-    public async Task AddMyContactWithNoClientRowRefusesNotFound()
+    public async Task AddMyContactWithNoClientRowIsRefusedByThePermissionGate()
     {
         var (client, clientId, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "add-my-contact-orphaned");
         using (var scope = factory.Services.CreateScope())
@@ -42,8 +42,8 @@ public sealed class AddMyContactTests(IntegrationTestFactory factory) : IClassFi
 
         var response = await client.PostAsJsonAsync("/api/clients/me/contacts", ClientsTestSeeds.ContactBody("Billing"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_PROFILE_NOT_FOUND);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_PERMISSION_DENIED);
     }
 
     /// <summary>The route is not for anonymous callers.</summary>

@@ -1,25 +1,42 @@
 <template>
   <div class="w-full">
-    <label v-if="label" :for="id" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+    <label v-if="label" :for="inputId" class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
       {{ label }}
       <span v-if="required" class="text-primary-600 dark:text-primary-400">*</span>
     </label>
 
-    <div class="relative phone-input-container" :class="{ 'has-error': error }" :data-testid="testid">
-      <ClientOnly>
-        <vue-tel-input
-          v-bind="bindProps"
-          :model-value="modelValue"
-          @on-input="handleTelInput"
-        />
-      </ClientOnly>
-
-      <AlertCircle
-        v-if="error"
-        :size="20"
-        :stroke-width="2"
-        class="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 pointer-events-none z-10"
+    <!-- Row: the country picker (which anchors its panel to this row) and the national number -->
+    <div class="relative flex items-stretch gap-2">
+      <UiPhoneCountryPicker
+        :model-value="country"
+        :disabled="disabled"
+        :error="Boolean(error)"
+        testid="phone-country-trigger"
+        @update:model-value="onCountry"
       />
+
+      <div class="relative min-w-0 flex-1">
+        <input
+          :id="inputId"
+          :value="national"
+          type="tel"
+          inputmode="tel"
+          autocomplete="tel-national"
+          :placeholder="t('ui.phoneExample')"
+          :required="required"
+          :disabled="disabled"
+          :aria-invalid="error ? 'true' : undefined"
+          :data-testid="testid"
+          :class="inputClasses"
+          @input="onNational(($event.target as HTMLInputElement).value)"
+        >
+        <AlertCircle
+          v-if="error"
+          :size="20"
+          :stroke-width="2"
+          class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-red-500"
+        />
+      </div>
     </div>
 
     <p v-if="error" class="mt-2 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
@@ -29,26 +46,23 @@
 
 <script setup lang="ts">
 /**
- * PhoneInput (`UiPhoneInput`) - an international phone field with a country picker.
+ * PhoneInput (`UiPhoneInput`) - an international phone field: a country picker (flag and calling
+ * code, searchable list) beside the field for the national number.
  *
- * Wraps the tel-input widget; its own DOM is restyled in `assets/css/ui.css` (the widget's markup
- * is not ours, so that is the one place classes cannot be used). It renders on the client only,
- * and emits the number in international format when it parses, otherwise the raw text.
+ * The stored value keeps its format: the number in international format (`+37410123456`) when it
+ * is valid for the chosen country, otherwise the text as typed behind the calling code. A value
+ * that arrives from outside is split back into country and national number; one this field just
+ * emitted is not, so typing never moves the chosen country under the reader.
  */
-import { computed } from 'vue'
-import { VueTelInput } from 'vue-tel-input'
-import 'vue-tel-input/vue-tel-input.css'
+import { computed, ref, useId, watch } from 'vue'
 import { AlertCircle } from 'lucide-vue-next'
-
-/** The parsed phone-number object emitted by the tel input. */
-interface PhoneParseResult {
-  /** The number in international format, when valid. */
-  number?: string
-}
+import { DEFAULT_PHONE_COUNTRY, composePhoneValue, splitPhoneValue } from '~/utils/phoneCountries'
+import { UiSize } from '~/utils/ui/enums'
+import { CONTROL_SIZE_CLASSES, fieldStateClasses } from '~/utils/ui/tones'
 
 /** Props of PhoneInput. */
 interface Props {
-  /** DOM id of the inner input. */
+  /** DOM id of the number input; generated when omitted so the label is always bound. */
   id?: string
   /** Label text above the field. */
   label?: string
@@ -62,7 +76,7 @@ interface Props {
   error?: string
   /** Neutral help line, hidden while an error shows. */
   hint?: string
-  /** `data-testid` of the field container. */
+  /** `data-testid` of the number input. */
   testid?: string
 }
 
@@ -82,44 +96,69 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   /** The number changed. */
   'update:modelValue': [value: string]
-  /** The tel input parsed a number; carries its parse result. */
-  onInput: [result: PhoneParseResult]
 }>()
 
 /** Translator for the strings this component builds itself. */
 const { t } = useI18n()
 
+/** Generated id used when the caller passes none. */
+const generatedId = useId()
+
+/** The id bound to both the label and the number input. */
+const inputId = computed(() => props.id ?? generatedId)
+
+/** ISO code of the chosen country; Armenia, the operator's home market, until the reader picks. */
+const country = ref(DEFAULT_PHONE_COUNTRY)
+
+/** The national part of the number, as typed. */
+const national = ref('')
+
+/** The last value this field emitted, so the echo from the parent is not split again. */
+let lastEmitted: string | undefined
+
+/** Class list of the number input: the kit's field frame at the standard size. */
+const inputClasses = computed(() => [
+  fieldStateClasses({ error: Boolean(props.error), disabled: props.disabled }),
+  'placeholder:text-gray-500 dark:placeholder:text-gray-400',
+  CONTROL_SIZE_CLASSES[UiSize.Md],
+  props.error ? 'pr-10' : '',
+].filter(Boolean).join(' '))
+
 /**
- * Normalises the tel input event: the parsed international number when present, else the raw one.
- *
- * @param number The raw text typed into the field.
- * @param object The parsed phone object from the tel input.
+ * Publishes the value for the current country and number.
  */
-const handleTelInput = (number: string, object: PhoneParseResult): void => {
-  const value = (object && object.number) ? object.number : number
-  emit('update:modelValue', value)
-  emit('onInput', object)
+const publish = (): void => {
+  lastEmitted = composePhoneValue(country.value, national.value)
+  emit('update:modelValue', lastEmitted)
 }
 
-/** Options handed to the tel input widget. */
-const bindProps = computed(() => ({
-  mode: 'international' as const,
-  disabled: props.disabled,
-  placeholder: t('ui.phoneNumber'),
-  required: props.required,
-  dropdownOptions: {
-    showSearchBox: true,
-    showFlags: true,
-    showDialCodeInList: true,
-    showDialCodeInSelection: false,
-  },
-  inputOptions: {
-    id: props.id,
-    showDialCode: true,
-    placeholder: t('ui.phoneExample'),
-  },
-  autoDefaultCountry: true,
-  // Armenia is the operator's home market, so it is the country offered first.
-  defaultCountry: 'AM',
-}))
+/**
+ * Takes the number the reader typed.
+ *
+ * @param value The text of the number input.
+ */
+const onNational = (value: string): void => {
+  national.value = value
+  publish()
+}
+
+/**
+ * Takes the country the reader picked.
+ *
+ * @param iso ISO code of the picked country.
+ */
+const onCountry = (iso: string): void => {
+  country.value = iso
+  publish()
+}
+
+/** Splits a value that came from outside into the picker and the number input. */
+watch(() => props.modelValue, (value) => {
+  if (value === lastEmitted) {
+    return
+  }
+  const parts = splitPhoneValue(value ?? '', country.value)
+  country.value = parts.iso
+  national.value = parts.national
+}, { immediate: true })
 </script>

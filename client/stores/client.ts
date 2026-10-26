@@ -15,7 +15,9 @@
 
 import { defineStore } from 'pinia'
 import { useClientApi } from '~/composables/apis/useClientApi'
+import { Permission } from '~/composables/usePermissions'
 import { PortalErrorCode, apiErrorCode, apiErrorMessage } from '~/lib/errorHandler'
+import { holdsPermission } from '~/utils/holdsPermission'
 import { isInvoiceOutstanding } from '~/utils/invoice'
 import type { ClientEmail } from '~/types/clientemail'
 import type { ClientUser } from '~/types/clientuser'
@@ -144,6 +146,16 @@ export const useClientStore = defineStore('client', {
       state.user
         ? `${state.user.firstname} ${state.user.lastname}`.trim()
         : '',
+
+    /**
+     * Whether the signed-in person holds a permission, for sections that would otherwise send a
+     * request the API is certain to refuse (a 403 per section, each one a console error).
+     *
+     * Answers true while the person is not loaded: with no identity there is nothing to hide
+     * behind, so the section still asks and the API, which enforces the same flags, decides.
+     */
+    mayDo: (state) => (flag: number): boolean =>
+      !state.user || holdsPermission(state.user.permissions, flag),
 
     /** First letter of name for avatar */
     userInitial: (state): string => {
@@ -290,6 +302,10 @@ export const useClientStore = defineStore('client', {
         if (!(await this.isCustomerAccount())) {
           return
         }
+        // A linked user who was not granted this section never asks for it; the API would refuse.
+        if (!this.mayDo(Permission.ViewProductsServices)) {
+          return
+        }
         this.services = await useClientApi().fetchServices()
         this.servicesLoaded = true
       } catch (err) {
@@ -323,6 +339,10 @@ export const useClientStore = defineStore('client', {
       this.invoicesError = null
       try {
         if (!(await this.isCustomerAccount())) {
+          return
+        }
+        // A linked user who was not granted this section never asks for it; the API would refuse.
+        if (!this.mayDo(Permission.ViewPayInvoices)) {
           return
         }
         this.invoices = await useClientApi().fetchInvoices()
@@ -360,6 +380,10 @@ export const useClientStore = defineStore('client', {
         if (!(await this.isCustomerAccount())) {
           return
         }
+        // A linked user who was not granted this section never asks for it; the API would refuse.
+        if (!this.mayDo(Permission.ViewDomains)) {
+          return
+        }
         this.domains = await useClientApi().fetchDomains()
         this.domainsLoaded = true
       } catch (err) {
@@ -393,6 +417,10 @@ export const useClientStore = defineStore('client', {
       this.ticketsError = null
       try {
         if (!(await this.isCustomerAccount())) {
+          return
+        }
+        // A linked user who was not granted this section never asks for it; the API would refuse.
+        if (!this.mayDo(Permission.ViewOpenSupportTickets)) {
           return
         }
         this.tickets = await useClientApi().fetchTickets()

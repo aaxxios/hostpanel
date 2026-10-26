@@ -32,18 +32,18 @@
     <ClientDashboardAlerts />
 
     <UiGrid cols="2" gap="lg">
-      <ClientDashboardServicesCard />
-      <ClientDashboardInvoicesCard />
+      <ClientDashboardServicesCard v-if="store.mayDo(Permission.ViewProductsServices)" />
+      <ClientDashboardInvoicesCard v-if="store.mayDo(Permission.ViewPayInvoices)" />
     </UiGrid>
 
     <UiGrid cols="2" gap="lg">
-      <ClientDashboardDomainsCard />
-      <ClientDashboardTicketsCard />
+      <ClientDashboardDomainsCard v-if="store.mayDo(Permission.ViewDomains)" />
+      <ClientDashboardTicketsCard v-if="store.mayDo(Permission.ViewOpenSupportTickets)" />
     </UiGrid>
 
     <UiGrid cols="2" gap="lg">
       <ClientDashboardNewsCard />
-      <ClientDashboardRegisterDomainCard />
+      <ClientDashboardRegisterDomainCard v-if="store.mayDo(Permission.PlaceNewOrders)" />
     </UiGrid>
   </UiStack>
 </template>
@@ -57,6 +57,7 @@
  * slice from the store, and the derived lists live in {@link useDashboardSummary}.
  */
 import { RefreshCw } from 'lucide-vue-next'
+import { Permission } from '~/composables/usePermissions'
 import { useClientStore } from '~/stores/client'
 import { useContentStore } from '~/stores/content'
 

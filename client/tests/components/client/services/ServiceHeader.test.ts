@@ -3,6 +3,8 @@
  */
 import { describe, expect, it } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
+import { grantPermissions } from '~/tests/helpers/grantPermissions'
+import { Permission } from '~/composables/usePermissions'
 import ServiceHeader from '~/components/client/services/ServiceHeader.vue'
 import type { ServiceDetail } from '~/types/servicedetail'
 import { ServiceStatus } from '~/types/servicestatus'
@@ -59,5 +61,17 @@ describe('ServiceHeader', () => {
     await wrapper.find('[data-testid="service-cpanel-login"]').trigger('click')
 
     expect(wrapper.emitted('cpanel')).toHaveLength(1)
+  })
+})
+
+describe('ServiceHeader permissions', () => {
+  it('offers the control-panel button only to a person allowed single sign-on', async () => {
+    const wrapper = mountClient(ServiceHeader, { props: { service: service(), ssoLoading: false } })
+
+    await grantPermissions(Permission.ViewProductsServices)
+    expect(wrapper.find('[data-testid="service-cpanel-login"]').exists()).toBe(false)
+
+    await grantPermissions(Permission.ViewProductsServices | Permission.AllowSingleSignOn)
+    expect(wrapper.find('[data-testid="service-cpanel-login"]').exists()).toBe(true)
   })
 })

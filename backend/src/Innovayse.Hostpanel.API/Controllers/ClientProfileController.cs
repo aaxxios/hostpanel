@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.API.Authorization;
+using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Application.Clients.Commands.AddMyContact;
 using Innovayse.Hostpanel.Application.Clients.Commands.RemoveMyContact;
 using Innovayse.Hostpanel.Application.Clients.Commands.UpdateMyContact;
@@ -38,6 +40,7 @@ public sealed class ClientProfileController : BaseApiController
     /// <returns>200 with the profile; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>.</returns>
     [HttpGet]
     [Authorize(Policy = Policies.Client)]
+    [AvailableToEveryClientUser]
     [ProducesResponseType(typeof(ClientDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyProfileAsync(CancellationToken ct)
@@ -49,9 +52,13 @@ public sealed class ClientProfileController : BaseApiController
     /// <summary>Updates the authenticated client's own profile and billing address.</summary>
     /// <param name="command">The updated profile data. A client id or currency in the body, if any, is ignored.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the updated profile; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>.</returns>
+    /// <returns>
+    /// 200 with the updated profile; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ModifyMasterProfile</c>.
+    /// </returns>
     [HttpPut]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ModifyMasterProfile)]
     [ProducesResponseType(typeof(ClientDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMyProfileAsync([FromBody] UpdateMyProfileCommand command, CancellationToken ct)
@@ -62,9 +69,13 @@ public sealed class ClientProfileController : BaseApiController
 
     /// <summary>Returns the additional contacts on the authenticated client's own account.</summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the account's contacts; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>.</returns>
+    /// <returns>
+    /// 200 with the account's contacts; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewManageContacts</c>.
+    /// </returns>
     [HttpGet("contacts")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewManageContacts)]
     [ProducesResponseType(typeof(IReadOnlyList<ContactDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyContactsAsync(CancellationToken ct)
@@ -76,9 +87,13 @@ public sealed class ClientProfileController : BaseApiController
     /// <summary>Adds a contact to the authenticated client's own account.</summary>
     /// <param name="command">The contact to add. A client id in the body, if any, is ignored.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>204 when written; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>.</returns>
+    /// <returns>
+    /// 204 when written; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewManageContacts</c>.
+    /// </returns>
     [HttpPost("contacts")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewManageContacts)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddMyContactAsync([FromBody] AddMyContactCommand command, CancellationToken ct)
@@ -92,10 +107,12 @@ public sealed class ClientProfileController : BaseApiController
     /// <param name="command">The updated contact data. A client id in the body, if any, is ignored.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when written; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c> or <c>MY_CONTACT_NOT_FOUND</c>.
+    /// 204 when written; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c> or <c>MY_CONTACT_NOT_FOUND</c>;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewManageContacts</c>.
     /// </returns>
     [HttpPut("contacts/{contactId:int}")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewManageContacts)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMyContactAsync(
@@ -109,10 +126,12 @@ public sealed class ClientProfileController : BaseApiController
     /// <param name="contactId">The contact primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when removed; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c> or <c>MY_CONTACT_NOT_FOUND</c>.
+    /// 204 when removed; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c> or <c>MY_CONTACT_NOT_FOUND</c>;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewManageContacts</c>.
     /// </returns>
     [HttpDelete("contacts/{contactId:int}")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewManageContacts)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveMyContactAsync(int contactId, CancellationToken ct)

@@ -44,6 +44,9 @@ const authApi = {
 /** Mocked profile reload on the client store. */
 const fetchUser = vi.fn()
 
+/** Mocked permission check on the client store; every permission is held unless a test says otherwise. */
+const mayDo = vi.fn()
+
 vi.stubGlobal('ref', ref)
 
 vi.mock('qrcode', () => ({
@@ -88,9 +91,9 @@ vi.mock('~/stores/client', () => ({
   /**
    * Stands in for the client store.
    *
-   * @returns A store exposing only the profile reload.
+   * @returns A store exposing only the profile reload and the permission check.
    */
-  useClientStore: () => ({ fetchUser })
+  useClientStore: () => ({ fetchUser, mayDo })
 }))
 
 const { useAccountStore } = await import('~/stores/account')
@@ -109,6 +112,8 @@ beforeEach(() => {
     }
   }
   fetchUser.mockReset()
+  mayDo.mockReset()
+  mayDo.mockReturnValue(true)
 })
 
 describe('useAccountStore.saveProfile', () => {
@@ -351,5 +356,32 @@ describe('useAccountStore reads', () => {
 
     await store.loadGatewayMethods()
     expect(store.gatewayMethods).toEqual([])
+  })
+})
+
+describe('useAccountStore reads without the permission', () => {
+  it.each([
+    ['loadUsers', 'fetchUsers', 'users'],
+    ['loadContacts', 'fetchContacts', 'contacts'],
+    ['loadEmails', 'fetchEmails', 'emails'],
+  ] as const)('%s sends no request and leaves the list empty', async (action, endpoint, list) => {
+    mayDo.mockReturnValue(false)
+    const store = useAccountStore()
+
+    await store[action]()
+
+    expect(clientApi[endpoint]).not.toHaveBeenCalled()
+    expect(store[list]).toEqual([])
+  })
+
+  it('loadPaymentMethods sends no request and reports no failure', async () => {
+    mayDo.mockReturnValue(false)
+    const store = useAccountStore()
+
+    await store.loadPaymentMethods()
+
+    expect(billingApi.fetchPaymentMethods).not.toHaveBeenCalled()
+    expect(store.paymentMethods).toEqual([])
+    expect(store.paymentLoadError).toBeNull()
   })
 })

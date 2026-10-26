@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.API.Authorization;
+using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Notifications.Common;
 using Innovayse.Hostpanel.Application.Notifications.Queries.GetMyEmailLog;
@@ -37,9 +39,13 @@ public sealed class MyEmailsController : BaseApiController
     /// <param name="page">1-based page number.</param>
     /// <param name="pageSize">Entries per page; the query clamps this to 1-100.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the page; 401 without a session; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>.</returns>
+    /// <returns>
+    /// 200 with the page; 401 without a session; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewEmails</c>.
+    /// </returns>
     [HttpGet]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewEmails)]
     [ProducesResponseType(typeof(PagedResult<EmailLogDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyEmailsAsync(
@@ -59,10 +65,12 @@ public sealed class MyEmailsController : BaseApiController
     /// 200 with the email; 404 with <c>EMAIL_LOG_NOT_FOUND</c> when it does not exist or belongs
     /// to another account -- the two are answered alike on purpose, see
     /// <see cref="Application.Notifications.Queries.GetClientEmailLog.GetClientEmailLogHandler"/>;
-    /// 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>.
+    /// 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewEmails</c>.
     /// </returns>
     [HttpGet("{id:int}")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewEmails)]
     [ProducesResponseType(typeof(EmailLogDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyEmailAsync(int id, CancellationToken ct)

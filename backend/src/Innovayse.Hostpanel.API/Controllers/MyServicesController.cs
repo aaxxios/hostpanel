@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.API.Authorization;
+using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Application.Billing.Queries.GetMyServiceInvoices;
 using Innovayse.Hostpanel.Application.Provisioning.Commands.ChangeMyServicePassword;
 using Innovayse.Hostpanel.Application.Provisioning.Queries.GetMyServiceControlPanelSsoUrl;
@@ -55,10 +57,12 @@ public sealed class MyServicesController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 with the caller's services; 401 without a session; 404 with
-    /// <c>CLIENT_PROFILE_NOT_FOUND</c> when the caller has no client record.
+    /// <c>CLIENT_PROFILE_NOT_FOUND</c> when the caller has no client record;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewProductsServices</c>.
     /// </returns>
     [HttpGet]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewProductsServices)]
     [ProducesResponseType(typeof(IReadOnlyList<ClientServiceDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMineAsync(CancellationToken ct)
@@ -74,10 +78,12 @@ public sealed class MyServicesController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 201 with the new service id; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>,
-    /// <c>PRODUCT_NOT_FOUND</c> or <c>PRODUCT_NOT_AVAILABLE</c>.
+    /// <c>PRODUCT_NOT_FOUND</c> or <c>PRODUCT_NOT_AVAILABLE</c>;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>PlaceNewOrders</c>.
     /// </returns>
     [HttpPost]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.PlaceNewOrders)]
     [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> OrderAsync([FromBody] OrderMyServiceCommand command, CancellationToken ct)
@@ -93,10 +99,12 @@ public sealed class MyServicesController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 with <c>{ url }</c> carrying the control-panel SSO address; 404 with
-    /// <c>SERVICE_NOT_FOUND</c> when the service is not the caller's; 401.
+    /// <c>SERVICE_NOT_FOUND</c> when the service is not the caller's; 401;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>AllowSingleSignOn</c>.
     /// </returns>
     [HttpGet("{id:int}/cpanel-sso")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.AllowSingleSignOn)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetCPanelSsoUrlAsync(int id, CancellationToken ct)
@@ -116,10 +124,12 @@ public sealed class MyServicesController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 on success; 404 with <c>SERVICE_NOT_FOUND</c> when the service is not the caller's,
-    /// or <c>CANCELLATION_ALREADY_PENDING</c> (409) when one is already open; 401.
+    /// or <c>CANCELLATION_ALREADY_PENDING</c> (409) when one is already open; 401;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>PlaceNewOrders</c>.
     /// </returns>
     [HttpPost("{id:int}/cancel")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.PlaceNewOrders)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
@@ -144,10 +154,12 @@ public sealed class MyServicesController : BaseApiController
     /// <returns>
     /// 200 on successful setup and provisioning; 404 with <c>SERVICE_NOT_FOUND</c> when the
     /// service is not the caller's; 400 with <c>SERVICE_NOT_PENDING</c>; 503 with
-    /// <c>NO_ELIGIBLE_SERVER</c>; 502 with <c>PROVISIONING_UPSTREAM_FAILED</c>; 401.
+    /// <c>NO_ELIGIBLE_SERVER</c>; 502 with <c>PROVISIONING_UPSTREAM_FAILED</c>; 401;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>PlaceNewOrders</c>.
     /// </returns>
     [HttpPost("{id:int}/setup")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.PlaceNewOrders)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SetupAsync(int id, [FromBody] SetupMyServiceCommand command, CancellationToken ct)
@@ -169,10 +181,13 @@ public sealed class MyServicesController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 with the service's invoices; 401; 404 with <c>SERVICE_NOT_FOUND</c> when the
-    /// service is not the caller's.
+    /// service is not the caller's;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewProductsServices</c> or
+    /// <c>ViewPayInvoices</c>.
     /// </returns>
     [HttpGet("{id:int}/invoices")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewProductsServices | ClientPermission.ViewPayInvoices)]
     [ProducesResponseType(typeof(ServiceInvoicesDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetInvoicesAsync(int id, CancellationToken ct)
@@ -186,10 +201,12 @@ public sealed class MyServicesController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 with the cancellation status; 401; 404 with <c>SERVICE_NOT_FOUND</c> when the
-    /// service is not the caller's.
+    /// service is not the caller's;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewProductsServices</c>.
     /// </returns>
     [HttpGet("{id:int}/cancellation-status")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewProductsServices)]
     [ProducesResponseType(typeof(CancellationStatusDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetCancellationStatusAsync(int id, CancellationToken ct)
@@ -204,10 +221,12 @@ public sealed class MyServicesController : BaseApiController
     /// <param name="command">The new password.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 200 on success; 404 with <c>SERVICE_NOT_FOUND</c> when the service is not the caller's; 401.
+    /// 200 on success; 404 with <c>SERVICE_NOT_FOUND</c> when the service is not the caller's; 401;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewModifyPasswords</c>.
     /// </returns>
     [HttpPost("{id:int}/change-password")]
     [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewModifyPasswords)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ChangePasswordAsync(

@@ -24,14 +24,45 @@
  * no prefix or suffix anywhere in the API, so the two symbol fields are gone rather than
  * emptied: `utils/formatCurrency.ts` places the symbol from the code itself.
  *
+ * ## Permissions
+ *
+ * `permissions` is the `ClientPermission` integer the API reports for the signed-in person
+ * (`clientPermissions` on `GET /auth/me`): everything for the owner of a client record, the stored
+ * grant for a linked user, nothing for anyone else. It used to be hard-coded to 8191, which made the
+ * portal's permission-filtered menus show everything to everybody. It only decides what the portal
+ * shows -- the API enforces the same flags on every request -- so when `/auth/me` cannot be read the
+ * value is 0 (show nothing that needs a permission) rather than a guess that grants.
+ *
  * @module server/api/portal/client/me.get
  */
 
+import type { H3Event } from 'h3'
 import { AuthMode } from '~/types/authmode'
 import { SessionCookie } from '~/constants/sessionCookie'
 
 /** Statuses `/clients/me` answers with when the identity is not a customer account (no Client role, no client record). */
 const NOT_A_CUSTOMER_STATUSES: ReadonlySet<number> = new Set([403, 404])
+
+/** The part of `GET /auth/me` this route reads. */
+interface BackendAccount {
+  /** The `ClientPermission` flags the caller holds on a client account, as an integer. */
+  clientPermissions?: number
+}
+
+/**
+ * Reads the permissions the signed-in person holds on a client account.
+ *
+ * @param event - The incoming browser request, whose session the backend call carries.
+ * @returns The permission integer; 0 when the backend does not answer or sends no value.
+ */
+const readClientPermissions = async (event: H3Event): Promise<number> => {
+  try {
+    const account = await internalApiCall<BackendAccount>(event, '/auth/me')
+    return typeof account.clientPermissions === 'number' ? account.clientPermissions : 0
+  } catch {
+    return 0
+  }
+}
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
@@ -82,7 +113,7 @@ export default defineEventHandler(async (event) => {
       // record for the identity -- a staff login, say -- which is not the same as "no currency
       // configured", and both correctly render an amount with no symbol rather than a guess.
       currency: (billing?.currency as string | null | undefined) ?? null,
-      permissions: 8191,
+      permissions: await readClientPermissions(event),
       // False only on a definite "not a customer" answer. A transient failure leaves it true
       // (unknown), so the customer sections still get their chance to load.
       hasClientProfile: !notACustomer,
@@ -122,7 +153,7 @@ export default defineEventHandler(async (event) => {
     language: data.language ?? '',
     // The account's billing currency, ISO 4217, straight off the record. See the module note.
     currency: (data.currency as string | null | undefined) ?? null,
-    permissions: 8191,
+    permissions: await readClientPermissions(event),
     email_preferences: {
       general: data.notifyGeneral ? 1 : 0,
       invoice: data.notifyInvoice ? 1 : 0,

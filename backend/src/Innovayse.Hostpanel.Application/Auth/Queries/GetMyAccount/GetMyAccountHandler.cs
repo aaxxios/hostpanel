@@ -21,15 +21,21 @@ public sealed class GetMyAccountHandler
     /// </summary>
     private readonly ICurrentUserService _caller;
 
+    /// <summary>Reads what the caller may do on a client account.</summary>
+    private readonly IClientAccess _access;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="identity">Where this deployment's people are read from.</param>
     /// <param name="roles">Local role store; roles are granted here, not by the SSO.</param>
     /// <param name="caller">Who is calling.</param>
-    public GetMyAccountHandler(IIdentityProvider identity, ISubjectRoleStore roles, ICurrentUserService caller)
+    /// <param name="access">Reads what the caller may do on a client account.</param>
+    public GetMyAccountHandler(
+        IIdentityProvider identity, ISubjectRoleStore roles, ICurrentUserService caller, IClientAccess access)
     {
         _identity = identity;
         _roles = roles;
         _caller = caller;
+        _access = access;
     }
 
     /// <summary>Handles <see cref="GetMyAccountQuery"/>.</summary>
@@ -55,7 +61,9 @@ public sealed class GetMyAccountHandler
         }
 
         var held = await _roles.GetRolesAsync(subject, ct);
+        var permissions = await _access.GetCallerPermissionsAsync(ct);
 
-        return Result<MyAccountDto>.Success(new MyAccountDto(account.Email, held, account.EmailVerified ?? _caller.IsEmailVerified));
+        return Result<MyAccountDto>.Success(new MyAccountDto(
+            account.Email, held, account.EmailVerified ?? _caller.IsEmailVerified, (int)permissions));
     }
 }

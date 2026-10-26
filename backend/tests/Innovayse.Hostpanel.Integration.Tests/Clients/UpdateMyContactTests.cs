@@ -46,9 +46,9 @@ public sealed class UpdateMyContactTests(IntegrationTestFactory factory) : IClas
         await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.MY_CONTACT_NOT_FOUND);
     }
 
-    /// <summary>A caller with the Client role but no client row answers 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>.</summary>
+    /// <summary>A caller with the Client role but no client row owns no account and is linked to none, so the permission gate refuses with 403 <c>CLIENT_PERMISSION_DENIED</c>.</summary>
     [Fact]
-    public async Task UpdateMyContactWithNoClientRowRefusesNotFound()
+    public async Task UpdateMyContactWithNoClientRowIsRefusedByThePermissionGate()
     {
         var (client, clientId, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "update-my-contact-orphaned");
         using (var scope = factory.Services.CreateScope())
@@ -59,8 +59,8 @@ public sealed class UpdateMyContactTests(IntegrationTestFactory factory) : IClas
 
         var response = await client.PutAsJsonAsync("/api/clients/me/contacts/1", ClientsTestSeeds.ContactBody("After"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_PROFILE_NOT_FOUND);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_PERMISSION_DENIED);
     }
 
     /// <summary>The route is not for anonymous callers.</summary>

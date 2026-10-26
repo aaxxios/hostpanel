@@ -15,7 +15,6 @@
       "label": "Постраничная навигация"
     },
     "search": "Поиск…",
-    "phoneNumber": "Введите номер телефона",
     "close": "Закрыть",
     "loading": "Загрузка",
     "showPassword": "Показать пароль",
@@ -27,7 +26,10 @@
     "language": "Язык",
     "currency": "Валюта",
     "currencyFixed": "Валюта указана в вашем аккаунте и не может быть изменена здесь.",
-    "phoneExample": "00 000 000"
+    "phoneExample": "00 000 000",
+    "phoneCountry": "Код страны",
+    "searchCountry": "Поиск страны или кода",
+    "noCountries": "Страна не найдена"
   },
   "common": {
     "cancel": "Отмена",

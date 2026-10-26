@@ -3,6 +3,8 @@
  */
 import { describe, expect, it } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
+import { grantPermissions } from '~/tests/helpers/grantPermissions'
+import { Permission } from '~/composables/usePermissions'
 import DomainSidebar from '~/components/client/domains/DomainSidebar.vue'
 import { DomainTab } from '~/types/domaintab'
 
@@ -44,5 +46,41 @@ describe('DomainSidebar', () => {
     const wrapper = mountClient(DomainSidebar, { props: { activeTab: DomainTab.Overview, isPending: false } })
 
     expect(wrapper.find('[data-testid="domain-action-register"]').attributes('href')).toBe('/domains')
+  })
+})
+
+describe('DomainSidebar permissions', () => {
+  /** Mounts the menu for a domain that is not pending. */
+  const mountMenu = () => mountClient(DomainSidebar, { props: { activeTab: DomainTab.Overview, isPending: false } })
+
+  it('offers only the overview to a person who may not change domain settings or place orders', async () => {
+    const wrapper = mountMenu()
+    await grantPermissions(Permission.ViewDomains)
+
+    expect(wrapper.find('[data-testid="domain-tab-overview"]').exists()).toBe(true)
+    for (const tab of [DomainTab.AutoRenew, DomainTab.Nameservers, DomainTab.Lock, DomainTab.Contact]) {
+      expect(wrapper.find(`[data-testid="domain-tab-${tab}"]`).exists()).toBe(false)
+    }
+    expect(wrapper.find('[data-testid="domain-action-renew"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="domain-action-register"]').exists()).toBe(false)
+  })
+
+  it('offers the settings panels with ManageDomainSettings', async () => {
+    const wrapper = mountMenu()
+    await grantPermissions(Permission.ViewDomains | Permission.ManageDomainSettings)
+
+    for (const tab of [DomainTab.AutoRenew, DomainTab.Nameservers, DomainTab.Lock, DomainTab.Contact]) {
+      expect(wrapper.find(`[data-testid="domain-tab-${tab}"]`).exists()).toBe(true)
+    }
+    expect(wrapper.find('[data-testid="domain-action-renew"]').exists()).toBe(false)
+  })
+
+  it('offers renewing and registering with PlaceNewOrders', async () => {
+    const wrapper = mountMenu()
+    await grantPermissions(Permission.ViewDomains | Permission.PlaceNewOrders)
+
+    expect(wrapper.find('[data-testid="domain-action-renew"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="domain-action-register"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="domain-tab-nameservers"]').exists()).toBe(false)
   })
 })

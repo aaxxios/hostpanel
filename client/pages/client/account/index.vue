@@ -22,6 +22,7 @@
  * @module pages/client/account/index
  */
 
+import { Permission } from '~/composables/usePermissions'
 import { useAccountStore } from '~/stores/account'
 import { useCatalogStore } from '~/stores/catalog'
 import { useClientStore } from '~/stores/client'
@@ -38,10 +39,26 @@ const route = useRoute()
 /** The router that keeps `?tab=` in step with the active tab. */
 const router = useRouter()
 
-/** The tab named by the query, or the details tab when it is missing or unknown. */
+/** The client store that holds the profile and knows what the signed-in person may do. */
+const client = useClientStore()
+
+/** Every tab with the permission that opens it; the details tab is for everyone. */
+const allTabs = computed(() => [
+  { value: AccountTab.Details, label: t('client.account.tabDetails'), permission: Permission.None },
+  { value: AccountTab.Contacts, label: t('client.contacts.title'), permission: Permission.ViewManageContacts },
+  // The flags have no user-management bit: the team is for a person with full access.
+  { value: AccountTab.Users, label: t('client.account.tabUsers'), permission: Permission.All },
+  { value: AccountTab.Emails, label: t('client.account.tabEmails'), permission: Permission.ViewEmails },
+  { value: AccountTab.Payment, label: t('client.account.tabPayment'), permission: Permission.ViewPayInvoices }
+])
+
+/** The tab strip: only the tabs the person may open. */
+const tabs = computed(() => allTabs.value.filter(tab => client.mayDo(tab.permission)))
+
+/** The tab named by the query, or the details tab when it is missing, unknown or not permitted. */
 const initialTab = (): AccountTab => {
-  const requested = Object.values(AccountTab).find(tab => tab === route.query.tab)
-  return requested ?? AccountTab.Details
+  const requested = tabs.value.find(tab => tab.value === route.query.tab)
+  return requested?.value ?? AccountTab.Details
 }
 
 /** The active tab. */
@@ -51,18 +68,6 @@ const activeTab = ref<AccountTab>(initialTab())
 watch(activeTab, (tab) => {
   router.replace({ query: { ...route.query, tab } })
 })
-
-/** The tab strip. */
-const tabs = computed(() => [
-  { value: AccountTab.Details, label: t('client.account.tabDetails') },
-  { value: AccountTab.Contacts, label: t('client.contacts.title') },
-  { value: AccountTab.Users, label: t('client.account.tabUsers') },
-  { value: AccountTab.Emails, label: t('client.account.tabEmails') },
-  { value: AccountTab.Payment, label: t('client.account.tabPayment') }
-])
-
-/** The client store that holds the profile. */
-const client = useClientStore()
 
 /** The account store that holds every tab's list. */
 const account = useAccountStore()

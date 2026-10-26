@@ -14,7 +14,7 @@
       </UiNavItem>
     </UiNavGroup>
 
-    <UiNavGroup :title="$t('client.domains.sectionActions')" :icon="Zap">
+    <UiNavGroup v-if="canOrder" :title="$t('client.domains.sectionActions')" :icon="Zap">
       <UiNavItem :icon="RefreshCw" testid="domain-action-renew" @click="emit('update:activeTab', DomainTab.Renew)">
         {{ $t('client.domains.actionRenewDomain') }}
       </UiNavItem>
@@ -33,6 +33,8 @@
  */
 import { computed } from 'vue'
 import { LayoutGrid, Lock, Network, PlusCircle, RefreshCw, Settings, UserCog, Zap } from 'lucide-vue-next'
+import { Permission } from '~/composables/usePermissions'
+import { useClientStore } from '~/stores/client'
 import { DomainTab } from '~/types/domaintab'
 
 /** Translates a key into the active locale. */
@@ -55,13 +57,26 @@ const emit = defineEmits<{
   'update:activeTab': [value: DomainTab]
 }>()
 
-/** The panels the menu switches between. */
+/** The client store, which knows what the signed-in person may do. */
+const store = useClientStore()
+
+/** Whether the person may change domain settings; without it only the overview is offered. */
+const canManage = computed(() => store.mayDo(Permission.ManageDomainSettings))
+
+/** Whether the person may place orders, which is what renewing or registering a domain is. */
+const canOrder = computed(() => store.mayDo(Permission.PlaceNewOrders))
+
+/** The panels the menu switches between: the overview for everyone, the settings panels for those who may change them. */
 const tabs = computed(() => [
   { key: DomainTab.Overview, label: t('client.domains.tabOverview'), icon: LayoutGrid },
-  { key: DomainTab.AutoRenew, label: t('client.domains.tabAutoRenew'), icon: RefreshCw },
-  { key: DomainTab.Nameservers, label: t('client.domains.tabNameservers'), icon: Network },
-  { key: DomainTab.Lock, label: t('client.domains.tabRegistrarLock'), icon: Lock },
-  { key: DomainTab.Contact, label: t('client.domains.tabContactInfo'), icon: UserCog },
+  ...(canManage.value
+    ? [
+        { key: DomainTab.AutoRenew, label: t('client.domains.tabAutoRenew'), icon: RefreshCw },
+        { key: DomainTab.Nameservers, label: t('client.domains.tabNameservers'), icon: Network },
+        { key: DomainTab.Lock, label: t('client.domains.tabRegistrarLock'), icon: Lock },
+        { key: DomainTab.Contact, label: t('client.domains.tabContactInfo'), icon: UserCog },
+      ]
+    : []),
 ])
 
 /**
