@@ -20,6 +20,7 @@ import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { Icon } from '@/lib/icons'
 import { useBillingStore } from '@/stores/billing'
 import { InvoiceOpenAction, InvoiceTab, InvoiceStatus } from '@/types/invoice'
@@ -34,6 +35,9 @@ const EDIT_ACTION = InvoiceOpenAction.Edit
 const route = useRoute()
 const router = useRouter()
 const store = useBillingStore()
+
+/** The success line shown after a tab saved its changes. */
+const banner = useResultBanner()
 
 /** The tab on show. */
 const activeTab = ref<string>(InvoiceTab.Summary)
@@ -80,6 +84,13 @@ const toggleMode = (): void => {
   }
 }
 
+/**
+ * Confirms a saved change; the store has already reloaded the invoice, so the tabs show the result.
+ */
+const onSaved = (): void => {
+  banner.show(t('shared.changesSavedSuccessfully'), false)
+}
+
 /** Goes back to the previous screen. */
 const goBack = (): void => {
   router.back()
@@ -119,6 +130,10 @@ watch(invoiceId, load)
       {{ store.error }}
     </UiAlert>
 
+    <UiAlert v-if="banner.message.value" variant="success" data-testid="billing-invoice-saved">
+      {{ banner.message.value }}
+    </UiAlert>
+
     <UiSkeleton v-if="invoice === null && store.loading" shape="block" data-testid="billing-invoice-loading" />
 
     <template v-if="invoice !== null">
@@ -127,12 +142,12 @@ watch(invoiceId, load)
       </UiAlert>
 
       <UiTabs v-model="activeTab" :items="tabs">
-        <InvoiceSummaryTab v-if="activeTab === InvoiceTab.Summary" :invoice="invoice" :readonly="!manageMode" />
-        <InvoicePaymentTab v-else-if="activeTab === InvoiceTab.Payment" :invoice="invoice" :readonly="!manageMode" />
-        <InvoiceOptionsTab v-else-if="activeTab === InvoiceTab.Options" :invoice="invoice" />
-        <InvoiceCreditTab v-else-if="activeTab === InvoiceTab.Credit" :invoice="invoice" :readonly="!manageMode" />
-        <InvoiceRefundTab v-else-if="activeTab === InvoiceTab.Refund" :invoice="invoice" :readonly="!manageMode" />
-        <InvoiceNotesTab v-else-if="activeTab === InvoiceTab.Notes" :invoice="invoice" :readonly="!manageMode" />
+        <InvoiceSummaryTab v-if="activeTab === InvoiceTab.Summary" :invoice="invoice" :readonly="!manageMode" @updated="onSaved" />
+        <InvoicePaymentTab v-else-if="activeTab === InvoiceTab.Payment" :invoice="invoice" :readonly="!manageMode" @updated="onSaved" />
+        <InvoiceOptionsTab v-else-if="activeTab === InvoiceTab.Options" :invoice="invoice" @updated="onSaved" />
+        <InvoiceCreditTab v-else-if="activeTab === InvoiceTab.Credit" :invoice="invoice" :readonly="!manageMode" @updated="onSaved" />
+        <InvoiceRefundTab v-else-if="activeTab === InvoiceTab.Refund" :invoice="invoice" :readonly="!manageMode" @updated="onSaved" />
+        <InvoiceNotesTab v-else-if="activeTab === InvoiceTab.Notes" :invoice="invoice" :readonly="!manageMode" @updated="onSaved" />
       </UiTabs>
     </template>
   </UiStack>

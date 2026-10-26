@@ -100,6 +100,12 @@ public sealed class LocalAuthController(
     private IUserService Users => services.GetRequiredService<IUserService>();
 
     /// <summary>
+    /// The pending-token service, resolved per action for the same reason as <see cref="Users"/>:
+    /// it is registered only where this deployment owns its users.
+    /// </summary>
+    private ITwoFactorChallengeService Challenges => services.GetRequiredService<ITwoFactorChallengeService>();
+
+    /// <summary>
     /// Answers a refusal in the product's one error shape (problem+json, code in <c>type</c>,
     /// sentence localized by code). This controller is outside <c>BaseApiController</c>, so it
     /// composes the same pieces <c>BaseApiController.MapFailure</c> does instead of naming a
@@ -111,6 +117,39 @@ public sealed class LocalAuthController(
     {
         var (status, title) = StatusMapping.For(code);
         return ErrorBody.ToActionResult(new ErrorResponse(code, title, status, errorMessages.Resolve(code)));
+    }
+
+    /// <summary>
+    /// The end of every successful sign-in, whether it finished at the password or at the second
+    /// factor: records the login, issues the access token with the account's roles and email
+    /// confirmation, and sets the httpOnly session cookie. One place, so the two paths cannot
+    /// drift apart again.
+    /// </summary>
+    /// <param name="userService">The local user service.</param>
+    /// <param name="userId">The account that signed in.</param>
+    /// <param name="email">The account's email address.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>200 with the access token and its lifetime in seconds.</returns>
+    private async Task<IActionResult> CompleteSignInAsync(
+        IUserService userService, string userId, string email, CancellationToken ct)
+    {
+        await userService.UpdateLastLoginAsync(userId, ct);
+        var roles = await userService.GetRolesAsync(userId, ct);
+        var emailConfirmed = await userService.IsEmailConfirmedAsync(userId, ct);
+
+        var accessToken = tokenService.GenerateAccessToken(
+            userId, email, null, null, [.. roles], emailConfirmed);
+
+        // The browser's copy goes into an httpOnly cookie it cannot read. The token stays in
+        // the body as well, because this endpoint has a second class of caller, anything
+        // scripted or machine-to-machine, and taking it out would break them for a browser
+        // problem they do not have. See LocalSessionCookie for why this is the same answer the
+        // SSO path already reached. A sign-in that finished at the second factor ends in the same
+        // session shape, or an operator with 2FA enabled would be the only one still holding a
+        // token in script-readable storage.
+        LocalSessionCookie.Issue(HttpContext, accessToken);
+
+        return Ok(new { accessToken, expiresIn = (int)tokenService.AccessTokenLifetime.TotalSeconds });
     }
 
     /// <summary>
@@ -143,27 +182,12 @@ public sealed class LocalAuthController(
         var is2FaEnabled = await userService.IsTwoFactorEnabledAsync(user.Value.Id, ct);
         if (is2FaEnabled)
         {
-            // Return a pending token (just the user ID encrypted/encoded — simple approach)
-            var pendingToken = Convert.ToBase64String(
-                System.Text.Encoding.UTF8.GetBytes($"2fa:{user.Value.Id}:{DateTime.UtcNow.Ticks}"));
+            // A signed, encrypted, expiring, single-use token: holding it proves the password step passed.
+            var pendingToken = Challenges.Issue(user.Value.Id);
             return Ok(new { twoFactorRequired = true, pendingToken });
         }
 
-        await userService.UpdateLastLoginAsync(user.Value.Id, ct);
-        var roles = await userService.GetRolesAsync(user.Value.Id, ct);
-        var emailConfirmed = await userService.IsEmailConfirmedAsync(user.Value.Id, ct);
-
-        var accessToken = tokenService.GenerateAccessToken(
-            user.Value.Id, user.Value.Email, null, null, [.. roles], emailConfirmed);
-
-        // The browser's copy goes into an httpOnly cookie it cannot read. The token stays in
-        // the body as well, because this endpoint has a second class of caller — anything
-        // scripted or machine-to-machine — and taking it out would break them for a browser
-        // problem they do not have. See LocalSessionCookie for why this is the same answer the
-        // SSO path already reached.
-        LocalSessionCookie.Issue(HttpContext, accessToken);
-
-        return Ok(new { accessToken, expiresIn = (int)tokenService.AccessTokenLifetime.TotalSeconds });
+        return await CompleteSignInAsync(userService, user.Value.Id, user.Value.Email, ct);
     }
 
     /// <summary>
@@ -182,49 +206,34 @@ public sealed class LocalAuthController(
             return NotFound();
         }
 
-        // Decode pending token
-        string userId;
-        try
-        {
-            var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(request.PendingToken));
-            var parts = decoded.Split(':');
-            if (parts.Length < 2 || parts[0] != "2fa")
-            {
-                return Refuse(HostpanelErrorCodes.PENDING_TOKEN_UNAUTHORIZED);
-            }
-
-            userId = parts[1];
-        }
-        catch
+        // The token must be ours, unexpired and unspent, and the challenge must still have an attempt
+        // left. The attempt is taken before the code is checked so parallel guesses cannot overshoot.
+        var challenges = Challenges;
+        var challenge = challenges.TryRead(request.PendingToken);
+        if (challenge is null || !challenges.TryBeginAttempt(challenge))
         {
             return Refuse(HostpanelErrorCodes.PENDING_TOKEN_UNAUTHORIZED);
         }
 
+        var userId = challenge.UserId;
         var userService = Users;
-        var valid = await userService.VerifyTwoFactorCodeAsync(userId, request.Code, ct);
+        var valid = !string.IsNullOrWhiteSpace(request.Code)
+            && await userService.VerifyTwoFactorCodeAsync(userId, request.Code, ct);
         if (!valid)
         {
             return Refuse(HostpanelErrorCodes.TWO_FACTOR_CODE_UNAUTHORIZED);
         }
 
-        await userService.UpdateLastLoginAsync(userId, ct);
+        // Spent before anything else can fail or be awaited again: one token signs in once.
+        challenges.Complete(challenge);
+
         var user = await userService.FindByIdAsync(userId, ct);
         if (user is null)
         {
             return Refuse(HostpanelErrorCodes.SIGN_IN_UNAUTHORIZED);
         }
 
-        var roles = await userService.GetRolesAsync(userId, ct);
-        var accessToken = tokenService.GenerateAccessToken(
-            userId, user.Value.Email, null, null, [.. roles]);
-
-        // Same as the credential step above: the browser's copy goes into the httpOnly cookie.
-        // A sign-in that finished at the second factor has to end in the same session shape as
-        // one that did not, or an operator with 2FA enabled would be the only one still holding
-        // a token in script-readable storage.
-        LocalSessionCookie.Issue(HttpContext, accessToken);
-
-        return Ok(new { accessToken, expiresIn = (int)tokenService.AccessTokenLifetime.TotalSeconds });
+        return await CompleteSignInAsync(userService, user.Value.Id, user.Value.Email, ct);
     }
 
     /// <summary>

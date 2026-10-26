@@ -50,6 +50,9 @@ import {
   BAD_CONTACT_EMAIL_MESSAGE,
   CLIENT,
   CLIENT_CREDENTIALS,
+  TWO_FACTOR_CREDENTIALS,
+  TWO_FACTOR_LOGIN_CODE,
+  TWO_FACTOR_PENDING_TOKEN,
   DEMO_ACCOUNTS,
   DEMO_RESET_IN_MS,
   CURRENCIES,
@@ -88,6 +91,7 @@ import {
   REGISTRANT_CONTACT,
   WHOIS_RECORD,
   TWO_FACTOR,
+  TWO_FACTOR_REFUSED,
 } from './fixtures.mjs'
 
 /**
@@ -406,10 +410,24 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
   // Sign-in (local auth mode).
   if (method === 'POST' && path === '/api/auth/login') {
     const ok = body?.email === CLIENT_CREDENTIALS.email && body?.password === CLIENT_CREDENTIALS.password
-    if (ok) {
+    const needsCode = body?.email === TWO_FACTOR_CREDENTIALS.email && body?.password === TWO_FACTOR_CREDENTIALS.password
+    if (needsCode) {
+      // A two-factor account gets the challenge, not a session.
+      send(res, 200, { twoFactorRequired: true, pendingToken: TWO_FACTOR_PENDING_TOKEN })
+    } else if (ok) {
       send(res, 200, { accessToken: ACCESS_TOKEN, expiresIn: 900 })
     } else {
       sendProblem(res, 401, 'INVALID_CREDENTIALS', 'Invalid email or password.')
+    }
+    return true
+  }
+
+  // Second sign-in step: the challenge token plus the one accepted code finish the sign-in.
+  if (method === 'POST' && path === '/api/auth/2fa-login') {
+    if (body?.pendingToken === TWO_FACTOR_PENDING_TOKEN && body?.code === TWO_FACTOR_LOGIN_CODE) {
+      send(res, 200, { accessToken: ACCESS_TOKEN, expiresIn: 900 })
+    } else {
+      sendProblem(res, 401, 'TWO_FACTOR_CODE_UNAUTHORIZED', TWO_FACTOR_REFUSED)
     }
     return true
   }

@@ -51,6 +51,46 @@ describe('InvoiceDetailView', () => {
     expect(wrapper.find('[data-testid="billing-invoice-notes-input"]').exists()).toBe(true)
   })
 
+  it('saves the notes, reloads the invoice and confirms with a success line', async () => {
+    let notes = ''
+    const mock = stubRoutes({
+      'PUT /api/billing/1/notes': () => {
+        notes = 'Saved note'
+        return new Response(null, { status: 204 })
+      },
+      'GET /api/billing/1': () => json(invoiceFixture({ notes })),
+    })
+    const { wrapper } = await mountRouted(InvoiceDetailView, PATTERN, '/billing/1/edit')
+    await flushPromises()
+    await wrapper.get('[data-testid="billing-invoice-tab-notes"]').trigger('click')
+
+    await wrapper.get('[data-testid="billing-invoice-notes-input"]').setValue('Saved note')
+    await wrapper.get('[data-testid="billing-invoice-notes-save"]').trigger('click')
+    await flushPromises()
+
+    const put = mock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === 'PUT')
+    expect(JSON.parse(String((put?.[1] as RequestInit | undefined)?.body))).toEqual({ notes: 'Saved note' })
+    expect(wrapper.get('[data-testid="billing-invoice-saved"]').text()).toContain('Changes saved successfully.')
+    expect((wrapper.get('[data-testid="billing-invoice-notes-input"]').element as HTMLTextAreaElement).value)
+      .toBe('Saved note')
+  })
+
+  it('shows the API sentence and no success line when a save is refused', async () => {
+    stubRoutes({
+      'PUT /api/billing/1/notes': () => problem('Notes are too long.', 400),
+      'GET /api/billing/1': () => json(invoiceFixture()),
+    })
+    const { wrapper } = await mountRouted(InvoiceDetailView, PATTERN, '/billing/1/edit')
+    await flushPromises()
+    await wrapper.get('[data-testid="billing-invoice-tab-notes"]').trigger('click')
+
+    await wrapper.get('[data-testid="billing-invoice-notes-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="billing-invoice-error"]').text()).toContain('Notes are too long.')
+    expect(wrapper.find('[data-testid="billing-invoice-saved"]').exists()).toBe(false)
+  })
+
   it('shows the API sentence when the invoice cannot be loaded', async () => {
     stubRoutes({ 'GET /api/billing/1': () => problem('Invoice not found.', 404) })
     const { wrapper } = await mountRouted(InvoiceDetailView, PATTERN, '/billing/1')

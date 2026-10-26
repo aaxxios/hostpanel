@@ -23,10 +23,11 @@ public sealed class EnableTwoFactorTests(IntegrationTestFactory factory) : IClas
     [Fact]
     public async Task EnableWithTheRightCodeSwitchesItOn()
     {
-        var client = await AuthTestSeeds.NewAccountClientAsync(factory);
+        using var two = new TwoFactorHost(factory);
+        var client = await AuthTestSeeds.NewAccountClientAsync(two.CreateClient());
         var secret = await AuthTestSeeds.StartSetupAsync(client);
 
-        var response = await client.PostAsJsonAsync("/api/me/2fa/enable", new { code = AuthTestSeeds.CurrentCode(secret) });
+        var response = await client.PostAsJsonAsync("/api/me/2fa/enable", new { code = two.CurrentCode(secret) });
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
@@ -35,7 +36,7 @@ public sealed class EnableTwoFactorTests(IntegrationTestFactory factory) : IClas
     [Fact]
     public async Task EnableRefusesAWrongCode()
     {
-        var client = await AuthTestSeeds.NewAccountClientAsync(factory);
+        var client = await AuthTestSeeds.NewAccountClientAsync(factory.CreateClient());
         await AuthTestSeeds.StartSetupAsync(client);
 
         var response = await client.PostAsJsonAsync("/api/me/2fa/enable", new { code = "000000" });
@@ -49,7 +50,8 @@ public sealed class EnableTwoFactorTests(IntegrationTestFactory factory) : IClas
     [Fact]
     public async Task LoginAfterEnablingAsksForTheSecondFactor()
     {
-        var client = factory.CreateClient();
+        using var two = new TwoFactorHost(factory);
+        var client = two.CreateClient();
         var email = $"twofactor-{Guid.NewGuid():N}@example.com";
         const string password = "Password123!";
         (await client.PostAsJsonAsync("/api/auth/register",
@@ -64,7 +66,7 @@ public sealed class EnableTwoFactorTests(IntegrationTestFactory factory) : IClas
         }
 
         var secret = await AuthTestSeeds.StartSetupAsync(client);
-        (await client.PostAsJsonAsync("/api/me/2fa/enable", new { code = AuthTestSeeds.CurrentCode(secret) }))
+        (await client.PostAsJsonAsync("/api/me/2fa/enable", new { code = two.CurrentCode(secret) }))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         var secondLogin = await client.PostAsJsonAsync("/api/auth/login", new { email, password });

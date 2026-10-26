@@ -230,6 +230,21 @@ public static class DependencyInjection
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders();
+
+            // The pending token between the password step and the one-time code: signed, encrypted
+            // with the Data Protection key ring, short-lived, spendable once, attempt-limited.
+            // Local mode only, because that is the only mode that signs anyone in with a password.
+            services.AddDataProtection();
+            services.AddOptions<TwoFactorChallengeOptions>()
+                .Bind(configuration.GetSection(TwoFactorChallengeOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.ITwoFactorChallengeService, TwoFactorChallengeService>();
+            services.AddOptions<TwoFactorCodeGuardOptions>()
+                .Bind(configuration.GetSection(TwoFactorCodeGuardOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.ITwoFactorCodeGuard, TwoFactorCodeGuard>();
         }
 
         // Auth services
