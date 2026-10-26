@@ -104,23 +104,24 @@ public sealed class LocalAuthControllerTests(IntegrationTestFactory factory) : I
     [Fact]
     public async Task TwoFactorLoginWithWrongCode_Refuses401()
     {
-        var account = factory.CreateClient();
+        using var two = new TwoFactorHost(factory);
+        var account = two.CreateClient();
         var email = $"refusal-{Guid.NewGuid():N}@example.com";
-        var registered = await account.PostAsJsonAsync(
-            "/api/auth/register", new { email, password = Password, firstName = "Re", lastName = "Fusal" });
-        registered.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var created = JsonDocument.Parse(await registered.Content.ReadAsStringAsync());
-        var userId = created.RootElement.GetProperty("userId").GetString()!;
+        (await account.PostAsJsonAsync(
+            "/api/auth/register", new { email, password = Password, firstName = "Re", lastName = "Fusal" }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
         var loggedIn = await account.PostAsJsonAsync("/api/auth/login", new { email, password = Password });
         using var session = JsonDocument.Parse(await loggedIn.Content.ReadAsStringAsync());
         account.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
             "Bearer", session.RootElement.GetProperty("accessToken").GetString()!);
         var secret = await AuthTestSeeds.StartSetupAsync(account);
-        (await account.PostAsJsonAsync("/api/me/2fa/enable", new { code = AuthTestSeeds.CurrentCode(secret) }))
+        (await account.PostAsJsonAsync("/api/me/2fa/enable", new { code = two.PreviousCode(secret) }))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
-        var pendingToken = Convert.ToBase64String(
-            System.Text.Encoding.UTF8.GetBytes($"2fa:{userId}:{DateTime.UtcNow.Ticks}"));
-        var client = RussianClient();
+        var second = await two.CreateClient().PostAsJsonAsync("/api/auth/login", new { email, password = Password });
+        using var challenge = JsonDocument.Parse(await second.Content.ReadAsStringAsync());
+        var pendingToken = challenge.RootElement.GetProperty("pendingToken").GetString()!;
+        var client = two.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Language", "ru");
 
         var response = await client.PostAsJsonAsync("/api/auth/2fa-login", new { pendingToken, code = "000000" });
 

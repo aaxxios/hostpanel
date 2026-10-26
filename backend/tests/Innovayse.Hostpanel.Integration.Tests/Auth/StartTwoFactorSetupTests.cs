@@ -21,7 +21,7 @@ public sealed class StartTwoFactorSetupTests(IntegrationTestFactory factory) : I
     [Fact]
     public async Task Setup_SignedInAccount_IssuesASecret()
     {
-        var client = await AuthTestSeeds.NewAccountClientAsync(factory);
+        var client = await AuthTestSeeds.NewAccountClientAsync(factory.CreateClient());
 
         var secret = await AuthTestSeeds.StartSetupAsync(client);
 

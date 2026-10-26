@@ -21,15 +21,25 @@ public sealed class UserService : IUserService
     /// <summary>Unit of work for persisting changes.</summary>
     private readonly IUnitOfWork _uow;
 
+    /// <summary>The per-account cap on wrong codes and the replay guard for accepted ones.</summary>
+    private readonly ITwoFactorCodeGuard _codeGuard;
+
+    /// <summary>The clock a one-time code is checked against.</summary>
+    private readonly TimeProvider _time;
+
     /// <summary>Initializes a new instance of the <see cref="UserService"/> class.</summary>
     /// <param name="userManager">The Identity user manager for <see cref="AppUser"/>.</param>
     /// <param name="db">The application DbContext, for the linked client account.</param>
     /// <param name="uow">Unit of work for persisting changes.</param>
-    public UserService(UserManager<AppUser> userManager, AppDbContext db, IUnitOfWork uow)
+    /// <param name="codeGuard">The per-account cap on wrong codes and the replay guard for accepted ones.</param>
+    /// <param name="time">The clock a one-time code is checked against.</param>
+    public UserService(UserManager<AppUser> userManager, AppDbContext db, IUnitOfWork uow, ITwoFactorCodeGuard codeGuard, TimeProvider time)
     {
         _userManager = userManager;
         _db = db;
         _uow = uow;
+        _codeGuard = codeGuard;
+        _time = time;
     }
 
     /// <inheritdoc/>
@@ -376,6 +386,14 @@ public sealed class UserService : IUserService
     /// <inheritdoc/>
     public async Task<bool> VerifyTwoFactorCodeAsync(string userId, string code, CancellationToken ct)
     {
+        // Every door that checks a code (sign-in, enabling, disabling) comes through here, so the
+        // limits live here. The attempt is taken before the code is looked at, so parallel guesses
+        // cannot overshoot the cap; a correct code gives it back.
+        if (!_codeGuard.TryBeginAttempt(userId))
+        {
+            return false;
+        }
+
         var user = await _userManager.FindByIdAsync(userId);
         if (user?.TwoFactorSecret is null)
         {
@@ -384,7 +402,19 @@ public sealed class UserService : IUserService
 
         var secretBytes = Base32Encoding.ToBytes(user.TwoFactorSecret);
         var totp = new Totp(secretBytes);
-        return totp.VerifyTotp(DateTime.UtcNow, code, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
+        if (!totp.VerifyTotp(_time.GetUtcNow().UtcDateTime, code, out var timeStep, VerificationWindow.RfcSpecifiedNetworkDelay))
+        {
+            return false;
+        }
+
+        // A code that was right once is not right again: it is a replay, and counts against the cap.
+        if (!_codeGuard.TryAcceptTimeStep(userId, timeStep))
+        {
+            return false;
+        }
+
+        _codeGuard.Forgive(userId);
+        return true;
     }
 
     /// <inheritdoc/>
