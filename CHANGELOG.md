@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Admin pages under "Storefront content" to create, edit and order the storefront content.
 - Storefront content ships empty: operators enter testimonials, partners, projects and FAQs in the admin; the repository carries no site content.
 - Demo mode seeds a fixed, maximal sample data set that is reset on schedule.
+- Invoices can be downloaded as a PDF from the admin invoice page and the client portal, from `GET /api/billing/{id}/pdf` and `GET /api/me/invoices/{id}/pdf`; drafts are admin-only and stamped DRAFT (#247).
 
 ### Changed
 
