@@ -32,9 +32,9 @@ public sealed class UpdateMyProfileTests(IntegrationTestFactory factory) : IClas
         body.GetProperty("currency").GetString().Should().Be(before.GetProperty("currency").GetString());
     }
 
-    /// <summary>A caller with the Client role but no client row answers 404, not a write.</summary>
+    /// <summary>A caller with the Client role but no client row owns no account and is linked to none, so the permission gate refuses before any write with 403 <c>CLIENT_PERMISSION_DENIED</c>.</summary>
     [Fact]
-    public async Task UpdateMyProfileWithNoClientRowRefusesNotFound()
+    public async Task UpdateMyProfileWithNoClientRowIsRefusedByThePermissionGate()
     {
         var (client, clientId, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "update-my-profile-orphaned");
         using (var scope = factory.Services.CreateScope())
@@ -45,8 +45,8 @@ public sealed class UpdateMyProfileTests(IntegrationTestFactory factory) : IClas
 
         var response = await client.PutAsJsonAsync("/api/clients/me", ClientsTestSeeds.UpdateBody());
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_PROFILE_NOT_FOUND);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_PERMISSION_DENIED);
     }
 
     /// <summary>The route is not for anonymous callers.</summary>

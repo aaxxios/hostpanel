@@ -538,6 +538,9 @@
   <data name="CLIENT_USER_NOT_LINKED" xml:space="preserve">
     <value>Этот пользователь не привязан к этому клиенту.</value>
   </data>
+  <data name="CLIENT_PERMISSION_DENIED" xml:space="preserve">
+    <value>У вашей учётной записи нет разрешения на это действие. Попросите владельца аккаунта предоставить вам доступ.</value>
+  </data>
   <data name="CLIENT_TRANSFER_SAME_OWNER" xml:space="preserve">
     <value>Этот пользователь уже является владельцем аккаунта.</value>
   </data>

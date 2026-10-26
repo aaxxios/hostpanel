@@ -39,6 +39,7 @@ public sealed class StatusMappingTests
     [InlineData(HostpanelErrorCodes.BRANDING_IMAGE_TOO_LARGE, 413)]
     [InlineData(HostpanelErrorCodes.SETUP_TOKEN_INVALID, 403)]
     [InlineData(SharedErrorCodes.DemoActionDisabled, 403)]
+    [InlineData(HostpanelErrorCodes.CLIENT_PERMISSION_DENIED, 403)]
     [InlineData("SHARE_NOT_FOUND_SEND_FAILED", 404)]
     [InlineData("SOMETHING_ELSE", 400)]
     public void MapsCodeToStatus(string code, int status)

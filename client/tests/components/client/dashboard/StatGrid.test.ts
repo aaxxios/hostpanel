@@ -7,6 +7,8 @@
 import { describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
 import { mountClient } from '~/tests/helpers/mountClient'
+import { grantPermissions } from '~/tests/helpers/grantPermissions'
+import { Permission } from '~/composables/usePermissions'
 import StatGrid from '~/components/client/dashboard/StatGrid.vue'
 import { useClientStore } from '~/stores/client'
 import type { ClientDomain } from '~/types/clientdomain'
@@ -69,5 +71,17 @@ describe('ClientDashboardStatGrid', () => {
     await nextTick()
 
     expect(wrapper.text()).toContain('client.dashboard.statActionRequired')
+  })
+})
+
+describe('ClientDashboardStatGrid permissions', () => {
+  it('shows a counter only for the sections the person may see', async () => {
+    const wrapper = mountClient(StatGrid, { props: { loading: false } })
+    await grantPermissions(Permission.ViewDomains | Permission.ViewOpenSupportTickets)
+
+    expect(wrapper.find(`[data-testid="dashboard-stat-${DashboardStat.Domains}"]`).exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="dashboard-stat-${DashboardStat.Tickets}"]`).exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="dashboard-stat-${DashboardStat.Services}"]`).exists()).toBe(false)
+    expect(wrapper.find(`[data-testid="dashboard-stat-${DashboardStat.Invoices}"]`).exists()).toBe(false)
   })
 })

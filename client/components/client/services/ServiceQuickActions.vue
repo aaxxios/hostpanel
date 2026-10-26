@@ -3,7 +3,7 @@
     <UiHeading :level="3" size="subsection" class="!text-sm mb-3">{{ $t('client.services.whatToday') }}</UiHeading>
     <UiStack gap="xs" align="start">
       <UiButton
-        v-if="hasServer"
+        v-if="hasServer && store.mayDo(Permission.AllowSingleSignOn)"
         variant="ghost"
         size="sm"
         :loading="ssoLoading"
@@ -13,11 +13,23 @@
         <ChevronRight :size="14" :stroke-width="2" class="mr-1.5" />
         {{ $t('client.services.quickCpanel') }}
       </UiButton>
-      <UiButton variant="ghost" size="sm" data-testid="service-quick-invoices" @click="emit('invoices')">
+      <UiButton
+        v-if="store.mayDo(Permission.ViewPayInvoices)"
+        variant="ghost"
+        size="sm"
+        data-testid="service-quick-invoices"
+        @click="emit('invoices')"
+      >
         <ChevronRight :size="14" :stroke-width="2" class="mr-1.5" />
         {{ $t('client.services.quickViewInvoices') }}
       </UiButton>
-      <UiButton variant="ghost" size="sm" data-testid="service-quick-cancel" @click="emit('cancel')">
+      <UiButton
+        v-if="store.mayDo(Permission.PlaceNewOrders)"
+        variant="ghost"
+        size="sm"
+        data-testid="service-quick-cancel"
+        @click="emit('cancel')"
+      >
         <ChevronRight :size="14" :stroke-width="2" class="mr-1.5" />
         {{ $t('client.services.quickCancel') }}
       </UiButton>
@@ -31,6 +43,11 @@
  * sign in to the control panel, reload the related invoices, start a cancellation.
  */
 import { ChevronRight } from 'lucide-vue-next'
+import { Permission } from '~/composables/usePermissions'
+import { useClientStore } from '~/stores/client'
+
+/** The client store, which knows what the signed-in person may do. */
+const store = useClientStore()
 
 /** Props of ServiceQuickActions. */
 interface Props {

@@ -587,6 +587,18 @@ export const NEW_CONTACT = {
 /** The first name the contact edit saves. */
 export const EDITED_CONTACT_FIRST_NAME = 'Carla'
 
+/**
+ * The signed-in person's account, as `GET /api/auth/me` answers (`MyAccountDto`). The portal reads
+ * `clientPermissions` from it to decide which sections to show; the owner of a client record holds
+ * every flag, so every section is visible to the flows.
+ */
+export const ACCOUNT = {
+  email: CLIENT.email,
+  roles: ['Client'],
+  emailVerified: true,
+  clientPermissions: 8191,
+}
+
 /** The account owner, listed first in the team and never removable (`ClientUserDto`). */
 export const TEAM_OWNER = {
   userId: 'u-owner',

@@ -131,11 +131,13 @@ public sealed class AuthController : BaseApiController
     }
 
     /// <summary>
-    /// Returns the current SSO-authenticated user's email and local roles, for SPA clients that
-    /// cannot decode roles from the SSO-issued token itself.
+    /// Returns the current SSO-authenticated user's email, local roles and client account permissions, for
+    /// SPA clients that cannot decode them from the SSO-issued token itself.
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with <c>{ email, roles, emailVerified }</c>; 401 when no account answers the credential.</returns>
+    /// <returns>
+    /// 200 with <c>{ email, roles, emailVerified, clientPermissions }</c>; 401 when no account answers the credential.
+    /// </returns>
     [HttpGet("me")]
     [Authorize(Policy = Policies.Member)]
     [ProducesResponseType(typeof(MyAccountDto), StatusCodes.Status200OK)]

@@ -41,6 +41,9 @@ public static class StatusMapping
             // Exact row: the user is not on the caller's account, which reads as absent (404), not as a
             // malformed request; the name carries no NOT_FOUND token for the generic arm to catch.
             "CLIENT_USER_NOT_LINKED" => (404, "Not Found"),
+            // Exact row: the name says "permission", not one of the FORBIDDEN / ACCESS_DENIED tokens the
+            // generic arms below catch, and a missing grant is a refusal (403), never a malformed request.
+            "CLIENT_PERMISSION_DENIED" => (403, "Forbidden"),
             var code when code.Contains("UNAUTHORIZED", StringComparison.Ordinal) => (401, "Unauthorized"),
             var code when code.Contains("FORBIDDEN", StringComparison.Ordinal) => (403, "Forbidden"),
             var code when code.Contains("ACCESS_DENIED", StringComparison.Ordinal) => (403, "Forbidden"),

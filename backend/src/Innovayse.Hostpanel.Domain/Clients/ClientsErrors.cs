@@ -33,6 +33,13 @@ public static class ClientsErrors
     /// <summary>The deduction exceeds the client's credit balance (400) — <see cref="Client.DeductCredit"/>.</summary>
     public const string ClientCreditInsufficient = "CLIENT_CREDIT_INSUFFICIENT";
 
+    /// <summary>
+    /// The signed-in user is not allowed to do this on the account: the permission the action needs
+    /// was not granted, or the user has no relationship to any account (403). Raised by the client
+    /// portal's permission filter, not by the aggregate; declared here with the other client codes.
+    /// </summary>
+    public const string ClientPermissionDenied = "CLIENT_PERMISSION_DENIED";
+
     /// <summary>The account is not in a state that can be suspended (400) — <see cref="Client.Suspend"/>.</summary>
     public const string ClientSuspendNotAllowed = "CLIENT_SUSPEND_NOT_ALLOWED";
 

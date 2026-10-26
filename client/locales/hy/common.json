@@ -15,7 +15,6 @@
       "label": "Էջավորում"
     },
     "search": "Որոնում…",
-    "phoneNumber": "Մուտքագրեք հեռախոսահամարը",
     "close": "Փակել",
     "loading": "Բեռնվում է",
     "showPassword": "Ցույց տալ գաղտնաբառը",
@@ -27,7 +26,10 @@
     "language": "Լեզու",
     "currency": "Արժույթ",
     "currencyFixed": "Ձեր արժույթը սահմանված է հաշվում և չի կարող փոխվել այստեղ։",
-    "phoneExample": "00 000 000"
+    "phoneExample": "00 000 000",
+    "phoneCountry": "Երկրի կոդ",
+    "searchCountry": "Որոնել երկիր կամ կոդ",
+    "noCountries": "Երկիր չի գտնվել"
   },
   "common": {
     "cancel": "Չեղարկել",

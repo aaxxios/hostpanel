@@ -46,6 +46,10 @@
   "uiSelect": {
     "noResults": "Нет результатов"
   },
+  "phoneInput": {
+    "countryCode": "Код страны",
+    "searchCountry": "Поиск страны или кода"
+  },
   "selectCountry": "Выберите страну",
   "dialog": {
     "close": "Закрыть",

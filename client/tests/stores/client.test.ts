@@ -13,6 +13,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { Permission } from '~/composables/usePermissions'
 
 /** The mocked `/api/portal/client/me` call, re-created for every test. */
 const fetchMe = vi.fn()
@@ -57,7 +58,7 @@ const deferred = <T>() => {
 }
 
 /** A minimal profile — only the fields the assertions read. */
-const profile = { id: 1, firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com' }
+const profile = { id: 1, firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com', permissions: Permission.All }
 
 describe('useClientStore.fetchUser', () => {
   beforeEach(() => {
@@ -272,5 +273,60 @@ describe('useClientStore.loadEmail', () => {
     store.reset()
 
     expect(store.email).toBeNull()
+  })
+})
+
+describe('useClientStore sections the person has no permission for', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fetchMe.mockReset()
+    fetchTickets.mockReset()
+    fetchServices.mockReset()
+    fetchInvoices.mockReset()
+    fetchDomains.mockReset()
+  })
+
+  it('never sends the request of a section the permissions do not cover', async () => {
+    fetchMe.mockResolvedValue({ ...profile, permissions: Permission.ViewDomains })
+    fetchDomains.mockResolvedValue([{ id: 3 }])
+    const store = useClientStore()
+
+    await store.fetchAll()
+
+    expect(fetchDomains).toHaveBeenCalledTimes(1)
+    expect(fetchServices).not.toHaveBeenCalled()
+    expect(fetchInvoices).not.toHaveBeenCalled()
+    expect(fetchTickets).not.toHaveBeenCalled()
+    expect(store.servicesError).toBeNull()
+    expect(store.invoicesError).toBeNull()
+    expect(store.ticketsError).toBeNull()
+  })
+
+  it('answers mayDo from the loaded permissions, and yes while nobody is loaded', async () => {
+    fetchMe.mockResolvedValue({ ...profile, permissions: Permission.ViewEmails })
+    const store = useClientStore()
+
+    expect(store.mayDo(Permission.ViewPayInvoices)).toBe(true)
+
+    await store.fetchUser()
+
+    expect(store.mayDo(Permission.ViewEmails)).toBe(true)
+    expect(store.mayDo(Permission.ViewPayInvoices)).toBe(false)
+    expect(store.mayDo(Permission.ViewEmails | Permission.ViewPayInvoices)).toBe(false)
+  })
+
+  it('keeps the API sentence when the server refuses a section anyway, for instance after a grant was withdrawn', async () => {
+    fetchMe.mockResolvedValue(profile)
+    // The shape the browser gets through the BFF: the sentence in statusMessage, the code under data.
+    fetchServices.mockRejectedValue({
+      statusCode: 403,
+      data: { statusMessage: 'Your account does not have permission to do this.', data: { code: 'CLIENT_PERMISSION_DENIED' } }
+    })
+    const store = useClientStore()
+
+    await store.fetchServices()
+
+    expect(store.servicesError).toBe('Your account does not have permission to do this.')
+    expect(store.clientProfileMissing).toBe(false)
   })
 })

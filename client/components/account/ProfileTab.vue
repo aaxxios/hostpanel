@@ -21,7 +21,7 @@
       />
 
       <template v-else>
-        <UiStack direction="row" justify="end">
+        <UiStack v-if="canEdit" direction="row" justify="end">
           <UiButton size="sm" variant="subtle" data-testid="account-profile-edit" @click="editing = true">
             <Pencil :size="14" :stroke-width="2" class="mr-1.5" />
             {{ $t('client.profile.edit') }}
@@ -61,6 +61,7 @@
 import { AlertCircle, Pencil } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { APP_LOCALES } from '~/constants/appLocales'
+import { Permission } from '~/composables/usePermissions'
 import { useAccountStore } from '~/stores/account'
 import { useClientStore } from '~/stores/client'
 import { AppLocale } from '~/types/applocale'
@@ -76,6 +77,9 @@ const client = useClientStore()
 const { user, userLoading } = storeToRefs(client)
 /** The gateways the default payment method can name. */
 const { gatewayMethods } = storeToRefs(useAccountStore())
+
+/** Whether the person may change the master profile; without it the details are read-only. */
+const canEdit = computed<boolean>(() => client.mayDo(Permission.ModifyMasterProfile))
 
 /** Whether the edit form is showing instead of the read-only details. */
 const editing = ref(false)

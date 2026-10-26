@@ -1,11 +1,13 @@
 /**
- * Permission flags matching the C# backend `ClientPermissions` enum.
+ * Permission flags matching the C# backend `ClientPermission` enum.
  *
  * Each value is a power-of-two bit flag. Combine with bitwise OR to represent
  * multiple permissions (e.g. `ViewDomains | ViewPayInvoices`).
  *
  * @module composables/usePermissions
  */
+
+import { holdsPermission } from '~/utils/holdsPermission'
 
 /** Permission bit flags of a client account. */
 export enum Permission {
@@ -83,11 +85,7 @@ export const usePermissions = () => {
    * @returns True if the user has every specified permission.
    */
   const hasAllPermissions = (flags: number): boolean => {
-    const perms = user.value?.permissions ?? 0
-    if (flags === 0) {
-      return true
-    }
-    return (perms & flags) === flags
+    return holdsPermission(user.value?.permissions, flags)
   }
 
   return { Permission, hasPermission, hasAllPermissions }

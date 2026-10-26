@@ -21,12 +21,13 @@
 
 <script setup lang="ts">
 /**
- * The four counters at the top of the dashboard — active services, domains, unpaid invoices
+ * The counters at the top of the dashboard — active services, domains, unpaid invoices
  * and open tickets — each a tile that opens the matching section.
  */
 import { FileText, Globe, MessageSquare, Server } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import { CLIENT_DOMAINS_PATH, CLIENT_INVOICES_PATH, CLIENT_SERVICES_PATH, CLIENT_TICKETS_PATH } from '~/constants/clientRoutes'
+import { Permission } from '~/composables/usePermissions'
 import { useClientStore } from '~/stores/client'
 import { DashboardStat } from '~/types/dashboardstat'
 import { UiTone } from '~/utils/ui/enums'
@@ -47,6 +48,8 @@ interface StatTile {
   hint?: string
   /** Section the tile opens. */
   to: string
+  /** Permission the person needs to see the tile, since the section behind it is theirs only then. */
+  permission: Permission
 }
 
 /** Props of ClientDashboardStatGrid. */
@@ -60,7 +63,7 @@ const { t } = useI18n()
 /** Client store: the signed-in person and their services, invoices, domains and tickets. */
 const store = useClientStore()
 
-/** The four tiles, in display order. */
+/** The tiles the person may see, in display order: one per section they hold the permission for. */
 const stats = computed<StatTile[]>(() => [
   {
     key: DashboardStat.Services,
@@ -68,7 +71,8 @@ const stats = computed<StatTile[]>(() => [
     value: store.activeServiceCount,
     icon: Server,
     tone: UiTone.Info,
-    to: CLIENT_SERVICES_PATH
+    to: CLIENT_SERVICES_PATH,
+    permission: Permission.ViewProductsServices
   },
   {
     key: DashboardStat.Domains,
@@ -76,7 +80,8 @@ const stats = computed<StatTile[]>(() => [
     value: store.domains.length,
     icon: Globe,
     tone: UiTone.Primary,
-    to: CLIENT_DOMAINS_PATH
+    to: CLIENT_DOMAINS_PATH,
+    permission: Permission.ViewDomains
   },
   {
     key: DashboardStat.Invoices,
@@ -85,7 +90,8 @@ const stats = computed<StatTile[]>(() => [
     icon: FileText,
     tone: store.unpaidCount > 0 ? UiTone.Warning : UiTone.Default,
     hint: store.unpaidCount > 0 ? t('client.dashboard.statActionRequired') : undefined,
-    to: CLIENT_INVOICES_PATH
+    to: CLIENT_INVOICES_PATH,
+    permission: Permission.ViewPayInvoices
   },
   {
     key: DashboardStat.Tickets,
@@ -93,7 +99,8 @@ const stats = computed<StatTile[]>(() => [
     value: store.openTicketCount,
     icon: MessageSquare,
     tone: UiTone.Secondary,
-    to: CLIENT_TICKETS_PATH
+    to: CLIENT_TICKETS_PATH,
+    permission: Permission.ViewOpenSupportTickets
   }
-])
+].filter(stat => store.mayDo(stat.permission)))
 </script>

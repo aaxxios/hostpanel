@@ -772,6 +772,12 @@ public static class HostpanelErrorCodes
     public const string CLIENT_USER_NOT_LINKED = Domain.Clients.ClientsErrors.ClientUserNotLinked;
 
     /// <summary>
+    /// The signed-in user lacks the permission a client portal action needs, or has no account
+    /// relationship at all (403, an exact <c>StatusMapping</c> row). Raised by the permission filter.
+    /// </summary>
+    public const string CLIENT_PERMISSION_DENIED = Domain.Clients.ClientsErrors.ClientPermissionDenied;
+
+    /// <summary>
     /// The named user is already the account owner (400) — <see cref="Domain.Clients.Client.TransferOwnership"/>.
     /// </summary>
     public const string CLIENT_TRANSFER_SAME_OWNER = Domain.Clients.ClientsErrors.ClientTransferSameOwner;

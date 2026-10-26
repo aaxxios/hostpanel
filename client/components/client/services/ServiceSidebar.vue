@@ -13,12 +13,12 @@
       </UiNavItem>
     </UiNavGroup>
 
-    <UiNavGroup :title="$t('client.services.sectionActions')" :icon="Zap">
-      <UiNavItem :to="CLIENT_TICKET_NEW_PATH" :icon="MessageSquare" testid="service-open-ticket">
+    <UiNavGroup v-if="canTicket || (service.status === ServiceStatus.Pending && canOrder)" :title="$t('client.services.sectionActions')" :icon="Zap">
+      <UiNavItem v-if="canTicket" :to="CLIENT_TICKET_NEW_PATH" :icon="MessageSquare" testid="service-open-ticket">
         {{ $t('client.services.actionOpenTicket') }}
       </UiNavItem>
       <UiNavItem
-        v-if="service.status === ServiceStatus.Pending"
+        v-if="service.status === ServiceStatus.Pending && canOrder"
         :to="clientServiceSetupPath(serviceId)"
         :icon="Zap"
         tone="warning"
@@ -29,7 +29,7 @@
     </UiNavGroup>
 
     <UiNavGroup v-if="service.serverhostname" :title="$t('client.services.sectionQuickLinks')" :icon="Link2">
-      <UiNavItem :icon="Monitor" :loading="ssoLoading" testid="service-link-cpanel" @click="emit('cpanel')">
+      <UiNavItem v-if="canSignIn" :icon="Monitor" :loading="ssoLoading" testid="service-link-cpanel" @click="emit('cpanel')">
         {{ $t('client.services.linkCpanel') }}
       </UiNavItem>
       <UiNavItem :href="webmailUrl" :icon="Mail" testid="service-link-webmail">
@@ -50,6 +50,8 @@
 import { computed } from 'vue'
 import { KeyRound, LayoutGrid, Link2, Mail, MessageSquare, Monitor, Settings, XCircle, Zap } from 'lucide-vue-next'
 import { CLIENT_TICKET_NEW_PATH, clientServiceSetupPath } from '~/constants/clientRoutes'
+import { Permission } from '~/composables/usePermissions'
+import { useClientStore } from '~/stores/client'
 import type { ServiceDetail } from '~/types/servicedetail'
 import { ServiceStatus } from '~/types/servicestatus'
 import { ServiceTab } from '~/types/servicetab'
@@ -83,13 +85,30 @@ const emit = defineEmits<{
   cpanel: []
 }>()
 
+/** The client store, which knows what the signed-in person may do. */
+const store = useClientStore()
+
+/** Whether the person may open a support ticket. */
+const canTicket = computed(() => store.mayDo(Permission.ViewOpenSupportTickets))
+
+/** Whether the person may complete an order's setup, and cancel a service: both place orders. */
+const canOrder = computed(() => store.mayDo(Permission.PlaceNewOrders))
+
+/** Whether the person may sign in to the control panel from here. */
+const canSignIn = computed(() => store.mayDo(Permission.AllowSingleSignOn))
+
+/** Whether the person may change the service's control-panel password. */
+const canChangePassword = computed(() => store.mayDo(Permission.ViewModifyPasswords))
+
 /** Address of the service's webmail, on its own server. */
 const webmailUrl = computed(() => buildWebmailUrl(props.service.serverhostname))
 
 /** The panels the menu switches between. */
 const tabs = computed(() => [
   { key: ServiceTab.Overview, label: t('client.services.tabOverview'), icon: LayoutGrid },
-  { key: ServiceTab.Password, label: t('client.services.tabChangePassword'), icon: KeyRound },
-  { key: ServiceTab.Cancel, label: t('client.services.tabCancel'), icon: XCircle },
+  ...(canChangePassword.value
+    ? [{ key: ServiceTab.Password, label: t('client.services.tabChangePassword'), icon: KeyRound }]
+    : []),
+  ...(canOrder.value ? [{ key: ServiceTab.Cancel, label: t('client.services.tabCancel'), icon: XCircle }] : []),
 ])
 </script>

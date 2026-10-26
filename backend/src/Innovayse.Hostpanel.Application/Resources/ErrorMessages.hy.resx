@@ -538,6 +538,9 @@
   <data name="CLIENT_USER_NOT_LINKED" xml:space="preserve">
     <value>Այս օգտատերը կապակցված չէ այս հաճախորդին։</value>
   </data>
+  <data name="CLIENT_PERMISSION_DENIED" xml:space="preserve">
+    <value>Ձեր հաշվին այս գործողության թույլտվությունը չի տրվել։ Խնդրեք հաշվի սեփականատիրոջը ձեզ հասանելիություն տրամադրել։</value>
+  </data>
   <data name="CLIENT_TRANSFER_SAME_OWNER" xml:space="preserve">
     <value>Այս օգտատերն արդեն հաշվի սեփականատերն է։</value>
   </data>

@@ -3,6 +3,8 @@
  */
 import { describe, expect, it } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
+import { grantPermissions } from '~/tests/helpers/grantPermissions'
+import { Permission } from '~/composables/usePermissions'
 import DomainOverview from '~/components/client/domains/DomainOverview.vue'
 import type { DomainDetail } from '~/types/domaindetail'
 import { DomainTab } from '~/types/domaintab'
@@ -49,5 +51,23 @@ describe('DomainOverview', () => {
     await wrapper.find('[data-testid="domain-quick-nameservers"]').trigger('click')
 
     expect(wrapper.emitted('navigate')).toEqual([[DomainTab.Renew], [DomainTab.Nameservers]])
+  })
+})
+
+describe('DomainOverview permissions', () => {
+  it('shows only the shortcuts the person may use', async () => {
+    const wrapper = mountOverview()
+    await grantPermissions(Permission.ViewDomains | Permission.PlaceNewOrders)
+
+    expect(wrapper.find('[data-testid="domain-quick-renew"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="domain-quick-nameservers"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="domain-quick-lock"]').exists()).toBe(false)
+  })
+
+  it('drops the shortcuts card when the person may use none of them', async () => {
+    const wrapper = mountOverview()
+    await grantPermissions(Permission.ViewDomains)
+
+    expect(wrapper.find('[data-testid="domain-quick-actions"]').exists()).toBe(false)
   })
 })

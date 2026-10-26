@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountPage, stubClientRuntime } from '~/tests/helpers/mountClient'
 import ServicePage from '~/pages/client/services/[id]/index.vue'
+import { Permission } from '~/composables/usePermissions'
 
 /** The mocked client endpoints the stores reach. */
 const clientApi = vi.hoisted(() => ({
@@ -36,7 +37,7 @@ describe('service page', () => {
     clientApi.fetchHostingInfo.mockResolvedValue({ nameservers: ['ns1.example.net'], ssl: null })
     clientApi.fetchCancellationStatus.mockResolvedValue({ pending: false })
     clientApi.fetchServiceInvoices.mockResolvedValue({ invoices: [], unattributedInvoiceCount: 0 })
-    clientApi.fetchMe.mockResolvedValue({ currency: 'USD' })
+    clientApi.fetchMe.mockResolvedValue({ currency: 'USD', permissions: Permission.All })
     navigate.mockReset()
     vi.stubGlobal('navigateTo', navigate)
     stubClientRuntime({ params: { id: '4' } })
@@ -107,5 +108,39 @@ describe('service page', () => {
     const wrapper = await mountPage(ServicePage)
 
     expect(wrapper.find('[data-testid="ui-empty-state"]').text()).toContain('client.services.notFound')
+  })
+})
+
+describe('service page permissions', () => {
+  beforeEach(() => {
+    Object.values(clientApi).forEach((fn) => fn.mockReset())
+    clientApi.fetchService.mockResolvedValue(service())
+    clientApi.fetchHostingInfo.mockResolvedValue({ nameservers: ['ns1.example.net'], ssl: null })
+    clientApi.fetchCancellationStatus.mockResolvedValue({ pending: false })
+    clientApi.fetchServiceInvoices.mockResolvedValue({ invoices: [], unattributedInvoiceCount: 0 })
+    vi.stubGlobal('navigateTo', navigate)
+    stubClientRuntime({ params: { id: '4' } })
+  })
+
+  it('shows neither the invoices nor the password and cancel panels to a person who may only view services', async () => {
+    clientApi.fetchMe.mockResolvedValue({ currency: 'USD', permissions: Permission.ViewProductsServices })
+
+    const wrapper = await mountPage(ServicePage)
+
+    expect(wrapper.find('[data-testid="service-details"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="service-invoices"]').exists()).toBe(false)
+    expect(clientApi.fetchServiceInvoices).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="service-tab-password"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="service-tab-cancel"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="service-quick-cancel"]').exists()).toBe(false)
+  })
+
+  it('shows the invoices to a person who may pay invoices', async () => {
+    clientApi.fetchMe.mockResolvedValue({ currency: 'USD', permissions: Permission.ViewProductsServices | Permission.ViewPayInvoices })
+
+    const wrapper = await mountPage(ServicePage)
+
+    expect(wrapper.find('[data-testid="service-invoices"]').exists()).toBe(true)
+    expect(clientApi.fetchServiceInvoices).toHaveBeenCalledWith('4')
   })
 })

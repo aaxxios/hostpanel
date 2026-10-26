@@ -9,6 +9,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { mountAuthPage, stubAuthRuntime } from '~/tests/helpers/authScreens'
+import { Permission } from '~/composables/usePermissions'
 
 /** The mocked identity call, re-created for every test. */
 const fetchMe = vi.fn()
@@ -55,7 +56,7 @@ beforeEach(() => {
   for (const call of [fetchMe, fetchServices, fetchInvoices, fetchDomains, fetchTickets, fetchRecentAnnouncements]) {
     call.mockReset()
   }
-  fetchMe.mockResolvedValue({ firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com' })
+  fetchMe.mockResolvedValue({ firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com', permissions: Permission.All })
   fetchServices.mockResolvedValue([{ id: 1, name: 'Starter', domain: 'a.test', username: 'ada', status: 'Active', serverhostname: '' }])
   fetchInvoices.mockResolvedValue([{ id: 7, status: 'Unpaid', dueDate: '2026-11-01', total: 25, currency: 'USD' }])
   fetchDomains.mockResolvedValue([{ id: 3, name: 'a.test', status: 'Active', expiresAt: '2030-01-01', nextDueDate: '', registeredAt: '' }])
@@ -133,5 +134,32 @@ describe('client dashboard page', () => {
     expect(fetchInvoices).toHaveBeenCalledTimes(2)
     expect(fetchDomains).toHaveBeenCalledTimes(2)
     expect(fetchTickets).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('client dashboard page permissions', () => {
+  it('neither asks for nor shows the sections the person has no permission for', async () => {
+    fetchMe.mockResolvedValue({ firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com', permissions: Permission.ViewDomains })
+
+    const wrapper = await mountAuthPage(DashboardPage)
+
+    expect(fetchDomains).toHaveBeenCalledTimes(1)
+    expect(fetchServices).not.toHaveBeenCalled()
+    expect(fetchInvoices).not.toHaveBeenCalled()
+    expect(fetchTickets).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="dashboard-domain-3"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="dashboard-service-1"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="dashboard-invoice-7"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="dashboard-ticket-9"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="dashboard-register-domain"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="dashboard-load-errors"]').exists()).toBe(false)
+  })
+
+  it('offers the domain search card to a person who may place orders', async () => {
+    fetchMe.mockResolvedValue({ firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com', permissions: Permission.PlaceNewOrders })
+
+    const wrapper = await mountAuthPage(DashboardPage)
+
+    expect(wrapper.find('[data-testid="dashboard-register-domain"]').exists()).toBe(true)
   })
 })

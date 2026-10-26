@@ -330,6 +330,13 @@ public static class DependencyInjection
             Innovayse.Hostpanel.Application.Common.Interfaces.IServiceOwnership,
             Innovayse.Hostpanel.Application.Services.Authorization.ServiceOwnership>();
 
+        // What the signed-in user may do on a client account. The portal's permission filter decides
+        // with it and the account endpoint reports it; both read it per request and neither trusts
+        // anything the request says about it.
+        services.AddScoped<
+            Innovayse.Hostpanel.Application.Common.Interfaces.IClientAccess,
+            Innovayse.Hostpanel.Application.Clients.Authorization.ClientAccess>();
+
         // Product services — IProductFeatureRepository, IProductGroupRepository and
         // IProductRepository are all gone: every consumer across Products, Migration, Domains,
         // Services and Billing now reads and writes through IHostpanelDbContext (A6 Task 5).

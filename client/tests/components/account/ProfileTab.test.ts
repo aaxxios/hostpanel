@@ -4,6 +4,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { mountAccount } from '~/tests/helpers/mountAccount'
+import { Permission } from '~/composables/usePermissions'
 import ProfileTab from '~/components/account/ProfileTab.vue'
 import { useAccountStore } from '~/stores/account'
 import { useClientStore } from '~/stores/client'
@@ -22,7 +23,7 @@ vi.stubGlobal('useAuthMode', () => ({ isSso: ref(false) }))
 
 /** A signed-in profile with a default gateway and a language. */
 const user: ClientUser = {
-  id: 1, firstname: 'Jane', lastname: 'Doe', email: 'jane@example.com', permissions: 0, defaultgateway: 'stripe', language: 'ru'
+  id: 1, firstname: 'Jane', lastname: 'Doe', email: 'jane@example.com', permissions: Permission.All, defaultgateway: 'stripe', language: 'ru'
 }
 
 describe('ProfileTab', () => {
@@ -85,5 +86,26 @@ describe('ProfileTab', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('[data-testid="account-2fa-badge"]').text()).toBe('client.twoFactor.enabled')
+  })
+})
+
+describe('ProfileTab permissions', () => {
+  it('shows the details read-only to a person who may not modify the master profile', async () => {
+    const wrapper = mountAccount(ProfileTab)
+    useClientStore().user = { ...user, permissions: Permission.ViewDomains }
+    useClientStore().userLoading = false
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="account-profile-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="account-profile-edit"]').exists()).toBe(false)
+  })
+
+  it('offers the edit button with ModifyMasterProfile', async () => {
+    const wrapper = mountAccount(ProfileTab)
+    useClientStore().user = { ...user, permissions: Permission.ModifyMasterProfile }
+    useClientStore().userLoading = false
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="account-profile-edit"]').exists()).toBe(true)
   })
 })

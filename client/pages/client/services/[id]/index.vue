@@ -45,7 +45,7 @@
               @invoices="loadInvoices"
               @cancel="activeTab = ServiceTab.Cancel"
             />
-            <ClientServicesServiceInvoicesCard />
+            <ClientServicesServiceInvoicesCard v-if="store.mayDo(Permission.ViewPayInvoices)" />
           </UiStack>
 
           <ClientServicesServicePasswordForm v-else-if="activeTab === ServiceTab.Password" :service-id="serviceId" />
@@ -66,6 +66,7 @@
 import { AlertCircle } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { CLIENT_SERVICES_PATH, clientServiceSetupPath } from '~/constants/clientRoutes'
+import { Permission } from '~/composables/usePermissions'
 import { useClientStore } from '~/stores/client'
 import { useServiceManagementStore } from '~/stores/servicemanagement'
 import { ServiceStatus } from '~/types/servicestatus'
@@ -151,5 +152,10 @@ watch(service, (current) => {
 }, { immediate: true })
 
 // The related invoices load when the page opens, for the overview card.
-onMounted(() => loadInvoices())
+onMounted(() => {
+  // The related invoices are for a person who may see invoices; anyone else is not asked to load them.
+  if (store.mayDo(Permission.ViewPayInvoices)) {
+    return loadInvoices()
+  }
+})
 </script>

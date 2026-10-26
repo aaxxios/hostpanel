@@ -32,6 +32,8 @@
 import { computed } from 'vue'
 import { Monitor, Server } from 'lucide-vue-next'
 import type { ServiceDetail } from '~/types/servicedetail'
+import { Permission } from '~/composables/usePermissions'
+import { useClientStore } from '~/stores/client'
 import { ServiceStatus } from '~/types/servicestatus'
 import { productNameOrFallback } from '~/utils/displayFallback'
 
@@ -52,6 +54,12 @@ const emit = defineEmits<{
   cpanel: []
 }>()
 
-/** Whether the control-panel button is offered: an active service with a known server. */
-const canLogin = computed(() => Boolean(props.service.serverhostname) && props.service.status === ServiceStatus.Active)
+/** The client store, which knows what the signed-in person may do. */
+const store = useClientStore()
+
+/** Whether the control-panel button is offered: an active service on a known server, to a person allowed single sign-on. */
+const canLogin = computed(() =>
+  Boolean(props.service.serverhostname)
+  && props.service.status === ServiceStatus.Active
+  && store.mayDo(Permission.AllowSingleSignOn))
 </script>

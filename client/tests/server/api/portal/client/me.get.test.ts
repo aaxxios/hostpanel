@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { makeEvent, refusal, setRuntimeConfig, startBackend } from '../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../helpers/bffHarness'
 import type { StubReply, StubRequest, StubServer } from '../../../../helpers/stubServer'
+import { Permission } from '~/composables/usePermissions'
 import { AuthMode } from '~/types/authmode'
 
 /** The stub playing both the SSO profile endpoint and the C# API. */
@@ -43,8 +44,11 @@ const billing = {
   twoFactorEnabled: true,
 }
 
+/** The permissions the C# API reports for the signed-in person: two of the thirteen flags. */
+const granted = Permission.ViewDomains | Permission.ViewEmails
+
 /**
- * Answers the SSO profile and the billing profile by path.
+ * Answers the SSO profile, the account (permissions) and the billing profile by path.
  *
  * @param request - The request the stub received.
  * @returns The reply for that path.
@@ -52,6 +56,9 @@ const billing = {
 const answer = (request: StubRequest): StubReply => {
   if (request.url === '/api/account/profile') {
     return { body: { id: 'sso-1', firstName: 'Id', lastName: 'Entity', email: 'sso@b.test', phoneNumber: '+9', totpEnabled: true } }
+  }
+  if (request.url === '/api/auth/me') {
+    return { body: { email: 'sso@b.test', roles: ['Client'], emailVerified: true, clientPermissions: granted } }
   }
   return { body: billing }
 }
@@ -90,6 +97,21 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
       twoFactorEnabled: true,
       email_preferences: { general: 1, invoice: 0, support: 1, product: 0, domain: 1, affiliate: 0 },
     })
+  })
+
+  it('takes the permissions from the API instead of granting everything', async () => {
+    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+
+    expect(backend.requests.map(request => request.url)).toContain('/api/auth/me')
+    expect(result['permissions']).toBe(granted)
+  })
+
+  it('grants nothing when the account cannot be read', async () => {
+    backend.respondWith(request => (request.url === '/api/auth/me' ? { status: 500, body: {} } : answer(request)))
+
+    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+
+    expect(result['permissions']).toBe(Permission.None)
   })
 
   it('falls back to the identity when the billing profile is refused', async () => {
@@ -147,12 +169,13 @@ describe('GET /api/portal/client/me in local mode', () => {
   })
 
   it('maps the billing profile to the portal shape', async () => {
-    backend.respondWith(() => ({ body: billing }))
+    backend.respondWith(request => (request.url === '/api/auth/me' ? answer(request) : { body: billing }))
 
     const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } }))
 
-    expect(backend.requests).toHaveLength(1)
+    expect(backend.requests.map(request => request.url)).toEqual(['/api/clients/me', '/api/auth/me'])
     expect(result).toMatchObject({
+      permissions: granted,
       id: 'b-1',
       firstname: 'Ann',
       address1: 'Main 1',
