@@ -292,6 +292,14 @@ export const useBillingStore = defineStore('billing', () => {
     return result.ok
   }
 
+  /**
+   * Builds the address of an invoice's PDF download for the page to open.
+   *
+   * @param id - Invoice id.
+   * @returns The address to open.
+   */
+  const pdfUrl = (id: number): string => api.pdfUrl(id)
+
   return {
     invoices,
     totalCount,
@@ -304,6 +312,7 @@ export const useBillingStore = defineStore('billing', () => {
     selectedIds,
     fetchAll,
     fetchById,
+    pdfUrl,
     fetchClientInvoices,
     createInvoice,
     updateItems,

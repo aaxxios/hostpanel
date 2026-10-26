@@ -146,7 +146,8 @@
     "unpaid": "Не оплачен",
     "tabSummary": "Сводка",
     "tabCredit": "Кредит",
-    "tabRefund": "Возврат"
+    "tabRefund": "Возврат",
+    "downloadPdf": "Скачать PDF"
   },
   "invoicesList": {
     "manageBillingInvoices": "Управление счетами на оплату",

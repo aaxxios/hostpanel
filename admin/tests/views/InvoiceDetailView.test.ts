@@ -91,6 +91,20 @@ describe('InvoiceDetailView', () => {
     expect(wrapper.find('[data-testid="billing-invoice-saved"]').exists()).toBe(false)
   })
 
+  it('opens the PDF download in a new tab', async () => {
+    stubRoutes({ 'GET /api/billing/1': () => json(invoiceFixture()) })
+    const open = vi.fn()
+    vi.stubGlobal('open', open)
+    const { wrapper } = await mountRouted(InvoiceDetailView, PATTERN, '/billing/1')
+    await flushPromises()
+
+    const button = wrapper.get('[data-testid="billing-invoice-download"]')
+    await button.trigger('click')
+
+    expect(button.text()).toContain('Download PDF')
+    expect(open).toHaveBeenCalledWith('/api/billing/1/pdf', '_blank')
+  })
+
   it('shows the API sentence when the invoice cannot be loaded', async () => {
     stubRoutes({ 'GET /api/billing/1': () => problem('Invoice not found.', 404) })
     const { wrapper } = await mountRouted(InvoiceDetailView, PATTERN, '/billing/1')

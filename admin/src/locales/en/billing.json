@@ -146,7 +146,8 @@
     "unpaid": "Unpaid",
     "tabSummary": "Summary",
     "tabCredit": "Credit",
-    "tabRefund": "Refund"
+    "tabRefund": "Refund",
+    "downloadPdf": "Download PDF"
   },
   "invoicesList": {
     "manageBillingInvoices": "Manage billing invoices",
