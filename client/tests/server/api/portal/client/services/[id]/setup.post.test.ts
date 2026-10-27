@@ -5,7 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../../../helpers/stubServer'
 
@@ -28,7 +28,7 @@ describe('service setup route', () => {
   it('posts the body to the service setup endpoint', async () => {
     backend.respondWith(() => ({ body: { ok: true } }))
 
-    const result = await route.default(makeEvent({ params: { id: '5' }, body: { domain: 'a.test' }, cookies: { auth_token: 'jwt' } }))
+    const result = await route.default(makeEvent({ params: { id: '5' }, body: { domain: 'a.test' }, cookies: await signedIn('jwt') }))
 
     expect(result).toEqual({ ok: true })
     expect(backend.requests[0]?.method).toBe('POST')

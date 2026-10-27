@@ -4,7 +4,7 @@
  * Switches the active SSO session to a remembered account.
  * Generates a PKCE pair and redirects to sso.innovayse.local/switch-init
  * which auto-submits to the SSO switch endpoint, then comes back
- * via the normal OIDC callback with a new auth_token.
+ * via the normal OIDC callback, which starts a new session.
  *
  * @module server/api/portal/auth/sso/switch.get
  */

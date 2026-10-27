@@ -5,15 +5,18 @@
  * 1. Revokes the refresh token on the hostpanel backend.
  * 2. Fires backchannel logout to all platform services via the main portal, when one is
  *    configured (`mainApiUrl`); with none configured the call is skipped.
- * 3. Clears all auth cookies.
+ * 3. Ends the server-side session: deletes the stored tokens and clears the cookies.
+ *
+ * @module server/api/portal/auth/logout.post
  */
-import { clearAllAuthCookies } from '~/server/utils/api'
-import { SessionCookie } from '~/constants/sessionCookie'
+import { readTokenPayload } from '~/server/utils/auth-cookie'
+import { endSession, readSession } from '~/server/utils/portal-session'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
-  const refreshToken = getCookie(event, SessionCookie.RefreshToken)
-  const authToken = getCookie(event, SessionCookie.AuthToken)
+  const current = await readSession(event)
+  const refreshToken = current?.session.refreshToken
+  const authToken = current?.session.accessToken
 
   // 1. Revoke refresh token on hostpanel backend
   try {
@@ -33,9 +36,8 @@ export default defineEventHandler(async (event) => {
   // calls are fire-and-forget so we don't block the response on them.
   if (authToken) {
     try {
-      const payload = authToken.split('.')[1] ?? ''
-      const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
-      const email: string = decoded.email || decoded.sub || ''
+      const claims = readTokenPayload(authToken) ?? {}
+      const email = String(claims['email'] || claims['sub'] || '')
       // No fallback host: a self-hosted install without a main portal has nothing to notify.
       const mainApiUrl = (config.mainApiUrl as string) || ''
       // The post-logout return address is this portal's own configured public URL.
@@ -50,7 +52,7 @@ export default defineEventHandler(async (event) => {
     } catch { /* ignore */ }
   }
 
-  // 3. Clear all cookies
-  clearAllAuthCookies(event)
+  // 3. End the session: the stored tokens and the cookies
+  await endSession(event)
   return { ok: true }
 })

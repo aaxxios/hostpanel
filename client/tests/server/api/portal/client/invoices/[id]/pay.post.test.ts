@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn, storedSession } from '../../../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../../../helpers/stubServer'
 
@@ -32,7 +32,7 @@ describe('POST /api/portal/client/invoices/:id/pay', () => {
     const result = await route.default(makeEvent({
       params: { id: '9' },
       body: { paymethodid: 4 },
-      cookies: { auth_token: 'jwt' },
+      cookies: await signedIn('jwt'),
     }))
 
     expect(result).toEqual({ paid: true })
@@ -49,18 +49,19 @@ describe('POST /api/portal/client/invoices/:id/pay', () => {
       }
       return request.headers['authorization'] === 'Bearer fresh' ? { body: { paid: true } } : { status: 401, body: {} }
     })
-    const event = makeEvent({ params: { id: '9' }, body: {}, cookies: { auth_token: 'old', refresh_token: 'r' } })
+    const cookies = await signedIn('old', { refreshToken: 'r' })
+    const event = makeEvent({ params: { id: '9' }, body: {}, cookies })
 
     const result = await route.default(event)
 
     expect(result).toEqual({ paid: true })
-    expect(event.written['auth_token']?.value).toBe('fresh')
+    expect(await storedSession(cookies)).toMatchObject({ accessToken: 'fresh', refreshToken: 'r' })
   })
 
   it('rethrows a refusal with the backend sentence', async () => {
     backend.respondWith(() => ({ status: 400, body: { type: 'INVOICE_ALREADY_PAID', detail: 'Already paid.' } }))
 
-    const error = await refusal(() => route.default(makeEvent({ params: { id: '9' }, body: {}, cookies: { auth_token: 'jwt' } })))
+    const error = await refusal(async () => route.default(makeEvent({ params: { id: '9' }, body: {}, cookies: await signedIn('jwt') })))
 
     expect(error).toMatchObject({ statusCode: 400, statusMessage: 'Already paid.', data: { code: 'INVOICE_ALREADY_PAID' } })
   })

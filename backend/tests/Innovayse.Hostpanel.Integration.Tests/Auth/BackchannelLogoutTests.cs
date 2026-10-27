@@ -25,10 +25,10 @@ public sealed class BackchannelLogoutTests(IntegrationTestFactory factory) : ICl
     /// <summary>The route the portal posts to.</summary>
     private const string Route = "/auth/backchannel-logout";
 
-    /// <summary>Builds a host configured with <see cref="Key"/> and a recording revoker.</summary>
-    /// <param name="revoker">Receives the revoked subjects.</param>
+    /// <summary>Builds a host configured with <see cref="Key"/> and recording revokers.</summary>
+    /// <param name="revokers">Receive the revoked subjects; each is registered as one session store.</param>
     /// <returns>A client against that host.</returns>
-    private HttpClient CreateClient(RecordingSessionRevoker revoker)
+    private HttpClient CreateClient(params RecordingSessionRevoker[] revokers)
     {
         var host = factory.WithWebHostBuilder(builder =>
         {
@@ -36,7 +36,10 @@ public sealed class BackchannelLogoutTests(IntegrationTestFactory factory) : ICl
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<ISessionRevoker>();
-                services.AddSingleton<ISessionRevoker>(revoker);
+                foreach (var revoker in revokers)
+                {
+                    services.AddSingleton<ISessionRevoker>(revoker);
+                }
             });
         });
 
@@ -118,6 +121,25 @@ public sealed class BackchannelLogoutTests(IntegrationTestFactory factory) : ICl
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         revoker.Revoked.Should().Equal(subject);
+    }
+
+    /// <summary>
+    /// Every registered session store is asked, so the client portal's sessions end together with
+    /// the panel's own.
+    /// </summary>
+    [Fact]
+    public async Task EverySessionStoreIsRevokedAsync()
+    {
+        var panel = new RecordingSessionRevoker();
+        var portal = new RecordingSessionRevoker();
+        var client = CreateClient(panel, portal);
+        var (email, subject) = await RegisterAsync(client);
+
+        var response = await PostAsync(client, email, Key);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        panel.Revoked.Should().Equal(subject);
+        portal.Revoked.Should().Equal(subject);
     }
 
     /// <summary>An address no account answers is a success that revokes nothing, so a retry is harmless.</summary>

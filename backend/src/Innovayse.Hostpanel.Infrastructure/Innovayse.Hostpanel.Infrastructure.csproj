@@ -56,6 +56,8 @@
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
     <PackageReference Include="Stripe.net" />
+    <!-- Auth/PortalSessionRevoker ends the client portal's Redis sessions on a back-channel logout. -->
+    <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="WolverineFx" />
     <PackageReference Include="WolverineFx.Postgresql" />

@@ -1,7 +1,7 @@
 /**
  * POST /api/portal/auth/login
  *
- * Signs in against the C# API (local-auth mode) and stores the session in httpOnly cookies. The
+ * Signs in against the C# API (local-auth mode) and starts the server-side session (the browser receives only the opaque session cookie). The
  * call is anonymous -- no session exists yet -- but still goes through `internalApiCall`, so the
  * reader's `X-Language` reaches the backend and a refusal arrives as the backend's own
  * `detail` / `code` rather than a raw upstream error.
@@ -9,8 +9,7 @@
  * @module server/api/portal/auth/login.post
  */
 
-import { SessionCookie } from '~/constants/sessionCookie'
-import { ACCESS_TOKEN_FALLBACK_MAX_AGE, AUTHED_FLAG_MAX_AGE } from '~/server/utils/auth-cookie'
+import { startSession } from '~/server/utils/portal-session'
 
 /** What the backend answers a sign-in with. */
 interface LoginResult {
@@ -41,22 +40,11 @@ export default defineEventHandler(async (event) => {
     return response
   }
 
-  // Set auth cookies
+  // Start the session; the token stays on the server
   if (response.accessToken) {
-    setCookie(event, SessionCookie.AuthToken, response.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: response.expiresIn ?? ACCESS_TOKEN_FALLBACK_MAX_AGE,
-      path: '/',
-    })
-    setCookie(event, SessionCookie.Authed, '1', {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: AUTHED_FLAG_MAX_AGE,
-      path: '/',
-    })
+    await startSession(event, response.expiresIn === undefined
+      ? { accessToken: response.accessToken }
+      : { accessToken: response.accessToken, expiresIn: response.expiresIn })
   }
 
   return { success: true }

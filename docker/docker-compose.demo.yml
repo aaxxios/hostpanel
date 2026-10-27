@@ -99,6 +99,7 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: "Host=hostpanel-demo-db;Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
       Auth__RedisConnection: hostpanel-demo-redis:${DEMO_REDIS_PORT}
+      PortalSessions__RedisConnection: hostpanel-demo-redis:${DEMO_REDIS_PORT}
       RabbitMQ__Host: hostpanel-demo-rabbitmq
       # Mail goes to the catcher: host, port and credentials override together.
       Smtp__Host: hostpanel-demo-mailhog
@@ -147,6 +148,8 @@ services:
       NUXT_PUBLIC_BASE_URL: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
       NUXT_PUBLIC_SITE_URL: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
       NUXT_SSO_CALLBACK_URL: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}/api/portal/auth/sso/callback
+      # The demo's own Redis, never production's.
+      NUXT_SESSION_REDIS: hostpanel-demo-redis:${DEMO_REDIS_PORT}
     depends_on: !override
       - hostpanel-demo-api
 

@@ -67,6 +67,22 @@ export const SSO_AUTHORIZE_PATH = '/api/portal/auth/sso/authorize'
 /** The query parameter that carries the page to return to after signing in. */
 export const CLIENT_REDIRECT_QUERY = 'redirect'
 
+/**
+ * The query parameter that asks a page to show the sign-in prompt. The sign-in callback adds it
+ * when the identity provider found no session to sign the visitor in with.
+ */
+export const SIGN_IN_PROMPT_QUERY = 'signin'
+
+/** The value of `SIGN_IN_PROMPT_QUERY` that shows the prompt. */
+export const SIGN_IN_PROMPT_VALUE = 'required'
+
+/**
+ * The query parameter that names the account a visitor arrives for (`?authuser=<email>`), as every
+ * product of a shared sign-on adds to the links it hands over. It is passed on to the identity
+ * provider as `login_hint`.
+ */
+export const LOGIN_HINT_QUERY = 'authuser'
+
 /** The client pages that need no session; a path equal to one of these, or below it, is public. */
 export const CLIENT_PUBLIC_ROUTES: readonly string[] = [
   CLIENT_LOGIN_PATH,

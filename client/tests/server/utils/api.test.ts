@@ -1,6 +1,6 @@
 /**
  * Tests for the BFF transport in `server/utils/api.ts`, run against a real HTTP stub that plays
- * the C# API (and the SSO token endpoint for the refresh).
+ * the C# API (and the SSO token endpoint for the refresh), over the real in-process session store.
  *
  * The language proof for the second hop: the `X-Language` the browser sent must reach the backend
  * on every call, the retry after a token refresh included. The error half: a refusal is
@@ -31,6 +31,12 @@ interface FakeEvent {
 /** The stub playing the backend and the SSO. */
 let stub: StubServer
 
+/** Id of the signed-in session every event carries by default; it holds the access token `old`. */
+const SIGNED_IN = 'session-signed-in'
+
+/** Id of a session that also holds a refresh token. */
+const REFRESHABLE = 'session-refreshable'
+
 /**
  * Builds a fake event.
  *
@@ -38,7 +44,7 @@ let stub: StubServer
  * @param cookies - Incoming cookies.
  * @returns The event, typed as the H3 event the code under test expects.
  */
-const makeEvent = (headers: Record<string, string> = {}, cookies: Record<string, string> = { auth_token: 'old' }): H3Event & FakeEvent => {
+const makeEvent = (headers: Record<string, string> = {}, cookies: Record<string, string> = { portal_session: SIGNED_IN }): H3Event & FakeEvent => {
   return { headers, cookies, written: {}, deleted: [] } as unknown as H3Event & FakeEvent
 }
 
@@ -51,15 +57,17 @@ vi.stubGlobal('deleteCookie', (event: FakeEvent, name: string) => {
   event.deleted.push(name)
 })
 vi.stubGlobal('createError', (options: Record<string, unknown>) => Object.assign(new Error(String(options.statusMessage ?? '')), options))
-vi.stubGlobal('REFRESH_TOKEN_MAX_AGE', 60)
-vi.stubGlobal('authCookieMaxAge', (await import('~/server/utils/auth-cookie')).authCookieMaxAge)
+vi.stubGlobal('useRuntimeConfig', () => ({ apiUrl: stub.baseUrl, ssoUrl: stub.baseUrl, ssoClientId: 'client', ssoClientSecret: 'secret' }))
 
 const { backendLanguage, internalApiCall } = await import('~/server/utils/api')
+// No `sessionRedis` in the runtime config: the real store is the in-process one.
+const { useSessionStore } = await import('~/server/utils/session-store')
 
 beforeEach(async () => {
   stub = await startStubServer()
   vi.stubGlobal('$fetch', ofetch)
-  vi.stubGlobal('useRuntimeConfig', () => ({ apiUrl: stub.baseUrl, ssoUrl: stub.baseUrl, ssoClientId: 'client', ssoClientSecret: 'secret' }))
+  await useSessionStore().set(SIGNED_IN, { accessToken: 'old' }, 3600)
+  await useSessionStore().set(REFRESHABLE, { accessToken: 'old', refreshToken: 'r' }, 3600)
 })
 
 afterEach(async () => {
@@ -86,21 +94,24 @@ describe('backendLanguage', () => {
 })
 
 describe('internalApiCall sliding session', () => {
-  it('stores a renewed token from the backend in the auth_token cookie', async () => {
+  it('stores a renewed token from the backend in the server-side session, not in a cookie', async () => {
     stub.respondWith(() => ({ body: { ok: true }, headers: { 'X-Renewed-Access-Token': 'renewed' } }))
     const event = makeEvent()
 
     await internalApiCall(event, '/me/services')
 
-    expect(event.written['auth_token']).toBe('renewed')
+    expect(await useSessionStore().get(SIGNED_IN)).toMatchObject({ accessToken: 'renewed' })
+    expect(event.written['portal_session']).toBe(SIGNED_IN)
+    expect(event.written['auth_token']).toBeUndefined()
   })
 
-  it('leaves the cookie alone when the backend offers no renewal', async () => {
+  it('leaves the session alone when the backend offers no renewal', async () => {
     const event = makeEvent()
 
     await internalApiCall(event, '/me/services')
 
-    expect(event.written['auth_token']).toBeUndefined()
+    expect(await useSessionStore().get(SIGNED_IN)).toMatchObject({ accessToken: 'old' })
+    expect(event.written).toEqual({})
   })
 })
 
@@ -134,7 +145,7 @@ describe('internalApiCall language', () => {
       }
       return request.headers['authorization'] === 'Bearer fresh' ? { body: { ok: true } } : { status: 401, body: {} }
     })
-    const event = makeEvent({ 'x-language': 'ru' }, { auth_token: 'old', refresh_token: 'r' })
+    const event = makeEvent({ 'x-language': 'ru' }, { portal_session: REFRESHABLE })
 
     const result = await internalApiCall(event, '/me/services')
 
@@ -143,12 +154,32 @@ describe('internalApiCall language', () => {
       ['Bearer old', 'ru'],
       ['Bearer fresh', 'ru'],
     ])
-    expect(event.written['auth_token']).toBe('fresh')
+    expect(await useSessionStore().get(REFRESHABLE)).toMatchObject({ accessToken: 'fresh', refreshToken: 'r' })
+  })
+
+  it('ends the session and answers 401 when the refresh is refused', async () => {
+    stub.respondWith((request) => request.url === '/connect/token' ? { status: 400, body: { error: 'invalid_grant' } } : { status: 401, body: {} })
+    const event = makeEvent({}, { portal_session: REFRESHABLE })
+
+    await expect(internalApiCall(event, '/me/services')).rejects.toMatchObject({ statusCode: 401 })
+
+    expect(await useSessionStore().get(REFRESHABLE)).toBeNull()
+    expect(event.deleted).toEqual(expect.arrayContaining(['portal_session', 'authed']))
+  })
+
+  it('ends a session without a refresh token on a 401, since nothing can renew it', async () => {
+    stub.respondWith(() => ({ status: 401, body: {} }))
+    const event = makeEvent()
+
+    await expect(internalApiCall(event, '/me/services')).rejects.toMatchObject({ statusCode: 401 })
+
+    expect(stub.requests.some((request) => request.url === '/connect/token')).toBe(false)
+    expect(await useSessionStore().get(SIGNED_IN)).toBeNull()
   })
 
   it('does not refresh, and sends no bearer, for an anonymous call', async () => {
     stub.respondWith(() => ({ status: 401, body: { type: 'INVALID_CREDENTIALS', detail: 'Wrong.' } }))
-    const event = makeEvent({ 'x-language': 'ru' }, { auth_token: 'stale', refresh_token: 'r' })
+    const event = makeEvent({ 'x-language': 'ru' }, { portal_session: REFRESHABLE })
 
     await expect(internalApiCall(event, '/auth/login', { method: 'POST', body: { email: 'a' }, anonymous: true })).rejects.toMatchObject({ statusCode: 401 })
 

@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../helpers/stubServer'
 
@@ -30,7 +30,7 @@ describe('POST /api/portal/order/create', () => {
     backend.respondWith(() => ({ body: { orderId: 7, invoiceId: 11, paymentToken: 'tok' } }))
     const body = { items: [{ productId: 3, billingCycle: 'Monthly' }], paymentMethod: 'stripe' }
 
-    const result = await route.default(makeEvent({ body, cookies: { auth_token: 'jwt' }, headers: { 'x-language': 'hy' } }))
+    const result = await route.default(makeEvent({ body, cookies: await signedIn('jwt'), headers: { 'x-language': 'hy' } }))
 
     expect(result).toEqual({ orderId: 7, invoiceId: 11, paymentToken: 'tok' })
     expect(backend.requests[0]?.method).toBe('POST')

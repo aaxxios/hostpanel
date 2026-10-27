@@ -1,16 +1,23 @@
 /**
  * GET /api/portal/auth/sso/callback?code=...
  *
- * Exchanges the authorization code for tokens, stores them in httpOnly cookies,
- * then redirects to the client dashboard.
+ * Exchanges the authorization code for tokens, keeps them in the server-side session store (the
+ * browser receives only the opaque session cookie), then redirects back.
+ *
+ * When the identity provider answers with an error instead of a code (a silent `prompt=none`
+ * probe that found no session answers `login_required`), the visitor is returned to the page they
+ * were on with the sign-in prompt flag (`?signin=required`), so the page says they are not signed
+ * in and offers the sign-in, instead of quietly rendering as a guest.
  *
  * @module server/api/portal/auth/sso/callback.get
  */
 
 import { CLIENT_DASHBOARD_PATH } from '~/constants/clientRoutes'
 import { SessionCookie } from '~/constants/sessionCookie'
-import { ACCESS_TOKEN_FALLBACK_MAX_AGE, AUTHED_FLAG_MAX_AGE, REFRESH_TOKEN_MAX_AGE } from '~/server/utils/auth-cookie'
+import { startSession } from '~/server/utils/portal-session'
+import type { SessionTokens } from '~/server/utils/portal-session'
 import { requireSsoSetting } from '~/server/utils/requireSsoSetting'
+import { isInternalPath, withSignInPrompt } from '~/utils/returnPath'
 
 /** The SSO token endpoint's reply (OAuth field names, as the standard spells them). */
 interface SsoTokenResponse {
@@ -44,7 +51,8 @@ export default defineEventHandler(async (event) => {
   // Fail closed: the token exchange sends the callback address as `redirect_uri`, so an empty one can never succeed.
   const redirectUri = requireSsoSetting(config.ssoCallbackUrl)
 
-  // Silent SSO (prompt=none) returned an error — not logged in, go back to homepage.
+  // The provider answered with an error (a silent probe with no session answers `login_required`):
+  // back to the page the visitor was on, flagged so it shows the sign-in prompt.
   // `sso_silent_tried` is deliberately left in place: it is the loop guard, and clearing
   // it here would send the very next page render straight back through /authorize. It
   // carries a short TTL of its own, so a later visit still gets a fresh session probe.
@@ -52,9 +60,11 @@ export default defineEventHandler(async (event) => {
   if (error) {
     deleteCookie(event, SessionCookie.PkceVerifier, { path: '/' })
     deleteCookie(event, SessionCookie.OauthState, { path: '/' })
-    const returnTo = getCookie(event, SessionCookie.SsoSilentReturn) || '/'
+    const remembered = getCookie(event, SessionCookie.SsoSilentReturn) || getCookie(event, SessionCookie.PostLoginRedirect)
     deleteCookie(event, SessionCookie.SsoSilentReturn, { path: '/' })
-    return sendRedirect(event, returnTo, 302)
+    deleteCookie(event, SessionCookie.PostLoginRedirect, { path: '/' })
+    const returnTo = isInternalPath(remembered) ? remembered : '/'
+    return sendRedirect(event, withSignInPrompt(returnTo), 302)
   }
 
   const code = query.code as string | undefined
@@ -113,34 +123,17 @@ export default defineEventHandler(async (event) => {
 
   const { access_token, refresh_token, expires_in } = tokenResponse
 
-  // Store access token in httpOnly cookie
-  setCookie(event, SessionCookie.AuthToken, access_token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: expires_in ?? ACCESS_TOKEN_FALLBACK_MAX_AGE,
-    path: '/',
-  })
-
-  // Store refresh token if provided
+  // The tokens stay on the server. A refresh token can be larger than the 4 KB a browser keeps per
+  // cookie, and when it was written as one the browser dropped it and the session ended with the
+  // access token.
+  const tokens: SessionTokens = { accessToken: access_token }
   if (refresh_token) {
-    setCookie(event, SessionCookie.RefreshToken, refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: REFRESH_TOKEN_MAX_AGE,
-      path: '/',
-    })
+    tokens.refreshToken = refresh_token
   }
-
-  // Non-httpOnly flag for client-side middleware
-  setCookie(event, SessionCookie.Authed, '1', {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: AUTHED_FLAG_MAX_AGE,
-    path: '/',
-  })
+  if (expires_in !== undefined) {
+    tokens.expiresIn = expires_in
+  }
+  await startSession(event, tokens)
 
   // This used to fetch /connect/userinfo and write the result — subject id, email, first
   // and last name — into a non-httpOnly `inno_pending_account` cookie, so the widget

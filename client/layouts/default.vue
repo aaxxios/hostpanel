@@ -3,6 +3,9 @@
     <!-- Demo-mode notice; renders nothing outside a demo -->
     <LayoutDemoBanner />
 
+    <!-- Sign-in prompt after a silent sign-in found no session; renders nothing otherwise -->
+    <LayoutSignInPrompt />
+
     <!-- Header supplied by the active template -->
     <component :is="header" />
 

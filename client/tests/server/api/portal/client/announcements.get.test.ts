@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../helpers/stubServer'
 
@@ -31,7 +31,7 @@ describe('GET /api/portal/client/announcements', () => {
       body: { items: [{ id: 3, title: 'Maintenance', publishedAt: '2026-01-02T10:00:00Z', content: 'Tonight.' }, { id: 4, title: 'Draft' }] },
     }))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' }, headers: { 'x-language': 'ru' } }))
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt'), headers: { 'x-language': 'ru' } }))
 
     expect(backend.requests[0]?.url).toBe('/api/announcements/published?page=1&pageSize=50')
     expect(backend.requests[0]?.headers['x-language']).toBe('ru')

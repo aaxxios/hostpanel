@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../../helpers/stubServer'
 
@@ -29,7 +29,7 @@ describe('GET /api/portal/auth/sso/profile', () => {
   it('returns the profile with the subject and the menu, calling the SSO with the bearer', async () => {
     backend.respondWith(() => ({ body: { sub: 'u-1', email: 'a@b.test' } }))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') })) as Record<string, unknown>
 
     expect(backend.requests[0]?.url).toBe('/api/account/profile')
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
@@ -46,7 +46,7 @@ describe('GET /api/portal/auth/sso/profile', () => {
   ])('labels the menu in the X-Language of the request (%s)', async (language, services) => {
     backend.respondWith(() => ({ body: { sub: 'u-1' } }))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' }, headers: { 'x-language': language } })) as Record<string, unknown>
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt'), headers: { 'x-language': language } })) as Record<string, unknown>
 
     const menu = result['menuItems'] as { label: string, icon: string }[]
     expect(menu[1]).toMatchObject({ label: services, icon: 'services' })
@@ -57,7 +57,7 @@ describe('GET /api/portal/auth/sso/profile', () => {
     backend.respondWith(() => ({ body: { email: 'a@b.test' } }))
     const payload = Buffer.from(JSON.stringify({ sub: 'from-token' })).toString('base64url')
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: `h.${payload}.s` } })) as Record<string, unknown>
+    const result = await route.default(makeEvent({ cookies: await signedIn(`h.${payload}.s`) })) as Record<string, unknown>
 
     expect(result['ssoSub']).toBe('from-token')
   })
@@ -65,7 +65,7 @@ describe('GET /api/portal/auth/sso/profile', () => {
   it('answers with an empty subject when neither the profile nor the token has one', async () => {
     backend.respondWith(() => ({ body: {} }))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'not-a-jwt' } })) as Record<string, unknown>
+    const result = await route.default(makeEvent({ cookies: await signedIn('not-a-jwt') })) as Record<string, unknown>
 
     expect(result['ssoSub']).toBe('')
   })

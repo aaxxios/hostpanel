@@ -154,6 +154,10 @@ export default defineNuxtConfig({
     ssoCallbackUrl: process.env.SSO_CALLBACK_URL || '',
     // Internal URL of the main portal, used for backchannel logout delegation; empty skips the call
     mainApiUrl: process.env.NUXT_MAIN_API_URL || '',
+    // Redis that keeps the signed-in sessions (the tokens never reach the browser). The same value
+    // as the API's REDIS_CONNECTION, overridden at runtime by NUXT_SESSION_REDIS. Empty keeps the
+    // sessions in this process's memory, which only suits a single process (tests, local dev).
+    sessionRedis: process.env.SESSION_REDIS || '',
 
     // Public runtime config (exposed to client)
     public: {

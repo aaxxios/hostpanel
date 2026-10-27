@@ -57,6 +57,25 @@ describe('GET /api/portal/auth/sso/authorize', () => {
     expect(new URL(event.redirectedTo ?? '').searchParams.get('prompt')).toBe('none')
   })
 
+  it('passes an authuser address on as login_hint', async () => {
+    const event = makeEvent({ query: { authuser: ' person@example.test ' } })
+
+    await route.default(event)
+
+    expect(new URL(event.redirectedTo ?? '').searchParams.get('login_hint')).toBe('person@example.test')
+  })
+
+  it('sends no login_hint without an authuser, or for one too long to be an address', async () => {
+    const plain = makeEvent()
+    const oversized = makeEvent({ query: { authuser: `${'a'.repeat(250)}@example.test` } })
+
+    await route.default(plain)
+    await route.default(oversized)
+
+    expect(new URL(plain.redirectedTo ?? '').searchParams.has('login_hint')).toBe(false)
+    expect(new URL(oversized.redirectedTo ?? '').searchParams.has('login_hint')).toBe(false)
+  })
+
   it('remembers a local returnTo path', async () => {
     const event = makeEvent({ query: { returnTo: '/client/invoices' } })
 
