@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -102,6 +103,20 @@ public sealed class GetInvoicePdfTests(IntegrationTestFactory factory) : IClassF
             (StatusCodes.Status403Forbidden, typeof(ErrorResponse)),
             (StatusCodes.Status404NotFound, typeof(ErrorResponse)),
         });
+    }
+
+    /// <summary>A limit of zero or less is refused when the API starts, naming the setting.</summary>
+    /// <param name="key">The <c>InvoicePdf</c> setting set to zero.</param>
+    [Theory]
+    [InlineData("InvoicePdf:MaxLines")]
+    [InlineData("InvoicePdf:MaxConcurrentRenders")]
+    public void Startup_RefusesANonPositiveLimit(string key)
+    {
+        using var host = factory.WithWebHostBuilder(builder => builder.UseSetting(key, "0"));
+
+        var act = () => host.CreateClient();
+
+        act.Should().Throw<OptionsValidationException>().WithMessage($"*{key}*");
     }
 
     /// <summary>An id that names no invoice answers 404 with the <c>INVOICE_NOT_FOUND</c> code.</summary>

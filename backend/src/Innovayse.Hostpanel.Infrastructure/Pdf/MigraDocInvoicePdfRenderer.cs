@@ -149,30 +149,42 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// <summary>Where branding uploads live under the web root.</summary>
     private readonly BrandingOptions _branding;
 
+    /// <summary>The process-wide limit on renders in flight.</summary>
+    private readonly InvoicePdfRenderGate _gate;
+
     /// <summary>Logs why a configured logo was left out.</summary>
     private readonly ILogger<MigraDocInvoicePdfRenderer> _logger;
 
     /// <summary>Initializes the renderer.</summary>
     /// <param name="env">Where the web root is, for finding an uploaded logo.</param>
     /// <param name="branding">Where branding uploads live under the web root.</param>
+    /// <param name="gate">The process-wide limit on renders in flight.</param>
     /// <param name="logger">Logs why a configured logo was left out.</param>
     public MigraDocInvoicePdfRenderer(
         IWebHostEnvironment env,
         IOptions<BrandingOptions> branding,
+        InvoicePdfRenderGate gate,
         ILogger<MigraDocInvoicePdfRenderer> logger)
     {
         _env = env;
         _branding = branding.Value;
+        _gate = gate;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public Task<byte[]> RenderAsync(InvoicePdfModel model, CancellationToken ct)
+    /// <remarks>
+    /// Waits for a slot in <see cref="InvoicePdfRenderGate"/> first, then renders inline and holds
+    /// the slot until the bytes are written; a render that throws gives its slot back too.
+    /// </remarks>
+    public async Task<byte[]> RenderAsync(InvoicePdfModel model, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(model);
-        ct.ThrowIfCancellationRequested();
 
-        return Task.FromResult(Render(model));
+        using (await _gate.EnterAsync(ct))
+        {
+            return Render(model);
+        }
     }
 
     /// <summary>Lays out and renders the invoice.</summary>

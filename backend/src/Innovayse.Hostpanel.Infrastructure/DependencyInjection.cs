@@ -174,7 +174,9 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(
                 Innovayse.Hostpanel.Application.Common.Settings.InvoicePdfOptions.SectionName))
             .Validate(o => o.MaxLines > 0, "InvoicePdf:MaxLines must be positive.")
+            .Validate(o => o.MaxConcurrentRenders > 0, "InvoicePdf:MaxConcurrentRenders must be positive.")
             .ValidateOnStart();
+        services.AddSingleton<Innovayse.Hostpanel.Infrastructure.Pdf.InvoicePdfRenderGate>();
         services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.IInvoicePdfRenderer,
             Innovayse.Hostpanel.Infrastructure.Pdf.MigraDocInvoicePdfRenderer>();
 

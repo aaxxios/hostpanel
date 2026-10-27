@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Infrastructure.Pdf;
 using Innovayse.Hostpanel.Infrastructure.Storage.Settings;
@@ -30,9 +31,20 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
     /// Builds a renderer whose web root is <c>web</c> inside this test's temporary directory, so a
     /// path that climbs out of the web root still lands somewhere the test owns.
     /// </summary>
+    /// <param name="gate">The render gate; a fresh one with the default limit when null.</param>
     /// <returns>The renderer under test.</returns>
-    private MigraDocInvoicePdfRenderer Create() =>
-        new(new StubWebHostEnvironment(Path.Combine(_webRoot, "web")), Options.Create(new BrandingOptions()), NullLogger<MigraDocInvoicePdfRenderer>.Instance);
+    private MigraDocInvoicePdfRenderer Create(InvoicePdfRenderGate? gate = null) =>
+        new(
+            new StubWebHostEnvironment(Path.Combine(_webRoot, "web")),
+            Options.Create(new BrandingOptions()),
+            gate ?? Gate(new InvoicePdfOptions().MaxConcurrentRenders),
+            NullLogger<MigraDocInvoicePdfRenderer>.Instance);
+
+    /// <summary>A render gate that lets <paramref name="limit"/> renders run at once.</summary>
+    /// <param name="limit">The most renders in flight.</param>
+    /// <returns>The gate; the test disposes it.</returns>
+    private static InvoicePdfRenderGate Gate(int limit) =>
+        new(Options.Create(new InvoicePdfOptions { MaxConcurrentRenders = limit }));
 
     /// <summary>A one-line unpaid invoice with Cyrillic and Armenian names on it.</summary>
     /// <returns>The model.</returns>
@@ -72,6 +84,74 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
     /// <param name="value">The text.</param>
     /// <returns>The text without whitespace.</returns>
     private static string Compact(string value) => string.Concat(value.Where(c => !char.IsWhiteSpace(c)));
+
+    /// <summary>
+    /// With the limit at one and its slot taken, a render waits rather than starting, and goes ahead
+    /// as soon as the slot is given back.
+    /// </summary>
+    [Fact]
+    public async Task Render_WaitsForAFreeSlot()
+    {
+        using var gate = Gate(1);
+        var renderer = Create(gate);
+        var held = await gate.EnterAsync(CancellationToken.None);
+
+        var render = renderer.RenderAsync(SampleModel(), CancellationToken.None);
+
+        render.IsCompleted.Should().BeFalse();
+        held.Dispose();
+        var bytes = await render;
+        System.Text.Encoding.ASCII.GetString(bytes, 0, 5).Should().Be("%PDF-");
+    }
+
+    /// <summary>A render cancelled while it waits gives up without ever taking the slot.</summary>
+    [Fact]
+    public async Task Render_CancelledWhileWaiting_NeverTakesTheSlot()
+    {
+        using var gate = Gate(1);
+        var renderer = Create(gate);
+        var held = await gate.EnterAsync(CancellationToken.None);
+        using var cts = new CancellationTokenSource();
+
+        var render = renderer.RenderAsync(SampleModel(), cts.Token);
+        await cts.CancelAsync();
+
+        await render.Invoking(r => r).Should().ThrowAsync<OperationCanceledException>();
+        held.Dispose();
+        var next = gate.EnterAsync(CancellationToken.None);
+        next.IsCompletedSuccessfully.Should().BeTrue("the cancelled render must not be holding the only slot");
+        (await next).Dispose();
+    }
+
+    /// <summary>A render that fails gives its slot back, so the next one is not stuck behind it.</summary>
+    [Fact]
+    public async Task Render_ThatFails_ReleasesTheSlot()
+    {
+        using var gate = Gate(1);
+        var renderer = Create(gate);
+
+        await renderer.Invoking(r => r.RenderAsync(SampleModel() with { Lines = null! }, CancellationToken.None))
+            .Should().ThrowAsync<Exception>();
+
+        var next = renderer.RenderAsync(SampleModel(), CancellationToken.None);
+        next.IsCompleted.Should().BeTrue("the failed render must have released the only slot");
+        (await next).Should().NotBeEmpty();
+    }
+
+    /// <summary>
+    /// A render still finishing when the gate is disposed at shutdown gives its slot back without
+    /// throwing, so the shutdown cannot replace the render's own outcome with an exception.
+    /// </summary>
+    [Fact]
+    public async Task Gate_DisposedWhileASlotIsHeld_ReleasesQuietly()
+    {
+        var gate = Gate(1);
+        var held = await gate.EnterAsync(CancellationToken.None);
+
+        gate.Dispose();
+
+        held.Invoking(s => s.Dispose()).Should().NotThrow();
+    }
 
     /// <summary>The output is a PDF of one page for a one-line invoice.</summary>
     [Fact]
