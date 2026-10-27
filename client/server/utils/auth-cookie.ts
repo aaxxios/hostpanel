@@ -1,39 +1,48 @@
 /**
- * Shared lifetime for the `refresh_token` cookie.
+ * Lifetime of a session that holds a refresh token, in seconds: the lifetime the identity
+ * provider grants a refresh token (thirty days).
  *
- * This value has to track innovayse-sso's own refresh-token lifetime, set in
- * `Innovayse.SSO.API/Program.cs` as `SetRefreshTokenLifetime(TimeSpan.FromDays(30))`.
- * It had drifted: every one of the three places that store a refresh token wrote its
- * own `60 * 60 * 24 * 7`, so on the eighth day the browser dropped a credential the
- * SSO would still have accepted for another three weeks, and the user was sent back
- * through a sign-in they did not need.
- *
- * Defining it once is the point — three copies are what let it drift in the first
- * place. If the SSO's lifetime changes, change it here and nowhere else.
+ * It had drifted once: every place that stored a refresh token wrote its own
+ * `60 * 60 * 24 * 7`, so on the eighth day a credential the provider would still have accepted
+ * for another three weeks was thrown away, and the user was sent back through a sign-in they did
+ * not need. Defining it once is the point. If the provider's lifetime changes, change it here and
+ * nowhere else.
  */
 export const REFRESH_TOKEN_MAX_AGE = 60 * 60 * 24 * 30
 
 /**
- * Reads the `exp` claim (seconds since the epoch) of a JWT without verifying it.
+ * Decodes the payload of a JWT without verifying it.
  *
- * The payload is only decoded, never trusted for access: the API issued the token, and this is
- * used solely to size the browser cookie that carries it.
+ * The payload is only decoded, never trusted for access: the token was issued to this server by
+ * the API or the identity provider, and its claims are read solely to size a session and to know
+ * whose session it is.
  *
  * @param token - A compact JWT.
- * @returns The `exp` claim, or null when the token is not a JWT or carries no numeric `exp`.
+ * @returns The claims, or null when the token is not a JWT.
  */
-const readTokenExpiry = (token: string): number | null => {
+export const readTokenPayload = (token: string): Record<string, unknown> | null => {
   const payload = token.split('.')[1]
   if (!payload) {
     return null
   }
   try {
     const json = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
-    const exp = (JSON.parse(json) as { exp?: unknown }).exp
-    return typeof exp === 'number' && Number.isFinite(exp) ? exp : null
+    const claims = JSON.parse(json) as unknown
+    return claims !== null && typeof claims === 'object' ? (claims as Record<string, unknown>) : null
   } catch {
     return null
   }
+}
+
+/**
+ * Reads the `exp` claim (seconds since the epoch) of a JWT without verifying it.
+ *
+ * @param token - A compact JWT.
+ * @returns The `exp` claim, or null when the token is not a JWT or carries no numeric `exp`.
+ */
+export const readTokenExpiry = (token: string): number | null => {
+  const exp = readTokenPayload(token)?.['exp']
+  return typeof exp === 'number' && Number.isFinite(exp) ? exp : null
 }
 
 /**

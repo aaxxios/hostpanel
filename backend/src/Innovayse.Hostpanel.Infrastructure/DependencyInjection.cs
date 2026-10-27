@@ -254,6 +254,16 @@ public static class DependencyInjection
         // which is the point, since SSO mode will stop registering it.
         services.AddScoped<Innovayse.Hostpanel.Application.Common.Interfaces.ISubjectRoleStore, SubjectRoleStore>();
 
+        // The client portal keeps its sign-in sessions in Redis; a back-channel logout ends them too.
+        // In both modes, beside the mode's own revoker: the handler asks every registered one. With
+        // no Redis configured the portal keeps its sessions in its own memory and there is nothing to add.
+        services.AddOptions<PortalSessionOptions>()
+            .Bind(configuration.GetSection(PortalSessionOptions.SectionName));
+        if (!string.IsNullOrWhiteSpace(configuration[$"{PortalSessionOptions.SectionName}:{nameof(PortalSessionOptions.RedisConnection)}"]))
+        {
+            services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.ISessionRevoker, PortalSessionRevoker>();
+        }
+
         // One provider, never both. In SSO mode ASP.NET Identity is not registered at all,
         // so there is no code path that could write a person row even by accident — which
         // is what let a second, drifting copy of every user exist before.

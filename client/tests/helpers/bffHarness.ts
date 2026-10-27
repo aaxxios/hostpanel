@@ -6,7 +6,8 @@
  * points the real `internalApiCall` at a real `node:http` stub (see `stubServer.ts`), so a test
  * drives the route's handler directly and asserts on what reached the "backend" and on what the
  * route set on the response. Nothing of our own is mocked: `internalApiCall`, `requireRouteParam`
- * and `clearAllAuthCookies` are the real modules.
+ * and the server-side session (`server/utils/portal-session.ts`, over the in-process store) are the
+ * real modules.
  *
  * Import this module before dynamically importing a route, because the route calls
  * `defineEventHandler` while it is being evaluated.
@@ -124,11 +125,12 @@ vi.stubGlobal('proxyRequest', async (_event: FakeEvent, target: string) => {
   const response = await fetch(target)
   return response.text()
 })
-vi.stubGlobal('REFRESH_TOKEN_MAX_AGE', 60)
-vi.stubGlobal('authCookieMaxAge', (await import('~/server/utils/auth-cookie')).authCookieMaxAge)
 vi.stubGlobal('useRuntimeConfig', () => runtimeConfig)
 
 const { getApiUrl, internalApiCall } = await import('~/server/utils/api')
+// No `sessionRedis` in the runtime config, so the real store is the in-process one.
+const { useSessionStore } = await import('~/server/utils/session-store')
+const { SessionCookie } = await import('~/constants/sessionCookie')
 const { requireRouteParam } = await import('~/server/utils/requireRouteParam')
 
 vi.stubGlobal('internalApiCall', internalApiCall)
@@ -190,4 +192,43 @@ export interface RouteModule {
 export interface MiddlewareModule {
   /** The middleware handler; it returns nothing to let the request continue, or throws to refuse it. */
   default: (event: H3Event) => unknown
+}
+
+/** The tokens a test signs in with. */
+export interface TestSessionTokens {
+  /** The refresh token; absent for a session without one. */
+  refreshToken?: string
+  /** The `sub` the session belongs to. */
+  subject?: string
+  /** When the access token expires, in seconds since the epoch. */
+  accessTokenExpiresAt?: number
+}
+
+/** Counter that keeps the ids of test sessions distinct. */
+let sessionCounter = 0
+
+/**
+ * Stores a signed-in session in the real (in-process) session store and returns the cookie that
+ * names it, the way a completed sign-in leaves the browser.
+ *
+ * @param accessToken - The access token the session holds.
+ * @param tokens - The refresh token, owner and expiry, when the test needs them.
+ * @returns The request cookies to pass to `makeEvent`.
+ */
+export const signedIn = async (accessToken: string, tokens: TestSessionTokens = {}): Promise<Record<string, string>> => {
+  sessionCounter += 1
+  const id = `test-session-${sessionCounter}`
+  await useSessionStore().set(id, { accessToken, ...tokens }, 3600)
+  return { [SessionCookie.Session]: id }
+}
+
+/**
+ * Reads back the session a test's cookie names.
+ *
+ * @param cookies - The cookies `signedIn` returned, or the event's written session cookie value.
+ * @returns The stored session, or null when the store holds none.
+ */
+export const storedSession = async (cookies: Record<string, string>) => {
+  const id = cookies[SessionCookie.Session]
+  return id ? useSessionStore().get(id) : null
 }

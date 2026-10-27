@@ -11,7 +11,17 @@
  */
 
 import { APP_LOCALES, DEFAULT_APP_LOCALE } from '~/constants/appLocales'
-import { CLIENT_AREA_PATH, CLIENT_DASHBOARD_PATH, CLIENT_LOGIN_PATH, CLIENT_PUBLIC_ROUTES, CLIENT_REDIRECT_QUERY } from '~/constants/clientRoutes'
+import {
+  CLIENT_AREA_PATH,
+  CLIENT_DASHBOARD_PATH,
+  CLIENT_LOGIN_PATH,
+  CLIENT_PUBLIC_ROUTES,
+  CLIENT_REDIRECT_QUERY,
+  LOGIN_HINT_QUERY,
+  SIGN_IN_PROMPT_QUERY,
+  SIGN_IN_PROMPT_VALUE,
+  SSO_AUTHORIZE_PATH
+} from '~/constants/clientRoutes'
 
 /**
  * Whether a string holds a control character, which has no business in a path and can smuggle a
@@ -105,3 +115,50 @@ export const loginPathWithReturn = (fullPath: string): string =>
   isInternalPath(fullPath) && !isPublicClientPath(fullPath)
     ? `${CLIENT_LOGIN_PATH}?${CLIENT_REDIRECT_QUERY}=${encodeURIComponent(fullPath)}`
     : CLIENT_LOGIN_PATH
+
+/** Origin used only to parse a relative path with `URL`; it never appears in a result. */
+const PARSE_ORIGIN = 'http://internal.invalid'
+
+/**
+ * Adds the sign-in prompt flag to a path, keeping its other query parameters and its hash.
+ *
+ * @param path - An internal path, with or without a query string.
+ * @returns The same path with `signin=required` set.
+ */
+export const withSignInPrompt = (path: string): string => {
+  const url = new URL(path, PARSE_ORIGIN)
+  url.searchParams.set(SIGN_IN_PROMPT_QUERY, SIGN_IN_PROMPT_VALUE)
+  return `${url.pathname}${url.search}${url.hash}`
+}
+
+/**
+ * Removes the sign-in prompt flag from a path, keeping everything else.
+ *
+ * @param path - An internal path, with or without a query string.
+ * @returns The path without `signin`.
+ */
+export const withoutSignInPrompt = (path: string): string => {
+  const url = new URL(path, PARSE_ORIGIN)
+  url.searchParams.delete(SIGN_IN_PROMPT_QUERY)
+  return `${url.pathname}${url.search}${url.hash}`
+}
+
+/**
+ * Builds the address that starts an interactive sign-in and comes back to a page afterwards.
+ *
+ * @param returnTo - The page to come back to; anything that is not an internal path is dropped.
+ * @param loginHint - The account the visitor arrived for (`?authuser=`), passed on as `login_hint`;
+ *   empty for none.
+ * @returns The authorize address with its query.
+ */
+export const signInPath = (returnTo: string, loginHint: string = ''): string => {
+  const params = new URLSearchParams()
+  if (isInternalPath(returnTo)) {
+    params.set('returnTo', withoutSignInPrompt(returnTo))
+  }
+  if (loginHint) {
+    params.set(LOGIN_HINT_QUERY, loginHint)
+  }
+  const query = params.toString()
+  return query ? `${SSO_AUTHORIZE_PATH}?${query}` : SSO_AUTHORIZE_PATH
+}

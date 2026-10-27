@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../../../helpers/stubServer'
 
@@ -32,7 +32,7 @@ describe('POST /api/portal/client/domains/:id/renew-order', () => {
     const result = await route.default(makeEvent({
       params: { id: '7' },
       body: { years: 2, paymentmethod: 'card', ignored: 1 },
-      cookies: { auth_token: 'jwt' },
+      cookies: await signedIn('jwt'),
       headers: { 'x-language': 'ru' },
     }))
 
@@ -47,7 +47,7 @@ describe('POST /api/portal/client/domains/:id/renew-order', () => {
   it('passes the backend refusal through with its code and sentence', async () => {
     backend.respondWith(() => ({ status: 409, body: { type: 'DOMAIN_NOT_RENEWABLE', detail: 'Too early.' } }))
 
-    const error = await refusal(() => route.default(makeEvent({ params: { id: '7' }, body: {}, cookies: { auth_token: 'jwt' } })))
+    const error = await refusal(async () => route.default(makeEvent({ params: { id: '7' }, body: {}, cookies: await signedIn('jwt') })))
 
     expect(error).toMatchObject({ statusCode: 409, statusMessage: 'Too early.', data: { code: 'DOMAIN_NOT_RENEWABLE' } })
   })

@@ -12,16 +12,19 @@ public sealed class BackchannelLogoutHandler
     /// <summary>Where the person is found by address.</summary>
     private readonly IIdentityProvider _identity;
 
-    /// <summary>Ends the person's sessions.</summary>
-    private readonly ISessionRevoker _sessions;
+    /// <summary>
+    /// Every place that holds sessions for the person: the panel's own sessions, and the client
+    /// portal's when it keeps them in a shared store.
+    /// </summary>
+    private readonly IReadOnlyList<ISessionRevoker> _sessions;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="identity">Where the person is found by address.</param>
-    /// <param name="sessions">Ends the person's sessions.</param>
-    public BackchannelLogoutHandler(IIdentityProvider identity, ISessionRevoker sessions)
+    /// <param name="sessions">Every registered revoker; each ends the sessions it knows about.</param>
+    public BackchannelLogoutHandler(IIdentityProvider identity, IEnumerable<ISessionRevoker> sessions)
     {
         _identity = identity;
-        _sessions = sessions;
+        _sessions = sessions.ToList();
     }
 
     /// <summary>Handles the command.</summary>
@@ -42,7 +45,11 @@ public sealed class BackchannelLogoutHandler
             return Result.Success();
         }
 
-        await _sessions.RevokeAllAsync(account.Subject, ct);
+        foreach (var revoker in _sessions)
+        {
+            await revoker.RevokeAllAsync(account.Subject, ct);
+        }
+
         return Result.Success();
     }
 }

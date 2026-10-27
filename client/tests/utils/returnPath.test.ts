@@ -6,7 +6,16 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { isInternalPath, isPrivateClientPath, isPublicClientPath, loginPathWithReturn, safeReturnPath } from '~/utils/returnPath'
+import {
+  isInternalPath,
+  isPrivateClientPath,
+  isPublicClientPath,
+  loginPathWithReturn,
+  safeReturnPath,
+  signInPath,
+  withSignInPrompt,
+  withoutSignInPrompt
+} from '~/utils/returnPath'
 
 describe('isPublicClientPath', () => {
   it('is true for the public pages and what is below them, ignoring query and hash', () => {
@@ -99,5 +108,37 @@ describe('loginPathWithReturn', () => {
 
   it('is the bare sign-in path for a value that is not an internal path', () => {
     expect(loginPathWithReturn('https://evil.example')).toBe('/client/login')
+  })
+})
+
+describe('withSignInPrompt', () => {
+  it('adds the flag to a bare path', () => {
+    expect(withSignInPrompt('/pricing')).toBe('/pricing?signin=required')
+  })
+
+  it('keeps the other query parameters and the hash', () => {
+    expect(withSignInPrompt('/hosting?plan=pro&authuser=a%40b.test#top')).toBe('/hosting?plan=pro&authuser=a%40b.test&signin=required#top')
+  })
+
+  it('does not repeat a flag that is already there', () => {
+    expect(withSignInPrompt('/?signin=required')).toBe('/?signin=required')
+  })
+})
+
+describe('withoutSignInPrompt', () => {
+  it('removes the flag and keeps the rest', () => {
+    expect(withoutSignInPrompt('/hosting?signin=required&plan=pro')).toBe('/hosting?plan=pro')
+    expect(withoutSignInPrompt('/?signin=required')).toBe('/')
+  })
+})
+
+describe('signInPath', () => {
+  it('returns to the page without the flag and passes the account hint on', () => {
+    expect(signInPath('/hosting?signin=required', 'a@b.test'))
+      .toBe('/api/portal/auth/sso/authorize?returnTo=%2Fhosting&authuser=a%40b.test')
+  })
+
+  it('drops a return address that is not an internal path', () => {
+    expect(signInPath('https://elsewhere.test/')).toBe('/api/portal/auth/sso/authorize')
   })
 })

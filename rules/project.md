@@ -519,6 +519,20 @@ rules is deleted and the ESLint conformance block applies to every `.vue` and `.
 - **Two hops, one language header.** The browser stamps `X-Language` (from the i18n locale,
   validated by `utils/transportLanguage.ts`) on every call to the BFF; the BFF forwards it to the
   API, and an unknown value becomes `en`. `Accept-Language` is not used anywhere.
+- **The signed-in session lives on the server.** The browser holds one opaque httpOnly cookie,
+  `portal_session` (a random id), and the readable `authed` hint; the access and refresh tokens stay
+  in the session store (`server/utils/portal-session.ts` over `server/utils/session-store.ts`):
+  Redis when `NUXT_SESSION_REDIS` is set (compose feeds it `REDIS_CONNECTION`), process memory
+  otherwise (unit tests, e2e, bare `nuxt dev`). A route that needs the bearer asks
+  `resolveAccessToken`, which renews an expiring token with the refresh token; `internalApiCall`
+  refreshes once more on a 401. Never write a token into a cookie: the identity provider's refresh
+  token is larger than the 4 KB a browser keeps per cookie and was silently dropped, which ended
+  every session with its access token. The Redis keys (`hostpanel:portal-session:<id>` and the
+  per-person set `hostpanel:portal-session-subject:<sub>`) are a contract with the API's
+  `Auth/PortalSessionRevoker`, which deletes a person's portal sessions on a back-channel logout
+  (`PortalSessions__RedisConnection`). A failed silent sign-in returns to the page with
+  `?signin=required`, which `LayoutSignInPrompt` turns into a sign-in prompt; an `authuser` query is
+  passed to the identity provider as `login_hint`.
 - **Errors are chosen in one place.** `lib/errorHandler.ts` (`apiErrorMessage`, `apiFieldErrors`,
   `apiErrorCode`) orders `errors[field]`, then `detail`, then `title`, then the client's own
   `errors.noAnswer`. The BFF writes no sentence (`scripts/` and `tests/server/contract.test.ts`

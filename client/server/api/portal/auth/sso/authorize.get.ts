@@ -4,13 +4,21 @@
  * Generates a PKCE pair, stores code_verifier in a short-lived httpOnly cookie,
  * then redirects the browser to the SSO authorization endpoint.
  *
+ * An `authuser` query (the account a visitor arrived for, as the products of a shared sign-on add
+ * to their links) is passed on as `login_hint`, so the identity provider picks or pre-fills that
+ * account instead of whichever one it signed in last.
+ *
  * @module server/api/portal/auth/sso/authorize.get
  */
 
 import { randomBytes, createHash } from 'node:crypto'
+import { LOGIN_HINT_QUERY } from '~/constants/clientRoutes'
 import { SessionCookie } from '~/constants/sessionCookie'
 import { SSO_FLOW_COOKIE_MAX_AGE } from '~/server/utils/auth-cookie'
 import { requireSsoSetting } from '~/server/utils/requireSsoSetting'
+
+/** The longest `login_hint` passed on; the longest valid e-mail address is 254 characters. */
+const MAX_LOGIN_HINT_LENGTH = 254
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
@@ -57,6 +65,12 @@ export default defineEventHandler(async (event) => {
   // If the user explicitly wants to switch accounts, pass prompt=select_account
   if (query.prompt) {
     params.set('prompt', query.prompt as string)
+  }
+
+  // The account the visitor arrived for. Capped: an address is never longer, and the value travels on in a URL.
+  const loginHint = query[LOGIN_HINT_QUERY]
+  if (typeof loginHint === 'string' && loginHint.trim() && loginHint.length <= MAX_LOGIN_HINT_LENGTH) {
+    params.set('login_hint', loginHint.trim())
   }
 
   // Save current page so callback can return here instead of always going to dashboard

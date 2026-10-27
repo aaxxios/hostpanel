@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../../helpers/stubServer'
 
@@ -32,7 +32,7 @@ describe('POST /api/portal/client/domains/transfer-order', () => {
   it('posts the renamed fields with the bearer and the reader language, and returns the order ids', async () => {
     backend.respondWith(() => ({ body: { orderId: 9, invoiceId: 11 } }))
 
-    const result = await route.default(makeEvent({ body: form, cookies: { auth_token: 'jwt' }, headers: { 'x-language': 'hy' } }))
+    const result = await route.default(makeEvent({ body: form, cookies: await signedIn('jwt'), headers: { 'x-language': 'hy' } }))
 
     expect(result).toEqual({ orderId: 9, invoiceId: 11 })
     expect(backend.requests[0]?.method).toBe('POST')
@@ -50,7 +50,7 @@ describe('POST /api/portal/client/domains/transfer-order', () => {
   it('passes the backend refusal through with its code and sentence', async () => {
     backend.respondWith(() => ({ status: 422, body: { type: 'DOMAIN_NOT_TRANSFERABLE', detail: 'Locked.' } }))
 
-    const error = await refusal(() => route.default(makeEvent({ body: form, cookies: { auth_token: 'jwt' } })))
+    const error = await refusal(async () => route.default(makeEvent({ body: form, cookies: await signedIn('jwt') })))
 
     expect(error).toMatchObject({ statusCode: 422, statusMessage: 'Locked.', data: { code: 'DOMAIN_NOT_TRANSFERABLE' } })
   })

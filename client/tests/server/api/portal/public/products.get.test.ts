@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../helpers/stubServer'
 
@@ -47,7 +47,7 @@ describe('GET /api/portal/public/products', () => {
   })
 
   it('sends the bearer for a signed-in reader', async () => {
-    await route.default(makeEvent({ cookies: { auth_token: 'jwt' } }))
+    await route.default(makeEvent({ cookies: await signedIn('jwt') }))
 
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
   })

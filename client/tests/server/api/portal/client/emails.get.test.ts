@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../helpers/stubServer'
 
@@ -31,7 +31,7 @@ describe('GET /api/portal/client/emails', () => {
       body: { items: [{ id: 5, to: 'a@b.test', subject: 'Invoice', sentAt: '2026-02-03T00:00:00Z', success: true, error: null }] },
     }))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' }, headers: { 'x-language': 'hy' } }))
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt'), headers: { 'x-language': 'hy' } }))
 
     expect(backend.requests[0]?.url).toBe('/api/me/emails?page=1&pageSize=100')
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')

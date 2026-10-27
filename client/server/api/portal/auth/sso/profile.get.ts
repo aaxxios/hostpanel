@@ -9,13 +9,14 @@
  * @module server/api/portal/auth/sso/profile.get
  */
 
-import { SessionCookie } from '~/constants/sessionCookie'
 import { backendLanguage } from '~/server/utils/api'
+import { readTokenPayload } from '~/server/utils/auth-cookie'
+import { resolveAccessToken } from '~/server/utils/portal-session'
 import { buildClientMenu } from '~/server/utils/clientMenu'
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
-  const accessToken = getCookie(event, SessionCookie.AuthToken)
+  const accessToken = await resolveAccessToken(event)
   if (!accessToken) {
     throw createError({ statusCode: 401 })
   }
@@ -27,11 +28,8 @@ export default defineEventHandler(async (event) => {
   // Extract ssoSub from JWT for account-switching (widget needs it to call /api/portal/auth/sso/switch)
   let ssoSub = (profile.sub as string | undefined) || ''
   if (!ssoSub) {
-    try {
-      const payload = accessToken.split('.')[1] ?? ''
-      const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
-      ssoSub = (decoded.sub as string | undefined) || ''
-    } catch { /* ignore */ }
+    const sub = readTokenPayload(accessToken)?.['sub']
+    ssoSub = typeof sub === 'string' ? sub : ''
   }
 
   return {

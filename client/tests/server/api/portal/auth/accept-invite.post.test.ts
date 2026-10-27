@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../helpers/stubServer'
 import { PortalErrorCode } from '~/constants/portalErrorCode'
@@ -29,7 +29,7 @@ afterEach(async () => {
 describe('POST /api/portal/auth/accept-invite', () => {
   it('sends only the token to the backend with the session bearer and the reader language', async () => {
     backend.respondWith(() => ({ body: { success: true } }))
-    const event = makeEvent({ body: { token: 'inv-1', extra: 'dropped' }, cookies: { auth_token: 'jwt' }, headers: { 'x-language': 'ru' } })
+    const event = makeEvent({ body: { token: 'inv-1', extra: 'dropped' }, cookies: await signedIn('jwt'), headers: { 'x-language': 'ru' } })
 
     const result = await route.default(event)
 
@@ -41,7 +41,7 @@ describe('POST /api/portal/auth/accept-invite', () => {
   })
 
   it('sends an empty token when the body carries no string token', async () => {
-    await route.default(makeEvent({ body: { token: 5 }, cookies: { auth_token: 'jwt' } }))
+    await route.default(makeEvent({ body: { token: 5 }, cookies: await signedIn('jwt') }))
 
     expect(JSON.parse(backend.requests[0]?.body ?? '{}')).toEqual({ token: '' })
   })
@@ -56,7 +56,7 @@ describe('POST /api/portal/auth/accept-invite', () => {
   it('maps a backend 401 to the sign-in-required code', async () => {
     backend.respondWith(() => ({ status: 401, body: { type: 'UNAUTHORIZED', detail: 'Expired.' } }))
 
-    const error = await refusal(() => route.default(makeEvent({ body: { token: 'inv-1' }, cookies: { auth_token: 'jwt' } })))
+    const error = await refusal(async () => route.default(makeEvent({ body: { token: 'inv-1' }, cookies: await signedIn('jwt') })))
 
     expect(error).toMatchObject({ statusCode: 403, data: { code: PortalErrorCode.InviteSignInRequired } })
   })
@@ -64,7 +64,7 @@ describe('POST /api/portal/auth/accept-invite', () => {
   it('passes any other backend refusal through with its code and sentence', async () => {
     backend.respondWith(() => ({ status: 410, body: { type: 'INVITE_EXPIRED', detail: 'The invitation expired.' } }))
 
-    const error = await refusal(() => route.default(makeEvent({ body: { token: 'inv-1' }, cookies: { auth_token: 'jwt' } })))
+    const error = await refusal(async () => route.default(makeEvent({ body: { token: 'inv-1' }, cookies: await signedIn('jwt') })))
 
     expect(error).toMatchObject({ statusCode: 410, statusMessage: 'The invitation expired.', data: { code: 'INVITE_EXPIRED' } })
   })

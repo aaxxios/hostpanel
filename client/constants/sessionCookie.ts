@@ -9,10 +9,19 @@
 
 /** The session cookies the portal sets or reads. */
 export enum SessionCookie {
-  /** Access token; httpOnly, sent to the backend as the bearer. */
-  AuthToken = 'auth_token',
-  /** Refresh token; httpOnly, exchanged for a new access token on a 401. */
-  RefreshToken = 'refresh_token',
+  /**
+   * The opaque id of the signed-in session; httpOnly. The tokens it names stay on the server
+   * (`server/utils/portal-session.ts`), so this is the only credential the browser holds.
+   */
+  Session = 'portal_session',
+  /** Legacy cookie that carried the raw access token; only ever cleared now. */
+  LegacyAuthToken = 'auth_token',
+  /**
+   * Legacy cookie that carried the raw refresh token; only ever cleared now. A refresh token can be
+   * larger than the 4 KB a browser keeps per cookie, so the browser dropped it and the session
+   * ended with the access token.
+   */
+  LegacyRefreshToken = 'refresh_token',
   /** Readable flag (`1`) that tells the browser a session exists without exposing the token. */
   Authed = 'authed',
   /** Marks that the silent single sign-on attempt has been made for this visit. */

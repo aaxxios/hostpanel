@@ -75,4 +75,13 @@ describe('sso-silent middleware', () => {
     expect(event.redirectedTo).toBeUndefined()
     expect(event.written).toEqual({})
   })
+
+  it('hands an authuser address on the page to the probe, even though the address has dots', () => {
+    const event = makeEvent({ path: '/hosting?authuser=person%40example.test', query: { authuser: 'person@example.test' } })
+
+    middleware.default(event)
+
+    expect(event.redirectedTo).toBe('/api/portal/auth/sso/authorize?prompt=none&authuser=person%40example.test')
+    expect(event.written['sso_silent_return']?.value).toBe('/hosting?authuser=person%40example.test')
+  })
 })

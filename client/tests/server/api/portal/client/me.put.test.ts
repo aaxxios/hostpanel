@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../helpers/stubServer'
 
@@ -60,7 +60,7 @@ describe('PUT /api/portal/client/me', () => {
   it('overlays the posted fields on the current profile and writes it back with the bearer and language', async () => {
     const result = await route.default(makeEvent({
       body: { firstname: 'Anna', emailprefs: { invoice: false } },
-      cookies: { auth_token: 'jwt' },
+      cookies: await signedIn('jwt'),
       headers: { 'x-language': 'ru' },
     }))
 
@@ -82,10 +82,10 @@ describe('PUT /api/portal/client/me', () => {
   })
 
   it('turns an empty language into null and keeps the current one when none is posted', async () => {
-    await route.default(makeEvent({ body: { language: '' }, cookies: { auth_token: 'jwt' } }))
+    await route.default(makeEvent({ body: { language: '' }, cookies: await signedIn('jwt') }))
     const cleared = written()
     backend.requests.length = 0
-    await route.default(makeEvent({ body: {}, cookies: { auth_token: 'jwt' } }))
+    await route.default(makeEvent({ body: {}, cookies: await signedIn('jwt') }))
 
     expect(cleared['Language']).toBeNull()
     expect(written()['Language']).toBe('hy')
@@ -96,7 +96,7 @@ describe('PUT /api/portal/client/me', () => {
       ? { body: current }
       : { status: 400, body: { type: 'VALIDATION_ERROR', detail: 'Invalid.', errors: { Email: ['Required.'] } } }))
 
-    const error = await refusal(() => route.default(makeEvent({ body: { email: '' }, cookies: { auth_token: 'jwt' } })))
+    const error = await refusal(async () => route.default(makeEvent({ body: { email: '' }, cookies: await signedIn('jwt') })))
 
     expect(error).toMatchObject({ statusCode: 400, statusMessage: 'Invalid.', data: { code: 'VALIDATION_ERROR', errors: { Email: ['Required.'] } } })
   })
@@ -104,7 +104,7 @@ describe('PUT /api/portal/client/me', () => {
   it('does not write when reading the current profile is refused', async () => {
     backend.respondWith(() => ({ status: 404, body: { type: 'CLIENT_PROFILE_NOT_FOUND', detail: 'No profile.' } }))
 
-    const error = await refusal(() => route.default(makeEvent({ body: {}, cookies: { auth_token: 'jwt' } })))
+    const error = await refusal(async () => route.default(makeEvent({ body: {}, cookies: await signedIn('jwt') })))
 
     expect(error).toMatchObject({ statusCode: 404, data: { code: 'CLIENT_PROFILE_NOT_FOUND' } })
     expect(backend.requests.some(request => request.method === 'PUT')).toBe(false)
