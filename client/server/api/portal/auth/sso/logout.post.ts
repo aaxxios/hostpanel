@@ -1,10 +1,13 @@
 /**
  * POST /api/portal/auth/sso/logout
  *
- * Clears all auth cookies, then redirects to SSO end-session endpoint.
+ * Ends the server-side session (the stored tokens and the cookies), then redirects to the SSO
+ * end-session endpoint.
+ *
+ * @module server/api/portal/auth/sso/logout.post
  */
 
-import { SessionCookie } from '~/constants/sessionCookie'
+import { endSession } from '~/server/utils/portal-session'
 import { requireSsoSetting } from '~/server/utils/requireSsoSetting'
 
 export default defineEventHandler(async (event) => {
@@ -12,9 +15,7 @@ export default defineEventHandler(async (event) => {
   // Fail closed before the session is cleared: without an SSO address there is no end-session page to go to.
   const ssoPublicUrl = requireSsoSetting(config.public.ssoPublicUrl)
 
-  deleteCookie(event, SessionCookie.AuthToken, { path: '/' })
-  deleteCookie(event, SessionCookie.RefreshToken, { path: '/' })
-  deleteCookie(event, SessionCookie.Authed, { path: '/' })
+  await endSession(event)
 
   const baseUrl = config.public.baseUrl || getRequestURL(event).origin
   const endsessionUrl = `${ssoPublicUrl}/connect/endsession?post_logout_redirect_uri=${encodeURIComponent(baseUrl)}`

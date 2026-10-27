@@ -8,7 +8,7 @@
  * @module e2e/support/helpers
  */
 import type { APIRequestContext, BrowserContext, Page } from '@playwright/test'
-import { ACCESS_TOKEN, STUB_URL } from './fixtures.mjs'
+import { CLIENT_CREDENTIALS, STUB_URL } from './fixtures.mjs'
 
 /** One request the stub backend has served, as `GET /__e2e/requests` reports it. */
 export interface StubRequest {
@@ -82,20 +82,25 @@ export const waitForHydration = async (page: Page): Promise<void> => {
 /**
  * Gives the browser context a signed-in session.
  *
- * The client area is gated by two cookies: `authed` (the readable flag the route middleware
- * checks) and `auth_token` (the bearer the BFF forwards). The stub backend accepts any bearer,
- * so setting them directly is equivalent to signing in -- and keeps every spec but the sign-in
- * one from repeating the form.
+ * The session lives on the server: the BFF keeps the tokens and gives the browser only an opaque
+ * `portal_session` cookie and the readable `authed` flag. So the context signs in through the BFF's
+ * own sign-in route with the stub customer's credentials (the same call the form makes), and the
+ * cookies it answers land in the context -- which keeps every spec but the sign-in one from
+ * repeating the form.
  *
  * @param context The browser context to sign in.
- * @param baseURL The app's base URL, which scopes the cookies.
- * @returns Resolves once the cookies are set.
+ * @param baseURL The app's base URL.
+ * @returns Resolves once the session cookies are in the context.
  */
 export const signIn = async (context: BrowserContext, baseURL: string): Promise<void> => {
-  await context.addCookies([
-    { name: 'authed', value: '1', url: baseURL },
-    { name: 'auth_token', value: ACCESS_TOKEN, url: baseURL },
-  ])
+  const response = await context.request.post(`${baseURL}/api/portal/auth/login`, {
+    // The BFF refuses a state-changing call without it (server/middleware/csrf.ts).
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    data: CLIENT_CREDENTIALS,
+  })
+  if (!response.ok()) {
+    throw new Error(`Signing in for the spec failed with ${response.status()}.`)
+  }
 }
 
 /**

@@ -1,19 +1,18 @@
 /**
  * POST /api/portal/auth/2fa-login
  *
- * Completes a two-factor sign-in with the pending token and the authenticator code, then stores
- * the session in httpOnly cookies. Anonymous (no session yet) but routed through
+ * Completes a two-factor sign-in with the pending token and the authenticator code, then starts
+ * the server-side session (the browser receives only the opaque session cookie). Anonymous (no session yet) but routed through
  * `internalApiCall` so `X-Language` is forwarded and a refusal keeps the backend's `detail`.
  *
  * @module server/api/portal/auth/2fa-login.post
  */
 
-import { SessionCookie } from '~/constants/sessionCookie'
-import { ACCESS_TOKEN_FALLBACK_MAX_AGE, AUTHED_FLAG_MAX_AGE } from '~/server/utils/auth-cookie'
+import { startSession } from '~/server/utils/portal-session'
 
 /** What the backend answers a completed two-factor sign-in with. */
 interface TwoFactorLoginResult {
-  /** Access token stored in the httpOnly `auth_token` cookie. */
+  /** Access token, kept in the server-side session. */
   accessToken: string
   /** Lifetime of the access token, in seconds. */
   expiresIn: number
@@ -31,20 +30,7 @@ export default defineEventHandler(async (event) => {
     { method: 'POST', body, anonymous: true }
   )
 
-  setCookie(event, SessionCookie.AuthToken, response.accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: response.expiresIn ?? ACCESS_TOKEN_FALLBACK_MAX_AGE,
-    path: '/',
-  })
-  setCookie(event, SessionCookie.Authed, '1', {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: AUTHED_FLAG_MAX_AGE,
-    path: '/',
-  })
+  await startSession(event, { accessToken: response.accessToken, expiresIn: response.expiresIn })
 
   return { success: true }
 })

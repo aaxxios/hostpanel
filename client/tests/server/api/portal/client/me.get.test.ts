@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, setRuntimeConfig, startBackend } from '../../../../helpers/bffHarness'
+import { makeEvent, refusal, setRuntimeConfig, startBackend, signedIn } from '../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../helpers/bffHarness'
 import type { StubReply, StubRequest, StubServer } from '../../../../helpers/stubServer'
 import { Permission } from '~/composables/usePermissions'
@@ -79,7 +79,7 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
   })
 
   it('merges identity and billing, preferring billing names, and forwards the language to the billing call', async () => {
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' }, headers: { 'x-language': 'ru' } }))
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt'), headers: { 'x-language': 'ru' } }))
 
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
     expect(backend.requests[1]?.url).toBe('/api/clients/me')
@@ -100,7 +100,7 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
   })
 
   it('takes the permissions from the API instead of granting everything', async () => {
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') })) as Record<string, unknown>
 
     expect(backend.requests.map(request => request.url)).toContain('/api/auth/me')
     expect(result['permissions']).toBe(granted)
@@ -109,7 +109,7 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
   it('grants nothing when the account cannot be read', async () => {
     backend.respondWith(request => (request.url === '/api/auth/me' ? { status: 500, body: {} } : answer(request)))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') })) as Record<string, unknown>
 
     expect(result['permissions']).toBe(Permission.None)
   })
@@ -117,7 +117,7 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
   it('falls back to the identity when the billing profile is refused', async () => {
     backend.respondWith(request => (request.url === '/api/account/profile' ? answer(request) : { status: 404, body: { type: 'CLIENT_PROFILE_NOT_FOUND', detail: 'None.' } }))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') })) as Record<string, unknown>
 
     expect(result['firstname']).toBe('Id')
     expect(result['phonenumber']).toBe('+9')
@@ -126,7 +126,7 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
   })
 
   it('flags a customer account as having a client profile', async () => {
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') })) as Record<string, unknown>
 
     expect(result['hasClientProfile']).toBe(true)
   })
@@ -134,7 +134,7 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
   it.each([403, 404])('flags the identity as not a customer when the billing profile answers %i', async (status) => {
     backend.respondWith(request => (request.url === '/api/account/profile' ? answer(request) : { status, body: { type: 'FORBIDDEN', detail: 'No.' } }))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') })) as Record<string, unknown>
 
     expect(result['hasClientProfile']).toBe(false)
   })
@@ -142,7 +142,7 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
   it('does not flag the identity when the billing profile fails for another reason', async () => {
     backend.respondWith(request => (request.url === '/api/account/profile' ? answer(request) : { status: 500, body: {} }))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } })) as Record<string, unknown>
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') })) as Record<string, unknown>
 
     expect(result['hasClientProfile']).toBe(true)
   })
@@ -157,7 +157,7 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
   it('refuses with the SSO status when the profile call fails', async () => {
     backend.respondWith(() => ({ status: 403, body: {} }))
 
-    const error = await refusal(() => route.default(makeEvent({ cookies: { auth_token: 'jwt' } })))
+    const error = await refusal(async () => route.default(makeEvent({ cookies: await signedIn('jwt') })))
 
     expect(error).toMatchObject({ statusCode: 403 })
   })
@@ -171,7 +171,7 @@ describe('GET /api/portal/client/me in local mode', () => {
   it('maps the billing profile to the portal shape', async () => {
     backend.respondWith(request => (request.url === '/api/auth/me' ? answer(request) : { body: billing }))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } }))
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') }))
 
     expect(backend.requests.map(request => request.url)).toEqual(['/api/clients/me', '/api/auth/me'])
     expect(result).toMatchObject({
@@ -188,7 +188,7 @@ describe('GET /api/portal/client/me in local mode', () => {
   it('passes the backend refusal through with its code and sentence', async () => {
     backend.respondWith(() => ({ status: 404, body: { type: 'CLIENT_PROFILE_NOT_FOUND', detail: 'No profile.' } }))
 
-    const error = await refusal(() => route.default(makeEvent({ cookies: { auth_token: 'jwt' } })))
+    const error = await refusal(async () => route.default(makeEvent({ cookies: await signedIn('jwt') })))
 
     expect(error).toMatchObject({ statusCode: 404, statusMessage: 'No profile.', data: { code: 'CLIENT_PROFILE_NOT_FOUND' } })
   })

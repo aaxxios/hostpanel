@@ -1,12 +1,13 @@
 /**
- * Tests for `POST /api/portal/auth/sso/logout`: it clears the session cookies and sends the browser
+ * Tests for `POST /api/portal/auth/sso/logout`: it ends the server-side session (stored tokens and
+ * cookies) and sends the browser
  * to the SSO end-session endpoint, which returns to the portal.
  *
  * @module tests/server/api/portal/auth/sso/logout.post.test
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, setRuntimeConfig, startBackend, refusal } from '../../../../../helpers/bffHarness'
+import { makeEvent, setRuntimeConfig, signedIn, startBackend, storedSession, refusal } from '../../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../../helpers/stubServer'
 
@@ -26,13 +27,15 @@ afterEach(async () => {
 })
 
 describe('POST /api/portal/auth/sso/logout', () => {
-  it('clears the session cookies and redirects to the end-session endpoint with the portal address', async () => {
+  it('ends the session and redirects to the end-session endpoint with the portal address', async () => {
     setRuntimeConfig({ public: { ssoPublicUrl: 'https://sso.test', baseUrl: 'https://portal.test' } })
-    const event = makeEvent()
+    const cookies = await signedIn('at', { refreshToken: 'rt' })
+    const event = makeEvent({ cookies })
 
     await route.default(event)
 
-    expect(event.deleted).toEqual(['auth_token', 'refresh_token', 'authed'])
+    expect(await storedSession(cookies)).toBeNull()
+    expect(event.deleted).toEqual(expect.arrayContaining(['portal_session', 'auth_token', 'refresh_token', 'authed']))
     expect(event.redirectedTo).toBe('https://sso.test/connect/endsession?post_logout_redirect_uri=https%3A%2F%2Fportal.test')
   })
 

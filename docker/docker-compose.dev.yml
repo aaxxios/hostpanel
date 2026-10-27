@@ -68,6 +68,8 @@ services:
       ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
 
       Auth__RedisConnection: ${REDIS_CONNECTION}
+      # The client portal's sign-in sessions live in the same Redis; a back-channel logout ends them.
+      PortalSessions__RedisConnection: ${REDIS_CONNECTION}
 
       RabbitMQ__Host: ${RABBITMQ_HOST}
       RabbitMQ__Port: ${RABBITMQ_PORT}
@@ -211,6 +213,8 @@ services:
       NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_HY: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_HY}
       BILLING_PORTAL_URL: ${BILLING_PORTAL_URL}
       NUXT_MAIN_API_URL: ${NUXT_MAIN_API_URL}
+      # Where the signed-in sessions are kept (the tokens never reach the browser): the API's Redis.
+      NUXT_SESSION_REDIS: ${REDIS_CONNECTION}
 
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
       WATCHPACK_POLLING: ${DEV_FILE_POLLING:?DEV_FILE_POLLING must be set}

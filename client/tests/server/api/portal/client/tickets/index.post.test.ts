@@ -5,7 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../../helpers/stubServer'
 
@@ -28,7 +28,7 @@ describe('POST /api/portal/client/tickets', () => {
   it('calls the backend endpoint and returns its answer', async () => {
     backend.respondWith(() => ({ body: { ok: true } }))
 
-    const result = await route.default(makeEvent({ body: { value: 'x' }, cookies: { auth_token: 'jwt' } }))
+    const result = await route.default(makeEvent({ body: { value: 'x' }, cookies: await signedIn('jwt') }))
 
     expect(result).toEqual({ ok: true })
     expect(backend.requests[0]?.method).toBe('POST')
@@ -38,7 +38,7 @@ describe('POST /api/portal/client/tickets', () => {
   })
 
   it('forwards the reader language to the backend', async () => {
-    const event = makeEvent({ body: { value: 'x' }, headers: { 'x-language': 'hy' }, cookies: { auth_token: 'jwt' } })
+    const event = makeEvent({ body: { value: 'x' }, headers: { 'x-language': 'hy' }, cookies: await signedIn('jwt') })
 
     await route.default(event)
 
@@ -48,7 +48,7 @@ describe('POST /api/portal/client/tickets', () => {
   it('passes the backend refusal through with its code and sentence', async () => {
     backend.respondWith(() => ({ status: 409, body: { type: 'SOME_REFUSAL', detail: 'Refused by the backend.' } }))
 
-    const error = await refusal(() => route.default(makeEvent({ body: { value: 'x' }, cookies: { auth_token: 'jwt' } })))
+    const error = await refusal(async () => route.default(makeEvent({ body: { value: 'x' }, cookies: await signedIn('jwt') })))
 
     expect(error).toMatchObject({ statusCode: 409, statusMessage: 'Refused by the backend.', data: { code: 'SOME_REFUSAL' } })
   })

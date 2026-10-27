@@ -5,7 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, signedIn } from '../../../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../../../helpers/stubServer'
 
@@ -26,7 +26,7 @@ afterEach(async () => {
 
 describe('service cancel route', () => {
   it('posts the body to the service cancel endpoint', async () => {
-    await route.default(makeEvent({ params: { id: '5' }, body: { reason: 'moving' }, cookies: { auth_token: 'jwt' } }))
+    await route.default(makeEvent({ params: { id: '5' }, body: { reason: 'moving' }, cookies: await signedIn('jwt') }))
 
     expect(backend.requests[0]?.url).toBe('/api/me/services/5/cancel')
     expect(JSON.parse(backend.requests[0]?.body ?? '{}')).toEqual({ reason: 'moving' })
@@ -35,7 +35,7 @@ describe('service cancel route', () => {
   it('writes no sentence of its own when the backend refuses a cancellation', async () => {
     backend.respondWith(() => ({ status: 409, body: { type: 'SERVICE_NOT_ACTIVE', detail: 'Not active.' } }))
 
-    const error = await refusal(() => route.default(makeEvent({ params: { id: '5' }, body: {}, cookies: { auth_token: 'jwt' } })))
+    const error = await refusal(async () => route.default(makeEvent({ params: { id: '5' }, body: {}, cookies: await signedIn('jwt') })))
 
     expect(error).toMatchObject({ statusCode: 409, statusMessage: 'Not active.', data: { code: 'SERVICE_NOT_ACTIVE' } })
   })

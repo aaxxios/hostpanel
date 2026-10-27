@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, refusal, startBackend } from '../../../../helpers/bffHarness'
+import { makeEvent, refusal, startBackend, storedSession } from '../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../helpers/stubServer'
 
@@ -37,7 +37,8 @@ describe('POST /api/portal/auth/2fa-login', () => {
     expect(backend.requests[0]?.headers['authorization']).toBeUndefined()
     expect(backend.requests[0]?.headers['x-language']).toBe('ru')
     expect(JSON.parse(backend.requests[0]?.body ?? '{}')).toEqual({ pendingToken: 'p', code: '123456' })
-    expect(event.written['auth_token']?.value).toBe('jwt-2')
+    expect(await storedSession({ portal_session: event.written['portal_session']?.value ?? '' })).toMatchObject({ accessToken: 'jwt-2' })
+    expect(event.written['auth_token']).toBeUndefined()
     expect(event.written['authed']?.value).toBe('1')
   })
 

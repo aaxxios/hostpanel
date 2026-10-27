@@ -5,7 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, startBackend } from '../../../../helpers/bffHarness'
+import { makeEvent, startBackend, signedIn } from '../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../helpers/stubServer'
 
@@ -28,7 +28,7 @@ describe('GET /api/portal/auth/email-verified', () => {
   it('calls the backend endpoint and returns its answer', async () => {
     backend.respondWith(() => ({ body: { verified: false } }))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } }))
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') }))
 
     expect(result).toEqual({ verified: false })
     expect(backend.requests[0]?.method).toBe('GET')
@@ -39,7 +39,7 @@ describe('GET /api/portal/auth/email-verified', () => {
   it('keeps a null answer null', async () => {
     backend.respondWith(() => ({ body: { verified: null } }))
 
-    const result = await route.default(makeEvent({ cookies: { auth_token: 'jwt' } }))
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') }))
 
     expect(result).toEqual({ verified: null })
   })

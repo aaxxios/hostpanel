@@ -68,8 +68,9 @@ refusal (`scriptStub` in `support/helpers.ts`), `POST /__e2e/settings` overrides
 setting such as `portal.template` (`setPortalSetting`), `POST /__e2e/demo` turns demo mode on
 (`enableDemoMode`; it is off by default).
 
-The client area is entered by setting the `authed` and `auth_token` cookies (`signIn` in
-`support/helpers.ts`); only `sign-in.spec.ts` goes through the form.
+The client area is entered by signing in through the BFF's own sign-in route with the stub
+customer's credentials (`signIn` in `support/helpers.ts`), which leaves the `portal_session` and
+`authed` cookies in the context; only `sign-in.spec.ts` goes through the form.
 
 ## No internet
 
