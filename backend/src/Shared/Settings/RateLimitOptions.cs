@@ -95,6 +95,16 @@ public sealed class RateLimitOptions
     public RateLimitTierOptions Strict { get; set; } = new() { PermitLimit = 5, WindowSeconds = 60 };
 
     /// <summary>
+    /// Gets or sets the tier for <see cref="Constants.RateLimitPolicies.SshKeys"/>: adding and
+    /// revoking SSH keys.
+    /// </summary>
+    /// <remarks>
+    /// Twenty a minute is far beyond what a person pasting keys does, and far below what would let
+    /// one account keep a managed server's key agent busy: every permit is an SSH connection.
+    /// </remarks>
+    public RateLimitTierOptions SshKeys { get; set; } = new() { PermitLimit = 20, WindowSeconds = 60 };
+
+    /// <summary>
     /// How many expensive operations one caller may have in flight at once. Five.
     /// </summary>
     /// <remarks>
