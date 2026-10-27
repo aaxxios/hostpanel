@@ -57,7 +57,7 @@ public sealed class RevokeMySshKeyTests(IntegrationTestFactory factory) : IClass
     }
 
     [Fact]
-    public async Task ServiceMoved_KeyIsStaleAndNeitherServerIsCalledAsync()
+    public async Task ServiceMoved_KeyIsRevokedOnItsOldServerOnlyAsync()
     {
         var (http, _, oldServer, serviceId) = await SshTestSeeds.OwnerWithServiceAsync(factory, "ssh-revoke-moved");
         var keyId = await SshTestSeeds.AddKeyAsync(http, serviceId, 1);
@@ -71,10 +71,28 @@ public sealed class RevokeMySshKeyTests(IntegrationTestFactory factory) : IClass
 
         var response = await http.DeleteAsync($"/api/me/services/{serviceId}/ssh/keys/{keyId}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.SSH_KEY_STALE);
-        SshTestSeeds.Agents(factory).AgentFor(oldServer).Calls.Should().NotContain(c => c.StartsWith("revoke"));
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        SshTestSeeds.Agents(factory).AgentFor(oldServer).KeysOf("web").Should().BeEmpty();
         SshTestSeeds.Agents(factory).AgentFor(newServer).Calls.Should().NotContain(c => c.StartsWith("revoke"));
+        (await KeyAsync(keyId)).SyncState.Should().Be(SshKeySyncState.Revoked);
+    }
+
+    [Fact]
+    public async Task SshSwitchedOffOnTheServer_CustomerCanStillRevokeAsync()
+    {
+        var (http, _, serverId, serviceId) = await SshTestSeeds.OwnerWithServiceAsync(factory, "ssh-revoke-off");
+        var keyId = await SshTestSeeds.AddKeyAsync(http, serviceId, 1);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            await context.ServerSshSettings.Where(s => s.ServerId == serverId)
+                .ExecuteUpdateAsync(u => u.SetProperty(s => s.IsEnabled, false));
+        }
+
+        var response = await http.DeleteAsync($"/api/me/services/{serviceId}/ssh/keys/{keyId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        SshTestSeeds.Agents(factory).AgentFor(serverId).KeysOf("web").Should().BeEmpty();
     }
 
     [Fact]

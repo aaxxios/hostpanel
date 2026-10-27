@@ -436,6 +436,9 @@ public static class DependencyInjection
         services.AddScoped<
             Innovayse.Hostpanel.Application.Common.Interfaces.ISshServiceContextResolver,
             Innovayse.Hostpanel.Application.Services.Common.SshServiceContextResolver>();
+        services.AddScoped<
+            Innovayse.Hostpanel.Application.Common.Interfaces.ISshKeyRevoker,
+            Innovayse.Hostpanel.Application.Services.Common.SshKeyRevoker>();
 
         // Billing services
         services.AddScoped<IPaymentGateway, NullPaymentGateway>();

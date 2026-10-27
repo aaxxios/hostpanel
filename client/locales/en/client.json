@@ -213,7 +213,7 @@
           "InstallFailed": "Install not confirmed",
           "RevokeFailed": "Revoke not confirmed",
           "Revoked": "Revoked",
-          "Stale": "Previous server — contact support",
+          "Stale": "Previous server",
           "Missing": "Not found on server"
         },
         "localError": {

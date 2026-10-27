@@ -14,10 +14,12 @@ namespace Innovayse.Hostpanel.Application.Services.Commands.RevokeMySshKey;
 /// Removes a key from the server it was installed on, and only from that server.
 /// </summary>
 /// <remarks>
-/// The key's pinned server and account must still be the service's. If the service has moved,
-/// nothing is sent anywhere: the new server never held this key, and the old one may now host a
-/// different customer under the same username. Revocation is allowed while the account's shell is
-/// disabled — removing access must never depend on access being enabled.
+/// A key that still belongs to the service's current server and account is removed through the
+/// normal provider. Otherwise — the service moved, or SSH key management was switched off on its
+/// server — it is removed on the server and account it was issued on, by its own tag only (see
+/// <see cref="ISshKeyRevoker"/>); the service's current server is never asked about a key it never
+/// held. Revocation is allowed while the account's shell is disabled — removing access must never
+/// depend on access being enabled.
 /// </remarks>
 public sealed class RevokeMySshKeyHandler
 {
@@ -33,6 +35,9 @@ public sealed class RevokeMySshKeyHandler
     /// <summary>Who is asking, for the audit entry.</summary>
     private readonly ICurrentUserService _caller;
 
+    /// <summary>Removes keys on the server they were issued on, when the service no longer points there.</summary>
+    private readonly ISshKeyRevoker _revoker;
+
     /// <summary>Logger.</summary>
     private readonly ILogger<RevokeMySshKeyHandler> _logger;
 
@@ -41,11 +46,13 @@ public sealed class RevokeMySshKeyHandler
     /// <param name="resolver">Resolves server, provider and account once ownership is settled.</param>
     /// <param name="context">Data context.</param>
     /// <param name="caller">Who is asking, for the audit entry.</param>
+    /// <param name="revoker">Removes keys on the server they were issued on.</param>
     /// <param name="logger">Logger.</param>
     public RevokeMySshKeyHandler(
         IServiceOwnership ownership, ISshServiceContextResolver resolver, IHostpanelDbContext context,
-        ICurrentUserService caller, ILogger<RevokeMySshKeyHandler> logger)
+        ICurrentUserService caller, ISshKeyRevoker revoker, ILogger<RevokeMySshKeyHandler> logger)
     {
+        _revoker = revoker;
         _ownership = ownership;
         _resolver = resolver;
         _context = context;
@@ -58,7 +65,7 @@ public sealed class RevokeMySshKeyHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success once the server confirmed the removal, or one of <c>SERVICE_NOT_FOUND</c>,
-    /// <c>SSH_KEY_NOT_FOUND</c>, <c>SSH_ACCESS_UNAVAILABLE</c>, <c>SSH_KEY_STALE</c>,
+    /// <c>SSH_KEY_NOT_FOUND</c>, <c>SSH_ACCESS_UNAVAILABLE</c> (service not active),
     /// <c>SSH_SERVER_UNAVAILABLE</c>.
     /// </returns>
     public async Task<Result> HandleAsync(RevokeMySshKeyCommand cmd, CancellationToken ct)
@@ -82,29 +89,35 @@ public sealed class RevokeMySshKeyHandler
             return Result.FailureCode(HostpanelErrorCodes.SSH_KEY_NOT_FOUND);
         }
 
-        // Shell-disabled accounts still resolve as Available here: the shell check is the
-        // server's, asked only by the access query, so revocation never depends on it.
-        if (context.State is not SshAccessState.Available)
+        if (context.State is SshAccessState.ServiceInactive)
         {
             return Result.FailureCode(HostpanelErrorCodes.SSH_ACCESS_UNAVAILABLE);
         }
 
-        var account = context.Account!;
-        if (!key.IsBoundTo(account.ServerId, account.Username))
+        var account = context.Account;
+        var current = context.State is SshAccessState.Available && key.IsBoundTo(account?.ServerId, account?.Username);
+        if (current)
         {
-            return Result.FailureCode(HostpanelErrorCodes.SSH_KEY_STALE);
+            // Shell-disabled accounts still resolve as Available here: the shell check is the
+            // server's, asked only by the access query, so revocation never depends on it.
+            try
+            {
+                await context.Provider!.RevokeKeyAsync(account!, key.KeyId, ct);
+                key.MarkRevoked();
+            }
+            catch (SshProviderException ex)
+            {
+                _logger.LogWarning(ex, "SSH key {KeyId} revoke on server {ServerId} failed: {Code}",
+                    key.KeyId, account!.ServerId, ex.Code);
+                key.MarkRevokeFailed(ex.Code);
+                await _context.SaveChangesAsync(ct);
+                return Result.FailureCode(HostpanelErrorCodes.SSH_SERVER_UNAVAILABLE);
+            }
         }
-
-        try
+        else if (!await _revoker.RevokeOnPinnedServerAsync(key, ct))
         {
-            await context.Provider!.RevokeKeyAsync(account, key.KeyId, ct);
-            key.MarkRevoked();
-        }
-        catch (SshProviderException ex)
-        {
-            _logger.LogWarning(ex, "SSH key {KeyId} revoke on server {ServerId} failed: {Code}",
-                key.KeyId, account.ServerId, ex.Code);
-            key.MarkRevokeFailed(ex.Code);
+            // The service moved, or SSH key management was switched off on its server: the key is
+            // removed where it was issued, by its own tag, and nowhere else.
             await _context.SaveChangesAsync(ct);
             return Result.FailureCode(HostpanelErrorCodes.SSH_SERVER_UNAVAILABLE);
         }

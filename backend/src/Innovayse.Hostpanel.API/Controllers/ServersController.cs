@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.Application.Admin.Servers.Commands.ConfigureServerSsh;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.CreateServer;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.DeleteServer;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.GenerateServerSshIdentity;
+using Innovayse.Hostpanel.Application.Admin.Servers.Commands.RevokeServerSshKeys;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.ScanServerSshHostKey;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.TestServerSshAgent;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.UpdateServer;
@@ -185,6 +186,19 @@ public sealed class ServersController : BaseApiController
     public async Task<IActionResult> ScanSshHostKeyAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<SshHostKeyScanDto>>(new ScanServerSshHostKeyCommand(id), ct);
+        return HandleResult(outcome);
+    }
+
+    /// <summary>Revokes every HostPanel-managed SSH key issued on the server, e.g. before uninstalling its agent.</summary>
+    /// <param name="id">Server identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>How many keys were removed and how many could not be confirmed.</returns>
+    [HttpPost("{id:int}/ssh-keys/revoke-all")]
+    [ProducesResponseType(typeof(RevokeServerSshKeysResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RevokeServerSshKeysAsync(int id, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<RevokeServerSshKeysResultDto>>(new RevokeServerSshKeysCommand(id), ct);
         return HandleResult(outcome);
     }
 }

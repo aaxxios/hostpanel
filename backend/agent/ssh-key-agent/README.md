@@ -118,9 +118,25 @@ additive; older HostPanels ignore them and older agents simply omit them.
 | Diagnose | `./install.sh --check` — user, lock, agent owner/mode, sudoers, forced-command key, config, self-test, host key |
 | Remove / roll back | `./uninstall.sh [--dry-run] [--purge]` — management key first, then sudoers, user and agent; config kept unless `--purge`; audit log always kept |
 
-Neither script touches sshd, the firewall, any VPN, Jailkit or customers' keys. Keys HostPanel
-installed keep working after an uninstall until revoked; list them with
-`grep -l 'hostpanel:' /home/*/.ssh/authorized_keys`.
+Neither script touches sshd, the firewall, any VPN, Jailkit or customers' keys. **Before
+uninstalling, revoke the server's managed keys from HostPanel**
+(`POST /api/admin/servers/{id}/ssh-keys/revoke-all`); keys left behind keep working until removed
+by hand — list them with `grep -l 'hostpanel:' /home/*/.ssh/authorized_keys`.
+
+## What happens to keys over a service's life
+
+Every key is pinned to the server and account it was issued on. Removals always go there, by the
+key's own tag, so they can never touch a key HostPanel did not write — not even on a server whose
+account has since been reused.
+
+| Event | Keys on the server | In HostPanel |
+|---|---|---|
+| Hosting account suspended | Stay; the account cannot log in (locked, no shell) and cannot receive new keys | Customer cannot change keys while the service is suspended; unchanged on unsuspend |
+| Service terminated | Revoked automatically on their server | `Revoked`; if the server did not confirm, `RevokeFailed` with the reason, visible to staff |
+| Service moved to another server | Stay on the old server until revoked | Listed as from the previous server; the customer (or revoke-all on the old server) removes them there; nothing is ever sent to the new server for them |
+| SSH key management switched off on the server | Stay | Customer can no longer add, but can still revoke |
+| Agent uninstalled | Stay unless revoke-all ran first | Revokes fail (`RevokeFailed`) until reinstalled |
+| Identity rotated | Unaffected | Customer access off until the installer runs with the new key |
 
 ## Tests
 

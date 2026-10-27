@@ -55,7 +55,7 @@
           </UiStack>
           <UiBadge v-if="badgeKey(key)" variant="warning" data-testid="service-ssh-key-badge">{{ $t(badgeKey(key)) }}</UiBadge>
           <UiButton
-            v-if="canManage && !key.isStale"
+            v-if="canRevoke"
             variant="danger"
             size="sm"
             :loading="revokingId === key.keyId"
@@ -168,7 +168,7 @@ const props = defineProps<Props>()
 /** The SSH key store. */
 const store = useSshKeysStore()
 /** Reactive state of the store this component renders. */
-const { access, keys, loading, loadError, adding, addError, localError, revokingId, revokeError, canManage, atLimit } = storeToRefs(store)
+const { access, keys, loading, loadError, adding, addError, localError, revokingId, revokeError, canManage, canRevoke, atLimit } = storeToRefs(store)
 
 /** The public key being pasted. */
 const publicKey = ref('')

@@ -4,7 +4,9 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Shared.Models;
+using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Admin.Servers.Commands.GenerateServerSshIdentity;
 
@@ -15,6 +17,12 @@ namespace Innovayse.Hostpanel.Application.Admin.Servers.Commands.GenerateServerS
 /// </summary>
 public sealed class GenerateServerSshIdentityHandler
 {
+    /// <summary>The administrator, for the audit trail.</summary>
+    private readonly ICurrentUserService _caller;
+
+    /// <summary>Logger; also the admin audit trail.</summary>
+    private readonly ILogger<GenerateServerSshIdentityHandler> _logger;
+
     /// <summary>Data context.</summary>
     private readonly IHostpanelDbContext _context;
 
@@ -32,9 +40,13 @@ public sealed class GenerateServerSshIdentityHandler
     /// <param name="factory">Provider factory, for support and the agent profile.</param>
     /// <param name="generator">Key pair generator.</param>
     /// <param name="bundle">The bundle this build ships.</param>
+    /// <param name="caller">The administrator, for the audit trail.</param>
+    /// <param name="logger">Logger; also the admin audit trail.</param>
     public GenerateServerSshIdentityHandler(
-        IHostpanelDbContext context, ISshKeyProviderFactory factory, ISshIdentityGenerator generator, ISshAgentBundle bundle)
+        IHostpanelDbContext context, ISshKeyProviderFactory factory, ISshIdentityGenerator generator, ISshAgentBundle bundle, ICurrentUserService caller, ILogger<GenerateServerSshIdentityHandler> logger)
     {
+        _caller = caller;
+        _logger = logger;
         _context = context;
         _factory = factory;
         _generator = generator;
@@ -69,6 +81,9 @@ public sealed class GenerateServerSshIdentityHandler
         var identity = _generator.Generate($"hostpanel-server-{server.Id}");
         settings.IssueIdentity(identity.PrivateKey, identity.PublicKey);
         await _context.SaveChangesAsync(ct);
+        _logger.LogInformation(
+            "SSH identity of server {ServerId} issued by user {UserId}; SSH key management disabled until reinstall",
+            server.Id, _caller.UserId);
         return Result<ServerSshSetupDto>.Success(settings.ToSetupDto(server.Id, profile, _bundle));
     }
 }

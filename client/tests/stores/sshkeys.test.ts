@@ -89,6 +89,7 @@ describe('useSshKeysStore', () => {
     await store.load('42')
     expect(api.fetchSshKeys).not.toHaveBeenCalled()
     expect(store.canManage).toBe(false)
+    expect(store.canRevoke).toBe(false)
   })
 
   it('cannot manage in any state but available', async () => {
@@ -98,6 +99,7 @@ describe('useSshKeysStore', () => {
       const store = useSshKeysStore()
       await store.load('1')
       expect(store.canManage).toBe(false)
+      expect(store.canRevoke).toBe(true)
     }
   })
 

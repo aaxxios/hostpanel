@@ -32,12 +32,16 @@ export const buildInstallCommand = (origin: string, setup: ServerSshSetupDto): s
   // Over https, refuse any redirect to another protocol; a plain-http HostPanel (a lab) keeps the
   // hash check, which is what actually vouches for the bytes.
   const proto = base.startsWith('https://') ? "--proto '=https' " : ''
-  return [
+  // A subshell, so `set -e` and the trap end with the command instead of staying in the
+  // administrator's interactive root shell; the trap removes the download whatever happens.
+  const steps = [
     'set -e',
     'D="$(mktemp -d)"',
+    `trap 'rm -rf "$D"' EXIT`,
     `curl -fsSL ${proto}-o "$D/agent.tgz" ${shellQuote(base + setup.bundlePath)}`,
     `echo "${setup.bundleSha256}  $D/agent.tgz" | sha256sum -c -`,
     'tar -xzf "$D/agent.tgz" -C "$D" --strip-components=1',
     `"$D/install.sh" --provider ${shellQuote(setup.profile)} --binding ${shellQuote(setup.binding)} ${shellQuote(setup.publicKey)}`,
-  ].join(' && ')
+  ]
+  return `(${steps.join('; ')})`
 }

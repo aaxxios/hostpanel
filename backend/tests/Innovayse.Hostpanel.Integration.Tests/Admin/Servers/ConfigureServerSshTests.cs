@@ -90,6 +90,37 @@ public sealed class ConfigureServerSshTests(IntegrationTestFactory factory) : IC
     }
 
     [Fact]
+    public async Task ReplacingTheKeyOfAnEnabledServer_IsRefusedAndChangesNothingAsync()
+    {
+        var admin = await SshAdminTestSupport.AdminAsync(factory);
+        var serverId = await SshTestSeeds.SeedServerAsync(factory, "rotate.example.test", 22, enabled: false);
+        var host = $"rotate-{Guid.NewGuid():N}.example.test";
+        (await SaveTestEnableAsync(admin, serverId, host)).EnsureSuccessStatusCode();
+        var before = await StoredKeyAsync(serverId);
+
+        var response = await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(true, privateKey: "A-DIFFERENT-KEY", host: host));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.SSH_AGENT_NOT_VERIFIED);
+        var settings = await admin.GetFromJsonAsync<JsonElement>($"/api/admin/servers/{serverId}/ssh-settings");
+        settings.GetProperty("isEnabled").GetBoolean().Should().BeTrue();
+        settings.GetProperty("isHealthy").GetBoolean().Should().BeTrue();
+        (await StoredKeyAsync(serverId)).Should().Be(before);
+    }
+
+    /// <summary>The stored (encrypted) private key column, compared as-is.</summary>
+    private async Task<string?> StoredKeyAsync(int serverId)
+    {
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var connection = (NpgsqlConnection)((DbContext)context).Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand("SELECT \"AgentPrivateKey\" FROM \"ServerSshSettings\" WHERE \"ServerId\" = @id", connection);
+        command.Parameters.AddWithValue("id", serverId);
+        return (string?)await command.ExecuteScalarAsync();
+    }
+
+    [Fact]
     public async Task TwoServersOnOneAgentEndpoint_SecondIsRefusedAsync()
     {
         var admin = await SshAdminTestSupport.AdminAsync(factory);

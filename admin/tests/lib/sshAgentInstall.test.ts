@@ -22,11 +22,15 @@ describe('buildInstallCommand', () => {
   it('downloads from this HostPanel, checks the hash, then installs with profile, binding and key', () => {
     const command = buildInstallCommand('https://panel.example.com/', SETUP) ?? ''
 
-    const steps = command.split(' && ')
-    expect(steps[2]).toBe(`curl -fsSL --proto '=https' -o "$D/agent.tgz" 'https://panel.example.com/api/public/ssh-agent/bundle.tar.gz'`)
-    expect(steps[3]).toBe(`echo "${'a'.repeat(64)}  $D/agent.tgz" | sha256sum -c -`)
-    expect(steps.indexOf(steps[3]!)).toBeLessThan(steps.findIndex((s) => s.startsWith('tar ')))
-    expect(steps[5]).toBe(`"$D/install.sh" --provider 'cwp' --binding '${SETUP.binding}' '${SETUP.publicKey}'`)
+    // One subshell: set -e and the cleanup trap must not leak into the admin's root shell.
+    expect(command.startsWith('(set -e; ')).toBe(true)
+    expect(command.endsWith(')')).toBe(true)
+    const steps = command.slice(1, -1).split('; ')
+    expect(steps[2]).toBe(`trap 'rm -rf "$D"' EXIT`)
+    expect(steps[3]).toBe(`curl -fsSL --proto '=https' -o "$D/agent.tgz" 'https://panel.example.com/api/public/ssh-agent/bundle.tar.gz'`)
+    expect(steps[4]).toBe(`echo "${'a'.repeat(64)}  $D/agent.tgz" | sha256sum -c -`)
+    expect(steps.findIndex((s) => s.includes('sha256sum'))).toBeLessThan(steps.findIndex((s) => s.startsWith('tar ')))
+    expect(steps[6]).toBe(`"$D/install.sh" --provider 'cwp' --binding '${SETUP.binding}' '${SETUP.publicKey}'`)
     expect(command).not.toContain('PRIVATE')
   })
 

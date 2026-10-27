@@ -4,13 +4,21 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Shared.Models;
+using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Admin.Servers.Commands.ConfigureServerSsh;
 
 /// <summary>Handles <see cref="ConfigureServerSshCommand"/>.</summary>
 public sealed class ConfigureServerSshHandler
 {
+    /// <summary>The administrator, for the audit trail.</summary>
+    private readonly ICurrentUserService _caller;
+
+    /// <summary>Logger; also the admin audit trail.</summary>
+    private readonly ILogger<ConfigureServerSshHandler> _logger;
+
     /// <summary>Data context.</summary>
     private readonly IHostpanelDbContext _context;
 
@@ -20,8 +28,12 @@ public sealed class ConfigureServerSshHandler
     /// <summary>Initialises the handler.</summary>
     /// <param name="context">Data context.</param>
     /// <param name="factory">Provider factory, to refuse enabling an unsupported module.</param>
-    public ConfigureServerSshHandler(IHostpanelDbContext context, ISshKeyProviderFactory factory)
+    /// <param name="caller">The administrator, for the audit trail.</param>
+    /// <param name="logger">Logger; also the admin audit trail.</param>
+    public ConfigureServerSshHandler(IHostpanelDbContext context, ISshKeyProviderFactory factory, ICurrentUserService caller, ILogger<ConfigureServerSshHandler> logger)
     {
+        _caller = caller;
+        _logger = logger;
         _context = context;
         _factory = factory;
     }
@@ -89,6 +101,9 @@ public sealed class ConfigureServerSshHandler
         }
 
         await _context.SaveChangesAsync(ct);
+        _logger.LogInformation(
+            "SSH settings of server {ServerId} saved by user {UserId}: enabled={Enabled}, key replaced={KeyReplaced}",
+            server.Id, _caller.UserId, settings.IsEnabled, !string.IsNullOrWhiteSpace(cmd.AgentPrivateKey));
         return Result<ServerSshSettingsDto>.Success(settings.ToDto(supported));
     }
 }

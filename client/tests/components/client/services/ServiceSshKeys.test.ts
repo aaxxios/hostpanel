@@ -61,6 +61,19 @@ describe('ServiceSshKeys', () => {
     expect(wrapper.find('[data-testid="service-ssh-form"]').exists()).toBe(true)
   })
 
+  it('lets keys be revoked when SSH was switched off on the server, but offers no form', async () => {
+    const wrapper = await mountIn(SshAccessState.NotConfigured, [KEY_ROW])
+
+    expect(wrapper.find('[data-testid="service-ssh-revoke"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="service-ssh-form"]').exists()).toBe(false)
+  })
+
+  it('offers no revoke for an inactive service', async () => {
+    const wrapper = await mountIn(SshAccessState.ServiceInactive)
+
+    expect(wrapper.find('[data-testid="service-ssh-revoke"]').exists()).toBe(false)
+  })
+
   it.each([SshAccessState.ShellDisabled, SshAccessState.Unsupported, SshAccessState.NotConfigured, SshAccessState.Unreachable])(
     'explains the %s state and offers no form', async (state) => {
       const wrapper = await mountIn(state)
@@ -80,7 +93,7 @@ describe('ServiceSshKeys', () => {
     expect(wrapper.find('[data-testid="service-ssh-retry"]').exists()).toBe(true)
   })
 
-  it('lists keys with fingerprint and flags a stale one without a revoke button', async () => {
+  it('lists keys with fingerprint and flags a stale one, which can still be revoked', async () => {
     const wrapper = await mountIn(SshAccessState.Available, [KEY_ROW, { ...KEY_ROW, keyId: 'k2', label: 'old', isStale: true }])
 
     const rows = wrapper.findAll('[data-testid="service-ssh-key"]')
@@ -88,7 +101,7 @@ describe('ServiceSshKeys', () => {
     expect(rows[0]?.find('[data-testid="service-ssh-key-fingerprint"]').text()).toBe('SHA256:abc')
     expect(rows[0]?.find('[data-testid="service-ssh-revoke"]').exists()).toBe(true)
     expect(rows[1]?.find('[data-testid="service-ssh-key-badge"]').text()).toContain('client.services.ssh.sync.Stale')
-    expect(rows[1]?.find('[data-testid="service-ssh-revoke"]').exists()).toBe(false)
+    expect(rows[1]?.find('[data-testid="service-ssh-revoke"]').exists()).toBe(true)
   })
 
   it('refuses a private key in the browser', async () => {
