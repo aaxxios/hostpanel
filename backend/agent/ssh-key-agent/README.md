@@ -139,7 +139,8 @@ account has since been reused.
 
 | Event | Keys on the server | In HostPanel |
 |---|---|---|
-| Hosting account suspended | Stay; the account cannot log in (locked, no shell) and cannot receive new keys | Customer cannot change keys while the service is suspended; unchanged on unsuspend |
+| Service suspended in HostPanel | Taken off the server (control panels suspend by locking the password, which does not stop a key from logging in); a key the server does not confirm removed stays installed and is logged for staff | `Suspended`; put back under the same id on unsuspension, `InstallFailed` if that is not confirmed |
+| Account suspended in the panel only | **Stay and keep logging in**: the password lock does not stop keys. Suspend through HostPanel | Unchanged |
 | Service terminated | Revoked automatically on their server | `Revoked`; if the server did not confirm, `RevokeFailed` with the reason, visible to staff |
 | Service moved to another server | Stay on the old server until revoked | Listed as from the previous server; the customer (or revoke-all on the old server) removes them there; nothing is ever sent to the new server for them |
 | SSH key management switched off on the server | Stay | Customer can no longer add, but can still revoke |

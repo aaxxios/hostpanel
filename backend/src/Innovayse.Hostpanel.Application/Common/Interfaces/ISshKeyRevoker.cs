@@ -23,4 +23,23 @@ public interface ISshKeyRevoker
     /// <param name="ct">Cancellation token.</param>
     /// <returns>True when the agent confirmed the key is gone.</returns>
     Task<bool> RevokeOnPinnedServerAsync(SshKey key, CancellationToken ct);
+
+    /// <summary>
+    /// Takes an installed key off its pinned server for a suspension and marks it
+    /// <see cref="Domain.Ssh.Enums.SshKeySyncState.Suspended"/>. When the agent does not confirm, the
+    /// key stays installed with the reason recorded. Does not save.
+    /// </summary>
+    /// <param name="key">A tracked, installed key.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>True when the agent confirmed the key is gone.</returns>
+    Task<bool> SuspendOnPinnedServerAsync(SshKey key, CancellationToken ct);
+
+    /// <summary>
+    /// Puts a suspended key back on its pinned server, under the same id. Marks it installed, or
+    /// <see cref="Domain.Ssh.Enums.SshKeySyncState.InstallFailed"/> with the reason. Does not save.
+    /// </summary>
+    /// <param name="key">A tracked, suspended key.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>True when the agent confirmed the key is back.</returns>
+    Task<bool> RestoreOnPinnedServerAsync(SshKey key, CancellationToken ct);
 }

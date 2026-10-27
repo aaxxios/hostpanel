@@ -250,6 +250,7 @@ public sealed class ClientService : BaseEntity, IAggregateRoot
         Status = ServiceStatus.Active;
         SuspendedAt = null;
         SuspensionSource = null;
+        AddDomainEvent(new ClientServiceUnsuspendedEvent(Id, ClientId));
         if (!hostingAlreadyUpdated)
         {
             AddDomainEvent(new Provisioning.Events.ServiceUnsuspendedEvent(Id, ClientId));

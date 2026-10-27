@@ -8,6 +8,8 @@ export enum SshKeySyncState {
   InstallFailed = 'InstallFailed',
   /** The revoke was not confirmed; the key may still log in. */
   RevokeFailed = 'RevokeFailed',
+  /** Taken off the server while the service is suspended; restored on unsuspension. */
+  Suspended = 'Suspended',
   /** Confirmed gone from the server. */
   Revoked = 'Revoked'
 }

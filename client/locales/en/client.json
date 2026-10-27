@@ -212,6 +212,7 @@
           "Pending": "Pending",
           "InstallFailed": "Install not confirmed",
           "RevokeFailed": "Revoke not confirmed",
+          "Suspended": "Off the server while the service is suspended",
           "Revoked": "Revoked",
           "Stale": "Previous server",
           "Missing": "Not found on server"

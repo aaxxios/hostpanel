@@ -69,6 +69,13 @@ describe('ServiceSshKeys', () => {
     expect(wrapper.find('[data-testid="service-ssh-connection"]').exists()).toBe(false)
   })
 
+  it('flags a key still off the server just after the service came back', async () => {
+    const wrapper = await mountIn(SshAccessState.Available, [{ ...KEY_ROW, syncState: SshKeySyncState.Suspended, presentOnServer: false }])
+
+    expect(wrapper.find('[data-testid="service-ssh-key-badge"]').text()).toBe('client.services.ssh.sync.Suspended')
+    expect(wrapper.find('[data-testid="service-ssh-revoke"]').exists()).toBe(true)
+  })
+
   it('offers no revoke for an inactive service', async () => {
     const wrapper = await mountIn(SshAccessState.ServiceInactive)
 
