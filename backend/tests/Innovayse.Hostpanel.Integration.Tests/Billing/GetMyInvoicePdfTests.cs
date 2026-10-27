@@ -29,6 +29,21 @@ public sealed class GetMyInvoicePdfTests(IntegrationTestFactory factory) : IClas
         System.Text.Encoding.ASCII.GetString(bytes, 0, 5).Should().Be("%PDF-");
     }
 
+    /// <summary>The client's download is not kept by the browser or a proxy either.</summary>
+    [Fact]
+    public async Task GetMyPdf_IsNeverCached()
+    {
+        var (owner, ownerClientId) = await BillingTestSeeds.RegisterClientAsync(factory, null, "pdf-no-store");
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+        var invoiceId = await BillingTestSeeds.CreateInvoiceAsync(admin, ownerClientId, 10m);
+
+        var response = await owner.GetAsync($"/api/me/invoices/{invoiceId}/pdf");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.CacheControl!.Private.Should().BeTrue();
+        response.Headers.CacheControl.NoStore.Should().BeTrue();
+    }
+
     /// <summary>
     /// The owner's own draft is not theirs to see yet: it answers exactly like an id that names no
     /// invoice, so a client cannot tell that a draft is being prepared.

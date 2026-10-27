@@ -38,6 +38,21 @@ public sealed class GetInvoicePdfTests(IntegrationTestFactory factory) : IClassF
         text.Should().Contain("AdaLovelace");
     }
 
+    /// <summary>The PDF carries a client's billing details, so no browser or proxy may keep a copy.</summary>
+    [Fact]
+    public async Task GetPdf_IsNeverCached()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+        var clientId = await BillingTestSeeds.SeedClientAsync(factory);
+        var invoiceId = await BillingTestSeeds.CreateInvoiceAsync(admin, clientId, 12.50m);
+
+        var response = await admin.GetAsync($"/api/billing/{invoiceId}/pdf");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.CacheControl!.Private.Should().BeTrue();
+        response.Headers.CacheControl.NoStore.Should().BeTrue();
+    }
+
     /// <summary>An id that names no invoice answers 404 with the <c>INVOICE_NOT_FOUND</c> code.</summary>
     [Fact]
     public async Task GetPdf_UnknownId_Returns404()
@@ -122,4 +137,5 @@ public sealed class GetInvoicePdfTests(IntegrationTestFactory factory) : IClassF
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await PdfText.CompactAsync(response)).Should().Contain("12.50XTS");
     }
+
 }
