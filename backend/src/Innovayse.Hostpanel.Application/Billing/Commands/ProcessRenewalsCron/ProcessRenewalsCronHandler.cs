@@ -101,6 +101,10 @@ public sealed class ProcessRenewalsCronHandler
         // puts its lines in front of the sweep below.
         var healed = await PayZeroTotalRenewalInvoicesAsync(ct);
 
+        // Two payments saved at the same moment each see only themselves and can leave an invoice
+        // open although together they cover it; it is settled here, before the sweep applies it.
+        healed += await SettleCoveredOpenInvoicesAsync(ct);
+
         // Sweep first: a paid renewal whose PaymentReceivedEvent was lost is applied here, within a
         // day, before anything new is raised. A claimed line (RenewalAttemptAt set) belongs to a
         // registrar call whose outcome a person must confirm; ApplyPaidRenewals would skip it, so
@@ -146,7 +150,7 @@ public sealed class ProcessRenewalsCronHandler
         }
 
         _logger.LogInformation(
-            "ProcessRenewalsCron paid {Healed} zero-total invoices, swept {Swept} invoices, lifted {Lifted} suspensions and checked {Clients} clients.",
+            "ProcessRenewalsCron settled {Healed} open invoices with nothing owed, swept {Swept} invoices, lifted {Lifted} suspensions and checked {Clients} clients.",
             healed, unapplied.Count, lifted, clientIds.Count);
     }
 
@@ -219,6 +223,44 @@ public sealed class ProcessRenewalsCronHandler
         _logger.LogWarning(
             "{Count} active auto-renewing services have no NextRenewalAt and are never billed; set their renewal date. First ids: {ServiceIds}",
             renewable.Count, string.Join(", ", renewable.Take(UndatedSampleSize)));
+    }
+
+    /// <summary>
+    /// Settles open invoices whose recorded payments, less refunds and reversals, already cover the
+    /// total. Each is saved on its own, so one failure leaves the rest to be settled.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>How many invoices were settled.</returns>
+    private async Task<int> SettleCoveredOpenInvoicesAsync(CancellationToken ct)
+    {
+        var covered = await _context.Invoices
+            .Where(i => (i.Status == InvoiceStatus.Unpaid || i.Status == InvoiceStatus.Overdue)
+                        && i.Total > 0
+                        && i.Transactions.Where(t => t.Type == InvoiceTransactionType.Payment).Sum(t => t.Amount)
+                           - i.Transactions.Where(t => t.Type == InvoiceTransactionType.Refund).Sum(t => t.Amount)
+                           >= i.Total)
+            .Include(i => i.Transactions)
+            .ToListAsync(ct);
+
+        var settled = 0;
+        foreach (var invoice in covered)
+        {
+            try
+            {
+                if (invoice.SettleIfCovered())
+                {
+                    await _context.SaveChangesAsync(ct);
+                    settled++;
+                    _logger.LogWarning("Invoice {InvoiceId} was open although its payments cover it; marked paid.", invoice.Id);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogError(ex, "Could not settle covered invoice {InvoiceId}; the next run retries it.", invoice.Id);
+            }
+        }
+
+        return settled;
     }
 
     /// <summary>

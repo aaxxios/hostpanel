@@ -227,4 +227,33 @@ public sealed class StartGatewayPaymentTests(IntegrationTestFactory factory) : I
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         body.GetProperty("redirectUrl").GetString().Should().Be("https://pg.example/pay?mdOrder=gw-second");
     }
+
+    /// <summary>
+    /// After a partial manual payment, the gateway session charges only what is still due, never the
+    /// whole total a second time.
+    /// </summary>
+    [Fact]
+    public async Task StartAfterPartialPayment_ChargesOnlyTheRemainder()
+    {
+        var plugin = new FakePaymentPlugin { CurrencyCode = "840" };
+        var resolver = new FakePaymentPluginResolver();
+        resolver.Register("bank-gateway", plugin);
+        var host = BuildHost(resolver);
+        var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "gw-partial");
+        var admin = await BillingTestSeeds.AdminClientAsync(factory, host);
+        var invoiceId = await BillingTestSeeds.CreateInvoiceAsync(admin, clientId, 25.50m);
+        (await admin.PostAsJsonAsync($"/api/billing/{invoiceId}/payment", new
+        {
+            date = DateTimeOffset.UtcNow,
+            gateway = "Manual",
+            transactionId = $"pay-{Guid.NewGuid():N}",
+            amount = 10m,
+            fees = 0m,
+        })).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var response = await StartAsync(client, invoiceId);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        plugin.LastCreatePaymentRequest!.AmountMinor.Should().Be(1550); // 25.50 - 10.00 due
+    }
 }

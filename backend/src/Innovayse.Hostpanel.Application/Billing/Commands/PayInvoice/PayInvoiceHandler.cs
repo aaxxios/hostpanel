@@ -43,6 +43,7 @@ public sealed class PayInvoiceHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success, or <c>INVOICE_NOT_FOUND</c> when the id names no invoice,
+    /// <c>INVOICE_NOT_PAYABLE</c> when it is closed or nothing is left due,
     /// <c>GATEWAY_CHARGE_UPSTREAM_FAILED</c> when the gateway declines the charge, or
     /// <c>GATEWAY_TRANSACTION_MISSING_UPSTREAM_FAILED</c> when it reports success without a
     /// transaction id.
@@ -51,7 +52,10 @@ public sealed class PayInvoiceHandler
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.Id == cmd.InvoiceId, ct);
+        // Transactions loaded: the card is charged what is still due, which earlier payments reduce.
+        var invoice = await _context.Invoices
+            .Include(i => i.Transactions)
+            .FirstOrDefaultAsync(i => i.Id == cmd.InvoiceId, ct);
         if (invoice is null)
         {
             return Result.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
@@ -59,7 +63,15 @@ public sealed class PayInvoiceHandler
 
         // Charged in the currency the invoice was issued in. The command used to carry a code
         // the caller chose, defaulting to USD, which charged an AMD invoice's total as dollars.
-        var chargeRequest = new ChargeInstruction(invoice.ClientId, invoice.Id, invoice.Total, invoice.Currency);
+        // What is still due, not the total: a payment recorded earlier must not be charged again.
+        var charged = invoice.AmountDue;
+        if (charged <= 0m)
+        {
+            // Closed, or nothing left due: a charge for 0 would only fail at the card gateway.
+            return Result.FailureCode(HostpanelErrorCodes.INVOICE_NOT_PAYABLE);
+        }
+
+        var chargeRequest = new ChargeInstruction(invoice.ClientId, invoice.Id, charged, invoice.Currency);
         var result = await _gateway.ChargeAsync(chargeRequest, ct);
 
         if (!result.Success)
@@ -72,18 +84,19 @@ public sealed class PayInvoiceHandler
             return Result.FailureCode(HostpanelErrorCodes.GATEWAY_TRANSACTION_MISSING_UPSTREAM_FAILED);
         }
 
-        invoice.MarkPaid(result.TransactionId);
+        var method = invoice.PaymentMethod ?? DefaultPaymentMethod;
+        invoice.MarkPaid(result.TransactionId, method);
 
         // Ledger row in the same save as the Paid mark, so "invoice is Paid" and "ledger row exists"
         // are one atomic fact; no event handler writes it.
-        if (invoice.Total > 0)
+        if (charged > 0)
         {
             _context.Transactions.Add(Transaction.CreateInvoicePayment(
                 invoice,
                 DateTimeOffset.UtcNow,
-                invoice.PaymentMethod ?? DefaultPaymentMethod,
+                method,
                 result.TransactionId,
-                invoice.Total,
+                charged,
                 0m));
         }
 

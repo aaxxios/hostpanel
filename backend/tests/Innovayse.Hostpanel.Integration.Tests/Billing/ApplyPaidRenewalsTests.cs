@@ -191,6 +191,33 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         (await ReloadLineAsync(context, invoice.Id)).RenewalAppliedAt.Should().BeNull();
     }
 
+    /// <summary>
+    /// A partial payment followed by the rest renews once the invoice is covered. Before, the first
+    /// payment marked the invoice Paid and the second was refused, so the renewal stayed stuck.
+    /// </summary>
+    [Fact]
+    public async Task PartialPaymentThenTheRest_Renews()
+    {
+        var host = Host(new FakeEmailSender());
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var start = DateTimeOffset.UtcNow.AddDays(5);
+        var service = await SeedActiveServiceAsync(context, start);
+        var invoice = await SeedServiceRenewalInvoiceAsync(context, service, start);
+        invoice.AddPayment(DateTimeOffset.UtcNow, "Manual", $"part-{Guid.NewGuid():N}", 1m, 0m, null);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        invoice.AddPayment(DateTimeOffset.UtcNow, "Manual", $"rest-{Guid.NewGuid():N}", invoice.AmountDue, 0m, null);
+        await context.SaveChangesAsync(CancellationToken.None);
+        var result = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var line = await ReloadLineAsync(context, invoice.Id);
+        line.RenewalAppliedAt.Should().NotBeNull();
+        (await ReloadServiceAsync(context, service.Id)).NextRenewalAt.Should().Be(line.RenewalPeriodEnd);
+    }
+
     /// <summary>An unpaid invoice applies nothing.</summary>
     [Fact]
     public async Task UnpaidInvoice_AppliesNothing()

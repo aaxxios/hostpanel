@@ -14,6 +14,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <param name="Tax">Computed tax amount.</param>
 /// <param name="TaxRate">Tax rate percentage.</param>
 /// <param name="Credit">Total credit applied.</param>
+/// <param name="AmountDue">What is still owed: the total less the payments recorded against it.</param>
 /// <param name="GatewayTransactionId">Payment gateway reference; null when unpaid.</param>
 /// <param name="Notes">Optional invoice notes.</param>
 /// <param name="InvoiceDate">Invoice issue date (UTC).</param>
@@ -34,6 +35,7 @@ public record InvoiceDto(
     decimal Tax,
     decimal TaxRate,
     decimal Credit,
+    decimal AmountDue,
     string? GatewayTransactionId,
     string? Notes,
     DateTimeOffset InvoiceDate,

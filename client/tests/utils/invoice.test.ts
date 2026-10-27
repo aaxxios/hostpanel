@@ -20,14 +20,14 @@ import type { ClientInvoice } from '~/types/clientinvoice'
 import type { ClientInvoiceTransaction } from '~/types/clientinvoicetransaction'
 
 /** A transaction carrying only the fields these functions read. */
-const txn = (amount: number, fees = 0): ClientInvoiceTransaction => ({
+const txn = (amount: number, fees = 0, type = 'Payment'): ClientInvoiceTransaction => ({
   id: 1,
   date: '2026-08-01T10:00:00+00:00',
   gateway: 'stripe',
   transactionId: 'ch_1',
   amount,
   fees,
-  type: 'Payment',
+  type,
   notes: null
 })
 
@@ -47,6 +47,7 @@ const invoice = (over: Partial<ClientInvoice> = {}): ClientInvoice => ({
   tax: 0,
   taxRate: 0,
   credit: 0,
+  amountDue: 20000,
   gatewayTransactionId: null,
   notes: null,
   paymentMethod: null,
@@ -62,6 +63,12 @@ describe('paymentsToDate', () => {
 
   it('subtracts a refund, which is recorded as a negative amount', () => {
     expect(paymentsToDate([txn(5000), txn(-2000)])).toBe(3000)
+  })
+
+  it('subtracts a Refund transaction, which the API records as a positive amount', () => {
+    // `InvoiceTransactionDto` sends refunds and payment reversals as positive amounts typed
+    // `Refund`; a plain sum added them to what the customer had paid.
+    expect(paymentsToDate([txn(5000), txn(2000, 0, 'Refund')])).toBe(3000)
   })
 
   it('ignores gateway fees, which are the gateway\'s cut and not the customer\'s money', () => {
@@ -80,14 +87,20 @@ describe('balanceDue', () => {
   it('reports what is left on a part-paid invoice — the bug this replaced', () => {
     // The whole reason this file exists. `balance ?? total` rendered the full 20000 here,
     // on the screen that then asks the customer to pay.
-    const partPaid = invoice({ total: 20000, transactions: [txn(5000)] })
+    const partPaid = invoice({ total: 20000, amountDue: 15000, transactions: [txn(5000)] })
 
     expect(paymentsToDate(partPaid.transactions)).toBe(5000)
     expect(balanceDue(partPaid)).toBe(15000)
   })
 
+  it('reports the amount due the API computed, which is what a payment charges', () => {
+    // The server's figure is the one the gateway is asked to charge; a page that worked out its
+    // own could show the customer one amount and charge another.
+    expect(balanceDue(invoice({ total: 20000, amountDue: 12000, transactions: [] }))).toBe(12000)
+  })
+
   it('reports nothing outstanding on a fully paid invoice', () => {
-    expect(balanceDue(invoice({ status: 'Paid', total: 20000, transactions: [txn(20000)] }))).toBe(0)
+    expect(balanceDue(invoice({ status: 'Paid', total: 20000, amountDue: 0, transactions: [txn(20000)] }))).toBe(0)
   })
 
   it('reports the full total when nothing has been received', () => {

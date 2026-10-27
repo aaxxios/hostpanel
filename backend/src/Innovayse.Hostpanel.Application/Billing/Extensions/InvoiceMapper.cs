@@ -28,6 +28,7 @@ public static class InvoiceMapper
             invoice.Tax,
             invoice.TaxRate,
             invoice.Credit,
+            invoice.AmountDue,
             invoice.GatewayTransactionId,
             invoice.Notes,
             invoice.InvoiceDate,

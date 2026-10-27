@@ -59,7 +59,10 @@ public sealed class CreateOrderPaymentIntentHandler
             return Result<string>.FailureCode(HostpanelErrorCodes.ORDER_NOT_INVOICED);
         }
 
-        var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.Id == order.InvoiceId.Value, ct);
+        // Transactions loaded: what is charged is what is still due, which earlier payments reduce.
+        var invoice = await _context.Invoices
+            .Include(i => i.Transactions)
+            .FirstOrDefaultAsync(i => i.Id == order.InvoiceId.Value, ct);
         if (invoice is null)
         {
             return Result<string>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
@@ -74,7 +77,14 @@ public sealed class CreateOrderPaymentIntentHandler
             ["clientId"] = order.ClientId.ToString(),
         };
 
-        var clientSecret = await _cardGateway.CreatePaymentIntentAsync(invoice.Total, IntentCurrency, metadata, ct);
+        // Nothing left to charge: an intent for 0 would only fail at the card gateway.
+        if (invoice.AmountDue <= 0m)
+        {
+            return Result<string>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_PAYABLE);
+        }
+
+        // What is still due, not the total: a payment recorded earlier must not be charged again.
+        var clientSecret = await _cardGateway.CreatePaymentIntentAsync(invoice.AmountDue, IntentCurrency, metadata, ct);
         return Result.Success(clientSecret);
     }
 }
