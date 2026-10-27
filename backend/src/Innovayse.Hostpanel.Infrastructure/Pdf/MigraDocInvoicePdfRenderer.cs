@@ -496,6 +496,8 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
                 model.PaidAt is { } paidAt ? $"PAID {paidAt.ToString(DateFormat, CultureInfo.InvariantCulture)}" : "PAID",
                 PaidStamp),
             InvoiceStatus.Draft => ("DRAFT", DraftStamp),
+            InvoiceStatus.Cancelled => ("CANCELLED", CancelledStamp),
+            InvoiceStatus.Refunded => ("REFUNDED", RefundedStamp),
             _ => (null, XColors.Transparent),
         };
         if (text is null)
