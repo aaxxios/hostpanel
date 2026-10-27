@@ -12,6 +12,7 @@ import type {
   ServerPayload,
   TestConnectionResultDto,
 } from '@/types/server'
+import type { ServerSshSettingsDto, ServerSshSettingsPayload, SshAgentTestResultDto } from '@/types/serverssh'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
 
@@ -103,6 +104,34 @@ export const useServersApi = () => {
   const deleteServerGroup = (id: number): Promise<void> =>
     request<void>(`${ApiPath.AdminServerGroups}/${id}`, { method: HttpMethod.Delete })
 
+  /**
+   * Reads a server's SSH key management settings. The private key is never part of the answer.
+   *
+   * @param id - Server id.
+   * @returns The settings; disabled defaults when never configured.
+   */
+  const getServerSshSettings = (id: number): Promise<ServerSshSettingsDto> =>
+    request<ServerSshSettingsDto>(`${ApiPath.AdminServers}/${id}/ssh-settings`)
+
+  /**
+   * Saves a server's SSH key management settings.
+   *
+   * @param id - Server id.
+   * @param payload - The settings; a null private key keeps the stored one.
+   * @returns The saved settings.
+   */
+  const saveServerSshSettings = (id: number, payload: ServerSshSettingsPayload): Promise<ServerSshSettingsDto> =>
+    request<ServerSshSettingsDto>(`${ApiPath.AdminServers}/${id}/ssh-settings`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
+
+  /**
+   * Pings a server's SSH key agent and records the outcome.
+   *
+   * @param id - Server id.
+   * @returns Whether the agent answered, and its version or the reason it did not.
+   */
+  const testServerSshAgent = (id: number): Promise<SshAgentTestResultDto> =>
+    request<SshAgentTestResultDto>(`${ApiPath.AdminServers}/${id}/ssh-settings/test`, { method: HttpMethod.Post })
+
   return {
     listServers,
     createServer,
@@ -113,5 +142,8 @@ export const useServersApi = () => {
     createServerGroup,
     updateServerGroup,
     deleteServerGroup,
+    getServerSshSettings,
+    saveServerSshSettings,
+    testServerSshAgent,
   }
 }

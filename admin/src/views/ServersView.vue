@@ -14,6 +14,7 @@ import type { ServerDto, ServerGroupDto, ServerGroupPayload, ServerModule, Serve
 import type { UiTone } from '@/utils/ui/tone'
 import GroupFormModal from '@/components/servers/GroupFormModal.vue'
 import ServerFormModal from '@/components/servers/ServerFormModal.vue'
+import ServerSshSettingsModal from '@/components/servers/ServerSshSettingsModal.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -71,6 +72,9 @@ const showGroupModal = ref(false)
 
 /** The server awaiting delete confirmation, or null when nothing is staged. */
 const deleteServerTarget = ref<ServerDto | null>(null)
+
+/** Server whose SSH key management settings dialog is open, null when closed. */
+const sshServerTarget = ref<ServerDto | null>(null)
 
 /** True while the staged server is being deleted. */
 const deletingServer = ref(false)
@@ -334,6 +338,9 @@ onMounted(async () => {
                   >
                     {{ t('shared.testConnection') }}
                   </UiButton>
+                  <UiButton variant="ghost" size="sm" :data-testid="`server-ssh-${server.id}`" @click="sshServerTarget = server">
+                    {{ t('servers.ssh.open') }}
+                  </UiButton>
                   <UiButton variant="ghost" size="sm" :data-testid="`server-edit-${server.id}`" @click="openEditServer(server)">
                     {{ t('shared.edit') }}
                   </UiButton>
@@ -402,6 +409,13 @@ onMounted(async () => {
     </UiStack>
 
     <!-- Server form dialog -->
+    <ServerSshSettingsModal
+      v-if="sshServerTarget"
+      :server-id="sshServerTarget.id"
+      :server-name="sshServerTarget.name"
+      @close="sshServerTarget = null"
+    />
+
     <ServerFormModal
       v-if="showServerModal"
       :server="editingServer"
