@@ -492,6 +492,40 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         mails[0].Subject.Should().Contain(domain.Name);
     }
 
+    /// <summary>
+    /// A paid domain with no registrar reference is not extended locally: the line stays
+    /// unapplied, the expiry stays put and staff are alerted.
+    /// </summary>
+    [Fact]
+    public async Task DomainWithoutRegistrarRef_LeavesUnappliedAndAlerts()
+    {
+        var sender = new FakeEmailSender();
+        using var scope = Host(sender).Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
+        var domain = RegisteredDomain.Register(
+            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow.AddDays(10), autoRenew: false, whoisPrivacy: false);
+        context.Domains.Add(domain);
+        await context.SaveChangesAsync(CancellationToken.None);
+        var expiry = await context.Domains.AsNoTracking().Where(d => d.Id == domain.Id).Select(d => d.ExpiresAt).FirstAsync();
+        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        invoice.AddDomainRenewal($"{domain.Name} renewal", 12m, domain.Id, expiry, expiry.AddYears(1));
+        context.Invoices.Add(invoice);
+        await context.SaveChangesAsync(CancellationToken.None);
+        invoice.MarkPaid("t");
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var result = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        (await ReloadLineAsync(context, invoice.Id)).RenewalAppliedAt.Should().BeNull();
+        (await context.Domains.AsNoTracking().FirstAsync(d => d.Id == domain.Id)).ExpiresAt.Should().Be(expiry);
+        var mails = await WaitForAdminMailAsync(sender);
+        mails.Should().ContainSingle();
+        mails[0].Subject.Should().Contain(domain.Name);
+    }
+
     /// <summary>After a clean refusal the claim is free again, so the next run with a working registrar renews.</summary>
     [Fact]
     public async Task RefusalReleasesClaim_SoTheNextRunRenews()

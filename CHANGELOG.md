@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A domain renewal no longer reports success when nothing was renewed at the registrar. An unconfigured Name.am or Namecheap integration, or a Name.am response that reports an error, now fails the renewal, so a paid renewal stays unapplied, is retried daily and alerts staff. A domain with no registrar reference is refused (`DOMAIN_NO_REGISTRAR_REF`) instead of being extended locally. When the registrar reports no new expiry, the current expiry is extended, so an early renewal keeps its remaining days.
 - The admin menu no longer "thinks" before a page opens on a slow connection. The admin image now compresses its bundle and lets browsers keep content-hashed assets for good; a screen's code starts downloading when the pointer reaches its link (and, on a cold page load, in parallel with the session check, which itself now asks the mode and the session together); and a thin progress bar shows at the top as soon as a navigation has been waiting for its screen.
 - A signed-in caller's first order no longer fails with a server error when it races the client record created on registration; the record is now saved once and the order continues with it.
 - Focus styling follows `:focus-visible`.

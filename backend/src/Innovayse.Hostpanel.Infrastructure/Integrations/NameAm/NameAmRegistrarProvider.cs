@@ -33,6 +33,9 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     /// <summary>No-op success result returned when the registrar is not configured.</summary>
     private static readonly RegistrarResult NotConfiguredResult = new(true, null, null, null);
 
+    /// <summary>The refusal reason for a call that cannot be a no-op when the registrar is not configured.</summary>
+    private const string NotConfiguredMessage = "Name.am is not configured.";
+
     /// <inheritdoc/>
     public async Task<RegistrarResult> RegisterAsync(DomainRegistrationOrder request, CancellationToken ct)
     {
@@ -134,7 +137,9 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
-            return NotConfiguredResult;
+            // A renewal is paid for: a no-op success would mark the domain renewed while it
+            // lapses at the registrar. A refusal is retried and reaches staff.
+            return new RegistrarResult(false, null, null, NotConfiguredMessage);
         }
 
         var (name, tld) = SplitDomain(request.DomainName);
@@ -155,9 +160,18 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
 
         using var doc = await _client.PostAsync("/client/carts/purchase", purchasePayload, ct);
 
-        var expiresAt = DateTimeOffset.UtcNow.AddYears(request.Years);
+        var errorMessage = ExtractErrorMessage(doc);
+        if (errorMessage is not null)
+        {
+            _logger.LogWarning(
+                "Name.am rejected renewal of '{DomainName}': {Error}",
+                request.DomainName, errorMessage);
+            return new RegistrarResult(false, null, null, errorMessage);
+        }
 
-        return new RegistrarResult(true, request.RegistrarRef, expiresAt, null);
+        // The purchase response carries no expiry. Reporting none lets the caller extend the
+        // current one; now + years would cost an early renewal its remaining days.
+        return new RegistrarResult(true, request.RegistrarRef, null, null);
     }
 
     /// <inheritdoc/>
@@ -411,7 +425,7 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
-            return new RegistrarResult(false, null, null, "Name.am is not configured.");
+            return new RegistrarResult(false, null, null, NotConfiguredMessage);
         }
 
         _logger.LogInformation("Polling Name.am for active status of domain {DomainName}", domainName);

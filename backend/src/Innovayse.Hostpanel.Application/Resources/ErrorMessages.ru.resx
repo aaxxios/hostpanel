@@ -202,7 +202,7 @@
     <value>Регистратору не удалось отменить ожидающую передачу. Повторите попытку позже.</value>
   </data>
 <data name="DOMAIN_NO_REGISTRAR_REF" xml:space="preserve">
-    <value>У этого домена нет ссылки на регистратора, поэтому исходящую передачу нельзя начать.</value>
+    <value>У этого домена нет ссылки на регистратора, поэтому изменить его у регистратора нельзя.</value>
   </data>
 <data name="DOMAIN_OUTGOING_TRANSFER_UPSTREAM_FAILED" xml:space="preserve">
     <value>Регистратору не удалось начать исходящую передачу. Повторите попытку позже.</value>

@@ -104,7 +104,9 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     {
         if (!_client.IsConfigured)
         {
-            return NotConfiguredResult;
+            // A renewal is paid for: a no-op success would mark the domain renewed while it
+            // lapses at the registrar. A refusal is retried and reaches staff.
+            return new RegistrarResult(false, null, null, "Namecheap is not configured.");
         }
 
         var (sld, tld) = SplitDomain(request.DomainName);
@@ -123,10 +125,12 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ?.Element(XName.Get("CommandResponse", ns))
             ?.Element(XName.Get("DomainRenewResult", ns));
 
+        // No expiry in the answer leaves it to the caller to extend the current one; now + years
+        // would cost an early renewal its remaining days.
         var expiresAtRaw = result?.Attribute("ExpireDate")?.Value;
         DateTimeOffset? expiresAt = expiresAtRaw is not null
             ? DateTimeOffset.Parse(expiresAtRaw)
-            : DateTimeOffset.UtcNow.AddYears(request.Years);
+            : null;
 
         return new RegistrarResult(true, request.RegistrarRef, expiresAt, null);
     }

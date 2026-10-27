@@ -41,6 +41,7 @@ public sealed class RenewDomainHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success, or <c>DOMAIN_NOT_FOUND</c> when the id names no domain, or
+    /// <c>DOMAIN_NO_REGISTRAR_REF</c> when the domain was never placed at a registrar, or
     /// <c>DOMAIN_RENEWAL_UPSTREAM_FAILED</c> when the registrar rejects the renewal.
     /// </returns>
     public async Task<Result> HandleAsync(RenewDomainCommand cmd, CancellationToken ct)
@@ -53,26 +54,26 @@ public sealed class RenewDomainHandler
             return Result.FailureCode(HostpanelErrorCodes.DOMAIN_NOT_FOUND);
         }
 
-        DateTimeOffset newExpiresAt;
-
-        if (domain.RegistrarRef is not null)
+        if (domain.RegistrarRef is null)
         {
-            var request = new DomainRenewalOrder(domain.Name, domain.RegistrarRef, cmd.Years);
-            var result = await _registrar.RenewAsync(request, ct);
-
-            if (!result.Success)
-            {
-                return Result.Failure(
-                    $"Registrar rejected renewal of '{domain.Name}': {result.ErrorMessage}",
-                    HostpanelErrorCodes.DOMAIN_RENEWAL_UPSTREAM_FAILED);
-            }
-
-            newExpiresAt = result.ExpiresAt ?? domain.ExpiresAt.AddYears(cmd.Years);
+            // Never placed at a registrar, so there is nothing to renew there. Extending the
+            // expiry here would mark a paid domain renewed while nothing changed upstream.
+            return Result.Failure(
+                $"'{domain.Name}' has no registrar reference and cannot be renewed at the registrar.",
+                HostpanelErrorCodes.DOMAIN_NO_REGISTRAR_REF);
         }
-        else
+
+        var request = new DomainRenewalOrder(domain.Name, domain.RegistrarRef, cmd.Years);
+        var result = await _registrar.RenewAsync(request, ct);
+
+        if (!result.Success)
         {
-            newExpiresAt = domain.ExpiresAt.AddYears(cmd.Years);
+            return Result.Failure(
+                $"Registrar rejected renewal of '{domain.Name}': {result.ErrorMessage}",
+                HostpanelErrorCodes.DOMAIN_RENEWAL_UPSTREAM_FAILED);
         }
+
+        var newExpiresAt = result.ExpiresAt ?? domain.ExpiresAt.AddYears(cmd.Years);
 
         domain.Renew(newExpiresAt);
         await _uow.SaveChangesAsync(ct);
