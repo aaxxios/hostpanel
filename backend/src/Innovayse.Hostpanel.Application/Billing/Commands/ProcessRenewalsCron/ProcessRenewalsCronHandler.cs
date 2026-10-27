@@ -26,7 +26,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.ProcessRenewalsCron;
 /// unsuspended; staff are told about a registrar claim that has stayed unconfirmed for a day; and
 /// one Warning names auto-renewing services that have no renewal date. Then one
 /// <see cref="RaiseClientRenewalInvoicesCommand"/> per candidate client, each in its own message
-/// scope. Nothing is extended here. Re-schedules itself for the next day, in a finally.
+/// scope. Nothing is extended here. Re-schedules itself for the next day through <see cref="RecurringJob"/>.
 /// </summary>
 public sealed class ProcessRenewalsCronHandler
 {
@@ -72,22 +72,23 @@ public sealed class ProcessRenewalsCronHandler
     /// <param name="cmd">The scheduled command (marker, no payload).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task.</returns>
-    public async Task HandleAsync(ProcessRenewalsCronCommand cmd, CancellationToken ct)
+    public Task HandleAsync(ProcessRenewalsCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
 
-        // In a finally so the daily chain survives any failure (a throwing query, a dead database);
-        // a missed day is not retried until tomorrow, but the job never silently stops for good.
-        try
-        {
-            await RunAsync(ct);
-        }
-        finally
-        {
-            var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
-            await _bus.ScheduleAsync(new ProcessRenewalsCronCommand(), nextRun);
-            _logger.LogInformation("ProcessRenewalsCronCommand re-scheduled for {NextRun:u}.", nextRun);
-        }
+        // Through RecurringJob so the daily chain survives any failure (a throwing query, a dead
+        // database); a missed day is not retried until tomorrow, but the job never silently stops.
+        return RecurringJob.RunAsync(
+            nameof(ProcessRenewalsCronCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+    }
+
+    /// <summary>Schedules the next pass.</summary>
+    /// <returns>A task.</returns>
+    private async Task ScheduleNextAsync()
+    {
+        var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
+        await _bus.ScheduleAsync(new ProcessRenewalsCronCommand(), nextRun);
+        _logger.LogInformation("ProcessRenewalsCronCommand re-scheduled for {NextRun:u}.", nextRun);
     }
 
     /// <summary>The run itself: heal, sweep, lift, alert, raise. Every step is isolated per item.</summary>

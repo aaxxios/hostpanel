@@ -57,10 +57,19 @@ public sealed class SyncServerAccountCountsCronHandler
     /// </summary>
     /// <param name="cmd">The scheduled command (marker, no payload).</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task HandleAsync(SyncServerAccountCountsCronCommand cmd, CancellationToken ct)
+    public Task HandleAsync(SyncServerAccountCountsCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
 
+        return RecurringJob.RunAsync(
+            nameof(SyncServerAccountCountsCronCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+    }
+
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task RunAsync(CancellationToken ct)
+    {
         // Was IServerRepository.ListAsync(null), ordered by name. Tracked, not AsNoTracking:
         // each server is mutated and saved below.
         var servers = await _context.Servers.OrderBy(s => s.Name).ToListAsync(ct);
@@ -103,8 +112,12 @@ public sealed class SyncServerAccountCountsCronHandler
         _logger.LogInformation(
             "SyncServerAccountCountsCron synced {SyncedCount} of {TotalCount} servers.",
             syncedCount, servers.Count);
+    }
 
-        // Re-schedule for next day
+    /// <summary>Schedules the next pass.</summary>
+    /// <returns>A task.</returns>
+    private async Task ScheduleNextAsync()
+    {
         var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
         await _bus.ScheduleAsync(new SyncServerAccountCountsCronCommand(), nextRun);
         _logger.LogInformation("SyncServerAccountCountsCronCommand re-scheduled for {NextRun:u}.", nextRun);

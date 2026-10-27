@@ -7,6 +7,7 @@ using Innovayse.Hostpanel.Application.Domains.Extensions;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Domains.Events;
+using Innovayse.Hostpanel.Shared.Infrastructure;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,9 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.CheckDomainExpiries;
 /// </summary>
 public sealed class CheckDomainExpiriesHandler
 {
+    /// <summary>Hour (UTC) at which the daily check runs; the startup schedules the first run for it.</summary>
+    public const int CronHour = 9;
+
     /// <summary>Warning intervals in days before expiry at which reminder emails are sent.</summary>
     private static readonly int[] WarningDays = [30, 14, 7, 1];
 
@@ -57,12 +61,24 @@ public sealed class CheckDomainExpiriesHandler
 
     /// <summary>
     /// Handles <see cref="CheckDomainExpiriesCommand"/>.
-    /// Marks expired domains and sends expiry warning notifications for domains approaching expiry.
+    /// Marks expired domains and sends expiry warning notifications for domains approaching expiry,
+    /// then schedules tomorrow's check, whether or not this one succeeded.
     /// </summary>
     /// <param name="cmd">The check domain expiries command.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    public async Task HandleAsync(CheckDomainExpiriesCommand cmd, CancellationToken ct)
+    public Task HandleAsync(CheckDomainExpiriesCommand cmd, CancellationToken ct)
+    {
+        _ = cmd;
+
+        return RecurringJob.RunAsync(
+            nameof(CheckDomainExpiriesCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+    }
+
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task RunAsync(CancellationToken ct)
     {
         var now = DateTimeOffset.UtcNow;
 
@@ -84,6 +100,18 @@ public sealed class CheckDomainExpiriesHandler
 
         // ── Send expiry warnings ─────────────────────────────────────────
         await SendExpiryWarningsAsync(now, ct);
+    }
+
+    /// <summary>
+    /// Schedules tomorrow's check. Before this the job never scheduled itself: it ran once after each
+    /// start, and domains stopped being marked expired or warned about until the next restart.
+    /// </summary>
+    /// <returns>A task.</returns>
+    private async Task ScheduleNextAsync()
+    {
+        var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
+        await _bus.ScheduleAsync(new CheckDomainExpiriesCommand(), nextRun);
+        _logger.LogInformation("CheckDomainExpiriesCommand re-scheduled for {NextRun:u}.", nextRun);
     }
 
     /// <summary>

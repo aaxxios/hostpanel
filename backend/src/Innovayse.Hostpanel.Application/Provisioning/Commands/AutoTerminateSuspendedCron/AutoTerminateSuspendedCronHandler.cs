@@ -56,10 +56,19 @@ public sealed class AutoTerminateSuspendedCronHandler
     /// </summary>
     /// <param name="cmd">The scheduled command (marker, no payload).</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task HandleAsync(AutoTerminateSuspendedCronCommand cmd, CancellationToken ct)
+    public Task HandleAsync(AutoTerminateSuspendedCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
 
+        return RecurringJob.RunAsync(
+            nameof(AutoTerminateSuspendedCronCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+    }
+
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task RunAsync(CancellationToken ct)
+    {
         var threshold = DateTimeOffset.UtcNow.AddDays(-SuspensionLimitDays);
 
         // Was IClientServiceRepository.ListSuspendedBeforeAsync. Tracked, not AsNoTracking: each
@@ -82,8 +91,12 @@ public sealed class AutoTerminateSuspendedCronHandler
             "AutoTerminateSuspendedCron terminated {Count} services suspended over {Days} days.",
             services.Count,
             SuspensionLimitDays);
+    }
 
-        // Re-schedule for next day
+    /// <summary>Schedules the next pass.</summary>
+    /// <returns>A task.</returns>
+    private async Task ScheduleNextAsync()
+    {
         var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
         await _bus.ScheduleAsync(new AutoTerminateSuspendedCronCommand(), nextRun);
         _logger.LogInformation("AutoTerminateSuspendedCronCommand re-scheduled for {NextRun:u}.", nextRun);

@@ -60,14 +60,27 @@ public sealed class ProcessBillableItemsCronHandler
     /// </summary>
     /// <param name="cmd">The scheduled command (marker, no payload).</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task HandleAsync(ProcessBillableItemsCronCommand cmd, CancellationToken ct)
+    public Task HandleAsync(ProcessBillableItemsCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
 
+        return RecurringJob.RunAsync(
+            nameof(ProcessBillableItemsCronCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+    }
+
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task RunAsync(CancellationToken ct)
+    {
         await ProcessCronItemsAsync(ct);
         await ProcessRecurringItemsAsync(ct);
+    }
 
-        // Re-schedule for next day
+    /// <summary>Schedules the next pass.</summary>
+    /// <returns>A task.</returns>
+    private async Task ScheduleNextAsync()
+    {
         var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
         await _bus.ScheduleAsync(new ProcessBillableItemsCronCommand(), nextRun);
         _logger.LogInformation("ProcessBillableItemsCronCommand re-scheduled for {NextRun:u}.", nextRun);

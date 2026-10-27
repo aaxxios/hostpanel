@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Shared.Infrastructure;
 using Innovayse.Hostpanel.Shared.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -62,17 +63,21 @@ public sealed class ResetDemoDataHandler
             return;
         }
 
-        try
-        {
-            await _manager.ResetAsync(ct);
-            _logger.LogInformation("Demo data reset.");
-        }
-        finally
-        {
-            var next = DateTimeOffset.UtcNow.AddHours(options.ResetIntervalHours);
-            await _bus.ScheduleAsync(new ResetDemoDataCommand(), next);
-            _schedule.Set(next);
-            _logger.LogInformation("ResetDemoDataCommand re-scheduled for {NextRun:u}.", next);
-        }
+        await RecurringJob.RunAsync(
+            nameof(ResetDemoDataCommand),
+            async () =>
+            {
+                await _manager.ResetAsync(ct);
+                _logger.LogInformation("Demo data reset.");
+            },
+            async () =>
+            {
+                var next = DateTimeOffset.UtcNow.AddHours(options.ResetIntervalHours);
+                await _bus.ScheduleAsync(new ResetDemoDataCommand(), next);
+                _schedule.Set(next);
+                _logger.LogInformation("ResetDemoDataCommand re-scheduled for {NextRun:u}.", next);
+            },
+            _logger,
+            ct);
     }
 }
