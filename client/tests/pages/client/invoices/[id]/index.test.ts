@@ -1,8 +1,9 @@
 /**
  * Tests for `pages/client/invoices/[id]/index.vue`: the header, the pay button of an owing invoice, the
- * totals and the not-found state.
+ * totals, the PDF download and the not-found state.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import { mountPage, stubClientRuntime } from '~/tests/helpers/mountClient'
 import InvoicePage from '~/pages/client/invoices/[id]/index.vue'
 import { InvoiceStatus } from '~/types/invoicestatus'
@@ -10,10 +11,14 @@ import { InvoiceStatus } from '~/types/invoicestatus'
 /** The mocked billing endpoints the store reaches. */
 const billingApi = vi.hoisted(() => ({
   fetchInvoice: vi.fn(),
-  invoicePdfUrl: (id: string) => `/api/portal/client/invoices/${id}/pdf`,
+  fetchInvoicePdf: vi.fn(),
 }))
 
+/** The mocked browser save. */
+const saveBlob = vi.hoisted(() => vi.fn())
+
 vi.mock('~/composables/apis/useBillingApi', () => ({ useBillingApi: () => billingApi }))
+vi.mock('~/utils/saveBlob', () => ({ saveBlob }))
 
 /**
  * Builds an invoice.
@@ -31,6 +36,8 @@ const invoice = (overrides: Record<string, unknown> = {}) => ({
 describe('invoice page', () => {
   beforeEach(() => {
     billingApi.fetchInvoice.mockReset()
+    billingApi.fetchInvoicePdf.mockReset()
+    saveBlob.mockReset()
     stubClientRuntime({ params: { id: '41' } })
   })
 
@@ -82,16 +89,33 @@ describe('invoice page', () => {
     expect(wrapper.find('[data-testid="ui-empty-state"]').text()).toContain('client.invoices.notFound')
   })
 
-  it('offers the invoice as a PDF download', async () => {
+  it('downloads the invoice PDF and saves it under the invoice number', async () => {
     billingApi.fetchInvoice.mockResolvedValue(invoice())
+    const pdf = new Blob(['%PDF'], { type: 'application/pdf' })
+    billingApi.fetchInvoicePdf.mockResolvedValue(pdf)
 
     const wrapper = await mountPage(InvoicePage)
+    const button = wrapper.find('[data-testid="invoice-download"]')
+    await button.trigger('click')
+    await flushPromises()
 
-    const link = wrapper.find('[data-testid="invoice-download"]')
-    expect(link.exists()).toBe(true)
-    expect(link.attributes('href')).toBe('/api/portal/client/invoices/41/pdf')
-    expect(link.attributes('download')).toBeDefined()
-    expect(link.text()).toContain('client.invoices.downloadPdf')
+    expect(button.text()).toContain('client.invoices.downloadPdf')
+    expect(billingApi.fetchInvoicePdf).toHaveBeenCalledWith('41')
+    expect(saveBlob).toHaveBeenCalledWith(pdf, 'invoice-41.pdf')
+    expect(wrapper.find('[data-testid="invoice-download-error"]').exists()).toBe(false)
+  })
+
+  it('shows the API sentence in an alert when the download fails', async () => {
+    billingApi.fetchInvoice.mockResolvedValue(invoice())
+    billingApi.fetchInvoicePdf.mockRejectedValue({ data: { detail: 'This invoice has too many lines to download as a PDF.' } })
+
+    const wrapper = await mountPage(InvoicePage)
+    await wrapper.find('[data-testid="invoice-download"]').trigger('click')
+    await flushPromises()
+
+    expect(saveBlob).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="invoice-download-error"]').text())
+      .toContain('This invoice has too many lines to download as a PDF.')
   })
 
   it('offers no PDF download for a draft', async () => {

@@ -20,7 +20,13 @@
           </UiStack>
           <UiStack direction="row" align="center" gap="sm">
             <ClientStatusBadge :status="invoice.status" />
-            <UiButton v-if="canDownload" variant="secondary" :href="pdfUrl" download data-testid="invoice-download">
+            <UiButton
+              v-if="canDownload"
+              variant="secondary"
+              :loading="paymentStore.pdfDownloading"
+              data-testid="invoice-download"
+              @click="paymentStore.downloadInvoicePdf(String(route.params.id))"
+            >
               <Download :size="16" :stroke-width="2" class="mr-2" />
               {{ $t('client.invoices.downloadPdf') }}
             </UiButton>
@@ -30,6 +36,10 @@
             </UiButton>
           </UiStack>
         </UiStack>
+
+        <UiAlert v-if="paymentStore.pdfError" variant="error" class="mb-4" data-testid="invoice-download-error">
+          {{ paymentStore.pdfError }}
+        </UiAlert>
 
         <UiGrid as="dl" cols="3" gap="md">
           <UiDescriptionItem :label="$t('client.invoices.dueDate')" :value="formatDate(invoice.dueDate)" :value-class="isOverdue ? '!text-red-600 dark:!text-red-400' : ''" />
@@ -126,9 +136,6 @@ const error = computed(() => paymentStore.invoiceError)
 
 /** The payment page of this invoice. */
 const payPath = computed(() => localePath(clientInvoicePayPath(String(route.params.id))))
-
-/** Address of this invoice's PDF download. */
-const pdfUrl = computed(() => paymentStore.invoicePdfUrl(String(route.params.id)))
 
 /** True once the invoice has loaded and is published; a draft is not the client's to download yet. */
 const canDownload = computed(() => invoice.value !== null && invoice.value.status !== InvoiceStatus.Draft)

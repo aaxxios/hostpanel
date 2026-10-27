@@ -218,19 +218,21 @@ export const useBillingApi = () => {
     })
 
   /**
-   * Builds the address of an invoice's PDF download.
+   * Reads an invoice as a PDF.
    *
-   * A download is a browser navigation, not a request `apiFetch` can make; the session cookie
-   * goes with it like any other same-origin request.
+   * No `responseType` is set: ofetch picks it from the answer, so the PDF arrives as a `Blob`
+   * while a refusal still arrives as parsed JSON and `apiErrorMessage` can read its sentence.
    *
    * @param id - Invoice id.
-   * @returns The address to link to.
+   * @returns The PDF.
+   * @throws Whatever `apiFetch` throws.
    */
-  const invoicePdfUrl = (id: string): string => `/api/portal/client/invoices/${id}/pdf`
+  const fetchInvoicePdf = (id: string): Promise<Blob> =>
+    apiFetch<Blob>(`/api/portal/client/invoices/${id}/pdf`)
 
   return {
     fetchInvoice,
-    invoicePdfUrl,
+    fetchInvoicePdf,
     fetchPaymentMethods,
     fetchGatewayMethods,
     createOrder,
