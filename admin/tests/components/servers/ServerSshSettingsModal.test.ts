@@ -95,6 +95,9 @@ describe('ServerSshSettingsModal', () => {
     await flushPromises()
     expect(wrapper.get('[data-testid="server-ssh-scan-match"]').text()).toBe('Not the pinned key')
     await wrapper.get('[data-testid="server-ssh-use-scanned"]').trigger('click')
+    // The badge follows the fingerprint field, not the answer the scan gave before it was used.
+    expect(wrapper.get('[data-testid="server-ssh-scan-match"]').text()).toBe('Matches the pinned key')
+    expect(wrapper.find('[data-testid="server-ssh-use-scanned"]').exists()).toBe(false)
     await wrapper.get('[data-testid="server-ssh-save"]').trigger('click')
     await flushPromises()
 

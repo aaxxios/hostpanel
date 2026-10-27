@@ -49,6 +49,18 @@ done
 
 version_of() { [[ -f "$1" ]] && sed -n 's/^AGENT_VERSION = "\(.*\)"$/\1/p' "$1" || echo none; }
 
+# OpenSSH 9.8+ refuses an address for a while after failed or unauthenticated connections. Host
+# key reads and calls with a rotated key count, so HostPanel's address can be locked out of every
+# server operation. Only reported: these scripts never change sshd.
+penalty_note() {
+  local cfg; cfg="$(sshd -T 2>/dev/null)" || return 0
+  local pen; pen="$(sed -n 's/^persourcepenalties //p' <<<"$cfg")"
+  [[ -z "$pen" || "$pen" == no ]] && return 0
+  [[ "$(sed -n 's/^persourcepenaltyexemptlist //p' <<<"$cfg")" == none ]] || return 0
+  echo "WARN   sshd PerSourcePenalties is on and no address is exempt. Add HostPanel's source address to"
+  echo "       PerSourcePenaltyExemptList in sshd_config, or HostPanel can be refused for minutes after a failure."
+}
+
 # --- diagnostics -------------------------------------------------------------------------------
 if [[ $CHECK -eq 1 ]]; then
   fail=0
@@ -65,6 +77,7 @@ if [[ $CHECK -eq 1 ]]; then
   pong="$(echo '{"v":1,"op":"ping"}' | sudo -u "$MGMT_USER" sudo -n "$AGENT_DST" 2>&1 || true)"
   [[ "$pong" == *'"ok": true'* ]] && say OK "self-test: $pong" || say FAIL "self-test: $pong"
   for f in /etc/ssh/ssh_host_ed25519_key.pub; do [[ -f $f ]] && say INFO "host key $(ssh-keygen -lf "$f" -E sha256 | awk '{print $2}')"; done
+  penalty_note
   exit $fail
 fi
 
@@ -133,5 +146,6 @@ echo "Done. Compare this host key with the one HostPanel shows before pinning it
 for f in /etc/ssh/ssh_host_ed25519_key.pub /etc/ssh/ssh_host_ecdsa_key.pub /etc/ssh/ssh_host_rsa_key.pub; do
   [[ -f $f ]] && ssh-keygen -lf "$f" -E sha256
 done
+penalty_note
 echo "Self-test:"
 echo '{"v":1,"op":"ping"}' | sudo -u "$MGMT_USER" sudo -n "$AGENT_DST"

@@ -66,6 +66,7 @@ describe('ServiceSshKeys', () => {
 
     expect(wrapper.find('[data-testid="service-ssh-revoke"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="service-ssh-form"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="service-ssh-connection"]').exists()).toBe(false)
   })
 
   it('offers no revoke for an inactive service', async () => {
@@ -81,6 +82,11 @@ describe('ServiceSshKeys', () => {
       expect(wrapper.find('[data-testid="service-ssh-state"]').text()).toContain(`client.services.ssh.state.${state}`)
       expect(wrapper.find('[data-testid="service-ssh-form"]').exists()).toBe(false)
       expect(wrapper.find('[data-testid="service-ssh-command"]').exists()).toBe(false)
+      // Nothing that suggests a login or a form the customer cannot use.
+      expect(wrapper.find('[data-testid="service-ssh-connection"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="service-ssh-empty"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="service-ssh-keys"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="service-ssh-howto"]').exists()).toBe(false)
     })
 
   it('shows a load failure with a retry', async () => {

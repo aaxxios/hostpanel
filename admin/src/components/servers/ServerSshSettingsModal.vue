@@ -148,6 +148,9 @@ const handleGenerate = async (): Promise<void> => {
  */
 const handleScan = (): Promise<void> => store.scanHostKey(props.serverId)
 
+/** Whether the scanned key is the one in the fingerprint field, i.e. the one that is or will be pinned. */
+const scanMatches = computed(() => Boolean(lastScan.value) && lastScan.value?.fingerprint === form.agentHostKeyFingerprint.trim())
+
 /** Puts the scanned fingerprint into the form; it is pinned when the settings are saved. */
 const useScannedFingerprint = (): void => {
   if (lastScan.value) {
@@ -248,10 +251,10 @@ onMounted(() => {
           <template v-if="lastScan">
             <UiCodeBlock :code="`${lastScan.algorithm} ${lastScan.fingerprint}`" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" data-testid="server-ssh-scanned" />
             <UiStack direction="row" gap="sm" wrap>
-              <UiBadge :tone="lastScan.matchesPinned ? UiTone.Success : UiTone.Warning" dot data-testid="server-ssh-scan-match">
-                {{ lastScan.matchesPinned ? t('servers.ssh.matchesPinned') : t('servers.ssh.notPinned') }}
+              <UiBadge :tone="scanMatches ? UiTone.Success : UiTone.Warning" dot data-testid="server-ssh-scan-match">
+                {{ scanMatches ? t('servers.ssh.matchesPinned') : t('servers.ssh.notPinned') }}
               </UiBadge>
-              <UiButton v-if="!lastScan.matchesPinned" type="button" variant="ghost" size="sm" data-testid="server-ssh-use-scanned" @click="useScannedFingerprint">
+              <UiButton v-if="!scanMatches" type="button" variant="ghost" size="sm" data-testid="server-ssh-use-scanned" @click="useScannedFingerprint">
                 {{ t('servers.ssh.useScanned') }}
               </UiButton>
             </UiStack>

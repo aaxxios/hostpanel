@@ -483,6 +483,12 @@ public static class HostpanelErrorCodes
     /// <summary>The server's key agent failed or did not answer; the outcome is recorded on the key (503).</summary>
     public const string SSH_SERVER_UNAVAILABLE = "SSH_SERVER_UNAVAILABLE";
 
+    /// <summary>
+    /// The agent endpoint presented no host key to an administrator's scan: wrong host or port, a
+    /// firewall, or sshd refusing the connection (503). Admin-facing, so it names what to check.
+    /// </summary>
+    public const string SSH_HOST_KEY_UNREADABLE = "SSH_HOST_KEY_UNREADABLE";
+
     /// <summary>The server's control panel module has no SSH key implementation (400).</summary>
     public const string SSH_MODULE_NOT_SUPPORTED = "SSH_MODULE_NOT_SUPPORTED";
 

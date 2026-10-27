@@ -37,7 +37,7 @@ public sealed class ScanServerSshHostKeyTests(IntegrationTestFactory factory) : 
     }
 
     [Fact]
-    public async Task UnreachableAgentHost_Returns503Async()
+    public async Task UnreachableAgentHost_Returns503WithAnAdminFacingCodeAsync()
     {
         var admin = await SshAdminTestSupport.AdminAsync(factory);
         var serverId = await SshTestSeeds.SeedServerAsync(factory, "down.example.test", 22, enabled: false);
@@ -46,7 +46,7 @@ public sealed class ScanServerSshHostKeyTests(IntegrationTestFactory factory) : 
         var response = await admin.PostAsync($"/api/admin/servers/{serverId}/ssh-settings/scan-host-key", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
-        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.SSH_SERVER_UNAVAILABLE);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.SSH_HOST_KEY_UNREADABLE);
     }
 
     [Fact]

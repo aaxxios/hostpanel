@@ -33,7 +33,7 @@ public sealed class ScanServerSshHostKeyHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The presented key, or <c>SERVER_NOT_FOUND</c>, <c>SSH_SETTINGS_INCOMPLETE</c> (no agent host
-    /// saved), <c>SSH_SERVER_UNAVAILABLE</c>.
+    /// saved), <c>SSH_HOST_KEY_UNREADABLE</c>.
     /// </returns>
     public async Task<Result<SshHostKeyScanDto>> HandleAsync(ScanServerSshHostKeyCommand cmd, CancellationToken ct)
     {
@@ -52,7 +52,7 @@ public sealed class ScanServerSshHostKeyHandler
             settings.AgentHost, settings.AgentPort, TimeSpan.FromSeconds(settings.ConnectTimeoutSeconds), ct);
         if (scan is null)
         {
-            return Result<SshHostKeyScanDto>.FailureCode(HostpanelErrorCodes.SSH_SERVER_UNAVAILABLE);
+            return Result<SshHostKeyScanDto>.FailureCode(HostpanelErrorCodes.SSH_HOST_KEY_UNREADABLE);
         }
 
         return Result<SshHostKeyScanDto>.Success(new SshHostKeyScanDto(

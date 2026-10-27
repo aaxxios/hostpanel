@@ -53,6 +53,7 @@ public static class StatusMapping
             "SSH_KEY_LIMIT_REACHED" or "SSH_KEY_STALE" or "SSH_ACCESS_UNAVAILABLE"
                 or "SSH_AGENT_NOT_VERIFIED" or "SSH_AGENT_ENDPOINT_IN_USE" => (409, "Conflict"),
             "SSH_SERVER_UNAVAILABLE" => (503, "Service Unavailable"),
+            "SSH_HOST_KEY_UNREADABLE" => (503, "Service Unavailable"),
             var code when code.Contains("UNAUTHORIZED", StringComparison.Ordinal) => (401, "Unauthorized"),
             var code when code.Contains("FORBIDDEN", StringComparison.Ordinal) => (403, "Forbidden"),
             var code when code.Contains("ACCESS_DENIED", StringComparison.Ordinal) => (403, "Forbidden"),

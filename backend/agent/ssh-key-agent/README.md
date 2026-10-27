@@ -50,6 +50,14 @@ HostPanel needs TCP access from its API host to the agent host and port. Any of 
 Either way the connection is authenticated by the per-server key, the host key is pinned, and the
 management account can do nothing but run the agent. No VPN is required by the software.
 
+**OpenSSH 9.8 and later** refuse an address for a while after failed or unauthenticated
+connections (`PerSourcePenalties`, on by default). *Read host key* is such a connection, and so is
+every call made with a rotated key before the installer has run again; repeated, they can lock
+HostPanel out of the server for up to ten minutes, which customers see as "could not be reached".
+Add HostPanel's source address to `PerSourcePenaltyExemptList` in `sshd_config`. `install.sh` and
+`install.sh --check` print a warning when penalties are on and no address is exempt; they never
+change sshd themselves.
+
 ## How HostPanel reaches the agent
 
 ```

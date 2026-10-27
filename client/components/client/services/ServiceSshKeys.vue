@@ -19,7 +19,7 @@
         {{ $t(`client.services.ssh.state.${access.state}`) }}
       </UiAlert>
 
-      <UiGrid v-if="access.hostname" cols="3" gap="sm" data-testid="service-ssh-connection">
+      <UiGrid v-if="canManage && access.hostname" cols="3" gap="sm" data-testid="service-ssh-connection">
         <UiDescriptionItem :label="$t('client.services.ssh.hostname')" :value="access.hostname" value-class="font-mono" />
         <UiDescriptionItem :label="$t('client.services.ssh.port')" :value="access.port" value-class="font-mono" />
         <UiDescriptionItem :label="$t('client.services.ssh.username')" :value="access.username" value-class="font-mono" />
@@ -39,7 +39,7 @@
         </UiStack>
       </UiStack>
 
-      <UiStack gap="sm">
+      <UiStack v-if="canManage || keys.length > 0" gap="sm" data-testid="service-ssh-keys">
         <UiText weight="semibold">
           {{ $t('client.services.ssh.keysTitle', { count: keys.length, max: access.maxKeys }) }}
         </UiText>
@@ -99,7 +99,7 @@
         </UiForm>
       </UiStack>
 
-      <UiAccordion :items="howTo" data-testid="service-ssh-howto">
+      <UiAccordion v-if="canManage" :items="howTo" data-testid="service-ssh-howto">
         <template #content-0>
           <UiStack gap="sm">
             <UiText size="sm">{{ $t('client.services.ssh.howToGenerate') }}</UiText>

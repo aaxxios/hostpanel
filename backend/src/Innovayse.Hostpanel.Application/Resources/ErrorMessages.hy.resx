@@ -661,6 +661,9 @@
   <data name="SSH_SERVER_UNAVAILABLE" xml:space="preserve">
     <value>Հոսթինգի սերվերի հետ կապ հաստատել չհաջողվեց։ Խնդրում ենք փորձել ավելի ուշ։</value>
   </data>
+  <data name="SSH_HOST_KEY_UNREADABLE" xml:space="preserve">
+    <value>Գործակալի հասցեից և պորտից SSH հոսթի բանալի չստացվեց։ Ստուգեք հասցեն և պորտը, firewall-ը, և որ sshd-ն ընդունում է HostPanel-ի միացումները։ OpenSSH 9.8 և ավելի նոր տարբերակներում անհաջող կամ չնույնականացված միացումներից հետո sshd-ն որոշ ժամանակ մերժում է հասցեն (PerSourcePenalties). HostPanel-ի հասցեն ավելացրեք PerSourcePenaltyExemptList-ում։</value>
+  </data>
   <data name="SSH_MODULE_NOT_SUPPORTED" xml:space="preserve">
     <value>SSH բանալիների կառավարումը չի աջակցվում սերվերի այս տեսակի համար։</value>
   </data>

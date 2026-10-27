@@ -9,7 +9,10 @@ public enum SshAccessState
     /// <summary>Keys can be listed, added and revoked.</summary>
     Available,
 
-    /// <summary>The hosting account has no login shell; SSH is disabled for it on the server.</summary>
+    /// <summary>
+    /// The server answered that this hosting account cannot use SSH: no login shell, not eligible,
+    /// or not an account the server knows.
+    /// </summary>
     ShellDisabled,
 
     /// <summary>The service's server runs a control panel with no SSH key implementation.</summary>
