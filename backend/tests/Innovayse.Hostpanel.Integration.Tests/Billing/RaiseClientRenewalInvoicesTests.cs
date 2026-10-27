@@ -8,6 +8,7 @@ using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Notifications;
+using Innovayse.Hostpanel.Domain.Orders;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
@@ -767,5 +768,71 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
 
         result.IsFailure.Should().BeTrue();
         result.ErrorCode.Should().Be("CLIENT_NOT_FOUND");
+    }
+
+    /// <summary>
+    /// A client renew order for the domain (its line carries no domain id or period) blocks the
+    /// auto-renewal while it still bills the domain -- its invoice unpaid, or paid with the order not
+    /// fulfilled yet -- and stops blocking once the order is fulfilled. Without the block the renew
+    /// order's payment and the auto-renewal would each buy the same year.
+    /// </summary>
+    [Fact]
+    public async Task OpenRenewOrder_BlocksTheDomainUntilFulfilled()
+    {
+        using var scope = Host(new FakeEmailSender()).Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var client = await SeedClientAsync(context);
+        var (domain, _) = await SeedDomainAsync(context, client.Id, DateTimeOffset.UtcNow.AddDays(10), new() { [1] = 12m });
+
+        // What PlaceOrderHandler leaves behind for a renew order: a plain invoice line, an order
+        // item naming the domain, the order still Pending and linked to its invoice.
+        var orderInvoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        orderInvoice.AddItem($"Domain renewal: {domain.Name}", 12m, 1);
+        context.Invoices.Add(orderInvoice);
+        await context.SaveChangesAsync(CancellationToken.None);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..20], client.Id, "bank-transfer", null, "USD");
+        order.AddItem(1, "Domain", BillingCycleNames.Annually, 12m, 12m, domain.Name, null, DomainActionNames.Renew, null, 1);
+        order.LinkInvoice(orderInvoice.Id);
+        context.Orders.Add(order);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        (await RaiseAsync(bus, client.Id)).Value.Should().Be(0, "the renew order's unpaid invoice bills the domain");
+
+        orderInvoice.MarkPaid("t");
+        await context.SaveChangesAsync(CancellationToken.None);
+        (await RaiseAsync(bus, client.Id)).Value.Should().Be(0, "paid but not fulfilled: the registrar renewal is still pending");
+
+        // Fulfilled. The expiry is left where it was on purpose, so the only thing that changed is
+        // the order's state: normal behaviour resumes and the period is invoiced.
+        order.Accept();
+        await context.SaveChangesAsync(CancellationToken.None);
+        (await RaiseAsync(bus, client.Id)).Value.Should().Be(1);
+        (await InvoicesOfAsync(context, client.Id)).Should().Contain(i => i.Items.Any(l => l.RegisteredDomainId == domain.Id));
+    }
+
+    /// <summary>A cancelled renew order does not block the auto-renewal.</summary>
+    [Fact]
+    public async Task CancelledRenewOrder_DoesNotBlock()
+    {
+        using var scope = Host(new FakeEmailSender()).Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var client = await SeedClientAsync(context);
+        var (domain, _) = await SeedDomainAsync(context, client.Id, DateTimeOffset.UtcNow.AddDays(10), new() { [1] = 12m });
+
+        var orderInvoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        orderInvoice.AddItem($"Domain renewal: {domain.Name}", 12m, 1);
+        orderInvoice.Cancel();
+        context.Invoices.Add(orderInvoice);
+        await context.SaveChangesAsync(CancellationToken.None);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..20], client.Id, "bank-transfer", null, "USD");
+        order.AddItem(1, "Domain", BillingCycleNames.Annually, 12m, 12m, domain.Name, null, DomainActionNames.Renew, null, 1);
+        order.LinkInvoice(orderInvoice.Id);
+        order.Cancel();
+        context.Orders.Add(order);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        (await RaiseAsync(bus, client.Id)).Value.Should().Be(1);
     }
 }

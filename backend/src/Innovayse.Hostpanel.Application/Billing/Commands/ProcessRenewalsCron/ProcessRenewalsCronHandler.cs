@@ -1,6 +1,7 @@
 using System.Globalization;
 using Innovayse.Hostpanel.Application.Billing.Commands.ApplyPaidRenewals;
 using Innovayse.Hostpanel.Application.Billing.Commands.RaiseClientRenewalInvoices;
+using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Services.Commands.UnsuspendService;
 using Innovayse.Hostpanel.Domain.Billing;
@@ -8,7 +9,6 @@ using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Domains.Events;
 using Innovayse.Hostpanel.Domain.Services.Enums;
-using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Shared.Infrastructure;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -42,20 +42,26 @@ public sealed class ProcessRenewalsCronHandler
     /// <summary>Message bus, for the per-invoice and per-client commands, staff alerts and re-scheduling.</summary>
     private readonly IMessageBus _bus;
 
+    /// <summary>The lead time that bounds the candidate clients.</summary>
+    private readonly RenewalSettingsReader _settings;
+
     /// <summary>Structured logger.</summary>
     private readonly ILogger<ProcessRenewalsCronHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context, for the sweep and the candidate clients.</param>
     /// <param name="bus">Message bus, for the per-invoice and per-client commands, staff alerts and re-scheduling.</param>
+    /// <param name="settings">The lead time that bounds the candidate clients.</param>
     /// <param name="logger">Structured logger.</param>
     public ProcessRenewalsCronHandler(
         IHostpanelDbContext context,
         IMessageBus bus,
+        RenewalSettingsReader settings,
         ILogger<ProcessRenewalsCronHandler> logger)
     {
         _context = context;
         _bus = bus;
+        _settings = settings;
         _logger = logger;
     }
 
@@ -118,10 +124,11 @@ public sealed class ProcessRenewalsCronHandler
         await WarnUndatedServicesAsync(ct);
 
         // Only the candidate clients are listed here; each RaiseClientRenewalInvoicesCommand applies
-        // the full rules (lead time read per run, duplicate guard, pricing) in its own scope.
-        // As far ahead as invoice_days_before can reach, so no due client is missed; each
-        // per-client command applies the real lead time.
-        var horizon = DateTimeOffset.UtcNow.AddDays(BillingSettingKeys.MaxDays);
+        // the full rules (lead time, duplicate guard, pricing) in its own scope. The horizon is the
+        // configured lead time, read once per run, so a client with nothing due inside it is not
+        // dispatched at all (each dispatch is a scope, a client load and a pricing pass).
+        var settings = await _settings.ReadAsync(ct);
+        var horizon = DateTimeOffset.UtcNow.AddDays(settings.InvoiceDaysBefore);
         var clientIds = await _context.ClientServices.AsNoTracking()
             .Where(s => s.Status == ServiceStatus.Active && s.AutoRenew && s.NextRenewalAt != null && s.NextRenewalAt <= horizon)
             .Select(s => s.ClientId)

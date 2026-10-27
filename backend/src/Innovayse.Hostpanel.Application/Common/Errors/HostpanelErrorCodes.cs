@@ -316,9 +316,9 @@ public static class HostpanelErrorCodes
     public const string DOMAIN_PRODUCT_NOT_CONFIGURED = "DOMAIN_PRODUCT_NOT_CONFIGURED";
 
     /// <summary>
-    /// A client renew order was refused because an overdue renewal invoice bills the domain
-    /// together with other items and can no longer be edited; the client pays that invoice first
-    /// (409).
+    /// A client renew order was refused because a renewal invoice for the domain cannot be released:
+    /// it is overdue and bills other items too (no longer editable), or it is PaymentPending or in
+    /// Collections (a payment may be in flight); the client settles that invoice first (409).
     /// </summary>
     public const string RENEWAL_INVOICE_OPEN = "RENEWAL_INVOICE_OPEN";
 

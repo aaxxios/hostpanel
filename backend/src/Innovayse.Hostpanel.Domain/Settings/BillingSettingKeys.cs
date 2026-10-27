@@ -22,13 +22,20 @@ public static class BillingSettingKeys
     public const string SuspendAfterOverdueDays = "billing.renewal.suspend_after_overdue_days";
 
     /// <summary>
-    /// The largest day count any of these settings accepts (the <c>DayCount</c> and reminder
-    /// patterns stop at 90). Readers that must look as far ahead as any setting can reach -- the
-    /// renewal cron listing candidate clients -- use this instead of their own literal.
+    /// The largest day count any of these settings accepts (the day-count and reminder patterns
+    /// stop at 90). A reader that must look as far ahead as any setting can reach uses this instead
+    /// of its own literal; the renewal cron does not, it reads the configured lead time.
     /// </summary>
     public const int MaxDays = 90;
 
     // Declared before Patterns: static fields initialise in textual order.
+    // At least one day: a zero lead time would raise the invoice on the renewal date itself, due
+    // that same day, leaving the client no time to pay before the period starts.
+    private static readonly ValuePattern LeadDays = new(
+        new Regex("^([1-9]|[1-8][0-9]|90)$", RegexOptions.CultureInvariant),
+        "a whole number of days from 1 to 90",
+        v => v);
+
     private static readonly ValuePattern DayCount = new(
         new Regex("^([0-9]|[1-8][0-9]|90)$", RegexOptions.CultureInvariant),
         "a whole number of days from 0 to 90",
@@ -38,7 +45,7 @@ public static class BillingSettingKeys
     public static readonly IReadOnlyDictionary<string, ValuePattern> Patterns =
         new Dictionary<string, ValuePattern>
         {
-            [InvoiceDaysBefore] = DayCount,
+            [InvoiceDaysBefore] = LeadDays,
             [SuspendAfterOverdueDays] = DayCount,
             [ReminderDays] = new(
                 new Regex("^\\s*([1-9]|[1-8][0-9]|90)\\s*(,\\s*([1-9]|[1-8][0-9]|90)\\s*)*$", RegexOptions.CultureInvariant),

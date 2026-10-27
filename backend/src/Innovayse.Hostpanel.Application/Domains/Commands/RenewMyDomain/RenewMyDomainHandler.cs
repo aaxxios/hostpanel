@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
@@ -106,7 +107,8 @@ public sealed class RenewMyDomainHandler
     /// when the domain is not the caller's, when no such domain exists, or when the caller has no
     /// client record; <c>DOMAIN_PRODUCT_NOT_CONFIGURED</c> when this installation sells no
     /// domain product; or <c>RENEWAL_INVOICE_OPEN</c> when an overdue renewal invoice bills this
-    /// domain together with something else and has to be paid first.
+    /// domain together with something else, or a PaymentPending/Collections one bills it, and has
+    /// to be settled first.
     /// </returns>
     /// <exception cref="UnauthorizedAccessException">
     /// Thrown when the request carries no subject. Deliberately not allowed to fall through to
@@ -189,17 +191,24 @@ public sealed class RenewMyDomainHandler
     /// cancelled. One that also bills something else keeps the rest: while it is still editable
     /// (Draft or Unpaid) only this domain's line is removed; once it is not (Overdue), it cannot be
     /// split and the renew order is refused with <c>RENEWAL_INVOICE_OPEN</c> before anything changes.
-    /// Paid invoices are never touched (<see cref="Invoice.Cancel"/> refuses them, and a paid period
+    /// An invoice in PaymentPending or Collections refuses the order the same way whether or not it
+    /// bills anything else: a gateway session may be in flight, or the debt is with collections, and
+    /// cancelling under either could lose a payment or double-charge. "Open" is the same set the
+    /// renewal run uses (<see cref="RenewalInvoiceStatuses.Open"/>), so nothing it would treat as
+    /// billing the domain is missed here. Paid invoices are never touched (<see cref="Invoice.Cancel"/> refuses them, and a paid period
     /// is the ApplyPaidRenewals path's).
     /// </summary>
     /// <param name="domainId">The domain being renewed by order.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success, or <c>RENEWAL_INVOICE_OPEN</c> when an Overdue invoice also bills something else.</returns>
+    /// <returns>
+    /// Success, or <c>RENEWAL_INVOICE_OPEN</c> when an Overdue invoice also bills something else or a
+    /// PaymentPending/Collections invoice bills this domain.
+    /// </returns>
     private async Task<Result> ReleaseOpenRenewalsAsync(int domainId, CancellationToken ct)
     {
         var openRenewals = await _context.Invoices
             .Include(i => i.Items)
-            .Where(i => (i.Status == InvoiceStatus.Draft || i.Status == InvoiceStatus.Unpaid || i.Status == InvoiceStatus.Overdue)
+            .Where(i => RenewalInvoiceStatuses.Open.Contains(i.Status)
                         && i.Items.Any(l => l.RegisteredDomainId == domainId && l.RenewalPeriodStart != null))
             .ToListAsync(ct);
         if (openRenewals.Count == 0)
@@ -210,6 +219,15 @@ public sealed class RenewMyDomainHandler
         bool IsThisDomainsRenewal(InvoiceItem l) => l.RegisteredDomainId == domainId && l.RenewalPeriodStart != null;
 
         // Decided for every invoice before anything is changed, so a refusal leaves all of them as they were.
+        var inFlight = openRenewals.FirstOrDefault(i => i.Status is InvoiceStatus.PaymentPending or InvoiceStatus.Collections);
+        if (inFlight is not null)
+        {
+            _logger.LogInformation(
+                "Renew order for domain {DomainId} refused: renewal invoice {InvoiceId} is {Status} and cannot be released.",
+                domainId, inFlight.Id, inFlight.Status);
+            return Result.FailureCode(HostpanelErrorCodes.RENEWAL_INVOICE_OPEN);
+        }
+
         var mixedLocked = openRenewals.FirstOrDefault(i =>
             !i.Items.All(IsThisDomainsRenewal) && i.Status is not (InvoiceStatus.Draft or InvoiceStatus.Unpaid));
         if (mixedLocked is not null)

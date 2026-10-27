@@ -109,7 +109,9 @@ public sealed class DomainRenewedHandler
             }
 
             // Only lift what expiry caused: a manual or overdue suspension is not this renewal's to undo.
-            if (service.SuspensionSource != SuspensionSource.DomainExpired)
+            // A null source is a suspension recorded before sources existed; renewal lifted those before,
+            // so it still does.
+            if (service.SuspensionSource is not (null or SuspensionSource.DomainExpired))
             {
                 _logger.LogInformation(
                     "Linked service {ServiceId} for domain {DomainId} was suspended by {Source}, not by expiry. Skipping unsuspend.",

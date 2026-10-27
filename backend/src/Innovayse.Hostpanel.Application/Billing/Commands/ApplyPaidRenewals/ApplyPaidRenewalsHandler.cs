@@ -35,6 +35,12 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.ApplyPaidRenewals;
 /// </remarks>
 public sealed class ApplyPaidRenewalsHandler
 {
+    /// <summary>
+    /// How far past the paid period's start a domain's expiry may sit and still be renewed by this
+    /// line. Well under the shortest renewal (a year), well over any edit or normalisation nudge.
+    /// </summary>
+    private static readonly TimeSpan AlreadyRenewedSlack = TimeSpan.FromDays(30);
+
     /// <summary>Invoices, services, domains.</summary>
     private readonly IHostpanelDbContext _context;
 
@@ -161,7 +167,10 @@ public sealed class ApplyPaidRenewalsHandler
             return;
         }
 
-        if (current.ExpiresAt > line.RenewalPeriodStart!.Value)
+        // A real renewal moves the expiry by at least a year; an admin edit or the registrar sync
+        // normalising the time of day nudges it by hours. Only a move past the slack counts as
+        // "already renewed" -- a nudge alone must not leave a paid domain unrenewed.
+        if (current.ExpiresAt > line.RenewalPeriodStart!.Value.Add(AlreadyRenewedSlack))
         {
             // Renewed some other way (a client renew order, staff) after this invoice was raised.
             // Renewing again would buy a second period with one payment's money; tell staff instead.

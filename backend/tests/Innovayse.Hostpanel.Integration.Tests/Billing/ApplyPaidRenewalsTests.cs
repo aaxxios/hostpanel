@@ -424,6 +424,43 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         mails[0].Subject.Should().Contain("Domain renewal needs attention").And.Contain(domain.Name);
     }
 
+    /// <summary>
+    /// An expiry nudged by hours after the invoice was raised (an admin edit, the registrar sync
+    /// normalising the time of day) is not "already renewed": the paid line still renews the domain.
+    /// </summary>
+    [Fact]
+    public async Task ExpiryNudgedByHours_StillRenews()
+    {
+        var sender = new FakeEmailSender();
+        var host = Host(sender);
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var domain = await SeedDomainAsync(context, DateTimeOffset.UtcNow.AddDays(10));
+        var expiry = await context.Domains.AsNoTracking().Where(d => d.Id == domain.Id).Select(d => d.ExpiresAt).FirstAsync();
+        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        invoice.AddDomainRenewal($"{domain.Name} renewal", 12m, domain.Id, expiry, expiry.AddYears(1));
+        context.Invoices.Add(invoice);
+        await context.SaveChangesAsync(CancellationToken.None);
+        invoice.MarkPaid("t");
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var nudged = expiry.AddHours(9);
+        await context.Domains.Where(d => d.Id == domain.Id)
+            .ExecuteUpdateAsync(set => set.SetProperty(d => d.ExpiresAt, nudged), CancellationToken.None);
+
+        var result = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+
+        // The stub registrar answers every renewal with now + 1 year.
+        (await context.Domains.AsNoTracking().FirstAsync(d => d.Id == domain.Id)).ExpiresAt
+            .Should().BeAfter(DateTimeOffset.UtcNow.AddDays(300));
+        (await ReloadLineAsync(context, invoice.Id)).RenewalAppliedAt.Should().NotBeNull();
+        await Task.Delay(1000);
+        sender.Sent.Should().NotContain(m => m.To == AdminEmail, "a renewed domain needs no staff attention");
+    }
+
     /// <summary>A registrar refusal leaves the line unapplied (the sweep retries) and alerts staff.</summary>
     [Fact]
     public async Task RegistrarRefusal_LeavesUnapplied()

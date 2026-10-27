@@ -192,7 +192,23 @@ public sealed class UpdateSettingTests(IntegrationTestFactory factory) : IClassF
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         body.RootElement.GetProperty("type").GetString().Should().Be(HostpanelErrorCodes.INVALID_SETTING_VALUE);
         body.RootElement.GetProperty("errors").GetProperty(BillingSettingKeys.InvoiceDaysBefore)[0].GetString()
-            .Should().Contain("0 to 90");
+            .Should().Contain("1 to 90");
+    }
+
+    /// <summary>A zero lead time is refused: invoice_days_before starts at 1, unlike the overdue grace.</summary>
+    [Fact]
+    public async Task InvoiceDaysBefore_Zero_IsRefusedAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await AdminTestSeeds.FindSettingIdAsync(client, BillingSettingKeys.InvoiceDaysBefore);
+
+        var response = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = "0" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        body.RootElement.GetProperty("type").GetString().Should().Be(HostpanelErrorCodes.INVALID_SETTING_VALUE);
+        body.RootElement.GetProperty("errors").GetProperty(BillingSettingKeys.InvoiceDaysBefore)[0].GetString()
+            .Should().Contain("a whole number of days from 1 to 90");
     }
 
     /// <summary>Clearing the reminder list is allowed (switches reminders off).</summary>

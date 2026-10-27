@@ -7,6 +7,8 @@ using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Domains.Events;
+using Innovayse.Hostpanel.Domain.Orders;
+using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -39,8 +41,13 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.RaiseClientRenewalInv
 public sealed class RaiseClientRenewalInvoicesHandler
 {
     /// <summary>Statuses of an invoice that is still open, so it blocks a second renewal of the same target.</summary>
-    private static readonly InvoiceStatus[] OpenStatuses =
-        [InvoiceStatus.Draft, InvoiceStatus.Unpaid, InvoiceStatus.Overdue, InvoiceStatus.Collections, InvoiceStatus.PaymentPending];
+    private static readonly InvoiceStatus[] OpenStatuses = RenewalInvoiceStatuses.Open;
+
+    /// <summary>
+    /// Statuses of a renew order's invoice while the order still blocks the auto-renewal: open, or
+    /// paid with the order not fulfilled yet (the registrar renewal is still in flight).
+    /// </summary>
+    private static readonly InvoiceStatus[] RenewOrderBlockingStatuses = [.. RenewalInvoiceStatuses.Open, InvoiceStatus.Paid];
 
     /// <summary>Data context.</summary>
     private readonly IHostpanelDbContext _context;
@@ -264,6 +271,16 @@ public sealed class RaiseClientRenewalInvoicesHandler
                 continue;
             }
 
+            if (await HasOpenRenewOrderAsync(clientId, domain.Name, ct))
+            {
+                // A client renew order released this domain's auto-renewal line; its own invoice
+                // line carries no domain id or period, so without this the next run bills the same
+                // year again. Once the order is fulfilled the expiry moves and this run resumes.
+                _logger.LogInformation(
+                    "Domain {DomainId} ({Name}) not invoiced: an open renew order is already billing it.", domain.Id, domain.Name);
+                continue;
+            }
+
             var years = Math.Max(1, domain.RegistrationPeriod);
             var (price, reason) = await RenewPriceAsync(domain, years, payer, ct);
             if (price is not > 0)
@@ -340,6 +357,25 @@ public sealed class RaiseClientRenewalInvoicesHandler
                           && (OpenStatuses.Contains(i.Status)
                               || (i.Status == InvoiceStatus.Paid && l.RenewalAppliedAt == null)
                               || l.RenewalPeriodStart == start)),
+            ct);
+
+    /// <summary>
+    /// Whether the client has a renew order for <paramref name="domainName"/> that still bills it: an
+    /// order still Pending (not fulfilled, not cancelled, not fraud) carrying a renew line for the name,
+    /// whose invoice is open -- or paid with fulfillment not run yet, the registrar renewal pending.
+    /// A fulfilled order is Active, a cancelled one Cancelled, and neither blocks.
+    /// </summary>
+    /// <param name="clientId">The client.</param>
+    /// <param name="domainName">The domain name, as the order line carries it.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns><see langword="true"/> when the auto-renewal must not raise a line.</returns>
+    private Task<bool> HasOpenRenewOrderAsync(int clientId, string domainName, CancellationToken ct) =>
+        _context.Orders.AnyAsync(
+            o => o.ClientId == clientId
+                 && o.Status == OrderStatus.Pending
+                 && o.InvoiceId != null
+                 && o.Items.Any(l => l.DomainAction == DomainActionNames.Renew && l.Domain == domainName)
+                 && _context.Invoices.Any(i => i.Id == o.InvoiceId && RenewOrderBlockingStatuses.Contains(i.Status)),
             ct);
 
     /// <summary>The TLD's renew price for <paramref name="years"/>, in the payer currency.</summary>

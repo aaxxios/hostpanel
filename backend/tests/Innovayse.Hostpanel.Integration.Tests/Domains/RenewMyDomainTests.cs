@@ -265,4 +265,31 @@ public sealed class RenewMyDomainTests(IntegrationTestFactory factory) : IClassF
         reloaded.Status.Should().Be(InvoiceStatus.Overdue);
         reloaded.Items.Should().HaveCount(2);
     }
+
+    /// <summary>
+    /// A renewal invoice in PaymentPending (a gateway session may be in flight) is never cancelled,
+    /// even when it bills only this domain: the renew order is refused with 409
+    /// <c>RENEWAL_INVOICE_OPEN</c> and the invoice is left as it was. No domain method reaches
+    /// PaymentPending today, so the status is written directly.
+    /// </summary>
+    [Fact]
+    public async Task RenewMyDomain_PaymentPendingInvoice_Returns409Async()
+    {
+        var (owner, clientId, domainId, _) = await ArrangeAsync("renew-my-domain-pending");
+        var invoiceId = await SeedInvoiceAsync(clientId, i => AddRenewal(i, domainId));
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            await context.Invoices.Where(i => i.Id == invoiceId)
+                .ExecuteUpdateAsync(set => set.SetProperty(i => i.Status, InvoiceStatus.PaymentPending), CancellationToken.None);
+        }
+
+        var response = await RenewAsync(owner, domainId);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict, await response.Content.ReadAsStringAsync());
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.RENEWAL_INVOICE_OPEN);
+        var reloaded = await LoadInvoiceAsync(invoiceId);
+        reloaded.Status.Should().Be(InvoiceStatus.PaymentPending);
+        reloaded.Items.Should().ContainSingle();
+    }
 }

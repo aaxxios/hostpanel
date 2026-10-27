@@ -11,6 +11,7 @@ using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Services.Enums;
+using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -171,6 +172,38 @@ public sealed class ProcessRenewalsCronTests(IntegrationTestFactory factory) : I
         // would return its in-memory values rather than the row the cron's scope wrote.
         var reloaded = await context.ClientServices.AsNoTracking().FirstAsync(s => s.Id == firstService.Id, CancellationToken.None);
         reloaded.NextRenewalAt.Should().Be(firstDue);
+    }
+
+    /// <summary>
+    /// The candidate horizon is the configured lead time, read per run: with
+    /// <c>invoice_days_before</c> raised to 30 a service renewing in 20 days is invoiced, and one in
+    /// 40 is not.
+    /// </summary>
+    [Fact]
+    public async Task Cron_CandidateHorizon_FollowsTheConfiguredLeadTime()
+    {
+        using var scope = Host(new FakeEmailSender()).Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var (insideClient, _, _) = await SeedServiceAsync(context, ServiceStatus.Active, DateTimeOffset.UtcNow.AddDays(20));
+        var (outsideClient, _, _) = await SeedServiceAsync(context, ServiceStatus.Active, DateTimeOffset.UtcNow.AddDays(40));
+
+        var row = await context.Settings.FirstAsync(r => r.Key == BillingSettingKeys.InvoiceDaysBefore, CancellationToken.None);
+        var original = row.Value;
+        row.UpdateValue("30");
+        await context.SaveChangesAsync(CancellationToken.None);
+        try
+        {
+            var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+            await bus.InvokeAsync(new ProcessRenewalsCronCommand(), CancellationToken.None);
+        }
+        finally
+        {
+            row.UpdateValue(original);
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        (await context.Invoices.AsNoTracking().CountAsync(i => i.ClientId == insideClient)).Should().Be(1);
+        (await context.Invoices.AsNoTracking().AnyAsync(i => i.ClientId == outsideClient)).Should().BeFalse();
     }
 
     /// <summary>The sweep applies a paid renewal line whose event was lost.</summary>

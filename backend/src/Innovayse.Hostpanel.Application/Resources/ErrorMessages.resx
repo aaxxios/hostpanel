@@ -220,7 +220,7 @@
     <value>Domains cannot be ordered on this site at the moment.</value>
   </data>
   <data name="RENEWAL_INVOICE_OPEN" xml:space="preserve">
-    <value>An overdue invoice still bills this domain together with other items. Pay that invoice first, then renew.</value>
+    <value>A renewal invoice for this domain cannot be released right now: it is overdue together with other items, or a payment on it is in progress. Settle that invoice first, then renew.</value>
   </data>
 <data name="DNS_RECORD_NOT_FOUND" xml:space="preserve">
     <value>No such DNS record on this domain.</value>
