@@ -292,6 +292,8 @@ export interface BinaryResponse {
   contentType: string
   /** The backend's `Content-Disposition` (file name and attachment), or null when it sent none. */
   contentDisposition: string | null
+  /** The backend's `Cache-Control`, or null when it sent none. */
+  cacheControl: string | null
 }
 
 /**
@@ -317,6 +319,7 @@ export const internalApiBinaryCall = (event: H3Event, endpoint: string): Promise
       body: Buffer.from(response._data ?? new ArrayBuffer(0)),
       contentType: response.headers.get('content-type') ?? 'application/octet-stream',
       contentDisposition: response.headers.get('content-disposition'),
+      cacheControl: response.headers.get('cache-control'),
     }
   })
 }

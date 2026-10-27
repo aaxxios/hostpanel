@@ -19,7 +19,12 @@ let route: RouteModule
 /** What the stub answers with: a PDF as the backend sends it. */
 const pdfReply = () => ({
   body: '%PDF-1.4 test',
-  headers: { 'content-type': 'application/pdf', 'content-disposition': 'attachment; filename=invoice-7.pdf' },
+  headers: {
+    'content-type': 'application/pdf',
+    'content-disposition': 'attachment; filename=invoice-7.pdf',
+    // Not the route's own fallback, so the assertion can only pass if the header was forwarded.
+    'cache-control': 'private, no-store, max-age=0',
+  },
 })
 
 beforeEach(async () => {
@@ -61,7 +66,17 @@ describe('GET /api/portal/client/invoices/:id/pdf', () => {
     expect(event.responseHeaders).toMatchObject({
       'content-type': 'application/pdf',
       'content-disposition': 'attachment; filename=invoice-7.pdf',
+      'cache-control': 'private, no-store, max-age=0',
     })
+  })
+
+  it('still forbids caching when the backend sends no cache-control', async () => {
+    backend.respondWith(() => ({ body: '%PDF-1.4 test', headers: { 'content-type': 'application/pdf' } }))
+    const event = makeEvent({ params: { id: '7' }, cookies: await signedIn('jwt') })
+
+    await route.default(event)
+
+    expect(event.responseHeaders['cache-control']).toBe('private, no-store')
   })
 
   it('passes a 404 refusal through with its code and sentence', async () => {
