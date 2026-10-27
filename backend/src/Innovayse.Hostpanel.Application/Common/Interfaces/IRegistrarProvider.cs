@@ -6,6 +6,11 @@ namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 /// Abstraction over a domain registrar provider (any registrar API supplier).
 /// Implementations live in Infrastructure/Integrations.
 /// </summary>
+/// <remarks>
+/// A purchase or a change succeeds only when the registrar did it. An unconfigured registrar, or
+/// one that refuses, answers with a failed <see cref="RegistrarResult"/>, never a no-op success;
+/// an exception means the outcome is unknown (a timeout, a 5xx).
+/// </remarks>
 public interface IRegistrarProvider
 {
     /// <summary>
@@ -13,7 +18,10 @@ public interface IRegistrarProvider
     /// </summary>
     /// <param name="request">Registration parameters including name, years, and nameservers.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result containing the registrar reference and expiry date on success.</returns>
+    /// <returns>
+    /// Success, with a non-empty registrar reference and the expiry, only when the registrar
+    /// accepted the registration; a failure when it refused or is not configured.
+    /// </returns>
     Task<RegistrarResult> RegisterAsync(DomainRegistrationOrder request, CancellationToken ct);
 
     /// <summary>
@@ -21,7 +29,10 @@ public interface IRegistrarProvider
     /// </summary>
     /// <param name="request">Transfer parameters including domain name and EPP code.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result containing the registrar transfer reference on success.</returns>
+    /// <returns>
+    /// Success, with a non-empty transfer reference, only when the registrar accepted the
+    /// transfer; a failure when it refused or is not configured.
+    /// </returns>
     Task<RegistrarResult> TransferAsync(DomainTransferOrder request, CancellationToken ct);
 
     /// <summary>
@@ -32,7 +43,6 @@ public interface IRegistrarProvider
     /// <returns>
     /// Success only when the registrar renewed the domain, with the new expiry when the registrar
     /// reports one (otherwise <see langword="null"/>, and the caller extends the current expiry).
-    /// An unconfigured registrar is a failure, never a no-op success: renewals are paid for.
     /// </returns>
     Task<RegistrarResult> RenewAsync(DomainRenewalOrder request, CancellationToken ct);
 
