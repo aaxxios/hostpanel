@@ -1,10 +1,15 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Reflection;
 using FluentAssertions;
+using Innovayse.Hostpanel.API.Controllers;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -75,6 +80,28 @@ public sealed class GetInvoicePdfTests(IntegrationTestFactory factory) : IClassF
         rendered.StatusCode.Should().Be(HttpStatusCode.OK);
         refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await BillingTestSeeds.CodeOfAsync(refused)).Should().Be(HostpanelErrorCodes.INVOICE_PDF_EXCEEDS_LIMIT);
+    }
+
+    /// <summary>
+    /// The action documents every status it can answer, with the error body on each refusal, so the
+    /// generated API description matches what a caller can actually receive.
+    /// </summary>
+    [Fact]
+    public void GetPdf_DeclaresEveryStatus()
+    {
+        var action = typeof(InvoicesController).GetMethod(nameof(InvoicesController.GetPdfAsync))!;
+
+        var declared = action.GetCustomAttributes<ProducesResponseTypeAttribute>()
+            .Select(a => (a.StatusCode, a.Type));
+
+        declared.Should().BeEquivalentTo(new[]
+        {
+            (StatusCodes.Status200OK, typeof(FileContentResult)),
+            (StatusCodes.Status400BadRequest, typeof(ErrorResponse)),
+            (StatusCodes.Status401Unauthorized, typeof(ErrorResponse)),
+            (StatusCodes.Status403Forbidden, typeof(ErrorResponse)),
+            (StatusCodes.Status404NotFound, typeof(ErrorResponse)),
+        });
     }
 
     /// <summary>An id that names no invoice answers 404 with the <c>INVOICE_NOT_FOUND</c> code.</summary>

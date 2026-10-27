@@ -5,6 +5,9 @@ using Innovayse.Hostpanel.API.Controllers;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
+using Innovayse.Hostpanel.Shared.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
@@ -59,6 +62,29 @@ public sealed class GetMyInvoicePdfTests(IntegrationTestFactory factory) : IClas
         var action = typeof(MyBillingController).GetMethod(nameof(MyBillingController.GetPdfAsync))!;
 
         action.GetCustomAttribute<EnableRateLimitingAttribute>()!.PolicyName.Should().Be(RateLimitPolicies.Concurrent);
+    }
+
+    /// <summary>
+    /// The action documents every status it can answer, with the error body on each refusal, so the
+    /// generated API description matches what a client can actually receive.
+    /// </summary>
+    [Fact]
+    public void GetMyPdf_DeclaresEveryStatus()
+    {
+        var action = typeof(MyBillingController).GetMethod(nameof(MyBillingController.GetPdfAsync))!;
+
+        var declared = action.GetCustomAttributes<ProducesResponseTypeAttribute>()
+            .Select(a => (a.StatusCode, a.Type));
+
+        declared.Should().BeEquivalentTo(new[]
+        {
+            (StatusCodes.Status200OK, typeof(FileContentResult)),
+            (StatusCodes.Status400BadRequest, typeof(ErrorResponse)),
+            (StatusCodes.Status401Unauthorized, typeof(ErrorResponse)),
+            (StatusCodes.Status403Forbidden, typeof(ErrorResponse)),
+            (StatusCodes.Status404NotFound, typeof(ErrorResponse)),
+            (StatusCodes.Status429TooManyRequests, typeof(ErrorResponse)),
+        });
     }
 
     /// <summary>
