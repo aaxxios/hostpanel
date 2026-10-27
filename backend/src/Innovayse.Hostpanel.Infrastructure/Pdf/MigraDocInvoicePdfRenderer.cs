@@ -311,7 +311,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// <param name="section">The section being built.</param>
     /// <param name="model">The invoice.</param>
     /// <param name="logo">The logo's PNG bytes and size in points, or null for none.</param>
-    private static void AddHeader(Section section, InvoicePdfModel model, (byte[] Png, double Width, double Height)? logo)
+    private static void AddHeader(Section section, InvoicePdfModel model, (byte[] Bytes, double Width, double Height)? logo)
     {
         var table = section.AddTable();
         table.LeftPadding = 0;
@@ -325,7 +325,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
         var seller = row.Cells[0];
         if (logo is { } image)
         {
-            var picture = seller.AddImage("base64:" + Convert.ToBase64String(image.Png));
+            var picture = seller.AddImage("base64:" + Convert.ToBase64String(image.Bytes));
             picture.LockAspectRatio = false;
             picture.Width = image.Width;
             picture.Height = image.Height;
@@ -518,7 +518,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// </summary>
     /// <param name="logoPath">The <c>portal.logo</c> value as stored.</param>
     /// <returns>The image bytes and the size to draw it at, or null to print without a logo.</returns>
-    private (byte[] Png, double Width, double Height)? LoadLogo(string? logoPath)
+    private (byte[] Bytes, double Width, double Height)? LoadLogo(string? logoPath)
     {
         if (string.IsNullOrWhiteSpace(logoPath))
         {
