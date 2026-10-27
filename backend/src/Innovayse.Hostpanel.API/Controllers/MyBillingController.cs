@@ -82,8 +82,9 @@ public sealed class MyBillingController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 with <c>invoice-{id}.pdf</c> as an attachment; 401; 404 with <c>INVOICE_NOT_FOUND</c> when
-    /// it is not the caller's or is still a draft; 403 with <c>CLIENT_PERMISSION_DENIED</c> when the
-    /// user lacks <c>ViewPayInvoices</c>.
+    /// it is not the caller's or is still a draft; 400 with <c>INVOICE_PDF_EXCEEDS_LIMIT</c> when it
+    /// has more lines than <c>InvoicePdf:MaxLines</c>; 403 with <c>CLIENT_PERMISSION_DENIED</c> when
+    /// the user lacks <c>ViewPayInvoices</c>.
     /// </returns>
     [HttpGet("{id:int}/pdf")]
     [Authorize(Policy = Policies.Client)]

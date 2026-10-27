@@ -90,8 +90,9 @@ public sealed class InvoicesController : BaseApiController
     /// <param name="id">Invoice primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 200 with <c>invoice-{id}.pdf</c> as an attachment; 404 when the id names no invoice; 401; 403
-    /// for a caller who is not staff.
+    /// 200 with <c>invoice-{id}.pdf</c> as an attachment; 404 when the id names no invoice; 400 with
+    /// <c>INVOICE_PDF_EXCEEDS_LIMIT</c> when it has more lines than <c>InvoicePdf:MaxLines</c>; 401;
+    /// 403 for a caller who is not staff.
     /// </returns>
     [HttpGet("{id:int}/pdf")]
     [Authorize(Policy = Policies.ResellerOrAdmin)]

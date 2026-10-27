@@ -91,6 +91,9 @@ public static class HostpanelErrorCodes
     /// <summary>The id names no invoice (404).</summary>
     public const string INVOICE_NOT_FOUND = "INVOICE_NOT_FOUND";
 
+    /// <summary>The invoice has more lines than <c>InvoicePdf:MaxLines</c> allows in a PDF (400).</summary>
+    public const string INVOICE_PDF_EXCEEDS_LIMIT = "INVOICE_PDF_EXCEEDS_LIMIT";
+
     // Billing — quotes
 
     /// <summary>The id names no quote (404).</summary>

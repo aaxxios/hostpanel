@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
@@ -51,6 +52,29 @@ public sealed class GetInvoicePdfTests(IntegrationTestFactory factory) : IClassF
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Headers.CacheControl!.Private.Should().BeTrue();
         response.Headers.CacheControl.NoStore.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// An invoice with more lines than <c>InvoicePdf:MaxLines</c> is refused before anything is
+    /// rendered; one at the limit still renders.
+    /// </summary>
+    [Fact]
+    public async Task GetPdf_RefusesInvoiceOverTheLineLimit()
+    {
+        var host = factory.WithWebHostBuilder(builder => builder.UseSetting("InvoicePdf:MaxLines", "2"));
+        var admin = host.CreateClient();
+        admin.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await factory.GetAdminTokenAsync());
+        var clientId = await BillingTestSeeds.SeedClientAsync(factory);
+        var atLimit = await CreateInvoiceWithLinesAsync(admin, clientId, 2);
+        var overLimit = await CreateInvoiceWithLinesAsync(admin, clientId, 3);
+
+        var rendered = await admin.GetAsync($"/api/billing/{atLimit}/pdf");
+        var refused = await admin.GetAsync($"/api/billing/{overLimit}/pdf");
+
+        rendered.StatusCode.Should().Be(HttpStatusCode.OK);
+        refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await BillingTestSeeds.CodeOfAsync(refused)).Should().Be(HostpanelErrorCodes.INVOICE_PDF_EXCEEDS_LIMIT);
     }
 
     /// <summary>An id that names no invoice answers 404 with the <c>INVOICE_NOT_FOUND</c> code.</summary>
@@ -138,4 +162,23 @@ public sealed class GetInvoicePdfTests(IntegrationTestFactory factory) : IClassF
         (await PdfText.CompactAsync(response)).Should().Contain("12.50XTS");
     }
 
+    /// <summary>Creates a published invoice with <paramref name="count"/> line items and returns its id.</summary>
+    /// <param name="admin">The authenticated admin client.</param>
+    /// <param name="clientId">The client to bill.</param>
+    /// <param name="count">How many line items it has.</param>
+    /// <returns>The new invoice's primary key.</returns>
+    private static async Task<int> CreateInvoiceWithLinesAsync(HttpClient admin, int clientId, int count)
+    {
+        var created = await admin.PostAsJsonAsync("/api/billing", new
+        {
+            clientId,
+            dueDate = DateTimeOffset.UtcNow.AddDays(14),
+            isDraft = false,
+            items = Enumerable.Range(1, count)
+                .Select(n => new { description = $"Line {n}", unitPrice = 1m, quantity = 1 })
+                .ToArray(),
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        return await created.Content.ReadFromJsonAsync<int>();
+    }
 }

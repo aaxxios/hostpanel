@@ -2,10 +2,12 @@ using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Application.Notifications.Common;
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.GetInvoicePdf;
 
@@ -30,20 +32,26 @@ public sealed class GetInvoicePdfHandler
     /// <summary>Draws the PDF.</summary>
     private readonly IInvoicePdfRenderer _renderer;
 
+    /// <summary>The most lines an invoice may have and still be rendered.</summary>
+    private readonly int _maxLines;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="renderer">Draws the PDF.</param>
-    public GetInvoicePdfHandler(IHostpanelDbContext context, IInvoicePdfRenderer renderer)
+    /// <param name="options">How large an invoice this deployment will render.</param>
+    public GetInvoicePdfHandler(IHostpanelDbContext context, IInvoicePdfRenderer renderer, IOptions<InvoicePdfOptions> options)
     {
         _context = context;
         _renderer = renderer;
+        _maxLines = options.Value.MaxLines;
     }
 
     /// <summary>Handles the query.</summary>
     /// <param name="query">The invoice to render.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// The PDF as <c>invoice-{id}.pdf</c>, or <c>INVOICE_NOT_FOUND</c> when the id names no invoice.
+    /// The PDF as <c>invoice-{id}.pdf</c>, <c>INVOICE_NOT_FOUND</c> when the id names no invoice, or
+    /// <c>INVOICE_PDF_EXCEEDS_LIMIT</c> when it has more lines than <c>InvoicePdf:MaxLines</c>.
     /// </returns>
     public async Task<Result<FileDownloadDto>> HandleAsync(GetInvoicePdfQuery query, CancellationToken ct)
     {
@@ -51,8 +59,8 @@ public sealed class GetInvoicePdfHandler
 
         // One statement: the line items join in, and the client and the currency row come back as
         // correlated subqueries. AsSingleQuery() overrides the context's split-query default, which
-        // would otherwise send the items as a second round trip; an invoice has a handful of lines,
-        // so the join cannot fan out.
+        // would otherwise send the items as a second round trip. The items stop one past the
+        // ceiling, which is enough to tell an invoice over it without reading all of its lines.
         var invoice = await _context.Invoices
             .AsNoTracking()
             .AsSingleQuery()
@@ -72,6 +80,7 @@ public sealed class GetInvoicePdfHandler
                 i.Currency,
                 Lines = i.Items
                     .OrderBy(item => item.Id)
+                    .Take(_maxLines + 1)
                     .Select(item => new InvoicePdfLine(item.Description, item.Quantity, item.UnitPrice, item.Amount))
                     .ToList(),
                 Client = _context.Clients
@@ -87,6 +96,11 @@ public sealed class GetInvoicePdfHandler
         if (invoice is null)
         {
             return Result<FileDownloadDto>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
+        }
+
+        if (invoice.Lines.Count > _maxLines)
+        {
+            return Result<FileDownloadDto>.FailureCode(HostpanelErrorCodes.INVOICE_PDF_EXCEEDS_LIMIT);
         }
 
         var client = invoice.Client;

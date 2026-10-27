@@ -84,6 +84,9 @@
 <data name="INVOICE_NOT_FOUND" xml:space="preserve">
     <value>Такой счёт не найден.</value>
   </data>
+<data name="INVOICE_PDF_EXCEEDS_LIMIT" xml:space="preserve">
+    <value>В этом счёте слишком много строк, чтобы скачать его в PDF.</value>
+  </data>
 <data name="QUOTE_NOT_FOUND" xml:space="preserve">
     <value>Такая смета не найдена.</value>
   </data>
