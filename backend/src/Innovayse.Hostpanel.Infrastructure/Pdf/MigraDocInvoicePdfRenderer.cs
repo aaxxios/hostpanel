@@ -167,24 +167,19 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// Layout and rendering are synchronous CPU work, so they run on the thread pool rather than on
-    /// the request's thread.
-    /// </remarks>
     public Task<byte[]> RenderAsync(InvoicePdfModel model, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(model);
+        ct.ThrowIfCancellationRequested();
 
-        return Task.Run(() => Render(model, ct), ct);
+        return Task.FromResult(Render(model));
     }
 
     /// <summary>Lays out and renders the invoice.</summary>
     /// <param name="model">Everything the PDF prints, already resolved.</param>
-    /// <param name="ct">Cancellation token, checked before the work starts.</param>
     /// <returns>The PDF file's bytes.</returns>
-    private byte[] Render(InvoicePdfModel model, CancellationToken ct)
+    private byte[] Render(InvoicePdfModel model)
     {
-        ct.ThrowIfCancellationRequested();
         PdfFonts.EnsureInitialized();
 
         var document = new Document();
