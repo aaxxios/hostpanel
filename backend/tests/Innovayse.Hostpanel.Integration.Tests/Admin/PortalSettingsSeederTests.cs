@@ -23,6 +23,10 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 public sealed class PortalSettingsSeederTests(IntegrationTestFactory factory)
     : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>Every key the seeder owns: the portal keys plus the billing engine's.</summary>
+    private static readonly IReadOnlyList<(string Key, string Value, string Description)> AllDefaults =
+        PortalSettingKeys.Defaults.Concat(BillingSettingKeys.Defaults).ToList();
+
     /// <summary>
     /// Deletes every row in the <c>Settings</c> table, undoing the seeding
     /// <see cref="IntegrationTestFactory.InitializeAsync"/> already performed, so a test can
@@ -45,10 +49,10 @@ public sealed class PortalSettingsSeederTests(IntegrationTestFactory factory)
 
         var created = await PortalSettingsSeeder.EnsureSeededAsync(context, uow);
 
-        Assert.Equal(PortalSettingKeys.Defaults.Count, created);
+        Assert.Equal(AllDefaults.Count, created);
         var keys = await context.Settings.AsNoTracking().Select(s => s.Key).ToListAsync();
         Assert.Equal(
-            PortalSettingKeys.Defaults.Select(d => d.Key).OrderBy(k => k),
+            AllDefaults.Select(d => d.Key).OrderBy(k => k),
             keys.OrderBy(k => k));
     }
 
@@ -65,7 +69,7 @@ public sealed class PortalSettingsSeederTests(IntegrationTestFactory factory)
 
         var created = await PortalSettingsSeeder.EnsureSeededAsync(context, uow);
 
-        Assert.Equal(PortalSettingKeys.Defaults.Count - 1, created);
+        Assert.Equal(AllDefaults.Count - 1, created);
         var chosen = await context.Settings.AsNoTracking()
             .FirstAsync(s => s.Key == PortalSettingKeys.Template);
         Assert.Equal("classic", chosen.Value);

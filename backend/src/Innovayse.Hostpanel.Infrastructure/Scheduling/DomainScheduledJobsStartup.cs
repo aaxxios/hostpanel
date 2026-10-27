@@ -1,4 +1,3 @@
-using Innovayse.Hostpanel.Application.Domains.Commands.AutoRenewDomains;
 using Innovayse.Hostpanel.Application.Domains.Commands.CheckDomainExpiries;
 using Innovayse.Hostpanel.Application.Domains.Commands.SyncPendingDomainStatuses;
 using Innovayse.Hostpanel.Application.Domains.Commands.SyncTldCostPrices;
@@ -15,7 +14,6 @@ namespace Innovayse.Hostpanel.Infrastructure.Scheduling;
 /// <remarks>
 /// <para>
 /// <see cref="CheckDomainExpiriesCommand"/> fires daily at 09:00 UTC.<br/>
-/// <see cref="AutoRenewDomainsCommand"/> fires daily at 10:00 UTC.<br/>
 /// <see cref="SyncPendingDomainStatusesCommand"/> fires every 15 minutes starting immediately.<br/>
 /// <see cref="SyncTldCostPricesCommand"/> fires daily at 04:00 UTC.
 /// </para>
@@ -44,9 +42,6 @@ public sealed class DomainScheduledJobsStartup : IHostedService
     /// <summary>Hour (UTC) at which <see cref="CheckDomainExpiriesCommand"/> should execute.</summary>
     private const int ExpiryCheckHour = 9;
 
-    /// <summary>Hour (UTC) at which <see cref="AutoRenewDomainsCommand"/> should execute.</summary>
-    private const int AutoRenewHour = 10;
-
     /// <summary>Interval in minutes between <see cref="SyncPendingDomainStatusesCommand"/> runs.</summary>
     private const int SyncPendingIntervalMinutes = 15;
 
@@ -61,7 +56,6 @@ public sealed class DomainScheduledJobsStartup : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         var expiryCheckTime = NextDailyOccurrence(ExpiryCheckHour);
-        var autoRenewTime = NextDailyOccurrence(AutoRenewHour);
         var syncPendingTime = DateTimeOffset.UtcNow.AddMinutes(SyncPendingIntervalMinutes);
 
         await using var scope = _scopeFactory.CreateAsyncScope();
@@ -71,11 +65,6 @@ public sealed class DomainScheduledJobsStartup : IHostedService
         _logger.LogInformation(
             "CheckDomainExpiriesCommand scheduled for {ScheduledAt:u}.",
             expiryCheckTime);
-
-        await bus.ScheduleAsync(new AutoRenewDomainsCommand(), autoRenewTime);
-        _logger.LogInformation(
-            "AutoRenewDomainsCommand scheduled for {ScheduledAt:u}.",
-            autoRenewTime);
 
         await bus.ScheduleAsync(new SyncPendingDomainStatusesCommand(), syncPendingTime);
         _logger.LogInformation(

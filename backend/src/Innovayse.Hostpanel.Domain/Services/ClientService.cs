@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Provisioning.Events;
@@ -88,6 +89,15 @@ public sealed class ClientService : BaseEntity, IAggregateRoot
     /// <summary>Gets the internal admin notes.</summary>
     public string? AdminNotes { get; private set; }
 
+    /// <summary>
+    /// Gets whether a renewal invoice is raised automatically ahead of <see cref="NextRenewalAt"/>.
+    /// <see langword="false"/> means staff bill the service by hand; it neither suspends nor terminates it.
+    /// </summary>
+    public bool AutoRenew { get; private set; } = true;
+
+    /// <summary>Gets why the service is suspended, or <see langword="null"/> when it is not (or the reason predates this column).</summary>
+    public SuspensionSource? SuspensionSource { get; private set; }
+
     /// <summary>EF Core parameterless constructor — do not call directly.</summary>
     private ClientService() { }
 
@@ -131,9 +141,11 @@ public sealed class ClientService : BaseEntity, IAggregateRoot
 
         Status = ServiceStatus.Active;
         ProvisioningRef = provisioningRef;
-        NextRenewalAt = BillingCycle == BillingCycleNames.Annual
-            ? CreatedAt.AddYears(1)
-            : CreatedAt.AddMonths(1);
+
+        // Through RenewalPeriod, which knows every stored spelling: comparing to "annual" alone
+        // renewed an "annually" service monthly at its annual price. An unknown cycle (free,
+        // one-time) has no renewal date rather than a guessed monthly one.
+        NextRenewalAt = RenewalPeriod.EndOf(CreatedAt, BillingCycle, CreatedAt.Day);
         AddDomainEvent(new ServiceProvisionedEvent(Id, ClientId, provisioningRef));
     }
 
@@ -170,8 +182,9 @@ public sealed class ClientService : BaseEntity, IAggregateRoot
     /// <see cref="ServiceSuspendedEvent"/> -- the request for the panel to do it -- is not raised
     /// and the account is not suspended a second time.
     /// </param>
+    /// <param name="source">Why it is suspended; decides whether a later payment may lift it.</param>
     /// <exception cref="DomainRuleException">Thrown when the service is not in Active status.</exception>
-    public void Suspend(string reason = "", bool hostingAlreadyUpdated = false)
+    public void Suspend(string reason = "", bool hostingAlreadyUpdated = false, SuspensionSource source = Enums.SuspensionSource.Manual)
     {
         if (Status is not ServiceStatus.Active)
         {
@@ -182,6 +195,7 @@ public sealed class ClientService : BaseEntity, IAggregateRoot
 
         Status = ServiceStatus.Suspended;
         SuspendedAt = DateTimeOffset.UtcNow;
+        SuspensionSource = source;
         AddDomainEvent(new ClientServiceSuspendedEvent(Id, ClientId));
         if (!hostingAlreadyUpdated)
         {
@@ -235,27 +249,29 @@ public sealed class ClientService : BaseEntity, IAggregateRoot
 
         Status = ServiceStatus.Active;
         SuspendedAt = null;
+        SuspensionSource = null;
         if (!hostingAlreadyUpdated)
         {
             AddDomainEvent(new Provisioning.Events.ServiceUnsuspendedEvent(Id, ClientId));
         }
     }
 
-    /// <summary>
-    /// Advances <see cref="NextRenewalAt"/> by one billing cycle (monthly or annual).
-    /// Call after generating a renewal invoice for the current period.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown when <see cref="NextRenewalAt"/> is null.</exception>
-    public void AdvanceRenewal()
-    {
-        if (NextRenewalAt is null)
-        {
-            throw new InvalidOperationException("Cannot advance renewal on a service with no renewal date.");
-        }
+    /// <summary>Turns automatic renewal invoicing on or off.</summary>
+    /// <param name="value">The new flag.</param>
+    public void SetAutoRenew(bool value) => AutoRenew = value;
 
-        NextRenewalAt = BillingCycle == BillingCycleNames.Annual
-            ? NextRenewalAt.Value.AddYears(1)
-            : NextRenewalAt.Value.AddMonths(1);
+    /// <summary>
+    /// Records that the period ending at <paramref name="periodEnd"/> is paid: the renewal date
+    /// becomes the later of its current value and <paramref name="periodEnd"/>. Never moves a date
+    /// back, so a replayed payment or a date staff already pushed further is left alone.
+    /// </summary>
+    /// <param name="periodEnd">End of the paid period.</param>
+    public void ExtendRenewalTo(DateTimeOffset periodEnd)
+    {
+        if (NextRenewalAt is null || periodEnd > NextRenewalAt)
+        {
+            NextRenewalAt = periodEnd;
+        }
     }
 
     /// <summary>

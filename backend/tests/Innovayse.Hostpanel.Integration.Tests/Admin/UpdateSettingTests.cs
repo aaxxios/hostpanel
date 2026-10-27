@@ -179,6 +179,55 @@ public sealed class UpdateSettingTests(IntegrationTestFactory factory) : IClassF
         await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = "Acme Hosting" });
     }
 
+    /// <summary>A billing key refuses a value outside its pattern with INVALID_SETTING_VALUE.</summary>
+    [Fact]
+    public async Task BillingKey_BadValue_IsRefusedAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await AdminTestSeeds.FindSettingIdAsync(client, BillingSettingKeys.InvoiceDaysBefore);
+
+        var response = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = "abc" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        body.RootElement.GetProperty("type").GetString().Should().Be(HostpanelErrorCodes.INVALID_SETTING_VALUE);
+        body.RootElement.GetProperty("errors").GetProperty(BillingSettingKeys.InvoiceDaysBefore)[0].GetString()
+            .Should().Contain("1 to 90");
+    }
+
+    /// <summary>A zero lead time is refused: invoice_days_before starts at 1, unlike the overdue grace.</summary>
+    [Fact]
+    public async Task InvoiceDaysBefore_Zero_IsRefusedAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await AdminTestSeeds.FindSettingIdAsync(client, BillingSettingKeys.InvoiceDaysBefore);
+
+        var response = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = "0" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        body.RootElement.GetProperty("type").GetString().Should().Be(HostpanelErrorCodes.INVALID_SETTING_VALUE);
+        body.RootElement.GetProperty("errors").GetProperty(BillingSettingKeys.InvoiceDaysBefore)[0].GetString()
+            .Should().Contain("a whole number of days from 1 to 90");
+    }
+
+    /// <summary>Clearing the reminder list is allowed (switches reminders off).</summary>
+    [Fact]
+    public async Task ReminderDays_CanBeClearedAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await AdminTestSeeds.FindSettingIdAsync(client, BillingSettingKeys.ReminderDays);
+
+        var update = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = string.Empty });
+        update.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var read = await client.GetFromJsonAsync<JsonElement>($"/api/admin/settings/{id}");
+        read.GetProperty("value").GetString().Should().BeEmpty();
+
+        // Restore the seeded default for any other test that reads it.
+        await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = "7,3,1" });
+    }
+
     /// <summary>Updating an unknown id answers 404 with <c>SETTING_NOT_FOUND</c>.</summary>
     [Fact]
     public async Task UnknownId_RefusesNotFoundAsync()

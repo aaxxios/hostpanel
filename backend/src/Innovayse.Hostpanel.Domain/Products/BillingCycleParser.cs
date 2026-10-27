@@ -21,4 +21,27 @@ public static class BillingCycleParser
         BillingCycleNames.Annual or BillingCycleNames.Annually => BillingCycle.Annual,
         _ => throw new ArgumentException($"Unknown billing cycle '{raw}'.", nameof(raw)),
     };
+
+    /// <summary>
+    /// Reads a stored billing-cycle string without throwing, for code that must skip what it does
+    /// not understand (a renewal must never guess a cycle and bill the wrong amount of time).
+    /// </summary>
+    /// <param name="raw">The stored value, any casing; may be null.</param>
+    /// <param name="cycle">The parsed cycle when this returns <see langword="true"/>.</param>
+    /// <returns><see langword="true"/> when <paramref name="raw"/> names a known cycle.</returns>
+    public static bool TryParse(string? raw, out BillingCycle cycle)
+    {
+        switch (raw?.Trim().ToLowerInvariant())
+        {
+            case BillingCycleNames.Monthly:
+                cycle = BillingCycle.Monthly;
+                return true;
+            case BillingCycleNames.Annual or BillingCycleNames.Annually:
+                cycle = BillingCycle.Annual;
+                return true;
+            default:
+                cycle = default;
+                return false;
+        }
+    }
 }

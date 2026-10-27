@@ -315,6 +315,13 @@ public static class HostpanelErrorCodes
     /// </summary>
     public const string DOMAIN_PRODUCT_NOT_CONFIGURED = "DOMAIN_PRODUCT_NOT_CONFIGURED";
 
+    /// <summary>
+    /// A client renew order was refused because a renewal invoice for the domain cannot be released:
+    /// it is overdue and bills other items too (no longer editable), or it is PaymentPending or in
+    /// Collections (a payment may be in flight); the client settles that invoice first (409).
+    /// </summary>
+    public const string RENEWAL_INVOICE_OPEN = "RENEWAL_INVOICE_OPEN";
+
     // Domains — DNS and forwarding
 
     /// <summary>The id names no DNS record on the domain's zone (404).</summary>

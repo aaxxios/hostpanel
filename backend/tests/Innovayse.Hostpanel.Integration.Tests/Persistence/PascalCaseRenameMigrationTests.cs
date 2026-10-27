@@ -87,7 +87,13 @@ public sealed partial class PascalCaseRenameMigrationTests(IntegrationTestFactor
         var namesDown = await RelationNamesAsync(connectionString);
         namesDown.Should().Contain(["invoice_items", "PK_invoice_items", "invoice_items_Id_seq"], "Down restores the snake_case names");
         namesDown.Should().NotContain("InvoiceItems");
-        (await RowCountsAsync(connectionString)).Should().Equal(rowsBefore, "Down renames in place and copies nothing");
+
+        // Tables created by migrations after the rename are dropped by going down past them, so they are not
+        // expected in the Down snapshot; they are empty in the demo data, so nothing is lost.
+        // Every later migration that creates a table must add it here, or going Down past it fails the comparison.
+        var createdAfterTheRename = new[] { "invoicereminders" };
+        var rowsExpectedDown = rowsBefore.Where(row => !createdAfterTheRename.Contains(row.Key)).ToDictionary(row => row.Key, row => row.Value);
+        (await RowCountsAsync(connectionString)).Should().Equal(rowsExpectedDown, "Down renames in place and copies nothing");
 
         await migrator.MigrateAsync();
 

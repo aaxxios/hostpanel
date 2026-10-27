@@ -39,7 +39,7 @@ public sealed class SuspendServiceHandler
             return Result.FailureCode(HostpanelErrorCodes.SERVICE_NOT_FOUND);
         }
 
-        service.Suspend();
+        service.Suspend(source: cmd.Source);
         await _uow.SaveChangesAsync(ct);
         return Result.Success();
     }

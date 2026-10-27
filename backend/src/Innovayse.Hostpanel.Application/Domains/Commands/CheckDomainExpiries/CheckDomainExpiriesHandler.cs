@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Commands.MarkDomainExpired;
@@ -31,6 +32,9 @@ public sealed class CheckDomainExpiriesHandler
     /// <summary>Unit of work the reminder is saved through.</summary>
     private readonly IUnitOfWork _uow;
 
+    /// <summary>Billing settings: whether renewal reminders are configured at all.</summary>
+    private readonly RenewalSettingsReader _settings;
+
     /// <summary>Structured logger.</summary>
     private readonly ILogger<CheckDomainExpiriesHandler> _logger;
 
@@ -38,13 +42,16 @@ public sealed class CheckDomainExpiriesHandler
     /// <param name="context">The data context the expiring domains are read from and the reminder is saved through.</param>
     /// <param name="bus">Wolverine bus used to dispatch <see cref="MarkDomainExpiredCommand"/> and to raise the expiry-warning event.</param>
     /// <param name="uow">Unit of work the reminder is saved through.</param>
+    /// <param name="settings">Billing settings: whether renewal reminders are configured at all.</param>
     /// <param name="logger">Structured logger.</param>
     public CheckDomainExpiriesHandler(
-        IHostpanelDbContext context, IMessageBus bus, IUnitOfWork uow, ILogger<CheckDomainExpiriesHandler> logger)
+        IHostpanelDbContext context, IMessageBus bus, IUnitOfWork uow, RenewalSettingsReader settings,
+        ILogger<CheckDomainExpiriesHandler> logger)
     {
         _context = context;
         _bus = bus;
         _uow = uow;
+        _settings = settings;
         _logger = logger;
     }
 
@@ -97,6 +104,13 @@ public sealed class CheckDomainExpiriesHandler
     /// Finds active domains expiring within the next 30 days and raises
     /// <see cref="DomainExpiringEvent"/> for each matching warning interval,
     /// provided a reminder of that type has not already been sent.
+    /// <para>
+    /// A domain whose renewal line sits on an open invoice is skipped while renewal reminders are
+    /// configured: the client is already being reminded about that invoice, and a second "expiring"
+    /// mail would contradict it. Every other domain -- auto-renewing or not -- still gets the warning:
+    /// one the renewal run could not price, one whose renewal invoice was cancelled, or any domain
+    /// once the reminder days are cleared, would otherwise expire without a word to the client.
+    /// </para>
     /// </summary>
     /// <param name="now">The current UTC time.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -105,10 +119,11 @@ public sealed class CheckDomainExpiriesHandler
     {
         var maxThreshold = now.AddDays(WarningDays[0] + 1);
         var expiringDomains = await ListExpiringBeforeAsync(maxThreshold, ct);
+        var beingReminded = await DomainsBeingRemindedAsync(expiringDomains, ct);
 
         foreach (var domain in expiringDomains)
         {
-            if (domain.Status != DomainStatus.Active || domain.ExpiresAt <= now)
+            if (domain.Status != DomainStatus.Active || domain.ExpiresAt <= now || beingReminded.Contains(domain.Id))
             {
                 continue;
             }
@@ -155,5 +170,37 @@ public sealed class CheckDomainExpiriesHandler
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// The ids among <paramref name="domains"/> whose client is already reminded by a renewal invoice:
+    /// a domain renewal line on an open invoice, with renewal reminders configured.
+    /// </summary>
+    /// <param name="domains">The domains about to be warned.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The domain ids to skip; empty when reminders are cleared.</returns>
+    private async Task<HashSet<int>> DomainsBeingRemindedAsync(IReadOnlyCollection<RegisteredDomain> domains, CancellationToken ct)
+    {
+        if (domains.Count == 0)
+        {
+            return [];
+        }
+
+        var settings = await _settings.ReadAsync(ct);
+        if (settings.ReminderDays.Count == 0)
+        {
+            // No renewal reminders go out, so the expiry warning is the only one the client gets.
+            return [];
+        }
+
+        var ids = domains.Select(d => d.Id).ToList();
+        var reminded = await _context.Invoices.AsNoTracking()
+            .Where(i => RenewalInvoiceStatuses.Open.Contains(i.Status))
+            .SelectMany(i => i.Items)
+            .Where(l => l.RegisteredDomainId != null && ids.Contains(l.RegisteredDomainId.Value) && l.RenewalPeriodStart != null)
+            .Select(l => l.RegisteredDomainId!.Value)
+            .Distinct()
+            .ToListAsync(ct);
+        return [.. reminded];
     }
 }

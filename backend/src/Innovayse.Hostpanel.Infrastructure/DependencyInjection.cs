@@ -644,6 +644,7 @@ public static class DependencyInjection
         services.AddScoped<IRegistrarProvider, NameAmRegistrarProvider>();
         services.AddScoped<IRegistrarProviderFactory, RegistrarProviderFactory>();
         services.AddScoped<Innovayse.Hostpanel.Application.Domains.Registrar.RegistrarProviderResolver>();
+        services.AddScoped<Innovayse.Hostpanel.Application.Billing.Common.RenewalSettingsReader>();
         services.AddScoped<NameAmRegistrarProvider>();
         services.AddScoped<IIntegrationConnectionProbe, NameAmConnectionProbe>();
         services.AddScoped<NamecheapRegistrarProvider>();

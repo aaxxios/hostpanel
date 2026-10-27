@@ -31,6 +31,12 @@ public sealed class ClientServiceConfiguration : IEntityTypeConfiguration<Client
         }
 
         builder.Property(x => x.SuspendedAt);
+
+        // Default true in the database too, so every existing service keeps being renewed. The
+        // sentinel is true, not the CLR default false: with the default sentinel EF treats an
+        // explicit false as "unset", omits the column and the database default silently stores true.
+        builder.Property(x => x.AutoRenew).IsRequired().HasDefaultValue(true).HasSentinel(true);
+        builder.Property(x => x.SuspensionSource).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.ServerId);
         builder.Property(x => x.PaymentMethod).HasMaxLength(50);
         builder.Property(x => x.PromotionCode).HasMaxLength(50);
