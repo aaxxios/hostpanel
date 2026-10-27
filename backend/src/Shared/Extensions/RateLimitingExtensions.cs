@@ -126,7 +126,7 @@ public static class RateLimitingExtensions
             .Bind(configuration.GetSection(RateLimitOptions.SectionName))
             .Validate(
                 o => IsPositive(o.Global) && IsPositive(o.Auth) && IsPositive(o.Upstream)
-                    && IsPositive(o.Strict) && o.ConcurrentPermitLimit > 0 && o.TrustedProxyCount >= 0,
+                    && IsPositive(o.Strict) && IsPositive(o.SshKeys) && o.ConcurrentPermitLimit > 0 && o.TrustedProxyCount >= 0,
                 $"Every {RateLimitOptions.SectionName} tier needs a positive PermitLimit and "
                     + "WindowSeconds, ConcurrentPermitLimit must be positive, and TrustedProxyCount "
                     + "must not be negative.")
@@ -137,7 +137,8 @@ public static class RateLimitingExtensions
             .Validate(
                 o => o.Auth.PermitLimit <= o.Global.PermitLimit
                     && o.Upstream.PermitLimit <= o.Global.PermitLimit
-                    && o.Strict.PermitLimit <= o.Global.PermitLimit,
+                    && o.Strict.PermitLimit <= o.Global.PermitLimit
+                    && o.SshKeys.PermitLimit <= o.Global.PermitLimit,
                 $"No {RateLimitOptions.SectionName} tier may allow more than Global, because the "
                     + "global budget applies to every request as well: the smaller of the two "
                     + "always binds, so a larger tier would silently have no effect.")
@@ -175,6 +176,7 @@ public static class RateLimitingExtensions
             [RateLimitPolicies.Auth] = limits.Auth.PermitLimit,
             [RateLimitPolicies.Upstream] = limits.Upstream.PermitLimit,
             [RateLimitPolicies.Strict] = limits.Strict.PermitLimit,
+            [RateLimitPolicies.SshKeys] = limits.SshKeys.PermitLimit,
             [RateLimitPolicies.Concurrent] = limits.ConcurrentPermitLimit,
         };
 
@@ -216,6 +218,12 @@ public static class RateLimitingExtensions
                 context => limitingDisabled
                     ? RateLimitPartition.GetNoLimiter(RateLimitPolicies.Strict)
                     : SlidingWindowPartition(context, RateLimitPolicies.Strict, limits.Strict));
+
+            options.AddPolicy(
+                RateLimitPolicies.SshKeys,
+                context => limitingDisabled
+                    ? RateLimitPartition.GetNoLimiter(RateLimitPolicies.SshKeys)
+                    : SlidingWindowPartition(context, RateLimitPolicies.SshKeys, limits.SshKeys));
 
             options.AddPolicy(
                 RateLimitPolicies.Concurrent,

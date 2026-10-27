@@ -3,6 +3,8 @@ using Innovayse.Hostpanel.Application.Billing.Commands.CheckOverdueInvoicesCron;
 using Innovayse.Hostpanel.Application.Billing.Commands.ProcessBillableItemsCron;
 using Innovayse.Hostpanel.Application.Billing.Commands.ProcessRenewalsCron;
 using Innovayse.Hostpanel.Application.Billing.Commands.ReconcileGatewayPaymentsCron;
+using Innovayse.Hostpanel.Application.Billing.Commands.SendRenewalRemindersCron;
+using Innovayse.Hostpanel.Application.Billing.Commands.SuspendOverdueServicesCron;
 using Innovayse.Hostpanel.Application.Provisioning.Commands.AutoTerminateSuspendedCron;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,8 +14,9 @@ using Wolverine;
 namespace Innovayse.Hostpanel.Infrastructure.Scheduling;
 
 /// <summary>
-/// Hosted service that schedules the daily billable items processing job on application startup.
-/// Runs at 06:00 UTC daily, processing cron-flagged and recurring billable items.
+/// Hosted service that schedules the daily billing jobs on application startup: renewal invoices (05:00 UTC),
+/// billable items processing and renewal reminders (06:00), overdue checks (07:00), overdue suspensions (09:00), plus the server sync,
+/// auto-terminate and gateway reconcile jobs.
 /// </summary>
 public sealed class BillingScheduledJobsStartup : IHostedService
 {
@@ -40,6 +43,12 @@ public sealed class BillingScheduledJobsStartup : IHostedService
 
     /// <summary>Hour (UTC) at which <see cref="ProcessRenewalsCronCommand"/> should execute.</summary>
     private const int RenewalsCronHour = 5;
+
+    /// <summary>Hour (UTC) at which <see cref="SendRenewalRemindersCronCommand"/> should execute.</summary>
+    private const int RenewalRemindersCronHour = 6;
+
+    /// <summary>Hour (UTC) at which <see cref="SuspendOverdueServicesCronCommand"/> should execute.</summary>
+    private const int SuspendOverdueCronHour = 9;
 
     /// <summary>Hour (UTC) at which <see cref="AutoTerminateSuspendedCronCommand"/> should execute.</summary>
     private const int AutoTerminateCronHour = 8;
@@ -74,6 +83,18 @@ public sealed class BillingScheduledJobsStartup : IHostedService
         _logger.LogInformation(
             "ProcessRenewalsCronCommand scheduled for {ScheduledAt:u}.",
             renewalsRun);
+
+        var remindersRun = NextDailyOccurrence(RenewalRemindersCronHour);
+        await bus.ScheduleAsync(new SendRenewalRemindersCronCommand(), remindersRun);
+        _logger.LogInformation(
+            "SendRenewalRemindersCronCommand scheduled for {ScheduledAt:u}.",
+            remindersRun);
+
+        var suspendOverdueRun = NextDailyOccurrence(SuspendOverdueCronHour);
+        await bus.ScheduleAsync(new SuspendOverdueServicesCronCommand(), suspendOverdueRun);
+        _logger.LogInformation(
+            "SuspendOverdueServicesCronCommand scheduled for {ScheduledAt:u}.",
+            suspendOverdueRun);
 
         var serverSyncRun = NextDailyOccurrence(ServerSyncCronHour);
         await bus.ScheduleAsync(new SyncServerAccountCountsCronCommand(), serverSyncRun);

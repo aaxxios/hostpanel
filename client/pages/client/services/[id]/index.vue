@@ -50,6 +50,7 @@
 
           <ClientServicesServicePasswordForm v-else-if="activeTab === ServiceTab.Password" :service-id="serviceId" />
           <ClientServicesServiceCancelForm v-else-if="activeTab === ServiceTab.Cancel" :service-id="serviceId" />
+          <ClientServicesServiceSshKeys v-else-if="activeTab === ServiceTab.Ssh" :service-id="serviceId" />
         </template>
       </UiSplit>
     </template>

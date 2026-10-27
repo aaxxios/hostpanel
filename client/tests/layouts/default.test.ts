@@ -1,6 +1,6 @@
 /**
  * Tests for the default layout: the active template's header and footer around the page slot,
- * the floating actions and the cart drawer, and the template stamp on the document.
+ * the demo notice and the sign-in prompt, the floating actions and the cart drawer, and the template stamp on the document.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
@@ -27,7 +27,7 @@ describe('layouts/default', () => {
       name: 'nova',
       slot: (slotName: string) => marker(`template-${slotName}`),
     }))
-    registerPageComponents({ LayoutCartDrawer: marker('cart-drawer'), LayoutDemoBanner: marker('demo-banner') })
+    registerPageComponents({ LayoutCartDrawer: marker('cart-drawer'), LayoutDemoBanner: marker('demo-banner'), LayoutSignInPrompt: marker('signin-prompt') })
   })
 
   /**
@@ -43,7 +43,7 @@ describe('layouts/default', () => {
   it('renders the template header, the page, the template footer, the floating actions and the cart', () => {
     const wrapper = mountLayout()
 
-    for (const id of ['demo-banner', 'template-header', 'page', 'template-footer', 'floating-actions', 'cookie-banner', 'cart-drawer']) {
+    for (const id of ['demo-banner', 'signin-prompt', 'template-header', 'page', 'template-footer', 'floating-actions', 'cookie-banner', 'cart-drawer']) {
       expect(wrapper.find(`[data-testid="${id}"]`).exists()).toBe(true)
     }
   })

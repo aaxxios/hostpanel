@@ -1,9 +1,10 @@
 /**
  * Pinia store for who is signed in.
  *
- * Auth strategy (unchanged from the composable this replaced):
- * - `auth_token` — httpOnly JWT cookie, set server-side after login
- * - `authed`     — plain cookie (value "1"), readable by JS and middleware on both sides
+ * Auth strategy:
+ * - `portal_session` — httpOnly cookie holding only an opaque session id, set server-side after
+ *   login; the tokens it names stay on the server (`server/utils/portal-session.ts`)
+ * - `authed`         — plain cookie (value "1"), readable by JS and middleware on both sides
  *
  * A setup store rather than an options store because {@link isLoggedIn} has to read a cookie
  * ref, and `useCookie` must be called once inside the Nuxt context rather than per getter

@@ -46,6 +46,13 @@ public static class RateLimitPolicies
     public const string Strict = "strict";
 
     /// <summary>
+    /// Signed-in changes to a hosting account's SSH keys. Each one opens an SSH connection to a
+    /// managed server and rewrites a file there, so it is bounded per user rather than sharing the
+    /// anonymous <see cref="Strict"/> budget, which is sized for contact forms.
+    /// </summary>
+    public const string SshKeys = "ssh-keys";
+
+    /// <summary>
     /// Operations whose cost is measured in what they hold rather than how often they are asked
     /// for -- report exports, a migration run. Limited by how many may be in flight at once,
     /// because a per-minute budget does not describe the harm.

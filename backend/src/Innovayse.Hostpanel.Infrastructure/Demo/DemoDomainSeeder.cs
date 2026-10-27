@@ -38,7 +38,7 @@ internal sealed class DemoDomainSeeder
     private static readonly (string Extension, DomainStatus Status, int ExpiresInDays)[] DemoClientDomains =
     [
         (".example", DomainStatus.Active, 240),
-        ("-net.example", DomainStatus.Active, 13),
+        ("-net.example", DomainStatus.Active, 10),
         ("-io.example", DomainStatus.PendingTransfer, 0),
         ("-org.example", DomainStatus.Active, 150),
         ("-dev.example", DomainStatus.Expired, -12),

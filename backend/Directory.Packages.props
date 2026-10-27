@@ -14,6 +14,7 @@
     commercial condition to downstream users is not one this project can take.
   -->
   <ItemGroup>
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="SkiaSharp" Version="4.153.1" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
   </ItemGroup>
@@ -118,6 +119,12 @@
     <PackageVersion Include="Scalar.AspNetCore" Version="2.18.0" />
     <PackageVersion Include="Serilog.AspNetCore" Version="8.0.3" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+    <!--
+      The client portal keeps its sign-in sessions in Redis, and a back-channel logout deletes them from
+      here (Auth/PortalSessionRevoker). 2.8.16 is the version Innovayse.Auth depends on in an SSO build,
+      so both builds resolve the same client.
+    -->
+    <PackageVersion Include="StackExchange.Redis" Version="2.8.16" />
   </ItemGroup>
   <!-- Roslyn / Tooling -->
   <ItemGroup>
@@ -142,6 +149,7 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="Moq" Version="4.21.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.Redis" Version="4.16.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>

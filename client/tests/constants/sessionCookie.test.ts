@@ -9,9 +9,13 @@ import { SessionCookie } from '~/constants/sessionCookie'
 
 describe('SessionCookie', () => {
   it('keeps the wire names of the session cookies', () => {
-    expect(SessionCookie.AuthToken).toBe('auth_token')
-    expect(SessionCookie.RefreshToken).toBe('refresh_token')
+    expect(SessionCookie.Session).toBe('portal_session')
     expect(SessionCookie.Authed).toBe('authed')
+  })
+
+  it('keeps the wire names of the legacy token cookies it still clears', () => {
+    expect(SessionCookie.LegacyAuthToken).toBe('auth_token')
+    expect(SessionCookie.LegacyRefreshToken).toBe('refresh_token')
   })
 
   it('keeps the wire names of the sign-in round-trip cookies', () => {

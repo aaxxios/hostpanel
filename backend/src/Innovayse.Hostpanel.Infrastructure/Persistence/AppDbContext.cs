@@ -17,6 +17,7 @@ using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Domain.Slides;
+using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Domain.Ssl;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Testimonials;
@@ -111,6 +112,9 @@ public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbConte
     /// <summary>Gets the invoice items table.</summary>
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
 
+    /// <summary>Gets the sent renewal reminders.</summary>
+    public DbSet<InvoiceReminder> InvoiceReminders => Set<InvoiceReminder>();
+
     /// <summary>Gets the transactions table.</summary>
     public DbSet<Transaction> Transactions => Set<Transaction>();
 
@@ -179,6 +183,12 @@ public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbConte
 
     /// <summary>Gets the server groups table.</summary>
     public DbSet<ServerGroup> ServerGroups => Set<ServerGroup>();
+
+    /// <summary>Gets the SSH keys customers added to their hosting services.</summary>
+    public DbSet<SshKey> SshKeys => Set<SshKey>();
+
+    /// <summary>Gets the per-server SSH key management settings.</summary>
+    public DbSet<ServerSshSettings> ServerSshSettings => Set<ServerSshSettings>();
 
     /// <summary>Gets the download categories table.</summary>
     public DbSet<DownloadCategory> DownloadCategories => Set<DownloadCategory>();

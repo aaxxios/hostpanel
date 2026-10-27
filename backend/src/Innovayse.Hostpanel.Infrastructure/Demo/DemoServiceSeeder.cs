@@ -125,6 +125,7 @@ internal sealed class DemoServiceSeeder
 
         var sequence = 0;
         var serverTurn = 0;
+        var renewalDemoPlaced = false;
         for (var c = 0; c < clients.Count; c++)
         {
             var client = clients[c];
@@ -149,7 +150,7 @@ internal sealed class DemoServiceSeeder
 
                 if (status == ServiceStatus.Suspended)
                 {
-                    service.Suspend("Unpaid invoice", true);
+                    service.Suspend("Unpaid invoice", true, SuspensionSource.Overdue);
                 }
                 else if (status == ServiceStatus.Terminated)
                 {
@@ -168,6 +169,14 @@ internal sealed class DemoServiceSeeder
                     ServiceStatus.Suspended => _today.AddDays(-(3 + ((c + i) % 10))),
                     _ => (DateTimeOffset?)null,
                 };
+
+                // The demo client's first active service is always ten days from its renewal, inside the 14-day invoicing
+                // window, so the renewal invoice flow can be shown on a fresh reset.
+                if (c == 0 && status == ServiceStatus.Active && !renewalDemoPlaced)
+                {
+                    renewal = _today.AddDays(10);
+                    renewalDemoPlaced = true;
+                }
 
                 service.Update(
                     domain: host,

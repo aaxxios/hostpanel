@@ -51,10 +51,19 @@ public sealed class CheckOverdueInvoicesCronHandler
     /// </summary>
     /// <param name="cmd">The scheduled command (marker, no payload).</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task HandleAsync(CheckOverdueInvoicesCronCommand cmd, CancellationToken ct)
+    public Task HandleAsync(CheckOverdueInvoicesCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
 
+        return RecurringJob.RunAsync(
+            nameof(CheckOverdueInvoicesCronCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+    }
+
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task RunAsync(CancellationToken ct)
+    {
         // Was IInvoiceRepository.ListUnpaidOverdueAsync. Tracked, not AsNoTracking: each matching
         // invoice has MarkOverdue() called on it below and is saved in this same pass.
         var overdueInvoices = await _context.Invoices
@@ -73,8 +82,12 @@ public sealed class CheckOverdueInvoicesCronHandler
 
         _logger.LogInformation(
             "CheckOverdueInvoicesCron marked {Count} invoices as overdue.", overdueInvoices.Count);
+    }
 
-        // Re-schedule for next day
+    /// <summary>Schedules the next pass.</summary>
+    /// <returns>A task.</returns>
+    private async Task ScheduleNextAsync()
+    {
         var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
         await _bus.ScheduleAsync(new CheckOverdueInvoicesCronCommand(), nextRun);
         _logger.LogInformation("CheckOverdueInvoicesCronCommand re-scheduled for {NextRun:u}.", nextRun);

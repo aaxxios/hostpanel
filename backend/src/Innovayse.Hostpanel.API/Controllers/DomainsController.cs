@@ -123,12 +123,13 @@ public sealed class DomainsController : BaseApiController
     /// <param name="command">Renewal details specifying the number of years.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 on success; 404 when the id names no domain; 502 when the registrar rejects the
-    /// renewal; 401; 403.
+    /// 204 on success; 400 when the domain has no registrar reference; 404 when the id names no
+    /// domain; 502 when the registrar rejects the renewal; 401; 403.
     /// </returns>
     [HttpPost("{id:int}/renew")]
     [Authorize(Policy = Policies.ResellerOrAdmin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status502BadGateway)]
     public async Task<IActionResult> RenewAsync(int id, [FromBody] RenewDomainCommand command, CancellationToken ct)

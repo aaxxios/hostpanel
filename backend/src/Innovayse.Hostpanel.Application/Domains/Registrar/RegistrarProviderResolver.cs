@@ -48,7 +48,7 @@ public sealed class RegistrarProviderResolver(
     /// </summary>
     /// <param name="domainName">The fully qualified domain name to extract TLD candidates from.</param>
     /// <returns>A list of TLD suffixes ordered by length descending.</returns>
-    private static List<string> ExtractTldCandidates(string domainName)
+    internal static List<string> ExtractTldCandidates(string domainName)
     {
         var parts = domainName.ToLowerInvariant().Trim().Split('.');
         var candidates = new List<string>();

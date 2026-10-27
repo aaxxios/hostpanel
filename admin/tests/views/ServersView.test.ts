@@ -120,4 +120,25 @@ describe('ServersView', () => {
 
     expect(wrapper.find('[data-testid="server-form-name"]').exists()).toBe(true)
   })
+
+  it('opens the SSH key management dialog for the row\'s server', async () => {
+    stubRoutes({
+      'GET /api/admin/servers': () => json([serverDto()]),
+      'GET /api/admin/server-groups': () => json([]),
+      'GET /api/admin/servers/1/ssh-settings': () =>
+        json({
+          serverId: 1, isSupported: true, isEnabled: false, sshHostname: '', sshPort: 22, agentHost: '', agentPort: 22,
+          agentUsername: '', hasAgentPrivateKey: false, agentHostKeyFingerprint: '', connectTimeoutSeconds: 10,
+          operationTimeoutSeconds: 20, isHealthy: null, lastHealthCheckAt: null,
+        }),
+    })
+    const wrapper = await mountServers()
+
+    await wrapper.get('[data-testid="server-ssh-1"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="server-ssh-hostname"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="server-ssh-cancel"]').trigger('click')
+    expect(wrapper.find('[data-testid="server-ssh-hostname"]').exists()).toBe(false)
+  })
 })

@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
+using Innovayse.Hostpanel.Shared.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Wolverine;
@@ -65,7 +66,18 @@ public sealed class SyncPendingDomainStatusesHandler
     /// <param name="cmd">The sync pending domain statuses command.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    public async Task HandleAsync(SyncPendingDomainStatusesCommand cmd, CancellationToken ct)
+    public Task HandleAsync(SyncPendingDomainStatusesCommand cmd, CancellationToken ct)
+    {
+        _ = cmd;
+
+        return RecurringJob.RunAsync(
+            nameof(SyncPendingDomainStatusesCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+    }
+
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task RunAsync(CancellationToken ct)
     {
         var pending = await _context.Domains
             .Where(x => x.Status == DomainStatus.PendingRegistration || x.Status == DomainStatus.PendingTransfer)
@@ -96,8 +108,12 @@ public sealed class SyncPendingDomainStatusesHandler
                 }
             }
         }
+    }
 
-        // Re-schedule the next run.
+    /// <summary>Schedules the next pass.</summary>
+    /// <returns>A task.</returns>
+    private async Task ScheduleNextAsync()
+    {
         var next = DateTimeOffset.UtcNow.AddMinutes(IntervalMinutes);
         await _bus.ScheduleAsync(new SyncPendingDomainStatusesCommand(), next);
         _logger.LogDebug("SyncPendingDomainStatuses: next run scheduled for {Next:u}.", next);

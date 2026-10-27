@@ -439,6 +439,7 @@ public sealed class DevDataSeeder
             var products = await _db.Products.Include(p => p.Prices).ToListAsync(ct);
             var activeClients = await _db.Clients.Where(c => c.Status == ClientStatus.Active).ToListAsync(ct);
             var billingCycles = new[] { "monthly", "annual" };
+            var renewalDevPlaced = false;
 
             foreach (var client in activeClients)
             {
@@ -488,6 +489,14 @@ public sealed class DevDataSeeder
                     else
                     {
                         svc.Activate("prov_" + Rng.Next(10000, 99999));
+
+                        // One service always renews ten days out -- inside the 14-day invoicing window -- so
+                        // the renewal flow has something to raise an invoice for on a fresh dev database.
+                        if (!renewalDevPlaced)
+                        {
+                            _db.Entry(svc).Property(nameof(ClientService.NextRenewalAt)).CurrentValue = DateTimeOffset.UtcNow.AddDays(10);
+                            renewalDevPlaced = true;
+                        }
                     }
 
                     _db.ClientServices.Add(svc);
@@ -778,7 +787,7 @@ public sealed class DevDataSeeder
             ("customershop.net",     11.99m, 90,   true,  true,  "Name.am"),
             ("developerlab.io",      39.99m, 270,  false, false, "Namecheap"),
             ("managerhub.com",       12.99m, 400,  true,  true,  "Namecheap"),
-            ("partnersolutions.org", 10.99m,  25,  true,  false, "Name.am"),
+            ("partnersolutions.org", 10.99m,  10,  true,  false, "Name.am"),
             ("resellerpro.com",      12.99m, 500,  true,  true,  "Namecheap"),
             ("ownersite.am",          8.99m, 60,   false, false, "Name.am"),
         ];

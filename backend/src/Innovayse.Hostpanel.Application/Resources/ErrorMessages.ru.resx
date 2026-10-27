@@ -202,7 +202,7 @@
     <value>Регистратору не удалось отменить ожидающую передачу. Повторите попытку позже.</value>
   </data>
 <data name="DOMAIN_NO_REGISTRAR_REF" xml:space="preserve">
-    <value>У этого домена нет ссылки на регистратора, поэтому исходящую передачу нельзя начать.</value>
+    <value>У этого домена нет ссылки на регистратора, поэтому изменить его у регистратора нельзя.</value>
   </data>
 <data name="DOMAIN_OUTGOING_TRANSFER_UPSTREAM_FAILED" xml:space="preserve">
     <value>Регистратору не удалось начать исходящую передачу. Повторите попытку позже.</value>
@@ -218,6 +218,9 @@
   </data>
 <data name="DOMAIN_PRODUCT_NOT_CONFIGURED" xml:space="preserve">
     <value>В настоящее время заказать домены на этом сайте нельзя.</value>
+  </data>
+  <data name="RENEWAL_INVOICE_OPEN" xml:space="preserve">
+    <value>Счёт на продление этого домена сейчас нельзя отменить: он просрочен и включает другие позиции, или по нему уже идёт оплата. Сначала урегулируйте этот счёт, затем продлите домен.</value>
   </data>
 <data name="DNS_RECORD_NOT_FOUND" xml:space="preserve">
     <value>DNS-запись с таким идентификатором не найдена у этого домена.</value>
@@ -633,5 +636,35 @@
   </data>
   <data name="TESTIMONIAL_RATING_OUT_OF_RANGE" xml:space="preserve">
     <value>Оценка должна быть от 1 до 5.</value>
+  </data>
+  <data name="SSH_KEY_INVALID" xml:space="preserve">
+    <value>Ключ не является допустимым открытым ключом ED25519.</value>
+  </data>
+  <data name="SSH_PRIVATE_KEY_REJECTED" xml:space="preserve">
+    <value>Это закрытый ключ. Вставьте открытый ключ (файл .pub).</value>
+  </data>
+  <data name="SSH_KEY_ALREADY_INSTALLED" xml:space="preserve">
+    <value>Этот ключ уже установлен для услуги.</value>
+  </data>
+  <data name="SSH_KEY_LIMIT_REACHED" xml:space="preserve">
+    <value>Для услуги уже добавлено максимальное число SSH-ключей.</value>
+  </data>
+  <data name="SSH_KEY_NOT_FOUND" xml:space="preserve">
+    <value>Такого SSH-ключа нет.</value>
+  </data>
+  <data name="SSH_KEY_STALE" xml:space="preserve">
+    <value>Этот ключ был выдан на прежнем сервере услуги. Обратитесь в поддержку, чтобы удалить его.</value>
+  </data>
+  <data name="SSH_ACCESS_UNAVAILABLE" xml:space="preserve">
+    <value>Управление SSH-ключами недоступно для этой услуги.</value>
+  </data>
+  <data name="SSH_SERVER_UNAVAILABLE" xml:space="preserve">
+    <value>Не удалось связаться с сервером хостинга. Повторите попытку позже.</value>
+  </data>
+  <data name="SSH_MODULE_NOT_SUPPORTED" xml:space="preserve">
+    <value>Управление SSH-ключами не поддерживается для этого типа сервера.</value>
+  </data>
+  <data name="SSH_SETTINGS_INCOMPLETE" xml:space="preserve">
+    <value>Настройки SSH для этого сервера заполнены не полностью.</value>
   </data>
 </root>

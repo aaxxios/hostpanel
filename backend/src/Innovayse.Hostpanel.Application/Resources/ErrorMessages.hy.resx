@@ -202,7 +202,7 @@
     <value>Ռեգիստրատորը չկարողացավ չեղարկել սպասվող փոխանցումը։ Փորձեք կրկին փոքր-ինչ ուշ։</value>
   </data>
 <data name="DOMAIN_NO_REGISTRAR_REF" xml:space="preserve">
-    <value>Այս դոմենը ռեգիստրատորի հղում չունի, ուստի ելքային փոխանցում սկսել հնարավոր չէ։</value>
+    <value>Այս դոմենը ռեգիստրատորի հղում չունի, ուստի ռեգիստրատորում այն փոփոխել հնարավոր չէ։</value>
   </data>
 <data name="DOMAIN_OUTGOING_TRANSFER_UPSTREAM_FAILED" xml:space="preserve">
     <value>Ռեգիստրատորը չկարողացավ սկսել ելքային փոխանցումը։ Փորձեք կրկին փոքր-ինչ ուշ։</value>
@@ -218,6 +218,9 @@
   </data>
 <data name="DOMAIN_PRODUCT_NOT_CONFIGURED" xml:space="preserve">
     <value>Այս պահին այս կայքում հնարավոր չէ պատվիրել դոմեններ։</value>
+  </data>
+  <data name="RENEWAL_INVOICE_OPEN" xml:space="preserve">
+    <value>Այս դոմենի երկարաձգման հաշիվը հիմա հնարավոր չէ չեղարկել. այն ժամկետանց է և ներառում է այլ դիրքեր, կամ դրա վճարումն արդեն ընթացքի մեջ է։ Նախ կարգավորեք այդ հաշիվը, ապա երկարաձգեք դոմենը։</value>
   </data>
 <data name="DNS_RECORD_NOT_FOUND" xml:space="preserve">
     <value>Այս դոմենի վրա նման DNS գրառում չկա։</value>
@@ -633,5 +636,35 @@
   </data>
   <data name="TESTIMONIAL_RATING_OUT_OF_RANGE" xml:space="preserve">
     <value>Գնահատականը պետք է լինի 1-ից 5։</value>
+  </data>
+  <data name="SSH_KEY_INVALID" xml:space="preserve">
+    <value>Բանալին վավեր ED25519 հանրային բանալի չէ։</value>
+  </data>
+  <data name="SSH_PRIVATE_KEY_REJECTED" xml:space="preserve">
+    <value>Սա գաղտնի բանալի է։ Տեղադրեք հանրային բանալին (.pub ֆայլը)։</value>
+  </data>
+  <data name="SSH_KEY_ALREADY_INSTALLED" xml:space="preserve">
+    <value>Այս բանալին արդեն տեղադրված է ծառայության վրա։</value>
+  </data>
+  <data name="SSH_KEY_LIMIT_REACHED" xml:space="preserve">
+    <value>Ծառայությունն արդեն ունի SSH բանալիների առավելագույն քանակը։</value>
+  </data>
+  <data name="SSH_KEY_NOT_FOUND" xml:space="preserve">
+    <value>Այդպիսի SSH բանալի չկա։</value>
+  </data>
+  <data name="SSH_KEY_STALE" xml:space="preserve">
+    <value>Այս բանալին տրվել է ծառայության նախկին սերվերի վրա։ Այն հեռացնելու համար դիմեք աջակցման ծառայությանը։</value>
+  </data>
+  <data name="SSH_ACCESS_UNAVAILABLE" xml:space="preserve">
+    <value>SSH բանալիների կառավարումը հասանելի չէ այս ծառայության համար։</value>
+  </data>
+  <data name="SSH_SERVER_UNAVAILABLE" xml:space="preserve">
+    <value>Հոսթինգի սերվերի հետ կապ հաստատել չհաջողվեց։ Խնդրում ենք փորձել ավելի ուշ։</value>
+  </data>
+  <data name="SSH_MODULE_NOT_SUPPORTED" xml:space="preserve">
+    <value>SSH բանալիների կառավարումը չի աջակցվում սերվերի այս տեսակի համար։</value>
+  </data>
+  <data name="SSH_SETTINGS_INCOMPLETE" xml:space="preserve">
+    <value>Այս սերվերի SSH կարգավորումները ամբողջական չեն։</value>
   </data>
 </root>

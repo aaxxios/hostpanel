@@ -12,7 +12,7 @@
  * `[Authorize]` and its command carries a token and nothing else
  * (`AcceptInvitationCommand(string Token)`); the handler asks the credential who the caller
  * is. So the only thing that travels from here is the token, and a request with no
- * `auth_token` cookie cannot succeed no matter what it carries — which is why that case is
+ * signed-in session cannot succeed no matter what it carries — which is why that case is
  * answered here rather than forwarded.
  *
  * **It takes no password.** The page's password fields had nowhere to go: there is no
@@ -25,7 +25,7 @@
  */
 
 import { PortalErrorCode } from '~/constants/portalErrorCode'
-import { SessionCookie } from '~/constants/sessionCookie'
+import { resolveAccessToken } from '~/server/utils/portal-session'
 
 /** Body this route accepts. The password the page used to send is deliberately not here. */
 interface AcceptInviteBody {
@@ -83,7 +83,7 @@ export default defineEventHandler(async (event): Promise<AcceptInviteResult> => 
 
   // The only guard made before a request is possible. Everything else — an empty token
   // included — goes to the backend so the wording stays where the rule is.
-  if (!getCookie(event, SessionCookie.AuthToken)) {
+  if (!(await resolveAccessToken(event))) {
     throw signInRequired()
   }
 

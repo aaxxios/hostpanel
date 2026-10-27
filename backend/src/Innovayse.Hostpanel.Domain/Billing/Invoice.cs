@@ -202,6 +202,61 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
         RecalculateTotals();
     }
 
+    /// <summary>Adds a renewal line for one service and one period, and recalculates totals.</summary>
+    /// <param name="description">Line description.</param>
+    /// <param name="amount">Price of the period.</param>
+    /// <param name="clientServiceId">The service renewed.</param>
+    /// <param name="start">Period start.</param>
+    /// <param name="end">Period end.</param>
+    /// <exception cref="DomainRuleException">The invoice is no longer editable.</exception>
+    public void AddServiceRenewal(string description, decimal amount, int clientServiceId, DateTimeOffset start, DateTimeOffset end) =>
+        AddRenewal(InvoiceItem.CreateRenewal(description, amount, clientServiceId, null, start, end));
+
+    /// <summary>Adds a renewal line for one domain and one period, and recalculates totals.</summary>
+    /// <param name="description">Line description.</param>
+    /// <param name="amount">Price of the period.</param>
+    /// <param name="registeredDomainId">The domain renewed.</param>
+    /// <param name="start">Period start (the current expiry).</param>
+    /// <param name="end">Period end.</param>
+    /// <exception cref="DomainRuleException">The invoice is no longer editable.</exception>
+    public void AddDomainRenewal(string description, decimal amount, int registeredDomainId, DateTimeOffset start, DateTimeOffset end) =>
+        AddRenewal(InvoiceItem.CreateRenewal(description, amount, null, registeredDomainId, start, end));
+
+    /// <summary>
+    /// Gets whether the invoice is Paid and the money covers it. <see cref="MarkPaid"/> and
+    /// <see cref="MarkPaidViaGateway"/> charge the whole <see cref="Total"/>, so they are full by
+    /// construction; <see cref="AddPayment"/> records any amount and marks Paid, so an invoice with
+    /// recorded payments is full only when they add up to <see cref="Total"/> (already net of credit).
+    /// </summary>
+    public bool IsPaidInFull
+    {
+        get
+        {
+            if (Status is not InvoiceStatus.Paid)
+            {
+                return false;
+            }
+
+            var payments = _transactions.Where(t => t.Type == InvoiceTransactionType.Payment).ToList();
+            return payments.Count == 0 || payments.Sum(t => t.Amount) >= Total;
+        }
+    }
+
+    /// <summary>Appends a renewal line under the same editability rule as <see cref="AddItem"/>.</summary>
+    /// <param name="item">The renewal line.</param>
+    /// <exception cref="DomainRuleException">The invoice is no longer editable.</exception>
+    private void AddRenewal(InvoiceItem item)
+    {
+        if (Status is not (InvoiceStatus.Draft or InvoiceStatus.Unpaid))
+        {
+            throw new DomainRuleException(
+                BillingErrors.InvoiceNotEditable, $"Cannot add items to an invoice with status {Status}.");
+        }
+
+        _items.Add(item);
+        RecalculateTotals();
+    }
+
     /// <summary>
     /// Removes a line item by ID and recalculates totals.
     /// </summary>
@@ -478,6 +533,7 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     {
         // The same amounts in the same currency: a copy never re-labels the lines it carries.
         var copy = CreateDraft(ClientId, DueDate, Currency);
+        // AddItem, never a renewal factory: a copy is not a renewal, and paying it must extend nothing.
         foreach (var item in _items)
         {
             copy.AddItem(item.Description, item.UnitPrice, item.Quantity, item.ClientServiceId);

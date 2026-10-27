@@ -202,7 +202,7 @@
     <value>The registrar was unable to cancel the pending transfer. Please try again shortly.</value>
   </data>
 <data name="DOMAIN_NO_REGISTRAR_REF" xml:space="preserve">
-    <value>This domain has no registrar reference, so an outgoing transfer cannot be started.</value>
+    <value>This domain has no registrar reference, so it cannot be changed at the registrar.</value>
   </data>
 <data name="DOMAIN_OUTGOING_TRANSFER_UPSTREAM_FAILED" xml:space="preserve">
     <value>The registrar was unable to start the outgoing transfer. Please try again shortly.</value>
@@ -218,6 +218,9 @@
   </data>
 <data name="DOMAIN_PRODUCT_NOT_CONFIGURED" xml:space="preserve">
     <value>Domains cannot be ordered on this site at the moment.</value>
+  </data>
+  <data name="RENEWAL_INVOICE_OPEN" xml:space="preserve">
+    <value>A renewal invoice for this domain cannot be released right now: it is overdue together with other items, or a payment on it is in progress. Settle that invoice first, then renew.</value>
   </data>
 <data name="DNS_RECORD_NOT_FOUND" xml:space="preserve">
     <value>No such DNS record on this domain.</value>
@@ -633,5 +636,35 @@
   </data>
   <data name="TESTIMONIAL_RATING_OUT_OF_RANGE" xml:space="preserve">
     <value>The rating must be from 1 to 5.</value>
+  </data>
+  <data name="SSH_KEY_INVALID" xml:space="preserve">
+    <value>The key is not a valid ED25519 public key.</value>
+  </data>
+  <data name="SSH_PRIVATE_KEY_REJECTED" xml:space="preserve">
+    <value>That is a private key. Paste the public key (the .pub file) instead.</value>
+  </data>
+  <data name="SSH_KEY_ALREADY_INSTALLED" xml:space="preserve">
+    <value>This key is already installed on the service.</value>
+  </data>
+  <data name="SSH_KEY_LIMIT_REACHED" xml:space="preserve">
+    <value>The service already holds the maximum number of SSH keys.</value>
+  </data>
+  <data name="SSH_KEY_NOT_FOUND" xml:space="preserve">
+    <value>No such SSH key.</value>
+  </data>
+  <data name="SSH_KEY_STALE" xml:space="preserve">
+    <value>This key was issued on the service's previous server. Contact support to remove it.</value>
+  </data>
+  <data name="SSH_ACCESS_UNAVAILABLE" xml:space="preserve">
+    <value>SSH key management is not available for this service.</value>
+  </data>
+  <data name="SSH_SERVER_UNAVAILABLE" xml:space="preserve">
+    <value>The hosting server could not be reached. Please try again later.</value>
+  </data>
+  <data name="SSH_MODULE_NOT_SUPPORTED" xml:space="preserve">
+    <value>SSH key management is not supported for this server type.</value>
+  </data>
+  <data name="SSH_SETTINGS_INCOMPLETE" xml:space="preserve">
+    <value>The SSH settings for this server are incomplete.</value>
   </data>
 </root>

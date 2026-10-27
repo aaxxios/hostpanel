@@ -47,6 +47,15 @@ public sealed class ModifyDomainContactHandler
             return Result.FailureCode(HostpanelErrorCodes.DOMAIN_NOT_FOUND);
         }
 
+        if (domain.RegistrarRef is null)
+        {
+            // Contacts live only at the registrar; there is nothing to change for a domain that
+            // was never placed at one, and reporting success would claim a change nobody made.
+            return Result.Failure(
+                $"'{domain.Name}' has no registrar reference, so its contacts cannot be changed.",
+                HostpanelErrorCodes.DOMAIN_NO_REGISTRAR_REF);
+        }
+
         var contact = new DomainContact(
             cmd.FirstName, cmd.LastName, cmd.Organization, cmd.Email, cmd.Phone,
             cmd.Address1, cmd.Address2, cmd.City, cmd.State, cmd.PostalCode, cmd.Country);

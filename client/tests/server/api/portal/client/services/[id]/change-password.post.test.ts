@@ -5,7 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, startBackend } from '../../../../../../helpers/bffHarness'
+import { makeEvent, startBackend, signedIn } from '../../../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../../../helpers/stubServer'
 
@@ -26,7 +26,7 @@ afterEach(async () => {
 
 describe('service change-password route', () => {
   it('sends the page field under the name the command reads', async () => {
-    await route.default(makeEvent({ params: { id: '5' }, body: { password: 'Secret-123' }, cookies: { auth_token: 'jwt' } }))
+    await route.default(makeEvent({ params: { id: '5' }, body: { password: 'Secret-123' }, cookies: await signedIn('jwt') }))
 
     expect(backend.requests[0]?.url).toBe('/api/me/services/5/change-password')
     expect(JSON.parse(backend.requests[0]?.body ?? '{}')).toEqual({ newPassword: 'Secret-123' })

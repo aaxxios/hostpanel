@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Xml.Linq;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Domains;
@@ -20,8 +21,14 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
         _client = client;
     }
 
-    /// <summary>No-op success result returned when the registrar is not configured.</summary>
-    private static readonly RegistrarResult NotConfiguredResult = new(true, null, null, null);
+    /// <summary>
+    /// The answer to a purchase or a change when the registrar is not configured: a refusal, never
+    /// a no-op success. A paid order is then refunded, a paid renewal retried, and a handler does
+    /// not save a change the registrar never made. Domains not held at a registrar never get here:
+    /// the handlers skip the registrar for them.
+    /// </summary>
+    private static readonly RegistrarResult NotConfiguredResult =
+        new(false, null, null, "Namecheap is not configured.");
 
     /// <inheritdoc/>
     public async Task<RegistrarResult> RegisterAsync(DomainRegistrationOrder request, CancellationToken ct)
@@ -47,20 +54,24 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             parameters["Nameservers"] = BuildNameserverString(request.Nameserver1, request.Nameserver2);
         }
 
-        var doc = await _client.ExecuteAsync("namecheap.domains.create", parameters, ct);
+        var (doc, refusal) = await ExecutePurchaseAsync("namecheap.domains.create", parameters, ct);
+        if (refusal is not null)
+        {
+            return refusal;
+        }
 
-        var ns = GetNamespace(doc);
-        var result = doc.Root
-            ?.Element(XName.Get("CommandResponse", ns))
-            ?.Element(XName.Get("DomainCreateResult", ns));
+        var result = ConfirmedResult(doc!, "DomainCreateResult", "Registered");
+        if (result is null)
+        {
+            return new RegistrarResult(false, null, null, "Namecheap did not confirm the registration.");
+        }
 
-        var domainId = result?.Attribute("DomainID")?.Value ?? string.Empty;
-        var expiresAtRaw = result?.Attribute("ExpireDate")?.Value;
+        var expiresAtRaw = result.Attribute("ExpireDate")?.Value;
         DateTimeOffset expiresAt = expiresAtRaw is not null
-            ? DateTimeOffset.Parse(expiresAtRaw)
+            ? DateTimeOffset.Parse(expiresAtRaw, CultureInfo.InvariantCulture)
             : DateTimeOffset.UtcNow.AddYears(request.Years);
 
-        return new RegistrarResult(true, domainId, expiresAt, null);
+        return new RegistrarResult(true, ReferenceOrName(result, "DomainID", request.DomainName), expiresAt, null);
     }
 
     /// <inheritdoc/>
@@ -83,20 +94,24 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
         _ = sld;
         _ = tld;
 
-        var doc = await _client.ExecuteAsync("namecheap.domains.transfer.create", parameters, ct);
+        var (doc, refusal) = await ExecutePurchaseAsync("namecheap.domains.transfer.create", parameters, ct);
+        if (refusal is not null)
+        {
+            return refusal;
+        }
 
-        var ns = GetNamespace(doc);
-        var result = doc.Root
-            ?.Element(XName.Get("CommandResponse", ns))
-            ?.Element(XName.Get("DomainTransferCreateResult", ns));
+        var result = ConfirmedResult(doc!, "DomainTransferCreateResult", "Transfer");
+        if (result is null)
+        {
+            return new RegistrarResult(false, null, null, "Namecheap did not confirm the transfer.");
+        }
 
-        var transferId = result?.Attribute("TransferID")?.Value ?? string.Empty;
-        var expiresAtRaw = result?.Attribute("ExpireDate")?.Value;
+        var expiresAtRaw = result.Attribute("ExpireDate")?.Value;
         DateTimeOffset? expiresAt = expiresAtRaw is not null
-            ? DateTimeOffset.Parse(expiresAtRaw)
+            ? DateTimeOffset.Parse(expiresAtRaw, CultureInfo.InvariantCulture)
             : null;
 
-        return new RegistrarResult(true, transferId, expiresAt, null);
+        return new RegistrarResult(true, ReferenceOrName(result, "TransferID", request.DomainName), expiresAt, null);
     }
 
     /// <inheritdoc/>
@@ -116,17 +131,25 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ["Years"] = request.Years.ToString(),
         };
 
-        var doc = await _client.ExecuteAsync("namecheap.domains.renew", parameters, ct);
+        var (doc, refusal) = await ExecutePurchaseAsync("namecheap.domains.renew", parameters, ct);
+        if (refusal is not null)
+        {
+            return refusal;
+        }
 
-        var ns = GetNamespace(doc);
-        var result = doc.Root
-            ?.Element(XName.Get("CommandResponse", ns))
-            ?.Element(XName.Get("DomainRenewResult", ns));
+        var result = ConfirmedResult(doc!, "DomainRenewResult", "Renew");
+        if (result is null)
+        {
+            return new RegistrarResult(false, null, null, "Namecheap did not confirm the renewal.");
+        }
 
-        var expiresAtRaw = result?.Attribute("ExpireDate")?.Value;
+        // No expiry in the answer leaves it to the caller to extend the current one; now + years
+        // would cost an early renewal its remaining days. Invariant culture: the request's
+        // culture (ru, hy) must not decide how the registrar's date is read.
+        var expiresAtRaw = result.Attribute("ExpireDate")?.Value;
         DateTimeOffset? expiresAt = expiresAtRaw is not null
-            ? DateTimeOffset.Parse(expiresAtRaw)
-            : DateTimeOffset.UtcNow.AddYears(request.Years);
+            ? DateTimeOffset.Parse(expiresAtRaw, CultureInfo.InvariantCulture)
+            : null;
 
         return new RegistrarResult(true, request.RegistrarRef, expiresAt, null);
     }
@@ -408,10 +431,9 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     {
         if (!_client.IsConfigured)
         {
-            // Not "taken" — unknown. Every other method here answers an unconfigured
-            // registrar with a success no-op, but availability has no such answer: a
-            // storefront that reports every domain as taken sells nothing and looks
-            // like it is working. Surfacing it means an operator who forgot to
+            // Not "taken" — unknown. A change is refused with a failed result, but a yes/no
+            // question has no such answer: a storefront that reports every domain as taken
+            // sells nothing and looks like it is working. Surfacing it means an operator who forgot to
             // configure a registrar finds out, instead of quietly selling nothing.
             throw new InvalidOperationException(
                 "Domain availability cannot be checked because no registrar is configured. "
@@ -657,11 +679,11 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
         var expiresRaw = info.Attribute("ExpiredDate")?.Value;
 
         DateTimeOffset createdAt = createdRaw is not null
-            ? DateTimeOffset.Parse(createdRaw)
+            ? DateTimeOffset.Parse(createdRaw, CultureInfo.InvariantCulture)
             : DateTimeOffset.MinValue;
 
         DateTimeOffset expiresAt = expiresRaw is not null
-            ? DateTimeOffset.Parse(expiresRaw)
+            ? DateTimeOffset.Parse(expiresRaw, CultureInfo.InvariantCulture)
             : DateTimeOffset.MaxValue;
 
         return new WhoisInfo(registrar, registrant, createdAt, expiresAt);
@@ -672,7 +694,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     {
         if (!_client.IsConfigured)
         {
-            return new RegistrarResult(false, null, null, "Namecheap is not configured.");
+            return NotConfiguredResult;
         }
 
         var (sld, tld) = SplitDomain(domainName);
@@ -698,7 +720,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
         var domainId = info.Attribute("ID")?.Value ?? domainName;
 
         DateTimeOffset expiresAt = expiresRaw is not null
-            ? DateTimeOffset.Parse(expiresRaw)
+            ? DateTimeOffset.Parse(expiresRaw, CultureInfo.InvariantCulture)
             : DateTimeOffset.UtcNow.AddYears(1);
 
         return new RegistrarResult(true, domainId, expiresAt, null);
@@ -719,6 +741,12 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
         IList<DnsRecord> records,
         CancellationToken ct)
     {
+        // The one write behind adding, updating and deleting a record.
+        if (!_client.IsConfigured)
+        {
+            return NotConfiguredResult;
+        }
+
         var (sld, tld) = SplitDomain(domainName);
 
         var parameters = new Dictionary<string, string>
@@ -815,6 +843,65 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
 
         await _client.ExecuteAsync("namecheap.domains.dns.setEmailForwarding", parameters, ct);
         return new RegistrarResult(true, null, null, null);
+    }
+
+    /// <summary>
+    /// Runs a command that buys something. An <c>ERROR</c> answer is Namecheap refusing it, so
+    /// nothing was bought: it comes back as a refusal the caller can act on (refund, retry)
+    /// rather than an exception it would have to treat as an unknown outcome.
+    /// </summary>
+    /// <param name="command">The Namecheap command.</param>
+    /// <param name="parameters">The command parameters.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The response, or the refusal when Namecheap answered <c>ERROR</c>.</returns>
+    /// <exception cref="HttpRequestException">
+    /// Thrown on a transport failure or a non-success status: the outcome is unknown.
+    /// </exception>
+    private async Task<(XDocument? Doc, RegistrarResult? Refusal)> ExecutePurchaseAsync(
+        string command, Dictionary<string, string> parameters, CancellationToken ct)
+    {
+        try
+        {
+            return (await _client.ExecuteAsync(command, parameters, ct), null);
+        }
+        catch (RegistrarException ex)
+        {
+            return (null, new RegistrarResult(false, null, null, ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Finds a command's result element when it confirms the purchase. An OK envelope is not proof
+    /// on its own: only the confirming attribute set to <c>true</c> says it was bought.
+    /// </summary>
+    /// <param name="doc">The response.</param>
+    /// <param name="resultElement">The result element name (e.g. <c>DomainRenewResult</c>).</param>
+    /// <param name="confirmAttribute">The attribute that confirms it (e.g. <c>Renew</c>).</param>
+    /// <returns>The result element, or <see langword="null"/> when it is missing or unconfirmed.</returns>
+    private static XElement? ConfirmedResult(XDocument doc, string resultElement, string confirmAttribute)
+    {
+        var ns = GetNamespace(doc);
+        var result = doc.Root
+            ?.Element(XName.Get("CommandResponse", ns))
+            ?.Element(XName.Get(resultElement, ns));
+
+        return string.Equals(result?.Attribute(confirmAttribute)?.Value, "true", StringComparison.OrdinalIgnoreCase)
+            ? result
+            : null;
+    }
+
+    /// <summary>
+    /// Reads Namecheap's reference for a purchase, or the domain name when it gave none: every
+    /// later Namecheap call addresses the domain by its name, and activation refuses an empty reference.
+    /// </summary>
+    /// <param name="result">The confirmed result element.</param>
+    /// <param name="attribute">The reference attribute (e.g. <c>DomainID</c>).</param>
+    /// <param name="domainName">The domain name.</param>
+    /// <returns>The reference to store.</returns>
+    private static string ReferenceOrName(XElement result, string attribute, string domainName)
+    {
+        var reference = result.Attribute(attribute)?.Value;
+        return string.IsNullOrWhiteSpace(reference) ? domainName : reference;
     }
 
     /// <summary>

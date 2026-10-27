@@ -55,8 +55,8 @@ public sealed class SyncTldCostPricesHandler
     }
 
     /// <summary>
-    /// Syncs cost prices for all TLD configurations from their respective registrar providers,
-    /// then re-schedules the next run for tomorrow at 04:00 UTC.
+    /// Syncs cost prices for all TLD configurations from their respective registrar providers; the
+    /// scheduled run then re-schedules the next one for tomorrow at 04:00 UTC.
     /// Individual registrar or TLD failures are logged and swallowed so one error does not abort the batch.
     /// </summary>
     /// <param name="cmd">The sync TLD cost prices command.</param>
@@ -66,6 +66,33 @@ public sealed class SyncTldCostPricesHandler
     /// refuse the whole run; it is logged and the remaining groups still sync.
     /// </returns>
     public async Task<Result> HandleAsync(SyncTldCostPricesCommand cmd, CancellationToken ct)
+    {
+        _ = cmd;
+
+        await RecurringJob.RunAsync(
+            nameof(SyncTldCostPricesCommand), () => SyncAllAsync(ct), ScheduleNextAsync, _logger, ct);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Handles an admin's <see cref="SyncTldCostPricesNowCommand"/>: one pass, nothing scheduled.
+    /// Scheduling here would start a second daily chain beside the scheduled one, one per click.
+    /// </summary>
+    /// <param name="cmd">The sync-now command (marker, no payload).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Success once every registrar group has been attempted.</returns>
+    public async Task<Result> HandleAsync(SyncTldCostPricesNowCommand cmd, CancellationToken ct)
+    {
+        _ = cmd;
+
+        await SyncAllAsync(ct);
+        return Result.Success();
+    }
+
+    /// <summary>Syncs every registrar group; one group failing is logged and the rest still sync.</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task SyncAllAsync(CancellationToken ct)
     {
         var allConfigs = await _context.TldConfigs.OrderBy(x => x.SortOrder).ThenBy(x => x.Tld).ToListAsync(ct);
 
@@ -85,12 +112,15 @@ public sealed class SyncTldCostPricesHandler
             }
         }
 
-        // Re-schedule for tomorrow at 04:00 UTC.
+    }
+
+    /// <summary>Schedules the next daily run for tomorrow at 04:00 UTC.</summary>
+    /// <returns>A task.</returns>
+    private async Task ScheduleNextAsync()
+    {
         var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
         await _bus.ScheduleAsync(new SyncTldCostPricesCommand(), nextRun);
         _logger.LogDebug("SyncTldCostPrices: next run scheduled for {Next:u}.", nextRun);
-
-        return Result.Success();
     }
 
     /// <summary>

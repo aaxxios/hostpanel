@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
+using Innovayse.Hostpanel.Shared.Infrastructure;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -59,70 +60,80 @@ public sealed class ReconcileGatewayPaymentsCronHandler
     /// <param name="cmd">The cron command.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task that completes when all pending sessions were checked.</returns>
-    public async Task HandleAsync(ReconcileGatewayPaymentsCronCommand cmd, CancellationToken ct)
+    public Task HandleAsync(ReconcileGatewayPaymentsCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
 
-        var now = DateTimeOffset.UtcNow;
+        // The reconciler is the only safety net for the whole no-webhook payment design: if the
+        // query itself throws (DB blip, etc.), the next run must still be scheduled, or every
+        // unpaid gateway session past this point silently stops being checked until a restart.
+        // The next run counts from this one's start, so a long run does not push every later one back.
+        var startedAt = DateTimeOffset.UtcNow;
+        return RecurringJob.RunAsync(
+            nameof(ReconcileGatewayPaymentsCronCommand),
+            () => RunAsync(startedAt, ct),
+            () => ScheduleNextAsync(startedAt),
+            _logger,
+            ct);
+    }
 
-        try
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <param name="now">When this pass started.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task RunAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        var startedAfter = now.AddHours(-AbandonedAfterHours);
+        var startedBefore = now.AddMinutes(-SessionSettleMinutes);
+
+        // Was IInvoiceRepository.ListPendingGatewayPaymentsAsync -- read-only here; the
+        // dispatched command below reloads and mutates the invoice in its own scope.
+        var pending = await _context.Invoices
+            .AsNoTracking()
+            .Where(i => (i.Status == InvoiceStatus.Unpaid || i.Status == InvoiceStatus.Overdue)
+                && i.GatewayOrderId != null
+                && i.GatewayStartedAt > startedAfter
+                && i.GatewayStartedAt < startedBefore)
+            .ToListAsync(ct);
+
+        _logger.LogInformation("Gateway payment reconciliation: {Count} pending session(s).", pending.Count);
+
+        foreach (var invoice in pending)
         {
-            var startedAfter = now.AddHours(-AbandonedAfterHours);
-            var startedBefore = now.AddMinutes(-SessionSettleMinutes);
-
-            // Was IInvoiceRepository.ListPendingGatewayPaymentsAsync -- read-only here; the
-            // dispatched command below reloads and mutates the invoice in its own scope.
-            var pending = await _context.Invoices
-                .AsNoTracking()
-                .Where(i => (i.Status == InvoiceStatus.Unpaid || i.Status == InvoiceStatus.Overdue)
-                    && i.GatewayOrderId != null
-                    && i.GatewayStartedAt > startedAfter
-                    && i.GatewayStartedAt < startedBefore)
-                .ToListAsync(ct);
-
-            _logger.LogInformation("Gateway payment reconciliation: {Count} pending session(s).", pending.Count);
-
-            foreach (var invoice in pending)
+            try
             {
-                try
-                {
-                    var result = await _bus.InvokeAsync<Result<GatewayCompletionState>>(
-                        new CompleteGatewayPaymentCommand(invoice.Id), ct);
-                    if (result.IsFailure)
-                    {
-                        // One bad session must not starve the rest; it will be retried next run.
-                        // Logged rather than thrown: the failure already arrived as a Result, and
-                        // wrapping a code back into an exception just to reach the catch below
-                        // would be exception-as-control-flow for no gain.
-                        _logger.LogError(
-                            "Reconciliation failed for invoice {InvoiceId}: {Code}.", invoice.Id, result.ErrorCode);
-                        continue;
-                    }
-
-                    if (result.Value == GatewayCompletionState.Paid)
-                    {
-                        _logger.LogWarning(
-                            "Reconciler recovered a paid-but-unreturned payment for invoice {InvoiceId}.", invoice.Id);
-                    }
-                }
-                catch (Exception ex)
+                var result = await _bus.InvokeAsync<Result<GatewayCompletionState>>(
+                    new CompleteGatewayPaymentCommand(invoice.Id), ct);
+                if (result.IsFailure)
                 {
                     // One bad session must not starve the rest; it will be retried next run.
-                    _logger.LogError(ex, "Reconciliation failed for invoice {InvoiceId}.", invoice.Id);
+                    // Logged rather than thrown: the failure already arrived as a Result, and
+                    // wrapping a code back into an exception just to reach the catch below
+                    // would be exception-as-control-flow for no gain.
+                    _logger.LogError(
+                        "Reconciliation failed for invoice {InvoiceId}: {Code}.", invoice.Id, result.ErrorCode);
+                    continue;
+                }
+
+                if (result.Value == GatewayCompletionState.Paid)
+                {
+                    _logger.LogWarning(
+                        "Reconciler recovered a paid-but-unreturned payment for invoice {InvoiceId}.", invoice.Id);
                 }
             }
+            catch (Exception ex)
+            {
+                // One bad session must not starve the rest; it will be retried next run.
+                _logger.LogError(ex, "Reconciliation failed for invoice {InvoiceId}.", invoice.Id);
+            }
         }
-        catch (Exception ex)
-        {
-            // The reconciler is the only safety net for the whole no-webhook payment design —
-            // if the query itself throws (DB blip, etc.), the reschedule below in `finally`
-            // must still run, or every unpaid gateway session past this point silently stops
-            // being checked until the next API restart.
-            _logger.LogError(ex, "Gateway payment reconciliation run failed.");
-        }
-        finally
-        {
-            await _bus.ScheduleAsync(new ReconcileGatewayPaymentsCronCommand(), now.AddMinutes(IntervalMinutes));
-        }
+    }
+
+    /// <summary>Schedules the next pass, <see cref="IntervalMinutes"/> after this one started.</summary>
+    /// <param name="startedAt">When this pass started.</param>
+    /// <returns>A task.</returns>
+    private async Task ScheduleNextAsync(DateTimeOffset startedAt)
+    {
+        await _bus.ScheduleAsync(new ReconcileGatewayPaymentsCronCommand(), startedAt.AddMinutes(IntervalMinutes));
     }
 }

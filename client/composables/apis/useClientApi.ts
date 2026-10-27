@@ -15,6 +15,8 @@ import type { ClientEmailSummary } from '~/types/clientemailsummary'
 import type { TeamMember } from '~/types/teammember'
 import type { AccountContact } from '~/types/accountcontact'
 import type { AccountContactInput } from '~/types/accountcontactinput'
+import type { SshAccess } from '~/types/sshaccess'
+import type { SshKey } from '~/types/sshkey'
 import type { ClientUser } from '~/types/clientuser'
 import type { ClientService } from '~/types/clientservice'
 import type { ClientInvoice } from '~/types/clientinvoice'
@@ -240,6 +242,48 @@ export const useClientApi = () => {
     })
 
   /**
+   * Reads the SSH access summary of one hosting service.
+   *
+   * @param id - Service id.
+   * @returns State, hostname, port and connect command, all resolved by the backend.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const fetchSshAccess = (id: string): Promise<SshAccess> =>
+    apiFetch<SshAccess>(`/api/portal/client/services/${id}/ssh`)
+
+  /**
+   * Lists the SSH keys of one hosting service.
+   *
+   * @param id - Service id.
+   * @returns The keys, oldest first.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const fetchSshKeys = (id: string): Promise<SshKey[]> =>
+    apiFetch<SshKey[]>(`/api/portal/client/services/${id}/ssh/keys`)
+
+  /**
+   * Adds an ED25519 public key to one hosting service.
+   *
+   * @param id - Service id.
+   * @param body - Label and public key line. Nothing else is accepted.
+   * @returns The installed key.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const addSshKey = (id: string, body: { label: string, publicKey: string }): Promise<SshKey> =>
+    apiFetch<SshKey>(`/api/portal/client/services/${id}/ssh/keys`, { method: 'POST', body })
+
+  /**
+   * Revokes one SSH key of one hosting service.
+   *
+   * @param id - Service id.
+   * @param keyId - The key's public id.
+   * @returns Nothing useful; success is the absence of a throw.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const revokeSshKey = (id: string, keyId: string): Promise<unknown> =>
+    apiFetch(`/api/portal/client/services/${id}/ssh/keys/${encodeURIComponent(keyId)}`, { method: 'DELETE' })
+
+  /**
    * Requests cancellation of one hosting service.
    *
    * @param id - Service id.
@@ -301,6 +345,10 @@ export const useClientApi = () => {
     changeServicePassword,
     cancelService,
     fetchCpanelSsoUrl,
-    setUpService
+    setUpService,
+    fetchSshAccess,
+    fetchSshKeys,
+    addSshKey,
+    revokeSshKey
   }
 }

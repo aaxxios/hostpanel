@@ -38,7 +38,7 @@
 
 import type { H3Event } from 'h3'
 import { AuthMode } from '~/types/authmode'
-import { SessionCookie } from '~/constants/sessionCookie'
+import { resolveAccessToken } from '~/server/utils/portal-session'
 
 /** Statuses `/clients/me` answers with when the identity is not a customer account (no Client role, no client record). */
 const NOT_A_CUSTOMER_STATUSES: ReadonlySet<number> = new Set([403, 404])
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
   const authMode = config.authMode as string ?? AuthMode.Sso
 
   if (authMode === AuthMode.Sso) {
-    const accessToken = getCookie(event, SessionCookie.AuthToken)
+    const accessToken = await resolveAccessToken(event)
     if (!accessToken) {
       throw createError({ statusCode: 401 })
     }

@@ -11,7 +11,9 @@ import {
   REFRESH_TOKEN_MAX_AGE,
   SSO_FLOW_COOKIE_MAX_AGE,
   SSO_SILENT_COOKIE_MAX_AGE,
-  authCookieMaxAge
+  authCookieMaxAge,
+  readTokenExpiry,
+  readTokenPayload
 } from '~/server/utils/auth-cookie'
 
 describe('REFRESH_TOKEN_MAX_AGE', () => {
@@ -32,17 +34,37 @@ describe('the other cookie lifetimes', () => {
   })
 })
 
-describe('authCookieMaxAge', () => {
-  /**
-   * Builds an unsigned JWT-shaped string around a payload.
-   *
-   * @param payload - The claims.
-   * @returns The compact token.
-   */
-  const tokenWith = (payload: Record<string, unknown>): string => {
-    return `h.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.s`
-  }
+/**
+ * Builds an unsigned JWT-shaped string around a payload.
+ *
+ * @param payload - The claims.
+ * @returns The compact token.
+ */
+const tokenWith = (payload: Record<string, unknown>): string => {
+  return `h.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.s`
+}
 
+describe('readTokenPayload', () => {
+  it('decodes the claims of a JWT', () => {
+    expect(readTokenPayload(tokenWith({ sub: 'person-1', exp: 5 }))).toEqual({ sub: 'person-1', exp: 5 })
+  })
+
+  it('answers null for an opaque token, a broken payload or a payload that is not an object', () => {
+    expect(readTokenPayload('opaque')).toBeNull()
+    expect(readTokenPayload('h.%%%.s')).toBeNull()
+    expect(readTokenPayload(`h.${Buffer.from('42').toString('base64url')}.s`)).toBeNull()
+  })
+})
+
+describe('readTokenExpiry', () => {
+  it('reads a numeric exp and ignores anything else', () => {
+    expect(readTokenExpiry(tokenWith({ exp: 1234 }))).toBe(1234)
+    expect(readTokenExpiry(tokenWith({ exp: 'soon' }))).toBeNull()
+    expect(readTokenExpiry('opaque')).toBeNull()
+  })
+})
+
+describe('authCookieMaxAge', () => {
   it('equals exp minus now', () => {
     expect(authCookieMaxAge(tokenWith({ exp: 1_000_900 }), 1_000_000)).toBe(900)
   })

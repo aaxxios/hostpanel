@@ -254,6 +254,16 @@ public static class DependencyInjection
         // which is the point, since SSO mode will stop registering it.
         services.AddScoped<Innovayse.Hostpanel.Application.Common.Interfaces.ISubjectRoleStore, SubjectRoleStore>();
 
+        // The client portal keeps its sign-in sessions in Redis; a back-channel logout ends them too.
+        // In both modes, beside the mode's own revoker: the handler asks every registered one. With
+        // no Redis configured the portal keeps its sessions in its own memory and there is nothing to add.
+        services.AddOptions<PortalSessionOptions>()
+            .Bind(configuration.GetSection(PortalSessionOptions.SectionName));
+        if (!string.IsNullOrWhiteSpace(configuration[$"{PortalSessionOptions.SectionName}:{nameof(PortalSessionOptions.RedisConnection)}"]))
+        {
+            services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.ISessionRevoker, PortalSessionRevoker>();
+        }
+
         // One provider, never both. In SSO mode ASP.NET Identity is not registered at all,
         // so there is no code path that could write a person row even by accident — which
         // is what let a second, drifting copy of every user exist before.
@@ -415,6 +425,14 @@ public static class DependencyInjection
 
         // Provisioning provider factory — creates per-server providers (CWP7, cPanel, etc.)
         services.AddScoped<Innovayse.Hostpanel.Application.Common.Interfaces.IProvisioningProviderFactory, Innovayse.Hostpanel.Infrastructure.Provisioning.ProvisioningProviderFactory>();
+
+        // SSH key management: per-server providers resolved from Server.Module plus the server's
+        // own ServerSshSettings row. Nothing here names a server; every value is per row.
+        services.AddSingleton<Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.ISshAgentTransport, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.SshNetAgentTransport>();
+        services.AddScoped<Innovayse.Hostpanel.Application.Common.Interfaces.ISshKeyProviderFactory, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.SshKeyProviderFactory>();
+        services.AddScoped<
+            Innovayse.Hostpanel.Application.Common.Interfaces.ISshServiceContextResolver,
+            Innovayse.Hostpanel.Application.Services.Common.SshServiceContextResolver>();
 
         // Billing services
         services.AddScoped<IPaymentGateway, NullPaymentGateway>();
@@ -644,6 +662,7 @@ public static class DependencyInjection
         services.AddScoped<IRegistrarProvider, NameAmRegistrarProvider>();
         services.AddScoped<IRegistrarProviderFactory, RegistrarProviderFactory>();
         services.AddScoped<Innovayse.Hostpanel.Application.Domains.Registrar.RegistrarProviderResolver>();
+        services.AddScoped<Innovayse.Hostpanel.Application.Billing.Common.RenewalSettingsReader>();
         services.AddScoped<NameAmRegistrarProvider>();
         services.AddScoped<IIntegrationConnectionProbe, NameAmConnectionProbe>();
         services.AddScoped<NamecheapRegistrarProvider>();
