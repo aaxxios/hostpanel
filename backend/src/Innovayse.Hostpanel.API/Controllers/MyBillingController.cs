@@ -10,10 +10,12 @@ using Innovayse.Hostpanel.Application.Billing.Queries.GetMyInvoice;
 using Innovayse.Hostpanel.Application.Billing.Queries.GetMyInvoicePdf;
 using Innovayse.Hostpanel.Application.Billing.Queries.GetMyInvoices;
 using Innovayse.Hostpanel.Shared.Authorization;
+using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.Hostpanel.Shared.Controllers;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Wolverine;
 using Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment.Enums;
 using Innovayse.Hostpanel.Application.Billing.Extensions;
@@ -84,11 +86,13 @@ public sealed class MyBillingController : BaseApiController
     /// 200 with <c>invoice-{id}.pdf</c> as an attachment; 401; 404 with <c>INVOICE_NOT_FOUND</c> when
     /// it is not the caller's or is still a draft; 400 with <c>INVOICE_PDF_EXCEEDS_LIMIT</c> when it
     /// has more lines than <c>InvoicePdf:MaxLines</c>; 403 with <c>CLIENT_PERMISSION_DENIED</c> when
-    /// the user lacks <c>ViewPayInvoices</c>.
+    /// the user lacks <c>ViewPayInvoices</c>; 429 when the caller already has as many renders in
+    /// flight as the concurrency policy allows.
     /// </returns>
     [HttpGet("{id:int}/pdf")]
     [Authorize(Policy = Policies.Client)]
     [RequiresClientPermission(ClientPermission.ViewPayInvoices)]
+    [EnableRateLimiting(RateLimitPolicies.Concurrent)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPdfAsync(int id, CancellationToken ct)

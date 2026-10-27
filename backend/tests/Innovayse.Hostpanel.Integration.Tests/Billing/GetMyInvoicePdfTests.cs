@@ -1,7 +1,11 @@
 using System.Net;
+using System.Reflection;
 using FluentAssertions;
+using Innovayse.Hostpanel.API.Controllers;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Constants;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -42,6 +46,19 @@ public sealed class GetMyInvoicePdfTests(IntegrationTestFactory factory) : IClas
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Headers.CacheControl!.Private.Should().BeTrue();
         response.Headers.CacheControl.NoStore.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Rendering holds a thread and a few megabytes, so a client may only have a few in flight.
+    /// Limiting is switched off in the Testing environment, hence the attribute is checked rather
+    /// than provoked.
+    /// </summary>
+    [Fact]
+    public void GetMyPdf_IsLimitedByConcurrency()
+    {
+        var action = typeof(MyBillingController).GetMethod(nameof(MyBillingController.GetPdfAsync))!;
+
+        action.GetCustomAttribute<EnableRateLimitingAttribute>()!.PolicyName.Should().Be(RateLimitPolicies.Concurrent);
     }
 
     /// <summary>
