@@ -89,6 +89,9 @@ public interface IHostpanelDbContext
     /// <summary>Gets the invoice items table.</summary>
     public DbSet<InvoiceItem> InvoiceItems { get; }
 
+    /// <summary>Gets the sent renewal reminders.</summary>
+    public DbSet<InvoiceReminder> InvoiceReminders { get; }
+
     /// <summary>Gets the transactions table.</summary>
     public DbSet<Transaction> Transactions { get; }
 

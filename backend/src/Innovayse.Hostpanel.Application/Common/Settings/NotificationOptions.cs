@@ -33,7 +33,10 @@ public sealed class NotificationOptions
     /// </summary>
     /// <remarks>
     /// A separate setting from <see cref="AdminEmail"/> rather than a reuse of it, and
-    /// deliberately no fallback between the two. They answer different questions -- this one is
+    /// deliberately no fallback between the two, with one exception: renewal alerts
+    /// (<c>DomainRenewalFailedEvent</c>) go to <see cref="AdminEmail"/> and fall back to this
+    /// address, because <see cref="AdminEmail"/> is configured on no tier today and a failed domain
+    /// renewal must still reach a person. They answer different questions -- this one is
     /// the enquiry inbox a person reads and replies from, <see cref="AdminEmail"/> is where
     /// automated operational alerts land -- and operators routinely route them to different
     /// mailboxes. Falling back would also make a value that is configured on no tier the

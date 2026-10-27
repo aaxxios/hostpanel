@@ -219,6 +219,9 @@
 <data name="DOMAIN_PRODUCT_NOT_CONFIGURED" xml:space="preserve">
     <value>Այս պահին այս կայքում հնարավոր չէ պատվիրել դոմեններ։</value>
   </data>
+  <data name="RENEWAL_INVOICE_OPEN" xml:space="preserve">
+    <value>Այս դոմենը դեռ ներառված է ժամկետանց հաշվում այլ դիրքերի հետ միասին։ Նախ վճարեք այդ հաշիվը, ապա երկարաձգեք դոմենը։</value>
+  </data>
 <data name="DNS_RECORD_NOT_FOUND" xml:space="preserve">
     <value>Այս դոմենի վրա նման DNS գրառում չկա։</value>
   </data>

@@ -3,6 +3,7 @@ using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +54,35 @@ public sealed class SuspendServiceTests(IntegrationTestFactory factory) : IClass
         var response = await admin.PostAsync($"/api/services/{serviceId}/suspend", content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    /// <summary>A staff suspension through the admin route is recorded as <see cref="SuspensionSource.Manual"/>.</summary>
+    [Fact]
+    public async Task AdminSuspend_RecordsTheSuspensionAsManualAsync()
+    {
+        var (_, ownerClientId) = await ServicesTestSeeds.RegisterOwnerAsync(factory, "suspend-source-owner");
+        var serviceId = await ServicesTestSeeds.SeedPendingServiceAsync(factory, ownerClientId);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var seeded = await context.ClientServices.FirstOrDefaultAsync(
+                s => s.Id == serviceId, CancellationToken.None);
+            seeded!.Activate("panel-ref-source-test");
+            await uow.SaveChangesAsync(CancellationToken.None);
+        }
+
+        var admin = await ServicesTestSeeds.AdminClientAsync(factory);
+        var response = await admin.PostAsync($"/api/services/{serviceId}/suspend", content: null);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using var verifyScope = factory.Services.CreateScope();
+        var verifyContext = verifyScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var reloaded = await verifyContext.ClientServices.AsNoTracking()
+            .FirstAsync(s => s.Id == serviceId, CancellationToken.None);
+        reloaded.Status.Should().Be(ServiceStatus.Suspended);
+        reloaded.SuspensionSource.Should().Be(SuspensionSource.Manual);
     }
 
     /// <summary>Suspending without authentication is refused.</summary>

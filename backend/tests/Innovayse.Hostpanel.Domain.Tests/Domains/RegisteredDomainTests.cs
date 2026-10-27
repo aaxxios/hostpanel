@@ -411,4 +411,18 @@ public sealed class RegisteredDomainTests
         domain.RegisteredAt.Should().Be(registeredAt);
         domain.ExpiresAt.Should().Be(expiresAt);
     }
+
+    /// <summary>After a renewal the billing due date follows the registrar expiry.</summary>
+    [Fact]
+    public void SyncDueDateToExpiry_CopiesExpiry()
+    {
+        var domain = RegisteredDomain.Register(1, "a.test", DateTimeOffset.UtcNow.AddYears(1), autoRenew: true, whoisPrivacy: false);
+        domain.Activate("ref");
+        var renewedTo = DateTimeOffset.UtcNow.AddYears(3);
+        domain.Renew(renewedTo);
+
+        domain.SyncDueDateToExpiry();
+
+        domain.NextDueDate.Should().Be(renewedTo);
+    }
 }

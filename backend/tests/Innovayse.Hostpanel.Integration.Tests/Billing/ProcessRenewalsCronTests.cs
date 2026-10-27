@@ -2,12 +2,17 @@ using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Commands.ProcessRenewalsCron;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
+using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Clients;
+using Innovayse.Hostpanel.Domain.Domains;
+using Innovayse.Hostpanel.Domain.Domains.Enums;
+using Innovayse.Hostpanel.Domain.Notifications;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
@@ -15,14 +20,28 @@ using Xunit;
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
 /// <summary>
-/// <see cref="ProcessRenewalsCronHandler"/> against Postgres: which services its
-/// <c>NextRenewalAt &lt;= now</c> filter picks up, now that the query is inlined against
-/// <see cref="IHostpanelDbContext"/> instead of the deleted <c>IClientServiceRepository</c> (A6
-/// Task 3, ruling 2 -- this pins the dissolved <c>ListDueForRenewalAsync</c> method's semantics).
+/// <see cref="ProcessRenewalsCronHandler"/> against Postgres: the daily run first sweeps paid
+/// renewal lines that were never applied (and tells staff about registrar claims nobody resolved),
+/// then raises each due client's renewal invoices in its own message, so one client's failure does
+/// not stop the rest. Raising never extends a service.
+/// <para>
+/// Every test runs on a host whose domain-event gate is suppressed, so a payment saved while
+/// arranging does not reach the <c>RenewalPaymentReceivedHandler</c> fast path: only the cron can
+/// have applied a line.
+/// </para>
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ProcessRenewalsCronTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>The staff address the alert test reads mail back for.</summary>
+    private const string AdminEmail = "cron-ops@example.test";
+
+    /// <summary>Builds a host with a suppressed event gate and a fake SMTP relay.</summary>
+    /// <param name="sender">The fake relay the host's mail goes to.</param>
+    /// <returns>The isolated host.</returns>
+    private WebApplicationFactory<Program> Host(FakeEmailSender sender) =>
+        EventHandlerTestHost.WithFakeRelay(factory, sender, adminEmail: AdminEmail);
+
     /// <summary>Seeds a client, a product and one <see cref="ClientService"/> in the given state.</summary>
     /// <param name="context">The data context to seed through.</param>
     /// <param name="status">The service's status.</param>
@@ -74,90 +93,253 @@ public sealed class ProcessRenewalsCronTests(IntegrationTestFactory factory) : I
     }
 
     /// <summary>
-    /// An active service whose renewal date has already passed is invoiced and its renewal
-    /// date is advanced by one cycle.
+    /// Seeds a paid invoice with one domain renewal line whose registrar call was claimed at
+    /// <paramref name="claimedAt"/> and never confirmed.
+    /// </summary>
+    /// <param name="context">The data context to seed through.</param>
+    /// <param name="claimedAt">When the line was claimed.</param>
+    /// <returns>The domain and the invoice id.</returns>
+    private static async Task<(RegisteredDomain Domain, int InvoiceId)> SeedClaimedDomainLineAsync(
+        IHostpanelDbContext context, DateTimeOffset claimedAt)
+    {
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        context.Clients.Add(client);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        // Not auto-renewing, so the cron's raising half leaves this client alone.
+        var expiry = DateTimeOffset.UtcNow.AddDays(5);
+        var domain = RegisteredDomain.Register(client.Id, $"{Guid.NewGuid():N}.test", expiry, autoRenew: false, whoisPrivacy: false);
+        domain.Activate("REF-STUB");
+        context.Domains.Add(domain);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var invoice = Invoice.Create(client.Id, expiry, "USD");
+        invoice.AddDomainRenewal($"{domain.Name} renewal", 12m, domain.Id, expiry, expiry.AddYears(1));
+        context.Invoices.Add(invoice);
+        await context.SaveChangesAsync(CancellationToken.None);
+        invoice.MarkPaid("t");
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        // The claim ApplyPaidRenewals sets before the registrar call; written the way it writes it.
+        await context.InvoiceItems
+            .Where(l => l.InvoiceId == invoice.Id)
+            .ExecuteUpdateAsync(set => set.SetProperty(l => l.RenewalAttemptAt, (DateTimeOffset?)claimedAt), CancellationToken.None);
+        return (domain, invoice.Id);
+    }
+
+    /// <summary>Polls the fake relay for a staff mail naming <paramref name="domainName"/>.</summary>
+    /// <param name="sender">The fake relay.</param>
+    /// <param name="domainName">The domain the mail must name.</param>
+    /// <param name="attempts">How many 200 ms polls to make before giving up.</param>
+    /// <returns>The matching staff mails received.</returns>
+    private static async Task<IReadOnlyList<EmailMessage>> WaitForAlertAsync(FakeEmailSender sender, string domainName, int attempts = 50)
+    {
+        bool Matches(EmailMessage m) => m.To == AdminEmail && m.Subject.Contains(domainName, StringComparison.Ordinal);
+
+        for (var i = 0; i < attempts && !sender.Sent.Any(Matches); i++)
+        {
+            await Task.Delay(200);
+        }
+
+        return sender.Sent.Where(Matches).ToList();
+    }
+
+    /// <summary>The cron raises renewal invoices for every due client and does not advance the service.</summary>
+    [Fact]
+    public async Task Cron_RaisesForDueClient_WithoutAdvancing()
+    {
+        using var scope = Host(new FakeEmailSender()).Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var (firstClient, firstService, firstDue) = await SeedServiceAsync(context, ServiceStatus.Active, DateTimeOffset.UtcNow.AddDays(10));
+        var (secondClient, _, _) = await SeedServiceAsync(context, ServiceStatus.Active, DateTimeOffset.UtcNow.AddDays(3));
+        var (notDueClient, _, _) = await SeedServiceAsync(context, ServiceStatus.Active, DateTimeOffset.UtcNow.AddDays(30));
+        var (suspendedClient, _, _) = await SeedServiceAsync(context, ServiceStatus.Suspended, DateTimeOffset.UtcNow.AddDays(3));
+
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        await bus.InvokeAsync(new ProcessRenewalsCronCommand(), CancellationToken.None);
+
+        var invoice = await context.Invoices.AsNoTracking().Include(i => i.Items)
+            .SingleAsync(i => i.ClientId == firstClient, CancellationToken.None);
+        var line = invoice.Items.Should().ContainSingle().Subject;
+        line.ClientServiceId.Should().Be(firstService.Id);
+        line.RenewalPeriodStart.Should().Be(firstDue);
+        (await context.Invoices.AsNoTracking().CountAsync(i => i.ClientId == secondClient)).Should().Be(1);
+        (await context.Invoices.AsNoTracking().AnyAsync(i => i.ClientId == notDueClient)).Should().BeFalse();
+        (await context.Invoices.AsNoTracking().AnyAsync(i => i.ClientId == suspendedClient)).Should().BeFalse();
+
+        // AsNoTracking(): the seeded service is still tracked in this scope, and a tracked query
+        // would return its in-memory values rather than the row the cron's scope wrote.
+        var reloaded = await context.ClientServices.AsNoTracking().FirstAsync(s => s.Id == firstService.Id, CancellationToken.None);
+        reloaded.NextRenewalAt.Should().Be(firstDue);
+    }
+
+    /// <summary>The sweep applies a paid renewal line whose event was lost.</summary>
+    [Fact]
+    public async Task Cron_SweepsPaidUnappliedLines()
+    {
+        using var scope = Host(new FakeEmailSender()).Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+
+        // Outside the lead time, so the raising half has nothing to do for this client.
+        var (clientId, service, storedDue) = await SeedServiceAsync(context, ServiceStatus.Active, DateTimeOffset.UtcNow.AddDays(40));
+        var start = storedDue!.Value;
+        var invoice = Invoice.Create(clientId, start, "USD");
+        invoice.AddServiceRenewal("Starter renewal", 5m, service.Id, start, start.AddMonths(1));
+        context.Invoices.Add(invoice);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        // Paid with the event gate suppressed: the PaymentReceivedEvent is "lost", as after a crash.
+        invoice.MarkPaid("t");
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        await bus.InvokeAsync(new ProcessRenewalsCronCommand(), CancellationToken.None);
+
+        var reloaded = await context.ClientServices.AsNoTracking().FirstAsync(s => s.Id == service.Id, CancellationToken.None);
+        reloaded.NextRenewalAt.Should().Be(start.AddMonths(1));
+        var line = await context.InvoiceItems.AsNoTracking().SingleAsync(l => l.InvoiceId == invoice.Id, CancellationToken.None);
+        line.RenewalAppliedAt.Should().NotBeNull();
+    }
+
+    /// <summary>One client whose invoice cannot be saved does not stop the others.</summary>
+    /// <remarks>
+    /// Client A's domain is priced at 10^16 USD by its TLD (the sell prices are jsonb, so nothing
+    /// refuses that), which overflows the invoice's <c>numeric(18,4)</c> columns: A's own save throws
+    /// a genuine database error inside A's message, not a stub.
+    /// </remarks>
+    [Fact]
+    public async Task Cron_OneClientFailing_DoesNotStopOthers()
+    {
+        using var scope = Host(new FakeEmailSender()).Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var failing = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        context.Clients.Add(failing);
+        var tld = $"f{Guid.NewGuid():N}"[..12];
+        var config = TldConfig.Create(tld, RegistrarModule.NameAm, "USD", "USD", true, 0, []);
+        config.UpdateSellPrices([], [], new() { [1] = 10_000_000_000_000_000m });
+        context.TldConfigs.Add(config);
+        await context.SaveChangesAsync(CancellationToken.None);
+        var domain = RegisteredDomain.Register(failing.Id, $"example.{tld}", DateTimeOffset.UtcNow.AddDays(10), autoRenew: true, whoisPrivacy: false);
+        domain.Activate("REF-STUB");
+        context.Domains.Add(domain);
+        await context.SaveChangesAsync(CancellationToken.None);
+        var (healthyClient, healthyService, _) = await SeedServiceAsync(context, ServiceStatus.Active, DateTimeOffset.UtcNow.AddDays(10));
+
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var run = () => bus.InvokeAsync(new ProcessRenewalsCronCommand(), CancellationToken.None);
+
+        await run.Should().NotThrowAsync();
+        (await context.Invoices.AsNoTracking().AnyAsync(i => i.ClientId == failing.Id)).Should().BeFalse();
+        var invoice = await context.Invoices.AsNoTracking().Include(i => i.Items)
+            .SingleAsync(i => i.ClientId == healthyClient, CancellationToken.None);
+        invoice.Items.Should().ContainSingle(l => l.ClientServiceId == healthyService.Id);
+    }
+
+    /// <summary>
+    /// A renewal invoice left open with nothing owed (credit covered it, and the process stopped
+    /// between the two saves) is marked paid by the next run, with no ledger row, and its renewal
+    /// is then applied by the sweep.
     /// </summary>
     [Fact]
-    public async Task ActiveServiceDueForRenewal_IsInvoicedAndAdvanced()
+    public async Task Cron_PaysZeroTotalOpenRenewalInvoice()
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = Host(new FakeEmailSender()).Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var due = DateTimeOffset.UtcNow.AddDays(-1);
-        var (clientId, service, storedDue) = await SeedServiceAsync(context, ServiceStatus.Active, due);
+        var (clientId, service, storedDue) = await SeedServiceAsync(context, ServiceStatus.Active, DateTimeOffset.UtcNow.AddDays(40));
+        var start = storedDue!.Value;
+        var invoice = Invoice.Create(clientId, start, "USD");
+        invoice.AddServiceRenewal("Starter renewal", 5m, service.Id, start, start.AddMonths(1));
+        invoice.ApplyCredit(5m);
+        context.Invoices.Add(invoice);
+        await context.SaveChangesAsync(CancellationToken.None);
 
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         await bus.InvokeAsync(new ProcessRenewalsCronCommand(), CancellationToken.None);
 
-        var invoice = await context.Invoices
-            .Include(i => i.Items)
-            .FirstOrDefaultAsync(i => i.ClientId == clientId, CancellationToken.None);
-        invoice.Should().NotBeNull();
-        invoice!.Items.Should().ContainSingle(i => i.ClientServiceId == service.Id);
-
-        // AsNoTracking(): the seeded service is still tracked in this scope's context, and a
-        // tracked query returns the tracked instance's in-memory values rather than the row the
-        // cron's own scope just wrote -- this must read the database, not the identity map.
-        // Compared against storedDue.AddMonths(1), not due.AddMonths(1): Postgres truncates
-        // DateTimeOffset to microseconds, so the .NET tick-precision value the test computed
-        // never equals what a reload of either side of the arithmetic returns.
-        var reloaded = await context.ClientServices
-            .AsNoTracking()
-            .FirstAsync(s => s.Id == service.Id, CancellationToken.None);
-        reloaded.NextRenewalAt.Should().Be(storedDue!.Value.AddMonths(1));
+        var reloaded = await context.Invoices.AsNoTracking().FirstAsync(i => i.Id == invoice.Id, CancellationToken.None);
+        reloaded.Status.Should().Be(InvoiceStatus.Paid);
+        reloaded.GatewayTransactionId.Should().Be(PaymentMethodNames.CreditBalance);
+        (await context.Transactions.AsNoTracking().AnyAsync(t => t.InvoiceId == invoice.Id)).Should().BeFalse();
+        (await context.ClientServices.AsNoTracking().FirstAsync(s => s.Id == service.Id)).NextRenewalAt.Should().Be(start.AddMonths(1));
     }
 
-    /// <summary>A service with no renewal date recorded is never due, however old the service is.</summary>
+    /// <summary>
+    /// A domain line claimed for the registrar call but never confirmed is reported to staff once,
+    /// on the run where the claim turns one day old; an older claim is not reported again, and
+    /// the sweep never re-applies a claimed line.
+    /// </summary>
     [Fact]
-    public async Task ActiveServiceWithNoRenewalDate_IsNeverPickedUp()
+    public async Task Cron_AlertsStaleClaimOnce()
     {
-        using var scope = factory.Services.CreateScope();
+        var sender = new FakeEmailSender();
+        using var scope = Host(sender).Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var (clientId, _, _) = await SeedServiceAsync(context, ServiceStatus.Active, nextRenewalAt: null);
+        var now = DateTimeOffset.UtcNow;
+        var (fresh, freshInvoice) = await SeedClaimedDomainLineAsync(context, now.AddDays(-1).AddHours(-1));
+        var (old, _) = await SeedClaimedDomainLineAsync(context, now.AddDays(-3));
+        var (recent, _) = await SeedClaimedDomainLineAsync(context, now.AddHours(-2));
 
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         await bus.InvokeAsync(new ProcessRenewalsCronCommand(), CancellationToken.None);
 
-        var invoice = await context.Invoices.FirstOrDefaultAsync(i => i.ClientId == clientId, CancellationToken.None);
-        invoice.Should().BeNull();
+        var mails = await WaitForAlertAsync(sender, fresh.Name);
+        mails.Should().ContainSingle();
+        mails[0].Body.Should().Contain("not confirmed").And.Contain("verify at the registrar");
+        (await WaitForAlertAsync(sender, old.Name, attempts: 5)).Should().BeEmpty();
+        (await WaitForAlertAsync(sender, recent.Name, attempts: 5)).Should().BeEmpty();
+
+        // Still claimed and unapplied: the sweep leaves a claimed line to a person.
+        var line = await context.InvoiceItems.AsNoTracking().SingleAsync(l => l.InvoiceId == freshInvoice, CancellationToken.None);
+        line.RenewalAppliedAt.Should().BeNull();
+        line.RenewalAttemptAt.Should().NotBeNull();
+        (await context.Domains.AsNoTracking().FirstAsync(d => d.Id == fresh.Id)).ExpiresAt
+            .Should().BeCloseTo(now.AddDays(5), TimeSpan.FromMinutes(1));
     }
 
-    /// <summary>A service whose renewal date has not arrived yet is left untouched.</summary>
+    /// <summary>
+    /// The lift sweep: a service suspended for an overdue legacy invoice that has since been paid
+    /// (its payment event lost) is unsuspended; one still on an Overdue invoice, and one an operator
+    /// suspended, stay suspended.
+    /// </summary>
     [Fact]
-    public async Task ActiveServiceNotYetDue_IsNotInvoiced()
+    public async Task Cron_LiftsOverdueSuspensionWhoseInvoiceIsNoLongerOverdue()
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = Host(new FakeEmailSender()).Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var notYetDue = DateTimeOffset.UtcNow.AddDays(5);
-        var (clientId, service, storedNotYetDue) = await SeedServiceAsync(context, ServiceStatus.Active, notYetDue);
+
+        // No renewal date, so the raising half leaves these clients alone.
+        var (paidClient, paidService, _) = await SeedServiceAsync(context, ServiceStatus.Active, null);
+        var (overdueClient, overdueService, _) = await SeedServiceAsync(context, ServiceStatus.Active, null);
+        var (_, manualService, _) = await SeedServiceAsync(context, ServiceStatus.Active, null);
+        paidService.Suspend("Overdue invoice", hostingAlreadyUpdated: true, source: SuspensionSource.Overdue);
+        overdueService.Suspend("Overdue invoice", hostingAlreadyUpdated: true, source: SuspensionSource.Overdue);
+        manualService.Suspend("Abuse", hostingAlreadyUpdated: true);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        // Legacy lines: a service link, no renewal period.
+        var paid = Invoice.Create(paidClient, DateTimeOffset.UtcNow.AddDays(-10), "USD");
+        paid.AddItem("Hosting", 5m, 1, paidService.Id);
+        var overdue = Invoice.Create(overdueClient, DateTimeOffset.UtcNow.AddDays(-10), "USD");
+        overdue.AddItem("Hosting", 5m, 1, overdueService.Id);
+        context.Invoices.AddRange(paid, overdue);
+        await context.SaveChangesAsync(CancellationToken.None);
+        paid.MarkOverdue();
+        overdue.MarkOverdue();
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        // Paid with the event gate suppressed: the payment path's unsuspend never ran.
+        paid.MarkPaid("t");
+        await context.SaveChangesAsync(CancellationToken.None);
 
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         await bus.InvokeAsync(new ProcessRenewalsCronCommand(), CancellationToken.None);
 
-        var invoice = await context.Invoices.FirstOrDefaultAsync(i => i.ClientId == clientId, CancellationToken.None);
-        invoice.Should().BeNull();
-
-        // AsNoTracking(): see the note in ActiveServiceDueForRenewal_IsInvoicedAndAdvanced.
-        // Compared against storedNotYetDue, not notYetDue: see the same note about microsecond
-        // truncation.
-        var reloaded = await context.ClientServices
-            .AsNoTracking()
-            .FirstAsync(s => s.Id == service.Id, CancellationToken.None);
-        reloaded.NextRenewalAt.Should().Be(storedNotYetDue);
-    }
-
-    /// <summary>A suspended service with a past renewal date is not renewed -- only Active counts.</summary>
-    [Fact]
-    public async Task SuspendedServiceDueForRenewal_IsNotInvoiced()
-    {
-        using var scope = factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var due = DateTimeOffset.UtcNow.AddDays(-1);
-        var (clientId, _, _) = await SeedServiceAsync(context, ServiceStatus.Suspended, due);
-
-        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        await bus.InvokeAsync(new ProcessRenewalsCronCommand(), CancellationToken.None);
-
-        var invoice = await context.Invoices.FirstOrDefaultAsync(i => i.ClientId == clientId, CancellationToken.None);
-        invoice.Should().BeNull();
+        var lifted = await context.ClientServices.AsNoTracking().FirstAsync(s => s.Id == paidService.Id, CancellationToken.None);
+        lifted.Status.Should().Be(ServiceStatus.Active);
+        lifted.SuspensionSource.Should().BeNull();
+        (await context.ClientServices.AsNoTracking().FirstAsync(s => s.Id == overdueService.Id, CancellationToken.None))
+            .Status.Should().Be(ServiceStatus.Suspended);
+        (await context.ClientServices.AsNoTracking().FirstAsync(s => s.Id == manualService.Id, CancellationToken.None))
+            .Status.Should().Be(ServiceStatus.Suspended);
     }
 }

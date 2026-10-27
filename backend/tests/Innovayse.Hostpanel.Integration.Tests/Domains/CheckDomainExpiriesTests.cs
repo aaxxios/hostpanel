@@ -78,4 +78,32 @@ public sealed class CheckDomainExpiriesTests(IntegrationTestFactory factory) : I
             .FirstAsync(d => d.Id == domain.Id, CancellationToken.None);
         Assert.Contains(reloaded.Reminders, r => r.ReminderType == "30 Days Before Expiry");
     }
+
+    /// <summary>
+    /// An auto-renewing domain expiring within the warning window gets no reminder row: it is
+    /// renewed through an invoice that carries its own reminders, and a second "expiring" mail
+    /// would contradict them. Fails if the <c>AutoRenew</c> skip is removed from the warning loop.
+    /// </summary>
+    [Fact]
+    public async Task CheckDomainExpiries_SendsNoWarningForAnAutoRenewDomainAsync()
+    {
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
+        var domain = RegisteredDomain.Register(
+            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow.AddDays(5), autoRenew: true, whoisPrivacy: false);
+        domain.Activate("REF-5");
+        context.Domains.Add(domain);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        await bus.InvokeAsync(new CheckDomainExpiriesCommand(), CancellationToken.None);
+
+        var reloaded = await context.Domains
+            .Include(d => d.Reminders)
+            .AsNoTracking()
+            .FirstAsync(d => d.Id == domain.Id, CancellationToken.None);
+        Assert.Empty(reloaded.Reminders);
+    }
 }

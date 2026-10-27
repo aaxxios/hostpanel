@@ -108,6 +108,17 @@ public sealed class DomainRenewedHandler
                 return;
             }
 
+            // Only lift what expiry caused: a manual or overdue suspension is not this renewal's to undo.
+            if (service.SuspensionSource != SuspensionSource.DomainExpired)
+            {
+                _logger.LogInformation(
+                    "Linked service {ServiceId} for domain {DomainId} was suspended by {Source}, not by expiry. Skipping unsuspend.",
+                    linkedServiceId,
+                    domainId,
+                    service.SuspensionSource);
+                return;
+            }
+
             var outcome = await _bus.InvokeAsync<Result>(new UnsuspendServiceCommand(linkedServiceId), ct);
 
             if (outcome.IsSuccess)

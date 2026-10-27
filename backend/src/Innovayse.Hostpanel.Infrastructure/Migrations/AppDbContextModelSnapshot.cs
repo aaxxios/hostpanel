@@ -297,6 +297,21 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("RegisteredDomainId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("RenewalAppliedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("RenewalAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("RenewalPeriodEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("RenewalPeriodStart")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("numeric(18,4)");
 
@@ -306,7 +321,40 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("InvoiceId");
 
+                    b.HasIndex("RenewalAppliedAt")
+                        .HasDatabaseName("IX_InvoiceItems_PendingRenewal")
+                        .HasFilter("\"RenewalAppliedAt\" IS NULL AND \"RenewalPeriodStart\" IS NOT NULL");
+
+                    b.HasIndex("ClientServiceId", "RenewalPeriodStart");
+
+                    b.HasIndex("RegisteredDomainId", "RenewalPeriodStart");
+
                     b.ToTable("InvoiceItems");
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.InvoiceReminder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DaysBefore")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId", "DaysBefore")
+                        .IsUnique();
+
+                    b.ToTable("InvoiceReminders");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.InvoiceTransaction", b =>
@@ -2450,6 +2498,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<bool>("AutoRenew")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("AutoTerminateEndOfCycle")
                         .HasColumnType("boolean");
 
@@ -2526,6 +2579,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset?>("SuspendedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SuspensionSource")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTimeOffset?>("TerminatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -3447,6 +3504,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                 {
                     b.HasOne("Innovayse.Hostpanel.Domain.Billing.Invoice", null)
                         .WithMany("Items")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.InvoiceReminder", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Billing.Invoice", null)
+                        .WithMany()
                         .HasForeignKey("InvoiceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

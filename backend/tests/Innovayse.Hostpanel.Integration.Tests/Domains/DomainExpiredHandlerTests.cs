@@ -54,5 +54,6 @@ public sealed class DomainExpiredHandlerTests(IntegrationTestFactory factory) : 
         var reloaded = await context.ClientServices.AsNoTracking()
             .FirstAsync(s => s.Id == service.Id, CancellationToken.None);
         Assert.Equal(ServiceStatus.Suspended, reloaded.Status);
+        Assert.Equal(SuspensionSource.DomainExpired, reloaded.SuspensionSource);
     }
 }

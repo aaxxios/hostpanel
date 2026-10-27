@@ -44,6 +44,9 @@ public static class StatusMapping
             // Exact row: the name says "permission", not one of the FORBIDDEN / ACCESS_DENIED tokens the
             // generic arms below catch, and a missing grant is a refusal (403), never a malformed request.
             "CLIENT_PERMISSION_DENIED" => (403, "Forbidden"),
+            // Exact row: an unpaid invoice stands in the way, a state conflict, and the name carries no
+            // CONFLICT / ALREADY token for the generic arms to catch.
+            "RENEWAL_INVOICE_OPEN" => (409, "Conflict"),
             var code when code.Contains("UNAUTHORIZED", StringComparison.Ordinal) => (401, "Unauthorized"),
             var code when code.Contains("FORBIDDEN", StringComparison.Ordinal) => (403, "Forbidden"),
             var code when code.Contains("ACCESS_DENIED", StringComparison.Ordinal) => (403, "Forbidden"),

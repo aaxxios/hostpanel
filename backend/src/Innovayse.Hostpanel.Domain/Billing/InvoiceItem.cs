@@ -31,13 +31,44 @@ public sealed class InvoiceItem : BaseEntity
     /// separately for exactly this reason.
     /// </para>
     /// <para>
-    /// Known gap: <c>UpdateInvoiceItemsHandler</c> replaces an invoice's lines wholesale rather
-    /// than editing them, so an admin who edits the lines of a linked invoice drops the links.
-    /// That path predates this column and is left alone here rather than reworked as a side
-    /// effect; the result is a lost link, never a wrong one.
+    /// <c>UpdateInvoiceItemsHandler</c> edits an existing line in place (<c>Invoice.UpdateItem</c>
+    /// changes description, price and quantity only), so an admin edit keeps this link and the
+    /// renewal columns; a line deleted there takes its link with it, and a line added there carries
+    /// none.
     /// </para>
     /// </remarks>
     public int? ClientServiceId { get; private set; }
+
+    /// <summary>
+    /// Gets the id of the registered domain this line charges for, or <see langword="null"/>.
+    /// Index only, no FK, for the same reason as <see cref="ClientServiceId"/>: the invoice is a
+    /// financial record that must outlive the domain row.
+    /// </summary>
+    public int? RegisteredDomainId { get; private set; }
+
+    /// <summary>Gets the start of the period this renewal line pays for, or <see langword="null"/> when it is not a renewal.</summary>
+    public DateTimeOffset? RenewalPeriodStart { get; private set; }
+
+    /// <summary>Gets the end of the period this renewal line pays for, or <see langword="null"/> when it is not a renewal.</summary>
+    public DateTimeOffset? RenewalPeriodEnd { get; private set; }
+
+    /// <summary>
+    /// Gets when the paid period was applied to its service or domain, or <see langword="null"/>
+    /// while it is not. This marker, not the payment event, is what makes a renewal happen exactly once.
+    /// </summary>
+    public DateTimeOffset? RenewalAppliedAt { get; private set; }
+
+    /// <summary>
+    /// Gets when a runner claimed this line before an outward registrar call, or
+    /// <see langword="null"/> while nobody has. Set atomically (a conditional update that only wins
+    /// while both this and <see cref="RenewalAppliedAt"/> are null) so two runners can never both
+    /// renew the same paid period at the registrar. Cleared again only when the registrar cleanly
+    /// refused; after an unknown outcome it stays set and the line waits for a person.
+    /// </summary>
+    public DateTimeOffset? RenewalAttemptAt { get; private set; }
+
+    /// <summary>Gets whether this line is a renewal (it carries a period). Lines written before renewals were tracked never are.</summary>
+    public bool IsRenewal => RenewalPeriodStart is not null;
 
     /// <summary>Gets the human-readable description of the charge.</summary>
     public string Description { get; private set; } = string.Empty;
@@ -89,6 +120,54 @@ public sealed class InvoiceItem : BaseEntity
             Amount = unitPrice * quantity,
             ClientServiceId = clientServiceId,
         };
+    }
+
+    /// <summary>Creates a renewal line for exactly one service or one domain over one period.</summary>
+    /// <param name="description">Human-readable charge description.</param>
+    /// <param name="amount">Price of the period (≥ 0).</param>
+    /// <param name="clientServiceId">The service renewed, or <see langword="null"/> for a domain line.</param>
+    /// <param name="registeredDomainId">The domain renewed, or <see langword="null"/> for a service line.</param>
+    /// <param name="start">Period start.</param>
+    /// <param name="end">Period end; must be after <paramref name="start"/>.</param>
+    /// <returns>The new line.</returns>
+    /// <exception cref="ArgumentException">Not exactly one target, or an empty period.</exception>
+    internal static InvoiceItem CreateRenewal(
+        string description, decimal amount, int? clientServiceId, int? registeredDomainId,
+        DateTimeOffset start, DateTimeOffset end)
+    {
+        if ((clientServiceId is null) == (registeredDomainId is null))
+        {
+            throw new ArgumentException("A renewal line renews exactly one service or one domain.");
+        }
+
+        if (end <= start)
+        {
+            throw new ArgumentException("A renewal period must end after it starts.", nameof(end));
+        }
+
+        var item = Create(description, amount, 1, clientServiceId);
+        item.RegisteredDomainId = registeredDomainId;
+        item.RenewalPeriodStart = start;
+        item.RenewalPeriodEnd = end;
+        return item;
+    }
+
+    /// <summary>Records that the paid period has been applied to its service or domain.</summary>
+    /// <param name="at">When it was applied (UTC).</param>
+    /// <exception cref="InvalidOperationException">The line is not a renewal, or was already applied.</exception>
+    public void MarkRenewalApplied(DateTimeOffset at)
+    {
+        if (!IsRenewal)
+        {
+            throw new InvalidOperationException("Only a renewal line can be applied.");
+        }
+
+        if (RenewalAppliedAt is not null)
+        {
+            throw new InvalidOperationException("This renewal line was already applied.");
+        }
+
+        RenewalAppliedAt = at;
     }
 
     /// <summary>

@@ -6,6 +6,7 @@ using Innovayse.Hostpanel.Application.Domains.Extensions;
 using Innovayse.Hostpanel.Application.Notifications.Commands.SendEmail;
 using Innovayse.Hostpanel.Application.Services.Commands.SuspendService;
 using Innovayse.Hostpanel.Domain.Domains.Events;
+using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -65,7 +66,7 @@ public sealed class DomainExpiredHandler
             try
             {
                 var outcome = await _bus.InvokeAsync<Result>(
-                    new SuspendServiceCommand(evt.LinkedServiceId.Value), ct);
+                    new SuspendServiceCommand(evt.LinkedServiceId.Value, SuspensionSource.DomainExpired), ct);
 
                 if (outcome.IsSuccess)
                 {

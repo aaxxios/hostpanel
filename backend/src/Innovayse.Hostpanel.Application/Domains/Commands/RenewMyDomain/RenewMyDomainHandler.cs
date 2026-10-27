@@ -4,6 +4,9 @@ using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
 using Innovayse.Hostpanel.Application.Orders.Commands.PlaceOrder;
 using Innovayse.Hostpanel.Application.Orders.Common;
+using Innovayse.Hostpanel.Domain.Billing;
+using Innovayse.Hostpanel.Domain.Billing.Enums;
+using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Orders;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
@@ -101,8 +104,9 @@ public sealed class RenewMyDomainHandler
     /// <returns>
     /// The new order and the invoice raised for it, for the client to pay; <c>DOMAIN_NOT_FOUND</c>
     /// when the domain is not the caller's, when no such domain exists, or when the caller has no
-    /// client record; or <c>DOMAIN_PRODUCT_NOT_CONFIGURED</c> when this installation sells no
-    /// domain product.
+    /// client record; <c>DOMAIN_PRODUCT_NOT_CONFIGURED</c> when this installation sells no
+    /// domain product; or <c>RENEWAL_INVOICE_OPEN</c> when an overdue renewal invoice bills this
+    /// domain together with something else and has to be paid first.
     /// </returns>
     /// <exception cref="UnauthorizedAccessException">
     /// Thrown when the request carries no subject. Deliberately not allowed to fall through to
@@ -138,6 +142,17 @@ public sealed class RenewMyDomainHandler
             return Result<PlaceOrderResultDto>.FailureCode(domainProductOutcome.ErrorCode!);
         }
 
+        // An auto-renewal invoice already open for this domain would bill the same year twice once
+        // this order is paid, so the domain is taken off it first -- all in one save, before the
+        // order is placed. If PlaceOrder then fails the domain stays off the old invoice; accepted:
+        // a cancelled or removed line does not block its period, so the next daily renewal run
+        // raises a fresh one and the client is never left without a renewal path.
+        var released = await ReleaseOpenRenewalsAsync(domain.Id, ct);
+        if (released.IsFailure)
+        {
+            return Result<PlaceOrderResultDto>.FailureCode(released.ErrorCode!);
+        }
+
         _logger.LogInformation(
             "Placing a domain renewal order for domain {DomainId} on behalf of subject {UserId}.",
             cmd.DomainId, userId);
@@ -166,6 +181,90 @@ public sealed class RenewMyDomainHandler
                         Years: cmd.Years),
                 ]),
             ct);
+    }
+
+    /// <summary>
+    /// Takes the domain off every open auto-renewal invoice that carries it, returning any credit
+    /// those invoices had applied to the client's balance. An invoice that bills only this domain is
+    /// cancelled. One that also bills something else keeps the rest: while it is still editable
+    /// (Draft or Unpaid) only this domain's line is removed; once it is not (Overdue), it cannot be
+    /// split and the renew order is refused with <c>RENEWAL_INVOICE_OPEN</c> before anything changes.
+    /// Paid invoices are never touched (<see cref="Invoice.Cancel"/> refuses them, and a paid period
+    /// is the ApplyPaidRenewals path's).
+    /// </summary>
+    /// <param name="domainId">The domain being renewed by order.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Success, or <c>RENEWAL_INVOICE_OPEN</c> when an Overdue invoice also bills something else.</returns>
+    private async Task<Result> ReleaseOpenRenewalsAsync(int domainId, CancellationToken ct)
+    {
+        var openRenewals = await _context.Invoices
+            .Include(i => i.Items)
+            .Where(i => (i.Status == InvoiceStatus.Draft || i.Status == InvoiceStatus.Unpaid || i.Status == InvoiceStatus.Overdue)
+                        && i.Items.Any(l => l.RegisteredDomainId == domainId && l.RenewalPeriodStart != null))
+            .ToListAsync(ct);
+        if (openRenewals.Count == 0)
+        {
+            return Result.Success();
+        }
+
+        bool IsThisDomainsRenewal(InvoiceItem l) => l.RegisteredDomainId == domainId && l.RenewalPeriodStart != null;
+
+        // Decided for every invoice before anything is changed, so a refusal leaves all of them as they were.
+        var mixedLocked = openRenewals.FirstOrDefault(i =>
+            !i.Items.All(IsThisDomainsRenewal) && i.Status is not (InvoiceStatus.Draft or InvoiceStatus.Unpaid));
+        if (mixedLocked is not null)
+        {
+            _logger.LogInformation(
+                "Renew order for domain {DomainId} refused: overdue invoice {InvoiceId} also bills other items.", domainId, mixedLocked.Id);
+            return Result.FailureCode(HostpanelErrorCodes.RENEWAL_INVOICE_OPEN);
+        }
+
+        // Credit goes back to the balance of the client each invoice was raised for.
+        var clientIds = openRenewals.Select(i => i.ClientId).Distinct().ToList();
+        var clients = await _context.Clients
+            .Where(c => clientIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, ct);
+        foreach (var open in openRenewals)
+        {
+            var client = clients[open.ClientId];
+            if (open.Items.All(IsThisDomainsRenewal))
+            {
+                // Credit first: a cancelled invoice keeps its Credit column, and money parked on a
+                // cancelled invoice is money the client has lost.
+                ReturnCredit(client, open, open.Credit);
+                open.Cancel();
+                continue;
+            }
+
+            foreach (var line in open.Items.Where(IsThisDomainsRenewal).ToList())
+            {
+                open.RemoveItem(line.Id);
+            }
+
+            // The credit may now exceed what is left to pay; the excess goes back, never a negative total.
+            if (open.Total < 0)
+            {
+                ReturnCredit(client, open, -open.Total);
+            }
+        }
+
+        await _context.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+
+    /// <summary>Moves <paramref name="amount"/> of applied credit from an invoice back to the client's balance.</summary>
+    /// <param name="client">The invoice's client (tracked).</param>
+    /// <param name="invoice">The invoice (tracked).</param>
+    /// <param name="amount">How much to move; nothing happens when it is not positive.</param>
+    private static void ReturnCredit(Client client, Invoice invoice, decimal amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        invoice.RemoveCredit(amount);
+        client.AddCredit(amount);
     }
 
     /// <summary>

@@ -108,7 +108,9 @@ public sealed class CheckDomainExpiriesHandler
 
         foreach (var domain in expiringDomains)
         {
-            if (domain.Status != DomainStatus.Active || domain.ExpiresAt <= now)
+            if (domain.Status != DomainStatus.Active || domain.ExpiresAt <= now
+                // Auto-renewing domains get the renewal invoice's own reminders; a second "expiring" mail would contradict them.
+                || domain.AutoRenew)
             {
                 continue;
             }

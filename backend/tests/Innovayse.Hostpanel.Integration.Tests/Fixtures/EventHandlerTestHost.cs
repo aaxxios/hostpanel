@@ -25,15 +25,22 @@ public static class EventHandlerTestHost
     /// <param name="factory">The shared API + PostgreSQL host to derive from.</param>
     /// <param name="emailSender">The fake relay the host's send-email pipeline will use.</param>
     /// <param name="adminEmail">The platform admin address to configure, or <c>null</c> to leave it unset.</param>
+    /// <param name="contactEmail">The contact-form inbox to configure, or <c>null</c> to leave it unset.</param>
     /// <returns>The isolated host.</returns>
     public static WebApplicationFactory<Program> WithFakeRelay(
-        IntegrationTestFactory factory, FakeEmailSender emailSender, string? adminEmail = null) =>
+        IntegrationTestFactory factory, FakeEmailSender emailSender, string? adminEmail = null, string? contactEmail = null) =>
         factory.WithWebHostBuilder(builder =>
         {
             if (adminEmail is not null)
             {
                 builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                     new Dictionary<string, string?> { [$"{NotificationOptions.SectionName}:AdminEmail"] = adminEmail }));
+            }
+
+            if (contactEmail is not null)
+            {
+                builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
+                    new Dictionary<string, string?> { [$"{NotificationOptions.SectionName}:ContactEmail"] = contactEmail }));
             }
 
             builder.ConfigureTestServices(services =>

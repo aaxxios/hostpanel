@@ -22,6 +22,28 @@ public sealed class InvoiceItemConfiguration : IEntityTypeConfiguration<InvoiceI
         builder.Property(x => x.ClientServiceId);
         builder.HasIndex(x => x.ClientServiceId);
 
+        // Same reasoning as ClientServiceId: an index for "this domain's renewals", no FK, because
+        // the invoice must survive the domain row.
+        builder.Property(x => x.RegisteredDomainId);
+        builder.Property(x => x.RenewalPeriodStart);
+        builder.Property(x => x.RenewalPeriodEnd);
+        builder.Property(x => x.RenewalAppliedAt);
+
+        // The claim taken before a registrar call; written only by a conditional ExecuteUpdate.
+        builder.Property(x => x.RenewalAttemptAt);
+
+        // The duplicate guard asks "is this period already invoiced" per target.
+        builder.HasIndex(x => new { x.ClientServiceId, x.RenewalPeriodStart });
+        builder.HasIndex(x => new { x.RegisteredDomainId, x.RenewalPeriodStart });
+
+        // The daily sweep reads only paid-but-unapplied renewal lines; a partial index keeps that
+        // read off every line ever billed.
+        builder.HasIndex(x => x.RenewalAppliedAt)
+            .HasDatabaseName("IX_InvoiceItems_PendingRenewal")
+            .HasFilter("\"RenewalAppliedAt\" IS NULL AND \"RenewalPeriodStart\" IS NOT NULL");
+
+        builder.Ignore(x => x.IsRenewal);
+
         builder.Property(x => x.Description).HasMaxLength(500).IsRequired();
         builder.Property(x => x.UnitPrice).HasColumnType("numeric(18,4)").IsRequired();
         builder.Property(x => x.Quantity).IsRequired();

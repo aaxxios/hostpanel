@@ -23,6 +23,7 @@ public sealed class StatusMappingTests
     [InlineData(HostpanelErrorCodes.INVOICE_NOT_FOUND, 404)]
     [InlineData(HostpanelErrorCodes.CLIENT_USER_NOT_LINKED, 404)]
     [InlineData("SKU_ALREADY_EXISTS", 409)]
+    [InlineData(HostpanelErrorCodes.RENEWAL_INVOICE_OPEN, 409)]
     [InlineData("PAYLOAD_TOO_LARGE", 413)]
     [InlineData("RATE_LIMITED", 429)]
     [InlineData("ACCOUNT_LOCKED", 423)]

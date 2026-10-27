@@ -8,6 +8,7 @@ using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
+using Innovayse.Hostpanel.Domain.Services.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 namespace Innovayse.Hostpanel.Application.Migration.Importers;
@@ -141,7 +142,7 @@ public sealed class ServicesImporter(
             case SourceServiceStatuses.Suspended:
             case SourceServiceStatuses.SuspendedByAdmin:
                 svc.Activate("migrated");
-                svc.Suspend();
+                svc.Suspend(source: SuspensionSource.Other);
                 break;
             case SourceServiceStatuses.Terminated:
             case SourceServiceStatuses.Cancelled:

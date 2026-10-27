@@ -330,6 +330,13 @@ public sealed class RegisteredDomain : BaseEntity, IAggregateRoot
     }
 
     /// <summary>
+    /// Makes the billing due date follow the registrar expiry after a paid renewal. Nothing else
+    /// moved <see cref="NextDueDate"/> after registration, so renewed and transferred domains showed
+    /// a stale date.
+    /// </summary>
+    public void SyncDueDateToExpiry() => NextDueDate = ExpiresAt;
+
+    /// <summary>
     /// Enables or disables automatic renewal for this domain.
     /// </summary>
     /// <param name="value">The desired auto-renew flag value.</param>

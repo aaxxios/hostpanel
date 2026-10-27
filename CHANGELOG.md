@@ -16,6 +16,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Recurring billing engine: a renewal invoice is raised 14 days before a service or domain falls due (`billing.renewal.invoice_days_before`), reminders go out 7, 3 and 1 days before (`billing.renewal.reminder_days`), and paying the invoice is what extends the service or renews the domain, exactly once. Credit is applied to renewal invoices automatically (`billing.renewal.auto_apply_credit`). The next period is raised only after the previous one is paid, at most once per daily run; a period that already started (a back-dated renewal date) gets the normal payment window, due 14 days after it is raised, instead of being born overdue.
+- Overdue suspension: any overdue invoice -- renewal or not -- gets a grace period after its due date (`billing.renewal.suspend_after_overdue_days`, default 3), then only the services on its lines are suspended. An overdue invoice with no service lines now suspends nothing (it used to suspend every service of the client). Paying lifts a suspension made for an overdue invoice once no other overdue invoice covers the service, and the daily renewal run lifts any that were missed; a suspension made by an operator, or for an expired domain, is never lifted by a payment.
+- An operator who unsuspends a service that is still on an invoice overdue past the grace sees it suspended again at the next 09:00 run, unless the service has `OverrideAutoSuspend` set or a `SuspendUntil` date in the future.
+- Cancelling a renewal invoice does not stop the renewal: the period is invoiced again on the next daily run while it is due. To stop a service renewing, set `AutoTerminateEndOfCycle` or open a cancellation request until the admin auto-renew toggle lands. A service skipped that way whose renewal date has already passed is running unbilled; a Warning says so on every run, and one Warning per run counts auto-renewing services that have no renewal date at all (`NextRenewalAt` empty) and are never billed.
+- Domains are no longer renewed for free: auto-renewal now bills the client, and the registrar is called only once the invoice is paid. A failed or unconfirmed registrar renewal alerts staff (`Notifications__AdminEmail`, falling back to `Notifications__ContactEmail`). A client renew order takes the domain off any open renewal invoice first, returning that invoice's credit; an overdue invoice that bills the domain with other items has to be paid first (`RENEWAL_INVOICE_OPEN`, 409).
+- Rollout note: on first deploy, (1) any service whose `NextRenewalAt` is already in the past gets a renewal invoice immediately, due 14 days later; (2) at the first 09:00 run every Active service on an invoice -- including invoices raised before this release -- that is already overdue by more than 3 days is suspended. Review those before deploying, and set `OverrideAutoSuspend`/`SuspendUntil` or settle the invoices where a suspension is not wanted:
+
+  ```sql
+  SELECT i."Id" AS "InvoiceId", i."ClientId", i."DueDate", it."ClientServiceId", s."OverrideAutoSuspend", s."SuspendUntil"
+  FROM "Invoices" i
+  JOIN "InvoiceItems" it ON it."InvoiceId" = i."Id"
+  JOIN "ClientServices" s ON s."Id" = it."ClientServiceId"
+  WHERE i."Status" = 'Overdue'
+    AND i."DueDate" < now() - interval '3 days'
+    AND s."Status" = 'Active'
+  ORDER BY i."ClientId", i."Id";
+  ```
+
+  Set `Notifications__AdminEmail` (or rely on `Notifications__ContactEmail`) so renewal alerts reach a person.
 - Hero stats and badge, contact channels and the site name are read from settings (`portal.stats.*`, `portal.hero.badge`, `portal.contact.*`, `portal.site.name`); sections with no content are hidden.
 - The demo site name is "Hostpanel Demo".
 - The fallback site name is "Hostpanel"; no operator brand is hard-coded.

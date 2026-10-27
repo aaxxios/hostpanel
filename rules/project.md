@@ -186,7 +186,22 @@ folder per use case under `Application/<Feature>/{Commands,Queries}/<UseCase>/`.
   until after the save. `ClientService.Suspend/Unsuspend/Terminate` take `hostingAlreadyUpdated`
   (handlers pass `true` after the panel call) so the event handler does not repeat it. The
   `PaymentReceived`/`InvoiceRefunded` transaction handlers are deleted; only notification
-  handlers remain.
+  handlers remain, with one exception: `Billing/Events/RenewalPaymentReceivedHandler` dispatches
+  `ApplyPaidRenewalsCommand`. It is safe because it only triggers an idempotent command (the line's
+  `RenewalAppliedAt` marker decides) that the daily renewal sweep also runs, so a dropped event is
+  applied within a day.
+
+### Recurring billing
+
+Renewal invoicing, payment and suspension run as four crons (UTC): `ProcessRenewalsCron` 05:00 (applies paid but
+unapplied renewal lines, self-heals zero-total open renewal invoices, alerts on stale claimed lines, then raises
+renewal invoices per client), `SendRenewalRemindersCron` 06:00, `CheckOverdueInvoicesCron` 07:00 and
+`SuspendOverdueServicesCron` 09:00. Settings (`BillingSettingKeys`, not public): `billing.renewal.invoice_days_before`
+(14), `billing.renewal.reminder_days` (`7,3,1`, may be cleared), `billing.renewal.auto_apply_credit` (true),
+`billing.renewal.suspend_after_overdue_days` (3). `InvoiceItem.RenewalAppliedAt` is the exactly-once marker and
+`RenewalAttemptAt` claims a domain line before the registrar call. Every suspension carries a `SuspensionSource`
+(`Manual`, `Overdue`, `DomainExpired`, `Other`): payment lifts only `Overdue`, and `DomainRenewedHandler` lifts only
+`DomainExpired`. Renewal alerts go to `Notifications:AdminEmail`, falling back to `Notifications:ContactEmail`.
 
 ## Demo mode
 
