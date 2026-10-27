@@ -63,13 +63,16 @@ public sealed class BulkInvoiceActionHandler
                     if (invoice.Status is InvoiceStatus.Unpaid or InvoiceStatus.Overdue)
                     {
                         var txId = $"bulk-{invoice.Id}-{DateTimeOffset.UtcNow.Ticks}";
-                        invoice.MarkPaid(txId);
+
+                        // Settles what is still due; a payment recorded earlier is not counted twice.
+                        var settled = invoice.AmountDue;
+                        invoice.MarkPaid(txId, BulkPaymentMethod);
 
                         // Same save as the Paid mark: one ledger row per invoice settled.
-                        if (invoice.Total > 0)
+                        if (settled > 0)
                         {
                             _context.Transactions.Add(Transaction.CreateInvoicePayment(
-                                invoice, DateTimeOffset.UtcNow, BulkPaymentMethod, txId, invoice.Total, 0m));
+                                invoice, DateTimeOffset.UtcNow, BulkPaymentMethod, txId, settled, 0m));
                         }
 
                         affected++;

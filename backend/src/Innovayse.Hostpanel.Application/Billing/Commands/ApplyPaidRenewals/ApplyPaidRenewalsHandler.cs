@@ -78,9 +78,10 @@ public sealed class ApplyPaidRenewalsHandler
 
         if (!invoice.IsPaidInFull)
         {
-            // A partial AddPayment marks the invoice Paid, and AddPayment then refuses the Paid
-            // invoice, so no later payment can complete it. Extending would give a whole period for
-            // part of the price; the lines are left unapplied and staff must resolve the invoice.
+            // A partial payment leaves the invoice open, so this is normally an unpaid invoice whose
+            // renewals wait for the rest. Paid without its payments covering the total means the
+            // money was settled some other way (an invoice marked unpaid and paid again, a refund);
+            // extending would give a whole period for part of the price, so staff must resolve it.
             if (invoice.Status is InvoiceStatus.Paid)
             {
                 _logger.LogWarning(

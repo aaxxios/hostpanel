@@ -65,7 +65,7 @@ public sealed class InvoiceRenewalTests
         copy.Items.Single().IsRenewal.Should().BeFalse();
     }
 
-    /// <summary>A partial manual payment marks the invoice Paid but not paid in full; a full one is.</summary>
+    /// <summary>A partial manual payment leaves the invoice open, not paid in full; a full one is.</summary>
     [Fact]
     public void IsPaidInFull_CountsRecordedPayments()
     {

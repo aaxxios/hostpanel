@@ -78,19 +78,24 @@ public sealed class ConfirmOrderPaymentHandler
             return Result.FailureCode(HostpanelErrorCodes.GATEWAY_TRANSACTION_MISSING_UPSTREAM_FAILED);
         }
 
-        var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.Id == order.InvoiceId.Value, ct);
+        // Transactions loaded: what is charged is what is still due, which earlier payments reduce.
+        var invoice = await _context.Invoices
+            .Include(i => i.Transactions)
+            .FirstOrDefaultAsync(i => i.Id == order.InvoiceId.Value, ct);
         if (invoice is null)
         {
             return Result.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
         }
 
-        invoice.MarkPaid(transactionId);
+        // Read before the Paid mark records it: the intent charged what was due, not the total.
+        var charged = invoice.AmountDue;
+        invoice.MarkPaid(transactionId, CardPaymentMethod);
 
         // Ledger row in the same save as the Paid mark; no event handler writes it.
-        if (invoice.Total > 0)
+        if (charged > 0)
         {
             _context.Transactions.Add(Transaction.CreateInvoicePayment(
-                invoice, DateTimeOffset.UtcNow, CardPaymentMethod, transactionId, invoice.Total, 0m));
+                invoice, DateTimeOffset.UtcNow, CardPaymentMethod, transactionId, charged, 0m));
         }
 
         await _context.SaveChangesAsync(ct);
