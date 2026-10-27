@@ -1,5 +1,5 @@
-using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 using Innovayse.Hostpanel.SharedKernel.Domain;
+using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 namespace Innovayse.Hostpanel.Domain.Ssh;
 
 /// <summary>
@@ -42,6 +42,19 @@ public sealed class ServerSshSettings : BaseEntity, IAggregateRoot
 
     /// <summary>Gets the OpenSSH private key HostPanel authenticates with. Encrypted at rest.</summary>
     public string? AgentPrivateKey { get; private set; }
+
+    /// <summary>
+    /// Gets the public half of <see cref="AgentPrivateKey"/> when HostPanel generated the pair, for
+    /// the installer command. Null for a key an administrator pasted in.
+    /// </summary>
+    public string? AgentPublicKey { get; private set; }
+
+    /// <summary>
+    /// Gets the id that ties the agent installed on the server to this server record. The installer
+    /// writes it into the agent's config and the agent reports it on ping; a mismatch means the
+    /// record points at an agent installed for another server.
+    /// </summary>
+    public Guid? AgentBinding { get; private set; }
 
     /// <summary>
     /// Gets the pinned SHA256 fingerprint of the server's host key. Calls are refused when the
@@ -96,15 +109,27 @@ public sealed class ServerSshSettings : BaseEntity, IAggregateRoot
             throw new ArgumentException("Timeouts are out of range.");
         }
 
+        // A changed endpoint, user or pinned host key means the last health check no longer
+        // describes what HostPanel will connect to.
+        if (!string.Equals(AgentHost, agentHost.Trim(), StringComparison.OrdinalIgnoreCase)
+            || AgentPort != agentPort
+            || AgentUsername != agentUsername.Trim()
+            || AgentHostKeyFingerprint != agentHostKeyFingerprint.Trim())
+        {
+            IsHealthy = null;
+        }
+
         IsEnabled = isEnabled;
         SshHostname = sshHostname.Trim();
         SshPort = sshPort;
         AgentHost = agentHost.Trim();
         AgentPort = agentPort;
         AgentUsername = agentUsername.Trim();
-        if (agentPrivateKey is not null)
+        if (agentPrivateKey is not null && agentPrivateKey != AgentPrivateKey)
         {
             AgentPrivateKey = agentPrivateKey;
+            AgentPublicKey = null;
+            IsHealthy = null;
         }
 
         AgentHostKeyFingerprint = agentHostKeyFingerprint.Trim();
@@ -124,6 +149,26 @@ public sealed class ServerSshSettings : BaseEntity, IAggregateRoot
         && !string.IsNullOrWhiteSpace(AgentUsername)
         && !string.IsNullOrWhiteSpace(AgentPrivateKey)
         && !string.IsNullOrWhiteSpace(AgentHostKeyFingerprint);
+
+    /// <summary>
+    /// Replaces the management identity with a newly generated pair. The binding is created once and
+    /// kept across rotations, so a reinstall with the new key stays tied to this record. Rotation
+    /// switches customer access off and clears the health check: the server holds the old key until
+    /// the installer runs again.
+    /// </summary>
+    /// <param name="privateKey">OpenSSH private key.</param>
+    /// <param name="publicKey">Matching public key line.</param>
+    public void IssueIdentity(string privateKey, string publicKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(privateKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicKey);
+        AgentPrivateKey = privateKey;
+        AgentPublicKey = publicKey;
+        AgentBinding ??= Guid.NewGuid();
+        IsEnabled = false;
+        IsHealthy = null;
+        LastHealthCheckAt = null;
+    }
 
     /// <summary>Records a health check outcome.</summary>
     /// <param name="healthy">Whether the agent answered a ping.</param>

@@ -131,6 +131,11 @@ describe('ServersView', () => {
           agentUsername: '', hasAgentPrivateKey: false, agentHostKeyFingerprint: '', connectTimeoutSeconds: 10,
           operationTimeoutSeconds: 20, isHealthy: null, lastHealthCheckAt: null,
         }),
+      'GET /api/admin/servers/1/ssh-setup': () =>
+        json({
+          serverId: 1, profile: 'cwp', publicKey: null, binding: null, agentUsername: 'hpsshkeys',
+          bundleVersion: '1.1.0', bundleSha256: 'd'.repeat(64), bundlePath: '/api/public/ssh-agent/bundle.tar.gz',
+        }),
     })
     const wrapper = await mountServers()
 

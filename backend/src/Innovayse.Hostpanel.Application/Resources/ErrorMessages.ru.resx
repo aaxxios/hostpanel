@@ -664,10 +664,19 @@
   <data name="SSH_SERVER_UNAVAILABLE" xml:space="preserve">
     <value>Не удалось связаться с сервером хостинга. Повторите попытку позже.</value>
   </data>
+  <data name="SSH_HOST_KEY_UNREADABLE" xml:space="preserve">
+    <value>Не удалось получить ключ хоста SSH с указанного адреса и порта агента. Проверьте адрес и порт, брандмауэр и то, что sshd принимает подключения от HostPanel. В OpenSSH 9.8 и новее после неудачных или неаутентифицированных подключений sshd на время отклоняет адрес (PerSourcePenalties): добавьте адрес HostPanel в PerSourcePenaltyExemptList.</value>
+  </data>
   <data name="SSH_MODULE_NOT_SUPPORTED" xml:space="preserve">
     <value>Управление SSH-ключами не поддерживается для этого типа сервера.</value>
   </data>
   <data name="SSH_SETTINGS_INCOMPLETE" xml:space="preserve">
     <value>Настройки SSH для этого сервера заполнены не полностью.</value>
+  </data>
+  <data name="SSH_AGENT_NOT_VERIFIED" xml:space="preserve">
+    <value>Перед включением управления SSH-ключами успешно проверьте агент с этими настройками.</value>
+  </data>
+  <data name="SSH_AGENT_ENDPOINT_IN_USE" xml:space="preserve">
+    <value>Этот хост и порт агента уже использует другой сервер.</value>
   </data>
 </root>

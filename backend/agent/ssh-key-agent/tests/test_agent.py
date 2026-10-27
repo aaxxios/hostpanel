@@ -12,6 +12,7 @@ import time
 import tempfile
 import threading
 import unittest
+from types import SimpleNamespace
 
 AGENT_PATH = os.path.join(os.path.dirname(__file__), "..", "hostpanel-ssh-key-agent")
 _loader = importlib.machinery.SourceFileLoader("agent", AGENT_PATH)
@@ -47,13 +48,28 @@ class AgentTestCase(unittest.TestCase):
         self.shell = "/bin/bash"
         home = os.path.join(self.home_root, "alice")
 
+        self.shadow = {"alice": "$6$salt$hash"}
+        self.groups = {}
+
         def fake_getpwnam(name):
             if name != "alice":
                 raise KeyError(name)
             return pwd.struct_passwd(("alice", "x", me.pw_uid, max(me.pw_gid, 1), "", home, self.shell))
 
+        def fake_getspnam(name):
+            if name not in self.shadow:
+                raise KeyError(name)
+            return SimpleNamespace(sp_pwdp=self.shadow[name])
+
+        def fake_getgrnam(name):
+            if name not in self.groups:
+                raise KeyError(name)
+            return SimpleNamespace(gr_mem=self.groups[name], gr_gid=424242)
+
         self._orig = agent.resolve_account
-        agent.resolve_account = lambda name, config, getpwnam=fake_getpwnam: self._orig(name, config, fake_getpwnam)
+        agent.resolve_account = lambda name, config, **_: self._orig(
+            name, config, getpwnam=fake_getpwnam, getspnam=fake_getspnam, getgrnam=fake_getgrnam, run=self.run)
+        self.run = None
 
     def tearDown(self):
         agent.resolve_account = self._orig
@@ -195,10 +211,84 @@ class BoundaryTests(AgentTestCase):
         me = pwd.getpwuid(os.geteuid())
         entry = pwd.struct_passwd(("alice", "x", me.pw_uid, 1, "", "/etc", "/bin/bash"))
         with self.assertRaises(agent.AgentError):
-            self._orig("alice", self.config, lambda _n: entry)
+            self._orig("alice", self.config, getpwnam=lambda _n: entry, getspnam=lambda _n: SimpleNamespace(sp_pwdp="x"))
 
     def test_ping(self):
         self.assertEqual(self.call(op="ping")["agent_version"], agent.AGENT_VERSION)
+
+    def test_ping_reports_provider_and_binding(self):
+        self.config["provider"] = "cwp"
+        self.config["binding"] = KEY_ID_A
+        pong = self.call(op="ping")
+        self.assertEqual((pong["provider"], pong["binding"]), ("cwp", KEY_ID_A))
+
+    def test_profiles_load_and_bad_binding_refused(self):
+        root = os.path.join(os.path.dirname(__file__), "..", "profiles")
+        for name in ("generic-linux.conf", "cwp.conf"):
+            loaded = agent.load_config(os.path.join(root, name))
+            self.assertEqual(loaded["binding"], "")
+        broken = os.path.join(self.tmp.name, "broken.conf")
+        with open(broken, "w") as handle:
+            handle.write("[agent]\nbinding = ../../etc\n")
+        with self.assertRaises(agent.AgentError):
+            agent.load_config(broken)
+
+
+class PolicyTests(AgentTestCase):
+    """Per-server policy: suspension, group, opt-in list and the panel account check."""
+
+    def test_suspended_account_cannot_receive_keys_but_can_be_cleaned(self):
+        self.call(op="add", account="alice", key_id=KEY_ID_A, public_key=make_key(1))
+        self.shadow["alice"] = "!$6$salt$hash"  # usermod -L
+        self.assertEqual(self.call(op="add", account="alice", key_id=KEY_ID_B, public_key=make_key(2))["error"], "account_suspended")
+        status = self.call(op="status", account="alice")
+        self.assertFalse(status["shell_enabled"])
+        self.assertEqual(status["reason"], "account_suspended")
+        self.assertTrue(self.call(op="revoke", account="alice", key_id=KEY_ID_A)["changed"])
+
+    def test_no_password_is_not_a_lock(self):
+        self.shadow["alice"] = "!!"
+        self.assertTrue(self.call(op="add", account="alice", key_id=KEY_ID_A, public_key=make_key(1))["ok"])
+
+    def test_group_required(self):
+        self.config["ssh_group"] = "sftp-ssh"
+        self.groups["sftp-ssh"] = []
+        self.assertEqual(self.call(op="add", account="alice", key_id=KEY_ID_A, public_key=make_key(1))["error"], "account_not_eligible")
+        self.groups["sftp-ssh"] = ["alice"]
+        self.assertTrue(self.call(op="add", account="alice", key_id=KEY_ID_A, public_key=make_key(1))["ok"])
+
+    def test_eligible_list_must_be_root_owned_and_name_the_account(self):
+        path = os.path.join(self.tmp.name, "eligible.conf")
+        with open(path, "w") as handle:
+            handle.write("bob\n")
+        self.config["eligible_list"] = path
+        result = self.call(op="add", account="alice", key_id=KEY_ID_A, public_key=make_key(1))
+        # Not root-owned in the test sandbox: refused as a fault, never treated as permission.
+        self.assertFalse(result["ok"])
+        if os.geteuid() != 0:
+            self.assertEqual(result["error"], "internal_error")
+
+    def test_account_check_command(self):
+        self.config["account_check_command"] = "/usr/local/libexec/check"
+        calls = []
+
+        def run(argv, **kwargs):
+            calls.append((argv, kwargs.get("env")))
+            return SimpleNamespace(returncode=self.check_code)
+
+        self.run = run
+        self.check_code = 1
+        self.assertEqual(self.call(op="list", account="alice")["error"], "account_not_found")
+        self.check_code = 0
+        self.assertTrue(self.call(op="list", account="alice")["ok"])
+        self.check_code = 5
+        self.assertEqual(self.call(op="list", account="alice")["error"], "internal_error")
+        self.assertEqual(calls[0][0], ["/usr/local/libexec/check", "alice"])
+        self.assertEqual(calls[0][1], {"PATH": "/usr/bin:/bin"})
+
+    def test_relative_check_command_refused(self):
+        self.config["account_check_command"] = "check"
+        self.assertEqual(self.call(op="list", account="alice")["error"], "internal_error")
 
 
 class TimeoutTests(unittest.TestCase):

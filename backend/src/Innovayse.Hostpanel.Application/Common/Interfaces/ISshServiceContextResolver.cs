@@ -18,5 +18,5 @@ public interface ISshServiceContextResolver
     /// <param name="serviceId">The service id from the route.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The resolved context, or <see langword="null"/> when the service does not exist.</returns>
-    Task<SshServiceContext?> ResolveAsync(int serviceId, CancellationToken ct);
+    public Task<SshServiceContext?> ResolveAsync(int serviceId, CancellationToken ct);
 }

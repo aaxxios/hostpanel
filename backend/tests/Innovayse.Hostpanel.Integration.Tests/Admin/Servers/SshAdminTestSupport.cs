@@ -22,13 +22,14 @@ internal static class SshAdminTestSupport
     /// <summary>A complete settings body.</summary>
     /// <param name="enabled">Whether to enable.</param>
     /// <param name="privateKey">The private key text, or null to keep the stored one.</param>
+    /// <param name="host">Agent host; a fresh unique one by default so tests never share an endpoint.</param>
     /// <returns>The body.</returns>
-    public static object Body(bool enabled, string? privateKey = "TEST-PRIVATE-KEY-MATERIAL") => new
+    public static object Body(bool enabled, string? privateKey = "TEST-PRIVATE-KEY-MATERIAL", string? host = null) => new
     {
         isEnabled = enabled,
         sshHostname = "cwp1.example.test",
         sshPort = 2222,
-        agentHost = "cwp1.internal.test",
+        agentHost = host ?? $"agent-{Guid.NewGuid():N}.internal.test",
         agentPort = 22,
         agentUsername = "hpsshkeys",
         agentPrivateKey = privateKey,

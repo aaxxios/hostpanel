@@ -139,6 +139,22 @@ public sealed class SshKey : BaseEntity, IAggregateRoot
         LastSyncError = error;
     }
 
+    /// <summary>Records that the provider confirmed the key was taken off the server for a suspension.</summary>
+    public void MarkSuspended()
+    {
+        EnsureNotRevoked();
+        SyncState = SshKeySyncState.Suspended;
+        LastSyncError = null;
+    }
+
+    /// <summary>Records a failed call that left the key's state as it was.</summary>
+    /// <param name="error">The provider's error code.</param>
+    public void RecordSyncError(string error)
+    {
+        EnsureNotRevoked();
+        LastSyncError = error;
+    }
+
     /// <summary>Refuses any transition out of the terminal state.</summary>
     /// <exception cref="InvalidOperationException">Thrown when the key is already revoked.</exception>
     private void EnsureNotRevoked()

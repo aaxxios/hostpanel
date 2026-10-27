@@ -57,7 +57,13 @@ public sealed class TestServerSshAgentHandler
         TestServerSshAgentResultDto outcome;
         try
         {
-            outcome = new TestServerSshAgentResultDto(true, await provider.PingAsync(ct), null);
+            var info = await provider.PingAsync(ct);
+
+            // The agent must have been installed for this record. An agent with no binding predates
+            // bindings (or was installed by hand) and is only accepted when this record has none either.
+            outcome = info.Binding == settings.AgentBinding
+                ? new TestServerSshAgentResultDto(true, info.Version, null, info.Provider)
+                : new TestServerSshAgentResultDto(false, info.Version, "binding_mismatch", info.Provider);
         }
         catch (SshProviderException ex)
         {

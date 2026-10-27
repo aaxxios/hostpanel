@@ -19,7 +19,7 @@
         {{ $t(`client.services.ssh.state.${access.state}`) }}
       </UiAlert>
 
-      <UiGrid v-if="access.hostname" cols="3" gap="sm" data-testid="service-ssh-connection">
+      <UiGrid v-if="canManage && access.hostname" cols="3" gap="sm" data-testid="service-ssh-connection">
         <UiDescriptionItem :label="$t('client.services.ssh.hostname')" :value="access.hostname" value-class="font-mono" />
         <UiDescriptionItem :label="$t('client.services.ssh.port')" :value="access.port" value-class="font-mono" />
         <UiDescriptionItem :label="$t('client.services.ssh.username')" :value="access.username" value-class="font-mono" />
@@ -39,7 +39,7 @@
         </UiStack>
       </UiStack>
 
-      <UiStack gap="sm">
+      <UiStack v-if="canManage || keys.length > 0" gap="sm" data-testid="service-ssh-keys">
         <UiText weight="semibold">
           {{ $t('client.services.ssh.keysTitle', { count: keys.length, max: access.maxKeys }) }}
         </UiText>
@@ -55,7 +55,7 @@
           </UiStack>
           <UiBadge v-if="badgeKey(key)" variant="warning" data-testid="service-ssh-key-badge">{{ $t(badgeKey(key)) }}</UiBadge>
           <UiButton
-            v-if="canManage && !key.isStale"
+            v-if="canRevoke"
             variant="danger"
             size="sm"
             :loading="revokingId === key.keyId"
@@ -99,7 +99,7 @@
         </UiForm>
       </UiStack>
 
-      <UiAccordion :items="howTo" data-testid="service-ssh-howto">
+      <UiAccordion v-if="canManage" :items="howTo" data-testid="service-ssh-howto">
         <template #content-0>
           <UiStack gap="sm">
             <UiText size="sm">{{ $t('client.services.ssh.howToGenerate') }}</UiText>
@@ -168,7 +168,7 @@ const props = defineProps<Props>()
 /** The SSH key store. */
 const store = useSshKeysStore()
 /** Reactive state of the store this component renders. */
-const { access, keys, loading, loadError, adding, addError, localError, revokingId, revokeError, canManage, atLimit } = storeToRefs(store)
+const { access, keys, loading, loadError, adding, addError, localError, revokingId, revokeError, canManage, canRevoke, atLimit } = storeToRefs(store)
 
 /** The public key being pasted. */
 const publicKey = ref('')

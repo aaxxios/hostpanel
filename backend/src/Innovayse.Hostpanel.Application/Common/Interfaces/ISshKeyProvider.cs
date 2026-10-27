@@ -11,23 +11,23 @@ public interface ISshKeyProvider
 {
     /// <summary>Checks the server's key agent answers, for the admin health check.</summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The agent's version string.</returns>
+    /// <returns>The agent's version, provider profile and binding.</returns>
     /// <exception cref="SshProviderException">Thrown when the server fails or refuses.</exception>
-    Task<string> PingAsync(CancellationToken ct);
+    public Task<SshAgentInfo> PingAsync(CancellationToken ct);
 
     /// <summary>Reports whether SSH access is enabled for the account and how many keys it holds.</summary>
     /// <param name="account">The account.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The status.</returns>
     /// <exception cref="SshProviderException">Thrown when the server fails or refuses.</exception>
-    Task<SshAccessStatus> GetAccessStatusAsync(SshAccount account, CancellationToken ct);
+    public Task<SshAccessStatus> GetAccessStatusAsync(SshAccount account, CancellationToken ct);
 
     /// <summary>Lists the HostPanel-managed keys on the account.</summary>
     /// <param name="account">The account.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The keys the server holds.</returns>
     /// <exception cref="SshProviderException">Thrown when the server fails or refuses.</exception>
-    Task<IReadOnlyList<InstalledSshKey>> ListKeysAsync(SshAccount account, CancellationToken ct);
+    public Task<IReadOnlyList<InstalledSshKey>> ListKeysAsync(SshAccount account, CancellationToken ct);
 
     /// <summary>Installs a key. Idempotent for the same <paramref name="keyId"/> and key.</summary>
     /// <param name="account">The account.</param>
@@ -36,7 +36,7 @@ public interface ISshKeyProvider
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task that completes once the server confirmed the install.</returns>
     /// <exception cref="SshProviderException">Thrown when the server fails or refuses.</exception>
-    Task AddKeyAsync(SshAccount account, Guid keyId, string publicKey, CancellationToken ct);
+    public Task AddKeyAsync(SshAccount account, Guid keyId, string publicKey, CancellationToken ct);
 
     /// <summary>Removes a key. Idempotent: removing an absent key succeeds.</summary>
     /// <param name="account">The account.</param>
@@ -44,5 +44,5 @@ public interface ISshKeyProvider
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task that completes once the server confirmed the key is gone.</returns>
     /// <exception cref="SshProviderException">Thrown when the server fails or refuses.</exception>
-    Task RevokeKeyAsync(SshAccount account, Guid keyId, CancellationToken ct);
+    public Task RevokeKeyAsync(SshAccount account, Guid keyId, CancellationToken ct);
 }

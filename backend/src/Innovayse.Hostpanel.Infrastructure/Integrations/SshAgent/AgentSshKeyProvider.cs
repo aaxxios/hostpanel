@@ -35,10 +35,12 @@ public sealed class AgentSshKeyProvider : ISshKeyProvider
     public int ServerId => _endpoint.ServerId;
 
     /// <inheritdoc/>
-    public async Task<string> PingAsync(CancellationToken ct)
+    public async Task<SshAgentInfo> PingAsync(CancellationToken ct)
     {
         var response = await SendAsync(new JsonObject { ["op"] = "ping" }, ct);
-        return response["agent_version"]?.GetValue<string>() ?? "unknown";
+        var provider = response["provider"]?.GetValue<string>();
+        var binding = Guid.TryParse(response["binding"]?.GetValue<string>(), out var parsed) ? parsed : (Guid?)null;
+        return new SshAgentInfo(response["agent_version"]?.GetValue<string>() ?? "unknown", provider, binding);
     }
 
     /// <inheritdoc/>

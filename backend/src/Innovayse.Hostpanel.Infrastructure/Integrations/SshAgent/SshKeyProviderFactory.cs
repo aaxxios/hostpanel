@@ -23,7 +23,14 @@ public sealed class SshKeyProviderFactory : ISshKeyProviderFactory
     }
 
     /// <inheritdoc/>
-    public bool Supports(ServerModule module) => module is ServerModule.Cwp7;
+    public bool Supports(ServerModule module) => AgentProfileFor(module) is not null;
+
+    /// <inheritdoc/>
+    public string? AgentProfileFor(ServerModule module) => module switch
+    {
+        ServerModule.Cwp7 => "cwp",
+        _ => null,
+    };
 
     /// <inheritdoc/>
     /// <exception cref="InvalidOperationException">Thrown when the settings belong to another server or are incomplete.</exception>

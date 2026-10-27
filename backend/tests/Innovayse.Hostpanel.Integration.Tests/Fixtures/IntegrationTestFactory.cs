@@ -124,6 +124,8 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
             // what the handlers sent to the server it seeded.
             services.RemoveAll<ISshKeyProviderFactory>();
             services.AddSingleton<ISshKeyProviderFactory, FakeSshKeyProviderFactory>();
+            services.RemoveAll<ISshHostKeyScanner>();
+            services.AddSingleton<ISshHostKeyScanner, FakeSshHostKeyScanner>();
 
             // Registration now sends the verification mail, so a host that kept the SMTP sender would
             // wait on a relay that does not exist for every account a test creates. Tests that read the

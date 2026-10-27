@@ -70,6 +70,22 @@ public sealed class GetMySshAccessTests(IntegrationTestFactory factory) : IClass
         (await AccessAsync(http, serviceId)).GetProperty("state").GetString().Should().Be("Unreachable");
     }
 
+    [Theory]
+    [InlineData("account_not_found")]
+    [InlineData("account_not_eligible")]
+    [InlineData("invalid_account")]
+    public async Task AccountRefusedByTheAgent_IsUnavailableForTheAccountNotUnreachableAsync(string code)
+    {
+        var (http, _, serverId, serviceId) = await SshTestSeeds.OwnerWithServiceAsync(factory, $"ssh-access-{code}");
+        SshTestSeeds.Agents(factory).AgentFor(serverId).FailWith = code;
+
+        var access = await AccessAsync(http, serviceId);
+
+        // The server answered: telling the customer to "try again later" would never help.
+        access.GetProperty("state").GetString().Should().Be("ShellDisabled");
+        access.GetProperty("connectCommand").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
     [Fact]
     public async Task UnsupportedModule_IsExplicitlyUnsupportedAsync()
     {

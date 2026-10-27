@@ -69,7 +69,12 @@ public sealed class GetMySshAccessHandler
             {
                 _logger.LogWarning(ex, "SSH status for service {ServiceId} on server {ServerId} failed: {Code}",
                     context.Service.Id, context.Server!.Id, ex.Code);
-                state = SshAccessState.Unreachable;
+
+                // The agent answered that this account cannot have keys: a fact about the account,
+                // not an outage, so the customer is sent to support rather than told to retry.
+                state = ex.Code is "account_not_found" or "account_not_eligible" or "invalid_account"
+                    ? SshAccessState.ShellDisabled
+                    : SshAccessState.Unreachable;
             }
         }
 

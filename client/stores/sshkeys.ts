@@ -42,6 +42,13 @@ export const useSshKeysStore = defineStore('sshKeys', () => {
   /** Whether keys can be added and revoked right now. */
   const canManage = computed(() => access.value?.state === SshAccessState.Available)
 
+  /**
+   * Whether listed keys can be revoked: whenever the service is active, even when keys can no
+   * longer be added (SSH switched off on the server, the service moved) — removing access never
+   * depends on access being available.
+   */
+  const canRevoke = computed(() => Boolean(access.value) && access.value?.state !== SshAccessState.ServiceInactive)
+
   /** Whether the service already holds its maximum number of keys. */
   const atLimit = computed(() => Boolean(access.value) && keys.value.length >= (access.value?.maxKeys ?? 0))
 
@@ -155,6 +162,6 @@ export const useSshKeysStore = defineStore('sshKeys', () => {
 
   return {
     access, keys, loading, loadError, adding, addError, localError, revokingId, revokeError,
-    canManage, atLimit, load, add, revoke, reset
+    canManage, canRevoke, atLimit, load, add, revoke, reset
   }
 })
