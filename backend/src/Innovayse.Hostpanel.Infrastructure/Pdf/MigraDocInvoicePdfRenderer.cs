@@ -317,8 +317,8 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// </summary>
     /// <param name="section">The section being built.</param>
     /// <param name="model">The invoice.</param>
-    /// <param name="logo">The logo's PNG bytes and size in points, or null for none.</param>
-    private static void AddHeader(Section section, InvoicePdfModel model, (byte[] Bytes, double Width, double Height)? logo)
+    /// <param name="logo">The logo and the size to draw it at, or null for none.</param>
+    private static void AddHeader(Section section, InvoicePdfModel model, PdfLogo? logo)
     {
         var table = section.AddTable();
         table.LeftPadding = 0;
@@ -330,12 +330,12 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
         var row = table.AddRow();
 
         var seller = row.Cells[0];
-        if (logo is { } image)
+        if (logo is not null)
         {
-            var picture = seller.AddImage("base64:" + Convert.ToBase64String(image.Bytes));
+            var picture = seller.AddImage("base64:" + Convert.ToBase64String(logo.Bytes));
             picture.LockAspectRatio = false;
-            picture.Width = image.Width;
-            picture.Height = image.Height;
+            picture.Width = logo.Width;
+            picture.Height = logo.Height;
         }
 
         AddParty(seller.Elements, null, model.Seller, firstSpaceBefore: logo is null ? 0 : RuleGap);
@@ -524,8 +524,8 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// directory; otherwise logs why at Debug and returns null.
     /// </summary>
     /// <param name="logoPath">The <c>portal.logo</c> value as stored.</param>
-    /// <returns>The image bytes and the size to draw it at, or null to print without a logo.</returns>
-    private (byte[] Bytes, double Width, double Height)? LoadLogo(string? logoPath)
+    /// <returns>The logo and the size to draw it at, or null to print without a logo.</returns>
+    private PdfLogo? LoadLogo(string? logoPath)
     {
         if (string.IsNullOrWhiteSpace(logoPath))
         {
@@ -553,7 +553,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
             var bytes = File.ReadAllBytes(full);
             using var image = XImage.FromStream(new MemoryStream(bytes));
             var scale = Math.Min(1, Math.Min(LogoMaxWidth / image.PixelWidth, LogoMaxHeight / image.PixelHeight));
-            return (bytes, image.PixelWidth * scale, image.PixelHeight * scale);
+            return new PdfLogo(bytes, image.PixelWidth * scale, image.PixelHeight * scale);
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or NotSupportedException or IOException or UnauthorizedAccessException)
         {
@@ -561,4 +561,10 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
             return null;
         }
     }
+
+    /// <summary>A logo ready to place on the page.</summary>
+    /// <param name="Bytes">The stored logo file. Uploads are re-encoded to PNG, but any image PDFsharp reads works.</param>
+    /// <param name="Width">Width to draw it at, in points, already scaled to fit.</param>
+    /// <param name="Height">Height to draw it at, in points, already scaled to fit.</param>
+    private sealed record PdfLogo(byte[] Bytes, double Width, double Height);
 }
