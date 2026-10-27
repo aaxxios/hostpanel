@@ -143,6 +143,12 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// <summary>Colour of the DRAFT stamp, translucent so the page shows through.</summary>
     private static readonly XColor DraftStamp = XColor.FromArgb(0x55, 0x6B, 0x72, 0x80);
 
+    /// <summary>Colour of the CANCELLED stamp, translucent so the page shows through.</summary>
+    private static readonly XColor CancelledStamp = XColor.FromArgb(0x55, 0xDC, 0x26, 0x26);
+
+    /// <summary>Colour of the REFUNDED stamp, translucent so the page shows through.</summary>
+    private static readonly XColor RefundedStamp = XColor.FromArgb(0x55, 0xD9, 0x77, 0x06);
+
     /// <summary>Where the web root is, for finding an uploaded logo.</summary>
     private readonly IWebHostEnvironment _env;
 
