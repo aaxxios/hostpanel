@@ -58,12 +58,38 @@ of: `invalid_request`, `unsupported_version`, `unknown_operation`, `request_too_
 * **Audit** — every `add`/`revoke` is appended to `audit_log` (timestamp, op, account, key id,
   fingerprint, outcome) by the root parent, successful or not. No key material is logged.
 
+## Per-server policy (agent.conf)
+
+Identity checks always run: strict name pattern, passwd entry, `uid >= min_uid`, not on
+`deny_accounts`, home exactly under `home_root`. These optional checks are switched on per server:
+
+| Setting | Effect |
+|---|---|
+| `account_check_command` | Absolute path of a root-owned helper run as `helper <account>` (no shell, empty environment, 10 s timeout). Exit 0 = panel account, 1 = not one (`account_not_found`), anything else = fault. `cwp/cwp-account-check` asks CWP's `root_cwp.user`. |
+| `check_shadow_lock` | A locked password (`usermod -L`, how CWP suspends) makes the account `account_suspended`. `!!`/`*` (no password) is not a lock. |
+| `ssh_group` | Only members of this group may receive keys (`account_not_eligible` otherwise). |
+| `eligible_list` | Root-owned, not group/world-writable file, one account per line: an opt-in list. |
+
+Suspension, group, list and login shell only decide whether an account may **receive** keys;
+`list` and `revoke` keep working so access can always be removed. `status` answers
+`shell_enabled: false` plus a `reason`.
+
+`cwp/agent.conf.srv4` is the configuration for a CWP server with Jailkit customer SSH
+(`sshd-cust`, `AllowGroups sftp-ssh sftp-only`): `ssh_group = sftp-ssh`, the existing opt-in list
+`/usr/local/etc/innovayse-ssh-eligible.conf`, the CWP account check and the shadow lock check.
+Keys written by other tools (for example `manage-ssh-key.sh`) are never listed or removed.
+
 ## Install on a server
 
 ```bash
 scp -r ssh-key-agent root@<server>:/root/
 ssh root@<server> '/root/ssh-key-agent/install.sh "ssh-ed25519 AAAA… hostpanel-<server>"'
 ```
+
+For a CWP server: `install.sh --with-cwp-check --config cwp/agent.conf.srv4 "<key>"`. Every
+step is idempotent and `--dry-run` prints what would change. `uninstall.sh` (also `--dry-run`)
+removes the management key first, then sudoers, the user and the agent; the config is kept unless
+`--purge`, the audit log always. Customers' keys are not touched by either script.
 
 The script prints the server's host key fingerprints and runs a `ping` self-test. Use a
 **separate** management key per server. Then configure the server in HostPanel — see *Adding a CWP server* below.

@@ -82,11 +82,14 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
         SshTestSeeds.Agents(factory).AgentFor(serverId).Calls.Should().BeEmpty();
     }
 
-    [Fact]
-    public async Task ShellDisabled_AgentRefusal_LeavesNoRecordAsync()
+    [Theory]
+    [InlineData("ssh_disabled")]
+    [InlineData("account_suspended")]
+    [InlineData("account_not_eligible")]
+    public async Task AgentAccessRefusal_LeavesNoRecordAsync(string agentCode)
     {
         var (http, _, serverId, serviceId) = await SshTestSeeds.OwnerWithServiceAsync(factory, "ssh-add-noshell");
-        SshTestSeeds.Agents(factory).AgentFor(serverId).FailWith = "ssh_disabled";
+        SshTestSeeds.Agents(factory).AgentFor(serverId).FailWith = agentCode;
 
         var response = await AddAsync(http, serviceId, SshTestSeeds.Key(1));
 

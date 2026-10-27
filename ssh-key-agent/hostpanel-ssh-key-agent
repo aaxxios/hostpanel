@@ -43,13 +43,19 @@ Security model, in order of what it defends against:
 import base64
 import configparser
 import fcntl
+import grp
 import hashlib
 import json
 import os
 import pwd
 import re
+try:
+    import spwd  # removed in Python 3.13; absent means the lock check cannot run
+except ImportError:  # pragma: no cover
+    spwd = None
 import signal
 import stat
+import subprocess
 import sys
 import time
 
@@ -75,6 +81,11 @@ DEFAULTS = {
     "max_keys": "50",
     "audit_log": "/var/log/hostpanel-ssh-key-agent.log",
     "lock_dir": "/run/hostpanel-ssh-key-agent",
+    # Optional per-server policy. Empty means "not checked", so the defaults behave as before.
+    "ssh_group": "",
+    "eligible_list": "",
+    "account_check_command": "",
+    "check_shadow_lock": "true",
 }
 
 
@@ -101,6 +112,10 @@ def load_config(path=CONFIG_PATH):
         "max_keys": int(section["max_keys"]),
         "audit_log": section["audit_log"],
         "lock_dir": section["lock_dir"],
+        "ssh_group": section["ssh_group"].strip(),
+        "eligible_list": section["eligible_list"].strip(),
+        "account_check_command": section["account_check_command"].strip(),
+        "check_shadow_lock": section.getboolean("check_shadow_lock"),
     }
 
 
@@ -155,8 +170,74 @@ def managed_key_id(line):
 
 # --------------------------------------------------------------------------- account checks
 
-def resolve_account(name, config, getpwnam=pwd.getpwnam):
-    """Resolves and vets the hosting account. The returned home path comes from passwd only."""
+def _is_locked(name, getspnam):
+    """
+    True when the account's password is locked (`usermod -L` prefixes the hash with `!`, which is
+    how CWP suspends an account). `!!`/`*` alone mean "no password set" and are not a lock.
+    """
+    if getspnam is None:
+        return False
+    try:
+        hashed = getspnam(name).sp_pwdp
+    except KeyError:
+        return False
+    except PermissionError:
+        # Only root can read shadow; a lock check that cannot run must not pass silently.
+        raise AgentError("internal_error")
+    return hashed.startswith("!") and hashed.lstrip("!").startswith("$")
+
+
+def _in_group(name, gid, group_name, getgrnam):
+    """True when the account is in the group, as a member or through its primary group."""
+    try:
+        group = getgrnam(group_name)
+    except KeyError:
+        return False
+    return name in group.gr_mem or group.gr_gid == gid
+
+
+def _in_eligible_list(name, path):
+    """True when the opt-in list (one account per line, root-owned) names the account."""
+    try:
+        st = os.stat(path, follow_symlinks=False)
+        if not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or st.st_mode & 0o022:
+            raise AgentError("internal_error")
+        with open(path, encoding="utf-8") as handle:
+            return any(line.strip() == name for line in handle)
+    except FileNotFoundError:
+        return False
+
+
+def _account_check(name, command, run=subprocess.run):
+    """
+    Asks the hosting panel whether `name` is one of its accounts, by running a root-owned helper
+    with the name as its only argument: no shell, empty environment, short timeout. Exit 0 means
+    yes, 1 means no, anything else is a fault.
+    """
+    if not os.path.isabs(command):
+        raise AgentError("internal_error")
+    try:
+        done = run([command, name], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                   stderr=subprocess.DEVNULL, env={"PATH": "/usr/bin:/bin"}, timeout=10, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        raise AgentError("internal_error")
+    if done.returncode == 1:
+        raise AgentError("account_not_found")
+    if done.returncode != 0:
+        raise AgentError("internal_error")
+
+
+def resolve_account(name, config, getpwnam=pwd.getpwnam, getspnam=None, getgrnam=grp.getgrnam,
+                    run=subprocess.run):
+    """
+    Resolves and vets the hosting account. The returned home path comes from passwd only.
+
+    Identity checks (name, passwd, uid, home, panel account) refuse every operation. Access
+    checks (suspension, shell, group, opt-in list) only decide whether the account may receive
+    keys: listing and revoking stay possible, so access can always be taken away.
+    """
+    if getspnam is None and spwd is not None:
+        getspnam = spwd.getspnam
     if not isinstance(name, str) or not ACCOUNT_RE.match(name):
         raise AgentError("invalid_account")
     if name in config["deny_accounts"]:
@@ -171,12 +252,32 @@ def resolve_account(name, config, getpwnam=pwd.getpwnam):
     # The home must be exactly <home_root>/<something>, never the root itself or deeper.
     if os.path.dirname(home) != config["home_root"]:
         raise AgentError("account_not_eligible")
+    if config.get("account_check_command"):
+        _account_check(name, config["account_check_command"], run)
+
+    suspended = bool(config.get("check_shadow_lock", True)) and _is_locked(name, getspnam)
+    shell_ok = entry.pw_shell not in DISABLED_SHELLS
+    eligible = True
+    if config.get("ssh_group") and not _in_group(name, entry.pw_gid, config["ssh_group"], getgrnam):
+        eligible = False
+    if config.get("eligible_list") and not _in_eligible_list(name, config["eligible_list"]):
+        eligible = False
+
+    reason = None
+    if suspended:
+        reason = "account_suspended"
+    elif not eligible:
+        reason = "account_not_eligible"
+    elif not shell_ok:
+        reason = "ssh_disabled"
+
     return {
         "name": name,
         "uid": entry.pw_uid,
         "gid": entry.pw_gid,
         "home": home,
-        "shell_enabled": entry.pw_shell not in DISABLED_SHELLS,
+        "shell_enabled": reason is None,
+        "reason": reason,
     }
 
 
@@ -264,7 +365,10 @@ def perform(request, account, config):
         finally:
             if ssh_fd is not None:
                 os.close(ssh_fd)
-        return {"shell_enabled": account["shell_enabled"], "managed_keys": len(managed), "unmanaged_keys": unmanaged}
+        status = {"shell_enabled": account["shell_enabled"], "managed_keys": len(managed), "unmanaged_keys": unmanaged}
+        if account.get("reason"):
+            status["reason"] = account["reason"]
+        return status
 
     if op == "list":
         ssh_fd = _open_ssh_dir(account["home"], create=False)
@@ -277,7 +381,7 @@ def perform(request, account, config):
 
     if op == "add":
         if not account["shell_enabled"]:
-            raise AgentError("ssh_disabled")
+            raise AgentError(account.get("reason") or "ssh_disabled")
         blob_b64, fingerprint = parse_ed25519(request["public_key"])
         key_id = request["key_id"]
         ssh_fd = _open_ssh_dir(account["home"], create=True)
