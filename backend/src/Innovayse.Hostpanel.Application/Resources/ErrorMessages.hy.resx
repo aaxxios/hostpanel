@@ -637,4 +637,34 @@
   <data name="TESTIMONIAL_RATING_OUT_OF_RANGE" xml:space="preserve">
     <value>Գնահատականը պետք է լինի 1-ից 5։</value>
   </data>
+  <data name="SSH_KEY_INVALID" xml:space="preserve">
+    <value>Բանալին վավեր ED25519 հանրային բանալի չէ։</value>
+  </data>
+  <data name="SSH_PRIVATE_KEY_REJECTED" xml:space="preserve">
+    <value>Սա գաղտնի բանալի է։ Տեղադրեք հանրային բանալին (.pub ֆայլը)։</value>
+  </data>
+  <data name="SSH_KEY_ALREADY_INSTALLED" xml:space="preserve">
+    <value>Այս բանալին արդեն տեղադրված է ծառայության վրա։</value>
+  </data>
+  <data name="SSH_KEY_LIMIT_REACHED" xml:space="preserve">
+    <value>Ծառայությունն արդեն ունի SSH բանալիների առավելագույն քանակը։</value>
+  </data>
+  <data name="SSH_KEY_NOT_FOUND" xml:space="preserve">
+    <value>Այդպիսի SSH բանալի չկա։</value>
+  </data>
+  <data name="SSH_KEY_STALE" xml:space="preserve">
+    <value>Այս բանալին տրվել է ծառայության նախկին սերվերի վրա։ Այն հեռացնելու համար դիմեք աջակցման ծառայությանը։</value>
+  </data>
+  <data name="SSH_ACCESS_UNAVAILABLE" xml:space="preserve">
+    <value>SSH բանալիների կառավարումը հասանելի չէ այս ծառայության համար։</value>
+  </data>
+  <data name="SSH_SERVER_UNAVAILABLE" xml:space="preserve">
+    <value>Հոսթինգի սերվերի հետ կապ հաստատել չհաջողվեց։ Խնդրում ենք փորձել ավելի ուշ։</value>
+  </data>
+  <data name="SSH_MODULE_NOT_SUPPORTED" xml:space="preserve">
+    <value>SSH բանալիների կառավարումը չի աջակցվում սերվերի այս տեսակի համար։</value>
+  </data>
+  <data name="SSH_SETTINGS_INCOMPLETE" xml:space="preserve">
+    <value>Այս սերվերի SSH կարգավորումները ամբողջական չեն։</value>
+  </data>
 </root>

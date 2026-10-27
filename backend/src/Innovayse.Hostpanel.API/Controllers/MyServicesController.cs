@@ -1,19 +1,25 @@
 using Innovayse.Hostpanel.API.Authorization;
-using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Application.Billing.Queries.GetMyServiceInvoices;
 using Innovayse.Hostpanel.Application.Provisioning.Commands.ChangeMyServicePassword;
 using Innovayse.Hostpanel.Application.Provisioning.Queries.GetMyServiceControlPanelSsoUrl;
+using Innovayse.Hostpanel.Application.Services.Commands.AddMySshKey;
 using Innovayse.Hostpanel.Application.Services.Commands.CancelMyService;
 using Innovayse.Hostpanel.Application.Services.Commands.OrderMyService;
+using Innovayse.Hostpanel.Application.Services.Commands.RevokeMySshKey;
 using Innovayse.Hostpanel.Application.Services.Commands.SetupMyService;
 using Innovayse.Hostpanel.Application.Services.Common;
 using Innovayse.Hostpanel.Application.Services.Queries.GetMyServiceCancellationStatus;
 using Innovayse.Hostpanel.Application.Services.Queries.GetMyServices;
+using Innovayse.Hostpanel.Application.Services.Queries.GetMySshAccess;
+using Innovayse.Hostpanel.Application.Services.Queries.ListMySshKeys;
+using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Shared.Authorization;
+using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.Hostpanel.Shared.Controllers;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Wolverine;
 
 namespace Innovayse.Hostpanel.API.Controllers;
@@ -235,5 +241,88 @@ public sealed class MyServicesController : BaseApiController
         // Reconstructed explicitly, not overlaid with `with` -- see the comment on CancelAsync.
         var outcome = await _bus.InvokeAsync<Result>(new ChangeMyServicePasswordCommand(id, command.NewPassword), ct);
         return HandleResultOk(outcome);
+    }
+
+    /// <summary>Gets the SSH access summary of one of the caller's services.</summary>
+    /// <remarks>
+    /// Server, provider, hosting account, hostname and port are all resolved from the service on
+    /// the server side. Rate-limited as an upstream call: it may ask the hosting server.
+    /// </remarks>
+    /// <param name="id">Client service primary key.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>200 with the summary; 404 <c>SERVICE_NOT_FOUND</c> when the service is not the caller's.</returns>
+    [HttpGet("{id:int}/ssh")]
+    [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewProductsServices)]
+    [EnableRateLimiting(RateLimitPolicies.Upstream)]
+    [ProducesResponseType(typeof(SshAccessDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetSshAccessAsync(int id, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<SshAccessDto>>(new GetMySshAccessQuery(id), ct);
+        return HandleResult(outcome);
+    }
+
+    /// <summary>Lists the SSH keys of one of the caller's services.</summary>
+    /// <param name="id">Client service primary key.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>200 with the keys; 404 when not the caller's; 409 when the service is inactive.</returns>
+    [HttpGet("{id:int}/ssh/keys")]
+    [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewProductsServices)]
+    [EnableRateLimiting(RateLimitPolicies.Upstream)]
+    [ProducesResponseType(typeof(IReadOnlyList<SshKeyDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ListSshKeysAsync(int id, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<IReadOnlyList<SshKeyDto>>>(new ListMySshKeysQuery(id), ct);
+        return HandleResult(outcome);
+    }
+
+    /// <summary>Adds an ED25519 public key to one of the caller's services.</summary>
+    /// <param name="id">Client service primary key.</param>
+    /// <param name="command">Label and public key. No server, account or path is accepted.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// 201 with the key; 400 <c>SSH_KEY_INVALID</c> / <c>SSH_PRIVATE_KEY_REJECTED</c>; 409
+    /// <c>SSH_KEY_ALREADY_INSTALLED</c> / <c>SSH_KEY_LIMIT_REACHED</c> / <c>SSH_ACCESS_UNAVAILABLE</c>;
+    /// 503 <c>SSH_SERVER_UNAVAILABLE</c>.
+    /// </returns>
+    [HttpPost("{id:int}/ssh/keys")]
+    [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewModifyPasswords)]
+    [EnableRateLimiting(RateLimitPolicies.Strict)]
+    [ProducesResponseType(typeof(SshKeyDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> AddSshKeyAsync(
+        int id, [FromBody] AddMySshKeyCommand command, CancellationToken ct)
+    {
+        // Reconstructed explicitly, not overlaid with `with` -- see the comment on CancelAsync.
+        var outcome = await _bus.InvokeAsync<Result<SshKeyDto>>(
+            new AddMySshKeyCommand(id, command.Label, command.PublicKey), ct);
+        return HandleResult(outcome, key => CreatedResult($"/api/me/services/{id}/ssh/keys/{key.KeyId}", key));
+    }
+
+    /// <summary>Revokes one SSH key of one of the caller's services.</summary>
+    /// <param name="id">Client service primary key.</param>
+    /// <param name="keyId">The key's public id.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>204 on success; 404 <c>SSH_KEY_NOT_FOUND</c>; 409 <c>SSH_KEY_STALE</c>; 503 when the server did not confirm.</returns>
+    [HttpDelete("{id:int}/ssh/keys/{keyId:guid}")]
+    [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewModifyPasswords)]
+    [EnableRateLimiting(RateLimitPolicies.Strict)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> RevokeSshKeyAsync(int id, Guid keyId, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result>(new RevokeMySshKeyCommand(id, keyId), ct);
+        return HandleResult(outcome);
     }
 }

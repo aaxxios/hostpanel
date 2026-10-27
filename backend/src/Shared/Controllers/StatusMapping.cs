@@ -47,6 +47,11 @@ public static class StatusMapping
             // Exact row: an unpaid invoice stands in the way, a state conflict, and the name carries no
             // CONFLICT / ALREADY token for the generic arms to catch.
             "RENEWAL_INVOICE_OPEN" => (409, "Conflict"),
+
+            // SSH key management: the service is the caller's, but its state or the key's binding
+            // does not allow the change, or the hosting server did not confirm it.
+            "SSH_KEY_LIMIT_REACHED" or "SSH_KEY_STALE" or "SSH_ACCESS_UNAVAILABLE" => (409, "Conflict"),
+            "SSH_SERVER_UNAVAILABLE" => (503, "Service Unavailable"),
             var code when code.Contains("UNAUTHORIZED", StringComparison.Ordinal) => (401, "Unauthorized"),
             var code when code.Contains("FORBIDDEN", StringComparison.Ordinal) => (403, "Forbidden"),
             var code when code.Contains("ACCESS_DENIED", StringComparison.Ordinal) => (403, "Forbidden"),

@@ -479,6 +479,17 @@ export const SERVICE_MANAGED = {
   username: 'e2emgd',
 }
 
+/** What the stub answers for the managed service's SSH access; the username and command are filled from the service. */
+export const SSH_ACCESS = {
+  state: 'Available',
+  hostname: 'cwp.e2e.test',
+  port: 2222,
+  maxKeys: 20,
+}
+
+/** A throwaway ED25519 public key (no private half exists anywhere in the suite). */
+export const SSH_PUBLIC_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG6EJIHRxsxge2aZnl+clPBfoX0nmvD7FfHXM2QQ3+3b e2e@laptop'
+
 /** A paid hosting service that has no control-panel account yet, so it needs the setup wizard (no domain, for the same reason as {@link SERVICE_MANAGED}). */
 export const SERVICE_PENDING = {
   id: 23,

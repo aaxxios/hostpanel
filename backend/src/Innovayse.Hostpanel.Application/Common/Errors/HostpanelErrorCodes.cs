@@ -457,6 +457,38 @@ public static class HostpanelErrorCodes
     /// </summary>
     public const string SERVICE_NOT_FOUND = "SERVICE_NOT_FOUND";
 
+    // Services — SSH key management
+
+    /// <summary>The pasted text is not a single, valid ED25519 public key (400).</summary>
+    public const string SSH_KEY_INVALID = "SSH_KEY_INVALID";
+
+    /// <summary>The pasted text is a private key; it is never stored or echoed (400).</summary>
+    public const string SSH_PRIVATE_KEY_REJECTED = "SSH_PRIVATE_KEY_REJECTED";
+
+    /// <summary>The key is already on the service, recorded here or present on the server (409).</summary>
+    public const string SSH_KEY_ALREADY_INSTALLED = "SSH_KEY_ALREADY_INSTALLED";
+
+    /// <summary>The service already holds the maximum number of SSH keys (409).</summary>
+    public const string SSH_KEY_LIMIT_REACHED = "SSH_KEY_LIMIT_REACHED";
+
+    /// <summary>The key id names no live key of this service; a key of another service answers the same (404).</summary>
+    public const string SSH_KEY_NOT_FOUND = "SSH_KEY_NOT_FOUND";
+
+    /// <summary>The key was issued on the service's previous server or account; nothing is sent anywhere for it (409).</summary>
+    public const string SSH_KEY_STALE = "SSH_KEY_STALE";
+
+    /// <summary>The service's state (inactive, unsupported panel, SSH not enabled on its server, shell disabled) does not allow key changes (409).</summary>
+    public const string SSH_ACCESS_UNAVAILABLE = "SSH_ACCESS_UNAVAILABLE";
+
+    /// <summary>The server's key agent failed or did not answer; the outcome is recorded on the key (503).</summary>
+    public const string SSH_SERVER_UNAVAILABLE = "SSH_SERVER_UNAVAILABLE";
+
+    /// <summary>The server's control panel module has no SSH key implementation (400).</summary>
+    public const string SSH_MODULE_NOT_SUPPORTED = "SSH_MODULE_NOT_SUPPORTED";
+
+    /// <summary>The server's SSH settings lack a value an enabled configuration or an agent call needs (400).</summary>
+    public const string SSH_SETTINGS_INCOMPLETE = "SSH_SETTINGS_INCOMPLETE";
+
     /// <summary>An open cancellation request already exists for the service (409).</summary>
     public const string CANCELLATION_ALREADY_PENDING = "CANCELLATION_ALREADY_PENDING";
 

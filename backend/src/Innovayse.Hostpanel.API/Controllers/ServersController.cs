@@ -1,7 +1,10 @@
+using Innovayse.Hostpanel.Application.Admin.Servers.Commands.ConfigureServerSsh;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.CreateServer;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.DeleteServer;
+using Innovayse.Hostpanel.Application.Admin.Servers.Commands.TestServerSshAgent;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.UpdateServer;
 using Innovayse.Hostpanel.Application.Admin.Servers.Common;
+using Innovayse.Hostpanel.Application.Admin.Servers.Queries.GetServerSshSettings;
 using Innovayse.Hostpanel.Application.Admin.Servers.Queries.ListServers;
 using Innovayse.Hostpanel.Application.Admin.Servers.Queries.TestServerConnection;
 using Innovayse.Hostpanel.Shared.Authorization;
@@ -95,6 +98,49 @@ public sealed class ServersController : BaseApiController
     {
         var outcome = await _bus.InvokeAsync<Result<TestServerConnectionResultDto>>(
             new TestServerConnectionQuery(id), ct);
+        return HandleResult(outcome);
+    }
+
+    /// <summary>Gets a server's SSH key management settings. The stored private key is never returned.</summary>
+    /// <param name="id">Server identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The settings; disabled defaults when never configured.</returns>
+    [HttpGet("{id:int}/ssh-settings")]
+    [ProducesResponseType(typeof(ServerSshSettingsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetSshSettingsAsync(int id, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<ServerSshSettingsDto>>(new GetServerSshSettingsQuery(id), ct);
+        return HandleResult(outcome);
+    }
+
+    /// <summary>Creates or replaces a server's SSH key management settings.</summary>
+    /// <param name="id">Server identifier.</param>
+    /// <param name="command">The settings; the server id comes from the route.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The saved settings.</returns>
+    [HttpPut("{id:int}/ssh-settings")]
+    [ProducesResponseType(typeof(ServerSshSettingsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ConfigureSshSettingsAsync(
+        int id, [FromBody] ConfigureServerSshCommand command, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<ServerSshSettingsDto>>(command with { ServerId = id }, ct);
+        return HandleResult(outcome);
+    }
+
+    /// <summary>Pings the server's SSH key agent and records the health outcome.</summary>
+    /// <param name="id">Server identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The outcome.</returns>
+    [HttpPost("{id:int}/ssh-settings/test")]
+    [ProducesResponseType(typeof(TestServerSshAgentResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> TestSshAgentAsync(int id, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<TestServerSshAgentResultDto>>(new TestServerSshAgentCommand(id), ct);
         return HandleResult(outcome);
     }
 }

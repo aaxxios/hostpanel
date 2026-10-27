@@ -416,6 +416,14 @@ public static class DependencyInjection
         // Provisioning provider factory — creates per-server providers (CWP7, cPanel, etc.)
         services.AddScoped<Innovayse.Hostpanel.Application.Common.Interfaces.IProvisioningProviderFactory, Innovayse.Hostpanel.Infrastructure.Provisioning.ProvisioningProviderFactory>();
 
+        // SSH key management: per-server providers resolved from Server.Module plus the server's
+        // own ServerSshSettings row. Nothing here names a server; every value is per row.
+        services.AddSingleton<Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.ISshAgentTransport, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.SshNetAgentTransport>();
+        services.AddScoped<Innovayse.Hostpanel.Application.Common.Interfaces.ISshKeyProviderFactory, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.SshKeyProviderFactory>();
+        services.AddScoped<
+            Innovayse.Hostpanel.Application.Common.Interfaces.ISshServiceContextResolver,
+            Innovayse.Hostpanel.Application.Services.Common.SshServiceContextResolver>();
+
         // Billing services
         services.AddScoped<IPaymentGateway, NullPaymentGateway>();
         services.AddScoped<IPayerCurrencyResolver, PayerCurrencyResolver>();
