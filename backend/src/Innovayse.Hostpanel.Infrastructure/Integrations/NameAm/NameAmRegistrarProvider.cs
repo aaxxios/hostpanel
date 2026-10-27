@@ -31,11 +31,16 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
         _logger = logger;
     }
 
-    /// <summary>No-op success result returned when the registrar is not configured.</summary>
-    private static readonly RegistrarResult NotConfiguredResult = new(true, null, null, null);
-
-    /// <summary>The refusal reason for a call that cannot be a no-op when the registrar is not configured.</summary>
+    /// <summary>The refusal reason for a change asked of an unconfigured registrar.</summary>
     private const string NotConfiguredMessage = "Name.am is not configured.";
+
+    /// <summary>
+    /// The answer to a purchase or a change when the registrar is not configured: a refusal, never
+    /// a no-op success. A paid order is then refunded, a paid renewal retried, and a handler does
+    /// not save a change the registrar never made. Domains not held at a registrar never get here:
+    /// the handlers skip the registrar for them.
+    /// </summary>
+    private static readonly RegistrarResult NotConfiguredResult = new(false, null, null, NotConfiguredMessage);
 
     /// <inheritdoc/>
     public async Task<RegistrarResult> RegisterAsync(DomainRegistrationOrder request, CancellationToken ct)
@@ -69,14 +74,12 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
         _logger.LogInformation("Registering domain {DomainName} for {Years} years via Name.am",
             request.DomainName, request.Years);
 
-        using var doc = await _client.PostAsync("/client/carts/purchase", purchasePayload, ct);
-
-        var errorMessage = ExtractErrorMessage(doc);
+        // An unrecognised answer is left for polling: the domain stays pending until Name.am
+        // reports it active.
+        var errorMessage = await PurchaseAsync(
+            purchasePayload, "registration", request.DomainName, requirePurchaseList: false, ct);
         if (errorMessage is not null)
         {
-            _logger.LogWarning(
-                "Name.am rejected registration of '{DomainName}': {Error}",
-                request.DomainName, errorMessage);
             return new RegistrarResult(false, null, null, errorMessage);
         }
 
@@ -119,14 +122,11 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
 
         _logger.LogInformation("Initiating transfer for domain {DomainName} via Name.am", request.DomainName);
 
-        using var doc = await _client.PostAsync("/client/carts/purchase", purchasePayload, ct);
-
-        var errorMessage = ExtractErrorMessage(doc);
+        // An unrecognised answer is left for polling, as for a registration.
+        var errorMessage = await PurchaseAsync(
+            purchasePayload, "transfer", request.DomainName, requirePurchaseList: false, ct);
         if (errorMessage is not null)
         {
-            _logger.LogWarning(
-                "Name.am rejected transfer of '{DomainName}': {Error}",
-                request.DomainName, errorMessage);
             return new RegistrarResult(false, null, null, errorMessage);
         }
 
@@ -138,9 +138,7 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
-            // A renewal is paid for: a no-op success would mark the domain renewed while it
-            // lapses at the registrar. A refusal is retried and reaches staff.
-            return new RegistrarResult(false, null, null, NotConfiguredMessage);
+            return NotConfiguredResult;
         }
 
         var (name, tld) = SplitDomain(request.DomainName);
@@ -159,37 +157,12 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
         _logger.LogInformation("Renewing domain {DomainName} for {Years} years via Name.am",
             request.DomainName, request.Years);
 
-        JsonDocument doc;
-        try
+        // No polling follows a renewal, so only a purchase list counts as bought.
+        var errorMessage = await PurchaseAsync(
+            purchasePayload, "renewal", request.DomainName, requirePurchaseList: true, ct);
+        if (errorMessage is not null)
         {
-            doc = await _client.PostAsync("/client/carts/purchase", purchasePayload, ct);
-        }
-        catch (HttpRequestException ex) when (IsDefiniteRefusal(ex.StatusCode))
-        {
-            // A 4xx means Name.am turned the order down, so nothing was bought: a clean refusal
-            // the caller may retry. A 5xx or a timeout stays an exception, its outcome unknown.
-            _logger.LogWarning(ex,
-                "Name.am refused renewal of '{DomainName}' with HTTP {Status}",
-                request.DomainName, (int)ex.StatusCode!.Value);
-            return new RegistrarResult(false, null, null,
-                $"Name.am refused the renewal (HTTP {(int)ex.StatusCode!.Value}).");
-        }
-
-        using (doc)
-        {
-            var errorMessage = ExtractErrorMessage(doc)
-                // A purchase that went through is answered with an array of purchased items;
-                // anything else is not proof that the renewal was bought.
-                ?? (doc.RootElement.ValueKind == JsonValueKind.Array
-                    ? null
-                    : "Name.am answered the renewal with an unexpected response.");
-            if (errorMessage is not null)
-            {
-                _logger.LogWarning(
-                    "Name.am rejected renewal of '{DomainName}': {Error}",
-                    request.DomainName, errorMessage);
-                return new RegistrarResult(false, null, null, errorMessage);
-            }
+            return new RegistrarResult(false, null, null, errorMessage);
         }
 
         // The purchase response carries no expiry. Reporting none lets the caller extend the
@@ -448,7 +421,7 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
-            return new RegistrarResult(false, null, null, NotConfiguredMessage);
+            return NotConfiguredResult;
         }
 
         _logger.LogInformation("Polling Name.am for active status of domain {DomainName}", domainName);
@@ -499,10 +472,9 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
-            // Not "taken" — unknown. Every other method here answers an unconfigured
-            // registrar with a success no-op, but availability has no such answer: a
-            // storefront that reports every domain as taken sells nothing and looks
-            // like it is working. Surfacing it means an operator who forgot to
+            // Not "taken" — unknown. A change is refused with a failed result, but a yes/no
+            // question has no such answer: a storefront that reports every domain as taken
+            // sells nothing and looks like it is working. Surfacing it means an operator who forgot to
             // configure a registrar finds out, instead of quietly selling nothing.
             throw new InvalidOperationException(
                 "Domain availability cannot be checked because no registrar is configured. "
@@ -925,6 +897,54 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
         }
 
         return [.. list];
+    }
+
+    /// <summary>
+    /// Posts a cart purchase and reads Name.am's answer to it.
+    /// </summary>
+    /// <param name="payload">The purchase body.</param>
+    /// <param name="action">What is bought, for the log and the refusal (e.g. <c>renewal</c>).</param>
+    /// <param name="domainName">The domain the purchase is for.</param>
+    /// <param name="requirePurchaseList">
+    /// Whether only an array of purchased items counts as bought. A body Name.am answers with that
+    /// is neither that nor a known error is otherwise accepted, for callers that poll for the outcome.
+    /// </param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The refusal reason, or <see langword="null"/> when the purchase went through.</returns>
+    /// <exception cref="HttpRequestException">
+    /// Thrown on a 5xx, a timeout or a transport failure: the outcome is unknown, so it is not a refusal.
+    /// </exception>
+    private async Task<string?> PurchaseAsync(
+        object payload, string action, string domainName, bool requirePurchaseList, CancellationToken ct)
+    {
+        JsonDocument doc;
+        try
+        {
+            doc = await _client.PostAsync("/client/carts/purchase", payload, ct);
+        }
+        catch (HttpRequestException ex) when (IsDefiniteRefusal(ex.StatusCode))
+        {
+            // A 4xx means Name.am turned the order down, so nothing was bought: a clean refusal
+            // the caller may act on. A 5xx or a timeout stays an exception, its outcome unknown.
+            var status = (int)ex.StatusCode!.Value;
+            _logger.LogWarning(ex, "Name.am refused {Action} of '{DomainName}' with HTTP {Status}", action, domainName, status);
+            return $"Name.am refused the {action} (HTTP {status}).";
+        }
+
+        using (doc)
+        {
+            var errorMessage = ExtractErrorMessage(doc)
+                // A purchase that went through is answered with an array of purchased items.
+                ?? (requirePurchaseList && doc.RootElement.ValueKind != JsonValueKind.Array
+                    ? $"Name.am answered the {action} with an unexpected response."
+                    : null);
+            if (errorMessage is not null)
+            {
+                _logger.LogWarning("Name.am rejected {Action} of '{DomainName}': {Error}", action, domainName, errorMessage);
+            }
+
+            return errorMessage;
+        }
     }
 
     /// <summary>
