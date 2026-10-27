@@ -48,7 +48,7 @@
  * control panel and webmail.
  */
 import { computed } from 'vue'
-import { KeyRound, LayoutGrid, Link2, Mail, MessageSquare, Monitor, Settings, XCircle, Zap } from 'lucide-vue-next'
+import { KeyRound, LayoutGrid, Link2, Mail, MessageSquare, Monitor, Settings, Terminal, XCircle, Zap } from 'lucide-vue-next'
 import { CLIENT_TICKET_NEW_PATH, clientServiceSetupPath } from '~/constants/clientRoutes'
 import { Permission } from '~/composables/usePermissions'
 import { useClientStore } from '~/stores/client'
@@ -108,6 +108,10 @@ const tabs = computed(() => [
   { key: ServiceTab.Overview, label: t('client.services.tabOverview'), icon: LayoutGrid },
   ...(canChangePassword.value
     ? [{ key: ServiceTab.Password, label: t('client.services.tabChangePassword'), icon: KeyRound }]
+    : []),
+  // SSH keys are login credentials, so they sit behind the same permission as the password.
+  ...(canChangePassword.value
+    ? [{ key: ServiceTab.Ssh, label: t('client.services.tabSsh'), icon: Terminal }]
     : []),
   ...(canOrder.value ? [{ key: ServiceTab.Cancel, label: t('client.services.tabCancel'), icon: XCircle }] : []),
 ])

@@ -16,6 +16,7 @@ using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Domain.Slides;
+using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Domain.Ssl;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Testimonials;
@@ -154,6 +155,12 @@ public interface IHostpanelDbContext
 
     /// <summary>Gets the server groups table.</summary>
     public DbSet<ServerGroup> ServerGroups { get; }
+
+    /// <summary>Gets the SSH keys customers added to their hosting services.</summary>
+    public DbSet<SshKey> SshKeys { get; }
+
+    /// <summary>Gets the per-server SSH key management settings.</summary>
+    public DbSet<ServerSshSettings> ServerSshSettings { get; }
 
     /// <summary>Gets the download categories table.</summary>
     public DbSet<DownloadCategory> DownloadCategories { get; }

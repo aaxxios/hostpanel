@@ -1,0 +1,468 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+hostpanel-ssh-key-agent -- manages ED25519 public keys in hosting accounts' authorized_keys.
+
+Installed once per managed CWP server. HostPanel reaches it over SSH as a dedicated management
+user whose single authorized key is pinned to a forced command:
+
+    restrict,command="sudo -n /usr/local/sbin/hostpanel-ssh-key-agent" ssh-ed25519 AAAA... hostpanel
+
+and sudoers lets that user run exactly this file, with no arguments, as root. The agent reads
+ONE JSON request from stdin and writes ONE JSON response to stdout. It never executes a shell,
+never takes a path from the request, and touches only <home>/.ssh/authorized_keys of an account
+that passes every eligibility check below.
+
+Contract version 1 (see README.md beside this file for the full specification):
+
+    {"v": 1, "op": "ping"}
+    {"v": 1, "op": "status", "account": "<user>"}
+    {"v": 1, "op": "list",   "account": "<user>"}
+    {"v": 1, "op": "add",    "account": "<user>", "key_id": "<uuid>", "public_key": "ssh-ed25519 AAAA..."}
+    {"v": 1, "op": "revoke", "account": "<user>", "key_id": "<uuid>"}
+
+Every response is {"v": 1, "ok": true, ...} or {"v": 1, "ok": false, "error": "<code>"}.
+
+Only keys this agent wrote are ever listed or removed. They are recognised by the comment
+"hostpanel:<key_id>"; a key the customer installed by hand is counted but never touched.
+
+Security model, in order of what it defends against:
+  * Request is size-capped and schema-checked; unknown fields and operations are refused.
+  * The account name is a strict POSIX pattern, must resolve through the passwd database, must
+    have uid >= min_uid, must not be on the deny list, and its home must sit directly under
+    home_root. A name never becomes a path; the path comes from the passwd entry.
+  * All file work happens in a forked child that has dropped to the account's own uid/gid with
+    no supplementary groups. A symlink planted by the customer can therefore reach nothing the
+    customer could not already write, and files are created with the right owner by construction.
+  * .ssh and authorized_keys are opened with O_NOFOLLOW relative to directory descriptors, and
+    the replacement is written to an O_EXCL temp file, fsynced and renamed into place.
+  * A per-account flock (in a root-owned directory) serialises concurrent requests.
+  * Every mutating request is appended to the audit log by the root parent, success or failure.
+"""
+
+import base64
+import configparser
+import fcntl
+import hashlib
+import json
+import os
+import pwd
+import re
+import signal
+import stat
+import sys
+import time
+
+CONTRACT_VERSION = 1
+AGENT_VERSION = "1.0.0"
+CONFIG_PATH = "/etc/hostpanel-ssh-key-agent/agent.conf"
+MAX_REQUEST_BYTES = 16 * 1024
+MAX_AUTHORIZED_KEYS_BYTES = 256 * 1024
+# A client that connects and never sends (or never closes) stdin must not pin a root process.
+STDIN_TIMEOUT_SECONDS = 10
+# Ceiling on one whole request, lock wait included.
+REQUEST_TIMEOUT_SECONDS = 60
+TAG_PREFIX = "hostpanel:"
+ACCOUNT_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
+KEY_ID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+ED25519_LINE_RE = re.compile(r"^ssh-ed25519 ([A-Za-z0-9+/]{68}(?:==|=)?)(?: [^\r\n]*)?$")
+DISABLED_SHELLS = {"/sbin/nologin", "/usr/sbin/nologin", "/bin/false", "/usr/bin/false", ""}
+
+DEFAULTS = {
+    "min_uid": "1000",
+    "home_root": "/home",
+    "deny_accounts": "root,admin,nobody,mysql,postfix,dovecot,named,apache,nginx",
+    "max_keys": "50",
+    "audit_log": "/var/log/hostpanel-ssh-key-agent.log",
+    "lock_dir": "/run/hostpanel-ssh-key-agent",
+}
+
+
+class AgentError(Exception):
+    """A refusal with a stable, machine-readable code. The message is never sent to the caller."""
+
+    def __init__(self, code, detail=""):
+        super().__init__(detail or code)
+        self.code = code
+        self.detail = detail
+
+
+def load_config(path=CONFIG_PATH):
+    """Reads agent.conf; a missing file means the defaults, never a crash."""
+    parser = configparser.ConfigParser()
+    parser.read_dict({"agent": DEFAULTS})
+    if os.path.exists(path):
+        parser.read(path)
+    section = parser["agent"]
+    return {
+        "min_uid": int(section["min_uid"]),
+        "home_root": os.path.realpath(section["home_root"]),
+        "deny_accounts": {a.strip() for a in section["deny_accounts"].split(",") if a.strip()},
+        "max_keys": int(section["max_keys"]),
+        "audit_log": section["audit_log"],
+        "lock_dir": section["lock_dir"],
+    }
+
+
+# --------------------------------------------------------------------------- key handling
+
+def parse_ed25519(public_key):
+    """
+    Validates an OpenSSH ED25519 public key line and returns (canonical_blob_b64, fingerprint).
+
+    The customer's comment is discarded: the agent writes its own tag in its place, so nothing a
+    customer types reaches authorized_keys except the base64 blob, which is re-encoded from bytes.
+    """
+    if not isinstance(public_key, str) or len(public_key) > 1024:
+        raise AgentError("invalid_key")
+    match = ED25519_LINE_RE.match(public_key.strip())
+    if not match:
+        raise AgentError("invalid_key")
+    try:
+        blob = base64.b64decode(match.group(1), validate=True)
+    except (ValueError, TypeError):
+        raise AgentError("invalid_key")
+    # string "ssh-ed25519" (4-byte length + 11 bytes) then string key (4-byte length + 32 bytes).
+    if len(blob) != 51 or blob[:15] != b"\x00\x00\x00\x0bssh-ed25519" or blob[15:19] != b"\x00\x00\x00\x20":
+        raise AgentError("invalid_key")
+    fingerprint = "SHA256:" + base64.b64encode(hashlib.sha256(blob).digest()).decode().rstrip("=")
+    return base64.b64encode(blob).decode(), fingerprint
+
+
+def fingerprint_of_line(line):
+    """Fingerprint of any authorized_keys line whose key is ED25519, else None."""
+    for token_index, token in enumerate(line.split()):
+        if token == "ssh-ed25519":
+            parts = line.split()
+            if token_index + 1 < len(parts):
+                try:
+                    blob = base64.b64decode(parts[token_index + 1], validate=True)
+                except (ValueError, TypeError):
+                    return None
+                return "SHA256:" + base64.b64encode(hashlib.sha256(blob).digest()).decode().rstrip("=")
+    return None
+
+
+def managed_key_id(line):
+    """The key id of a line this agent wrote, or None for any other line."""
+    parts = line.split()
+    if len(parts) == 3 and parts[0] == "ssh-ed25519" and parts[2].startswith(TAG_PREFIX):
+        key_id = parts[2][len(TAG_PREFIX):]
+        if KEY_ID_RE.match(key_id):
+            return key_id
+    return None
+
+
+# --------------------------------------------------------------------------- account checks
+
+def resolve_account(name, config, getpwnam=pwd.getpwnam):
+    """Resolves and vets the hosting account. The returned home path comes from passwd only."""
+    if not isinstance(name, str) or not ACCOUNT_RE.match(name):
+        raise AgentError("invalid_account")
+    if name in config["deny_accounts"]:
+        raise AgentError("account_not_eligible")
+    try:
+        entry = getpwnam(name)
+    except KeyError:
+        raise AgentError("account_not_found")
+    if entry.pw_uid < config["min_uid"] or entry.pw_uid == 0 or entry.pw_gid == 0:
+        raise AgentError("account_not_eligible")
+    home = os.path.realpath(entry.pw_dir)
+    # The home must be exactly <home_root>/<something>, never the root itself or deeper.
+    if os.path.dirname(home) != config["home_root"]:
+        raise AgentError("account_not_eligible")
+    return {
+        "name": name,
+        "uid": entry.pw_uid,
+        "gid": entry.pw_gid,
+        "home": home,
+        "shell_enabled": entry.pw_shell not in DISABLED_SHELLS,
+    }
+
+
+# --------------------------------------------------------------------------- file work (runs as the account)
+
+def _open_ssh_dir(home, create):
+    """Opens <home>/.ssh as a directory descriptor without following symlinks."""
+    home_fd = os.open(home, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        try:
+            st = os.stat(".ssh", dir_fd=home_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            if not create:
+                return None
+            os.mkdir(".ssh", 0o700, dir_fd=home_fd)
+            st = os.stat(".ssh", dir_fd=home_fd, follow_symlinks=False)
+        if not stat.S_ISDIR(st.st_mode) or st.st_uid != os.geteuid():
+            raise AgentError("unsafe_path")
+        return os.open(".ssh", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=home_fd)
+    finally:
+        os.close(home_fd)
+
+
+def _read_lines(ssh_fd):
+    """Reads authorized_keys (refusing symlinks and oversize files); missing means empty."""
+    if ssh_fd is None:
+        return []
+    try:
+        fd = os.open("authorized_keys", os.O_RDONLY | os.O_NOFOLLOW, dir_fd=ssh_fd)
+    except FileNotFoundError:
+        return []
+    except OSError:
+        raise AgentError("unsafe_path")
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_uid != os.geteuid():
+            raise AgentError("unsafe_path")
+        if st.st_size > MAX_AUTHORIZED_KEYS_BYTES:
+            raise AgentError("file_too_large")
+        with os.fdopen(os.dup(fd), "r", encoding="utf-8", errors="replace") as handle:
+            return handle.read().splitlines()
+    finally:
+        os.close(fd)
+
+
+def _write_lines(ssh_fd, lines):
+    """Atomically replaces authorized_keys: O_EXCL temp file, fsync, rename, fsync directory."""
+    tmp_name = "authorized_keys.hostpanel.%d.tmp" % os.getpid()
+    data = ("\n".join(lines) + "\n") if lines else ""
+    fd = os.open(tmp_name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=ssh_fd)
+    try:
+        os.write(fd, data.encode("utf-8"))
+        os.fchmod(fd, 0o600)
+        os.fsync(fd)
+    except BaseException:
+        os.close(fd)
+        os.unlink(tmp_name, dir_fd=ssh_fd)
+        raise
+    os.close(fd)
+    os.replace(tmp_name, "authorized_keys", src_dir_fd=ssh_fd, dst_dir_fd=ssh_fd)
+    os.fsync(ssh_fd)
+
+
+def _summarise(lines):
+    managed, unmanaged = [], 0
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        key_id = managed_key_id(stripped)
+        if key_id:
+            managed.append({"key_id": key_id, "fingerprint": fingerprint_of_line(stripped)})
+        else:
+            unmanaged += 1
+    return managed, unmanaged
+
+
+def perform(request, account, config):
+    """Executes one operation as the (already dropped-to) account user. Returns the response body."""
+    op = request["op"]
+    if op == "status":
+        ssh_fd = _open_ssh_dir(account["home"], create=False)
+        try:
+            managed, unmanaged = _summarise(_read_lines(ssh_fd))
+        finally:
+            if ssh_fd is not None:
+                os.close(ssh_fd)
+        return {"shell_enabled": account["shell_enabled"], "managed_keys": len(managed), "unmanaged_keys": unmanaged}
+
+    if op == "list":
+        ssh_fd = _open_ssh_dir(account["home"], create=False)
+        try:
+            managed, unmanaged = _summarise(_read_lines(ssh_fd))
+        finally:
+            if ssh_fd is not None:
+                os.close(ssh_fd)
+        return {"keys": managed, "unmanaged_keys": unmanaged}
+
+    if op == "add":
+        if not account["shell_enabled"]:
+            raise AgentError("ssh_disabled")
+        blob_b64, fingerprint = parse_ed25519(request["public_key"])
+        key_id = request["key_id"]
+        ssh_fd = _open_ssh_dir(account["home"], create=True)
+        try:
+            lines = _read_lines(ssh_fd)
+            for line in lines:
+                stripped = line.strip()
+                existing_id = managed_key_id(stripped)
+                if fingerprint_of_line(stripped) == fingerprint:
+                    if existing_id == key_id:
+                        return {"key_id": key_id, "fingerprint": fingerprint, "changed": False}
+                    raise AgentError("duplicate_key")
+                if existing_id == key_id:
+                    raise AgentError("key_id_conflict")
+            managed, _ = _summarise(lines)
+            if len(managed) >= config["max_keys"]:
+                raise AgentError("too_many_keys")
+            lines.append("ssh-ed25519 %s %s%s" % (blob_b64, TAG_PREFIX, key_id))
+            _write_lines(ssh_fd, lines)
+        finally:
+            os.close(ssh_fd)
+        return {"key_id": key_id, "fingerprint": fingerprint, "changed": True}
+
+    if op == "revoke":
+        key_id = request["key_id"]
+        ssh_fd = _open_ssh_dir(account["home"], create=False)
+        if ssh_fd is None:
+            return {"key_id": key_id, "changed": False}
+        try:
+            lines = _read_lines(ssh_fd)
+            kept = [line for line in lines if managed_key_id(line.strip()) != key_id]
+            if len(kept) == len(lines):
+                return {"key_id": key_id, "changed": False}
+            _write_lines(ssh_fd, kept)
+        finally:
+            os.close(ssh_fd)
+        return {"key_id": key_id, "changed": True}
+
+    raise AgentError("unknown_operation")
+
+
+# --------------------------------------------------------------------------- request handling (root)
+
+REQUIRED_FIELDS = {
+    "ping": set(),
+    "status": {"account"},
+    "list": {"account"},
+    "add": {"account", "key_id", "public_key"},
+    "revoke": {"account", "key_id"},
+}
+
+
+def validate_request(raw):
+    """Parses and schema-checks the request. Unknown fields are refused, not ignored."""
+    if len(raw) > MAX_REQUEST_BYTES:
+        raise AgentError("request_too_large")
+    try:
+        request = json.loads(raw)
+    except ValueError:
+        raise AgentError("invalid_request")
+    if not isinstance(request, dict) or request.get("v") != CONTRACT_VERSION:
+        raise AgentError("unsupported_version")
+    op = request.get("op")
+    if op not in REQUIRED_FIELDS:
+        raise AgentError("unknown_operation")
+    allowed = {"v", "op"} | REQUIRED_FIELDS[op]
+    if set(request) != allowed:
+        raise AgentError("invalid_request")
+    if "key_id" in request and (not isinstance(request["key_id"], str) or not KEY_ID_RE.match(request["key_id"])):
+        raise AgentError("invalid_request")
+    return request
+
+
+def run_as_account(request, account, config):
+    """Forks, drops the child to the account's uid/gid, runs the operation there, returns its result."""
+    if os.geteuid() == account["uid"]:
+        # Already the account (tests run this way); no privilege to drop.
+        return perform(request, account, config)
+    read_fd, write_fd = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(read_fd)
+        try:
+            os.setgroups([])
+            os.setgid(account["gid"])
+            os.setuid(account["uid"])
+            os.umask(0o077)
+            body = {"ok": True, "result": perform(request, account, config)}
+        except AgentError as exc:
+            body = {"ok": False, "error": exc.code}
+        except Exception:  # noqa: BLE001 -- the child must always answer
+            body = {"ok": False, "error": "internal_error"}
+        os.write(write_fd, json.dumps(body).encode())
+        os._exit(0)
+    os.close(write_fd)
+    chunks = []
+    while True:
+        chunk = os.read(read_fd, 65536)
+        if not chunk:
+            break
+        chunks.append(chunk)
+    os.close(read_fd)
+    os.waitpid(pid, 0)
+    try:
+        body = json.loads(b"".join(chunks) or b"{}")
+    except ValueError:
+        raise AgentError("internal_error")
+    if not body.get("ok"):
+        raise AgentError(body.get("error", "internal_error"))
+    return body["result"]
+
+
+def audit(config, request, outcome):
+    """Appends one line per mutating request. Never contains key material beyond the fingerprint."""
+    if request is None or request.get("op") not in ("add", "revoke"):
+        return
+    entry = {
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "op": request.get("op"),
+        "account": request.get("account"),
+        "key_id": request.get("key_id"),
+        "outcome": outcome,
+        "client": os.environ.get("SUDO_USER", ""),
+    }
+    if request.get("op") == "add":
+        try:
+            entry["fingerprint"] = parse_ed25519(request.get("public_key"))[1]
+        except AgentError:
+            entry["fingerprint"] = None
+    try:
+        fd = os.open(config["audit_log"], os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "a") as handle:
+            handle.write(json.dumps(entry) + "\n")
+    except OSError:
+        pass
+
+
+def handle(raw, config):
+    """Full request lifecycle. Returns the response dict; never raises."""
+    request = None
+    try:
+        request = validate_request(raw)
+        if request["op"] == "ping":
+            return {"v": CONTRACT_VERSION, "ok": True, "agent_version": AGENT_VERSION}
+        account = resolve_account(request["account"], config)
+        os.makedirs(config["lock_dir"], mode=0o700, exist_ok=True)
+        lock_fd = os.open(os.path.join(config["lock_dir"], account["name"] + ".lock"),
+                          os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            result = run_as_account(request, account, config)
+        finally:
+            os.close(lock_fd)
+        audit(config, request, "ok")
+        response = {"v": CONTRACT_VERSION, "ok": True}
+        response.update(result)
+        return response
+    except AgentError as exc:
+        audit(config, request, exc.code)
+        return {"v": CONTRACT_VERSION, "ok": False, "error": exc.code}
+    except Exception:  # noqa: BLE001 -- the caller gets a code, never a traceback
+        audit(config, request, "internal_error")
+        return {"v": CONTRACT_VERSION, "ok": False, "error": "internal_error"}
+
+
+def _on_timeout(signum, frame):
+    raise AgentError("timeout")
+
+
+def main():
+    signal.signal(signal.SIGALRM, _on_timeout)
+    signal.alarm(STDIN_TIMEOUT_SECONDS)
+    try:
+        raw = sys.stdin.buffer.read(MAX_REQUEST_BYTES + 1).decode("utf-8", errors="replace")
+    except AgentError:
+        sys.stdout.write(json.dumps({"v": CONTRACT_VERSION, "ok": False, "error": "timeout"}) + "\n")
+        return 1
+    # handle() turns the AgentError raised by a later alarm into an ordinary refusal.
+    signal.alarm(REQUEST_TIMEOUT_SECONDS)
+    response = handle(raw, load_config())
+    signal.alarm(0)
+    sys.stdout.write(json.dumps(response) + "\n")
+    sys.stdout.flush()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

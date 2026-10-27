@@ -1222,4 +1222,37 @@
   <data name="ServiceNotProvisioned" xml:space="preserve">
     <value>Услуга {0} ещё не подключена.</value>
   </data>
+  <data name="SshKeyIdInvalid" xml:space="preserve">
+    <value>Укажите корректный SSH-ключ.</value>
+  </data>
+  <data name="SshLabelRequired" xml:space="preserve">
+    <value>Введите название ключа.</value>
+  </data>
+  <data name="SshLabelTooLong" xml:space="preserve">
+    <value>Название может содержать не более 100 символов.</value>
+  </data>
+  <data name="SshPublicKeyRequired" xml:space="preserve">
+    <value>Вставьте открытый ключ.</value>
+  </data>
+  <data name="SshPublicKeyTooLong" xml:space="preserve">
+    <value>Открытый ключ слишком длинный.</value>
+  </data>
+  <data name="SshHostnameInvalid" xml:space="preserve">
+    <value>Введите корректное имя хоста.</value>
+  </data>
+  <data name="SshPortInvalid" xml:space="preserve">
+    <value>Порт должен быть от 1 до 65535.</value>
+  </data>
+  <data name="SshAgentUsernameInvalid" xml:space="preserve">
+    <value>Введите корректное имя служебного пользователя.</value>
+  </data>
+  <data name="SshHostKeyFingerprintInvalid" xml:space="preserve">
+    <value>Отпечаток ключа хоста должен иметь вид SHA256:… (43 символа).</value>
+  </data>
+  <data name="SshAgentPrivateKeyTooLong" xml:space="preserve">
+    <value>Закрытый ключ слишком длинный.</value>
+  </data>
+  <data name="SshTimeoutInvalid" xml:space="preserve">
+    <value>Тайм-ауты вне допустимого диапазона.</value>
+  </data>
 </root>

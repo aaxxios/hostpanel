@@ -637,4 +637,34 @@
   <data name="TESTIMONIAL_RATING_OUT_OF_RANGE" xml:space="preserve">
     <value>Оценка должна быть от 1 до 5.</value>
   </data>
+  <data name="SSH_KEY_INVALID" xml:space="preserve">
+    <value>Ключ не является допустимым открытым ключом ED25519.</value>
+  </data>
+  <data name="SSH_PRIVATE_KEY_REJECTED" xml:space="preserve">
+    <value>Это закрытый ключ. Вставьте открытый ключ (файл .pub).</value>
+  </data>
+  <data name="SSH_KEY_ALREADY_INSTALLED" xml:space="preserve">
+    <value>Этот ключ уже установлен для услуги.</value>
+  </data>
+  <data name="SSH_KEY_LIMIT_REACHED" xml:space="preserve">
+    <value>Для услуги уже добавлено максимальное число SSH-ключей.</value>
+  </data>
+  <data name="SSH_KEY_NOT_FOUND" xml:space="preserve">
+    <value>Такого SSH-ключа нет.</value>
+  </data>
+  <data name="SSH_KEY_STALE" xml:space="preserve">
+    <value>Этот ключ был выдан на прежнем сервере услуги. Обратитесь в поддержку, чтобы удалить его.</value>
+  </data>
+  <data name="SSH_ACCESS_UNAVAILABLE" xml:space="preserve">
+    <value>Управление SSH-ключами недоступно для этой услуги.</value>
+  </data>
+  <data name="SSH_SERVER_UNAVAILABLE" xml:space="preserve">
+    <value>Не удалось связаться с сервером хостинга. Повторите попытку позже.</value>
+  </data>
+  <data name="SSH_MODULE_NOT_SUPPORTED" xml:space="preserve">
+    <value>Управление SSH-ключами не поддерживается для этого типа сервера.</value>
+  </data>
+  <data name="SSH_SETTINGS_INCOMPLETE" xml:space="preserve">
+    <value>Настройки SSH для этого сервера заполнены не полностью.</value>
+  </data>
 </root>

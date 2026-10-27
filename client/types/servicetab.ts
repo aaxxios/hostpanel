@@ -5,5 +5,7 @@ export enum ServiceTab {
   /** Control-panel password form. */
   Password = 'password',
   /** Cancellation request form. */
-  Cancel = 'cancel'
+  Cancel = 'cancel',
+  /** SSH key management. */
+  Ssh = 'ssh'
 }

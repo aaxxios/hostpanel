@@ -2737,6 +2737,136 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.ToTable("SlideTranslations");
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Ssh.ServerSshSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AgentHost")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("AgentHostKeyFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("AgentPort")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AgentPrivateKey")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<string>("AgentUsername")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("ConnectTimeoutSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("IsHealthy")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastHealthCheckAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("OperationTimeoutSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ServerId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SshHostname")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("SshPort")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerId")
+                        .IsUnique();
+
+                    b.ToTable("ServerSshSettings");
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Ssh.SshKey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccountUsername")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("ClientServiceId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid>("KeyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("LastSyncError")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("PublicKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ServerId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SyncState")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KeyId")
+                        .IsUnique();
+
+                    b.HasIndex("ServerId");
+
+                    b.HasIndex("ClientServiceId", "Fingerprint")
+                        .IsUnique()
+                        .HasFilter("\"SyncState\" <> 'Revoked'");
+
+                    b.ToTable("SshKeys");
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Ssl.SslCheck", b =>
                 {
                     b.Property<int>("Id")
@@ -3675,6 +3805,24 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasOne("Innovayse.Hostpanel.Domain.Slides.Slide", null)
                         .WithMany("Translations")
                         .HasForeignKey("SlideId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Ssh.ServerSshSettings", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Servers.Server", null)
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Ssh.SshKey", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Services.ClientService", null)
+                        .WithMany()
+                        .HasForeignKey("ClientServiceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

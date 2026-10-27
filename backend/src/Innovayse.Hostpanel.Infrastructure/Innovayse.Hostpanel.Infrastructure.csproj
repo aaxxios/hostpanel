@@ -18,6 +18,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DnsClient" />
+    <PackageReference Include="SSH.NET" />
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="Mapster" />

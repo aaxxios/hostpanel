@@ -79,6 +79,7 @@ import {
   SERVICE,
   SERVICE_INVOICE,
   SERVICE_MANAGED,
+  SSH_ACCESS,
   SERVICE_PENDING,
   STUB_PORT,
   TAKEN_DOMAIN,
@@ -193,6 +194,12 @@ let contacts = [{ ...SEEDED_CONTACT }]
 
 /** @type {Record<string, unknown>[]} The account's team; a removal changes it. */
 let team = [{ ...TEAM_OWNER }, { ...TEAM_MEMBER }]
+
+/** @type {Record<string, unknown>[]} SSH keys of the managed service; an add and a revoke change them, a reset empties them. */
+let sshKeys = []
+
+/** Running number that makes each stub SSH key id unique. */
+let lastSshKey = 0
 
 /** @type {number} Last contact id handed out, so a created contact gets a fresh one. */
 let lastContactId = Number(SEEDED_CONTACT.id)
@@ -577,6 +584,58 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
 const routeManagement = (method, path, body, res) => {
   const isGet = method === 'GET'
 
+  // SSH keys of one service: the access summary, the list, an add and a revoke. Only the managed
+  // service offers them; the real backend resolves server, port and account from the service.
+  const sshMatch = path.match(/^\/api\/me\/services\/(\d+)\/ssh(?:\/keys(?:\/([^/]+))?)?$/)
+  if (sshMatch) {
+    const service = services.find((s) => String(s.id) === sshMatch[1])
+    if (!service) {
+      sendProblem(res, 404, 'SERVICE_NOT_FOUND', 'No such client service.')
+      return true
+    }
+    if (isGet && path.endsWith('/ssh')) {
+      send(res, 200, { ...SSH_ACCESS, username: service.username, connectCommand: `ssh -p ${SSH_ACCESS.port} ${service.username}@${SSH_ACCESS.hostname}` })
+      return true
+    }
+    if (isGet && path.endsWith('/ssh/keys')) {
+      send(res, 200, sshKeys.map((key) => Object.fromEntries(Object.entries(key).filter(([name]) => name !== 'blob'))))
+      return true
+    }
+    if (method === 'POST' && path.endsWith('/ssh/keys')) {
+      const blob = String(body?.publicKey ?? '').split(' ')[1] ?? ''
+      if (!String(body?.publicKey ?? '').startsWith('ssh-ed25519 ')) {
+        sendProblem(res, 400, 'SSH_KEY_INVALID', 'The key is not a valid ED25519 public key.')
+        return true
+      }
+      if (sshKeys.some((k) => k.blob === blob)) {
+        sendProblem(res, 409, 'SSH_KEY_ALREADY_INSTALLED', 'This key is already installed on the service.')
+        return true
+      }
+      lastSshKey += 1
+      const key = {
+        keyId: `00000000-0000-4000-8000-${String(lastSshKey).padStart(12, '0')}`,
+        label: String(body?.label ?? ''),
+        fingerprint: `SHA256:e2e-fingerprint-${lastSshKey}`,
+        createdAt: '2026-10-27T00:00:00Z',
+        syncState: 'Installed',
+        isStale: false,
+        presentOnServer: true,
+      }
+      sshKeys = [...sshKeys, { ...key, blob }]
+      send(res, 201, key)
+      return true
+    }
+    if (method === 'DELETE' && sshMatch[2]) {
+      if (!sshKeys.some((k) => k.keyId === sshMatch[2])) {
+        sendProblem(res, 404, 'SSH_KEY_NOT_FOUND', 'No such SSH key.')
+        return true
+      }
+      sshKeys = sshKeys.filter((k) => k.keyId !== sshMatch[2])
+      send(res, 204)
+      return true
+    }
+  }
+
   // One service: cancellation state, related invoices, password, cancellation and first-time setup.
   const serviceMatch = path.match(/^\/api\/me\/services\/(\d+)\/(cancellation-status|invoices|change-password|cancel|setup)$/)
   if (serviceMatch) {
@@ -779,6 +838,8 @@ const server = createServer(async (req, res) => {
     savedCards = [{ ...SAVED_CARD }]
     contacts = [{ ...SEEDED_CONTACT }]
     team = [{ ...TEAM_OWNER }, { ...TEAM_MEMBER }]
+    sshKeys = []
+    lastSshKey = 0
     lastContactId = Number(SEEDED_CONTACT.id)
     send(res, 204)
     return

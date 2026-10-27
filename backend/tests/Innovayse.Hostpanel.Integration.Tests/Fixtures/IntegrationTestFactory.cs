@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -117,6 +118,12 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
             }
 
             services.AddScoped<IProvisioningProviderFactory, StubProvisioningProviderFactory>();
+
+            // SSH key agents are reached over SSH by the real factory; every test instead gets one
+            // in-memory agent per server id, shared for the host's lifetime so a test can read back
+            // what the handlers sent to the server it seeded.
+            services.RemoveAll<ISshKeyProviderFactory>();
+            services.AddSingleton<ISshKeyProviderFactory, FakeSshKeyProviderFactory>();
 
             // Registration now sends the verification mail, so a host that kept the SMTP sender would
             // wait on a relay that does not exist for every account a test creates. Tests that read the

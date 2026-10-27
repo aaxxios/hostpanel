@@ -14,6 +14,7 @@
     commercial condition to downstream users is not one this project can take.
   -->
   <ItemGroup>
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="SkiaSharp" Version="4.153.1" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
   </ItemGroup>
