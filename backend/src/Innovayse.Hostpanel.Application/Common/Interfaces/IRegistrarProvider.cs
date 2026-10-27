@@ -29,7 +29,11 @@ public interface IRegistrarProvider
     /// </summary>
     /// <param name="request">Renewal parameters including registrar reference and years.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result containing the updated expiry date on success.</returns>
+    /// <returns>
+    /// Success only when the registrar renewed the domain, with the new expiry when the registrar
+    /// reports one (otherwise <see langword="null"/>, and the caller extends the current expiry).
+    /// An unconfigured registrar is a failure, never a no-op success: renewals are paid for.
+    /// </returns>
     Task<RegistrarResult> RenewAsync(DomainRenewalOrder request, CancellationToken ct);
 
     /// <summary>

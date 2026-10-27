@@ -202,7 +202,7 @@
     <value>The registrar was unable to cancel the pending transfer. Please try again shortly.</value>
   </data>
 <data name="DOMAIN_NO_REGISTRAR_REF" xml:space="preserve">
-    <value>This domain has no registrar reference, so an outgoing transfer cannot be started.</value>
+    <value>This domain has no registrar reference, so it cannot be changed at the registrar.</value>
   </data>
 <data name="DOMAIN_OUTGOING_TRANSFER_UPSTREAM_FAILED" xml:space="preserve">
     <value>The registrar was unable to start the outgoing transfer. Please try again shortly.</value>

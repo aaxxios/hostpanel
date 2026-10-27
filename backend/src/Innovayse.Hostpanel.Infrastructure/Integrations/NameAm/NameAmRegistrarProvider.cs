@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Domains;
@@ -32,6 +33,9 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
 
     /// <summary>No-op success result returned when the registrar is not configured.</summary>
     private static readonly RegistrarResult NotConfiguredResult = new(true, null, null, null);
+
+    /// <summary>The refusal reason for a call that cannot be a no-op when the registrar is not configured.</summary>
+    private const string NotConfiguredMessage = "Name.am is not configured.";
 
     /// <inheritdoc/>
     public async Task<RegistrarResult> RegisterAsync(DomainRegistrationOrder request, CancellationToken ct)
@@ -134,7 +138,9 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
-            return NotConfiguredResult;
+            // A renewal is paid for: a no-op success would mark the domain renewed while it
+            // lapses at the registrar. A refusal is retried and reaches staff.
+            return new RegistrarResult(false, null, null, NotConfiguredMessage);
         }
 
         var (name, tld) = SplitDomain(request.DomainName);
@@ -153,11 +159,42 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
         _logger.LogInformation("Renewing domain {DomainName} for {Years} years via Name.am",
             request.DomainName, request.Years);
 
-        using var doc = await _client.PostAsync("/client/carts/purchase", purchasePayload, ct);
+        JsonDocument doc;
+        try
+        {
+            doc = await _client.PostAsync("/client/carts/purchase", purchasePayload, ct);
+        }
+        catch (HttpRequestException ex) when (IsDefiniteRefusal(ex.StatusCode))
+        {
+            // A 4xx means Name.am turned the order down, so nothing was bought: a clean refusal
+            // the caller may retry. A 5xx or a timeout stays an exception, its outcome unknown.
+            _logger.LogWarning(ex,
+                "Name.am refused renewal of '{DomainName}' with HTTP {Status}",
+                request.DomainName, (int)ex.StatusCode!.Value);
+            return new RegistrarResult(false, null, null,
+                $"Name.am refused the renewal (HTTP {(int)ex.StatusCode!.Value}).");
+        }
 
-        var expiresAt = DateTimeOffset.UtcNow.AddYears(request.Years);
+        using (doc)
+        {
+            var errorMessage = ExtractErrorMessage(doc)
+                // A purchase that went through is answered with an array of purchased items;
+                // anything else is not proof that the renewal was bought.
+                ?? (doc.RootElement.ValueKind == JsonValueKind.Array
+                    ? null
+                    : "Name.am answered the renewal with an unexpected response.");
+            if (errorMessage is not null)
+            {
+                _logger.LogWarning(
+                    "Name.am rejected renewal of '{DomainName}': {Error}",
+                    request.DomainName, errorMessage);
+                return new RegistrarResult(false, null, null, errorMessage);
+            }
+        }
 
-        return new RegistrarResult(true, request.RegistrarRef, expiresAt, null);
+        // The purchase response carries no expiry. Reporting none lets the caller extend the
+        // current one; now + years would cost an early renewal its remaining days.
+        return new RegistrarResult(true, request.RegistrarRef, null, null);
     }
 
     /// <inheritdoc/>
@@ -411,7 +448,7 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
-            return new RegistrarResult(false, null, null, "Name.am is not configured.");
+            return new RegistrarResult(false, null, null, NotConfiguredMessage);
         }
 
         _logger.LogInformation("Polling Name.am for active status of domain {DomainName}", domainName);
@@ -889,6 +926,15 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
 
         return [.. list];
     }
+
+    /// <summary>
+    /// Gets whether an HTTP status is Name.am declining a request outright (a 4xx other than
+    /// 408 Request Timeout), as opposed to a failure whose outcome is unknown.
+    /// </summary>
+    /// <param name="status">The status of the failed response, if one was received.</param>
+    /// <returns><see langword="true"/> when nothing can have been processed.</returns>
+    private static bool IsDefiniteRefusal(HttpStatusCode? status) =>
+        status is { } code && (int)code is >= 400 and < 500 && code != HttpStatusCode.RequestTimeout;
 
     /// <summary>
     /// Inspects a Name.am API response body for error indicators.

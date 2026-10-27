@@ -202,7 +202,7 @@
     <value>Ռեգիստրատորը չկարողացավ չեղարկել սպասվող փոխանցումը։ Փորձեք կրկին փոքր-ինչ ուշ։</value>
   </data>
 <data name="DOMAIN_NO_REGISTRAR_REF" xml:space="preserve">
-    <value>Այս դոմենը ռեգիստրատորի հղում չունի, ուստի ելքային փոխանցում սկսել հնարավոր չէ։</value>
+    <value>Այս դոմենը ռեգիստրատորի հղում չունի, ուստի ռեգիստրատորում այն փոփոխել հնարավոր չէ։</value>
   </data>
 <data name="DOMAIN_OUTGOING_TRANSFER_UPSTREAM_FAILED" xml:space="preserve">
     <value>Ռեգիստրատորը չկարողացավ սկսել ելքային փոխանցումը։ Փորձեք կրկին փոքր-ինչ ուշ։</value>

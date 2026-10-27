@@ -291,8 +291,8 @@ public static class HostpanelErrorCodes
     public const string DOMAIN_TRANSFER_CANCEL_UPSTREAM_FAILED = "DOMAIN_TRANSFER_CANCEL_UPSTREAM_FAILED";
 
     /// <summary>
-    /// The domain carries no registrar reference, so an outgoing transfer cannot be initiated
-    /// against it (400).
+    /// The domain carries no registrar reference, so an outgoing transfer or a renewal cannot be
+    /// placed against it (400).
     /// </summary>
     public const string DOMAIN_NO_REGISTRAR_REF = "DOMAIN_NO_REGISTRAR_REF";
 

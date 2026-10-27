@@ -149,7 +149,7 @@ public sealed class ApplyPaidRenewalsHandler
     {
         var current = await _context.Domains.AsNoTracking()
             .Where(d => d.Id == domainId)
-            .Select(d => new { d.Name, d.ExpiresAt, d.Status })
+            .Select(d => new { d.Name, d.ExpiresAt, d.Status, d.RegistrarRef })
             .FirstOrDefaultAsync(ct);
         if (current is null)
         {
@@ -164,6 +164,15 @@ public sealed class ApplyPaidRenewalsHandler
             // whole command every day. Close the line and hand the refund question to staff.
             await CloseWithoutEffectAsync(invoice, line, domainId, current.Name,
                 $"The domain is {current.Status} and cannot be renewed; the paid renewal was not applied. Review for a refund.", ct);
+            return;
+        }
+
+        if (current.RegistrarRef is null)
+        {
+            // Never placed at a registrar, so RenewDomainCommand refuses it every time; releasing the
+            // claim would retry and alert daily for ever. Close the line and hand it to staff.
+            await CloseWithoutEffectAsync(invoice, line, domainId, current.Name,
+                "The domain is not linked to a registrar and cannot be renewed there; the paid renewal was not applied. Review for a refund.", ct);
             return;
         }
 

@@ -205,4 +205,64 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
         result.Success.Should().BeTrue();
         namecheap.Requests.Should().BeEmpty();
     }
+
+    /// <summary>An unconfigured integration refuses a renewal and calls nothing.</summary>
+    [Fact]
+    public async Task RenewAsync_WhenNotConfigured_FailsWithoutCallingNamecheapAsync()
+    {
+        var unconfigured = Settings;
+        unconfigured.ApiKey = string.Empty;
+        var provider = new NamecheapRegistrarProvider(new NamecheapClient(new HttpClient(), Options.Create(unconfigured)));
+
+        var result = await provider.RenewAsync(new DomainRenewalOrder("example.com", "example.com", 1), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("not configured");
+        namecheap.Requests.Should().BeEmpty();
+    }
+
+    /// <summary>A renewal answer with an expiry reports that expiry.</summary>
+    [Fact]
+    public async Task RenewAsync_WithExpireDate_ReportsItAsync()
+    {
+        const string response = """<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainRenewResult DomainName="example.com" Renew="true" ExpireDate="2029-03-15" /></CommandResponse></ApiResponse>""";
+        var provider = BuildProvider(response);
+
+        var result = await provider.RenewAsync(new DomainRenewalOrder("example.com", "example.com", 1), CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        result.ExpiresAt!.Value.Date.Should().Be(new DateTime(2029, 3, 15));
+        QueryParam(LastRequestUrl(), "Command").Should().Be("namecheap.domains.renew");
+    }
+
+    /// <summary>
+    /// A renewal answer without an expiry reports none, so the caller extends the current one;
+    /// now + years would cost an early renewal its remaining days.
+    /// </summary>
+    [Fact]
+    public async Task RenewAsync_WithoutExpireDate_ReportsNoExpiryAsync()
+    {
+        const string response = """<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainRenewResult DomainName="example.com" Renew="true" /></CommandResponse></ApiResponse>""";
+        var provider = BuildProvider(response);
+
+        var result = await provider.RenewAsync(new DomainRenewalOrder("example.com", "example.com", 1), CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        result.ExpiresAt.Should().BeNull();
+    }
+
+    /// <summary>An OK envelope whose renew result is not <c>Renew="true"</c> renewed nothing.</summary>
+    /// <param name="response">The Namecheap answer.</param>
+    [Theory]
+    [InlineData("""<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainRenewResult DomainName="example.com" Renew="false" /></CommandResponse></ApiResponse>""")]
+    [InlineData("""<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse /></ApiResponse>""")]
+    public async Task RenewAsync_WithoutRenewConfirmation_FailsAsync(string response)
+    {
+        var provider = BuildProvider(response);
+
+        var result = await provider.RenewAsync(new DomainRenewalOrder("example.com", "example.com", 1), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("did not confirm");
+    }
 }
