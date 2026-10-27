@@ -129,7 +129,7 @@ public sealed class TldConfigsController : BaseApiController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SyncAsync(CancellationToken ct)
     {
-        var outcome = await _bus.InvokeAsync<Result>(new SyncTldCostPricesCommand(), ct);
+        var outcome = await _bus.InvokeAsync<Result>(new SyncTldCostPricesNowCommand(), ct);
         return HandleResult(outcome);
     }
 }

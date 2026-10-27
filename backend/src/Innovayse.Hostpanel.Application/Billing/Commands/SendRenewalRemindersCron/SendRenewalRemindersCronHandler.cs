@@ -54,49 +54,57 @@ public sealed class SendRenewalRemindersCronHandler
     /// <param name="cmd">Marker.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task.</returns>
-    public async Task HandleAsync(SendRenewalRemindersCronCommand cmd, CancellationToken ct)
+    public Task HandleAsync(SendRenewalRemindersCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
 
-        // In a finally so the daily chain survives any failure; a missed day is not retried until tomorrow.
-        try
-        {
-            var settings = await _settings.ReadAsync(ct);
-            if (settings.ReminderDays.Count > 0)
-            {
-                var horizon = DateTimeOffset.UtcNow.AddDays(settings.ReminderDays.Max() + 1);
-                var invoiceIds = await _context.Invoices.AsNoTracking()
-                    .Where(i => i.Status == InvoiceStatus.Unpaid
-                                && i.DueDate <= horizon
-                                && i.Items.Any(l => l.RenewalPeriodStart != null))
-                    .Select(i => i.Id)
-                    .ToListAsync(ct);
+        return RecurringJob.RunAsync(
+            nameof(SendRenewalRemindersCronCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+    }
 
-                // One message (own scope and DbContext) per invoice: one failure cannot poison the rest.
-                foreach (var id in invoiceIds)
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task RunAsync(CancellationToken ct)
+    {
+        var settings = await _settings.ReadAsync(ct);
+        if (settings.ReminderDays.Count > 0)
+        {
+            var horizon = DateTimeOffset.UtcNow.AddDays(settings.ReminderDays.Max() + 1);
+            var invoiceIds = await _context.Invoices.AsNoTracking()
+                .Where(i => i.Status == InvoiceStatus.Unpaid
+                            && i.DueDate <= horizon
+                            && i.Items.Any(l => l.RenewalPeriodStart != null))
+                .Select(i => i.Id)
+                .ToListAsync(ct);
+
+            // One message (own scope and DbContext) per invoice: one failure cannot poison the rest.
+            foreach (var id in invoiceIds)
+            {
+                try
                 {
-                    try
+                    var result = await _bus.InvokeAsync<Result>(new SendRenewalReminderCommand(id), ct);
+                    if (result.IsFailure)
                     {
-                        var result = await _bus.InvokeAsync<Result>(new SendRenewalReminderCommand(id), ct);
-                        if (result.IsFailure)
-                        {
-                            _logger.LogWarning("Renewal reminder for invoice {InvoiceId} refused ({Code}); the next run retries it.", id, result.ErrorCode);
-                        }
-                    }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
-                    {
-                        _logger.LogError(ex, "Renewal reminder for invoice {InvoiceId} failed; the next run retries it.", id);
+                        _logger.LogWarning("Renewal reminder for invoice {InvoiceId} refused ({Code}); the next run retries it.", id, result.ErrorCode);
                     }
                 }
-
-                _logger.LogInformation("SendRenewalRemindersCron checked {Invoices} open renewal invoices.", invoiceIds.Count);
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                {
+                    _logger.LogError(ex, "Renewal reminder for invoice {InvoiceId} failed; the next run retries it.", id);
+                }
             }
+
+            _logger.LogInformation("SendRenewalRemindersCron checked {Invoices} open renewal invoices.", invoiceIds.Count);
         }
-        finally
-        {
-            var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
-            await _bus.ScheduleAsync(new SendRenewalRemindersCronCommand(), nextRun);
-            _logger.LogInformation("SendRenewalRemindersCronCommand re-scheduled for {NextRun:u}.", nextRun);
-        }
+    }
+
+    /// <summary>Schedules the next pass.</summary>
+    /// <returns>A task.</returns>
+    private async Task ScheduleNextAsync()
+    {
+        var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
+        await _bus.ScheduleAsync(new SendRenewalRemindersCronCommand(), nextRun);
+        _logger.LogInformation("SendRenewalRemindersCronCommand re-scheduled for {NextRun:u}.", nextRun);
     }
 }

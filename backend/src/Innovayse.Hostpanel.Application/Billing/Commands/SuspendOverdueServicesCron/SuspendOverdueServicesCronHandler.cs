@@ -57,73 +57,81 @@ public sealed class SuspendOverdueServicesCronHandler
     /// <param name="cmd">Marker.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task.</returns>
-    public async Task HandleAsync(SuspendOverdueServicesCronCommand cmd, CancellationToken ct)
+    public Task HandleAsync(SuspendOverdueServicesCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
 
-        // In a finally so the daily chain survives any failure; a missed day is not retried until tomorrow.
-        try
+        return RecurringJob.RunAsync(
+            nameof(SuspendOverdueServicesCronCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+    }
+
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task RunAsync(CancellationToken ct)
+    {
+        var settings = await _settings.ReadAsync(ct);
+        var now = DateTimeOffset.UtcNow;
+        var cutoff = now.AddDays(-settings.SuspendAfterOverdueDays);
+
+        var serviceIds = await _context.Invoices.AsNoTracking()
+            .Where(i => i.Status == InvoiceStatus.Overdue && i.DueDate < cutoff)
+            .SelectMany(i => i.Items)
+            .Where(l => l.ClientServiceId != null)
+            .Select(l => l.ClientServiceId!.Value)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var eligible = await _context.ClientServices.AsNoTracking()
+            .Where(s => serviceIds.Contains(s.Id) && s.Status == ServiceStatus.Active && !s.OverrideAutoSuspend
+                        && (s.SuspendUntil == null || s.SuspendUntil <= now))
+            .OrderBy(s => s.Id)
+            .Select(s => s.Id)
+            .ToListAsync(ct);
+
+        var suspended = 0;
+        foreach (var id in eligible)
         {
-            var settings = await _settings.ReadAsync(ct);
-            var now = DateTimeOffset.UtcNow;
-            var cutoff = now.AddDays(-settings.SuspendAfterOverdueDays);
-
-            var serviceIds = await _context.Invoices.AsNoTracking()
-                .Where(i => i.Status == InvoiceStatus.Overdue && i.DueDate < cutoff)
-                .SelectMany(i => i.Items)
-                .Where(l => l.ClientServiceId != null)
-                .Select(l => l.ClientServiceId!.Value)
-                .Distinct()
-                .ToListAsync(ct);
-
-            var eligible = await _context.ClientServices.AsNoTracking()
-                .Where(s => serviceIds.Contains(s.Id) && s.Status == ServiceStatus.Active && !s.OverrideAutoSuspend
-                            && (s.SuspendUntil == null || s.SuspendUntil <= now))
-                .OrderBy(s => s.Id)
-                .Select(s => s.Id)
-                .ToListAsync(ct);
-
-            var suspended = 0;
-            foreach (var id in eligible)
+            try
             {
-                try
+                // Re-checked right before each suspension: the list above can be minutes old by
+                // now, and a payment that landed meanwhile (its unsuspend already ran and found
+                // nothing to lift) must not be answered with a suspension nobody would lift
+                // until the next renewal run.
+                var stillCovered = await _context.Invoices.AsNoTracking()
+                    .AnyAsync(i => i.Status == InvoiceStatus.Overdue && i.DueDate < cutoff
+                                   && i.Items.Any(l => l.ClientServiceId == id), ct);
+                if (!stillCovered)
                 {
-                    // Re-checked right before each suspension: the list above can be minutes old by
-                    // now, and a payment that landed meanwhile (its unsuspend already ran and found
-                    // nothing to lift) must not be answered with a suspension nobody would lift
-                    // until the next renewal run.
-                    var stillCovered = await _context.Invoices.AsNoTracking()
-                        .AnyAsync(i => i.Status == InvoiceStatus.Overdue && i.DueDate < cutoff
-                                       && i.Items.Any(l => l.ClientServiceId == id), ct);
-                    if (!stillCovered)
-                    {
-                        _logger.LogInformation("Service {ServiceId} is no longer on an invoice overdue past the grace period; not suspended.", id);
-                        continue;
-                    }
-
-                    var outcome = await _bus.InvokeAsync<Result>(new SuspendServiceCommand(id, SuspensionSource.Overdue), ct);
-                    if (outcome.IsFailure)
-                    {
-                        _logger.LogWarning("Overdue suspension refused for service {ServiceId} ({Code}).", id, outcome.ErrorCode);
-                    }
-                    else
-                    {
-                        suspended++;
-                    }
+                    _logger.LogInformation("Service {ServiceId} is no longer on an invoice overdue past the grace period; not suspended.", id);
+                    continue;
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+
+                var outcome = await _bus.InvokeAsync<Result>(new SuspendServiceCommand(id, SuspensionSource.Overdue), ct);
+                if (outcome.IsFailure)
                 {
-                    _logger.LogError(ex, "Overdue suspension failed for service {ServiceId}; the next run retries it.", id);
+                    _logger.LogWarning("Overdue suspension refused for service {ServiceId} ({Code}).", id, outcome.ErrorCode);
+                }
+                else
+                {
+                    suspended++;
                 }
             }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogError(ex, "Overdue suspension failed for service {ServiceId}; the next run retries it.", id);
+            }
+        }
 
-            _logger.LogInformation("SuspendOverdueServicesCron suspended {Count} of {Eligible} eligible services.", suspended, eligible.Count);
-        }
-        finally
-        {
-            var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
-            await _bus.ScheduleAsync(new SuspendOverdueServicesCronCommand(), nextRun);
-            _logger.LogInformation("SuspendOverdueServicesCronCommand re-scheduled for {NextRun:u}.", nextRun);
-        }
+        _logger.LogInformation("SuspendOverdueServicesCron suspended {Count} of {Eligible} eligible services.", suspended, eligible.Count);
+    }
+
+    /// <summary>Schedules the next pass.</summary>
+    /// <returns>A task.</returns>
+    private async Task ScheduleNextAsync()
+    {
+        var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
+        await _bus.ScheduleAsync(new SuspendOverdueServicesCronCommand(), nextRun);
+        _logger.LogInformation("SuspendOverdueServicesCronCommand re-scheduled for {NextRun:u}.", nextRun);
     }
 }

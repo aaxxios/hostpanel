@@ -39,9 +39,6 @@ public sealed class DomainScheduledJobsStartup : IHostedService
         _logger = logger;
     }
 
-    /// <summary>Hour (UTC) at which <see cref="CheckDomainExpiriesCommand"/> should execute.</summary>
-    private const int ExpiryCheckHour = 9;
-
     /// <summary>Interval in minutes between <see cref="SyncPendingDomainStatusesCommand"/> runs.</summary>
     private const int SyncPendingIntervalMinutes = 15;
 
@@ -55,7 +52,7 @@ public sealed class DomainScheduledJobsStartup : IHostedService
     /// <returns>A <see cref="Task"/> that completes once all messages are enqueued.</returns>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var expiryCheckTime = NextDailyOccurrence(ExpiryCheckHour);
+        var expiryCheckTime = NextDailyOccurrence(CheckDomainExpiriesHandler.CronHour);
         var syncPendingTime = DateTimeOffset.UtcNow.AddMinutes(SyncPendingIntervalMinutes);
 
         await using var scope = _scopeFactory.CreateAsyncScope();
