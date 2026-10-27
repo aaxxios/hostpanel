@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Xml.Linq;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Domains;
@@ -125,11 +126,18 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ?.Element(XName.Get("CommandResponse", ns))
             ?.Element(XName.Get("DomainRenewResult", ns));
 
+        // An OK envelope is not proof on its own: only Renew="true" says the period was bought.
+        if (!string.Equals(result?.Attribute("Renew")?.Value, "true", StringComparison.OrdinalIgnoreCase))
+        {
+            return new RegistrarResult(false, null, null, "Namecheap did not confirm the renewal.");
+        }
+
         // No expiry in the answer leaves it to the caller to extend the current one; now + years
-        // would cost an early renewal its remaining days.
-        var expiresAtRaw = result?.Attribute("ExpireDate")?.Value;
+        // would cost an early renewal its remaining days. Invariant culture: the request's
+        // culture (ru, hy) must not decide how the registrar's date is read.
+        var expiresAtRaw = result!.Attribute("ExpireDate")?.Value;
         DateTimeOffset? expiresAt = expiresAtRaw is not null
-            ? DateTimeOffset.Parse(expiresAtRaw)
+            ? DateTimeOffset.Parse(expiresAtRaw, CultureInfo.InvariantCulture)
             : null;
 
         return new RegistrarResult(true, request.RegistrarRef, expiresAt, null);

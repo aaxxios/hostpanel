@@ -250,4 +250,19 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
         result.Success.Should().BeTrue();
         result.ExpiresAt.Should().BeNull();
     }
+
+    /// <summary>An OK envelope whose renew result is not <c>Renew="true"</c> renewed nothing.</summary>
+    /// <param name="response">The Namecheap answer.</param>
+    [Theory]
+    [InlineData("""<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainRenewResult DomainName="example.com" Renew="false" /></CommandResponse></ApiResponse>""")]
+    [InlineData("""<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse /></ApiResponse>""")]
+    public async Task RenewAsync_WithoutRenewConfirmation_FailsAsync(string response)
+    {
+        var provider = BuildProvider(response);
+
+        var result = await provider.RenewAsync(new DomainRenewalOrder("example.com", "example.com", 1), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("did not confirm");
+    }
 }

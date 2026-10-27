@@ -1,3 +1,4 @@
+using System.Net;
 using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Infrastructure.Integrations.NameAm;
@@ -112,5 +113,45 @@ public sealed class NameAmRegistrarProviderTests(IntegrationTestFactory factory)
         result.ExpiresAt.Should().BeNull();
         var purchase = _nameAm.Requests.Should().Contain(r => r.PathAndQuery.StartsWith("/client/carts/purchase")).Which;
         purchase.Body.Should().Contain("domain_renew").And.Contain("2_year_register");
+    }
+
+    /// <summary>An HTTP 200 that is neither a purchase list nor a known error is not proof of a renewal.</summary>
+    [Fact]
+    public async Task RenewAsync_WhenBodyHasAnUnknownShape_FailsAsync()
+    {
+        ScriptRenewal("""{"success":false,"errors":["plan unavailable"]}""");
+        var provider = BuildProvider();
+
+        var result = await provider.RenewAsync(new DomainRenewalOrder("example.am", "example.am", 1), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("unexpected response");
+    }
+
+    /// <summary>A 4xx is Name.am turning the order down: a clean refusal, not an exception.</summary>
+    [Fact]
+    public async Task RenewAsync_WhenNameAmAnswers4xx_FailsCleanlyAsync()
+    {
+        _nameAm.Enqueue("""{"accessToken":"Bearer test-token"}""");
+        _nameAm.Enqueue(HttpStatusCode.UnprocessableEntity, """{"message":"Insufficient balance"}""");
+        var provider = BuildProvider();
+
+        var result = await provider.RenewAsync(new DomainRenewalOrder("example.am", "example.am", 1), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("422");
+    }
+
+    /// <summary>A 5xx leaves the outcome unknown, so it stays an exception for the caller to treat as such.</summary>
+    [Fact]
+    public async Task RenewAsync_WhenNameAmAnswers5xx_ThrowsAsync()
+    {
+        _nameAm.Enqueue("""{"accessToken":"Bearer test-token"}""");
+        _nameAm.Enqueue(HttpStatusCode.BadGateway, "{}");
+        var provider = BuildProvider();
+
+        var act = () => provider.RenewAsync(new DomainRenewalOrder("example.am", "example.am", 1), CancellationToken.None);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
     }
 }

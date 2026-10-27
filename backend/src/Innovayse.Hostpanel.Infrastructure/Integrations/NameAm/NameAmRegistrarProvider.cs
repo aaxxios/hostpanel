@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Domains;
@@ -158,15 +159,37 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
         _logger.LogInformation("Renewing domain {DomainName} for {Years} years via Name.am",
             request.DomainName, request.Years);
 
-        using var doc = await _client.PostAsync("/client/carts/purchase", purchasePayload, ct);
-
-        var errorMessage = ExtractErrorMessage(doc);
-        if (errorMessage is not null)
+        JsonDocument doc;
+        try
         {
-            _logger.LogWarning(
-                "Name.am rejected renewal of '{DomainName}': {Error}",
-                request.DomainName, errorMessage);
-            return new RegistrarResult(false, null, null, errorMessage);
+            doc = await _client.PostAsync("/client/carts/purchase", purchasePayload, ct);
+        }
+        catch (HttpRequestException ex) when (IsDefiniteRefusal(ex.StatusCode))
+        {
+            // A 4xx means Name.am turned the order down, so nothing was bought: a clean refusal
+            // the caller may retry. A 5xx or a timeout stays an exception, its outcome unknown.
+            _logger.LogWarning(ex,
+                "Name.am refused renewal of '{DomainName}' with HTTP {Status}",
+                request.DomainName, (int)ex.StatusCode!.Value);
+            return new RegistrarResult(false, null, null,
+                $"Name.am refused the renewal (HTTP {(int)ex.StatusCode!.Value}).");
+        }
+
+        using (doc)
+        {
+            var errorMessage = ExtractErrorMessage(doc)
+                // A purchase that went through is answered with an array of purchased items;
+                // anything else is not proof that the renewal was bought.
+                ?? (doc.RootElement.ValueKind == JsonValueKind.Array
+                    ? null
+                    : "Name.am answered the renewal with an unexpected response.");
+            if (errorMessage is not null)
+            {
+                _logger.LogWarning(
+                    "Name.am rejected renewal of '{DomainName}': {Error}",
+                    request.DomainName, errorMessage);
+                return new RegistrarResult(false, null, null, errorMessage);
+            }
         }
 
         // The purchase response carries no expiry. Reporting none lets the caller extend the
@@ -903,6 +926,15 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
 
         return [.. list];
     }
+
+    /// <summary>
+    /// Gets whether an HTTP status is Name.am declining a request outright (a 4xx other than
+    /// 408 Request Timeout), as opposed to a failure whose outcome is unknown.
+    /// </summary>
+    /// <param name="status">The status of the failed response, if one was received.</param>
+    /// <returns><see langword="true"/> when nothing can have been processed.</returns>
+    private static bool IsDefiniteRefusal(HttpStatusCode? status) =>
+        status is { } code && (int)code is >= 400 and < 500 && code != HttpStatusCode.RequestTimeout;
 
     /// <summary>
     /// Inspects a Name.am API response body for error indicators.

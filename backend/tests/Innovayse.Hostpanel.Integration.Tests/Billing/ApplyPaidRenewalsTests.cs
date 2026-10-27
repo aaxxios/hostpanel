@@ -493,14 +493,17 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
     }
 
     /// <summary>
-    /// A paid domain with no registrar reference is not extended locally: the line stays
-    /// unapplied, the expiry stays put and staff are alerted.
+    /// A paid domain with no registrar reference is not extended locally and not retried for ever:
+    /// the registrar is never called, the line is closed, the expiry stays put and staff are alerted
+    /// to review a refund.
     /// </summary>
     [Fact]
-    public async Task DomainWithoutRegistrarRef_LeavesUnappliedAndAlerts()
+    public async Task DomainWithoutRegistrarRef_IsClosedAndAlerted()
     {
         var sender = new FakeEmailSender();
-        using var scope = Host(sender).Services.CreateScope();
+        var host = Host(sender).WithWebHostBuilder(b =>
+            b.ConfigureTestServices(s => s.AddScoped<IRegistrarProvider, CountingRegistrar>()));
+        using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var clientId = await DomainsTestSeeds.SeedClientAsync(context);
@@ -519,11 +522,13 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var result = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        (await ReloadLineAsync(context, invoice.Id)).RenewalAppliedAt.Should().BeNull();
+        TestRegistrar.RenewCallsFor(domain.Name).Should().Be(0);
+        (await ReloadLineAsync(context, invoice.Id)).RenewalAppliedAt.Should().NotBeNull("the line is closed, not left for a daily retry");
         (await context.Domains.AsNoTracking().FirstAsync(d => d.Id == domain.Id)).ExpiresAt.Should().Be(expiry);
         var mails = await WaitForAdminMailAsync(sender);
         mails.Should().ContainSingle();
         mails[0].Subject.Should().Contain(domain.Name);
+        mails[0].Body.Should().Contain("not linked to a registrar");
     }
 
     /// <summary>After a clean refusal the claim is free again, so the next run with a working registrar renews.</summary>
