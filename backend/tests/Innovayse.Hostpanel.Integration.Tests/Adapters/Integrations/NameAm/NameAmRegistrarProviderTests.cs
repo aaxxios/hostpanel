@@ -154,4 +154,78 @@ public sealed class NameAmRegistrarProviderTests(IntegrationTestFactory factory)
 
         await act.Should().ThrowAsync<HttpRequestException>();
     }
+
+    /// <summary>A registration on an unconfigured integration is refused, so a paid order is refunded.</summary>
+    [Fact]
+    public async Task RegisterAsync_WhenNotConfigured_FailsWithoutCallingNameAmAsync()
+    {
+        var provider = BuildProvider(configured: false);
+
+        var result = await provider.RegisterAsync(
+            new DomainRegistrationOrder("example.am", 1, false, false, null, null), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("not configured");
+        _nameAm.Requests.Should().BeEmpty();
+    }
+
+    /// <summary>A registration Name.am turns down with a 4xx is a clean refusal.</summary>
+    [Fact]
+    public async Task RegisterAsync_WhenNameAmAnswers4xx_FailsCleanlyAsync()
+    {
+        _nameAm.Enqueue("""{"accessToken":"Bearer test-token"}""");
+        _nameAm.Enqueue(HttpStatusCode.BadRequest, """{"message":"Domain is taken"}""");
+        var provider = BuildProvider();
+
+        var result = await provider.RegisterAsync(
+            new DomainRegistrationOrder("example.am", 1, false, false, null, null), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("400");
+    }
+
+    /// <summary>A purchased registration succeeds and is left for polling to activate.</summary>
+    [Fact]
+    public async Task RegisterAsync_WhenPurchased_SucceedsPendingPollingAsync()
+    {
+        ScriptRenewal("""[{"domain":"example.am","type":"domain_registration"}]""");
+        var provider = BuildProvider();
+
+        var result = await provider.RegisterAsync(
+            new DomainRegistrationOrder("example.am", 1, false, false, null, null), CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        result.RegistrarRef.Should().Be("example.am");
+        result.RequiresPolling.Should().BeTrue();
+    }
+
+    /// <summary>A transfer on an unconfigured integration is refused.</summary>
+    [Fact]
+    public async Task TransferAsync_WhenNotConfigured_FailsAsync()
+    {
+        var provider = BuildProvider(configured: false);
+
+        var result = await provider.TransferAsync(
+            new DomainTransferOrder("example.am", "EPP-1", false), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("not configured");
+    }
+
+    /// <summary>
+    /// A change to a registrar-held domain on an unconfigured integration is refused, so the
+    /// handler does not save a change the registrar never made.
+    /// </summary>
+    [Fact]
+    public async Task SetNameserversAsync_WhenNotConfigured_FailsAsync()
+    {
+        var provider = BuildProvider(configured: false);
+
+        var result = await provider.SetNameserversAsync(
+            "example.am", "example.am", ["ns1.example.test"], CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("not configured");
+        _nameAm.Requests.Should().BeEmpty();
+    }
 }

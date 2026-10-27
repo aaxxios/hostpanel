@@ -10,7 +10,9 @@ using Innovayse.Hostpanel.Domain.Orders;
 using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
+using Innovayse.Hostpanel.Infrastructure.Integrations.NameAm;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -183,5 +185,44 @@ public sealed class FulfillPaidOrderTests(IntegrationTestFactory factory) : ICla
 
         var reloadedInvoice = await context.Invoices.FindAsync(invoice.Id);
         reloadedInvoice!.Status.Should().Be(InvoiceStatus.Refunded);
+    }
+
+    /// <summary>
+    /// With the real Name.am provider and no Name.am credentials, a paid registration is refused,
+    /// not faked: no domain is recorded and the payment is refunded automatically.
+    /// </summary>
+    [Fact]
+    public async Task UnconfiguredRegistrarRefundsAndRecordsNoDomain()
+    {
+        var host = factory.WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+            s.AddScoped<IRegistrarProvider>(sp => sp.GetRequiredService<NameAmRegistrarProvider>())));
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var (clientId, _) = await SeedClientAndProductAsync(context);
+
+        var domainName = $"{Guid.NewGuid():N}"[..12] + ".am";
+        var orderId = await SeedPendingOrderAsync(
+            context, clientId,
+            order => order.AddItem(
+                9, domainName, BillingCycleNames.Annual, 25m, 25m, domain: domainName, hostname: null,
+                domainAction: DomainActionNames.Register, years: 1));
+
+        var order = await context.Orders.FindAsync(orderId);
+        var invoice = await context.Invoices.FindAsync(order!.InvoiceId!.Value);
+        invoice!.SetGatewaySession("bank-gateway", "gw-order-unconfigured-1");
+        invoice.MarkPaidViaGateway("pre-refund-txn");
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var plugin = new FakePaymentPlugin { RefundResult = "plugin-refund-2" };
+        var resolver = new FakePaymentPluginResolver();
+        resolver.Register("bank-gateway", plugin);
+
+        var handler = BuildHandler(scope, resolver);
+        var result = await handler.HandleAsync(new FulfillPaidOrderCommand(orderId), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        plugin.LastRefundGatewayOrderId.Should().Be("gw-order-unconfigured-1");
+        (await context.Invoices.FindAsync(invoice.Id))!.Status.Should().Be(InvoiceStatus.Refunded);
+        (await context.Domains.AnyAsync(d => d.Name == domainName, CancellationToken.None)).Should().BeFalse();
     }
 }
