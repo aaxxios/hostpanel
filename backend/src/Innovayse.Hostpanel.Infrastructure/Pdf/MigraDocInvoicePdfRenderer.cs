@@ -20,7 +20,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Pdf;
 /// <remarks>
 /// <para>
 /// MigraDoc does the layout: wrapping, the items table with its header repeated on every page it
-/// runs onto, page breaks and the page-number footer. The PAID or DRAFT stamp is the one thing
+/// runs onto, page breaks and the page-number footer. The PAID, DRAFT, CANCELLED or REFUNDED stamp is the one thing
 /// drawn afterwards, straight onto the first page with PDFsharp, because MigraDoc cannot rotate
 /// text. Text is set as text, so the PDF stays searchable and selectable.
 /// </para>
@@ -56,7 +56,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// <summary>Size of the invoice number in the header.</summary>
     private const double TitleSize = 18;
 
-    /// <summary>Size of the PAID or DRAFT stamp.</summary>
+    /// <summary>Size of the stamp.</summary>
     private const double StampSize = 40;
 
     /// <summary>Rotation of the stamp, in degrees.</summary>
@@ -485,7 +485,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
         footer.AddNumPagesField();
     }
 
-    /// <summary>Stamps the first page PAID (with the date) or DRAFT; other statuses get no stamp.</summary>
+    /// <summary>Stamps the first page PAID (with the date), DRAFT, CANCELLED or REFUNDED; other statuses get no stamp.</summary>
     /// <param name="page">The rendered first page.</param>
     /// <param name="model">The invoice.</param>
     private static void DrawStamp(PdfSharp.Pdf.PdfPage page, InvoicePdfModel model)
