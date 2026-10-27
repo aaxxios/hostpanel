@@ -91,6 +91,9 @@ public static class HostpanelErrorCodes
     /// <summary>The id names no invoice (404).</summary>
     public const string INVOICE_NOT_FOUND = "INVOICE_NOT_FOUND";
 
+    /// <summary>The invoice has more lines than <c>InvoicePdf:MaxLines</c> allows in a PDF (400).</summary>
+    public const string INVOICE_PDF_EXCEEDS_LIMIT = "INVOICE_PDF_EXCEEDS_LIMIT";
+
     // Billing — quotes
 
     /// <summary>The id names no quote (404).</summary>
@@ -483,11 +486,23 @@ public static class HostpanelErrorCodes
     /// <summary>The server's key agent failed or did not answer; the outcome is recorded on the key (503).</summary>
     public const string SSH_SERVER_UNAVAILABLE = "SSH_SERVER_UNAVAILABLE";
 
+    /// <summary>
+    /// The agent endpoint presented no host key to an administrator's scan: wrong host or port, a
+    /// firewall, or sshd refusing the connection (503). Admin-facing, so it names what to check.
+    /// </summary>
+    public const string SSH_HOST_KEY_UNREADABLE = "SSH_HOST_KEY_UNREADABLE";
+
     /// <summary>The server's control panel module has no SSH key implementation (400).</summary>
     public const string SSH_MODULE_NOT_SUPPORTED = "SSH_MODULE_NOT_SUPPORTED";
 
     /// <summary>The server's SSH settings lack a value an enabled configuration or an agent call needs (400).</summary>
     public const string SSH_SETTINGS_INCOMPLETE = "SSH_SETTINGS_INCOMPLETE";
+
+    /// <summary>SSH key management can only be enabled after a successful agent test with the current settings (409).</summary>
+    public const string SSH_AGENT_NOT_VERIFIED = "SSH_AGENT_NOT_VERIFIED";
+
+    /// <summary>Another server already uses this agent host and port for SSH key management (409).</summary>
+    public const string SSH_AGENT_ENDPOINT_IN_USE = "SSH_AGENT_ENDPOINT_IN_USE";
 
     /// <summary>An open cancellation request already exists for the service (409).</summary>
     public const string CANCELLATION_ALREADY_PENDING = "CANCELLATION_ALREADY_PENDING";

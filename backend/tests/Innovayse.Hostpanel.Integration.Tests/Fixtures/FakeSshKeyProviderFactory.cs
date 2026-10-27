@@ -22,7 +22,10 @@ public sealed class FakeSshKeyProviderFactory : ISshKeyProviderFactory
     public FakeSshAgent AgentFor(int serverId) => _agents.GetOrAdd(serverId, id => new FakeSshAgent(id));
 
     /// <inheritdoc/>
-    public bool Supports(ServerModule module) => module is ServerModule.Cwp7;
+    public bool Supports(ServerModule module) => AgentProfileFor(module) is not null;
+
+    /// <inheritdoc/>
+    public string? AgentProfileFor(ServerModule module) => module is ServerModule.Cwp7 ? "cwp" : null;
 
     /// <inheritdoc/>
     public ISshKeyProvider? CreateFor(Server server, ServerSshSettings settings) =>
@@ -51,6 +54,9 @@ public sealed class FakeSshAgent : ISshKeyProvider
     /// <summary>When set, every call throws with this code.</summary>
     public string? FailWith { get; set; }
 
+    /// <summary>The binding this agent reports on ping; null like an install that predates bindings.</summary>
+    public Guid? Binding { get; set; }
+
     /// <summary>Whether accounts have a login shell.</summary>
     public bool ShellEnabled { get; set; } = true;
 
@@ -60,10 +66,10 @@ public sealed class FakeSshAgent : ISshKeyProvider
     public IReadOnlyDictionary<Guid, string> KeysOf(string username) => Account(username);
 
     /// <inheritdoc/>
-    public Task<string> PingAsync(CancellationToken ct)
+    public Task<SshAgentInfo> PingAsync(CancellationToken ct)
     {
         Record("ping", null);
-        return Task.FromResult("1.0.0");
+        return Task.FromResult(new SshAgentInfo("1.1.0", "cwp", Binding));
     }
 
     /// <inheritdoc/>

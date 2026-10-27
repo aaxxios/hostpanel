@@ -5,7 +5,6 @@ using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
@@ -34,7 +33,10 @@ public sealed class GetServerSshSettingsTests(IntegrationTestFactory factory) : 
         var admin = await SshAdminTestSupport.AdminAsync(factory);
         var created = await admin.PostAsJsonAsync("/api/admin/servers", new
         {
-            name = $"plain-{Guid.NewGuid():N}", hostname = "plain.example.test", module = ServerModule.CPanel, username = "root",
+            name = $"plain-{Guid.NewGuid():N}",
+            hostname = "plain.example.test",
+            module = ServerModule.CPanel,
+            username = "root",
         });
         created.EnsureSuccessStatusCode();
         var serverId = await created.Content.ReadFromJsonAsync<int>();

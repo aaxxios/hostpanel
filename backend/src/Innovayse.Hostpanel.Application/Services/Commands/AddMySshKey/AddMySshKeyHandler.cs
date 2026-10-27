@@ -137,7 +137,7 @@ public sealed class AddMySshKeyHandler
                 {
                     "duplicate_key" => HostpanelErrorCodes.SSH_KEY_ALREADY_INSTALLED,
                     "too_many_keys" => HostpanelErrorCodes.SSH_KEY_LIMIT_REACHED,
-                    "ssh_disabled" => HostpanelErrorCodes.SSH_ACCESS_UNAVAILABLE,
+                    "ssh_disabled" or "account_suspended" or "account_not_eligible" => HostpanelErrorCodes.SSH_ACCESS_UNAVAILABLE,
                     "invalid_key" => HostpanelErrorCodes.SSH_KEY_INVALID,
                     _ => HostpanelErrorCodes.SSH_SERVER_UNAVAILABLE,
                 });

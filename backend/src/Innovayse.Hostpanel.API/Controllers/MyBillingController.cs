@@ -5,13 +5,17 @@ using Innovayse.Hostpanel.Application.Billing.Commands.CompleteMyGatewayPayment;
 using Innovayse.Hostpanel.Application.Billing.Commands.PayMyInvoice;
 using Innovayse.Hostpanel.Application.Billing.Commands.StartMyGatewayPayment;
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Billing.Queries.GetMyInvoice;
+using Innovayse.Hostpanel.Application.Billing.Queries.GetMyInvoicePdf;
 using Innovayse.Hostpanel.Application.Billing.Queries.GetMyInvoices;
 using Innovayse.Hostpanel.Shared.Authorization;
+using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.Hostpanel.Shared.Controllers;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Wolverine;
 using Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment.Enums;
 using Innovayse.Hostpanel.Application.Billing.Extensions;
@@ -73,6 +77,32 @@ public sealed class MyBillingController : BaseApiController
     {
         var outcome = await _bus.InvokeAsync<Result<InvoiceDto>>(new GetMyInvoiceQuery(id), ct);
         return HandleResult(outcome);
+    }
+
+    /// <summary>Downloads one of the authenticated client's published invoices as a PDF.</summary>
+    /// <param name="id">Invoice primary key.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// 200 with <c>invoice-{id}.pdf</c> as an attachment; 400 for an id that is not positive, or with
+    /// <c>INVOICE_PDF_EXCEEDS_LIMIT</c> when the invoice has more lines than <c>InvoicePdf:MaxLines</c>;
+    /// 401; 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewPayInvoices</c>; 404
+    /// with <c>INVOICE_NOT_FOUND</c> when it is not the caller's or is still a draft; 429 when the
+    /// caller already has as many renders in flight as the concurrency policy allows.
+    /// </returns>
+    [HttpGet("{id:int}/pdf")]
+    [Authorize(Policy = Policies.Client)]
+    [RequiresClientPermission(ClientPermission.ViewPayInvoices)]
+    [EnableRateLimiting(RateLimitPolicies.Concurrent)]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> GetPdfAsync(int id, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<FileDownloadDto>>(new GetMyInvoicePdfQuery(id), ct);
+        return FileResult(outcome);
     }
 
     /// <summary>Pays an invoice belonging to the authenticated client, in the invoice's own currency.</summary>

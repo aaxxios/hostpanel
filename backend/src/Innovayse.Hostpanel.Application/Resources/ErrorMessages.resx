@@ -84,6 +84,9 @@
 <data name="INVOICE_NOT_FOUND" xml:space="preserve">
     <value>No such invoice.</value>
   </data>
+<data name="INVOICE_PDF_EXCEEDS_LIMIT" xml:space="preserve">
+    <value>This invoice has too many lines to download as a PDF.</value>
+  </data>
 <data name="QUOTE_NOT_FOUND" xml:space="preserve">
     <value>No such quote.</value>
   </data>
@@ -661,10 +664,19 @@
   <data name="SSH_SERVER_UNAVAILABLE" xml:space="preserve">
     <value>The hosting server could not be reached. Please try again later.</value>
   </data>
+  <data name="SSH_HOST_KEY_UNREADABLE" xml:space="preserve">
+    <value>No SSH host key was received from the agent host and port. Check the address and port, the firewall, and that sshd accepts connections from HostPanel. On OpenSSH 9.8 or later, repeated failed or unauthenticated connections make sshd refuse an address for a while (PerSourcePenalties): add HostPanel's address to PerSourcePenaltyExemptList.</value>
+  </data>
   <data name="SSH_MODULE_NOT_SUPPORTED" xml:space="preserve">
     <value>SSH key management is not supported for this server type.</value>
   </data>
   <data name="SSH_SETTINGS_INCOMPLETE" xml:space="preserve">
     <value>The SSH settings for this server are incomplete.</value>
+  </data>
+  <data name="SSH_AGENT_NOT_VERIFIED" xml:space="preserve">
+    <value>Run a successful agent test with these settings before enabling SSH key management.</value>
+  </data>
+  <data name="SSH_AGENT_ENDPOINT_IN_USE" xml:space="preserve">
+    <value>Another server already uses this agent host and port.</value>
   </data>
 </root>

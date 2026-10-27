@@ -59,7 +59,8 @@ public class ClientServiceTests
 
         suspended.ClearDomainEvents();
         suspended.Unsuspend(hostingAlreadyUpdated: true);
-        Assert.Empty(suspended.DomainEvents);
+        Assert.Contains(suspended.DomainEvents, e => e is ClientServiceUnsuspendedEvent);
+        Assert.DoesNotContain(suspended.DomainEvents, e => e is ServiceUnsuspendedEvent);
 
         var terminated = ClientService.Create(1, 2, BillingCycleNames.Monthly);
         terminated.Activate("ref");

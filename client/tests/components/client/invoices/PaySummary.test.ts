@@ -8,7 +8,7 @@ import type { ClientInvoice } from '~/types/clientinvoice'
 
 /** An invoice of 100, part-paid by 40. */
 const invoice = {
-  id: 9, currency: 'USD', subTotal: 100, credit: 0, total: 100,
+  id: 9, currency: 'USD', subTotal: 100, credit: 0, total: 100, amountDue: 60,
   items: [{ id: 1, description: 'Hosting', amount: 60 }, { id: 2, description: 'Domain', amount: 40 }],
   transactions: [{ id: 1, amount: 40 }]
 } as unknown as ClientInvoice

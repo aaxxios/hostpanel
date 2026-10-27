@@ -2745,6 +2745,9 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<Guid?>("AgentBinding")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("AgentHost")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -2761,6 +2764,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<string>("AgentPrivateKey")
                         .HasMaxLength(8000)
                         .HasColumnType("character varying(8000)");
+
+                    b.Property<string>("AgentPublicKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("AgentUsername")
                         .IsRequired()

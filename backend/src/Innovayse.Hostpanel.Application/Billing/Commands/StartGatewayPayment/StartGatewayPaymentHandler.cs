@@ -72,7 +72,10 @@ public sealed class StartGatewayPaymentHandler
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.Id == cmd.InvoiceId, ct);
+        // Transactions loaded: the session charges what is still due, which earlier payments reduce.
+        var invoice = await _context.Invoices
+            .Include(i => i.Transactions)
+            .FirstOrDefaultAsync(i => i.Id == cmd.InvoiceId, ct);
         if (invoice is null)
         {
             return Result<string>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
@@ -81,7 +84,9 @@ public sealed class StartGatewayPaymentHandler
         // Check payability before touching the bank at all — starting a session for a
         // Paid/Cancelled/Refunded invoice would register a live payable order at the gateway
         // for nothing, since SetGatewaySession() would reject it afterwards anyway.
-        if (invoice.Status is not (InvoiceStatus.Unpaid or InvoiceStatus.Overdue))
+        // An open invoice with nothing left due (earlier payments cover it) is not payable either:
+        // a session for 0 would be a bank order nobody can pay.
+        if (invoice.Status is not (InvoiceStatus.Unpaid or InvoiceStatus.Overdue) || invoice.AmountDue <= 0m)
         {
             return Result<string>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_PAYABLE);
         }
@@ -117,7 +122,8 @@ public sealed class StartGatewayPaymentHandler
         var orderNumber = $"INV{invoice.Id}-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
         // The Application layer owns the major→minor conversion (ISO 4217 exponent-2).
-        var amountMinor = CurrencyCodes.ToMinorUnits(invoice.Total);
+        // What is still due, not the total: a payment recorded earlier must not be charged again.
+        var amountMinor = CurrencyCodes.ToMinorUnits(invoice.AmountDue);
 
         var session = await plugin.CreatePaymentAsync(
             new PaymentRequest(orderNumber, amountMinor, cmd.ReturnUrl, $"Invoice #{invoice.Id}", null),

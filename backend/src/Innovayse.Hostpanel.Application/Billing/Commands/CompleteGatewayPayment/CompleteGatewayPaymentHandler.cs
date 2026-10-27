@@ -60,7 +60,9 @@ public sealed class CompleteGatewayPaymentHandler
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.Id == cmd.InvoiceId, ct);
+        var invoice = await _context.Invoices
+            .Include(i => i.Transactions)
+            .FirstOrDefaultAsync(i => i.Id == cmd.InvoiceId, ct);
         if (invoice is null)
         {
             return Result<GatewayCompletionState>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
@@ -96,15 +98,18 @@ public sealed class CompleteGatewayPaymentHandler
         }
 
         var gatewayTransactionId = status.TransactionId ?? invoice.GatewayOrderId;
+
+        // Read before the Paid mark records it: the session charged what was due, not the total.
+        var charged = invoice.AmountDue;
         invoice.MarkPaidViaGateway(gatewayTransactionId);
 
         // The client's ledger row is written here, in the same save as the Paid mark, rather than by
         // an event handler: the concurrent-completion guard below then makes "ledger row exists"
         // and "invoice is Paid" one atomic fact, so the row can neither be missed nor doubled.
-        if (invoice.Total > 0)
+        if (charged > 0)
         {
             _context.Transactions.Add(Transaction.CreateInvoicePayment(
-                invoice, DateTimeOffset.UtcNow, invoice.GatewayModule, gatewayTransactionId, invoice.Total, 0m));
+                invoice, DateTimeOffset.UtcNow, invoice.GatewayModule, gatewayTransactionId, charged, 0m));
         }
 
         try

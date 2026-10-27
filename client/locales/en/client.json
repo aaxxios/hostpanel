@@ -212,8 +212,9 @@
           "Pending": "Pending",
           "InstallFailed": "Install not confirmed",
           "RevokeFailed": "Revoke not confirmed",
+          "Suspended": "Off the server while the service is suspended",
           "Revoked": "Revoked",
-          "Stale": "Previous server — contact support",
+          "Stale": "Previous server",
           "Missing": "Not found on server"
         },
         "localError": {
@@ -482,6 +483,7 @@
       "heading": "Invoice #{id}",
       "issued": "Issued",
       "payNow": "Pay Now",
+      "downloadPdf": "Download PDF",
       "dueDate": "Due Date",
       "datePaid": "Date Paid",
       "paymentMethod": "Payment Method",

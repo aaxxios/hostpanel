@@ -26,29 +26,27 @@ import { InvoiceStatus } from '~/types/invoicestatus'
 /**
  * How much has actually been received against an invoice.
  *
- * A refund is recorded as a negative transaction amount, so a plain sum is the net received.
- * Gateway `fees` are the gateway's cut of a payment rather than part of what the customer
- * handed over, and are deliberately not subtracted.
+ * The API sends refunds and payment reversals as positive amounts typed `Refund`, so those are
+ * taken back out; a negative amount is subtracted by the plain sum as well. Gateway `fees` are the
+ * gateway's cut of a payment rather than part of what the customer handed over, and are
+ * deliberately not subtracted.
  *
  * @param transactions - The invoice's recorded transactions; an absent list reads as none.
  * @returns The net amount received, in the account's billing currency.
  */
 export const paymentsToDate = (transactions: ClientInvoiceTransaction[] | null | undefined): number =>
-  (transactions ?? []).reduce((sum, txn) => sum + txn.amount, 0)
+  (transactions ?? []).reduce((sum, txn) => sum + (txn.type === 'Refund' ? -Math.abs(txn.amount) : txn.amount), 0)
 
 /**
- * What is still owed on an invoice: the total less everything received.
+ * What is still owed on an invoice, as the API computed it (`InvoiceDto.AmountDue`).
+ *
+ * The server's figure, not one worked out here: it is the amount a payment started from the
+ * portal charges, so the page shows the customer exactly what they will pay.
  *
  * @param invoice - The invoice, or nothing while one is still loading.
  * @returns The outstanding balance; `0` when there is no invoice to read.
  */
-export const balanceDue = (invoice: ClientInvoice | null | undefined): number => {
-  if (!invoice) {
-    return 0
-  }
-
-  return invoice.total - paymentsToDate(invoice.transactions)
-}
+export const balanceDue = (invoice: ClientInvoice | null | undefined): number => invoice?.amountDue ?? 0
 
 /**
  * Whether an invoice still has money owing on it.

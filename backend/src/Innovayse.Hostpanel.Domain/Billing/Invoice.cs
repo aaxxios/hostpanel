@@ -222,11 +222,37 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     public void AddDomainRenewal(string description, decimal amount, int registeredDomainId, DateTimeOffset start, DateTimeOffset end) =>
         AddRenewal(InvoiceItem.CreateRenewal(description, amount, null, registeredDomainId, start, end));
 
+    /// <summary>The gateway recorded on a remainder payment when the paying path names none.</summary>
+    private const string UnknownGateway = "Unknown";
+
+    /// <summary>The gateway recorded on the transaction that reverses payments when an invoice is marked unpaid.</summary>
+    private const string ReversalGateway = "Reversal";
+
     /// <summary>
-    /// Gets whether the invoice is Paid and the money covers it. <see cref="MarkPaid"/> and
-    /// <see cref="MarkPaidViaGateway"/> charge the whole <see cref="Total"/>, so they are full by
-    /// construction; <see cref="AddPayment"/> records any amount and marks Paid, so an invoice with
-    /// recorded payments is full only when they add up to <see cref="Total"/> (already net of credit).
+    /// Gets the money the invoice holds: the payments recorded against it less the refunds and
+    /// reversals (<see cref="MarkUnpaid"/>) taken back out.
+    /// </summary>
+    public decimal AmountPaid =>
+        _transactions.Where(t => t.Type == InvoiceTransactionType.Payment).Sum(t => t.Amount)
+        - _transactions.Where(t => t.Type == InvoiceTransactionType.Refund).Sum(t => t.Amount);
+
+    /// <summary>
+    /// Gets what is still owed on an open (Unpaid or Overdue) invoice: <see cref="Total"/> (already
+    /// net of credit) less <see cref="AmountPaid"/>, never below zero; a closed invoice owes nothing.
+    /// Every path that settles the invoice charges this, not the total, so a payment recorded
+    /// earlier is never charged again.
+    /// </summary>
+    public decimal AmountDue => IsOpen ? Math.Max(0m, Total - AmountPaid) : 0m;
+
+    /// <summary>Gets whether the invoice can still take a payment (Unpaid or Overdue).</summary>
+    private bool IsOpen => Status is InvoiceStatus.Unpaid or InvoiceStatus.Overdue;
+
+    /// <summary>
+    /// Gets whether the invoice is Paid and the money covers it. <see cref="AddPayment"/> marks it
+    /// Paid only once its payments cover <see cref="Total"/> (already net of credit), and
+    /// <see cref="MarkPaid"/> and <see cref="MarkPaidViaGateway"/> settle <see cref="AmountDue"/>,
+    /// recording it when earlier payments exist, so an invoice with recorded payments is full only
+    /// when they add up to <see cref="Total"/>; one paid in one go through those two is full by construction.
     /// </summary>
     public bool IsPaidInFull
     {
@@ -237,8 +263,8 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
                 return false;
             }
 
-            var payments = _transactions.Where(t => t.Type == InvoiceTransactionType.Payment).ToList();
-            return payments.Count == 0 || payments.Sum(t => t.Amount) >= Total;
+            var hasPayments = _transactions.Any(t => t.Type == InvoiceTransactionType.Payment);
+            return !hasPayments || AmountPaid >= Total;
         }
     }
 
@@ -285,7 +311,10 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     }
 
     /// <summary>
-    /// Records a payment transaction against this invoice.
+    /// Records a payment against this invoice. The invoice becomes Paid only once the recorded
+    /// payments cover <see cref="Total"/>; until then it stays Unpaid or Overdue and takes further
+    /// payments. A payment above <see cref="AmountDue"/> still settles the invoice; the excess stays
+    /// on the recorded transaction for staff to settle, and is not turned into credit here.
     /// </summary>
     /// <param name="date">When the payment was made.</param>
     /// <param name="gateway">Name of the payment gateway or method.</param>
@@ -293,11 +322,14 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// <param name="amount">Amount paid, in the invoice currency.</param>
     /// <param name="fees">Gateway fees charged on the payment.</param>
     /// <param name="notes">Free-form note, or null.</param>
+    /// <exception cref="DomainRuleException">The invoice is not Unpaid or Overdue.</exception>
     public void AddPayment(DateTimeOffset date, string gateway, string transactionId, decimal amount, decimal fees, string? notes)
     {
+        EnsurePayable();
+
         var tx = InvoiceTransaction.Create(Id, date, gateway, transactionId, amount, InvoiceTransactionType.Payment, fees, notes);
         _transactions.Add(tx);
-        MarkPaidAt(transactionId, date);
+        SettleIfCovered(transactionId, date, gateway);
     }
 
     /// <summary>
@@ -374,26 +406,17 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// <see cref="MarkPaidViaGateway"/> instead when completing the invoice's own active session.
     /// </summary>
     /// <param name="gatewayTransactionId">Reference of the payment, or the admin-supplied reference for a manual one.</param>
-    public void MarkPaid(string gatewayTransactionId) => MarkPaidAt(gatewayTransactionId, DateTimeOffset.UtcNow);
+    /// <param name="gateway">The gateway or method that took the money, recorded on the remainder's transaction.</param>
+    public void MarkPaid(string gatewayTransactionId, string? gateway = null) =>
+        MarkPaidAt(gatewayTransactionId, DateTimeOffset.UtcNow, gateway ?? PaymentMethod ?? UnknownGateway);
 
     /// <summary>Marks the invoice paid at a given moment, clears the gateway session and raises <see cref="PaymentReceivedEvent"/>.</summary>
     /// <param name="gatewayTransactionId">Reference of the payment.</param>
     /// <param name="paidAt">When the payment was received (UTC).</param>
+    /// <param name="gateway">The gateway or method that took the money.</param>
     /// <exception cref="DomainRuleException">The invoice is not Unpaid or Overdue.</exception>
-    private void MarkPaidAt(string gatewayTransactionId, DateTimeOffset paidAt)
-    {
-        if (Status is not (InvoiceStatus.Unpaid or InvoiceStatus.Overdue))
-        {
-            throw new DomainRuleException(
-                BillingErrors.InvoiceNotPayable, $"Invoice cannot be paid in status {Status}.");
-        }
-
-        Status = InvoiceStatus.Paid;
-        PaidAt = paidAt;
-        GatewayTransactionId = gatewayTransactionId;
-        ClearGatewaySession();
-        AddDomainEvent(new PaymentReceivedEvent(Id, ClientId, Total, gatewayTransactionId));
-    }
+    private void MarkPaidAt(string gatewayTransactionId, DateTimeOffset paidAt, string gateway) =>
+        Settle(gatewayTransactionId, paidAt, gateway, clearGatewaySession: true);
 
     /// <summary>
     /// Records a successful payment made through the invoice's own currently active
@@ -403,18 +426,97 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// which gateway actually took the money.
     /// </summary>
     /// <param name="gatewayTransactionId">The gateway's transaction reference for the completed payment.</param>
-    public void MarkPaidViaGateway(string gatewayTransactionId)
+    public void MarkPaidViaGateway(string gatewayTransactionId) =>
+        Settle(gatewayTransactionId, DateTimeOffset.UtcNow, GatewayModule ?? UnknownGateway, clearGatewaySession: false);
+
+    /// <summary>
+    /// Marks the invoice Paid and raises <see cref="PaymentReceivedEvent"/>: the one Paid transition
+    /// every settling path goes through.
+    /// </summary>
+    /// <param name="gatewayTransactionId">Reference of the payment.</param>
+    /// <param name="paidAt">When the payment was received (UTC).</param>
+    /// <param name="gateway">The gateway or method that took the money.</param>
+    /// <param name="clearGatewaySession">
+    /// Whether to drop the stored gateway session: yes unless the invoice's own session paid it,
+    /// whose fields refund and reconciliation code still need.
+    /// </param>
+    /// <exception cref="DomainRuleException">The invoice is not Unpaid or Overdue.</exception>
+    private void Settle(string gatewayTransactionId, DateTimeOffset paidAt, string gateway, bool clearGatewaySession)
     {
-        if (Status is not (InvoiceStatus.Unpaid or InvoiceStatus.Overdue))
+        EnsurePayable();
+        RecordRemainder(paidAt, gateway, gatewayTransactionId);
+
+        Status = InvoiceStatus.Paid;
+        PaidAt = paidAt;
+        GatewayTransactionId = gatewayTransactionId;
+        if (clearGatewaySession)
+        {
+            ClearGatewaySession();
+        }
+
+        AddDomainEvent(new PaymentReceivedEvent(Id, ClientId, Total, gatewayTransactionId));
+    }
+
+    /// <summary>
+    /// Settles an open invoice whose recorded money now covers its total: after a payment, or after
+    /// a credit or line change lowered the total under what was already paid.
+    /// </summary>
+    /// <param name="transactionId">Reference recorded as the paying transaction.</param>
+    /// <param name="paidAt">When it became covered.</param>
+    /// <param name="gateway">The gateway or method of the covering payment.</param>
+    private void SettleIfCovered(string transactionId, DateTimeOffset paidAt, string gateway)
+    {
+        if (IsOpen && AmountPaid > 0m && AmountPaid >= Total)
+        {
+            Settle(transactionId, paidAt, gateway, clearGatewaySession: true);
+        }
+    }
+
+    /// <summary>
+    /// Settles an open invoice whose recorded money already covers its total, crediting the latest
+    /// payment with it. Two payments recorded at the same moment each see only themselves and can
+    /// leave such an invoice open; the daily renewal run calls this to close it.
+    /// </summary>
+    /// <returns>Whether the invoice was settled.</returns>
+    public bool SettleIfCovered()
+    {
+        var lastPayment = _transactions.LastOrDefault(t => t.Type == InvoiceTransactionType.Payment);
+        if (lastPayment is null || !IsOpen || AmountPaid < Total)
+        {
+            return false;
+        }
+
+        SettleIfCovered(lastPayment.TransactionId, DateTimeOffset.UtcNow, lastPayment.Gateway);
+        return true;
+    }
+
+    /// <summary>Refuses a payment on an invoice that is not open.</summary>
+    /// <exception cref="DomainRuleException">The invoice is not Unpaid or Overdue.</exception>
+    private void EnsurePayable()
+    {
+        if (!IsOpen)
         {
             throw new DomainRuleException(
                 BillingErrors.InvoiceNotPayable, $"Invoice cannot be paid in status {Status}.");
         }
+    }
 
-        Status = InvoiceStatus.Paid;
-        PaidAt = DateTimeOffset.UtcNow;
-        GatewayTransactionId = gatewayTransactionId;
-        AddDomainEvent(new PaymentReceivedEvent(Id, ClientId, Total, gatewayTransactionId));
+    /// <summary>
+    /// When a full-charge path settles an invoice that already holds payments, records the
+    /// remainder it took as a payment too, so the recorded payments cover the total and
+    /// <see cref="IsPaidInFull"/> holds. An invoice paid in one go records nothing extra, as before.
+    /// </summary>
+    /// <param name="paidAt">When the remainder was paid.</param>
+    /// <param name="gateway">The gateway or method that took it.</param>
+    /// <param name="transactionId">The payment's reference.</param>
+    private void RecordRemainder(DateTimeOffset paidAt, string gateway, string transactionId)
+    {
+        var due = AmountDue;
+        if (AmountPaid > 0m && due > 0m)
+        {
+            _transactions.Add(InvoiceTransaction.Create(
+                Id, paidAt, gateway, transactionId, due, InvoiceTransactionType.Payment, 0m, null));
+        }
     }
 
     /// <summary>Clears the stored hosted-gateway session fields.</summary>
@@ -498,6 +600,16 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
                 $"Only Paid invoices can be marked Unpaid; current status is {Status}.");
         }
 
+        // The money is no longer held (it bounced, or was recorded by mistake): reverse it, so the
+        // whole total is due again and a new payment can settle the invoice.
+        var held = AmountPaid;
+        if (held > 0m)
+        {
+            _transactions.Add(InvoiceTransaction.Create(
+                Id, DateTimeOffset.UtcNow, ReversalGateway, GatewayTransactionId ?? ReversalGateway, held,
+                InvoiceTransactionType.Refund, 0m, "Reversed: invoice marked unpaid"));
+        }
+
         Status = InvoiceStatus.Unpaid;
         PaidAt = null;
         GatewayTransactionId = null;
@@ -563,5 +675,9 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
         SubTotal = _items.Sum(i => i.Amount);
         Tax = Math.Round(SubTotal * TaxRate / 100, 4);
         Total = SubTotal + Tax - Credit;
+
+        // A lower total (credit, a removed or cheaper line, less tax) may now be covered by what was
+        // already paid; nothing is owed then, so the invoice must not stay open and go overdue.
+        SettleIfCovered();
     }
 }

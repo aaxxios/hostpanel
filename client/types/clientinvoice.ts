@@ -69,6 +69,11 @@ export interface ClientInvoice {
   paidAt: string | null
   /** Final total after tax and credit. */
   total: number
+  /**
+   * What is still owed: the total less the payments recorded against it, `0` once the invoice is
+   * closed. This is what a payment started from the portal charges.
+   */
+  amountDue: number
   /** Sum of all line item amounts before tax and credit. */
   subTotal: number
   /** Computed tax amount. */

@@ -28,6 +28,8 @@ const api = useBillingApi()
 /** Every endpoint function with the request it must send. */
 const rows: ExpectedRequest[] = [
   { name: 'fetchInvoice reads one invoice', call: () => api.fetchInvoice('7'), method: 'GET', url: '/api/portal/client/invoices/7' },
+  { name: 'fetchInvoicePdf reads the invoice PDF', call: () => api.fetchInvoicePdf('7'), method: 'GET', url: '/api/portal/client/invoices/7/pdf' },
+  { name: 'fetchInvoicePdf encodes the id into one path segment', call: () => api.fetchInvoicePdf('7/../x'), method: 'GET', url: '/api/portal/client/invoices/7%2F..%2Fx/pdf' },
   { name: 'fetchPaymentMethods reads the saved methods', call: () => api.fetchPaymentMethods(), method: 'GET', url: '/api/portal/client/payment-methods' },
   { name: 'fetchGatewayMethods reads the gateways under the order surface', call: () => api.fetchGatewayMethods(), method: 'GET', url: '/api/portal/order/payment-methods' },
   { name: 'payInvoice posts the saved method id', call: () => api.payInvoice('7', 'pm_1'), method: 'POST', url: '/api/portal/client/invoices/7/pay', body: { paymethodid: 'pm_1' } },
@@ -68,5 +70,14 @@ describe('useBillingApi', () => {
     const [method] = await api.fetchPaymentMethods()
 
     expect(method).toMatchObject({ id: 'pm_1', description: 'Mastercard •••• 4444', card_expiry: '09/29', is_default: true })
+  })
+
+  it('returns the PDF as a blob', async () => {
+    stub = await startTransport(() => ({ body: '%PDF-1.4 test', headers: { 'content-type': 'application/pdf' } }))
+
+    const pdf = await api.fetchInvoicePdf('41')
+
+    expect(pdf).toBeInstanceOf(Blob)
+    expect(await pdf.text()).toBe('%PDF-1.4 test')
   })
 })

@@ -375,4 +375,51 @@ public sealed class ProcessRenewalsCronTests(IntegrationTestFactory factory) : I
         (await context.ClientServices.AsNoTracking().FirstAsync(s => s.Id == manualService.Id, CancellationToken.None))
             .Status.Should().Be(ServiceStatus.Suspended);
     }
+
+    /// <summary>
+    /// Two partial payments saved at the same moment each see only themselves, so neither settles
+    /// the invoice although together they cover it. The daily run settles such an invoice.
+    /// </summary>
+    /// <returns>A task.</returns>
+    [Fact]
+    public async Task OpenInvoiceCoveredByConcurrentPayments_IsSettled()
+    {
+        var host = Host(new FakeEmailSender());
+        int invoiceId;
+        using (var seed = host.Services.CreateScope())
+        {
+            var context = seed.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+            context.Clients.Add(client);
+            await context.SaveChangesAsync(CancellationToken.None);
+            var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD");
+            invoice.AddItem("Hosting", 10m, 1);
+            context.Invoices.Add(invoice);
+            await context.SaveChangesAsync(CancellationToken.None);
+            invoiceId = invoice.Id;
+        }
+
+        // Both scopes load the invoice before either saves, as two admins recording payments at once.
+        using var first = host.Services.CreateScope();
+        using var second = host.Services.CreateScope();
+        var firstContext = first.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var secondContext = second.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var a = await firstContext.Invoices.Include(i => i.Transactions).FirstAsync(i => i.Id == invoiceId);
+        var b = await secondContext.Invoices.Include(i => i.Transactions).FirstAsync(i => i.Id == invoiceId);
+        a.AddPayment(DateTimeOffset.UtcNow, "Manual", "half-1", 5m, 0m, null);
+        b.AddPayment(DateTimeOffset.UtcNow, "Manual", "half-2", 5m, 0m, null);
+        await firstContext.SaveChangesAsync(CancellationToken.None);
+        await secondContext.SaveChangesAsync(CancellationToken.None);
+
+        using var scope = host.Services.CreateScope();
+        var readContext = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        (await readContext.Invoices.AsNoTracking().FirstAsync(i => i.Id == invoiceId)).Status
+            .Should().Be(InvoiceStatus.Unpaid, "each save saw only its own half");
+
+        await scope.ServiceProvider.GetRequiredService<IMessageBus>()
+            .InvokeAsync(new ProcessRenewalsCronCommand(), CancellationToken.None);
+
+        (await readContext.Invoices.AsNoTracking().FirstAsync(i => i.Id == invoiceId)).Status
+            .Should().Be(InvoiceStatus.Paid);
+    }
 }

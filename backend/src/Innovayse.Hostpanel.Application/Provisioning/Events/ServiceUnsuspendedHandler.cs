@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Provisioning.Common;
 using Innovayse.Hostpanel.Application.Provisioning.Extensions;
+using Innovayse.Hostpanel.Application.Services.Events;
 using Innovayse.Hostpanel.Domain.Provisioning.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -39,24 +40,29 @@ public sealed class ServiceUnsuspendedHandler
     /// </summary>
     /// <param name="evt">The domain event carrying the service identifier.</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task HandleAsync(ServiceUnsuspendedEvent evt, CancellationToken ct)
+    /// <returns>
+    /// <see cref="RestoreSuspendedSshKeys"/> once the account is unlocked, so the service's SSH keys
+    /// can go back on; nothing when the panel was not reached.
+    /// </returns>
+    public async Task<RestoreSuspendedSshKeys?> HandleAsync(ServiceUnsuspendedEvent evt, CancellationToken ct)
     {
         var service = await _context.ClientServices.FirstOrDefaultAsync(s => s.Id == evt.ServiceId, ct);
         if (service?.ProvisioningRef is null || service.ServerId is null)
         {
-            return;
+            return null;
         }
 
         var server = await _context.FindServerAsync(service, ct);
         if (server is null)
         {
-            return;
+            return null;
         }
 
         try
         {
             var provider = _providerFactory.CreateFor(server);
             await provider.UnsuspendAsync(service.ProvisioningRef, ct);
+            return new RestoreSuspendedSshKeys(service.Id, service.ClientId);
         }
         catch (Exception ex)
         {
@@ -69,6 +75,7 @@ public sealed class ServiceUnsuspendedHandler
                 "Unsuspending service {ServiceId} on server {ServerId} failed; the platform shows it as active but the hosting account may still be suspended.",
                 service.Id,
                 server.Id);
+            return null;
         }
     }
 }

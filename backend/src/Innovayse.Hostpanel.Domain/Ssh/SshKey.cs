@@ -1,6 +1,6 @@
 using Innovayse.Hostpanel.Domain.Ssh.Enums;
-using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 using Innovayse.Hostpanel.SharedKernel.Domain;
+using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 namespace Innovayse.Hostpanel.Domain.Ssh;
 
 /// <summary>
@@ -136,6 +136,22 @@ public sealed class SshKey : BaseEntity, IAggregateRoot
     {
         EnsureNotRevoked();
         SyncState = SshKeySyncState.RevokeFailed;
+        LastSyncError = error;
+    }
+
+    /// <summary>Records that the provider confirmed the key was taken off the server for a suspension.</summary>
+    public void MarkSuspended()
+    {
+        EnsureNotRevoked();
+        SyncState = SshKeySyncState.Suspended;
+        LastSyncError = null;
+    }
+
+    /// <summary>Records a failed call that left the key's state as it was.</summary>
+    /// <param name="error">The provider's error code.</param>
+    public void RecordSyncError(string error)
+    {
+        EnsureNotRevoked();
         LastSyncError = error;
     }
 

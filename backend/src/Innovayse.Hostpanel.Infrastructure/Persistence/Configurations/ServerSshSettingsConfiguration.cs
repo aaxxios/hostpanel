@@ -20,6 +20,7 @@ public sealed class ServerSshSettingsConfiguration : IEntityTypeConfiguration<Se
         builder.Property(x => x.AgentHost).IsRequired().HasMaxLength(255);
         builder.Property(x => x.AgentUsername).IsRequired().HasMaxLength(32);
         builder.Property(x => x.AgentHostKeyFingerprint).IsRequired().HasMaxLength(100);
+        builder.Property(x => x.AgentPublicKey).HasMaxLength(200);
         builder.Ignore(x => x.IsComplete);
 
         // The agent's private key is a server credential like Server.AccessHash and is encrypted

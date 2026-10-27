@@ -4,7 +4,6 @@ using System.Text.Json;
 using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
@@ -21,7 +20,8 @@ public sealed class TestServerSshAgentTests(IntegrationTestFactory factory) : IC
             .Content.ReadFromJsonAsync<JsonElement>();
 
         body.GetProperty("isHealthy").GetBoolean().Should().BeTrue();
-        body.GetProperty("agentVersion").GetString().Should().Be("1.0.0");
+        body.GetProperty("agentVersion").GetString().Should().Be("1.1.0");
+        body.GetProperty("provider").GetString().Should().Be("cwp");
         (await admin.GetFromJsonAsync<JsonElement>($"/api/admin/servers/{serverId}/ssh-settings"))
             .GetProperty("isHealthy").GetBoolean().Should().BeTrue();
     }
@@ -39,5 +39,19 @@ public sealed class TestServerSshAgentTests(IntegrationTestFactory factory) : IC
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         body.GetProperty("isHealthy").GetBoolean().Should().BeFalse();
         body.GetProperty("error").GetString().Should().Be("unreachable");
+    }
+
+    [Fact]
+    public async Task AgentBoundToAnotherServer_IsUnhealthyWithBindingMismatchAsync()
+    {
+        var admin = await SshAdminTestSupport.AdminAsync(factory);
+        var serverId = await SshTestSeeds.SeedServerAsync(factory, "bound.example.test", 22);
+        SshTestSeeds.Agents(factory).AgentFor(serverId).Binding = Guid.NewGuid();
+
+        var body = await (await admin.PostAsync($"/api/admin/servers/{serverId}/ssh-settings/test", null))
+            .Content.ReadFromJsonAsync<JsonElement>();
+
+        body.GetProperty("isHealthy").GetBoolean().Should().BeFalse();
+        body.GetProperty("error").GetString().Should().Be("binding_mismatch");
     }
 }

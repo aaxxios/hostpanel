@@ -18,6 +18,14 @@
     <PackageVersion Include="SkiaSharp" Version="4.153.1" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
   </ItemGroup>
+  <!--
+    Invoice PDFs: PDFsharp + MigraDoc, the cross-platform (Core) build. 6.5.0 onwards is
+    AGPL-3.0-only, which this AGPL-3.0-licensed project can take; the library refuses to render
+    until PdfSharpLicense.SetAgplLicense() is called, which Infrastructure/Pdf/PdfFonts.cs does.
+  -->
+  <ItemGroup>
+    <PackageVersion Include="PDFsharp-MigraDoc" Version="6.5.0" />
+  </ItemGroup>
 
   <!-- ASP.NET Core & Identity -->
   <ItemGroup>
@@ -148,6 +156,8 @@
     <PackageVersion Include="FluentAssertions" Version="6.12.2" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="Moq" Version="4.21.0" />
+    <!-- Reads rendered invoice PDFs back in the renderer tests. Test-only, Apache-2.0. -->
+    <PackageVersion Include="PdfPig" Version="0.1.16" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageVersion Include="Testcontainers.Redis" Version="4.16.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />

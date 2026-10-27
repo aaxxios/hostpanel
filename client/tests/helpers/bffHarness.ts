@@ -127,13 +127,14 @@ vi.stubGlobal('proxyRequest', async (_event: FakeEvent, target: string) => {
 })
 vi.stubGlobal('useRuntimeConfig', () => runtimeConfig)
 
-const { getApiUrl, internalApiCall } = await import('~/server/utils/api')
+const { getApiUrl, internalApiBinaryCall, internalApiCall } = await import('~/server/utils/api')
 // No `sessionRedis` in the runtime config, so the real store is the in-process one.
 const { useSessionStore } = await import('~/server/utils/session-store')
 const { SessionCookie } = await import('~/constants/sessionCookie')
 const { requireRouteParam } = await import('~/server/utils/requireRouteParam')
 
 vi.stubGlobal('internalApiCall', internalApiCall)
+vi.stubGlobal('internalApiBinaryCall', internalApiBinaryCall)
 vi.stubGlobal('getApiUrl', getApiUrl)
 vi.stubGlobal('requireRouteParam', requireRouteParam)
 

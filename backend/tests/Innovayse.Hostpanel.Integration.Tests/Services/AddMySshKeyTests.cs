@@ -10,7 +10,6 @@ using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
@@ -82,11 +81,14 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
         SshTestSeeds.Agents(factory).AgentFor(serverId).Calls.Should().BeEmpty();
     }
 
-    [Fact]
-    public async Task ShellDisabled_AgentRefusal_LeavesNoRecordAsync()
+    [Theory]
+    [InlineData("ssh_disabled")]
+    [InlineData("account_suspended")]
+    [InlineData("account_not_eligible")]
+    public async Task AgentAccessRefusal_LeavesNoRecordAsync(string agentCode)
     {
         var (http, _, serverId, serviceId) = await SshTestSeeds.OwnerWithServiceAsync(factory, "ssh-add-noshell");
-        SshTestSeeds.Agents(factory).AgentFor(serverId).FailWith = "ssh_disabled";
+        SshTestSeeds.Agents(factory).AgentFor(serverId).FailWith = agentCode;
 
         var response = await AddAsync(http, serviceId, SshTestSeeds.Key(1));
 
@@ -117,7 +119,11 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
 
         var response = await http.PostAsJsonAsync($"/api/me/services/{serviceId}/ssh/keys", new
         {
-            label = "x", publicKey = SshTestSeeds.Key(3), serverId = 999999, account = "root", path = "/root/.ssh",
+            label = "x",
+            publicKey = SshTestSeeds.Key(3),
+            serverId = 999999,
+            account = "root",
+            path = "/root/.ssh",
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);

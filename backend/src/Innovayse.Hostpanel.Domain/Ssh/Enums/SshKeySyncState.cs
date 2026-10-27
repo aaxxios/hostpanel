@@ -23,6 +23,12 @@ public enum SshKeySyncState
     /// <summary>The revoke call failed or timed out; the key may still be able to log in.</summary>
     RevokeFailed,
 
+    /// <summary>
+    /// Taken off the server while the service is suspended (panels suspend by locking the password,
+    /// which does not stop a key from logging in); put back when the service is unsuspended.
+    /// </summary>
+    Suspended,
+
     /// <summary>The provider confirmed the key is gone from the server. Terminal.</summary>
     Revoked,
 }

@@ -112,4 +112,61 @@ public sealed class AddInvoicePaymentTests(IntegrationTestFactory factory) : ICl
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    /// <summary>Posts a manual payment of <paramref name="amount"/> against an invoice.</summary>
+    /// <param name="admin">The authenticated admin client.</param>
+    /// <param name="invoiceId">The invoice.</param>
+    /// <param name="amount">The amount paid.</param>
+    /// <returns>The HTTP response.</returns>
+    private static Task<HttpResponseMessage> PayAsync(HttpClient admin, int invoiceId, decimal amount) =>
+        admin.PostAsJsonAsync($"/api/billing/{invoiceId}/payment", new
+        {
+            date = DateTimeOffset.UtcNow,
+            gateway = PaymentMethodNames.Manual,
+            transactionId = $"pay-{Guid.NewGuid():N}",
+            amount,
+            fees = 0m,
+        });
+
+    /// <summary>Reads the invoice's status and amount due through the admin route.</summary>
+    /// <param name="admin">The authenticated admin client.</param>
+    /// <param name="invoiceId">The invoice.</param>
+    /// <returns>The status name and the amount due.</returns>
+    private static async Task<(string Status, decimal AmountDue)> ReadAsync(HttpClient admin, int invoiceId)
+    {
+        using var body = JsonDocument.Parse(await (await admin.GetAsync($"/api/billing/{invoiceId}")).Content.ReadAsStringAsync());
+        return (body.RootElement.GetProperty("status").GetString()!, body.RootElement.GetProperty("amountDue").GetDecimal());
+    }
+
+    /// <summary>
+    /// A payment short of the total leaves the invoice Unpaid with the rest still due, and the
+    /// payment that covers the rest marks it Paid.
+    /// </summary>
+    [Fact]
+    public async Task PartialPayments_CompleteTheInvoiceOnlyWhenTheyCoverIt()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+        var clientId = await BillingTestSeeds.SeedClientAsync(factory);
+        var invoiceId = await BillingTestSeeds.CreateInvoiceAsync(admin, clientId, 20m);
+
+        (await PayAsync(admin, invoiceId, 5m)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await ReadAsync(admin, invoiceId)).Should().Be((nameof(InvoiceStatus.Unpaid), 15m));
+
+        (await PayAsync(admin, invoiceId, 15m)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await ReadAsync(admin, invoiceId)).Should().Be((nameof(InvoiceStatus.Paid), 0m));
+    }
+
+    /// <summary>A Paid invoice refuses a further payment instead of recording money against it.</summary>
+    [Fact]
+    public async Task PaymentOnAPaidInvoice_IsRefused()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+        var clientId = await BillingTestSeeds.SeedClientAsync(factory);
+        var invoiceId = await BillingTestSeeds.CreateInvoiceAsync(admin, clientId, 20m);
+        (await PayAsync(admin, invoiceId, 20m)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var response = await PayAsync(admin, invoiceId, 1m);
+
+        ((int)response.StatusCode).Should().BeInRange(400, 499);
+    }
 }

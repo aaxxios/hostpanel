@@ -20,12 +20,26 @@
           </UiStack>
           <UiStack direction="row" align="center" gap="sm">
             <ClientStatusBadge :status="invoice.status" />
+            <UiButton
+              v-if="canDownload"
+              variant="secondary"
+              :loading="paymentStore.pdfDownloading"
+              data-testid="invoice-download"
+              @click="paymentStore.downloadInvoicePdf(String(route.params.id))"
+            >
+              <Download :size="16" :stroke-width="2" class="mr-2" />
+              {{ $t('client.invoices.downloadPdf') }}
+            </UiButton>
             <UiButton v-if="isOutstanding" :to="payPath" data-testid="invoice-pay-now">
               <CreditCard :size="16" :stroke-width="2" class="mr-2" />
               {{ $t('client.invoices.payNow') }}
             </UiButton>
           </UiStack>
         </UiStack>
+
+        <UiAlert v-if="paymentStore.pdfError" variant="error" class="mb-4" data-testid="invoice-download-error">
+          {{ paymentStore.pdfError }}
+        </UiAlert>
 
         <UiGrid as="dl" cols="3" gap="md">
           <UiDescriptionItem :label="$t('client.invoices.dueDate')" :value="formatDate(invoice.dueDate)" :value-class="isOverdue ? '!text-red-600 dark:!text-red-400' : ''" />
@@ -77,7 +91,7 @@
         <template #action>
           <UiButton :to="payPath" size="sm" class="flex-shrink-0" data-testid="invoice-pay-amount">
             <CreditCard :size="16" :stroke-width="2" class="mr-2" />
-            {{ $t('client.invoices.payAmount') }} {{ money(invoice.total) }}
+            {{ $t('client.invoices.payAmount') }} {{ money(balanceDue(invoice)) }}
           </UiButton>
         </template>
       </UiAlert>
@@ -91,11 +105,12 @@
  * totals, and a reminder banner. The invoice is read through the invoice payment store.
  */
 import { CLIENT_INVOICES_PATH, clientInvoicePayPath } from '~/constants/clientRoutes'
-import { AlertCircle, CreditCard } from 'lucide-vue-next'
+import { AlertCircle, CreditCard, Download } from 'lucide-vue-next'
 import { useInvoicePaymentStore } from '~/stores/invoicepayment'
+import { InvoiceStatus } from '~/types/invoicestatus'
 import { formatCurrency } from '~/utils/formatCurrency'
 import { EMPTY_DATE, formatDate, formatDateTime } from '~/utils/formatDate'
-import { isInvoiceOutstanding, isInvoiceOverdue } from '~/utils/invoice'
+import { balanceDue, isInvoiceOutstanding, isInvoiceOverdue } from '~/utils/invoice'
 
 definePageMeta({ layout: 'client', middleware: 'client-auth' })
 
@@ -121,6 +136,9 @@ const error = computed(() => paymentStore.invoiceError)
 
 /** The payment page of this invoice. */
 const payPath = computed(() => localePath(clientInvoicePayPath(String(route.params.id))))
+
+/** True once the invoice has loaded and is published; a draft is not the client's to download yet. */
+const canDownload = computed(() => invoice.value !== null && invoice.value.status !== InvoiceStatus.Draft)
 
 /**
  * Formats one amount on this invoice in the invoice's own billing currency.

@@ -169,6 +169,17 @@ public static class DependencyInjection
         services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.IBrandingStorage,
             Innovayse.Hostpanel.Infrastructure.Storage.FileSystemBrandingStorage>();
 
+        // Invoice PDFs: stateless, and the fonts it embeds are loaded once per process.
+        services.AddOptions<Innovayse.Hostpanel.Application.Common.Settings.InvoicePdfOptions>()
+            .Bind(configuration.GetSection(
+                Innovayse.Hostpanel.Application.Common.Settings.InvoicePdfOptions.SectionName))
+            .Validate(o => o.MaxLines > 0, "InvoicePdf:MaxLines must be positive.")
+            .Validate(o => o.MaxConcurrentRenders > 0, "InvoicePdf:MaxConcurrentRenders must be positive.")
+            .ValidateOnStart();
+        services.AddSingleton<Innovayse.Hostpanel.Infrastructure.Pdf.InvoicePdfRenderGate>();
+        services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.IInvoicePdfRenderer,
+            Innovayse.Hostpanel.Infrastructure.Pdf.MigraDocInvoicePdfRenderer>();
+
         // Where people live decides almost everything below. Read from configuration once,
         // here, so there is one answer rather than a scattering of Auth:Mode checks that
         // can disagree.
@@ -430,9 +441,15 @@ public static class DependencyInjection
         // own ServerSshSettings row. Nothing here names a server; every value is per row.
         services.AddSingleton<Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.ISshAgentTransport, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.SshNetAgentTransport>();
         services.AddScoped<Innovayse.Hostpanel.Application.Common.Interfaces.ISshKeyProviderFactory, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.SshKeyProviderFactory>();
+        services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.ISshIdentityGenerator, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.BouncyCastleSshIdentityGenerator>();
+        services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.ISshHostKeyScanner, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.SshNetHostKeyScanner>();
+        services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.ISshAgentBundle, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.EmbeddedSshAgentBundle>();
         services.AddScoped<
             Innovayse.Hostpanel.Application.Common.Interfaces.ISshServiceContextResolver,
             Innovayse.Hostpanel.Application.Services.Common.SshServiceContextResolver>();
+        services.AddScoped<
+            Innovayse.Hostpanel.Application.Common.Interfaces.ISshKeyRevoker,
+            Innovayse.Hostpanel.Application.Services.Common.SshKeyRevoker>();
 
         // Billing services
         services.AddScoped<IPaymentGateway, NullPaymentGateway>();

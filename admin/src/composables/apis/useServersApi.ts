@@ -12,7 +12,7 @@ import type {
   ServerPayload,
   TestConnectionResultDto,
 } from '@/types/server'
-import type { ServerSshSettingsDto, ServerSshSettingsPayload, SshAgentTestResultDto } from '@/types/serverssh'
+import type { ServerSshSettingsDto, ServerSshSettingsPayload, ServerSshSetupDto, SshAgentTestResultDto, SshHostKeyScanDto } from '@/types/serverssh'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
 
@@ -132,6 +132,33 @@ export const useServersApi = () => {
   const testServerSshAgent = (id: number): Promise<SshAgentTestResultDto> =>
     request<SshAgentTestResultDto>(`${ApiPath.AdminServers}/${id}/ssh-settings/test`, { method: HttpMethod.Post })
 
+  /**
+   * Reads what is needed to install the SSH key agent on a server.
+   *
+   * @param id - Server id.
+   * @returns Profile, public key, binding and bundle; never the private key.
+   */
+  const getServerSshSetup = (id: number): Promise<ServerSshSetupDto> =>
+    request<ServerSshSetupDto>(`${ApiPath.AdminServers}/${id}/ssh-setup`)
+
+  /**
+   * Generates or rotates a server's ED25519 management identity.
+   *
+   * @param id - Server id.
+   * @returns The setup with the new public key.
+   */
+  const generateServerSshIdentity = (id: number): Promise<ServerSshSetupDto> =>
+    request<ServerSshSetupDto>(`${ApiPath.AdminServers}/${id}/ssh-identity`, { method: HttpMethod.Post })
+
+  /**
+   * Reads the host key the saved agent endpoint presents, for the administrator to verify.
+   *
+   * @param id - Server id.
+   * @returns The presented key and whether it matches the pin.
+   */
+  const scanServerSshHostKey = (id: number): Promise<SshHostKeyScanDto> =>
+    request<SshHostKeyScanDto>(`${ApiPath.AdminServers}/${id}/ssh-settings/scan-host-key`, { method: HttpMethod.Post })
+
   return {
     listServers,
     createServer,
@@ -145,5 +172,8 @@ export const useServersApi = () => {
     getServerSshSettings,
     saveServerSshSettings,
     testServerSshAgent,
+    getServerSshSetup,
+    generateServerSshIdentity,
+    scanServerSshHostKey,
   }
 }
