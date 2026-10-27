@@ -1,6 +1,7 @@
 using System.Net;
 using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Domains;
+using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Infrastructure.Integrations.Namecheap;
 using Innovayse.Hostpanel.Infrastructure.Integrations.Namecheap.Settings;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
@@ -377,5 +378,35 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
 
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("not configured");
+    }
+
+    /// <summary>
+    /// A DNS record added on an unconfigured integration is refused, so the handler does not save
+    /// a record Namecheap never got.
+    /// </summary>
+    [Fact]
+    public async Task AddDnsRecordAsync_WhenNotConfigured_FailsAsync()
+    {
+        var record = DnsRecord.CreateDetached(DnsRecordType.A, "www", "192.0.2.1", 1800, null);
+
+        var result = await BuildUnconfiguredProvider().AddDnsRecordAsync(
+            "example.com", "example.com", record, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("not configured");
+        namecheap.Requests.Should().BeEmpty();
+    }
+
+    /// <summary>The client refuses to answer an unconfigured call with a fake OK envelope.</summary>
+    [Fact]
+    public async Task Client_WhenNotConfigured_ThrowsInsteadOfFakingSuccessAsync()
+    {
+        var unconfigured = Settings;
+        unconfigured.ApiKey = string.Empty;
+        var client = new NamecheapClient(new HttpClient(), Options.Create(unconfigured));
+
+        var act = () => client.ExecuteAsync("namecheap.domains.getList", [], CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 }

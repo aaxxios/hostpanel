@@ -205,7 +205,8 @@ public sealed class NameAmRegistrarProviderTests(IntegrationTestFactory factory)
     {
         var provider = BuildProvider(configured: false);
 
-        var result = await provider.TransferAsync(new DomainTransferOrder("example.am", "EPP-1", false), CancellationToken.None);
+        var result = await provider.TransferAsync(
+            new DomainTransferOrder("example.am", "EPP-1", false), CancellationToken.None);
 
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("not configured");
@@ -220,7 +221,8 @@ public sealed class NameAmRegistrarProviderTests(IntegrationTestFactory factory)
     {
         var provider = BuildProvider(configured: false);
 
-        var result = await provider.SetNameserversAsync("example.am", "example.am", ["ns1.example.test"], CancellationToken.None);
+        var result = await provider.SetNameserversAsync(
+            "example.am", "example.am", ["ns1.example.test"], CancellationToken.None);
 
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("not configured");

@@ -75,9 +75,9 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
             request.DomainName, request.Years);
 
         // An unrecognised answer is left for polling: the domain stays pending until Name.am
-        // reports it active.
+        // reports it active. Test mode skips polling, so there only a purchase list counts.
         var errorMessage = await PurchaseAsync(
-            purchasePayload, "registration", request.DomainName, requirePurchaseList: false, ct);
+            purchasePayload, "registration", request.DomainName, requirePurchaseList: _client.IsTestMode, ct);
         if (errorMessage is not null)
         {
             return new RegistrarResult(false, null, null, errorMessage);
@@ -927,7 +927,8 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
             // A 4xx means Name.am turned the order down, so nothing was bought: a clean refusal
             // the caller may act on. A 5xx or a timeout stays an exception, its outcome unknown.
             var status = (int)ex.StatusCode!.Value;
-            _logger.LogWarning(ex, "Name.am refused {Action} of '{DomainName}' with HTTP {Status}", action, domainName, status);
+            _logger.LogWarning(
+                ex, "Name.am refused {Action} of '{DomainName}' with HTTP {Status}", action, domainName, status);
             return $"Name.am refused the {action} (HTTP {status}).";
         }
 
@@ -940,7 +941,8 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
                     : null);
             if (errorMessage is not null)
             {
-                _logger.LogWarning("Name.am rejected {Action} of '{DomainName}': {Error}", action, domainName, errorMessage);
+                _logger.LogWarning(
+                    "Name.am rejected {Action} of '{DomainName}': {Error}", action, domainName, errorMessage);
             }
 
             return errorMessage;

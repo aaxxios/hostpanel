@@ -27,7 +27,8 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     /// not save a change the registrar never made. Domains not held at a registrar never get here:
     /// the handlers skip the registrar for them.
     /// </summary>
-    private static readonly RegistrarResult NotConfiguredResult = new(false, null, null, "Namecheap is not configured.");
+    private static readonly RegistrarResult NotConfiguredResult =
+        new(false, null, null, "Namecheap is not configured.");
 
     /// <inheritdoc/>
     public async Task<RegistrarResult> RegisterAsync(DomainRegistrationOrder request, CancellationToken ct)
@@ -430,10 +431,9 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     {
         if (!_client.IsConfigured)
         {
-            // Not "taken" — unknown. Every other method here answers an unconfigured
-            // registrar with a success no-op, but availability has no such answer: a
-            // storefront that reports every domain as taken sells nothing and looks
-            // like it is working. Surfacing it means an operator who forgot to
+            // Not "taken" — unknown. A change is refused with a failed result, but a yes/no
+            // question has no such answer: a storefront that reports every domain as taken
+            // sells nothing and looks like it is working. Surfacing it means an operator who forgot to
             // configure a registrar finds out, instead of quietly selling nothing.
             throw new InvalidOperationException(
                 "Domain availability cannot be checked because no registrar is configured. "
@@ -679,11 +679,11 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
         var expiresRaw = info.Attribute("ExpiredDate")?.Value;
 
         DateTimeOffset createdAt = createdRaw is not null
-            ? DateTimeOffset.Parse(createdRaw)
+            ? DateTimeOffset.Parse(createdRaw, CultureInfo.InvariantCulture)
             : DateTimeOffset.MinValue;
 
         DateTimeOffset expiresAt = expiresRaw is not null
-            ? DateTimeOffset.Parse(expiresRaw)
+            ? DateTimeOffset.Parse(expiresRaw, CultureInfo.InvariantCulture)
             : DateTimeOffset.MaxValue;
 
         return new WhoisInfo(registrar, registrant, createdAt, expiresAt);
@@ -694,7 +694,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     {
         if (!_client.IsConfigured)
         {
-            return new RegistrarResult(false, null, null, "Namecheap is not configured.");
+            return NotConfiguredResult;
         }
 
         var (sld, tld) = SplitDomain(domainName);
@@ -720,7 +720,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
         var domainId = info.Attribute("ID")?.Value ?? domainName;
 
         DateTimeOffset expiresAt = expiresRaw is not null
-            ? DateTimeOffset.Parse(expiresRaw)
+            ? DateTimeOffset.Parse(expiresRaw, CultureInfo.InvariantCulture)
             : DateTimeOffset.UtcNow.AddYears(1);
 
         return new RegistrarResult(true, domainId, expiresAt, null);
@@ -741,6 +741,12 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
         IList<DnsRecord> records,
         CancellationToken ct)
     {
+        // The one write behind adding, updating and deleting a record.
+        if (!_client.IsConfigured)
+        {
+            return NotConfiguredResult;
+        }
+
         var (sld, tld) = SplitDomain(domainName);
 
         var parameters = new Dictionary<string, string>

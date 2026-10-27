@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Commands.ModifyDomainContact;
+using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -97,5 +99,41 @@ public sealed class ModifyDomainContactTests(IntegrationTestFactory factory) : I
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>
+    /// Contacts live only at the registrar, so a domain never placed at one is refused with
+    /// <c>DOMAIN_NO_REGISTRAR_REF</c> instead of reporting a change nobody made.
+    /// </summary>
+    [Fact]
+    public async Task ModifyContact_WithoutRegistrarRef_Returns400Async()
+    {
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
+        var domain = RegisteredDomain.Register(
+            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow.AddYears(1),
+            autoRenew: false, whoisPrivacy: false);
+        context.Domains.Add(domain);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var client = await DomainsTestSeeds.AdminClientAsync(factory);
+        var response = await client.PostAsJsonAsync($"/api/domains/{domain.Id}/modify-contact", new
+        {
+            firstName = "Ada",
+            lastName = "Lovelace",
+            organization = "",
+            email = "ada@example.test",
+            phone = "+10000000000",
+            address1 = "1 Analytical Engine Way",
+            address2 = "",
+            city = "London",
+            state = "London",
+            postalCode = "00000",
+            country = "GB",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.DOMAIN_NO_REGISTRAR_REF);
     }
 }

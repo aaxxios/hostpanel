@@ -40,6 +40,10 @@ public sealed class NamecheapClient
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Parsed XDocument of the successful API response.</returns>
     /// <exception cref="RegistrarException">Thrown when the API response contains ERROR status.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the client is not configured. Callers check <see cref="IsConfigured"/> first;
+    /// a path that forgets fails loudly instead of being answered with a fake success.
+    /// </exception>
     public async Task<XDocument> ExecuteAsync(
         string command,
         Dictionary<string, string> parameters,
@@ -47,7 +51,8 @@ public sealed class NamecheapClient
     {
         if (!IsConfigured)
         {
-            return XDocument.Parse("<ApiResponse Status=\"OK\"><CommandResponse /></ApiResponse>");
+            throw new InvalidOperationException(
+                $"Namecheap is not configured; '{command}' was not sent.");
         }
 
         parameters["ApiUser"] = _settings.ApiUser;
