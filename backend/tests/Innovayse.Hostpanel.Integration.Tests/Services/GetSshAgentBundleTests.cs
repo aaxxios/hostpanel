@@ -3,7 +3,6 @@ using System.IO.Compression;
 using System.Net;
 using FluentAssertions;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 

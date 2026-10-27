@@ -7,7 +7,6 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
@@ -55,7 +54,10 @@ public sealed class ScanServerSshHostKeyTests(IntegrationTestFactory factory) : 
         var admin = await SshAdminTestSupport.AdminAsync(factory);
         var created = await admin.PostAsJsonAsync("/api/admin/servers", new
         {
-            name = $"bare-{Guid.NewGuid():N}", hostname = "bare.example.test", module = Domain.Servers.Enums.ServerModule.Cwp7, username = "root",
+            name = $"bare-{Guid.NewGuid():N}",
+            hostname = "bare.example.test",
+            module = Domain.Servers.Enums.ServerModule.Cwp7,
+            username = "root",
         });
         var serverId = await created.Content.ReadFromJsonAsync<int>();
 

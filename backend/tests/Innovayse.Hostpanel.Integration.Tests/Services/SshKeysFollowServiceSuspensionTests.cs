@@ -8,7 +8,6 @@ using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
@@ -18,6 +17,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Services;
 /// </summary>
 public sealed class SshKeysFollowServiceSuspensionTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>Suspension takes only this service's keys off; unsuspension puts the same ids back.</summary>
     [Fact]
     public async Task Suspension_RemovesKeysFromTheServer_AndUnsuspensionRestoresThemAsync()
     {
@@ -41,6 +41,7 @@ public sealed class SshKeysFollowServiceSuspensionTests(IntegrationTestFactory f
         (await StatesAsync(serviceId)).Should().Equal(SshKeySyncState.Installed, SshKeySyncState.Installed);
     }
 
+    /// <summary>An unconfirmed removal leaves the key installed, with the reason.</summary>
     [Fact]
     public async Task Suspension_WithTheServerDown_KeepsTheKeyInstalledAndRecordsWhyAsync()
     {
@@ -56,6 +57,7 @@ public sealed class SshKeysFollowServiceSuspensionTests(IntegrationTestFactory f
         key.LastSyncError.Should().Be(SshProviderException.Unreachable);
     }
 
+    /// <summary>An unconfirmed restore is a failed install, with the reason.</summary>
     [Fact]
     public async Task Unsuspension_WithTheServerDown_LeavesTheKeyAsAFailedInstallAsync()
     {
@@ -71,6 +73,7 @@ public sealed class SshKeysFollowServiceSuspensionTests(IntegrationTestFactory f
         key.LastSyncError.Should().Be(SshProviderException.Unreachable);
     }
 
+    /// <summary>A still-locked account defers the restore to <see cref="RestoreSuspendedSshKeys"/>.</summary>
     [Fact]
     public async Task Unsuspension_BeforeThePanelLiftedItsLock_KeepsTheKeySuspended_AndTheRetryRestoresItAsync()
     {
@@ -92,12 +95,18 @@ public sealed class SshKeysFollowServiceSuspensionTests(IntegrationTestFactory f
         agent.KeysOf("web").Should().HaveCount(1);
     }
 
+    /// <summary>Delivers a message through the real bus, in a fresh scope.</summary>
+    /// <param name="evt">The message.</param>
+    /// <returns>A task that completes once it was handled.</returns>
     private async Task Publish(object evt)
     {
         using var scope = factory.Services.CreateScope();
         await scope.ServiceProvider.GetRequiredService<IMessageBus>().InvokeAsync(evt, CancellationToken.None);
     }
 
+    /// <summary>The service's key states, oldest first.</summary>
+    /// <param name="serviceId">The service.</param>
+    /// <returns>The states.</returns>
     private async Task<List<SshKeySyncState>> StatesAsync(int serviceId)
     {
         using var scope = factory.Services.CreateScope();
@@ -105,6 +114,9 @@ public sealed class SshKeysFollowServiceSuspensionTests(IntegrationTestFactory f
             .Where(k => k.ClientServiceId == serviceId).OrderBy(k => k.Id).Select(k => k.SyncState).ToListAsync();
     }
 
+    /// <summary>The service's only key.</summary>
+    /// <param name="serviceId">The service.</param>
+    /// <returns>The key, untracked.</returns>
     private async Task<SshKey> KeyAsync(int serviceId)
     {
         using var scope = factory.Services.CreateScope();

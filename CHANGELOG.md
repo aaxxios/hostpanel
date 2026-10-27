@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Admin pages under "Storefront content" to create, edit and order the storefront content.
 - Storefront content ships empty: operators enter testimonials, partners, projects and FAQs in the admin; the repository carries no site content.
 - Demo mode seeds a fixed, maximal sample data set that is reset on schedule.
+- SSH key management for hosting services: customers add and revoke ED25519 public keys for their hosting account from the client portal (Services → SSH Keys); HostPanel installs them on the account's server and never stores or accepts a private key. Off on every server until an administrator enables it.
+- SSH key agent for managed servers (`backend/agent/ssh-key-agent`): administrators connect a server from Servers → SSH with a per-server management key, a one-command installer whose download is checked against a SHA256 before it runs, a pinned host key and a test that must pass before the feature can be enabled. Profiles for CWP and plain Linux; see the agent README for the network requirements, including `PerSourcePenaltyExemptList` on OpenSSH 9.8 and later.
+- Suspending a service takes its SSH keys off the server and unsuspending puts the same keys back; terminating a service revokes them. Control panels suspend by locking the password, which does not stop a key from logging in, so suspend through HostPanel rather than in the panel directly.
 - Invoices can be downloaded as a PDF from the admin invoice page and the client portal, from `GET /api/billing/{id}/pdf` and `GET /api/me/invoices/{id}/pdf`; drafts are admin-only and stamped DRAFT. An invoice with more lines than `InvoicePdf__MaxLines` (500 by default) is refused, at most `InvoicePdf__MaxConcurrentRenders` (4 by default) render at once across the process, and downloads are sent with `Cache-Control: private, no-store`, through the client portal as well (#247).
 
 ### Changed

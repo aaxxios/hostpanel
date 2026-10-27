@@ -10,7 +10,6 @@ using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
@@ -120,7 +119,11 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
 
         var response = await http.PostAsJsonAsync($"/api/me/services/{serviceId}/ssh/keys", new
         {
-            label = "x", publicKey = SshTestSeeds.Key(3), serverId = 999999, account = "root", path = "/root/.ssh",
+            label = "x",
+            publicKey = SshTestSeeds.Key(3),
+            serverId = 999999,
+            account = "root",
+            path = "/root/.ssh",
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);

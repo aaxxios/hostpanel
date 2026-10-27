@@ -5,7 +5,6 @@ using FluentAssertions;
 using Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 using Microsoft.Extensions.Logging.Abstractions;
 using Renci.SshNet;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Integrations.SshAgent;
 
