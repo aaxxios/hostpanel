@@ -42,6 +42,14 @@ describe('GET /api/portal/client/invoices/:id/pdf', () => {
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
   })
 
+  it('encodes the id, so it cannot reach another backend path', async () => {
+    backend.respondWith(pdfReply)
+
+    await route.default(makeEvent({ params: { id: '7/../../clients' }, cookies: await signedIn('jwt') }))
+
+    expect(backend.requests[0]?.url).toBe('/api/me/invoices/7%2F..%2F..%2Fclients/pdf')
+  })
+
   it('returns the PDF bytes and download headers unchanged', async () => {
     backend.respondWith(pdfReply)
     const event = makeEvent({ params: { id: '7' }, cookies: await signedIn('jwt') })

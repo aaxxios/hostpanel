@@ -5,7 +5,7 @@
 export default defineEventHandler(async (event) => {
   const id = requireRouteParam(event, 'id')
 
-  const file = await internalApiBinaryCall(event, `/me/invoices/${id}/pdf`)
+  const file = await internalApiBinaryCall(event, `/me/invoices/${encodeURIComponent(id)}/pdf`)
   setResponseHeaders(event, {
     'content-type': file.contentType,
     ...(file.contentDisposition ? { 'content-disposition': file.contentDisposition } : {}),
