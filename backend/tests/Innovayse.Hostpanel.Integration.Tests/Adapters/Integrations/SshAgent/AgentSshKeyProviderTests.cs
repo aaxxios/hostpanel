@@ -3,7 +3,6 @@ using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
 using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Integrations.SshAgent;
 

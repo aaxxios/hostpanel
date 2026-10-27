@@ -10,7 +10,6 @@ using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Renci.SshNet;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
@@ -80,7 +79,10 @@ public sealed class GenerateServerSshIdentityTests(IntegrationTestFactory factor
     {
         var created = await admin.PostAsJsonAsync("/api/admin/servers", new
         {
-            name = $"ident-{Guid.NewGuid():N}", hostname = "ident.example.test", module = ServerModule.Cwp7, username = "root",
+            name = $"ident-{Guid.NewGuid():N}",
+            hostname = "ident.example.test",
+            module = ServerModule.Cwp7,
+            username = "root",
         });
         created.EnsureSuccessStatusCode();
         return await created.Content.ReadFromJsonAsync<int>();

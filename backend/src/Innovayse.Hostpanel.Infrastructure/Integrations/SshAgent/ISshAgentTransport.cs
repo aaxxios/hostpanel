@@ -15,5 +15,5 @@ public interface ISshAgentTransport
     /// Thrown with <see cref="Innovayse.Hostpanel.Domain.Ssh.SshProviderException.Unreachable"/> on any
     /// connection, authentication, host-key or timeout failure.
     /// </exception>
-    Task<string> SendAsync(SshAgentEndpoint endpoint, string requestJson, CancellationToken ct);
+    public Task<string> SendAsync(SshAgentEndpoint endpoint, string requestJson, CancellationToken ct);
 }

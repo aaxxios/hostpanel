@@ -10,7 +10,6 @@ using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 

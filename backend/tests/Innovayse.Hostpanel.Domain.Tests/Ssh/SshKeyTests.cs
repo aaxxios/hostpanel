@@ -1,6 +1,5 @@
 using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Domain.Ssh.Enums;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Ssh;
 

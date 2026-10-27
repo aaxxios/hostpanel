@@ -22,7 +22,7 @@ public interface ISshKeyRevoker
     /// <param name="key">A tracked, active key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>True when the agent confirmed the key is gone.</returns>
-    Task<bool> RevokeOnPinnedServerAsync(SshKey key, CancellationToken ct);
+    public Task<bool> RevokeOnPinnedServerAsync(SshKey key, CancellationToken ct);
 
     /// <summary>
     /// Takes an installed key off its pinned server for a suspension and marks it
@@ -32,7 +32,7 @@ public interface ISshKeyRevoker
     /// <param name="key">A tracked, installed key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>True when the agent confirmed the key is gone.</returns>
-    Task<bool> SuspendOnPinnedServerAsync(SshKey key, CancellationToken ct);
+    public Task<bool> SuspendOnPinnedServerAsync(SshKey key, CancellationToken ct);
 
     /// <summary>
     /// Puts a suspended key back on its pinned server, under the same id. Marks it installed, or
@@ -41,5 +41,5 @@ public interface ISshKeyRevoker
     /// <param name="key">A tracked, suspended key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>True when the agent confirmed the key is back.</returns>
-    Task<bool> RestoreOnPinnedServerAsync(SshKey key, CancellationToken ct);
+    public Task<bool> RestoreOnPinnedServerAsync(SshKey key, CancellationToken ct);
 }

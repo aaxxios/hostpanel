@@ -1,5 +1,4 @@
 using Innovayse.Hostpanel.Domain.Ssh;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Ssh;
 
