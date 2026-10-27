@@ -1,8 +1,8 @@
+using System.Text.Json.Nodes;
 using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
 using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
-using System.Text.Json.Nodes;
 using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Integrations.SshAgent;
@@ -31,6 +31,17 @@ public sealed class AgentSshKeyProviderTests
         Assert.Equal("web", request["account"]!.GetValue<string>());
         Assert.Equal(keyId.ToString(), request["key_id"]!.GetValue<string>());
         Assert.Equal(5, request.Count);
+    }
+
+    [Fact]
+    public async Task Ping_ReadsVersionProviderAndBinding_AndToleratesOldAgentsAsync()
+    {
+        var binding = Guid.NewGuid();
+        var current = new AgentSshKeyProvider(Endpoint, new RecordingTransport($$"""{"v":1,"ok":true,"agent_version":"1.1.0","provider":"cwp","binding":"{{binding}}"}"""));
+        var old = new AgentSshKeyProvider(Endpoint, new RecordingTransport("""{"v":1,"ok":true,"agent_version":"1.0.0"}"""));
+
+        Assert.Equal(new SshAgentInfo("1.1.0", "cwp", binding), await current.PingAsync(default));
+        Assert.Equal(new SshAgentInfo("1.0.0", null, null), await old.PingAsync(default));
     }
 
     [Fact]

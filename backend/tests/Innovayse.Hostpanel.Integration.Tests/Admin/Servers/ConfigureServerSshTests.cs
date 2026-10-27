@@ -14,48 +14,94 @@ using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
-/// <summary><c>PUT api/admin/servers/{id}/ssh-settings</c>.</summary>
+/// <summary><c>PUT api/admin/servers/{id}/ssh-settings</c>: saving, the verify-before-enable gate and endpoint uniqueness.</summary>
 public sealed class ConfigureServerSshTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>Saves, tests and enables a server's settings on one agent host, as the setup dialog does.</summary>
+    private static async Task<HttpResponseMessage> SaveTestEnableAsync(HttpClient admin, int serverId, string host)
+    {
+        (await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(false, host: host))).EnsureSuccessStatusCode();
+        (await admin.PostAsync($"/api/admin/servers/{serverId}/ssh-settings/test", null)).EnsureSuccessStatusCode();
+        return await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(true, privateKey: null, host: host));
+    }
+
     [Fact]
-    public async Task Configure_SavesSettingsEncryptsTheKeyAndNeverReturnsItAsync()
+    public async Task Save_EncryptsTheKeyAndNeverReturnsItAsync()
     {
         var admin = await SshAdminTestSupport.AdminAsync(factory);
         var serverId = await SshTestSeeds.SeedServerAsync(factory, "x.example.test", 22, enabled: false);
 
-        var response = await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(true));
+        var response = await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(false));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var raw = await response.Content.ReadAsStringAsync();
         raw.Should().NotContain("TEST-PRIVATE-KEY-MATERIAL");
         var body = JsonDocument.Parse(raw).RootElement;
-        body.GetProperty("isEnabled").GetBoolean().Should().BeTrue();
         body.GetProperty("sshPort").GetInt32().Should().Be(2222);
         body.GetProperty("hasAgentPrivateKey").GetBoolean().Should().BeTrue();
 
-        // At rest the column holds ciphertext, not the key.
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var connection = (NpgsqlConnection)((DbContext)context).Database.GetDbConnection();
         await connection.OpenAsync();
-        await using var command = new NpgsqlCommand(
-            "SELECT \"AgentPrivateKey\" FROM \"ServerSshSettings\" WHERE \"ServerId\" = @id", connection);
+        await using var command = new NpgsqlCommand("SELECT \"AgentPrivateKey\" FROM \"ServerSshSettings\" WHERE \"ServerId\" = @id", connection);
         command.Parameters.AddWithValue("id", serverId);
-        var stored = (string?)await command.ExecuteScalarAsync();
-        stored.Should().NotBeNull().And.NotContain("TEST-PRIVATE-KEY-MATERIAL");
+        ((string?)await command.ExecuteScalarAsync()).Should().NotBeNull().And.NotContain("TEST-PRIVATE-KEY-MATERIAL");
     }
 
     [Fact]
-    public async Task OmittedPrivateKey_KeepsTheStoredOneAsync()
+    public async Task Enable_WithoutASuccessfulTest_IsRefusedAsync()
     {
         var admin = await SshAdminTestSupport.AdminAsync(factory);
-        var serverId = await SshTestSeeds.SeedServerAsync(factory, "keep.example.test", 22, enabled: false);
-        (await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(true))).EnsureSuccessStatusCode();
+        var serverId = await SshTestSeeds.SeedServerAsync(factory, "unverified.example.test", 22, enabled: false);
 
-        var response = await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(true, privateKey: null));
+        var response = await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(true));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.SSH_AGENT_NOT_VERIFIED);
+    }
+
+    [Fact]
+    public async Task Enable_AfterASuccessfulTest_SucceedsAndKeepsTheStoredKeyAsync()
+    {
+        var admin = await SshAdminTestSupport.AdminAsync(factory);
+        var serverId = await SshTestSeeds.SeedServerAsync(factory, "verified.example.test", 22, enabled: false);
+
+        var response = await SaveTestEnableAsync(admin, serverId, $"agent-{serverId}-{Guid.NewGuid():N}.example.test");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("hasAgentPrivateKey").GetBoolean().Should().BeTrue();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("isEnabled").GetBoolean().Should().BeTrue();
+        body.GetProperty("hasAgentPrivateKey").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ChangingTheEndpoint_ClearsTheTestAndBlocksEnablingAsync()
+    {
+        var admin = await SshAdminTestSupport.AdminAsync(factory);
+        var serverId = await SshTestSeeds.SeedServerAsync(factory, "moved.example.test", 22, enabled: false);
+        (await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(false, host: "a.example.test"))).EnsureSuccessStatusCode();
+        (await admin.PostAsync($"/api/admin/servers/{serverId}/ssh-settings/test", null)).EnsureSuccessStatusCode();
+
+        var response = await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(true, privateKey: null, host: "b.example.test"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.SSH_AGENT_NOT_VERIFIED);
+    }
+
+    [Fact]
+    public async Task TwoServersOnOneAgentEndpoint_SecondIsRefusedAsync()
+    {
+        var admin = await SshAdminTestSupport.AdminAsync(factory);
+        var host = $"shared-{Guid.NewGuid():N}.example.test";
+        var first = await SshTestSeeds.SeedServerAsync(factory, "one.example.test", 22, enabled: false);
+        var second = await SshTestSeeds.SeedServerAsync(factory, "two.example.test", 22, enabled: false);
+        (await SaveTestEnableAsync(admin, first, host)).EnsureSuccessStatusCode();
+
+        var response = await SaveTestEnableAsync(admin, second, host.ToUpperInvariant());
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.SSH_AGENT_ENDPOINT_IN_USE);
     }
 
     [Fact]
@@ -78,8 +124,13 @@ public sealed class ConfigureServerSshTests(IntegrationTestFactory factory) : IC
 
         var response = await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", new
         {
-            isEnabled = false, sshHostname = "h", sshPort = 22, agentHost = "h", agentPort = 22,
-            agentUsername = "hp", agentHostKeyFingerprint = "md5:nope",
+            isEnabled = false,
+            sshHostname = "h",
+            sshPort = 22,
+            agentHost = "h",
+            agentPort = 22,
+            agentUsername = "hp",
+            agentHostKeyFingerprint = "md5:nope",
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);

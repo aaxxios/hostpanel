@@ -489,6 +489,12 @@ public static class HostpanelErrorCodes
     /// <summary>The server's SSH settings lack a value an enabled configuration or an agent call needs (400).</summary>
     public const string SSH_SETTINGS_INCOMPLETE = "SSH_SETTINGS_INCOMPLETE";
 
+    /// <summary>SSH key management can only be enabled after a successful agent test with the current settings (409).</summary>
+    public const string SSH_AGENT_NOT_VERIFIED = "SSH_AGENT_NOT_VERIFIED";
+
+    /// <summary>Another server already uses this agent host and port for SSH key management (409).</summary>
+    public const string SSH_AGENT_ENDPOINT_IN_USE = "SSH_AGENT_ENDPOINT_IN_USE";
+
     /// <summary>An open cancellation request already exists for the service (409).</summary>
     public const string CANCELLATION_ALREADY_PENDING = "CANCELLATION_ALREADY_PENDING";
 

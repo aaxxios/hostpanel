@@ -31,7 +31,7 @@ public sealed class ConfigureServerSshHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The saved settings, or <c>SERVER_NOT_FOUND</c>, <c>SSH_MODULE_NOT_SUPPORTED</c>,
-    /// <c>SSH_SETTINGS_INCOMPLETE</c>.
+    /// <c>SSH_SETTINGS_INCOMPLETE</c>, <c>SSH_AGENT_NOT_VERIFIED</c>, <c>SSH_AGENT_ENDPOINT_IN_USE</c>.
     /// </returns>
     public async Task<Result<ServerSshSettingsDto>> HandleAsync(ConfigureServerSshCommand cmd, CancellationToken ct)
     {
@@ -65,6 +65,27 @@ public sealed class ConfigureServerSshHandler
         {
             // The aggregate refuses an enabled configuration that lacks a value an agent call needs.
             return Result<ServerSshSettingsDto>.FailureCode(HostpanelErrorCodes.SSH_SETTINGS_INCOMPLETE);
+        }
+
+        if (cmd.IsEnabled)
+        {
+            // Customers are only ever pointed at an agent HostPanel has verified, with these exact
+            // settings: any change to the endpoint, user, key or pin clears the last health check.
+            if (settings.IsHealthy != true)
+            {
+                return Result<ServerSshSettingsDto>.FailureCode(HostpanelErrorCodes.SSH_AGENT_NOT_VERIFIED);
+            }
+
+            // One agent manages one server record. Two records on the same endpoint would let keys
+            // meant for one server's accounts land on the other's.
+            var host = settings.AgentHost.ToLowerInvariant();
+            var port = settings.AgentPort;
+            var taken = await _context.ServerSshSettings.AsNoTracking()
+                .AnyAsync(s => s.ServerId != server.Id && s.IsEnabled && s.AgentHost.ToLower() == host && s.AgentPort == port, ct);
+            if (taken)
+            {
+                return Result<ServerSshSettingsDto>.FailureCode(HostpanelErrorCodes.SSH_AGENT_ENDPOINT_IN_USE);
+            }
         }
 
         await _context.SaveChangesAsync(ct);

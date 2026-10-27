@@ -65,6 +65,38 @@ export interface SshAgentTestResultDto {
   isHealthy: boolean
   /** The agent's version when it answered. */
   agentVersion: string | null
-  /** The provider's reason code when it did not. */
+  /** The reason code when it is not healthy (`binding_mismatch`, `unreachable`, …). */
   error: string | null
+  /** The provider profile the agent runs, when it answered. */
+  provider?: string | null
+}
+
+/** What the admin panel needs to build the one-command installer for a server. */
+export interface ServerSshSetupDto {
+  /** The server. */
+  serverId: number
+  /** Agent profile for the server's module (`cwp`), null when the module is unsupported. */
+  profile: string | null
+  /** The management public key to install, null until an identity is generated. */
+  publicKey: string | null
+  /** The id the installer binds the agent to. */
+  binding: string | null
+  /** The management user the installer creates. */
+  agentUsername: string
+  /** Agent version of the bundle this HostPanel serves. */
+  bundleVersion: string
+  /** SHA256 the installer verifies before unpacking. */
+  bundleSha256: string
+  /** Path of the bundle on this HostPanel. */
+  bundlePath: string
+}
+
+/** The host key a server's agent endpoint presented to a scan. */
+export interface SshHostKeyScanDto {
+  /** Host key algorithm. */
+  algorithm: string
+  /** SHA256 fingerprint. */
+  fingerprint: string
+  /** Whether it equals the fingerprint already pinned. */
+  matchesPinned: boolean
 }

@@ -8,7 +8,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useServersApi } from '@/composables/apis/useServersApi'
 import { runAction } from '@/lib/runAction'
-import type { ServerSshSettingsDto, ServerSshSettingsPayload, SshAgentTestResultDto } from '@/types/serverssh'
+import type { ServerSshSettingsDto, ServerSshSettingsPayload, ServerSshSetupDto, SshAgentTestResultDto, SshHostKeyScanDto } from '@/types/serverssh'
 
 /** SSH settings state for the server whose dialog is open. */
 export const useServerSshStore = defineStore('serverSsh', () => {
@@ -28,6 +28,18 @@ export const useServerSshStore = defineStore('serverSsh', () => {
 
   /** The last health check's outcome in this dialog, null before one ran. */
   const lastTest = ref<SshAgentTestResultDto | null>(null)
+
+  /** What the installer needs, once loaded. */
+  const setup = ref<ServerSshSetupDto | null>(null)
+
+  /** True while an identity is being generated. */
+  const generating = ref(false)
+
+  /** True while a host key scan is in flight. */
+  const scanning = ref(false)
+
+  /** The last host key scan in this dialog, null before one ran. */
+  const lastScan = ref<SshHostKeyScanDto | null>(null)
 
   /** Sentence for the last refused request, null when none. */
   const error = ref<string | null>(null)
@@ -81,6 +93,50 @@ export const useServerSshStore = defineStore('serverSsh', () => {
     }
   }
 
+  /**
+   * Loads the settings and the installer setup together.
+   *
+   * @param id - Server id.
+   * @returns Resolves when both settled.
+   */
+  const loadAll = async (id: number): Promise<void> => {
+    await load(id)
+    const result = await runAction(error, () => api.getServerSshSetup(id))
+    setup.value = result.ok ? result.value : null
+  }
+
+  /**
+   * Generates (or rotates) the server's management identity, then reloads the settings, which
+   * rotation switches off.
+   *
+   * @param id - Server id.
+   * @returns True when generated.
+   */
+  const generateIdentity = async (id: number): Promise<boolean> => {
+    generating.value = true
+    const result = await runAction(error, () => api.generateServerSshIdentity(id))
+    generating.value = false
+    if (!result.ok) {
+      return false
+    }
+    setup.value = result.value
+    await load(id)
+    return true
+  }
+
+  /**
+   * Scans the host key of the saved agent endpoint.
+   *
+   * @param id - Server id.
+   * @returns Resolves when settled; the result is in {@link lastScan}.
+   */
+  const scanHostKey = async (id: number): Promise<void> => {
+    scanning.value = true
+    const result = await runAction(error, () => api.scanServerSshHostKey(id))
+    lastScan.value = result.ok ? result.value : null
+    scanning.value = false
+  }
+
   /** Clears everything, for a newly opened dialog. */
   const reset = (): void => {
     settings.value = null
@@ -88,9 +144,16 @@ export const useServerSshStore = defineStore('serverSsh', () => {
     saving.value = false
     testing.value = false
     lastTest.value = null
+    setup.value = null
+    generating.value = false
+    scanning.value = false
+    lastScan.value = null
     error.value = null
     fieldErrors.value = {}
   }
 
-  return { settings, loading, saving, testing, lastTest, error, fieldErrors, load, save, test, reset }
+  return {
+    settings, setup, loading, saving, testing, generating, scanning, lastTest, lastScan, error, fieldErrors,
+    load, loadAll, save, test, generateIdentity, scanHostKey, reset,
+  }
 })

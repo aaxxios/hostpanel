@@ -50,7 +50,8 @@ public static class StatusMapping
 
             // SSH key management: the service is the caller's, but its state or the key's binding
             // does not allow the change, or the hosting server did not confirm it.
-            "SSH_KEY_LIMIT_REACHED" or "SSH_KEY_STALE" or "SSH_ACCESS_UNAVAILABLE" => (409, "Conflict"),
+            "SSH_KEY_LIMIT_REACHED" or "SSH_KEY_STALE" or "SSH_ACCESS_UNAVAILABLE"
+                or "SSH_AGENT_NOT_VERIFIED" or "SSH_AGENT_ENDPOINT_IN_USE" => (409, "Conflict"),
             "SSH_SERVER_UNAVAILABLE" => (503, "Service Unavailable"),
             var code when code.Contains("UNAUTHORIZED", StringComparison.Ordinal) => (401, "Unauthorized"),
             var code when code.Contains("FORBIDDEN", StringComparison.Ordinal) => (403, "Forbidden"),

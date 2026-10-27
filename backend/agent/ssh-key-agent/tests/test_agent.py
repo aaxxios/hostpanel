@@ -216,9 +216,26 @@ class BoundaryTests(AgentTestCase):
     def test_ping(self):
         self.assertEqual(self.call(op="ping")["agent_version"], agent.AGENT_VERSION)
 
+    def test_ping_reports_provider_and_binding(self):
+        self.config["provider"] = "cwp"
+        self.config["binding"] = KEY_ID_A
+        pong = self.call(op="ping")
+        self.assertEqual((pong["provider"], pong["binding"]), ("cwp", KEY_ID_A))
+
+    def test_profiles_load_and_bad_binding_refused(self):
+        root = os.path.join(os.path.dirname(__file__), "..", "profiles")
+        for name in ("generic-linux.conf", "cwp.conf"):
+            loaded = agent.load_config(os.path.join(root, name))
+            self.assertEqual(loaded["binding"], "")
+        broken = os.path.join(self.tmp.name, "broken.conf")
+        with open(broken, "w") as handle:
+            handle.write("[agent]\nbinding = ../../etc\n")
+        with self.assertRaises(agent.AgentError):
+            agent.load_config(broken)
+
 
 class PolicyTests(AgentTestCase):
-    """The per-server policy srv4 uses: suspension, group, opt-in list and the panel account check."""
+    """Per-server policy: suspension, group, opt-in list and the panel account check."""
 
     def test_suspended_account_cannot_receive_keys_but_can_be_cleaned(self):
         self.call(op="add", account="alice", key_id=KEY_ID_A, public_key=make_key(1))

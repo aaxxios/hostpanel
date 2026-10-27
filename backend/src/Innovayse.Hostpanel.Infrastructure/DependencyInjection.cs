@@ -430,6 +430,9 @@ public static class DependencyInjection
         // own ServerSshSettings row. Nothing here names a server; every value is per row.
         services.AddSingleton<Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.ISshAgentTransport, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.SshNetAgentTransport>();
         services.AddScoped<Innovayse.Hostpanel.Application.Common.Interfaces.ISshKeyProviderFactory, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.SshKeyProviderFactory>();
+        services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.ISshIdentityGenerator, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.BouncyCastleSshIdentityGenerator>();
+        services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.ISshHostKeyScanner, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.SshNetHostKeyScanner>();
+        services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.ISshAgentBundle, Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent.EmbeddedSshAgentBundle>();
         services.AddScoped<
             Innovayse.Hostpanel.Application.Common.Interfaces.ISshServiceContextResolver,
             Innovayse.Hostpanel.Application.Services.Common.SshServiceContextResolver>();

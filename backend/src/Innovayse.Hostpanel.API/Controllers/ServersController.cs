@@ -1,10 +1,13 @@
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.ConfigureServerSsh;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.CreateServer;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.DeleteServer;
+using Innovayse.Hostpanel.Application.Admin.Servers.Commands.GenerateServerSshIdentity;
+using Innovayse.Hostpanel.Application.Admin.Servers.Commands.ScanServerSshHostKey;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.TestServerSshAgent;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.UpdateServer;
 using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Application.Admin.Servers.Queries.GetServerSshSettings;
+using Innovayse.Hostpanel.Application.Admin.Servers.Queries.GetServerSshSetup;
 using Innovayse.Hostpanel.Application.Admin.Servers.Queries.ListServers;
 using Innovayse.Hostpanel.Application.Admin.Servers.Queries.TestServerConnection;
 using Innovayse.Hostpanel.Shared.Authorization;
@@ -141,6 +144,47 @@ public sealed class ServersController : BaseApiController
     public async Task<IActionResult> TestSshAgentAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<TestServerSshAgentResultDto>>(new TestServerSshAgentCommand(id), ct);
+        return HandleResult(outcome);
+    }
+
+    /// <summary>Gets what is needed to install the SSH key agent on the server: profile, public key, binding and bundle.</summary>
+    /// <param name="id">Server identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The setup. The private key is never part of it.</returns>
+    [HttpGet("{id:int}/ssh-setup")]
+    [ProducesResponseType(typeof(ServerSshSetupDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetSshSetupAsync(int id, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<ServerSshSetupDto>>(new GetServerSshSetupQuery(id), ct);
+        return HandleResult(outcome);
+    }
+
+    /// <summary>Generates (or rotates) the server's ED25519 management identity. Rotation disables customer access until reinstall.</summary>
+    /// <param name="id">Server identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The setup with the new public key.</returns>
+    [HttpPost("{id:int}/ssh-identity")]
+    [ProducesResponseType(typeof(ServerSshSetupDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GenerateSshIdentityAsync(int id, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<ServerSshSetupDto>>(new GenerateServerSshIdentityCommand(id), ct);
+        return HandleResult(outcome);
+    }
+
+    /// <summary>Reads the host key the saved agent endpoint presents. Shown for verification, never pinned by this call.</summary>
+    /// <param name="id">Server identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The presented key and whether it matches the pin.</returns>
+    [HttpPost("{id:int}/ssh-settings/scan-host-key")]
+    [ProducesResponseType(typeof(SshHostKeyScanDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> ScanSshHostKeyAsync(int id, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<SshHostKeyScanDto>>(new ScanServerSshHostKeyCommand(id), ct);
         return HandleResult(outcome);
     }
 }

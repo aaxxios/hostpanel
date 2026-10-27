@@ -1,7 +1,7 @@
 /**
- * Unit tests for ServerSshSettingsModal: it loads the server's settings, never shows a stored
- * private key, sends an empty key field as "keep", shows field refusals, runs the health check and
- * flags an unsupported module.
+ * Unit tests for the guided SSH setup dialog: it loads settings and setup, never shows a stored
+ * private key, generates an identity and shows a hash-verifying installer command, reads and pins a
+ * host key, flags an agent installed for another server, and keeps an empty key field as "keep".
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
@@ -27,8 +27,23 @@ const SETTINGS = {
   lastHealthCheckAt: null,
 }
 
+/** Setup before an identity exists. */
+const SETUP = {
+  serverId: 4,
+  profile: 'cwp',
+  publicKey: null,
+  binding: null,
+  agentUsername: 'hpsshkeys',
+  bundleVersion: '1.1.0',
+  bundleSha256: 'b'.repeat(64),
+  bundlePath: '/api/public/ssh-agent/bundle.tar.gz',
+}
+
+/** Setup after an identity was generated. */
+const SETUP_WITH_KEY = { ...SETUP, publicKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG6EJIHRxsxge2aZnl+clPBfoX0nmvD7FfHXM2QQ3+3b hostpanel-server-4', binding: '22222222-2222-4222-8222-222222222222' }
+
 /**
- * Mounts the dialog for server 4 and waits for its load.
+ * Mounts the dialog for server 4 and waits for its two loads.
  *
  * @returns The mounted dialog.
  */
@@ -43,59 +58,93 @@ describe('ServerSshSettingsModal', () => {
     vi.unstubAllGlobals()
   })
 
-  it('loads the settings into the form and leaves the private key field empty', async () => {
-    const mock = stubFetch(json(SETTINGS))
+  it('loads settings and setup, and leaves the private key field empty', async () => {
+    const mock = stubFetch(json(SETTINGS), json(SETUP))
     const wrapper = await mountDialog()
 
-    expect(callOf(mock).url).toContain('/api/admin/servers/4/ssh-settings')
+    expect(callOf(mock, 0).url).toContain('/api/admin/servers/4/ssh-settings')
+    expect(callOf(mock, 1).url).toContain('/api/admin/servers/4/ssh-setup')
     expect((wrapper.get('[data-testid="server-ssh-hostname"]').element as HTMLInputElement).value).toBe('cwp1.example.test')
     expect((wrapper.get('[data-testid="server-ssh-private-key"]').element as HTMLTextAreaElement).value).toBe('')
-    expect(wrapper.get('[data-testid="server-ssh-health"]').text()).toBe('Not tested')
+    expect(wrapper.find('[data-testid="server-ssh-install-command"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="server-ssh-generate"]').text()).toBe('Generate identity')
   })
 
-  it('sends an empty private key field as null, so the stored key is kept', async () => {
-    const mock = stubFetch(json(SETTINGS), json({ ...SETTINGS, isEnabled: true }))
+  it('generates an identity and shows the hash-verifying installer command', async () => {
+    const mock = stubFetch(json(SETTINGS), json(SETUP), json(SETUP_WITH_KEY), json(SETTINGS))
     const wrapper = await mountDialog()
 
-    await wrapper.get('[data-testid="server-ssh-enabled"]').trigger('click')
+    await wrapper.get('[data-testid="server-ssh-generate"]').trigger('click')
+    await flushPromises()
+
+    expect(callOf(mock, 2).method).toBe('POST')
+    expect(callOf(mock, 2).url).toContain('/ssh-identity')
+    const command = wrapper.get('[data-testid="server-ssh-install-command"]').text()
+    expect(command).toContain(`sha256sum -c -`)
+    expect(command).toContain('b'.repeat(64))
+    expect(command).toContain(`--provider 'cwp' --binding '${SETUP_WITH_KEY.binding}'`)
+    expect(command).not.toContain('PRIVATE')
+    expect(wrapper.get('[data-testid="server-ssh-generate"]').text()).toBe('Rotate identity')
+  })
+
+  it('reads the host key and pins it only through the form', async () => {
+    const mock = stubFetch(json(SETTINGS), json(SETUP), json({ algorithm: 'ssh-ed25519', fingerprint: 'SHA256:' + 'Z'.repeat(43), matchesPinned: false }), json(SETTINGS))
+    const wrapper = await mountDialog()
+
+    await wrapper.get('[data-testid="server-ssh-scan"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="server-ssh-scan-match"]').text()).toBe('Not the pinned key')
+    await wrapper.get('[data-testid="server-ssh-use-scanned"]').trigger('click')
     await wrapper.get('[data-testid="server-ssh-save"]').trigger('click')
     await flushPromises()
 
-    const body = callOf(mock, 1).body as Record<string, unknown>
-    expect(body.isEnabled).toBe(true)
-    expect(body.agentPrivateKey).toBeNull()
-    expect(wrapper.emitted('close')).toHaveLength(1)
+    expect(callOf(mock, 2).url).toContain('/ssh-settings/scan-host-key')
+    expect((callOf(mock, 3).body as Record<string, unknown>).agentHostKeyFingerprint).toBe('SHA256:' + 'Z'.repeat(43))
   })
 
-  it('shows the refusal and the field sentence, and stays open', async () => {
-    stubFetch(json(SETTINGS), invalid('Validation failed.', { agentHostKeyFingerprint: ['Bad fingerprint.'] }))
+  it('explains an agent installed for another server', async () => {
+    stubFetch(json(SETTINGS), json(SETUP), json({ isHealthy: false, agentVersion: '1.1.0', error: 'binding_mismatch', provider: 'cwp' }), json({ ...SETTINGS, isHealthy: false }))
     const wrapper = await mountDialog()
 
-    await wrapper.get('[data-testid="server-ssh-fingerprint"]').setValue('md5:nope')
-    await wrapper.get('[data-testid="server-ssh-save"]').trigger('click')
+    await wrapper.get('[data-testid="server-ssh-test"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="server-ssh-error"]').text()).toContain('Validation failed.')
-    expect(wrapper.text()).toContain('Bad fingerprint.')
-    expect(wrapper.emitted('close')).toBeUndefined()
+    expect(wrapper.find('[data-testid="server-ssh-binding-mismatch"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="server-ssh-health"]').text()).toBe('Agent unreachable')
   })
 
-  it('runs the health check and shows the agent version', async () => {
-    stubFetch(json(SETTINGS), json({ isHealthy: true, agentVersion: '1.0.0', error: null }), json({ ...SETTINGS, isHealthy: true }))
+  it('runs the health check and shows version and provider', async () => {
+    stubFetch(json(SETTINGS), json(SETUP), json({ isHealthy: true, agentVersion: '1.1.0', error: null, provider: 'cwp' }), json({ ...SETTINGS, isHealthy: true }))
     const wrapper = await mountDialog()
 
     await wrapper.get('[data-testid="server-ssh-test"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.get('[data-testid="server-ssh-health"]').text()).toBe('Agent reachable')
-    expect(wrapper.get('[data-testid="server-ssh-agent-version"]').text()).toContain('1.0.0')
+    expect(wrapper.get('[data-testid="server-ssh-agent-version"]').text()).toBe('Agent 1.1.0 (cwp)')
   })
 
-  it('warns that an unsupported module cannot be enabled', async () => {
-    stubFetch(json({ ...SETTINGS, isSupported: false, hasAgentPrivateKey: false }))
+  it('sends an empty private key field as null, and shows a refused enable', async () => {
+    const mock = stubFetch(json(SETTINGS), json(SETUP), invalid('Run a successful agent test with these settings before enabling SSH key management.', {}))
+    const wrapper = await mountDialog()
+
+    await wrapper.get('[data-testid="server-ssh-enabled"]').trigger('click')
+    await wrapper.get('[data-testid="server-ssh-save"]').trigger('click')
+    await flushPromises()
+
+    const body = callOf(mock, 2).body as Record<string, unknown>
+    expect(body.isEnabled).toBe(true)
+    expect(body.agentPrivateKey).toBeNull()
+    expect(wrapper.get('[data-testid="server-ssh-error"]').text()).toContain('successful agent test')
+    expect(wrapper.emitted('close')).toBeUndefined()
+  })
+
+  it('warns that an unsupported module has no installer', async () => {
+    stubFetch(json({ ...SETTINGS, isSupported: false, hasAgentPrivateKey: false }), json({ ...SETUP, profile: null }))
     const wrapper = await mountDialog()
 
     expect(wrapper.find('[data-testid="server-ssh-unsupported"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="server-ssh-generate"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="server-ssh-test"]').attributes('disabled')).toBeDefined()
   })
 })

@@ -60,7 +60,7 @@ import sys
 import time
 
 CONTRACT_VERSION = 1
-AGENT_VERSION = "1.0.0"
+AGENT_VERSION = "1.1.0"
 CONFIG_PATH = "/etc/hostpanel-ssh-key-agent/agent.conf"
 MAX_REQUEST_BYTES = 16 * 1024
 MAX_AUTHORIZED_KEYS_BYTES = 256 * 1024
@@ -81,6 +81,10 @@ DEFAULTS = {
     "max_keys": "50",
     "audit_log": "/var/log/hostpanel-ssh-key-agent.log",
     "lock_dir": "/run/hostpanel-ssh-key-agent",
+    # Identity of this installation: which provider profile it runs and which HostPanel server
+    # record it was installed for. Reported by ping so HostPanel can refuse a misrouted server.
+    "provider": "generic-linux",
+    "binding": "",
     # Optional per-server policy. Empty means "not checked", so the defaults behave as before.
     "ssh_group": "",
     "eligible_list": "",
@@ -98,6 +102,14 @@ class AgentError(Exception):
         self.detail = detail
 
 
+def _binding(value):
+    """The configured binding id, lower-cased; anything but a UUID or empty is a broken config."""
+    value = value.strip().lower()
+    if value and not KEY_ID_RE.match(value):
+        raise AgentError("internal_error")
+    return value
+
+
 def load_config(path=CONFIG_PATH):
     """Reads agent.conf; a missing file means the defaults, never a crash."""
     parser = configparser.ConfigParser()
@@ -112,6 +124,8 @@ def load_config(path=CONFIG_PATH):
         "max_keys": int(section["max_keys"]),
         "audit_log": section["audit_log"],
         "lock_dir": section["lock_dir"],
+        "provider": section["provider"].strip() or "generic-linux",
+        "binding": _binding(section["binding"]),
         "ssh_group": section["ssh_group"].strip(),
         "eligible_list": section["eligible_list"].strip(),
         "account_check_command": section["account_check_command"].strip(),
@@ -525,7 +539,8 @@ def handle(raw, config):
     try:
         request = validate_request(raw)
         if request["op"] == "ping":
-            return {"v": CONTRACT_VERSION, "ok": True, "agent_version": AGENT_VERSION}
+            return {"v": CONTRACT_VERSION, "ok": True, "agent_version": AGENT_VERSION,
+                    "provider": config.get("provider", "generic-linux"), "binding": config.get("binding", "")}
         account = resolve_account(request["account"], config)
         os.makedirs(config["lock_dir"], mode=0o700, exist_ok=True)
         lock_fd = os.open(os.path.join(config["lock_dir"], account["name"] + ".lock"),
@@ -561,7 +576,12 @@ def main():
         return 1
     # handle() turns the AgentError raised by a later alarm into an ordinary refusal.
     signal.alarm(REQUEST_TIMEOUT_SECONDS)
-    response = handle(raw, load_config())
+    try:
+        config = load_config()
+    except AgentError as exc:
+        sys.stdout.write(json.dumps({"v": CONTRACT_VERSION, "ok": False, "error": exc.code}) + "\n")
+        return 1
+    response = handle(raw, config)
     signal.alarm(0)
     sys.stdout.write(json.dumps(response) + "\n")
     sys.stdout.flush()

@@ -667,4 +667,10 @@
   <data name="SSH_SETTINGS_INCOMPLETE" xml:space="preserve">
     <value>Настройки SSH для этого сервера заполнены не полностью.</value>
   </data>
+  <data name="SSH_AGENT_NOT_VERIFIED" xml:space="preserve">
+    <value>Перед включением управления SSH-ключами успешно проверьте агент с этими настройками.</value>
+  </data>
+  <data name="SSH_AGENT_ENDPOINT_IN_USE" xml:space="preserve">
+    <value>Этот хост и порт агента уже использует другой сервер.</value>
+  </data>
 </root>

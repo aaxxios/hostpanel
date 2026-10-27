@@ -667,4 +667,10 @@
   <data name="SSH_SETTINGS_INCOMPLETE" xml:space="preserve">
     <value>Այս սերվերի SSH կարգավորումները ամբողջական չեն։</value>
   </data>
+  <data name="SSH_AGENT_NOT_VERIFIED" xml:space="preserve">
+    <value>SSH բանալիների կառավարումը միացնելուց առաջ հաջողությամբ ստուգեք agent-ը այս կարգավորումներով։</value>
+  </data>
+  <data name="SSH_AGENT_ENDPOINT_IN_USE" xml:space="preserve">
+    <value>Այս agent-ի հոսթն ու պորտն արդեն օգտագործում է մեկ այլ սերվեր։</value>
+  </data>
 </root>

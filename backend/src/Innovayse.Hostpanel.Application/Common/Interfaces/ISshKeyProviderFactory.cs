@@ -14,11 +14,19 @@ public interface ISshKeyProviderFactory
     /// <summary>Whether the server's module has an SSH key implementation at all.</summary>
     /// <param name="module">The server module.</param>
     /// <returns><see langword="true"/> when supported.</returns>
-    bool Supports(ServerModule module);
+    public bool Supports(ServerModule module);
+
+    /// <summary>
+    /// The agent profile a supported module installs (<c>cwp</c> for the v7 hosting panel), used to
+    /// build the installer command. Null for an unsupported module.
+    /// </summary>
+    /// <param name="module">The server module.</param>
+    /// <returns>The profile name, or null.</returns>
+    public string? AgentProfileFor(ServerModule module);
 
     /// <summary>Creates a provider bound to one server.</summary>
     /// <param name="server">The server.</param>
     /// <param name="settings">Its SSH settings; must be complete.</param>
     /// <returns>The provider, or <see langword="null"/> when the module is unsupported.</returns>
-    ISshKeyProvider? CreateFor(Server server, ServerSshSettings settings);
+    public ISshKeyProvider? CreateFor(Server server, ServerSshSettings settings);
 }
