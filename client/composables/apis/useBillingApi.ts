@@ -217,8 +217,22 @@ export const useBillingApi = () => {
       body: { ...body, paymentToken }
     })
 
+  /**
+   * Reads an invoice as a PDF.
+   *
+   * No `responseType` is set: ofetch picks it from the answer, so the PDF arrives as a `Blob`
+   * while a refusal still arrives as parsed JSON and `apiErrorMessage` can read its sentence.
+   *
+   * @param id - Invoice id, encoded so it stays one path segment.
+   * @returns The PDF.
+   * @throws Whatever `apiFetch` throws.
+   */
+  const fetchInvoicePdf = (id: string): Promise<Blob> =>
+    apiFetch<Blob>(`/api/portal/client/invoices/${encodeURIComponent(id)}/pdf`)
+
   return {
     fetchInvoice,
+    fetchInvoicePdf,
     fetchPaymentMethods,
     fetchGatewayMethods,
     createOrder,

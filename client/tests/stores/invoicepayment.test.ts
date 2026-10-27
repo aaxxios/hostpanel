@@ -30,6 +30,12 @@ const fetchGatewayMethodsMock = vi.fn()
 /** The mocked gateway settlement call. */
 const completeGatewayMock = vi.fn()
 
+/** The mocked PDF read. */
+const fetchInvoicePdfMock = vi.fn()
+
+/** The mocked browser save, so no test touches the DOM. */
+const saveBlobMock = vi.fn()
+
 vi.stubGlobal('ref', ref)
 
 vi.mock('~/composables/apis/useBillingApi', () => ({
@@ -44,9 +50,12 @@ vi.mock('~/composables/apis/useBillingApi', () => ({
     fetchInvoice: fetchInvoiceMock,
     fetchPaymentMethods: fetchPaymentMethodsMock,
     fetchGatewayMethods: fetchGatewayMethodsMock,
-    completeGatewayPayment: completeGatewayMock
+    completeGatewayPayment: completeGatewayMock,
+    fetchInvoicePdf: fetchInvoicePdfMock
   })
 }))
+
+vi.mock('~/utils/saveBlob', () => ({ saveBlob: saveBlobMock }))
 
 const { useInvoicePaymentStore } = await import('~/stores/invoicepayment')
 const { ActionOutcome } = await import('~/types/actionoutcome')
@@ -208,5 +217,44 @@ describe('useInvoicePaymentStore.verifyGatewayPayment', () => {
     const state = await useInvoicePaymentStore().verifyGatewayPayment(PaymentTarget.Invoice, '7')
 
     expect(state).toBe('unknown')
+  })
+})
+
+describe('useInvoicePaymentStore.downloadInvoicePdf', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fetchInvoicePdfMock.mockReset()
+    saveBlobMock.mockReset()
+  })
+
+  it('saves the PDF under the invoice number and releases the in-flight flag', async () => {
+    const pdf = new Blob(['%PDF'], { type: 'application/pdf' })
+    fetchInvoicePdfMock.mockResolvedValue(pdf)
+    const store = useInvoicePaymentStore()
+
+    const pending = store.downloadInvoicePdf('41')
+    expect(store.pdfDownloading).toBe(true)
+    await pending
+
+    expect(fetchInvoicePdfMock).toHaveBeenCalledWith('41')
+    expect(saveBlobMock).toHaveBeenCalledWith(pdf, 'invoice-41.pdf')
+    expect(store.pdfDownloading).toBe(false)
+    expect(store.pdfError).toBe('')
+  })
+
+  it('keeps the API sentence when the download is refused, and clears it on the next try', async () => {
+    fetchInvoicePdfMock.mockRejectedValueOnce({ data: { detail: 'This invoice has too many lines to download as a PDF.' } })
+    const store = useInvoicePaymentStore()
+
+    await store.downloadInvoicePdf('41')
+
+    expect(saveBlobMock).not.toHaveBeenCalled()
+    expect(store.pdfError).toBe('This invoice has too many lines to download as a PDF.')
+    expect(store.pdfDownloading).toBe(false)
+
+    fetchInvoicePdfMock.mockResolvedValueOnce(new Blob(['%PDF']))
+    await store.downloadInvoicePdf('41')
+
+    expect(store.pdfError).toBe('')
   })
 })

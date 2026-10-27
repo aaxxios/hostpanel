@@ -101,6 +101,11 @@ const print = (): void => {
   window.print()
 }
 
+/** Opens the invoice's PDF in a new tab, where the browser downloads it. */
+const downloadPdf = (): void => {
+  window.open(store.pdfUrl(invoiceId.value), '_blank')
+}
+
 onMounted(load)
 watch(invoiceId, load)
 </script>
@@ -122,6 +127,9 @@ watch(invoiceId, load)
         </UiButton>
         <UiButton variant="secondary" data-testid="billing-invoice-print" @click="print">
           {{ t('shared.print') }}
+        </UiButton>
+        <UiButton variant="secondary" data-testid="billing-invoice-download" @click="downloadPdf">
+          {{ t('billing.invoiceDetail.downloadPdf') }}
         </UiButton>
       </template>
     </UiPageHeader>

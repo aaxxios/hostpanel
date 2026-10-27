@@ -84,6 +84,9 @@
 <data name="INVOICE_NOT_FOUND" xml:space="preserve">
     <value>No such invoice.</value>
   </data>
+<data name="INVOICE_PDF_EXCEEDS_LIMIT" xml:space="preserve">
+    <value>This invoice has too many lines to download as a PDF.</value>
+  </data>
 <data name="QUOTE_NOT_FOUND" xml:space="preserve">
     <value>No such quote.</value>
   </data>

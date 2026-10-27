@@ -101,6 +101,11 @@ public abstract class BaseApiController : ControllerBase
     }
 
     /// <summary>The file download the handler produced, or the mapped refusal.</summary>
+    /// <remarks>
+    /// Every download is marked <c>private, no-store</c>. What goes out this way is an invoice or
+    /// a report about somebody's account, so neither the browser nor a proxy in between should keep
+    /// a copy for the next person at the same machine or behind the same cache.
+    /// </remarks>
     /// <typeparam name="T">The export DTO type.</typeparam>
     /// <param name="result">The handler's outcome.</param>
     /// <returns>A file response with the DTO's bytes, content type and download name.</returns>
@@ -114,6 +119,7 @@ public abstract class BaseApiController : ControllerBase
             return MapFailure(result);
         }
 
+        Response.Headers.CacheControl = "private, no-store";
         return File(result.Value.FileContent, result.Value.ContentType, result.Value.FileName);
     }
 

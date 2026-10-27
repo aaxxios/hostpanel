@@ -84,6 +84,10 @@ describe('useInvoicesApi', () => {
     expect(callOf(mock)).toMatchObject({ url: '/api/billing/5/duplicate', method: 'POST' })
   })
 
+  it('pdfUrl builds the address of the invoice PDF download', () => {
+    expect(useInvoicesApi().pdfUrl(5)).toBe('/api/billing/5/pdf')
+  })
+
   it('rejects with an ApiError carrying the refusal body', async () => {
     stubFetch(problem('Invoice is locked.', 409))
 

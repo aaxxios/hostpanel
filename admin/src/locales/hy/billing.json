@@ -146,7 +146,8 @@
     "unpaid": "Չվճարված",
     "tabSummary": "Ամփոփում",
     "tabCredit": "Կրեդիտ",
-    "tabRefund": "Վերադարձ"
+    "tabRefund": "Վերադարձ",
+    "downloadPdf": "Ներբեռնել PDF"
   },
   "invoicesList": {
     "manageBillingInvoices": "Վճարման հաշիվների կառավարում",

@@ -13,6 +13,7 @@ import { defineStore } from 'pinia'
 import { useBillingApi } from '~/composables/apis/useBillingApi'
 import { ActionOutcome } from '~/types/actionoutcome'
 import { apiErrorMessage } from '~/lib/errorHandler'
+import { saveBlob } from '~/utils/saveBlob'
 import type { ClientInvoice } from '~/types/clientinvoice'
 import type { GatewayMethod } from '~/types/gatewaymethod'
 import { GatewayPaymentState } from '~/types/gatewaypaymentstate'
@@ -197,9 +198,36 @@ export const useInvoicePaymentStore = defineStore('invoicePayment', () => {
     }
   }
 
+  /** True while an invoice PDF is being downloaded. */
+  const pdfDownloading = ref(false)
+
+  /** The sentence for a failed PDF download; empty when the last one went through. */
+  const pdfError = ref('')
+
+  /**
+   * Downloads an invoice as a PDF and hands it to the browser as `invoice-{id}.pdf`.
+   *
+   * @param id - Invoice id.
+   * @returns Nothing; a refusal leaves its sentence in {@link pdfError}.
+   */
+  const downloadInvoicePdf = async (id: string): Promise<void> => {
+    pdfDownloading.value = true
+    pdfError.value = ''
+    try {
+      saveBlob(await billing.fetchInvoicePdf(id), `invoice-${id}.pdf`)
+    } catch (e: unknown) {
+      pdfError.value = apiErrorMessage(e)
+    } finally {
+      pdfDownloading.value = false
+    }
+  }
+
   return {
     invoice,
     invoiceLoading,
+    pdfDownloading,
+    pdfError,
+    downloadInvoicePdf,
     invoiceError,
     savedMethods,
     gatewayMethods,

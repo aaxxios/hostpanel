@@ -18,7 +18,7 @@ import type {
   InvoiceRefundPayload,
 } from '@/types/invoice'
 import type { PagedResult } from '@/types/pagedresult'
-import { ApiPath } from '@/lib/apiPaths'
+import { API_BASE, ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
 
 /**
@@ -197,10 +197,22 @@ export const useInvoicesApi = () => {
   const bulk = (invoiceIds: number[], action: string): Promise<void> =>
     request<void>(`${ApiPath.Billing}/bulk`, { method: HttpMethod.Post, body: JSON.stringify({ invoiceIds, action }) })
 
+  /**
+   * Builds the address of an invoice's PDF download.
+   *
+   * A download is a browser navigation, not a request `useApi` can make, so the page needs the
+   * address itself; the session cookie goes with it like any other same-origin request.
+   *
+   * @param id - Invoice id.
+   * @returns The address to open.
+   */
+  const pdfUrl = (id: number): string => `${API_BASE}${ApiPath.Billing}/${id}/pdf`
+
   return {
     list,
     listByClient,
     get,
+    pdfUrl,
     create,
     updateItems,
     updateOptions,

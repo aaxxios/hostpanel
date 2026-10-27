@@ -169,6 +169,17 @@ public static class DependencyInjection
         services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.IBrandingStorage,
             Innovayse.Hostpanel.Infrastructure.Storage.FileSystemBrandingStorage>();
 
+        // Invoice PDFs: stateless, and the fonts it embeds are loaded once per process.
+        services.AddOptions<Innovayse.Hostpanel.Application.Common.Settings.InvoicePdfOptions>()
+            .Bind(configuration.GetSection(
+                Innovayse.Hostpanel.Application.Common.Settings.InvoicePdfOptions.SectionName))
+            .Validate(o => o.MaxLines > 0, "InvoicePdf:MaxLines must be positive.")
+            .Validate(o => o.MaxConcurrentRenders > 0, "InvoicePdf:MaxConcurrentRenders must be positive.")
+            .ValidateOnStart();
+        services.AddSingleton<Innovayse.Hostpanel.Infrastructure.Pdf.InvoicePdfRenderGate>();
+        services.AddSingleton<Innovayse.Hostpanel.Application.Common.Interfaces.IInvoicePdfRenderer,
+            Innovayse.Hostpanel.Infrastructure.Pdf.MigraDocInvoicePdfRenderer>();
+
         // Where people live decides almost everything below. Read from configuration once,
         // here, so there is one answer rather than a scattering of Auth:Mode checks that
         // can disagree.

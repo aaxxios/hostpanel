@@ -9,6 +9,7 @@ using Innovayse.Hostpanel.Application.Billing.Commands.UpdateInvoiceNotes;
 using Innovayse.Hostpanel.Application.Billing.Commands.UpdateInvoiceOptions;
 using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Billing.Queries.GetInvoice;
+using Innovayse.Hostpanel.Application.Billing.Queries.GetInvoicePdf;
 using Innovayse.Hostpanel.Application.Billing.Queries.ListClientInvoices;
 using Innovayse.Hostpanel.Application.Billing.Queries.ListInvoices;
 using Innovayse.Hostpanel.Application.Common;
@@ -83,6 +84,28 @@ public sealed class InvoicesController : BaseApiController
     {
         var outcome = await _bus.InvokeAsync<Result<InvoiceDto>>(new GetInvoiceQuery(id), ct);
         return HandleResult(outcome);
+    }
+
+    /// <summary>Downloads a single invoice as a PDF, drafts included (stamped DRAFT).</summary>
+    /// <param name="id">Invoice primary key.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// 200 with <c>invoice-{id}.pdf</c> as an attachment; 400 for an id that is not positive, or with
+    /// <c>INVOICE_PDF_EXCEEDS_LIMIT</c> when the invoice has more lines than <c>InvoicePdf:MaxLines</c>;
+    /// 401; 403 for a caller who is not staff; 404 with <c>INVOICE_NOT_FOUND</c> when the id names no
+    /// invoice.
+    /// </returns>
+    [HttpGet("{id:int}/pdf")]
+    [Authorize(Policy = Policies.ResellerOrAdmin)]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPdfAsync(int id, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<FileDownloadDto>>(new GetInvoicePdfQuery(id), ct);
+        return FileResult(outcome);
     }
 
     /// <summary>Creates a new invoice for a client.</summary>

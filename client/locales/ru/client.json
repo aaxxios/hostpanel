@@ -482,6 +482,7 @@
       "heading": "Счёт №{id}",
       "issued": "Выставлен",
       "payNow": "Оплатить",
+      "downloadPdf": "Скачать PDF",
       "dueDate": "Срок оплаты",
       "datePaid": "Дата оплаты",
       "paymentMethod": "Способ оплаты",

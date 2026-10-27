@@ -482,6 +482,7 @@
       "heading": "Invoice #{id}",
       "issued": "Issued",
       "payNow": "Pay Now",
+      "downloadPdf": "Download PDF",
       "dueDate": "Due Date",
       "datePaid": "Date Paid",
       "paymentMethod": "Payment Method",
