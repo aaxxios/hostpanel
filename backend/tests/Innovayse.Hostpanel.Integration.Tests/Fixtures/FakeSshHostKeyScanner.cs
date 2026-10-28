@@ -1,19 +1,28 @@
 using System.Collections.Concurrent;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Ssh;
+using Innovayse.Hostpanel.Domain.Ssh.Enums;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
-/// In-memory host key scanner: the key each host presents is set by the test; an unknown host is
-/// unreachable. Hosts are unique per test, so tests never see each other's answers.
+/// In-memory host key scanner: the key each host presents, or how it fails, is set by the test; an
+/// unknown host gives no answer. Hosts are unique per test, so tests never see each other's answers.
 /// </summary>
 public sealed class FakeSshHostKeyScanner : ISshHostKeyScanner
 {
     /// <summary>Presented keys by "host:port".</summary>
     public ConcurrentDictionary<string, SshHostKeyScan> Keys { get; } = new();
 
+    /// <summary>How each "host:port" fails, when it presents no key.</summary>
+    public ConcurrentDictionary<string, SshEndpointFailure> Failures { get; } = new();
+
     /// <inheritdoc/>
-    public Task<SshHostKeyScan?> ScanAsync(string host, int port, TimeSpan timeout, CancellationToken ct) =>
-        Task.FromResult(Keys.TryGetValue($"{host}:{port}", out var scan) ? scan : null);
+    public Task<SshHostKeyProbe> ScanAsync(string host, int port, TimeSpan timeout, CancellationToken ct)
+    {
+        var endpoint = $"{host}:{port}";
+        return Task.FromResult(Keys.TryGetValue(endpoint, out var scan)
+            ? new SshHostKeyProbe(scan, null)
+            : new SshHostKeyProbe(null, Failures.TryGetValue(endpoint, out var failure) ? failure : SshEndpointFailure.NoAnswer));
+    }
 }

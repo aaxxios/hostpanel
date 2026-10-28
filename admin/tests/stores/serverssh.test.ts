@@ -93,7 +93,7 @@ describe('serverSshStore', () => {
   })
 
   it('loads settings and setup together, generates an identity and scans the host key', async () => {
-    const setup = { serverId: 4, profile: 'cwp', publicKey: null, binding: null, agentUsername: 'hpsshkeys', bundleVersion: '1.1.0', bundleSha256: 'c'.repeat(64), bundlePath: '/api/public/ssh-agent/bundle.tar.gz' }
+    const setup = { serverId: 4, profile: 'cwp', publicKey: null, binding: null, agentUsername: 'hpsshkeys', bundleVersion: '1.1.0', bundleSha256: 'c'.repeat(64), bundlePath: '/api/public/ssh-agent/bundle.tar.gz', sourceAddresses: [] }
     const generated = { ...setup, publicKey: 'ssh-ed25519 AAAA x', binding: '33333333-3333-4333-8333-333333333333' }
     const mock = stubFetch(json(SETTINGS), json(setup), json(generated), json({ ...SETTINGS, isEnabled: false }), json({ algorithm: 'ssh-ed25519', fingerprint: 'SHA256:x', matchesPinned: false }))
     const store = useServerSshStore()

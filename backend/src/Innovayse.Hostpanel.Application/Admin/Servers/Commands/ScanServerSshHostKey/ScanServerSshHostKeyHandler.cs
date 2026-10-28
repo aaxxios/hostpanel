@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Ssh.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,7 +34,8 @@ public sealed class ScanServerSshHostKeyHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The presented key, or <c>SERVER_NOT_FOUND</c>, <c>SSH_SETTINGS_INCOMPLETE</c> (no agent host
-    /// saved), <c>SSH_HOST_KEY_UNREADABLE</c>.
+    /// saved), or one of <c>SSH_AGENT_HOST_UNREACHABLE</c>, <c>SSH_AGENT_PORT_REFUSED</c>,
+    /// <c>SSH_AGENT_CONNECTION_CLOSED</c>, <c>SSH_HOST_KEY_UNREADABLE</c> naming what to check.
     /// </returns>
     public async Task<Result<SshHostKeyScanDto>> HandleAsync(ScanServerSshHostKeyCommand cmd, CancellationToken ct)
     {
@@ -48,11 +50,17 @@ public sealed class ScanServerSshHostKeyHandler
             return Result<SshHostKeyScanDto>.FailureCode(HostpanelErrorCodes.SSH_SETTINGS_INCOMPLETE);
         }
 
-        var scan = await _scanner.ScanAsync(
+        var probe = await _scanner.ScanAsync(
             settings.AgentHost, settings.AgentPort, TimeSpan.FromSeconds(settings.ConnectTimeoutSeconds), ct);
-        if (scan is null)
+        if (probe.Key is not { } scan)
         {
-            return Result<SshHostKeyScanDto>.FailureCode(HostpanelErrorCodes.SSH_HOST_KEY_UNREADABLE);
+            return Result<SshHostKeyScanDto>.FailureCode(probe.Failure switch
+            {
+                SshEndpointFailure.NoAnswer => HostpanelErrorCodes.SSH_AGENT_HOST_UNREACHABLE,
+                SshEndpointFailure.Refused => HostpanelErrorCodes.SSH_AGENT_PORT_REFUSED,
+                SshEndpointFailure.ClosedBeforeGreeting => HostpanelErrorCodes.SSH_AGENT_CONNECTION_CLOSED,
+                _ => HostpanelErrorCodes.SSH_HOST_KEY_UNREADABLE,
+            });
         }
 
         return Result<SshHostKeyScanDto>.Success(new SshHostKeyScanDto(

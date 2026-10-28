@@ -13,6 +13,10 @@ namespace Innovayse.Hostpanel.Application.Admin.Servers.Common;
 /// <param name="BundleVersion">Agent version in the bundle this HostPanel serves.</param>
 /// <param name="BundleSha256">SHA256 the installer command verifies before unpacking.</param>
 /// <param name="BundlePath">Path of the bundle on this HostPanel.</param>
+/// <param name="SourceAddresses">
+/// Addresses this HostPanel connects to agents from, for the firewall and sshd lines; empty when
+/// not configured.
+/// </param>
 public sealed record ServerSshSetupDto(
     int ServerId,
     string? Profile,
@@ -21,4 +25,5 @@ public sealed record ServerSshSetupDto(
     string AgentUsername,
     string BundleVersion,
     string BundleSha256,
-    string BundlePath);
+    string BundlePath,
+    IReadOnlyList<string> SourceAddresses);

@@ -50,6 +50,11 @@ HostPanel needs TCP access from its API host to the agent host and port. Any of 
 Either way the connection is authenticated by the per-server key, the host key is pinned, and the
 management account can do nothing but run the agent. No VPN is required by the software.
 
+Set `SSH_AGENT_SOURCE_ADDRESSES` on the HostPanel deployment to the address managed servers see its
+connections come from; Servers → SSH then shows the exact CSF, firewalld and ufw lines that allow only
+that address on the agent port, and the `PerSourcePenaltyExemptList` line for sshd. With a VPN, enter the
+server's VPN address as the agent host; the host HostPanel runs on must itself be in the VPN.
+
 **OpenSSH 9.8 and later** refuse an address for a while after failed or unauthenticated
 connections (`PerSourcePenalties`, on by default). *Read host key* is such a connection, and so is
 every call made with a rotated key before the installer has run again; repeated, they can lock

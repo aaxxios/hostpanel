@@ -5,6 +5,7 @@ using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Ssh;
+using Innovayse.Hostpanel.Domain.Ssh.Enums;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,17 +36,26 @@ public sealed class ScanServerSshHostKeyTests(IntegrationTestFactory factory) : 
         settings.GetProperty("agentHostKeyFingerprint").GetString().Should().Be(SshAdminTestSupport.Fingerprint);
     }
 
-    [Fact]
-    public async Task UnreachableAgentHost_Returns503WithAnAdminFacingCodeAsync()
+    /// <summary>Each way the endpoint can fail names what to check, as an admin-facing 503.</summary>
+    /// <param name="failure">How the endpoint failed.</param>
+    /// <param name="code">The error code the admin sees.</param>
+    [Theory]
+    [InlineData(SshEndpointFailure.NoAnswer, HostpanelErrorCodes.SSH_AGENT_HOST_UNREACHABLE)]
+    [InlineData(SshEndpointFailure.Refused, HostpanelErrorCodes.SSH_AGENT_PORT_REFUSED)]
+    [InlineData(SshEndpointFailure.ClosedBeforeGreeting, HostpanelErrorCodes.SSH_AGENT_CONNECTION_CLOSED)]
+    [InlineData(SshEndpointFailure.Other, HostpanelErrorCodes.SSH_HOST_KEY_UNREADABLE)]
+    public async Task FailedRead_Returns503NamingWhatToCheckAsync(SshEndpointFailure failure, string code)
     {
         var admin = await SshAdminTestSupport.AdminAsync(factory);
         var serverId = await SshTestSeeds.SeedServerAsync(factory, "down.example.test", 22, enabled: false);
-        (await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(false))).EnsureSuccessStatusCode();
+        var host = $"down-{serverId}.internal.test";
+        (await admin.PutAsJsonAsync($"/api/admin/servers/{serverId}/ssh-settings", SshAdminTestSupport.Body(false, host: host))).EnsureSuccessStatusCode();
+        Scanner.Failures[$"{host}:22"] = failure;
 
         var response = await admin.PostAsync($"/api/admin/servers/{serverId}/ssh-settings/scan-host-key", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
-        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.SSH_HOST_KEY_UNREADABLE);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(code);
     }
 
     [Fact]

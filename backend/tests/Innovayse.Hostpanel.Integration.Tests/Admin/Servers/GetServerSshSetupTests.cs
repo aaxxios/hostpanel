@@ -25,6 +25,8 @@ public sealed class GetServerSshSetupTests(IntegrationTestFactory factory) : ICl
         setup.GetProperty("bundleVersion").GetString().Should().MatchRegex(@"^\d+\.\d+\.\d+$");
         var bytes = await factory.CreateClient().GetByteArrayAsync(setup.GetProperty("bundlePath").GetString());
         Convert.ToHexStringLower(SHA256.HashData(bytes)).Should().Be(setup.GetProperty("bundleSha256").GetString());
+        setup.GetProperty("sourceAddresses").EnumerateArray().Select(a => a.GetString())
+            .Should().Equal("203.0.113.10", "2001:db8::10");
     }
 
     [Fact]

@@ -2,11 +2,13 @@ using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Application.Admin.Servers.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Innovayse.Hostpanel.Application.Admin.Servers.Commands.GenerateServerSshIdentity;
 
@@ -35,15 +37,19 @@ public sealed class GenerateServerSshIdentityHandler
     /// <summary>The bundle this build ships.</summary>
     private readonly ISshAgentBundle _bundle;
 
+    /// <summary>How managed servers see this HostPanel.</summary>
+    private readonly SshAgentOptions _network;
+
     /// <summary>Initialises the handler.</summary>
     /// <param name="context">Data context.</param>
     /// <param name="factory">Provider factory, for support and the agent profile.</param>
     /// <param name="generator">Key pair generator.</param>
     /// <param name="bundle">The bundle this build ships.</param>
+    /// <param name="network">How managed servers see this HostPanel.</param>
     /// <param name="caller">The administrator, for the audit trail.</param>
     /// <param name="logger">Logger; also the admin audit trail.</param>
     public GenerateServerSshIdentityHandler(
-        IHostpanelDbContext context, ISshKeyProviderFactory factory, ISshIdentityGenerator generator, ISshAgentBundle bundle, ICurrentUserService caller, ILogger<GenerateServerSshIdentityHandler> logger)
+        IHostpanelDbContext context, ISshKeyProviderFactory factory, ISshIdentityGenerator generator, ISshAgentBundle bundle, IOptions<SshAgentOptions> network, ICurrentUserService caller, ILogger<GenerateServerSshIdentityHandler> logger)
     {
         _caller = caller;
         _logger = logger;
@@ -51,6 +57,7 @@ public sealed class GenerateServerSshIdentityHandler
         _factory = factory;
         _generator = generator;
         _bundle = bundle;
+        _network = network.Value;
     }
 
     /// <summary>Handles the command.</summary>
@@ -84,6 +91,6 @@ public sealed class GenerateServerSshIdentityHandler
         _logger.LogInformation(
             "SSH identity of server {ServerId} issued by user {UserId}; SSH key management disabled until reinstall",
             server.Id, _caller.UserId);
-        return Result<ServerSshSetupDto>.Success(settings.ToSetupDto(server.Id, profile, _bundle));
+        return Result<ServerSshSetupDto>.Success(settings.ToSetupDto(server.Id, profile, _bundle, _network));
     }
 }
