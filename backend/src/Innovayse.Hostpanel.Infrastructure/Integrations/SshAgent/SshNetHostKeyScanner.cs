@@ -1,6 +1,7 @@
 using System.Net.Sockets;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Ssh;
+using Innovayse.Hostpanel.Domain.Ssh.Enums;
 using Microsoft.Extensions.Logging;
 using Renci.SshNet;
 using Renci.SshNet.Common;
@@ -26,7 +27,7 @@ public sealed class SshNetHostKeyScanner : ISshHostKeyScanner
     }
 
     /// <inheritdoc/>
-    public async Task<SshHostKeyScan?> ScanAsync(string host, int port, TimeSpan timeout, CancellationToken ct)
+    public async Task<SshHostKeyProbe> ScanAsync(string host, int port, TimeSpan timeout, CancellationToken ct)
     {
         SshHostKeyScan? seen = null;
         var connection = new ConnectionInfo(host, port, "hostkey-scan", new NoneAuthenticationMethod("hostkey-scan"))
@@ -50,10 +51,53 @@ public sealed class SshNetHostKeyScanner : ISshHostKeyScanner
         {
             if (seen is null && !ct.IsCancellationRequested)
             {
-                _logger.LogInformation(ex, "Host key scan of {Host}:{Port} got no key.", host, port);
+                var failure = await ClassifyAsync(ex, host, port, timeout, ct);
+                _logger.LogInformation(ex, "Host key scan of {Host}:{Port} got no key: {Failure}.", host, port, failure);
+                return new SshHostKeyProbe(null, failure);
             }
         }
 
-        return seen;
+        return seen is null ? new SshHostKeyProbe(null, SshEndpointFailure.Other) : new SshHostKeyProbe(seen, null);
+    }
+
+    /// <summary>
+    /// Tells apart why no key came. A hang-up before the banner is certain from the SSH exception;
+    /// anything else is settled by one plain TCP connect, made only on this failure path so a healthy
+    /// endpoint is never asked twice (each unauthenticated connection can count against PerSourcePenalties).
+    /// </summary>
+    /// <param name="ex">What the SSH connect threw.</param>
+    /// <param name="host">Host.</param>
+    /// <param name="port">Port.</param>
+    /// <param name="timeout">Connect timeout.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The failure.</returns>
+    private static async Task<SshEndpointFailure> ClassifyAsync(Exception ex, string host, int port, TimeSpan timeout, CancellationToken ct)
+    {
+        if (ex is SshConnectionException)
+        {
+            return SshEndpointFailure.ClosedBeforeGreeting;
+        }
+
+        if (ex is SocketException { SocketErrorCode: SocketError.ConnectionRefused })
+        {
+            return SshEndpointFailure.Refused;
+        }
+
+        using var tcp = new TcpClient();
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        limit.CancelAfter(timeout);
+        try
+        {
+            await tcp.ConnectAsync(host, port, limit.Token);
+            return SshEndpointFailure.Other;
+        }
+        catch (SocketException se) when (se.SocketErrorCode is SocketError.ConnectionRefused)
+        {
+            return SshEndpointFailure.Refused;
+        }
+        catch (Exception probe) when (probe is SocketException or OperationCanceledException or IOException)
+        {
+            return SshEndpointFailure.NoAnswer;
+        }
     }
 }

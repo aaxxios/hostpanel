@@ -6,7 +6,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import ServerSshSettingsModal from '@/components/servers/ServerSshSettingsModal.vue'
-import { callOf, invalid, json, stubFetch } from '../../helpers/fetch'
+import { callOf, invalid, json, problem, stubFetch } from '../../helpers/fetch'
 import { mountWithApp } from '../../helpers/mount'
 
 /** Settings as the API answers them. */
@@ -37,6 +37,7 @@ const SETUP = {
   bundleVersion: '1.1.0',
   bundleSha256: 'b'.repeat(64),
   bundlePath: '/api/public/ssh-agent/bundle.tar.gz',
+  sourceAddresses: ['203.0.113.10'],
 }
 
 /** Setup after an identity was generated. */
@@ -103,6 +104,35 @@ describe('ServerSshSettingsModal', () => {
 
     expect(callOf(mock, 2).url).toContain('/ssh-settings/scan-host-key')
     expect((callOf(mock, 3).body as Record<string, unknown>).agentHostKeyFingerprint).toBe('SHA256:' + 'Z'.repeat(43))
+  })
+
+  it('shows the firewall and sshd lines that let only this HostPanel in on the agent port', async () => {
+    stubFetch(json(SETTINGS), json(SETUP))
+    const wrapper = await mountDialog()
+
+    const network = wrapper.get('[data-testid="server-ssh-network"]').text()
+    expect(network).toContain(`csf -a 203.0.113.10 'HostPanel SSH key agent'`)
+    expect(network).toContain(`ufw allow from 203.0.113.10 to any port ${SETTINGS.agentPort} proto tcp`)
+    expect(network).toContain('PerSourcePenaltyExemptList 203.0.113.10')
+  })
+
+  it('asks for HostPanel\'s address rather than guessing one', async () => {
+    stubFetch(json(SETTINGS), json({ ...SETUP, sourceAddresses: [] }))
+    const wrapper = await mountDialog()
+
+    expect(wrapper.find('[data-testid="server-ssh-network-lines"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="server-ssh-network-unset"]').text()).toContain('SshAgent__SourceAddresses')
+  })
+
+  it('shows a failed host key read beside the button, not at the top of the dialog', async () => {
+    stubFetch(json(SETTINGS), json(SETUP), problem('No answer from the agent host and port.', 503))
+    const wrapper = await mountDialog()
+
+    await wrapper.get('[data-testid="server-ssh-scan"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="server-ssh-scan-error"]').text()).toContain('No answer from the agent host and port.')
+    expect(wrapper.find('[data-testid="server-ssh-error"]').exists()).toBe(false)
   })
 
   it('explains an agent installed for another server', async () => {

@@ -13,6 +13,6 @@ public interface ISshHostKeyScanner
     /// <param name="port">SSH port.</param>
     /// <param name="timeout">Connect timeout.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The presented key, or null when the server could not be reached.</returns>
-    public Task<SshHostKeyScan?> ScanAsync(string host, int port, TimeSpan timeout, CancellationToken ct);
+    /// <returns>The presented key, or how the endpoint failed to present one.</returns>
+    public Task<SshHostKeyProbe> ScanAsync(string host, int port, TimeSpan timeout, CancellationToken ct);
 }

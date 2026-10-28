@@ -665,7 +665,16 @@
     <value>Не удалось связаться с сервером хостинга. Повторите попытку позже.</value>
   </data>
   <data name="SSH_HOST_KEY_UNREADABLE" xml:space="preserve">
-    <value>Не удалось получить ключ хоста SSH с указанного адреса и порта агента. Проверьте адрес и порт, брандмауэр и то, что sshd принимает подключения от HostPanel. В OpenSSH 9.8 и новее после неудачных или неаутентифицированных подключений sshd на время отклоняет адрес (PerSourcePenalties): добавьте адрес HostPanel в PerSourcePenaltyExemptList.</value>
+    <value>С адреса и порта агента не получен ключ хоста SSH. Проверьте, что на этом порту работает sshd.</value>
+  </data>
+  <data name="SSH_AGENT_HOST_UNREACHABLE" xml:space="preserve">
+    <value>Адрес и порт агента не отвечают: у HostPanel нет сетевого пути к ним. Проверьте адрес, что сеть, в которой работает HostPanel, до него доходит (VPN или маршрутизация), и что брандмауэр сервера пропускает адрес HostPanel.</value>
+  </data>
+  <data name="SSH_AGENT_PORT_REFUSED" xml:space="preserve">
+    <value>Хост агента отклонил подключение на этом порту: там ничего не слушает или брандмауэр отклоняет адрес HostPanel. Проверьте порт и брандмауэр.</value>
+  </data>
+  <data name="SSH_AGENT_CONNECTION_CLOSED" xml:space="preserve">
+    <value>Хост агента принял подключение и закрыл его до приветствия SSH: sshd отклоняет адрес HostPanel. В OpenSSH 9.8 и новее причина обычно PerSourcePenalties после неудачных или неаутентифицированных подключений; добавьте адрес HostPanel в PerSourcePenaltyExemptList. Проверьте также MaxStartups и TCP wrappers (hosts.deny).</value>
   </data>
   <data name="SSH_MODULE_NOT_SUPPORTED" xml:space="preserve">
     <value>Управление SSH-ключами не поддерживается для этого типа сервера.</value>

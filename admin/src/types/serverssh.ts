@@ -89,6 +89,8 @@ export interface ServerSshSetupDto {
   bundleSha256: string
   /** Path of the bundle on this HostPanel. */
   bundlePath: string
+  /** Addresses this HostPanel connects to agents from; empty or absent (an older API) when not configured. */
+  sourceAddresses?: string[]
 }
 
 /** The host key a server's agent endpoint presented to a scan. */

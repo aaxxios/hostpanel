@@ -24,7 +24,7 @@ const SETUP: ServerSshSetupDto = {
   agentUsername: 'hpsshkeys',
   bundleVersion: '1.1.0',
   bundleSha256: 'e'.repeat(64),
-  bundlePath: '/api/public/ssh-agent/bundle.tar.gz',
+  bundlePath: '/api/public/ssh-agent/bundle.tar.gz', sourceAddresses: [],
 }
 
 test('generating an identity shows an installer command that verifies the bundle hash', async ({ page }) => {

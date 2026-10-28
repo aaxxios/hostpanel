@@ -2,8 +2,10 @@ using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Application.Admin.Servers.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Innovayse.Hostpanel.Application.Admin.Servers.Queries.GetServerSshSetup;
 
@@ -19,15 +21,20 @@ public sealed class GetServerSshSetupHandler
     /// <summary>The bundle this build ships.</summary>
     private readonly ISshAgentBundle _bundle;
 
+    /// <summary>How managed servers see this HostPanel.</summary>
+    private readonly SshAgentOptions _network;
+
     /// <summary>Initialises the handler.</summary>
     /// <param name="context">Data context.</param>
     /// <param name="factory">Provider factory, for the agent profile.</param>
     /// <param name="bundle">The bundle this build ships.</param>
-    public GetServerSshSetupHandler(IHostpanelDbContext context, ISshKeyProviderFactory factory, ISshAgentBundle bundle)
+    /// <param name="network">How managed servers see this HostPanel.</param>
+    public GetServerSshSetupHandler(IHostpanelDbContext context, ISshKeyProviderFactory factory, ISshAgentBundle bundle, IOptions<SshAgentOptions> network)
     {
         _context = context;
         _factory = factory;
         _bundle = bundle;
+        _network = network.Value;
     }
 
     /// <summary>Handles the query.</summary>
@@ -43,6 +50,6 @@ public sealed class GetServerSshSetupHandler
         }
 
         var settings = await _context.ServerSshSettings.AsNoTracking().FirstOrDefaultAsync(s => s.ServerId == server.Id, ct);
-        return Result<ServerSshSetupDto>.Success(settings.ToSetupDto(server.Id, _factory.AgentProfileFor(server.Module), _bundle));
+        return Result<ServerSshSetupDto>.Success(settings.ToSetupDto(server.Id, _factory.AgentProfileFor(server.Module), _bundle, _network));
     }
 }
