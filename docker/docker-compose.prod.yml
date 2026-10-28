@@ -75,6 +75,7 @@ services:
       # The address(es) managed servers see HostPanel's agent connections come from, comma-separated.
       # Optional: when set, Servers -> SSH shows ready-made firewall and sshd lines for it.
       SshAgent__SourceAddresses: ${SSH_AGENT_SOURCE_ADDRESSES:-}
+      PanelNetwork__HostAddresses: ${PANEL_HOST_ADDRESSES:-}
     volumes:
       # Operator-uploaded branding lives in the web root; without a volume every deploy erases it.
       - hostpanel_branding:/app/wwwroot/uploads/branding

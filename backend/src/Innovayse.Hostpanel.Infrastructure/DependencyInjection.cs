@@ -615,6 +615,8 @@ public static class DependencyInjection
         {
             client.Timeout = HttpBackstopTimeouts.Cwp;
         })
+            .ConfigurePrimaryHttpMessageHandler(sp => Provisioning.Settings.PanelHostAddressConnector.CreateHandler(
+                sp.GetRequiredService<IOptions<Provisioning.Settings.PanelNetworkOptions>>()))
             .AddNoRetryResilience(o => o.Cwp);
         // Named twin of the typed registration above, for the same reason the CWP7 pair exists:
         // CwpProvisioningProvider builds its own CwpApiClient (the interface exposes only the
@@ -625,7 +627,17 @@ public static class DependencyInjection
         {
             client.Timeout = HttpBackstopTimeouts.Cwp;
         })
+            .ConfigurePrimaryHttpMessageHandler(sp => Provisioning.Settings.PanelHostAddressConnector.CreateHandler(
+                sp.GetRequiredService<IOptions<Provisioning.Settings.PanelNetworkOptions>>()))
             .AddNoRetryResilience(o => o.Cwp);
+
+        // VPN routes to panels whose API port is closed to the internet; see PanelNetworkOptions.
+        services.AddOptions<Provisioning.Settings.PanelNetworkOptions>()
+            .Bind(configuration.GetSection(Provisioning.Settings.PanelNetworkOptions.SectionName))
+            .Validate(
+                o => o.IsValid,
+                $"{Provisioning.Settings.PanelNetworkOptions.SectionName}:HostAddresses must be comma-separated hostname=address pairs, e.g. srv4.example.com=10.77.0.1.")
+            .ValidateOnStart();
 
         // CWP7 API client (named + typed so the factory can also resolve it by name).
         // Both registrations carry the same profile for the same two reasons as CWP above; the
@@ -635,11 +647,15 @@ public static class DependencyInjection
         {
             client.Timeout = HttpBackstopTimeouts.Cwp7;
         })
+            .ConfigurePrimaryHttpMessageHandler(sp => Provisioning.Settings.PanelHostAddressConnector.CreateHandler(
+                sp.GetRequiredService<IOptions<Provisioning.Settings.PanelNetworkOptions>>()))
             .AddNoRetryResilience(o => o.Cwp7);
         services.AddHttpClient<Innovayse.SDK.Plugins.IHostingPanelV7ApiClient, Innovayse.Providers.CWP7.Cwp7ApiClient>(client =>
         {
             client.Timeout = HttpBackstopTimeouts.Cwp7;
         })
+            .ConfigurePrimaryHttpMessageHandler(sp => Provisioning.Settings.PanelHostAddressConnector.CreateHandler(
+                sp.GetRequiredService<IOptions<Provisioning.Settings.PanelNetworkOptions>>()))
             .AddNoRetryResilience(o => o.Cwp7);
 
         // Migration

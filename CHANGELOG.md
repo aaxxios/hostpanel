@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `PanelNetwork:HostAddresses` (`PANEL_HOST_ADDRESSES`): reach a control panel's API over a VPN address while requests and TLS keep its hostname, so customer links and certificate checks are unchanged.
 - Storefront content: testimonials, partners, projects and FAQs, with English, Russian and Armenian translations, served from `/api/public/{testimonials,partners,projects,faqs}`.
 - Admin pages under "Storefront content" to create, edit and order the storefront content.
 - Storefront content ships empty: operators enter testimonials, partners, projects and FAQs in the admin; the repository carries no site content.
