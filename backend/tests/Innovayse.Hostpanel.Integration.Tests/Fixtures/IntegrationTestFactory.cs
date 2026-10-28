@@ -4,8 +4,6 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Auth;
 using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Domains;
-using Innovayse.Hostpanel.Integration.Tests.Provisioning;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -66,6 +64,7 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
         // so these tests exercise the encrypting EF converters that production uses.
         builder.UseSetting("Auth:Mode", "local");
         builder.UseSetting("EncryptionKey", TestEncryptionKey);
+        builder.UseSetting("SshAgent:SourceAddresses", "203.0.113.10, 2001:db8::10");
 
         builder.ConfigureAppConfiguration((_, config) =>
         {

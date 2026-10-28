@@ -13,10 +13,11 @@
  * The private key is write-only: generated and kept by HostPanel, or pasted under "advanced", and
  * never shown. Requests and refusals belong to the server SSH store.
  */
-import { computed, onMounted, reactive, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { buildInstallCommand } from '@/lib/sshAgentInstall'
+import { buildNetworkLines } from '@/lib/sshAgentNetwork'
 import { useServerSshStore } from '@/stores/serverssh'
 import type { ServerSshSettingsDto, ServerSshSettingsPayload } from '@/types/serverssh'
 import { UiTone } from '@/utils/ui/tone'
@@ -59,7 +60,7 @@ const emit = defineEmits<{
 const store = useServerSshStore()
 
 /** Reactive state of the store this dialog renders. */
-const { settings, setup, loading, saving, testing, generating, scanning, lastTest, lastScan, error, fieldErrors } = storeToRefs(store)
+const { settings, setup, loading, saving, testing, generating, scanning, lastTest, lastScan, error, scanError, fieldErrors } = storeToRefs(store)
 
 /** The form as the inputs hold it. */
 const form = reactive<ServerSshSettingsPayload>({
@@ -112,6 +113,9 @@ const health = computed(() => {
 })
 
 /** The one-command installer, once an identity exists. */
+/** Firewall and sshd lines that let only this HostPanel reach the saved agent port, when its address is known. */
+const networkLines = computed(() => (setup.value && settings.value ? buildNetworkLines(setup.value.sourceAddresses ?? [], settings.value.agentPort) : null))
+
 const installCommand = computed(() => (setup.value ? buildInstallCommand(window.location.origin, setup.value) : null))
 
 /** Whether the saved settings point at an agent host, so a scan and a test can run. */
@@ -129,8 +133,29 @@ const payload = computed<ServerSshSettingsPayload>(() => ({
  * @returns Resolves when the attempt has ended.
  */
 const handleSave = async (): Promise<void> => {
-  await store.save(props.serverId, payload.value)
+  const ok = await store.save(props.serverId, payload.value)
+  saveFailed.value = !ok
+  // The saved settings refill the form; the confirmation holds for exactly what came back.
+  await nextTick()
+  savedSnapshot.value = ok ? JSON.stringify(payload.value) : null
 }
+
+/** The form as last saved successfully, null when the last save failed or none ran. */
+const savedSnapshot = ref<string | null>(null)
+
+/** Whether the last save in this dialog was refused. */
+const saveFailed = ref(false)
+
+/** Whether the form still holds exactly what was last saved, so "Saved" is true. */
+const showSaved = computed(() => savedSnapshot.value !== null && savedSnapshot.value === JSON.stringify(payload.value))
+
+/** Why the last save was refused, for the line beside the button; null when it was not. */
+const saveFailure = computed(() => {
+  if (!saveFailed.value) {
+    return null
+  }
+  return Object.keys(fieldErrors.value).length > 0 ? t('servers.ssh.saveFieldErrors') : t('servers.ssh.saveFailed', { reason: error.value ?? '' })
+})
 
 /**
  * Generates (or rotates) the server's management identity.
@@ -218,6 +243,24 @@ onMounted(() => {
             </UiGrid>
             <UiText size="sm" tone="muted">{{ t('servers.ssh.connectionHint') }}</UiText>
           </UiForm>
+          <UiStack v-if="setup" gap="sm" data-testid="server-ssh-network">
+            <UiText size="sm" weight="semibold">{{ t('servers.ssh.networkTitle') }}</UiText>
+            <template v-if="networkLines">
+              <UiText size="sm" tone="muted">{{ t('servers.ssh.networkIntro', { addresses: (setup.sourceAddresses ?? []).join(', ') }) }}</UiText>
+              <UiStack gap="xs" data-testid="server-ssh-network-lines">
+                <UiText size="xs" tone="muted">CSF</UiText>
+                <UiCodeBlock :code="networkLines.csf" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" />
+                <UiText size="xs" tone="muted">firewalld</UiText>
+                <UiCodeBlock :code="networkLines.firewalld" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" />
+                <UiText size="xs" tone="muted">ufw</UiText>
+                <UiCodeBlock :code="networkLines.ufw" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" />
+                <UiText size="xs" tone="muted">{{ t('servers.ssh.networkSshd') }}</UiText>
+                <UiCodeBlock :code="networkLines.sshd" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" />
+              </UiStack>
+            </template>
+            <UiText v-else size="sm" tone="muted" data-testid="server-ssh-network-unset">{{ t('servers.ssh.networkUnset') }}</UiText>
+            <UiText size="sm" tone="muted">{{ t('servers.ssh.networkVpn') }}</UiText>
+          </UiStack>
         </UiStack>
 
         <!-- 2. Install -->
@@ -248,6 +291,7 @@ onMounted(() => {
               {{ t('servers.ssh.scanHostKey') }}
             </UiButton>
           </UiStack>
+          <UiAlert v-if="scanError" variant="error" data-testid="server-ssh-scan-error">{{ scanError }}</UiAlert>
           <template v-if="lastScan">
             <UiCodeBlock :code="`${lastScan.algorithm} ${lastScan.fingerprint}`" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" data-testid="server-ssh-scanned" />
             <UiStack direction="row" gap="sm" wrap>
@@ -332,6 +376,8 @@ onMounted(() => {
     </UiStack>
 
     <template #footer>
+      <UiText v-if="showSaved" size="sm" tone="success" data-testid="server-ssh-saved">{{ t('servers.ssh.saved') }}</UiText>
+      <UiText v-else-if="saveFailure" size="sm" tone="danger" data-testid="server-ssh-save-status">{{ saveFailure }}</UiText>
       <UiButton type="button" variant="secondary" data-testid="server-ssh-cancel" @click="emit('close')">
         {{ t('shared.close') }}
       </UiButton>

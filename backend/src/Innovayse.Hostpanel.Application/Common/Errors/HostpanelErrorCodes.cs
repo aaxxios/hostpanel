@@ -1,8 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Application.Domains.Common;
-using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Application.Common.Errors;
@@ -491,6 +488,15 @@ public static class HostpanelErrorCodes
     /// firewall, or sshd refusing the connection (503). Admin-facing, so it names what to check.
     /// </summary>
     public const string SSH_HOST_KEY_UNREADABLE = "SSH_HOST_KEY_UNREADABLE";
+
+    /// <summary>The agent endpoint gave no answer within the timeout: no network path to it (503).</summary>
+    public const string SSH_AGENT_HOST_UNREACHABLE = "SSH_AGENT_HOST_UNREACHABLE";
+
+    /// <summary>The agent endpoint refused the connection: nothing listens there, or a firewall rejects it (503).</summary>
+    public const string SSH_AGENT_PORT_REFUSED = "SSH_AGENT_PORT_REFUSED";
+
+    /// <summary>The agent endpoint accepted the connection and closed it before the SSH greeting (503).</summary>
+    public const string SSH_AGENT_CONNECTION_CLOSED = "SSH_AGENT_CONNECTION_CLOSED";
 
     /// <summary>The server's control panel module has no SSH key implementation (400).</summary>
     public const string SSH_MODULE_NOT_SUPPORTED = "SSH_MODULE_NOT_SUPPORTED";

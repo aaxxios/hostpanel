@@ -44,6 +44,9 @@ export const useServerSshStore = defineStore('serverSsh', () => {
   /** Sentence for the last refused request, null when none. */
   const error = ref<string | null>(null)
 
+  /** Why the last host key read failed, shown beside its button; null when it did not fail. */
+  const scanError = ref<string | null>(null)
+
   /** Per-field sentences of the last refused save. */
   const fieldErrors = ref<Record<string, string>>({})
 
@@ -132,7 +135,7 @@ export const useServerSshStore = defineStore('serverSsh', () => {
    */
   const scanHostKey = async (id: number): Promise<void> => {
     scanning.value = true
-    const result = await runAction(error, () => api.scanServerSshHostKey(id))
+    const result = await runAction(scanError, () => api.scanServerSshHostKey(id))
     lastScan.value = result.ok ? result.value : null
     scanning.value = false
   }
@@ -149,11 +152,12 @@ export const useServerSshStore = defineStore('serverSsh', () => {
     scanning.value = false
     lastScan.value = null
     error.value = null
+    scanError.value = null
     fieldErrors.value = {}
   }
 
   return {
-    settings, setup, loading, saving, testing, generating, scanning, lastTest, lastScan, error, fieldErrors,
+    settings, setup, loading, saving, testing, generating, scanning, lastTest, lastScan, error, scanError, fieldErrors,
     load, loadAll, save, test, generateIdentity, scanHostKey, reset,
   }
 })

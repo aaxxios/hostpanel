@@ -665,7 +665,16 @@
     <value>Հոսթինգի սերվերի հետ կապ հաստատել չհաջողվեց։ Խնդրում ենք փորձել ավելի ուշ։</value>
   </data>
   <data name="SSH_HOST_KEY_UNREADABLE" xml:space="preserve">
-    <value>Գործակալի հասցեից և պորտից SSH հոսթի բանալի չստացվեց։ Ստուգեք հասցեն և պորտը, firewall-ը, և որ sshd-ն ընդունում է HostPanel-ի միացումները։ OpenSSH 9.8 և ավելի նոր տարբերակներում անհաջող կամ չնույնականացված միացումներից հետո sshd-ն որոշ ժամանակ մերժում է հասցեն (PerSourcePenalties). HostPanel-ի հասցեն ավելացրեք PerSourcePenaltyExemptList-ում։</value>
+    <value>Գործակալի հասցեից և պորտից SSH հոսթի բանալի չստացվեց։ Ստուգեք, որ այդ պորտում աշխատում է sshd-ն։</value>
+  </data>
+  <data name="SSH_AGENT_HOST_UNREACHABLE" xml:space="preserve">
+    <value>Գործակալի հասցեն և պորտը չեն պատասխանում. HostPanel-ը դրանց հասնելու ցանցային ճանապարհ չունի։ Ստուգեք հասցեն, որ HostPanel-ի ցանցը հասնում է դրան (VPN կամ երթուղավորում), և որ սերվերի firewall-ը թույլ է տալիս HostPanel-ի հասցեն։</value>
+  </data>
+  <data name="SSH_AGENT_PORT_REFUSED" xml:space="preserve">
+    <value>Գործակալի հոսթը մերժեց միացումն այդ պորտում. այնտեղ ոչինչ չի լսում, կամ firewall-ը մերժում է HostPanel-ի հասցեն։ Ստուգեք պորտը և firewall-ը։</value>
+  </data>
+  <data name="SSH_AGENT_CONNECTION_CLOSED" xml:space="preserve">
+    <value>Գործակալի հոսթն ընդունեց միացումը և փակեց այն մինչև SSH ողջույնը. sshd-ն մերժում է HostPanel-ի հասցեն։ OpenSSH 9.8 և ավելի նոր տարբերակներում սովորաբար պատճառը PerSourcePenalties-ն է անհաջող կամ չնույնականացված միացումներից հետո. HostPanel-ի հասցեն ավելացրեք PerSourcePenaltyExemptList-ում։ Ստուգեք նաև MaxStartups-ը և TCP wrappers-ը (hosts.deny)։</value>
   </data>
   <data name="SSH_MODULE_NOT_SUPPORTED" xml:space="preserve">
     <value>SSH բանալիների կառավարումը չի աջակցվում սերվերի այս տեսակի համար։</value>

@@ -8,9 +8,6 @@ using Innovayse.Hostpanel.Shared.Filters;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Innovayse.Hostpanel.Shared.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.OpenApi;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 
 namespace Innovayse.Hostpanel.API;
@@ -80,6 +77,14 @@ public static class DependencyInjection
                 o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out _),
                 $"{AdminPanelOptions.ConfigurationKey} must be an absolute URL including the scheme, "
                     + "e.g. https://admin.example.com.")
+            .ValidateOnStart();
+
+        // Where agent connections come from, for the firewall and sshd lines the admin panel shows.
+        services.AddOptions<SshAgentOptions>()
+            .Bind(configuration.GetSection(SshAgentOptions.SectionName))
+            .Validate(
+                o => o.IsValid,
+                $"{SshAgentOptions.SectionName}:SourceAddresses must be comma-separated IPv4 or IPv6 addresses, e.g. 203.0.113.10.")
             .ValidateOnStart();
 
         // Contact addresses for the support departments seeded on a fresh install.

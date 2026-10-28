@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Domain.Ssh;
 
 namespace Innovayse.Hostpanel.Application.Admin.Servers.Extensions;
@@ -18,9 +19,11 @@ public static class ServerSshSetupExtensions
     /// <param name="serverId">The server.</param>
     /// <param name="profile">The agent profile for its module.</param>
     /// <param name="bundle">The bundle this build ships.</param>
+    /// <param name="network">How managed servers see this HostPanel.</param>
     /// <returns>The DTO.</returns>
-    public static ServerSshSetupDto ToSetupDto(this ServerSshSettings? settings, int serverId, string? profile, ISshAgentBundle bundle) =>
+    public static ServerSshSetupDto ToSetupDto(
+        this ServerSshSettings? settings, int serverId, string? profile, ISshAgentBundle bundle, SshAgentOptions network) =>
         new(serverId, profile, settings?.AgentPublicKey, settings?.AgentBinding,
             string.IsNullOrWhiteSpace(settings?.AgentUsername) ? DefaultAgentUsername : settings.AgentUsername,
-            bundle.Version, bundle.Sha256, BundlePath);
+            bundle.Version, bundle.Sha256, BundlePath, network.Addresses);
 }

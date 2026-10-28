@@ -26,7 +26,8 @@ hosting" to customers.
    server. It downloads the agent bundle from your HostPanel, **stops unless the SHA256 matches the
    value shown in the authenticated admin panel**, unpacks to a fresh temporary directory and runs
    `install.sh --provider <profile> --binding <id> "<public key>"`. The installer prints the
-   server's host key fingerprints.
+   server's host key fingerprints. Paste it into an SSH session: CWP's browser Terminal drops `$`
+   variables and repeats input, which breaks the command.
 3. **Host key.** *Read host key*: HostPanel shows the key the agent endpoint presents (without
    authenticating). Compare it with what the installer printed; if identical, *Use this
    fingerprint* and save. Connections presenting any other key are refused.
@@ -49,6 +50,11 @@ HostPanel needs TCP access from its API host to the agent host and port. Any of 
 
 Either way the connection is authenticated by the per-server key, the host key is pinned, and the
 management account can do nothing but run the agent. No VPN is required by the software.
+
+Set `SSH_AGENT_SOURCE_ADDRESSES` on the HostPanel deployment to the address managed servers see its
+connections come from; Servers → SSH then shows the exact CSF, firewalld and ufw lines that allow only
+that address on the agent port, and the `PerSourcePenaltyExemptList` line for sshd. With a VPN, enter the
+server's VPN address as the agent host; the host HostPanel runs on must itself be in the VPN.
 
 **OpenSSH 9.8 and later** refuse an address for a while after failed or unauthenticated
 connections (`PerSourcePenalties`, on by default). *Read host key* is such a connection, and so is

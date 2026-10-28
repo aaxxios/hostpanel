@@ -345,7 +345,23 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
 
         CompactText(document).Should().Contain("DRAFT");
     }
+    /// <summary>A cancelled invoice is stamped CANCELLED.</summary>
+    [Fact]
+    public async Task Render_StampsCancelled()
+    {
+        using var document = await RenderAsync(SampleModel() with { Status = InvoiceStatus.Cancelled });
 
+        CompactText(document).Should().Contain("CANCELLED");
+    }
+
+    /// <summary>A refunded invoice is stamped REFUNDED.</summary>
+    [Fact]
+    public async Task Render_StampsRefunded()
+    {
+        using var document = await RenderAsync(SampleModel() with { Status = InvoiceStatus.Refunded });
+
+        CompactText(document).Should().Contain("REFUNDED");
+    }
     /// <summary>An unpaid invoice carries no stamp.</summary>
     [Fact]
     public async Task Render_NoStampForUnpaid()
