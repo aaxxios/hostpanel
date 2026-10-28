@@ -172,6 +172,29 @@ describe('ServerSshSettingsModal', () => {
     expect(wrapper.emitted('close')).toBeUndefined()
   })
 
+  it('confirms a save beside the button, and drops the confirmation once a field changes', async () => {
+    stubFetch(json(SETTINGS), json(SETUP), json({ ...SETTINGS, sshPort: 2299 }))
+    const wrapper = await mountDialog()
+
+    await wrapper.get('[data-testid="server-ssh-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="server-ssh-saved"]').text()).toBe('Saved')
+    await wrapper.get('[data-testid="server-ssh-hostname"]').setValue('other.example.test')
+    expect(wrapper.find('[data-testid="server-ssh-saved"]').exists()).toBe(false)
+  })
+
+  it('says beside the button that a refused save needs the highlighted fields fixed', async () => {
+    stubFetch(json(SETTINGS), json(SETUP), invalid('One or more validation errors occurred.', { agentHost: ['Agent host must not be empty.'] }))
+    const wrapper = await mountDialog()
+
+    await wrapper.get('[data-testid="server-ssh-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="server-ssh-save-status"]').text()).toBe('Not saved: check the highlighted fields.')
+    expect(wrapper.find('[data-testid="server-ssh-saved"]').exists()).toBe(false)
+  })
+
   it('warns that an unsupported module has no installer', async () => {
     stubFetch(json({ ...SETTINGS, isSupported: false, hasAgentPrivateKey: false }), json({ ...SETUP, profile: null }))
     const wrapper = await mountDialog()

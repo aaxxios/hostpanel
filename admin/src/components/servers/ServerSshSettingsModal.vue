@@ -13,7 +13,7 @@
  * The private key is write-only: generated and kept by HostPanel, or pasted under "advanced", and
  * never shown. Requests and refusals belong to the server SSH store.
  */
-import { computed, onMounted, reactive, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { buildInstallCommand } from '@/lib/sshAgentInstall'
@@ -133,8 +133,29 @@ const payload = computed<ServerSshSettingsPayload>(() => ({
  * @returns Resolves when the attempt has ended.
  */
 const handleSave = async (): Promise<void> => {
-  await store.save(props.serverId, payload.value)
+  const ok = await store.save(props.serverId, payload.value)
+  saveFailed.value = !ok
+  // The saved settings refill the form; the confirmation holds for exactly what came back.
+  await nextTick()
+  savedSnapshot.value = ok ? JSON.stringify(payload.value) : null
 }
+
+/** The form as last saved successfully, null when the last save failed or none ran. */
+const savedSnapshot = ref<string | null>(null)
+
+/** Whether the last save in this dialog was refused. */
+const saveFailed = ref(false)
+
+/** Whether the form still holds exactly what was last saved, so "Saved" is true. */
+const showSaved = computed(() => savedSnapshot.value !== null && savedSnapshot.value === JSON.stringify(payload.value))
+
+/** Why the last save was refused, for the line beside the button; null when it was not. */
+const saveFailure = computed(() => {
+  if (!saveFailed.value) {
+    return null
+  }
+  return Object.keys(fieldErrors.value).length > 0 ? t('servers.ssh.saveFieldErrors') : t('servers.ssh.saveFailed', { reason: error.value ?? '' })
+})
 
 /**
  * Generates (or rotates) the server's management identity.
@@ -355,6 +376,8 @@ onMounted(() => {
     </UiStack>
 
     <template #footer>
+      <UiText v-if="showSaved" size="sm" tone="success" data-testid="server-ssh-saved">{{ t('servers.ssh.saved') }}</UiText>
+      <UiText v-else-if="saveFailure" size="sm" tone="danger" data-testid="server-ssh-save-status">{{ saveFailure }}</UiText>
       <UiButton type="button" variant="secondary" data-testid="server-ssh-cancel" @click="emit('close')">
         {{ t('shared.close') }}
       </UiButton>
