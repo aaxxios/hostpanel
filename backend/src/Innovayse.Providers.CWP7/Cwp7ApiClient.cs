@@ -393,7 +393,18 @@ internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
         using var packagesResponse = await _http.PostAsync(packagesUrl, packagesContent, ct);
         packagesResponse.EnsureSuccessStatusCode();
 
-        var packageList = await packagesResponse.Content.ReadFromJsonAsync<Cwp7PackageListResponse>(ct)
+        // A refusal (wrong key, address not allowed) is HTTP 200 with "Error" and a text msj, which
+        // the list shape cannot hold; read it first so the log says why instead of a JSON error.
+        var raw = await packagesResponse.Content.ReadAsStringAsync(ct);
+        using (var doc = System.Text.Json.JsonDocument.Parse(raw))
+        {
+            if (doc.RootElement.TryGetProperty("msj", out var msj) && msj.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                throw new InvalidOperationException($"CWP7 API refused the packages list: {msj.GetString()}");
+            }
+        }
+
+        var packageList = System.Text.Json.JsonSerializer.Deserialize<Cwp7PackageListResponse>(raw)
             ?? throw new InvalidOperationException("CWP7 API returned an empty packages response.");
 
         var packagesCount = packageList.Packages?.Count ?? 0;
