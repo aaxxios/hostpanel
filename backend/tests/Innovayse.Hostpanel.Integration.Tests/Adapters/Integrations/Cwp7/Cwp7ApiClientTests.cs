@@ -189,4 +189,48 @@ public sealed class Cwp7ApiClientTests : IAsyncLifetime
 
         cwp7.Requests.Should().ContainSingle().Which.PathAndQuery.Should().Be("/v1/user_session");
     }
+
+    /// <summary>
+    /// A packages-list refusal ("Error" with a text <c>msj</c>) surfaces CWP7's own reason instead
+    /// of a JSON conversion error, so a wrong API key reads as one in the server log.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Fact]
+    public async Task GetServerInfo_Refusal_ThrowsWithCwpReason()
+    {
+        var client = new Cwp7ApiClient(
+            new HttpClient(new FixedReplyHandler("""{"status":"Error","msj":"key does not exist"}""")),
+            NullLogger<Cwp7ApiClient>.Instance);
+
+        var act = () => client.GetServerInfoAsync("panel.example.test", "2304", "wrong-key", CancellationToken.None);
+
+        (await act.Should().ThrowAsync<InvalidOperationException>())
+            .WithMessage("*key does not exist*");
+    }
+
+    /// <summary>A packages list answers with its entry count.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Fact]
+    public async Task GetServerInfo_PackageList_ReturnsCount()
+    {
+        var client = new Cwp7ApiClient(
+            new HttpClient(new FixedReplyHandler("""{"status":"OK","msj":[{"id":1},{"id":2}]}""")),
+            NullLogger<Cwp7ApiClient>.Instance);
+
+        var count = await client.GetServerInfoAsync("panel.example.test", "2304", "key", CancellationToken.None);
+
+        count.Should().Be(2);
+    }
+
+    /// <summary>Answers every request with the same JSON body, without a network round trip.</summary>
+    /// <param name="body">The JSON body to answer with.</param>
+    private sealed class FixedReplyHandler(string body) : HttpMessageHandler
+    {
+        /// <inheritdoc />
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json"),
+            });
+    }
 }
