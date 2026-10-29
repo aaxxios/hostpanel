@@ -6,6 +6,7 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Queries.GetTldPricing;
+using Innovayse.Hostpanel.Application.Orders.Commands.FulfillPaidOrder;
 using Innovayse.Hostpanel.Application.Orders.Common;
 using Innovayse.Hostpanel.Domain.Auth;
 using Innovayse.Hostpanel.Domain.Billing;
@@ -37,6 +38,9 @@ public sealed class PlaceOrderHandler
     private readonly ISubjectRoleStore _roles;
 
     /// <summary>Wolverine message bus, for invoking the payment-method and TLD pricing queries.</summary>
+    /// <summary>The gateway recorded on an invoice settled because nothing was due.</summary>
+    private const string FreeOrderGateway = "free";
+
     private readonly IMessageBus _bus;
 
     /// <summary>Who is ordering, and from where; the command says neither, and must not.</summary>
@@ -223,6 +227,25 @@ public sealed class PlaceOrderHandler
 
         order.LinkInvoice(invoice.Id);
         await _context.SaveChangesAsync(ct);
+
+        // Nothing due (a free product): no payment will ever come, so settle the invoice here and
+        // fulfil the order the way a confirmed payment does. Without this a free order waited on
+        // a $0 payment forever and its service was never created. No ledger row: nothing moved.
+        if (invoice.AmountDue <= 0)
+        {
+            invoice.MarkPaid($"free-{order.OrderNumber}", FreeOrderGateway);
+            await _context.SaveChangesAsync(ct);
+
+            var fulfilled = await _bus.InvokeAsync<Result>(new FulfillPaidOrderCommand(order.Id), ct);
+            if (fulfilled.IsFailure)
+            {
+                _logger.LogError(
+                    "Free order {OrderId} was settled but could not be fulfilled: {Code}",
+                    order.Id, fulfilled.ErrorCode);
+            }
+
+            return Result.Success(new PlaceOrderResultDto(order.Id, invoice.Id, order.PaymentToken, Paid: true));
+        }
 
         return Result.Success(new PlaceOrderResultDto(order.Id, invoice.Id, order.PaymentToken));
     }

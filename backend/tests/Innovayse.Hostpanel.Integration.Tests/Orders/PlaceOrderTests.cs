@@ -5,9 +5,11 @@ using System.Text.Json;
 using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Billing;
+using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Orders;
+using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
@@ -74,8 +76,9 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
 
     /// <summary>Seeds an active hosting product priced in USD (and, optionally, AMD).</summary>
     /// <param name="amdMonthly">The AMD price to set, or <see langword="null"/> for USD only.</param>
+    /// <param name="usdMonthly">The USD monthly price; <see cref="UsdMonthly"/> unless a test needs another.</param>
     /// <returns>The new product's primary key.</returns>
-    private async Task<int> SeedProductAsync(decimal? amdMonthly = null)
+    private async Task<int> SeedProductAsync(decimal? amdMonthly = null, decimal usdMonthly = UsdMonthly)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -86,7 +89,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
 
         var product = Product.Create(
             group.Id, "Starter Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
-        product.SetPrice("USD", BillingCycle.Monthly, UsdMonthly);
+        product.SetPrice("USD", BillingCycle.Monthly, usdMonthly);
         if (amdMonthly.HasValue)
         {
             product.SetPrice("AMD", BillingCycle.Monthly, amdMonthly.Value);
@@ -141,6 +144,69 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
         body.RootElement.GetProperty("orderId").GetInt32().Should().BeGreaterThan(0);
         body.RootElement.GetProperty("invoiceId").GetInt32().Should().BeGreaterThan(0);
         body.RootElement.GetProperty("paymentToken").GetString().Should().NotBeNullOrWhiteSpace();
+    }
+
+    /// <summary>
+    /// A free order needs no payment: its $0 invoice is settled at checkout, the order is accepted
+    /// and its service created. It used to wait on a payment that could never come, so every free
+    /// order stayed Pending with an Unpaid $0 invoice.
+    /// </summary>
+    [Fact]
+    public async Task FreeOrderIsSettledAndFulfilledAtCheckout()
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync(usdMonthly: 0m);
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/orders", new
+        {
+            firstName = "Ada",
+            lastName = "Lovelace",
+            email = $"free-{Guid.NewGuid():N}@example.test",
+            password = TestPassword,
+            paymentMethod = "bank_transfer",
+            items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        body.RootElement.GetProperty("paid").GetBoolean().Should().BeTrue();
+        var orderId = body.RootElement.GetProperty("orderId").GetInt32();
+        var invoiceId = body.RootElement.GetProperty("invoiceId").GetInt32();
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.Invoices.AsNoTracking().SingleAsync(i => i.Id == invoiceId)).Status.Should().Be(InvoiceStatus.Paid);
+        (await db.Orders.AsNoTracking().SingleAsync(o => o.Id == orderId)).Status.Should().NotBe(OrderStatus.Pending);
+        (await db.Transactions.AsNoTracking().AnyAsync(t => t.InvoiceId == invoiceId)).Should().BeFalse();
+    }
+
+    /// <summary>A priced order is left for the payer to pay: not marked paid, invoice unpaid.</summary>
+    [Fact]
+    public async Task PricedOrderIsNotSettledAtCheckout()
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync();
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/orders", new
+        {
+            firstName = "Ada",
+            lastName = "Lovelace",
+            email = $"priced-{Guid.NewGuid():N}@example.test",
+            password = TestPassword,
+            paymentMethod = "bank_transfer",
+            items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        body.RootElement.GetProperty("paid").GetBoolean().Should().BeFalse();
+        var invoiceId = body.RootElement.GetProperty("invoiceId").GetInt32();
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.Invoices.AsNoTracking().SingleAsync(i => i.Id == invoiceId)).Status.Should().Be(InvoiceStatus.Unpaid);
     }
 
     /// <summary>

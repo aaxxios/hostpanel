@@ -256,6 +256,19 @@ describe('useCheckoutStore.placeOrder', () => {
     expect(withoutInvoice).toEqual({ kind: CheckoutDestinationKind.Route, target: '/en/client/invoices' })
   })
 
+  it('sends a free order straight to the success page, whatever the method, without paying', async () => {
+    billing.createOrder.mockResolvedValue({ ...placed, paid: true })
+    const store = arrange('inecobank')
+
+    const destination = await store.placeOrder(input())
+
+    expect(billing.startOrderGatewayPayment).not.toHaveBeenCalled()
+    expect(billing.createOrderPaymentIntent).not.toHaveBeenCalled()
+    expect(destination).toMatchObject({ kind: CheckoutDestinationKind.Route })
+    expect((destination as { target: string }).target).toContain('/en/client/order-success?order=ORD-0042')
+    expect(useCartStore().items).toEqual([])
+  })
+
   it('keeps the API sentence and the field messages when the order is refused, and keeps the cart', async () => {
     billing.createOrder.mockRejectedValue({
       data: { detail: 'Fix the form.', type: 'VALIDATION_ERROR', errors: { email: ['Email is required.'] } }

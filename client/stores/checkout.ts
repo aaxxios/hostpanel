@@ -213,6 +213,19 @@ export const useCheckoutStore = defineStore('checkout', () => {
         }
       }
 
+      // Nothing was due: the backend settled the invoice and fulfilled the order, so there is
+      // nothing to pay and the payer goes straight to the confirmation.
+      if (result.paid) {
+        const finalAmount = totalLabel.value
+        cart.clear()
+        return {
+          kind: CheckoutDestinationKind.Route,
+          target: input.localizePath(
+            clientOrderSuccessPath(`ORD-${String(result.orderId).padStart(4, '0')}`, `&amount=${finalAmount}`)
+          )
+        }
+      }
+
       if (method === PAYMENT_MODULE_STRIPE) {
         // Step 2: open the payment intent; step 3: confirm the card with the provider's element.
         const { clientSecret } = await billing.createOrderPaymentIntent(result.orderId, result.paymentToken)
