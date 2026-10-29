@@ -68,7 +68,7 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
     /// <returns>The parsed document; the caller disposes it.</returns>
     private async Task<PdfDocument> RenderAsync(InvoicePdfModel model)
     {
-        var bytes = await Create().RenderAsync(model, CancellationToken.None);
+        var bytes = (await Create().RenderAsync(model, CancellationToken.None)).Value!;
         return PdfDocument.Open(bytes);
     }
 
@@ -98,7 +98,7 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
 
         render.IsCompleted.Should().BeFalse();
         held.Dispose();
-        var bytes = await render;
+        var bytes = (await render).Value!;
         System.Text.Encoding.ASCII.GetString(bytes, 0, 5).Should().Be("%PDF-");
     }
 
@@ -133,7 +133,7 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
 
         var next = renderer.RenderAsync(SampleModel(), CancellationToken.None);
         next.IsCompleted.Should().BeTrue("the failed render must have released the only slot");
-        (await next).Should().NotBeEmpty();
+        (await next).Value.Should().NotBeEmpty();
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
     [Fact]
     public async Task Render_ProducesPdf()
     {
-        var bytes = await Create().RenderAsync(SampleModel(), CancellationToken.None);
+        var bytes = (await Create().RenderAsync(SampleModel(), CancellationToken.None)).Value!;
 
         System.Text.Encoding.ASCII.GetString(bytes, 0, 5).Should().Be("%PDF-");
         using var document = PdfDocument.Open(bytes);
@@ -526,7 +526,7 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
     [Fact]
     public async Task Render_StaysSmallEnoughToEmail()
     {
-        var bytes = await Create().RenderAsync(SampleModel() with { Status = InvoiceStatus.Paid, PaidAt = DateTimeOffset.UtcNow }, CancellationToken.None);
+        var bytes = (await Create().RenderAsync(SampleModel() with { Status = InvoiceStatus.Paid, PaidAt = DateTimeOffset.UtcNow }, CancellationToken.None)).Value!;
 
         bytes.Length.Should().BeLessThan(60_000);
     }
@@ -561,7 +561,7 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
                 Money = new InvoicePdfMoneyFormat(string.Empty, " ֏", 0),
                 Lines = Enumerable.Range(1, 20).Select(i => new InvoicePdfLine($"Service {id}-{i} Ծաղկաձոր", 1, 1m, 1m)).ToList(),
             };
-            return (Id: id, Bytes: await renderer.RenderAsync(model, CancellationToken.None));
+            return (Id: id, Bytes: (await renderer.RenderAsync(model, CancellationToken.None)).Value!);
         })));
 
         foreach (var (id, bytes) in rendered)

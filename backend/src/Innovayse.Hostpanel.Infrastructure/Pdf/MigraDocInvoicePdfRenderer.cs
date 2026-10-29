@@ -5,6 +5,7 @@ using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Infrastructure.Storage.Settings;
+using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -183,13 +184,13 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// Waits for a slot in <see cref="InvoicePdfRenderGate"/> first, then renders inline and holds
     /// the slot until the bytes are written; a render that throws gives its slot back too.
     /// </remarks>
-    public async Task<byte[]> RenderAsync(InvoicePdfModel model, CancellationToken ct)
+    public async Task<Result<byte[]>> RenderAsync(InvoicePdfModel model, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(model);
 
         using (await _gate.EnterAsync(ct))
         {
-            return Render(model);
+            return Result<byte[]>.Success(Render(model));
         }
     }
 

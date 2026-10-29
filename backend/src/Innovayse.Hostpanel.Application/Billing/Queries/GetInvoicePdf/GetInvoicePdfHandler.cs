@@ -166,8 +166,13 @@ public sealed class GetInvoicePdfHandler
             // can tell which currency the figures are in.
             Money: invoice.Money ?? new InvoicePdfMoneyFormat(string.Empty, " " + invoice.Currency, FallbackDecimals));
 
-        var bytes = await _renderer.RenderAsync(model, ct);
-        return Result<FileDownloadDto>.Success(new FileDownloadDto(bytes, PdfContentType, $"invoice-{invoice.Id}.pdf"));
+        var rendered = await _renderer.RenderAsync(model, ct);
+        if (rendered.IsFailure)
+        {
+            return Result<FileDownloadDto>.FailureCode(rendered.ErrorCode!);
+        }
+
+        return Result<FileDownloadDto>.Success(new FileDownloadDto(rendered.Value!, PdfContentType, $"invoice-{invoice.Id}.pdf"));
     }
 
     /// <summary>The values that are not null or blank, trimmed, in order.</summary>
