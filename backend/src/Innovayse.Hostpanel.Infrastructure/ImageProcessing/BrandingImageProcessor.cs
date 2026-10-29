@@ -17,13 +17,13 @@ namespace Innovayse.Hostpanel.Infrastructure.ImageProcessing;
 /// <para>
 /// <b>Every stored file is a PNG this class encoded.</b> Nothing an operator uploads is written
 /// back out as it arrived, and that is the security property the class exists for rather than an
-/// incidental choice: re-encoding drops every ancillary chunk — EXIF with the photographer's
+/// incidental choice: re-encoding drops every ancillary chunk; EXIF with the photographer's
 /// coordinates, colour profiles, and the trailing payload that makes one file a valid image
 /// <i>and</i> a valid archive or script at the same time.
 /// </para>
 /// <para>
 /// <b>SVG is refused, not stored.</b> Storing the vector untouched is exactly the thing not to
-/// do: an SVG served from the same origin as the panel is a script tag with a picture around it —
+/// do: an SVG served from the same origin as the panel is a script tag with a picture around it;
 /// it carries <c>&lt;script&gt;</c> and event handlers, and a browser runs them, which turns "an
 /// admin uploads a logo" into stored XSS against every visitor. So the upload is refused with a
 /// readable message and the operator converts to PNG once, rather than the product growing a
@@ -40,28 +40,16 @@ namespace Innovayse.Hostpanel.Infrastructure.ImageProcessing;
 /// <c>backend/Directory.Packages.props</c>.
 /// </para>
 /// </remarks>
-internal sealed class BrandingImageProcessor : IBrandingImageProcessor
+public sealed class BrandingImageProcessor : IBrandingImageProcessor
 {
-    /// <summary>Logs the precise reason a refusal was reached -- which check failed, whether the SVG parsed -- which is deliberately never returned to the caller (rules/security.md).</summary>
-    private readonly ILogger<BrandingImageProcessor> _logger;
-
-    /// <summary>Initializes a new instance of the <see cref="BrandingImageProcessor"/> class.</summary>
-    /// <param name="options">Ceilings and paths for branding uploads.</param>
-    /// <param name="logger">Logs the precise reason a refusal was reached -- which check failed, whether the SVG parsed -- which is deliberately never returned to the caller (rules/security.md).</param>
-    public BrandingImageProcessor(IOptions<BrandingOptions> options, ILogger<BrandingImageProcessor> logger)
-    {
-        _options = options.Value;
-        _logger = logger;
-    }
-
     /// <summary>
     /// The square icon set generated from a favicon upload: the file name each rendition is
     /// stored under, its edge in pixels, and what links it.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The names are the workspace's, not this feature's -- every product's static root carries
-    /// the same eight file names, and `innovayse-workspace/brand/README.md` is where that list
+    /// The names are the static root's, not this feature's: the storefront and the admin static
+    /// roots carry the same eight file names, and `docs/brand/README.md` is where that list
     /// is written down. An upload has to produce exactly those names, because the pages that
     /// link them are the same pages that link the committed defaults.
     /// </para>
@@ -72,15 +60,15 @@ internal sealed class BrandingImageProcessor : IBrandingImageProcessor
     /// <c>maskable</c>.
     /// </para>
     /// </remarks>
-    private static readonly (string File, int Size, BrandingRole Role)[] FaviconSet =
+    private static readonly FaviconVariant[] FaviconSet =
     [
-        ("favicon-16x16.png", 16, BrandingRole.Icon),
-        ("favicon-32x32.png", 32, BrandingRole.Icon),
-        ("apple-touch-icon.png", 180, BrandingRole.AppleTouch),
-        ("icon-192.png", 192, BrandingRole.Android),
-        ("icon-512.png", 512, BrandingRole.Android),
-        ("icon-maskable-192.png", 192, BrandingRole.Maskable),
-        ("icon-maskable-512.png", 512, BrandingRole.Maskable),
+        new("favicon-16x16.png", 16, BrandingRole.Icon),
+        new("favicon-32x32.png", 32, BrandingRole.Icon),
+        new("apple-touch-icon.png", 180, BrandingRole.AppleTouch),
+        new("icon-192.png", 192, BrandingRole.Android),
+        new("icon-512.png", 512, BrandingRole.Android),
+        new("icon-maskable-192.png", 192, BrandingRole.Maskable),
+        new("icon-maskable-512.png", 512, BrandingRole.Maskable),
     ];
 
     /// <summary>
@@ -88,7 +76,7 @@ internal sealed class BrandingImageProcessor : IBrandingImageProcessor
     /// </summary>
     /// <remarks>
     /// An allow-list rather than "whatever the codec can decode". Skia also reads ICO, WBMP and
-    /// several camera raw formats, which no browser renders as a favicon — accepting them would
+    /// several camera raw formats, which no browser renders as a favicon: accepting them would
     /// let an operator upload a file that stores fine and then fails to display, with nothing
     /// explaining why.
     /// </remarks>
@@ -115,29 +103,44 @@ internal sealed class BrandingImageProcessor : IBrandingImageProcessor
     /// <summary>Resolved ceilings and paths.</summary>
     private readonly BrandingOptions _options;
 
+    /// <summary>Logs the precise reason a refusal was reached (which check failed, whether the SVG parsed), detail that is deliberately never returned to the caller.</summary>
+    private readonly ILogger<BrandingImageProcessor> _logger;
+
+    /// <summary>Initializes a new instance of the <see cref="BrandingImageProcessor"/> class.</summary>
+    /// <param name="options">Ceilings and paths for branding uploads.</param>
+    /// <param name="logger">Logs the precise reason a refusal was reached (which check failed, whether the SVG parsed), detail that is deliberately never returned to the caller.</param>
+    public BrandingImageProcessor(IOptions<BrandingOptions> options, ILogger<BrandingImageProcessor> logger)
+    {
+        _options = options.Value;
+        _logger = logger;
+    }
+
     /// <inheritdoc />
-    public Task<Result<IReadOnlyList<BrandingRendition>>> RenderAsync(
+    public async Task<Result<IReadOnlyList<BrandingRendition>>> RenderAsync(
         BrandingSource source,
         BrandingKind kind,
         CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(source);
         ct.ThrowIfCancellationRequested();
 
-        if (source.Content.Length == 0)
+        // At most one byte past the ceiling is ever read: enough to tell "too large" apart from
+        // "exactly at the ceiling" without buffering whatever size the client chose to send.
+        var content = await ReadCappedAsync(source.Content, _options.MaxBytes + 1, ct);
+        if (content.Length == 0)
         {
-            return Task.FromResult(Invalid("Upload was empty."));
+            return Invalid("Upload was empty.");
         }
 
-        if (source.Content.Length > _options.MaxBytes)
+        if (content.Length > _options.MaxBytes)
         {
-            return Task.FromResult(
-                TooLarge($"Upload was {source.Content.Length} bytes; ceiling is {_options.MaxBytes}."));
+            return TooLarge($"Upload was over the ceiling of {_options.MaxBytes} bytes.");
         }
 
-        var decoded = Decode(source.Content);
+        var decoded = Decode(content);
         if (decoded.IsFailure)
         {
-            return Task.FromResult(Result<IReadOnlyList<BrandingRendition>>.FailureCode(decoded.ErrorCode!));
+            return Result<IReadOnlyList<BrandingRendition>>.FailureCode(decoded.ErrorCode!);
         }
 
         using var image = decoded.Value!;
@@ -146,7 +149,31 @@ internal sealed class BrandingImageProcessor : IBrandingImageProcessor
             ? RenderFaviconSet(image)
             : RenderLogo(image);
 
-        return Task.FromResult(Result<IReadOnlyList<BrandingRendition>>.Success(renditions));
+        return Result<IReadOnlyList<BrandingRendition>>.Success(renditions);
+    }
+
+    /// <summary>Reads a stream into memory, stopping once <paramref name="limit"/> bytes are held.</summary>
+    /// <param name="content">The uploaded stream.</param>
+    /// <param name="limit">The most bytes to read.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The bytes read, never more than <paramref name="limit"/>.</returns>
+    private static async Task<byte[]> ReadCappedAsync(Stream content, int limit, CancellationToken ct)
+    {
+        using var buffer = new MemoryStream();
+        var chunk = new byte[81920];
+        while (buffer.Length < limit)
+        {
+            var wanted = (int)Math.Min(chunk.Length, limit - buffer.Length);
+            var read = await content.ReadAsync(chunk.AsMemory(0, wanted), ct);
+            if (read == 0)
+            {
+                break;
+            }
+
+            buffer.Write(chunk, 0, read);
+        }
+
+        return buffer.ToArray();
     }
 
     /// <summary>
@@ -160,7 +187,7 @@ internal sealed class BrandingImageProcessor : IBrandingImageProcessor
     private Result<SKBitmap> Decode(byte[] content)
     {
         // Named before anything else, because it is the one refusal an operator will hit by
-        // accident: the admin panel used to accept SVG, so the message has to say what to do.
+        // accident (logos are often kept as SVG), so the message has to say what to do.
         if (LooksLikeSvg(content))
         {
             return Invalid<SKBitmap>("Upload is SVG. Vectors are not stored: convert to PNG before uploading.");
@@ -286,7 +313,7 @@ internal sealed class BrandingImageProcessor : IBrandingImageProcessor
 
         // The primary is the largest ordinary icon rather than the upload as it arrived: it is
         // what a browser with no size preference picks, and it has to be square like the rest.
-        // Named favicon.png, not favicon.ico -- this process encodes PNG, and every surface that
+        // Named favicon.png, not favicon.ico: this process encodes PNG, and every surface that
         // links the uploaded set links it by this name.
         var largest = FaviconSet.Where(f => f.Role != BrandingRole.Maskable).Max(f => f.Size);
         renditions.Add(new BrandingRendition(
@@ -369,8 +396,7 @@ internal sealed class BrandingImageProcessor : IBrandingImageProcessor
     /// Android crops an adaptive icon to whatever silhouette the launcher chooses and
     /// guarantees only the inner 80%. The ordinary rendition cannot be reused: its transparent
     /// margin would be cropped into a smaller, lopsided square. So the canvas is filled edge to
-    /// edge and the artwork sits well inside the safe circle -- the same 70% the workspace's
-    /// hand-drawn maskable marks use, in `brand/maskable/`.
+    /// edge and the artwork sits well inside the safe circle, at 70% of the canvas.
     /// </para>
     /// <para>
     /// The field is taken from the upload's own top-left pixel rather than a colour chosen

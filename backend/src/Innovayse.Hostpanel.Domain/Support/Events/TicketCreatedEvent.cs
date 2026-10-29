@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Support.Events;
+
 /// <summary>
 /// Raised when a new support ticket is successfully created.
 /// Used to trigger notifications to the assigned department.
@@ -12,7 +13,7 @@ namespace Innovayse.Hostpanel.Domain.Support.Events;
 public record TicketCreatedEvent(int TicketId, int ClientId, int DepartmentId) : IDomainEvent
 {
     /// <summary>
-    /// When the change was made, UTC. Stamped at construction; nothing reads a clock in this domain yet.
+    /// When the change was made, UTC, given by whoever raised the event.
     /// </summary>
-    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+    public required DateTimeOffset OccurredAt { get; init; }
 }

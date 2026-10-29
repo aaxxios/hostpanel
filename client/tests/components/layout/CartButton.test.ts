@@ -6,6 +6,7 @@ import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import LayoutCartButton from '~/components/layout/CartButton.vue'
 import { useCartStore } from '~/stores/cart'
 import type { CartItem } from '~/types/cartitem'
+import { PricingCycle } from '~/types/pricingcycle'
 
 /**
  * Builds a minimal cart line.
@@ -16,7 +17,7 @@ import type { CartItem } from '~/types/cartitem'
 const line = (pid: number): CartItem => ({
   pid,
   name: `Plan ${pid}`,
-  billingcycle: 'monthly',
+  billingcycle: PricingCycle.Monthly,
   cycleLabel: 'Monthly',
   amount: 10,
   currency: 'USD',

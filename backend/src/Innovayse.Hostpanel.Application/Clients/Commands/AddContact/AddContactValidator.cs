@@ -24,25 +24,25 @@ public sealed class AddContactValidator : LocalizedValidator<AddContactCommand>
             .MaximumLength(50).WithMessage(L["ClientContactPhoneInvalid"])
             .When(x => x.Phone is not null);
         RuleFor(x => x.Type).IsInEnum().WithMessage(L["ClientContactTypeInvalid"]);
-        RuleFor(x => x.Street)
+        RuleFor(x => x.Address.Street)
             .MaximumLength(200).WithMessage(L["ClientContactStreetInvalid"])
-            .When(x => x.Street is not null);
-        RuleFor(x => x.Address2)
+            .When(x => x.Address.Street is not null);
+        RuleFor(x => x.Address.Address2)
             .MaximumLength(200).WithMessage(L["ClientContactAddress2Invalid"])
-            .When(x => x.Address2 is not null);
-        RuleFor(x => x.City)
+            .When(x => x.Address.Address2 is not null);
+        RuleFor(x => x.Address.City)
             .MaximumLength(100).WithMessage(L["ClientContactCityInvalid"])
-            .When(x => x.City is not null);
-        RuleFor(x => x.State)
+            .When(x => x.Address.City is not null);
+        RuleFor(x => x.Address.State)
             .MaximumLength(100).WithMessage(L["ClientContactStateInvalid"])
-            .When(x => x.State is not null);
-        RuleFor(x => x.PostCode)
+            .When(x => x.Address.State is not null);
+        RuleFor(x => x.Address.PostCode)
             .MaximumLength(20).WithMessage(L["ClientContactPostCodeInvalid"])
-            .When(x => x.PostCode is not null);
-        // Guarded on blank, not on null -- an unfilled country field arrives as "" from some
+            .When(x => x.Address.PostCode is not null);
+        // Guarded on blank, not on null: an unfilled country field arrives as "" from some
         // screens, and Length(2) cannot pass on "".
-        RuleFor(x => x.Country)
+        RuleFor(x => x.Address.Country)
             .Length(2).WithMessage(L["ClientContactCountryInvalid"])
-            .When(x => !string.IsNullOrEmpty(x.Country));
+            .When(x => !string.IsNullOrEmpty(x.Address.Country));
     }
 }

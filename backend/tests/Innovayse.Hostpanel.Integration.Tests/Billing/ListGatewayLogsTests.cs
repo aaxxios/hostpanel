@@ -1,13 +1,10 @@
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Application.Billing.Queries.ListGatewayLogs.Enums;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -53,7 +50,7 @@ public sealed class ListGatewayLogsTests(IntegrationTestFactory factory) : IClas
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var invoice = await context.Invoices.FirstAsync(i => i.Id == invoiceId, CancellationToken.None);
-        invoice.SetGatewaySession(module, orderId);
+        invoice.SetGatewaySession(module, orderId, scope.ServiceProvider.GetRequiredService<IClock>().UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
         return invoiceId;
     }
@@ -122,7 +119,7 @@ public sealed class ListGatewayLogsTests(IntegrationTestFactory factory) : IClas
         past.Should().BeEmpty();
     }
 
-    /// <summary>Paging splits the log and reports the total across pages.</summary>
+    /// <summary>Paging splits the log and reports the page number, the page count and the total across pages.</summary>
     [Fact]
     public async Task ListPagesTheLog()
     {
@@ -138,6 +135,8 @@ public sealed class ListGatewayLogsTests(IntegrationTestFactory factory) : IClas
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         body.RootElement.GetProperty("totalCount").GetInt32().Should().Be(3);
         body.RootElement.GetProperty("items").GetArrayLength().Should().Be(1);
+        body.RootElement.GetProperty("pageNumber").GetInt32().Should().Be(2);
+        body.RootElement.GetProperty("totalPages").GetInt32().Should().Be(2);
     }
 
     /// <summary>A page size over the ceiling is refused by the validator with 400.</summary>

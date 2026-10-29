@@ -6,8 +6,8 @@ using Microsoft.Extensions.Localization;
 namespace Innovayse.Hostpanel.Application.Billing.Commands.PayMyInvoice;
 
 /// <summary>
-/// Validator for <see cref="PayMyInvoiceCommand"/>. Checks only the shape of the id; whether it
-/// names an invoice the caller may pay is the handler's answer.
+/// Validator for <see cref="PayMyInvoiceCommand"/>. Checks only the shape of the ids; whether they
+/// name an invoice the caller may pay and a method saved on the caller's account is the handler's answer.
 /// </summary>
 public sealed class PayMyInvoiceValidator : LocalizedValidator<PayMyInvoiceCommand>
 {
@@ -17,5 +17,7 @@ public sealed class PayMyInvoiceValidator : LocalizedValidator<PayMyInvoiceComma
         : base(localizer)
     {
         RuleFor(x => x.InvoiceId).MustBePositiveId(L["InvoiceIdInvalid"]);
+        RuleFor(x => x.PaymentMethodId).NotEmpty().WithMessage(L["PaymentMethodRequired"]);
+        RuleFor(x => x.AttemptId).NotEmpty().WithMessage(L["PaymentAttemptRequired"]);
     }
 }

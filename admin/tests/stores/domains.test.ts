@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { translate } from '@/lib/translate'
 import { useDomainsStore } from '@/stores/domains'
+import { DomainStatus } from '@/types/domain'
 import { json, problem, stubFetch, stubOffline, callOf, invalid } from '../helpers/fetch'
 
 describe('domainsStore loads', () => {
@@ -81,7 +82,7 @@ describe('domainsStore writes', () => {
     expect(await store.update(3, {
       firstPaymentAmount: 0, recurringAmount: 0, paymentMethod: null, promotionCode: null,
       subscriptionId: null, adminNotes: null, expiresAt: null, nextDueDate: null,
-      registrationPeriod: 0, status: 'Active', nameservers: [],
+      registrationPeriod: 0, status: DomainStatus.Active, nameservers: [],
     })).toBe(false)
     expect(store.actionError).toBe('Check the form.')
     expect(store.fieldErrors).toEqual({ registrationPeriod: 'Must be at least 1.' })

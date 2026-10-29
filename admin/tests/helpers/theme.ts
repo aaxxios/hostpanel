@@ -17,7 +17,7 @@ export interface FakeSchemeQuery {
  * @returns The controller.
  */
 export const stubSchemeQuery = (light: boolean): FakeSchemeQuery => {
-  /** Listeners added through `addEventListener('change', …)`. */
+  /** Listeners added through `addEventListener('change', listener)`. */
   const listeners: Array<() => void> = []
   /** The live query object; `matches` is read on every call. */
   const query = {

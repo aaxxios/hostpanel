@@ -1,6 +1,7 @@
 using Innovayse.SDK.Plugins;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
+
 /// <summary>
 /// Resolves a configured payment gateway plugin by its module id.
 /// Implemented in Infrastructure: reads the integration settings saved from the

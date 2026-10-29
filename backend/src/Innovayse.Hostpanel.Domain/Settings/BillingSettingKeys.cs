@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace Innovayse.Hostpanel.Domain.Settings;
 
 /// <summary>
-/// The billing engine's operator settings (issue #67). Kept apart from <see cref="PortalSettingKeys"/>
+/// The billing engine's operator settings. Kept apart from <see cref="PortalSettingKeys"/>
 /// on purpose: that list feeds the anonymous storefront endpoint, and none of these is public.
 /// Seeded by <c>PortalSettingsSeeder</c>, edited in System Settings, validated by <c>UpdateSettingHandler</c>.
 /// </summary>
@@ -21,6 +21,9 @@ public static class BillingSettingKeys
     /// <summary>Days an invoice may stay overdue before the services on it are suspended.</summary>
     public const string SuspendAfterOverdueDays = "billing.renewal.suspend_after_overdue_days";
 
+    /// <summary>Days a service suspended for non-payment may stay suspended before it is terminated automatically.</summary>
+    public const string TerminateAfterSuspendedDays = "billing.renewal.terminate_after_suspended_days";
+
     /// <summary>
     /// The largest day count any of these settings accepts (the day-count and reminder patterns
     /// stop at 90). A reader that must look as far ahead as any setting can reach uses this instead
@@ -28,14 +31,20 @@ public static class BillingSettingKeys
     /// </summary>
     public const int MaxDays = 90;
 
-    // Declared before Patterns: static fields initialise in textual order.
-    // At least one day: a zero lead time would raise the invoice on the renewal date itself, due
-    // that same day, leaving the client no time to pay before the period starts.
+    /// <summary>
+    /// A day count of at least one, up to 90: the renewal lead time and the delay before a suspended
+    /// service is terminated. At least one day, because a zero lead time would raise the invoice on the
+    /// renewal date itself, due that same day, leaving the client no time to pay before the period starts,
+    /// and a zero delay would terminate a service in the same run that found it suspended.
+    /// </summary>
+    /// <remarks>Declared before <see cref="Patterns"/>: static fields initialise in textual order.</remarks>
     private static readonly ValuePattern LeadDays = new(
         new Regex("^([1-9]|[1-8][0-9]|90)$", RegexOptions.CultureInvariant),
         "a whole number of days from 1 to 90",
         v => v);
 
+    /// <summary>A day count from 0 to 90, for settings where zero means "on the day".</summary>
+    /// <remarks>Declared before <see cref="Patterns"/>: static fields initialise in textual order.</remarks>
     private static readonly ValuePattern DayCount = new(
         new Regex("^([0-9]|[1-8][0-9]|90)$", RegexOptions.CultureInvariant),
         "a whole number of days from 0 to 90",
@@ -47,6 +56,7 @@ public static class BillingSettingKeys
         {
             [InvoiceDaysBefore] = LeadDays,
             [SuspendAfterOverdueDays] = DayCount,
+            [TerminateAfterSuspendedDays] = LeadDays,
             [ReminderDays] = new(
                 new Regex("^\\s*([1-9]|[1-8][0-9]|90)\\s*(,\\s*([1-9]|[1-8][0-9]|90)\\s*)*$", RegexOptions.CultureInvariant),
                 "comma-separated days from 1 to 90, like 7,3,1",
@@ -58,12 +68,13 @@ public static class BillingSettingKeys
         };
 
     /// <summary>Every key with its seeded value and the description shown in System Settings.</summary>
-    public static readonly IReadOnlyList<(string Key, string Value, string Description)> Defaults =
+    public static readonly IReadOnlyList<SettingDefault> Defaults =
     [
-        (InvoiceDaysBefore, "14", "Days before a service or domain renews that its renewal invoice is raised."),
-        (ReminderDays, "7,3,1", "Days before a renewal invoice is due on which a reminder is mailed. Empty sends none."),
-        (AutoApplyCredit, "true", "Pay renewal invoices from the client's credit balance automatically (true/false)."),
-        (SuspendAfterOverdueDays, "3", "Days an invoice may stay overdue before the services on it are suspended."),
+        new(InvoiceDaysBefore, "14", "Days before a service or domain renews that its renewal invoice is raised."),
+        new(ReminderDays, "7,3,1", "Days before a renewal invoice is due on which a reminder is mailed. Empty sends none."),
+        new(AutoApplyCredit, "true", "Pay renewal invoices from the client's credit balance automatically (true/false)."),
+        new(SuspendAfterOverdueDays, "3", "Days an invoice may stay overdue before the services on it are suspended."),
+        new(TerminateAfterSuspendedDays, "14", "Days a service suspended for non-payment stays suspended before it is terminated and its hosting account removed."),
     ];
 
     /// <summary>Keys that may be saved empty although they seed with a value.</summary>

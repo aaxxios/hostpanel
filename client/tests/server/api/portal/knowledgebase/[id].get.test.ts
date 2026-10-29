@@ -27,7 +27,7 @@ afterEach(async () => {
 
 describe('GET /api/portal/knowledgebase/:id', () => {
   it('returns the article with a tag-free excerpt and the original body', async () => {
-    backend.respondWith(() => ({ body: { id: 9, title: 'Guide', content: '<h1>Hi</h1><p>There</p>', category: 'Email', isPublished: true } }))
+    backend.respondWith(() => ({ body: { id: 9, title: 'Guide', content: '<h1>Hi</h1><p>There</p>', category: 'Email' } }))
 
     const result = await route.default(makeEvent({ params: { id: '9' }, headers: { 'x-language': 'hy' } }))
 

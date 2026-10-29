@@ -1,6 +1,5 @@
 using Innovayse.Hostpanel.API.Authorization;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
-using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Notifications.Common;
 using Innovayse.Hostpanel.Application.Notifications.Queries.GetMyEmailLog;
 using Innovayse.Hostpanel.Application.Notifications.Queries.ListMyEmailLogs;
@@ -23,6 +22,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 /// action dispatches once; the handler behind it resolves the caller and scopes the read.
 /// </remarks>
 [Route("api/me/emails")]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class MyEmailsController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -36,25 +36,26 @@ public sealed class MyEmailsController : BaseApiController
     }
 
     /// <summary>Returns the emails sent to the authenticated client, newest first.</summary>
-    /// <param name="page">1-based page number.</param>
-    /// <param name="pageSize">Entries per page; the query clamps this to 1-100.</param>
+    /// <param name="query">The page and page size; the read clamps the size to 1-100.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 with the page; 401 without a session; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>;
-    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewEmails</c>.
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewEmails</c>;
+    /// 400 when the body, query or route fails validation; 429 when the rate limit is hit.
     /// </returns>
     [HttpGet]
     [Authorize(Policy = Policies.Client)]
     [RequiresClientPermission(ClientPermission.ViewEmails)]
-    [ProducesResponseType(typeof(PagedResult<EmailLogDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedList<MyEmailLogDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyEmailsAsync(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        CancellationToken ct = default)
+        [FromQuery] ListMyEmailLogsQuery query,
+        CancellationToken ct)
     {
-        var outcome = await _bus.InvokeAsync<Result<PagedResult<EmailLogDto>>>(
-            new ListMyEmailLogsQuery(page, pageSize), ct);
+        var outcome = await _bus.InvokeAsync<Result<PaginatedList<MyEmailLogDto>>>(query, ct);
         return HandleResult(outcome);
     }
 
@@ -63,19 +64,22 @@ public sealed class MyEmailsController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 with the email; 404 with <c>EMAIL_LOG_NOT_FOUND</c> when it does not exist or belongs
-    /// to another account -- the two are answered alike on purpose, see
+    /// to another account: the two are answered alike on purpose, see
     /// <see cref="Application.Notifications.Queries.GetClientEmailLog.GetClientEmailLogHandler"/>;
-    /// 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>;
-    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewEmails</c>.
+    /// 401 without a session; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>;
+    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewEmails</c>;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpGet("{id:int}")]
     [Authorize(Policy = Policies.Client)]
     [RequiresClientPermission(ClientPermission.ViewEmails)]
-    [ProducesResponseType(typeof(EmailLogDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(MyEmailLogDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyEmailAsync(int id, CancellationToken ct)
     {
-        var outcome = await _bus.InvokeAsync<Result<EmailLogDetailDto>>(new GetMyEmailLogQuery(id), ct);
+        var outcome = await _bus.InvokeAsync<Result<MyEmailLogDetailDto>>(new GetMyEmailLogQuery(id), ct);
         return HandleResult(outcome);
     }
 }

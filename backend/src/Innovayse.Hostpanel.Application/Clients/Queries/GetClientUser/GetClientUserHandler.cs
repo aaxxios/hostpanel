@@ -49,7 +49,7 @@ public sealed class GetClientUserHandler
 
         // Assembled from the account and the client already loaded, rather than from one store
         // that held both. The language comes off the account, which is where it is actually
-        // stored; an SSO-backed provider answers null for it, so the screen shows nothing rather
+        // stored; a provider-backed provider answers null for it, so the screen shows nothing rather
         // than a value hostpanel invented. The timestamp is the client one, which is the one this
         // screen is about.
         return Result<UserDetailDto>.Success(new UserDetailDto(

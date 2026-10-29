@@ -5,4 +5,4 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.SendRenewalReminder;
 /// the <c>InvoiceReminders</c> row for the threshold decides whether anything is sent.
 /// </summary>
 /// <param name="InvoiceId">The invoice.</param>
-public record SendRenewalReminderCommand(int InvoiceId);
+public sealed record SendRenewalReminderCommand(int InvoiceId);

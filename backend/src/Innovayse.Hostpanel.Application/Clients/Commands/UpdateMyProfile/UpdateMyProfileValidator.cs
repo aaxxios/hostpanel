@@ -5,9 +5,10 @@ using Microsoft.Extensions.Localization;
 namespace Innovayse.Hostpanel.Application.Clients.Commands.UpdateMyProfile;
 
 /// <summary>
-/// Validator for <see cref="UpdateMyProfileCommand"/>. Declares no rules: the handler forwards the
-/// fields to <c>UpdateClientCommand</c>, whose validator owns every field rule and which only runs
-/// once the caller's profile has been found -- so a caller with no profile still answers 404.
+/// Validator for <see cref="UpdateMyProfileCommand"/>. Declares no rules of its own: the handler
+/// overlays the provided members on the stored profile and dispatches <c>UpdateClientCommand</c>,
+/// whose validator owns every field rule, so each rule lives in one place and a caller with no
+/// profile still answers 404 before any field is judged.
 /// </summary>
 public sealed class UpdateMyProfileValidator : LocalizedValidator<UpdateMyProfileCommand>
 {

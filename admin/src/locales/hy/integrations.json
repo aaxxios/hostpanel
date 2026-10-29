@@ -7,7 +7,8 @@
   },
   "integrationCard": {
     "plugin": "Պլագին",
-    "configure": "Կարգավորել →"
+    "configure": "Կարգավորել →",
+    "notConfigured": "Կարգավորված չէ"
   },
   "integrationStatusSidebar": {
     "connectionStatus": "Միացման վիճակ",
@@ -17,9 +18,7 @@
     "endpoint": "Վերջնակետ",
     "tested": "Ստուգվել է",
     "roundTrip": "Արձագանքի ժամանակ",
-    "previouslyTestedOk": "Նախկինում հաջողությամբ ստուգվել է",
     "notTestedYet": "Դեռ չի ստուգվել",
-    "lastTestedFormatlasttested": "Վերջին ստուգում՝ {formatLastTested}",
     "setupNote": "Կարգավորման նշում"
   },
   "cwp7Integration": {
@@ -59,5 +58,8 @@
   "integrationConfigForm": {
     "enterValue": "Մուտքագրեք՝ {label}",
     "chooseValue": "Ընտրեք՝ {label}"
+  },
+  "integrationDetail": {
+    "saved": "Կարգավորումները պահպանվեցին։"
   }
 }

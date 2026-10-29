@@ -4,20 +4,20 @@
  *
  * A closed set the page branches on, so it is an enum rather than a union of string literals.
  * `Paid`, `Pending` and `Declined` are only ever the backend's own word (the API sends them as
- * these strings); `Unknown` means no authoritative answer could be had, and `Missing` that the
+ * these exact strings, so a response's `state` is read as this enum without any mapping); `Unknown` means no authoritative answer could be had, and `Missing` that the
  * link carried nothing to verify.
  */
 export enum GatewayPaymentState {
   /** The check is under way. */
-  Verifying = 'verifying',
+  Verifying = 'Verifying',
   /** The bank confirmed the payment. */
-  Paid = 'paid',
+  Paid = 'Paid',
   /** The bank has not settled the payment yet. */
-  Pending = 'pending',
+  Pending = 'Pending',
   /** The bank declined the payment. */
-  Declined = 'declined',
+  Declined = 'Declined',
   /** No authoritative answer could be obtained (network error, timeout, proxy failure). */
-  Unknown = 'unknown',
+  Unknown = 'Unknown',
   /** The URL never carried an order or invoice id, so there is no payment attempt to check. */
-  Missing = 'missing'
+  Missing = 'Missing'
 }

@@ -31,6 +31,18 @@
       </UiCard>
 
       <UiForm id="two-factor-form" data-testid="two-factor-form" :error="tfaModalError" spacing="sm" @submit="onSubmit">
+        <!-- Switching it off asks for the password as well: the code proves the device, the
+             password proves the person, and a session someone else is holding has neither. -->
+        <UiInput
+          v-if="!isEnable"
+          v-model="currentPassword"
+          type="password"
+          :label="$t('client.twoFactor.currentPassword')"
+          :placeholder="$t('client.twoFactor.currentPasswordPlaceholder')"
+          autocomplete="current-password"
+          required
+          testid="account-2fa-password"
+        />
         <UiOtpInput
           v-model="code"
           :length="6"
@@ -54,7 +66,7 @@
 <script setup lang="ts">
 /**
  * TwoFactorDialog - the dialog that collects an authenticator code to enable or disable
- * two-factor.
+ * two-factor, and the current password when disabling.
  *
  * In enable mode it also shows the QR and the manual secret. Submitting goes through the
  * account store, which refreshes the profile on success; the dialog then closes itself.
@@ -102,6 +114,9 @@ const { tfaSaving, tfaModalError } = storeToRefs(account)
 /** The code typed so far. */
 const code = ref('')
 
+/** The current password typed so far; asked for only when switching two-factor off. */
+const currentPassword = ref('')
+
 /** Whether the dialog is enrolling (true) or disabling (false). */
 const isEnable = computed<boolean>(() => props.mode === TwoFactorMode.Enable)
 
@@ -117,13 +132,17 @@ const submitLabel = computed<string>(() => {
 watch(() => props.modelValue, (open) => {
   if (open) {
     code.value = ''
+    currentPassword.value = ''
     account.clearModalErrors()
   }
 })
 
-/** Submits the code for the dialog's direction and closes on success. */
+/**
+ * Submits the code (and, when switching off, the password) for the dialog's direction and closes
+ * on success. Switching off signs this browser out, since the server ended every session.
+ */
 const onSubmit = async (): Promise<void> => {
-  if (await account.submitTwoFactor(props.mode, code.value) === ActionOutcome.Succeeded) {
+  if (await account.submitTwoFactor(props.mode, code.value, currentPassword.value) === ActionOutcome.Succeeded) {
     emit('update:modelValue', false)
   }
 }

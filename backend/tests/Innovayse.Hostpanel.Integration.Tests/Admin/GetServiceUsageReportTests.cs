@@ -1,16 +1,20 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Clients;
+using Innovayse.Hostpanel.Domain.Products;
+using Innovayse.Hostpanel.Domain.Products.Enums;
+using Innovayse.Hostpanel.Domain.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 
 /// <summary>
-/// <c>GET /api/admin/reports/service-usage</c>: an admin or reseller reads the usage items grouped
+/// <c>GET /api/admin/reports/service-usage</c>: an admin reads the usage items grouped
 /// by product, a caller with only the Client role is refused, and the route is closed to a caller
 /// with no credential. This use case refuses nothing once authorized.
 /// </summary>
-/// <remarks>Split out of the deleted <c>DashboardEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetServiceUsageReportTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -23,6 +27,37 @@ public sealed class GetServiceUsageReportTests(IntegrationTestFactory factory) :
         var response = await client.GetAsync("/api/admin/reports/service-usage");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>The report counts the services of each product and names the product.</summary>
+    [Fact]
+    public async Task CountsServicesPerProductAsync()
+    {
+        var name = $"Usage-{Guid.NewGuid():N}";
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            var group = ProductGroup.Create($"Group-{Guid.NewGuid():N}", null);
+            context.ProductGroups.Add(group);
+            await context.SaveChangesAsync(CancellationToken.None);
+            var product = Product.Create(group.Id, name, null, null, null, null, ProductType.SharedHosting, 5m, 50m, DateTimeOffset.UtcNow);
+            var client = Client.Create($"user-{Guid.NewGuid():N}", "Ada", "Lovelace", $"ada-{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
+            context.Products.Add(product);
+            context.Clients.Add(client);
+            await context.SaveChangesAsync(CancellationToken.None);
+            context.ClientServices.Add(ClientService.Create(client.Id, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow));
+            context.ClientServices.Add(ClientService.Create(client.Id, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow));
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        var admin = await AdminTestSeeds.AdminClientAsync(factory);
+        var response = await admin.GetAsync("/api/admin/reports/service-usage");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.EnumerateArray()
+            .Single(item => item.GetProperty("productName").GetString() == name)
+            .GetProperty("count").GetInt32().Should().Be(2);
     }
 
     /// <summary>A caller with only the Client role is refused with 403.</summary>

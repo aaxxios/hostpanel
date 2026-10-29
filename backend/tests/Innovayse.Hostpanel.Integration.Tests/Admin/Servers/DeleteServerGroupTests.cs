@@ -1,18 +1,19 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Products;
+using Innovayse.Hostpanel.Domain.Products.Enums;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
 /// <summary>
 /// <c>DELETE /api/admin/server-groups/{id}</c>: creating then deleting a group removes it,
-/// deleting it again answers <c>SERVER_GROUP_NOT_FOUND</c>, a caller with only the Client role is
+/// deleting it again answers <c>SERVER_GROUP_NOT_FOUND</c>, a group a product still uses is refused
+/// with <c>SERVER_GROUP_IN_USE</c>, a caller with only the Client role is
 /// refused, and the route is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>ServerGroupsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DeleteServerGroupTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -30,6 +31,30 @@ public sealed class DeleteServerGroupTests(IntegrationTestFactory factory) : ICl
         var deleteAgain = await client.DeleteAsync($"/api/admin/server-groups/{groupId}");
         deleteAgain.StatusCode.Should().Be(HttpStatusCode.NotFound);
         await ServersTestSeeds.AssertCodeAsync(deleteAgain, HostpanelErrorCodes.SERVER_GROUP_NOT_FOUND);
+    }
+
+    /// <summary>A group a product still provisions into is refused with 409 and is kept.</summary>
+    [Fact]
+    public async Task GroupUsedByAProduct_IsRefusedAsync()
+    {
+        var client = await ServersTestSeeds.AdminClientAsync(factory);
+        var groupId = await ServersTestSeeds.CreateServerGroupAsync(client, $"Group-{Guid.NewGuid():N}");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            var productGroup = ProductGroup.Create($"group-use-{Guid.NewGuid():N}", null);
+            context.ProductGroups.Add(productGroup);
+            await context.SaveChangesAsync(CancellationToken.None);
+            context.Products.Add(Product.Create(
+                productGroup.Id, $"Plan {Guid.NewGuid():N}", null, null, null, "plan", ProductType.SharedHosting, 0m, 0m,
+                DateTimeOffset.UtcNow, serverGroupId: groupId));
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        var delete = await client.DeleteAsync($"/api/admin/server-groups/{groupId}");
+
+        delete.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await ServersTestSeeds.AssertCodeAsync(delete, HostpanelErrorCodes.SERVER_GROUP_IN_USE);
     }
 
     /// <summary>A caller with only the Client role is refused with 403.</summary>

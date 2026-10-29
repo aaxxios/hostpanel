@@ -9,12 +9,13 @@
 import { computed, toRef } from 'vue'
 import { useSettingDraft } from '@/composables/useSettingDraft'
 import SettingNotSeeded from '@/components/settings/SettingNotSeeded.vue'
+import SettingOutcome from '@/components/settings/SettingOutcome.vue'
 import SettingSaveButton from '@/components/settings/SettingSaveButton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiToggle from '@/components/ui/UiToggle.vue'
 import { SettingEnv, SettingToggle } from '@/types/setting'
-import type { Setting, SettingKey } from '@/types/setting'
+import type { Setting, SettingKey, SettingSave } from '@/types/setting'
 
 /** Props for SettingToggleField. */
 const props = defineProps<{
@@ -30,13 +31,8 @@ const props = defineProps<{
   defaultOn: boolean
   /** Test id of the switch; the Save button adds `-save`. */
   testid: string
-  /** True while a save is in flight. */
-  saving?: boolean
-}>()
-
-const emit = defineEmits<{
-  /** Emitted with the row id and the new value when the operator saves the switch. */
-  save: [id: number, value: string]
+  /** Persists one row and answers how it went; each control shows its own outcome. */
+  save: SettingSave
 }>()
 
 /** The settings list as a ref, which is what the draft composable watches. */
@@ -78,9 +74,10 @@ const enabled = computed<boolean>({
     </UiStack>
     <SettingSaveButton
       :dirty="draft.dirty.value"
-      :saving="saving"
+      :saving="draft.saving.value"
       :data-testid="`${testid}-save`"
-      @click="draft.submit((id, value) => emit('save', id, value))"
+      @click="draft.submit(save)"
     />
+    <SettingOutcome :outcome="draft.outcome.value" />
   </UiStack>
 </template>

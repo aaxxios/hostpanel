@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
@@ -45,16 +46,18 @@ public static class EventHandlerTestHost
 
             builder.ConfigureTestServices(services =>
             {
-                services.AddScoped<IEmailSender>(_ => emailSender);
+                services.RemoveAll<IEmailSender>();
+                services.AddSingleton<IEmailSender>(emailSender);
 
                 // Seeding saves must not publish their own events; each test dispatches its one event by hand.
+                services.RemoveAll<IDomainEventGate>();
                 services.AddScoped<IDomainEventGate, SuppressedDomainEventGate>();
             });
         });
 
     /// <summary>
     /// Seeds a client backed by a genuine ASP.NET Identity user, and returns it alongside the
-    /// user's email — <see cref="Client"/> itself carries no email field; the address lives on
+    /// user's email. <see cref="Client"/> itself carries no email field; the address lives on
     /// the identity account <c>IIdentityProvider.FindBySubjectAsync</c> resolves.
     /// </summary>
     /// <param name="services">The scoped service provider to resolve the user manager from.</param>
@@ -63,7 +66,7 @@ public static class EventHandlerTestHost
     /// <param name="firstName">The client's first name.</param>
     /// <param name="lastName">The client's last name.</param>
     /// <returns>The saved client and the identity email it is backed by.</returns>
-    public static async Task<(Client Client, string Email)> SeedIdentityClientAsync(
+    public static async Task<SeededIdentityClient> SeedIdentityClientAsync(
         IServiceProvider services,
         IHostpanelDbContext context,
         string emailPrefix,
@@ -76,9 +79,9 @@ public static class EventHandlerTestHost
         var created = await userManager.CreateAsync(user, "Pass@123!");
         Assert.True(created.Succeeded);
 
-        var client = Client.Create(user.Id, firstName, lastName, email);
+        var client = Client.Create(user.Id, firstName, lastName, email, DateTimeOffset.UtcNow);
         context.Clients.Add(client);
         await context.SaveChangesAsync(CancellationToken.None);
-        return (client, email);
+        return new SeededIdentityClient(client, email);
     }
 }

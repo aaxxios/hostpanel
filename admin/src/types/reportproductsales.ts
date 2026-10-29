@@ -34,6 +34,8 @@ export interface ReportIncomeByProduct {
   totalUnitsSold: number
   /** Income overall. */
   totalIncome: number
+  /** ISO 4217 code of the base currency every income figure is converted to. */
+  currency: string
 }
 
 /** Units and value of one product (monthly orders report; the income report maps onto it). */
@@ -42,7 +44,7 @@ export interface ReportSalesProduct {
   productId: number
   /** Product name. */
   productName: string
-  /** Units sold. */
+  /** Units ordered: one per order line. */
   unitsSold: number
   /** Value of the units sold. */
   value: number
@@ -72,4 +74,6 @@ export interface ReportMonthlyOrders {
   totalUnitsSold: number
   /** Value overall. */
   totalValue: number
+  /** ISO 4217 code of the base currency every value is converted to. */
+  currency: string
 }

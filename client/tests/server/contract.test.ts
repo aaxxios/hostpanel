@@ -98,4 +98,14 @@ describe('BFF contract', () => {
 
     expect(offenders).toEqual([])
   })
+
+  it('reaches the sign-on service only through signOnFetch, bar the code exchange of the callback', () => {
+    const allowed = new Set(['utils/signon-http.ts', 'api/portal/auth/sso/callback.get.ts'])
+    const offenders = walk(SERVER)
+      .filter((path) => /\bssoUrl\b/.test(code(path)))
+      .map((path) => relative(SERVER, path).replace(/\\/g, '/'))
+      .filter((path) => !allowed.has(path))
+
+    expect(offenders).toEqual([])
+  })
 })

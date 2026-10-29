@@ -13,7 +13,7 @@ import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { useReport } from '@/composables/useReport'
 import { downloadCsv } from '@/lib/reportsCsv'
-import { formatReportAmount } from '@/lib/money'
+import { formatCurrencyCode } from '@/lib/money'
 import { ReportCellFormat } from '@/types/reportcolumn'
 import type { ReportColumn } from '@/types/reportcolumn'
 import type { ReportTopClient } from '@/types/reporttopclient'
@@ -26,10 +26,21 @@ const { t } = useI18n()
 /** Name of the downloaded file. */
 const CSV_FILE_NAME = 'top-clients-by-income.csv'
 
-const { data } = useReport<ReportTopClient[]>(() => '/reports/top-clients-by-income?take=10')
+const { data, load } = useReport<ReportTopClient[]>(() => '/reports/top-clients-by-income?take=10')
 
 /** Clients ranked by income; empty until loaded. */
 const rows = computed<ReportTopClient[]>(() => data.value ?? [])
+
+/** Base currency the amounts are converted to; empty until loaded. */
+const currency = computed<string>(() => rows.value[0]?.currency ?? '')
+
+/**
+ * Formats an amount in the base currency the API converted the report to.
+ *
+ * @param amount - Amount in the report currency.
+ * @returns The amount with its currency symbol.
+ */
+const formatMoney = (amount: number): string => formatCurrencyCode(amount, currency.value)
 
 /** Table columns. */
 const columns = computed<ReportColumn[]>(() => [
@@ -44,9 +55,9 @@ const columns = computed<ReportColumn[]>(() => [
 /** Pie labels: the client names. */
 const labels = computed<string[]>(() => rows.value.map(row => row.clientName))
 
-/** Pie data: the money received from each client. */
+/** Pie data: the net income from each client. */
 const series = computed<UiChartSeries[]>(() => [
-  { label: t('shared.amountIn'), data: rows.value.map(row => row.totalAmountIn) },
+  { label: t('shared.balance'), data: rows.value.map(row => row.balance) },
 ])
 
 /** Downloads the table as a CSV file. */
@@ -60,7 +71,7 @@ const exportCsv = (): void => {
 </script>
 
 <template>
-  <ReportPage :title="t('reports.topClients.top10ClientsByIncome')" :description="t('reports.topClients.thisReportShowsThe10')">
+  <ReportPage :retry="load" :title="t('reports.topClients.top10ClientsByIncome')" :description="t('reports.topClients.thisReportShowsThe10')">
     <template #filters>
       <UiStack direction="row" justify="end" class="mb-6">
         <UiButton variant="secondary" data-testid="report-export" @click="exportCsv">
@@ -69,10 +80,10 @@ const exportCsv = (): void => {
       </UiStack>
     </template>
 
-    <ReportChartCard :type="UiChartType.Pie" :labels="labels" :series="series" :value-formatter="formatReportAmount" height="lg" />
-    <ReportTable :columns="columns" :rows="rows" row-key="clientId" :empty-text="t('reports.topClients.noData')" />
+    <ReportChartCard :type="UiChartType.Pie" :labels="labels" :series="series" :value-formatter="formatMoney" height="lg" />
+    <ReportTable :columns="columns" :rows="rows" row-key="clientId" :format-money="formatMoney" :empty-text="t('reports.topClients.noData')" />
     <UiText tone="muted" size="sm">
-      {{ t('reports.topClients.denotesConvertedToDefaultCurrency') }}
+      {{ t('reports.common.convertedToBaseCurrency', { currency }) }}
     </UiText>
   </ReportPage>
 </template>

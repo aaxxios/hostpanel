@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Admin.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -28,26 +29,18 @@ public sealed class GetServiceUsageReportHandler
     public async Task<Result<IReadOnlyList<ServiceUsageReportItemDto>>> HandleAsync(
         GetServiceUsageReportQuery query, CancellationToken ct)
     {
-        // Was IClientServiceRepository.GetAllAsync -- read-only, so no tracking is needed.
-        var services = await _context.ClientServices.AsNoTracking().ToListAsync(ct);
-
-        var grouped = services
-            .GroupBy(s => s.ProductId)
-            .Select(g => new { ProductId = g.Key, Count = g.Count() })
-            .ToList();
-
-        // Was IProductRepository.FindByIdsAsync -- read-only, so no tracking is needed.
-        var productIds = grouped.Select(g => g.ProductId).ToList();
-        var products = await _context.Products
-            .AsNoTracking()
-            .Where(p => productIds.Contains(p.Id))
+        // One query: the services are left-joined to their product and the database counts per product; a service
+        // whose product no longer exists is still counted, with a null name.
+        var rows = await (
+            from service in _context.ClientServices.AsNoTracking()
+            join product in _context.Products.AsNoTracking() on service.ProductId equals product.Id into products
+            from product in products.DefaultIfEmpty()
+            group service by new { service.ProductId, Name = product == null ? null : product.Name } into g
+            select new { g.Key.Name, Count = g.Count() })
             .ToListAsync(ct);
-        var productMap = products.ToDictionary(p => p.Id, p => p.Name);
 
-        IReadOnlyList<ServiceUsageReportItemDto> items = grouped
-            .Select(g => new ServiceUsageReportItemDto(
-                productMap.TryGetValue(g.ProductId, out var name) ? name : null,
-                g.Count))
+        IReadOnlyList<ServiceUsageReportItemDto> items = rows
+            .Select(r => new ServiceUsageReportItemDto(r.Name, r.Count))
             .OrderByDescending(r => r.Count)
             .ToList();
 

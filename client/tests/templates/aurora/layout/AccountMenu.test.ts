@@ -8,7 +8,7 @@ import AccountMenu from '~/templates/aurora/layout/AccountMenu.vue'
 import { stubAuroraGlobals } from '../auroraGlobals'
 
 /** The customer the session reports. */
-const USER = { firstname: 'Ann', lastname: 'Lee', email: 'ann@acme.test' }
+const USER = { firstName: 'Ann', lastName: 'Lee', email: 'ann@acme.test' }
 
 describe('AccountMenu', () => {
   it('shows only the avatar trigger, named after the customer, until it is opened', () => {

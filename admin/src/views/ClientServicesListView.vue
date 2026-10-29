@@ -1,21 +1,21 @@
 <script setup lang="ts">
 /**
- * Client services list -- shows all services belonging to the current client.
+ * Client services list: shows all services belonging to the current client.
  * Navigates to the service detail page when a row is clicked.
  */
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import { useServicesStore } from '@/stores/services'
-import { serviceStatusTone } from '@/lib/tones'
+import { SERVICE_STATUS_OPTIONS } from '@/lib/constants'
+import { serviceStatusTone, statusLabel } from '@/lib/tones'
 import { capitalize, formatDate } from '@/lib/format'
 import { formatPrice } from '@/lib/money'
 import type { ServiceListItem } from '@/types/service'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
@@ -32,11 +32,6 @@ import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 import { ClientSection, clientItemPath } from '@/lib/routes'
 
 const { t } = useI18n()
-
-
-/** Fallback text for fields the API leaves unresolved. */
-
-const { productLabel } = useFallbackLabels()
 
 /** Current route, source of the client id. */
 const route = useRoute()
@@ -112,9 +107,13 @@ onMounted(() => fetchServices())
       <UiText :tone="UiTextTone.Secondary">{{ t('clients.clientServicesList.loadingServices') }}</UiText>
     </UiStack>
 
-    <UiAlert v-else-if="error" variant="error" data-testid="client-services-error">
-      {{ error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="error"
+      :message="error"
+      :loading="loading"
+      testid="client-services-error"
+      @retry="fetchServices()"
+    />
 
     <UiCard v-else-if="services.length > 0">
       <UiTable density="comfortable" data-testid="client-services-table">
@@ -139,13 +138,13 @@ onMounted(() => fetchServices())
             @click="viewService(service.id)"
           >
             <UiTableCell muted>{{ service.id }}</UiTableCell>
-            <UiTableCell>{{ productLabel(service.productName) }}</UiTableCell>
+            <UiTableCell>{{ service.productName }}</UiTableCell>
             <UiTableCell muted>{{ service.domain ?? '—' }}</UiTableCell>
             <UiTableCell muted>{{ formatPrice(service.price, service.priceCurrency) }}</UiTableCell>
             <UiTableCell muted>{{ capitalize(service.billingCycle) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(service.nextDueDate) }}</UiTableCell>
             <UiTableCell>
-              <UiBadge :tone="serviceStatusTone(service.status)" small>{{ service.status }}</UiBadge>
+              <UiBadge :tone="serviceStatusTone(service.status)" small>{{ statusLabel(SERVICE_STATUS_OPTIONS, service.status) }}</UiBadge>
             </UiTableCell>
           </UiTableRow>
         </UiTableBody>

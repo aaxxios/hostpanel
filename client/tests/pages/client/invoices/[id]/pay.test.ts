@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountPage, stubClientRuntime } from '~/tests/helpers/mountClient'
 import PayPage from '~/pages/client/invoices/[id]/pay.vue'
 import { InvoiceStatus } from '~/types/invoicestatus'
+import { PaymentMethodType } from '~/types/payment'
 
 /** The mocked billing endpoints the store reaches. */
 const billingApi = vi.hoisted(() => ({
@@ -21,11 +22,11 @@ vi.mock('~/composables/apis/useBillingApi', () => ({ useBillingApi: () => billin
  * @returns The invoice.
  */
 const invoice = (status: InvoiceStatus) => ({
-  id: 41, status, currency: 'USD', subTotal: 100, credit: 0, total: 100, items: [{ id: 1, description: 'Hosting', amount: 100 }], transactions: []
+  id: 41, status, currency: 'USD', subTotal: 100, credit: 0, total: 100, amountDue: 100, items: [{ id: 1, description: 'Hosting', amount: 100 }], transactions: []
 })
 
 /** A saved card. */
-const card = { id: 'pm_1', type: 'card', description: 'Visa', gateway_name: 'stripe', card_type: 'visa', card_last_four: '4242' }
+const card = { id: 'pm_1', type: PaymentMethodType.Card, description: 'Visa', gatewayName: 'stripe', cardType: 'visa', cardLastFour: '4242' }
 
 describe('invoice payment page', () => {
   beforeEach(() => {
@@ -71,7 +72,7 @@ describe('invoice payment page', () => {
     await wrapper.find('[data-testid="invoice-pay-submit"]').trigger('click')
 
     await vi.waitFor(() => expect(wrapper.find('[data-testid="invoice-pay-success"]').exists()).toBe(true))
-    expect(billingApi.payInvoice).toHaveBeenCalledWith('41', 'pm_1')
+    expect(billingApi.payInvoice).toHaveBeenCalledWith('41', 'pm_1', expect.any(String))
   })
 
   it('links the breadcrumb back to the invoice', async () => {

@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.Application.Services.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Provisioning.Commands.ChangeMyServicePassword;
+
 /// <summary>
 /// Command for a signed-in client to change the hosting account password of one of their own
 /// services.

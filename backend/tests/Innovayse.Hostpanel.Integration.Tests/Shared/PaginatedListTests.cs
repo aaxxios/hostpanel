@@ -1,8 +1,7 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Shared.Models;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Shared;
+
 /// <summary>Pins the page arithmetic every list endpoint relies on.</summary>
 public sealed class PaginatedListTests
 {
@@ -16,7 +15,7 @@ public sealed class PaginatedListTests
     }
 
     /// <summary>
-    /// The first page never skips a row — the reason <see cref="PageOffset"/> exists is the
+    /// The first page never skips a row. The reason <see cref="PageOffset"/> exists is the
     /// overflow that <c>(pageNumber - 1) * pageSize</c> hits for a huge page, not this case, but
     /// page 1 is the floor its clamp promises.
     /// </summary>

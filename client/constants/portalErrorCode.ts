@@ -20,8 +20,8 @@ export const PortalErrorCode = {
   /**
    * The signed-in identity has no row in the backend's `clients` table.
    *
-   * Not a failure. Staff identities -- the platform superadmin above all -- authenticate fine and
-   * were simply never onboarded as customers, so every "my ..." endpoint answers 404 with this
+   * Not a failure. Staff identities, the platform superadmin above all, authenticate fine and
+   * were simply never onboarded as customers, so every "my" endpoint answers 404 with this
    * code. `stores/client.ts` turns it into a state flag so the portal renders an explanation and
    * a way out instead of a red alert; the explanation itself is the sentence the API sent.
    */
@@ -35,9 +35,18 @@ export const PortalErrorCode = {
    * BFF, not by the C# API** (`server/api/portal/auth/accept-invite.post.ts` refuses before any
    * request to the backend is possible), so the backend has no resource entry for it and its
    * sentence stays in `client.acceptInvite.signInRequired`. That is the second client-authored
-   * sentence the localization rule allows -- a guard before any request is possible.
+   * sentence the localization rule allows: a guard before any request is possible.
    */
   InviteSignInRequired: 'INVITE_SIGN_IN_REQUIRED',
+
+  /**
+   * The service a client asked for is not one of theirs, or does not exist.
+   *
+   * Written by the BFF (`server/api/portal/client/services/[id]/index.get.ts`, which picks the one
+   * service out of the client's list) with no sentence; the service page branches on it to say
+   * "not found" instead of showing a failed read with a retry.
+   */
+  ServiceNotFound: 'SERVICE_NOT_FOUND',
 } as const
 
 /** Any of the codes in {@link PortalErrorCode}. */

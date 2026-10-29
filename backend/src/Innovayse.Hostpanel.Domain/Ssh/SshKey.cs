@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Domain.Ssh.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Ssh;
 
 /// <summary>
@@ -18,7 +19,7 @@ namespace Innovayse.Hostpanel.Domain.Ssh;
 /// <para>
 /// <see cref="KeyId"/> is the stable public identifier. It is written into the server-side
 /// comment (<c>hostpanel:&lt;KeyId&gt;</c>) so the agent can find exactly this line again, and it
-/// is what the API routes use — the sequential database id is never exposed.
+/// is what the API routes use: the sequential database id is never exposed.
 /// </para>
 /// </remarks>
 public sealed class SshKey : BaseEntity, IAggregateRoot
@@ -41,14 +42,14 @@ public sealed class SshKey : BaseEntity, IAggregateRoot
     /// <summary>Gets the canonical public key line (<c>ssh-ed25519 &lt;base64&gt;</c>), without any comment.</summary>
     public string PublicKey { get; private set; } = string.Empty;
 
-    /// <summary>Gets the OpenSSH SHA256 fingerprint (<c>SHA256:…</c>).</summary>
+    /// <summary>Gets the OpenSSH SHA256 fingerprint, <c>SHA256:</c> prefixed.</summary>
     public string Fingerprint { get; private set; } = string.Empty;
 
     /// <summary>Gets the synchronisation state with the server.</summary>
     public SshKeySyncState SyncState { get; private set; }
 
-    /// <summary>Gets the provider's error code from the last failed operation, if any.</summary>
-    public string? LastSyncError { get; private set; }
+    /// <summary>Gets why the last failed provider operation failed, if any.</summary>
+    public SshProviderFailure? LastSyncError { get; private set; }
 
     /// <summary>Gets when the key was recorded.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
@@ -90,7 +91,6 @@ public sealed class SshKey : BaseEntity, IAggregateRoot
             PublicKey = publicKey,
             Fingerprint = fingerprint,
             SyncState = SshKeySyncState.Pending,
-            CreatedAt = DateTimeOffset.UtcNow,
         };
     }
 
@@ -113,8 +113,8 @@ public sealed class SshKey : BaseEntity, IAggregateRoot
     }
 
     /// <summary>Records that the install failed; the key may or may not be on the server.</summary>
-    /// <param name="error">The provider's error code.</param>
-    public void MarkInstallFailed(string error)
+    /// <param name="error">Why the provider call failed.</param>
+    public void MarkInstallFailed(SshProviderFailure error)
     {
         EnsureNotRevoked();
         SyncState = SshKeySyncState.InstallFailed;
@@ -122,17 +122,18 @@ public sealed class SshKey : BaseEntity, IAggregateRoot
     }
 
     /// <summary>Records that the provider confirmed the key is gone from the server.</summary>
-    public void MarkRevoked()
+    /// <param name="revokedAt">When the provider confirmed the removal, UTC.</param>
+    public void MarkRevoked(DateTimeOffset revokedAt)
     {
         EnsureNotRevoked();
         SyncState = SshKeySyncState.Revoked;
-        RevokedAt = DateTimeOffset.UtcNow;
+        RevokedAt = revokedAt;
         LastSyncError = null;
     }
 
     /// <summary>Records that the revoke failed; the key may still authenticate.</summary>
-    /// <param name="error">The provider's error code.</param>
-    public void MarkRevokeFailed(string error)
+    /// <param name="error">Why the provider call failed.</param>
+    public void MarkRevokeFailed(SshProviderFailure error)
     {
         EnsureNotRevoked();
         SyncState = SshKeySyncState.RevokeFailed;
@@ -148,8 +149,8 @@ public sealed class SshKey : BaseEntity, IAggregateRoot
     }
 
     /// <summary>Records a failed call that left the key's state as it was.</summary>
-    /// <param name="error">The provider's error code.</param>
-    public void RecordSyncError(string error)
+    /// <param name="error">Why the provider call failed.</param>
+    public void RecordSyncError(SshProviderFailure error)
     {
         EnsureNotRevoked();
         LastSyncError = error;

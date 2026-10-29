@@ -1,16 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
 /// <summary>
 /// <c>GET /api/reports/disk-usage</c> against Postgres: the cached disk usage report.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetDiskUsageReportTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -36,7 +32,7 @@ public sealed class GetDiskUsageReportTests(IntegrationTestFactory factory) : IC
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

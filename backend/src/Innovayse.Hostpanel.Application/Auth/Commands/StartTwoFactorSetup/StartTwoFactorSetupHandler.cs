@@ -1,6 +1,5 @@
 using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
 
@@ -32,13 +31,14 @@ public sealed class StartTwoFactorSetupHandler
     /// <param name="cmd">The command.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// Success with the secret and the <c>otpauth://</c> URI, or <c>UNAUTHORIZED</c> when the
-    /// account behind the credential is gone — the same answer an absent credential would get, so
+    /// Success with the secret and the <c>otpauth://</c> URI; <c>TWO_FACTOR_ALREADY_ENABLED</c> when
+    /// two-factor is already on; or <c>UNAUTHORIZED</c> when the
+    /// account behind the credential is gone: the same answer an absent credential would get, so
     /// the refusal does not tell an already-authenticated caller anything a stranger could not
     /// already infer about the account's existence.
     /// </returns>
     /// <remarks>
-    /// Generating a secret does not switch two-factor on —
+    /// Generating a secret does not switch two-factor on:
     /// <see cref="Innovayse.Hostpanel.Application.Auth.Commands.EnableTwoFactor.EnableTwoFactorHandler"/>
     /// does, and only after a code proves the app holds the same secret. Enabling here would lock
     /// an account out of its own sign-in the moment the person closed the page without scanning.
@@ -47,9 +47,6 @@ public sealed class StartTwoFactorSetupHandler
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var setup = await _twoFactor.StartSetupAsync(_caller.RequireUserId(), ct);
-        return setup is null
-            ? Result<TwoFactorSetupDto>.FailureCode(SharedErrorCodes.Unauthorized)
-            : Result<TwoFactorSetupDto>.Success(setup);
+        return await _twoFactor.StartSetupAsync(_caller.RequireUserId(), ct);
     }
 }

@@ -18,6 +18,9 @@ public static class PaymentMethodNames
     /// <summary>A manual bank transfer.</summary>
     public const string BankTransfer = "Bank Transfer";
 
+    /// <summary>The reference an invoice that owed nothing is marked paid with; no money moved.</summary>
+    public const string NoCharge = "No Charge";
+
     /// <summary>A payment taken through PayPal.</summary>
     public const string PayPal = "PayPal";
 

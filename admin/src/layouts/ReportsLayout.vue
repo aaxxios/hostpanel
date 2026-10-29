@@ -2,6 +2,7 @@
 /**
  * Shell of the reports area: the report list as an inner sidebar and the chosen report beside it.
  */
+import RoutedView from '@/components/layout/RoutedView.vue'
 import ReportsInnerSidebar from '@/components/reports/ReportsInnerSidebar.vue'
 import UiSidebarLayout from '@/components/ui/UiSidebarLayout.vue'
 </script>
@@ -11,6 +12,6 @@ import UiSidebarLayout from '@/components/ui/UiSidebarLayout.vue'
     <template #sidebar>
       <ReportsInnerSidebar />
     </template>
-    <RouterView />
+    <RoutedView />
   </UiSidebarLayout>
 </template>

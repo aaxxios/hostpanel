@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.Infrastructure.Auth.Settings;
 using Microsoft.Extensions.Options;

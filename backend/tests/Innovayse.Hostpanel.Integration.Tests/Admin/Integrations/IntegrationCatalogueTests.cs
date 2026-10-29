@@ -1,7 +1,5 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Admin.Integrations.Common;
 using Innovayse.Hostpanel.Domain.Settings;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Integrations;
 
@@ -49,7 +47,7 @@ public sealed class IntegrationCatalogueTests
         IntegrationCatalogue.TryGetTestable("no-such-integration", out _).Should().BeFalse();
     }
 
-    /// <summary>The form and the completeness check have always differed for Stripe; the catalogue keeps both.</summary>
+    /// <summary>The form and the completeness check have always differed for the card gateway; the catalogue keeps both.</summary>
     [Fact]
     public void StripeKeepsItsFormAndCompletenessRulesApart()
     {

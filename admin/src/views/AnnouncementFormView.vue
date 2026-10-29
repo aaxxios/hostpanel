@@ -10,6 +10,7 @@ import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiCheckbox from '@/components/ui/UiCheckbox.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiLink from '@/components/ui/UiLink.vue'
@@ -66,6 +67,9 @@ const saving = ref(false)
 /** Whether the existing announcement is being loaded. */
 const loading = ref(false)
 
+/** The sentence of a refused load of the announcement being edited, null when it loaded. */
+const loadError = ref<string | null>(null)
+
 /**
  * Loads the announcement being edited into the form.
  */
@@ -74,7 +78,7 @@ const fetchAnnouncement = async (): Promise<void> => {
     return
   }
   loading.value = true
-  await store.fetchById(announcementId.value)
+  loadError.value = (await store.fetchById(announcementId.value)) ? null : store.error
   loading.value = false
   const data = store.current
   if (data) {
@@ -136,9 +140,17 @@ onMounted(() => {
 
     <UiSkeleton v-if="loading" :lines="4" data-testid="announcement-form-loading" />
 
-    <UiAlert v-if="store.error" variant="error" data-testid="announcement-form-error">{{ store.error }}</UiAlert>
+    <UiErrorState
+      v-if="loadError !== null"
+      :message="loadError"
+      :loading="loading"
+      testid="announcement-form-load-error"
+      @retry="fetchAnnouncement"
+    />
 
-    <UiCard v-if="!loading" padding="md">
+    <UiAlert v-else-if="store.error" variant="error" data-testid="announcement-form-error">{{ store.error }}</UiAlert>
+
+    <UiCard v-if="!loading && loadError === null" padding="md">
       <UiStack>
         <UiStack v-if="form.createdOn" direction="row" gap="sm" align="center">
           <UiText tone="muted" size="md">{{ t('shared.date') }}</UiText>

@@ -155,13 +155,13 @@ onMounted(() => {
             <UiStack gap="sm">
               <UiStack direction="row" align="center" gap="sm">
                 <UiHeading :level="3" variant="card" class="min-w-0 flex-1 truncate">{{ server.name }}</UiHeading>
-                <UiBadge v-if="server.isDisabled" tone="danger" small>{{ t('shared.disabled') }}</UiBadge>
+                <UiBadge v-if="server.limits.isDisabled" tone="danger" small>{{ t('shared.disabled') }}</UiBadge>
                 <UiBadge v-else :tone="stateTone(server)" dot small />
               </UiStack>
-              <UiText tone="muted" size="sm">{{ server.hostname }}</UiText>
-              <UiText v-if="server.ipAddress" tone="muted" size="sm">{{ server.ipAddress }}</UiText>
+              <UiText tone="muted" size="sm">{{ server.endpoint.hostname }}</UiText>
+              <UiText v-if="server.endpoint.ipAddress" tone="muted" size="sm">{{ server.endpoint.ipAddress }}</UiText>
               <UiText v-if="server.accountsCount !== null" tone="muted" size="sm">
-                {{ t('integrations.cwp7Integration.accountscountValueAccounts', { accountsCount: server.accountsCount, value: server.maxAccounts ?? '∞' }) }}
+                {{ t('integrations.cwp7Integration.accountscountValueAccounts', { accountsCount: server.accountsCount, value: server.limits.maxAccounts ?? '∞' }) }}
               </UiText>
             </UiStack>
           </UiCard>

@@ -1,6 +1,6 @@
 /**
  * The endpoint set every storefront content type shares: list, create, update, delete and
- * reorder under an `/admin/...` route root.
+ * reorder under an `/admin/<area>` route root.
  *
  * No state lives here; every function rejects with an `ApiError` carrying the problem+json body.
  * The per-type composables (`useTestimonialsApi`, `usePartnersApi`, `useProjectsApi`,
@@ -27,7 +27,7 @@ export interface StorefrontApi<TItem, TPayload, TUpdatePayload = TPayload> {
 }
 
 /**
- * Endpoint functions for one `/admin/...` route root.
+ * Endpoint functions for one `/admin/<area>` route root.
  *
  * @param base - Route root of the content type, e.g. `ApiPath.AdminTestimonials`.
  * @returns One typed function per endpoint.

@@ -4,7 +4,7 @@ namespace Innovayse.Hostpanel.Application.Products.Commands.UpdateProduct;
 
 /// <summary>Command to update an existing product's details and prices.</summary>
 /// <param name="Id">
-/// Product primary key; wins over any id in the body. A value type, so it is left non-nullable —
+/// Product primary key; wins over any id in the body. A value type, so it is left non-nullable:
 /// unlike a bound string, a missing <c>int</c> in the body simply binds to <c>0</c> rather than
 /// being treated as a required member, and the route overlay (<c>command with { Id = id }</c>)
 /// replaces it before the handler ever sees that default.

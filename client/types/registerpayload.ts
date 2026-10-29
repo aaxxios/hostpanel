@@ -4,7 +4,7 @@ export interface RegisterPayload {
   firstname: string
   /** Family name. */
   lastname: string
-  /** Account email — also the sign-in identifier. */
+  /** Account email: also the sign-in identifier. */
   email: string
   /** Chosen password, in the clear; the transport is what protects it. */
   password: string

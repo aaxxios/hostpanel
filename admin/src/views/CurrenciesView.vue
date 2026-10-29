@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Admin Currencies settings view — table of configured currencies with rate, base and enabled
+ * Admin Currencies settings view: table of configured currencies with rate, base and enabled
  * state, plus the bulk exchange-rate and product-price actions.
  *
  * A result banner reports the async actions, a confirmation dialog guards the destructive or global
@@ -16,6 +16,7 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiCheckbox from '@/components/ui/UiCheckbox.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiLabel from '@/components/ui/UiLabel.vue'
@@ -237,9 +238,13 @@ onMounted(() => store.fetchAll())
 
     <SettingsLoading v-if="store.loading" :message="t('settings.currencies.loadingCurrencies')" />
 
-    <UiAlert v-else-if="store.error" variant="danger" data-testid="currencies-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="currencies-error"
+      @retry="store.fetchAll()"
+    />
 
     <UiCard v-else class="overflow-hidden">
       <UiTable density="comfortable" :empty="store.currencies.length === 0" :colspan="8">

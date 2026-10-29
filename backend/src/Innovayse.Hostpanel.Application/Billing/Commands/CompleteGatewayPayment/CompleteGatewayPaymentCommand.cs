@@ -1,4 +1,5 @@
-using Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment.Enums;
+
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
 
 namespace Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment;
 

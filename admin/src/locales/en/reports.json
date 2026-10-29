@@ -10,11 +10,18 @@
     "agingInvoices": "Aging Invoices",
     "aSummaryOfOutstandingInvoices": "A summary of outstanding invoices broken down into the period of which they are overdue",
     "period": "Period",
-    "curAmount": "{cur} Amount"
+    "curAmount": "{cur} Amount",
+    "buckets": {
+      "Days0To30": "0 - 30",
+      "Days30To60": "30 - 60",
+      "Days60To90": "60 - 90",
+      "Days90To120": "90 - 120",
+      "Over120": "120 +"
+    }
   },
   "annualIncome": {
     "annualIncomeReport": "Annual Income Report",
-    "totalIncomePerMonthFor": "Total income per month for the selected year",
+    "totalIncomePerMonthFor": "Income received per month of the selected year: payments less refunds.",
     "income": "Income"
   },
   "clientsByCountry": {
@@ -39,7 +46,9 @@
     "previousBalance": "Previous Balance:",
     "noEntriesForThisPeriod": "No entries for this period.",
     "endingBalance": "Ending Balance:",
-    "debit": "Debit"
+    "debit": "Debit",
+    "invoicePayment": "Invoice Payment - #{id}",
+    "paidHistory": "Invoice #{id}, paid before import"
   },
   "creditsReviewer": {
     "creditsReviewer": "Credits Reviewer",
@@ -47,10 +56,9 @@
     "allClients": "All clients",
     "minAmount": "Min. Amount",
     "maxAmount": "Max. Amount",
-    "creditsFoundTotal": "credits found — Total:",
+    "currencySummary": "{currency}: {count} credits, {amount} in total",
     "creditId": "Credit ID",
     "clientId": "Client ID",
-    "adminUser": "Admin User",
     "noCreditsFoundForThis": "No credits found for this period."
   },
   "customerRetention": {
@@ -60,7 +68,10 @@
     "productCount": "Product Count",
     "averageDaysActive": "Average Days Active",
     "averageYearsMonthsActive": "Average Years/Months Active",
-    "noDataFound": "No data found."
+    "noDataFound": "No data found.",
+    "activeYears": "{count} year | {count} years",
+    "activeMonths": "{count} month | {count} months",
+    "activeDays": "{count} day | {count} days"
   },
   "dailyPerformance": {
     "dailyPerformance": "Daily Performance",
@@ -125,24 +136,21 @@
   },
   "incomeForecast": {
     "incomeForecast": "Income Forecast",
-    "projectedIncomeBasedOnRecurring": "Projected income based on recurring billing cycles",
     "cumulativeForecast": "Cumulative Forecast",
     "monthly": "Monthly",
     "quarterly": "Quarterly",
     "semiAnnual": "Semi Annual",
-    "annual": "Annual"
+    "annual": "Annual",
+    "incomePerMonthWithTrailingWindows": "Income received per month, with the trailing quarter, half year and year to date."
   },
   "invoicesReport": {
     "thisReportCanBeUsed": "This report can be used to generate a custom export of invoices by applying up to 5 filters.",
     "creationDate": "Creation Date",
     "totalcountInvoiceSFound": "{totalCount} invoice(s) found",
-    "userId": "User ID",
-    "invoiceNumber": "Invoice Number",
-    "tax2": "Tax2",
-    "taxRate2": "Tax Rate 2"
+    "userId": "User ID"
   },
   "monthlyOrders": {
-    "thisReportGivesABreakdown": "This report gives a breakdown of the number of units sold of each product per month.",
+    "thisReportGivesABreakdown": "This report gives the units ordered of each product in a month: one per order line, on pending and accepted orders.",
     "unitsSold": "Units Sold"
   },
   "monthlyTransactions": {
@@ -171,11 +179,7 @@
   "salesTax": {
     "salesTaxLiability": "Sales Tax Liability",
     "thisReportShowsSalesTax": "This report shows sales tax liability for the selected period.",
-    "chooseCurrency": "Choose Currency",
-    "invoicesFound": "Invoices Found",
-    "totalInvoiced": "Total Invoiced:",
-    "taxLevel1Liability": "Tax Level 1 Liability:",
-    "taxLevel2Liability": "Tax Level 2 Liability:",
+    "currencySummary": "{currency}: {count} invoices, {invoiced} invoiced, {tax} tax liability",
     "tax": "Tax",
     "credit": "Credit",
     "noInvoicesFoundForThis": "No invoices found for this period.",
@@ -246,9 +250,8 @@
   },
   "topClients": {
     "top10ClientsByIncome": "Top 10 Clients by Income",
-    "thisReportShowsThe10": "This report shows the 10 clients with the highest net income according to the transactions entered.",
-    "noData": "No data",
-    "denotesConvertedToDefaultCurrency": "* denotes converted to default currency"
+    "thisReportShowsThe10": "This report shows the 10 clients with the highest net invoice income: payments less refunds and fees. Credit top-ups are not income.",
+    "noData": "No data"
   },
   "transactionsReport": {
     "thisReportCanBeUsed": "This report can be used to generate a custom export of transactions by applying up to 5 filters.",
@@ -268,7 +271,7 @@
     "totalVatCollected": "Total VAT Collected",
     "totals": "Totals",
     "ifACountryDoesNot": "* If a country does not appear in the report, then no VAT was collected from customers in that country during the period selected.",
-    "isleOfManGbAnd": "Isle of Man (GB) and Monaco (FR) are listed in this report as EU Overseas Territories of their respective countries and should be included in any figures provided to tax authorities.",
+    "period": "For the period {from} to {to}",
     "quarter1": "January - March",
     "quarter2": "April - June",
     "quarter3": "July - September",
@@ -297,6 +300,7 @@
   },
   "common": {
     "years": "{count} yr",
-    "clientCount": "{count} client | {count} clients"
+    "clientCount": "{count} client | {count} clients",
+    "convertedToBaseCurrency": "Amounts are in {currency}, converted from each invoice currency at the configured rates."
   }
 }

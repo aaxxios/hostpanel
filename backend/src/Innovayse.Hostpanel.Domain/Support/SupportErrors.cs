@@ -12,9 +12,9 @@ namespace Innovayse.Hostpanel.Domain.Support;
 /// </remarks>
 public static class SupportErrors
 {
-    /// <summary>A closed ticket does not accept new replies (400) — <see cref="Ticket.AddReply"/>.</summary>
+    /// <summary>A closed ticket does not accept new replies (400): <see cref="Ticket.AddReply"/>.</summary>
     public const string TicketReplyNotAllowed = "TICKET_REPLY_NOT_ALLOWED";
 
-    /// <summary>The ticket is already closed (400) — <see cref="Ticket.Close"/>.</summary>
+    /// <summary>The ticket is already closed (400): <see cref="Ticket.Close"/>.</summary>
     public const string TicketCloseNotAllowed = "TICKET_CLOSE_NOT_ALLOWED";
 }

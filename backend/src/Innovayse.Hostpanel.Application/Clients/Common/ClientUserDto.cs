@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Application.Clients.Common;
 /// <param name="Permissions">Granted permissions as a bit-flags integer. 8191 (All) for owners.</param>
 /// <param name="LastLoginAt">Last login timestamp or null.</param>
 /// <param name="CreatedAt">When the user was linked to the client.</param>
-public record ClientUserDto(
+public sealed record ClientUserDto(
     string UserId,
     string FirstName,
     string LastName,

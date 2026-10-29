@@ -1,21 +1,17 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Commands.SuspendOverdueServicesCron;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -37,32 +33,30 @@ public sealed class SuspendOverdueServicesCronTests(IntegrationTestFactory facto
             services.AddScoped<IDomainEventGate, SuppressedDomainEventGate>();
             if (poisoned is not null)
             {
-                services.AddScoped<IUnitOfWork>(sp => new PoisonedUnitOfWork(
-                    ActivatorUtilities.CreateInstance<UnitOfWork>(sp), sp.GetRequiredService<IHostpanelDbContext>(), poisoned));
+                services.ConfigureDbContext<AppDbContext>(options => options.AddInterceptors(new PoisonedServiceSaveInterceptor(poisoned)));
             }
 
             if (race is not null)
             {
-                services.AddScoped<IUnitOfWork>(sp => new PayingUnitOfWork(
-                    ActivatorUtilities.CreateInstance<UnitOfWork>(sp), sp.GetRequiredService<IHostpanelDbContext>(), race));
+                services.ConfigureDbContext<AppDbContext>(options => options.AddInterceptors(new PayingSaveInterceptor(race)));
             }
         }));
 
     /// <summary>Seeds a client with a product to attach services to.</summary>
     /// <param name="context">The data context to seed through.</param>
     /// <returns>The client id and product id.</returns>
-    private static async Task<(int ClientId, int ProductId)> SeedClientAsync(IHostpanelDbContext context)
+    private static async Task<ClientProductIds> SeedClientAsync(IHostpanelDbContext context)
     {
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Grace", "Hopper", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Grace", "Hopper", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(client);
         var group = ProductGroup.Create($"overdue-cron-{Guid.NewGuid():N}", null);
         context.ProductGroups.Add(group);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 5m, 50m, DateTimeOffset.UtcNow);
         context.Products.Add(product);
         await context.SaveChangesAsync(CancellationToken.None);
-        return (client.Id, product.Id);
+        return new(client.Id, product.Id);
     }
 
     /// <summary>Seeds an active service for a client, optionally protected from auto-suspend.</summary>
@@ -71,24 +65,23 @@ public sealed class SuspendOverdueServicesCronTests(IntegrationTestFactory facto
     /// <param name="productId">The product.</param>
     /// <param name="overrideAutoSuspend">Whether the service opts out of auto-suspend.</param>
     /// <param name="suspendUntil">A date until which auto-suspend is held off, or null.</param>
+    /// <param name="autoRenew">Whether billing looks after the service; false means staff bill it by hand.</param>
     /// <returns>The service id.</returns>
     private static async Task<int> SeedServiceAsync(
-        IHostpanelDbContext context, int clientId, int productId, bool overrideAutoSuspend = false, DateTimeOffset? suspendUntil = null)
+        IHostpanelDbContext context, int clientId, int productId, bool overrideAutoSuspend = false, DateTimeOffset? suspendUntil = null,
+        bool autoRenew = true)
     {
-        var service = ClientService.Create(clientId, productId, BillingCycleNames.Monthly);
-        service.Activate("panel-ref");
-        if (overrideAutoSuspend || suspendUntil is not null)
+        var service = ClientService.Create(clientId, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        await ServicesTestSeeds.AddActivatedAsync(context, service, "panel-ref", DateTimeOffset.UtcNow);
+        if (overrideAutoSuspend || suspendUntil is not null || !autoRenew)
         {
-            service.Update(
-                domain: null, dedicatedIp: null, username: null, password: null, billingCycle: BillingCycleNames.Monthly,
-                recurringAmount: 5m, paymentMethod: null, nextRenewalAt: service.NextRenewalAt, subscriptionId: null,
-                overrideAutoSuspend: overrideAutoSuspend, suspendUntil: suspendUntil, autoTerminateEndOfCycle: false,
-                autoTerminateReason: null, adminNotes: null, provisioningRef: service.ProvisioningRef,
-                firstPaymentAmount: 5m, promotionCode: null, terminatedAt: null,
-                serverId: null, quantity: 1, productId: null);
+            service.ChangeBillingTerms(new ServiceBillingTerms(
+                BillingCycle: BillingCycle.Monthly, Quantity: 1, FirstPaymentAmount: 5m,
+                RecurringAmount: 5m, NextRenewalAt: service.NextRenewalAt, PaymentMethod: null,
+                PromotionCode: null, SubscriptionId: null));
+            service.ConfigureAutomation(autoRenew, overrideAutoSuspend, suspendUntil, false, null);
         }
 
-        context.ClientServices.Add(service);
         await context.SaveChangesAsync(CancellationToken.None);
         return service.Id;
     }
@@ -104,7 +97,7 @@ public sealed class SuspendOverdueServicesCronTests(IntegrationTestFactory facto
     {
         var now = DateTimeOffset.UtcNow;
         var due = now.AddDays(-dueDaysAgo);
-        var invoice = Invoice.Create(clientId, due, "USD");
+        var invoice = Invoice.Create(clientId, due, "USD", now);
         if (serviceIds.Count == 0)
         {
             invoice.AddItem("One-off setup", 25m, 1);
@@ -119,7 +112,7 @@ public sealed class SuspendOverdueServicesCronTests(IntegrationTestFactory facto
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        invoice.MarkOverdue();
+        invoice.MarkOverdue(now);
         await context.SaveChangesAsync(CancellationToken.None);
         return invoice.Id;
     }
@@ -176,7 +169,10 @@ public sealed class SuspendOverdueServicesCronTests(IntegrationTestFactory facto
         (await LoadAsync(context, service)).Status.Should().Be(ServiceStatus.Active);
     }
 
-    /// <summary>OverrideAutoSuspend and a future SuspendUntil protect a service; an elapsed SuspendUntil does not.</summary>
+    /// <summary>
+    /// A suspension hold (OverrideAutoSuspend) protects a service, for good or until a future
+    /// SuspendUntil; a hold whose SuspendUntil has passed does not.
+    /// </summary>
     [Fact]
     public async Task Overrides_Protect()
     {
@@ -184,8 +180,10 @@ public sealed class SuspendOverdueServicesCronTests(IntegrationTestFactory facto
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var (clientId, productId) = await SeedClientAsync(context);
         var overridden = await SeedServiceAsync(context, clientId, productId, overrideAutoSuspend: true);
-        var held = await SeedServiceAsync(context, clientId, productId, suspendUntil: DateTimeOffset.UtcNow.AddDays(5));
-        var elapsed = await SeedServiceAsync(context, clientId, productId, suspendUntil: DateTimeOffset.UtcNow.AddDays(-1));
+        var held = await SeedServiceAsync(
+            context, clientId, productId, overrideAutoSuspend: true, suspendUntil: DateTimeOffset.UtcNow.AddDays(5));
+        var elapsed = await SeedServiceAsync(
+            context, clientId, productId, overrideAutoSuspend: true, suspendUntil: DateTimeOffset.UtcNow.AddDays(-1));
         await SeedOverdueInvoiceAsync(context, clientId, [overridden, held, elapsed], dueDaysAgo: 4);
 
         await RunAsync(scope.ServiceProvider);
@@ -195,7 +193,24 @@ public sealed class SuspendOverdueServicesCronTests(IntegrationTestFactory facto
         (await LoadAsync(context, elapsed)).Status.Should().Be(ServiceStatus.Suspended);
     }
 
-    /// <summary>An overdue invoice with no service lines suspends nothing (behaviour change from the old handler, which suspended every service of the client).</summary>
+    /// <summary>A service billed by hand (<c>AutoRenew</c> off) is never suspended by the overdue run.</summary>
+    [Fact]
+    public async Task ManualBilling_IsNotSuspended()
+    {
+        using var scope = Host().Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var (clientId, productId) = await SeedClientAsync(context);
+        var manual = await SeedServiceAsync(context, clientId, productId, autoRenew: false);
+        var automatic = await SeedServiceAsync(context, clientId, productId);
+        await SeedOverdueInvoiceAsync(context, clientId, [manual, automatic], dueDaysAgo: 4);
+
+        await RunAsync(scope.ServiceProvider);
+
+        (await LoadAsync(context, manual)).Status.Should().Be(ServiceStatus.Active);
+        (await LoadAsync(context, automatic)).Status.Should().Be(ServiceStatus.Suspended);
+    }
+
+    /// <summary>An overdue invoice with no service lines suspends nothing: only the services an invoice bills are suspended, never the client's other services.</summary>
     [Fact]
     public async Task NoServiceLines_Nothing()
     {
@@ -255,73 +270,5 @@ public sealed class SuspendOverdueServicesCronTests(IntegrationTestFactory facto
         race.Fired.Should().BeTrue("the payment must land mid-run for this test to mean anything");
         (await LoadAsync(context, first)).Status.Should().Be(ServiceStatus.Suspended);
         (await LoadAsync(context, second)).Status.Should().Be(ServiceStatus.Active);
-    }
-
-    /// <summary>Names the suspension during whose save <see cref="PayingUnitOfWork"/> pays another invoice.</summary>
-    private sealed class PaymentRace
-    {
-        /// <summary>The service whose suspension save triggers the payment.</summary>
-        public int TriggerServiceId { get; set; }
-
-        /// <summary>The invoice marked paid when the trigger fires.</summary>
-        public int InvoiceToPay { get; set; }
-
-        /// <summary>Whether the payment was made.</summary>
-        public bool Fired { get; set; }
-    }
-
-    /// <summary>A unit of work that, saving the trigger service's suspension, first marks another invoice paid.</summary>
-    /// <param name="inner">The real unit of work.</param>
-    /// <param name="context">The scope's data context, to inspect pending changes and pay the invoice.</param>
-    /// <param name="race">The trigger and the invoice to pay.</param>
-    private sealed class PayingUnitOfWork(IUnitOfWork inner, IHostpanelDbContext context, PaymentRace race) : IUnitOfWork
-    {
-        /// <inheritdoc/>
-        public async Task<int> SaveChangesAsync(CancellationToken ct = default)
-        {
-            if (!race.Fired && race.TriggerServiceId != 0 && context is DbContext db
-                && db.ChangeTracker.Entries<ClientService>().Any(e => e.State == EntityState.Modified && e.Entity.Id == race.TriggerServiceId))
-            {
-                // Written the way a payment ends up in the row; the event path is irrelevant here.
-                await context.Invoices
-                    .Where(i => i.Id == race.InvoiceToPay)
-                    .ExecuteUpdateAsync(set => set.SetProperty(i => i.Status, InvoiceStatus.Paid), ct);
-                race.Fired = true;
-            }
-
-            return await inner.SaveChangesAsync(ct);
-        }
-
-        /// <inheritdoc/>
-        public void DetachAll() => inner.DetachAll();
-    }
-
-    /// <summary>Names the one service whose suspension save <see cref="PoisonedUnitOfWork"/> refuses.</summary>
-    private sealed class PoisonedService
-    {
-        /// <summary>The poisoned service id.</summary>
-        public int ServiceId { get; set; }
-    }
-
-    /// <summary>A unit of work that throws when saving a modified poisoned service.</summary>
-    /// <param name="inner">The real unit of work.</param>
-    /// <param name="context">The scope's data context, to inspect pending changes.</param>
-    /// <param name="poisoned">The poisoned service.</param>
-    private sealed class PoisonedUnitOfWork(IUnitOfWork inner, IHostpanelDbContext context, PoisonedService poisoned) : IUnitOfWork
-    {
-        /// <inheritdoc/>
-        public Task<int> SaveChangesAsync(CancellationToken ct = default)
-        {
-            if (poisoned.ServiceId != 0 && context is DbContext db
-                && db.ChangeTracker.Entries<ClientService>().Any(e => e.State == EntityState.Modified && e.Entity.Id == poisoned.ServiceId))
-            {
-                throw new InvalidOperationException("Simulated failure for the poisoned service.");
-            }
-
-            return inner.SaveChangesAsync(ct);
-        }
-
-        /// <inheritdoc/>
-        public void DetachAll() => inner.DetachAll();
     }
 }

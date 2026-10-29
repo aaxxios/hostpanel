@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Live status card of a provisioning provider (CWP, CWP7).
+ * Live status card of a hosting panel provisioning provider.
  *
  * Displays the connection badge, the provider-specific figures the page passes in, the last test
  * time and the refusal the provider reported. Emits `test` when the admin asks for a new test.

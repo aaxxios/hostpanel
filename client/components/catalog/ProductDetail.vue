@@ -74,12 +74,12 @@
           <UiBalancedGrid :count="product.plans.length" data-testid="product-plans-grid">
             <CatalogProductPlanCard
               v-for="(plan, index) in product.plans"
-              :key="plan.pid"
+              :key="plan.id"
               :plan="plan"
               :price="priceFor(plan)"
               :cycle="selectedCycle"
               :in-cart="isInCart(plan)"
-              :popular="plan.pid === popularPid"
+              :popular="plan.id === popularPlanId"
               :trial-url="trialUrlFor(plan)"
               class="animate-reveal-up motion-reduce:animate-none"
               :class="revealDelay(index * 100)"
@@ -154,7 +154,7 @@ import type { ProductPlan } from '~/types/productplan'
 import type { SegmentedOption } from '~/types/segmentedoption'
 import { HOSTING_FAMILY_URL } from '~/utils/catalogGroups'
 import { isComparable } from '~/utils/comparisonRows'
-import { recommendedPlanPid } from '~/utils/productFamilies'
+import { recommendedPlanId } from '~/utils/productFamilies'
 import { revealDelay } from '~/utils/reveal'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'
 import { UiButtonVariant, UiHeadingLevel } from '~/utils/ui/enums'
@@ -219,7 +219,7 @@ const cycleOptions = computed<SegmentedOption<PricingCycle>[]>(() =>
   })))
 
 /** The plan that wears the recommended badge, or null. */
-const popularPid = computed(() => recommendedPlanPid(props.product.plans))
+const popularPlanId = computed(() => recommendedPlanId(props.product.plans))
 
 /** Whether the plans share enough specification lines for a comparison to be worth showing. */
 const comparable = computed(() => isComparable(props.comparisonRows))

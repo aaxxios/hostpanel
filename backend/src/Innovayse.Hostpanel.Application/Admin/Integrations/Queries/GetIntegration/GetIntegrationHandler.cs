@@ -41,25 +41,10 @@ public sealed class GetIntegrationHandler
     /// </returns>
     public async Task<Result<IntegrationDetailDto>> HandleAsync(GetIntegrationQuery query, CancellationToken ct)
     {
-        IReadOnlyList<FieldDefinitionDto> fields;
-
-        if (IntegrationCatalogue.TryGet(query.Slug, out var meta))
+        var definition = IntegrationFields.Resolve(query.Slug, _plugins);
+        if (definition is null)
         {
-            fields = meta.Fields;
-        }
-        else
-        {
-            var manifest = _plugins.GetLoadedManifests()
-                .FirstOrDefault(m => m.Id == query.Slug);
-
-            if (manifest is null)
-            {
-                return Result<IntegrationDetailDto>.FailureCode(HostpanelErrorCodes.INTEGRATION_NOT_FOUND);
-            }
-
-            fields = manifest.Fields
-                .Select(f => new FieldDefinitionDto(f.Key, f.Label, f.Type, f.Required))
-                .ToList();
+            return Result<IntegrationDetailDto>.FailureCode(HostpanelErrorCodes.INTEGRATION_NOT_FOUND);
         }
 
         var prefix = IntegrationSettingKeys.Prefix(query.Slug);
@@ -67,8 +52,8 @@ public sealed class GetIntegrationHandler
         var isEnabled = settings.IsEnabled(query.Slug);
 
         var secrecy = SettingSecrecy.From(_plugins);
-        var config = new Dictionary<string, IntegrationFieldValueDto>(fields.Count);
-        foreach (var field in fields)
+        var config = new Dictionary<string, IntegrationFieldValueDto>(definition.Fields.Count);
+        foreach (var field in definition.Fields)
         {
             var key = IntegrationSettingKeys.FieldKey(query.Slug, field.Key);
             var value = settings.GetValue(query.Slug, field.Key);
@@ -80,6 +65,6 @@ public sealed class GetIntegrationHandler
                 : new IntegrationFieldValueDto(value ?? string.Empty, IsSecret: false, hasValue);
         }
 
-        return Result<IntegrationDetailDto>.Success(new IntegrationDetailDto(query.Slug, isEnabled, config, fields));
+        return Result<IntegrationDetailDto>.Success(new IntegrationDetailDto(query.Slug, definition.Name, isEnabled, config, definition.Fields));
     }
 }

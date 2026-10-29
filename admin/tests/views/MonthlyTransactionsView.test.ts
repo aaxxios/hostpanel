@@ -1,5 +1,5 @@
 /**
- * Tests of MonthlyTransactionsView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of MonthlyTransactionsView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -14,9 +14,10 @@ runReportCase({
   view: MonthlyTransactionsView,
   routes: {
     'GET /reports/daily-transactions': () => json({
-      month: 1, year: 2024, totalAmountIn: 10, totalFees: 1, totalAmountOut: 2,
+      month: 1, year: 2024, totalAmountIn: 10, totalFees: 1, totalAmountOut: 2, currency: 'USD',
       rows: [{ date: '2024-01-02', amountIn: 10, fees: 1, amountOut: 2, balance: 7 }],
     }),
   },
   expected: ['Monthly Transactions Report for January 2024', '2024-01-02', '$7.00'],
+  retryable: true,
 })

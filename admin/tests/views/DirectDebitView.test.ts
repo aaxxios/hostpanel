@@ -1,5 +1,5 @@
 /**
- * Tests of DirectDebitView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of DirectDebitView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -21,4 +21,5 @@ runReportCase({
     }),
   },
   expected: ['Direct Debit Processing', 'Beta', 'First Bank', '$11.00'],
+  retryable: true,
 })

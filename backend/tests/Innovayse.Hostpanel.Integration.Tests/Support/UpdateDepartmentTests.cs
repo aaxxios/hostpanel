@@ -1,18 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
 /// <summary>
 /// <c>PUT /api/departments/{id}</c>: an admin can update a support department, an id names no
-/// department is refused <c>DEPARTMENT_NOT_FOUND</c> (the pre-conversion route answered 400), and
+/// department is refused <c>DEPARTMENT_NOT_FOUND</c>, and
 /// the action is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>DepartmentsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateDepartmentTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

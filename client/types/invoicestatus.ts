@@ -1,5 +1,5 @@
 /**
- * Lifecycle status of an invoice, as `Innovayse.Domain.Billing.InvoiceStatus` serialises.
+ * Lifecycle status of an invoice, as `Innovayse.Hostpanel.Domain.Billing.InvoiceStatus` serialises.
  *
  * `Program.cs` registers a `JsonStringEnumConverter`, so these arrive as the member names
  * verbatim. All eight members are listed.

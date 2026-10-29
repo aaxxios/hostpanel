@@ -1,7 +1,9 @@
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Domains;
+
 /// <summary>
 /// Configuration and pricing for a single TLD extension.
 /// Stores both cost (registrar) and sell (client-facing) prices per registration period,
@@ -75,7 +77,7 @@ public sealed class TldConfig : BaseEntity
     /// <summary>Gets the UTC timestamp when this configuration was created.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private TldConfig() { }
 
     /// <summary>
@@ -102,7 +104,6 @@ public sealed class TldConfig : BaseEntity
             IsEnabled = isEnabled,
             SortOrder = sortOrder,
             _categories = [.. categories],
-            CreatedAt = DateTimeOffset.UtcNow
         };
     }
 
@@ -158,10 +159,11 @@ public sealed class TldConfig : BaseEntity
     }
 
     /// <summary>
-    /// Marks this TLD configuration as having been successfully synced with the registrar at the current time.
+    /// Marks this TLD configuration as having been successfully synced with the registrar.
     /// </summary>
-    public void MarkSynced()
+    /// <param name="syncedAt">When the sync finished, UTC.</param>
+    public void MarkSynced(DateTimeOffset syncedAt)
     {
-        LastSyncedAt = DateTimeOffset.UtcNow;
+        LastSyncedAt = syncedAt;
     }
 }

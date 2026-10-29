@@ -1,14 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Commands.BulkInvoiceAction;
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -17,7 +15,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// validation-time refusal for an unrecognised action, the handler's own defensive answer for the
 /// same, and the count a <c>MarkPaid</c> action reports for eligible rows.
 /// </summary>
-/// <remarks>Split from the deleted <c>InvoicePaymentsEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class BulkInvoiceActionTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -42,12 +39,12 @@ public sealed class BulkInvoiceActionTests(IntegrationTestFactory factory) : ICl
     }
 
     /// <summary>
-    /// <see cref="BulkInvoiceActionHandler"/>'s own defensive answer for an action name that is not
-    /// one of the ones it switches on — reachable only by calling the handler directly, since the
+    /// <see cref="BulkInvoiceActionHandler"/>'s own defensive answer for an action value that is not
+    /// one of the ones it switches on, reachable only by calling the handler directly, since the
     /// command's validator refuses the same input first on the real API path.
     /// </summary>
     [Fact]
-    public async Task HandlerAnswersBulkInvoiceActionUnknownForAnUnrecognisedActionName()
+    public async Task HandlerAnswersBulkInvoiceActionUnknownForAnUndefinedActionValue()
     {
         var admin = await BillingTestSeeds.AdminClientAsync(factory);
         var clientId = await BillingTestSeeds.SeedClientAsync(factory);
@@ -55,10 +52,11 @@ public sealed class BulkInvoiceActionTests(IntegrationTestFactory factory) : ICl
 
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var handler = new BulkInvoiceActionHandler(context);
+        var handler = new BulkInvoiceActionHandler(
+            context, scope.ServiceProvider.GetRequiredService<IClientCredit>(), scope.ServiceProvider.GetRequiredService<IClock>());
 
         var outcome = await handler.HandleAsync(
-            new BulkInvoiceActionCommand([invoiceId], "NotARealAction"), CancellationToken.None);
+            new BulkInvoiceActionCommand([invoiceId], (InvoiceBulkAction)99), CancellationToken.None);
 
         outcome.IsFailure.Should().BeTrue();
         outcome.ErrorCode.Should().Be(HostpanelErrorCodes.BULK_INVOICE_ACTION_UNKNOWN);
@@ -146,5 +144,106 @@ public sealed class BulkInvoiceActionTests(IntegrationTestFactory factory) : ICl
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A <c>MarkCancelled</c> bulk action skips an invoice that already took a payment, like a single cancel refuses it.</summary>
+    [Fact]
+    public async Task BulkActionCancelSkipsAPartPaidInvoice()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+        var clientId = await BillingTestSeeds.SeedClientAsync(factory);
+        var partPaidId = await BillingTestSeeds.CreateInvoiceAsync(admin, clientId, 10m);
+        await BillingTestSeeds.MarkPaidAsync(admin, partPaidId, 4m);
+        var openId = await BillingTestSeeds.CreateInvoiceAsync(admin, clientId, 10m);
+
+        var response = await admin.PostAsJsonAsync("/api/billing/bulk", new
+        {
+            invoiceIds = new[] { partPaidId, openId },
+            action = "MarkCancelled",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<int>()).Should().Be(1);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var partPaid = await db.Invoices.AsNoTracking().SingleAsync(i => i.Id == partPaidId);
+        partPaid.Status.Should().Be(Domain.Billing.Enums.InvoiceStatus.Unpaid);
+    }
+
+    /// <summary>A <c>MarkPaid</c> bulk action settles the rest of a part-paid invoice, so it ends paid in full.</summary>
+    [Fact]
+    public async Task BulkActionMarkPaidSettlesTheRestOfAPartPaidInvoice()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+        var clientId = await BillingTestSeeds.SeedClientAsync(factory);
+        var invoiceId = await BillingTestSeeds.CreateInvoiceAsync(admin, clientId, 10m);
+        await BillingTestSeeds.MarkPaidAsync(admin, invoiceId, 4m);
+
+        var response = await admin.PostAsJsonAsync("/api/billing/bulk", new
+        {
+            invoiceIds = new[] { invoiceId },
+            action = "MarkPaid",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var invoice = await db.Invoices.AsNoTracking().Include(i => i.Transactions).SingleAsync(i => i.Id == invoiceId);
+        invoice.IsPaidInFull.Should().BeTrue();
+        invoice.AmountPaid.Should().Be(10m);
+    }
+
+    /// <summary>
+    /// A <c>MarkUnpaid</c> bulk action skips a paid invoice whose payment is recorded, like a single
+    /// reopen refuses it: that money is undone by deleting or refunding the payment.
+    /// </summary>
+    [Fact]
+    public async Task BulkActionMarkUnpaidSkipsAnInvoiceWithRecordedPayments()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+        var clientId = await BillingTestSeeds.SeedClientAsync(factory);
+        var invoiceId = await BillingTestSeeds.CreateInvoiceAsync(admin, clientId, 10m);
+        await BillingTestSeeds.MarkPaidAsync(admin, invoiceId, 10m);
+
+        var response = await admin.PostAsJsonAsync("/api/billing/bulk", new
+        {
+            invoiceIds = new[] { invoiceId },
+            action = "MarkUnpaid",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<int>()).Should().Be(0);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var invoice = await db.Invoices.AsNoTracking().Include(i => i.Transactions).SingleAsync(i => i.Id == invoiceId);
+        invoice.Status.Should().Be(Domain.Billing.Enums.InvoiceStatus.Paid);
+        invoice.AmountDue.Should().Be(0m);
+    }
+
+    /// <summary>
+    /// A bulk delete releases the billable items that sat on the deleted invoices, so the next
+    /// invoicing run bills them again.
+    /// </summary>
+    [Fact]
+    public async Task BulkDeleteReleasesTheBillableItemsPutOnTheInvoices()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+        var seeded = await BillableItemSeeds.SeedItemOnACancelledInvoiceAsync(factory);
+
+        var response = await admin.PostAsJsonAsync("/api/billing/bulk", new
+        {
+            invoiceIds = new[] { seeded.InvoiceId },
+            action = "Delete",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<int>()).Should().Be(1);
+        var released = await BillableItemSeeds.ReadItemAsync(factory, seeded.ItemId);
+        released.IsInvoiced.Should().BeFalse();
+        released.InvoiceId.Should().BeNull();
+
+        await BillableItemSeeds.RunInvoicingAsync(factory);
+
+        (await BillableItemSeeds.ReadItemAsync(factory, seeded.ItemId)).IsInvoiced.Should().BeTrue();
     }
 }

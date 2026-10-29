@@ -26,29 +26,29 @@ internal sealed class DemoDomainSeeder
     private const int ReminderWindowDays = 30;
 
     /// <summary>The state and distance to expiry of the n-th domain handed out to the customers after the demo client, repeating.</summary>
-    private static readonly (DomainStatus Status, int ExpiresInDays)[] KindPattern =
+    private static readonly DemoDomainKind[] KindPattern =
     [
-        (DomainStatus.Active, 240), (DomainStatus.Active, 120), (DomainStatus.Active, 9), (DomainStatus.Active, 330),
-        (DomainStatus.PendingTransfer, 0), (DomainStatus.Active, 75), (DomainStatus.Expired, -12), (DomainStatus.Active, 180),
-        (DomainStatus.Redemption, -45), (DomainStatus.Active, 22), (DomainStatus.Transferred, 200), (DomainStatus.Active, 300),
-        (DomainStatus.Cancelled, -60), (DomainStatus.Active, 150), (DomainStatus.PendingRegistration, 365), (DomainStatus.Active, 27),
+        new(DomainStatus.Active, 240), new(DomainStatus.Active, 120), new(DomainStatus.Active, 9), new(DomainStatus.Active, 330),
+        new(DomainStatus.PendingTransfer, 0), new(DomainStatus.Active, 75), new(DomainStatus.Expired, -12), new(DomainStatus.Active, 180),
+        new(DomainStatus.Redemption, -45), new(DomainStatus.Active, 22), new(DomainStatus.Transferred, 200), new(DomainStatus.Active, 300),
+        new(DomainStatus.Cancelled, -60), new(DomainStatus.Active, 150), new(DomainStatus.PendingRegistration, 365), new(DomainStatus.Active, 27),
     ];
 
     /// <summary>The demo client's own domains: suffix, state and distance to expiry.</summary>
-    private static readonly (string Extension, DomainStatus Status, int ExpiresInDays)[] DemoClientDomains =
+    private static readonly DemoClientDomain[] DemoClientDomains =
     [
-        (".example", DomainStatus.Active, 240),
-        ("-net.example", DomainStatus.Active, 10),
-        ("-io.example", DomainStatus.PendingTransfer, 0),
-        ("-org.example", DomainStatus.Active, 150),
-        ("-dev.example", DomainStatus.Expired, -12),
-        ("-app.example", DomainStatus.PendingRegistration, 365),
-        ("-co.example", DomainStatus.Active, 22),
-        ("-shop.example", DomainStatus.Active, 300),
-        ("-old.example", DomainStatus.Redemption, -45),
-        ("-moved.example", DomainStatus.Transferred, 200),
-        ("-closed.example", DomainStatus.Cancelled, -60),
-        ("-blog.example", DomainStatus.Active, 90),
+        new(".example", DomainStatus.Active, 240),
+        new("-net.example", DomainStatus.Active, 10),
+        new("-io.example", DomainStatus.PendingTransfer, 0),
+        new("-org.example", DomainStatus.Active, 150),
+        new("-dev.example", DomainStatus.Expired, -12),
+        new("-app.example", DomainStatus.PendingRegistration, 365),
+        new("-co.example", DomainStatus.Active, 22),
+        new("-shop.example", DomainStatus.Active, 300),
+        new("-old.example", DomainStatus.Redemption, -45),
+        new("-moved.example", DomainStatus.Transferred, 200),
+        new("-closed.example", DomainStatus.Cancelled, -60),
+        new("-blog.example", DomainStatus.Active, 90),
     ];
 
     /// <summary>The suffixes (all under the reserved example name) the other customers' second domains use, rotated.</summary>
@@ -128,9 +128,9 @@ internal sealed class DemoDomainSeeder
         var expiresAt = _today.AddDays(expiresInDays);
 
         var domain = status == DomainStatus.PendingTransfer
-            ? RegisteredDomain.CreateTransfer(client.Id, name, price, price, PaymentMethodNames.Card)
+            ? RegisteredDomain.CreateTransfer(client.Id, name, _today, currency, price, price, PaymentMethodNames.Card)
             : RegisteredDomain.Register(
-                client.Id, name, expiresAt, autoRenew: sequence % 4 != 3, whoisPrivacy: sequence % 2 == 0,
+                client.Id, name, _today, expiresAt, autoRenew: sequence % 4 != 3, whoisPrivacy: sequence % 2 == 0,
                 recurringAmount: price, firstPaymentAmount: price, priceCurrency: currency,
                 registrar: RegistrarName, registrationPeriod: 1, paymentMethod: PaymentMethodNames.Card);
 
@@ -172,7 +172,7 @@ internal sealed class DemoDomainSeeder
         }
         else if (status is DomainStatus.Expired or DomainStatus.Redemption)
         {
-            domain.AddReminder(status == DomainStatus.Expired ? "Expired Notice" : "Redemption Notice", $"admin@{name}");
+            domain.AddReminder(status == DomainStatus.Expired ? DomainReminderType.ExpiredNotice : DomainReminderType.RedemptionNotice, $"admin@{name}", _today);
         }
 
         _db.Domains.Add(domain);
@@ -182,16 +182,16 @@ internal sealed class DemoDomainSeeder
     /// <param name="domain">The domain, still pending registration.</param>
     /// <param name="status">The state to reach: active, expired, in redemption or transferred away.</param>
     /// <param name="sequence">The domain's running number, used in the registrar reference.</param>
-    private static void MoveToLiveState(RegisteredDomain domain, DomainStatus status, int sequence)
+    private void MoveToLiveState(RegisteredDomain domain, DomainStatus status, int sequence)
     {
-        domain.Activate($"DEMO-{100000 + sequence}");
+        domain.Activate($"DEMO-{100000 + sequence}", domain.ExpiresAt, _today);
         switch (status)
         {
             case DomainStatus.Expired:
-                domain.MarkExpired();
+                domain.MarkExpired(_today);
                 break;
             case DomainStatus.Redemption:
-                domain.MarkExpired();
+                domain.MarkExpired(_today);
                 domain.MarkRedemption();
                 break;
             case DomainStatus.Transferred:
@@ -232,17 +232,17 @@ internal sealed class DemoDomainSeeder
     /// <param name="domain">The active domain.</param>
     /// <param name="name">The domain name, used for the recipient.</param>
     /// <param name="expiresInDays">Days left until expiry.</param>
-    private static void AddReminders(RegisteredDomain domain, string name, int expiresInDays)
+    private void AddReminders(RegisteredDomain domain, string name, int expiresInDays)
     {
         if (expiresInDays > ReminderWindowDays)
         {
             return;
         }
 
-        domain.AddReminder("30 Days Before Expiry", $"admin@{name}");
+        domain.AddReminder(DomainReminderType.ThirtyDaysBeforeExpiry, $"admin@{name}", _today);
         if (expiresInDays <= 14)
         {
-            domain.AddReminder("14 Days Before Expiry", $"admin@{name}");
+            domain.AddReminder(DomainReminderType.FourteenDaysBeforeExpiry, $"admin@{name}", _today);
         }
     }
 }

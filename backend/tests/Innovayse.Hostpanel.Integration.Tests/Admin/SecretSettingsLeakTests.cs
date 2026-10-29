@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Settings;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 
@@ -84,7 +81,7 @@ public sealed class SecretSettingsLeakTests(IntegrationTestFactory factory) : IC
         secret.GetProperty("isSecret").GetBoolean().Should().BeTrue();
         secret.GetProperty("hasValue").GetBoolean().Should().BeTrue();
         secret.GetProperty("value").ValueKind.Should().Be(JsonValueKind.Null);
-        config.GetProperty("webhook_secret").GetProperty("isSecret").GetBoolean().Should().BeTrue();
+        config.TryGetProperty("webhook_secret", out _).Should().BeFalse();
         config.GetProperty("publishable_key").GetProperty("isSecret").GetBoolean().Should().BeFalse();
     }
 

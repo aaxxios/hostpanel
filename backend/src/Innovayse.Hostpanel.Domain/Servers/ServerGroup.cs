@@ -1,7 +1,9 @@
 using Innovayse.Hostpanel.Domain.Servers.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Servers;
+
 /// <summary>
 /// Represents a named group of provisioning servers with a shared fill strategy.
 /// </summary>
@@ -16,13 +18,13 @@ public sealed class ServerGroup : BaseEntity, IAggregateRoot
     /// <summary>Gets the UTC timestamp when the group was created.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
-    /// <summary>Navigation property — servers that belong to this group.</summary>
+    /// <summary>Navigation property: servers that belong to this group.</summary>
     public IReadOnlyCollection<Server> Servers => _servers.AsReadOnly();
 
     /// <summary>Mutable backing list for EF Core.</summary>
     private readonly List<Server> _servers = [];
 
-    /// <summary>EF Core constructor — do not call directly.</summary>
+    /// <summary>EF Core constructor: do not call directly.</summary>
     private ServerGroup() { }
 
     /// <summary>Initialises a ServerGroup with the given identity.</summary>
@@ -44,18 +46,20 @@ public sealed class ServerGroup : BaseEntity, IAggregateRoot
         {
             Name = name,
             FillType = fillType,
-            CreatedAt = DateTimeOffset.UtcNow,
         };
     }
 
-    /// <summary>
-    /// Updates the group name and fill strategy.
-    /// </summary>
+    /// <summary>Renames the group.</summary>
     /// <param name="name">New display name.</param>
-    /// <param name="fillType">New fill strategy.</param>
-    public void Update(string name, ServerFillType fillType)
+    public void Rename(string name)
     {
         Name = name;
+    }
+
+    /// <summary>Changes how new accounts are spread over the group's servers.</summary>
+    /// <param name="fillType">New fill strategy.</param>
+    public void ChangeFillType(ServerFillType fillType)
+    {
         FillType = fillType;
     }
 }

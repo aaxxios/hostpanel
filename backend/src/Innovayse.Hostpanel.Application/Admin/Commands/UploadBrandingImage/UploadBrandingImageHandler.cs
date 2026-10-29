@@ -54,11 +54,10 @@ public sealed class UploadBrandingImageHandler
         CancellationToken ct)
     {
         // 400 (BRANDING_IMAGE_INVALID) or 413 (BRANDING_IMAGE_TOO_LARGE): the processor logs the
-        // precise cause -- which signature failed, which ceiling was hit -- and keeps it out of
-        // the body, so probing the endpoint teaches nothing about the checks it runs.
-        using var buffer = new MemoryStream();
-        await command.Content.CopyToAsync(buffer, ct);
-        var source = new BrandingSource(buffer.ToArray(), command.FileName);
+        // precise cause, which signature failed, which ceiling was hit, and keeps it out of
+        // the body, so probing the endpoint teaches nothing about the checks it runs. The stream
+        // is handed over unread: the processor owns the byte ceiling and reads no further than it.
+        var source = new BrandingSource(command.Content, command.FileName);
         var rendered = await _processor.RenderAsync(source, command.Kind, ct);
         if (rendered.IsFailure)
         {
@@ -68,7 +67,7 @@ public sealed class UploadBrandingImageHandler
         var assets = await _storage.SaveAsync(command.Kind, rendered.Value!, ct);
 
         // The processor's contract guarantees exactly one Primary, and the storage contract
-        // guarantees the order is preserved -- so this is a lookup, not a search that might fail.
+        // guarantees the order is preserved, so this is a lookup, not a search that might fail.
         var primary = assets.First(a => a.Role == BrandingRole.Primary);
 
         return Result<BrandingUploadResultDto>.Success(new BrandingUploadResultDto(primary.Url, assets));

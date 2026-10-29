@@ -25,7 +25,7 @@ public static class HostpanelErrorCodes
     public const string HOSTPANEL_UNEXPECTED = SharedErrorCodes.Unexpected;
 
     /// <summary>The edge rate limiter refused the request (429, with <c>Retry-After</c>).</summary>
-    public const string HOSTPANEL_RATE_LIMITED = "HOSTPANEL_RATE_LIMITED";
+    public const string HOSTPANEL_RATE_LIMITED = SharedErrorCodes.RateLimited;
 
     /// <summary>
     /// A command marked <c>IDemoRestricted</c> was refused because the deployment is a public demo
@@ -54,14 +54,14 @@ public static class HostpanelErrorCodes
     /// <summary>The email and password match no account, or a sign-in step could not resolve its account (401).</summary>
     public const string SIGN_IN_UNAUTHORIZED = "SIGN_IN_UNAUTHORIZED";
 
+    /// <summary>The account is locked out after too many wrong passwords; no password is accepted until the lockout ends (423, via the <c>_LOCKED</c> suffix).</summary>
+    public const string SIGN_IN_ACCOUNT_LOCKED = "SIGN_IN_ACCOUNT_LOCKED";
+
     /// <summary>The pending token handed out after the password step is malformed (401).</summary>
     public const string PENDING_TOKEN_UNAUTHORIZED = "PENDING_TOKEN_UNAUTHORIZED";
 
     /// <summary>The TOTP code presented at sign-in did not match (401). Distinct from <see cref="TWO_FACTOR_CODE_INVALID"/>, which answers 400 for a signed-in account.</summary>
     public const string TWO_FACTOR_CODE_UNAUTHORIZED = "TWO_FACTOR_CODE_UNAUTHORIZED";
-
-    /// <summary>The session cannot be refreshed; the caller has to sign in again (401).</summary>
-    public const string SESSION_UNAUTHORIZED = "SESSION_UNAUTHORIZED";
 
     /// <summary>The sign-out fan-out presented a missing or wrong <c>X-Logout-Key</c> (401).</summary>
     public const string BACKCHANNEL_LOGOUT_UNAUTHORIZED = "BACKCHANNEL_LOGOUT_UNAUTHORIZED";
@@ -72,7 +72,19 @@ public static class HostpanelErrorCodes
     /// <summary>The local account could not be created, for example because the address is taken or the password is refused (400).</summary>
     public const string REGISTRATION_FAILED = "REGISTRATION_FAILED";
 
-    // Billing — currencies
+    /// <summary>An account with this email address already exists, so a new one cannot be created for it (409).</summary>
+    public const string ACCOUNT_EMAIL_EXISTS = "ACCOUNT_EMAIL_EXISTS";
+
+    /// <summary>Two-factor setup was started on an account that already has it on (409); switch it off first.</summary>
+    public const string TWO_FACTOR_ALREADY_ENABLED = "TWO_FACTOR_ALREADY_ENABLED";
+
+    /// <summary>The current password a sensitive account change asks for is missing or wrong (400).</summary>
+    public const string CURRENT_PASSWORD_INVALID = "CURRENT_PASSWORD_INVALID";
+
+    /// <summary>The new sign-in address already belongs to another account (409).</summary>
+    public const string EMAIL_ALREADY_IN_USE = "EMAIL_ALREADY_IN_USE";
+
+    // Billing: currencies
 
     /// <summary>The code names no configured currency (404).</summary>
     public const string CURRENCY_NOT_FOUND = "CURRENCY_NOT_FOUND";
@@ -83,7 +95,13 @@ public static class HostpanelErrorCodes
     /// <summary>No currency is marked as the base, so nothing can be converted (503).</summary>
     public const string BASE_CURRENCY_NOT_CONFIGURED = "BASE_CURRENCY_NOT_CONFIGURED";
 
-    // Billing — invoices
+    /// <summary>The exchange rate source did not answer or answered with an error; nothing was changed (503).</summary>
+    public const string EXCHANGE_RATE_SOURCE_UNAVAILABLE = "EXCHANGE_RATE_SOURCE_UNAVAILABLE";
+
+    /// <summary>The exchange rate source quotes nothing against the configured base currency (409).</summary>
+    public const string EXCHANGE_RATE_BASE_NOT_QUOTED = "EXCHANGE_RATE_BASE_NOT_QUOTED";
+
+    // Billing: invoices
 
     /// <summary>The id names no invoice (404).</summary>
     public const string INVOICE_NOT_FOUND = "INVOICE_NOT_FOUND";
@@ -91,12 +109,12 @@ public static class HostpanelErrorCodes
     /// <summary>The invoice has more lines than <c>InvoicePdf:MaxLines</c> allows in a PDF (400).</summary>
     public const string INVOICE_PDF_EXCEEDS_LIMIT = "INVOICE_PDF_EXCEEDS_LIMIT";
 
-    // Billing — quotes
+    // Billing: quotes
 
     /// <summary>The id names no quote (404).</summary>
     public const string QUOTE_NOT_FOUND = "QUOTE_NOT_FOUND";
 
-    // Billing — billable items
+    // Billing: billable items
 
     /// <summary>The id names no billable item (404).</summary>
     public const string BILLABLE_ITEM_NOT_FOUND = "BILLABLE_ITEM_NOT_FOUND";
@@ -107,7 +125,7 @@ public static class HostpanelErrorCodes
     /// <summary>A named billable item has already been placed on an invoice (400).</summary>
     public const string BILLABLE_ITEM_INVOICED = "BILLABLE_ITEM_INVOICED";
 
-    // Billing — transactions and invoice payments
+    // Billing: transactions and invoice payments
 
     /// <summary>The id names no transaction (404).</summary>
     public const string TRANSACTION_NOT_FOUND = "TRANSACTION_NOT_FOUND";
@@ -124,7 +142,7 @@ public static class HostpanelErrorCodes
     /// </summary>
     public const string PAYMENT_PLUGIN_NOT_CONFIGURED = "PAYMENT_PLUGIN_NOT_CONFIGURED";
 
-    // Billing — gateway payments and saved payment methods
+    // Billing: gateway payments and saved payment methods
 
     /// <summary>The invoice is not in a status a payment may be started or charged for (400).</summary>
     public const string INVOICE_NOT_PAYABLE = "INVOICE_NOT_PAYABLE";
@@ -141,6 +159,11 @@ public static class HostpanelErrorCodes
     /// <summary>The card gateway payment method id does not belong to the caller's account (400).</summary>
     public const string PAYMENT_METHOD_NOT_OWNED = "PAYMENT_METHOD_NOT_OWNED";
 
+    /// <summary>
+    /// The deployment cannot charge a saved payment method because it has no card gateway configured (409).
+    /// </summary>
+    public const string PAYMENT_METHOD_UNAVAILABLE = "PAYMENT_METHOD_UNAVAILABLE";
+
     /// <summary>The caller's account has no saved payment method yet (400).</summary>
     public const string NO_SAVED_PAYMENT_METHODS = "NO_SAVED_PAYMENT_METHODS";
 
@@ -154,22 +177,36 @@ public static class HostpanelErrorCodes
     public const string GATEWAY_CHARGE_UPSTREAM_FAILED = "GATEWAY_CHARGE_UPSTREAM_FAILED";
 
     /// <summary>
+    /// The card gateway could not be reached or failed on its side, so nothing was charged or
+    /// nothing is known yet; the same attempt may be retried (503).
+    /// </summary>
+    public const string PAYMENT_GATEWAY_SERVICE_UNAVAILABLE = "PAYMENT_GATEWAY_SERVICE_UNAVAILABLE";
+
+    /// <summary>
+    /// The card gateway refused a saved-payment-method call (listing, changing the default,
+    /// removing, or looking up a charge); repeating it unchanged will not help (502).
+    /// </summary>
+    public const string PAYMENT_METHOD_UPSTREAM_FAILED = "PAYMENT_METHOD_UPSTREAM_FAILED";
+
+    /// <summary>
     /// The payment gateway reported the charge as successful but returned no transaction id to
     /// record against the invoice (502).
     /// </summary>
     public const string GATEWAY_TRANSACTION_MISSING_UPSTREAM_FAILED = "GATEWAY_TRANSACTION_MISSING_UPSTREAM_FAILED";
 
+    /// <summary>
+    /// The card payment intent does not pay this order's invoice: its amount, currency, order or
+    /// invoice differs from what the invoice is due for (400).
+    /// </summary>
+    public const string PAYMENT_INTENT_MISMATCH = "PAYMENT_INTENT_MISMATCH";
+
+    /// <summary>The card payment intent was already recorded as a payment (409).</summary>
+    public const string PAYMENT_INTENT_ALREADY_USED = "PAYMENT_INTENT_ALREADY_USED";
+
     /// <summary>The caller has no row in the clients table, so there is no account to act on (404).</summary>
     public const string CLIENT_PROFILE_NOT_FOUND = "CLIENT_PROFILE_NOT_FOUND";
 
     // Clients
-
-    /// <summary>
-    /// The client has no contact with that id -- another account's or none at all (404). One code
-    /// for both so every contact route refuses alike, and neither answer tells a caller which of
-    /// the two happened.
-    /// </summary>
-    public const string MY_CONTACT_NOT_FOUND = "MY_CONTACT_NOT_FOUND";
 
     /// <summary>The token names no invitation (404).</summary>
     public const string INVITATION_NOT_FOUND = "INVITATION_NOT_FOUND";
@@ -186,6 +223,15 @@ public static class HostpanelErrorCodes
     /// <summary>The id names no identity account (404).</summary>
     public const string IDENTITY_USER_NOT_FOUND = "IDENTITY_USER_NOT_FOUND";
 
+    /// <summary>The id names no live user account (404).</summary>
+    public const string USER_NOT_FOUND = "USER_NOT_FOUND";
+
+    /// <summary>An admin asked to delete their own account (409).</summary>
+    public const string USER_CANNOT_DELETE_SELF = "USER_CANNOT_DELETE_SELF";
+
+    /// <summary>The change would leave the installation with no active administrator (409).</summary>
+    public const string USER_LAST_ADMIN = "USER_LAST_ADMIN";
+
     /// <summary>The account's owner has no identity record to read (404).</summary>
     public const string ACCOUNT_OWNER_NOT_FOUND = "ACCOUNT_OWNER_NOT_FOUND";
 
@@ -201,21 +247,12 @@ public static class HostpanelErrorCodes
     /// <summary>The client has already been invoiced, so its currency is fixed (409).</summary>
     public const string CLIENT_CURRENCY_ALREADY_INVOICED = "CLIENT_CURRENCY_ALREADY_INVOICED";
 
-    /// <summary>
-    /// The requested client status names no member of <c>ClientStatus</c> (400). The validator
-    /// already refuses this for a caller that reached the handler through the API; answered here
-    /// too, defensively, for a command dispatched some other way.
-    /// </summary>
-    public const string CLIENT_STATUS_INVALID = "CLIENT_STATUS_INVALID";
-
     // Notifications
 
     /// <summary>
     /// The id names no email log entry sent to the caller's own account (404). Answered alike
     /// whether the entry does not exist or was sent to somebody else, so
-    /// <c>/api/me/emails/{id}</c> cannot be used to enumerate ids. Added alongside the Clients
-    /// batch because <c>MyEmailsController</c> had to move onto <c>BaseApiController</c> once
-    /// <c>GetMyProfileQuery</c> started answering <c>Result&lt;ClientDto&gt;</c>.
+    /// <c>/api/me/emails/{id}</c> cannot be used to enumerate ids.
     /// </summary>
     public const string EMAIL_LOG_NOT_FOUND = "EMAIL_LOG_NOT_FOUND";
 
@@ -223,13 +260,18 @@ public static class HostpanelErrorCodes
     /// The id names no email template (404): <c>GetEmailTemplateHandler</c>,
     /// <c>UpdateEmailTemplateHandler</c>, <c>DeleteEmailTemplateHandler</c>,
     /// <c>ToggleEmailTemplateHandler</c> and <c>SendEmailHandler</c>'s slug lookup all answer with
-    /// it — the last one is never seen on the wire today, because nothing binds
-    /// <c>SendEmailCommand</c> to a route, but the handler still answers with a code rather than
-    /// throwing so a future endpoint would not need to change it.
+    /// it. Nothing binds <c>SendEmailCommand</c> to a route, so the last one never reaches the
+    /// wire, but the handler still answers with a code rather than throwing.
     /// </summary>
     public const string EMAIL_TEMPLATE_NOT_FOUND = "EMAIL_TEMPLATE_NOT_FOUND";
 
-    // Support — tickets
+    /// <summary>
+    /// The template already has a version in the requested language (409):
+    /// <c>CreateEmailTemplateHandler</c>; each slug holds one version per language.
+    /// </summary>
+    public const string EMAIL_TEMPLATE_ALREADY_EXISTS = "EMAIL_TEMPLATE_ALREADY_EXISTS";
+
+    // Support: tickets
 
     /// <summary>
     /// The id names no ticket (404). Shared by the staff surface and by <c>ITicketOwnership</c>'s
@@ -237,12 +279,12 @@ public static class HostpanelErrorCodes
     /// </summary>
     public const string TICKET_NOT_FOUND = "TICKET_NOT_FOUND";
 
-    // Support — departments
+    // Support: departments
 
     /// <summary>The id names no support department (404).</summary>
     public const string DEPARTMENT_NOT_FOUND = "DEPARTMENT_NOT_FOUND";
 
-    // Support — downloads
+    // Support: downloads
 
     /// <summary>The id names no download (404).</summary>
     public const string DOWNLOAD_NOT_FOUND = "DOWNLOAD_NOT_FOUND";
@@ -250,7 +292,10 @@ public static class HostpanelErrorCodes
     /// <summary>The id names no download category (404).</summary>
     public const string DOWNLOAD_CATEGORY_NOT_FOUND = "DOWNLOAD_CATEGORY_NOT_FOUND";
 
-    // Support — predefined replies
+    /// <summary>The download category still has sub-categories or downloads, so it cannot be deleted (409).</summary>
+    public const string DOWNLOAD_CATEGORY_IN_USE = "DOWNLOAD_CATEGORY_IN_USE";
+
+    // Support: predefined replies
 
     /// <summary>The id names no predefined reply (404).</summary>
     public const string PREDEFINED_REPLY_NOT_FOUND = "PREDEFINED_REPLY_NOT_FOUND";
@@ -258,7 +303,10 @@ public static class HostpanelErrorCodes
     /// <summary>The id names no predefined reply category (404).</summary>
     public const string PREDEFINED_REPLY_CATEGORY_NOT_FOUND = "PREDEFINED_REPLY_CATEGORY_NOT_FOUND";
 
-    // Support — contact form
+    /// <summary>The predefined reply category still has sub-categories or replies, so it cannot be deleted (409).</summary>
+    public const string PREDEFINED_REPLY_CATEGORY_IN_USE = "PREDEFINED_REPLY_CATEGORY_IN_USE";
+
+    // Support: contact form
 
     /// <summary>This deployment has no configured enquiry inbox for the contact form (503).</summary>
     public const string CONTACT_NOT_CONFIGURED = "CONTACT_NOT_CONFIGURED";
@@ -322,7 +370,7 @@ public static class HostpanelErrorCodes
     /// </summary>
     public const string RENEWAL_INVOICE_OPEN = "RENEWAL_INVOICE_OPEN";
 
-    // Domains — DNS and forwarding
+    // Domains: DNS and forwarding
 
     /// <summary>The id names no DNS record on the domain's zone (404).</summary>
     public const string DNS_RECORD_NOT_FOUND = "DNS_RECORD_NOT_FOUND";
@@ -368,7 +416,37 @@ public static class HostpanelErrorCodes
     /// <summary>The registrar module named does not match a known provider (400).</summary>
     public const string TLD_REGISTRAR_MODULE_UNKNOWN = "TLD_REGISTRAR_MODULE_UNKNOWN";
 
-    // Support — knowledge base and content
+    // Domains: why a registrar adapter refused. The adapter logs the registrar's own wording and
+    // hands one of these back on RegistrarResult.ErrorCode.
+
+    /// <summary>The domain's registrar has no credentials configured (503).</summary>
+    public const string REGISTRAR_NOT_CONFIGURED = "REGISTRAR_NOT_CONFIGURED";
+
+    /// <summary>The registrar refused the order or change, or did not confirm it (502).</summary>
+    public const string REGISTRAR_ORDER_UPSTREAM_FAILED = "REGISTRAR_ORDER_UPSTREAM_FAILED";
+
+    /// <summary>The registrar offers no programmatic way to do this; its support has to (409).</summary>
+    public const string REGISTRAR_OPERATION_UNSUPPORTED = "REGISTRAR_OPERATION_UNSUPPORTED";
+
+    /// <summary>The registrar account holds no domain by that name (404).</summary>
+    public const string REGISTRAR_DOMAIN_NOT_FOUND = "REGISTRAR_DOMAIN_NOT_FOUND";
+
+    /// <summary>The registrar holds the domain but does not report it active yet (409).</summary>
+    public const string REGISTRAR_DOMAIN_NOT_ACTIVE = "REGISTRAR_DOMAIN_NOT_ACTIVE";
+
+    /// <summary>The domain has no privacy subscription at the registrar to switch on or off (409).</summary>
+    public const string REGISTRAR_WHOIS_PRIVACY_UNAVAILABLE = "REGISTRAR_WHOIS_PRIVACY_UNAVAILABLE";
+
+    /// <summary>The registrar says the name is not available to register or transfer, and the account does not hold it (409).</summary>
+    public const string REGISTRAR_DOMAIN_UNAVAILABLE = "REGISTRAR_DOMAIN_UNAVAILABLE";
+
+    /// <summary>The operator's registrar account has too little balance for the purchase (503).</summary>
+    public const string REGISTRAR_INSUFFICIENT_FUNDS = "REGISTRAR_INSUFFICIENT_FUNDS";
+
+    /// <summary>The registrant contact is missing a detail the registrar requires, so nothing was bought (422).</summary>
+    public const string REGISTRAR_CONTACT_VALIDATION_FAILED = "REGISTRAR_CONTACT_VALIDATION_FAILED";
+
+    // Support: knowledge base and content
 
     /// <summary>The id names no knowledge base article (404).</summary>
     public const string KBARTICLE_NOT_FOUND = "KBARTICLE_NOT_FOUND";
@@ -376,25 +454,20 @@ public static class HostpanelErrorCodes
     /// <summary>The id names no knowledge base category (404).</summary>
     public const string KBCATEGORY_NOT_FOUND = "KBCATEGORY_NOT_FOUND";
 
+    /// <summary>The knowledge base category still has sub-categories, so it cannot be deleted (409).</summary>
+    public const string KBCATEGORY_IN_USE = "KBCATEGORY_IN_USE";
+
     /// <summary>The id names no announcement (404).</summary>
     public const string ANNOUNCEMENT_NOT_FOUND = "ANNOUNCEMENT_NOT_FOUND";
 
     /// <summary>The id names no network issue (404).</summary>
     public const string NETWORKISSUE_NOT_FOUND = "NETWORKISSUE_NOT_FOUND";
 
-    /// <summary>
-    /// The public knowledge base article read cannot serve the id (400): it either names no row
-    /// at all or names an unpublished draft. Deliberately not a <c>*_NOT_FOUND</c> code -- ids are
-    /// sequential and this route is anonymous, so a caller telling "missing" apart from "exists but
-    /// is a draft" could map the unpublished backlog one guess at a time.
-    /// </summary>
-    public const string KB_PUBLISHED_ARTICLE_UNAVAILABLE = "KB_PUBLISHED_ARTICLE_UNAVAILABLE";
-
     // Orders
 
     /// <summary>
-    /// The id names no order, or -- for the four checkout-payment actions a guest reaches with no
-    /// credential -- the id and the payment token presented for it do not go together (404). Both
+    /// The id names no order, or, for the four checkout-payment actions a guest reaches with no
+    /// credential, the id and the payment token presented for it do not go together (404). Both
     /// causes answer alike on purpose: order ids are sequential, and a caller who could tell
     /// "no such order" apart from "not your order" could map out how many orders exist.
     /// </summary>
@@ -447,17 +520,23 @@ public static class HostpanelErrorCodes
     /// </summary>
     public const string ORDER_DOMAIN_PRICING_INVALID = "ORDER_DOMAIN_PRICING_INVALID";
 
+    /// <summary>
+    /// The order number sequence has outgrown the configured prefix and the longest order number
+    /// the order table stores, so no new order can be numbered until the operator shortens the
+    /// prefix (503).
+    /// </summary>
+    public const string ORDER_NUMBER_RANGE_EXHAUSTED = "ORDER_NUMBER_RANGE_EXHAUSTED";
+
     // Services
 
     /// <summary>
-    /// The id names no client service (404). Shared by the admin surface and, now that
-    /// <c>IServiceOwnership</c> answers a <see cref="Shared.Models.Result"/> instead of throwing,
-    /// by every client-facing <c>My*</c> refusal too: a service belonging to somebody else, one
+    /// The id names no client service (404). Shared by the admin surface and by every
+    /// client-facing <c>My*</c> refusal through <c>IServiceOwnership</c>: a service belonging to somebody else, one
     /// that does not exist, and a caller with no client record all answer this code alike.
     /// </summary>
     public const string SERVICE_NOT_FOUND = "SERVICE_NOT_FOUND";
 
-    // Services — SSH key management
+    // Services: SSH key management
 
     /// <summary>The pasted text is not a single, valid ED25519 public key (400).</summary>
     public const string SSH_KEY_INVALID = "SSH_KEY_INVALID";
@@ -513,6 +592,9 @@ public static class HostpanelErrorCodes
     /// <summary>An open cancellation request already exists for the service (409).</summary>
     public const string CANCELLATION_ALREADY_PENDING = "CANCELLATION_ALREADY_PENDING";
 
+    /// <summary>The service is already terminated, so there is nothing left to cancel (409).</summary>
+    public const string SERVICE_ALREADY_TERMINATED = "SERVICE_ALREADY_TERMINATED";
+
     /// <summary>The id names no cancellation request (404).</summary>
     public const string CANCELLATION_REQUEST_NOT_FOUND = "CANCELLATION_REQUEST_NOT_FOUND";
 
@@ -529,7 +611,7 @@ public static class HostpanelErrorCodes
     public const string SERVICE_NOT_PENDING = "SERVICE_NOT_PENDING";
 
     /// <summary>
-    /// No server of the product's module has room to provision the service right now (503) — a
+    /// No server of the product's module has room to provision the service right now (503): a
     /// capacity gap, not a caller error.
     /// </summary>
     public const string NO_ELIGIBLE_SERVER = "NO_ELIGIBLE_SERVER";
@@ -537,8 +619,23 @@ public static class HostpanelErrorCodes
     /// <summary>The provisioning provider rejected the setup request (502).</summary>
     public const string PROVISIONING_UPSTREAM_FAILED = "PROVISIONING_UPSTREAM_FAILED";
 
-    /// <summary>The status named on an update does not match a known service status (400).</summary>
-    public const string INVALID_SERVICE_STATUS = "INVALID_SERVICE_STATUS";
+    /// <summary>
+    /// The service's first invoice is not paid in full, so the client may not set it up yet (402).
+    /// Staff provisioning is not bound by it.
+    /// </summary>
+    public const string SERVICE_FIRST_INVOICE_UNPAID = "SERVICE_FIRST_INVOICE_UNPAID";
+
+    /// <summary>
+    /// The panel already holds an account under the service's username that is not this service's,
+    /// so it cannot be adopted and the service needs staff attention (409).
+    /// </summary>
+    public const string PROVISIONING_ACCOUNT_CONFLICT = "PROVISIONING_ACCOUNT_CONFLICT";
+
+    /// <summary>The service has no domain or username to create the hosting account with (409).</summary>
+    public const string SERVICE_HOSTING_DETAILS_MISSING = "SERVICE_HOSTING_DETAILS_MISSING";
+
+    /// <summary>The service's product names no hosting package to create the account on (409).</summary>
+    public const string PRODUCT_PACKAGE_MISSING = "PRODUCT_PACKAGE_MISSING";
 
     // Provisioning
 
@@ -575,7 +672,7 @@ public static class HostpanelErrorCodes
     /// <summary>The provisioning provider could not return the account's credentials (502).</summary>
     public const string SERVICE_CREDENTIALS_UPSTREAM_FAILED = "SERVICE_CREDENTIALS_UPSTREAM_FAILED";
 
-    // Admin — servers
+    // Admin: servers
 
     /// <summary>The id names no configured provisioning server (404).</summary>
     public const string SERVER_NOT_FOUND = "SERVER_NOT_FOUND";
@@ -583,11 +680,29 @@ public static class HostpanelErrorCodes
     /// <summary>The id names no configured server group (404).</summary>
     public const string SERVER_GROUP_NOT_FOUND = "SERVER_GROUP_NOT_FOUND";
 
-    // Admin — plugins
+    /// <summary>The server still hosts client services or SSH keys, so it cannot be deleted (409).</summary>
+    public const string SERVER_IN_USE = "SERVER_IN_USE";
+
+    /// <summary>Products still provision into the server group, so it cannot be deleted (409).</summary>
+    public const string SERVER_GROUP_IN_USE = "SERVER_GROUP_IN_USE";
+
+    /// <summary>The connection probe could not reach the server or the panel did not answer (answered inside the test result, not as a refusal).</summary>
+    public const string SERVER_CONNECTION_UNREACHABLE = "SERVER_CONNECTION_UNREACHABLE";
+
+    /// <summary>The server stores no access hash to probe a version 7 hosting panel with (answered inside the test result).</summary>
+    public const string SERVER_CONNECTION_NO_ACCESS_HASH = "SERVER_CONNECTION_NO_ACCESS_HASH";
+
+    /// <summary>The server stores no API key or access hash to probe a legacy hosting panel with (answered inside the test result).</summary>
+    public const string SERVER_CONNECTION_NO_API_KEY = "SERVER_CONNECTION_NO_API_KEY";
+
+    /// <summary>The server's module has no connection probe (answered inside the test result).</summary>
+    public const string SERVER_CONNECTION_MODULE_UNSUPPORTED = "SERVER_CONNECTION_MODULE_UNSUPPORTED";
+
+    // Admin: plugins
 
     /// <summary>
-    /// The uploaded archive has no <c>plugin.json</c> at its root, the manifest could not be
-    /// parsed, or it is missing the plugin id (400).
+    /// The upload is empty or not a readable ZIP archive, it has no <c>plugin.json</c> at its root,
+    /// the manifest could not be parsed, or it is missing the plugin id (400).
     /// </summary>
     public const string PLUGIN_MANIFEST_INVALID = "PLUGIN_MANIFEST_INVALID";
 
@@ -601,13 +716,31 @@ public static class HostpanelErrorCodes
     /// </summary>
     public const string PLUGIN_ARCHIVE_UNSAFE = "PLUGIN_ARCHIVE_UNSAFE";
 
-    /// <summary>The plugin id is not a bare directory name and cannot be resolved safely (400).</summary>
+    /// <summary>
+    /// The plugin id does not meet the plugin id rule (lower-case letters, digits and single
+    /// hyphens) or would resolve outside the plugins folder (400).
+    /// </summary>
     public const string PLUGIN_ID_INVALID = "PLUGIN_ID_INVALID";
 
     /// <summary>No plugin with that id is installed (404).</summary>
     public const string PLUGIN_NOT_FOUND = "PLUGIN_NOT_FOUND";
 
-    // Admin — integrations
+    /// <summary>The archive has more entries, or unpacks to more bytes, than this host accepts (413).</summary>
+    public const string PLUGIN_ARCHIVE_TOO_LARGE = "PLUGIN_ARCHIVE_TOO_LARGE";
+
+    /// <summary>
+    /// The archive carries an assembly named like one of the host's own or the framework's, which
+    /// would be loaded in place of the host's copy (400).
+    /// </summary>
+    public const string PLUGIN_HOST_ASSEMBLY_REFUSED = "PLUGIN_HOST_ASSEMBLY_REFUSED";
+
+    /// <summary>A trusted-package list is configured and the archive is not on it (400).</summary>
+    public const string PLUGIN_NOT_TRUSTED = "PLUGIN_NOT_TRUSTED";
+
+    /// <summary>The plugin ships with this build and cannot be removed or replaced by an upload (409).</summary>
+    public const string PLUGIN_BUILT_IN = "PLUGIN_BUILT_IN";
+
+    // Admin: integrations
 
     /// <summary>The slug names neither a built-in integration nor a loaded plugin (404).</summary>
     public const string INTEGRATION_NOT_FOUND = "INTEGRATION_NOT_FOUND";
@@ -630,12 +763,6 @@ public static class HostpanelErrorCodes
 
     /// <summary>The id names no homepage slide (404).</summary>
     public const string SLIDE_NOT_FOUND = "SLIDE_NOT_FOUND";
-
-    /// <summary>An uploaded slide image is not one of the media types this deployment accepts (400).</summary>
-    public const string SLIDE_IMAGE_TYPE_INVALID = "SLIDE_IMAGE_TYPE_INVALID";
-
-    /// <summary>An uploaded slide image is over the byte ceiling this deployment enforces (400).</summary>
-    public const string SLIDE_IMAGE_EXCEEDS_LIMIT = "SLIDE_IMAGE_EXCEEDS_LIMIT";
 
     // Storefront content
 
@@ -663,16 +790,19 @@ public static class HostpanelErrorCodes
     public const string MIGRATION_JOB_NOT_FOUND = "MIGRATION_JOB_NOT_FOUND";
 
     /// <summary>
-    /// The job is not <c>Pending</c>, so a pull cannot be started for it — it is already running,
+    /// The job is not <c>Pending</c>, so a pull cannot be started for it: it is already running,
     /// already finished, or already failed (400).
     /// </summary>
     public const string MIGRATION_JOB_NOT_PENDING = "MIGRATION_JOB_NOT_PENDING";
 
     /// <summary>
-    /// The job has already completed or failed, so it cannot accept another batch (409, via the
-    /// <c>ALREADY</c> token).
+    /// The job has not failed, so there is nothing to retry: it is pending, queued, running or
+    /// completed, or a concurrent retry queued it first (400).
     /// </summary>
-    public const string MIGRATION_JOB_ALREADY_FINISHED = "MIGRATION_JOB_ALREADY_FINISHED";
+    public const string MIGRATION_JOB_NOT_FAILED = "MIGRATION_JOB_NOT_FAILED";
+
+    /// <summary>The job's status does not allow the requested step (409).</summary>
+    public const string MIGRATION_JOB_INVALID_TRANSITION = Domain.Migration.MigrationJobErrors.InvalidTransition;
 
     /// <summary>
     /// The migration plugin's files are not present on this deployment, so there is nothing to
@@ -681,29 +811,28 @@ public static class HostpanelErrorCodes
     public const string MIGRATION_PLUGIN_NOT_FOUND = "MIGRATION_PLUGIN_NOT_FOUND";
 
     /// <summary>
-    /// The source system — a port this deployment does not own — could not be reached or refused
+    /// The source system, a port this deployment does not own, could not be reached or refused
     /// the connection test (502). No detail from the source ever reaches the response.
     /// </summary>
     public const string MIGRATION_CONNECTION_UPSTREAM_FAILED = "MIGRATION_CONNECTION_UPSTREAM_FAILED";
 
-    // Admin — settings
+    // Admin: settings
 
-    /// <summary>The id names no configuration setting (404). Replaces a bare thrown
-    /// <c>InvalidOperationException</c> (400); the admin not-found ruling moves it to 404.</summary>
+    /// <summary>The id names no configuration setting (404).</summary>
     public const string SETTING_NOT_FOUND = "SETTING_NOT_FOUND";
 
     /// <summary>
     /// The written value is outside the key's fixed vocabulary, or does not match the shape the
-    /// key requires (400). <c>detail</c> carries a fixed sentence; the per-key wording — the
-    /// values or the shape actually accepted — travels in <c>errors[key]</c> instead, because it
+    /// key requires (400). <c>detail</c> carries a fixed sentence; the per-key wording, the
+    /// values or the shape actually accepted, travels in <c>errors[key]</c> instead, because it
     /// depends on the row being written and cannot be a single resx sentence.
     /// </summary>
     public const string INVALID_SETTING_VALUE = "INVALID_SETTING_VALUE";
 
-    // Admin — branding
+    // Admin: branding
 
     /// <summary>
-    /// The uploaded bytes are not an image this deployment will store — not an image at all, an
+    /// The uploaded bytes are not an image this deployment will store, not an image at all, an
     /// unsupported format, or a declared type that disagrees with the real bytes (400). The
     /// precise cause is logged, never returned.
     /// </summary>
@@ -716,117 +845,124 @@ public static class HostpanelErrorCodes
     /// </summary>
     public const string BRANDING_IMAGE_TOO_LARGE = "BRANDING_IMAGE_TOO_LARGE";
 
-    // Auth — account provisioning refused by an admin action
+    // Auth: account provisioning refused by an admin action
 
     /// <summary>
     /// A guest checkout, an admin "create client" or a migration pull tried to create an account
-    /// where an SSO owns the accounts (400). Answered from <c>PlaceOrderHandler</c>'s guest-checkout
+    /// where an external sign-on provider owns the accounts (400). Answered from <c>PlaceOrderHandler</c>'s guest-checkout
     /// branch and <c>AdminCreateClientHandler</c>'s new-account branch; a migration pull logs the
     /// same refusal against the job's own log instead of answering an HTTP caller.
     /// </summary>
     public const string USER_PROVISIONING_NOT_ALLOWED_CREATE_ACCOUNT = "USER_PROVISIONING_NOT_ALLOWED_CREATE_ACCOUNT";
 
     /// <summary>
-    /// An admin tried to rename a person where an SSO owns the accounts (400). Answered from
+    /// An admin tried to rename a person where an external sign-on provider owns the accounts (400). Answered from
     /// <c>UpdateUserHandler</c>'s own call.
     /// </summary>
     public const string USER_PROVISIONING_NOT_ALLOWED_CHANGE_NAME = "USER_PROVISIONING_NOT_ALLOWED_CHANGE_NAME";
 
     /// <summary>
-    /// An admin tried to change a person's sign-in address where an SSO owns the accounts (400).
+    /// An admin tried to change a person's sign-in address where an external sign-on provider owns the accounts (400).
     /// Answered from <c>UpdateUserHandler</c> and from <c>UpdateClientHandler</c>'s own call to the
     /// same provisioning method.
     /// </summary>
     public const string USER_PROVISIONING_NOT_ALLOWED_CHANGE_EMAIL = "USER_PROVISIONING_NOT_ALLOWED_CHANGE_EMAIL";
 
-    /// <summary>An admin tried to delete an account where an SSO owns the accounts (400).</summary>
+    /// <summary>An admin tried to delete an account where an external sign-on provider owns the accounts (400).</summary>
     public const string USER_PROVISIONING_NOT_ALLOWED_DELETE_ACCOUNT = "USER_PROVISIONING_NOT_ALLOWED_DELETE_ACCOUNT";
 
-    /// <summary>An admin tried to set a person's password directly where an SSO owns the accounts (400).</summary>
+    /// <summary>An admin tried to set a person's password directly where an external sign-on provider owns the accounts (400).</summary>
     public const string USER_PROVISIONING_NOT_ALLOWED_SET_PASSWORD = "USER_PROVISIONING_NOT_ALLOWED_SET_PASSWORD";
 
     /// <summary>
-    /// An admin tried to issue a password-reset link where an SSO owns the accounts (400).
+    /// An admin tried to issue a password-reset link where an external sign-on provider owns the accounts (400).
     /// </summary>
     public const string USER_PROVISIONING_NOT_ALLOWED_ISSUE_PASSWORD_RESET =
         "USER_PROVISIONING_NOT_ALLOWED_ISSUE_PASSWORD_RESET";
 
     /// <summary>
-    /// Something tried to confirm an email address where an SSO owns the accounts (400).
+    /// Something tried to confirm an email address where an external sign-on provider owns the accounts (400).
     /// </summary>
     public const string USER_PROVISIONING_NOT_ALLOWED_CONFIRM_EMAIL =
         "USER_PROVISIONING_NOT_ALLOWED_CONFIRM_EMAIL";
 
     /// <summary>
-    /// Something tried to issue an email-confirmation token where an SSO owns the accounts (400).
+    /// Something tried to issue an email-confirmation token where an external sign-on provider owns the accounts (400).
     /// </summary>
     public const string USER_PROVISIONING_NOT_ALLOWED_ISSUE_EMAIL_CONFIRMATION =
         "USER_PROVISIONING_NOT_ALLOWED_ISSUE_EMAIL_CONFIRMATION";
 
-    // Domain aggregate refusals (A6 Task 8). The literal string is declared once, on the
-    // Domain-side <c>&lt;Feature&gt;Errors</c> class each aggregate throws with — Domain may not
+    // Domain aggregate refusals. The literal string is declared once, on the
+    // Domain-side <c>&lt;Feature&gt;Errors</c> class each aggregate throws with: Domain may not
     // reference this Application-layer class, so these constants alias that value rather than
     // duplicating it, purely so ResourceCoverageTests (which reflects over this class only) still
     // requires a sentence for each one in every language.
 
-    /// <summary>The base currency cannot be disabled (400) — <see cref="Domain.Billing.Currency.Disable"/>.</summary>
+    /// <summary>The base currency cannot be disabled (400): <see cref="Domain.Billing.Currency.Disable"/>.</summary>
     public const string CURRENCY_BASE_DISABLE_NOT_ALLOWED = Domain.Billing.BillingErrors.CurrencyBaseDisableNotAllowed;
 
-    /// <summary>Only a Draft invoice may be published (400) — <see cref="Domain.Billing.Invoice.Publish"/>.</summary>
+    /// <summary>Only a Draft invoice may be published (400): <see cref="Domain.Billing.Invoice.Publish"/>.</summary>
     public const string INVOICE_NOT_DRAFT = Domain.Billing.BillingErrors.InvoiceNotDraft;
 
-    /// <summary>The invoice is no longer editable (400) — <see cref="Domain.Billing.Invoice.AddItem"/>.</summary>
+    /// <summary>The invoice is no longer editable (400): <see cref="Domain.Billing.Invoice.AddItem"/>.</summary>
     public const string INVOICE_NOT_EDITABLE = Domain.Billing.BillingErrors.InvoiceNotEditable;
 
     /// <summary>
-    /// The id names no line item on this invoice (404) — <see cref="Domain.Billing.Invoice.RemoveItem"/>
+    /// The id names no line item on this invoice (404): <see cref="Domain.Billing.Invoice.RemoveItem"/>
     /// and <see cref="Domain.Billing.Invoice.UpdateItem"/>.
     /// </summary>
     public const string INVOICE_ITEM_NOT_FOUND = Domain.Billing.BillingErrors.InvoiceItemNotFound;
 
     /// <summary>
-    /// The invoice is not eligible to be marked overdue (400) — <see cref="Domain.Billing.Invoice.MarkOverdue"/>.
+    /// The invoice is not eligible to be marked overdue (400): <see cref="Domain.Billing.Invoice.MarkOverdue"/>.
     /// </summary>
     public const string INVOICE_NOT_UNPAID = Domain.Billing.BillingErrors.InvoiceNotUnpaid;
 
-    /// <summary>A paid invoice cannot be cancelled (400) — <see cref="Domain.Billing.Invoice.Cancel"/>.</summary>
+    /// <summary>A paid, refunded or already cancelled invoice cannot be cancelled (400): <see cref="Domain.Billing.Invoice.Cancel"/>.</summary>
     public const string INVOICE_CANCEL_NOT_ALLOWED = Domain.Billing.BillingErrors.InvoiceCancelNotAllowed;
 
     /// <summary>
-    /// The invoice must be Paid for this action (400) — <see cref="Domain.Billing.Invoice.MarkUnpaid"/>
+    /// The invoice must be Paid for this action (400): <see cref="Domain.Billing.Invoice.MarkUnpaid"/>
     /// and <see cref="Domain.Billing.Invoice.Refund"/>.
     /// </summary>
     public const string INVOICE_NOT_PAID = Domain.Billing.BillingErrors.InvoiceNotPaid;
 
-    /// <summary>The quote is no longer editable (400) — <see cref="Domain.Billing.Quote.AddItem"/>.</summary>
+    /// <summary>The quote is no longer editable (400): <see cref="Domain.Billing.Quote.AddItem"/>.</summary>
     public const string QUOTE_NOT_EDITABLE = Domain.Billing.BillingErrors.QuoteNotEditable;
 
-    /// <summary>The quote's stage does not allow acceptance (400) — <see cref="Domain.Billing.Quote.Accept"/>.</summary>
+    /// <summary>The quote's stage does not allow acceptance (400): <see cref="Domain.Billing.Quote.Accept"/>.</summary>
     public const string QUOTE_NOT_ACCEPTABLE = Domain.Billing.BillingErrors.QuoteNotAcceptable;
 
     /// <summary>
-    /// The id names no line item on this quote (404) — <see cref="Domain.Billing.Quote.RemoveItem"/>
+    /// The id names no line item on this quote (404): <see cref="Domain.Billing.Quote.RemoveItem"/>
     /// and <see cref="Domain.Billing.Quote.UpdateItem"/>.
     /// </summary>
     public const string QUOTE_ITEM_NOT_FOUND = Domain.Billing.BillingErrors.QuoteItemNotFound;
 
     /// <summary>
-    /// The id names no contact on this client (404) — <see cref="Domain.Clients.Client.RemoveContact"/>
-    /// and <see cref="Domain.Clients.Client.UpdateContact"/>.
+    /// A transaction moves no money in either direction (422): <see cref="Domain.Billing.Transaction.Create"/>
+    /// and <see cref="Domain.Billing.Transaction.CorrectAmounts"/>.
+    /// </summary>
+    public const string TRANSACTION_AMOUNT_REQUIRED = Domain.Billing.BillingErrors.TransactionAmountRequired;
+
+    /// <summary>
+    /// The id names no contact on this client (404): <see cref="Domain.Clients.Client.RemoveContact"/>
+    /// and <see cref="Domain.Clients.Client.UpdateContact"/>. The one answer for a contact that is
+    /// another account's and one that does not exist, on the admin and the client routes alike.
     /// </summary>
     public const string CLIENT_CONTACT_NOT_FOUND = Domain.Clients.ClientsErrors.ClientContactNotFound;
 
     /// <summary>
-    /// The account owner cannot also be added as an additional user (400) —
+    /// The account owner cannot also be added as an additional user (400):
     /// <see cref="Domain.Clients.Client.AddUser"/>.
     /// </summary>
     public const string CLIENT_USER_IS_OWNER = Domain.Clients.ClientsErrors.ClientUserIsOwner;
 
-    /// <summary>The user is already linked to this client (400) — <see cref="Domain.Clients.Client.AddUser"/>.</summary>
+    /// <summary>The user is already linked to this client (400): <see cref="Domain.Clients.Client.AddUser"/>.</summary>
     public const string CLIENT_USER_LINK_DUPLICATE = Domain.Clients.ClientsErrors.ClientUserLinkDuplicate;
 
     /// <summary>
-    /// The user is not linked to this client (400) — <see cref="Domain.Clients.Client.RemoveUser"/> and
+    /// The user is not linked to this client (400): <see cref="Domain.Clients.Client.RemoveUser"/> and
     /// <see cref="Domain.Clients.Client.UpdateUserPermissions"/>.
     /// </summary>
     public const string CLIENT_USER_NOT_LINKED = Domain.Clients.ClientsErrors.ClientUserNotLinked;
@@ -838,67 +974,132 @@ public static class HostpanelErrorCodes
     public const string CLIENT_PERMISSION_DENIED = Domain.Clients.ClientsErrors.ClientPermissionDenied;
 
     /// <summary>
-    /// The named user is already the account owner (400) — <see cref="Domain.Clients.Client.TransferOwnership"/>.
+    /// The named user is already the account owner (400): <see cref="Domain.Clients.Client.TransferOwnership"/>.
     /// </summary>
     public const string CLIENT_TRANSFER_SAME_OWNER = Domain.Clients.ClientsErrors.ClientTransferSameOwner;
 
     /// <summary>
-    /// The deduction exceeds the client's credit balance (400) — <see cref="Domain.Clients.Client.DeductCredit"/>.
+    /// The deduction exceeds the client's credit balance (400): <see cref="Domain.Clients.Client.DeductCredit"/>.
     /// </summary>
     public const string CLIENT_CREDIT_INSUFFICIENT = Domain.Clients.ClientsErrors.ClientCreditInsufficient;
 
-    /// <summary>The account is not in a state that can be suspended (400) — <see cref="Domain.Clients.Client.Suspend"/>.</summary>
+    /// <summary>The account is not in a state that can be suspended (400): <see cref="Domain.Clients.Client.Suspend"/>.</summary>
     public const string CLIENT_SUSPEND_NOT_ALLOWED = Domain.Clients.ClientsErrors.ClientSuspendNotAllowed;
 
-    /// <summary>The account is already closed (400) — <see cref="Domain.Clients.Client.Close"/>.</summary>
+    /// <summary>The account is already closed (400): <see cref="Domain.Clients.Client.Close"/>.</summary>
     public const string CLIENT_CLOSE_NOT_ALLOWED = Domain.Clients.ClientsErrors.ClientCloseNotAllowed;
 
-    /// <summary>A closed account cannot be reactivated this way (400) — <see cref="Domain.Clients.Client.Activate"/>.</summary>
+    /// <summary>A closed account cannot be reactivated this way (400): <see cref="Domain.Clients.Client.Activate"/>.</summary>
     public const string CLIENT_ACTIVATE_NOT_ALLOWED = Domain.Clients.ClientsErrors.ClientActivateNotAllowed;
 
+    /// <summary>The account is suspended or closed and cannot be deactivated (400): <see cref="Domain.Clients.Client.Deactivate"/>.</summary>
+    public const string CLIENT_DEACTIVATE_NOT_ALLOWED = Domain.Clients.ClientsErrors.ClientDeactivateNotAllowed;
+
     /// <summary>
-    /// The domain's status does not allow cancellation (400) — <see cref="Domain.Domains.RegisteredDomain.Cancel"/>.
+    /// The account is suspended, so it may not place orders or pay through a new card method (403, an exact
+    /// <c>StatusMapping</c> row).
+    /// </summary>
+    public const string CLIENT_SUSPENDED = Domain.Clients.ClientsErrors.ClientSuspended;
+
+    /// <summary>
+    /// The account is closed, so it may not place orders, pay through a new card method or be billed (403, an exact
+    /// <c>StatusMapping</c> row).
+    /// </summary>
+    public const string CLIENT_CLOSED = Domain.Clients.ClientsErrors.ClientClosed;
+
+    /// <summary>
+    /// The account has credit card processing disabled, so no card payment or saved card charge is taken from it
+    /// (403, an exact <c>StatusMapping</c> row).
+    /// </summary>
+    public const string CLIENT_CARD_PAYMENT_DISABLED = Domain.Clients.ClientsErrors.ClientCardPaymentDisabled;
+
+    /// <summary>
+    /// The account does not allow single sign-on into the hosting panels of its services (403, an exact
+    /// <c>StatusMapping</c> row).
+    /// </summary>
+    public const string CLIENT_SSO_DISABLED = Domain.Clients.ClientsErrors.ClientSsoDisabled;
+
+    /// <summary>
+    /// The account is tax exempt, so a tax rate cannot be set on its invoices (409, an exact
+    /// <c>StatusMapping</c> row).
+    /// </summary>
+    public const string CLIENT_TAX_EXEMPT = Domain.Clients.ClientsErrors.ClientTaxExempt;
+
+    /// <summary>
+    /// The account owner cannot be removed as an additional user (409, an exact <c>StatusMapping</c> row):
+    /// <see cref="Domain.Clients.Client.RemoveUser"/>.
+    /// </summary>
+    public const string CLIENT_OWNER_CANNOT_BE_REMOVED = Domain.Clients.ClientsErrors.ClientOwnerCannotBeRemoved;
+
+    /// <summary>
+    /// Another contact of this client already uses the email address (409, an exact <c>StatusMapping</c> row):
+    /// <see cref="Domain.Clients.Client.AddContact"/> and <see cref="Domain.Clients.Client.UpdateContact"/>.
+    /// </summary>
+    public const string CONTACT_EMAIL_IN_USE = Domain.Clients.ClientsErrors.ClientContactEmailInUse;
+
+    /// <summary>
+    /// The account is closed, so its contacts and users cannot be changed (409, an exact <c>StatusMapping</c> row).
+    /// </summary>
+    public const string CLIENT_RECORD_CLOSED = Domain.Clients.ClientsErrors.ClientRecordClosed;
+
+    /// <summary>
+    /// The domain's status does not allow cancellation (400): <see cref="Domain.Domains.RegisteredDomain.Cancel"/>.
     /// </summary>
     public const string DOMAIN_CANCEL_NOT_ALLOWED = Domain.Domains.DomainsErrors.DomainCancelNotAllowed;
 
     /// <summary>
-    /// The domain's status does not allow renewal (400) — <see cref="Domain.Domains.RegisteredDomain.Renew"/>.
+    /// The domain's status does not allow renewal (400): <see cref="Domain.Domains.RegisteredDomain.Renew"/>.
     /// </summary>
     public const string DOMAIN_RENEW_NOT_ALLOWED = Domain.Domains.DomainsErrors.DomainRenewNotAllowed;
 
     /// <summary>
-    /// The id names no DNS record on this domain (404) —
+    /// The domain's status does not allow linking a hosting service (400):
+    /// <see cref="Domain.Domains.RegisteredDomain.LinkService"/>.
+    /// </summary>
+    public const string DOMAIN_LINK_NOT_ALLOWED = Domain.Domains.DomainsErrors.DomainLinkNotAllowed;
+
+    /// <summary>
+    /// The id names no DNS record on this domain (404):
     /// <see cref="Domain.Domains.RegisteredDomain.UpdateDnsRecord"/> and
     /// <see cref="Domain.Domains.RegisteredDomain.RemoveDnsRecord"/>.
     /// </summary>
     public const string DOMAIN_DNS_RECORD_NOT_FOUND = Domain.Domains.DomainsErrors.DomainDnsRecordNotFound;
 
     /// <summary>
-    /// The id names no email forwarding rule on this domain (404) —
+    /// The id names no email forwarding rule on this domain (404):
     /// <see cref="Domain.Domains.RegisteredDomain.UpdateForwardingRule"/> and
     /// <see cref="Domain.Domains.RegisteredDomain.RemoveForwardingRule"/>.
     /// </summary>
     public const string DOMAIN_FORWARDING_RULE_NOT_FOUND = Domain.Domains.DomainsErrors.DomainForwardingRuleNotFound;
 
     /// <summary>
-    /// The order is not Pending (400) — <see cref="Domain.Orders.Order.Accept"/>,
+    /// The order is not Pending (400): <see cref="Domain.Orders.Order.Accept"/>,
     /// <see cref="Domain.Orders.Order.Cancel"/> and <see cref="Domain.Orders.Order.MarkFraud"/>.
     /// </summary>
     public const string ORDER_NOT_PENDING = Domain.Orders.OrdersErrors.OrderNotPending;
 
-    /// <summary>The service is not Active (400) — <see cref="Domain.Services.ClientService.Suspend"/>.</summary>
+    /// <summary>The service is not Active (400): <see cref="Domain.Services.ClientService.Suspend"/>.</summary>
     public const string SERVICE_NOT_ACTIVE = Domain.Services.ServicesErrors.ServiceNotActive;
 
-    /// <summary>The service is already terminated (400) — <see cref="Domain.Services.ClientService.Terminate"/>.</summary>
+    /// <summary>The service is already terminated (400): <see cref="Domain.Services.ClientService.Terminate"/>.</summary>
     public const string SERVICE_TERMINATE_NOT_ALLOWED = Domain.Services.ServicesErrors.ServiceTerminateNotAllowed;
 
-    /// <summary>The service is not Suspended (400) — <see cref="Domain.Services.ClientService.Unsuspend"/>.</summary>
+    /// <summary>The service is not Suspended (400): <see cref="Domain.Services.ClientService.Unsuspend"/>.</summary>
     public const string SERVICE_NOT_SUSPENDED = Domain.Services.ServicesErrors.ServiceNotSuspended;
 
-    /// <summary>A closed ticket does not accept new replies (400) — <see cref="Domain.Support.Ticket.AddReply"/>.</summary>
+    /// <summary>Staff asked for a status the service cannot be moved to (400), when <see cref="Domain.Services.ClientService.CanChangeStatusTo"/> refuses it.</summary>
+    public const string SERVICE_STATUS_CHANGE_NOT_ALLOWED = Domain.Services.ServicesErrors.ServiceStatusChangeNotAllowed;
+
+    /// <summary>A hold date without the hold, or a termination reason without the end-of-cycle termination (400), from <see cref="Domain.Services.ClientService.ConfigureAutomation"/>.</summary>
+    public const string SERVICE_AUTOMATION_INCONSISTENT = Domain.Services.ServicesErrors.ServiceAutomationInconsistent;
+
+    /// <summary>The service is not terminated, so it has no termination date to correct (409), from <see cref="Domain.Services.ClientService.CorrectTerminationDate"/>.</summary>
+    public const string SERVICE_NOT_TERMINATED = Domain.Services.ServicesErrors.ServiceNotTerminated;
+
+    /// <summary>A closed ticket does not accept new replies (400): <see cref="Domain.Support.Ticket.AddReply"/>.</summary>
     public const string TICKET_REPLY_NOT_ALLOWED = Domain.Support.SupportErrors.TicketReplyNotAllowed;
 
-    /// <summary>The ticket is already closed (400) — <see cref="Domain.Support.Ticket.Close"/>.</summary>
+    /// <summary>The ticket is already closed (400): <see cref="Domain.Support.Ticket.Close"/>.</summary>
     public const string TICKET_CLOSE_NOT_ALLOWED = Domain.Support.SupportErrors.TicketCloseNotAllowed;
 
     /// <summary>The sort order of a question is negative (400).</summary>
@@ -927,4 +1128,43 @@ public static class HostpanelErrorCodes
 
     /// <summary>A testimonial's rating is outside 1 to 5 (400).</summary>
     public const string TESTIMONIAL_RATING_OUT_OF_RANGE = Domain.Testimonials.TestimonialErrors.RatingOutOfRange;
+
+    /// <summary>The refund is more than what was paid and not yet refunded (400): <see cref="Domain.Billing.Invoice.AddRefund"/>.</summary>
+    public const string INVOICE_REFUND_EXCEEDS_PAID = Domain.Billing.BillingErrors.InvoiceRefundExceedsPaid;
+
+    /// <summary>Another refund of the invoice is still waiting for its gateway (409): <see cref="Domain.Billing.Invoice.BeginRefund"/>.</summary>
+    public const string INVOICE_REFUND_CONFLICT = Domain.Billing.BillingErrors.InvoiceRefundConflict;
+
+    /// <summary>The credit is more than the invoice still owes (400): <see cref="Domain.Billing.Invoice.ApplyCredit"/>.</summary>
+    public const string INVOICE_CREDIT_EXCEEDS_DUE = Domain.Billing.BillingErrors.InvoiceCreditExceedsDue;
+
+    /// <summary>The payment is more than the invoice still owes (400): <see cref="Domain.Billing.Invoice.AddPayment"/>.</summary>
+    public const string INVOICE_PAYMENT_EXCEEDS_DUE = Domain.Billing.BillingErrors.InvoicePaymentExceedsDue;
+
+    /// <summary>The invoice still owes money and must be settled, not marked paid (400): <see cref="Domain.Billing.Invoice.MarkPaid"/>.</summary>
+    public const string INVOICE_AMOUNT_STILL_DUE = Domain.Billing.BillingErrors.InvoiceAmountStillDue;
+
+    /// <summary>
+    /// The invoice already took a payment and cannot be cancelled, reopened or closed as history (400);
+    /// see <see cref="Domain.Billing.Invoice.EnsureCancellable"/> and <see cref="Domain.Billing.Invoice.MarkUnpaid"/>.
+    /// </summary>
+    public const string INVOICE_HAS_PAYMENTS = Domain.Billing.BillingErrors.InvoiceHasPayments;
+
+    /// <summary>The change would make the invoice charge less than the payments it already took (400); see <see cref="Domain.Billing.Invoice.RemoveItem"/>.</summary>
+    public const string INVOICE_TOTAL_BELOW_PAID = Domain.Billing.BillingErrors.InvoiceTotalBelowPaid;
+
+    /// <summary>A gateway refund was asked for an invoice no payment gateway took money for (400).</summary>
+    public const string INVOICE_NOT_GATEWAY_PAID = "INVOICE_NOT_GATEWAY_PAID";
+
+    /// <summary>The card gateway refused a refund (502); any part it had already returned stays recorded.</summary>
+    public const string CARD_REFUND_REFUSED = "CARD_REFUND_REFUSED";
+
+    /// <summary>The hosted payment gateway refused or failed a refund (502); nothing was returned through it.</summary>
+    public const string GATEWAY_REFUND_REFUSED = "GATEWAY_REFUND_REFUSED";
+
+    /// <summary>The gateway reported a paid amount or currency other than what the invoice owes (400); the invoice stays unpaid.</summary>
+    public const string GATEWAY_PAYMENT_MISMATCH = "GATEWAY_PAYMENT_MISMATCH";
+
+    /// <summary>Only a Draft or Cancelled invoice may be deleted (400): <see cref="Domain.Billing.Invoice.CanDelete"/>.</summary>
+    public const string INVOICE_NOT_DELETABLE = "INVOICE_NOT_DELETABLE";
 }

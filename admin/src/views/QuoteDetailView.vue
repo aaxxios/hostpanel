@@ -1,14 +1,17 @@
 <script setup lang="ts">
 /**
- * Quote detail: opens an existing quote for editing, or — without an id in the route — starts a
+ * Quote detail: opens an existing quote for editing, or, without an id in the route, starts a
  * new one for the client named in the query. The operator edits the general data, the lines and
- * the three notes, then saves, duplicates, converts the quote to an invoice or deletes it.
+ * the three notes, then saves, duplicates, converts the quote to an invoice or deletes it. A refused
+ * load offers a retry; each action's outcome shows under the header; deleting is confirmed in a
+ * danger prompt.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import QuoteItemsEditor from '@/components/billing/QuoteItemsEditor.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -33,6 +36,7 @@ import { useQuotesStore } from '@/stores/quotes'
 import { QuoteStage } from '@/types/quote'
 import type { QuoteItemUpdate } from '@/types/quote'
 import { invoicePath, quotePath } from '@/lib/routes'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
 
@@ -128,6 +132,11 @@ const fields = () => ({
   adminNotes: adminNotes.value || undefined,
 })
 
+/** Loads the quote of the route again, after a refused load. */
+const reload = (): void => {
+  void store.fetchById(quoteId.value)
+}
+
 /** Saves the quote: creates it (and opens it) or updates it. */
 const save = async (): Promise<void> => {
   store.successMessage = null
@@ -168,11 +177,20 @@ const convert = async (): Promise<void> => {
   }
 }
 
-/** Deletes the quote and goes back. */
+/** Deletes the quote and goes back; a refusal stays on the quote with the API's sentence. */
 const remove = async (): Promise<void> => {
+  store.successMessage = null
+  const deleted = await store.deleteQuote(quoteId.value)
   deleteOpen.value = false
-  if (await store.deleteQuote(quoteId.value)) {
+  if (deleted) {
     router.back()
+  }
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!store.loading) {
+    deleteOpen.value = false
   }
 }
 
@@ -199,9 +217,13 @@ onMounted(() => {
   <UiStack data-testid="billing-quote-detail-view">
     <UiSkeleton v-if="store.loading && store.currentQuote === null && !isNew" shape="block" data-testid="billing-quote-loading" />
 
-    <UiAlert v-else-if="store.error && store.currentQuote === null && !isNew" variant="error" data-testid="billing-quote-load-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="store.error && store.currentQuote === null && !isNew"
+      :message="store.error"
+      :loading="store.loading"
+      testid="billing-quote-load-error"
+      @retry="reload"
+    />
 
     <template v-else>
       <UiPageHeader :title="isNew ? t('billing.quoteDetail.newQuote') : t('billing.quoteDetail.quoteNumber', { id: quoteId })">
@@ -316,9 +338,9 @@ onMounted(() => {
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="store.loading"
-      tone="danger"
+      :tone="UiTone.Danger"
       @confirm="remove"
-      @close="deleteOpen = false"
+      @close="dismissDelete"
     />
 
     <UiDialog

@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Support.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -11,7 +8,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// <c>POST /api/network-issues</c>: an admin can create a network issue, an unrecognised type is
 /// refused before the domain is touched, and the action is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>KnowledgeBaseAndContentEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateNetworkIssueTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

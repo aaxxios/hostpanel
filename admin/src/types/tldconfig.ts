@@ -3,13 +3,23 @@
  * import reports back.
  */
 
+/** The prices of one TLD for each action, keyed by period in years (e.g. "1", "2"). */
+export interface TldPriceTable {
+  /** Prices for registration keyed by period. */
+  register: Record<string, number>
+  /** Prices for transfer keyed by period. */
+  transfer: Record<string, number>
+  /** Prices for renewal keyed by period. */
+  renew: Record<string, number>
+}
+
 /** TLD configuration for pricing management. */
 export interface TldConfig {
   /** Unique identifier. */
   id: number
   /** Top-level domain suffix (e.g. "com", "net"). */
   tld: string
-  /** Registrar module name (e.g. "NameAm", "Namecheap"). */
+  /** Registrar module name, as the backend's registrar module enum spells it. */
   registrarModule: string
   /** ISO 4217 cost currency code. */
   currency: string
@@ -21,18 +31,10 @@ export interface TldConfig {
   sortOrder: number
   /** TLD category tags. */
   categories: string[]
-  /** Cost prices for registration keyed by period (e.g. "1", "2"). */
-  costRegister: Record<string, number>
-  /** Cost prices for transfer keyed by period. */
-  costTransfer: Record<string, number>
-  /** Cost prices for renewal keyed by period. */
-  costRenew: Record<string, number>
-  /** Sell prices for registration keyed by period. */
-  sellRegister: Record<string, number>
-  /** Sell prices for transfer keyed by period. */
-  sellTransfer: Record<string, number>
-  /** Sell prices for renewal keyed by period. */
-  sellRenew: Record<string, number>
+  /** Registrar cost prices. */
+  costs: TldPriceTable
+  /** Client-facing sell prices. */
+  sells: TldPriceTable
   /** ISO 8601 timestamp of the last price sync, or null if never synced. */
   lastSyncedAt: string | null
   /** ISO 8601 creation timestamp. */

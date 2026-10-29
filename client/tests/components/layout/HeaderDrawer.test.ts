@@ -8,7 +8,7 @@ import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
 import LayoutHeaderDrawer from '~/components/layout/HeaderDrawer.vue'
 import { useAuthStore } from '~/stores/auth'
-import type { ClientUser } from '~/types/clientuser'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 import type { HeaderNavItem } from '~/types/headernavitem'
 
 vi.mock('~/composables/apis/useAuthApi', () => ({
@@ -46,7 +46,7 @@ const items: HeaderNavItem[] = [
 ]
 
 /** A signed-in client. */
-const client = { id: 1, firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.test' } as ClientUser
+const client = makeClientUser()
 
 /**
  * Mounts an open drawer.

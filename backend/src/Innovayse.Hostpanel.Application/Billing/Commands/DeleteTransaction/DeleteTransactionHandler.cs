@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
@@ -13,11 +14,16 @@ public sealed class DeleteTransactionHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>Reverses the transaction's credit adjustment in the same save as the delete.</summary>
+    private readonly IClientCredit _clientCredit;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public DeleteTransactionHandler(IHostpanelDbContext context)
+    /// <param name="clientCredit">Reverses the transaction's credit adjustment in the same save as the delete.</param>
+    public DeleteTransactionHandler(IHostpanelDbContext context, IClientCredit clientCredit)
     {
         _context = context;
+        _clientCredit = clientCredit;
     }
 
     /// <summary>Handles <see cref="DeleteTransactionCommand"/>.</summary>
@@ -26,7 +32,8 @@ public sealed class DeleteTransactionHandler
     /// <returns>
     /// Success, or <c>TRANSACTION_NOT_FOUND</c> when the id names no transaction, or
     /// <c>CLIENT_NOT_FOUND</c> when the transaction's credit adjustment cannot be reversed because
-    /// the owning client no longer exists.
+    /// the owning client no longer exists, or <c>CLIENT_CREDIT_INSUFFICIENT</c> when the credit it
+    /// added has already been spent.
     /// </returns>
     public async Task<Result> HandleAsync(DeleteTransactionCommand cmd, CancellationToken ct)
     {
@@ -38,22 +45,23 @@ public sealed class DeleteTransactionHandler
             return Result.FailureCode(HostpanelErrorCodes.TRANSACTION_NOT_FOUND);
         }
 
-        if (transaction.AddedToCredit)
+        if (transaction.AddedToCredit && transaction.AmountIn > 0)
         {
-            var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == transaction.ClientId, ct);
-            if (client is null)
+            var taken = await _clientCredit.DeductAsync(
+                new ClientCreditChange(transaction.ClientId, transaction.AmountIn), ct);
+            if (taken.IsFailure)
             {
-                return Result.FailureCode(HostpanelErrorCodes.CLIENT_NOT_FOUND);
+                return Result.FailureCode(taken.ErrorCode!);
             }
+        }
 
-            if (transaction.AmountIn > 0)
+        if (transaction.AddedToCredit && transaction.AmountOut > 0)
+        {
+            var added = await _clientCredit.AddAsync(
+                new ClientCreditChange(transaction.ClientId, transaction.AmountOut), ct);
+            if (added.IsFailure)
             {
-                client.DeductCredit(transaction.AmountIn);
-            }
-
-            if (transaction.AmountOut > 0)
-            {
-                client.AddCredit(transaction.AmountOut);
+                return Result.FailureCode(added.ErrorCode!);
             }
         }
 

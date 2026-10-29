@@ -12,6 +12,7 @@ test('choosing a status filter asks the API for that status', async ({ page }) =
 
   await page.goto('/support/tickets')
   await expect(page.getByTestId(`support-tickets-row-${openListed.id}`)).toContainText(openListed.subject)
+  await expect(page.getByTestId(`support-tickets-row-${openListed.id}`)).toContainText(openListed.clientName)
 
   await page.getByTestId('support-tickets-filter-closed').click()
 

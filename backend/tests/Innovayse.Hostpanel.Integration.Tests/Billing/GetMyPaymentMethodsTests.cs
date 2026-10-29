@@ -1,13 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
+using System.Text.Json;
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Settings;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -16,7 +17,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <see cref="FakeCardPaymentGateway"/>: the authenticated client's saved cards, and empty for one who
 /// has never saved any.
 /// </summary>
-/// <remarks>New coverage — gap-filled for A7 Task 3, ruling 2; no grouped file exercised this route.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetMyPaymentMethodsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -25,7 +25,7 @@ public sealed class GetMyPaymentMethodsTests(IntegrationTestFactory factory) : I
     /// <returns>The test host.</returns>
     private WebApplicationFactory<Program> BuildHost(FakeCardPaymentGateway cardGateway) =>
         factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services => services.AddScoped<ICardPaymentGateway>(_ => cardGateway)));
+            builder.ConfigureTestServices(services => services.AddSingleton<ICardPaymentGateway>(cardGateway)));
 
     /// <summary>A client who has never saved a payment method sees an empty list.</summary>
     [Fact]
@@ -47,7 +47,7 @@ public sealed class GetMyPaymentMethodsTests(IntegrationTestFactory factory) : I
     {
         var cardGateway = new FakeCardPaymentGateway
         {
-            SavedPaymentMethods = [new CardPaymentMethodDto("pm_1", "card", "visa", "4242", 12, 2030, true)],
+            SavedPaymentMethods = [new CardPaymentMethodDto("pm_1", SavedPaymentMethodType.Card, "visa", "4242", 12, 2030, true)],
         };
         var host = BuildHost(cardGateway);
         var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "one-card");
@@ -56,8 +56,47 @@ public sealed class GetMyPaymentMethodsTests(IntegrationTestFactory factory) : I
         var response = await client.GetAsync("/api/me/payment-methods");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<List<CardPaymentMethodDto>>();
-        body.Should().ContainSingle(m => m.Id == "pm_1" && m.Last4 == "4242");
+
+        // Read as the wire carries it: the card type is the enum member's name.
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.EnumerateArray().Should().ContainSingle(m =>
+            m.GetProperty("id").GetString() == "pm_1"
+            && m.GetProperty("last4").GetString() == "4242"
+            && m.GetProperty("type").GetString() == nameof(SavedPaymentMethodType.Card));
+    }
+
+    /// <summary>
+    /// A card gateway that cannot be reached answers 503 with <c>PAYMENT_GATEWAY_SERVICE_UNAVAILABLE</c>
+    /// and a <c>Retry-After</c>, never an unhandled 500.
+    /// </summary>
+    [Fact]
+    public async Task GetMine_GatewayUnavailable_Answers503WithRetryAfter()
+    {
+        var host = BuildHost(new FakeCardPaymentGateway { ListFailure = CardGatewayFailure.Unavailable });
+        var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "list-unavailable");
+        await BillingTestSeeds.StampCardCustomerAsync(host, clientId, "cus_1");
+
+        var response = await client.GetAsync("/api/me/payment-methods");
+
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.PAYMENT_GATEWAY_SERVICE_UNAVAILABLE);
+        response.Headers.RetryAfter.Should().NotBeNull();
+        response.Headers.RetryAfter!.Delta.Should().Be(TimeSpan.FromSeconds(new ServiceUnavailableOptions().RetryAfterSeconds));
+    }
+
+    /// <summary>A card gateway that refuses the listing answers 502 with <c>PAYMENT_METHOD_UPSTREAM_FAILED</c>.</summary>
+    [Fact]
+    public async Task GetMine_GatewayRefuses_Answers502()
+    {
+        var host = BuildHost(new FakeCardPaymentGateway { ListFailure = CardGatewayFailure.Refused });
+        var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "list-refused");
+        await BillingTestSeeds.StampCardCustomerAsync(host, clientId, "cus_1");
+
+        var response = await client.GetAsync("/api/me/payment-methods");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadGateway);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.PAYMENT_METHOD_UPSTREAM_FAILED);
+        response.Headers.RetryAfter.Should().BeNull();
     }
 
     /// <summary>Listing payment methods is not for anonymous callers.</summary>

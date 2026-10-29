@@ -1,19 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>UpdateDomain</c> use case —
-/// <c>PUT /api/domains/{id}</c>, updating billing and administrative fields on a domain. Had no
-/// Integration coverage of its own before this batch.
+/// Integration tests for the admin <c>UpdateDomain</c> use case:
+/// <c>PUT /api/domains/{id}</c>, updating billing and administrative fields on a domain.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateDomainTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -52,7 +48,7 @@ public sealed class UpdateDomainTests(IntegrationTestFactory factory) : IClassFi
         reloaded.AdminNotes.Should().Be("Updated by test");
     }
 
-    /// <summary>An unrecognized status name refuses with 400 rather than reaching <c>Enum.Parse</c>.</summary>
+    /// <summary>An unrecognized status name is refused with 400 when the body is bound to <see cref="DomainStatus"/>, before any handler runs.</summary>
     [Fact]
     public async Task UpdateDomain_WithInvalidStatus_Returns400Async()
     {

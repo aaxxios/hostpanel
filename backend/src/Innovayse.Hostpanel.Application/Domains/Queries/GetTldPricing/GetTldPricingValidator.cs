@@ -8,7 +8,7 @@ namespace Innovayse.Hostpanel.Application.Domains.Queries.GetTldPricing;
 /// <summary>
 /// Validates <see cref="GetTldPricingQuery"/> inputs before the handler executes. There are no
 /// rules: <see cref="GetTldPricingQuery.TargetCurrency"/> is optional and any unrecognized code
-/// simply falls back to USD pricing in the handler, so no input value refuses the request.
+/// is answered in unconverted prices, so no input value refuses the request.
 /// </summary>
 public sealed class GetTldPricingValidator : LocalizedValidator<GetTldPricingQuery>
 {

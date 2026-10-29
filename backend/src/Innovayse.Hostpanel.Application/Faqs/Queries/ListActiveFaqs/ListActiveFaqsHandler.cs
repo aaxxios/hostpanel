@@ -2,6 +2,7 @@ using System.Globalization;
 using Innovayse.Hostpanel.Application.Common.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Common.Settings;
+using Innovayse.Hostpanel.Application.Faqs.Common;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -34,7 +35,7 @@ public sealed class ListActiveFaqsHandler
     /// <summary>
     ///     Handles the query.
     /// </summary>
-    /// <param name="query">The query; it carries no input — the locale is the request culture set from <c>X-Language</c>.</param>
+    /// <param name="query">The query; it carries no input: the locale is the request culture set from <c>X-Language</c>.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The active questions ordered by sort order, each with its requested-locale text (falling back to the

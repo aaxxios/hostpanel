@@ -8,9 +8,16 @@ name: Publish to Docker Hub
 # `yarn build`): every component x platform job pushes by digest, then a merge job per component
 # stitches the digests into the <component>-<version> and <component>-latest manifests.
 #
-# Images are public, so they are built with AUTH_MODE=local: Innovayse.Auth lives in a private
-# registry and no credential is passed. Both frontends take every deployment value from the
-# environment at start, so only the API image has a build arg.
+# Images are public, so they are built with AUTH_MODE=local: the authentication package of the
+# private flavour lives in a private feed and no credential is passed. Both frontends take every
+# deployment value from the environment at start, so only the API image has a build arg.
+#
+# This workflow is the only publisher of these images; the GitLab pipeline does not publish.
+#
+# Gates: the tagged commit (or the commit a manual run is started on) must be an ancestor of main
+# and must have a successful CI workflow run, otherwise nothing is built. Every image carries
+# SLSA provenance (mode=max) and an SBOM attestation. Third-party actions are pinned to a commit
+# SHA with the version in a comment; Dependabot keeps them up to date.
 #
 # Secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN. Variable: DOCKERHUB_NAMESPACE.
 on:
@@ -31,15 +38,46 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify:
+    name: Check the commit is on main and passed CI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check the commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -eu
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$COMMIT" FETCH_HEAD; then
+            echo "Commit $COMMIT is not an ancestor of main, refusing to publish."; exit 1
+          fi
+          passed=$(gh api "repos/${REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${COMMIT}&status=success&per_page=1" --jq '.total_count')
+          if [ "$passed" -lt 1 ]; then
+            echo "The CI workflow has no successful run for commit $COMMIT, refusing to publish."; exit 1
+          fi
+          echo "Commit $COMMIT is on main and passed CI."
+
   prepare:
     name: Resolve the version and licence
+    needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
       version: ${{ steps.meta_in.outputs.version }}
       licenses: ${{ steps.meta_in.outputs.licenses }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Resolve the version and licence
         id: meta_in
@@ -105,18 +143,18 @@ jobs:
     env:
       NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Image metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.NAMESPACE }}/hostpanel
           labels: |
@@ -127,13 +165,15 @@ jobs:
 
       - name: Build and push by digest
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           target: ${{ matrix.target }}
           build-args: ${{ matrix.build_args }}
           platforms: ${{ matrix.platform }}
+          provenance: mode=max
+          sbom: true
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.NAMESPACE }}/hostpanel,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.name }}-${{ matrix.arch }}
@@ -147,7 +187,7 @@ jobs:
           touch "${RUNNER_TEMP}/digests/${DIGEST#sha256:}"
 
       - name: Upload the digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: digests-${{ matrix.name }}-${{ matrix.arch }}
           path: ${{ runner.temp }}/digests/*
@@ -166,25 +206,25 @@ jobs:
     env:
       NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Download the digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-${{ matrix.name }}-*
           merge-multiple: true
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Image metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.NAMESPACE }}/hostpanel
           tags: |
@@ -206,7 +246,7 @@ jobs:
 
       - name: Sync the Docker Hub README
         if: matrix.name == 'api'
-        uses: peter-evans/dockerhub-description@v4
+        uses: peter-evans/dockerhub-description@432a30c9e07499fd01da9f8a49f0faf9e0ca5b77 # v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}

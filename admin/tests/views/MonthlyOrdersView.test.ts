@@ -1,5 +1,5 @@
 /**
- * Tests of MonthlyOrdersView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of MonthlyOrdersView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -17,9 +17,10 @@ runReportCase({
   view: MonthlyOrdersView,
   routes: {
     'GET /reports/monthly-orders': () => json({
-      month: 1, year: 2024, totalUnitsSold: 2, totalValue: 20,
+      month: 1, year: 2024, totalUnitsSold: 2, totalValue: 20, currency: 'USD',
       groups: [{ ...productGroup, groupValue: 20, products: [{ ...productGroup.products[0], value: 20 }] }],
     }),
   },
-  expected: ['Sales by Product for January 2024', 'Basic', '$20.00 USD'],
+  expected: ['Sales by Product for January 2024', 'Basic', '$20.00'],
+  retryable: true,
 })

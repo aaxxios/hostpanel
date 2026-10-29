@@ -4,12 +4,15 @@
  *
  * Body: { ns1, ns2, ns3?, ns4?, ns5? }
  */
+
+import { HttpMethod } from '~/types/httpmethod'
+
 export default defineEventHandler(async (event) => {
   const id = requireRouteParam(event, 'id')
 
   const body = await readBody(event)
   return await internalApiCall<Record<string, unknown>>(event, `/me/domains/${id}/nameservers`, {
-    method: 'PUT',
+    method: HttpMethod.Put,
     body,
   })
 })

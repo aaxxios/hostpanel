@@ -4,7 +4,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Currencies.Commands.UpsertCurr
 /// <remarks>
 /// The numeric code is read only on creation: it is an identity, not a setting, and a wrong one is
 /// fixed by removing the row, not by editing it. Which currency is the base is not decided here
-/// either — see <c>SetBaseCurrencyCommand</c>; a row created through this command is never the base.
+/// either: see <c>SetBaseCurrencyCommand</c>; a row created through this command is never the base.
 /// </remarks>
 /// <param name="Code">
 /// ISO 4217 alpha code, any case. Nullable because the controller overlays it from the route

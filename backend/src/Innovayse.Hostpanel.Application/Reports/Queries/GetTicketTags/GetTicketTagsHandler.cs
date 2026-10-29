@@ -1,4 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Reports.Common;
+using Innovayse.Hostpanel.Application.Reports.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,7 +28,7 @@ public sealed class GetTicketTagsHandler
         ArgumentNullException.ThrowIfNull(query);
 
         // Every tag belongs to exactly one ticket, so flattening through the navigation reaches
-        // the same rows the old repository read directly off the TicketTags table.
+        // every row of the TicketTags table.
         var tags = _context.Tickets.AsNoTracking().SelectMany(t => t.Tags);
 
         if (query.From.HasValue || query.To.HasValue)
@@ -35,14 +37,14 @@ public sealed class GetTicketTagsHandler
 
             if (query.From.HasValue)
             {
-                var fromDto = new DateTimeOffset(query.From.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+                var fromDto = query.From.Value.StartOfDayUtc();
                 ticketIds = ticketIds.Where(t => t.CreatedAt >= fromDto);
             }
 
             if (query.To.HasValue)
             {
-                var toDto = new DateTimeOffset(query.To.Value.ToDateTime(TimeOnly.MaxValue), TimeSpan.Zero);
-                ticketIds = ticketIds.Where(t => t.CreatedAt <= toDto);
+                var toDto = query.To.Value.EndOfDayExclusiveUtc();
+                ticketIds = ticketIds.Where(t => t.CreatedAt < toDto);
             }
 
             var ids = await ticketIds.Select(t => t.Id).ToListAsync(ct);

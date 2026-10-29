@@ -1,11 +1,12 @@
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Shared.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Wolverine;
+
 namespace Innovayse.Hostpanel.Application.Domains.Commands.SyncPendingDomainStatuses;
 
 /// <summary>
@@ -14,47 +15,44 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.SyncPendingDomainStat
 /// the domain as live.
 /// </summary>
 /// <remarks>
-/// This is needed for registrars like Name.am where cart purchases are processed asynchronously
+/// This is needed for registrars that process cart purchases asynchronously,
 /// and the domain is not immediately active after the API call.
 /// </remarks>
 public sealed class SyncPendingDomainStatusesHandler
 {
-    /// <summary>Interval in minutes between consecutive sync runs.</summary>
-    private const int IntervalMinutes = 15;
-
     /// <summary>The data context the pending domains are read from and the activation is saved through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>The registrar provider polled for each pending domain's live status.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
 
-    /// <summary>Unit of work the activated domain is saved through.</summary>
-    private readonly IUnitOfWork _uow;
-
-    /// <summary>Wolverine bus used to re-schedule the next run.</summary>
-    private readonly IMessageBus _bus;
+    /// <summary>Runs the passes under their lease and schedules the next run.</summary>
+    private readonly RecurringJobs _jobs;
 
     /// <summary>Structured logger.</summary>
     private readonly ILogger<SyncPendingDomainStatusesHandler> _logger;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The data context the pending domains are read from and the activation is saved through.</param>
-    /// <param name="registrar">The registrar provider polled for each pending domain's live status.</param>
-    /// <param name="uow">Unit of work the activated domain is saved through.</param>
-    /// <param name="bus">Wolverine bus used to re-schedule the next run.</param>
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
+    /// <param name="jobs">Runs the passes under their lease and schedules the next run.</param>
     /// <param name="logger">Structured logger.</param>
+    /// <param name="clock">The source of the current moment.</param>
     public SyncPendingDomainStatusesHandler(
         IHostpanelDbContext context,
-        IRegistrarProvider registrar,
-        IUnitOfWork uow,
-        IMessageBus bus,
-        ILogger<SyncPendingDomainStatusesHandler> logger)
+        RegistrarProviderResolver registrars,
+        RecurringJobs jobs,
+        ILogger<SyncPendingDomainStatusesHandler> logger,
+        IClock clock)
     {
         _context = context;
-        _registrar = registrar;
-        _uow = uow;
-        _bus = bus;
+        _registrars = registrars;
+        _jobs = jobs;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>
@@ -70,28 +68,31 @@ public sealed class SyncPendingDomainStatusesHandler
     {
         _ = cmd;
 
-        return RecurringJob.RunAsync(
-            nameof(SyncPendingDomainStatusesCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+        return _jobs.RunAsync<SyncPendingDomainStatusesCommand>(
+            _jobs.Schedules.SyncPendingDomainStatuses, () => RunAsync(ct), ct);
     }
 
-    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJobs"/>.</summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task.</returns>
     private async Task RunAsync(CancellationToken ct)
     {
-        var pending = await _context.Domains
-            .Where(x => x.Status == DomainStatus.PendingRegistration || x.Status == DomainStatus.PendingTransfer)
-            .OrderBy(x => x.RegisteredAt)
-            .ToListAsync(ct);
-
-        if (pending.Count == 0)
+        var checkedCount = 0;
+        var lastId = 0;
+        while (true)
         {
-            _logger.LogDebug("SyncPendingDomainStatuses: no pending domains found.");
-        }
-        else
-        {
-            _logger.LogInformation(
-                "SyncPendingDomainStatuses: checking {Count} pending domain(s).", pending.Count);
+            // Tracked, not AsNoTracking: each domain is activated and saved below. Keyset batches, so
+            // a long backlog is never loaded at once and a domain that fails is not read again this pass.
+            var pending = await _context.Domains
+                .Where(x => x.Id > lastId
+                            && (x.Status == DomainStatus.PendingRegistration || x.Status == DomainStatus.PendingTransfer))
+                .OrderBy(x => x.Id)
+                .Take(JobBatch.Size)
+                .ToListAsync(ct);
+            if (pending.Count == 0)
+            {
+                break;
+            }
 
             foreach (var domain in pending)
             {
@@ -99,24 +100,21 @@ public sealed class SyncPendingDomainStatusesHandler
                 {
                     await SyncDomainAsync(domain, ct);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (JobFailure.IsFailure(ex, ct))
                 {
-                    _logger.LogWarning(
-                        ex,
-                        "SyncPendingDomainStatuses: failed to sync domain {DomainName} (ID {DomainId}).",
-                        domain.Name, domain.Id);
+                    // The failed change is still tracked and would ride along with, and fail, every later
+                    // save in this loop; detaching it isolates this domain, and the next run retries it.
+                    _context.Domains.Entry(domain).State = EntityState.Detached;
+                    _logger.LogWarning(ex, "SyncPendingDomainStatuses: failed to sync domain {DomainId}.", domain.Id);
                 }
             }
-        }
-    }
 
-    /// <summary>Schedules the next pass.</summary>
-    /// <returns>A task.</returns>
-    private async Task ScheduleNextAsync()
-    {
-        var next = DateTimeOffset.UtcNow.AddMinutes(IntervalMinutes);
-        await _bus.ScheduleAsync(new SyncPendingDomainStatusesCommand(), next);
-        _logger.LogDebug("SyncPendingDomainStatuses: next run scheduled for {Next:u}.", next);
+            checkedCount += pending.Count;
+            lastId = pending[^1].Id;
+            _context.DetachAll();
+        }
+
+        _logger.LogInformation("SyncPendingDomainStatuses: checked {Count} pending domain(s).", checkedCount);
     }
 
     /// <summary>
@@ -127,34 +125,39 @@ public sealed class SyncPendingDomainStatusesHandler
     /// <returns>A task representing the asynchronous operation.</returns>
     private async Task SyncDomainAsync(RegisteredDomain domain, CancellationToken ct)
     {
-        var result = await _registrar.CheckDomainActiveAsync(domain.Name, ct);
+        var registrar = await _registrars.ResolveAsync(domain, ct);
+        var result = await registrar.CheckDomainActiveAsync(domain.Name, ct);
 
         if (!result.Success)
         {
             _logger.LogDebug(
-                "Domain {DomainName} (ID {DomainId}) not yet active: {Reason}",
-                domain.Name, domain.Id, result.ErrorMessage);
+                "Domain {DomainId} not yet active: {Reason}",
+                domain.Id, result.ErrorCode);
             return;
         }
 
-        var expiresAt = result.ExpiresAt ?? DateTimeOffset.UtcNow.AddYears(1);
+        var now = _clock.UtcNow;
+        // Without a date from the registrar, a registration keeps the expiry it was ordered with and a
+        // transfer runs for the period bought with it.
+        var expiresAt = result.ExpiresAt
+            ?? (domain.Status == DomainStatus.PendingRegistration ? domain.ExpiresAt : now.AddYears(domain.RegistrationPeriod));
         var registrarRef = result.RegistrarRef ?? domain.Name;
 
         if (domain.Status == DomainStatus.PendingRegistration)
         {
-            domain.Activate(registrarRef);
+            domain.Activate(registrarRef, expiresAt, now);
             _logger.LogInformation(
-                "Domain {DomainName} (ID {DomainId}) activated via polling (expires {ExpiresAt:u}).",
-                domain.Name, domain.Id, expiresAt);
+                "Domain {DomainId} activated via polling (expires {ExpiresAt:u}).",
+                domain.Id, expiresAt);
         }
         else if (domain.Status == DomainStatus.PendingTransfer)
         {
-            domain.ActivateTransfer(registrarRef, expiresAt);
+            domain.ActivateTransfer(registrarRef, expiresAt, now);
             _logger.LogInformation(
-                "Domain {DomainName} (ID {DomainId}) transfer confirmed via polling (expires {ExpiresAt:u}).",
-                domain.Name, domain.Id, expiresAt);
+                "Domain {DomainId} transfer confirmed via polling (expires {ExpiresAt:u}).",
+                domain.Id, expiresAt);
         }
 
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
     }
 }

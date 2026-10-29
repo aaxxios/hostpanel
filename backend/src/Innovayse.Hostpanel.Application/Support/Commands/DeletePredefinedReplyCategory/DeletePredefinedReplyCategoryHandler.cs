@@ -21,7 +21,10 @@ public sealed class DeletePredefinedReplyCategoryHandler
     /// <summary>Handles the command.</summary>
     /// <param name="cmd">The category to delete.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success, or <c>PREDEFINED_REPLY_CATEGORY_NOT_FOUND</c> when the id names no category.</returns>
+    /// <returns>
+    /// Success, <c>PREDEFINED_REPLY_CATEGORY_NOT_FOUND</c> when the id names no category, or
+    /// <c>PREDEFINED_REPLY_CATEGORY_IN_USE</c> when it still has sub-categories or replies.
+    /// </returns>
     public async Task<Result> HandleAsync(DeletePredefinedReplyCategoryCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
@@ -30,6 +33,12 @@ public sealed class DeletePredefinedReplyCategoryHandler
         if (category is null)
         {
             return Result.FailureCode(HostpanelErrorCodes.PREDEFINED_REPLY_CATEGORY_NOT_FOUND);
+        }
+
+        if (await _context.PredefinedReplyCategories.AnyAsync(c => c.ParentCategoryId == cmd.Id, ct)
+            || await _context.PredefinedReplies.AnyAsync(r => r.CategoryId == cmd.Id, ct))
+        {
+            return Result.FailureCode(HostpanelErrorCodes.PREDEFINED_REPLY_CATEGORY_IN_USE);
         }
 
         _context.PredefinedReplyCategories.Remove(category);

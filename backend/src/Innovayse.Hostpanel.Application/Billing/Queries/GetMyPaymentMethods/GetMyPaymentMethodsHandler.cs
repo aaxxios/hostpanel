@@ -1,10 +1,9 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
-using Innovayse.Hostpanel.Application.Clients.Common;
+using Innovayse.Hostpanel.Application.Billing.Extensions;
 using Innovayse.Hostpanel.Application.Clients.Extensions;
-using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
-using Innovayse.Hostpanel.Shared.MultiTenancy;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.GetMyPaymentMethods;
 
@@ -13,24 +12,19 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.GetMyPaymentMethods;
 /// </summary>
 public sealed class GetMyPaymentMethodsHandler
 {
-    /// <summary>The module's data context.</summary>
-    private readonly IHostpanelDbContext _context;
+    /// <summary>The Wolverine bus, for the Clients module's card gateway customer query.</summary>
+    private readonly IMessageBus _bus;
 
     /// <summary>Card payment gateway, for reading saved payment methods.</summary>
     private readonly ICardPaymentGateway _cardGateway;
 
-    /// <summary>Who is asking; the query does not say, and must not.</summary>
-    private readonly ICurrentUserService _caller;
-
     /// <summary>Initializes the handler.</summary>
-    /// <param name="context">The module's data context.</param>
+    /// <param name="bus">The Wolverine bus, for the Clients module's card gateway customer query.</param>
     /// <param name="cardGateway">Card payment gateway, for reading saved payment methods.</param>
-    /// <param name="caller">Who is asking; the query does not say, and must not.</param>
-    public GetMyPaymentMethodsHandler(IHostpanelDbContext context, ICardPaymentGateway cardGateway, ICurrentUserService caller)
+    public GetMyPaymentMethodsHandler(IMessageBus bus, ICardPaymentGateway cardGateway)
     {
-        _context = context;
+        _bus = bus;
         _cardGateway = cardGateway;
-        _caller = caller;
     }
 
     /// <summary>
@@ -40,26 +34,33 @@ public sealed class GetMyPaymentMethodsHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The client's saved cards and bank accounts, empty for a client who has never had one
-    /// attached, or <c>CLIENT_PROFILE_NOT_FOUND</c> when the caller has no client record.
+    /// attached; <c>CLIENT_PROFILE_NOT_FOUND</c> when the caller has no client record; or
+    /// <c>PAYMENT_GATEWAY_SERVICE_UNAVAILABLE</c> / <c>PAYMENT_METHOD_UPSTREAM_FAILED</c> when the card
+    /// gateway could not be reached or refused the call.
     /// </returns>
     public async Task<Result<IReadOnlyList<CardPaymentMethodDto>>> HandleAsync(
         GetMyPaymentMethodsQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var userId = _caller.RequireUserId();
-
-        var client = await _context.Clients.FindReadOnlyByUserIdAsync(userId, ct);
-        if (client is null)
+        var customer = await _bus.GetCallerCardGatewayCustomerAsync(ct);
+        if (customer.IsFailure)
         {
-            return Result<IReadOnlyList<CardPaymentMethodDto>>.FailureCode(
-                HostpanelErrorCodes.CLIENT_PROFILE_NOT_FOUND);
+            return Result<IReadOnlyList<CardPaymentMethodDto>>.FailureCode(customer.ErrorCode!);
         }
 
-        IReadOnlyList<CardPaymentMethodDto> methods = client.CardGatewayCustomerId is null
-            ? []
-            : await _cardGateway.ListPaymentMethodsAsync(client.CardGatewayCustomerId, ct);
+        var customerId = customer.Value!.CustomerId;
+        if (customerId is null)
+        {
+            return Result.Success<IReadOnlyList<CardPaymentMethodDto>>([]);
+        }
 
-        return Result.Success(methods);
+        var methods = await _cardGateway.ListPaymentMethodsAsync(new CardCustomerInstruction(customerId), ct);
+        if (methods.Failure is { } failure)
+        {
+            return Result<IReadOnlyList<CardPaymentMethodDto>>.FailureCode(failure.ToPaymentMethodErrorCode());
+        }
+
+        return Result.Success(methods.Methods);
     }
 }

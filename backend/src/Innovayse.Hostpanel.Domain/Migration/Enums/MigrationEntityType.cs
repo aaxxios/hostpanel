@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Migration.Enums;
+
 /// <summary>Entity types that can be imported during a migration.</summary>
 public enum MigrationEntityType
 {

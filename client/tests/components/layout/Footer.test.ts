@@ -19,7 +19,13 @@ vi.mock('~/components/LogoLockup.vue', () => ({
   }),
 }))
 
-/** Builds a stand-in for a picker the footer owns no behaviour of. */
+/**
+ * Builds a stand-in for a picker the footer owns no behaviour of.
+ *
+ * @param name Component name the stand-in registers under.
+ * @param testid Test id of the element it renders.
+ * @returns The stand-in component.
+ */
 const stubFor = (name: string, testid: string) => defineComponent({
   name,
   setup: () => () => h('div', { 'data-testid': testid }),
@@ -99,19 +105,17 @@ describe('LayoutFooter', () => {
     ])
   })
 
-  it('lists every catalogue plan group in the hosting column, skipping empty or inactive ones', () => {
+  it('lists every catalogue plan group in the hosting column, skipping empty ones', () => {
     const wrapper = mountFooter([
-      { id: 1, name: 'Shared hosting', isActive: true, productCount: 3 },
-      { id: 7, name: 'Cloud servers', isActive: true, productCount: 2 },
-      { id: 9, name: 'Retired', isActive: false, productCount: 4 },
-      { id: 10, name: 'Empty', isActive: true, productCount: 0 },
+      { id: 1, name: 'Shared hosting', productCount: 3 },
+      { id: 7, name: 'Cloud servers', productCount: 2 },
+      { id: 10, name: 'Empty', productCount: 0 },
     ])
 
     const column = wrapper.find('[data-testid="footer-column-hosting"]')
     const labels = column.findAll('a').map((link) => link.text())
     expect(labels).toContain('Shared hosting')
     expect(labels).toContain('Cloud servers')
-    expect(labels).not.toContain('Retired')
     expect(labels).not.toContain('Empty')
     expect(column.find('[data-testid="footer-hosting-all"]').attributes('href')).toBe('/en/products')
   })
@@ -119,7 +123,12 @@ describe('LayoutFooter', () => {
   it('links the domain, company, support and legal pages', () => {
     const wrapper = mountFooter()
 
-    /** Reads the destination of the footer link with the given test id. */
+    /**
+     * Reads the destination of the footer link with the given test id.
+     *
+     * @param testid Test id of the link.
+     * @returns Its `href`, or undefined when it has none.
+     */
     const href = (testid: string): string | undefined => wrapper.find(`[data-testid="${testid}"]`).attributes('href')
     expect(href('footer-domains-register')).toBe('/en/domains')
     expect(href('footer-domains-transfer')).toBe('/en/domains/transfer')

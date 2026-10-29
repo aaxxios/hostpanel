@@ -1,15 +1,12 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Demo.Commands.ResetDemoData;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.Infrastructure.Demo;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Demo;
 
@@ -26,7 +23,7 @@ public sealed class ResetDemoDataTests(IntegrationTestFactory factory) : IClassF
     /// <returns>The stray client's id.</returns>
     private static async Task<int> AddStrayClientAsync(IHostpanelDbContext context)
     {
-        var stray = Client.Create($"stray-{Guid.NewGuid():N}", "Stray", "Visitor", $"{Guid.NewGuid():N}@example.test");
+        var stray = Client.Create($"stray-{Guid.NewGuid():N}", "Stray", "Visitor", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(stray);
         await context.SaveChangesAsync(CancellationToken.None);
         return stray.Id;

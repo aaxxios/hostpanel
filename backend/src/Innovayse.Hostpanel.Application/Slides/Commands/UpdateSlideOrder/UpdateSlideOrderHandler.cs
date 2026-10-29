@@ -1,12 +1,13 @@
+using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Common.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Slides.Commands.UpdateSlideOrder;
 
 /// <summary>
-/// Loads every slide, applies the new sort order values for the ids listed in the command, and
-/// persists the reordering in one transaction. Slides whose ids are not present in the command are
+/// Loads the slides the command names, applies their new sort order values, and persists the
+/// reordering in one transaction. Slides whose ids are not present in the command are
 /// left unchanged.
 /// </summary>
 public sealed class UpdateSlideOrderHandler
@@ -28,31 +29,14 @@ public sealed class UpdateSlideOrderHandler
     /// </summary>
     /// <param name="cmd">The slide id and new sort order pairs.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success. Unknown ids in the list are silently skipped.</returns>
+    /// <returns>Success, or <c>SLIDE_NOT_FOUND</c> when an id names no row; nothing is moved then.</returns>
     public async Task<Result> HandleAsync(UpdateSlideOrderCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var slides = await _context.Slides.OrderBy(s => s.SortOrder).ToListAsync(ct);
-        var orderMap = cmd.Items.ToDictionary(i => i.Id, i => i.SortOrder);
-
-        foreach (var slide in slides)
+        if (!await _context.Slides.ApplySortOrderAsync(cmd.Items, ct))
         {
-            if (orderMap.TryGetValue(slide.Id, out var newOrder))
-            {
-                slide.Update(
-                    slide.IconName,
-                    slide.BrandColor,
-                    slide.ImageUrl,
-                    slide.DemoUrl,
-                    slide.LearnMoreUrl,
-                    slide.ProductId,
-                    newOrder,
-                    slide.IsActive,
-                    slide.TargetAudience,
-                    slide.VisibleFrom,
-                    slide.VisibleUntil);
-            }
+            return Result.FailureCode(HostpanelErrorCodes.SLIDE_NOT_FOUND);
         }
 
         await _context.SaveChangesAsync(ct);

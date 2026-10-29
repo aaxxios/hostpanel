@@ -1,4 +1,5 @@
 using FluentValidation;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
@@ -20,7 +21,7 @@ public sealed class ConfigureServerSshValidator : LocalizedValidator<ConfigureSe
         RuleFor(x => x.SshPort).InclusiveBetween(1, 65535).WithMessage(L["SshPortInvalid"]);
         RuleFor(x => x.AgentPort).InclusiveBetween(1, 65535).WithMessage(L["SshPortInvalid"]);
         RuleFor(x => x.AgentHostKeyFingerprint).NotNull().Matches("^(SHA256:[A-Za-z0-9+/]{43})?$").WithMessage(L["SshHostKeyFingerprintInvalid"]);
-        RuleFor(x => x.AgentPrivateKey).MaximumLength(8000).WithMessage(L["SshAgentPrivateKeyTooLong"]);
+        RuleFor(x => x.AgentPrivateKey).MaximumLength(ProtectedValueLimits.AgentPrivateKey).WithMessage(L["SshAgentPrivateKeyTooLong"]);
         RuleFor(x => x.ConnectTimeoutSeconds).InclusiveBetween(1, 120).WithMessage(L["SshTimeoutInvalid"]);
         RuleFor(x => x.OperationTimeoutSeconds).InclusiveBetween(1, 300).WithMessage(L["SshTimeoutInvalid"]);
     }

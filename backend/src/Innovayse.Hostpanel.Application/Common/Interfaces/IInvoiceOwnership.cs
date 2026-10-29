@@ -7,22 +7,17 @@ namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The client-facing billing routes used to carry the rule as
-/// <c>if (invoice.ClientId != profile.Id) return Forbid();</c> written out four times in
-/// <c>MyBillingController</c>. It worked, but it lived at the endpoint: every new action had to
-/// remember it, and it travelled separately from the command, so anything that dispatched
-/// <c>PayInvoiceCommand</c> or <c>StartGatewayPaymentCommand</c> without going through that
-/// controller was unchecked.
+/// The check travels with the command, not the endpoint: it is called by the client-facing
+/// handlers (<c>PayMyInvoiceCommand</c>, <c>StartGatewayPaymentCommand</c> and the rest), so no
+/// dispatch path can skip it.
 /// </para>
 /// <para>
-/// It now sits in the Application layer beside <c>ITicketOwnership</c> and
-/// <c>IDomainOwnership</c>, resolving the caller itself through <c>ICurrentUserService</c>
-/// rather than being told whom to check, and is called by the client-facing handlers rather than
-/// by the endpoint.
+/// It sits in the Application layer beside <c>ITicketOwnership</c> and <c>IDomainOwnership</c>,
+/// resolving the caller itself through <c>ICurrentUserService</c> rather than being told whom to
+/// check.
 /// </para>
 /// <para>
-/// The refusal used to be a thrown <c>InvoiceNotFoundException</c>, caught by
-/// <c>ExceptionMiddleware</c>. It is now a <see cref="Result"/> the caller must inspect, matching
+/// The refusal is a <see cref="Result"/> the caller must inspect, matching
 /// <c>IServiceOwnership</c>: a refusal nobody reads must not become silent, so every caller checks
 /// <see cref="Result.IsFailure"/> and forwards <see cref="Result.ErrorCode"/> rather than letting
 /// the call simply return.

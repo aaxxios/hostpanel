@@ -11,11 +11,16 @@ public sealed class DuplicateInvoiceHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The clock the current moment is read from.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public DuplicateInvoiceHandler(IHostpanelDbContext context)
+    /// <param name="clock">The clock the current moment is read from.</param>
+    public DuplicateInvoiceHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the command.</summary>
@@ -37,7 +42,7 @@ public sealed class DuplicateInvoiceHandler
             return Result<int>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
         }
 
-        var copy = source.Duplicate();
+        var copy = source.Duplicate(_clock.UtcNow);
         _context.Invoices.Add(copy);
         await _context.SaveChangesAsync(ct);
         return Result<int>.Success(copy.Id);

@@ -1,10 +1,7 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Admin.Integrations.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Settings;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Integrations;
 
@@ -92,10 +89,27 @@ public sealed class IntegrationSettingsLookupTests(IntegrationTestFactory factor
         Seed(context, slug, "host", "single.example.test");
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var stored = await context.GetIntegrationValueAsync(slug, "host", CancellationToken.None);
-        var missing = await context.GetIntegrationValueAsync(slug, "port", CancellationToken.None);
+        var cipher = scope.ServiceProvider.GetRequiredService<ISecretSettingCipher>();
+        var stored = await context.GetIntegrationValueAsync(cipher, slug, "host", CancellationToken.None);
+        var missing = await context.GetIntegrationValueAsync(cipher, slug, "port", CancellationToken.None);
 
         stored.Should().Be("single.example.test");
         missing.Should().BeNull();
+    }
+
+    /// <summary>A secret stored encrypted is returned as the plain value the operator entered.</summary>
+    [Fact]
+    public async Task GetIntegrationValueAsync_DecryptsAProtectedSecretAsync()
+    {
+        var slug = $"lookup-{Guid.NewGuid():N}";
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var cipher = scope.ServiceProvider.GetRequiredService<ISecretSettingCipher>();
+        Seed(context, slug, IntegrationSettingKeys.ApiKeyField, cipher.Protect("panel-api-key"));
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var stored = await context.GetIntegrationValueAsync(cipher, slug, IntegrationSettingKeys.ApiKeyField, CancellationToken.None);
+
+        stored.Should().Be("panel-api-key");
     }
 }

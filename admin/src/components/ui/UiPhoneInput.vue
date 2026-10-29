@@ -18,8 +18,7 @@ const props = defineProps<{
    * Combined phone value.
    *
    * Optional: this component is driven by the `phoneNumber`/`countryCode` pair and never
-   * reads `modelValue`. It was declared required, which made every two-field call site —
-   * the only kind there is — a type error.
+   * reads `modelValue`, so a call site binding only the two fields stays valid.
    */
   modelValue?: string | null
   /** The national number (two-way bound with `v-model:phone-number`). */

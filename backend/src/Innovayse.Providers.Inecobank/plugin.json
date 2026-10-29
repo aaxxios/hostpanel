@@ -2,7 +2,7 @@
   "id": "inecobank",
   "name": "Inecobank",
   "version": "1.0.0",
-  "author": "Innovayse",
+  "author": "Hostpanel",
   "description": "Card payments via Inecobank's hosted payment page (Armenian Card gateway).",
   "type": "Payment",
   "category": "Payment Gateways",

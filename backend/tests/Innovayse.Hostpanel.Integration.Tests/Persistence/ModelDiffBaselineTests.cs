@@ -1,11 +1,9 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 // The differ, the migrations-assembly snapshot and the runtime model initializer are all
-// EF-internal APIs. They are the only honest oracle for "did the model change at all" — the
+// EF-internal APIs. They are the only honest oracle for "did the model change at all": the
 // same two services back the `dotnet ef migrations` design-time tooling, so trusting them here
 // is trusting the same code path EF itself uses to decide whether a migration is needed.
 #pragma warning disable EF1001
@@ -19,10 +17,9 @@ namespace Innovayse.Hostpanel.Integration.Tests.Persistence;
 #pragma warning restore EF1001
 
 /// <summary>
-/// The conformance migration promises no schema change. EF's own differ is the judge: the set of
-/// operations between the migrations snapshot and the live model is recorded once, before the
-/// first task, and every later task must reproduce it exactly — an added column, a renamed table
-/// or a changed default shows up here as a diff against the fixture, not as a surprise migration.
+/// Pins the operations EF's own differ finds between the migrations snapshot and the live model
+/// against a recorded baseline: an added column, a renamed table or a changed default shows up
+/// here as a diff against the fixture, not as a surprise migration.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ModelDiffBaselineTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>

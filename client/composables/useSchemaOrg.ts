@@ -5,6 +5,7 @@
  * @module composables/useSchemaOrg
  */
 
+import type { MaybeRefOrGetter } from 'vue'
 import { APP_LOCALES } from '~/constants/appLocales'
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { SCHEMA_ORG_CONTEXT } from '~/constants/schemaOrg'
@@ -75,6 +76,18 @@ interface SchemaFaq {
   answer: string
 }
 
+/** A piece of writing (knowledge-base article, announcement) as the article schema describes it. */
+interface SchemaArticle {
+  /** Headline of the article. */
+  headline: string
+  /** Short plain-text summary. */
+  description?: string
+  /** Address of the article page, absolute or site-relative. */
+  url: string
+  /** ISO 8601 date the article was published, when the source gives one. */
+  datePublished?: string
+}
+
 /**
  * Builds the JSON-LD documents of the public site and injects them into the head.
  *
@@ -91,7 +104,11 @@ export const useSchemaOrg = () => {
   const { name: siteName, tagline: siteTagline } = useSiteIdentity()
   const { email, phone, telegramUrl, whatsappUrl, address } = useContactDetails()
 
-  /** The operator's logo when uploaded, otherwise the bundled neutral one. */
+  /**
+   * The operator's logo when uploaded, otherwise the bundled neutral one.
+   *
+   * @returns An absolute logo URL.
+   */
   const logoUrl = (): string => {
     const uploaded = get(PortalSettingKey.Logo, 'portalLogo')
     if (!uploaded) {
@@ -104,7 +121,9 @@ export const useSchemaOrg = () => {
   const postalAddress = () => (address.value ? { address: { '@type': 'PostalAddress', streetAddress: address.value } } : {})
 
   /**
-   * Organization schema
+   * Organization schema.
+   *
+   * @returns The `Organization` JSON-LD object.
    */
   const organizationSchema = () => {
     return {
@@ -126,7 +145,9 @@ export const useSchemaOrg = () => {
   }
 
   /**
-   * LocalBusiness schema
+   * LocalBusiness schema.
+   *
+   * @returns The `LocalBusiness` JSON-LD object.
    */
   const localBusinessSchema = () => {
     return {
@@ -143,7 +164,9 @@ export const useSchemaOrg = () => {
   }
 
   /**
-   * WebSite schema with search action
+   * WebSite schema with search action.
+   *
+   * @returns The `WebSite` JSON-LD object.
    */
   const websiteSchema = () => {
     return {
@@ -162,6 +185,9 @@ export const useSchemaOrg = () => {
 
   /**
    * Service schema. Names no served area: the operator's real coverage is not known here.
+   *
+   * @param service The service to describe.
+   * @returns The `Service` JSON-LD object.
    */
   const serviceSchema = (service: SchemaService) => {
     return {
@@ -180,6 +206,9 @@ export const useSchemaOrg = () => {
   /**
    * Product schema (for SaaS products). Carries no offer and no rating: neither is known
    * here, and a published figure that is not the operator's own is a false claim.
+   *
+   * @param product The product to describe.
+   * @returns The `Product` JSON-LD object.
    */
   const productSchema = (product: SchemaProduct) => {
     return {
@@ -200,6 +229,9 @@ export const useSchemaOrg = () => {
    * Product schema for a product family: one `Offer` per plan, each priced for one billing period.
    * The figures are the catalogue's own, in the payer's currency; a family with no priced plan
    * publishes no `offers` at all rather than an empty list.
+   *
+   * @param family The product family and its plans.
+   * @returns The `Product` JSON-LD object.
    */
   const productFamilySchema = (family: SchemaProductFamily) => {
     return {
@@ -232,7 +264,10 @@ export const useSchemaOrg = () => {
   }
 
   /**
-   * BreadcrumbList schema
+   * BreadcrumbList schema.
+   *
+   * @param items The trail, from the home page down.
+   * @returns The `BreadcrumbList` JSON-LD object.
    */
   const breadcrumbSchema = (items: SchemaBreadcrumb[]) => {
     return {
@@ -248,7 +283,10 @@ export const useSchemaOrg = () => {
   }
 
   /**
-   * FAQ schema
+   * FAQ schema.
+   *
+   * @param faqs The questions and answers.
+   * @returns The `FAQPage` JSON-LD object.
    */
   const faqSchema = (faqs: SchemaFaq[]) => {
     return {
@@ -266,19 +304,44 @@ export const useSchemaOrg = () => {
   }
 
   /**
-   * Inject schema into head
+   * Article schema.
+   *
+   * @param article The article; a relative `url` is made absolute.
+   * @returns The `Article` JSON-LD object.
    */
-  const injectSchema = (schema: object | object[]) => {
-    const schemas = Array.isArray(schema) ? schema : [schema]
+  const articleSchema = (article: SchemaArticle) => {
+    const url = article.url.startsWith('http') ? article.url : `${baseUrl}${article.url}`
+    return {
+      '@context': SCHEMA_ORG_CONTEXT,
+      '@type': 'Article',
+      headline: article.headline,
+      mainEntityOfPage: url,
+      url,
+      publisher: { '@id': `${baseUrl}/#organization` },
+      ...(article.description ? { description: article.description } : {}),
+      ...(article.datePublished ? { datePublished: article.datePublished } : {})
+    }
+  }
 
-    useHead({
-      script: schemas.map(s => ({
-        type: 'application/ld+json',
-        // innerHTML, not `children`: the current unhead renders an unknown key as an
-        // attribute, and the structured data was landing in children="…" on an empty
-        // <script> — emitted nowhere a crawler reads.
-        innerHTML: JSON.stringify(s)
-      }))
+  /**
+   * Inject schema into head. A getter keeps the document current when the page's content or
+   * language changes; it may return an empty list while the content is not there.
+   *
+   * @param schema One schema object or a list, as a value, ref or getter.
+   */
+  const injectSchema = (schema: MaybeRefOrGetter<object | object[]>) => {
+    useHead(() => {
+      const value = toValue(schema)
+      const schemas = Array.isArray(value) ? value : [value]
+      return {
+        script: schemas.map(s => ({
+          type: 'application/ld+json',
+          // innerHTML, not `children`: the current unhead renders an unknown key as an
+          // attribute, and the structured data would land in a `children` attribute of an
+          // empty <script>, which no crawler reads.
+          innerHTML: JSON.stringify(s)
+        }))
+      }
     })
   }
 
@@ -292,6 +355,7 @@ export const useSchemaOrg = () => {
     productFamilySchema,
     breadcrumbSchema,
     faqSchema,
+    articleSchema,
     injectSchema
   }
 }

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 /**
- * Client users sub-page — lists all users (owner + additional) linked to this client.
+ * Client users sub-page: lists all users (owner + additional) linked to this client.
  * Supports adding users with permissions, managing user profiles, and removing non-owner users.
+ * Removing, deleting and transferring ownership are confirmed first; every action reports its
+ * outcome (success, or the API's sentence) at the top, and a refused load shows the sentence with
+ * a Retry in place of the list.
  */
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
@@ -21,6 +24,7 @@ import UiCard from '@/components/ui/UiCard.vue'
 import UiCheckbox from '@/components/ui/UiCheckbox.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
@@ -71,8 +75,11 @@ const users = ref<ClientUserItem[]>([])
 /** True while the initial fetch is in flight (owned by the store). */
 const loading = computed(() => store.loading)
 
-/** Error message, null when no error (owned by the client-users and users stores). */
-const error = computed(() => store.error ?? usersStore.actionError)
+/** The sentence of the last refused list load, shown with Retry; null when the list loaded. */
+const loadError = ref<string | null>(null)
+
+/** Sentence of a refused action, null when none (owned by the client-users and users stores). */
+const error = computed<string | null>(() => (loadError.value === null ? store.error ?? usersStore.actionError : null))
 
 /** Feedback message after a successful action. */
 const successMessage = ref<string | null>(null)
@@ -155,6 +162,7 @@ const flashSuccess = (message: string, ms: number = NOTICE_VISIBLE_MS): void => 
  */
 const fetchUsers = async (): Promise<void> => {
   const result = await store.fetchUsers(clientId.value)
+  loadError.value = result ? null : store.error
   if (result) {
     users.value = result
   }
@@ -305,7 +313,7 @@ const makeOwnerTarget = ref<UserDetail | null>(null)
 const transferringOwnership = ref(false)
 
 /**
- * Stages the ownership transfer to the editing user. Only opens the prompt —
+ * Stages the ownership transfer to the editing user. Only opens the prompt:
  * {@link confirmMakeOwner} does the work, so the question is asked by the app's own modal.
  *
  * The user is captured here rather than read again on confirm: the manage modal stays open
@@ -364,7 +372,7 @@ const removeUserTarget = ref<ClientUserItem | null>(null)
 const removingUser = ref(false)
 
 /**
- * Stages a non-owner user for removal from this client. Only opens the prompt —
+ * Stages a non-owner user for removal from this client. Only opens the prompt:
  * {@link confirmRemoveUser} does the work, so the question is asked by the app's own modal.
  *
  * @param clientUser - The user to remove.
@@ -394,8 +402,10 @@ const confirmRemoveUser = async (): Promise<void> => {
   }
 }
 
+/** Loads the users. */
 onMounted(() => fetchUsers())
 
+/** Stops the pending success-message timer. */
 onBeforeUnmount(() => {
   clearTimeout(successTimer)
 })
@@ -414,6 +424,14 @@ onBeforeUnmount(() => {
       <UiSkeleton :lines="3" />
       <UiText :tone="UiTextTone.Secondary">{{ t('clients.clientUsers.loadingUsers') }}</UiText>
     </UiStack>
+
+    <UiErrorState
+      v-else-if="loadError !== null"
+      :message="loadError"
+      :loading="loading"
+      testid="client-users-load-error"
+      @retry="fetchUsers()"
+    />
 
     <template v-else>
       <UiStack direction="row" :justify="UiJustify.Between" :align="UiAlignItems.Center">

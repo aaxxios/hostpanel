@@ -11,6 +11,7 @@ import CartDrawer from '~/components/layout/CartDrawer.vue'
 import { useCartStore } from '~/stores/cart'
 import type { CartItem } from '~/types/cartitem'
 import type { BillingCurrency } from '~/types/currency'
+import { PricingCycle } from '~/types/pricingcycle'
 
 /** The currencies the stood-in currency endpoint answers with. */
 const currencies: BillingCurrency[] = [
@@ -41,7 +42,7 @@ const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() }
 const line = (pid: number, amount: number, currency = 'USD'): CartItem => ({
   pid,
   name: `Plan ${pid}`,
-  billingcycle: 'monthly',
+  billingcycle: PricingCycle.Monthly,
   cycleLabel: 'Monthly',
   amount,
   currency,

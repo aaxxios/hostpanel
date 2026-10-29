@@ -2,9 +2,9 @@
  * Regression tests for the identity request in `stores/client.ts`.
  *
  * The store is the layer that decides when `/api/portal/client/me` is asked for, so it is the
- * layer these assertions belong to. A client-area page load has three callers — the
+ * layer these assertions belong to. A client-area page load has three callers (the
  * `client-auth` plugin (through `stores/auth.ts`), the `client` layout's `onMounted`, and the
- * page's own fetch — and they all start before the first answer returns. Production served
+ * page's own fetch) and they all start before the first answer returns. Production served
  * three identical `/me` requests per page load for exactly that reason. Without a test naming
  * the invariant, the fourth caller someone adds brings the duplication straight back.
  *
@@ -14,6 +14,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { Permission } from '~/composables/usePermissions'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 
 /** The mocked `/api/portal/client/me` call, re-created for every test. */
 const fetchMe = vi.fn()
@@ -57,8 +58,8 @@ const deferred = <T>() => {
   return { promise, resolve, reject }
 }
 
-/** A minimal profile — only the fields the assertions read. */
-const profile = { id: 1, firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com', permissions: Permission.All }
+/** A minimal profile: only the fields the assertions read. */
+const profile = makeClientUser({ email: 'ada@example.com', permissions: Permission.All })
 
 describe('useClientStore.fetchUser', () => {
   beforeEach(() => {
@@ -167,7 +168,7 @@ describe('useClientStore.fetchUser', () => {
     const stale = store.fetchUser()
     store.reset()
 
-    const next = { ...profile, id: 2, firstname: 'Grace', email: 'grace@example.com' }
+    const next = { ...profile, id: 2, firstName: 'Grace', email: 'grace@example.com' }
     fetchMe.mockResolvedValueOnce(next)
     await store.fetchUser()
 
@@ -238,11 +239,11 @@ describe('useClientStore.loadEmail', () => {
   })
 
   it('keeps the message', async () => {
-    fetchEmail.mockResolvedValue({ id: '5', subject: 'Hello', message: '<p>x</p>', date: '2026-01-01' })
+    fetchEmail.mockResolvedValue({ id: 5, to: 'a@b.test', subject: 'Hello', body: '<p>x</p>', sentAt: '2026-01-01T00:00:00Z', success: true })
     const store = useClientStore()
 
     expect(await store.loadEmail('5')).toMatchObject({ subject: 'Hello' })
-    expect(store.email).toMatchObject({ id: '5' })
+    expect(store.email).toMatchObject({ id: 5 })
     expect(store.emailLoading).toBe(false)
     expect(store.emailError).toBeNull()
   })

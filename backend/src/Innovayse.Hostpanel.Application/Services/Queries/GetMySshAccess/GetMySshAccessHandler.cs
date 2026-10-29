@@ -27,7 +27,7 @@ public sealed class GetMySshAccessHandler
     /// <summary>Initialises the handler.</summary>
     /// <param name="ownership">The rule that says a client may only touch their own services.</param>
     /// <param name="resolver">Resolves server, provider and account once ownership is settled.</param>
-    /// <param name="logger">Logger.</param>
+    /// <param name="logger">Records a provider failure without putting its detail on the wire.</param>
     public GetMySshAccessHandler(
         IServiceOwnership ownership, ISshServiceContextResolver resolver, ILogger<GetMySshAccessHandler> logger)
     {
@@ -37,7 +37,7 @@ public sealed class GetMySshAccessHandler
     }
 
     /// <summary>Handles <see cref="GetMySshAccessQuery"/>.</summary>
-    /// <param name="query">The query.</param>
+    /// <param name="query">Names the caller's service whose SSH access is read.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The access summary, or <c>SERVICE_NOT_FOUND</c> when the service is not the caller's.</returns>
     public async Task<Result<SshAccessDto>> HandleAsync(GetMySshAccessQuery query, CancellationToken ct)
@@ -67,18 +67,19 @@ public sealed class GetMySshAccessHandler
             }
             catch (SshProviderException ex)
             {
-                _logger.LogWarning(ex, "SSH status for service {ServiceId} on server {ServerId} failed: {Code}",
-                    context.Service.Id, context.Server!.Id, ex.Code);
+                _logger.LogWarning(ex, "SSH status for service {ServiceId} on server {ServerId} failed: {Failure}",
+                    context.Service.Id, context.Target!.ServerId, ex.Failure);
 
                 // The agent answered that this account cannot have keys: a fact about the account,
                 // not an outage, so the customer is sent to support rather than told to retry.
-                state = ex.Code is "account_not_found" or "account_not_eligible" or "invalid_account"
+                state = ex.Failure is SshProviderFailure.AccountNotFound or SshProviderFailure.AccountNotEligible
+                    or SshProviderFailure.InvalidAccount
                     ? SshAccessState.ShellDisabled
                     : SshAccessState.Unreachable;
             }
         }
 
-        var settings = context.Settings;
+        var settings = context.Agent;
         var username = settings is null ? null : context.Account?.Username;
         string? command = null;
         if (state is SshAccessState.Available && settings is not null && username is not null)

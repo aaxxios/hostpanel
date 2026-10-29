@@ -4,9 +4,9 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
 using Innovayse.Hostpanel.Domain.Domains;
-using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Domains.Commands.UpdateDomain;
 
 /// <summary>
@@ -18,16 +18,11 @@ public sealed class UpdateDomainHandler
     /// <summary>The data context the domain aggregate is loaded, mutated and saved through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work the aggregate is saved through.</summary>
-    private readonly IUnitOfWork _uow;
-
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The data context the domain aggregate is loaded, mutated and saved through.</param>
-    /// <param name="uow">Unit of work the aggregate is saved through.</param>
-    public UpdateDomainHandler(IHostpanelDbContext context, IUnitOfWork uow)
+    public UpdateDomainHandler(IHostpanelDbContext context)
     {
         _context = context;
-        _uow = uow;
     }
 
     /// <summary>
@@ -46,14 +41,13 @@ public sealed class UpdateDomainHandler
             return Result.FailureCode(HostpanelErrorCodes.DOMAIN_NOT_FOUND);
         }
 
-        var status = Enum.Parse<DomainStatus>(cmd.Status);
         var expiresAt = DateTimeOffset.Parse(cmd.ExpiresAt);
         var nextDueDate = DateTimeOffset.Parse(cmd.NextDueDate);
 
         domain.Update(
             cmd.FirstPaymentAmount, cmd.RecurringAmount, cmd.PaymentMethod,
             cmd.PromotionCode, cmd.SubscriptionId, cmd.AdminNotes,
-            expiresAt, nextDueDate, cmd.RegistrationPeriod, status);
+            expiresAt, nextDueDate, cmd.RegistrationPeriod, cmd.Status!.Value);
 
         var nameserverHosts = cmd.Nameservers
             .Where(ns => !string.IsNullOrWhiteSpace(ns))
@@ -64,7 +58,7 @@ public sealed class UpdateDomainHandler
             domain.SetNameservers(nameserverHosts);
         }
 
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
         return Result.Success();
     }
 }

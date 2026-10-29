@@ -1,13 +1,16 @@
+using Innovayse.Hostpanel.Application.Billing.Currencies.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Shared.Models;
 
 namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>
 /// Exchange rates for the public demo: a fixed table, so a rate refresh never reaches a bank and
-/// always gives the same answer. Quotes are the value of one unit of the base currency in each
-/// requested currency; a currency outside the table is left out of the answer.
+/// always gives the same answer. Quotes are "1 unit of the code = X base units", the same contract
+/// every source answers, so a refresh leaves the seeded euro rate exactly as it was; a currency
+/// outside the table is left out of the answer.
 /// </summary>
-internal sealed class DemoExchangeRateSource : IExchangeRateSource
+public sealed class DemoExchangeRateSource : IExchangeRateSource
 {
     /// <summary>Units of each currency one US dollar buys.</summary>
     private static readonly IReadOnlyDictionary<string, decimal> PerDollar = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
@@ -19,15 +22,21 @@ internal sealed class DemoExchangeRateSource : IExchangeRateSource
     };
 
     /// <inheritdoc/>
-    public Task<IReadOnlyDictionary<string, decimal>> RatesToAsync(
-        string baseCode, IEnumerable<string> codes, CancellationToken ct)
+    public Task<Result<ExchangeRateQuotes>> QuoteAsync(ExchangeRateLookup lookup, CancellationToken ct)
     {
-        IReadOnlyDictionary<string, decimal> answer = PerDollar.TryGetValue(baseCode, out var baseRate)
-            ? codes
+        ArgumentNullException.ThrowIfNull(lookup);
+
+        // One unit of the code is (base per dollar) / (code per dollar) base units: with base USD,
+        // one euro is 1 / 0.92 dollars, the rate the catalogue seeder stores.
+        IReadOnlyDictionary<string, decimal> rates = PerDollar.TryGetValue(lookup.BaseCode, out var basePerDollar)
+            ? lookup.Codes
                 .Where(PerDollar.ContainsKey)
-                .ToDictionary(code => code, code => Math.Round(PerDollar[code] / baseRate, 8), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    code => code.ToUpperInvariant(),
+                    code => Math.Round(basePerDollar / PerDollar[code], 8),
+                    StringComparer.Ordinal)
             : new Dictionary<string, decimal>();
 
-        return Task.FromResult(answer);
+        return Task.FromResult(Result<ExchangeRateQuotes>.Success(new ExchangeRateQuotes(rates)));
     }
 }

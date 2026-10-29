@@ -4,7 +4,7 @@ using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.SyncPendingDomainStatuses;
 
-/// <summary>Validates <see cref="SyncPendingDomainStatusesCommand"/>: no rules — the command carries no input.</summary>
+/// <summary>Validates <see cref="SyncPendingDomainStatusesCommand"/>: no rules; the command carries no input.</summary>
 public sealed class SyncPendingDomainStatusesValidator : LocalizedValidator<SyncPendingDomainStatusesCommand>
 {
     /// <summary>Initializes the validator with the localization service.</summary>

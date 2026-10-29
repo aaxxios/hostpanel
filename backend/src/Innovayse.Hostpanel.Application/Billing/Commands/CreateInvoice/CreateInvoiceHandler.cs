@@ -1,8 +1,10 @@
+using Innovayse.Hostpanel.Application.Audit.Common;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Audit;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Shared.Models;
-using Innovayse.Hostpanel.Shared.MultiTenancy;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Commands.CreateInvoice;
 
@@ -12,34 +14,50 @@ public sealed class CreateInvoiceHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Current request context, providing the acting admin's identity and IP for the audit trail.</summary>
-    private readonly ICurrentUserService _ctx;
+    /// <summary>Records the activity log line for this action, saved with the change it describes.</summary>
+    private readonly IActivityLogger _activity;
 
     /// <summary>Resolves the currency the invoiced client is billed in, stamped on the invoice.</summary>
     private readonly IPayerCurrencyResolver _payerCurrency;
 
+    /// <summary>The clock the issue moment is read from.</summary>
+    private readonly IClock _clock;
+
+    /// <summary>Wolverine bus the owning modules' existence queries are dispatched through.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    /// <param name="ctx">Current request context providing admin identity and IP.</param>
+    /// <param name="activity">Records the activity log line for this action, saved with the change it describes.</param>
     /// <param name="payerCurrency">The currency the invoiced client is billed in, stamped on the invoice.</param>
+    /// <param name="clock">The clock the issue moment is read from.</param>
+    /// <param name="bus">Wolverine bus the owning modules' existence queries are dispatched through.</param>
     public CreateInvoiceHandler(
-        IHostpanelDbContext context, ICurrentUserService ctx, IPayerCurrencyResolver payerCurrency)
+        IHostpanelDbContext context, IActivityLogger activity, IPayerCurrencyResolver payerCurrency, IClock clock,
+        IMessageBus bus)
     {
         _context = context;
-        _ctx = ctx;
+        _activity = activity;
         _payerCurrency = payerCurrency;
+        _clock = clock;
+        _bus = bus;
     }
 
     /// <summary>Handles the command.</summary>
     /// <param name="cmd">The create invoice command.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success with the newly created invoice ID. This use case refuses nothing itself.</returns>
+    /// <returns>Success with the newly created invoice ID, or <c>CLIENT_NOT_FOUND</c> when the id names no client.</returns>
     public async Task<Result<int>> HandleAsync(CreateInvoiceCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
+        if (!await _bus.ClientExistsAsync(cmd.ClientId, ct))
+        {
+            return Result<int>.FailureCode(HostpanelErrorCodes.CLIENT_NOT_FOUND);
+        }
+
         var currency = (await _payerCurrency.ForClientAsync(cmd.ClientId, ct)).Code;
-        var invoice = Invoice.Create(cmd.ClientId, cmd.DueDate, currency, cmd.IsDraft);
+        var invoice = Invoice.Create(cmd.ClientId, cmd.DueDate, currency, cmd.IsDraft, _clock.UtcNow);
 
         foreach (var item in cmd.Items)
         {
@@ -49,10 +67,8 @@ public sealed class CreateInvoiceHandler
         _context.Invoices.Add(invoice);
         await _context.SaveChangesAsync(ct);
 
-        _context.ActivityLogs.Add(ActivityLog.Create(
-            cmd.ClientId,
-            $"Created Manual Invoice - Invoice ID: {invoice.Id}",
-            _ctx.UserId, _ctx.UserName, _ctx.Email, _ctx.IpAddress));
+        await _activity.RecordAsync(
+            new ActivityLogEntry(cmd.ClientId, $"Created Manual Invoice - Invoice ID: {invoice.Id}"), ct);
         await _context.SaveChangesAsync(ct);
 
         return Result<int>.Success(invoice.Id);

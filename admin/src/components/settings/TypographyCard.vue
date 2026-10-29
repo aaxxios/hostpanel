@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Typography card — the heading and body typefaces the storefront uses.
+ * Typography card: the heading and body typefaces the storefront uses.
  *
  * Two selects over the four faces the storefront ships (all self-hosted; nothing here or on the
  * storefront loads from a font CDN), and a three-language preview underneath so an operator sees
@@ -12,6 +12,7 @@ import { computed, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingDraft } from '@/composables/useSettingDraft'
 import SettingNotSeeded from '@/components/settings/SettingNotSeeded.vue'
+import SettingOutcome from '@/components/settings/SettingOutcome.vue'
 import SettingSaveButton from '@/components/settings/SettingSaveButton.vue'
 import SettingsSection from '@/components/settings/SettingsSection.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -21,7 +22,7 @@ import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { BRAND_FONT_OPTIONS, previewClass } from '@/lib/brandFonts'
 import { SettingEnv, SettingKey } from '@/types/setting'
-import type { Setting } from '@/types/setting'
+import type { Setting, SettingSave } from '@/types/setting'
 
 const { t } = useI18n()
 
@@ -29,13 +30,8 @@ const { t } = useI18n()
 const props = defineProps<{
   /** All system settings, as loaded from the backend. */
   settings: Setting[]
-  /** True while a save is in flight. */
-  saving?: boolean
-}>()
-
-const emit = defineEmits<{
-  /** Emitted with the row id and the new value when the operator saves a face. */
-  save: [id: number, value: string]
+  /** Persists one row and answers how it went; each control shows its own outcome. */
+  save: SettingSave
 }>()
 
 /** The settings list as a ref, which is what the draft composable watches. */
@@ -89,10 +85,11 @@ const fontOptions = computed(() => [
             />
             <SettingSaveButton
               :dirty="field.draft.dirty.value"
-              :saving="saving"
+              :saving="field.draft.saving.value"
               :data-testid="`typography-save-${field.testid}`"
-              @click="field.draft.submit((id, value) => emit('save', id, value))"
+              @click="field.draft.submit(save)"
             />
+            <SettingOutcome :outcome="field.draft.outcome.value" />
           </UiStack>
         </UiStack>
       </template>

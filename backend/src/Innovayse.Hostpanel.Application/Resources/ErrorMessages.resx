@@ -126,6 +126,9 @@
 <data name="PAYMENT_METHOD_NOT_OWNED" xml:space="preserve">
     <value>That payment method does not belong to this account.</value>
   </data>
+<data name="PAYMENT_METHOD_UNAVAILABLE" xml:space="preserve">
+    <value>That saved payment method cannot be charged because this deployment has no card gateway configured.</value>
+  </data>
 <data name="NO_SAVED_PAYMENT_METHODS" xml:space="preserve">
     <value>This account has no saved payment methods.</value>
   </data>
@@ -135,14 +138,17 @@
 <data name="GATEWAY_CHARGE_UPSTREAM_FAILED" xml:space="preserve">
     <value>The payment gateway declined the charge.</value>
   </data>
+  <data name="PAYMENT_GATEWAY_SERVICE_UNAVAILABLE" xml:space="preserve">
+    <value>The payment gateway is temporarily unavailable. Please try again shortly.</value>
+  </data>
+  <data name="PAYMENT_METHOD_UPSTREAM_FAILED" xml:space="preserve">
+    <value>The payment gateway could not process the request for your saved payment methods. Please try again later or contact support.</value>
+  </data>
 <data name="GATEWAY_TRANSACTION_MISSING_UPSTREAM_FAILED" xml:space="preserve">
     <value>The payment gateway reported success but returned no transaction reference.</value>
   </data>
 <data name="CLIENT_PROFILE_NOT_FOUND" xml:space="preserve">
     <value>This account has no client profile, so there is nothing to show in the client area.</value>
-  </data>
-<data name="MY_CONTACT_NOT_FOUND" xml:space="preserve">
-    <value>No such contact.</value>
   </data>
 <data name="INVITATION_NOT_FOUND" xml:space="preserve">
     <value>No such invitation.</value>
@@ -174,14 +180,14 @@
 <data name="CLIENT_CURRENCY_ALREADY_INVOICED" xml:space="preserve">
     <value>This client has already been invoiced, so their currency cannot be changed.</value>
   </data>
-<data name="CLIENT_STATUS_INVALID" xml:space="preserve">
-    <value>That is not a client status this deployment recognises.</value>
-  </data>
 <data name="EMAIL_LOG_NOT_FOUND" xml:space="preserve">
     <value>No such email.</value>
   </data>
 <data name="EMAIL_TEMPLATE_NOT_FOUND" xml:space="preserve">
     <value>No such email template.</value>
+  </data>
+<data name="EMAIL_TEMPLATE_ALREADY_EXISTS" xml:space="preserve">
+    <value>This template already has a version in that language.</value>
   </data>
 <data name="TICKET_NOT_FOUND" xml:space="preserve">
     <value>No such ticket.</value>
@@ -273,14 +279,14 @@
 <data name="KBCATEGORY_NOT_FOUND" xml:space="preserve">
     <value>No such knowledge base category exists.</value>
   </data>
+<data name="KBCATEGORY_IN_USE" xml:space="preserve">
+    <value>This knowledge base category still has sub-categories. Move or delete them first.</value>
+  </data>
 <data name="ANNOUNCEMENT_NOT_FOUND" xml:space="preserve">
     <value>No such announcement exists.</value>
   </data>
 <data name="NETWORKISSUE_NOT_FOUND" xml:space="preserve">
     <value>No such network issue exists.</value>
-  </data>
-<data name="KB_PUBLISHED_ARTICLE_UNAVAILABLE" xml:space="preserve">
-    <value>No such knowledge base article is available.</value>
   </data>
 <data name="ORDER_NOT_FOUND" xml:space="preserve">
     <value>No such order exists.</value>
@@ -296,6 +302,12 @@
   </data>
 <data name="ORDER_CURRENCY_UNAVAILABLE" xml:space="preserve">
     <value>That currency is not offered.</value>
+  </data>
+  <data name="ACCOUNT_EMAIL_EXISTS" xml:space="preserve">
+    <value>An account with this email address already exists. Sign in to continue.</value>
+  </data>
+  <data name="ORDER_NUMBER_RANGE_EXHAUSTED" xml:space="preserve">
+    <value>Orders cannot be numbered right now. Please try again later.</value>
   </data>
 <data name="ORDER_GUEST_DETAILS_REQUIRED" xml:space="preserve">
     <value>Your name, email and password are required to place this order.</value>
@@ -315,11 +327,17 @@
 <data name="DOWNLOAD_CATEGORY_NOT_FOUND" xml:space="preserve">
     <value>No such download category exists.</value>
   </data>
+<data name="DOWNLOAD_CATEGORY_IN_USE" xml:space="preserve">
+    <value>This download category still has sub-categories or downloads. Move or delete them first.</value>
+  </data>
 <data name="PREDEFINED_REPLY_NOT_FOUND" xml:space="preserve">
     <value>No such predefined reply exists.</value>
   </data>
 <data name="PREDEFINED_REPLY_CATEGORY_NOT_FOUND" xml:space="preserve">
     <value>No such predefined reply category exists.</value>
+  </data>
+<data name="PREDEFINED_REPLY_CATEGORY_IN_USE" xml:space="preserve">
+    <value>This predefined reply category still has sub-categories or replies. Move or delete them first.</value>
   </data>
 <data name="CONTACT_NOT_CONFIGURED" xml:space="preserve">
     <value>The contact form is not available on this deployment. Please use the email address or phone number shown on this page.</value>
@@ -332,6 +350,9 @@
   </data>
 <data name="CANCELLATION_ALREADY_PENDING" xml:space="preserve">
     <value>A cancellation request is already pending for this service.</value>
+  </data>
+  <data name="SERVICE_ALREADY_TERMINATED" xml:space="preserve">
+    <value>This service is already terminated, so it cannot be cancelled.</value>
   </data>
 <data name="CANCELLATION_REQUEST_NOT_FOUND" xml:space="preserve">
     <value>No such cancellation request.</value>
@@ -351,8 +372,11 @@
 <data name="PROVISIONING_UPSTREAM_FAILED" xml:space="preserve">
     <value>Provisioning the service failed. Please try again or contact support.</value>
   </data>
-<data name="INVALID_SERVICE_STATUS" xml:space="preserve">
-    <value>That is not a known service status.</value>
+<data name="SERVICE_FIRST_INVOICE_UNPAID" xml:space="preserve">
+    <value>This service can be set up once its first invoice is paid in full.</value>
+  </data>
+<data name="PROVISIONING_ACCOUNT_CONFLICT" xml:space="preserve">
+    <value>The hosting account name is already taken on the server. Our team has been notified and will finish the setup.</value>
   </data>
 <data name="SERVICE_NOT_PROVISIONED" xml:space="preserve">
     <value>This service has not been provisioned yet.</value>
@@ -393,12 +417,6 @@
 <data name="SLIDE_NOT_FOUND" xml:space="preserve">
     <value>No such slide.</value>
   </data>
-<data name="SLIDE_IMAGE_TYPE_INVALID" xml:space="preserve">
-    <value>That file type is not supported. Upload a JPEG, PNG, WebP, GIF or SVG image.</value>
-  </data>
-<data name="SLIDE_IMAGE_EXCEEDS_LIMIT" xml:space="preserve">
-    <value>That image is too large. Upload a file under 5 MB.</value>
-  </data>
 <data name="SETUP_ALREADY_COMPLETED" xml:space="preserve">
     <value>This installation has already been set up and someone already holds the administrator role. Ask them to grant you access.</value>
   </data>
@@ -411,14 +429,14 @@
 <data name="SIGN_IN_UNAUTHORIZED" xml:space="preserve">
     <value>Invalid email or password.</value>
   </data>
+<data name="SIGN_IN_ACCOUNT_LOCKED" xml:space="preserve">
+    <value>Too many wrong passwords. This account is locked for a while, try again later.</value>
+  </data>
 <data name="PENDING_TOKEN_UNAUTHORIZED" xml:space="preserve">
     <value>That sign-in step has expired or is not valid. Sign in again.</value>
   </data>
 <data name="TWO_FACTOR_CODE_UNAUTHORIZED" xml:space="preserve">
     <value>That code did not match. Check your authenticator app and try again.</value>
-  </data>
-<data name="SESSION_UNAUTHORIZED" xml:space="preserve">
-    <value>Your session has expired. Sign in again.</value>
   </data>
 <data name="TOKEN_INVALID_OR_EXPIRED" xml:space="preserve">
     <value>The link is invalid or has expired. Request a new one.</value>
@@ -426,14 +444,26 @@
 <data name="REGISTRATION_FAILED" xml:space="preserve">
     <value>We could not create the account. Check the details and try again.</value>
   </data>
+<data name="TWO_FACTOR_ALREADY_ENABLED" xml:space="preserve">
+    <value>Two-factor authentication is already on. Switch it off before setting it up again.</value>
+  </data>
+<data name="CURRENT_PASSWORD_INVALID" xml:space="preserve">
+    <value>The current password is not correct.</value>
+  </data>
+<data name="EMAIL_ALREADY_IN_USE" xml:space="preserve">
+    <value>This email address is already used by another account.</value>
+  </data>
 <data name="MIGRATION_JOB_NOT_FOUND" xml:space="preserve">
     <value>No such migration job.</value>
   </data>
 <data name="MIGRATION_JOB_NOT_PENDING" xml:space="preserve">
     <value>This migration job has already started or finished and cannot be started again.</value>
   </data>
-<data name="MIGRATION_JOB_ALREADY_FINISHED" xml:space="preserve">
-    <value>This migration job has already completed or failed; no further batches are accepted.</value>
+<data name="MIGRATION_JOB_NOT_FAILED" xml:space="preserve">
+    <value>This migration job has not failed, so it cannot be retried.</value>
+  </data>
+<data name="MIGRATION_JOB_INVALID_TRANSITION" xml:space="preserve">
+    <value>This migration job cannot do that in its current state.</value>
   </data>
 <data name="MIGRATION_PLUGIN_NOT_FOUND" xml:space="preserve">
     <value>The migration plugin is not available on this deployment.</value>
@@ -443,6 +473,18 @@
   </data>
 <data name="SERVER_NOT_FOUND" xml:space="preserve">
     <value>No such provisioning server.</value>
+  </data>
+<data name="SERVER_CONNECTION_UNREACHABLE" xml:space="preserve">
+    <value>Could not reach the server. See the server log for detail.</value>
+  </data>
+<data name="SERVER_CONNECTION_NO_ACCESS_HASH" xml:space="preserve">
+    <value>No access hash is configured for this server.</value>
+  </data>
+<data name="SERVER_CONNECTION_NO_API_KEY" xml:space="preserve">
+    <value>No API key or access hash is configured for this server.</value>
+  </data>
+<data name="SERVER_CONNECTION_MODULE_UNSUPPORTED" xml:space="preserve">
+    <value>Connection testing is not supported for this server module.</value>
   </data>
 <data name="SERVER_GROUP_NOT_FOUND" xml:space="preserve">
     <value>No such server group.</value>
@@ -461,6 +503,18 @@
   </data>
 <data name="PLUGIN_NOT_FOUND" xml:space="preserve">
     <value>No such plugin is installed.</value>
+  </data>
+<data name="PLUGIN_ARCHIVE_TOO_LARGE" xml:space="preserve">
+    <value>That archive is too large to install: it has too many files or unpacks to more than this server accepts.</value>
+  </data>
+<data name="PLUGIN_HOST_ASSEMBLY_REFUSED" xml:space="preserve">
+    <value>That archive contains an assembly with the name of one the server already provides and was rejected. Remove it from the package and upload again.</value>
+  </data>
+<data name="PLUGIN_NOT_TRUSTED" xml:space="preserve">
+    <value>That archive is not on this server's list of trusted plugin packages.</value>
+  </data>
+<data name="PLUGIN_BUILT_IN" xml:space="preserve">
+    <value>This plugin ships with the server and cannot be removed or replaced.</value>
   </data>
 <data name="INTEGRATION_NOT_FOUND" xml:space="preserve">
     <value>No such integration.</value>
@@ -518,7 +572,7 @@
     <value>Only an unpaid invoice can be marked overdue.</value>
   </data>
   <data name="INVOICE_CANCEL_NOT_ALLOWED" xml:space="preserve">
-    <value>A paid invoice cannot be cancelled.</value>
+    <value>A paid, refunded or already cancelled invoice cannot be cancelled.</value>
   </data>
   <data name="INVOICE_NOT_PAID" xml:space="preserve">
     <value>This action requires the invoice to be paid.</value>
@@ -562,11 +616,32 @@
   <data name="CLIENT_ACTIVATE_NOT_ALLOWED" xml:space="preserve">
     <value>A closed account cannot be reactivated this way.</value>
   </data>
+  <data name="CLIENT_DEACTIVATE_NOT_ALLOWED" xml:space="preserve">
+    <value>Only an active account can be deactivated. Activate a suspended account first; a closed account cannot be changed.</value>
+  </data>
+  <data name="CLIENT_SUSPENDED" xml:space="preserve">
+    <value>This account is suspended, so it cannot place orders or pay online. Contact support to have it reactivated.</value>
+  </data>
+  <data name="CLIENT_CLOSED" xml:space="preserve">
+    <value>This account is closed and can no longer place orders or be billed.</value>
+  </data>
+  <data name="CLIENT_OWNER_CANNOT_BE_REMOVED" xml:space="preserve">
+    <value>The account owner cannot be removed. Transfer ownership to another user first.</value>
+  </data>
+  <data name="CONTACT_EMAIL_IN_USE" xml:space="preserve">
+    <value>Another contact of this client already uses this email address.</value>
+  </data>
+  <data name="CLIENT_RECORD_CLOSED" xml:space="preserve">
+    <value>This account is closed, so its contacts and users can no longer be changed.</value>
+  </data>
   <data name="DOMAIN_CANCEL_NOT_ALLOWED" xml:space="preserve">
     <value>This domain's status does not allow cancellation.</value>
   </data>
   <data name="DOMAIN_RENEW_NOT_ALLOWED" xml:space="preserve">
     <value>This domain's status does not allow renewal.</value>
+  </data>
+  <data name="DOMAIN_LINK_NOT_ALLOWED" xml:space="preserve">
+    <value>This domain's status does not allow linking a hosting service.</value>
   </data>
   <data name="DOMAIN_DNS_RECORD_NOT_FOUND" xml:space="preserve">
     <value>No such DNS record on this domain.</value>
@@ -687,5 +762,122 @@
   </data>
   <data name="SSH_AGENT_ENDPOINT_IN_USE" xml:space="preserve">
     <value>Another server already uses this agent host and port.</value>
+  </data>
+  <data name="PAYMENT_INTENT_MISMATCH" xml:space="preserve">
+    <value>This card payment does not match the invoice for this order.</value>
+  </data>
+  <data name="PAYMENT_INTENT_ALREADY_USED" xml:space="preserve">
+    <value>This card payment has already been recorded.</value>
+  </data>
+  <data name="REGISTRAR_NOT_CONFIGURED" xml:space="preserve">
+    <value>The registrar for this domain is not configured.</value>
+  </data>
+  <data name="REGISTRAR_ORDER_UPSTREAM_FAILED" xml:space="preserve">
+    <value>The registrar refused the request. Please try again shortly.</value>
+  </data>
+  <data name="REGISTRAR_OPERATION_UNSUPPORTED" xml:space="preserve">
+    <value>The registrar does not offer this action. Please contact the registrar's support.</value>
+  </data>
+  <data name="REGISTRAR_DOMAIN_NOT_FOUND" xml:space="preserve">
+    <value>The registrar does not hold this domain.</value>
+  </data>
+  <data name="REGISTRAR_DOMAIN_NOT_ACTIVE" xml:space="preserve">
+    <value>The registrar has not activated this domain yet.</value>
+  </data>
+  <data name="REGISTRAR_WHOIS_PRIVACY_UNAVAILABLE" xml:space="preserve">
+    <value>This domain has no WHOIS privacy subscription at the registrar.</value>
+  </data>
+  <data name="REGISTRAR_DOMAIN_UNAVAILABLE" xml:space="preserve">
+    <value>The registrar says this domain name is not available.</value>
+  </data>
+  <data name="REGISTRAR_INSUFFICIENT_FUNDS" xml:space="preserve">
+    <value>The registrar account does not have enough balance for this purchase.</value>
+  </data>
+  <data name="REGISTRAR_CONTACT_VALIDATION_FAILED" xml:space="preserve">
+    <value>The registrant contact details are incomplete, so the registrar cannot be sent the order.</value>
+  </data>
+  <data name="TRANSACTION_AMOUNT_REQUIRED" xml:space="preserve">
+    <value>A transaction must have an incoming or outgoing amount.</value>
+  </data>
+  <data name="INVOICE_REFUND_EXCEEDS_PAID" xml:space="preserve">
+    <value>The refund is more than what was paid and not yet refunded.</value>
+  </data>
+  <data name="INVOICE_CREDIT_EXCEEDS_DUE" xml:space="preserve">
+    <value>The credit is more than the invoice still owes.</value>
+  </data>
+  <data name="INVOICE_NOT_GATEWAY_PAID" xml:space="preserve">
+    <value>No payment gateway took money for this invoice, so it cannot be refunded through one.</value>
+  </data>
+  <data name="CARD_REFUND_REFUSED" xml:space="preserve">
+    <value>The card payment gateway refused the refund. Any part it had already returned is recorded on the invoice.</value>
+  </data>
+  <data name="INVOICE_REFUND_CONFLICT" xml:space="preserve">
+    <value>Another refund of this invoice is still waiting for its payment gateway. Try again once it is answered.</value>
+  </data>
+  <data name="GATEWAY_REFUND_REFUSED" xml:space="preserve">
+    <value>The payment gateway refused or failed the refund. Nothing was returned through it.</value>
+  </data>
+  <data name="GATEWAY_PAYMENT_MISMATCH" xml:space="preserve">
+    <value>The payment gateway reported an amount or currency that does not match the invoice.</value>
+  </data>
+  <data name="INVOICE_NOT_DELETABLE" xml:space="preserve">
+    <value>Only a draft or cancelled invoice can be deleted.</value>
+  </data>
+  <data name="SERVICE_STATUS_CHANGE_NOT_ALLOWED" xml:space="preserve">
+    <value>This service cannot be moved to that status.</value>
+  </data>
+  <data name="SERVICE_AUTOMATION_INCONSISTENT" xml:space="preserve">
+    <value>Set a hold date only with the suspension hold, and a termination reason only with the end-of-cycle termination.</value>
+  </data>
+  <data name="SERVICE_NOT_TERMINATED" xml:space="preserve">
+    <value>Only a terminated service has a termination date to correct.</value>
+  </data>
+  <data name="SERVICE_HOSTING_DETAILS_MISSING" xml:space="preserve">
+    <value>This service has no domain or username yet. Set up the hosting account first.</value>
+  </data>
+  <data name="PRODUCT_PACKAGE_MISSING" xml:space="preserve">
+    <value>This product has no hosting package set. Choose one on the product first.</value>
+  </data>
+  <data name="INVOICE_PAYMENT_EXCEEDS_DUE" xml:space="preserve">
+    <value>The payment is more than the invoice still owes.</value>
+  </data>
+  <data name="INVOICE_AMOUNT_STILL_DUE" xml:space="preserve">
+    <value>The invoice still owes money, so it has to be settled rather than marked paid.</value>
+  </data>
+  <data name="INVOICE_HAS_PAYMENTS" xml:space="preserve">
+    <value>The invoice already took a payment. Refund or delete that payment first.</value>
+  </data>
+  <data name="INVOICE_TOTAL_BELOW_PAID" xml:space="preserve">
+    <value>The invoice would then charge less than the payments it already took.</value>
+  </data>
+  <data name="SERVER_IN_USE" xml:space="preserve">
+    <value>This server still hosts client services or SSH keys. Move or remove them first.</value>
+  </data>
+  <data name="SERVER_GROUP_IN_USE" xml:space="preserve">
+    <value>Products still use this server group. Assign them to another group first.</value>
+  </data>
+  <data name="USER_NOT_FOUND" xml:space="preserve">
+    <value>No such user.</value>
+  </data>
+  <data name="USER_CANNOT_DELETE_SELF" xml:space="preserve">
+    <value>You cannot delete your own account.</value>
+  </data>
+  <data name="USER_LAST_ADMIN" xml:space="preserve">
+    <value>This is the last active administrator. Make another user an administrator first.</value>
+  </data>
+  <data name="EXCHANGE_RATE_SOURCE_UNAVAILABLE" xml:space="preserve">
+    <value>The exchange rate source is not answering right now. Try again later.</value>
+  </data>
+  <data name="EXCHANGE_RATE_BASE_NOT_QUOTED" xml:space="preserve">
+    <value>The exchange rate source does not quote the base currency.</value>
+  </data>
+  <data name="CLIENT_CARD_PAYMENT_DISABLED" xml:space="preserve">
+    <value>Card payments are disabled for this account. Pay by another method or contact support.</value>
+  </data>
+  <data name="CLIENT_SSO_DISABLED" xml:space="preserve">
+    <value>Single sign-on to the hosting panel is not enabled for this account.</value>
+  </data>
+  <data name="CLIENT_TAX_EXEMPT" xml:space="preserve">
+    <value>This client is tax exempt, so a tax rate cannot be set on their invoices.</value>
   </data>
 </root>

@@ -15,7 +15,7 @@ import { TemplateName } from '~/types/templatename'
 type PageColors = Record<ColorMode, string>
 
 /**
- * Page background per template and mode, for `<meta name="theme-color">` — the colour
+ * Page background per template and mode, for `<meta name="theme-color">`: the colour
  * the browser paints its own chrome on mobile. Read from the template stylesheets'
  * page tokens. Classic paints the shared `--page` token (aurora.css), so it takes aurora's pair.
  */
@@ -28,11 +28,9 @@ const PAGE_COLORS: Record<TemplateName, PageColors> = {
 /**
  * Colour-mode plugin: the one writer of the `dark` / `light` class on `<html>`.
  *
- * Replaces a client-only plugin that forced `dark` on every public page and a blocking
- * script in `app.vue` that did the same, both of which overrode the toggle in the
- * client area and made the operator's choice impossible. The class now comes from
- * `useAppColorMode().applied` through `useHead`, so the server renders it into the
- * HTML — no flash — and the browser keeps it in step with the toggle.
+ * A second writer would override the toggle and the operator's default. The class comes
+ * from `useAppColorMode().applied` through `useHead`, so the server renders it into the
+ * HTML without a flash, and the browser keeps it in step with the toggle.
  *
  * Under `system` with no cookie the server cannot know the mode, so it emits no class
  * and the inline {@link SYSTEM_MODE_BOOTSTRAP} picks one before first paint; this

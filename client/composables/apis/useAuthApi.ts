@@ -1,5 +1,5 @@
 /**
- * Endpoints under `/api/portal/auth` — signing in, signing out, and everything that changes
+ * Endpoints under `/api/portal/auth`: signing in, signing out, and everything that changes
  * which credentials work.
  *
  * Stateless by contract: no `ref`, no `computed`, no caching. Who is signed in is
@@ -13,6 +13,7 @@ import type { ClientUser } from '~/types/clientuser'
 import type { EmailVerifiedStatus } from '~/types/emailverifiedstatus'
 import type { LoginResult } from '~/types/loginresult'
 import type { RegisterPayload } from '~/types/registerpayload'
+import { HttpMethod } from '~/types/httpmethod'
 
 /**
  * The `/api/portal/auth` surface, one function per endpoint.
@@ -26,11 +27,11 @@ export const useAuthApi = () => {
    * @param email - Account email.
    * @param password - Account password.
    * @returns The signed-in account, or the second-factor challenge when TOTP is switched on.
-   * @throws Whatever `apiFetch` throws — a rejected credential is an error here, not a value.
+   * @throws Whatever `apiFetch` throws: a rejected credential is an error here, not a value.
    */
   const login = (email: string, password: string): Promise<LoginResult> =>
     apiFetch<LoginResult>('/api/portal/auth/login', {
-      method: 'POST',
+      method: HttpMethod.Post,
       body: { email, password }
     })
 
@@ -40,11 +41,11 @@ export const useAuthApi = () => {
    * @param pendingToken - Token the challenge answered with.
    * @param code - TOTP code the visitor read off their authenticator.
    * @returns The signed-in account.
-   * @throws Whatever `apiFetch` throws — a wrong code included.
+   * @throws Whatever `apiFetch` throws: a wrong code included.
    */
   const loginWithTwoFactor = (pendingToken: string, code: string): Promise<ClientUser> =>
     apiFetch<ClientUser>('/api/portal/auth/2fa-login', {
-      method: 'POST',
+      method: HttpMethod.Post,
       body: { pendingToken, code }
     })
 
@@ -56,7 +57,7 @@ export const useAuthApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const register = (payload: RegisterPayload): Promise<unknown> =>
-    apiFetch('/api/portal/auth/register', { method: 'POST', body: payload })
+    apiFetch('/api/portal/auth/register', { method: HttpMethod.Post, body: payload })
 
   /**
    * Clears this product's session cookies and invalidates the refresh token.
@@ -65,7 +66,7 @@ export const useAuthApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const logout = (): Promise<unknown> =>
-    apiFetch('/api/portal/auth/logout', { method: 'POST' })
+    apiFetch('/api/portal/auth/logout', { method: HttpMethod.Post })
 
   /**
    * Clears this product's session cookies in SSO mode.
@@ -78,7 +79,7 @@ export const useAuthApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const ssoLogout = (): Promise<unknown> =>
-    apiFetch('/api/portal/auth/sso/logout', { method: 'POST' })
+    apiFetch('/api/portal/auth/sso/logout', { method: HttpMethod.Post })
 
   /**
    * Asks for a password-reset mail.
@@ -88,7 +89,7 @@ export const useAuthApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const requestPasswordReset = (email: string): Promise<unknown> =>
-    apiFetch('/api/portal/auth/forgot-password', { method: 'POST', body: { email } })
+    apiFetch('/api/portal/auth/forgot-password', { method: HttpMethod.Post, body: { email } })
 
   /**
    * Sets a new password from a reset link.
@@ -101,7 +102,7 @@ export const useAuthApi = () => {
    */
   const resetPassword = (email: string, token: string, newPassword: string): Promise<unknown> =>
     apiFetch('/api/portal/auth/reset-password', {
-      method: 'POST',
+      method: HttpMethod.Post,
       body: { email, token, newPassword }
     })
 
@@ -114,7 +115,7 @@ export const useAuthApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const confirmEmail = (email: string, token: string): Promise<unknown> =>
-    apiFetch('/api/portal/auth/confirm-email', { method: 'POST', body: { email, token } })
+    apiFetch('/api/portal/auth/confirm-email', { method: HttpMethod.Post, body: { email, token } })
 
   /**
    * Reads whether the signed-in account's email address is confirmed.
@@ -132,23 +133,23 @@ export const useAuthApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const resendVerification = (): Promise<unknown> =>
-    apiFetch('/api/portal/auth/resend-verification', { method: 'POST' })
+    apiFetch('/api/portal/auth/resend-verification', { method: HttpMethod.Post })
 
   /**
    * Accepts a client invitation on behalf of whoever is signed in.
    *
    * No password travels with it. The backend command carries a token and nothing else and
-   * resolves the accepting account from the credential — a field naming the subject would
+   * resolves the accepting account from the credential: a field naming the subject would
    * let whoever holds the token link a different account. The page's password fields went
    * with it: nothing in this product sets a password from an invitation token.
    *
    * @param token - Invitation token from the link.
    * @returns Nothing the caller reads; success is the absence of a throw.
-   * @throws Whatever `apiFetch` throws — an expired or already-accepted invitation included,
+   * @throws Whatever `apiFetch` throws: an expired or already-accepted invitation included,
    *         and a `403` carrying `INVITE_SIGN_IN_REQUIRED` when nobody is signed in yet.
    */
   const acceptInvite = (token: string): Promise<unknown> =>
-    apiFetch('/api/portal/auth/accept-invite', { method: 'POST', body: { token } })
+    apiFetch('/api/portal/auth/accept-invite', { method: HttpMethod.Post, body: { token } })
 
   /**
    * Starts TOTP enrolment, returning the secret and its QR payload.
@@ -157,7 +158,7 @@ export const useAuthApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const setupTwoFactor = (): Promise<{ secret: string, qrCodeUri: string }> =>
-    apiFetch<{ secret: string, qrCodeUri: string }>('/api/portal/auth/2fa-setup', { method: 'POST' })
+    apiFetch<{ secret: string, qrCodeUri: string }>('/api/portal/auth/2fa-setup', { method: HttpMethod.Post })
 
   /**
    * Switches TOTP on, confirming enrolment with a first code.
@@ -167,17 +168,18 @@ export const useAuthApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const enableTwoFactor = (code: string): Promise<unknown> =>
-    apiFetch('/api/portal/auth/2fa-enable', { method: 'POST', body: { code } })
+    apiFetch('/api/portal/auth/2fa-enable', { method: HttpMethod.Post, body: { code } })
 
   /**
-   * Switches TOTP off.
+   * Switches TOTP off. Every session of the account ends with it, this one included.
    *
    * @param code - Current TOTP code, proving the request came from the enrolled device.
+   * @param currentPassword - The account's current password, proving the person.
    * @returns Whatever the endpoint answers with.
    * @throws Whatever `apiFetch` throws.
    */
-  const disableTwoFactor = (code: string): Promise<unknown> =>
-    apiFetch('/api/portal/auth/2fa-disable', { method: 'POST', body: { code } })
+  const disableTwoFactor = (code: string, currentPassword: string): Promise<unknown> =>
+    apiFetch('/api/portal/auth/2fa-disable', { method: HttpMethod.Post, body: { code, currentPassword } })
 
   return {
     login,

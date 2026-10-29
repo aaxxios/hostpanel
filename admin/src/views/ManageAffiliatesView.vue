@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Manage Affiliates — the affiliate programme overview.
+ * Manage Affiliates: the affiliate programme overview.
  *
  * The feature is not built yet, so the screen says so instead of showing records that do not exist.
  */

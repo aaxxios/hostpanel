@@ -2,13 +2,16 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Billing.Events;
+
 /// <summary>Raised when a new invoice is created.</summary>
 /// <param name="InvoiceId">The invoice ID (0 before save; EF sets the real value post-persist).</param>
 /// <param name="ClientId">The client the invoice belongs to.</param>
-public record InvoiceCreatedEvent(int InvoiceId, int ClientId) : IDomainEvent
+/// <param name="Total">The invoice total when the event is dispatched, after the items were added.</param>
+/// <param name="Currency">The ISO 4217 code the total is billed in.</param>
+public record InvoiceCreatedEvent(int InvoiceId, int ClientId, decimal Total, string Currency) : IDomainEvent
 {
     /// <summary>
-    /// When the change was made, UTC. Stamped at construction; nothing reads a clock in this domain yet.
+    /// When the change was made, UTC, given by whoever raised the event.
     /// </summary>
-    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+    public required DateTimeOffset OccurredAt { get; init; }
 }

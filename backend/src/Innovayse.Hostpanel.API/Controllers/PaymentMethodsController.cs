@@ -15,6 +15,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 /// </summary>
 [Route("api/payment-methods")]
 [AllowAnonymous]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class PaymentMethodsController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -30,9 +31,14 @@ public sealed class PaymentMethodsController : BaseApiController
     /// <summary>Lists every payment gateway available at checkout right now.</summary>
     /// <param name="query">Names the currency to list for, or none for the caller's own.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the available methods, empty when none apply. Never fails.</returns>
+    /// <returns>
+    /// 200 with the available methods, empty when none apply; 400 with <c>VALIDATION_ERROR</c> for an
+    /// unusable currency code;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<AvailablePaymentMethodDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ListAsync([FromQuery] ListAvailablePaymentMethodsQuery query, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<IReadOnlyList<AvailablePaymentMethodDto>>>(query, ct);

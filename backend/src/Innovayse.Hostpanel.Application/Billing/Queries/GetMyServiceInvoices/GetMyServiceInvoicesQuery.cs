@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.GetMyServiceInvoices;
 /// <remarks>
 /// Carries a service id but no client id. Which account the service must belong to is resolved
 /// inside the handler from the credential, so the scoping cannot be separated from the message
-/// the way an id in the body can, and the repository read is scoped by that client as well as by
+/// the way an id in the body can, and the database read is scoped by that client as well as by
 /// the service.
 /// </remarks>
 /// <param name="ServiceId">Primary key of the service, which must belong to the caller.</param>

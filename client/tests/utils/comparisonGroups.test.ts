@@ -15,7 +15,7 @@ import type { ProductFeature } from '~/types/productfeature'
  * @param id The group id.
  * @returns The group.
  */
-const group = (id: number): PortalProductGroup => ({ id, name: `Group ${id}`, isActive: true, productCount: 2 })
+const group = (id: number): PortalProductGroup => ({ id, name: `Group ${id}`, productCount: 2 })
 
 /**
  * Builds a plan.

@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.ListInvoices;
 
 /// <summary>
 ///     Validator for ListInvoicesQuery. Page and page size are both clamped by the handler, so no
-///     rule is declared for them here — decided, not forgotten.
+///     rule is declared for them here; the status filter must name a known status.
 /// </summary>
 public sealed class ListInvoicesValidator : LocalizedValidator<ListInvoicesQuery>
 {
@@ -16,5 +16,6 @@ public sealed class ListInvoicesValidator : LocalizedValidator<ListInvoicesQuery
     public ListInvoicesValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
+        RuleFor(x => x.Status).IsInEnum().WithMessage(L["InvoiceStatusInvalid"]);
     }
 }

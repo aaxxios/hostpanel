@@ -1,13 +1,15 @@
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Products;
+
 /// <summary>
 /// One stored price for a product: this much, in this currency, per this cycle.
 /// </summary>
 /// <remarks>
 /// A row per currency is the whole point of multi-currency pricing. Nothing is derived from an
-/// exchange rate when a client is shown or charged a price — an admin wrote this number.
+/// exchange rate when a client is shown or charged a price: an admin wrote this number.
 /// </remarks>
 public sealed class ProductPrice : BaseEntity
 {

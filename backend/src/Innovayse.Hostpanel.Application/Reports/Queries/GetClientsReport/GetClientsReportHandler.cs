@@ -1,4 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Reports.Common;
+using Innovayse.Hostpanel.Application.Reports.Extensions;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -7,9 +9,9 @@ namespace Innovayse.Hostpanel.Application.Reports.Queries.GetClientsReport;
 
 /// <summary>Handles <see cref="GetClientsReportQuery"/>.</summary>
 /// <remarks>
-/// The sign-in address is not on the client row itself — it belongs to whichever system owns
+/// The sign-in address is not on the client row itself: it belongs to whichever system owns
 /// accounts, so it is resolved for the one page returned through <see cref="IIdentityProvider"/>
-/// rather than by joining the local Identity user table, which is empty in SSO mode.
+/// rather than by joining the local Identity user table, which is empty in single sign-on mode.
 /// </remarks>
 public sealed class GetClientsReportHandler
 {
@@ -32,7 +34,7 @@ public sealed class GetClientsReportHandler
     /// <param name="query">The filters and page to return.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The matching page of clients and the unfiltered total. Never refuses.</returns>
-    public async Task<Result<ClientReportResultDto>> HandleAsync(GetClientsReportQuery query, CancellationToken ct)
+    public async Task<Result<PaginatedList<ClientReportDto>>> HandleAsync(GetClientsReportQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -50,14 +52,14 @@ public sealed class GetClientsReportHandler
 
         if (query.CreatedFrom.HasValue)
         {
-            var from = query.CreatedFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            var from = query.CreatedFrom.Value.StartOfDayUtc();
             clients = clients.Where(c => c.CreatedAt >= from);
         }
 
         if (query.CreatedTo.HasValue)
         {
-            var to = query.CreatedTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
-            clients = clients.Where(c => c.CreatedAt <= to);
+            var to = query.CreatedTo.Value.EndOfDayExclusiveUtc();
+            clients = clients.Where(c => c.CreatedAt < to);
         }
 
         var totalCount = await clients.CountAsync(ct);
@@ -87,27 +89,22 @@ public sealed class GetClientsReportHandler
             })
             .ToListAsync(ct);
 
-        var emails = await _identity.GetEmailsBySubjectsAsync(page.Select(c => c.UserId), ct);
+        var accounts = await _identity.GetAccountsBySubjectsAsync(page.Select(c => c.UserId), ct);
 
-        IReadOnlyList<ClientReportDto> items = page.Select(c => new ClientReportDto(
+        var items = page.Select(c => new ClientReportDto(
             c.Id,
             c.FirstName,
             c.LastName,
             c.CompanyName,
-            emails.GetValueOrDefault(c.UserId, string.Empty),
-            c.Street,
-            c.Address2,
-            c.City,
-            c.State,
-            c.PostCode,
-            c.Country,
+            accounts.TryGetValue(c.UserId, out var account) ? account.Email : string.Empty,
+            new ClientReportAddressDto(c.Street, c.Address2, c.City, c.State, c.PostCode, c.Country),
             c.Phone,
             c.Currency,
             c.CreditBalance,
-            c.Status.ToString(),
+            c.Status,
             c.CreatedAt.ToString("yyyy-MM-dd"),
             c.AdminNotes)).ToList();
 
-        return Result<ClientReportResultDto>.Success(new ClientReportResultDto(items, totalCount));
+        return Result<PaginatedList<ClientReportDto>>.Success(new PaginatedList<ClientReportDto>(items, totalCount, query.Page, query.PageSize));
     }
 }

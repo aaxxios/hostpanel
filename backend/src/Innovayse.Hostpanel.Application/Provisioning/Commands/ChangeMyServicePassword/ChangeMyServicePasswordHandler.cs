@@ -5,6 +5,7 @@ using Wolverine;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Provisioning.Commands.ChangeMyServicePassword;
+
 /// <summary>
 /// Changes the hosting account password of one of the calling client's own services, refusing
 /// every service that is not theirs.

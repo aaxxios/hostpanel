@@ -1,7 +1,7 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Products.Common;
-using Innovayse.Hostpanel.Application.Products.Constants;
+using Innovayse.Hostpanel.Application.Products.Extensions;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -43,7 +43,7 @@ public sealed class CreateProductFeatureHandler
             return Result<int>.FailureCode(HostpanelErrorCodes.PRODUCT_NOT_FOUND);
         }
 
-        if (await ProductFeatureLabels.ExistsWithLabelAsync(_context, cmd.ProductId, cmd.Label, excludingId: null, ct))
+        if (await _context.ProductFeatureLabelExistsAsync(cmd.ProductId, cmd.Label, excludingId: null, ct))
         {
             return Result<int>.FailureCode(HostpanelErrorCodes.PRODUCT_FEATURE_LABEL_DUPLICATE);
         }

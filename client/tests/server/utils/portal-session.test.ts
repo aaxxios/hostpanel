@@ -7,8 +7,8 @@
  * @module tests/server/utils/portal-session.test
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeEvent, signedIn, startBackend, storedSession } from '../../helpers/bffHarness'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { makeEvent, refusal, setRuntimeConfig, signedIn, startBackend, storedSession } from '../../helpers/bffHarness'
 import type { StubServer } from '../../helpers/stubServer'
 import {
   endSession,
@@ -20,6 +20,7 @@ import {
   startSession,
   updateAccessToken
 } from '~/server/utils/portal-session'
+import { useSessionStore } from '~/server/utils/session-store'
 
 /** The stub playing the SSO token endpoint. */
 let sso: StubServer
@@ -40,7 +41,11 @@ afterEach(async () => {
  */
 const jwt = (claims: Record<string, unknown>): string => `h.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.s`
 
-/** The current time in seconds. */
+/**
+ * The current time in seconds.
+ *
+ * @returns Unix time, whole seconds.
+ */
 const now = (): number => Math.floor(Date.now() / 1000)
 
 describe('startSession', () => {
@@ -52,8 +57,8 @@ describe('startSession', () => {
 
     const cookie = event.written['portal_session']
     expect(cookie?.value).toMatch(/^[A-Za-z0-9_-]{43}$/)
-    expect(cookie?.options).toMatchObject({ httpOnly: true, sameSite: 'lax', path: '/', maxAge: 30 * 24 * 60 * 60 })
-    expect(event.written['authed']).toMatchObject({ value: '1', options: { httpOnly: false } })
+    expect(cookie?.options).toMatchObject({ httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 30 * 24 * 60 * 60 })
+    expect(event.written['authed']).toMatchObject({ value: '1', options: { httpOnly: false, secure: true, sameSite: 'lax', path: '/' } })
     expect(event.deleted).toEqual(expect.arrayContaining(['auth_token', 'refresh_token']))
     expect(await storedSession({ portal_session: cookie?.value ?? '' }))
       .toMatchObject({ accessToken, refreshToken: 'r'.repeat(5000), subject: 'person-1' })
@@ -146,8 +151,18 @@ describe('refreshSession', () => {
     expect(sso.requests.filter((request) => request.url === '/connect/token')).toHaveLength(1)
   })
 
-  it('ends the session when the SSO refuses the refresh token', async () => {
-    sso.respondWith(() => ({ status: 400, body: { error: 'invalid_grant' } }))
+  it('ends a session that has no refresh token without calling the SSO', async () => {
+    const cookies = await signedIn('at')
+
+    expect(await refreshSession(makeEvent({ cookies }))).toBeNull()
+    expect(sso.requests).toHaveLength(0)
+    expect(await storedSession(cookies)).toBeNull()
+  })
+})
+
+describe('refreshSession when the renewal cannot be completed', () => {
+  it.each([400, 401])('ends the session when the SSO refuses the grant with %i', async (status) => {
+    sso.respondWith(() => ({ status, body: { error: 'invalid_grant' } }))
     const cookies = await signedIn('at', { refreshToken: 'rt' })
     const event = makeEvent({ cookies })
 
@@ -156,12 +171,92 @@ describe('refreshSession', () => {
     expect(event.deleted).toEqual(expect.arrayContaining(['portal_session', 'authed']))
   })
 
-  it('ends a session that has no refresh token without calling the SSO', async () => {
-    const cookies = await signedIn('at')
+  it.each([500, 502, 503])('answers 503 and keeps the session when the SSO fails with %i', async (status) => {
+    sso.respondWith(() => ({ status, body: {} }))
+    const cookies = await signedIn('at', { refreshToken: 'rt' })
+    const event = makeEvent({ cookies })
 
-    expect(await refreshSession(makeEvent({ cookies }))).toBeNull()
+    const error = await refusal(() => refreshSession(event))
+
+    expect(error).toMatchObject({ statusCode: 503, data: { code: 'SIGN_ON_UNAVAILABLE' } })
+    expect(await storedSession(cookies)).toMatchObject({ accessToken: 'at', refreshToken: 'rt' })
+    expect(event.deleted).toEqual([])
+  })
+
+  it('answers 503 and keeps the session when the SSO cannot be reached', async () => {
+    // Nothing listens on port 1, so the connection is refused.
+    setRuntimeConfig({ ssoUrl: 'http://127.0.0.1:1' })
+    const cookies = await signedIn('at', { refreshToken: 'rt' })
+
+    const error = await refusal(() => refreshSession(makeEvent({ cookies })))
+
+    expect(error).toMatchObject({ statusCode: 503 })
+    expect(await storedSession(cookies)).toMatchObject({ refreshToken: 'rt' })
+  })
+
+  it('answers 503 and keeps the session when the SSO answers without an access token', async () => {
+    sso.respondWith(() => ({ body: {} }))
+    const cookies = await signedIn('at', { refreshToken: 'rt' })
+
+    const error = await refusal(() => refreshSession(makeEvent({ cookies })))
+
+    expect(error).toMatchObject({ statusCode: 503 })
+    expect(await storedSession(cookies)).toMatchObject({ accessToken: 'at' })
+  })
+})
+
+describe('refreshSession across replicas', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('releases the refresh lock once the exchange is done, so the next renewal can take it', async () => {
+    sso.respondWith(() => ({ body: { access_token: 'fresh', refresh_token: 'rt-2', expires_in: 900 } }))
+    const cookies = await signedIn('at', { refreshToken: 'rt' })
+
+    await refreshSession(makeEvent({ cookies }))
+
+    const holder = await useSessionStore().acquireRefreshLock(cookies['portal_session'] ?? '', 15)
+    expect(holder).toBeTruthy()
+  })
+
+  it('releases the refresh lock when the exchange fails', async () => {
+    sso.respondWith(() => ({ status: 500, body: {} }))
+    const cookies = await signedIn('at', { refreshToken: 'rt' })
+
+    await refusal(() => refreshSession(makeEvent({ cookies })))
+
+    expect(await useSessionStore().acquireRefreshLock(cookies['portal_session'] ?? '', 15)).toBeTruthy()
+  })
+
+  it('uses the renewal another replica finished while it waited, and presents no token itself', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    const cookies = await signedIn('at', { refreshToken: 'rt', subject: 'person-1' })
+    const id = cookies['portal_session'] ?? ''
+    const store = useSessionStore()
+    const otherReplica = await store.acquireRefreshLock(id, 15)
+
+    const pending = refreshSession(makeEvent({ cookies }))
+    await vi.advanceTimersByTimeAsync(250)
+    await store.set(id, { accessToken: 'renewed-elsewhere', refreshToken: 'rt-2', subject: 'person-1' }, 3600)
+    await store.releaseRefreshLock(id, otherReplica ?? '')
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(await pending).toBe('renewed-elsewhere')
     expect(sso.requests).toHaveLength(0)
-    expect(await storedSession(cookies)).toBeNull()
+  })
+
+  it('answers 503 and keeps the session when the lock stays with another replica', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    const cookies = await signedIn('at', { refreshToken: 'rt' })
+    await useSessionStore().acquireRefreshLock(cookies['portal_session'] ?? '', 600)
+
+    const pending = refusal(() => refreshSession(makeEvent({ cookies })))
+    await vi.advanceTimersByTimeAsync(20 * 250 + 250)
+
+    expect(await pending).toMatchObject({ statusCode: 503 })
+    expect(await storedSession(cookies)).toMatchObject({ accessToken: 'at' })
+    expect(sso.requests).toHaveLength(0)
   })
 })
 

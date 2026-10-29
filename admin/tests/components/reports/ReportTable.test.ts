@@ -82,6 +82,19 @@ describe('ReportTable', () => {
     expect(cells).toContain('12.5 EUR')
   })
 
+  it('writes a money cell in the row currency when the column names one', () => {
+    const wrapper = mount(ReportTable, {
+      props: {
+        columns: [{ key: 'amount', label: 'Amount', format: ReportCellFormat.Money, currencyKey: 'currency' }],
+        rows: [{ amount: 12.5, currency: 'EUR' }],
+        formatMoney: (amount: number) => `${amount} ignored`,
+      },
+      global: { plugins: [createTestI18n()] },
+    })
+
+    expect(wrapper.get('td').text()).toBe('€12.50')
+  })
+
   it('lets a screen fill the cell of one column', () => {
     const wrapper = mountTable({}, { 'cell-note': '<template #cell-note="{ row }">[{{ row.id }}]</template>' })
 
@@ -113,5 +126,15 @@ describe('ReportTable', () => {
 
   it('shows the default empty text when none is given', () => {
     expect(mountTable({ rows: [] }).text()).toContain('No data.')
+  })
+
+  it('reads a column named by a dot path from a nested record', () => {
+    const nested = [{ dates: { paid: '2026-10-05' } }]
+    const wrapper = mount(ReportTable, {
+      props: { columns: [{ key: 'dates.paid', label: 'Paid' }], rows: nested },
+      global: { plugins: [createTestI18n()] },
+    })
+
+    expect(wrapper.get('td').text()).toBe('2026-10-05')
   })
 })

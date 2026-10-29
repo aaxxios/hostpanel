@@ -7,7 +7,10 @@
  */
 import { expect, test } from './support/test'
 import { INVITE, TEAM_MEMBER, TEAM_OWNER } from './support/fixtures.mjs'
+import { InvitePermissionMode } from '../types/invitepermissionmode'
+import { TeamPermission } from '../types/teampermission'
 import { resetStub, scriptStub, signIn, stubRequests, waitForHydration } from './support/helpers'
+import { HttpMethod } from '../types/httpmethod'
 
 test.beforeEach(async ({ page, context, request, baseURL }) => {
   await resetStub(request)
@@ -51,12 +54,13 @@ test('an invitation is sent with the name, address and full access, and the form
   await expect(page.getByTestId('account-invite-email')).toHaveValue('')
 
   const sent = (await stubRequests(request)).find(r => r.method === 'POST' && r.path === '/api/me/users/invite')
-  expect(sent?.body).toMatchObject({ email: INVITE.email, firstName: INVITE.firstName, lastName: INVITE.lastName, permissions: 'all' })
+  expect(sent?.body).toMatchObject({ email: INVITE.email, firstName: INVITE.firstName, lastName: INVITE.lastName, permissionMode: InvitePermissionMode.All, permissions: [] })
 })
 
 test('choosing the permissions offers the list and sends only the chosen ones', async ({ page, request }) => {
   await page.getByTestId('account-invite-perm-choose').click()
   await expect(page.getByTestId('account-invite-perms')).toBeVisible()
+  await page.getByTestId(`account-invite-perm-${TeamPermission.Tickets}`).click()
 
   await page.getByTestId('account-invite-firstname').fill(INVITE.firstName)
   await page.getByTestId('account-invite-lastname').fill(INVITE.lastName)
@@ -65,12 +69,11 @@ test('choosing the permissions offers the list and sends only the chosen ones', 
 
   await expect(page.getByTestId('account-invite-form').getByTestId('ui-form-success')).toBeVisible()
   const sent = (await stubRequests(request)).find(r => r.method === 'POST' && r.path === '/api/me/users/invite')
-  // No permission was ticked, so the list is empty -- not "all".
-  expect(sent?.body).toMatchObject({ email: INVITE.email, permissions: '' })
+  expect(sent?.body).toMatchObject({ email: INVITE.email, permissionMode: InvitePermissionMode.Choose, permissions: [TeamPermission.Tickets] })
 })
 
 test('a refused invitation shows the backend sentence and keeps what was typed', async ({ page, request }) => {
-  await scriptStub(request, { method: 'POST', path: '/api/me/users/invite', status: 400, code: 'INVITE_REFUSED', detail: 'E2E: this person is already invited.' })
+  await scriptStub(request, { method: HttpMethod.Post, path: '/api/me/users/invite', status: 400, code: 'INVITE_REFUSED', detail: 'E2E: this person is already invited.' })
 
   await page.getByTestId('account-invite-firstname').fill(INVITE.firstName)
   await page.getByTestId('account-invite-lastname').fill(INVITE.lastName)

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
 import TicketRow from '~/components/client/support/TicketRow.vue'
 import type { ClientTicket } from '~/types/clientticket'
+import { TicketPriority } from '~/types/ticketpriority'
 import { TicketStatus } from '~/types/ticketstatus'
 
 /**
@@ -14,8 +15,8 @@ import { TicketStatus } from '~/types/ticketstatus'
  * @returns A ticket.
  */
 const ticket = (overrides: Partial<ClientTicket> = {}): ClientTicket => ({
-  id: 12, clientId: 1, subject: 'Site is down', departmentName: 'Support', createdAt: '2026-01-02T10:00:00Z', lastReplyAt: null,
-  priority: 'High', status: TicketStatus.Open, replyCount: 0, isFlagged: false,
+  id: 12, subject: 'Site is down', departmentName: 'Support', createdAt: '2026-01-02T10:00:00Z', lastReplyAt: null,
+  priority: TicketPriority.High, status: TicketStatus.Open, replyCount: 0,
   ...overrides
 })
 

@@ -8,7 +8,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// Certificate monitoring for the public demo. Reads the stored check results like the real
 /// service, but "revalidate" only re-reads them: no connection is opened to any host.
 /// </summary>
-internal sealed class DemoSslMonitoringService : ISslMonitoringService
+public sealed class DemoSslMonitoringService : ISslMonitoringService
 {
     /// <summary>The real service, used for its read side only.</summary>
     private readonly SslMonitoringService _inner;

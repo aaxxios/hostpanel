@@ -93,15 +93,15 @@ await useAsyncData('home:slides', () => catalogStore.loadSlides(locale.value), {
 /** The slides shaped for the template. */
 const sliderItems = computed(() => (catalogStore.slides ?? []).map((slide): SliderItem => ({
   id: String(slide.id),
-  name: slide.title,
-  tagline: slide.tagline ?? '',
-  description: slide.description ?? '',
-  features: slide.features ?? [],
+  name: slide.content.title,
+  tagline: slide.content.tagline ?? '',
+  description: slide.content.description ?? '',
+  features: slide.content.features ?? [],
   icon: slide.iconName,
   color: slide.brandColor,
   image: slide.imageUrl,
-  demoUrl: slide.demoUrl ?? '',
-  learnMoreUrl: slide.learnMoreUrl ?? slide.ctaUrl ?? '/',
+  demoUrl: slide.links.demoUrl ?? '',
+  learnMoreUrl: slide.links.learnMoreUrl ?? slide.callToAction.url ?? '/',
 })))
 
 /** The first slide, which the server-rendered fallback shows. */

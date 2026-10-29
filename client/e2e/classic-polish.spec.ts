@@ -15,7 +15,7 @@ import { enableSlides, resetStub, setPortalSetting, waitForHydration } from './s
 const LIGHT_LUMINANCE = 128
 
 /**
- * Average of the red, green and blue channels of a computed `rgb(...)` / `rgba(...)` colour.
+ * Average of the red, green and blue channels of a computed `rgb()` / `rgba()` colour.
  *
  * @param colour The computed colour string.
  * @returns The channel average, 0 for black and 255 for white.

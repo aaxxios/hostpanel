@@ -9,6 +9,7 @@ import ServicesListView from '@/views/ServicesListView.vue'
 import { mountRouted } from '../helpers/mount'
 import { stubRoutes } from '../helpers/routes'
 import { json, problem } from '../helpers/fetch'
+import { BillingCycle } from '@/types/service'
 
 /** One active service as the list endpoint returns it. */
 const service = {
@@ -19,7 +20,7 @@ const service = {
   domain: null,
   price: 4.99,
   priceCurrency: 'USD',
-  billingCycle: 'monthly',
+  billingCycle: BillingCycle.Monthly,
   status: 'Suspended',
   nextDueDate: '2026-05-01T00:00:00Z',
 }
@@ -75,5 +76,21 @@ describe('ServicesListView', () => {
     const wrapper = await mountList()
 
     expect(wrapper.get('[data-testid="services-error"]').text()).toContain('Not allowed.')
+  })
+
+  it('loads again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRoutes({
+      'GET /api/services': () => {
+        calls += 1
+        return calls === 1 ? problem('Not allowed.', 403) : json({ items: [service], totalCount: 1 })
+      },
+    })
+    const wrapper = await mountList()
+
+    await wrapper.get('[data-testid="services-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="services-row-11"]').text()).toContain('VPS Small')
   })
 })

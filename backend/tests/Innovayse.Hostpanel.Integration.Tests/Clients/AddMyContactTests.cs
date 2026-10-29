@@ -2,13 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
@@ -24,9 +21,13 @@ public sealed class AddMyContactTests(IntegrationTestFactory factory) : IClassFi
 
         var response = await client.PostAsJsonAsync("/api/clients/me/contacts", ClientsTestSeeds.ContactBody("Billing"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var contactId = await response.Content.ReadFromJsonAsync<int>();
+        response.Headers.Location!.ToString().Should().EndWith($"/api/clients/me/contacts/{contactId}");
         var listed = await client.GetFromJsonAsync<JsonElement>("/api/clients/me/contacts");
-        listed.EnumerateArray().Single().GetProperty("firstName").GetString().Should().Be("Billing");
+        var contact = listed.EnumerateArray().Single();
+        contact.GetProperty("firstName").GetString().Should().Be("Billing");
+        contact.GetProperty("id").GetInt32().Should().Be(contactId);
     }
 
     /// <summary>A caller with the Client role but no client row owns no account and is linked to none, so the permission gate refuses before any write with 403 <c>CLIENT_PERMISSION_DENIED</c>.</summary>

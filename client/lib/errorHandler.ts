@@ -10,8 +10,7 @@
  * message that embeds the address it called.
  *
  * **Codes are the contract.** A page or store may branch on {@link apiErrorCode} and never on the
- * sentence, which is reworded in three languages. This mirrors innovayse-sso, whose store holds
- * `auth.error` for rendering and `auth.errorCode` for deciding.
+ * sentence, which is reworded in three languages.
  *
  * @module lib/errorHandler
  */
@@ -58,12 +57,12 @@ const textOrNull = (value: unknown): string | null => {
  * directly carries its problem+json body unwrapped (`data.type`).
  *
  * @param err - Whatever the call threw.
- * @returns The code, or `null` when the response carried none -- including a request that never
+ * @returns The code, or `null` when the response carried none, including a request that never
  *          got an answer at all.
  */
 export const apiErrorCode = (err: unknown): string | null => {
   const body = failureBody(err)
-  // legacy-gate: allow -- `data.code` is the BFF's own field (server/utils/api.ts), not the backend's old pair
+  // legacy-gate: allow: `data.code` is the BFF's own field (server/utils/api.ts), not the backend's old pair
   return body.data?.code ?? body.type ?? null
 }
 
@@ -72,7 +71,8 @@ export const apiErrorCode = (err: unknown): string | null => {
  *
  * @param err - Whatever the call threw.
  * @returns Field name (camelCase, as on the wire) to that field's first message; empty when the
- *          refusal was not about fields.
+ *          refusal was not about fields. A nested field arrives as a dotted path (`address.street`);
+ *          the server names each segment in PascalCase, so every segment is lower-cased at its first letter.
  */
 export const apiFieldErrors = (err: unknown): Record<string, string> => {
   const body = failureBody(err)
@@ -81,7 +81,7 @@ export const apiFieldErrors = (err: unknown): Record<string, string> => {
   for (const [field, messages] of Object.entries(raw)) {
     const first = textOrNull(messages?.[0])
     if (first !== null) {
-      result[field] = first
+      result[field.split('.').map(segment => segment.charAt(0).toLowerCase() + segment.slice(1)).join('.')] = first
     }
   }
   return result
@@ -92,7 +92,7 @@ export const apiFieldErrors = (err: unknown): Record<string, string> => {
  *
  * @param err - Whatever the call threw.
  * @returns The first field message, else the API's `detail` (carried as `statusMessage` through the
- *          BFF), else its `title`, else -- with nothing from the server to show -- the client's own
+ *          BFF), else its `title`, else, with nothing from the server to show, the client's own
  *          "no answer" sentence. Never empty.
  */
 export const apiErrorMessage = (err: unknown): string => {

@@ -3,9 +3,9 @@
  *
  * The body of such a record is HTML written in the admin portal. It is never handed to the
  * browser as markup: this module reads the string into a tree of known tags and attributes and
- * `UiRichText` turns that tree into Vue nodes. Anything not on the lists below is dropped --
+ * `UiRichText` turns that tree into Vue nodes. Anything not on the lists below is dropped:
  * unknown tags are unwrapped (their text stays), dangerous containers (`script`, `style`,
- * `iframe`, `svg`...) are dropped with their content, every `on*`/`style`/`class` attribute is
+ * `iframe`, `svg` and the like) are dropped with their content, every `on*`/`style`/`class` attribute is
  * dropped, and a link or image URL must use a safe scheme. The text itself is decoded here and
  * rendered as a text node, so Vue escapes it; there is no path by which a string becomes markup.
  *
@@ -15,10 +15,13 @@
  * @module utils/ui/richText
  */
 
+import { isSafeUrl } from '~/utils/safeUrl'
+import { UiRichNodeType } from '~/utils/ui/enums'
+
 /** A text run of the parsed document. */
 export interface RichTextNode {
   /** Discriminator. */
-  type: 'text'
+  type: UiRichNodeType.Text
   /** Decoded text; rendered as a Vue text node, so it is escaped on output. */
   text: string
 }
@@ -26,7 +29,7 @@ export interface RichTextNode {
 /** An element of the parsed document. */
 export interface RichElementNode {
   /** Discriminator. */
-  type: 'element'
+  type: UiRichNodeType.Element
   /** Lower-case tag name from the allow-list. */
   tag: string
   /** Attributes that survived the allow-list, already validated. */
@@ -66,7 +69,17 @@ const ALLOWED_ATTRIBUTES: Readonly<Record<string, readonly string[]>> = {
 /** URL schemes a link may use. */
 const LINK_SCHEMES: ReadonlySet<string> = new Set(['http', 'https', 'mailto', 'tel'])
 
-/** URL schemes an image may use (no `data:`). */
+/** The `rel` of an off-site link from content: no opener, no referrer, no endorsement, user content. */
+export const EXTERNAL_LINK_REL = 'noopener noreferrer nofollow ugc'
+
+/**
+ * URL schemes an image may use (no `data:`).
+ *
+ * Any `http(s)` host passes this allow-list, but the browser only loads what the page's
+ * Content-Security-Policy `img-src` directive permits. The deployment's `img-src` is therefore
+ * the second gate: an image on a host it does not list is refused by the browser, not by this
+ * module. Images are deliberately not proxied through this app.
+ */
 const IMAGE_SCHEMES: ReadonlySet<string> = new Set(['http', 'https'])
 
 /** Elements that implicitly close a still-open `p`, as a browser's parser would. */
@@ -144,33 +157,6 @@ export const decodeEntities = (input: string): string =>
   })
 
 /**
- * Whether a URL is safe for the given tag.
- *
- * Control characters and whitespace are removed before the scheme is read, because a browser
- * ignores them inside a scheme (`java\tscript:`), and a URL without a scheme (relative, `#`,
- * `?`) is allowed.
- *
- * @param url The attribute value, already entity-decoded.
- * @param schemes The schemes the attribute may use.
- * @returns True when the URL is relative or uses an allowed scheme.
- */
-export const isSafeUrl = (url: string, schemes: ReadonlySet<string>): boolean => {
-  const compact = Array.from(url).filter((char) => {
-    const code = char.charCodeAt(0)
-    return code > 0x20 && (code < 0x7f || code > 0x9f)
-  }).join('')
-  if (compact === '') {
-    return false
-  }
-  const scheme = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(compact)
-  if (scheme) {
-    return schemes.has((scheme[1] ?? '').toLowerCase())
-  }
-  // `//host/path` is protocol-relative; it inherits the page scheme, which is safe.
-  return true
-}
-
-/**
  * Reads the attributes of one tag and keeps only the allowed, valid ones.
  *
  * @param tag Lower-case tag name.
@@ -201,9 +187,10 @@ const readAttributes = (tag: string, raw: string): Record<string, string> => {
     attrs[name] = value
   }
   if (tag === 'a' && attrs.href && /^(https?:)?\/\//i.test(attrs.href)) {
-    // An off-site link must not hand the opener window to the target.
+    // An off-site link must not hand the opener window to the target, and it is user-supplied
+    // content, so search engines are told not to vouch for it.
     attrs.target = '_blank'
-    attrs.rel = 'noopener noreferrer nofollow'
+    attrs.rel = EXTERNAL_LINK_REL
   }
   return attrs
 }
@@ -240,11 +227,11 @@ export const parseRichText = (html: string): RichNode[] => {
     const text = decodeEntities(raw)
     const children = currentChildren()
     const last = children[children.length - 1]
-    if (last && last.type === 'text') {
+    if (last && last.type === UiRichNodeType.Text) {
       last.text += text
       return
     }
-    children.push({ type: 'text', text })
+    children.push({ type: UiRichNodeType.Text, text })
   }
 
   /**
@@ -329,7 +316,7 @@ export const parseRichText = (html: string): RichNode[] => {
       }
     }
 
-    const element: RichElementNode = { type: 'element', tag, attrs: readAttributes(tag, attributeText), children: [] }
+    const element: RichElementNode = { type: UiRichNodeType.Element, tag, attrs: readAttributes(tag, attributeText), children: [] }
     currentChildren().push(element)
     if (!VOID_TAGS.has(tag)) {
       stack.push(element)

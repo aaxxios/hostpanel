@@ -20,16 +20,8 @@
         <UiSkeleton :lines="8" class="mt-8" />
       </UiStack>
 
-      <!-- Error -->
-      <UiEmptyState
-        v-else-if="error || !article"
-        :icon="BookOpen"
-        :title="t('kb.errorDesc')"
-        data-testid="kb-article-error"
-      />
-
       <!-- Article -->
-      <UiStack v-else as="article" gap="lg">
+      <UiStack v-else-if="article" as="article" gap="lg">
         <!-- Meta row -->
         <UiStack direction="row" wrap align="center" gap="sm">
           <UiText
@@ -102,12 +94,17 @@
 <script setup lang="ts">
 /**
  * Knowledgebase article detail page.
- * Fetches a single article by ID and renders the full HTML body from the API.
+ * Fetches a single article by ID and renders the full HTML body from the API. An article that does
+ * not exist or is not published is a real 404, not a page that says so with a 200; a read that
+ * fails any other way keeps the upstream status (502 without an answer), so it is not taken for gone.
  */
 
-import { ArrowLeft, BookOpen, Calendar, Eye, ThumbsUp, ThumbsDown } from 'lucide-vue-next'
+import { ArrowLeft, Calendar, Eye, ThumbsUp, ThumbsDown } from 'lucide-vue-next'
 import { useContentStore } from '~/stores/content'
 import { KbVote } from '~/types/kbvote'
+import { SeoPageType } from '~/types/seopagetype'
+import { pageLoadError } from '~/utils/pageLoadError'
+import { detailTitle } from '~/utils/seoTitle'
 
 /** The current route. */
 const route = useRoute()
@@ -128,21 +125,29 @@ const { pending } = await useAsyncData(
   { watch: [locale] }
 )
 
-/** The sentence explaining why the article could not be read, or `''`. */
-const error = computed(() => content.error)
-
 /** The article the route names, once the store has it. */
 const article = computed(() => content.articleFor(String(route.params.id)))
 
 /** Local helpful vote state (UI only, no API submission) */
 const vote = ref<KbVote | null>(null)
 
-watchEffect(() => {
-  if (article.value?.title) {
-    useSeoMeta({
-      title: `${article.value.title} — ${t('kb.title')}`,
-      description: article.value.excerpt
-    })
-  }
-})
+// The article is read before the head and the status decision, so a crawler sees the final status:
+// 404 when the backend has no such article, the upstream status when the read itself failed.
+if (!pending.value && !article.value) {
+  throw pageLoadError(content.errorStatus, 'Article not found')
+}
+
+// Head tags follow the article, so a new article or a language change never leaves stale tags.
+/** The canonical URL of this article in the active language. */
+const { canonicalUrl } = useSeo(() => ({
+  title: article.value ? detailTitle(article.value.title, t('kb.title')) : undefined,
+  description: article.value?.excerpt,
+  type: SeoPageType.Article
+}))
+
+/** Builder and publisher of the article structured data. */
+const { articleSchema, injectSchema } = useSchemaOrg()
+injectSchema(() => article.value
+  ? [articleSchema({ headline: article.value.title, description: article.value.excerpt, url: canonicalUrl.value })]
+  : [])
 </script>

@@ -7,15 +7,13 @@
  * Checkout page.
  *
  * Thin by the same rule as the other public routes: the page owns the route,
- * the template owns the markup. Unlike the others there is no SEO block —
+ * the template owns the markup. Unlike the others there is no SEO block:
  * `routeRules` marks `/checkout/**` `ssr: false` with an
  * `X-Robots-Tag: noindex, nofollow` header, so there is nothing to describe to
  * a crawler and nothing a meta tag could add.
  *
- * Both templates currently resolve to the same component. `aurora` has no
- * checkout of its own yet: this page carries the ordering flow, and rebuilding
- * it in new markup is only safe once an order can actually be placed against a
- * running backend to prove nothing was dropped.
+ * Both templates resolve to the same component: `aurora` has no checkout of its
+ * own, and this page carries the ordering flow.
  */
 import { TemplateSlot } from '~/types/templateslot'
 

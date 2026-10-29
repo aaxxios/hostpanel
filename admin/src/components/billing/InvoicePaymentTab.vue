@@ -2,7 +2,8 @@
 /**
  * "Add payment" tab of the invoice screen: records a payment received outside the gateway, with
  * the line items and the transaction ledgers below. A draft or cancelled invoice takes no
- * payment, so the form is replaced by the reason.
+ * payment, so the form is replaced by the reason. The outcome of recording a payment (success, or
+ * the API's sentence) shows under the form.
  */
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -20,25 +21,23 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiNumberInput from '@/components/ui/UiNumberInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { GATEWAY_OPTIONS } from '@/lib/constants'
 import { InvoiceStatus } from '@/types/invoice'
 import { useBillingStore } from '@/stores/billing'
-import type { Invoice } from '@/types/invoice'
+import type { InvoiceDetail } from '@/types/invoice'
 import { PaymentGateway } from '@/types/gateway'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
 
 const props = defineProps<{
   /** The invoice to add payments to. */
-  invoice: Invoice
+  invoice: InvoiceDetail
   /** True to show the line items without editing controls (the form stays usable). */
   readonly?: boolean
-}>()
-
-const emit = defineEmits<{
-  /** Emitted after a payment was recorded or the items were saved. */
-  updated: []
 }>()
 
 const store = useBillingStore()
@@ -64,6 +63,12 @@ const fees = ref(0)
 /** True while the payment is being recorded. */
 const submitting = ref(false)
 
+/** The outcome line of the last payment, shown under the form. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
 /** True when the invoice is a draft, which takes no payment. */
 const isDraft = computed<boolean>(() => props.invoice.status === InvoiceStatus.Draft)
 
@@ -73,11 +78,16 @@ const isCancelled = computed<boolean>(() => props.invoice.status === InvoiceStat
 /** True when the form has what the API needs. */
 const canSubmit = computed<boolean>(() => paymentDate.value !== null && paymentDate.value !== '' && amount.value > 0)
 
-/** Records the payment, then clears the form. */
+/**
+ * Records the payment and shows the outcome; on success the form is cleared.
+ *
+ * @returns Resolves when the request has settled.
+ */
 const submit = async (): Promise<void> => {
   if (!canSubmit.value || paymentDate.value === null) {
     return
   }
+  feedback.clear()
   submitting.value = true
   const ok = await store.addPayment(props.invoice.id, {
     date: new Date(paymentDate.value).toISOString(),
@@ -87,14 +97,16 @@ const submit = async (): Promise<void> => {
     fees: fees.value,
   })
   submitting.value = false
-  if (ok) {
-    paymentDate.value = null
-    gateway.value = DEFAULT_GATEWAY
-    transactionId.value = ''
-    amount.value = 0
-    fees.value = 0
-    emit('updated')
+  if (!ok) {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+    return
   }
+  paymentDate.value = null
+  gateway.value = DEFAULT_GATEWAY
+  transactionId.value = ''
+  amount.value = 0
+  fees.value = 0
+  feedback.show(t('billing.invoicePaymentTab.paymentAdded'), false)
 }
 </script>
 
@@ -153,10 +165,11 @@ const submit = async (): Promise<void> => {
               {{ t('billing.invoicePaymentTab.addPayment') }}
             </UiButton>
           </UiStack>
+          <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="billing-invoice-payment-feedback" />
         </UiForm>
       </UiCard>
 
-      <InvoiceItemsSection :invoice="invoice" :readonly="readonly" @updated="emit('updated')" />
+      <InvoiceItemsSection :invoice="invoice" :readonly="readonly" />
       <InvoiceTransactionsSection :invoice="invoice" />
     </template>
   </UiStack>

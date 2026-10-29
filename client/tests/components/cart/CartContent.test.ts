@@ -8,11 +8,12 @@ import { stubPublicPageRuntime } from '~/tests/helpers/publicPage'
 import CartContent from '~/components/cart/CartContent.vue'
 import type { CartItem } from '~/types/cartitem'
 import { CartItemType } from '~/types/cartitemtype'
+import { PricingCycle } from '~/types/pricingcycle'
 
 /** Two cart lines. */
 const items: CartItem[] = [
-  { pid: 1, name: 'Starter', billingcycle: 'monthly', cycleLabel: 'Monthly', amount: 5, currency: 'USD' },
-  { pid: 2, name: 'example.com', billingcycle: 'annually', cycleLabel: '1 Year', amount: 12, currency: 'USD', itemType: CartItemType.Domain, domain: 'example.com' },
+  { pid: 1, name: 'Starter', billingcycle: PricingCycle.Monthly, cycleLabel: 'Monthly', amount: 5, currency: 'USD' },
+  { pid: 2, name: 'example.com', billingcycle: PricingCycle.Annual, cycleLabel: '1 Year', amount: 12, currency: 'USD', itemType: CartItemType.Domain, domain: 'example.com' },
 ]
 
 /**

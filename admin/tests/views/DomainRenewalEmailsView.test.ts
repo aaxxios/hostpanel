@@ -3,6 +3,7 @@
  * refuses.
  */
 import { vi } from 'vitest'
+import { DomainReminderType } from '@/types/domain'
 import DomainRenewalEmailsView from '@/views/DomainRenewalEmailsView.vue'
 import { json } from '../helpers/fetch'
 import { runReportCase } from '../helpers/reportViews'
@@ -14,8 +15,9 @@ runReportCase({
   view: DomainRenewalEmailsView,
   routes: {
     'GET /reports/domain-renewal-emails': () => json({
-      rows: [{ clientName: 'Beta', domain: 'beta.test', sentAt: '2024-03-05T12:00:00Z', reminder: '30 days', recipients: 'a@b.test' }],
+      rows: [{ clientName: 'Beta', domain: 'beta.test', sentAt: '2024-03-05T12:00:00Z', reminder: DomainReminderType.ThirtyDaysBeforeExpiry, recipients: 'a@b.test' }],
     }),
   },
-  expected: ['Domain Renewal Reminder Emails', 'beta.test', '05/03/2024', 'a@b.test'],
+  expected: ['Domain Renewal Reminder Emails', 'beta.test', '05/03/2024', '30 days before expiry', 'a@b.test'],
+  retryable: true,
 })

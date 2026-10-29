@@ -25,7 +25,7 @@ public sealed class IntegrationSettingsLookup
     /// <summary>Loads the settings whose key starts with a prefix.</summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="keyPrefix">
-    /// The key prefix to keep -- <see cref="IntegrationSettingKeys.RootPrefix"/> for every
+    /// The key prefix to keep: <see cref="IntegrationSettingKeys.RootPrefix"/> for every
     /// integration, or <see cref="IntegrationSettingKeys.Prefix(string)"/> for one.
     /// </param>
     /// <param name="ct">Cancellation token.</param>
@@ -52,7 +52,11 @@ public sealed class IntegrationSettingsLookup
             && string.Equals(value, IntegrationSettingKeys.EnabledValue, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Reads the stored value of one integration field.</summary>
+    /// <summary>
+    /// Reads the stored value of one integration field. A secret field comes back as stored, that is
+    /// encrypted: this lookup only answers presence for secrets, and a caller that needs a secret's
+    /// plain value reads it through <see cref="IntegrationSettingQueries"/> and the cipher.
+    /// </summary>
     /// <param name="slug">The integration slug.</param>
     /// <param name="field">The field key.</param>
     /// <returns>The stored value, or <c>null</c> when nothing is stored.</returns>

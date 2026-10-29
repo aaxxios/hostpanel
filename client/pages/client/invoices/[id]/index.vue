@@ -143,7 +143,7 @@ const canDownload = computed(() => invoice.value !== null && invoice.value.statu
 /**
  * Formats one amount on this invoice in the invoice's own billing currency.
  *
- * An invoice's currency is fixed at creation (`InvoiceDto.Currency`) and is not always the
+ * An invoice's currency is fixed at creation (`MyInvoiceDto.Currency`) and is not always the
  * account's current one, so it is the authority. When it is absent (an invoice predating the
  * field) `formatCurrency` still shows a grouped number with no symbol rather than guessing.
  *
@@ -153,9 +153,9 @@ const canDownload = computed(() => invoice.value !== null && invoice.value.statu
 const money = (amount: string | number | null | undefined): string =>
   formatCurrency(amount, { code: invoice.value?.currency })
 
-/** Whether this invoice still has money owing -- one definition, in `utils/invoice.ts`. */
+/** Whether this invoice still has money owing: one definition, in `utils/invoice.ts`. */
 const isOutstanding = computed(() => invoice.value !== null && isInvoiceOutstanding(invoice.value))
 
-/** Whether the due date should be shown in red -- one definition, in `utils/invoice.ts`. */
+/** Whether the due date should be shown in red: one definition, in `utils/invoice.ts`. */
 const isOverdue = computed(() => isInvoiceOverdue(invoice.value))
 </script>

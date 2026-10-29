@@ -45,8 +45,7 @@
     "breadcrumb": "Breadcrumb"
   },
   "fallback": {
-    "unknown": "Unknown",
-    "product": "Product #{id}"
+    "unknown": "Unknown"
   },
   "errors": {
     "noAnswer": "Could not reach the server."

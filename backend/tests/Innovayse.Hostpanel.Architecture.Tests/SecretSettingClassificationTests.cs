@@ -1,8 +1,6 @@
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Admin.Integrations.Common;
 using Innovayse.Hostpanel.Domain.Settings;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Architecture.Tests;
 
@@ -50,7 +48,7 @@ public sealed class SecretSettingClassificationTests
                 var name = field.GetProperty("key").GetString()!;
                 var type = field.GetProperty("type").GetString();
                 SecretSettingKeys.IntegrationSecretFields.Contains(name).Should().Be(
-                    SecretSettingKeys.IsSecretFieldType(type),
+                    SecretSettingKeys.IsSecretFieldType(IntegrationFieldTypes.FromManifest(type)),
                     "{0} declares '{1}' as '{2}'",
                     path,
                     name,

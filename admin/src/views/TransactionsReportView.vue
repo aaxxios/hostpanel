@@ -28,9 +28,9 @@ const columns = computed<ReportColumn[]>(() => [
   { key: 'description', label: t('shared.description') },
   { key: 'invoiceId', label: t('shared.invoiceId') },
   { key: 'transactionId', label: t('shared.transactionId') },
-  { key: 'amountIn', label: t('shared.amountIn'), format: ReportCellFormat.Money },
-  { key: 'fees', label: t('shared.fees'), format: ReportCellFormat.Money },
-  { key: 'amountOut', label: t('shared.amountOut'), format: ReportCellFormat.Money },
+  { key: 'amountIn', label: t('shared.amountIn'), format: ReportCellFormat.Money, currencyKey: 'currency' },
+  { key: 'fees', label: t('shared.fees'), format: ReportCellFormat.Money, currencyKey: 'currency' },
+  { key: 'amountOut', label: t('shared.amountOut'), format: ReportCellFormat.Money, currencyKey: 'currency' },
 ])
 
 /** Date-range filters. */

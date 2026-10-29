@@ -18,11 +18,11 @@ public sealed class FakeSshHostKeyScanner : ISshHostKeyScanner
     public ConcurrentDictionary<string, SshEndpointFailure> Failures { get; } = new();
 
     /// <inheritdoc/>
-    public Task<SshHostKeyProbe> ScanAsync(string host, int port, TimeSpan timeout, CancellationToken ct)
+    public Task<SshHostKeyProbe> ScanAsync(SshEndpoint endpoint, CancellationToken ct)
     {
-        var endpoint = $"{host}:{port}";
-        return Task.FromResult(Keys.TryGetValue(endpoint, out var scan)
+        var address = $"{endpoint.Host}:{endpoint.Port}";
+        return Task.FromResult(Keys.TryGetValue(address, out var scan)
             ? new SshHostKeyProbe(scan, null)
-            : new SshHostKeyProbe(null, Failures.TryGetValue(endpoint, out var failure) ? failure : SshEndpointFailure.NoAnswer));
+            : new SshHostKeyProbe(null, Failures.TryGetValue(address, out var failure) ? failure : SshEndpointFailure.NoAnswer));
     }
 }

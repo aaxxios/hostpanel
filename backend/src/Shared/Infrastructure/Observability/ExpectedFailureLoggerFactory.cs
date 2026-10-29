@@ -2,7 +2,7 @@ namespace Innovayse.Hostpanel.Shared.Infrastructure.Observability;
 
 /// <summary>
 /// An <see cref="ILoggerFactory"/> decorator whose loggers demote an Error entry to Debug when its
-/// exception is, or wraps, a FluentValidation <c>ValidationException</c> — Wolverine's
+/// exception is, or wraps, a FluentValidation <c>ValidationException</c>: Wolverine's
 /// "Invocation of {Message} failed!" line for an expected validation rejection. Everything else
 /// passes through unchanged.
 /// </summary>

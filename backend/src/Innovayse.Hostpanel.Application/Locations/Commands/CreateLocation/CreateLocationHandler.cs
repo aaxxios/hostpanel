@@ -34,7 +34,7 @@ public sealed class CreateLocationHandler
         ArgumentNullException.ThrowIfNull(cmd);
 
         var entity = ServerLocation.Create(cmd.CountryCode, cmd.SortOrder, cmd.IsActive);
-        entity.ApplyTranslations(cmd.Translations);
+        entity.ReplaceTranslations(cmd.Translations.ToContent());
 
         _context.ServerLocations.Add(entity);
         await _context.SaveChangesAsync(ct);

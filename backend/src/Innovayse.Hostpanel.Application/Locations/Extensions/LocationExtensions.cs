@@ -22,26 +22,13 @@ public static class LocationExtensions
             x.Translations.ToDictionary(t => t.Locale, t => new LocationTranslationDto(t.Name, t.City, t.LatencyNote)));
     }
 
-    /// <summary>
-    /// Makes the location's translations exactly the given set: locales that are no longer sent are
-    /// removed, the rest are added or updated in place.
-    /// </summary>
-    /// <param name="x">The location to change.</param>
-    /// <param name="translations">The complete set of translations, keyed by locale code.</param>
-    public static void ApplyTranslations(this ServerLocation x, IReadOnlyDictionary<string, LocationTranslationDto> translations)
+    /// <summary>Turns the translations a command carries into the text the location keeps per locale.</summary>
+    /// <param name="translations">The translations as sent, keyed by locale code.</param>
+    /// <returns>The same set, keyed by locale code, ready for <see cref="ServerLocation.ReplaceTranslations"/>.</returns>
+    public static IReadOnlyDictionary<string, ServerLocationTranslationContent> ToContent(this IReadOnlyDictionary<string, LocationTranslationDto> translations)
     {
-        ArgumentNullException.ThrowIfNull(x);
         ArgumentNullException.ThrowIfNull(translations);
 
-        var stale = x.Translations.Select(t => t.Locale).Where(locale => !translations.ContainsKey(locale)).ToList();
-        foreach (var locale in stale)
-        {
-            x.RemoveTranslation(locale);
-        }
-
-        foreach (var (locale, translation) in translations)
-        {
-            x.SetTranslation(locale, translation.Name, translation.City, translation.LatencyNote);
-        }
+        return translations.ToDictionary(t => t.Key, t => new ServerLocationTranslationContent(t.Value.Name, t.Value.City, t.Value.LatencyNote));
     }
 }

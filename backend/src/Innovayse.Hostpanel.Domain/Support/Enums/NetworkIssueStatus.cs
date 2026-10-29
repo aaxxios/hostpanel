@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Support.Enums;
+
 /// <summary>Lifecycle status of a network issue.</summary>
 public enum NetworkIssueStatus
 {

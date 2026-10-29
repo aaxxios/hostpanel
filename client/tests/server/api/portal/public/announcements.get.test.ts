@@ -1,6 +1,6 @@
 /**
  * Tests for `GET /api/portal/public/announcements`: it reads the ten newest published announcements
- * and reduces each to id, title and calendar date.
+ * and passes the backend page through.
  *
  * @module tests/server/api/portal/public/announcements.get.test
  */
@@ -26,22 +26,15 @@ afterEach(async () => {
 })
 
 describe('GET /api/portal/public/announcements', () => {
-  it('maps announcements to id, title and the date part of the publish time', async () => {
-    backend.respondWith(() => ({
-      body: { items: [{ id: 1, title: 'News', publishedAt: '2026-03-04T12:30:00Z', content: 'x' }, { id: 2, title: 'Undated' }] },
-    }))
+  it('reads the first page of ten published announcements and passes it through as sent', async () => {
+    const page = { items: [{ id: 1, title: 'News', publishedAt: '2026-03-04T12:30:00Z', content: 'x' }], pageNumber: 1, pageSize: 10, totalCount: 1, totalPages: 1 }
+    backend.respondWith(() => ({ body: page }))
 
     const result = await route.default(makeEvent({ headers: { 'x-language': 'hy' } }))
 
     expect(backend.requests[0]?.url).toBe('/api/announcements/published?page=1&pageSize=10')
     expect(backend.requests[0]?.headers['x-language']).toBe('hy')
-    expect(result).toEqual([{ id: 1, title: 'News', date: '2026-03-04' }, { id: 2, title: 'Undated', date: '' }])
-  })
-
-  it('answers an empty list when the backend sends no items', async () => {
-    backend.respondWith(() => ({ body: {} }))
-
-    expect(await route.default(makeEvent())).toEqual([])
+    expect(result).toEqual(page)
   })
 
   it('passes the backend refusal through with its code and sentence', async () => {

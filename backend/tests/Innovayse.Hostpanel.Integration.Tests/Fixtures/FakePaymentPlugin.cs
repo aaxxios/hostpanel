@@ -5,8 +5,8 @@ namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
 /// An <see cref="IPaymentPlugin"/> a test drives entirely: what it charges in, what it hands
-/// back from <see cref="CreatePaymentAsync"/> and <see cref="GetStatusAsync"/>, and — when a test
-/// needs to prove a call never happened — what it throws instead. A fake port standing in for a
+/// back from <see cref="CreatePaymentAsync"/> and <see cref="GetStatusAsync"/>, and, when a test
+/// needs to prove a call never happened, what it throws instead. A fake port standing in for a
 /// hosted bank gateway, which a test must never actually call.
 /// </summary>
 public sealed class FakePaymentPlugin : IPaymentPlugin
@@ -26,6 +26,9 @@ public sealed class FakePaymentPlugin : IPaymentPlugin
     /// <summary>The session <see cref="CreatePaymentAsync"/> answers with.</summary>
     public PaymentSession CreatePaymentResult { get; set; } = new("gw-fake", "https://pg.example/pay?mdOrder=gw-fake");
 
+    /// <summary>An exception <see cref="CreatePaymentAsync"/> throws instead of answering, as a gateway outage would, when set.</summary>
+    public Exception? CreatePaymentThrows { get; set; }
+
     /// <summary>The status <see cref="GetStatusAsync"/> answers with.</summary>
     public GatewayPaymentStatus StatusResult { get; set; } = new(GatewayPaymentState.Pending, null, "orderStatus:0");
 
@@ -34,7 +37,7 @@ public sealed class FakePaymentPlugin : IPaymentPlugin
 
     /// <summary>
     /// The refund id <see cref="RefundAsync"/> answers with when a test sets it; unset, it throws,
-    /// the same as before this field existed, for every test that never expects a refund call.
+    /// for every test that never expects a refund call.
     /// </summary>
     public string? RefundResult { get; set; }
 
@@ -49,7 +52,9 @@ public sealed class FakePaymentPlugin : IPaymentPlugin
     {
         CreatePaymentCallCount++;
         LastCreatePaymentRequest = request;
-        return Task.FromResult(CreatePaymentResult);
+        return CreatePaymentThrows is not null
+            ? Task.FromException<PaymentSession>(CreatePaymentThrows)
+            : Task.FromResult(CreatePaymentResult);
     }
 
     /// <inheritdoc/>

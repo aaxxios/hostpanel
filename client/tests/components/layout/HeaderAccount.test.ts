@@ -8,7 +8,7 @@ import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
 import LayoutHeaderAccount from '~/components/layout/HeaderAccount.vue'
 import { useAuthStore } from '~/stores/auth'
-import type { ClientUser } from '~/types/clientuser'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 
 /** The mocked sign-out call of the auth API. */
 const logoutMock = vi.fn()
@@ -23,7 +23,7 @@ vi.mock('~/composables/apis/useAuthApi', () => ({
 }))
 
 /** A signed-in client. */
-const client = { id: 1, firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.test' } as ClientUser
+const client = makeClientUser()
 
 /**
  * Mounts the account menu with the session store already holding a client, so the profile read

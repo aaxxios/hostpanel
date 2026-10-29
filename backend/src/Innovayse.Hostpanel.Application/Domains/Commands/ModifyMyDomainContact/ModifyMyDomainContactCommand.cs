@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Domain.Domains;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.ModifyMyDomainContact;
+
 /// <summary>Command for a client to modify the WHOIS registrant contact on one of their own domains.</summary>
 /// <remarks>
 /// Carries a domain id but no client id. Which account the domain must belong to is resolved inside

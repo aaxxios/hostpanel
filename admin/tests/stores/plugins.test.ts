@@ -1,6 +1,7 @@
 /**
  * Tests for the plugins store: list, install, remove and restart through the real `useApi`
- * transport. A refusal keeps the API's own sentence in `error`; an offline call keeps the shared
+ * transport. A refused load keeps the API's own sentence in `error`, a refused install or remove in
+ * `actionError`; an offline call keeps the shared
  * "no answer" sentence; nothing throws.
  */
 
@@ -67,8 +68,9 @@ describe('pluginsStore.install', () => {
     const mock = stubFetch(problem('Not a plugin archive.', 400))
     const store = usePluginsStore()
 
-    await store.install(zip)
-    expect(store.error).toBe('Not a plugin archive.')
+    expect(await store.install(zip)).toBe(false)
+    expect(store.actionError).toBe('Not a plugin archive.')
+    expect(store.error).toBeNull()
     expect(store.requiresRestart).toBe(false)
     expect(mock).toHaveBeenCalledTimes(1)
   })
@@ -90,9 +92,9 @@ describe('pluginsStore.remove', () => {
     const store = usePluginsStore()
     store.plugins.push({ id: 'a' } as never)
 
-    await store.remove('a')
+    expect(await store.remove('a')).toBe(false)
     expect(store.plugins).toHaveLength(1)
-    expect(store.error).toBe('Plugin is in use.')
+    expect(store.actionError).toBe('Plugin is in use.')
   })
 })
 

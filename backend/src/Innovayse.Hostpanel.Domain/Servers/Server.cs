@@ -2,7 +2,9 @@ using Innovayse.Hostpanel.Domain.Servers.Enums;
 using Innovayse.Hostpanel.Domain.Servers.Events;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Servers;
+
 /// <summary>
 /// Represents a provisioning server that hosts client accounts.
 /// </summary>
@@ -103,7 +105,16 @@ public sealed class Server : BaseEntity, IAggregateRoot
     /// <summary>Gets the account count reported by the server on last test, or null if unknown.</summary>
     public int? AccountsCount { get; private set; }
 
-    /// <summary>EF Core constructor — do not call directly.</summary>
+    /// <summary>Gets whether an API password is stored.</summary>
+    public bool HasPassword => !string.IsNullOrEmpty(Password);
+
+    /// <summary>Gets whether an API token is stored.</summary>
+    public bool HasApiToken => !string.IsNullOrEmpty(ApiToken);
+
+    /// <summary>Gets whether an access hash is stored.</summary>
+    public bool HasAccessHash => !string.IsNullOrEmpty(AccessHash);
+
+    /// <summary>EF Core constructor: do not call directly.</summary>
     private Server() { }
 
     /// <summary>Initialises a Server with the given identity.</summary>
@@ -117,21 +128,43 @@ public sealed class Server : BaseEntity, IAggregateRoot
     /// Creates a new server and raises <see cref="ServerCreatedEvent"/>.
     /// </summary>
     /// <param name="details">All server configuration fields.</param>
+    /// <param name="occurredAt">The moment the server was added, UTC.</param>
     /// <returns>A new <see cref="Server"/> instance.</returns>
-    public static Server Create(ServerDetails details)
+    public static Server Create(ServerDetails details, DateTimeOffset occurredAt)
     {
         var server = new Server(0);
         server.Apply(details);
-        server.CreatedAt = DateTimeOffset.UtcNow;
-        server.AddDomainEvent(new ServerCreatedEvent(details.Name, details.Module));
+        server.AddDomainEvent(new ServerCreatedEvent(details.Name, details.Module) { OccurredAt = occurredAt });
         return server;
     }
 
     /// <summary>
-    /// Updates all configuration fields of the server.
+    /// Reconfigures the server as one edit of its connection settings. A credential left null, empty
+    /// or whitespace in <paramref name="details"/> keeps its stored value; one named in
+    /// <paramref name="clears"/> is removed, and a clear wins over a value sent alongside it.
     /// </summary>
-    /// <param name="details">Updated server configuration.</param>
-    public void Update(ServerDetails details) => Apply(details);
+    /// <param name="details">The new server configuration.</param>
+    /// <param name="clears">The stored credentials to remove.</param>
+    public void Reconfigure(ServerDetails details, ServerCredentialClears clears)
+    {
+        ArgumentNullException.ThrowIfNull(clears);
+
+        Apply(details);
+        if (clears.Password)
+        {
+            Password = null;
+        }
+
+        if (clears.ApiToken)
+        {
+            ApiToken = null;
+        }
+
+        if (clears.AccessHash)
+        {
+            AccessHash = null;
+        }
+    }
 
     /// <summary>
     /// Assigns this server to a group.
@@ -149,10 +182,11 @@ public sealed class Server : BaseEntity, IAggregateRoot
     /// </summary>
     /// <param name="isOnline">Whether the connection succeeded.</param>
     /// <param name="accountsCount">Account count from the server, or null on failure.</param>
-    public void RecordConnectionTest(bool isOnline, int? accountsCount)
+    /// <param name="testedAt">When the test ran, UTC.</param>
+    public void RecordConnectionTest(bool isOnline, int? accountsCount, DateTimeOffset testedAt)
     {
         IsOnline = isOnline;
-        LastTestedAt = DateTimeOffset.UtcNow;
+        LastTestedAt = testedAt;
         AccountsCount = accountsCount;
     }
 
@@ -168,19 +202,21 @@ public sealed class Server : BaseEntity, IAggregateRoot
         AssignedIpAddresses = d.AssignedIpAddresses;
         Module = d.Module;
         Username = d.Username;
-        if (d.Password is not null)
+        // A blank credential is "unchanged", never "erase": the admin form never holds the stored
+        // value, so a field left empty on save must not wipe it. Removal is an explicit clear.
+        if (!string.IsNullOrWhiteSpace(d.Credentials.Password))
         {
-            Password = d.Password;
+            Password = d.Credentials.Password;
         }
 
-        if (d.ApiToken is not null)
+        if (!string.IsNullOrWhiteSpace(d.Credentials.ApiToken))
         {
-            ApiToken = d.ApiToken;
+            ApiToken = d.Credentials.ApiToken;
         }
 
-        if (d.AccessHash is not null)
+        if (!string.IsNullOrWhiteSpace(d.Credentials.AccessHash))
         {
-            AccessHash = d.AccessHash;
+            AccessHash = d.Credentials.AccessHash;
         }
 
         UseSSL = d.UseSSL;
@@ -190,15 +226,15 @@ public sealed class Server : BaseEntity, IAggregateRoot
         MonthlyCost = d.MonthlyCost;
         Datacenter = d.Datacenter;
         ServerStatusAddress = d.ServerStatusAddress;
-        Ns1Hostname = d.Ns1Hostname;
-        Ns1Ip = d.Ns1Ip;
-        Ns2Hostname = d.Ns2Hostname;
-        Ns2Ip = d.Ns2Ip;
-        Ns3Hostname = d.Ns3Hostname;
-        Ns3Ip = d.Ns3Ip;
-        Ns4Hostname = d.Ns4Hostname;
-        Ns4Ip = d.Ns4Ip;
-        Ns5Hostname = d.Ns5Hostname;
-        Ns5Ip = d.Ns5Ip;
+        Ns1Hostname = d.NameServers.Ns1Hostname;
+        Ns1Ip = d.NameServers.Ns1Ip;
+        Ns2Hostname = d.NameServers.Ns2Hostname;
+        Ns2Ip = d.NameServers.Ns2Ip;
+        Ns3Hostname = d.NameServers.Ns3Hostname;
+        Ns3Ip = d.NameServers.Ns3Ip;
+        Ns4Hostname = d.NameServers.Ns4Hostname;
+        Ns4Ip = d.NameServers.Ns4Ip;
+        Ns5Hostname = d.NameServers.Ns5Hostname;
+        Ns5Ip = d.NameServers.Ns5Ip;
     }
 }

@@ -1,3 +1,7 @@
+/**
+ * Runtime configuration helpers: the deployment base path and origin from `config.js`, and URLs for public files and stored storefront images.
+ */
+
 import type { AppRuntimeConfig } from '@/types/runtimeConfig'
 
 /**

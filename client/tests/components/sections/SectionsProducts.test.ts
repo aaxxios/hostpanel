@@ -14,6 +14,7 @@ import type { PortalProductGroup } from '~/types/portalproductgroup'
 import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
 import { HomeSectionId } from '~/types/homesectionid'
 import { HOME_PRODUCT_FAMILY_LIMIT } from '~/constants/homeProducts'
+import { ProductType } from '~/types/producttype'
 
 /** The mocked catalogue endpoints, re-created for every test. */
 const api = { fetchProducts: vi.fn(), fetchProductGroups: vi.fn(), fetchProductFeatures: vi.fn() }
@@ -38,23 +39,26 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
 
 /** One hosting plan and one SaaS family with its parent. */
 const catalogue: PortalProduct[] = [
-  { id: 1, pid: 1, groupId: 1, name: 'Web Hosting', slug: 'web-hosting', type: 'SharedHosting', description: 'Fast hosting<br />✔ SSD<br />✔ SSL<br />✔ Backups<br />✔ Email' },
-  { id: 10, pid: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', type: 'Vps', description: 'Learn online<br />✔ Courses' },
-  { id: 20, pid: 20, groupId: 6, name: 'Domain Registration', slug: 'domain-registration', type: 'Domain', description: 'Register domains' },
-  { id: 30, pid: 30, groupId: 7, name: 'Plain Plan', slug: 'plain-plan', type: 'Other', description: 'No bullets here' },
+  { id: 1, groupId: 1, name: 'Web Hosting', slug: 'web-hosting', type: ProductType.SharedHosting, description: 'Fast hosting<br />✔ SSD<br />✔ SSL<br />✔ Backups<br />✔ Email' },
+  { id: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', type: ProductType.Vps, description: 'Learn online<br />✔ Courses' },
+  { id: 20, groupId: 6, name: 'Domain Registration', slug: 'domain-registration', type: ProductType.Domain, description: 'Register domains' },
+  { id: 30, groupId: 7, name: 'Plain Plan', slug: 'plain-plan', type: ProductType.Other, description: 'No bullets here' },
 ]
 
 /** The groups: hosting and one family are shown; one is empty and one is switched off. */
 const groups: PortalProductGroup[] = [
-  { id: 3, name: 'Alpha Suite', isActive: true, productCount: 1 },
-  { id: 1, name: 'Web Hosting', isActive: true, productCount: 1 },
-  { id: 6, name: 'Domains', isActive: true, productCount: 1 },
-  { id: 7, name: 'Plain Plan', isActive: true, productCount: 1 },
-  { id: 4, name: 'Beta Kit', isActive: true, productCount: 0 },
-  { id: 5, name: 'Gamma Tool', isActive: false, productCount: 2 },
+  { id: 3, name: 'Alpha Suite', productCount: 1 },
+  { id: 1, name: 'Web Hosting', productCount: 1 },
+  { id: 6, name: 'Domains', productCount: 1 },
+  { id: 7, name: 'Plain Plan', productCount: 1 },
+  { id: 4, name: 'Beta Kit', productCount: 0 },
 ]
 
-/** Mounts the section and lets the catalogue load. */
+/**
+ * Mounts the section and lets the catalogue load.
+ *
+ * @returns The wrapper.
+ */
 const mountSection = async () => {
   const wrapper = await mountPage(SectionsProducts, { components: { ...CLASSIC_COMPONENTS, CatalogProductFamilyCard: ProductFamilyCard } })
   await flushPromises()
@@ -98,7 +102,7 @@ describe('SectionsProducts', () => {
     expect(wrapper.find('[data-testid="product-link-domains"]').attributes('href')).toBe('/en/domains')
   })
 
-  it('shows only the first three cards and leaves out empty and switched off groups', async () => {
+  it('shows only the first three cards and leaves out empty groups', async () => {
     const wrapper = await mountSection()
 
     expect(wrapper.findAll('[data-testid^="product-card-"]')).toHaveLength(HOME_PRODUCT_FAMILY_LIMIT)
@@ -106,7 +110,6 @@ describe('SectionsProducts', () => {
     expect(wrapper.find('[data-testid="product-card-alpha-suite"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="product-card-plain-plan"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="product-card-beta-kit"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="product-card-gamma-tool"]').exists()).toBe(false)
   })
 
   it('puts a featured family first and keeps the grid at three column widths', async () => {

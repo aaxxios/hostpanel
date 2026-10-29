@@ -1,9 +1,6 @@
+using Innovayse.Hostpanel.Application.Support.Common.Enums;
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Application.Support.Commands.BulkUpdateTickets.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// unrecognised action is refused before any ticket is touched, and the action is closed to a
 /// caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>TicketsAdminEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class BulkUpdateTicketsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -21,7 +17,7 @@ public sealed class BulkUpdateTicketsTests(IntegrationTestFactory factory) : ICl
     public async Task AdminCanBulkFlagTicketsAsync()
     {
         var client = await SupportTestSeeds.AdminClientAsync(factory);
-        var id = await SupportTestSeeds.CreateAdminTicketAsync(client);
+        var id = await SupportTestSeeds.CreateAdminTicketAsync(factory, client);
 
         var response = await client.PostAsJsonAsync(
             "/api/tickets/bulk", new { ticketIds = new[] { id }, action = nameof(BulkTicketAction.Flag) });
@@ -34,7 +30,7 @@ public sealed class BulkUpdateTicketsTests(IntegrationTestFactory factory) : ICl
     public async Task BulkActionRefusesAnUnknownActionAsync()
     {
         var client = await SupportTestSeeds.AdminClientAsync(factory);
-        var id = await SupportTestSeeds.CreateAdminTicketAsync(client);
+        var id = await SupportTestSeeds.CreateAdminTicketAsync(factory, client);
 
         var response = await client.PostAsJsonAsync(
             "/api/tickets/bulk", new { ticketIds = new[] { id }, action = "explode" });

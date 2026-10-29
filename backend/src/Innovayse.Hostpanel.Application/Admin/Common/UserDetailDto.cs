@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Common;
 /// <param name="LastLoginAt">UTC timestamp of last login, or null if never.</param>
 /// <param name="CreatedAt">UTC timestamp of account creation.</param>
 /// <param name="Accounts">Client accounts linked to this user.</param>
-public record UserDetailDto(
+public sealed record UserDetailDto(
     string Id,
     string FirstName,
     string LastName,

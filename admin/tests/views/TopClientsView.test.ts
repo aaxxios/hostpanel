@@ -1,5 +1,5 @@
 /**
- * Tests of TopClientsView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of TopClientsView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses, and runs its own actions.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -16,10 +16,11 @@ runReportCase({
   view: TopClientsView,
   routes: {
     'GET /reports/top-clients-by-income': () => json([
-      { clientId: 1, clientName: 'Beta', totalAmountIn: 100, totalFees: 2, totalAmountOut: 0, balance: 98 },
+      { clientId: 1, clientName: 'Beta', totalAmountIn: 100, totalFees: 2, totalAmountOut: 0, balance: 98, currency: 'USD' },
     ]),
   },
   expected: ['Top 10 Clients by Income', 'Beta', '$98.00'],
+  retryable: true,
 })
 
 describe('TopClientsView actions', () => {
@@ -31,7 +32,7 @@ describe('TopClientsView actions', () => {
   it('downloads its table as a CSV file', async () => {
     stubRouteTable({
       'GET /reports/top-clients-by-income': () => json([
-        { clientId: 1, clientName: 'Beta', totalAmountIn: 100, totalFees: 2, totalAmountOut: 0, balance: 98 },
+        { clientId: 1, clientName: 'Beta', totalAmountIn: 100, totalFees: 2, totalAmountOut: 0, balance: 98, currency: 'USD' },
       ]),
     })
     const wrapper = await mountView(TopClientsView)

@@ -1,11 +1,16 @@
 /**
  * Tests for `pages/client/services/[id]/index.vue`: the panels, the notices, the control-panel
- * sign-in and the redirect of a service that has no account yet.
+ * sign-in and the redirect of a service that has no account yet, and a failed read: not found, or the API sentence with a retry.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import { mountPage, stubClientRuntime } from '~/tests/helpers/mountClient'
 import ServicePage from '~/pages/client/services/[id]/index.vue'
 import { Permission } from '~/composables/usePermissions'
+import { PortalErrorCode } from '~/constants/portalErrorCode'
+import { makeClientService as service } from '~/tests/helpers/clientServiceFixture'
+import { ServiceStatus } from '~/types/servicestatus'
+import { SuspensionSource } from '~/types/suspensionsource'
 
 /** The mocked client endpoints the stores reach. */
 const clientApi = vi.hoisted(() => ({
@@ -18,17 +23,6 @@ vi.mock('~/composables/apis/useClientApi', () => ({ useClientApi: () => clientAp
 /** Stands in for Nuxt's `navigateTo`. */
 const navigate = vi.fn()
 
-/**
- * Builds a service.
- *
- * @param overrides - Fields to set.
- * @returns The service.
- */
-const service = (overrides: Record<string, unknown> = {}) => ({
-  id: 4, name: 'Starter', status: 'Active', username: 'webmstr', domain: 'example.com', groupname: 'Hosting', serverhostname: 'srv1.example.net',
-  billingcycle: 'monthly', regdate: '2026-01-01', nextduedate: '2026-12-01', recurringamount: '10', firstpaymentamount: '12',
-  diskusage: '1', disklimit: '10', bwusage: '0', bwlimit: '0', ...overrides
-})
 
 describe('service page', () => {
   beforeEach(() => {
@@ -57,6 +51,23 @@ describe('service page', () => {
     expect(wrapper.find('[data-testid="service-details"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="service-server"]').text()).toContain('ns1.example.net')
     expect(wrapper.find('[data-testid="service-invoices"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="service-suspension-reason"]').exists()).toBe(false)
+  })
+
+  it('names why a suspended service is suspended', async () => {
+    clientApi.fetchService.mockResolvedValue(service({ status: ServiceStatus.Suspended, suspensionSource: SuspensionSource.Overdue }))
+
+    const wrapper = await mountPage(ServicePage)
+
+    expect(wrapper.find('[data-testid="service-suspension-reason"]').text()).toContain('client.services.suspensionSources.overdue')
+  })
+
+  it('hides a leftover suspension source once the service is active again', async () => {
+    clientApi.fetchService.mockResolvedValue(service({ status: ServiceStatus.Active, suspensionSource: SuspensionSource.Overdue }))
+
+    const wrapper = await mountPage(ServicePage)
+
+    expect(wrapper.find('[data-testid="service-suspension-reason"]').exists()).toBe(false)
   })
 
   it('switches to the password and the cancellation panels', async () => {
@@ -78,16 +89,8 @@ describe('service page', () => {
     expect(wrapper.find('[data-testid="service-cancel"]').exists()).toBe(true)
   })
 
-  it('shows the suspension reason of a suspended service', async () => {
-    clientApi.fetchService.mockResolvedValue(service({ status: 'Suspended', suspensionreason: 'Overdue invoice' }))
-
-    const wrapper = await mountPage(ServicePage)
-
-    expect(wrapper.text()).toContain('Overdue invoice')
-  })
-
   it('sends a service without a control-panel account to its setup wizard', async () => {
-    clientApi.fetchService.mockResolvedValue(service({ username: '', status: 'Pending' }))
+    clientApi.fetchService.mockResolvedValue(service({ username: null, status: ServiceStatus.Pending }))
 
     await mountPage(ServicePage)
 
@@ -95,19 +98,36 @@ describe('service page', () => {
   })
 
   it('does not send a terminated service to setup', async () => {
-    clientApi.fetchService.mockResolvedValue(service({ username: '', status: 'Terminated' }))
+    clientApi.fetchService.mockResolvedValue(service({ username: null, status: ServiceStatus.Terminated }))
 
     await mountPage(ServicePage)
 
     expect(navigate).not.toHaveBeenCalled()
   })
 
-  it('says the service was not found when the read fails', async () => {
-    clientApi.fetchService.mockRejectedValue({ data: { detail: 'No such service.' } })
+  it('says the service was not found when the read is refused as not found', async () => {
+    clientApi.fetchService.mockRejectedValue({ data: { data: { code: PortalErrorCode.ServiceNotFound } } })
 
     const wrapper = await mountPage(ServicePage)
 
-    expect(wrapper.find('[data-testid="ui-empty-state"]').text()).toContain('client.services.notFound')
+    expect(wrapper.find('[data-testid="service-not-found"]').text()).toContain('client.services.notFound')
+    expect(wrapper.find('[data-testid="service-load-error"]').exists()).toBe(false)
+  })
+
+  it('shows the API sentence and a retry when the read fails for another reason, and reads again on retry', async () => {
+    clientApi.fetchService.mockRejectedValueOnce({ data: { detail: 'The service could not be read.' } })
+
+    const wrapper = await mountPage(ServicePage)
+
+    expect(wrapper.find('[data-testid="service-load-error"]').text()).toContain('The service could not be read.')
+    expect(wrapper.find('[data-testid="service-not-found"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="service-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(clientApi.fetchService).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[data-testid="service-load-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="service-details"]').exists()).toBe(true)
   })
 })
 

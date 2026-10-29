@@ -1,10 +1,9 @@
 using System.Reflection;
-using FluentAssertions;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Architecture.Tests;
+
 /// <summary>
 /// The kernel and the domain reference nothing but the runtime. EF Core, logging or a localizer
 /// reaching the domain is how a business rule ends up depending on a framework.
@@ -26,7 +25,8 @@ public sealed class KernelPurityTests
     }
 
     /// <summary>
-    /// Every domain aggregate derives from the kernel's base entity — the old Domain/Common bases are gone.
+    /// Domain declares no abstract base types of its own in a <c>.Common</c> namespace: every aggregate
+    /// derives from the kernel's base entity.
     /// </summary>
     [Fact]
     public void Domain_HasNoBaseTypesOfItsOwn()

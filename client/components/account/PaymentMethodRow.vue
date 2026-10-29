@@ -4,25 +4,26 @@
       <CreditCard :size="22" :stroke-width="1.5" class="text-gray-500 dark:text-gray-400 flex-shrink-0" />
       <UiStack gap="none">
         <UiStack direction="row" align="center" gap="xs" wrap>
-          <UiText size="sm" weight="medium">{{ method.description || method.gateway_name }}</UiText>
+          <UiText size="sm" weight="medium">{{ method.description || method.gatewayName }}</UiText>
           <UiBadge variant="success" size="sm" rounded>{{ $t('client.payment.statusActive') }}</UiBadge>
-          <UiBadge v-if="method.is_default" variant="primary" size="sm" rounded data-testid="account-payment-default-badge">
+          <UiBadge v-if="method.isDefault" variant="primary" size="sm" rounded data-testid="account-payment-default-badge">
             {{ $t('client.payment.defaultBadge') }}
           </UiBadge>
         </UiStack>
         <UiText size="xs" tone="subtle">
           <span data-testid="account-payment-type">{{ typeLabel }}</span>
-          <span v-if="method.card_expiry"> · {{ $t('client.payment.expires') }} {{ method.card_expiry }}</span>
+          <span v-if="method.cardExpiry"> · {{ $t('client.payment.expires') }} {{ method.cardExpiry }}</span>
         </UiText>
       </UiStack>
     </UiStack>
 
     <UiStack direction="row" align="center" gap="xs">
       <UiButton
-        v-if="!method.is_default"
+        v-if="!method.isDefault"
         size="sm"
         variant="outline"
         :loading="settingDefault"
+        :disabled="busy"
         :data-testid="`account-payment-default-${method.id}`"
         @click="emit('setDefault', method.id)"
       >
@@ -31,8 +32,9 @@
       </UiButton>
       <UiButton
         size="sm"
-        variant="subtle"
+        variant="danger"
         :loading="removing"
+        :disabled="busy"
         :data-testid="`account-payment-remove-${method.id}`"
         @click="emit('remove', method.id)"
       >
@@ -72,17 +74,21 @@ const props = withDefaults(defineProps<Props>(), {
   removing: false
 })
 
+/** Whether either action is running on this method; both buttons wait for it to end. */
+const busy = computed<boolean>(() => props.settingDefault || props.removing)
+
 /** Translator for the method type label. */
 const { t } = useI18n()
 
-/** Locale key of the label for each known method type. */
+/** Locale key of the label for each method type. */
 const TYPE_LABEL_KEYS: Record<PaymentMethodType, string> = {
   [PaymentMethodType.Card]: 'client.payment.type.card',
-  [PaymentMethodType.BankAccount]: 'client.payment.type.bankAccount'
+  [PaymentMethodType.BankAccount]: 'client.payment.type.bankAccount',
+  [PaymentMethodType.Other]: 'client.payment.type.other'
 }
 
-/** The translated name of the method's type; a type the client does not know reads as "other". */
-const typeLabel = computed<string>(() => t(TYPE_LABEL_KEYS[props.method.type as PaymentMethodType] ?? 'client.payment.type.other'))
+/** The translated name of the method's type. */
+const typeLabel = computed<string>(() => t(TYPE_LABEL_KEYS[props.method.type]))
 
 /** Events of {@link PaymentMethodRow}. */
 const emit = defineEmits<{

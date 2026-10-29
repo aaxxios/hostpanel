@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Client contacts sub-page — lists, adds, edits, and deletes contacts for the current client.
+ * Client contacts sub-page: lists, adds, edits, and deletes contacts for the current client.
  */
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
@@ -117,7 +117,7 @@ const deleteContactTarget = ref<number | null>(null)
 const deletingContact = ref(false)
 
 /**
- * Stages a contact for deletion. Only opens the prompt — {@link confirmDeleteContact} does the
+ * Stages a contact for deletion. Only opens the prompt: {@link confirmDeleteContact} does the
  * work, so the question is asked by the app's own modal rather than the browser's dialog.
  *
  * @param contactId - The ID of the contact to delete.
@@ -153,7 +153,7 @@ const confirmDeleteContact = async (): Promise<void> => {
 /**
  * Handles the delete event from the edit modal.
  *
- * Closes the edit modal first, then stages the same confirmation the row action uses — the edit
+ * Closes the edit modal first, then stages the same confirmation the row action uses: the edit
  * modal has already asked once, so this is the second half of a prompt chain that predates the
  * move off `confirm()` and is preserved exactly.
  *

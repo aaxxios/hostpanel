@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Innovayse.Hostpanel.Infrastructure.Email;
+
 /// <summary>
 /// Reads the brand for outgoing mail from the <c>portal.*</c> settings, filling in the
 /// storefront's own defaults wherever the operator has set nothing.
@@ -16,8 +17,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Email;
 /// <para>
 /// The logo is the dark-background one, falling back to the light one: the seeded e-mail
 /// layout is dark, like the sign-in pages. An uploaded logo is stored as a path relative to
-/// the portal (<c>/uploads/branding/…</c>), which a mail client cannot resolve, so it is made
-/// absolute against <see cref="ClientPortalOptions.BaseUrl"/> — the portal proxies that path
+/// the portal (under <c>/uploads/branding/</c>), which a mail client cannot resolve, so it is made
+/// absolute against <see cref="ClientPortalOptions.BaseUrl"/>: the portal proxies that path
 /// to the API's <c>wwwroot</c>. A pasted absolute URL is left alone.
 /// </para>
 /// <para>
@@ -45,7 +46,7 @@ public sealed class SettingsEmailBrandingProvider : IEmailBrandingProvider
     /// <inheritdoc />
     public async Task<EmailBranding> GetAsync(CancellationToken ct = default)
     {
-        // Was ISettingRepository.ListAsync -- read-only, so no tracking is needed.
+        // Read-only, so no tracking is needed.
         var rows = await _db.Settings.AsNoTracking().ToListAsync(ct);
         string Value(string key) =>
             rows.FirstOrDefault(s => s.Key == key)?.Value?.Trim() ?? string.Empty;

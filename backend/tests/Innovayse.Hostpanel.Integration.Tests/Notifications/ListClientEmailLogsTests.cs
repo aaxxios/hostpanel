@@ -1,8 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 
@@ -26,13 +23,15 @@ public sealed class ListClientEmailLogsTests(IntegrationTestFactory factory) : I
         var page = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         page.GetProperty("items").GetArrayLength().Should().Be(0);
         page.GetProperty("totalCount").GetInt32().Should().Be(0);
+        page.GetProperty("pageNumber").GetInt32().Should().Be(1);
+        page.GetProperty("totalPages").GetInt32().Should().Be(0);
     }
 
     /// <summary>The admin per-client route finds a log seeded straight at the client's own address, and lists nobody else's.</summary>
     [Fact]
     public async Task AdminListByClient_FindsTheClientsOwnLog()
     {
-        var (_, clientId, email) = await NotificationsTestSeeds.RegisterClientAsync(factory);
+        var (_, clientId, _, email) = await NotificationsTestSeeds.RegisterClientAsync(factory);
         await NotificationsTestSeeds.SeedLogAsync(factory, email, "Hello, client");
 
         var admin = await NotificationsTestSeeds.AdminClientAsync(factory);
@@ -63,7 +62,7 @@ public sealed class ListClientEmailLogsTests(IntegrationTestFactory factory) : I
     [Fact]
     public async Task MyEmails_List_ReturnsOwnLogsOnly()
     {
-        var (http, _, email) = await NotificationsTestSeeds.RegisterClientAsync(factory);
+        var (http, _, _, email) = await NotificationsTestSeeds.RegisterClientAsync(factory);
         await NotificationsTestSeeds.SeedLogAsync(factory, email, "Mine");
         await NotificationsTestSeeds.SeedLogAsync(factory, $"someone-else-{Guid.NewGuid():N}@example.test", "Not mine");
 

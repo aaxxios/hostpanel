@@ -19,6 +19,12 @@ import type { UiTone } from '@/utils/ui/tone'
 import { useModalSurface } from '@/utils/ui/modalSurface'
 import { UiDialogSize, UiDialogVariant } from '@/utils/ui/dialog'
 
+/**
+ * The root is a Teleport, which cannot take attributes, so a caller's `data-testid` or `aria-*`
+ * would be dropped with a warning. They go onto the dialog panel instead.
+ */
+defineOptions({ inheritAttrs: false })
+
 const { t } = useI18n()
 
 /** Props for UiDialog. */
@@ -33,7 +39,7 @@ const props = withDefaults(defineProps<{
   message?: string
   /** Label of the confirm button; defaults to a translated "Confirm". */
   confirmLabel?: string
-  /** Label of the confirm button while `loading`; defaults to a translated "Processing...". */
+  /** Label of the confirm button while `loading`; defaults to a translated "Processing". */
   loadingLabel?: string
   /** Whether the confirmed action is running (disables the confirm button). */
   loading?: boolean
@@ -112,6 +118,7 @@ const onBackdrop = (): void => {
       @click.self="onBackdrop"
     >
       <div
+        v-bind="$attrs"
         ref="panel"
         role="dialog"
         aria-modal="true"

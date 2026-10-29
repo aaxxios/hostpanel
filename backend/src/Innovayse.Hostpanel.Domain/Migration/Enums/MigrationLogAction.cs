@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Migration.Enums;
+
 /// <summary>Outcome of a single record processed during a migration job.</summary>
 public enum MigrationLogAction
 {

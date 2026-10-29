@@ -7,6 +7,7 @@ using Polly;
 using Polly.Retry;
 
 namespace Innovayse.Hostpanel.Infrastructure.Resilience.Extensions;
+
 /// <summary>
 /// The resilience pipeline this product puts in front of every outbound HTTP client: a total
 /// budget, a per-attempt timeout, an optional circuit breaker, and retries for exactly the
@@ -14,15 +15,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Resilience.Extensions;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Eleven client registrations previously had none of this, so a third party that stopped
-/// answering held a request thread until <see cref="HttpClient"/>'s 100-second default expired.
-/// The per-attempt timeout is the part that matters most; retries are the part most easily got
+/// Without it a third party that stopped answering would hold a request thread until
+/// <see cref="HttpClient"/>'s 100-second default expired. The per-attempt timeout is the part
+/// that matters most; retries are the part most easily got
 /// wrong.
 /// </para>
 /// <para>
 /// <b>There is no blanket profile and no blanket retry, on purpose.</b> These clients call a
 /// registrar, two control panels, an identity provider, a chat bot and a foreign install, and
-/// they disagree about almost everything — how long a call legitimately takes, whether a repeat
+/// they disagree about almost everything: how long a call legitimately takes, whether a repeat
 /// is free or bills someone, and whether the registration addresses one host or every server the
 /// platform owns. So the caller names a profile from <see cref="HttpResilienceOptions"/> and
 /// names, separately, which of its requests may be repeated. The default for the second is
@@ -35,15 +36,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Resilience.Extensions;
 /// operation, including the read ones, over POST with the verb in a form field; and the
 /// Inecobank payment gateway posts a status lookup, a payment registration and a refund to the
 /// same host over the same verb. A predicate copied from a service whose API is RESTful would
-/// repeat <c>createacct</c> here — or <c>refund.do</c>.
+/// repeat <c>createacct</c> here, or <c>refund.do</c>.
 /// </para>
 /// </remarks>
 public static class HttpClientResilienceExtensions
 {
     /// <summary>
     /// Namecheap commands are dotted names whose final segment says what the call does. Every
-    /// read this product issues is named <c>get*</c> — <c>getInfo</c>, <c>getHosts</c>,
-    /// <c>getList</c>, <c>getEPPCode</c>, <c>getEmailForwarding</c> — and the one exception is
+    /// read this product issues is named <c>get*</c>, <c>getInfo</c>, <c>getHosts</c>,
+    /// <c>getList</c>, <c>getEPPCode</c>, <c>getEmailForwarding</c>, and the one exception is
     /// <c>check</c>.
     /// </summary>
     private const string NamecheapReadPrefix = "get";
@@ -56,7 +57,7 @@ public static class HttpClientResilienceExtensions
 
     /// <summary>
     /// The only Name.am POST paths a repeat cannot make worse. <c>/client/domains/check</c> is a
-    /// pure availability lookup, and <c>/auth/login</c> issues a bearer token — a second token
+    /// pure availability lookup, and <c>/auth/login</c> issues a bearer token: a second token
     /// costs nothing and supersedes the first. Everything else this client posts goes to
     /// <c>/client/carts/purchase</c>, which registers, transfers or renews a domain and bills for
     /// it, so the list is an allowlist rather than a denylist: a path added to the client later
@@ -71,7 +72,7 @@ public static class HttpClientResilienceExtensions
     /// <c>InecobankPaymentGateway.PluginId</c>: the provider is loaded reflectively out of
     /// <c>plugins/</c> and Infrastructure deliberately does not reference it, so the two ends of
     /// this string are matched by convention and nothing else. Change one and the plugin drops
-    /// back to the factory's unnamed client without a word — and loses this profile with it.
+    /// back to the factory's unnamed client without a word, and loses this profile with it.
     /// </summary>
     public const string InecobankClientName = "inecobank";
 
@@ -89,7 +90,7 @@ public static class HttpClientResilienceExtensions
     /// <param name="builder">The client registration to wrap.</param>
     /// <param name="selectProfile">Picks this client's profile out of the bound options.</param>
     /// <param name="isRetryable">
-    /// Whether a given request may be repeated. <see langword="null"/> — the default — adds no
+    /// Whether a given request may be repeated. <see langword="null"/>, the default, adds no
     /// retry stage at all, which is the right answer for any client whose every operation
     /// provisions, charges or spends something.
     /// </param>
@@ -104,7 +105,7 @@ public static class HttpClientResilienceExtensions
     /// </description></item>
     /// <item><description>
     /// <b>Retry</b>, only when <paramref name="isRetryable"/> is supplied and the profile allows
-    /// at least one attempt. Exponential with jitter — without jitter every replica that failed
+    /// at least one attempt. Exponential with jitter: without jitter every replica that failed
     /// together retries together, and the recovering third party is knocked over by the
     /// synchronised wave rather than by the original load.
     /// </description></item>
@@ -147,7 +148,7 @@ public static class HttpClientResilienceExtensions
 
                     // The request is read from the resilience context rather than from the
                     // response, because on the exception path there is no response to read it
-                    // off -- and that is exactly the path where knowing what was sent matters.
+                    // off, and that is exactly the path where knowing what was sent matters.
                     ShouldHandle = args => ValueTask.FromResult(
                         IsTransient(args.Outcome)
                         && IsRepeatable(
@@ -184,7 +185,7 @@ public static class HttpClientResilienceExtensions
     /// <returns>The same <paramref name="builder"/>, for chaining.</returns>
     /// <remarks>
     /// Use this only where the claim has been checked against the client's full surface, not
-    /// where it is merely true of most of it. It is correct for the SSO's service API (four GETs
+    /// where it is merely true of most of it. It is correct for the sign-on provider's service API (four GETs
     /// that read a person) and for the migration source (three POSTs that all read, because the
     /// pull protocol posts a signed payload and gets data back). It is <b>not</b> correct for
     /// either registrar, which mixes lookups and purchases on the same client.
@@ -231,7 +232,7 @@ public static class HttpClientResilienceExtensions
         builder.AddResilience(o => o.Namecheap, IsNamecheapRepeatable);
 
     /// <summary>
-    /// Applies the Inecobank profile, repeating only the order-status lookup — never the call
+    /// Applies the Inecobank profile, repeating only the order-status lookup: never the call
     /// that opens a payment session and never the one that refunds.
     /// </summary>
     /// <param name="builder">The client registration to wrap.</param>
@@ -270,8 +271,8 @@ public static class HttpClientResilienceExtensions
     /// PUT is repeatable here because Name.am uses it the way HTTP defines it: every one of the
     /// five call sites replaces a domain's nameservers, contacts, lock or auto-renew flag with a
     /// whole new representation, so a second identical PUT ends in the state the first would
-    /// have. POST is where the money is — <c>/client/carts/purchase</c> is registration, transfer
-    /// and renewal alike — so it is refused except for the two paths in
+    /// have. POST is where the money is, <c>/client/carts/purchase</c> is registration, transfer
+    /// and renewal alike, so it is refused except for the two paths in
     /// <see cref="NameAmRepeatablePostPaths"/>.
     /// </remarks>
     private static bool IsNameAmRepeatable(HttpRequestMessage request)
@@ -383,7 +384,7 @@ public static class HttpClientResilienceExtensions
     /// <summary>
     /// Whether an attempt failed in a way a repeat could plausibly fix.
     /// </summary>
-    /// <param name="outcome">What the attempt produced — a response, or the exception it threw.</param>
+    /// <param name="outcome">What the attempt produced: a response, or the exception it threw.</param>
     /// <returns>True for 5xx, 408, and connection-level or timeout exceptions.</returns>
     /// <remarks>
     /// A 4xx other than 408 is the caller's own request being wrong; repeating it produces the

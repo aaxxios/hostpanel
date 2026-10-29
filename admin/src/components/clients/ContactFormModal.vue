@@ -6,6 +6,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Contact } from '@/types/contact'
+import type { ContactNotifications } from '@/types/contactnotifications'
 import { useGeoOptions } from '@/composables/useGeoOptions'
 import { ContactType } from '@/types/contact'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -85,23 +86,23 @@ const postCode = ref('')
 const country = ref('')
 
 /** Email notification switches, named as the payload fields. */
-const notify = reactive({
-  notifyGeneral: true,
-  notifyInvoice: true,
-  notifySupport: true,
-  notifyProduct: true,
-  notifyDomain: true,
-  notifyAffiliate: true,
+const notify = reactive<ContactNotifications>({
+  general: true,
+  invoice: true,
+  support: true,
+  product: true,
+  domain: true,
+  affiliate: true,
 })
 
 /** Email notification switches in display order. */
 const notifyToggles = computed<{ key: keyof typeof notify; label: string }[]>(() => [
-  { key: 'notifyGeneral', label: t('shared.generalEmails') },
-  { key: 'notifyInvoice', label: t('shared.invoiceEmails') },
-  { key: 'notifySupport', label: t('shared.supportEmails') },
-  { key: 'notifyProduct', label: t('shared.productEmails') },
-  { key: 'notifyDomain', label: t('shared.domainEmails') },
-  { key: 'notifyAffiliate', label: t('shared.affiliateEmails') },
+  { key: 'general', label: t('shared.generalEmails') },
+  { key: 'invoice', label: t('shared.invoiceEmails') },
+  { key: 'support', label: t('shared.supportEmails') },
+  { key: 'product', label: t('shared.productEmails') },
+  { key: 'domain', label: t('shared.domainEmails') },
+  { key: 'affiliate', label: t('shared.affiliateEmails') },
 ])
 
 /** Field-level validation errors. */
@@ -158,13 +159,15 @@ const handleSave = (): void => {
     email: email.value.trim(),
     phone: phone.value.trim() ? `${selectedPhoneCode.value} ${phone.value.trim()}` : null,
     type: contactType.value,
-    street: street.value.trim() || null,
-    address2: address2.value.trim() || null,
-    city: city.value.trim() || null,
-    state: state.value.trim() || null,
-    postCode: postCode.value.trim() || null,
-    country: country.value || null,
-    ...notify,
+    address: {
+      street: street.value.trim() || null,
+      address2: address2.value.trim() || null,
+      city: city.value.trim() || null,
+      state: state.value.trim() || null,
+      postCode: postCode.value.trim() || null,
+      country: country.value || null,
+    },
+    notifications: { ...notify },
   })
 }
 
@@ -172,7 +175,7 @@ const handleSave = (): void => {
 const showDeleteConfirm = ref(false)
 
 /**
- * Stages the delete confirmation. Only opens the prompt — {@link confirmDelete} does the work,
+ * Stages the delete confirmation. Only opens the prompt: {@link confirmDelete} does the work,
  * so the question is asked by the app's own modal instead of the browser's blocking dialog.
  *
  * @returns Nothing.
@@ -218,19 +221,14 @@ const populateFromContact = (): void => {
     phone.value = parsed.number
   }
 
-  street.value = c.street ?? ''
-  address2.value = c.address2 ?? ''
-  city.value = c.city ?? ''
-  state.value = c.state ?? ''
-  postCode.value = c.postCode ?? ''
-  country.value = c.country ?? ''
+  street.value = c.address.street ?? ''
+  address2.value = c.address.address2 ?? ''
+  city.value = c.address.city ?? ''
+  state.value = c.address.state ?? ''
+  postCode.value = c.address.postCode ?? ''
+  country.value = c.address.country ?? ''
 
-  notify.notifyGeneral = c.notifyGeneral
-  notify.notifyInvoice = c.notifyInvoice
-  notify.notifySupport = c.notifySupport
-  notify.notifyProduct = c.notifyProduct
-  notify.notifyDomain = c.notifyDomain
-  notify.notifyAffiliate = c.notifyAffiliate
+  Object.assign(notify, c.notifications)
 }
 
 onMounted(() => {
@@ -382,7 +380,7 @@ onMounted(() => {
           <UiHeading :level="3" variant="card">{{ t('shared.emailNotifications') }}</UiHeading>
           <UiStack gap="sm">
             <UiLabel v-for="toggle in notifyToggles" :key="toggle.key" :variant="UiLabelVariant.Inline">
-              <UiToggle v-model="notify[toggle.key]" :data-testid="`clients-contact-${toggle.key}`" />
+              <UiToggle v-model="notify[toggle.key]" :data-testid="`clients-contact-notify-${toggle.key}`" />
               {{ toggle.label }}
             </UiLabel>
           </UiStack>

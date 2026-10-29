@@ -16,7 +16,7 @@ test('a signed-out visitor opening a protected page is sent to the login form', 
 
   await page.goto('/dashboard')
 
-  // The login address now carries the page that was asked for, so it ends in a query, not in `/login`.
+  // The login address carries the page that was asked for, so it ends in a query, not in `/login`.
   await page.waitForURL(/\/login\?redirect=/)
   await expect(fieldOf(page, 'login-email')).toBeVisible()
   await expect(fieldOf(page, 'login-password')).toBeVisible()
@@ -46,7 +46,7 @@ test('correct credentials sign in and open the dashboard', async ({ page }) => {
   await page.waitForURL('**/dashboard')
   await expect(page.getByTestId('dashboard-header')).toBeVisible()
 
-  // The credentials travel in the JSON body — never in the URL.
+  // The credentials travel in the JSON body, never in the URL.
   const [login] = api.callsTo(HttpMethod.Post, '/api/auth/login')
   expect(login?.body).toEqual({ email: validCredentials.email, password: validCredentials.password })
   expect(login?.search).toBe('')

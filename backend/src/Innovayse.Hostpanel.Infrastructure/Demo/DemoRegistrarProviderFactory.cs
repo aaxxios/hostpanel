@@ -4,7 +4,7 @@ using Innovayse.Hostpanel.Domain.Domains.Enums;
 namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>Hands out the demo registrar whichever registrar module is asked for.</summary>
-internal sealed class DemoRegistrarProviderFactory : IRegistrarProviderFactory
+public sealed class DemoRegistrarProviderFactory : IRegistrarProviderFactory
 {
     /// <summary>The one fake registrar every module resolves to.</summary>
     private readonly IRegistrarProvider _provider;

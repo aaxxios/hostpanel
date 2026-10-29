@@ -1,5 +1,5 @@
 /**
- * Tests of IncomeByProductView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of IncomeByProductView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -17,9 +17,10 @@ runReportCase({
   view: IncomeByProductView,
   routes: {
     'GET /reports/income-by-product-grouped': () => json({
-      month: 1, year: 2024, totalUnitsSold: 2, totalIncome: 20,
+      month: 1, year: 2024, totalUnitsSold: 2, totalIncome: 20, currency: 'USD',
       groups: [{ ...productGroup, groupIncome: 20, products: [{ ...productGroup.products[0], totalIncome: 20 }] }],
     }),
   },
-  expected: ['Income by Product for January 2024', 'Basic', '$20.00 USD'],
+  expected: ['Income by Product for January 2024', 'Basic', '$20.00'],
+  retryable: true,
 })

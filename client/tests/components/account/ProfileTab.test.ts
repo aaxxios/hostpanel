@@ -1,5 +1,5 @@
 /**
- * Unit tests for ProfileTab: loading, failure, the view and the edit switch.
+ * Unit tests for ProfileTab: loading, failure, the view, the edit switch and the sign-in address card.
  */
 import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
@@ -9,6 +9,7 @@ import ProfileTab from '~/components/account/ProfileTab.vue'
 import { useAccountStore } from '~/stores/account'
 import { useClientStore } from '~/stores/client'
 import type { ClientUser } from '~/types/clientuser'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 
 vi.mock('~/composables/apis/useClientApi', () => ({ useClientApi: () => ({}) }))
 vi.mock('~/composables/apis/useBillingApi', () => ({ useBillingApi: () => ({}) }))
@@ -22,9 +23,9 @@ vi.mock('~/stores/catalog', async () => {
 vi.stubGlobal('useAuthMode', () => ({ isSso: ref(false) }))
 
 /** A signed-in profile with a default gateway and a language. */
-const user: ClientUser = {
-  id: 1, firstname: 'Jane', lastname: 'Doe', email: 'jane@example.com', permissions: Permission.All, defaultgateway: 'stripe', language: 'ru'
-}
+const user: ClientUser = makeClientUser({
+  firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com', permissions: Permission.All, paymentMethod: 'stripe', language: 'ru'
+})
 
 describe('ProfileTab', () => {
   it('shows a skeleton while the profile loads', () => {
@@ -98,6 +99,7 @@ describe('ProfileTab permissions', () => {
 
     expect(wrapper.find('[data-testid="account-profile-view"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="account-profile-edit"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="account-email-change-card"]').exists()).toBe(false)
   })
 
   it('offers the edit button with ModifyMasterProfile', async () => {
@@ -107,5 +109,6 @@ describe('ProfileTab permissions', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('[data-testid="account-profile-edit"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="account-email-change-card"]').exists()).toBe(true)
   })
 })

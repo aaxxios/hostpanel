@@ -11,9 +11,9 @@ namespace Innovayse.Hostpanel.Domain.Locations;
 /// </remarks>
 public static class ServerLocationErrors
 {
-    /// <summary>The sort order is negative (400) — <see cref="ServerLocation.Create"/>, <see cref="ServerLocation.Update"/> and <see cref="ServerLocation.SetSortOrder"/>.</summary>
+    /// <summary>The sort order is negative (400): <see cref="ServerLocation.Create"/>, <see cref="ServerLocation.Update"/> and <see cref="ServerLocation.SetSortOrder"/>.</summary>
     public const string SortOrderNegative = "LOCATION_SORT_ORDER_NEGATIVE";
 
-    /// <summary>The country code is not two letters (400) — <see cref="ServerLocation.Create"/> and <see cref="ServerLocation.Update"/>.</summary>
+    /// <summary>The country code is not two letters (400): <see cref="ServerLocation.Create"/> and <see cref="ServerLocation.Update"/>.</summary>
     public const string CountryCodeInvalid = "LOCATION_COUNTRY_CODE_INVALID";
 }

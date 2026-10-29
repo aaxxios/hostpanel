@@ -2,7 +2,7 @@
  * Wire shape for `GET /api/settings/public`.
  *
  * The endpoint is `[AllowAnonymous]` and returns an allow-listed subset of the settings
- * table, which is what lets the login screen — rendered with no session — show the
+ * table, which is what lets the login screen, rendered with no session, show the
  * operator's own logo rather than this product's.
  */
 

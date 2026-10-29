@@ -13,7 +13,7 @@ const NO_STORE = 'private, no-store'
 export default defineEventHandler(async (event) => {
   const id = requireRouteParam(event, 'id')
 
-  const file = await internalApiBinaryCall(event, `/me/invoices/${encodeURIComponent(id)}/pdf`)
+  const file = await internalApiBinaryCall(event, `/me/invoices/${id}/pdf`)
   setResponseHeaders(event, {
     'content-type': file.contentType,
     'cache-control': file.cacheControl ?? NO_STORE,

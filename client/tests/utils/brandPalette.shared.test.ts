@@ -10,7 +10,12 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-/** Resolves a path relative to this test file. */
+/**
+ * Resolves a path relative to this test file.
+ *
+ * @param rel Relative path.
+ * @returns The absolute file path.
+ */
 const here = (rel: string): string => fileURLToPath(new URL(rel, import.meta.url))
 
 describe('admin copy of brandPalette.ts', () => {

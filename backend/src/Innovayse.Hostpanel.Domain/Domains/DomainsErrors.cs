@@ -12,20 +12,26 @@ namespace Innovayse.Hostpanel.Domain.Domains;
 /// </remarks>
 public static class DomainsErrors
 {
-    /// <summary>The domain's status does not allow cancellation (400) — <see cref="RegisteredDomain.Cancel"/>.</summary>
+    /// <summary>The domain's status does not allow cancellation (400): <see cref="RegisteredDomain.Cancel"/>.</summary>
     public const string DomainCancelNotAllowed = "DOMAIN_CANCEL_NOT_ALLOWED";
 
-    /// <summary>The domain's status does not allow renewal (400) — <see cref="RegisteredDomain.Renew"/>.</summary>
+    /// <summary>The domain's status does not allow renewal (400): <see cref="RegisteredDomain.Renew"/>.</summary>
     public const string DomainRenewNotAllowed = "DOMAIN_RENEW_NOT_ALLOWED";
 
     /// <summary>
-    /// The id names no DNS record on this domain (404) — <see cref="RegisteredDomain.UpdateDnsRecord"/>
+    /// The domain's status does not allow linking a hosting service (400):
+    /// <see cref="RegisteredDomain.LinkService"/>.
+    /// </summary>
+    public const string DomainLinkNotAllowed = "DOMAIN_LINK_NOT_ALLOWED";
+
+    /// <summary>
+    /// The id names no DNS record on this domain (404): <see cref="RegisteredDomain.UpdateDnsRecord"/>
     /// and <see cref="RegisteredDomain.RemoveDnsRecord"/>.
     /// </summary>
     public const string DomainDnsRecordNotFound = "DOMAIN_DNS_RECORD_NOT_FOUND";
 
     /// <summary>
-    /// The id names no email forwarding rule on this domain (404) —
+    /// The id names no email forwarding rule on this domain (404):
     /// <see cref="RegisteredDomain.UpdateForwardingRule"/> and
     /// <see cref="RegisteredDomain.RemoveForwardingRule"/>.
     /// </summary>

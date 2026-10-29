@@ -1,14 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 
 /// <summary>
-/// Integration tests for the <c>GetClientEmailLog</c> use case — <c>GET /api/me/emails/{id}</c>,
+/// Integration tests for the <c>GetClientEmailLog</c> use case: <c>GET /api/me/emails/{id}</c>,
 /// the client portal's own reading of one email they were sent.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -18,7 +15,7 @@ public sealed class GetClientEmailLogTests(IntegrationTestFactory factory) : ICl
     [Fact]
     public async Task MyEmails_Get_ReturnsTheEntryWithItsBody()
     {
-        var (http, _, email) = await NotificationsTestSeeds.RegisterClientAsync(factory);
+        var (http, _, _, email) = await NotificationsTestSeeds.RegisterClientAsync(factory);
         var id = await NotificationsTestSeeds.SeedLogAsync(factory, email, "Read me");
 
         var response = await http.GetAsync($"/api/me/emails/{id}");
@@ -33,7 +30,7 @@ public sealed class GetClientEmailLogTests(IntegrationTestFactory factory) : ICl
     [Fact]
     public async Task MyEmails_Get_SomebodyElsesEntry_RefusesNotFound()
     {
-        var (http, _, _) = await NotificationsTestSeeds.RegisterClientAsync(factory);
+        var (http, _, _, _) = await NotificationsTestSeeds.RegisterClientAsync(factory);
         var othersId = await NotificationsTestSeeds.SeedLogAsync(
             factory, $"someone-else-{Guid.NewGuid():N}@example.test", "Not mine");
 

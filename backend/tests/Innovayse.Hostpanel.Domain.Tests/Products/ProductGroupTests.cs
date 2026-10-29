@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Domain.Products;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Products;
+
 /// <summary>Unit tests for the <see cref="ProductGroup"/> aggregate.</summary>
 public class ProductGroupTests
 {

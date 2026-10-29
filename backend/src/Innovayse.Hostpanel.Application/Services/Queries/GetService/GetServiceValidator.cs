@@ -4,6 +4,7 @@ using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Services.Queries.GetService;
+
 /// <summary>Validates <see cref="GetServiceQuery"/> before the handler executes.</summary>
 public sealed class GetServiceValidator : LocalizedValidator<GetServiceQuery>
 {

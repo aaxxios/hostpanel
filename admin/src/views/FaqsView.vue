@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Storefront FAQ list — the questions and answers shown on the portal.
+ * Storefront FAQ list: the questions and answers shown on the portal.
  *
  * Shows the entries ordered by sort order with drag-and-drop reordering, category and status, and
  * navigation to the dedicated create and edit pages. Deleting asks first.
@@ -111,6 +111,7 @@ const navigateEdit = (item: Faq): void => {
     :loading="store.loading"
     :error="store.error"
     :action-error="store.actionError"
+    :outcome="list.outcome.value"
     :saving-order="list.savingOrder.value"
     :delete-target="list.deleteTarget.value"
     :deleting="list.deleting.value"
@@ -121,6 +122,7 @@ const navigateEdit = (item: Faq): void => {
     @confirm-delete="list.confirmDelete"
     @cancel-delete="list.cancelDelete"
     @reorder="list.saveOrder"
+    @retry="store.fetchAll"
   >
     <template #row="{ item }">
       <UiTableCell>

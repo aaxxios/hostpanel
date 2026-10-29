@@ -41,6 +41,14 @@ describe('TwoFactorDialog', () => {
     expect(wrapper.text()).toContain('client.twoFactor.disableTitle')
   })
 
+  it('asks for the current password only when disabling', () => {
+    const disabling = mountAccount(TwoFactorDialog, { props: { modelValue: true, mode: TwoFactorMode.Disable } })
+    const enabling = mountAccount(TwoFactorDialog, { props: { modelValue: true, mode: TwoFactorMode.Enable } })
+
+    expect(disabling.find('[data-testid="account-2fa-password"]').attributes('type')).toBe('password')
+    expect(enabling.find('[data-testid="account-2fa-password"]').exists()).toBe(false)
+  })
+
   it('puts the submit button in the pinned footer, tied to the form by id', () => {
     const wrapper = mountAccount(TwoFactorDialog, { props: { modelValue: true, mode: TwoFactorMode.Enable } })
     const button = wrapper.find('[data-testid="account-2fa-submit"]')
@@ -55,11 +63,12 @@ describe('TwoFactorDialog', () => {
     const submit = vi.spyOn(useAccountStore(), 'submitTwoFactor').mockResolvedValue(ActionOutcome.Succeeded)
 
     wrapper.findComponent(OtpInput).vm.$emit('update:modelValue', '123456')
+    await wrapper.find('[data-testid="account-2fa-password"]').setValue('secret-pw')
     await wrapper.vm.$nextTick()
     await wrapper.find('form').trigger('submit')
     await Promise.resolve()
 
-    expect(submit).toHaveBeenCalledWith(TwoFactorMode.Disable, '123456')
+    expect(submit).toHaveBeenCalledWith(TwoFactorMode.Disable, '123456', 'secret-pw')
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([false])
   })
 

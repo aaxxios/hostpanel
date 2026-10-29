@@ -1,3 +1,5 @@
+import type { DomainReminderType } from '@/types/domain'
+
 /** One renewal reminder e-mail that was sent. */
 export interface ReportDomainRenewalRow {
   /** Client name. */
@@ -7,7 +9,7 @@ export interface ReportDomainRenewalRow {
   /** When it was sent. */
   sentAt: string
   /** Which reminder it was. */
-  reminder: string
+  reminder: DomainReminderType
   /** Recipient addresses. */
   recipients: string
 }

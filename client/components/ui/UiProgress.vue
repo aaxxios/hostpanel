@@ -1,18 +1,23 @@
 <template>
   <div
-    ref="trackRef"
     role="progressbar"
     :aria-label="label"
     aria-valuemin="0"
     aria-valuemax="100"
     :aria-valuenow="percent"
+    :aria-valuetext="valueText"
     data-testid="ui-progress"
     class="h-1.5 w-full rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden"
   >
-    <div
-      data-testid="ui-progress-bar"
-      :class="['h-full rounded-full transition-all duration-500 w-[var(--ui-progress,0%)]', TONE_CLASSES[tone as UiTone]]"
-    />
+    <svg class="block h-full w-full" aria-hidden="true" focusable="false">
+      <rect
+        data-testid="ui-progress-bar"
+        :width="`${percent}%`"
+        height="100%"
+        rx="3"
+        :class="['transition-all duration-500', TONE_CLASSES[tone as UiTone]]"
+      />
+    </svg>
   </div>
 </template>
 
@@ -20,11 +25,12 @@
 /**
  * UiProgress - a thin horizontal bar showing how much of a whole is used or done.
  *
- * The width is the CSS custom property `--ui-progress`, written on the track from script, and a
- * Tailwind class reads it. That keeps the component free of an inline `style` attribute while the
- * value stays dynamic. The value is clamped to 0-100 and a non-number reads as empty.
+ * The filled part is an SVG rectangle whose `width` attribute is the percentage. An attribute is
+ * part of the server-rendered markup, so the bar is drawn at its real width before any script runs
+ * and always matches `aria-valuenow`, and the component still carries no inline `style`. The value
+ * is clamped to 0-100 and a non-number reads as empty.
  */
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { UiTone } from '~/utils/ui/enums'
 
 /** Props of UiProgress. */
@@ -35,26 +41,26 @@ interface Props {
   label: string
   /** Colour of the filled part. */
   tone?: `${UiTone}`
+  /** The value as a reader should hear it, e.g. "256 MB / 1024 MB"; the bare percentage when unset. */
+  valueText?: string
 }
 
 /** Props of the component with their defaults applied. */
 const props = withDefaults(defineProps<Props>(), {
   tone: UiTone.Primary,
+  valueText: undefined,
 })
 
 /** Fill colour per tone. */
 const TONE_CLASSES: Record<UiTone, string> = {
-  [UiTone.Default]: 'bg-gray-500',
-  [UiTone.Primary]: 'bg-primary-500',
-  [UiTone.Secondary]: 'bg-secondary-500',
-  [UiTone.Success]: 'bg-green-500',
-  [UiTone.Warning]: 'bg-yellow-500',
-  [UiTone.Danger]: 'bg-red-500',
-  [UiTone.Info]: 'bg-blue-500',
+  [UiTone.Default]: 'fill-gray-500',
+  [UiTone.Primary]: 'fill-primary-500',
+  [UiTone.Secondary]: 'fill-secondary-500',
+  [UiTone.Success]: 'fill-green-500',
+  [UiTone.Warning]: 'fill-yellow-500',
+  [UiTone.Danger]: 'fill-red-500',
+  [UiTone.Info]: 'fill-blue-500',
 }
-
-/** The track element the custom property is written on. */
-const trackRef = ref<HTMLElement | null>(null)
 
 /** The value as a whole percentage between 0 and 100. */
 const percent = computed(() => {
@@ -63,12 +69,4 @@ const percent = computed(() => {
   }
   return Math.round(Math.min(100, Math.max(0, props.value)))
 })
-
-/** Writes the custom property the bar's width class reads. */
-const applyWidth = (): void => {
-  trackRef.value?.style.setProperty('--ui-progress', `${percent.value}%`)
-}
-
-onMounted(applyWidth)
-watch(percent, applyWidth)
 </script>

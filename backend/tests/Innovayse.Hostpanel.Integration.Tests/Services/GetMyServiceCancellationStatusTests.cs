@@ -1,17 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
 /// <summary>
 /// Integration tests for <c>GET /api/me/services/{id}/cancellation-status</c>.
 /// </summary>
-/// <remarks>Moved from the deleted <c>MyServicesOwnershipEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetMyServiceCancellationStatusTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

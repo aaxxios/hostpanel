@@ -1,5 +1,4 @@
 using Innovayse.Hostpanel.Domain.Locations;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Locations;
 
@@ -10,34 +9,29 @@ public sealed class ServerLocationTests
     /// <returns>A new, active location.</returns>
     private static ServerLocation NewEntity() => ServerLocation.Create(countryCode: "de", sortOrder: 2, isActive: true);
 
-    /// <summary>Create stores every field, upper-cases the country code, starts with no translations and stamps the creation time.</summary>
+    /// <summary>Create stores every field, upper-cases the country code and starts with no translations.</summary>
     [Fact]
     public void Create_StoresFields_AndStartsWithoutTranslations()
     {
-        var before = DateTimeOffset.UtcNow;
-
         var entity = NewEntity();
 
         Assert.Equal("DE", entity.CountryCode);
         Assert.Equal(2, entity.SortOrder);
         Assert.True(entity.IsActive);
         Assert.Empty(entity.Translations);
-        Assert.True(entity.CreatedAt >= before);
     }
 
-    /// <summary>Update replaces every non-translation field and keeps the creation time.</summary>
+    /// <summary>Update replaces every non-translation field.</summary>
     [Fact]
     public void Update_ReplacesEveryField()
     {
         var entity = NewEntity();
-        var created = entity.CreatedAt;
 
         entity.Update(countryCode: "nl", sortOrder: 7, isActive: false);
 
         Assert.Equal("NL", entity.CountryCode);
         Assert.Equal(7, entity.SortOrder);
         Assert.False(entity.IsActive);
-        Assert.Equal(created, entity.CreatedAt);
     }
 
     /// <summary>Deactivate hides the location and Activate shows it again.</summary>
@@ -166,5 +160,26 @@ public sealed class ServerLocationTests
 
         Assert.Equal(ServerLocationErrors.CountryCodeInvalid, ex.Code);
         Assert.Equal("DE", entity.CountryCode);
+    }
+
+    /// <summary>
+    /// ReplaceTranslations leaves exactly the given locales: a locale it does not name is removed, a
+    /// kept one is updated in place and a new one is added.
+    /// </summary>
+    [Fact]
+    public void ReplaceTranslations_RemovesUnlisted_UpdatesKept_AddsNew()
+    {
+        var entity = NewEntity();
+        entity.SetTranslation("en", name: "Frankfurt One", city: null, latencyNote: null);
+        entity.SetTranslation("ru", name: "Frankfurt Ru", city: null, latencyNote: null);
+
+        entity.ReplaceTranslations(new Dictionary<string, ServerLocationTranslationContent>
+        {
+            ["en"] = new ServerLocationTranslationContent("Frankfurt Two", "Frankfurt", null),
+            ["hy"] = new ServerLocationTranslationContent("Frankfurt Hy", null, null),
+        });
+
+        Assert.Equal(["en", "hy"], entity.Translations.Select(t => t.Locale).Order());
+        Assert.Equal("Frankfurt Two", entity.Translations.Single(t => t.Locale == "en").Name);
     }
 }

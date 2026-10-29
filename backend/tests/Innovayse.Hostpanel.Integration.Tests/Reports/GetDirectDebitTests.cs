@@ -1,12 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
@@ -14,7 +11,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 /// <c>GET /api/reports/direct-debit</c> against Postgres: every unpaid invoice on a direct-debit
 /// payment method.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetDirectDebitTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -26,7 +22,7 @@ public sealed class GetDirectDebitTests(IntegrationTestFactory factory) : IClass
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var invoice = Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(5), "USD");
+            var invoice = Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(5), "USD", DateTimeOffset.UtcNow);
             invoice.AddItem("Renewal", 60m, 1);
             invoice.UpdateOptions(DateTimeOffset.UtcNow, invoice.DueDate, "Direct Debit", 0m);
             db.Invoices.Add(invoice);
@@ -50,7 +46,7 @@ public sealed class GetDirectDebitTests(IntegrationTestFactory factory) : IClass
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

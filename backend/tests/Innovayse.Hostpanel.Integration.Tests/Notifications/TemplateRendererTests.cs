@@ -1,20 +1,24 @@
+using System.Reflection;
 using Innovayse.Hostpanel.Application.Notifications.Common;
+using Innovayse.Hostpanel.Application.Notifications.Common.TemplateModels;
 using Innovayse.Hostpanel.Application.Notifications.Rendering;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 
 /// <summary>
-/// Tests for <see cref="TemplateRenderer"/>: the caller's model renders as before, the brand
-/// and site objects are there for every template, and the caller's own member wins on a clash.
+/// Tests for <see cref="TemplateRenderer"/>: typed models render under their lower snake case
+/// names, the brand and site objects are there for every template, a body encodes every printed
+/// value as HTML and a subject prints it as it is.
 /// </summary>
 /// <remarks>
-/// Branding comes from <see cref="FakeEmailBrandingProvider"/> — <c>IEmailBrandingProvider</c> is a
+/// Branding comes from <see cref="FakeEmailBrandingProvider"/>: <c>IEmailBrandingProvider</c> is a
 /// port this product owns, and the rule is no <c>Moq</c> of our own code.
 /// </remarks>
 public sealed class TemplateRendererTests
 {
+    /// <summary>A ticket subject a visitor could type to plant a link and a script in staff mail.</summary>
+    private const string HostileSubject = "<a href=\"https://phish.example\">Verify</a><script>steal()</script>";
+
     /// <summary>The branding the renderer under test reads from, unless overridden per-call.</summary>
     private readonly FakeEmailBrandingProvider _branding = new();
 
@@ -36,79 +40,115 @@ public sealed class TemplateRendererTests
         return new TemplateRenderer(_branding);
     }
 
-    /// <summary>The caller's own model renders exactly as before the brand/site injection existed.</summary>
+    /// <summary>A model member is read under its lower snake case name.</summary>
     [Fact]
-    public async Task RenderAsync_CallerModel_RendersAsBefore()
+    public async Task RenderHtmlAsync_ModelMember_RendersUnderItsSnakeCaseName()
     {
-        var html = await CreateRenderer().RenderAsync("Reset: {{ reset_link }}", new { reset_link = "https://x/reset?t=1" });
+        var html = await CreateRenderer().RenderHtmlAsync(
+            "Reset: {{ reset_link }}", new PasswordResetTemplateModel("https://x/reset?t=1"), CancellationToken.None);
 
         Assert.Equal("Reset: https://x/reset?t=1", html);
     }
 
-    /// <summary>Every field of the brand and the site name are available beside the caller's model.</summary>
+    /// <summary>The members of a nested record render too, which a registration-based strategy would leave blank.</summary>
     [Fact]
-    public async Task RenderAsync_ExposesBrandAndSiteBesideTheModel()
+    public async Task RenderTextAsync_NestedRecord_RendersItsMembers()
     {
-        var html = await CreateRenderer().RenderAsync(
-            "{{ site.name }}|{{ brand.primary }}|{{ brand.primary_dark }}|{{ brand.on_primary }}|{{ brand.accent }}|{{ brand.logo_url }}|{{ reset_link }}",
-            new { reset_link = "L" });
+        var model = new RenewalReminderTemplateModel(
+            new RenewalInvoiceTemplateData(42, 19.90m, "USD", "2026-11-01", "https://x/client/invoices/42"));
 
-        Assert.Equal("Acme Hosting|#1a73e8|#154485|#ffffff|#e8710a|https://acme.test/uploads/branding/logodark/x/logo.png|L", html);
+        var text = await CreateRenderer().RenderTextAsync(
+            "#{{ invoice.id }} {{ invoice.total }} {{ invoice.currency }} {{ invoice.due_date }} {{ invoice.url }}",
+            model,
+            CancellationToken.None);
+
+        Assert.Equal("#42 19.90 USD 2026-11-01 https://x/client/invoices/42", text);
+    }
+
+    /// <summary>Every field of the brand and the site name are available beside the model.</summary>
+    [Fact]
+    public async Task RenderTextAsync_ExposesBrandAndSiteBesideTheModel()
+    {
+        var text = await CreateRenderer().RenderTextAsync(
+            "{{ site.name }}|{{ brand.primary }}|{{ brand.primary_dark }}|{{ brand.on_primary }}|{{ brand.accent }}|{{ brand.logo_url }}|{{ reset_link }}",
+            new PasswordResetTemplateModel("L"),
+            CancellationToken.None);
+
+        Assert.Equal("Acme Hosting|#1a73e8|#154485|#ffffff|#e8710a|https://acme.test/uploads/branding/logodark/x/logo.png|L", text);
     }
 
     /// <summary>A logo-or-site-name branch in a seeded layout template follows whichever brand is injected.</summary>
     [Fact]
-    public async Task RenderAsync_LogoBranchInTheSeededLayout_FollowsTheBrand()
+    public async Task RenderHtmlAsync_LogoBranchInTheSeededLayout_FollowsTheBrand()
     {
         const string template = "{% if brand.logo_url != \"\" %}<img src=\"{{ brand.logo_url }}\">{% else %}<span>{{ site.name }}</span>{% endif %}";
+        var model = new PasswordResetTemplateModel("L");
 
-        var withLogo = await CreateRenderer().RenderAsync(template, new { });
-        var without = await CreateRenderer(Acme with { LogoUrl = "" }).RenderAsync(template, new { });
+        var withLogo = await CreateRenderer().RenderHtmlAsync(template, model, CancellationToken.None);
+        var without = await CreateRenderer(Acme with { LogoUrl = "" }).RenderHtmlAsync(template, model, CancellationToken.None);
 
         Assert.Contains("<img src=\"https://acme.test", withLogo);
         Assert.Equal("<span>Acme Hosting</span>", without);
     }
 
-    /// <summary>A model member named <c>brand</c> wins over the injected brand object.</summary>
+    /// <summary>A body encodes a hostile ticket subject, so no link or script reaches the mail as markup.</summary>
     [Fact]
-    public async Task RenderAsync_CallerOwnBrandMember_WinsOverTheInjectedOne()
+    public async Task RenderHtmlAsync_HostileTicketSubject_IsEncoded()
     {
-        var html = await CreateRenderer().RenderAsync(
-            "{{ brand }}|{{ site.name }}",
-            new { brand = "caller's brand" });
+        var model = new TicketClosedTemplateModel(new TicketTemplateData(7, HostileSubject));
 
-        Assert.Equal("caller's brand|Acme Hosting", html);
+        var html = await CreateRenderer().RenderHtmlAsync("<p>{{ ticket.subject }}</p>", model, CancellationToken.None);
+
+        Assert.Equal(
+            "<p>&lt;a href=&quot;https://phish.example&quot;&gt;Verify&lt;/a&gt;&lt;script&gt;steal()&lt;/script&gt;</p>",
+            html);
     }
 
-    /// <summary>A dictionary model's own <c>site</c> key wins over the injected site object.</summary>
+    /// <summary>A body keeps Russian and Armenian text readable while still encoding the markup characters.</summary>
     [Fact]
-    public async Task RenderAsync_DictionaryModel_KeepsItsOwnSiteKey()
+    public async Task RenderHtmlAsync_CyrillicAndArmenianText_StaysReadableWhileMarkupIsEncoded()
     {
-        var model = new Dictionary<string, object> { ["site"] = "caller's site", ["x"] = 1 };
+        var model = new TicketClosedTemplateModel(new TicketTemplateData(7, "Привет, Բարև <b> & \"q\""));
 
-        var html = await CreateRenderer().RenderAsync("{{ site }}|{{ brand.primary }}", model);
+        var html = await CreateRenderer().RenderHtmlAsync("<p>{{ ticket.subject }}</p>", model, CancellationToken.None);
 
-        Assert.Equal("caller's site|#1a73e8", html);
+        Assert.Equal("<p>Привет, Բարև &lt;b&gt; &amp; &quot;q&quot;</p>", html);
     }
 
-    /// <summary>A differently-cased key in the model does not suppress the injected object.</summary>
+    /// <summary>A subject is a plain-text header, so the same value prints as it is, not as entities.</summary>
     [Fact]
-    public async Task RenderAsync_DifferentlyCasedKey_DoesNotSuppressTheInjectedObject()
+    public async Task RenderTextAsync_HostileTicketSubject_PrintsAsTyped()
     {
-        // Fluid resolves names exactly, so "Site" is not {{ site }} and the brand's site must
-        // still be there.
-        var model = new Dictionary<string, object> { ["Site"] = "caller's site" };
+        var model = new TicketRepliedTemplateModel(new TicketTemplateData(7, HostileSubject));
 
-        var html = await CreateRenderer().RenderAsync("{{ site.name }}", model);
+        var text = await CreateRenderer().RenderTextAsync("#{{ ticket.id }}: {{ ticket.subject }}", model, CancellationToken.None);
 
-        Assert.Equal("Acme Hosting", html);
+        Assert.Equal($"#7: {HostileSubject}", text);
+    }
+
+    /// <summary>
+    /// <c>brand</c> and <c>site</c> belong to the renderer: no template model declares a member that
+    /// would read as either, at any depth a template can reach.
+    /// </summary>
+    [Fact]
+    public void TemplateModels_DoNotDeclareTheReservedNames()
+    {
+        var reserved = new[] { "Brand", "Site" };
+        var offenders = typeof(EmailTemplateModel).Assembly.GetTypes()
+            .Where(t => t.Namespace == typeof(EmailTemplateModel).Namespace)
+            .SelectMany(t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            .Where(p => reserved.Contains(p.Name))
+            .Select(p => $"{p.DeclaringType!.Name}.{p.Name}")
+            .ToList();
+
+        Assert.Empty(offenders);
     }
 
     /// <summary>A template the parser cannot read throws rather than rendering partial output.</summary>
     [Fact]
-    public async Task RenderAsync_ParseError_Throws()
+    public async Task RenderHtmlAsync_ParseError_Throws()
     {
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            CreateRenderer().RenderAsync("{{ unclosed", new { }));
+            CreateRenderer().RenderHtmlAsync("{{ unclosed", new PasswordResetTemplateModel("L"), CancellationToken.None));
     }
 }

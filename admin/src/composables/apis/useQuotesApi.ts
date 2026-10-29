@@ -7,7 +7,7 @@
  */
 
 import { buildQuery, useApi } from '@/composables/useApi'
-import type { PagedResult } from '@/types/pagedresult'
+import type { PaginatedList } from '@/types/paginatedlist'
 import type { CreateQuotePayload, Quote, QuoteListItem, UpdateQuotePayload } from '@/types/quote'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
@@ -27,8 +27,8 @@ export const useQuotesApi = () => {
    * @param pageSize - Items per page.
    * @returns One page of quotes.
    */
-  const list = (page: number, pageSize: number): Promise<PagedResult<QuoteListItem>> =>
-    request<PagedResult<QuoteListItem>>(`${ApiPath.BillingQuotes}${buildQuery({ page, pageSize })}`)
+  const list = (page: number, pageSize: number): Promise<PaginatedList<QuoteListItem>> =>
+    request<PaginatedList<QuoteListItem>>(`${ApiPath.BillingQuotes}${buildQuery({ page, pageSize })}`)
 
   /**
    * Lists the quotes of one client.
@@ -38,8 +38,8 @@ export const useQuotesApi = () => {
    * @param pageSize - Items per page.
    * @returns One page of quotes.
    */
-  const listByClient = (clientId: number | string, page: number, pageSize: number): Promise<PagedResult<QuoteListItem>> =>
-    request<PagedResult<QuoteListItem>>(`${ApiPath.BillingQuotes}/client/${clientId}${buildQuery({ page, pageSize })}`)
+  const listByClient = (clientId: number | string, page: number, pageSize: number): Promise<PaginatedList<QuoteListItem>> =>
+    request<PaginatedList<QuoteListItem>>(`${ApiPath.BillingQuotes}/client/${clientId}${buildQuery({ page, pageSize })}`)
 
   /**
    * Loads one quote with its lines.

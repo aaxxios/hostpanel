@@ -2,8 +2,9 @@
 /**
  * Stand-in shown in place of a screen whose code is still downloading.
  *
- * The router switches to the screen at once; this keeps the content area from sitting on the old
- * page, or on nothing, until the chunk arrives. The screen's own skeleton takes over from it.
+ * `RoutedView` shows it as soon as a navigation passes the guards, so a click is answered at once
+ * instead of the content area sitting on the old page until the chunk arrives. The screen's own
+ * skeleton takes over from it.
  */
 import { useI18n } from 'vue-i18n'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'

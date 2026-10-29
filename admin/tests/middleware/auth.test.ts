@@ -1,6 +1,6 @@
 /**
- * Tests for the navigation guard: the session state is asked of the server once, an anonymous
- * visitor is sent to the sign-in page, a signed-in one is kept off it, and the first-run screen is
+ * Tests for the navigation guard: the session state is asked of the server once, signed in or
+ * signed out, an anonymous visitor is sent to the sign-in page, a signed-in one is kept off it, and the first-run screen is
  * reachable only while setup is outstanding on a deployment that owns its accounts.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -34,7 +34,7 @@ const route = (
 const stubSession = (options: { mode: 'local' | 'sso'; setup: boolean; signedIn: boolean }) =>
   stubRoutes({
     'GET /api/auth/mode': () => json({ mode: options.mode }),
-    'GET /api/auth/setup-required': () => json({ required: options.setup, tokenRequired: false }),
+    'GET /api/auth/setup-required': () => json({ required: options.setup }),
     'GET /api/auth/me': () =>
       options.signedIn
         ? json({ email: 'a@b.c', roles: ['Admin'], emailVerified: true })
@@ -46,6 +46,7 @@ beforeEach(() => {
   const auth = useAuthStore(pinia)
   auth.mode = null
   auth.user = null
+  auth.sessionChecked = false
   auth.setupRequired = false
 })
 
@@ -142,7 +143,7 @@ describe('authMiddleware', () => {
         return json({ mode: 'local' })
       }
       if (url.endsWith('/api/auth/setup-required')) {
-        return json({ required: false, tokenRequired: false })
+        return json({ required: false })
       }
       return json({ email: 'a@b.c', roles: ['Admin'], emailVerified: true })
     }
@@ -161,6 +162,17 @@ describe('authMiddleware', () => {
     release.forEach((answer) => answer())
 
     expect(await navigation).toBe(true)
+  })
+
+  it('asks a signed-out visitor for the session only once per page load', async () => {
+    const mock = stubSession({ mode: 'local', setup: false, signedIn: false })
+
+    await authMiddleware(route({ public: true }, '/login'))
+    await authMiddleware(route({ requiresAuth: true }, '/dashboard'))
+    await authMiddleware(route({ public: true }, '/login'))
+
+    const meCalls = mock.mock.calls.filter(([url]) => String(url).endsWith('/api/auth/me'))
+    expect(meCalls).toHaveLength(1)
   })
 
   it('makes no request at all once the session state is known', async () => {

@@ -11,7 +11,7 @@ generates. Nothing in it is specific to one hosting company, network or server.
 |---|---|---|
 | `cwp` (CentOS Web Panel) | Supported; adapter, unit tests and isolated lab tests | Account must exist in CWP (`root_cwp.user`, via `providers/cwp/account-check`); suspended (`usermod -L`) accounts cannot receive keys. |
 | `generic-linux` | Agent profile; lab-tested. **Not selectable in HostPanel yet** — HostPanel has no server module for a plain Linux host. | passwd identity checks and the suspension lock only. |
-| cPanel/WHM, DirectAdmin | **Not supported.** Extension point only. | A provider is a profile in `profiles/<name>.conf` plus, if it needs one, a root-owned helper in `providers/<name>/` that answers `account_check_command`; HostPanel maps the server module to the profile in `SshKeyProviderFactory.AgentProfileFor`. Neither exists for these panels. |
+| Other hosting panels | **Not supported.** Extension point only. | A provider is a profile in `profiles/<name>.conf` plus, if it needs one, a root-owned helper in `providers/<name>/` that answers `account_check_command`; HostPanel maps the server module to the profile in `SshKeyProviderFactory.AgentProfileFor`. None exists for them yet. |
 
 HostPanel only offers SSH key management on servers whose module maps to a profile (today: the
 v7 hosting panel module → `cwp`). Every other server answers "not available for this type of
@@ -26,7 +26,7 @@ hosting" to customers.
    server. It downloads the agent bundle from your HostPanel, **stops unless the SHA256 matches the
    value shown in the authenticated admin panel**, unpacks to a fresh temporary directory and runs
    `install.sh --provider <profile> --binding <id> "<public key>"`. The installer prints the
-   server's host key fingerprints. Paste it into an SSH session: CWP's browser Terminal drops `$`
+   server's host key fingerprints. Paste it into an SSH session: a hosting panel's browser terminal drops `$`
    variables and repeats input, which breaks the command.
 3. **Host key.** *Read host key*: HostPanel shows the key the agent endpoint presents (without
    authenticating). Compare it with what the installer printed; if identical, *Use this
@@ -121,6 +121,49 @@ additive; older HostPanels ignore them and older agents simply omit them.
 | `check_shadow_lock` | A locked password (`usermod -L`) makes the account `account_suspended`. `!!`/`*` alone is not a lock. |
 | `ssh_group` | Only members may receive keys — set it when only one group may log in over SSH (e.g. a jailed-shell group). |
 | `eligible_list` | Root-owned, not group/world-writable file, one account per line: an SSH opt-in list. |
+
+## Jailed SSH enrolment (`jail_enrol`, agent 1.2.0+)
+
+Off by default. With `jail_enrol = true` a customer gets SSH by adding their first key in
+HostPanel; nobody runs anything on the server by hand. It assumes the customer sshd chroots
+`jail_group` into `jail_root/%u` (for example `Match Group sftp-ssh` with
+`ChrootDirectory /home/jail/%u`) and that jailkit is installed.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `jail_enrol` | `false` | Enrol on the first key, withdraw on the last. |
+| `jail_root` | `/home/jail` | Parent of every jail; root-owned. |
+| `jail_group` | `sftp-ssh` | Group the customer sshd chroots. Leave `ssh_group` empty when this is on. |
+| `jail_sections` | `basicshell,editors,extendedshell,netutils,terminfo` | `jk_init` sections copied into a new jail. |
+| `jail_shell` | `/bin/bash` | Login shell set on enrolment. |
+| `jail_extras` | `/usr/bin/uname,/usr/bin/id,/usr/bin/hostname,/usr/bin/dircolors,/usr/bin/rsync,/usr/bin/tar,/usr/bin/gzip,/usr/bin/unzip,/etc/bashrc,/etc/profile.d/colorls.sh,/etc/DIR_COLORS` | Paths copied into the jail with `jk_cp -f` on every enrolment (binaries bring their libraries); missing ones are skipped. A bare jailkit tree lacks `uname`, which a login profile script calls, and `/etc/profile.d/colorls.sh` (with `dircolors`), where `ll` is defined; `rsync`, `tar`, `gzip` and `unzip` let a CI job deploy a site over SSH. |
+| `systemd_unit_dir` | `/etc/systemd/system` | Where the home bind-mount unit is written. |
+
+While it is on, an account that passes every other check reports `shell_enabled: true` even
+before it is jailed, because adding a key is what gives it SSH. Suspended and denied accounts
+are never enrolled.
+
+**On `add`, before the key is written** (each step skipped when already done; any failure
+refuses the add with `internal_error` and writes no key):
+
+1. `jk_init -f -j <jail_root>/<user> <jail_sections>` when the jail has no `etc/`.
+2. The user is appended to the jail's own `etc/passwd` and `etc/group`.
+3. `<jail>/home/<user>` is created and the real home is bind-mounted onto it by a persistent
+   unit (`systemd-escape -p --suffix=mount`, `What=/home/<user>`, `Options=bind`), then
+   `systemctl enable --now`. Customer files are never moved or copied.
+4. `usermod -aG <jail_group> <user>`, and `usermod -s <jail_shell> <user>` if the shell was a
+   disabled one.
+
+**On `revoke` of the last managed key**, when the account is in `jail_group` and has no
+hand-installed keys either: `gpasswd -d <user> <jail_group>`, and `usermod -s /sbin/nologin` if
+the shell is still `jail_shell`. The jail and its mount stay, so the next key re-enables SSH at
+once. Both events are written to the audit log (`jail_enrol`, `jail_withdraw`).
+
+To remove a jail entirely: `systemctl disable --now <unit>`, delete the unit file and
+`systemctl daemon-reload`. **Before deleting anything**, check that `findmnt -R <jail_root>/<user>`
+prints nothing: while the bind mount is active, `<jail_root>/<user>/home/<user>` *is* the
+customer's website, and `rm -rf` on the jail would delete it. Only when nothing is mounted, remove
+the jail with `rm -rf --one-file-system <jail_root>/<user>`.
 
 ## Lifecycle
 

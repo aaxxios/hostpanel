@@ -49,7 +49,7 @@ const columns = computed<ReportColumn[]>(() => [
 </script>
 
 <template>
-  <ReportPage
+  <ReportPage :retry="load"
     :title="t('reports.ticketFeedbackComments.ticketFeedbackComments')"
     :description="t('reports.ticketFeedbackComments.thisReportAllowsYouTo')"
   >

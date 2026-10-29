@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { translate } from '@/lib/translate'
 import { useOrdersStore } from '@/stores/orders'
+import { OrderStatus } from '@/types/order'
 import { json, problem, stubFetch, stubOffline, callOf } from '../helpers/fetch'
 
 describe('ordersStore', () => {
@@ -23,7 +24,7 @@ describe('ordersStore', () => {
   it('fetchAll sends the status filter and fills the list', async () => {
     const mock = stubFetch(json({ items: [{ id: 1 }], totalCount: 1 }))
     const store = useOrdersStore()
-    store.statusFilter = 'Pending'
+    store.statusFilter = OrderStatus.Pending
 
     expect(await store.fetchAll()).toBe(true)
     expect(callOf(mock).url).toBe('/api/orders?page=1&pageSize=20&status=Pending')
@@ -56,9 +57,10 @@ describe('ordersStore', () => {
 
   it('acceptOrder and cancelOrder refresh the order detail on success', async () => {
     const store = useOrdersStore()
-    const mock = stubFetch(json({}), json({ id: 8, status: 'Active' }))
+    const mock = stubFetch(json({ failedLines: [] }), json({ id: 8, status: 'Active' }))
 
     expect(await store.acceptOrder(8)).toBe(true)
+    expect(store.acceptFailures).toEqual([])
     expect(callOf(mock, 0)).toMatchObject({ url: '/api/orders/8/accept', method: 'POST' })
     expect(callOf(mock, 1).url).toBe('/api/orders/8')
     expect(store.currentOrder).toEqual({ id: 8, status: 'Active' })
@@ -67,6 +69,19 @@ describe('ordersStore', () => {
     expect(await store.cancelOrder(8)).toBe(true)
     expect(callOf(cancel, 0)).toMatchObject({ url: '/api/orders/8/cancel', method: 'POST' })
     expect(store.currentOrder).toEqual({ id: 8, status: 'Cancelled' })
+  })
+
+  it('acceptOrder keeps the lines it could not fulfil and names them', async () => {
+    const store = useOrdersStore()
+    const failedLines = [
+      { itemId: 1, kind: 'Domain', productName: 'Domain', domain: 'taken.example', firstPaymentAmount: 10, errorCode: null, reason: 'Taken.' },
+      { itemId: 2, kind: 'Service', productName: 'Starter Hosting', domain: null, firstPaymentAmount: 5, errorCode: 'PRODUCT_NOT_FOUND', reason: 'Gone.' },
+    ]
+    stubFetch(json({ failedLines }), json({ id: 8, status: 'Active' }))
+
+    expect(await store.acceptOrder(8)).toBe(true)
+    expect(store.acceptFailures).toEqual(failedLines)
+    expect(store.acceptFailureNames).toBe('taken.example, Starter Hosting')
   })
 
   it('a refused command returns false, sets actionError and does not refresh', async () => {

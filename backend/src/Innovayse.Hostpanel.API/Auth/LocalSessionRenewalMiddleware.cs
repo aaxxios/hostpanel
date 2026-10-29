@@ -1,5 +1,5 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Shared.Constants;
+using Innovayse.Hostpanel.Shared.Infrastructure;
 
 namespace Innovayse.Hostpanel.API.Auth;
 
@@ -15,7 +15,12 @@ namespace Innovayse.Hostpanel.API.Auth;
 /// <see cref="IJwtService.RenewAccessToken"/>.
 /// </para>
 /// <para>
-/// Registered only in <c>Program.cs</c>'s local branch, after authentication. SSO is untouched.
+/// Registered only in <c>Program.cs</c>'s local branch, after authentication. External sign-on is untouched.
+/// Running after authentication is what keeps a revoked session from being extended: a token whose
+/// session version is no longer the account's own is refused by
+/// <see cref="LocalSessionVersionValidator"/>, the request is then not authenticated, and nothing
+/// here renews it. The presented token is read the same way authentication reads it (the header
+/// first, the cookie otherwise), so the token renewed is always the one that was just checked.
 /// </para>
 /// </remarks>
 public sealed class LocalSessionRenewalMiddleware
@@ -25,9 +30,6 @@ public sealed class LocalSessionRenewalMiddleware
 
     /// <summary>Path of the sign-out action; a renewal must never undo the cookie it clears.</summary>
     private const string LogoutPath = "/api/auth/logout";
-
-    /// <summary>Scheme prefix of an <c>Authorization</c> header.</summary>
-    private const string BearerPrefix = BearerScheme.HeaderPrefix;
 
     /// <summary>The next middleware in the pipeline.</summary>
     private readonly RequestDelegate _next;
@@ -48,10 +50,9 @@ public sealed class LocalSessionRenewalMiddleware
         if (context.User.Identity?.IsAuthenticated == true
             && !context.Request.Path.StartsWithSegments(LogoutPath, StringComparison.OrdinalIgnoreCase))
         {
-            var header = context.Request.Headers.Authorization.FirstOrDefault();
-            var fromHeader = header?.StartsWith(BearerPrefix, StringComparison.OrdinalIgnoreCase) == true;
-            string? presented = fromHeader
-                ? header![BearerPrefix.Length..]
+            var fromHeader = BearerHeader.TryRead(context.Request, out var bearerToken);
+            var presented = fromHeader
+                ? bearerToken
                 : context.Request.Cookies[LocalSessionCookie.Name];
 
             var renewed = string.IsNullOrEmpty(presented) ? null : tokens.RenewAccessToken(presented);

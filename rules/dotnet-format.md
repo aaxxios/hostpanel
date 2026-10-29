@@ -1,4 +1,4 @@
-# dotnet format Rules — Innovayse Backend
+# dotnet format rules for the HostPanel backend
 
 ## Setup
 
@@ -10,7 +10,7 @@ dotnet format
 dotnet format --verify-no-changes
 
 # Format specific project
-dotnet format src/Innovayse.API/Innovayse.API.csproj
+dotnet format src/Innovayse.Hostpanel.API/Innovayse.Hostpanel.API.csproj
 ```
 
 ## .editorconfig

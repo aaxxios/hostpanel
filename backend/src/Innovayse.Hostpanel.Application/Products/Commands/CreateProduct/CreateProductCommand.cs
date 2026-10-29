@@ -1,7 +1,7 @@
 using Innovayse.Hostpanel.Application.Products.Common;
 using Innovayse.Hostpanel.Domain.Products;
-
 using Innovayse.Hostpanel.Domain.Products.Enums;
+
 namespace Innovayse.Hostpanel.Application.Products.Commands.CreateProduct;
 
 /// <summary>Command to create a new product in a product group.</summary>

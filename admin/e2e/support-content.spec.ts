@@ -19,7 +19,7 @@ test('publishing an announcement posts it and returns to the list', async ({ pag
       {
         method: HttpMethod.Get,
         path: '/api/announcements',
-        respond: () => ({ body: { items: stored, totalCount: stored.length, page: 1, pageSize: 20 } }),
+        respond: () => ({ body: { items: stored, pageNumber: 1, pageSize: 20, totalCount: stored.length, totalPages: Math.ceil(stored.length / 20) } }),
       },
       {
         method: HttpMethod.Post,

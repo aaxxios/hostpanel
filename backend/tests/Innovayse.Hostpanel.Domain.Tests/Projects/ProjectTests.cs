@@ -1,5 +1,4 @@
 using Innovayse.Hostpanel.Domain.Projects;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Projects;
 
@@ -10,12 +9,10 @@ public sealed class ProjectTests
     /// <returns>A new, active project.</returns>
     private static Project NewEntity() => Project.Create(slug: "acme-site", url: "https://acme.example", imageUrls: new[] { "/a.png", "/b.png" }, sortOrder: 2, isActive: true);
 
-    /// <summary>Create stores every field, starts with no translations and stamps the creation time.</summary>
+    /// <summary>Create stores every field and starts with no translations.</summary>
     [Fact]
     public void Create_StoresFields_AndStartsWithoutTranslations()
     {
-        var before = DateTimeOffset.UtcNow;
-
         var entity = NewEntity();
 
         Assert.Equal("acme-site", entity.Slug);
@@ -24,15 +21,13 @@ public sealed class ProjectTests
         Assert.Equal(2, entity.SortOrder);
         Assert.True(entity.IsActive);
         Assert.Empty(entity.Translations);
-        Assert.True(entity.CreatedAt >= before);
     }
 
-    /// <summary>Update replaces every non-translation field and keeps the creation time.</summary>
+    /// <summary>Update replaces every non-translation field.</summary>
     [Fact]
     public void Update_ReplacesEveryField()
     {
         var entity = NewEntity();
-        var created = entity.CreatedAt;
 
         entity.Update(slug: "acme-portal", url: null, imageUrls: new[] { "/c.png" }, sortOrder: 7, isActive: false);
 
@@ -41,7 +36,6 @@ public sealed class ProjectTests
         Assert.Equal(new[] { "/c.png" }, entity.ImageUrls);
         Assert.Equal(7, entity.SortOrder);
         Assert.False(entity.IsActive);
-        Assert.Equal(created, entity.CreatedAt);
     }
 
     /// <summary>Deactivate hides the project and Activate shows it again.</summary>
@@ -164,5 +158,26 @@ public sealed class ProjectTests
 
         Assert.Equal(ProjectErrors.SlugRequired, ex.Code);
         Assert.Equal("acme-site", entity.Slug);
+    }
+
+    /// <summary>
+    /// ReplaceTranslations leaves exactly the given locales: a locale it does not name is removed, a
+    /// kept one is updated in place and a new one is added.
+    /// </summary>
+    [Fact]
+    public void ReplaceTranslations_RemovesUnlisted_UpdatesKept_AddsNew()
+    {
+        var entity = NewEntity();
+        entity.SetTranslation("en", title: "Acme", summary: "Short", description: null);
+        entity.SetTranslation("ru", title: "Acme Ru", summary: null, description: null);
+
+        entity.ReplaceTranslations(new Dictionary<string, ProjectTranslationContent>
+        {
+            ["en"] = new ProjectTranslationContent("Acme Portal", null, "Long"),
+            ["hy"] = new ProjectTranslationContent("Acme Hy", null, null),
+        });
+
+        Assert.Equal(["en", "hy"], entity.Translations.Select(t => t.Locale).Order());
+        Assert.Equal("Acme Portal", entity.Translations.Single(t => t.Locale == "en").Title);
     }
 }

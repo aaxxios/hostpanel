@@ -1,10 +1,7 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.Infrastructure.Auth.Settings;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 
@@ -136,5 +133,23 @@ public sealed class TwoFactorCodeGuardTests
         clock.Advance(TimeSpan.FromMinutes(14));
 
         guard.TryBeginAttempt("a").Should().BeFalse();
+    }
+
+    /// <summary>The failure count and the replay memory survive a cache compaction under memory pressure.</summary>
+    [Fact]
+    public void Counters_SurviveCacheCompaction()
+    {
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var guard = new TwoFactorCodeGuard(
+            cache,
+            Options.Create(new TwoFactorCodeGuardOptions { MaxFailures = 1, WindowMinutes = 15 }),
+            Clock());
+        guard.TryBeginAttempt("a").Should().BeTrue();
+        guard.TryAcceptTimeStep("a", 100).Should().BeTrue();
+
+        cache.Compact(1.0);
+
+        guard.TryBeginAttempt("a").Should().BeFalse();
+        guard.TryAcceptTimeStep("a", 100).Should().BeFalse();
     }
 }

@@ -1,18 +1,20 @@
 <script setup lang="ts">
 /**
  * Billing invoices list: every client's invoices, filtered by status and invoice date, with
- * paging, bulk actions on the ticked rows and a confirmed delete.
+ * paging, bulk actions on the ticked rows and a confirmed delete. Deleting and cancelling are
+ * confirmed first; every action reports its outcome (success, or the API's sentence) above the
+ * table, and a refused load shows the sentence with a Retry.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiCheckbox from '@/components/ui/UiCheckbox.vue'
 import UiDateRangePicker from '@/components/ui/UiDateRangePicker.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiFilterCard from '@/components/ui/UiFilterCard.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
@@ -23,6 +25,7 @@ import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -40,13 +43,9 @@ import { pageFirstRow, pageLastRow } from '@/lib/paging'
 import { InvoiceBulkAction, InvoiceStatus } from '@/types/invoice'
 import { LEDGER_PAGE_SIZE } from '@/lib/limits'
 import { invoiceEditPath, invoiceViewPath } from '@/lib/routes'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
-
-
-/** Fallback text for fields the API leaves unresolved. */
-
-const { clientLabel } = useFallbackLabels()
 
 const store = useBillingStore()
 
@@ -71,8 +70,23 @@ const appliedRange = ref<[string, string] | null>(null)
 /** Invoice waiting for the delete confirmation, null when none. */
 const pendingDeleteId = ref<number | null>(null)
 
-/** True while the bulk-delete confirmation is open. */
-const bulkDeleteOpen = ref(false)
+/** The destructive bulk action (delete or cancel) waiting for confirmation, null when none. */
+const pendingBulk = ref<InvoiceBulkAction | null>(null)
+
+/** True while a bulk action or a delete is in flight. */
+const processing = ref(false)
+
+/** The sentence of the last refused list load, shown with Retry; null when the list loaded. */
+const loadError = ref<string | null>(null)
+
+/** The outcome line of the last action. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/** True when the pending bulk action is the delete (otherwise it is the cancel). */
+const pendingBulkIsDelete = computed<boolean>(() => pendingBulk.value === InvoiceBulkAction.Delete)
 
 /** Options of the status filter: the shared lifecycle statuses plus the two collection states. */
 const statusOptions = computed(() => [
@@ -106,6 +120,27 @@ const load = async (next: number): Promise<void> => {
     appliedRange.value?.[0] ?? '',
     appliedRange.value?.[1] ?? '',
   )
+  loadError.value = store.error
+}
+
+/**
+ * Runs one invoice command, shows its outcome and reloads the page on success.
+ *
+ * @param command - The store call to run.
+ * @param successKey - Locale key of the success sentence.
+ * @returns Resolves when the request (and the reload) has settled.
+ */
+const runCommand = async (command: () => Promise<boolean>, successKey: string): Promise<void> => {
+  feedback.clear()
+  processing.value = true
+  const ok = await command()
+  processing.value = false
+  if (ok) {
+    feedback.show(t(successKey), false)
+    await load(page.value)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
 }
 
 /**
@@ -147,27 +182,53 @@ const toggleAll = (): void => {
 }
 
 /**
- * Applies a bulk action to the ticked invoices, then reloads the page.
+ * Applies a bulk action to the ticked invoices, shows the outcome and reloads the page.
  *
  * @param action - What to do with them.
+ * @returns Resolves when the request (and the reload) has settled.
  */
-const runBulk = async (action: InvoiceBulkAction): Promise<void> => {
-  const ok = await store.bulkAction(store.selectedIds, action)
-  bulkDeleteOpen.value = false
-  if (ok) {
-    await load(page.value)
+const runBulk = (action: InvoiceBulkAction): Promise<void> =>
+  runCommand(() => store.bulkAction(store.selectedIds, action), 'billing.invoicesList.bulkActionDone')
+
+/**
+ * Runs the confirmed destructive bulk action and closes the prompt.
+ *
+ * @returns Resolves when the request (and the reload) has settled.
+ */
+const confirmBulk = async (): Promise<void> => {
+  const action = pendingBulk.value
+  if (action === null) {
+    return
+  }
+  await runBulk(action)
+  pendingBulk.value = null
+}
+
+/** Closes the bulk confirmation; ignored while the action runs. */
+const dismissBulk = (): void => {
+  if (!processing.value) {
+    pendingBulk.value = null
   }
 }
 
-/** Deletes the invoice that waits for confirmation, then reloads the page. */
+/**
+ * Deletes the invoice that waits for confirmation, shows the outcome and reloads the page.
+ *
+ * @returns Resolves when the request (and the reload) has settled.
+ */
 const confirmDelete = async (): Promise<void> => {
   const id = pendingDeleteId.value
-  pendingDeleteId.value = null
   if (id === null) {
     return
   }
-  if (await store.deleteInvoice(id)) {
-    await load(page.value)
+  await runCommand(() => store.deleteInvoice(id), 'billing.invoicesList.invoiceDeleted')
+  pendingDeleteId.value = null
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!processing.value) {
+    pendingDeleteId.value = null
   }
 }
 
@@ -211,9 +272,15 @@ onMounted(() => load(1))
       </template>
     </UiFilterCard>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="billing-invoices-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="billing-invoices-feedback" />
+
+    <UiErrorState
+      v-if="loadError !== null"
+      :message="loadError"
+      :loading="store.loading"
+      testid="billing-invoices-error"
+      @retry="load(page)"
+    />
 
     <UiText v-if="store.invoices.length > 0" tone="secondary" size="md" data-testid="billing-invoices-count">
       {{ t('billing.invoicesList.totalcountRecordsFoundShowingValue', { totalCount: store.totalCount, value: firstShown, value2: lastShown }) }}
@@ -228,13 +295,13 @@ onMounted(() => load(1))
         <UiButton variant="secondary" size="sm" data-testid="billing-invoices-bulk-unpaid" @click="runBulk(InvoiceBulkAction.MarkUnpaid)">
           {{ t('billing.invoicesList.markUnpaid') }}
         </UiButton>
-        <UiButton variant="secondary" size="sm" data-testid="billing-invoices-bulk-cancelled" @click="runBulk(InvoiceBulkAction.MarkCancelled)">
+        <UiButton variant="secondary" size="sm" data-testid="billing-invoices-bulk-cancelled" @click="pendingBulk = InvoiceBulkAction.MarkCancelled">
           {{ t('shared.markCancelled') }}
         </UiButton>
         <UiButton variant="secondary" size="sm" data-testid="billing-invoices-bulk-duplicate" @click="runBulk(InvoiceBulkAction.Duplicate)">
           {{ t('billing.invoicesList.duplicateInvoice') }}
         </UiButton>
-        <UiButton variant="danger" size="sm" data-testid="billing-invoices-bulk-delete" @click="bulkDeleteOpen = true">
+        <UiButton variant="danger" size="sm" data-testid="billing-invoices-bulk-delete" @click="pendingBulk = InvoiceBulkAction.Delete">
           {{ t('shared.delete') }}
         </UiButton>
       </UiStack>
@@ -278,7 +345,7 @@ onMounted(() => load(1))
               />
             </UiTableCell>
             <UiTableCell muted>#{{ invoice.id }}</UiTableCell>
-            <UiTableCell>{{ clientLabel(invoice.clientName, invoice.clientId) }}</UiTableCell>
+            <UiTableCell>{{ invoice.clientName }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(invoice.createdAt) }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(invoice.dueDate) }}</UiTableCell>
             <UiTableCell>{{ formatPlainAmount(invoice.total, invoice.currency) }}</UiTableCell>
@@ -339,23 +406,25 @@ onMounted(() => load(1))
       :message="t('billing.invoicesList.deleteInvoiceMessage', { id: pendingDeleteId ?? 0 })"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
-      :loading="store.loading"
+      :loading="processing"
       tone="danger"
       @confirm="confirmDelete"
-      @close="pendingDeleteId = null"
+      @close="dismissDelete"
     />
 
     <UiDialog
       variant="confirm"
-      :open="bulkDeleteOpen"
-      :title="t('billing.invoicesList.deleteInvoices')"
-      :message="t('billing.invoicesList.deleteInvoicesMessage', { count: store.selectedIds.length }, store.selectedIds.length)"
-      :confirm-label="t('shared.delete')"
-      :loading-label="t('shared.deleting')"
-      :loading="store.loading"
+      :open="pendingBulk !== null"
+      :title="pendingBulkIsDelete ? t('billing.invoicesList.deleteInvoices') : t('billing.invoicesList.cancelInvoices')"
+      :message="pendingBulkIsDelete
+        ? t('billing.invoicesList.deleteInvoicesMessage', { count: store.selectedIds.length }, store.selectedIds.length)
+        : t('billing.invoicesList.cancelInvoicesMessage', { count: store.selectedIds.length }, store.selectedIds.length)"
+      :confirm-label="pendingBulkIsDelete ? t('shared.delete') : t('shared.markCancelled')"
+      :loading="processing"
       tone="danger"
-      @confirm="runBulk(InvoiceBulkAction.Delete)"
-      @close="bulkDeleteOpen = false"
+      data-testid="billing-invoices-bulk-confirm"
+      @confirm="confirmBulk"
+      @close="dismissBulk"
     />
   </UiStack>
 </template>

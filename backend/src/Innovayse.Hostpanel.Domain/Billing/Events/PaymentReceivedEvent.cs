@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Billing.Events;
+
 /// <summary>Raised when a payment is successfully recorded on an invoice.</summary>
 /// <param name="InvoiceId">The paid invoice ID.</param>
 /// <param name="ClientId">The client who paid.</param>
@@ -10,7 +11,7 @@ namespace Innovayse.Hostpanel.Domain.Billing.Events;
 public record PaymentReceivedEvent(int InvoiceId, int ClientId, decimal Amount, string TransactionId) : IDomainEvent
 {
     /// <summary>
-    /// When the change was made, UTC. Stamped at construction; nothing reads a clock in this domain yet.
+    /// When the change was made, UTC, given by whoever raised the event.
     /// </summary>
-    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+    public required DateTimeOffset OccurredAt { get; init; }
 }

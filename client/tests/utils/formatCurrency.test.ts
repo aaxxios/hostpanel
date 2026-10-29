@@ -1,19 +1,14 @@
 /**
  * Tests for rendering a money amount without inventing the currency it is in.
  *
- * The anchor case was the production one: `/client/services/16` showed `24000` and the dashboard
- * showed `20000`, because `server/api/portal/client/me.get.ts` hardcoded `currency: undefined,
- * currencyprefix: '', currencysuffix: ''` in both of its branches and threw away the ISO 4217
- * code `ClientDto.Currency` had been sending all along.
- *
- * That BFF literal is now fixed and the code reaches this file as `store.user.currency`, so the
- * symbol-bearing path below is the one a configured account takes. The empty-currency path is
- * kept as a first-class case rather than demoted to an edge case: an account with no currency
- * set is still a real account, and rendering a grouped number with no symbol is still the right
- * answer for it — a wrong symbol on a bill is worse than none, because a reader believes it.
+ * The ISO 4217 code `ClientDto.Currency` sends reaches this file as `store.user.currency`, so
+ * the symbol-bearing path below is the one a configured account takes. The empty-currency path
+ * is a first-class case rather than an edge case: an account with no currency set is still a
+ * real account, and a grouped number with no symbol is the right answer for it, because a wrong
+ * symbol on a bill is worse than none: a reader believes it.
  *
  * The assertions avoid pinning exact separator characters where a platform's CLDR data could
- * reasonably differ — Russian and Armenian group with a space whose exact codepoint has moved
+ * reasonably differ: Russian and Armenian group with a space whose exact codepoint has moved
  * between ICU versions. What is asserted is the part a bill depends on: the digits are grouped,
  * the decimals are there, and **no symbol is invented**.
  *
@@ -26,7 +21,12 @@ import { EMPTY_AMOUNT, formatCurrency } from '~/utils/formatCurrency'
 /** The billing amount production shows for service 16, as the API sends it. */
 const PRODUCTION_AMOUNT = '24000'
 
-/** Digits only, with the grouping and decimal marks stripped, whatever they are locally. */
+/**
+ * Digits only, with the grouping and decimal marks stripped, whatever they are locally.
+ *
+ * @param formatted Formatted amount.
+ * @returns Its digits.
+ */
 const digitsOf = (formatted: string): string => formatted.replace(/[^0-9]/g, '')
 
 describe('formatCurrency', () => {
@@ -59,7 +59,7 @@ describe('formatCurrency', () => {
 
   it('uses an ISO 4217 code when the API supplies one', () => {
     // Only reachable once the BFF forwards `ClientDto.Currency`; the presentation half is
-    // ready for it. The placement is `Intl`'s call, not a table in this file — which is the
+    // ready for it. The placement is `Intl`'s call, not a table in this file, which is the
     // point of delegating rather than concatenating a symbol.
     expect(formatCurrency('9.99', { code: 'USD', locale: 'en' })).toBe('$9.99')
 
@@ -85,7 +85,7 @@ describe('formatCurrency', () => {
 
     // `ZZZ` is deliberately *not* asserted as a fallback: it is a real, reserved ISO 4217 code
     // and `Intl` renders it as one. Anything three letters long is a code as far as `Intl` is
-    // concerned — which is precisely why this frontend must never make one up.
+    // concerned, which is precisely why this frontend must never make one up.
     expect(formatCurrency(PRODUCTION_AMOUNT, { code: 'ZZZ', locale: 'en' })).toContain('ZZZ')
   })
 

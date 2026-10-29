@@ -4,36 +4,37 @@ using Innovayse.Hostpanel.Application.Provisioning.Commands.ChangeMyServicePassw
 using Innovayse.Hostpanel.Application.Provisioning.Commands.ChangePassword;
 using Innovayse.Hostpanel.Application.Provisioning.Queries.GetControlPanelSsoUrl;
 using Innovayse.Hostpanel.Application.Provisioning.Queries.GetMyServiceControlPanelSsoUrl;
+using Innovayse.Hostpanel.Application.Services.Commands.AddMySshKey;
 using Innovayse.Hostpanel.Application.Services.Commands.CancelMyService;
 using Innovayse.Hostpanel.Application.Services.Commands.CancelService;
+using Innovayse.Hostpanel.Application.Services.Commands.RevokeMySshKey;
 using Innovayse.Hostpanel.Application.Services.Commands.SetupMyService;
 using Innovayse.Hostpanel.Application.Services.Commands.SetupService;
 using Innovayse.Hostpanel.Application.Services.Common;
 using Innovayse.Hostpanel.Application.Services.Queries.GetCancellationStatus;
 using Innovayse.Hostpanel.Application.Services.Queries.GetMyServiceCancellationStatus;
-using Xunit;
+using Innovayse.Hostpanel.Application.Services.Queries.GetMyServiceHostingInfo;
+using Innovayse.Hostpanel.Application.Services.Queries.GetMySshAccess;
+using Innovayse.Hostpanel.Application.Services.Queries.ListMySshKeys;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
 /// <summary>
 /// Proves that every client-facing service message is marked, and every marked message has a
-/// handler wired to enforce it, without exercising a handler's runtime behaviour: that half — a
-/// stranger's service actually being refused over HTTP — is
-/// <c>MyServicesOwnershipEndpointTests</c> in this project, which reaches the real database and
+/// handler wired to enforce it, without exercising a handler's runtime behaviour: that half, a
+/// stranger's service actually being refused over HTTP, is
+/// <see cref="MyServicesRoutesAreOwnershipScopedTests"/> in this project, which reaches the real database and
 /// the real ownership rule together.
 /// <para>
-/// This is the regression suite for a live defect: <c>MyServicesController</c> took a service id
-/// straight off the route on five actions and checked nothing, so any authenticated customer
-/// could walk sequential ids and obtain a control-panel single-sign-on URL into another
-/// customer's hosting account, cancel their service, or change their hosting password.
+/// A client-facing route that takes a service id must check that the caller owns that service;
+/// otherwise one customer could act on another customer's hosting account.
 /// </para>
 /// <para>
-/// The two tests here are the ones that matter beyond today. The defect was not five mistakes; it
-/// was that nothing failed when a route was written without a check. These reflection tests — and
-/// <see cref="MyServicesRoutesAreOwnershipScopedTests"/>, which reaches the controller this test
-/// needs reflection rather than the real endpoint to see into — fail on the <b>next</b> such route
-/// rather than on these five.
+/// Checking each existing route does not stop the next one being written without a check. These
+/// reflection tests fail on the <b>next</b> such message, and
+/// <see cref="MyServicesRoutesAreOwnershipScopedTests"/> asserts over HTTP that each route refuses a
+/// stranger's service.
 /// </para>
 /// </summary>
 /// <remarks>Pure reflection over the Application assembly, no mock of our own
@@ -55,7 +56,7 @@ public sealed class CallerScopedServiceMessageTests
             .Where(t => typeof(ICallerScopedServiceMessage).IsAssignableFrom(t))
             .ToList();
 
-        // If this ever reads zero the test has stopped testing anything -- a renamed marker or a
+        // If this ever reads zero the test has stopped testing anything: a renamed marker or a
         // moved assembly would otherwise leave it silently green.
         Assert.NotEmpty(marked);
 
@@ -74,7 +75,7 @@ public sealed class CallerScopedServiceMessageTests
     /// <summary>
     /// The shared use cases an admin route also dispatches must <b>not</b> carry the marker.
     /// Marking them would make the ownership rule apply to staff acting on any client's service,
-    /// which is legitimate — the split into <c>My*</c> messages exists precisely so the client
+    /// which is legitimate; the split into <c>My*</c> messages exists precisely so the client
     /// path can be constrained without constraining the admin path.
     /// </summary>
     [Fact]
@@ -99,7 +100,12 @@ public sealed class CallerScopedServiceMessageTests
         Assert.True(typeof(ICallerScopedServiceMessage).IsAssignableFrom(typeof(CancelMyServiceCommand)));
         Assert.True(typeof(ICallerScopedServiceMessage).IsAssignableFrom(typeof(SetupMyServiceCommand)));
         Assert.True(typeof(ICallerScopedServiceMessage).IsAssignableFrom(typeof(GetMyServiceCancellationStatusQuery)));
+        Assert.True(typeof(ICallerScopedServiceMessage).IsAssignableFrom(typeof(GetMyServiceHostingInfoQuery)));
         Assert.True(typeof(ICallerScopedServiceMessage).IsAssignableFrom(typeof(GetMyServiceInvoicesQuery)));
+        Assert.True(typeof(ICallerScopedServiceMessage).IsAssignableFrom(typeof(GetMySshAccessQuery)));
+        Assert.True(typeof(ICallerScopedServiceMessage).IsAssignableFrom(typeof(ListMySshKeysQuery)));
+        Assert.True(typeof(ICallerScopedServiceMessage).IsAssignableFrom(typeof(AddMySshKeyCommand)));
+        Assert.True(typeof(ICallerScopedServiceMessage).IsAssignableFrom(typeof(RevokeMySshKeyCommand)));
     }
 
     /// <summary>
@@ -122,8 +128,8 @@ public sealed class CallerScopedServiceMessageTests
     /// <summary>
     /// Whether a handler is constructed with the ownership rule. Taking it as a dependency is the
     /// only way it can be called, and the handlers are small enough that a dependency taken and
-    /// then ignored would not survive review — the behaviour is proven end-to-end by
-    /// <c>MyServicesOwnershipEndpointTests</c>, and this covers the ones that do not exist yet.
+    /// then ignored would not survive review. The behaviour is proven end-to-end by
+    /// <see cref="MyServicesRoutesAreOwnershipScopedTests"/>, and this covers the ones that do not exist yet.
     /// </summary>
     /// <param name="handler">The handler type.</param>
     /// <returns><see langword="true"/> when some constructor takes an <see cref="IServiceOwnership"/>.</returns>

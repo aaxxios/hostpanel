@@ -3,17 +3,22 @@
  * Full-page form for creating a new client account.
  *
  * All sections are displayed on a single scrollable page in a two-column layout.
- * Navigates back to the clients list on success.
+ * Navigates back to the clients list on success. Creating a client as Suspended or Closed is first
+ * put to the operator, with the effects of that status spelled out.
  */
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import type { AdminCreateClientPayload } from '@/types/admincreateclientpayload'
+import type { ClientSettings } from '@/types/client'
 import type { UserSearchHit } from '@/types/clientuser'
+import type { ContactNotifications } from '@/types/contactnotifications'
 import { useClientsStore } from '@/stores/clients'
 import { CLIENT_STATUS_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/constants'
 import { ClientStatus } from '@/types/client'
+import { restrictsAccount, type RestrictiveClientStatus } from '@/lib/clientStatus'
 import { useGeoOptions } from '@/composables/useGeoOptions'
+import ClientStatusConfirmDialog from '@/components/clients/ClientStatusConfirmDialog.vue'
 import ClientUserPicker from '@/components/clients/ClientUserPicker.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -89,7 +94,7 @@ const selectedPhoneCode = computed(() => resolvePhoneCode(phoneCountry.value))
 const language = ref('')
 
 /** Client status. */
-const status = ref<string>(ClientStatus.Active)
+const status = ref<ClientStatus>(ClientStatus.Active)
 
 /** Street address line 1. */
 const street = ref('')
@@ -119,18 +124,17 @@ const paymentMethod = ref('')
 const billingContact = ref('')
 
 /** Email notification switches, named as the payload fields. */
-const notify = reactive({
-  notifyGeneral: true,
-  notifyInvoice: true,
-  notifySupport: true,
-  notifyProduct: true,
-  notifyDomain: true,
-  notifyAffiliate: true,
+const notify = reactive<ContactNotifications>({
+  general: true,
+  invoice: true,
+  support: true,
+  product: true,
+  domain: true,
+  affiliate: true,
 })
 
 /** Account setting switches, named as the payload fields. */
-const settings = reactive({
-  lateFees: true,
+const settings = reactive<ClientSettings>({
   overdueNotices: true,
   taxExempt: false,
   separateInvoices: false,
@@ -142,17 +146,16 @@ const settings = reactive({
 
 /** Email notification switches in display order. */
 const notifyToggles = computed<{ key: keyof typeof notify; label: string }[]>(() => [
-  { key: 'notifyGeneral', label: t('shared.generalEmails') },
-  { key: 'notifyInvoice', label: t('shared.invoiceEmails') },
-  { key: 'notifySupport', label: t('shared.supportEmails') },
-  { key: 'notifyProduct', label: t('shared.productEmails') },
-  { key: 'notifyDomain', label: t('shared.domainEmails') },
-  { key: 'notifyAffiliate', label: t('shared.affiliateEmails') },
+  { key: 'general', label: t('shared.generalEmails') },
+  { key: 'invoice', label: t('shared.invoiceEmails') },
+  { key: 'support', label: t('shared.supportEmails') },
+  { key: 'product', label: t('shared.productEmails') },
+  { key: 'domain', label: t('shared.domainEmails') },
+  { key: 'affiliate', label: t('shared.affiliateEmails') },
 ])
 
 /** Account setting switches in display order. */
 const settingToggles = computed<{ key: keyof typeof settings; label: string }[]>(() => [
-  { key: 'lateFees', label: t('shared.lateFees') },
   { key: 'overdueNotices', label: t('shared.overdueNotices') },
   { key: 'taxExempt', label: t('shared.taxExempt') },
   { key: 'separateInvoices', label: t('shared.separateInvoices') },
@@ -206,12 +209,15 @@ const goBack = (): void => {
   router.push(AppRoute.Clients)
 }
 
+/** The restrictive status awaiting the operator's confirmation, null when no prompt is open. */
+const pendingStatus = ref<RestrictiveClientStatus | null>(null)
+
 /**
  * Builds the payload and submits to the API; a refusal fills `store.fieldErrors`.
  *
  * @returns Promise that resolves when the create attempt has finished.
  */
-const handleSubmit = async (): Promise<void> => {
+const createClient = async (): Promise<void> => {
   const payload: AdminCreateClientPayload = {
     createNewUser: createNewUser.value,
     existingUserId: !createNewUser.value ? selectedUser.value?.id : undefined,
@@ -221,20 +227,24 @@ const handleSubmit = async (): Promise<void> => {
     lastName: lastName.value.trim(),
     companyName: companyName.value.trim() || undefined,
     phone: phone.value.trim() ? `${selectedPhoneCode.value} ${phone.value.trim()}` : undefined,
-    street: street.value.trim() || undefined,
-    address2: address2.value.trim() || undefined,
-    city: city.value.trim() || undefined,
-    state: state.value.trim() || undefined,
-    postCode: postCode.value.trim() || undefined,
-    country: country.value || undefined,
-    currency: currency.value || undefined,
-    language: language.value || undefined,
-    paymentMethod: paymentMethod.value.trim() || undefined,
-    billingContact: billingContact.value.trim() || undefined,
-    adminNotes: adminNotes.value.trim() || undefined,
+    address: {
+      street: street.value.trim() || undefined,
+      address2: address2.value.trim() || undefined,
+      city: city.value.trim() || undefined,
+      state: state.value.trim() || undefined,
+      postCode: postCode.value.trim() || undefined,
+      country: country.value || undefined,
+    },
+    preferences: {
+      currency: currency.value || undefined,
+      language: language.value || undefined,
+      paymentMethod: paymentMethod.value.trim() || undefined,
+      billingContact: billingContact.value.trim() || undefined,
+      adminNotes: adminNotes.value.trim() || undefined,
+    },
     status: status.value,
-    ...notify,
-    ...settings,
+    notifications: { ...notify },
+    settings: { ...settings },
   }
 
   saving.value = true
@@ -245,6 +255,31 @@ const handleSubmit = async (): Promise<void> => {
   } else {
     saveError.value = store.saveError
   }
+}
+
+/**
+ * Submits the form. Creating the client as Suspended or Closed is first put to the operator, because
+ * both change what the client and their services can do.
+ *
+ * @returns Promise that resolves when the create attempt has finished or the prompt is open.
+ */
+const handleSubmit = async (): Promise<void> => {
+  if (restrictsAccount(status.value)) {
+    pendingStatus.value = status.value
+    return
+  }
+
+  await createClient()
+}
+
+/**
+ * Confirms the staged status and creates the client.
+ *
+ * @returns Promise that resolves when the create attempt has finished.
+ */
+const confirmStatus = async (): Promise<void> => {
+  pendingStatus.value = null
+  await createClient()
 }
 
 onMounted(() => {
@@ -515,7 +550,7 @@ onMounted(() => {
             <UiStack>
               <UiHeading :level="2" variant="card">{{ t('shared.emailNotifications') }}</UiHeading>
               <UiLabel v-for="toggle in notifyToggles" :key="toggle.key" :variant="UiLabelVariant.Inline">
-                <UiToggle v-model="notify[toggle.key]" :data-testid="`add-client-${toggle.key}`" />
+                <UiToggle v-model="notify[toggle.key]" :data-testid="`add-client-notify-${toggle.key}`" />
                 {{ toggle.label }}
               </UiLabel>
             </UiStack>
@@ -545,5 +580,14 @@ onMounted(() => {
         </UiStack>
       </UiGrid>
     </UiForm>
+
+    <ClientStatusConfirmDialog
+      v-if="pendingStatus"
+      :status="pendingStatus"
+      :loading="saving"
+      testid="add-client-status-confirm"
+      @confirm="confirmStatus"
+      @close="pendingStatus = null"
+    />
   </UiStack>
 </template>

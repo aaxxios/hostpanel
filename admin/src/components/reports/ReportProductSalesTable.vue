@@ -23,7 +23,7 @@ const props = withDefaults(defineProps<{
   groups: ReportSalesGroup[]
   /** Units sold overall. */
   totalUnitsSold: number
-  /** Value overall (in USD, restated by `formatMoney`). */
+  /** Value overall, printed by `formatMoney`. */
   totalValue: number
   /** Formats a value cell; US dollars when omitted. */
   formatMoney?: (amount: number) => string

@@ -2,12 +2,12 @@
  * Derives the full browser/iOS/Android icon set from the stored favicon URL.
  *
  * The `portal.favicon` setting holds one URL. When an operator uploaded the image, the API
- * generated a whole set beside it — every file of one upload lands in the same directory,
+ * generated a whole set beside it: every file of one upload lands in the same directory,
  * under names the backend chooses. This module is the storefront's half of that contract.
  *
- * The names are fixed by `SkiaBrandingImageProcessor.RenderFaviconSet` in
- * `backend/src/Innovayse.Infrastructure/Branding/`. **Renaming a file there without changing
- * `UPLOADED_ICON_SET` here produces no error anywhere** — the tags are emitted, the browser
+ * The names are fixed by `BrandingImageProcessor.RenderFaviconSet` in
+ * `backend/src/Innovayse.Hostpanel.Infrastructure/ImageProcessing/`. **Renaming a file there without changing
+ * `UPLOADED_ICON_SET` here produces no error anywhere**: the tags are emitted, the browser
  * requests them, the proxy answers 404, and the tab silently keeps the previous icon. If you
  * touch one side, touch both.
  *
@@ -66,17 +66,15 @@ const UPLOADED_ICON_SET: readonly UploadedIconFile[] = [
 /**
  * The icons a fresh install serves, straight out of `public/`.
  *
- * All of them exist on disk. Until recently only the two favicons did, while `nuxt.config`
- * still advertised `/apple-touch-icon.png` and the web manifest still listed both
- * `android-chrome-*.png` -- so every install shipped an iOS icon and a PWA install prompt
- * pointing at 404s. The PNGs are rendered from the brand kit in `docs/brand/` (the mark and
- * the app tile); regenerate them from it if the mark ever changes.
+ * All of them exist on disk, so the iOS icon and the PWA install prompt the web manifest
+ * advertises never point at a 404. The PNGs are rendered from the brand kit in `docs/brand/`
+ * (the mark and the app tile); regenerate them from it if the mark ever changes.
  *
- * These used to live in `nuxt.config.ts`. They were moved here because two places emitting
+ * They live here rather than in `nuxt.config.ts` because two places emitting
  * `<link rel="icon">` is one too many: unhead only dedupes link tags that carry a matching
- * explicit key, so a static tag in the config and an uploaded one from `app.vue` both survive
- * into the rendered head, and Chrome prefers the SVG — an operator who uploaded a favicon kept
- * seeing the built-in mark and had no way to tell why.
+ * explicit key, so a static tag in the config and an uploaded one from `app.vue` would both
+ * survive into the rendered head, and Chrome prefers the SVG: an operator who uploaded a
+ * favicon would keep seeing the built-in mark.
  */
 const BUILT_IN_ICONS: BrandingIcon[] = [
   { rel: BrandingIconRel.Icon, href: '/favicon.ico', type: 'image/x-icon' },
@@ -98,8 +96,7 @@ const BUILT_IN_ICONS: BrandingIcon[] = [
  * The prefix alone is not enough. Uploads made before the icon generator existed sit flat in
  * the uploads root (`/uploads/branding/favicon-<guid>.png`), and the generated ones sit one
  * directory down (`/uploads/branding/<kind>/<id>/<file>`). Only the second kind has siblings,
- * so accepting the first put five invented links into the page head that every browser then
- * fetched and got a 404 for — observed in production.
+ * so accepting the first would put five invented links into the page head, each one a 404.
  *
  * @param url The stored `portal.favicon` value.
  * @returns True when the URL names a file inside a generated icon directory.
@@ -128,7 +125,7 @@ export const brandingIcons = (faviconUrl: string): BrandingIcon[] => {
   }
 
   if (!isUploadedBranding(faviconUrl)) {
-    // Someone else's file. It may be an .ico, an .svg or a .png — the browser will work it
+    // Someone else's file. It may be an .ico, an .svg or a .png: the browser will work it
     // out, and declaring a type we have not checked would be worse than declaring none.
     return [{ rel: BrandingIconRel.Icon, href: faviconUrl, type: '' }]
   }

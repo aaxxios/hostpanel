@@ -1,16 +1,16 @@
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Infrastructure;
 using Innovayse.Hostpanel.Shared.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Demo.Commands.ResetDemoData;
 
 /// <summary>
 /// Handles <see cref="ResetDemoDataCommand"/>: asks the data manager to wipe and reseed inside one
 /// transaction, then schedules the next run. Re-schedules even when the reset throws, so one bad
-/// night does not end the cycle; the exception still propagates to the log.
+/// night does not end the cycle; the exception is logged.
 /// </summary>
 public sealed class ResetDemoDataHandler
 {
@@ -23,8 +23,8 @@ public sealed class ResetDemoDataHandler
     /// <summary>Records when the next reset is due.</summary>
     private readonly IDemoResetSchedule _schedule;
 
-    /// <summary>Message bus, for re-scheduling the job.</summary>
-    private readonly IMessageBus _bus;
+    /// <summary>Runs the passes under their lease and schedules the next run.</summary>
+    private readonly RecurringJobs _jobs;
 
     /// <summary>Structured logger.</summary>
     private readonly ILogger<ResetDemoDataHandler> _logger;
@@ -33,19 +33,19 @@ public sealed class ResetDemoDataHandler
     /// <param name="options">The demo switch and the reset interval.</param>
     /// <param name="manager">Wipes and reseeds the data.</param>
     /// <param name="schedule">Records when the next reset is due.</param>
-    /// <param name="bus">Message bus, for re-scheduling the job.</param>
+    /// <param name="jobs">Runs the passes under their lease and schedules the next run.</param>
     /// <param name="logger">Structured logger.</param>
     public ResetDemoDataHandler(
         IOptions<DemoOptions> options,
         IDemoDataManager manager,
         IDemoResetSchedule schedule,
-        IMessageBus bus,
+        RecurringJobs jobs,
         ILogger<ResetDemoDataHandler> logger)
     {
         _options = options;
         _manager = manager;
         _schedule = schedule;
-        _bus = bus;
+        _jobs = jobs;
         _logger = logger;
     }
 
@@ -63,21 +63,18 @@ public sealed class ResetDemoDataHandler
             return;
         }
 
-        await RecurringJob.RunAsync(
-            nameof(ResetDemoDataCommand),
+        var next = await _jobs.RunAsync<ResetDemoDataCommand>(
+            JobSchedule.Every(TimeSpan.FromHours(options.ResetIntervalHours)),
             async () =>
             {
                 await _manager.ResetAsync(ct);
                 _logger.LogInformation("Demo data reset.");
             },
-            async () =>
-            {
-                var next = DateTimeOffset.UtcNow.AddHours(options.ResetIntervalHours);
-                await _bus.ScheduleAsync(new ResetDemoDataCommand(), next);
-                _schedule.Set(next);
-                _logger.LogInformation("ResetDemoDataCommand re-scheduled for {NextRun:u}.", next);
-            },
-            _logger,
             ct);
+
+        if (next is { } at)
+        {
+            _schedule.Set(at);
+        }
     }
 }

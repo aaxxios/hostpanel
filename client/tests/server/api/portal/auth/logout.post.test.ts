@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { makeEvent, setRuntimeConfig, signedIn, startBackend, storedSession } from '../../../../helpers/bffHarness'
+import { makeEvent, signedIn, startBackend, storedSession } from '../../../../helpers/bffHarness'
 import type { RouteModule } from '../../../../helpers/bffHarness'
 import type { StubServer } from '../../../../helpers/stubServer'
 
@@ -30,14 +30,13 @@ afterEach(async () => {
 })
 
 /**
- * Finds the backchannel logout request among the calls a fetch spy saw (the backend revocation
- * goes through the same global).
+ * Lists the URLs a fetch spy was called with (the backend revocation goes through the same global).
  *
  * @param spy - The stood-in fetch.
- * @returns The first backchannel URL, or undefined when none was made.
+ * @returns Every requested URL, in order.
  */
-const backchannelTarget = (spy: ReturnType<typeof vi.fn>): string | undefined =>
-  (spy.mock.calls as unknown[][]).map((call) => String(call[0])).find((url) => url.includes('logout-redirect'))
+const requestedUrls = (spy: ReturnType<typeof vi.fn>): string[] =>
+  (spy.mock.calls as unknown[][]).map((call) => String(call[0]))
 
 describe('POST /api/portal/auth/logout', () => {
   it('revokes the refresh token on the backend, deletes the stored session and clears every auth cookie', async () => {
@@ -53,19 +52,7 @@ describe('POST /api/portal/auth/logout', () => {
     expect(event.deleted).toEqual(expect.arrayContaining(['portal_session', 'auth_token', 'refresh_token', 'authed']))
   })
 
-  it('sends the backchannel call to the configured main portal with this portal own URL', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(new Response(null)))
-    vi.stubGlobal('fetch', fetchSpy)
-    setRuntimeConfig({ mainApiUrl: 'https://main.test', public: { baseUrl: 'https://panel.test' } })
-    const token = `x.${Buffer.from(JSON.stringify({ email: 'a@b.test' })).toString('base64url')}.y`
-
-    await route.default(makeEvent({ cookies: await signedIn(token) }))
-
-    const target = backchannelTarget(fetchSpy)
-    expect(target).toBe(`https://main.test/api/portal/auth/sso/logout-redirect?redirect_uri=${encodeURIComponent('https://panel.test')}`)
-  })
-
-  it('skips the backchannel call when no main portal is configured', async () => {
+  it('calls nothing but the backend revocation, so the access token never leaves this server', async () => {
     const fetchSpy = vi.fn(() => Promise.resolve(new Response(null)))
     vi.stubGlobal('fetch', fetchSpy)
     const token = `x.${Buffer.from(JSON.stringify({ email: 'a@b.test' })).toString('base64url')}.y`
@@ -73,7 +60,8 @@ describe('POST /api/portal/auth/logout', () => {
     const result = await route.default(makeEvent({ cookies: await signedIn(token) }))
 
     expect(result).toEqual({ ok: true })
-    expect(backchannelTarget(fetchSpy)).toBeUndefined()
+    const urls = requestedUrls(fetchSpy)
+    expect(urls.every((url) => url.endsWith('/api/auth/logout'))).toBe(true)
   })
 
   it('ends the session even when the backend refuses the revocation', async () => {

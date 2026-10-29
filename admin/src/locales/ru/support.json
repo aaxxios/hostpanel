@@ -16,7 +16,8 @@
     "noAnnouncementsFound": "Объявления не найдены",
     "createYourFirstAnnouncementTo": "Создайте первое объявление, чтобы начать.",
     "deleteAnnouncement": "Удалить объявление",
-    "areYouSureYouWant": "Вы уверены, что хотите удалить это объявление? Это действие нельзя отменить."
+    "areYouSureYouWant": "Вы уверены, что хотите удалить это объявление? Это действие нельзя отменить.",
+    "announcementDeleted": "Объявление удалено."
   },
   "downloads": {
     "downloads": "Загрузки",
@@ -48,7 +49,10 @@
     "deleteTitle": "Удалить: {item}",
     "deleteMessage": "Вы уверены, что хотите удалить «{name}»? Это действие нельзя отменить.",
     "selectType": "Выберите тип",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "categorySaved": "Категория сохранена.",
+    "downloadSaved": "Загрузка сохранена.",
+    "deleted": "Удалено."
   },
   "knowledgebase": {
     "knowledgebase": "База знаний",
@@ -68,7 +72,10 @@
     "saveArticle": "Сохранить статью",
     "deleteCategory": "Удалить категорию",
     "areYouSureYouWant": "Вы уверены, что хотите удалить эту категорию? Это может затронуть все статьи в ней.",
-    "addArticle": "Добавить статью"
+    "addArticle": "Добавить статью",
+    "categorySaved": "Категория сохранена.",
+    "categoryDeleted": "Категория удалена.",
+    "articleSaved": "Статья сохранена."
   },
   "networkIssueForm": {
     "updateTheNetworkIssueDetails": "Обновите данные сетевой проблемы ниже",
@@ -164,7 +171,10 @@
     "conversation": "Переписка",
     "staff": "Сотрудник",
     "deleteTicket": "Удалить тикет",
-    "deleteTicketMessage": "Вы уверены, что хотите удалить тикет #TKT-{id}? Это действие нельзя отменить."
+    "deleteTicketMessage": "Вы уверены, что хотите удалить тикет #TKT-{id}? Это действие нельзя отменить.",
+    "ticketClosed": "Тикет закрыт.",
+    "ticketReopened": "Тикет снова открыт.",
+    "replySent": "Ответ отправлен."
   },
   "supportTickets": {
     "supportTickets": "Тикеты поддержки",
@@ -174,8 +184,9 @@
     "flag": "Пометить",
     "unflag": "Снять пометку",
     "requestor": "Инициатор",
-    "clientClientid": "Клиент №{clientId}",
     "noTicketsFound": "Тикеты не найдены",
-    "tryAdjustingYourFiltersOr": "Попробуйте изменить фильтры или поисковый запрос."
+    "tryAdjustingYourFiltersOr": "Попробуйте изменить фильтры или поисковый запрос.",
+    "confirmBulkDeleteTitle": "Удалить выбранные тикеты?",
+    "confirmBulkDeleteMessage": "Будет безвозвратно удалено тикетов: {count}. Это действие нельзя отменить."
   }
 }

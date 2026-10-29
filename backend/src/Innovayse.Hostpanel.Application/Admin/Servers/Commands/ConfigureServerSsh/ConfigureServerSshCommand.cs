@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Servers.Commands.ConfigureServer
 /// <param name="AgentPort">Agent SSH port.</param>
 /// <param name="AgentUsername">Management user.</param>
 /// <param name="AgentPrivateKey">New OpenSSH private key, or <see langword="null"/>/empty to keep the stored one.</param>
-/// <param name="AgentHostKeyFingerprint">Pinned host key fingerprint, <c>SHA256:…</c>.</param>
+/// <param name="AgentHostKeyFingerprint">Pinned host key fingerprint, in the <c>SHA256:</c> prefixed form.</param>
 /// <param name="ConnectTimeoutSeconds">Connect timeout.</param>
 /// <param name="OperationTimeoutSeconds">Operation timeout.</param>
 public sealed record ConfigureServerSshCommand(

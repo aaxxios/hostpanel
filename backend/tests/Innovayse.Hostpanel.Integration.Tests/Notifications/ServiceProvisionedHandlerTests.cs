@@ -1,16 +1,14 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Provisioning.Events;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 
 /// <summary>
 /// Tests for <c>ServiceProvisionedHandler</c>: a provisioned service notifies the owning client.
 /// Each test builds its own host from <see cref="IntegrationTestFactory"/> with the one port this platform
-/// does not own -- the SMTP relay -- replaced by <see cref="FakeEmailSender"/>, publishes the event exactly once
+/// does not own (the SMTP relay) replaced by <see cref="FakeEmailSender"/>, publishes the event exactly once
 /// through the real message bus and asserts the handler's one effect happened exactly once.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -29,7 +27,7 @@ public sealed class ServiceProvisionedHandlerTests(IntegrationTestFactory factor
         var (client, email) = await EventHandlerTestHost.SeedIdentityClientAsync(scope.ServiceProvider, context, "notification-event");
         var serviceId = await NotificationsTestSeeds.SeedClientServiceAsync(context, client.Id);
 
-        await bus.InvokeAsync(new ServiceProvisionedEvent(serviceId, client.Id, "provisioning-ref-1"), CancellationToken.None);
+        await bus.InvokeAsync(new ServiceProvisionedEvent(serviceId, client.Id, "provisioning-ref-1", DateTimeOffset.UtcNow), CancellationToken.None);
 
         var message = Assert.Single(emailSender.Sent);
         Assert.Equal(email, message.To);

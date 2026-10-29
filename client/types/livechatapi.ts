@@ -1,7 +1,15 @@
+/**
+ * The part of the live-chat widget API that the portal calls.
+ *
+ * @module types/livechatapi
+ */
+
+import type { LiveChatPanelState } from '~/types/livechatpanelstate'
+
 /** The subset of the live-chat widget's API this application calls. */
 export interface LiveChatApi {
   /** Opens or closes the chat panel. */
-  toggle: (state: 'open' | 'close') => void
+  toggle: (state: LiveChatPanelState) => void
   /** Switches the widget's own UI language. */
   setLocale: (locale: string) => void
   /** Records attributes on the conversation, so an agent sees them. */

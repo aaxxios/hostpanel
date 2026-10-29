@@ -1,6 +1,6 @@
 /**
  * Lifecycle statuses of a hosting service the portal branches on, as the API names them on
- * `ClientService.status`.
+ * `ClientService.status` (the backend's `ServiceStatus`).
  */
 export enum ServiceStatus {
   /** Provisioned and running. */
@@ -10,7 +10,5 @@ export enum ServiceStatus {
   /** Switched off, usually for non-payment. */
   Suspended = 'Suspended',
   /** Removed by staff. */
-  Terminated = 'Terminated',
-  /** Cancelled by the client. */
-  Cancelled = 'Cancelled'
+  Terminated = 'Terminated'
 }

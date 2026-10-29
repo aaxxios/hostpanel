@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Shared.Middleware;
 /// Wolverine middleware that logs message handling with timing information.
 /// Includes user context from the current request.
 /// Uses <see cref="Envelope"/> to remain message-type-agnostic (Wolverine does not
-/// support generic Before/After methods — <c>T</c> would be treated as a DI variable).
+/// support generic Before/After methods: <c>T</c> would be treated as a DI variable).
 /// </summary>
 public class LoggingMiddleware
 {

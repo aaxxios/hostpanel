@@ -4,12 +4,15 @@
  *
  * Body: { enabled: boolean }
  */
+
+import { HttpMethod } from '~/types/httpmethod'
+
 export default defineEventHandler(async (event) => {
   const id = requireRouteParam(event, 'id')
 
   const body = await readBody(event)
   return await internalApiCall<Record<string, unknown>>(event, `/me/domains/${id}/auto-renew`, {
-    method: 'PUT',
+    method: HttpMethod.Put,
     body,
   })
 })

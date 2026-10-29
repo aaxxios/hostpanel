@@ -3,7 +3,7 @@
     <UiTableHead>
       <UiTableRow :hoverable="false">
         <UiTableTh class="min-w-[160px] !p-4 md:!p-5">{{ $t('hosting.comparison.feature') }}</UiTableTh>
-        <UiTableTh v-for="plan in plans" :key="plan.pid" align="center" class="min-w-[120px] !p-4 md:!p-5">
+        <UiTableTh v-for="plan in plans" :key="plan.id" align="center" class="min-w-[120px] !p-4 md:!p-5">
           <UiText size="sm" tone="inherit" weight="semibold" class="normal-case text-gray-900 dark:text-white [.tpl-classic_&]:text-classic-ink">
             {{ plan.tier }}
           </UiText>
@@ -28,7 +28,7 @@
         </UiTableTd>
         <UiTableTd
           v-for="(value, index) in row.values"
-          :key="`${row.label}-${plans[index]?.pid ?? index}`"
+          :key="`${row.label}-${plans[index]?.id ?? index}`"
           align="center"
           class="!p-4 md:!p-5"
           :class="value ? 'text-gray-900 dark:text-white [.tpl-classic_&]:text-classic-ink' : 'text-gray-500 dark:text-gray-500 [.tpl-classic_&]:text-classic-muted'"

@@ -2,7 +2,7 @@ namespace Innovayse.Hostpanel.Shared.Constants;
 
 /// <summary>
 ///     Supported content/UI languages across the whole platform.
-///     Single source of truth — every service, cache key and culture provider
+///     Single source of truth: every service, cache key and culture provider
 ///     must resolve languages through this class.
 /// </summary>
 public static class SupportedLanguages

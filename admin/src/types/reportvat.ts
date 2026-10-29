@@ -1,25 +1,25 @@
-/** VAT figures of one country and rate. */
+/** VAT figures of one member state, rate and invoice currency. */
 export interface ReportVatRow {
-  /** Country name. */
-  countryName: string
-  /** ISO-2 country code. */
+  /** ISO-2 country code; the screen names the country in the reader's language. */
   countryCode: string
   /** VAT rate in percent. */
   vatRate: number
-  /** Invoices counted. */
+  /** Taxed invoices paid in the quarter. */
   numberOfInvoices: number
-  /** Value invoiced without VAT. */
+  /** Value invoiced without VAT, less the net part of the quarter's refunds. */
   totalExclVat: number
-  /** VAT collected. */
+  /** VAT collected, less the VAT part of the quarter's refunds. */
   totalVatCollected: number
-  /** Currency of the figures. */
+  /** ISO 4217 code both totals are in. */
   currency: string
 }
 
-/** The VAT MOSS report. */
+/** The VAT MOSS report of one quarter. */
 export interface ReportVat {
-  /** Caption of the quarter. */
-  periodLabel: string
-  /** One row per country and rate. */
+  /** First day of the quarter, `yyyy-MM-dd`. */
+  periodStart: string
+  /** Last day of the quarter, `yyyy-MM-dd`. */
+  periodEnd: string
+  /** One row per member state, rate and currency. */
   rows: ReportVatRow[]
 }

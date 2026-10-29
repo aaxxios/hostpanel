@@ -1,13 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
@@ -15,7 +12,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 /// <c>GET /api/reports/support-ticket-replies</c> against Postgres: reply counts per admin per
 /// day for the month.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingRemainderEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetSupportTicketRepliesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -28,8 +24,10 @@ public sealed class GetSupportTicketRepliesTests(IntegrationTestFactory factory)
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var ticket = Ticket.Create(clientId, "Help", "I need help", 1, TicketPriority.Medium);
-            ticket.AddReply("On it", marker, isStaffReply: true);
+            // A real department: a ticket's department is a foreign key.
+            var departmentId = await SupportTestSeeds.SeedDepartmentAsync(db);
+            var ticket = Ticket.Create(clientId, "Help", "I need help", departmentId, TicketPriority.Medium, DateTimeOffset.UtcNow);
+            ticket.AddReply("On it", marker, isStaffReply: true, DateTimeOffset.UtcNow);
             db.Tickets.Add(ticket);
             await db.SaveChangesAsync();
         }
@@ -63,7 +61,7 @@ public sealed class GetSupportTicketRepliesTests(IntegrationTestFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

@@ -11,12 +11,12 @@ import type { ProductPlan } from '~/types/productplan'
 /**
  * Builds a plan.
  *
- * @param pid Order id, also the product id.
+ * @param id Product id.
  * @param tier Plan name.
  * @returns The plan.
  */
-const plan = (pid: number, tier: string): ProductPlan => ({
-  id: pid, pid, tier, pricing: { monthly: pid, annual: null }, description: '', features: [], isFeatured: false,
+const plan = (id: number, tier: string): ProductPlan => ({
+  id, tier, pricing: { monthly: id, annual: null }, description: '', features: [], isFeatured: false,
 })
 
 /** The two plans the table compares. */
@@ -34,7 +34,7 @@ const rows: ComparisonRow[] = [
  * @returns The wrapper.
  */
 const mountTable = () =>
-  mountWithKit(ProductPlansTable, { props: { plans, rows, priceFor: (item: ProductPlan) => `$${item.pid}` } })
+  mountWithKit(ProductPlansTable, { props: { plans, rows, priceFor: (item: ProductPlan) => `$${item.id}` } })
 
 describe('ProductPlansTable', () => {
   it('heads one column per plan with its name and price', () => {

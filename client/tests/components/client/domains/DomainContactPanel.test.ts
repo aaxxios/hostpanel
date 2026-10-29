@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
 import DomainContactPanel from '~/components/client/domains/DomainContactPanel.vue'
 import { ContactType } from '~/types/contacttype'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 
 /** The mocked endpoints the store reaches. */
 const domainsApi = vi.hoisted(() => ({ fetchWhois: vi.fn(), fetchContact: vi.fn(), setWhois: vi.fn() }))
@@ -46,18 +47,8 @@ const contact = {
   email: 'grace@example.com',
   phone: '555',
   type: ContactType.General,
-  street: '1 Pier',
-  address2: null,
-  city: 'Arlington',
-  state: null,
-  postCode: '22201',
-  country: 'US',
-  notifyGeneral: true,
-  notifyInvoice: true,
-  notifySupport: true,
-  notifyProduct: true,
-  notifyDomain: false,
-  notifyAffiliate: false
+  address: { street: '1 Pier', address2: null, city: 'Arlington', state: null, postCode: '22201', country: 'US' },
+  notifications: { general: true, invoice: true, support: true, product: true, domain: false, affiliate: false }
 }
 
 /**
@@ -92,7 +83,11 @@ describe('DomainContactPanel', () => {
     // By default the registrar holds no contact, so the profile stands in.
     domainsApi.fetchContact.mockRejectedValue({ data: { detail: 'No contact.' } })
     clientApi.fetchContacts.mockResolvedValue([{ ...contact }])
-    clientApi.fetchMeOnce.mockResolvedValue({ firstname: 'Linus', lastname: 'T', city: 'Helsinki', postcode: '00100' })
+    clientApi.fetchMeOnce.mockResolvedValue(makeClientUser({
+      firstName: 'Linus',
+      lastName: 'T',
+      address: { street: null, address2: null, city: 'Helsinki', state: null, postCode: '00100', country: null }
+    }))
   })
 
   it('shows the registry record and pre-fills the form from the primary profile', async () => {

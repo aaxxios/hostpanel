@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Ssh;
+using Innovayse.Hostpanel.Infrastructure.Persistence.Converters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -19,7 +20,8 @@ public sealed class SshKeyConfiguration : IEntityTypeConfiguration<SshKey>
         builder.Property(x => x.PublicKey).IsRequired().HasMaxLength(200);
         builder.Property(x => x.Fingerprint).IsRequired().HasMaxLength(60);
         builder.Property(x => x.SyncState).IsRequired().HasConversion<string>().HasMaxLength(20);
-        builder.Property(x => x.LastSyncError).HasMaxLength(64);
+        builder.Property(x => x.LastSyncError).HasConversion(new SshProviderFailureConverter()).HasMaxLength(64);
+
         builder.Ignore(x => x.IsActive);
 
         builder.HasOne<ClientService>()

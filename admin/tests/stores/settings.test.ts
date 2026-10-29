@@ -5,6 +5,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { MessageLanguage } from '@/locales/messages'
 import { useSettingsStore } from '@/stores/settings'
 import { json, problem, stubFetch, stubOffline } from '../helpers/fetch'
 import { installStoreHooks, NO_ANSWER } from '../helpers/storeHooks'
@@ -68,7 +69,8 @@ describe('settingsStore.updateSetting', () => {
     const store = useSettingsStore()
 
     expect(await store.updateSetting(1, 'x')).toBe(false)
-    expect(store.error).toBe('Allowed values: light, dark, system.')
+    expect(store.actionError).toBe('Allowed values: light, dark, system.')
+    expect(store.error).toBeNull()
   })
 })
 
@@ -95,7 +97,43 @@ describe('settingsStore.clearSetting', () => {
     const store = useSettingsStore()
 
     expect(await store.clearSetting(1)).toBe(false)
-    expect(store.error).toBe('Setting not found.')
+    expect(store.actionError).toBe('Setting not found.')
+  })
+})
+
+describe('settingsStore.saveEmailTemplateVersion', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  /** The words saved in every case. */
+  const content = { subject: 'S', body: 'B', description: null }
+
+  it('adds a version the template does not have yet and refreshes', async () => {
+    const fetchMock = stubFetch(json(7), json([]))
+
+    expect(await useSettingsStore().saveEmailTemplateVersion('welcome', MessageLanguage.Hy, null, content)).toBe(true)
+    expect(fetchMock.mock.calls[0]![0]).toBe('/api/admin/email-templates')
+    expect((fetchMock.mock.calls[0]![1] as RequestInit).method).toBe('POST')
+  })
+
+  it('rewrites a stored version by its id', async () => {
+    const fetchMock = stubFetch(new Response(null, { status: 204 }), json([]))
+
+    expect(await useSettingsStore().saveEmailTemplateVersion('welcome', MessageLanguage.Ru, 4, content)).toBe(true)
+    expect(fetchMock.mock.calls[0]![0]).toBe('/api/admin/email-templates/4')
+  })
+
+  it('keeps the API sentence of a refused save', async () => {
+    stubFetch(problem('This template already has a version in that language.', 409))
+    const store = useSettingsStore()
+
+    expect(await store.saveEmailTemplateVersion('welcome', MessageLanguage.Ru, null, content)).toBe(false)
+    expect(store.actionError).toBe('This template already has a version in that language.')
   })
 })
 

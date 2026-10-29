@@ -2,11 +2,13 @@
 /**
  * Inline CRUD table for managing DNS records on a domain.
  * Supports adding, editing, and deleting individual DNS records. Adding and editing share one
- * draft and one inline row.
+ * draft and one inline row. A delete is confirmed first, and every change reports its outcome
+ * (success, or the API's sentence) under the heading.
  */
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDomainsStore } from '@/stores/domains'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { DNS_RECORD_TYPE_OPTIONS } from '@/lib/constants'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
@@ -17,6 +19,7 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiNumberInput from '@/components/ui/UiNumberInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -28,6 +31,7 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextTone } from '@/utils/ui/text'
+import { UiTone } from '@/utils/ui/tone'
 import type { DnsRecordItem } from '@/types/domain'
 import { DnsRecordType } from '@/types/domain'
 
@@ -69,6 +73,26 @@ const store = useDomainsStore()
 
 /** True while an API call is in flight. */
 const saving = ref(false)
+
+/** The outcome line of the last change, shown under the heading. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Shows the outcome of one change: the success sentence, or the API's sentence of the refusal.
+ *
+ * @param ok - Whether the API accepted the change.
+ * @param successKey - Locale key of the success sentence.
+ */
+const report = (ok: boolean, successKey: string): void => {
+  if (ok) {
+    feedback.show(t(successKey), false)
+  } else {
+    feedback.show(store.actionError ?? t('errors.noAnswer'), true)
+  }
+}
 
 /** Whether the inline add row is visible. */
 const showAddRow = ref(false)
@@ -186,11 +210,13 @@ const saveDraft = async (): Promise<void> => {
     return
   }
   const id = editingId.value
+  feedback.clear()
   saving.value = true
   const ok = id === null
     ? await store.addDnsRecord(props.domainId, draftPayload())
     : await store.updateDnsRecord(props.domainId, id, draftPayload())
   saving.value = false
+  report(ok, 'clients.dnsRecordsTable.saved')
   if (ok) {
     cancelDraft()
     emit('refresh')
@@ -204,7 +230,7 @@ const deleteTargetId = ref<number | null>(null)
 const deleting = ref(false)
 
 /**
- * Stages a DNS record for deletion. Only opens the prompt — {@link confirmDelete} does the work,
+ * Stages a DNS record for deletion. Only opens the prompt: {@link confirmDelete} does the work,
  * so the question is asked by the app's own modal instead of the browser's blocking dialog.
  *
  * @param recordId - The ID of the record to delete.
@@ -227,14 +253,23 @@ const confirmDelete = async (): Promise<void> => {
   if (recordId === null) {
     return
   }
+  feedback.clear()
   saving.value = true
   deleting.value = true
   const deleted = await store.deleteDnsRecord(props.domainId, recordId)
   saving.value = false
   deleting.value = false
   deleteTargetId.value = null
+  report(deleted, 'clients.dnsRecordsTable.deleted')
   if (deleted) {
     emit('refresh')
+  }
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    deleteTargetId.value = null
   }
 }
 </script>
@@ -255,6 +290,8 @@ const confirmDelete = async (): Promise<void> => {
           <UiIcon :markup="ICONS.add" :size="UiSize.Md" />
         </UiIconButton>
       </UiStack>
+
+      <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="clients-dns-feedback" />
 
       <UiTable density="compact" :empty="isEmpty" :colspan="6" data-testid="clients-dns-table">
         <UiTableHead>
@@ -369,7 +406,7 @@ const confirmDelete = async (): Promise<void> => {
       :loading="deleting"
       tone="danger"
       @confirm="confirmDelete"
-      @close="deleteTargetId = null"
+      @close="dismissDelete"
     />
   </UiCard>
 </template>

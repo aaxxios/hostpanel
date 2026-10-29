@@ -19,7 +19,7 @@ public sealed class SetDefaultPaymentMethodValidator : LocalizedValidator<SetDef
     public SetDefaultPaymentMethodValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
-        RuleFor(x => x.PaymentMethodId).NotEmpty();
+        RuleFor(x => x.PaymentMethodId).NotEmpty().WithMessage(L["PaymentMethodIdRequired"]);
 
         // The card gateway allows no other update to an existing card, so a request that does not ask to
         // make it the default is refused here rather than silently accepted and ignored.

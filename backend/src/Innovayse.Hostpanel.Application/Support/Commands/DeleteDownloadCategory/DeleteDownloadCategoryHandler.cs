@@ -21,7 +21,10 @@ public sealed class DeleteDownloadCategoryHandler
     /// <summary>Handles the command.</summary>
     /// <param name="cmd">The category to delete.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success, or <c>DOWNLOAD_CATEGORY_NOT_FOUND</c> when the id names no category.</returns>
+    /// <returns>
+    /// Success, <c>DOWNLOAD_CATEGORY_NOT_FOUND</c> when the id names no category, or
+    /// <c>DOWNLOAD_CATEGORY_IN_USE</c> when it still has sub-categories or downloads.
+    /// </returns>
     public async Task<Result> HandleAsync(DeleteDownloadCategoryCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
@@ -30,6 +33,12 @@ public sealed class DeleteDownloadCategoryHandler
         if (category is null)
         {
             return Result.FailureCode(HostpanelErrorCodes.DOWNLOAD_CATEGORY_NOT_FOUND);
+        }
+
+        if (await _context.DownloadCategories.AnyAsync(c => c.ParentCategoryId == cmd.Id, ct)
+            || await _context.Downloads.AnyAsync(d => d.CategoryId == cmd.Id, ct))
+        {
+            return Result.FailureCode(HostpanelErrorCodes.DOWNLOAD_CATEGORY_IN_USE);
         }
 
         _context.DownloadCategories.Remove(category);

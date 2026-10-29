@@ -12,21 +12,6 @@
   "paymentMethodOptions": {
     "bankTransfer": "Банковский перевод"
   },
-  "billingCycleOptions": {
-    "free": "Бесплатно",
-    "quarterly": "Ежеквартально",
-    "semiAnnual": "Раз в полгода",
-    "biennial": "Раз в два года",
-    "triennial": "Раз в три года"
-  },
-  "invoiceActionOptions": {
-    "recur": "Повторять"
-  },
-  "recurrencePeriodOptions": {
-    "days": "Дни",
-    "weeks": "Недели",
-    "months": "Месяцы"
-  },
   "quoteStageOptions": {
     "allStages": "Все этапы"
   },
@@ -38,5 +23,11 @@
     "flagged": "Помеченные",
     "answered": "Отвечено",
     "customerReply": "Ответ клиента"
+  },
+  "recurringPeriodOptions": {
+    "weekly": "Еженедельно",
+    "monthly": "Ежемесячно",
+    "quarterly": "Ежеквартально",
+    "annually": "Ежегодно"
   }
 }

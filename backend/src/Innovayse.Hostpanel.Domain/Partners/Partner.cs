@@ -7,11 +7,11 @@ namespace Innovayse.Hostpanel.Domain.Partners;
 /// A partner or client logo shown on the storefront, with per-locale translations.
 /// Stored in the <c>Partners</c> table.
 /// </summary>
-public sealed class Partner : BaseEntity, IAggregateRoot
+public sealed class Partner : BaseEntity, IAggregateRoot, ISortable
 {
-    /// <summary>Longest LogoUrl may be — matches the <c>Partners.LogoUrl</c> column.</summary>
+    /// <summary>Longest LogoUrl may be: matches the <c>Partners.LogoUrl</c> column.</summary>
     public const int LogoUrlMaxLength = 500;
-    /// <summary>Longest Url may be — matches the <c>Partners.Url</c> column.</summary>
+    /// <summary>Longest Url may be: matches the <c>Partners.Url</c> column.</summary>
     public const int UrlMaxLength = 500;
 
     /// <summary>Gets the URL of the partner's logo image, or <c>null</c>.</summary>
@@ -35,7 +35,7 @@ public sealed class Partner : BaseEntity, IAggregateRoot
     /// <summary>Gets the per-locale translations.</summary>
     public IReadOnlyList<PartnerTranslation> Translations => _translations.AsReadOnly();
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Partner() { }
 
     /// <summary>
@@ -57,7 +57,6 @@ public sealed class Partner : BaseEntity, IAggregateRoot
             Url = url,
             SortOrder = sortOrder,
             IsActive = isActive,
-            CreatedAt = DateTimeOffset.UtcNow
         };
     }
 
@@ -122,6 +121,23 @@ public sealed class Partner : BaseEntity, IAggregateRoot
         if (existing is not null)
         {
             _translations.Remove(existing);
+        }
+    }
+
+    /// <summary>
+    /// Makes the partner's translations exactly the given set: locales that are not in it are
+    /// removed, the rest are added or updated in place.
+    /// </summary>
+    /// <param name="translations">The complete set of translations, keyed by BCP-47 locale code.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="translations"/> is null.</exception>
+    public void ReplaceTranslations(IReadOnlyDictionary<string, PartnerTranslationContent> translations)
+    {
+        ArgumentNullException.ThrowIfNull(translations);
+
+        _translations.RemoveAll(t => !translations.ContainsKey(t.Locale));
+        foreach (var (locale, content) in translations)
+        {
+            SetTranslation(locale, content.Name);
         }
     }
 

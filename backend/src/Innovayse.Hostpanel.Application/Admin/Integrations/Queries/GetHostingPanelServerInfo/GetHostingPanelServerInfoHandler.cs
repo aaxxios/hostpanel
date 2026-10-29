@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Admin.Integrations.Queries.GetHostingPanelServerInfo;
 
-/// <summary>Handles <see cref="GetHostingPanelServerInfoQuery"/> -- fetches live hosting panel server status, cached for 5 minutes.</summary>
+/// <summary>Handles <see cref="GetHostingPanelServerInfoQuery"/>: fetches live hosting panel server status, cached for 5 minutes.</summary>
 public sealed class GetHostingPanelServerInfoHandler
 {
     /// <summary>Cache key used to store and retrieve the hosting panel server info result.</summary>
@@ -21,6 +21,9 @@ public sealed class GetHostingPanelServerInfoHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>Decrypts the stored API key.</summary>
+    private readonly ISecretSettingCipher _cipher;
+
     /// <summary>Hosting panel API client abstraction.</summary>
     private readonly IHostingPanelApiClient _cwpClient;
 
@@ -30,21 +33,30 @@ public sealed class GetHostingPanelServerInfoHandler
     /// <summary>Logs a provider failure without putting its detail on the wire.</summary>
     private readonly ILogger<GetHostingPanelServerInfoHandler> _logger;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
+    /// <param name="cipher">Decrypts the stored API key.</param>
     /// <param name="cwpClient">Hosting panel API client abstraction.</param>
     /// <param name="cache">In-memory cache for the server info result.</param>
     /// <param name="logger">Logs a provider failure without putting its detail on the wire.</param>
+    /// <param name="clock">The source of the current moment.</param>
     public GetHostingPanelServerInfoHandler(
         IHostpanelDbContext context,
+        ISecretSettingCipher cipher,
         IHostingPanelApiClient cwpClient,
         IMemoryCache cache,
-        ILogger<GetHostingPanelServerInfoHandler> logger)
+        ILogger<GetHostingPanelServerInfoHandler> logger,
+        IClock clock)
     {
         _context = context;
+        _cipher = cipher;
         _cwpClient = cwpClient;
         _cache = cache;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>
@@ -55,7 +67,7 @@ public sealed class GetHostingPanelServerInfoHandler
     /// <returns>
     /// The current status, always succeeding. When credentials are missing or the API call fails,
     /// <see cref="HostingPanelServerInfoDto.Connected"/> is <see langword="false"/> rather than the request
-    /// being refused -- the diagnostic result is the answer the caller asked for.
+    /// being refused: the diagnostic result is the answer the caller asked for.
     /// </returns>
     public async Task<Result<HostingPanelServerInfoDto>> HandleAsync(GetHostingPanelServerInfoQuery query, CancellationToken ct)
     {
@@ -64,38 +76,35 @@ public sealed class GetHostingPanelServerInfoHandler
             return Result<HostingPanelServerInfoDto>.Success(cached);
         }
 
-        var host = await _context.GetIntegrationValueAsync(IntegrationSlugs.InnovayseCwp, IntegrationSettingKeys.HostField, ct);
-        var portSetting = await _context.GetIntegrationValueAsync(IntegrationSlugs.InnovayseCwp, IntegrationSettingKeys.PortField, ct);
-        var apiKey = await _context.GetIntegrationValueAsync(IntegrationSlugs.InnovayseCwp, IntegrationSettingKeys.ApiKeyField, ct);
+        var host = await _context.GetIntegrationValueAsync(_cipher, IntegrationSlugs.InnovayseCwp, IntegrationSettingKeys.HostField, ct);
+        var portSetting = await _context.GetIntegrationValueAsync(_cipher, IntegrationSlugs.InnovayseCwp, IntegrationSettingKeys.PortField, ct);
+        var apiKey = await _context.GetIntegrationValueAsync(_cipher, IntegrationSlugs.InnovayseCwp, IntegrationSettingKeys.ApiKeyField, ct);
 
-        // 2031 used to be the fallback here, and it is the hosting panel's own HTTPS UI -- it answers
-        // nothing under /v1/, which is the only path this client requests. An operator who had
-        // filled in a host and an API key but left the port blank was therefore told the server
-        // was unreachable when it was answering perfectly on 2304, the port every other hosting panel caller
-        // in this repository already used.
-        var port = portSetting is { Length: > 0 } configured
+        // A blank port falls back to the API port, never to 2031: that is the hosting panel's own
+        // HTTPS UI and answers nothing under /v1/, the only path this client requests.
+        var port = int.TryParse(portSetting, NumberStyles.None, CultureInfo.InvariantCulture, out var configured)
             ? configured
-            : IHostingPanelApiClient.DefaultApiPort.ToString(CultureInfo.InvariantCulture);
+            : IHostingPanelApiClient.DefaultApiPort;
 
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(apiKey))
         {
             return Result<HostingPanelServerInfoDto>.Success(new HostingPanelServerInfoDto(
                 Connected: false,
                 AccountsCount: null,
-                CwpVersion: null,
+                Version: null,
                 LastTestedAt: null,
                 ErrorMessage: "CWP is not configured."));
         }
 
         try
         {
-            var (accountsCount, cwpVersion) = await _cwpClient.GetServerInfoAsync(host, port, apiKey, ct);
+            var info = await _cwpClient.GetServerInfoAsync(new HostingPanelConnection(host, port, apiKey), ct);
 
             var dto = new HostingPanelServerInfoDto(
                 Connected: true,
-                AccountsCount: accountsCount,
-                CwpVersion: cwpVersion,
-                LastTestedAt: DateTimeOffset.UtcNow,
+                AccountsCount: info.AccountsCount,
+                Version: info.Version,
+                LastTestedAt: _clock.UtcNow,
                 ErrorMessage: null);
 
             _cache.Set(CacheKey, dto, CacheDuration);
@@ -109,7 +118,7 @@ public sealed class GetHostingPanelServerInfoHandler
             return Result<HostingPanelServerInfoDto>.Success(new HostingPanelServerInfoDto(
                 Connected: false,
                 AccountsCount: null,
-                CwpVersion: null,
+                Version: null,
                 LastTestedAt: null,
                 ErrorMessage: "Could not reach the server. See the server log for detail."));
         }

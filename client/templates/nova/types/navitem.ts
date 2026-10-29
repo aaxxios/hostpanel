@@ -8,7 +8,7 @@
  * One navigation entry.
  *
  * `to` is a path relative to the locale root; the components run it through
- * `useLocalePath`. Every entry must point at a route this portal actually has —
+ * `useLocalePath`. Every entry must point at a route this portal actually has:
  * a link to a page that does not exist is a 404 the visitor blames on the host.
  */
 export interface NavItem {

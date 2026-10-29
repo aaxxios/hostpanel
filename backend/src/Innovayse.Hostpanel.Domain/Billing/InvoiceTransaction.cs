@@ -1,7 +1,9 @@
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Billing;
+
 /// <summary>
 /// A financial transaction recorded against an <see cref="Invoice"/>.
 /// Represents payments, refunds, or credits. Owned by the Invoice aggregate.
@@ -33,7 +35,7 @@ public sealed class InvoiceTransaction : BaseEntity
     /// <summary>Gets optional notes for this transaction; null when not provided.</summary>
     public string? Notes { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private InvoiceTransaction() { }
 
     /// <summary>

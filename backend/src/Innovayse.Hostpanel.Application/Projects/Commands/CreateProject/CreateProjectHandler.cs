@@ -41,10 +41,27 @@ public sealed class CreateProjectHandler
         }
 
         var entity = Project.Create(cmd.Slug, cmd.Url, cmd.ImageUrls, cmd.SortOrder, cmd.IsActive);
-        entity.ApplyTranslations(cmd.Translations);
+        entity.ReplaceTranslations(cmd.Translations.ToContent());
 
         _context.Projects.Add(entity);
-        await _context.SaveChangesAsync(ct);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Another writer took the slug between the check above and this save, and the unique index
+            // refused. Asked again rather than assumed: any other failed save is not this conflict and
+            // must still surface as the error it is.
+            _context.DiscardPendingChanges();
+            if (await _context.Projects.AnyAsync(p => p.Slug == cmd.Slug, ct))
+            {
+                return Result<int>.FailureCode(HostpanelErrorCodes.PROJECT_SLUG_EXISTS);
+            }
+
+            throw;
+        }
+
         return Result<int>.Success(entity.Id);
     }
 }

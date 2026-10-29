@@ -171,7 +171,7 @@
 /**
  * aurora hosting plan cards.
  *
- * Presentation only — plans and their formatted prices arrive as props, and the
+ * Presentation only: plans and their formatted prices arrive as props, and the
  * billing-period toggle is reported upward rather than owned here.
  */
 import { PLAN_FEATURE_LIMIT } from '~/constants/planFeatureLimit'

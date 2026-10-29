@@ -1,5 +1,5 @@
 /**
- * Tests of ProductSuspensionsView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of ProductSuspensionsView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -18,4 +18,5 @@ runReportCase({
     ]),
   },
   expected: ['Product Suspensions', 'Beta', 'Unpaid invoice'],
+  retryable: true,
 })

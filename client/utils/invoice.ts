@@ -1,17 +1,13 @@
 /**
  * The three questions the portal asks about an invoice that the API does not answer directly.
  *
- * `InvoiceDto` sends what it stores — a total, a due date, a status and a list of transactions
- * — and leaves the derivations to the reader. Those derivations were previously written inline
- * in each page, and each page got one of them wrong:
+ * `MyInvoiceDto` sends what it stores (a total, a due date, a status and a list of transactions)
+ * and leaves the derivations to the reader:
  *
- * - `pages/client/invoices/[id]/pay.vue` computed both money figures from `invoice.balance`,
- *   a field `InvoiceDto` has never had. `balance ?? total` therefore always took the second
- *   branch: **Payments to date rendered `0.00` on every invoice, including fully paid ones, and
- *   Balance Due rendered the full total on an invoice the customer had already part-paid** — on
- *   the screen that then asks them to pay it.
- * - `pages/client/invoices/index.vue` and `[id].vue` each had their own idea of "overdue", and
- *   only one of them knew the backend has an `Overdue` status of its own.
+ * - Payments to date come from the transactions, and Balance Due is the API's own `amountDue`;
+ *   falling back to `total` would show a part-paid invoice as owing its full total on the screen
+ *   that asks the customer to pay it.
+ * - "Overdue" includes the backend's own `Overdue` status, not only a past due date.
  *
  * One copy each, here, so a page cannot disagree with the page next to it about what a customer
  * owes. See `types/clientinvoice.ts` for the field vocabulary these read.
@@ -22,26 +18,30 @@
 import type { ClientInvoice } from '~/types/clientinvoice'
 import type { ClientInvoiceTransaction } from '~/types/clientinvoicetransaction'
 import { InvoiceStatus } from '~/types/invoicestatus'
+import { InvoiceTransactionType } from '~/types/invoicetransactiontype'
 
 /**
- * How much has actually been received against an invoice.
+ * How much has been paid towards an invoice: the sum of its `Payment` transactions.
  *
- * The API sends refunds and payment reversals as positive amounts typed `Refund`, so those are
- * taken back out; a negative amount is subtracted by the plain sum as well. Gateway `fees` are the
- * gateway's cut of a payment rather than part of what the customer handed over, and are
- * deliberately not subtracted.
+ * Mirrors the backend's `Invoice.PaymentsRecorded`. Every amount is stored positive and the
+ * transaction type says which way the money moved, so a plain sum would count a refund as money
+ * received. Refunds and credits are left out: a credit is already netted out of the total, and a
+ * refund returns money without reopening the invoice.
  *
  * @param transactions - The invoice's recorded transactions; an absent list reads as none.
- * @returns The net amount received, in the account's billing currency.
+ * @returns The amount paid, in the invoice's currency.
  */
 export const paymentsToDate = (transactions: ClientInvoiceTransaction[] | null | undefined): number =>
-  (transactions ?? []).reduce((sum, txn) => sum + (txn.type === 'Refund' ? -Math.abs(txn.amount) : txn.amount), 0)
+  (transactions ?? [])
+    .filter((txn) => txn.type === InvoiceTransactionType.Payment)
+    .reduce((sum, txn) => sum + txn.amount, 0)
 
 /**
- * What is still owed on an invoice, as the API computed it (`InvoiceDto.AmountDue`).
+ * What is still owed on an invoice, as the API computed it (`MyInvoiceDto.AmountDue`).
  *
  * The server's figure, not one worked out here: it is the amount a payment started from the
- * portal charges, so the page shows the customer exactly what they will pay.
+ * portal charges, so the page shows the customer exactly what they will pay, and a part-paid
+ * invoice that stays open shows only what is left on it.
  *
  * @param invoice - The invoice, or nothing while one is still loading.
  * @returns The outstanding balance; `0` when there is no invoice to read.
@@ -55,10 +55,8 @@ export const balanceDue = (invoice: ClientInvoice | null | undefined): number =>
  * becomes once `ProcessRenewalsCronHandler` has run over it. Reading one without the other
  * under-counts, and it under-counts the more urgent half.
  *
- * This exists because the dashboard had two answers on one screen: its stat card counted
- * `Unpaid` alone and its banner counted both, so the same account was shown "6 unpaid" beside
- * "You have 12 unpaid invoices". The card was the wrong one — it is the element that says
- * "Action required", and it was the element leaving out the overdue ones.
+ * One definition keeps the dashboard's stat card and its banner from showing two different
+ * unpaid counts for the same account.
  *
  * @param invoice - The invoice to judge.
  * @returns True when the invoice is awaiting payment.
@@ -70,7 +68,7 @@ export const isInvoiceOutstanding = (invoice: Pick<ClientInvoice, 'status'>): bo
  * Whether an invoice should be shown to the customer as late.
  *
  * Two states count. The backend has its own `Overdue` status, but nothing flips an invoice into
- * it at the moment the date passes — `ProcessRenewalsCronHandler` writes it — so an invoice can
+ * it at the moment the date passes (`ProcessRenewalsCronHandler` writes it), so an invoice can
  * sit `Unpaid` with a due date in the past until that next runs. Both are late on the calendar
  * the customer is looking at, which is the one that decides whether the date turns red.
  *

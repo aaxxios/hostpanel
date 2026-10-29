@@ -12,21 +12,6 @@
   "paymentMethodOptions": {
     "bankTransfer": "Bank Transfer"
   },
-  "billingCycleOptions": {
-    "free": "Free",
-    "quarterly": "Quarterly",
-    "semiAnnual": "Semi-Annual",
-    "biennial": "Biennial",
-    "triennial": "Triennial"
-  },
-  "invoiceActionOptions": {
-    "recur": "Recur"
-  },
-  "recurrencePeriodOptions": {
-    "days": "Days",
-    "weeks": "Weeks",
-    "months": "Months"
-  },
   "quoteStageOptions": {
     "allStages": "All Stages"
   },
@@ -38,5 +23,11 @@
     "flagged": "Flagged",
     "answered": "Answered",
     "customerReply": "Customer-Reply"
+  },
+  "recurringPeriodOptions": {
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "quarterly": "Quarterly",
+    "annually": "Annually"
   }
 }

@@ -1,8 +1,13 @@
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Products.Extensions;
+using Innovayse.Hostpanel.Application.Reports.Common;
+using Innovayse.Hostpanel.Application.Reports.Extensions;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Reports.Queries.GetServicesReport;
 
@@ -12,18 +17,24 @@ public sealed class GetServicesReportHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The bus the owning clients' and the products' names are asked through.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetServicesReportHandler(IHostpanelDbContext context)
+    /// <param name="bus">The bus the owning clients' and the products' names are asked through.</param>
+    public GetServicesReportHandler(IHostpanelDbContext context, IMessageBus bus)
     {
         _context = context;
+        _bus = bus;
     }
 
     /// <summary>Handles the query.</summary>
     /// <param name="query">The filters and page to return.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The matching page of services and the unfiltered total. Never refuses.</returns>
-    public async Task<Result<ServiceReportResultDto>> HandleAsync(GetServicesReportQuery query, CancellationToken ct)
+    /// <exception cref="InvalidOperationException">A service names a client or a product that does not exist, so the database is broken.</exception>
+    public async Task<Result<PaginatedList<ServiceReportDto>>> HandleAsync(GetServicesReportQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -34,68 +45,61 @@ public sealed class GetServicesReportHandler
             services = services.Where(s => s.Status.ToString() == query.Status);
         }
 
-        if (!string.IsNullOrWhiteSpace(query.BillingCycle))
+        if (query.BillingCycle.HasValue)
         {
-            services = services.Where(s => s.BillingCycle.ToLower() == query.BillingCycle.ToLower());
+            services = services.Where(s => s.BillingCycle == query.BillingCycle.Value);
         }
 
         if (query.CreatedFrom.HasValue)
         {
-            services = services.Where(s => s.CreatedAt >= query.CreatedFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            services = services.Where(s => s.CreatedAt >= query.CreatedFrom.Value.StartOfDayUtc());
         }
 
         if (query.CreatedTo.HasValue)
         {
-            services = services.Where(s => s.CreatedAt <= query.CreatedTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc));
+            services = services.Where(s => s.CreatedAt < query.CreatedTo.Value.EndOfDayExclusiveUtc());
         }
 
         if (query.NextDueFrom.HasValue)
         {
-            services = services.Where(s => s.NextRenewalAt >= query.NextDueFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            services = services.Where(s => s.NextRenewalAt >= query.NextDueFrom.Value.StartOfDayUtc());
         }
 
         if (query.NextDueTo.HasValue)
         {
-            services = services.Where(s => s.NextRenewalAt <= query.NextDueTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc));
+            services = services.Where(s => s.NextRenewalAt < query.NextDueTo.Value.EndOfDayExclusiveUtc());
         }
 
         if (query.TerminatedFrom.HasValue)
         {
-            services = services.Where(s => s.TerminatedAt >= query.TerminatedFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            services = services.Where(s => s.TerminatedAt >= query.TerminatedFrom.Value.StartOfDayUtc());
         }
 
         if (query.TerminatedTo.HasValue)
         {
-            services = services.Where(s => s.TerminatedAt <= query.TerminatedTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc));
+            services = services.Where(s => s.TerminatedAt < query.TerminatedTo.Value.EndOfDayExclusiveUtc());
         }
 
         var totalCount = await services.CountAsync(ct);
-
-        // Names are resolved for every filtered row up front, not just the current page — the
-        // pre-conversion repository did the same, so a page further in still shows real names.
-        var clientIds = await services.Select(s => s.ClientId).Distinct().ToListAsync(ct);
-        var clientNames = await _context.Clients.AsNoTracking()
-            .Where(c => clientIds.Contains(c.Id))
-            .Select(c => new { c.Id, Name = c.FirstName + " " + c.LastName })
-            .ToDictionaryAsync(x => x.Id, x => x.Name, ct);
-
-        var productIds = await services.Select(s => s.ProductId).Distinct().ToListAsync(ct);
-        var productNames = await _context.Products.AsNoTracking()
-            .Where(p => productIds.Contains(p.Id))
-            .Select(p => new { p.Id, p.Name })
-            .ToDictionaryAsync(x => x.Id, x => x.Name, ct);
 
         var items = await services
             .OrderByDescending(s => s.CreatedAt)
             .Paginate(query.Page, query.PageSize)
             .ToListAsync(ct);
 
+        // FK_ClientServices_Clients_ClientId and FK_ClientServices_Products_ProductId restrict
+        // deleting a client or a product that still has services, so every one named on the page is there.
+        var clientIds = items.Select(s => s.ClientId).Distinct().ToList();
+        var clients = await _bus.GetRequiredClientBriefsByIdAsync(clientIds, ct);
+        var productIds = items.Select(s => s.ProductId).Distinct().ToList();
+        var products = await _bus.GetRequiredProductSummariesByIdAsync(productIds, ct);
+
         var result = items.Select(s => new ServiceReportDto(
             s.Id,
             s.ClientId,
-            clientNames.GetValueOrDefault(s.ClientId, string.Empty),
+            clients[s.ClientId].FullName,
             s.ProductId,
-            productNames.GetValueOrDefault(s.ProductId, string.Empty),
+            products[s.ProductId].Name,
             s.Domain,
             s.BillingCycle,
             s.FirstPaymentAmount,
@@ -104,9 +108,9 @@ public sealed class GetServicesReportHandler
             s.CreatedAt.ToString("yyyy-MM-dd"),
             s.NextRenewalAt?.ToString("yyyy-MM-dd"),
             s.TerminatedAt?.ToString("yyyy-MM-dd"),
-            s.Status.ToString(),
+            s.Status,
             s.AdminNotes)).ToList();
 
-        return Result<ServiceReportResultDto>.Success(new ServiceReportResultDto(result, totalCount));
+        return Result<PaginatedList<ServiceReportDto>>.Success(new PaginatedList<ServiceReportDto>(result, totalCount, query.Page, query.PageSize));
     }
 }

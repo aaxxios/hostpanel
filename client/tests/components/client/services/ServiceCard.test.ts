@@ -1,22 +1,12 @@
 /**
- * Unit tests for ServiceCard: where the card links, the setup badge and the disk-usage bar.
+ * Unit tests for ServiceCard: where the card links, the setup badge, the renewal date, the amount
+ * and the disk bar.
  */
 import { describe, expect, it } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
 import ServiceCard from '~/components/client/services/ServiceCard.vue'
-import type { ClientService } from '~/types/clientservice'
-
-/**
- * Builds a service with the fields the card reads.
- *
- * @param overrides - Fields to set.
- * @returns A service.
- */
-const service = (overrides: Partial<ClientService> = {}): ClientService => ({
-  id: 4, name: 'Starter', domain: 'example.com', groupname: 'Hosting', username: 'webmstr', status: 'Active',
-  nextduedate: '2026-12-01', recurringamount: '10.00', diskusage: '256', disklimit: '1024',
-  ...overrides
-} as ClientService)
+import { EMPTY_DATE } from '~/utils/formatDate'
+import { makeClientService as service } from '~/tests/helpers/clientServiceFixture'
 
 describe('ServiceCard', () => {
   it('links a set-up service to its page', () => {
@@ -27,14 +17,8 @@ describe('ServiceCard', () => {
     expect(wrapper.text()).toContain('example.com')
   })
 
-  it('shows the product fallback when the backend sent no product name', () => {
-    const wrapper = mountClient(ServiceCard, { props: { service: service({ name: null }), currency: {} } })
-
-    expect(wrapper.text()).toContain('fallback.product')
-  })
-
   it('links a service without a control-panel account to its setup wizard and flags it', () => {
-    const wrapper = mountClient(ServiceCard, { props: { service: service({ username: '' }), currency: {} } })
+    const wrapper = mountClient(ServiceCard, { props: { service: service({ username: null }), currency: {} } })
 
     expect(wrapper.attributes('href')).toBe('/client/services/4/setup')
     expect(wrapper.find('[data-testid="service-needs-setup"]').exists()).toBe(true)
@@ -47,17 +31,29 @@ describe('ServiceCard', () => {
     expect(wrapper.text()).toContain('Active')
   })
 
-  it('draws the disk bar only when there is a limit', () => {
-    const limited = mountClient(ServiceCard, { props: { service: service(), currency: {} } })
-    const unlimited = mountClient(ServiceCard, { props: { service: service({ disklimit: '0' }), currency: {} } })
+  it('words a service without a domain instead of leaving the line blank', () => {
+    const wrapper = mountClient(ServiceCard, { props: { service: service({ domain: null }), currency: {} } })
 
-    expect(limited.find('[data-testid="usage-bar"]').exists()).toBe(true)
-    expect(unlimited.find('[data-testid="usage-bar"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('client.dashboard.noDomain')
+  })
+
+  it('shows the empty date for a service not active yet', () => {
+    const wrapper = mountClient(ServiceCard, { props: { service: service({ nextRenewalAt: null }), currency: {} } })
+
+    expect(wrapper.text()).toContain(EMPTY_DATE)
   })
 
   it('formats the amount in the account currency', () => {
     const wrapper = mountClient(ServiceCard, { props: { service: service(), currency: { code: 'USD' } } })
 
     expect(wrapper.text()).toContain('$10.00')
+  })
+
+  it('draws the disk bar only when the server reported a disk limit', () => {
+    const limited = mountClient(ServiceCard, { props: { service: service({ usage: { diskUsedMb: 256, diskLimitMb: 1024, bandwidthUsedMb: 10, bandwidthLimitMb: 0, updatedAt: '2026-10-01T00:00:00Z' } }), currency: {} } })
+    const unlimited = mountClient(ServiceCard, { props: { service: service({ usage: { ...{ diskUsedMb: 256, diskLimitMb: 1024, bandwidthUsedMb: 10, bandwidthLimitMb: 0, updatedAt: '2026-10-01T00:00:00Z' }, diskLimitMb: 0 } }), currency: {} } })
+
+    expect(limited.find('[data-testid="usage-bar"]').exists()).toBe(true)
+    expect(unlimited.find('[data-testid="usage-bar"]').exists()).toBe(false)
   })
 })

@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Application.Reports.Queries.GetIncomeForecast;
 
 /// <summary>
 /// Validator for <see cref="GetIncomeForecastQuery"/>. Its one input is an optional year, which
-/// every value of (including <see langword="null"/>) is valid, so no rule is declared — decided,
+/// every value of (including <see langword="null"/>) is valid, so no rule is declared: decided,
 /// not forgotten.
 /// </summary>
 public sealed class GetIncomeForecastValidator : LocalizedValidator<GetIncomeForecastQuery>

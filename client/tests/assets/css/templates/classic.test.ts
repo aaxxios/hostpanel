@@ -1,7 +1,7 @@
 /**
  * Guards the classic template's colour tokens: a complete light set on `:root`, a dark set
  * under `.dark`, and a page body that follows the colour-mode tokens instead of a fixed dark
- * colour (the regression behind issue 402, where classic stayed dark whatever the toggle said).
+ * colour (without it classic stays dark whatever the toggle says).
  */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -79,7 +79,12 @@ describe('classic tokens', () => {
   })
 
   it('gives the page a different value in each mode', () => {
-    /** Page token value of a block. */
+    /**
+     * Page token value of a block.
+     *
+     * @param block CSS rule body to search.
+     * @returns The trimmed `--classic-page` value.
+     */
     const value = (block: string): string => /--classic-page:\s*([^;]+);/.exec(block)![1]!.trim()
 
     expect(value(light)).not.toBe(value(dark))

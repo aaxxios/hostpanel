@@ -9,7 +9,8 @@
     "savingOrder": "Saving order...",
     "reorder": "Reorder",
     "moveUp": "Move up",
-    "moveDown": "Move down"
+    "moveDown": "Move down",
+    "orderSaved": "Order saved."
   },
   "form": {
     "unsavedChanges": "Unsaved changes",

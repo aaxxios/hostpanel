@@ -81,13 +81,14 @@ internal sealed class DemoServerSeeder
         {
             var (name, host, ip, max, isDefault, isDisabled, online, cost, datacenter, groupId) = servers[i];
             var server = Server.Create(new ServerDetails(
-                name, host, ip, null, ServerModule.Cwp7, "root", "demo-placeholder", null, "demo-placeholder-hash",
+                name, host, ip, null, ServerModule.Cwp7, "root", new ServerCredentials("demo-placeholder", null, "demo-placeholder-hash"),
                 true, max, isDefault, isDisabled, cost, datacenter, null,
-                PrimaryNameserver, "192.0.2.1", SecondaryNameserver, "192.0.2.2",
-                null, null, null, null, null, null));
+                new ServerNameServers(
+                    PrimaryNameserver, "192.0.2.1", SecondaryNameserver, "192.0.2.2", null, null, null, null, null, null)),
+                _today);
             server.AssignToGroup(groupId);
             // Between a quarter and three quarters full, so an account count never passes the server's own limit.
-            server.RecordConnectionTest(online, online ? max * (25 + ((i * 11) % 50)) / 100 : null);
+            server.RecordConnectionTest(online, online ? max * (25 + ((i * 11) % 50)) / 100 : null, _today);
             _db.Servers.Add(server);
         }
 
@@ -112,16 +113,16 @@ internal sealed class DemoServerSeeder
             // Every seventh site has no certificate, so the "no SSL" bucket is never empty.
             if (i % 7 == 5)
             {
-                _db.SslChecks.Add(SslCheck.Create(host, false, null, null, true));
+                _db.SslChecks.Add(SslCheck.Create(host, false, null, null, true, _today));
             }
             else
             {
                 _db.SslChecks.Add(SslCheck.Create(
-                    host, true, "Demo Certificate Authority", _today.AddDays(expiryDays[i % expiryDays.Length]), true));
+                    host, true, "Demo Certificate Authority", _today.AddDays(expiryDays[i % expiryDays.Length]), true, _today));
             }
         }
 
-        _db.SslChecks.Add(SslCheck.Create("retired-site.example", false, null, null, false));
+        _db.SslChecks.Add(SslCheck.Create("retired-site.example", false, null, null, false, _today));
         await _db.SaveChangesAsync(ct);
     }
 }

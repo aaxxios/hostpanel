@@ -8,8 +8,8 @@
  * prose to tell one refusal from another.
  *
  * The blast radius is kept deliberately small. Only API requests that actually carry a `data`
- * payload are handled here; for everything else — page renders (Nuxt's handler renders
- * `error.vue`), dev-mode HTML error pages, the unhandled-error logging — this handler answers
+ * payload are handled here; for everything else (a page render, which Nuxt's handler turns into
+ * `error.vue`; dev-mode HTML error pages; the unhandled-error logging) this handler answers
  * nothing, so the next handler in the chain (registered by `nuxt.config.ts`) takes the request.
  *
  * @module server/error
@@ -46,7 +46,7 @@ export default defineNitroErrorHandler(async (error, event) => {
   const data = (error as ErrorWithData).data
 
   // Anything without a code, and anything outside the API surface, is none of this file's
-  // business — answering nothing hands it to the handlers after this one, which render those
+  // business: answering nothing hands it to the handlers after this one, which render those
   // better than a reimplementation would.
   if (!data || typeof data !== 'object' || !event.path?.startsWith('/api/')) {
     return

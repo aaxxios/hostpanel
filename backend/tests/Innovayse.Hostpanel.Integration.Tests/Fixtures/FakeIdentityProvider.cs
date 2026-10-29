@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Shared.Models;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
@@ -28,16 +29,6 @@ public sealed class FakeIdentityProvider(IdentityAccount? account) : IIdentityPr
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyDictionary<string, string>> GetEmailsBySubjectsAsync(
-        IEnumerable<string> subjects, CancellationToken ct)
-    {
-        IReadOnlyDictionary<string, string> result = account is null
-            ? new Dictionary<string, string>()
-            : subjects.ToDictionary(subject => subject, _ => account.Email);
-        return Task.FromResult(result);
-    }
-
-    /// <inheritdoc />
     public Task<IReadOnlyDictionary<string, IdentityAccount>> GetAccountsBySubjectsAsync(
         IEnumerable<string> subjects, CancellationToken ct)
     {
@@ -48,10 +39,9 @@ public sealed class FakeIdentityProvider(IdentityAccount? account) : IIdentityPr
     }
 
     /// <inheritdoc />
-    public Task<(IReadOnlyList<IdentityAccount> Items, int Total)> ListAsync(
-        string? search, int page, int pageSize, CancellationToken ct)
+    public Task<PaginatedList<IdentityAccount>> ListAsync(IdentityAccountListQuery query, CancellationToken ct)
     {
-        IReadOnlyList<IdentityAccount> items = account is null ? [] : [account];
-        return Task.FromResult((items, items.Count));
+        List<IdentityAccount> items = account is null ? [] : [account];
+        return Task.FromResult(new PaginatedList<IdentityAccount>(items, items.Count, query.Page, query.PageSize));
     }
 }

@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Billing.Currencies.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
@@ -35,7 +36,9 @@ public sealed class UpdateExchangeRatesHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Which currencies were updated and which the source did not quote, or
-    /// <c>BASE_CURRENCY_NOT_CONFIGURED</c> when no currency is marked as the base.
+    /// <c>BASE_CURRENCY_NOT_CONFIGURED</c> when no currency is marked as the base, or the source's
+    /// own refusal: <c>EXCHANGE_RATE_SOURCE_UNAVAILABLE</c> (nothing is changed) or
+    /// <c>EXCHANGE_RATE_BASE_NOT_QUOTED</c>.
     /// </returns>
     public async Task<Result<UpdateExchangeRatesResultDto>> HandleAsync(
         UpdateExchangeRatesCommand cmd, CancellationToken ct)
@@ -50,7 +53,14 @@ public sealed class UpdateExchangeRatesHandler
         }
 
         var others = all.Where(c => !c.IsBase).ToList();
-        var rates = await _source.RatesToAsync(baseCurrency.Code, others.Select(c => c.Code), ct);
+        var quoted = await _source.QuoteAsync(
+            new ExchangeRateLookup(baseCurrency.Code, others.Select(c => c.Code).ToList()), ct);
+        if (quoted.IsFailure)
+        {
+            return Result<UpdateExchangeRatesResultDto>.FailureCode(quoted.ErrorCode!);
+        }
+
+        var rates = quoted.Value!.RatesToBase;
 
         List<string> updated = [];
         List<string> missing = [];

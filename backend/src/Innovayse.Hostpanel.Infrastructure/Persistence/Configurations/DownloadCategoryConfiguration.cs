@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table configuration for <see cref="DownloadCategory"/>.</summary>
 public sealed class DownloadCategoryConfiguration : IEntityTypeConfiguration<DownloadCategory>
 {
@@ -17,5 +18,11 @@ public sealed class DownloadCategoryConfiguration : IEntityTypeConfiguration<Dow
         builder.Property(x => x.ParentCategoryId);
 
         builder.HasIndex(x => x.ParentCategoryId);
+
+        // A category with sub-categories cannot be deleted; the delete use case refuses it first.
+        builder.HasOne<DownloadCategory>()
+            .WithMany()
+            .HasForeignKey(x => x.ParentCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

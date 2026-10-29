@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Domain.Billing;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
+
 /// <summary>
 /// The one answer to "which currency is this payer billed in".
 /// </summary>

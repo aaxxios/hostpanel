@@ -1,5 +1,5 @@
 /**
- * Shared Catalog helpers — auto-imported by Nuxt from utils/
+ * Shared Catalog helpers: auto-imported by Nuxt from utils/
  *
  * @module utils/catalogGroups
  */
@@ -50,12 +50,13 @@ export const nameToKey = (name: string): string => {
 }
 
 /**
- * Whether the storefront shows a group as a product family: it is active and holds a product.
+ * Whether the storefront shows a group as a product family: it holds a product. The catalogue
+ * only ever lists active groups.
  *
  * @param group The catalogue group.
  * @returns True when it is a family.
  */
-export const isFamilyGroup = (group: PortalProductGroup): boolean => group.isActive && group.productCount > 0
+export const isFamilyGroup = (group: PortalProductGroup): boolean => group.productCount > 0
 
 /**
  * The key (slug) of a family: the hosting family has a fixed one, every other family is named by
@@ -93,9 +94,9 @@ export const familyColor = (key: string): string => {
  * @param products The group's products.
  * @returns The dominant type, or null when there is no product or none has a type.
  */
-export const dominantProductType = (products: readonly PortalProduct[]): string | null => {
-  const counts = new Map<string, number>()
-  let best: string | null = null
+export const dominantProductType = (products: readonly PortalProduct[]): ProductType | null => {
+  const counts = new Map<ProductType, number>()
+  let best: ProductType | null = null
   for (const product of products) {
     if (!product.type) {
       continue
@@ -135,42 +136,20 @@ export const familyConfig = (group: PortalProductGroup, products: readonly Porta
   return { name: group.name, icon, color: familyColor(key), learnMoreUrl: `/products/${key}` }
 }
 
-/*
- * `getGt` and `getGroupFeatures` used to live here.
- *
- * `getGt(p, field)` read `p.group_translations.translated_<field>`, then
- * `p.translated_<field>`, then `p.<field>`; `getGroupFeatures(p)` read
- * `p.group_features[].translated_feature`. Neither field is on `ProductDto`, and
- * `GET /api/portal/public/products` — verified against a live backend — sends only
- * `ProductDto`'s own fields, so the first two branches of `getGt` never resolved and
- * `getGroupFeatures` always returned `[]`. Callers now read the base field directly.
- *
- * Structured, per-product specification lines do exist, but as their own resource:
- * `GET /api/portal/public/product-features` (`ProductFeature` — label/value/sortOrder),
- * reached through `useCatalogStore().loadProductFeatures(groupId)`. That is what a caller
- * wanting `group_features` wants today.
- *
- * Localised product copy does not exist anywhere in the backend: there is no product
- * translations table and no `lang` handling in `ProductsController`. `Slide` is the only
- * entity with a `*Translation` sibling, and `loadSlides(lang)` is the one place a `lang`
- * parameter still means something. Making product copy translatable is a backend change —
- * a `ProductTranslation` entity alongside `SlideTranslation` — not a frontend one.
- */
-
 /** The HTML entities a legacy description may contain, by name or code. */
 const ENTITIES: Record<string, string> = {
   amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'", '#x27': "'",
 }
 
 /**
- * Flatten a legacy description into plain text lines.
+ * Flatten a product description into plain text lines.
  *
- * The legacy system let each product's description be edited as HTML, so the same field
+ * A product's description may have been edited as HTML, so the same field
  * arrives either as newline-separated plain text or as one long line with
- * <br /> between items — the two are indistinguishable to whoever typed them,
+ * <br /> between items: the two are indistinguishable to whoever typed them,
  * and both are in use across the catalogue. Line-based parsing sees the HTML
- * variant as a single unbroken line, which is how raw "<strong>…<br />" ended
- * up printed on the product cards. Convert the block-level tags back into the
+ * variant as a single unbroken line and would print raw `<strong>` and `<br />` tags on
+ * the product cards. Convert the block-level tags back into the
  * newlines they stand for, drop the rest, and the parser below works on either.
  *
  * @param text The raw description.

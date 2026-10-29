@@ -1,17 +1,19 @@
 <script setup lang="ts">
 /**
  * Knowledgebase management: tabs for adding categories (with the category browser) and articles.
+ * Every change reports its outcome (success, or the API's sentence) under the header, deleting a
+ * category is confirmed first, and a refused load shows the sentence with a Retry.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SupportCheckboxField from '@/components/support/SupportCheckboxField.vue'
 import SupportRowActions from '@/components/support/SupportRowActions.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
@@ -21,9 +23,11 @@ import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { enumValueOf } from '@/lib/enumValue'
 import { useKnowledgebaseStore } from '@/stores/knowledgebase'
 import type { KbCategory } from '@/types/kbarticle'
@@ -71,6 +75,38 @@ const newArticle = ref({ title: '', categoryId: 0, content: '', published: false
 /** Whether an article is being saved. */
 const articleSaving = ref(false)
 
+/** The sentence of the last refused load, shown with Retry; null when the categories loaded. */
+const loadError = ref<string | null>(null)
+
+/** The outcome line of the last change. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Shows the outcome of one change: the success sentence, or the API's sentence of the refusal.
+ *
+ * @param ok - Whether the API accepted the change.
+ * @param successKey - Locale key of the success sentence.
+ */
+const report = (ok: boolean, successKey: string): void => {
+  if (ok) {
+    feedback.show(t(successKey), false)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
+}
+
+/**
+ * Loads the categories and records whether the load was refused.
+ *
+ * @returns Resolves when the categories have settled.
+ */
+const load = async (): Promise<void> => {
+  loadError.value = (await store.fetchCategories()) ? null : store.error
+}
+
 /** Category options for select dropdowns. */
 const categoryOptions = computed(() => store.categories.map((category) => ({ value: category.id, label: category.name })))
 
@@ -98,6 +134,7 @@ const addCategory = async (): Promise<void> => {
   if (!newCategory.value.name.trim()) {
     return
   }
+  feedback.clear()
   categorySaving.value = true
   const id = await store.createCategory({
     name: newCategory.value.name.trim(),
@@ -105,6 +142,7 @@ const addCategory = async (): Promise<void> => {
     isHidden: newCategory.value.isHidden,
   })
   categorySaving.value = false
+  report(id !== null, 'support.knowledgebase.categorySaved')
   if (id !== null) {
     newCategory.value = { name: '', description: '', isHidden: false }
   }
@@ -131,23 +169,34 @@ const saveEditCategory = async (): Promise<void> => {
   if (editingCategoryId.value === null) {
     return
   }
-  if (await store.updateCategory(editingCategoryId.value, { ...editingCategory.value })) {
+  feedback.clear()
+  const saved = await store.updateCategory(editingCategoryId.value, { ...editingCategory.value })
+  report(saved, 'support.knowledgebase.categorySaved')
+  if (saved) {
     editingCategoryId.value = null
   }
 }
 
 /**
- * Deletes the category the dialog asked about.
+ * Deletes the category the dialog asked about and shows the outcome.
  */
 const handleDeleteCategory = async (): Promise<void> => {
   if (deleteCategoryTarget.value === null) {
     return
   }
+  feedback.clear()
   deletingCategory.value = true
-  if (await store.deleteCategory(deleteCategoryTarget.value)) {
+  const deleted = await store.deleteCategory(deleteCategoryTarget.value)
+  deletingCategory.value = false
+  deleteCategoryTarget.value = null
+  report(deleted, 'support.knowledgebase.categoryDeleted')
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDeleteCategory = (): void => {
+  if (!deletingCategory.value) {
     deleteCategoryTarget.value = null
   }
-  deletingCategory.value = false
 }
 
 /**
@@ -162,6 +211,7 @@ const addArticle = async (): Promise<void> => {
   if (!category) {
     return
   }
+  feedback.clear()
   articleSaving.value = true
   const id = await store.createArticle({
     title: newArticle.value.title.trim(),
@@ -170,14 +220,16 @@ const addArticle = async (): Promise<void> => {
     isPublished: newArticle.value.published,
   })
   articleSaving.value = false
+  report(id !== null, 'support.knowledgebase.articleSaved')
   if (id !== null) {
     newArticle.value = { title: '', categoryId: 0, content: '', published: false }
-    await store.fetchCategories()
+    await load()
   }
 }
 
+/** Loads the categories. */
 onMounted(() => {
-  store.fetchCategories()
+  void load()
 })
 </script>
 
@@ -188,7 +240,15 @@ onMounted(() => {
       :subtitle="t('support.knowledgebase.manageKnowledgebaseArticlesAndCategories')"
     />
 
-    <UiAlert v-if="store.error" variant="error" data-testid="knowledgebase-error">{{ store.error }}</UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="knowledgebase-feedback" />
+
+    <UiErrorState
+      v-if="loadError !== null"
+      :message="loadError"
+      :loading="store.loading"
+      testid="knowledgebase-error"
+      @retry="load"
+    />
 
     <UiTabs :items="tabItems" :model-value="activeTab" @update:model-value="selectTab" />
 
@@ -374,7 +434,7 @@ onMounted(() => {
       :loading="deletingCategory"
       tone="danger"
       @confirm="handleDeleteCategory"
-      @close="deleteCategoryTarget = null"
+      @close="dismissDeleteCategory"
     />
   </UiStack>
 </template>

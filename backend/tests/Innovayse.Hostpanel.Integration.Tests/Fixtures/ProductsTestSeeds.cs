@@ -1,15 +1,13 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
-/// Seeding and authentication helpers shared by every Products use-case test file, extracted
-/// from the endpoint-grouped files this A7 Task 6 batch split apart so the seeding logic exists
-/// exactly once rather than once per use case.
+/// Seeding and authentication helpers shared by every Products use-case test file, so the seeding
+/// logic exists exactly once rather than once per use case.
 /// </summary>
 public static class ProductsTestSeeds
 {

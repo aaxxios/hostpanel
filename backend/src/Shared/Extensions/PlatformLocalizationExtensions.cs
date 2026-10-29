@@ -33,13 +33,14 @@ public static class PlatformLocalizationExtensions
     /// content language.
     /// </summary>
     /// <param name="app">Application builder.</param>
+    /// <param name="defaultCulture">The culture a request without a supported <c>X-Language</c> is answered in.</param>
     /// <returns>Application builder for chaining.</returns>
-    public static IApplicationBuilder UsePlatformLocalization(this IApplicationBuilder app)
+    public static IApplicationBuilder UsePlatformLocalization(this IApplicationBuilder app, string defaultCulture)
     {
         string[] cultures = [.. SupportedLanguages.All];
 
         var options = new RequestLocalizationOptions()
-            .SetDefaultCulture(SupportedLanguages.Default)
+            .SetDefaultCulture(defaultCulture)
             .AddSupportedCultures(cultures)
             .AddSupportedUICultures(cultures);
 

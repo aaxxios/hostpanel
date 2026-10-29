@@ -2,11 +2,12 @@
 /**
  * Right sidebar for the integration detail page.
  *
- * Displays the connection test state (in flight, last result, or last persisted test time) and an
- * optional contextual hint.
+ * Displays the connection test state (in flight, the result of this session's test, or not tested
+ * yet) and an optional contextual hint. No test moment is stored, so only a test run on this page is
+ * shown.
  */
 import { useI18n } from 'vue-i18n'
-import { formatClock, formatRelativeFromNow } from '@/lib/format'
+import { formatClock } from '@/lib/format'
 import type { IntegrationTestResult } from '@/types/integration'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
@@ -20,9 +21,7 @@ import { MS_PER_SECOND } from '@/lib/limits'
 const { t, locale } = useI18n()
 
 /** Props for IntegrationStatusSidebar. */
-const props = defineProps<{
-  /** ISO 8601 timestamp of last successful test, or null if never tested. */
-  lastTestedAt: string | null
+defineProps<{
   /** Result of the most recent in-session test, or null. */
   testResult: IntegrationTestResult | null
   /** True while a connection test is in flight. */
@@ -41,14 +40,6 @@ const props = defineProps<{
  */
 const formatDuration = (ms: number): string =>
   ms < MS_PER_SECOND ? `${ms} ms` : `${(ms / MS_PER_SECOND).toFixed(1)} s`
-
-/**
- * Describes the persisted last test time.
- *
- * @returns Relative wording such as "5 minutes ago", or the translated "Never".
- */
-const formatLastTested = (): string =>
-  props.lastTestedAt ? formatRelativeFromNow(props.lastTestedAt, locale.value) : t('integrations.common.never')
 </script>
 
 <template>
@@ -61,8 +52,8 @@ const formatLastTested = (): string =>
         </UiText>
 
         <!-- Test in flight. Checked first: the store clears the previous result when a test
-             starts, so without this branch the card fell straight through to "Not tested yet"
-             for the duration of the probe and gave no sign anything was happening. -->
+             starts, so without this branch the card would show "Not tested yet" for the
+             duration of the probe. -->
         <UiStack v-if="testing" gap="xs" data-testid="integration-status-testing">
           <UiText tone="primary" size="md" class="font-medium">
             {{ t('integrations.integrationStatusSidebar.testingConnection') }}
@@ -93,14 +84,11 @@ const formatLastTested = (): string =>
           </UiStack>
         </UiStack>
 
-        <!-- Persisted last-tested -->
+        <!-- Nothing tested on this page yet -->
         <UiStack v-else gap="xs" data-testid="integration-status-idle">
-          <UiBadge :tone="lastTestedAt ? 'success' : 'neutral'" dot>
-            {{ lastTestedAt ? t('integrations.integrationStatusSidebar.previouslyTestedOk') : t('integrations.integrationStatusSidebar.notTestedYet') }}
+          <UiBadge tone="neutral" dot>
+            {{ t('integrations.integrationStatusSidebar.notTestedYet') }}
           </UiBadge>
-          <UiText tone="muted" size="sm">
-            {{ t('integrations.integrationStatusSidebar.lastTestedFormatlasttested', { formatLastTested: formatLastTested() }) }}
-          </UiText>
         </UiStack>
       </UiStack>
     </UiCard>

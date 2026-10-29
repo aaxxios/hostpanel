@@ -117,7 +117,7 @@ export const useQuotesStore = defineStore('quotes', () => {
   }
 
   /**
-   * Updates an existing quote, then reloads it.
+   * Updates an existing quote, then reloads it and confirms the save in `successMessage`.
    *
    * @param id - The quote id to update.
    * @param payload - Updated quote data.
@@ -128,6 +128,9 @@ export const useQuotesStore = defineStore('quotes', () => {
       await api.update(id, payload)
       currentQuote.value = await api.get(id)
     })
+    if (result.ok) {
+      successMessage.value = translate('quotes.savedSuccess', { id })
+    }
     return result.ok
   }
 

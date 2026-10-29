@@ -6,9 +6,8 @@ namespace Innovayse.Hostpanel.Shared.MultiTenancy;
 /// command's body.
 /// </summary>
 /// <remarks>
-/// hostpanel's identifiers are strings (the SSO <c>sub</c>, or the local Identity user id), not the
-/// <c>Guid</c> the other products use, and there is no tenant: hostpanel bills clients, not
-/// organizations (conformance spec §2).
+/// Identifiers are strings (the sign-on provider <c>sub</c>, or the local Identity user id), not
+/// <c>Guid</c>s, and there is no tenant: hostpanel bills clients.
 /// </remarks>
 public interface ICurrentUserService
 {
@@ -16,7 +15,9 @@ public interface ICurrentUserService
     public string? UserId { get; }
 
     /// <summary>The caller's display name, resolved at most once per request; null when unknown.</summary>
-    public string? UserName { get; }
+    /// <param name="ct">Cancels the lookup.</param>
+    /// <returns>The display name, or null when there is no caller or the caller is unknown.</returns>
+    public Task<string?> GetUserNameAsync(CancellationToken ct);
 
     /// <summary>The <c>email</c> claim, or null when the token omitted it.</summary>
     public string? Email { get; }

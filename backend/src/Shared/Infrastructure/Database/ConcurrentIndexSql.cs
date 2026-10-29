@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Shared.Infrastructure.Database;
 
 /// <summary>
 /// Builds PostgreSQL <c>CREATE/DROP INDEX CONCURRENTLY</c> statements. Index, table and column names
-/// are quoted exactly as passed — these are PascalCase, matching the C# names — and each is checked
+/// are quoted exactly as passed, these are PascalCase, matching the C# names, and each is checked
 /// against a PascalCase pattern first, so an argument can never smuggle SQL into a migration. Schema
 /// and index method are not renamed by that convention (Postgres schemas and access methods, e.g.
 /// <c>ai</c>, <c>hnsw</c>, stay lower-case) and are checked against a looser identifier pattern instead.
@@ -20,9 +20,9 @@ public static partial class ConcurrentIndexSql
     /// <param name="columns">Indexed columns in order, PascalCase; at least one.</param>
     /// <param name="schema">Schema name, or null for the search path.</param>
     /// <param name="unique">Whether the index is unique.</param>
-    /// <param name="method">Index method (<c>btree</c>, <c>gin</c>, <c>hnsw</c>…), or null for the default.</param>
+    /// <param name="method">Index method (<c>btree</c>, <c>gin</c>, <c>hnsw</c> and so on), or null for the default.</param>
     /// <param name="filter">
-    /// Partial-index predicate, or null. Raw SQL written by the migration author, never user input —
+    /// Partial-index predicate, or null. Raw SQL written by the migration author, never user input:
     /// it cannot be validated as an identifier.
     /// </param>
     /// <returns>The SQL statement.</returns>
@@ -84,7 +84,7 @@ public static partial class ConcurrentIndexSql
 
     /// <summary>
     /// A PascalCase identifier: either a plain name (an upper-case letter, then letters and digits,
-    /// no underscore) or an EF-style constraint/index name — an optional <c>PK_|FK_|IX_|UX_|AK_|CK_</c>
+    /// no underscore) or an EF-style constraint/index name; an optional <c>PK_|FK_|IX_|UX_|AK_|CK_</c>
     /// prefix followed by one or more PascalCase parts joined by <c>_</c> (e.g. <c>IX_Messages_ConversationId</c>).
     /// </summary>
     /// <returns>The compiled pattern.</returns>

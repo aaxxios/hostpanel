@@ -1,7 +1,7 @@
 using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Common.Settings;
-using Innovayse.Hostpanel.Domain.Ssh;
+using Innovayse.Hostpanel.Domain.Servers;
 
 namespace Innovayse.Hostpanel.Application.Admin.Servers.Extensions;
 

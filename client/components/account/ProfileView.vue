@@ -3,9 +3,9 @@
     <UiGrid cols="2" gap="lg">
       <UiCard :title="$t('client.profile.accountInfo')">
         <dl class="grid grid-cols-1 gap-4">
-          <UiDescriptionItem :label="$t('client.profile.firstName')" :value="user.firstname" />
-          <UiDescriptionItem :label="$t('client.profile.lastName')" :value="user.lastname" />
-          <UiDescriptionItem v-if="user.companyname" :label="$t('client.profile.companyName')" :value="user.companyname" />
+          <UiDescriptionItem :label="$t('client.profile.firstName')" :value="user.firstName" />
+          <UiDescriptionItem :label="$t('client.profile.lastName')" :value="user.lastName" />
+          <UiDescriptionItem v-if="user.companyName" :label="$t('client.profile.companyName')" :value="user.companyName" />
           <UiDescriptionItem :label="$t('client.profile.email')" :value="user.email" value-class="break-all" />
           <UiDescriptionItem :label="$t('client.profile.paymentMethod')" :value="paymentMethodLabel" />
           <UiDescriptionItem v-if="ownsLanguage" :label="$t('client.profile.language')" :value="languageLabel" />
@@ -14,13 +14,13 @@
 
       <UiCard :title="$t('client.profile.billingAddress')">
         <dl class="grid grid-cols-1 gap-4">
-          <UiDescriptionItem :label="$t('client.profile.address1')" :value="user.address1 || undefined" />
-          <UiDescriptionItem v-if="user.address2" :label="$t('client.profile.address2')" :value="user.address2" />
-          <UiDescriptionItem :label="$t('client.profile.city')" :value="user.city || undefined" />
-          <UiDescriptionItem :label="$t('client.profile.state')" :value="user.state || undefined" />
-          <UiDescriptionItem :label="$t('client.profile.postcode')" :value="user.postcode || undefined" />
-          <UiDescriptionItem :label="$t('client.profile.country')" :value="user.countryname || user.country || undefined" />
-          <UiDescriptionItem :label="$t('client.profile.phone')" :value="user.phonenumber || undefined" />
+          <UiDescriptionItem :label="$t('client.profile.address1')" :value="user.address?.street || undefined" />
+          <UiDescriptionItem v-if="user.address?.address2" :label="$t('client.profile.address2')" :value="user.address.address2" />
+          <UiDescriptionItem :label="$t('client.profile.city')" :value="user.address?.city || undefined" />
+          <UiDescriptionItem :label="$t('client.profile.state')" :value="user.address?.state || undefined" />
+          <UiDescriptionItem :label="$t('client.profile.postcode')" :value="user.address?.postCode || undefined" />
+          <UiDescriptionItem :label="$t('client.profile.country')" :value="user.address?.country || undefined" />
+          <UiDescriptionItem :label="$t('client.profile.phone')" :value="user.phone || undefined" />
         </dl>
       </UiCard>
     </UiGrid>

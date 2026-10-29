@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import {
+  BILLABLE_ITEM_DESCRIPTION_MAX_LENGTH,
   BYTES_PER_KB,
   COPIED_VISIBLE_MS,
   DEFAULT_PAGE_SIZE,
@@ -32,6 +33,10 @@ describe('limits', () => {
   it('keeps the notice and debounce timings the screens were written against', () => {
     expect(NOTICE_VISIBLE_MS).toBe(3000)
     expect(SEARCH_DEBOUNCE_MS).toBe(300)
+  })
+
+  it('caps a billable item description where the API does', () => {
+    expect(BILLABLE_ITEM_DESCRIPTION_MAX_LENGTH).toBe(500)
   })
 
   it('keeps the page sizes of each kind of list', () => {

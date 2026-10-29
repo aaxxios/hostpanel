@@ -1,7 +1,7 @@
 <template>
   <div data-testid="account-profile-tab">
     <!-- Only while there is no profile to show: a refresh after a save keeps the page (and the edit
-         form, whose "saved" event would otherwise be lost with the form that is unmounted). -->
+         form, whose confirmation would otherwise be lost with the form that is unmounted). -->
     <UiStack v-if="userLoading && !user" gap="md" data-testid="account-profile-loading">
       <UiSkeleton shape="block" class="h-24" />
       <UiSkeleton shape="block" class="h-64" />
@@ -16,7 +16,6 @@
         :owns-language="ownsLanguage"
         :payment-options="paymentOptions"
         :language-options="languageOptions"
-        @saved="editing = false"
         @cancel="editing = false"
       />
 
@@ -34,6 +33,7 @@
           :owns-language="ownsLanguage"
           :email-prefs="emailPrefs"
         />
+        <AccountEmailChangeCard v-if="canEdit && ownsAccount" :email="user.email" />
         <AccountTwoFactorCard :enabled="twoFactorEnabled" />
       </template>
     </UiStack>
@@ -49,7 +49,7 @@
 
 <script setup lang="ts">
 /**
- * ProfileTab - the "Account Details" tab: summary, details or edit form, and two-factor.
+ * ProfileTab - the "Account Details" tab: summary, details or edit form, the sign-in address and two-factor.
  *
  * Reads the profile from the client store and the gateways from the account store; it derives
  * the human wording (default payment method, language) once and hands it to the view and the
@@ -93,6 +93,12 @@ const editing = ref(false)
  */
 const ownsLanguage = computed<boolean>(() => !isSso.value)
 
+/**
+ * Whether this deployment owns the account's sign-in address. Under SSO the SSO owns it, so
+ * changing it is not offered here at all.
+ */
+const ownsAccount = computed<boolean>(() => !isSso.value)
+
 /** Whether two-factor is on; read from the profile the client store already holds. */
 const twoFactorEnabled = computed<boolean>(() => user.value?.twoFactorEnabled ?? false)
 
@@ -111,8 +117,8 @@ const LANGUAGE_LABEL_KEYS: Record<AppLocale, string> = {
 
 /**
  * The languages the backend accepts, keyed by the codes in `LocaleOptions.SupportedLocales`.
- * One vocabulary end to end: the legacy words ("english") match no supported locale and would
- * have been served as English by accident.
+ * One vocabulary end to end: a language word such as "english" matches no supported locale and
+ * would be served as English by accident.
  */
 const languageOptions = computed(() => [
   { value: '', label: t('client.profile.langDefault') },
@@ -121,7 +127,7 @@ const languageOptions = computed(() => [
 
 /** The default payment method as a name a person reads. */
 const paymentMethodLabel = computed<string>(() => {
-  const gateway = user.value?.defaultgateway
+  const gateway = user.value?.paymentMethod
   if (!gateway) {
     return t('client.profile.paymentDefault')
   }
@@ -130,7 +136,7 @@ const paymentMethodLabel = computed<string>(() => {
 
 /**
  * The stored language as a name a person reads, resolved through the same option list the
- * dropdown renders rather than by capitalising the code (`en` used to print as "En").
+ * dropdown renders rather than by capitalising the code, which would print `en` as "En".
  */
 const languageLabel = computed<string>(() => {
   const language = user.value?.language
@@ -141,5 +147,5 @@ const languageLabel = computed<string>(() => {
 })
 
 /** The decoded email preferences of the stored profile. */
-const emailPrefs = computed(() => decodeEmailPrefs(user.value?.email_preferences))
+const emailPrefs = computed(() => decodeEmailPrefs(user.value?.notifications))
 </script>

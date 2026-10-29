@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 
@@ -9,7 +10,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// no network. References are derived from the domain name, so the same name always gets the same
 /// reference, and every name is available except the ones that spell <c>taken</c>.
 /// </summary>
-internal sealed class DemoRegistrarProvider : IRegistrarProvider
+public sealed class DemoRegistrarProvider : IRegistrarProvider
 {
     /// <summary>A name containing this word reads as already registered, so the demo can show both answers.</summary>
     private const string TakenMarker = "taken";
@@ -22,6 +23,16 @@ internal sealed class DemoRegistrarProvider : IRegistrarProvider
         "Demo", "Registrant", "Demo Registrant LLC", "registrant@demo.example", "+1 555 0100",
         "1 Demo Street", null, "Northvale", "Northvale", "00001", "US");
 
+    /// <summary>The source of the current moment the fake registry dates its answers from.</summary>
+    private readonly IClock _clock;
+
+    /// <summary>Initializes the fake registrar.</summary>
+    /// <param name="clock">The source of the current moment the fake registry dates its answers from.</param>
+    public DemoRegistrarProvider(IClock clock)
+    {
+        _clock = clock;
+    }
+
     /// <summary>Builds the reference the registry would hand back for a name.</summary>
     /// <param name="domainName">The domain name.</param>
     /// <returns>A stable reference.</returns>
@@ -31,9 +42,9 @@ internal sealed class DemoRegistrarProvider : IRegistrarProvider
     /// <param name="registrarRef">The registry reference.</param>
     /// <param name="withExpiry">Whether the result carries an expiry one term from now.</param>
     /// <returns>The success result.</returns>
-    private static Task<RegistrarResult> Ok(string registrarRef, bool withExpiry = false) =>
+    private Task<RegistrarResult> Ok(string registrarRef, bool withExpiry = false) =>
         Task.FromResult(new RegistrarResult(
-            true, registrarRef, withExpiry ? DateTimeOffset.UtcNow.AddYears(TermYears) : null, null));
+            true, registrarRef, withExpiry ? _clock.UtcNow.AddYears(TermYears) : null, null));
 
     /// <inheritdoc/>
     public Task<RegistrarResult> RegisterAsync(DomainRegistrationOrder request, CancellationToken ct) =>
@@ -48,86 +59,85 @@ internal sealed class DemoRegistrarProvider : IRegistrarProvider
         Ok(request.RegistrarRef, true);
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> CancelTransferAsync(string domainName, string registrarRef, CancellationToken ct) =>
-        Ok(registrarRef);
+    public Task<RegistrarResult> CancelTransferAsync(DomainRef domain, CancellationToken ct) =>
+        Ok(domain.RegistrarRef);
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> InitiateOutgoingTransferAsync(string domainName, string registrarRef, CancellationToken ct) =>
-        Ok(registrarRef);
+    public Task<RegistrarResult> InitiateOutgoingTransferAsync(DomainRef domain, CancellationToken ct) =>
+        Ok(domain.RegistrarRef);
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetAutoRenewAsync(string domainName, string registrarRef, bool enabled, CancellationToken ct) =>
-        Ok(registrarRef);
+    public Task<RegistrarResult> SetAutoRenewAsync(RegistrarFlagChange change, CancellationToken ct) =>
+        Ok(change.Domain.RegistrarRef);
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetWhoisPrivacyAsync(string domainName, string registrarRef, bool enabled, CancellationToken ct) =>
-        Ok(registrarRef);
+    public Task<RegistrarResult> SetWhoisPrivacyAsync(RegistrarFlagChange change, CancellationToken ct) =>
+        Ok(change.Domain.RegistrarRef);
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetRegistrarLockAsync(string domainName, string registrarRef, bool locked, CancellationToken ct) =>
-        Ok(registrarRef);
+    public Task<RegistrarResult> SetRegistrarLockAsync(RegistrarFlagChange change, CancellationToken ct) =>
+        Ok(change.Domain.RegistrarRef);
 
     /// <inheritdoc/>
-    public Task<string?> GetEppCodeAsync(string domainName, string registrarRef, CancellationToken ct) =>
+    public Task<string?> GetEppCodeAsync(DomainRef domain, CancellationToken ct) =>
         Task.FromResult<string?>("DEMO-EPP-CODE");
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetNameserversAsync(
-        string domainName, string registrarRef, IReadOnlyList<string> nameservers, CancellationToken ct) =>
-        Ok(registrarRef);
+    public Task<RegistrarResult> SetNameserversAsync(NameserverChange change, CancellationToken ct) =>
+        Ok(change.Domain.RegistrarRef);
 
     /// <inheritdoc/>
-    public Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(string domainName, string registrarRef, CancellationToken ct)
+    public Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(DomainRef domain, CancellationToken ct)
     {
         IReadOnlyList<DnsRecord> records =
         [
             DnsRecord.CreateDetached(DnsRecordType.A, "@", "192.0.2.10", 3600, null),
-            DnsRecord.CreateDetached(DnsRecordType.CNAME, "www", domainName, 3600, null),
-            DnsRecord.CreateDetached(DnsRecordType.MX, "@", $"mail.{domainName}", 3600, 10),
+            DnsRecord.CreateDetached(DnsRecordType.CNAME, "www", domain.Name, 3600, null),
+            DnsRecord.CreateDetached(DnsRecordType.MX, "@", $"mail.{domain.Name}", 3600, 10),
         ];
 
         return Task.FromResult(records);
     }
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> AddDnsRecordAsync(string domainName, string registrarRef, DnsRecord record, CancellationToken ct) =>
-        Ok(registrarRef);
+    public Task<RegistrarResult> AddDnsRecordAsync(DnsRecordChange change, CancellationToken ct) =>
+        Ok(change.Domain.RegistrarRef);
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> UpdateDnsRecordAsync(string domainName, string registrarRef, DnsRecord record, CancellationToken ct) =>
-        Ok(registrarRef);
+    public Task<RegistrarResult> UpdateDnsRecordAsync(DnsRecordChange change, CancellationToken ct) =>
+        Ok(change.Domain.RegistrarRef);
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> DeleteDnsRecordAsync(string domainName, string registrarRef, int recordId, CancellationToken ct) =>
-        Ok(registrarRef);
+    public Task<RegistrarResult> DeleteDnsRecordAsync(DnsRecordRemoval removal, CancellationToken ct) =>
+        Ok(removal.Domain.RegistrarRef);
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> ModifyContactDetailsAsync(string domainName, DomainContact contact, CancellationToken ct) =>
-        Ok(RefFor(domainName));
+    public Task<RegistrarResult> ModifyContactDetailsAsync(DomainContactChange change, CancellationToken ct) =>
+        Ok(RefFor(change.DomainName));
 
     /// <inheritdoc/>
     public Task<DomainContact?> GetContactDetailsAsync(string domainName, CancellationToken ct) =>
         Task.FromResult<DomainContact?>(SampleContact);
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetEmailForwardingAsync(string domainName, bool enabled, CancellationToken ct) =>
-        Ok(RefFor(domainName));
+    public Task<RegistrarResult> SetEmailForwardingAsync(DomainFeatureToggle toggle, CancellationToken ct) =>
+        Ok(RefFor(toggle.DomainName));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> AddEmailForwardingRuleAsync(string domainName, string source, string destination, CancellationToken ct) =>
-        Ok(RefFor(domainName));
+    public Task<RegistrarResult> AddEmailForwardingRuleAsync(EmailForwardingRuleChange change, CancellationToken ct) =>
+        Ok(RefFor(change.DomainName));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> UpdateEmailForwardingRuleAsync(string domainName, string source, string destination, CancellationToken ct) =>
-        Ok(RefFor(domainName));
+    public Task<RegistrarResult> UpdateEmailForwardingRuleAsync(EmailForwardingRuleChange change, CancellationToken ct) =>
+        Ok(RefFor(change.DomainName));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> DeleteEmailForwardingRuleAsync(string domainName, string source, CancellationToken ct) =>
-        Ok(RefFor(domainName));
+    public Task<RegistrarResult> DeleteEmailForwardingRuleAsync(EmailForwardingRuleRemoval removal, CancellationToken ct) =>
+        Ok(RefFor(removal.DomainName));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetDnsManagementAsync(string domainName, bool enabled, CancellationToken ct) =>
-        Ok(RefFor(domainName));
+    public Task<RegistrarResult> SetDnsManagementAsync(DomainFeatureToggle toggle, CancellationToken ct) =>
+        Ok(RefFor(toggle.DomainName));
 
     /// <inheritdoc/>
     public Task<bool> CheckAvailabilityAsync(string domainName, CancellationToken ct) =>
@@ -140,7 +150,7 @@ internal sealed class DemoRegistrarProvider : IRegistrarProvider
     /// <inheritdoc/>
     public Task<WhoisInfo?> GetWhoisAsync(string domainName, CancellationToken ct)
     {
-        var created = DateTimeOffset.UtcNow.AddMonths(-3);
+        var created = _clock.UtcNow.AddMonths(-3);
         return Task.FromResult<WhoisInfo?>(new WhoisInfo("Demo Registrar", "Demo Registrant LLC", created, created.AddYears(TermYears)));
     }
 

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Demo.Queries.GetDemo;
 
-/// <summary>Validates <see cref="GetDemoQuery"/>: no rules — the query carries no input.</summary>
+/// <summary>Validates <see cref="GetDemoQuery"/>: no rules; the query carries no input.</summary>
 public sealed class GetDemoValidator : LocalizedValidator<GetDemoQuery>
 {
     /// <summary>Initializes the validator with the localization service.</summary>

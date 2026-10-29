@@ -11,10 +11,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
 import { makeContactInput } from '~/tests/helpers/accountContact'
+import { InvitePermissionMode } from '~/types/invitepermissionmode'
+import type { InviteUserPayload } from '~/types/inviteuserpayload'
 
 /** Mocked client endpoints, re-created for every test. */
 const clientApi = {
   updateMe: vi.fn(),
+  startEmailChange: vi.fn(),
+  confirmEmailChange: vi.fn(),
   inviteUser: vi.fn(),
   removeUser: vi.fn(),
   createContact: vi.fn(),
@@ -27,7 +31,6 @@ const clientApi = {
 
 /** Mocked billing endpoints. */
 const billingApi = {
-  updatePaymentMethod: vi.fn(),
   setDefaultPaymentMethod: vi.fn(),
   removePaymentMethod: vi.fn(),
   fetchPaymentMethods: vi.fn(),
@@ -43,6 +46,12 @@ const authApi = {
 
 /** Mocked profile reload on the client store. */
 const fetchUser = vi.fn()
+
+/** Mocked sign-out on the auth store, which ends the session and leaves for the sign-in page. */
+const signOut = vi.fn()
+
+/** Mocked local session end on the auth store, which keeps the page. */
+const endLocalSession = vi.fn()
 
 /** Mocked permission check on the client store; every permission is held unless a test says otherwise. */
 const mayDo = vi.fn()
@@ -96,13 +105,36 @@ vi.mock('~/stores/client', () => ({
   useClientStore: () => ({ fetchUser, mayDo })
 }))
 
+vi.mock('~/stores/auth', () => ({
+  /**
+   * Stands in for the auth store.
+   *
+   * @returns A store exposing only the two ways of ending the session.
+   */
+  useAuthStore: () => ({ signOut, endLocalSession })
+}))
+
+vi.mock('~/utils/translate', () => ({
+  /**
+   * Stands in for the out-of-component translator.
+   *
+   * @param key - The message key.
+   * @returns The key itself.
+   */
+  translate: (key: string): string => key
+}))
+
 const { useAccountStore } = await import('~/stores/account')
+const { EmailConfirmationStatus } = await import('~/types/emailconfirmationstatus')
 const { ActionOutcome } = await import('~/types/actionoutcome')
 const { ContactSaveOutcome } = await import('~/types/contactsaveoutcome')
 const { TwoFactorMode } = await import('~/types/twofactormode')
 
 /** A refusal shaped like the API's problem body. */
 const refused = { data: { detail: 'Refused.' } }
+
+/** A complete invitation granting every permission. */
+const invite: InviteUserPayload = { email: 'a@b.c', firstName: 'A', lastName: 'B', permissionMode: InvitePermissionMode.All, permissions: [] }
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -112,6 +144,8 @@ beforeEach(() => {
     }
   }
   fetchUser.mockReset()
+  signOut.mockReset()
+  endLocalSession.mockReset()
   mayDo.mockReset()
   mayDo.mockReturnValue(true)
 })
@@ -121,7 +155,7 @@ describe('useAccountStore.saveProfile', () => {
     clientApi.updateMe.mockResolvedValue({})
     const store = useAccountStore()
 
-    const outcome = await store.saveProfile({ firstname: 'Ada' })
+    const outcome = await store.saveProfile({ firstName: 'Ada' })
 
     expect(outcome).toBe(ActionOutcome.Succeeded)
     expect(fetchUser).toHaveBeenCalledWith(true)
@@ -162,7 +196,7 @@ describe('useAccountStore team members', () => {
     clientApi.inviteUser.mockResolvedValue({})
     const store = useAccountStore()
 
-    expect(await store.inviteUser({ email: 'a@b.c' })).toBe(ActionOutcome.Succeeded)
+    expect(await store.inviteUser(invite)).toBe(ActionOutcome.Succeeded)
     expect(store.inviting).toBe(false)
   })
 
@@ -170,7 +204,7 @@ describe('useAccountStore team members', () => {
     clientApi.inviteUser.mockRejectedValue(refused)
     const store = useAccountStore()
 
-    expect(await store.inviteUser({})).toBe(ActionOutcome.Failed)
+    expect(await store.inviteUser(invite)).toBe(ActionOutcome.Failed)
     expect(store.inviteError).toBe('Refused.')
   })
 
@@ -193,7 +227,7 @@ describe('useAccountStore contacts', () => {
   })
 
   it('creates when the id is null and updates when it is set', async () => {
-    clientApi.createContact.mockResolvedValue({})
+    clientApi.createContact.mockResolvedValue(5)
     clientApi.updateContact.mockResolvedValue({})
     const store = useAccountStore()
     const body = makeContactInput({ firstName: 'A', lastName: 'L' })
@@ -241,17 +275,36 @@ describe('useAccountStore two-factor', () => {
     expect(store.tfaError).toBe('Refused.')
   })
 
-  it('enables or disables by mode and reloads the profile', async () => {
+  it('enables with the code and reloads the profile', async () => {
     authApi.enableTwoFactor.mockResolvedValue({})
-    authApi.disableTwoFactor.mockResolvedValue({})
     const store = useAccountStore()
 
     expect(await store.submitTwoFactor(TwoFactorMode.Enable, '123456')).toBe(ActionOutcome.Succeeded)
-    expect(await store.submitTwoFactor(TwoFactorMode.Disable, '654321')).toBe(ActionOutcome.Succeeded)
 
     expect(authApi.enableTwoFactor).toHaveBeenCalledWith('123456')
-    expect(authApi.disableTwoFactor).toHaveBeenCalledWith('654321')
-    expect(fetchUser).toHaveBeenCalledTimes(2)
+    expect(fetchUser).toHaveBeenCalledTimes(1)
+    expect(signOut).not.toHaveBeenCalled()
+  })
+
+  it('disables with the code and the password, then signs this browser out', async () => {
+    authApi.disableTwoFactor.mockResolvedValue({})
+    const store = useAccountStore()
+
+    expect(await store.submitTwoFactor(TwoFactorMode.Disable, '654321', 'secret-pw')).toBe(ActionOutcome.Succeeded)
+
+    expect(authApi.disableTwoFactor).toHaveBeenCalledWith('654321', 'secret-pw')
+    expect(signOut).toHaveBeenCalledTimes(1)
+    expect(fetchUser).not.toHaveBeenCalled()
+  })
+
+  it('stays signed in when switching off is refused', async () => {
+    authApi.disableTwoFactor.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    expect(await store.submitTwoFactor(TwoFactorMode.Disable, '654321', 'wrong')).toBe(ActionOutcome.Failed)
+
+    expect(store.tfaModalError).toBe('Refused.')
+    expect(signOut).not.toHaveBeenCalled()
   })
 
   it('keeps the sentence when a code is refused', async () => {
@@ -264,16 +317,64 @@ describe('useAccountStore two-factor', () => {
   })
 })
 
-describe('useAccountStore payment methods', () => {
-  it('keeps the sentence when an expiry edit is refused', async () => {
-    billingApi.updatePaymentMethod.mockRejectedValue(refused)
+describe('useAccountStore sign-in address', () => {
+  it('asks for the change and remembers where the link went', async () => {
+    clientApi.startEmailChange.mockResolvedValue(undefined)
     const store = useAccountStore()
 
-    expect(await store.updatePaymentMethod('1', {})).toBe(ActionOutcome.Failed)
-    expect(store.editError).toBe('Refused.')
-    expect(store.editSaving).toBe(false)
+    const outcome = await store.startEmailChange({ newEmail: 'new@example.com', currentPassword: 'pw' })
+
+    expect(outcome).toBe(ActionOutcome.Succeeded)
+    expect(clientApi.startEmailChange).toHaveBeenCalledWith({ newEmail: 'new@example.com', currentPassword: 'pw' })
+    expect(store.emailChangeSentTo).toBe('new@example.com')
+    expect(store.emailChangeSaving).toBe(false)
   })
 
+  it('keeps the sentence and sends nobody to an inbox when the change is refused', async () => {
+    clientApi.startEmailChange.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    const outcome = await store.startEmailChange({ newEmail: 'new@example.com', currentPassword: 'wrong' })
+
+    expect(outcome).toBe(ActionOutcome.Failed)
+    expect(store.emailChangeError).toBe('Refused.')
+    expect(store.emailChangeSentTo).toBeNull()
+  })
+
+  it('confirms the change and ends this browser session', async () => {
+    clientApi.confirmEmailChange.mockResolvedValue(undefined)
+    const store = useAccountStore()
+
+    const status = await store.confirmEmailChange('new@example.com', 'tok')
+
+    expect(status).toBe(EmailConfirmationStatus.Confirmed)
+    expect(clientApi.confirmEmailChange).toHaveBeenCalledWith('new@example.com', 'tok')
+    expect(endLocalSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses a link with nothing in it without a request', async () => {
+    const store = useAccountStore()
+
+    const status = await store.confirmEmailChange('', '')
+
+    expect(status).toBe(EmailConfirmationStatus.Failed)
+    expect(store.emailChangeConfirmError).toBe('client.confirmEmail.invalidLink')
+    expect(clientApi.confirmEmailChange).not.toHaveBeenCalled()
+  })
+
+  it('keeps the sentence and the session when the token is refused', async () => {
+    clientApi.confirmEmailChange.mockRejectedValue(refused)
+    const store = useAccountStore()
+
+    const status = await store.confirmEmailChange('new@example.com', 'bad')
+
+    expect(status).toBe(EmailConfirmationStatus.Failed)
+    expect(store.emailChangeConfirmError).toBe('Refused.')
+    expect(endLocalSession).not.toHaveBeenCalled()
+  })
+})
+
+describe('useAccountStore payment methods', () => {
   it('reports Succeeded for set-default and clears the in-flight id', async () => {
     billingApi.setDefaultPaymentMethod.mockResolvedValue({})
     const store = useAccountStore()
@@ -311,8 +412,7 @@ describe('useAccountStore reads', () => {
 
   it.each([
     ['loadUsers', 'fetchUsers', 'users', 'usersLoading'],
-    ['loadContacts', 'fetchContacts', 'contacts', 'contactsLoading'],
-    ['loadEmails', 'fetchEmails', 'emails', 'emailsLoading']
+    ['loadContacts', 'fetchContacts', 'contacts', 'contactsLoading']
   ] as const)('%s keeps the list, and empties it when the read fails', async (action, endpoint, state, flag) => {
     clientApi[endpoint].mockResolvedValueOnce([{ id: '1' }]).mockRejectedValueOnce(new Error('down'))
     const store = useAccountStore()
@@ -324,6 +424,22 @@ describe('useAccountStore reads', () => {
     await store[action]()
     expect(store[state]).toEqual([])
     expect(store[flag]).toBe(false)
+  })
+
+  it('keeps the rows of the sent-mail page, and empties them when the read fails', async () => {
+    const row = { id: 1, to: 'a@b.test', subject: 'Invoice', sentAt: '2026-02-03T00:00:00Z', success: true }
+    clientApi.fetchEmails
+      .mockResolvedValueOnce({ items: [row], pageNumber: 1, pageSize: 100, totalCount: 1, totalPages: 1 })
+      .mockRejectedValueOnce(new Error('down'))
+    const store = useAccountStore()
+
+    await store.loadEmails()
+    expect(store.emails).toEqual([row])
+    expect(store.emailsLoading).toBe(false)
+
+    await store.loadEmails()
+    expect(store.emails).toEqual([])
+    expect(store.emailsLoading).toBe(false)
   })
 
   it('keeps the saved payment methods', async () => {

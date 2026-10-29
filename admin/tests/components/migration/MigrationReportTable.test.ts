@@ -7,18 +7,21 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import MigrationReportTable from '@/components/migration/MigrationReportTable.vue'
 import { createTestI18n } from '../../helpers/i18n'
-import { json } from '../../helpers/fetch'
+import { json, problem } from '../../helpers/fetch'
 import { stubRoutes } from '../../helpers/routes'
+import { MigrationEntityType, MigrationLogAction, MigrationSkipReason } from '@/types/migration'
 
-/** Two log rows: one imported client and one failed invoice. */
+/** Three log rows: one imported client, one failed invoice and one skipped domain. */
 const page = {
   items: [
-    { id: 1, entityType: 'Clients', identifier: 'C-100', action: 'Imported', reason: null, createdAt: '2026-10-01T10:00:00Z' },
-    { id: 2, entityType: 'Invoices', identifier: 'INV-7', action: 'Failed', reason: 'Missing client', createdAt: '2026-10-01T10:00:05Z' },
+    { id: 1, entityType: MigrationEntityType.Clients, identifier: 'C-100', action: MigrationLogAction.Imported, skipReason: null, reason: null, createdAt: '2026-10-01T10:00:00Z' },
+    { id: 2, entityType: MigrationEntityType.Invoices, identifier: 'INV-7', action: MigrationLogAction.Failed, skipReason: MigrationSkipReason.ImportFailed, reason: null, createdAt: '2026-10-01T10:00:05Z' },
+    { id: 3, entityType: MigrationEntityType.Domains, identifier: 'example.test', action: MigrationLogAction.Skipped, skipReason: MigrationSkipReason.ClientNotFound, reason: null, createdAt: '2026-10-01T10:00:09Z' },
   ],
-  totalCount: 2,
-  page: 1,
+  totalCount: 3,
+  pageNumber: 1,
   pageSize: 20,
+  totalPages: 1,
 }
 
 /**
@@ -42,7 +45,7 @@ describe('MigrationReportTable', () => {
     vi.unstubAllGlobals()
   })
 
-  it('renders a row per log entry with its outcome and reason', async () => {
+  it('renders a row per log entry with its outcome and translated reason', async () => {
     stubRoutes({ 'GET /api/admin/migrations/5/logs': () => json(page) })
     const wrapper = await mountReport()
 
@@ -51,8 +54,10 @@ describe('MigrationReportTable', () => {
     expect(text).toContain('INV-7')
     expect(text).toContain('Imported')
     expect(text).toContain('Failed')
-    expect(text).toContain('Missing client')
-    expect(wrapper.get('[data-testid="migration-report-count"]').text()).toContain('2')
+    expect(text).toContain('Import failed')
+    expect(text).toContain('Client not found')
+    expect(text).not.toContain('ClientNotFound')
+    expect(wrapper.get('[data-testid="migration-report-count"]').text()).toContain('3')
   })
 
   it('asks for page 1 with the page size on the first load', async () => {
@@ -69,5 +74,22 @@ describe('MigrationReportTable', () => {
     const wrapper = await mountReport()
 
     expect(wrapper.text()).toContain('No records found')
+    expect(wrapper.find('[data-testid="migration-report-error"]').exists()).toBe(false)
+  })
+
+  it('shows the API sentence with Retry instead of the empty state when the log is refused', async () => {
+    let refuse = true
+    stubRoutes({ 'GET /api/admin/migrations/5/logs': () => (refuse ? problem('No such job.', 404) : json(page)) })
+    const wrapper = await mountReport()
+
+    expect(wrapper.get('[data-testid="migration-report-error"]').text()).toBe('No such job.')
+    expect(wrapper.text()).not.toContain('No records found')
+
+    refuse = false
+    await wrapper.get('[data-testid="migration-report-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="migration-report-error"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="migration-report-table"]').text()).toContain('C-100')
   })
 })

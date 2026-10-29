@@ -3,6 +3,7 @@
  * has one, and shows the API's sentence when the load is refused.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import NotificationsView from '@/views/NotificationsView.vue'
 import { mountRoutedSettled } from '../helpers/mount'
 import { json, problem } from '../helpers/fetch'
@@ -37,5 +38,22 @@ describe('NotificationsView', () => {
     const wrapper = await mountRoutedSettled(NotificationsView, '/notifications')
 
     expect(wrapper.get('[data-testid="notifications-error"]').text()).toContain('Not allowed.')
+  })
+
+  it('loads the feed again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRoutes({
+      'GET /api/admin/dashboard/activity': () => {
+        calls += 1
+        return calls === 1 ? problem('Not allowed.', 403) : json([])
+      },
+    })
+    const wrapper = await mountRoutedSettled(NotificationsView, '/notifications')
+
+    await wrapper.get('[data-testid="notifications-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="notifications-error"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="notifications-empty"]').text()).toContain('No notifications')
   })
 })

@@ -91,9 +91,9 @@ const activeTab = ref<string>(ListFilter.All)
  * The filter tabs.
  *
  * The unpaid tab means "still owed", not "status is literally Unpaid". There is no Overdue
- * tab, so counting the status alone left overdue invoices reachable only from All -- hiding
- * them from the customer who came here to see what they owe, and from the dashboard card
- * that links straight to this tab. The paid tab carries no count.
+ * tab, so counting the status alone would leave overdue invoices reachable only from All,
+ * hiding them from the customer who came here to see what they owe, and from the dashboard
+ * card that links straight to this tab. The paid tab carries no count.
  */
 const tabs = computed(() => [
   { value: ListFilter.All, label: t('client.invoices.tabAll'), badge: store.invoices.length },

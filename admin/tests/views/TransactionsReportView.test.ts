@@ -12,6 +12,6 @@ vi.mock('chart.js', async () => (await import('../helpers/chartJsMock')).chartJs
 runReportCase({
   name: 'TransactionsReportView',
   view: TransactionsReportView,
-  routes: { 'GET /reports/transactions': () => json({ items: [], totalCount: 0 }) },
+  routes: { 'GET /reports/transactions': () => json({ items: [], pageNumber: 1, pageSize: 50, totalCount: 0, totalPages: 0 }) },
   expected: ['Transactions', '0 transaction(s) found', 'No transactions found.'],
 })

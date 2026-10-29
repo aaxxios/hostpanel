@@ -1,7 +1,7 @@
 using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Application.Resources;
 using Innovayse.Hostpanel.Shared.Contracts.Interfaces;
-using Innovayse.Hostpanel.Shared.Localization;
+using Innovayse.Hostpanel.Shared.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -34,16 +34,11 @@ public static class LocalizationRegistration
                 $"{LocaleOptions.ConfigurationKey} must be a locale code such as en or en-US.")
             .ValidateOnStart();
 
-        // The refusal sentences in Innovayse.Hostpanel.Application/Resources/ApplicationValidationMessages*.resx. No
-        // ResourcesPath: the resx files sit in a Resources/ folder whose name is already part of the
-        // ApplicationValidationMessages marker type's namespace, and setting it would make the factory look for
-        // Resources.Resources.ApplicationValidationMessages instead.
-        services.AddLocalization();
-
-        // What XLanguageRequestCultureProvider (Shared/Localization/) asks whether a given
-        // X-Language value is one this deployment answers in. SupportedLanguages (en/ru/hy) is the
-        // same set LocaleOptions.SupportedLocales names for the culture list below, by construction.
-        services.AddSingleton<ISupportedLanguagesProvider, PlatformSupportedLanguagesProvider>();
+        // The localizer (no ResourcesPath: a marker type's full name is its resource name, so the
+        // ErrorMessages and ApplicationValidationMessages markers find their resx files) and what
+        // XLanguageRequestCultureProvider asks whether an X-Language value is one this deployment
+        // answers in. SupportedLanguages (en/ru/hy) is the same set LocaleOptions.SupportedLocales names.
+        services.AddPlatformLocalization();
 
         // BaseApiController.MapFailure resolves a refusal's sentence through this, by error code, from
         // Application/Resources/ErrorMessages*.resx in the request's language.

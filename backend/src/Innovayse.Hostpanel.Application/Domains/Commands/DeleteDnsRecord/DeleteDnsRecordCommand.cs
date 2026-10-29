@@ -7,4 +7,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.DeleteDnsRecord;
 /// ever ran.
 /// </param>
 /// <param name="RecordId">Primary key of the DNS record to delete; overlaid from the route.</param>
-public record DeleteDnsRecordCommand(int? DomainId, int? RecordId);
+public sealed record DeleteDnsRecordCommand(int? DomainId, int? RecordId);

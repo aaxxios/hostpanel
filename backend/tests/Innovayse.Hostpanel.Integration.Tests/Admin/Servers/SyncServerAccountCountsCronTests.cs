@@ -1,14 +1,11 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.SyncServerAccountCountsCron;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
@@ -19,8 +16,8 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 /// </summary>
 /// <remarks>
 /// A cron under <c>Commands/</c>, dispatched through the real <see cref="IMessageBus"/> the way
-/// <c>AutoTerminateSuspendedCronTests</c> does. The one port this platform does not own --
-/// <see cref="IServerConnectionTester"/>, a real network call to the hosting server -- is
+/// <c>AutoTerminateSuspendedCronTests</c> does. The one port this platform does not own
+/// (<see cref="IServerConnectionTester"/>, a real network call to the hosting server) is
 /// replaced by <see cref="FakeServerConnectionTester"/>.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -33,7 +30,7 @@ public sealed class SyncServerAccountCountsCronTests(IntegrationTestFactory fact
         FakeServerConnectionTester tester) =>
         factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
-                services.AddScoped<IServerConnectionTester>(_ => tester)));
+                services.AddSingleton<IServerConnectionTester>(tester)));
 
     /// <summary>Seeds a non-disabled server directly against the database.</summary>
     /// <param name="context">The data context to seed through.</param>
@@ -48,9 +45,7 @@ public sealed class SyncServerAccountCountsCronTests(IntegrationTestFactory fact
             AssignedIpAddresses: null,
             Module: ServerModule.Cwp7,
             Username: "api",
-            Password: "secret",
-            ApiToken: null,
-            AccessHash: null,
+            Credentials: new ServerCredentials("secret", null, null),
             UseSSL: true,
             MaxAccounts: null,
             IsDefault: false,
@@ -58,16 +53,7 @@ public sealed class SyncServerAccountCountsCronTests(IntegrationTestFactory fact
             MonthlyCost: 0m,
             Datacenter: null,
             ServerStatusAddress: null,
-            Ns1Hostname: null,
-            Ns1Ip: null,
-            Ns2Hostname: null,
-            Ns2Ip: null,
-            Ns3Hostname: null,
-            Ns3Ip: null,
-            Ns4Hostname: null,
-            Ns4Ip: null,
-            Ns5Hostname: null,
-            Ns5Ip: null));
+            NameServers: ServerNameServers.None), DateTimeOffset.UtcNow);
         context.Servers.Add(server);
         await context.SaveChangesAsync(CancellationToken.None);
         return server;
@@ -91,7 +77,7 @@ public sealed class SyncServerAccountCountsCronTests(IntegrationTestFactory fact
         reloaded.AccountsCount.Should().Be(7);
     }
 
-    /// <summary>A disabled server is skipped entirely -- never handed to the connection tester.</summary>
+    /// <summary>A disabled server is skipped entirely: never handed to the connection tester.</summary>
     [Fact]
     public async Task DisabledServer_IsSkippedEntirely()
     {
@@ -123,5 +109,35 @@ public sealed class SyncServerAccountCountsCronTests(IntegrationTestFactory fact
         await act.Should().NotThrowAsync();
         var reloaded = await context.Servers.AsNoTracking().FirstAsync(s => s.Id == server.Id, CancellationToken.None);
         reloaded.AccountsCount.Should().BeNull();
+    }
+
+    /// <summary>
+    /// One server whose result cannot be saved is skipped and does not poison the next server's save:
+    /// the following server still gets its account count recorded.
+    /// </summary>
+    [Fact]
+    public async Task AServerWhoseResultCannotBeSaved_DoesNotStopTheNext()
+    {
+        var tester = new FakeServerConnectionTester { AccountsCount = 9 };
+        var poisonedId = 0;
+        using var failingHost = FailingSaveHost.Create(
+            factory,
+            new ManualTimeProvider(DateTimeOffset.UtcNow),
+            tracker => tracker.Entries<Server>().Any(e => e.State == EntityState.Modified && e.Entity.Id == poisonedId));
+        using var host = failingHost.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services => services.AddSingleton<IServerConnectionTester>(tester)));
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var failing = await SeedServerAsync(context, isDisabled: false);
+        var other = await SeedServerAsync(context, isDisabled: false);
+        poisonedId = failing.Id;
+
+        await scope.ServiceProvider.GetRequiredService<IMessageBus>()
+            .InvokeAsync(new SyncServerAccountCountsCronCommand(), CancellationToken.None);
+
+        var failingAfter = await context.Servers.AsNoTracking().FirstAsync(s => s.Id == failing.Id, CancellationToken.None);
+        var otherAfter = await context.Servers.AsNoTracking().FirstAsync(s => s.Id == other.Id, CancellationToken.None);
+        failingAfter.AccountsCount.Should().BeNull();
+        otherAfter.AccountsCount.Should().Be(9);
     }
 }

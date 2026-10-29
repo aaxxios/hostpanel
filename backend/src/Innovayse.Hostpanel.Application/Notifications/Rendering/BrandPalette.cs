@@ -1,6 +1,7 @@
 using System.Globalization;
 
 namespace Innovayse.Hostpanel.Application.Notifications.Rendering;
+
 /// <summary>
 /// Derives the shades and the readable text colour for the brand colour an operator picked,
 /// for the e-mail renderer.
@@ -14,9 +15,9 @@ namespace Innovayse.Hostpanel.Application.Notifications.Rendering;
 /// so that a change to one side without the other fails a build.
 /// </para>
 /// <para>
-/// The ramp is built in OKLCH — lightness spread from near-white (50) to near-black (950),
+/// The ramp is built in OKLCH, lightness spread from near-white (50) to near-black (950),
 /// hue fixed, chroma tapered toward the ends and pulled back into the sRGB gamut rather than
-/// clamped — so a tint of a saturated blue stays blue instead of turning cyan. The picked
+/// clamped, so a tint of a saturated blue stays blue instead of turning cyan. The picked
 /// colour itself sits at 500.
 /// </para>
 /// </remarks>
@@ -54,8 +55,8 @@ public static class BrandPalette
     /// Parses <c>#rrggbb</c> in any case.
     /// </summary>
     /// <param name="hex">The colour with its <c>#</c>.</param>
-    /// <returns>The channels 0–255, or <see langword="null"/> when the string is not a colour.</returns>
-    public static (int R, int G, int B)? Parse(string hex)
+    /// <returns>The channels 0 to 255, or <see langword="null"/> when the string is not a colour.</returns>
+    public static RgbColor? Parse(string hex)
     {
         var s = hex.Trim();
         if (s.Length != 7 || s[0] != '#'
@@ -64,7 +65,7 @@ public static class BrandPalette
             return null;
         }
 
-        return ((n >> 16) & 255, (n >> 8) & 255, n & 255);
+        return new RgbColor((n >> 16) & 255, (n >> 8) & 255, n & 255);
     }
 
     /// <summary>
@@ -72,7 +73,7 @@ public static class BrandPalette
     /// </summary>
     /// <param name="rgb">The channels.</param>
     /// <returns>The hex string.</returns>
-    public static string Format((int R, int G, int B) rgb) =>
+    public static string Format(RgbColor rgb) =>
         string.Create(CultureInfo.InvariantCulture, $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}");
 
     /// <summary>
@@ -115,7 +116,7 @@ public static class BrandPalette
     }
 
     /// <summary>
-    /// WCAG 2 contrast ratio between two colours, 1–21.
+    /// WCAG 2 contrast ratio between two colours, 1 to 21.
     /// </summary>
     /// <param name="a">One colour.</param>
     /// <param name="b">The other.</param>
@@ -153,10 +154,10 @@ public static class BrandPalette
     /// <summary>WCAG 2 relative luminance.</summary>
     /// <param name="rgb">Colour as 8-bit red, green and blue channels.</param>
     /// <returns>Luminance from 0 (black) to 1 (white).</returns>
-    private static double Luminance((int R, int G, int B) rgb) =>
+    private static double Luminance(RgbColor rgb) =>
         0.2126 * ToLinear(rgb.R) + 0.7152 * ToLinear(rgb.G) + 0.0722 * ToLinear(rgb.B);
 
-    /// <summary>sRGB 0–255 → linear 0–1.</summary>
+    /// <summary>sRGB 0 to 255 → linear 0 to 1.</summary>
     /// <param name="c">One sRGB channel, 0 to 255.</param>
     /// <returns>The linear-light value, 0 to 1.</returns>
     private static double ToLinear(int c)
@@ -165,7 +166,7 @@ public static class BrandPalette
         return s <= 0.04045 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4);
     }
 
-    /// <summary>Linear 0–1 → sRGB 0–255, clamped.</summary>
+    /// <summary>Linear 0 to 1 → sRGB 0 to 255, clamped.</summary>
     /// <param name="l">One linear-light channel, 0 to 1.</param>
     /// <returns>The sRGB channel, 0 to 255.</returns>
     private static int ToSrgb(double l)
@@ -177,7 +178,7 @@ public static class BrandPalette
     /// <summary>sRGB → OKLab.</summary>
     /// <param name="rgb">Colour as 8-bit red, green and blue channels.</param>
     /// <returns>The lightness and the two opponent-colour axes.</returns>
-    private static (double L, double A, double B) RgbToOklab((int R, int G, int B) rgb)
+    private static OklabColor RgbToOklab(RgbColor rgb)
     {
         var lr = ToLinear(rgb.R);
         var lg = ToLinear(rgb.G);
@@ -185,7 +186,7 @@ public static class BrandPalette
         var l = Math.Cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
         var m = Math.Cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
         var s = Math.Cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
-        return (
+        return new OklabColor(
             0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
             1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
             0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
@@ -196,12 +197,12 @@ public static class BrandPalette
     /// <param name="a">Green-red axis.</param>
     /// <param name="b">Blue-yellow axis.</param>
     /// <returns>Linear red, green and blue channels, possibly outside 0 to 1.</returns>
-    private static (double R, double G, double B) OklabToLinear(double L, double a, double b)
+    private static LinearRgb OklabToLinear(double L, double a, double b)
     {
         var l = Math.Pow(L + 0.3963377774 * a + 0.2158037573 * b, 3);
         var m = Math.Pow(L - 0.1055613458 * a - 0.0638541728 * b, 3);
         var s = Math.Pow(L - 0.0894841775 * a - 1.2914855480 * b, 3);
-        return (
+        return new LinearRgb(
             +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
             -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
             -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
@@ -210,7 +211,7 @@ public static class BrandPalette
     /// <summary>Whether every linear channel is displayable.</summary>
     /// <param name="lin">Colour as linear red, green and blue channels.</param>
     /// <returns>True when all three channels lie within 0 to 1.</returns>
-    private static bool InGamut((double R, double G, double B) lin) =>
+    private static bool InGamut(LinearRgb lin) =>
         lin.R is >= -0.0005 and <= 1.0005 && lin.G is >= -0.0005 and <= 1.0005 && lin.B is >= -0.0005 and <= 1.0005;
 
     /// <summary>OKLCH → sRGB, reducing chroma at fixed lightness and hue until the colour fits.</summary>
@@ -218,9 +219,9 @@ public static class BrandPalette
     /// <param name="chroma">Requested chroma before gamut reduction.</param>
     /// <param name="hue">Hue angle in radians.</param>
     /// <returns>The 8-bit channels of the in-gamut colour.</returns>
-    private static (int R, int G, int B) OklchToRgb(double l, double chroma, double hue)
+    private static RgbColor OklchToRgb(double l, double chroma, double hue)
     {
-        (double, double, double) At(double c) => OklabToLinear(l, c * Math.Cos(hue), c * Math.Sin(hue));
+        LinearRgb At(double c) => OklabToLinear(l, c * Math.Cos(hue), c * Math.Sin(hue));
 
         var lin = At(chroma);
         if (!InGamut(lin))
@@ -242,6 +243,6 @@ public static class BrandPalette
             lin = At(lo);
         }
 
-        return (ToSrgb(lin.Item1), ToSrgb(lin.Item2), ToSrgb(lin.Item3));
+        return new RgbColor(ToSrgb(lin.R), ToSrgb(lin.G), ToSrgb(lin.B));
     }
 }

@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Application.Admin.Common;
 using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 using Innovayse.Hostpanel.Application.Admin.Integrations.Common;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Shared.Models;
@@ -26,7 +27,10 @@ public sealed class SaveIntegrationConfigHandler
     /// </summary>
     private readonly IMemoryCache _cache;
 
-    /// <summary>Loaded plugins, whose manifests declare which of their fields are secret.</summary>
+    /// <summary>Encrypts a secret field value before it is stored.</summary>
+    private readonly ISecretSettingCipher _cipher;
+
+    /// <summary>Loaded plugins, whose manifests declare their fields and which of them are secret.</summary>
     private readonly IPluginRegistry _plugins;
 
     /// <summary>The acting admin, named in the audit line of a secret change.</summary>
@@ -41,18 +45,21 @@ public sealed class SaveIntegrationConfigHandler
     /// Invalidates the cached hosting-panel server-info results a saved credential change would make
     /// stale.
     /// </param>
-    /// <param name="plugins">Loaded plugins, whose manifests declare which of their fields are secret.</param>
+    /// <param name="cipher">Encrypts a secret field value before it is stored.</param>
+    /// <param name="plugins">Loaded plugins, whose manifests declare their fields and which of them are secret.</param>
     /// <param name="currentUser">The acting admin, named in the audit line of a secret change.</param>
     /// <param name="logger">Receives the audit line of a secret change.</param>
     public SaveIntegrationConfigHandler(
         IHostpanelDbContext context,
         IMemoryCache cache,
+        ISecretSettingCipher cipher,
         IPluginRegistry plugins,
         ICurrentUserService currentUser,
         ILogger<SaveIntegrationConfigHandler> logger)
     {
         _context = context;
         _cache = cache;
+        _cipher = cipher;
         _plugins = plugins;
         _currentUser = currentUser;
         _logger = logger;
@@ -64,12 +71,17 @@ public sealed class SaveIntegrationConfigHandler
     /// </summary>
     /// <param name="command">The save integration config command.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success. Always succeeds once validation has passed.</returns>
+    /// <returns>
+    /// Success, or <c>INTEGRATION_NOT_FOUND</c> when the slug names neither a built-in integration
+    /// nor a loaded plugin.
+    /// </returns>
     public async Task<Result> HandleAsync(SaveIntegrationConfigCommand command, CancellationToken ct)
     {
-        // The validator refuses an empty slug before the handler runs; the member is nullable only so
-        // the route overlay can fill it (see the command), so narrow it once here.
-        var slug = command.Slug ?? throw new InvalidOperationException("The slug is validated as required.");
+        var slug = command.Slug;
+        if (IntegrationFields.Resolve(slug, _plugins) is null)
+        {
+            return Result.FailureCode(HostpanelErrorCodes.INTEGRATION_NOT_FOUND);
+        }
 
         // Upsert the is_enabled flag.
         await UpsertAsync(
@@ -98,7 +110,9 @@ public sealed class SaveIntegrationConfigHandler
                 continue;
             }
 
-            await UpsertAsync(key, fieldValue ?? string.Empty, $"{slug} integration field: {fieldKey}.", ct);
+            // A secret is stored encrypted; the readers that need it decrypt through the same cipher.
+            var stored = isSecret ? _cipher.Protect(fieldValue!) : fieldValue ?? string.Empty;
+            await UpsertAsync(key, stored, $"{slug} integration field: {fieldKey}.", ct);
             if (isSecret)
             {
                 audit.Add((key, SecretSettingChange.Replaced));
@@ -134,11 +148,6 @@ public sealed class SaveIntegrationConfigHandler
         if (string.Equals(slug, IntegrationSlugs.Cwp, StringComparison.OrdinalIgnoreCase))
         {
             _cache.Remove(HostingPanelCacheKeys.Cwp);
-        }
-
-        if (string.Equals(slug, IntegrationSlugs.Cwp7, StringComparison.OrdinalIgnoreCase))
-        {
-            _cache.Remove(HostingPanelCacheKeys.Cwp7);
         }
 
         return Result.Success();

@@ -104,6 +104,36 @@ describe('GET /api/portal/auth/sso/authorize', () => {
   })
 })
 
+describe('GET /api/portal/auth/sso/authorize with unsafe input', () => {
+  it.each(['prompt', 'authuser', 'returnTo'])('refuses a repeated %s key with 400 and sets no cookie', async (key) => {
+    const event = makeEvent({ query: { [key]: ['a', 'b'] as unknown as string } })
+
+    const error = await refusal(() => route.default(event))
+
+    expect(error).toMatchObject({ statusCode: 400, data: { code: 'BAD_QUERY' } })
+    expect(event.redirectedTo).toBeUndefined()
+    expect(event.written).toEqual({})
+  })
+
+  it.each(['//evil.test/x', '/\\evil.test', '/ok\u0000x'])('does not remember the return path %j', async (returnTo) => {
+    const event = makeEvent({ query: { returnTo } })
+
+    await route.default(event)
+
+    expect(event.written['post_login_redirect']).toBeUndefined()
+  })
+
+  it('writes every flow cookie httpOnly, Secure outside development, SameSite=Lax', async () => {
+    const event = makeEvent({ query: { returnTo: '/client' } })
+
+    await route.default(event)
+
+    for (const name of ['pkce_verifier', 'oauth_state', 'post_login_redirect']) {
+      expect(event.written[name]?.options, name).toMatchObject({ httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 300 })
+    }
+  })
+})
+
 describe('GET /api/portal/auth/sso/authorize when the SSO address is not configured', () => {
   it('refuses with 503 and sets no cookie when the public SSO address is empty', async () => {
     setRuntimeConfig({ ssoCallbackUrl: 'https://portal.test/api/portal/auth/sso/callback', public: { ssoPublicUrl: '' } })

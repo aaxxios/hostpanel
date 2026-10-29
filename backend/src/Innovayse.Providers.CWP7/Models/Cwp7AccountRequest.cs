@@ -37,6 +37,10 @@ internal sealed class Cwp7AccountRequest
     public string? ServerIps { get; init; }
 
     /// <summary>Gets or initializes the backup setting (on/off).</summary>
+    /// <remarks>
+    /// Sent as <c>banckup</c>: the panel's own API documentation spells the parameter that way
+    /// and reads no other name, so the typo is part of the wire contract and must not be corrected.
+    /// </remarks>
     public string? Backup { get; init; }
 
     /// <summary>Converts this request into URL-encoded form content for the HTTP POST body.</summary>

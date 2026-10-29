@@ -8,11 +8,15 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.TransferDomain;
 /// <param name="FirstPaymentAmount">One-time transfer cost to record on the domain.</param>
 /// <param name="RecurringAmount">Recurring renewal price to record on the domain.</param>
 /// <param name="PaymentMethod">Payment method label to record on the domain; null if not set.</param>
-public record TransferDomainCommand(
+/// <param name="Years">Registration period bought with the transfer, in years (1-10).</param>
+/// <param name="PriceCurrency">ISO 4217 code of the currency the amounts are in (the paid order's currency); null bills in the client's billing currency.</param>
+public sealed record TransferDomainCommand(
     int ClientId,
     string DomainName,
     string EppCode,
     bool WhoisPrivacy,
     decimal FirstPaymentAmount = 0,
     decimal RecurringAmount = 0,
-    string? PaymentMethod = null);
+    string? PaymentMethod = null,
+    int Years = 1,
+    string? PriceCurrency = null);

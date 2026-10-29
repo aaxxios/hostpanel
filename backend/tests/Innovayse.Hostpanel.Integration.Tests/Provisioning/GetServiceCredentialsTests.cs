@@ -1,16 +1,12 @@
 using System.Net;
 using System.Net.Http.Headers;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Provisioning;
 
 /// <summary>
 /// Integration tests for <c>GET /api/provisioning/{id}/credentials</c>.
 /// </summary>
-/// <remarks>Moved from the deleted <c>ProvisioningEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetServiceCredentialsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

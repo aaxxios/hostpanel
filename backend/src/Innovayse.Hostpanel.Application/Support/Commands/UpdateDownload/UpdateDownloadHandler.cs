@@ -21,7 +21,10 @@ public sealed class UpdateDownloadHandler
     /// <summary>Handles the command.</summary>
     /// <param name="cmd">The download to update and its new details.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success, or <c>DOWNLOAD_NOT_FOUND</c> when the id names no download.</returns>
+    /// <returns>
+    /// Success, <c>DOWNLOAD_NOT_FOUND</c> when the id names no download, or
+    /// <c>DOWNLOAD_CATEGORY_NOT_FOUND</c> when the category names no category.
+    /// </returns>
     public async Task<Result> HandleAsync(UpdateDownloadCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
@@ -30,6 +33,11 @@ public sealed class UpdateDownloadHandler
         if (download is null)
         {
             return Result.FailureCode(HostpanelErrorCodes.DOWNLOAD_NOT_FOUND);
+        }
+
+        if (!await _context.DownloadCategories.AnyAsync(c => c.Id == cmd.CategoryId, ct))
+        {
+            return Result.FailureCode(HostpanelErrorCodes.DOWNLOAD_CATEGORY_NOT_FOUND);
         }
 
         download.Update(

@@ -7,11 +7,11 @@
 
 /** The three images an operator can upload, each empty when not set. */
 export interface BrandLogoSources {
-  /** `portal.logo` — the logo for light backgrounds, and the one every install had first. */
+  /** `portal.logo`: the logo for light backgrounds, and the one every install had first. */
   light: string
-  /** `portal.logo.dark` — the logo for dark backgrounds. */
+  /** `portal.logo.dark`: the logo for dark backgrounds. */
   dark: string
-  /** `portal.logo.mark` — the square icon-only logo. */
+  /** `portal.logo.mark`: the square icon-only logo. */
   mark: string
 }
 
@@ -49,7 +49,7 @@ export interface BrandLogoPair {
  *
  * CSS rather than {@link pickBrandLogo} on the page: under the `system` default the
  * server does not know the mode, renders as dark, and a browser on a light device
- * would keep the server's `src` — production Vue does not patch an attribute that
+ * would keep the server's `src`: production Vue does not patch an attribute that
  * disagrees after hydration. Two images and a class swap need no JavaScript and can
  * never disagree with the palette.
  *

@@ -6,31 +6,38 @@ using Innovayse.Hostpanel.Infrastructure.Integrations.CPanel;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Infrastructure.Monitoring;
+
 /// <summary>
 /// Disk usage service. Returns cached stats from the database.
 /// UpdateNowAsync polls all cPanel servers and upserts the cache.
 /// </summary>
 public sealed class DiskUsageService : IDiskUsageService
 {
-    /// <summary>The db this class uses.</summary>
+    /// <summary>The database the servers are read from and the cached figures are written to.</summary>
     private readonly AppDbContext _db;
 
-    /// <summary>The http factory this class uses.</summary>
+    /// <summary>Creates the clients that query each hosting server.</summary>
     private readonly IHttpClientFactory _httpFactory;
 
-    /// <summary>The logger this class uses.</summary>
+    /// <summary>Records a server that could not be polled.</summary>
     private readonly ILogger<DiskUsageService> _logger;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes a new instance of the <see cref="DiskUsageService"/> class.</summary>
-    /// <param name="db">The db this class uses.</param>
-    /// <param name="httpFactory">The http factory this class uses.</param>
-    /// <param name="logger">The logger this class uses.</param>
-    public DiskUsageService(AppDbContext db, IHttpClientFactory httpFactory, ILogger<DiskUsageService> logger)
+    /// <param name="db">The database the servers are read from and the cached figures are written to.</param>
+    /// <param name="httpFactory">Creates the clients that query each hosting server.</param>
+    /// <param name="logger">Records a server that could not be polled.</param>
+    /// <param name="clock">The source of the current moment.</param>
+    public DiskUsageService(AppDbContext db, IHttpClientFactory httpFactory, ILogger<DiskUsageService> logger, IClock clock)
     {
         _db = db;
         _httpFactory = httpFactory;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -87,6 +94,7 @@ public sealed class DiskUsageService : IDiskUsageService
                 }
 
                 var accounts = await api.ListAccountsAsync(ct);
+                var fetchedAt = _clock.UtcNow;
 
                 foreach (var acct in accounts)
                 {
@@ -97,13 +105,13 @@ public sealed class DiskUsageService : IDiskUsageService
                     var key = (server.Name, acct.Domain.ToLowerInvariant());
                     if (cache.TryGetValue(key, out var stat))
                     {
-                        stat.Update(acct.DiskUsedMb, acct.DiskLimitMb, acct.BwUsedMb, acct.BwLimitMb);
+                        stat.RecordUsage(acct.DiskUsedMb, acct.DiskLimitMb, acct.BwUsedMb, acct.BwLimitMb, fetchedAt);
                     }
                     else
                     {
                         var newStat = Domain.Hosting.DiskUsageStat.Create(
                             server.Name, acct.Domain, clientName,
-                            acct.DiskUsedMb, acct.DiskLimitMb, acct.BwUsedMb, acct.BwLimitMb);
+                            acct.DiskUsedMb, acct.DiskLimitMb, acct.BwUsedMb, acct.BwLimitMb, fetchedAt);
                         _db.DiskUsageStats.Add(newStat);
                         cache[key] = newStat;
                     }

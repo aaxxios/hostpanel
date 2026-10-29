@@ -2,7 +2,7 @@
  * POST /api/portal/auth/login
  *
  * Signs in against the C# API (local-auth mode) and starts the server-side session (the browser receives only the opaque session cookie). The
- * call is anonymous -- no session exists yet -- but still goes through `internalApiCall`, so the
+ * call is anonymous, no session exists yet, but still goes through `internalApiCall`, so the
  * reader's `X-Language` reaches the backend and a refusal arrives as the backend's own
  * `detail` / `code` rather than a raw upstream error.
  *
@@ -10,6 +10,8 @@
  */
 
 import { startSession } from '~/server/utils/portal-session'
+import { HttpMethod } from '~/types/httpmethod'
+import { readBodyObject } from '~/server/utils/readBodyObject'
 
 /** What the backend answers a sign-in with. */
 interface LoginResult {
@@ -27,15 +29,15 @@ interface LoginResult {
  * Signs in and sets the session cookies, or passes a two-factor challenge through.
  */
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
+  const body = await readBodyObject(event)
 
   const response = await internalApiCall<LoginResult>(
     event,
     '/auth/login',
-    { method: 'POST', body, anonymous: true }
+    { method: HttpMethod.Post, body, anonymous: true }
   )
 
-  // 2FA required — pass through without setting cookies
+  // 2FA required: pass through without setting cookies
   if (response.twoFactorRequired) {
     return response
   }

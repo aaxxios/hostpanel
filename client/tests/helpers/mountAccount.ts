@@ -2,7 +2,7 @@
  * Mount helper for the account components: the kit plus every `components/account/*.vue`.
  *
  * The account components render one another (`AccountProfileTab` renders `AccountProfileForm`,
- * and so on) under the names Nuxt auto-imports them by -- the `Account` directory prefix plus the
+ * and so on) under the names Nuxt auto-imports them by: the `Account` directory prefix plus the
  * file name. Registering them here keeps a test mounting the same tree the page renders.
  *
  * @module tests/helpers/mountAccount

@@ -1,13 +1,10 @@
 using System.Security.Claims;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Integration.Tests;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -32,7 +29,7 @@ public sealed class PayerCurrencyResolverTests(IntegrationTestFactory factory)
     /// <returns>The new client's primary key.</returns>
     private static async Task<int> SeedClientAsync(IHostpanelDbContext context, string userId, string? currency)
     {
-        var client = Client.Create(userId, "Jane", "Doe", $"{userId}@example.test");
+        var client = Client.Create(userId, "Jane", "Doe", $"{userId}@example.test", DateTimeOffset.UtcNow);
         if (currency is not null)
         {
             client.SetCurrency(currency);

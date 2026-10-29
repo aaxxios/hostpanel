@@ -2,7 +2,7 @@
 /**
  * Drop zone for a single file: drag a file onto it, or click to browse.
  *
- * It reports the picked file (`select`) and nothing else — the screen sends it through its store.
+ * It reports the picked file (`select`) and nothing else: the screen sends it through its store.
  * While `uploading` it shows a spinner and the progress caption instead of the invitation. The
  * hidden native input carries `inputTestid` so a flow test can attach a file without a drag.
  */

@@ -4,6 +4,7 @@ using Innovayse.Hostpanel.Application.Resources;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Microsoft.Extensions.Localization;
+
 namespace Innovayse.Hostpanel.Application.Clients.Commands.UpdateUserPermissions;
 
 /// <summary>Validates <see cref="UpdateUserPermissionsCommand"/> before the handler executes.</summary>
@@ -17,7 +18,7 @@ public sealed class UpdateUserPermissionsValidator : LocalizedValidator<UpdateUs
         RuleFor(x => x.ClientId).MustBePositiveId(L["ClientIdInvalid"]);
         RuleFor(x => x.MemberUserId).NotEmpty().WithMessage(L["ClientUserIdRequired"]);
         RuleFor(x => x.Permissions)
-            .Must(p => (p & ~(int)ClientPermission.All) == 0)
+            .Must(p => (p & ~ClientPermission.All) == ClientPermission.None)
             .WithMessage(L["ClientPermissionsInvalid"]);
     }
 }

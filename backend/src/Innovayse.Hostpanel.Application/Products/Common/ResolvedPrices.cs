@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Domain.Products;
+
 namespace Innovayse.Hostpanel.Application.Products.Common;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Products.Common;
 /// product, or only the base currency.
 /// </summary>
 /// <remarks>
-/// The per-currency list is the whole truth — a currency absent from it is one the product no
+/// The per-currency list is the whole truth: a currency absent from it is one the product no
 /// longer sells in. The legacy single-currency pair only ever spoke about the base currency, so a
 /// form that still posts it must not wipe the other currencies an admin priced elsewhere.
 /// </remarks>
@@ -34,6 +36,10 @@ public sealed record ResolvedPrices(
     /// is what the legacy <c>AnnualPrice</c> column is written from.
     /// </summary>
     public decimal BaseAnnual => BaseEntry?.Annual ?? NoPrice;
+
+    /// <summary>Gets the list in the shape <see cref="Product.ReplacePrices"/> takes.</summary>
+    public IReadOnlyCollection<ProductCurrencyPrices> CurrencyPrices =>
+        Prices.Select(p => new ProductCurrencyPrices(p.CurrencyCode, p.Monthly, p.Annual)).ToList();
 
     /// <summary>Gets the list entry for the base currency, if the admin priced it.</summary>
     private ProductPriceDto? BaseEntry =>

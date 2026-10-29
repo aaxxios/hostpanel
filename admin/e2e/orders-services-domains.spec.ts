@@ -22,16 +22,17 @@ test('accepting a pending order posts the command and reloads the list', async (
         path: `/api/orders/${pendingOrder.id}/accept`,
         respond: () => {
           stored.status = OrderStatus.Active
-          return { status: 204 }
+          return { body: { failedLines: [] } }
         },
       },
-      { method: HttpMethod.Get, path: `/api/orders/${pendingOrder.id}`, respond: () => ({ body: { ...stored, invoiceStatus: null, ipAddress: null, items: [] } }) },
+      { method: HttpMethod.Get, path: `/api/orders/${pendingOrder.id}`, respond: () => ({ body: { ...stored, invoiceStatus: null, invoiceTotal: null, ipAddress: null, items: [] } }) },
     ],
   })
 
   await page.goto('/orders')
   await expect(page.getByTestId(`orders-row-${pendingOrder.id}`)).toContainText(pendingOrder.orderNumber)
   await expect(page.getByTestId(`orders-client-${pendingOrder.id}`)).toHaveAttribute('href', `/clients/${pendingOrder.clientId}`)
+  await expect(page.getByTestId(`orders-client-${pendingOrder.id}`)).toHaveText(pendingOrder.clientName)
 
   await page.getByTestId(`orders-accept-${pendingOrder.id}`).click()
 
@@ -53,7 +54,7 @@ test('a refused accept shows the API sentence and keeps the order pending', asyn
   await page.goto('/orders')
   await page.getByTestId(`orders-accept-${pendingOrder.id}`).click()
 
-  await expect(page.getByTestId('orders-action-error')).toContainText(sentence)
+  await expect(page.getByTestId('orders-action-feedback')).toContainText(sentence)
   await expect(page.getByTestId(`orders-accept-${pendingOrder.id}`)).toBeVisible()
 })
 
@@ -64,6 +65,7 @@ test('the services list links each service to its client', async ({ page }) => {
 
   await expect(page.getByTestId(`services-row-${hostingService.id}`)).toContainText(hostingProductName)
   await expect(page.getByTestId(`services-client-${hostingService.id}`)).toHaveAttribute('href', `/clients/${hostingService.clientId}`)
+  await expect(page.getByTestId(`services-client-${hostingService.id}`)).toHaveText(hostingService.clientName)
 })
 
 test('the domains list opens a domain under its client', async ({ page }) => {
@@ -76,12 +78,13 @@ test('the domains list opens a domain under its client', async ({ page }) => {
     'href',
     `/clients/${registeredDomain.clientId}/domains/${registeredDomain.id}`,
   )
+  await expect(page.getByTestId(`domains-client-${registeredDomain.id}`)).toHaveText(registeredDomain.clientName)
 })
 
 test('an empty services list shows the empty state', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
-    routes: [json(HttpMethod.Get, '/api/services', { items: [], totalCount: 0, page: 1, pageSize: 20 })],
+    routes: [json(HttpMethod.Get, '/api/services', { items: [], pageNumber: 1, pageSize: 20, totalCount: 0, totalPages: 0 })],
   })
 
   await page.goto('/services')

@@ -57,6 +57,12 @@ describe('filterPage', () => {
   it('skips filters on fields the endpoint already applied', () => {
     expect(filterPage(rows, [{ field: 'status', condition: 'exact', value: 'Paid' }], ['status'])).toEqual(rows)
   })
+
+  it('reads a nested field by its dot path', () => {
+    const nested = [{ address: { city: 'Yerevan' } }, { address: { city: 'Gyumri' } }]
+
+    expect(filterPage(nested, [{ field: 'address.city', condition: 'exact', value: 'gyumri' }], [])).toEqual([nested[1]])
+  })
 })
 
 describe('reportPath', () => {

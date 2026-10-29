@@ -1,22 +1,24 @@
 <script setup lang="ts">
 /**
  * Predefined replies management: tabs for categories, reply templates and a search over the
- * templates.
+ * templates. A refused load offers a retry; the outcome of each add, rename, delete or search
+ * (success, or the API's sentence) shows under the tabs; deletes are confirmed in a danger prompt.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SupportRowActions from '@/components/support/SupportRowActions.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
@@ -28,10 +30,42 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiSize } from '@/utils/ui/size'
 import type { UiTabItem } from '@/utils/ui/tabs'
 import { SEARCH_DEBOUNCE_MS } from '@/lib/limits'
+import { useResultBanner } from '@/composables/useResultBanner'
+import { UiDialogVariant } from '@/utils/ui/dialog'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
 
 const store = usePredefinedRepliesStore()
+
+/** The outcome line of the last add, rename, delete or search. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Shows the outcome of a change: the success sentence, or the API's refusal.
+ *
+ * @param ok - Whether the API accepted the change.
+ * @param successKey - Locale key of the success sentence.
+ */
+const report = (ok: boolean, successKey: string): void => {
+  if (ok) {
+    feedback.show(t(successKey), false)
+  } else {
+    feedback.show(store.actionError ?? t('errors.noAnswer'), true)
+  }
+}
+
+/**
+ * Loads the categories and the replies.
+ *
+ * @returns Resolves when both loads have settled.
+ */
+const loadAll = async (): Promise<void> => {
+  await Promise.all([store.fetchCategories(), store.fetchReplies()])
+}
 
 /** Currently active tab. */
 const activeTab = ref<PredefinedRepliesTab>(PredefinedRepliesTab.Category)
@@ -124,9 +158,11 @@ const addCategory = async (): Promise<void> => {
   if (!newCategoryName.value.trim()) {
     return
   }
+  feedback.clear()
   categorySaving.value = true
   const id = await store.createCategory(newCategoryName.value.trim())
   categorySaving.value = false
+  report(id !== null, 'shared.recordCreated')
   if (id !== null) {
     newCategoryName.value = ''
   }
@@ -157,7 +193,10 @@ const saveEditCategory = async (): Promise<void> => {
   if (editingCategoryId.value === null || !editingCategoryName.value.trim()) {
     return
   }
-  if (await store.updateCategory(editingCategoryId.value, editingCategoryName.value.trim())) {
+  feedback.clear()
+  const saved = await store.updateCategory(editingCategoryId.value, editingCategoryName.value.trim())
+  report(saved, 'shared.changesSavedSuccessfully')
+  if (saved) {
     cancelEditCategory()
   }
 }
@@ -169,11 +208,19 @@ const handleDeleteCategory = async (): Promise<void> => {
   if (deleteCategoryTarget.value === null) {
     return
   }
+  feedback.clear()
   deletingCategory.value = true
-  if (await store.deleteCategory(deleteCategoryTarget.value)) {
+  const deleted = await store.deleteCategory(deleteCategoryTarget.value)
+  deletingCategory.value = false
+  deleteCategoryTarget.value = null
+  report(deleted, 'shared.recordDeleted')
+}
+
+/** Closes the category delete confirmation; ignored while the delete runs. */
+const dismissDeleteCategory = (): void => {
+  if (!deletingCategory.value) {
     deleteCategoryTarget.value = null
   }
-  deletingCategory.value = false
 }
 
 /**
@@ -183,6 +230,7 @@ const addReply = async (): Promise<void> => {
   if (!canAddReply.value) {
     return
   }
+  feedback.clear()
   replySaving.value = true
   const id = await store.createReply({
     name: newReplyName.value.trim(),
@@ -190,6 +238,7 @@ const addReply = async (): Promise<void> => {
     content: newReplyContent.value.trim(),
   })
   replySaving.value = false
+  report(id !== null, 'shared.recordCreated')
   if (id !== null) {
     newReplyName.value = ''
     newReplyCategoryId.value = 0
@@ -215,7 +264,10 @@ const saveEditReply = async (): Promise<void> => {
   if (editingReplyId.value === null) {
     return
   }
-  if (await store.updateReply(editingReplyId.value, { ...editingReply.value })) {
+  feedback.clear()
+  const saved = await store.updateReply(editingReplyId.value, { ...editingReply.value })
+  report(saved, 'shared.changesSavedSuccessfully')
+  if (saved) {
     editingReplyId.value = null
     await store.fetchReplies()
   }
@@ -228,12 +280,22 @@ const handleDeleteReply = async (): Promise<void> => {
   if (deleteReplyTarget.value === null) {
     return
   }
+  feedback.clear()
   deletingReply.value = true
-  if (await store.deleteReply(deleteReplyTarget.value)) {
-    deleteReplyTarget.value = null
+  const deleted = await store.deleteReply(deleteReplyTarget.value)
+  deletingReply.value = false
+  deleteReplyTarget.value = null
+  report(deleted, 'shared.recordDeleted')
+  if (deleted) {
     await store.fetchReplies()
   }
-  deletingReply.value = false
+}
+
+/** Closes the reply delete confirmation; ignored while the delete runs. */
+const dismissDeleteReply = (): void => {
+  if (!deletingReply.value) {
+    deleteReplyTarget.value = null
+  }
 }
 
 // The search runs once typing pauses; an empty box clears the results.
@@ -248,6 +310,8 @@ watch(searchQuery, (query) => {
     const hits = await store.searchReplies(query.trim())
     if (hits) {
       searchResults.value = hits
+    } else {
+      feedback.show(store.actionError ?? t('errors.noAnswer'), true)
     }
     searching.value = false
   }, SEARCH_DEBOUNCE_MS)
@@ -257,9 +321,7 @@ onBeforeUnmount(() => {
   clearTimeout(searchTimer)
 })
 
-onMounted(async () => {
-  await Promise.all([store.fetchCategories(), store.fetchReplies()])
-})
+onMounted(loadAll)
 </script>
 
 <template>
@@ -269,9 +331,17 @@ onMounted(async () => {
       :subtitle="t('support.predefinedReplies.managePredefinedTicketReplyTemplates')"
     />
 
-    <UiAlert v-if="store.error" variant="error" data-testid="predefined-replies-error">{{ store.error }}</UiAlert>
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="predefined-replies-error"
+      @retry="loadAll"
+    />
 
     <UiTabs :items="tabItems" :model-value="activeTab" @update:model-value="selectTab" />
+
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="predefined-replies-feedback" />
 
     <template v-if="activeTab === PredefinedRepliesTab.Category">
       <UiCard padding="md">
@@ -512,29 +582,29 @@ onMounted(async () => {
     </template>
 
     <UiDialog
-      variant="confirm"
+      :variant="UiDialogVariant.Confirm"
       :open="deleteCategoryTarget !== null"
       :title="t('support.predefinedReplies.deleteCategory')"
       :message="t('support.predefinedReplies.areYouSureYouWant')"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="deletingCategory"
-      tone="danger"
+      :tone="UiTone.Danger"
       @confirm="handleDeleteCategory"
-      @close="deleteCategoryTarget = null"
+      @close="dismissDeleteCategory"
     />
 
     <UiDialog
-      variant="confirm"
+      :variant="UiDialogVariant.Confirm"
       :open="deleteReplyTarget !== null"
       :title="t('support.predefinedReplies.deletePredefinedReply')"
       :message="t('support.predefinedReplies.areYouSureYouWant2')"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="deletingReply"
-      tone="danger"
+      :tone="UiTone.Danger"
       @confirm="handleDeleteReply"
-      @close="deleteReplyTarget = null"
+      @close="dismissDeleteReply"
     />
   </UiStack>
 </template>

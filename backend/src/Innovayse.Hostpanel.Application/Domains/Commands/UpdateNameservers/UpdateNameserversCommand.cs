@@ -6,4 +6,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.UpdateNameservers;
 /// member here would make the body required before <c>with { DomainId = id }</c> ever ran.
 /// </param>
 /// <param name="Nameservers">New ordered list of nameserver hostnames (minimum 2).</param>
-public record UpdateNameserversCommand(int? DomainId, IReadOnlyList<string> Nameservers);
+public sealed record UpdateNameserversCommand(int? DomainId, IReadOnlyList<string> Nameservers);

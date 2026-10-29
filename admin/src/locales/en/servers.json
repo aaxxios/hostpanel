@@ -89,9 +89,6 @@
     "leastFull": "Add to the least full server",
     "fillUntilFull": "Fill active server until full then switch"
   },
-  "moduleLabels": {
-    "wordPressHosting": "Innovayse WordPress Hosting"
-  },
   "ssh": {
     "open": "SSH",
     "title": "SSH key management — {name}",
@@ -99,8 +96,32 @@
     "healthy": "Agent reachable",
     "unhealthy": "Agent unreachable",
     "notTested": "Not tested",
-    "agentVersion": "Agent {version} ({provider})",
-    "agentError": "Last check failed: {code}",
+    "agentVersion": "Agent {version}",
+    "agentVersionWithProvider": "Agent {version} ({provider})",
+    "agentError": "Last check failed: {reason}",
+    "failures": {
+      "Unknown": "unknown reason",
+      "Unreachable": "the server could not be reached",
+      "Timeout": "the agent timed out",
+      "InternalError": "the agent failed internally",
+      "UnsupportedVersion": "the agent version is not supported",
+      "InvalidRequest": "the agent rejected the request",
+      "UnknownOperation": "the agent does not support this operation",
+      "RequestTooLarge": "the request was too large",
+      "InvalidAccount": "the account name is not valid",
+      "AccountNotFound": "the account was not found",
+      "AccountNotEligible": "the account cannot have managed keys",
+      "SshDisabled": "shell access is disabled for the account",
+      "InvalidKey": "the key is not valid",
+      "DuplicateKey": "the key is already installed",
+      "KeyIdConflict": "the key id is already in use",
+      "TooManyKeys": "the account reached its key limit",
+      "UnsafePath": "the key file path is not safe",
+      "FileTooLarge": "the key file is too large",
+      "AccountSuspended": "the account is suspended on the server",
+      "AgentNotConfigured": "the server has no complete agent settings",
+      "BindingMismatch": "the agent was installed for a different server"
+    },
     "enabled": "Customers on this server may manage SSH keys",
     "enabledHint": "Enabling requires a successful test with the saved settings, and never turns on shell access for any account.",
     "sshHostname": "SSH hostname",
@@ -153,6 +174,9 @@
     "stepTest": "4. Test the agent",
     "bindingMismatch": "The agent that answered was installed for a different server. Check the agent host, or run this server's installer command on it.",
     "stepEnable": "5. Enable for customers",
-    "advanced": "Advanced: use an existing management key"
+    "advanced": "Advanced: use an existing management key",
+    "networkCsf": "CSF",
+    "networkFirewalld": "firewalld",
+    "networkUfw": "ufw"
   }
 }

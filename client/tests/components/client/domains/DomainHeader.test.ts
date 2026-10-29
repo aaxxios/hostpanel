@@ -5,9 +5,10 @@ import { describe, expect, it } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
 import DomainHeader from '~/components/client/domains/DomainHeader.vue'
 import type { DomainDetail } from '~/types/domaindetail'
+import { DomainStatus } from '~/types/domainstatus'
 
 /** A domain with the fields the header reads. */
-const domain = { id: 1, name: 'example.com', status: 'Active', expiresAt: '2027-03-05T00:00:00Z' } as DomainDetail
+const domain = { id: 1, name: 'example.com', status: DomainStatus.Active, expiresAt: '2027-03-05T00:00:00Z' } as DomainDetail
 
 describe('DomainHeader', () => {
   it('shows the full name as the page title', () => {

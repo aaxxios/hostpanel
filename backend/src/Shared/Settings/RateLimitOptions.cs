@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Shared.Settings;
 /// itself (<c>client/server/utils/api.ts</c>, <c>internalApiCall</c>), so every request it relays
 /// arrives from one container address. Authenticated portal traffic still partitions correctly,
 /// because it carries the visitor's bearer token and the partition key prefers the subject over
-/// the address -- but <i>anonymous</i> portal traffic (the marketing pages, the domain search, the
+/// the address, but <i>anonymous</i> portal traffic (the marketing pages, the domain search, the
 /// contact form) collapses into a single bucket shared by the entire public site. Anything sized
 /// for one person would refuse real visitors there.
 /// </para>
@@ -17,8 +17,8 @@ namespace Innovayse.Hostpanel.Shared.Settings;
 /// That does not make the limits pointless: a caller abusing an anonymous endpoint reaches it
 /// through nginx as a browser would, and <i>that</i> path partitions on the real client address.
 /// The tight tiers therefore bind on the attacker and not on the shared bucket, which is the
-/// arrangement each number below is chosen for. The clean fix -- having the portal forward the
-/// visitor's address so its bucket splits too -- is a change to the frontend and to nginx's header
+/// arrangement each number below is chosen for. The clean fix, having the portal forward the
+/// visitor's address so its bucket splits too, is a change to the frontend and to nginx's header
 /// handling, and is deliberately not made here.
 /// </para>
 /// </remarks>
@@ -34,14 +34,14 @@ public sealed class RateLimitOptions
     /// <remarks>
     /// Not configurable, and sliding rather than fixed on purpose. A fixed window lets a caller
     /// spend the whole budget in its last second and the whole of the next one immediately after,
-    /// so the real short-term rate is twice the configured number -- which is exactly the burst
+    /// so the real short-term rate is twice the configured number, which is exactly the burst
     /// these limits exist to flatten.
     /// </remarks>
     public const int SegmentsPerWindow = 6;
 
     /// <summary>
     /// The budget every request is measured against, whether or not its endpoint names a tighter
-    /// tier. 1200 requests a minute -- twenty a second.
+    /// tier. 1200 requests a minute: twenty a second.
     /// </summary>
     /// <remarks>
     /// This is a ceiling on abuse, not a fairness quota. The binding constraint is the shared
@@ -55,7 +55,7 @@ public sealed class RateLimitOptions
     public RateLimitTierOptions Global { get; set; } = new() { PermitLimit = 1200, WindowSeconds = 60 };
 
     /// <summary>
-    /// The budget for endpoints that accept a credential, a one-time code or a reset token --
+    /// The budget for endpoints that accept a credential, a one-time code or a reset token:
     /// anything where a high request rate means guessing. 15 requests a minute.
     /// </summary>
     /// <remarks>
@@ -69,7 +69,7 @@ public sealed class RateLimitOptions
     public RateLimitTierOptions Auth { get; set; } = new() { PermitLimit = 15, WindowSeconds = 60 };
 
     /// <summary>
-    /// The budget for endpoints where every request costs a call to somebody else's system -- a
+    /// The budget for endpoints where every request costs a call to somebody else's system: a
     /// domain registrar, a WHOIS server. 60 requests a minute.
     /// </summary>
     /// <remarks>
@@ -82,7 +82,7 @@ public sealed class RateLimitOptions
     public RateLimitTierOptions Upstream { get; set; } = new() { PermitLimit = 60, WindowSeconds = 60 };
 
     /// <summary>
-    /// The budget for anonymous writes that cause something to be delivered in the real world --
+    /// The budget for anonymous writes that cause something to be delivered in the real world:
     /// mail leaving the relay, a message posted to the operator's chat. 5 requests a minute.
     /// </summary>
     /// <remarks>
@@ -109,7 +109,7 @@ public sealed class RateLimitOptions
     /// </summary>
     /// <remarks>
     /// A concurrency limit rather than a rate, because for a report export the cost is a table
-    /// scan held in memory for the length of the request, not the number of requests -- ten
+    /// scan held in memory for the length of the request, not the number of requests: ten
     /// exports spread over a minute are fine and five at the same instant are not. Five rather
     /// than one: an administrator opening several exports in tabs is ordinary use, and a limit of
     /// one would make the second tab fail rather than wait.
@@ -117,34 +117,33 @@ public sealed class RateLimitOptions
     public int ConcurrentPermitLimit { get; set; } = 5;
 
     /// <summary>
-    /// How many proxies stand between a visitor's browser and this process. Two.
+    /// How many trusted proxies in a row stand between a visitor's browser and this process. Zero
+    /// by default, so no forwarded header is believed until the deployment says which proxies it has.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Bound straight onto <c>ForwardedHeadersOptions.ForwardLimit</c>, which is what makes
-    /// <c>Connection.RemoteIpAddress</c> the visitor's address rather than a proxy's. The deployed
-    /// chain is browser -> edge proxy -> this stack's nginx -> Kestrel: nginx records the edge in
-    /// <c>X-Forwarded-For</c> and the edge recorded the browser, so exactly two entries have to be
-    /// consumed from the right-hand end before the address is the visitor's.
+    /// Bound straight onto <c>ForwardedHeadersOptions.ForwardLimit</c>. <c>X-Forwarded-For</c> is read
+    /// from the right-hand end, one entry per trusted hop, and only while the hop it came from is in
+    /// <see cref="KnownProxies"/> or <see cref="KnownNetworks"/>; anything a caller forged stays at the
+    /// left-hand end and is left behind.
     /// </para>
     /// <para>
-    /// Left at the framework default of 1 the middleware stops one entry short and every visitor
-    /// resolves to the edge proxy -- one partition for the entire internet, which is the failure
-    /// that looks most like success: the limiter runs, the counters move, and one person's burst
-    /// refuses everybody.
-    /// </para>
-    /// <para>
-    /// It is consumed from the right and never from the left, and that is the whole security
-    /// property. Proxies append, so anything a caller forges stays at the left-hand end and is
-    /// simply left behind; an implementation that read the first entry -- or <c>X-Real-IP</c>, or
-    /// <c>CF-Connecting-IP</c>, none of which anything in this chain strips -- would let a caller
-    /// mint a new partition per request and never reach a limit at all.
-    /// </para>
-    /// <para>
-    /// The number has to match the deployment: a stack reached through one proxy sets this to 1,
-    /// and a process reached directly sets it to 0. Setting it higher than the real chain is the
-    /// dangerous direction, because the middleware would then consume an entry the caller wrote.
+    /// Setting it higher than the real chain is the dangerous direction, because the middleware would
+    /// then consume an entry the caller wrote.
     /// </para>
     /// </remarks>
-    public int TrustedProxyCount { get; set; } = 2;
+    public int TrustedProxyCount { get; set; }
+
+    /// <summary>
+    /// Addresses of the proxies whose forwarded headers are believed (<c>RateLimit__KnownProxies__N</c>).
+    /// Each must parse as an IP address, or startup is refused.
+    /// </summary>
+    public List<string> KnownProxies { get; set; } = [];
+
+    /// <summary>
+    /// CIDR ranges of the proxies whose forwarded headers are believed (<c>RateLimit__KnownNetworks__N</c>),
+    /// such as the Docker network the edge and client containers share. Each must parse as a range, or
+    /// startup is refused.
+    /// </summary>
+    public List<string> KnownNetworks { get; set; } = [];
 }

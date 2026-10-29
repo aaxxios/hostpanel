@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Site identity card — the name the storefront calls itself and a one-line tagline.
+ * Site identity card: the name the storefront calls itself and a one-line tagline.
  *
  * The name reaches the browser title's `og:site_name`, every logo's alt text and the structured
  * data; the tagline is the default meta description. Each field is saved on its own, so a mistake
@@ -11,12 +11,13 @@ import { useI18n } from 'vue-i18n'
 import { useSettingDraft } from '@/composables/useSettingDraft'
 import type { SettingDraft } from '@/composables/useSettingDraft'
 import SettingNotSeeded from '@/components/settings/SettingNotSeeded.vue'
+import SettingOutcome from '@/components/settings/SettingOutcome.vue'
 import SettingSaveButton from '@/components/settings/SettingSaveButton.vue'
 import SettingsSection from '@/components/settings/SettingsSection.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import { SettingEnv, SettingKey } from '@/types/setting'
-import type { Setting } from '@/types/setting'
+import type { Setting, SettingSave } from '@/types/setting'
 import { SHORT_TEXT_MAX_LENGTH } from '@/lib/limits'
 
 const { t } = useI18n()
@@ -25,13 +26,8 @@ const { t } = useI18n()
 const props = defineProps<{
   /** All system settings, as loaded from the backend. */
   settings: Setting[]
-  /** True while a save is in flight. */
-  saving?: boolean
-}>()
-
-const emit = defineEmits<{
-  /** Emitted with the row id and the new value when the operator saves a field. */
-  save: [id: number, value: string]
+  /** Persists one row and answers how it went; each control shows its own outcome. */
+  save: SettingSave
 }>()
 
 /** The settings list as a ref, which is what the draft composable watches. */
@@ -89,14 +85,15 @@ const FIELDS: IdentityField[] = [
           :maxlength="SHORT_TEXT_MAX_LENGTH"
           :data-testid="`site-identity-${field.testid}`"
           class="min-w-72 flex-1"
-          @keyup.enter="field.draft.submit((id, value) => emit('save', id, value))"
+          @keyup.enter="field.draft.submit(save)"
         />
         <SettingSaveButton
           :dirty="field.draft.dirty.value"
-          :saving="saving"
+          :saving="field.draft.saving.value"
           :data-testid="`site-identity-save-${field.testid}`"
-          @click="field.draft.submit((id, value) => emit('save', id, value))"
+          @click="field.draft.submit(save)"
         />
+        <SettingOutcome :outcome="field.draft.outcome.value" />
       </UiStack>
     </template>
   </SettingsSection>

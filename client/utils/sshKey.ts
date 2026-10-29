@@ -1,6 +1,6 @@
 /**
  * Client-side pre-checks for a pasted SSH public key. They give instant feedback and keep an
- * obviously wrong paste — above all a private key — from ever leaving the browser. The backend
+ * obviously wrong paste, above all a private key, from ever leaving the browser. The backend
  * re-validates everything; these checks are never the gate.
  *
  * @module utils/sshKey

@@ -11,9 +11,8 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.UpdateEmailForwarding
 /// <param name="Destination">New destination email address.</param>
 /// <param name="IsActive">
 /// Whether the rule should be active. Defaults to <see langword="true"/> so a caller that omits
-/// the field from the body — the admin app's plain edit form never sends it, only its dedicated
-/// toggle does — keeps the rule active exactly as the deleted <c>EmailForwardingRuleRequest</c>
-/// DTO's own <c>= true</c> property initializer did.
+/// the field from the body, the admin app's plain edit form never sends it, only its dedicated
+/// toggle does, keeps the rule active.
 /// </param>
-public record UpdateEmailForwardingRuleCommand(
+public sealed record UpdateEmailForwardingRuleCommand(
     int? DomainId, int? RuleId, string Source, string Destination, bool IsActive = true);

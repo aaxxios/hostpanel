@@ -3,9 +3,10 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
-using Innovayse.Hostpanel.Domain.Domains;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.RenewDomain;
 
@@ -14,24 +15,29 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.RenewDomain;
 /// </summary>
 public sealed class RenewDomainHandler
 {
-    /// <summary>The registrar provider used to place the renewal order.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
 
     /// <summary>The data context the domain aggregate is loaded, mutated and saved through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work the aggregate is saved through.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>Logger that records the registrar's refusal code for operators.</summary>
+    private readonly ILogger<RenewDomainHandler> _logger;
+
+    /// <summary>The clock that dates the renewal.</summary>
+    private readonly IClock _clock;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="registrar">The registrar provider used to place the renewal order.</param>
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
     /// <param name="context">The data context the domain aggregate is loaded, mutated and saved through.</param>
-    /// <param name="uow">Unit of work the aggregate is saved through.</param>
-    public RenewDomainHandler(IRegistrarProvider registrar, IHostpanelDbContext context, IUnitOfWork uow)
+    /// <param name="logger">Logger that records the registrar's refusal code for operators.</param>
+    /// <param name="clock">The clock that dates the renewal.</param>
+    public RenewDomainHandler(RegistrarProviderResolver registrars, IHostpanelDbContext context, ILogger<RenewDomainHandler> logger, IClock clock)
     {
-        _registrar = registrar;
+        _registrars = registrars;
         _context = context;
-        _uow = uow;
+        _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>
@@ -42,6 +48,7 @@ public sealed class RenewDomainHandler
     /// <returns>
     /// Success, or <c>DOMAIN_NOT_FOUND</c> when the id names no domain, or
     /// <c>DOMAIN_NO_REGISTRAR_REF</c> when the domain was never placed at a registrar, or
+    /// <c>DOMAIN_RENEW_NOT_ALLOWED</c> when the domain is cancelled or transferred out, or
     /// <c>DOMAIN_RENEWAL_UPSTREAM_FAILED</c> when the registrar rejects the renewal.
     /// </returns>
     public async Task<Result> HandleAsync(RenewDomainCommand cmd, CancellationToken ct)
@@ -58,25 +65,31 @@ public sealed class RenewDomainHandler
         {
             // Never placed at a registrar, so there is nothing to renew there. Extending the
             // expiry here would mark a paid domain renewed while nothing changed upstream.
-            return Result.Failure(
-                $"'{domain.Name}' has no registrar reference and cannot be renewed at the registrar.",
-                HostpanelErrorCodes.DOMAIN_NO_REGISTRAR_REF);
+            return Result.FailureCode(HostpanelErrorCodes.DOMAIN_NO_REGISTRAR_REF);
+        }
+
+        if (!domain.CanRenew)
+        {
+            // Refused before the registrar is called, so a renewal the domain would refuse is never bought.
+            return Result.FailureCode(HostpanelErrorCodes.DOMAIN_RENEW_NOT_ALLOWED);
         }
 
         var request = new DomainRenewalOrder(domain.Name, domain.RegistrarRef, cmd.Years);
-        var result = await _registrar.RenewAsync(request, ct);
+        var registrar = await _registrars.ResolveAsync(domain, ct);
+        var result = await registrar.RenewAsync(request, ct);
 
         if (!result.Success)
         {
-            return Result.Failure(
-                $"Registrar rejected renewal of '{domain.Name}': {result.ErrorMessage}",
-                HostpanelErrorCodes.DOMAIN_RENEWAL_UPSTREAM_FAILED);
+            _logger.LogWarning(
+                "Registrar rejected renewal of '{DomainName}': {Reason}",
+                domain.Name, result.ErrorCode);
+            return Result.FailureCode(result.ToFailureCode(HostpanelErrorCodes.DOMAIN_RENEWAL_UPSTREAM_FAILED));
         }
 
         var newExpiresAt = result.ExpiresAt ?? domain.ExpiresAt.AddYears(cmd.Years);
 
-        domain.Renew(newExpiresAt);
-        await _uow.SaveChangesAsync(ct);
+        domain.Renew(newExpiresAt, _clock.UtcNow);
+        await _context.SaveChangesAsync(ct);
         return Result.Success();
     }
 }

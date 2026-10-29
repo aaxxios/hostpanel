@@ -3,12 +3,15 @@
  * Frame every report screen sits in: title and description, the filters, then the result.
  *
  * Loading and the refusal sentence come from the reports store, so a screen passes neither. While
- * a report loads the result is replaced by a placeholder; a failed load shows the API sentence;
- * otherwise the default slot and the "generated on" line show.
+ * a report loads the result is replaced by a placeholder; a failed load shows the API sentence
+ * (with a Retry button when the screen passes `retry`) instead of the result, so an empty-state
+ * text never stands in for data that could not be read; otherwise the default slot and the
+ * "generated on" line show.
  */
 import { useI18n } from 'vue-i18n'
 import ReportTimestamp from '@/components/reports/ReportTimestamp.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
@@ -23,6 +26,8 @@ defineProps<{
   title: string
   /** Line under the title (already translated). */
   description?: string
+  /** Loads the report again after a failed load; without it the failure shows no Retry button. */
+  retry?: () => unknown
 }>()
 
 const store = useReportsStore()
@@ -39,9 +44,12 @@ const store = useReportsStore()
       <UiSkeleton :lines="3" />
       <UiText class="sr-only">{{ t('shared.loading') }}</UiText>
     </UiStack>
-    <UiAlert v-else-if="store.error" variant="danger" data-testid="report-error">
-      {{ store.error }}
-    </UiAlert>
+    <template v-else-if="store.error">
+      <UiErrorState v-if="retry" :message="store.error" testid="report-error" @retry="retry()" />
+      <UiAlert v-else variant="danger" data-testid="report-error">
+        {{ store.error }}
+      </UiAlert>
+    </template>
     <UiStack v-else gap="lg">
       <slot />
       <ReportTimestamp />

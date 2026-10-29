@@ -1,6 +1,4 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Settings;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Settings;
 
@@ -45,6 +43,22 @@ public sealed class BillingSettingKeysTests
     {
         BillingSettingKeys.Patterns[BillingSettingKeys.InvoiceDaysBefore].Regex.IsMatch(value).Should().Be(leadOk);
         BillingSettingKeys.Patterns[BillingSettingKeys.SuspendAfterOverdueDays].Regex.IsMatch(value).Should().Be(graceOk);
+    }
+
+    /// <summary>The delay before automatic termination is at least one day and at most 90, and its default is valid.</summary>
+    /// <param name="value">The candidate value.</param>
+    /// <param name="ok">Whether terminate_after_suspended_days accepts it.</param>
+    [Theory]
+    [InlineData("0", false)]
+    [InlineData("1", true)]
+    [InlineData("14", true)]
+    [InlineData("90", true)]
+    [InlineData("91", false)]
+    [InlineData("", false)]
+    public void TerminateAfterSuspendedDays_Pattern(string value, bool ok)
+    {
+        BillingSettingKeys.Patterns[BillingSettingKeys.TerminateAfterSuspendedDays].Regex.IsMatch(value).Should().Be(ok);
+        BillingSettingKeys.AllowsEmpty(BillingSettingKeys.TerminateAfterSuspendedDays).Should().BeFalse();
     }
 
     /// <summary>Each day-count key says its own range in the refusal text.</summary>

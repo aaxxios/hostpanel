@@ -1,19 +1,20 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Orders.Common.Enums;
 using Innovayse.Hostpanel.Domain.Orders.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Orders;
 
 /// <summary>
 /// <c>POST /api/orders/{id}/accept</c> against Postgres: the happy path, the missing-order
-/// refusal, the line item's <c>PRODUCT_NOT_FOUND</c> refusal, and the authorization boundary
-/// (anonymous, wrong role).
+/// refusal, per-line failure reports (a rejected domain beside a hosting line),
+/// and the authorization boundary (anonymous, wrong role).
 /// </summary>
-/// <remarks>Split from the deleted <c>OrdersAdminEndpointTests</c> (A7 Task 6).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class AcceptOrderTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -30,7 +31,7 @@ public sealed class AcceptOrderTests(IntegrationTestFactory factory) : IClassFix
         await OrdersTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.ORDER_NOT_FOUND);
     }
 
-    /// <summary>Accepting a pending order moves it to Active.</summary>
+    /// <summary>Accepting a pending order moves it to Active and reports no failed line.</summary>
     [Fact]
     public async Task AcceptMovesAPendingOrderToActive()
     {
@@ -39,26 +40,38 @@ public sealed class AcceptOrderTests(IntegrationTestFactory factory) : IClassFix
 
         var response = await admin.PostAsync($"/api/orders/{orderId}/accept", content: null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var outcome = await response.Content.ReadFromJsonAsync<JsonElement>();
+        outcome.GetProperty("failedLines").GetArrayLength().Should().Be(0);
         var read = await admin.GetFromJsonAsync<JsonElement>($"/api/orders/{orderId}");
         read.GetProperty("status").GetString().Should().Be(nameof(OrderStatus.Active));
     }
 
     /// <summary>
-    /// Accepting an order whose line item names a product deleted since the order was placed is
-    /// refused with the same <c>PRODUCT_NOT_FOUND</c> code <c>OrderServiceHandler</c> gives any
-    /// other line naming no product, and the order is left Pending rather than half-accepted.
+    /// A domain line is fulfilled as a domain, never as a client service: a registration the
+    /// registrar refuses is reported as a failed domain line, and the hosting line after it is
+    /// still fulfilled, so one failure never stops the rest.
     /// </summary>
     [Fact]
-    public async Task AcceptRefusesAnOrderWhoseProductWasDeleted()
+    public async Task AcceptRunsTheDomainActionAndKeepsGoingPastAFailedLine()
     {
-        var orderId = await OrdersTestSeeds.SeedOrderWithDeletedProductAsync(factory);
+        var seeded = await OrdersTestSeeds.SeedTakenDomainAndHostingOrderAsync(factory);
         var admin = await OrdersTestSeeds.AdminClientAsync(factory);
 
-        var response = await admin.PostAsync($"/api/orders/{orderId}/accept", content: null);
+        var response = await admin.PostAsync($"/api/orders/{seeded.OrderId}/accept", content: null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await OrdersTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.PRODUCT_NOT_FOUND);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var outcome = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var failed = outcome.GetProperty("failedLines");
+        failed.GetArrayLength().Should().Be(1);
+        failed[0].GetProperty("kind").GetString().Should().Be(nameof(OrderLineKind.Domain));
+        failed[0].GetProperty("domain").GetString().Should().Be(seeded.Domain);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var services = await db.ClientServices.AsNoTracking().Where(s => s.ClientId == seeded.ClientId).ToListAsync();
+        services.Should().ContainSingle(s => s.ProductId == seeded.ProductId);
+        (await db.Orders.AsNoTracking().SingleAsync(o => o.Id == seeded.OrderId)).Status.Should().Be(OrderStatus.Active);
     }
 
     /// <summary>Accepting is not for anonymous callers.</summary>

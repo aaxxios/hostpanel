@@ -1,42 +1,38 @@
 using Innovayse.Hostpanel.Domain.Products.Enums;
+
 namespace Innovayse.Hostpanel.Domain.Products;
 
 /// <summary>
-/// Parses the billing-cycle strings the order flow and cart have always sent.
+/// Reads the billing-cycle texts older data and external sources carry into a <see cref="BillingCycle"/>.
 /// </summary>
 /// <remarks>
-/// Three spellings are in the wild — "monthly", "annual" and "annually" — because the client
-/// and the seed data never agreed. They are accepted here, in one place, so no handler has to
-/// carry its own switch over them.
+/// Three spellings were in the wild before the cycle became an enum: "monthly", "annual" and
+/// "annually". They are read here, in one place, by the persistence converter and by the importers;
+/// nothing else in the code works with a cycle as text.
 /// </remarks>
 public static class BillingCycleParser
 {
-    /// <summary>Parses a cycle string.</summary>
-    /// <param name="raw">"monthly", "annual" or "annually", any case.</param>
-    /// <returns>The cycle.</returns>
-    /// <exception cref="ArgumentException">The string is none of the known spellings.</exception>
-    public static BillingCycle Parse(string raw) => raw?.Trim().ToLowerInvariant() switch
-    {
-        BillingCycleNames.Monthly => BillingCycle.Monthly,
-        BillingCycleNames.Annual or BillingCycleNames.Annually => BillingCycle.Annual,
-        _ => throw new ArgumentException($"Unknown billing cycle '{raw}'.", nameof(raw)),
-    };
+    /// <summary>The legacy spelling of <see cref="BillingCycle.Monthly"/>.</summary>
+    private const string Monthly = "monthly";
 
-    /// <summary>
-    /// Reads a stored billing-cycle string without throwing, for code that must skip what it does
-    /// not understand (a renewal must never guess a cycle and bill the wrong amount of time).
-    /// </summary>
-    /// <param name="raw">The stored value, any casing; may be null.</param>
-    /// <param name="cycle">The parsed cycle when this returns <see langword="true"/>.</param>
+    /// <summary>The legacy spelling of <see cref="BillingCycle.Annual"/>.</summary>
+    private const string Annual = "annual";
+
+    /// <summary>The alternative legacy spelling of <see cref="BillingCycle.Annual"/>.</summary>
+    private const string Annually = "annually";
+
+    /// <summary>Reads a stored or imported billing-cycle text without throwing.</summary>
+    /// <param name="raw">The text, any casing and surrounding blanks; may be null.</param>
+    /// <param name="cycle">The cycle when this returns <see langword="true"/>.</param>
     /// <returns><see langword="true"/> when <paramref name="raw"/> names a known cycle.</returns>
     public static bool TryParse(string? raw, out BillingCycle cycle)
     {
         switch (raw?.Trim().ToLowerInvariant())
         {
-            case BillingCycleNames.Monthly:
+            case Monthly:
                 cycle = BillingCycle.Monthly;
                 return true;
-            case BillingCycleNames.Annual or BillingCycleNames.Annually:
+            case Annual or Annually:
                 cycle = BillingCycle.Annual;
                 return true;
             default:

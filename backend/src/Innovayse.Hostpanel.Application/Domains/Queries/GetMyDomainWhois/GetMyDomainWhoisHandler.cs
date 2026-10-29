@@ -6,6 +6,7 @@ using Wolverine;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Domains.Queries.GetMyDomainWhois;
+
 /// <summary>
 /// Performs a WHOIS lookup on one of the calling client's own domains, refusing every id that is
 /// not theirs.
@@ -13,7 +14,7 @@ namespace Innovayse.Hostpanel.Application.Domains.Queries.GetMyDomainWhois;
 /// <remarks>
 /// The check lives here rather than at the endpoint, so it travels with the message: nothing can
 /// reach a WHOIS lookup through <see cref="GetMyDomainWhoisQuery"/> without it having run. The
-/// two shared reads it then dispatches are the same ones the admin route uses -- the domain is
+/// two shared reads it then dispatches are the same ones the admin route uses: the domain is
 /// loaded to turn the id into a hostname, and only then is the lookup performed.
 /// </remarks>
 public sealed class GetMyDomainWhoisHandler

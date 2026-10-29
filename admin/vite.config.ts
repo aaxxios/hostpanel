@@ -3,7 +3,9 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import type { Plugin } from 'vite'
-import { themeBootScript } from './src/lib/themeBoot'
+// The extension is spelled out because Vite's native config loader runs this file under Node,
+// which resolves a relative import only by its full file name.
+import { themeBootScript } from './src/lib/themeBoot.ts'
 
 /**
  * Inlines the theme pre-paint script at the end of `<head>`, after the `theme-color` metas it
@@ -45,7 +47,9 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ['panel-admin.innovayse.local', ...(process.env.ALLOWED_HOSTS ?? '').split(',').map((h) => h.trim()).filter(Boolean)],
+    // Extra names the dev server answers to besides localhost, from the environment (ADMIN_DEV_ALLOWED_HOSTS,
+    // comma separated): a deployment's own host names are not written into the repository.
+    allowedHosts: (process.env.ADMIN_DEV_ALLOWED_HOSTS ?? '').split(',').map((h) => h.trim()).filter(Boolean),
     proxy: {
       '/api': {
         target: process.env.API_PROXY_TARGET || 'http://localhost:5148',

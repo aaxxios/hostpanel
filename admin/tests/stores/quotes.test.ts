@@ -78,6 +78,7 @@ describe('quoteStore', () => {
     expect(await store.updateQuote(3, { subject: 'new', stage: 'Draft', validUntil: '2026-03-01', items: [] })).toBe(true)
     expect(callOf(mock, 0)).toMatchObject({ url: '/api/quotes/3', method: 'PUT' })
     expect(store.currentQuote).toEqual({ id: 3, subject: 'new' })
+    expect(store.successMessage).toBe('Quote #3 saved.')
   })
 
   it('updateQuote returns false and does not reload on refusal', async () => {

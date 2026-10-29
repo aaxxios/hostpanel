@@ -356,7 +356,9 @@
     "feature": "Feature",
     "adding": "Adding…",
     "add": "Add",
-    "plansLineUpByFeature": "Plans line up by feature name, so spell it the same way across products — \"Disk\" and \"Disk space\" become two separate rows. Within one product a name can only be used once; reusing it is refused rather than saved where it would never show."
+    "plansLineUpByFeature": "Plans line up by feature name, so spell it the same way across products — \"Disk\" and \"Disk space\" become two separate rows. Within one product a name can only be used once; reusing it is refused rather than saved where it would never show.",
+    "confirmRemoveTitle": "Remove this line?",
+    "confirmRemoveMessage": "The line \"{label}\" will be removed from the specification."
   },
   "productForm": {
     "editProduct": "Edit Product",
@@ -400,7 +402,13 @@
   },
   "emailTemplates": {
     "emailTemplates": "Email Templates",
-    "noTemplatesFound": "No templates found."
+    "noTemplatesFound": "No templates found.",
+    "languages": "Languages",
+    "body": "Body (HTML)",
+    "missingVersion": "This template has no version in this language yet, so mail in it is sent in English. Saving adds it.",
+    "subjectPlaceholder": "Subject line, variables allowed",
+    "bodyPlaceholder": "HTML body, variables allowed",
+    "descriptionPlaceholder": "When this mail is sent"
   },
   "products": {
     "products": "Products",

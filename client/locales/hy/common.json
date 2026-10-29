@@ -45,8 +45,7 @@
     "breadcrumb": "Նավիգացիոն շղթա"
   },
   "fallback": {
-    "unknown": "Անհայտ",
-    "product": "Ապրանք №{id}"
+    "unknown": "Անհայտ"
   },
   "errors": {
     "noAnswer": "Չհաջողվեց կապվել սերվերի հետ։"

@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Application.Notifications.Commands.SendEmail;
+using Innovayse.Hostpanel.Application.Notifications.Common.TemplateModels;
 using Innovayse.Hostpanel.Domain.Domains.Events;
 using Microsoft.Extensions.Options;
 using Wolverine;
@@ -33,15 +34,13 @@ public sealed class DomainRegistrationFailedAdminHandler
     /// <returns>A task representing the asynchronous send operation.</returns>
     public async Task HandleAsync(DomainRegistrationFailedEvent evt, CancellationToken ct)
     {
-        var data = new
-        {
-            domain = new { name = evt.DomainName },
-            client = new { id = evt.ClientId },
-            invoice = new { id = evt.InvoiceId },
-            reason = evt.Reason,
-        };
+        var data = new DomainRegistrationFailedAdminTemplateModel(
+            new DomainNameTemplateData(evt.DomainName),
+            new ClientRefTemplateData(evt.ClientId),
+            new InvoiceRefTemplateData(evt.InvoiceId),
+            evt.Reason);
 
         await _bus.InvokeAsync(
-            new SendEmailCommand(_settings.Value.AdminEmail, "domain-registration-failed-admin", data), ct);
+            new SendEmailCommand(_settings.Value.AdminEmail, null, "domain-registration-failed-admin", data), ct);
     }
 }

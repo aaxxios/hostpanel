@@ -2,9 +2,10 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Products;
+
 /// <summary>
 /// Groups related products (e.g., "Shared Hosting", "VPS", "SSL Certificates").
-/// An aggregate root — owns the list of products in the catalogue.
+/// An aggregate root: owns the list of products in the catalogue.
 /// Stored in the <c>ProductGroups</c> table.
 /// </summary>
 public sealed class ProductGroup : BaseEntity, IAggregateRoot
@@ -24,7 +25,7 @@ public sealed class ProductGroup : BaseEntity, IAggregateRoot
     /// <summary>Gets all products belonging to this group.</summary>
     public IReadOnlyList<Product> Products => _products.AsReadOnly();
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private ProductGroup() { }
 
     /// <summary>
@@ -50,9 +51,9 @@ public sealed class ProductGroup : BaseEntity, IAggregateRoot
         Description = description;
     }
 
-    /// <summary>Marks the group inactive — hides it from the storefront.</summary>
+    /// <summary>Marks the group inactive: hides it from the storefront.</summary>
     public void Deactivate() => IsActive = false;
 
-    /// <summary>Marks the group active — makes it visible in the storefront.</summary>
+    /// <summary>Marks the group active: makes it visible in the storefront.</summary>
     public void Activate() => IsActive = true;
 }

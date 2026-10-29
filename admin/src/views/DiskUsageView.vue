@@ -25,7 +25,7 @@ const { t } = useI18n()
 
 const store = useReportsStore()
 
-const { data } = useReport<ReportDiskUsage>(() => '/reports/disk-usage')
+const { data, load } = useReport<ReportDiskUsage>(() => '/reports/disk-usage')
 
 /** Percent of a limit from which an account is flagged as filling up. */
 const WARN_PERCENT = 70
@@ -74,7 +74,7 @@ const updateNow = async (): Promise<void> => {
 </script>
 
 <template>
-  <ReportPage :title="t('reports.diskUsage.diskSpaceBandwidthUsageSummary')" :description="t('reports.diskUsage.thisReportShowsTheDisk')">
+  <ReportPage :retry="load" :title="t('reports.diskUsage.diskSpaceBandwidthUsageSummary')" :description="t('reports.diskUsage.thisReportShowsTheDisk')">
     <template #filters>
       <UiStack direction="row" justify="between" align="center" class="mb-6">
         <UiText v-if="lastUpdated" tone="muted" size="sm" data-testid="report-last-updated">

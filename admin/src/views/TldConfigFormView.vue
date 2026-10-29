@@ -4,7 +4,8 @@
  *
  * Detects edit mode from the route params, loads the configuration when editing, and carries the
  * pricing tables for registration, transfer and renewal across the listed year periods. Asks
- * before leaving with unsaved edits.
+ * before leaving with unsaved edits. A refused load shows the API's sentence with a retry instead of
+ * the form; a refused save shows next to the save bar, a saved configuration returns to the list.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -14,14 +15,16 @@ import SettingsFormFooter from '@/components/settings/SettingsFormFooter.vue'
 import SettingsLoading from '@/components/settings/SettingsLoading.vue'
 import SettingsSection from '@/components/settings/SettingsSection.vue'
 import TldPricingTable from '@/components/settings/TldPricingTable.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiSpinner from '@/components/ui/UiSpinner.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
+import { UiTone } from '@/utils/ui/tone'
 import UiText from '@/components/ui/UiText.vue'
 import UiToggle from '@/components/ui/UiToggle.vue'
 import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
@@ -72,8 +75,11 @@ const loadingConfig = ref(false)
 /** True while saving the form. */
 const saving = ref(false)
 
-/** Error message from save or load operations. */
+/** The sentence for the last refused save, null when none. */
 const saveError = ref<string | null>(null)
+
+/** Sentence for a failed load of the configuration being edited, null when none. */
+const loadError = ref<string | null>(null)
 
 /** Tracks whether the form has been modified since loading. */
 const isDirty = ref(false)
@@ -136,16 +142,19 @@ watch(
   { deep: true },
 )
 
-onMounted(async () => {
-  if (!isEditMode.value) {
-    return
-  }
+/**
+ * Loads the configuration being edited into the form; a refusal is kept in `loadError`.
+ *
+ * @returns Resolves when the load has settled.
+ */
+const loadConfig = async (): Promise<void> => {
+  loadError.value = null
   loadingConfig.value = true
   const id = Number(route.params.id)
   const config = await store.fetchById(id)
   loadingConfig.value = false
   if (!config) {
-    saveError.value = t('settings.tldConfigForm.notFound', { id })
+    loadError.value = store.error ?? t('settings.tldConfigForm.notFound', { id })
     return
   }
 
@@ -157,15 +166,21 @@ onMounted(async () => {
   sortOrder.value = config.sortOrder
   categoriesInput.value = config.categories.join(', ')
 
-  costRegister.value = fromApiMap(config.costRegister)
-  costTransfer.value = fromApiMap(config.costTransfer)
-  costRenew.value = fromApiMap(config.costRenew)
-  sellRegister.value = fromApiMap(config.sellRegister)
-  sellTransfer.value = fromApiMap(config.sellTransfer)
-  sellRenew.value = fromApiMap(config.sellRenew)
+  costRegister.value = fromApiMap(config.costs.register)
+  costTransfer.value = fromApiMap(config.costs.transfer)
+  costRenew.value = fromApiMap(config.costs.renew)
+  sellRegister.value = fromApiMap(config.sells.register)
+  sellTransfer.value = fromApiMap(config.sells.transfer)
+  sellRenew.value = fromApiMap(config.sells.renew)
 
   // Populating the form is not an edit.
   isDirty.value = false
+}
+
+onMounted(async () => {
+  if (isEditMode.value) {
+    await loadConfig()
+  }
 })
 
 /**
@@ -249,10 +264,9 @@ const handleCancel = (): void => {
 
     <SettingsLoading v-if="loadingConfig" :message="t('settings.tldConfigForm.loadingTldConfiguration')" />
 
+    <UiErrorState v-else-if="loadError" :message="loadError" testid="tld-config-form-load-error" @retry="loadConfig" />
+
     <template v-else>
-      <UiAlert v-if="saveError" variant="danger" class="mb-5" data-testid="tld-config-form-error">
-        {{ saveError }}
-      </UiAlert>
 
       <UiGrid :columns="2" class="items-start">
         <!-- Left: general settings -->
@@ -369,6 +383,8 @@ const handleCancel = (): void => {
           />
         </UiStack>
       </UiGrid>
+
+      <UiStatusMessage :message="saveError" :tone="UiTone.Danger" class="mb-5" data-testid="tld-config-form-error" />
 
       <SettingsFormFooter
         :save-label="isEditMode ? t('shared.saveChanges') : t('settings.tldConfigForm.createTld')"

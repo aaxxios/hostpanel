@@ -18,7 +18,7 @@ namespace Innovayse.Hostpanel.Application.Common.Validators;
 /// </para>
 /// <para>
 /// Validators take a localizer and handlers do not, because of where each sentence is produced.
-/// A handler's refusal is resolved at the API boundary — the error code is the resource key, and
+/// A handler's refusal is resolved at the API boundary: the error code is the resource key, and
 /// <c>BaseApiController</c> looks it up, so a handler never needs a localizer. A validator's
 /// message has no code to be resolved by: it is attached to a field, several can be returned at
 /// once, and they are grouped into the <c>errors</c> dictionary before any controller sees them.
@@ -42,7 +42,7 @@ public abstract class LocalizedValidator<T> : AbstractValidator<T>
     /// <remarks>Keys live in <c>Application/Resources/ApplicationValidationMessages.resx</c> and its
     /// <c>.ru</c>/<c>.hy</c> siblings, named for the rule rather than for the sentence. A value
     /// that interpolates takes <c>{0}</c> placeholders and is called as
-    /// <c>L["Key", argument]</c> — never rebuilt with string interpolation, which a resource
+    /// <c>L["Key", argument]</c>: never rebuilt with string interpolation, which a resource
     /// cannot do.</remarks>
     protected IStringLocalizer L { get; }
 }

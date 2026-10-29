@@ -20,13 +20,13 @@ import { transactionTypeTone } from '@/lib/tones'
 import { formatDate } from '@/lib/format'
 import { formatUsdPlain } from '@/lib/money'
 import { InvoiceTransactionType } from '@/types/invoice'
-import type { Invoice, InvoiceTransaction } from '@/types/invoice'
+import type { InvoiceDetail, InvoiceTransaction } from '@/types/invoice'
 
 const { t } = useI18n()
 
 const props = defineProps<{
   /** The invoice whose transactions are listed. */
-  invoice: Invoice
+  invoice: InvoiceDetail
 }>()
 
 /** Every transaction of the invoice; the API may omit the list on a brand-new invoice. */

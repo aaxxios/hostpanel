@@ -1,5 +1,5 @@
 /**
- * Tests of TicketTagsView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of TicketTagsView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -14,4 +14,5 @@ runReportCase({
   view: TicketTagsView,
   routes: { 'GET /reports/ticket-tags': () => json({ rows: [{ tag: 'billing', count: 4 }] }) },
   expected: ['Ticket Tags Overview', 'billing'],
+  retryable: true,
 })

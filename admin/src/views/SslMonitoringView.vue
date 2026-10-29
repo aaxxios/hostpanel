@@ -60,7 +60,7 @@ const revalidate = async (): Promise<void> => {
 </script>
 
 <template>
-  <ReportPage :title="t('reports.sslMonitoring.sslCertificateMonitoring')" :description="t('reports.sslMonitoring.displaysAListOfDomains')">
+  <ReportPage :retry="load" :title="t('reports.sslMonitoring.sslCertificateMonitoring')" :description="t('reports.sslMonitoring.displaysAListOfDomains')">
     <template #filters>
       <UiStack direction="row" gap="sm" class="mb-6">
         <UiButton

@@ -1,10 +1,8 @@
 {
   "stripe": {
     "shortDescription": "Ընդունեք առցանց քարտային վճարումներ Stripe վճարային հարթակի միջոցով։",
-    "hint": "Ավելացրեք այս webhook հասցեն ձեր Stripe վահանակում՝ https://yourdomain.com/api/webhooks/stripe",
     "fieldSecretKey": "Գաղտնի բանալի",
     "fieldPublishableKey": "Հրապարակային բանալի",
-    "fieldWebhookSecret": "Webhook-ի գաղտնիք",
     "fieldMode": "Ռեժիմ"
   },
   "paypal": {

@@ -57,17 +57,11 @@ const slide = (id: number, overrides: Partial<SlidePublic> = {}): SlidePublic =>
   iconName: 'school',
   brandColor: '#8b5cf6',
   imageUrl: `/images/slide-${id}.jpg`,
-  demoUrl: null,
-  learnMoreUrl: `/products/slide-${id}`,
   productId: null,
-  monthlyPrice: null,
-  annualPrice: null,
-  title: `Slide ${id}`,
-  tagline: 'Tagline',
-  description: 'Description',
-  features: ['Feature one'],
-  ctaText: null,
-  ctaUrl: null,
+  content: { title: `Slide ${id}`, tagline: 'Tagline', description: 'Description', features: ['Feature one'] },
+  links: { demoUrl: null, learnMoreUrl: `/products/slide-${id}` },
+  callToAction: { text: null, url: null },
+  pricing: { monthlyPrice: null, annualPrice: null },
   ...overrides,
 })
 
@@ -89,7 +83,7 @@ describe('ProductsFullSlider', () => {
     slideToLoop.mockReset()
     registerPageComponents({ SectionsProductsSlide })
     api.fetchSlides.mockReset()
-    api.fetchSlides.mockResolvedValue([slide(1), slide(2, { demoUrl: 'https://demo.test', brandColor: '#10b981' })])
+    api.fetchSlides.mockResolvedValue([slide(1), slide(2, { links: { demoUrl: 'https://demo.test', learnMoreUrl: '/products/slide-2' }, brandColor: '#10b981' })])
   })
 
   it('reads the slides in the active language', async () => {
@@ -174,8 +168,8 @@ describe('ProductsFullSlider', () => {
 
   it('falls back to the illustration of the slide topic when it has no picture, and to the generic one otherwise', async () => {
     api.fetchSlides.mockResolvedValue([
-      slide(1, { imageUrl: '', learnMoreUrl: '/vps' }),
-      slide(2, { imageUrl: '', learnMoreUrl: '/offers' }),
+      slide(1, { imageUrl: '', links: { demoUrl: null, learnMoreUrl: '/vps' } }),
+      slide(2, { imageUrl: '', links: { demoUrl: null, learnMoreUrl: '/offers' } }),
     ])
     const wrapper = await mountSlider()
 

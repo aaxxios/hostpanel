@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 
@@ -26,7 +23,7 @@ public sealed class ClaimSetupTests(IntegrationTestFactory factory) : IClassFixt
     /// <summary>
     /// A signed-in caller presenting a wrong token, or no body at all, is refused with
     /// <c>SETUP_TOKEN_INVALID</c> while setup is open or <c>SETUP_ALREADY_COMPLETED</c> once
-    /// somebody holds Admin -- an empty body reaches the handler rather than failing model binding.
+    /// somebody holds Admin: an empty body reaches the handler rather than failing model binding.
     /// </summary>
     [Fact]
     public async Task ClaimSetupWithAWrongTokenIsRefused()

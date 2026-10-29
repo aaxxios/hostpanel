@@ -14,7 +14,7 @@ const NO_ANSWER = 'Could not reach the server. Check your connection and try aga
 
 /** The ledger answer the list endpoint sends. */
 const ledger = {
-  transactions: { items: [{ id: 1 }], totalCount: 4, page: 1, pageSize: 25 },
+  transactions: { items: [{ id: 1 }], pageNumber: 1, pageSize: 25, totalCount: 4, totalPages: 1 },
   totalIn: 10,
   totalOut: 2,
   totalFees: 1,
@@ -105,6 +105,8 @@ describe('billingTransactionsStore', () => {
     const refused = stubFetch(problem('Transaction is settled.', 409))
     expect(await store.remove(2)).toBe(false)
     expect(refused).toHaveBeenCalledTimes(1)
+    expect(store.actionError).toBe('Transaction is settled.')
+    expect(store.error).toBeNull()
   })
 })
 

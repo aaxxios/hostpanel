@@ -1,11 +1,13 @@
+using System.Xml;
 using System.Xml.Linq;
 using Innovayse.Hostpanel.Infrastructure.Integrations.Namecheap.Settings;
 using Microsoft.Extensions.Options;
 
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.Namecheap;
+
 /// <summary>
 /// Typed <see cref="HttpClient"/> wrapper for the Namecheap XML API v2.
-/// Handles authentication parameter injection, request dispatch, and error mapping.
+/// Handles credential injection into the request body, request dispatch, and error mapping.
 /// </summary>
 public sealed class NamecheapClient
 {
@@ -32,46 +34,65 @@ public sealed class NamecheapClient
     /// settings rather than being restated by each caller.
     /// </summary>
     public bool IsConfigured => _settings.IsConfigured;
+
     /// <summary>
     /// Executes a Namecheap XML API command and returns the parsed response document.
     /// </summary>
-    /// <param name="command">The API command name (e.g. namecheap.domains.create).</param>
-    /// <param name="parameters">Additional command-specific parameters.</param>
+    /// <remarks>
+    /// The request is a POST: the credentials and the command's parameters travel in the form body,
+    /// so neither the API key nor the account name can end up in a URL, a proxy log or a client
+    /// log. Only the command name is also put in the query string, where it is not a secret and
+    /// lets the retry policy tell a lookup from a purchase. The command passed in is not changed.
+    /// </remarks>
+    /// <param name="command">The command and its parameters.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Parsed XDocument of the successful API response.</returns>
     /// <exception cref="RegistrarException">Thrown when the API response contains ERROR status.</exception>
+    /// <exception cref="HttpRequestException">
+    /// Thrown on a transport failure, a non-success HTTP status, or an answer that is not XML.
+    /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the client is not configured. Callers check <see cref="IsConfigured"/> first;
     /// a path that forgets fails loudly instead of being answered with a fake success.
     /// </exception>
-    public async Task<XDocument> ExecuteAsync(
-        string command,
-        Dictionary<string, string> parameters,
-        CancellationToken ct)
+    public async Task<XDocument> ExecuteAsync(NamecheapCommand command, CancellationToken ct)
     {
         if (!IsConfigured)
         {
             throw new InvalidOperationException(
-                $"Namecheap is not configured; '{command}' was not sent.");
+                $"Namecheap is not configured; '{command.Name}' was not sent.");
         }
 
-        parameters["ApiUser"] = _settings.ApiUser;
-        parameters["ApiKey"] = _settings.ApiKey;
-        parameters["UserName"] = _settings.ApiUser;
-        parameters["ClientIp"] = _settings.ClientIp;
-        parameters["Command"] = command;
+        // A copy, so the caller's parameters are never written to; the credentials are set last so
+        // a parameter of the same name cannot replace them.
+        var form = new Dictionary<string, string>(command.Parameters)
+        {
+            ["ApiUser"] = _settings.ApiUser,
+            ["ApiKey"] = _settings.ApiKey,
+            ["UserName"] = _settings.ApiUser,
+            ["ClientIp"] = _settings.ClientIp,
+            ["Command"] = command.Name,
+        };
 
-        var queryString = string.Join("&",
-            parameters.Select(kvp =>
-                $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
+        var url = $"{_settings.ApiUrl.TrimEnd('/')}?Command={Uri.EscapeDataString(command.Name)}";
 
-        var url = $"{_settings.ApiUrl.TrimEnd('/')}?{queryString}";
-
-        using var response = await _http.GetAsync(url, ct);
+        using var content = new FormUrlEncodedContent(form);
+        using var response = await _http.PostAsync(url, content, ct);
         response.EnsureSuccessStatusCode();
 
         var xml = await response.Content.ReadAsStringAsync(ct);
-        var doc = XDocument.Parse(xml);
+
+        XDocument doc;
+        try
+        {
+            doc = XDocument.Parse(xml);
+        }
+        catch (XmlException ex)
+        {
+            // Not what Namecheap promises (a gateway error page, say): the outcome of the command
+            // is unknown, which is what a transport failure means to every caller.
+            throw new HttpRequestException("Namecheap answered with something that is not XML.", ex);
+        }
 
         var apiResponse = doc.Root;
         var status = apiResponse?.Attribute("Status")?.Value;

@@ -1,5 +1,6 @@
 /**
- * Pinia store for the integration list and the per-integration config page.
+ * Pinia store for the integration list, the per-integration config page and the live CWP server
+ * status.
  *
  * The only caller of `useIntegrationsApi` for these screens. A refusal is kept as the API's own
  * sentence in `error`; a failed connection test is reported as an unsuccessful `testResult`
@@ -11,6 +12,7 @@ import { ref } from 'vue'
 import { useIntegrationsApi } from '@/composables/apis/useIntegrationsApi'
 import { runAction } from '@/lib/runAction'
 import { IntegrationCategory, IntegrationCategoryName } from '@/types/integration'
+import type { CwpServerInfoDto } from '@/types/cwp'
 import type {
   IntegrationConfigPayload,
   IntegrationDetailDto,
@@ -50,9 +52,9 @@ export const useIntegrationsStore = defineStore('integrations', () => {
 
   /**
    * True while a connection test is in flight. Kept apart from `loading` on purpose: that flag
-   * also drives the Save button's "Saving…" label and the initial page skeleton, so reusing it
-   * for the test made the Save button claim it was saving and gave the status sidebar nothing
-   * to distinguish "testing now" from "not tested yet".
+   * also drives the Save button's "Saving" label and the initial page skeleton, so sharing it
+   * would make the Save button claim it was saving and leave the status sidebar unable to tell
+   * "testing now" from "not tested yet".
    */
   const testing = ref(false)
 
@@ -61,6 +63,15 @@ export const useIntegrationsStore = defineStore('integrations', () => {
 
   /** Result of the last connection test. */
   const testResult = ref<IntegrationTestResult | null>(null)
+
+  /** Live status of the CWP server, null until the first successful read. */
+  const cwpServerInfo = ref<CwpServerInfoDto | null>(null)
+
+  /**
+   * Sentence for the last failed CWP status read, null when none. Kept apart from `error` so a
+   * status refusal never hides the config page's own load or save refusal.
+   */
+  const cwpServerInfoError = ref<string | null>(null)
 
   /**
    * Fetches the summary list of all integrations.
@@ -79,7 +90,7 @@ export const useIntegrationsStore = defineStore('integrations', () => {
   /**
    * Fetches full config detail for a single integration by slug.
    *
-   * @param slug - Integration slug (e.g. "stripe", "cpanel").
+   * @param slug - Integration slug, as used in the admin routes.
    * @returns Resolves when the request is over; a refusal is left in `error`.
    */
   const fetchOne = async (slug: string): Promise<void> => {
@@ -103,15 +114,17 @@ export const useIntegrationsStore = defineStore('integrations', () => {
    *
    * @param slug - Integration slug.
    * @param payload - Updated enabled state and config values.
-   * @returns Resolves when the save and the re-read are over; a refusal is left in `error`.
+   * @returns True when the save was accepted (after the re-read); false when refused, with the
+   * sentence left in `error`.
    */
-  const saveConfig = async (slug: string, payload: IntegrationConfigPayload): Promise<void> => {
+  const saveConfig = async (slug: string, payload: IntegrationConfigPayload): Promise<boolean> => {
     loading.value = true
     const result = await runAction(error, () => api.saveIntegration(slug, payload))
     loading.value = false
     if (result.ok) {
       await fetchOne(slug)
     }
+    return result.ok
   }
 
   /**
@@ -134,11 +147,20 @@ export const useIntegrationsStore = defineStore('integrations', () => {
       return
     }
     testResult.value = { ...result.value, durationMs }
-    // The detail page's "Last tested" reads the persisted value, which the backend updates
-    // on a successful probe. Mirror it here so the card does not keep quoting the previous
-    // run until the next full reload.
-    if (result.value.success && current.value && result.value.testedAt) {
-      current.value = { ...current.value, lastTestedAt: result.value.testedAt }
+  }
+
+  /**
+   * Reads the live status of the CWP server.
+   *
+   * On failure the previous status stays in `cwpServerInfo` and the refusal is left in
+   * `cwpServerInfoError`.
+   *
+   * @returns Resolves when the request is over.
+   */
+  const fetchCwpServerInfo = async (): Promise<void> => {
+    const result = await runAction(cwpServerInfoError, api.getCwpServerInfo)
+    if (result.ok) {
+      cwpServerInfo.value = result.value
     }
   }
 
@@ -149,9 +171,12 @@ export const useIntegrationsStore = defineStore('integrations', () => {
     testing,
     error,
     testResult,
+    cwpServerInfo,
+    cwpServerInfoError,
     fetchAll,
     fetchOne,
     saveConfig,
     testConnection,
+    fetchCwpServerInfo,
   }
 })

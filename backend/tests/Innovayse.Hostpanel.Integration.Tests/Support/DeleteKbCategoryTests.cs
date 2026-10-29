@@ -1,8 +1,6 @@
 using System.Net;
-using FluentAssertions;
+using System.Net.Http.Json;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -11,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// category, an id names no category is refused <c>KBCATEGORY_NOT_FOUND</c>, and the action is
 /// closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>KnowledgeBaseAndContentEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DeleteKbCategoryTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -37,6 +34,33 @@ public sealed class DeleteKbCategoryTests(IntegrationTestFactory factory) : ICla
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         await SupportTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.KBCATEGORY_NOT_FOUND);
+    }
+
+    /// <summary>
+    /// A knowledge base category with a sub-category is refused with 409 <c>KBCATEGORY_IN_USE</c> and
+    /// kept; once the sub-category is gone it can be deleted.
+    /// </summary>
+    [Fact]
+    public async Task DeleteRefusesACategoryWithSubCategoriesAsync()
+    {
+        var client = await SupportTestSeeds.AdminClientAsync(factory);
+        var parentId = await SupportTestSeeds.CreateKbCategoryAsync(client);
+        var child = await client.PostAsJsonAsync("/api/admin/knowledgebase/categories", new
+        {
+            name = $"Child-{Guid.NewGuid():N}",
+            description = "A sub-category.",
+            isHidden = false,
+            parentCategoryId = parentId,
+        });
+        child.StatusCode.Should().Be(HttpStatusCode.Created);
+        var childId = int.Parse((await child.Content.ReadAsStringAsync()).Trim());
+
+        var refused = await client.DeleteAsync($"/api/admin/knowledgebase/categories/{parentId}");
+
+        refused.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await SupportTestSeeds.AssertCodeAsync(refused, HostpanelErrorCodes.KBCATEGORY_IN_USE);
+        (await client.DeleteAsync($"/api/admin/knowledgebase/categories/{childId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await client.DeleteAsync($"/api/admin/knowledgebase/categories/{parentId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     /// <summary>A caller with no credential cannot delete a knowledge base category.</summary>

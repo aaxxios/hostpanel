@@ -7,8 +7,13 @@
  */
 
 import { buildQuery, useApi } from '@/composables/useApi'
-import type { BillableItem, BillableItemsResult, CreateBillableItemPayload } from '@/types/billableitem'
-import type { PagedResult } from '@/types/pagedresult'
+import type {
+  BillableItem,
+  BillableItemsResult,
+  CreateBillableItemPayload,
+  CreateClientBillableItemPayload,
+} from '@/types/billableitem'
+import type { PaginatedList } from '@/types/paginatedlist'
 import type { ServiceListItem } from '@/types/service'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
@@ -30,8 +35,8 @@ export const useBillableItemsApi = () => {
    * @param type - Optional type filter (`OneTime` or `Recurring`).
    * @returns One page of items.
    */
-  const list = (page: number, pageSize: number, type?: string): Promise<PagedResult<BillableItem>> =>
-    request<PagedResult<BillableItem>>(`${ApiPath.BillingBillableItems}${buildQuery({ page, pageSize, type })}`)
+  const list = (page: number, pageSize: number, type?: string): Promise<PaginatedList<BillableItem>> =>
+    request<PaginatedList<BillableItem>>(`${ApiPath.BillingBillableItems}${buildQuery({ page, pageSize, type })}`)
 
   /**
    * Creates a billable item.
@@ -96,17 +101,17 @@ export const useBillableItemsApi = () => {
    * @param clientId - The client id.
    * @returns One page of services (up to 100).
    */
-  const listServices = (clientId: string): Promise<PagedResult<ServiceListItem>> =>
-    request<PagedResult<ServiceListItem>>(`${ApiPath.Services}${buildQuery({ clientId, pageSize: LOOKUP_PAGE_SIZE })}`)
+  const listServices = (clientId: string): Promise<PaginatedList<ServiceListItem>> =>
+    request<PaginatedList<ServiceListItem>>(`${ApiPath.Services}${buildQuery({ clientId, pageSize: LOOKUP_PAGE_SIZE })}`)
 
   /**
    * Adds one billable item to a client.
    *
    * @param clientId - The client id.
-   * @param payload - The item fields.
+   * @param payload - The item, shaped as the API's create command (the route names the client).
    * @returns Nothing.
    */
-  const addForClient = (clientId: string, payload: Record<string, unknown>): Promise<void> =>
+  const addForClient = (clientId: string, payload: CreateClientBillableItemPayload): Promise<void> =>
     request<void>(`${ApiPath.Clients}/${clientId}/billable-items`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**

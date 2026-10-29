@@ -1,17 +1,13 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Provisioning;
 
 /// <summary>
 /// Integration tests for the admin <c>POST /api/provisioning/{id}/change-password</c> action.
 /// </summary>
-/// <remarks>Moved from the deleted <c>ProvisioningEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ChangePasswordTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

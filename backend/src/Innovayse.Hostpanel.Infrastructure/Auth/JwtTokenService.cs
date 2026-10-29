@@ -2,20 +2,20 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Infrastructure.Auth.Settings;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Innovayse.Hostpanel.Infrastructure.Auth;
+
 /// <summary>
-/// Issues local JWTs when Auth:Mode=local (no SSO dependency).
+/// Issues local JWTs when Auth:Mode=local (no external sign-on provider dependency).
 /// </summary>
 /// <remarks>
-/// Lives in Infrastructure rather than beside the controller that used to hold it: signing a
-/// token is I/O-adjacent work behind the <see cref="IJwtService"/> port, and an implementation
-/// parked in the API project is a dependency pointing the wrong way -- nothing below the web
-/// edge could reach it, and the controller injected the concrete class instead of a contract.
+/// Lives in Infrastructure: signing a token is I/O-adjacent work behind the
+/// <see cref="IJwtService"/> port, so callers depend on the contract, not on this class.
 /// </remarks>
 public sealed class JwtTokenService : IJwtService
 {
@@ -41,7 +41,7 @@ public sealed class JwtTokenService : IJwtService
 
     /// <summary>
     /// Dev-only fallback signing secret, used when Jwt:Secret is unset. Program.cs applies
-    /// this same fallback for validating incoming tokens -- shared here as the one place both
+    /// this same fallback for validating incoming tokens: shared here as the one place both
     /// sides read from, so a token this service signs is never rejected by the validator that's
     /// supposed to accept it (or, unset, throws instead of silently signing with two different
     /// keys). Never set in a deployed environment; validated there via Program.cs's length check.
@@ -50,8 +50,8 @@ public sealed class JwtTokenService : IJwtService
 
     /// <summary>
     /// Default issuer/audience, used whenever Jwt:Issuer / Jwt:Audience are unset. Unlike
-    /// <see cref="DevSecretFallback"/> these are fine to run with in any environment -- they're
-    /// just identifier strings, not a secret -- but they still have to be the exact values
+    /// <see cref="DevSecretFallback"/> these are fine to run with in any environment, they're
+    /// just identifier strings, not a secret, but they still have to be the exact values
     /// Program.cs's token validators fall back to, or a token minted without either config key
     /// set carries issuer/audience: null and gets rejected by validators expecting these
     /// defaults, which is a 401 on every request with an otherwise-valid token.
@@ -64,6 +64,12 @@ public sealed class JwtTokenService : IJwtService
     /// <summary>Claim holding the Unix time of the original sign-in; kept across renewals so the absolute maximum age can be enforced.</summary>
     public const string SessionStartClaim = "session_start";
 
+    /// <summary>
+    /// Claim holding the account's session version at issue; carried unchanged across renewals, so
+    /// a renewed token is refused as soon as the account's version moves on.
+    /// </summary>
+    public const string SessionVersionClaim = "session_version";
+
     /// <summary>A token is renewed once its remaining life is at most this fraction (1/N) of its lifetime.</summary>
     private const int RenewalWindowDivisor = 3;
 
@@ -74,43 +80,40 @@ public sealed class JwtTokenService : IJwtService
     private const int RefreshTokenBytes = 32;
 
     /// <inheritdoc/>
-    public string GenerateAccessToken(
-        string userId,
-        string email,
-        string? firstName,
-        string? lastName,
-        IReadOnlyList<string> roles,
-        bool emailVerified = true)
+    public string GenerateAccessToken(AccessTokenClaims claims)
     {
+        ArgumentNullException.ThrowIfNull(claims);
+
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Value.SigningSecret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new List<Claim>
+        var tokenClaims = new List<Claim>
         {
-            new(Innovayse.Hostpanel.Shared.Constants.JwtClaims.Sub, userId),
-            new("email", email),
-            new("email_verified", emailVerified ? "true" : "false"),
+            new(Innovayse.Hostpanel.Shared.Constants.JwtClaims.Sub, claims.UserId),
+            new("email", claims.Email),
+            new("email_verified", claims.EmailVerified ? "true" : "false"),
+            new(SessionVersionClaim, claims.SessionVersion),
             new(SessionStartClaim, _time.GetUtcNow().ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)),
         };
-        if (!string.IsNullOrEmpty(firstName))
+        if (!string.IsNullOrEmpty(claims.FirstName))
         {
-            claims.Add(new("given_name", firstName));
+            tokenClaims.Add(new("given_name", claims.FirstName));
         }
 
-        if (!string.IsNullOrEmpty(lastName))
+        if (!string.IsNullOrEmpty(claims.LastName))
         {
-            claims.Add(new("family_name", lastName));
+            tokenClaims.Add(new("family_name", claims.LastName));
         }
 
-        foreach (var role in roles)
+        foreach (var role in claims.Roles)
         {
-            claims.Add(new(ClaimTypes.Role, role));
+            tokenClaims.Add(new(ClaimTypes.Role, role));
         }
 
         var token = new JwtSecurityToken(
             issuer: _options.Value.Issuer,
             audience: _options.Value.Audience,
-            claims: claims,
+            claims: tokenClaims,
             expires: _time.GetUtcNow().UtcDateTime.Add(AccessTokenLifetime),
             signingCredentials: creds);
 
@@ -144,6 +147,14 @@ public sealed class JwtTokenService : IJwtService
         }
 
         var jwt = (JwtSecurityToken)validated;
+
+        // A token with no session version cannot be tied to the account's current sessions, so
+        // it is never extended. Whether the version is still current is decided by authentication,
+        // which runs before any renewal and refuses a stale one.
+        if (string.IsNullOrEmpty(jwt.Claims.FirstOrDefault(c => c.Type == SessionVersionClaim)?.Value))
+        {
+            return null;
+        }
         var startClaim = jwt.Claims.FirstOrDefault(c => c.Type == SessionStartClaim)?.Value;
         if (!long.TryParse(startClaim, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var startSeconds))
         {

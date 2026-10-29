@@ -3,10 +3,9 @@ using Innovayse.Hostpanel.Application.Migration.Common;
 using Innovayse.Hostpanel.Application.Migration.Importers;
 using Innovayse.Hostpanel.Application.Migration.Pull;
 using Innovayse.Hostpanel.Domain.Migration.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Domain.Products.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Migration.Importers;
 
@@ -22,7 +21,7 @@ public sealed class ProductsImporterTests(IntegrationTestFactory factory) : ICla
     [Fact]
     public async Task RunAsync_Products_CreatesTheGroupAndProductAsync()
     {
-        var source = new FakeMigrationPullSource { Totals = new MigrationSourceTotals(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) };
+        var source = new FakeMigrationPullSource { Totals = MigrationSourceTotals.Empty with { Hosting = new MigrationHostingTotals(Products: 1) } };
         using var host = MigrationTestSeeds.HostWithFakeSource(factory, source);
         using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
@@ -48,5 +47,36 @@ public sealed class ProductsImporterTests(IntegrationTestFactory factory) : ICla
 
         var products = await context.Products.AsNoTracking().Where(p => p.Name == productName).ToListAsync();
         Assert.Single(products);
+    }
+
+    /// <summary>
+    /// A cycle the source does not sell arrives as a null price and gets no price row; the cycle
+    /// it sells gets its price.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_ProductNotSoldAnnually_GetsOnlyTheMonthlyPriceAsync()
+    {
+        var source = new FakeMigrationPullSource { Totals = MigrationSourceTotals.Empty with { Hosting = new MigrationHostingTotals(Products: 1) } };
+        using var host = MigrationTestSeeds.HostWithFakeSource(factory, source);
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var job = await MigrationTestSeeds.SeedJobSelectingOnlyAsync(context, MigrationEntityType.Products);
+        var marker = Guid.NewGuid().ToString("N");
+        var productName = $"product-{marker}";
+        source.SetDatasetJson("product_groups", $$"""
+            [{"Id":1,"Name":"group-{{marker}}","Description":null}]
+            """);
+        source.SetDatasetJson("products", $$"""
+            [{"Id":1,"GroupId":1,"Name":"{{productName}}","Description":null,"Type":"hostingaccount","MonthlyPrice":4.5,"AnnualPrice":null}]
+            """);
+
+        var worker = scope.ServiceProvider.GetRequiredService<MigrationPullWorker>();
+        await worker.RunAsync(job.Id, CancellationToken.None);
+
+        var product = await context.Products.AsNoTracking().Include(p => p.Prices)
+            .SingleAsync(p => p.Name == productName);
+        var price = Assert.Single(product.Prices);
+        Assert.Equal(BillingCycle.Monthly, price.Cycle);
+        Assert.Equal(4.5m, price.Amount);
     }
 }

@@ -1,7 +1,7 @@
 /**
  * Fixtures of the migration screens' tests: a complete job as the admin API returns it.
  */
-import { MIGRATION_ENTITY_KEYS } from '@/types/migration'
+import { MIGRATION_ENTITY_KEYS, MigrationStatus } from '@/types/migration'
 import type { MigrationJob } from '@/types/migration'
 
 /**
@@ -15,15 +15,15 @@ export const migrationJob = (overrides: Partial<MigrationJob> = {}): MigrationJo
   const progress = {} as MigrationJob['progress']
   for (const key of MIGRATION_ENTITY_KEYS) {
     selection[key] = key === 'clients' || key === 'invoices'
-    progress[key] = { imported: 0, skipped: 0, total: 0, done: false }
+    progress[key] = { imported: 0, skipped: 0, failed: 0, total: 0, done: false }
   }
   return {
     id: 5,
     key: 'secret-key-123',
     sourceUrl: 'https://old.example.com',
-    status: 'Pending',
+    status: MigrationStatus.Pending,
     label: 'Production',
-    errorMessage: null,
+    failure: null,
     entitySelection: selection,
     progress: progress,
     overallPercent: 0,

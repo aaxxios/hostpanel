@@ -3,12 +3,12 @@
  *
  * `index.html` ships two `<link rel="icon">` tags for the built-in mark, because a tab
  * needs an icon before any JavaScript has run. This replaces them once the branding
- * settings arrive — a static SPA has no server render to write them into, so the swap
+ * settings arrive: a static SPA has no server render to write them into, so the swap
  * has to happen in the document.
  *
- * The old tags are removed rather than added to. A browser handed two `rel="icon"` links
+ * The built-in tags are removed rather than added to. A browser handed two `rel="icon"` links
  * picks one by its own rules, and Chrome prefers the SVG, so leaving the built-in tag in
- * place meant an uploaded PNG favicon was fetched and then ignored.
+ * place would fetch an uploaded PNG favicon and then ignore it.
  */
 
 import { watch } from 'vue'
@@ -42,7 +42,7 @@ const applyFavicon = (url: string): void => {
 /**
  * Loads the branding settings and keeps the tab icon in step with them.
  *
- * Call once, from the root component. Safe to call again — the store only fetches once.
+ * Call once, from the root component. Safe to call again: the store only fetches once.
  */
 export const useFavicon = (): void => {
   const branding = useBrandingStore()

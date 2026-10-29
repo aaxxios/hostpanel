@@ -10,11 +10,18 @@
     "agingInvoices": "Просроченные счета",
     "aSummaryOfOutstandingInvoices": "Сводка по неоплаченным счетам с разбивкой по периодам просрочки",
     "period": "Период",
-    "curAmount": "Сумма ({cur})"
+    "curAmount": "Сумма ({cur})",
+    "buckets": {
+      "Days0To30": "0 - 30",
+      "Days30To60": "30 - 60",
+      "Days60To90": "60 - 90",
+      "Days90To120": "90 - 120",
+      "Over120": "120 +"
+    }
   },
   "annualIncome": {
     "annualIncomeReport": "Годовой отчёт о доходах",
-    "totalIncomePerMonthFor": "Общий доход по месяцам за выбранный год",
+    "totalIncomePerMonthFor": "Доход по месяцам выбранного года: платежи за вычетом возвратов.",
     "income": "Доход"
   },
   "clientsByCountry": {
@@ -39,7 +46,9 @@
     "previousBalance": "Предыдущий баланс:",
     "noEntriesForThisPeriod": "За этот период записей нет.",
     "endingBalance": "Конечный баланс:",
-    "debit": "Дебет"
+    "debit": "Дебет",
+    "invoicePayment": "Оплата счёта - #{id}",
+    "paidHistory": "Счёт #{id}, оплачен до импорта"
   },
   "creditsReviewer": {
     "creditsReviewer": "Проверка кредитов",
@@ -47,10 +56,9 @@
     "allClients": "Все клиенты",
     "minAmount": "Мин. сумма",
     "maxAmount": "Макс. сумма",
-    "creditsFoundTotal": "кредитов найдено — итого:",
+    "currencySummary": "{currency}: кредитов {count}, итого {amount}",
     "creditId": "ID кредита",
     "clientId": "ID клиента",
-    "adminUser": "Администратор",
     "noCreditsFoundForThis": "За этот период кредиты не найдены."
   },
   "customerRetention": {
@@ -60,7 +68,10 @@
     "productCount": "Количество продуктов",
     "averageDaysActive": "Среднее число активных дней",
     "averageYearsMonthsActive": "Средняя активность (годы/месяцы)",
-    "noDataFound": "Данные не найдены."
+    "noDataFound": "Данные не найдены.",
+    "activeYears": "{count} год | {count} года | {count} лет",
+    "activeMonths": "{count} месяц | {count} месяца | {count} месяцев",
+    "activeDays": "{count} день | {count} дня | {count} дней"
   },
   "dailyPerformance": {
     "dailyPerformance": "Ежедневная эффективность",
@@ -125,24 +136,21 @@
   },
   "incomeForecast": {
     "incomeForecast": "Прогноз доходов",
-    "projectedIncomeBasedOnRecurring": "Прогнозируемый доход на основе повторяющихся периодов оплаты",
     "cumulativeForecast": "Накопительный прогноз",
     "monthly": "Ежемесячно",
     "quarterly": "Ежеквартально",
     "semiAnnual": "Раз в полгода",
-    "annual": "Ежегодно"
+    "annual": "Ежегодно",
+    "incomePerMonthWithTrailingWindows": "Доход по месяцам, с суммами за последний квартал, полугодие и с начала года."
   },
   "invoicesReport": {
     "thisReportCanBeUsed": "Этот отчёт позволяет сформировать пользовательский экспорт счетов, применив до 5 фильтров.",
     "creationDate": "Дата создания",
     "totalcountInvoiceSFound": "Найдено счетов: {totalCount}",
-    "userId": "ID пользователя",
-    "invoiceNumber": "Номер счёта",
-    "tax2": "Налог 2",
-    "taxRate2": "Ставка налога 2"
+    "userId": "ID пользователя"
   },
   "monthlyOrders": {
-    "thisReportGivesABreakdown": "Этот отчёт показывает количество проданных единиц каждого продукта по месяцам.",
+    "thisReportGivesABreakdown": "Этот отчёт показывает количество заказанных единиц каждого продукта за месяц: одна единица на строку заказа, для ожидающих и принятых заказов.",
     "unitsSold": "Продано единиц"
   },
   "monthlyTransactions": {
@@ -171,11 +179,7 @@
   "salesTax": {
     "salesTaxLiability": "Обязательства по налогу с продаж",
     "thisReportShowsSalesTax": "Этот отчёт показывает обязательства по налогу с продаж за выбранный период.",
-    "chooseCurrency": "Выберите валюту",
-    "invoicesFound": "Найдено счетов",
-    "totalInvoiced": "Всего выставлено:",
-    "taxLevel1Liability": "Обязательства по налогу уровня 1:",
-    "taxLevel2Liability": "Обязательства по налогу уровня 2:",
+    "currencySummary": "{currency}: счетов {count}, выставлено {invoiced}, налоговые обязательства {tax}",
     "tax": "Налог",
     "credit": "Кредит",
     "noInvoicesFoundForThis": "За этот период счета не найдены.",
@@ -246,9 +250,8 @@
   },
   "topClients": {
     "top10ClientsByIncome": "Топ-10 клиентов по доходу",
-    "thisReportShowsThe10": "Этот отчёт показывает 10 клиентов с наибольшим чистым доходом по введённым транзакциям.",
-    "noData": "Нет данных",
-    "denotesConvertedToDefaultCurrency": "* означает пересчёт в валюту по умолчанию"
+    "thisReportShowsThe10": "Этот отчёт показывает 10 клиентов с наибольшим чистым доходом по счетам: платежи за вычетом возвратов и комиссий. Пополнения баланса не являются доходом.",
+    "noData": "Нет данных"
   },
   "transactionsReport": {
     "thisReportCanBeUsed": "Этот отчёт позволяет сформировать пользовательский экспорт транзакций, применив до 5 фильтров.",
@@ -268,7 +271,7 @@
     "totalVatCollected": "Всего собрано НДС",
     "totals": "Итого",
     "ifACountryDoesNot": "* Если страны нет в отчёте, значит, в выбранном периоде НДС с клиентов этой страны не взимался.",
-    "isleOfManGbAnd": "Остров Мэн (GB) и Монако (FR) указаны в этом отчёте как заморские территории ЕС соответствующих стран и должны быть включены в данные, предоставляемые налоговым органам.",
+    "period": "За период с {from} по {to}",
     "quarter1": "Январь – март",
     "quarter2": "Апрель – июнь",
     "quarter3": "Июль – сентябрь",
@@ -297,6 +300,7 @@
   },
   "common": {
     "years": "{count} г.",
-    "clientCount": "{count} клиент | {count} клиента | {count} клиентов"
+    "clientCount": "{count} клиент | {count} клиента | {count} клиентов",
+    "convertedToBaseCurrency": "Суммы указаны в {currency} и пересчитаны из валюты каждого счёта по настроенным курсам."
   }
 }

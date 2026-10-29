@@ -1,11 +1,11 @@
 /**
  * The shape gate for `tests/`: every component, store, api composable, composable, `lib/` module
- * and BFF utility has a mirror test at the same path under `tests/`
+ * and BFF route, middleware, plugin and utility has a mirror test at the same path under `tests/`
  * (`stores/auth.ts` -> `tests/stores/auth.test.ts`, `components/ui/UiCard.vue` ->
  * `tests/components/ui/UiCard.test.ts`).
  *
  * A source file that cannot have one yet is named in {@link KNOWN_GAPS} with the reason; the list
- * may only shrink -- an entry whose mirror test now exists fails the stale-entry check below.
+ * may only shrink: an entry whose mirror test now exists fails the stale-entry check below.
  *
  * @module tests/coverage-shape.test
  */
@@ -18,7 +18,17 @@ import { describe, expect, it } from 'vitest'
 const ROOT = resolve(import.meta.dirname, '..')
 
 /** Source folders whose files must be mirrored. */
-const MIRRORED_AREAS = ['components', 'stores', 'composables', 'lib', 'server/utils'] as const
+const MIRRORED_AREAS = [
+  'components',
+  'stores',
+  'composables',
+  'lib',
+  'server/api',
+  'server/middleware',
+  'server/plugins',
+  'server/routes',
+  'server/utils',
+] as const
 
 /**
  * Source files still without a mirror test, each with the reason. Remove the entry when the test
@@ -66,7 +76,7 @@ describe('tests/ mirrors the source tree', () => {
     expect(SOURCES.length).toBeGreaterThan(100)
   })
 
-  it('has a mirror test for every component, store, api composable, composable, lib and BFF utility', () => {
+  it('has a mirror test for every component, store, api composable, composable, lib and BFF server file', () => {
     const missing = SOURCES.filter((source) => !existsSync(join(ROOT, mirrorOf(source))) && !(source in KNOWN_GAPS))
 
     expect(missing).toEqual([])

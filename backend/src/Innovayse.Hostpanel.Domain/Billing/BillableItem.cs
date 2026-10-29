@@ -1,9 +1,11 @@
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Billing;
+
 /// <summary>
-/// A billable item — a product or service that can be added to an invoice.
+/// A billable item: a product or service that can be added to an invoice.
 /// Can be one-time or recurring, invoiced or waiting to be invoiced (Uninvoiced Items).
 /// Stored in the <c>BillableItems</c> table.
 /// </summary>
@@ -33,13 +35,16 @@ public sealed class BillableItem : BaseEntity, IAggregateRoot
     /// <summary>Gets the FK to the invoice if invoiced; null otherwise.</summary>
     public int? InvoiceId { get; private set; }
 
-    /// <summary>Gets the next date when this recurring item is due for invoicing.</summary>
+    /// <summary>
+    /// Gets the date the item is due for automatic invoicing: once for a one-time item, next for a
+    /// recurring one; null when it is only invoiced by hand.
+    /// </summary>
     public DateTimeOffset? NextDueDate { get; private set; }
 
     /// <summary>Gets the UTC timestamp when the item was created.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private BillableItem() { }
 
     /// <summary>
@@ -51,7 +56,10 @@ public sealed class BillableItem : BaseEntity, IAggregateRoot
     /// <param name="currency">Currency code.</param>
     /// <param name="type">OneTime or Recurring.</param>
     /// <param name="recurringPeriod">Recurring period (null for one-time).</param>
-    /// <param name="nextDueDate">Next due date for recurring items (null for one-time).</param>
+    /// <param name="nextDueDate">
+    /// Day the item is invoiced automatically (once for a one-time item, next for a recurring one), or
+    /// null to invoice it by hand.
+    /// </param>
     /// <returns>A new billable item aggregate.</returns>
     public static BillableItem Create(
         int clientId,
@@ -72,7 +80,6 @@ public sealed class BillableItem : BaseEntity, IAggregateRoot
             RecurringPeriod = recurringPeriod,
             NextDueDate = nextDueDate,
             IsInvoiced = false,
-            CreatedAt = DateTimeOffset.UtcNow,
         };
     }
 
@@ -84,6 +91,16 @@ public sealed class BillableItem : BaseEntity, IAggregateRoot
     {
         IsInvoiced = true;
         InvoiceId = invoiceId;
+    }
+
+    /// <summary>
+    /// Takes this item off the invoice it was put on, so it is waiting to be invoiced again: the
+    /// invoice no longer exists, or no longer stands, and the item still has to be billed.
+    /// </summary>
+    public void ReleaseFromInvoice()
+    {
+        IsInvoiced = false;
+        InvoiceId = null;
     }
 
     /// <summary>
@@ -115,7 +132,6 @@ public sealed class BillableItem : BaseEntity, IAggregateRoot
             _ => NextDueDate.Value.AddMonths(1),
         };
 
-        IsInvoiced = false;
-        InvoiceId = null;
+        ReleaseFromInvoice();
     }
 }

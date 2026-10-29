@@ -4,4 +4,4 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.GetMyInvoices;
 /// <remarks>
 /// Carries no client id. Which account is resolved inside the handler from the credential.
 /// </remarks>
-public record GetMyInvoicesQuery();
+public sealed record GetMyInvoicesQuery();

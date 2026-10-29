@@ -1,4 +1,5 @@
 using FluentValidation;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Innovayse.Hostpanel.Application.Testimonials.Common;
@@ -14,7 +15,8 @@ public sealed class UpdateTestimonialValidator : LocalizedValidator<UpdateTestim
     ///     Initializes validator with localization service.
     /// </summary>
     /// <param name="localizer">String localizer for validation messages.</param>
-    public UpdateTestimonialValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
+    /// <param name="clock">The source of the current moment a publish date is checked against.</param>
+    public UpdateTestimonialValidator(IStringLocalizer<ApplicationValidationMessages> localizer, IClock clock)
         : base(localizer)
     {
         RuleFor(x => x.Id).MustBePositiveId(L["ContentIdInvalid"]);
@@ -25,7 +27,7 @@ public sealed class UpdateTestimonialValidator : LocalizedValidator<UpdateTestim
             .MustBeWebLink(L["ContentUrlInvalid"]);
         RuleFor(x => x.Rating).InclusiveBetween(1, 5).WithMessage(L["TestimonialRatingInvalid"]);
         // One day of slack so a date picked in a timezone ahead of UTC is not refused.
-        RuleFor(x => x.PublishedAt).Must(d => d is null || d.Value <= DateTimeOffset.UtcNow.AddDays(1)).WithMessage(L["TestimonialPublishedAtFuture"]);
+        RuleFor(x => x.PublishedAt).Must(d => d is null || d.Value <= clock.UtcNow.AddDays(1)).WithMessage(L["TestimonialPublishedAtFuture"]);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0).WithMessage(L["ContentSortOrderInvalid"]);
         RuleFor(x => x.Translations).NotEmpty().WithMessage(L["ContentTranslationsRequired"]);
         RuleForEach(x => x.Translations).SetValidator(new TestimonialTranslationValidator(localizer));

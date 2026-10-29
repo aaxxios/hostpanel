@@ -13,7 +13,14 @@
     "addNotesAboutThisOrder": "Добавьте заметки к этому заказу...",
     "notesAreOnlyVisibleTo": "Заметки видны только администраторам.",
     "deleteOrder": "Удалить заказ",
-    "areYouSureYouWant": "Вы уверены, что хотите безвозвратно удалить этот заказ? Это действие нельзя отменить."
+    "areYouSureYouWant": "Вы уверены, что хотите безвозвратно удалить этот заказ? Это действие нельзя отменить.",
+    "orderAccepted": "Заказ принят.",
+    "orderCancelled": "Заказ отменён.",
+    "confirmCancelTitle": "Отменить этот заказ?",
+    "confirmCancelMessage": "Заказ будет отменён. Это действие нельзя отменить.",
+    "cancelOrder": "Отменить заказ",
+    "linesSubtotal": "Сумма позиций заказа (без налога и кредита)",
+    "invoiceTotal": "Итого по счёту"
   },
   "ordersList": {
     "orders": "Заказы",
@@ -23,6 +30,14 @@
     "items": "Позиции",
     "accept": "Принять",
     "totalcountOrderValue": "Заказов: {totalCount}",
-    "noOrdersFound": "Заказы не найдены"
+    "noOrdersFound": "Заказы не найдены",
+    "orderAccepted": "Заказ принят.",
+    "orderCancelled": "Заказ отменён.",
+    "confirmCancelTitle": "Отменить этот заказ?",
+    "confirmCancelMessage": "Заказ будет отменён. Это действие нельзя отменить.",
+    "cancelOrder": "Отменить заказ"
+  },
+  "fulfillment": {
+    "acceptedWithFailedLines": "Заказ принят, но эти позиции не удалось выполнить: {lines}."
   }
 }

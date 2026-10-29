@@ -37,24 +37,30 @@ public sealed class TestIntegrationConnectionHandler
     /// <summary>Logs a provider failure without putting its detail on the wire.</summary>
     private readonly ILogger<TestIntegrationConnectionHandler> _logger;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="pluginResolver">Payment plugin resolver, used for live gateway probes.</param>
     /// <param name="cache">Invalidates the cached hosting-panel server-info results a test call would make stale.</param>
     /// <param name="probes">Live credential checks for built-in integrations, matched by slug.</param>
     /// <param name="logger">Logs a provider failure without putting its detail on the wire.</param>
+    /// <param name="clock">The source of the current moment.</param>
     public TestIntegrationConnectionHandler(
         IHostpanelDbContext context,
         IPaymentPluginResolver pluginResolver,
         IMemoryCache cache,
         IEnumerable<IIntegrationConnectionProbe> probes,
-        ILogger<TestIntegrationConnectionHandler> logger)
+        ILogger<TestIntegrationConnectionHandler> logger,
+        IClock clock)
     {
         _context = context;
         _pluginResolver = pluginResolver;
         _cache = cache;
         _probes = probes;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>
@@ -72,7 +78,7 @@ public sealed class TestIntegrationConnectionHandler
     public async Task<Result<IntegrationTestResultDto>> HandleAsync(
         TestIntegrationConnectionCommand command, CancellationToken ct)
     {
-        var testedAt = DateTimeOffset.UtcNow;
+        var testedAt = _clock.UtcNow;
 
         if (!IntegrationCatalogue.TryGetTestable(command.Slug, out var meta))
         {
@@ -86,11 +92,6 @@ public sealed class TestIntegrationConnectionHandler
         if (command.Slug.Equals(IntegrationSlugs.Cwp, StringComparison.OrdinalIgnoreCase))
         {
             _cache.Remove(HostingPanelCacheKeys.Cwp);
-        }
-
-        if (command.Slug.Equals(IntegrationSlugs.Cwp7, StringComparison.OrdinalIgnoreCase))
-        {
-            _cache.Remove(HostingPanelCacheKeys.Cwp7);
         }
 
         return Result<IntegrationTestResultDto>.Success(result);
@@ -170,7 +171,7 @@ public sealed class TestIntegrationConnectionHandler
         }
         catch (OperationCanceledException)
         {
-            // An admin-cancelled request is not a provider failure -- let it propagate.
+            // An admin-cancelled request is not a provider failure: let it propagate.
             throw;
         }
         catch (Exception ex)
@@ -211,7 +212,7 @@ public sealed class TestIntegrationConnectionHandler
         catch (OperationCanceledException)
         {
             // An admin-cancelled request (e.g. navigating away mid-probe) is not a gateway
-            // failure -- let it propagate rather than reporting "test failed".
+            // failure: let it propagate rather than reporting "test failed".
             throw;
         }
         catch (Exception ex)

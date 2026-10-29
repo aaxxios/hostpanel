@@ -7,7 +7,8 @@
   },
   "integrationCard": {
     "plugin": "Plugin",
-    "configure": "Configure →"
+    "configure": "Configure →",
+    "notConfigured": "Not configured"
   },
   "integrationStatusSidebar": {
     "connectionStatus": "Connection Status",
@@ -17,9 +18,7 @@
     "endpoint": "Endpoint",
     "tested": "Tested",
     "roundTrip": "Round trip",
-    "previouslyTestedOk": "Previously tested OK",
     "notTestedYet": "Not tested yet",
-    "lastTestedFormatlasttested": "Last tested: {formatLastTested}",
     "setupNote": "Setup Note"
   },
   "cwp7Integration": {
@@ -59,5 +58,8 @@
   "integrationConfigForm": {
     "enterValue": "Enter {label}",
     "chooseValue": "Choose {label}"
+  },
+  "integrationDetail": {
+    "saved": "Settings saved."
   }
 }

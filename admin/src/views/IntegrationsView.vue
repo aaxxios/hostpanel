@@ -12,8 +12,8 @@ import { useIntegrationsStore } from '@/stores/integrations'
 import { INTEGRATION_CATEGORIES } from '@/types/integrationmeta'
 import { IntegrationCategory } from '@/types/integration'
 import IntegrationCard from '@/components/integrations/IntegrationCard.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
@@ -66,9 +66,13 @@ onMounted(store.fetchAll)
     <UiSkeleton v-if="store.loading && filtered.length === 0" :lines="3" data-testid="integrations-loading" />
 
     <!-- Error -->
-    <UiAlert v-else-if="store.error" variant="error" data-testid="integrations-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="integrations-error"
+      @retry="store.fetchAll()"
+    />
 
     <!-- Cards grid -->
     <UiGrid v-else-if="filtered.length > 0" :columns="3" gap="md" data-testid="integrations-grid">

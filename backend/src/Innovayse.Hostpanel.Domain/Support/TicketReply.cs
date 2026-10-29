@@ -2,9 +2,10 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Support;
+
 /// <summary>
 /// Represents a single reply message on a support ticket, either by a client or staff member.
-/// Created via <see cref="Create"/> factory — no public constructor.
+/// Created via <see cref="Create"/> factory: no public constructor.
 /// </summary>
 public sealed class TicketReply : BaseEntity
 {
@@ -20,7 +21,7 @@ public sealed class TicketReply : BaseEntity
     /// <summary>Gets the UTC timestamp when this reply was created.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private TicketReply() { }
 
     /// <summary>Internal constructor used by the <see cref="Create"/> factory method.</summary>
@@ -32,7 +33,6 @@ public sealed class TicketReply : BaseEntity
         Message = message;
         AuthorName = authorName;
         IsStaffReply = isStaffReply;
-        CreatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <summary>Moves this reply to the moment it was really written, for replies seeded from history.</summary>

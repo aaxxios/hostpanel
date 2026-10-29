@@ -17,7 +17,7 @@ describe('email page', () => {
   })
 
   it('shows the subject and the body in a sandboxed frame', async () => {
-    clientApi.fetchEmail.mockResolvedValue({ id: 'e1', subject: 'Welcome', date: '2026-01-01T10:00:00Z', message: '<p>Hello</p>' })
+    clientApi.fetchEmail.mockResolvedValue({ id: 1, to: 'a@b.test', subject: 'Welcome', sentAt: '2026-01-01T10:00:00Z', body: '<p>Hello</p>', success: true })
 
     const wrapper = await mountPage(EmailPage)
 
@@ -28,7 +28,7 @@ describe('email page', () => {
   })
 
   it('links back to the email history', async () => {
-    clientApi.fetchEmail.mockResolvedValue({ id: 'e1', subject: 'Welcome', date: '2026-01-01T10:00:00Z', message: '' })
+    clientApi.fetchEmail.mockResolvedValue({ id: 1, to: 'a@b.test', subject: 'Welcome', sentAt: '2026-01-01T10:00:00Z', body: '', success: true })
 
     const wrapper = await mountPage(EmailPage)
 

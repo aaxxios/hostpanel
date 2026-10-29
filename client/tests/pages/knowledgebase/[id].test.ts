@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { mountPage, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
+import { SeoPageType } from '~/types/seopagetype'
 import type { PublicPageSpies } from '~/tests/helpers/publicPage'
 
 /** The mocked content endpoints, hoisted so the mocked module can reach them. */
@@ -76,15 +77,30 @@ describe('pages/knowledgebase/[id]', () => {
     expect(wrapper.find('[data-testid="kb-back"]').attributes('href')).toBe('/en/knowledgebase')
   })
 
-  it('sets the page title from the article', async () => {
+  it('gives the head a getter that follows the article, with a plain separator in the title', async () => {
     api.fetchKbArticle.mockResolvedValue(ARTICLE)
 
     await mountPage(Page)
 
-    expect(spies.useSeoMeta).toHaveBeenCalledWith({
-      title: 'Point a domain at your server — kb.title',
+    const options = (spies.useSeo.mock.calls[0]![0] as () => Record<string, unknown>)()
+    expect(options).toEqual({
+      title: 'Point a domain at your server | kb.title',
       description: 'Change the DNS records',
+      type: SeoPageType.Article,
     })
+    expect(String(options.title)).not.toMatch(/[–—]/)
+    expect(spies.useSeoMeta).not.toHaveBeenCalled()
+  })
+
+  it('publishes Article structured data for the article at its canonical URL', async () => {
+    api.fetchKbArticle.mockResolvedValue(ARTICLE)
+
+    await mountPage(Page)
+
+    const schema = (spies.injectSchema.mock.calls[0]![0] as () => object[])()
+    expect(schema).toEqual([
+      { '@type': 'Article', headline: 'Point a domain at your server', description: 'Change the DNS records', url: 'https://portal.test/canonical' },
+    ])
   })
 
   it('highlights the chosen vote only', async () => {
@@ -100,13 +116,23 @@ describe('pages/knowledgebase/[id]', () => {
     expect(wrapper.find('[data-testid="kb-vote-yes"]').classes()).not.toContain('bg-primary-700')
   })
 
-  it('shows the failure state when the article cannot be read', async () => {
-    api.fetchKbArticle.mockRejectedValue({ data: { detail: 'Not found.' } })
+  it.each([
+    ['a 404 from the backend', { statusCode: 404, data: { detail: 'Not found.' } }, 404],
+    ['a 503 from the backend', { statusCode: 503, data: { detail: 'Unavailable.' } }, 503],
+    ['a network error', new TypeError('fetch failed'), 502],
+  ])('raises the right status for %s', async (_name, failure, status) => {
+    api.fetchKbArticle.mockRejectedValue(failure)
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const errorHandler = vi.fn()
 
-    const wrapper = await mountPage(Page)
+    const wrapper = await mountPage(Page, { errorHandler })
 
-    expect(wrapper.find('[data-testid="kb-article-error"]').text()).toContain('kb.errorDesc')
+    expect(spies.createError).toHaveBeenCalledWith(expect.objectContaining({ statusCode: status }))
+    expect(errorHandler).toHaveBeenCalledWith(expect.objectContaining({ statusCode: status }), expect.anything(), expect.anything())
     expect(wrapper.find('[data-testid="kb-article-heading"]').exists()).toBe(false)
+    consoleError.mockRestore()
+    consoleWarn.mockRestore()
   })
 
   it('shows placeholders while the article loads', async () => {

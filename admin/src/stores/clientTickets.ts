@@ -3,7 +3,8 @@
  *
  * Lists, opens, creates, updates, deletes and answers tickets through `useClientTicketsApi`.
  * A refusal becomes the API sentence in `error` (and the per-field messages in
- * `fieldErrors`); the statistics and department lookups are non-critical and fail silently.
+ * `fieldErrors`); the statistics lookup is non-critical and fails silently, while a failed
+ * department lookup is kept in `departmentsError` so a form can offer a retry.
  */
 
 import { defineStore } from 'pinia'
@@ -40,10 +41,13 @@ export const useClientTicketsStore = defineStore('clientTickets', () => {
   /** Sentence for the last failed request, null when none. */
   const error = ref<string | null>(null)
 
+  /** Sentence for the last failed department lookup, null when it succeeded. */
+  const departmentsError = ref<string | null>(null)
+
   /** Per-field messages of the last refused request, keyed by camelCase field name. */
   const fieldErrors = ref<Record<string, string>>({})
 
-  /** Throwaway error ref: the stats and department lookups are non-critical, so their failure is silent. */
+  /** Throwaway error ref: the stats lookup is non-critical, so its failure is silent. */
   const quiet = ref<string | null>(null)
 
   /**
@@ -100,12 +104,12 @@ export const useClientTicketsStore = defineStore('clientTickets', () => {
   }
 
   /**
-   * Fetches all support departments for dropdown options.
+   * Fetches all support departments for dropdown options; a failure lands in `departmentsError`.
    *
    * @returns Promise that resolves when the departments are loaded.
    */
   const fetchDepartments = async (): Promise<void> => {
-    const result = await runAction(quiet, () => api.departments())
+    const result = await runAction(departmentsError, () => api.departments())
     if (result.ok) {
       departments.value = result.value
     }
@@ -167,6 +171,7 @@ export const useClientTicketsStore = defineStore('clientTickets', () => {
     departments,
     loading,
     error,
+    departmentsError,
     fieldErrors,
     fetchClientTickets,
     fetchStats,

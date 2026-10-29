@@ -67,16 +67,18 @@
 
 <script setup lang="ts">
 /**
- * Landing page for hosted-gateway returnUrl redirects (e.g. Inecobank).
+ * Landing page for hosted-gateway returnUrl redirects.
  * Reads ?order=<id> (checkout flow, anonymous) or ?invoice=<id> (invoice pay flow,
  * authenticated) and verifies the payment against the backend, which pulls the
  * authoritative status from the bank.
  */
 import { CLIENT_INVOICES_PATH, clientInvoicePayPath, clientOrderSuccessPath } from '~/constants/clientRoutes'
 import { AlertTriangle, CheckCircle2, Clock, Loader2, XCircle } from 'lucide-vue-next'
+import { useCartStore } from '~/stores/cart'
 import { useInvoicePaymentStore } from '~/stores/invoicepayment'
 import { GatewayPaymentState } from '~/types/gatewaypaymentstate'
 import { PaymentTarget } from '~/types/paymenttarget'
+import { queryId } from '~/utils/queryId'
 
 /** The current route. */
 const route = useRoute()
@@ -86,14 +88,31 @@ const localePath = useLocalePath()
 const { t } = useI18n()
 /** The invoice payment store, which verifies a hosted-gateway payment. */
 const paymentStore = useInvoicePaymentStore()
-/** Reads and forgets the token an order was placed with. */
-const { recall: recallPaymentToken, forget: forgetPaymentToken } = useOrderPaymentToken()
+/** The cart, emptied once a checkout payment is confirmed. */
+const cart = useCartStore()
+/** Reads and forgets the token an order was placed with, and the invoice it was billed on. */
+const { recall: recallPaymentToken, recallInvoiceId, forget: forgetPaymentToken } = useOrderPaymentToken()
 
-/** The order id from `?order=`, when the payer came from checkout. */
-const orderId = computed(() => route.query.order as string | undefined)
+/** The order id from `?order=`, when the payer came from checkout and the value is one whole number. */
+const orderId = computed(() => queryId(route.query.order))
 
-/** The invoice id from `?invoice=`, when the payer came from the invoice pay flow. */
-const invoiceId = computed(() => route.query.invoice as string | undefined)
+/** The invoice id from `?invoice=`, when the payer came from the invoice pay flow and the value is one whole number. */
+const invoiceId = computed(() => queryId(route.query.invoice))
+
+/**
+ * Whether the address carries nothing to check: no id at all, or an id that is repeated or not a
+ * whole number. Such an address is treated as missing rather than partly trusted.
+ */
+const addressUnusable = computed(() =>
+  (!orderId.value && !invoiceId.value) ||
+  (route.query.order !== undefined && !orderId.value) ||
+  (route.query.invoice !== undefined && !invoiceId.value))
+
+/**
+ * The invoice a declined payment is retried against: the one in the address, or for an order the
+ * one it was billed on, read from the stored entry before it is dropped.
+ */
+const retryInvoiceId = ref<string | undefined>(undefined)
 
 /**
  * Where the check stands. `Unknown` means no authoritative answer could be had from the backend
@@ -107,15 +126,24 @@ const state = ref<GatewayPaymentState>(GatewayPaymentState.Verifying)
 /** Whether a check request is in flight; the retry buttons are disabled meanwhile. */
 const checking = ref(false)
 
-/** Where the primary button leads after a successful payment. */
+/**
+ * Where the primary button leads after a successful payment. An order's number is the one the
+ * backend answered with, never built here from the id: the prefix and padding are the operator's.
+ */
 const continueTarget = computed(() =>
   orderId.value
-    ? localePath(clientOrderSuccessPath(`ORD-${String(orderId.value).padStart(4, '0')}`))
+    ? localePath(clientOrderSuccessPath({ order: paymentStore.verifiedOrderNumber }))
     : localePath(`${CLIENT_INVOICES_PATH}/${invoiceId.value}`))
 
-/** Where to send the payer to retry after a declined payment. */
-const retryTarget = computed(() =>
-  invoiceId.value ? localePath(clientInvoicePayPath(invoiceId.value)) : localePath('/cart'))
+/**
+ * Where to send the payer to retry after a declined payment: paying the same invoice again, never
+ * a fresh cart, since the order already exists. Without a known invoice the invoice list is the
+ * place the unpaid one can be found.
+ */
+const retryTarget = computed(() => {
+  const invoice = invoiceId.value ?? retryInvoiceId.value
+  return invoice ? localePath(clientInvoicePayPath(invoice)) : localePath(CLIENT_INVOICES_PATH)
+})
 
 /**
  * Where to send the payer from the unknown state to check on the order or invoice themselves: a
@@ -132,7 +160,7 @@ const check = async (): Promise<void> => {
   // restated rather than asserted away so the two cannot drift apart.
   const target = orderId.value ? PaymentTarget.Order : PaymentTarget.Invoice
   const id = orderId.value ?? invoiceId.value
-  if (!id) {
+  if (!id || addressUnusable.value) {
     state.value = GatewayPaymentState.Missing
     checking.value = false
     return
@@ -144,10 +172,19 @@ const check = async (): Promise<void> => {
   // answers as it would for an order that does not exist, the same answer it gives anyone
   // guessing at ids.
   const paymentToken = target === PaymentTarget.Order ? recallPaymentToken(id) : undefined
+  if (target === PaymentTarget.Order) {
+    const billedInvoice = recallInvoiceId(id)
+    retryInvoiceId.value = billedInvoice === undefined ? undefined : String(billedInvoice)
+  }
 
   checking.value = true
   const result = await paymentStore.verifyGatewayPayment(target, id, paymentToken)
   state.value = result
+  if (target === PaymentTarget.Order && result === GatewayPaymentState.Paid) {
+    // The cart was kept while the payer was at the bank so a declined payment loses nothing; it is
+    // emptied only now that the payment is confirmed.
+    cart.clear()
+  }
   if (target === PaymentTarget.Order && result !== GatewayPaymentState.Pending && result !== GatewayPaymentState.Unknown) {
     // Settled one way or the other: the token has done its job and should not sit in the browser
     // afterwards. A pending payment keeps it so a retry can still verify, and so does an unknown
@@ -159,9 +196,9 @@ const check = async (): Promise<void> => {
 }
 
 onMounted(() => {
-  if (!orderId.value && !invoiceId.value) {
+  if (addressUnusable.value) {
     // Nothing to verify: do not call check(), which would fall through to the invoice branch
-    // with an undefined id and hit /invoices/undefined/....
+    // with an undefined id and request /invoices/undefined.
     state.value = GatewayPaymentState.Missing
     return
   }

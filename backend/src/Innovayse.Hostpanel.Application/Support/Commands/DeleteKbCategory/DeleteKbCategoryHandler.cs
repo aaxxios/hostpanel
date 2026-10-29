@@ -21,7 +21,11 @@ public sealed class DeleteKbCategoryHandler
     /// <summary>Handles the command.</summary>
     /// <param name="cmd">The category to delete.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success, or <c>KBCATEGORY_NOT_FOUND</c> when the id names no category.</returns>
+    /// <returns>
+    /// Success, <c>KBCATEGORY_NOT_FOUND</c> when the id names no category, or <c>KBCATEGORY_IN_USE</c>
+    /// when it still has sub-categories. Articles name their category as text, not by id, so they
+    /// do not hold a category back.
+    /// </returns>
     public async Task<Result> HandleAsync(DeleteKbCategoryCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
@@ -30,6 +34,11 @@ public sealed class DeleteKbCategoryHandler
         if (category is null)
         {
             return Result.FailureCode(HostpanelErrorCodes.KBCATEGORY_NOT_FOUND);
+        }
+
+        if (await _context.KbCategories.AnyAsync(c => c.ParentCategoryId == cmd.Id, ct))
+        {
+            return Result.FailureCode(HostpanelErrorCodes.KBCATEGORY_IN_USE);
         }
 
         _context.KbCategories.Remove(category);

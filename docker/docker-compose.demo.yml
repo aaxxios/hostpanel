@@ -5,13 +5,13 @@
 # production data.
 #
 # Networks. The demo must see NOTHING of production, at the network level:
-#   - `default` is a demo-private bridge (it replaces the platform overlay's attachment to innovayse_network),
+#   - `default` is a demo-private bridge (it replaces the platform overlay's attachment to the production network),
 #     so the database, broker, redis and mailhog are reachable only from inside the demo. It is deliberately
 #     not `internal: true`: mailhog publishes its UI port on the host, which Docker cannot do from an
 #     internal-only network. Nothing production-side is on it, so it reaches no production container anyway.
-#   - `edge` is the dedicated external network hostpanel_demo_edge, NOT innovayse_network. Only the edge proxy
-#     (innovayse-edge, which is on both networks) and the three edge-facing demo services are on it. The demo
-#     therefore cannot resolve or route to any production container (hostpanel-db, main-client, sso-api, ...);
+#   - `edge` is the dedicated external network hostpanel_demo_edge, NOT the production network. Only the edge proxy
+#     (your reverse proxy, which is on both networks) and the three edge-facing demo services are on it. The demo
+#     therefore cannot resolve or route to any production container (hostpanel-db, ...);
 #     the one production-side peer it can address is the proxy itself, which routes by Host header.
 #     Create it once per host:  docker network create --subnet 172.29.0.0/16 hostpanel_demo_edge  (deploy:demo does,
 #     idempotently). The subnet is fixed because the edge proxy denies it on every production host (nginx.conf,
@@ -27,10 +27,14 @@
 name: hostpanel-demo
 
 networks:
-  # Replaces (not merges with) the platform overlay's external innovayse_network.
+  # Replaces (not merges with) the platform overlay's external production network.
   default: !override
     name: hostpanel-demo_default
-  # Created by hand or by deploy:demo; it must exist before `up`. Never innovayse_network.
+    # Fixed, like the edge subnet: the demo client calls the API over it, so the API trusts it.
+    ipam:
+      config:
+        - subnet: ${DEMO_NETWORK_SUBNET:?DEMO_NETWORK_SUBNET must be set}
+  # Created by hand or by deploy:demo; it must exist before `up`. Never the production network.
   edge:
     name: hostpanel_demo_edge
     external: true
@@ -42,6 +46,8 @@ volumes:
     name: hostpanel-demo_redisdata
   hostpanel_branding:
     name: hostpanel-demo_branding
+  hostpanel_plugins:
+    name: hostpanel-demo_plugins
 
 services:
   hostpanel-db:
@@ -111,6 +117,9 @@ services:
       Cors__AllowedOrigins__0: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
       AdminBaseUrl: ${DEMO_ADMIN_BASE_URL:?DEMO_ADMIN_BASE_URL must be set}
       ClientBaseUrl: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}
+      # The demo client reaches the API over the private bridge and the edge proxy over the edge network.
+      RateLimit__KnownNetworks__0: ${DEMO_NETWORK_SUBNET:?DEMO_NETWORK_SUBNET must be set}
+      RateLimit__KnownNetworks__1: ${DEMO_EDGE_NETWORK_SUBNET:?DEMO_EDGE_NETWORK_SUBNET must be set}
       Demo__Enabled: ${DEMO_ENABLED}
       Demo__ResetIntervalHours: ${DEMO_RESET_INTERVAL_HOURS}
       Demo__AdminEmail: ${DEMO_ADMIN_EMAIL}
@@ -119,8 +128,8 @@ services:
       Demo__ClientPassword: ${DEMO_CLIENT_PASSWORD:?DEMO_CLIENT_PASSWORD must be set}
       # Optional: the contact shown on the storefront; empty keeps the seed's fictional pair. Display only,
       # mail still goes to the demo's mailhog (Smtp__Host above).
-      Demo__ContactEmail: ${DEMO_CONTACT_EMAIL}
-      Demo__ContactPhone: ${DEMO_CONTACT_PHONE}
+      Demo__ContactEmail: ${DEMO_CONTACT_EMAIL:-}
+      Demo__ContactPhone: ${DEMO_CONTACT_PHONE:-}
     depends_on: !override
       hostpanel-db:
         condition: service_healthy
@@ -150,8 +159,13 @@ services:
       NUXT_SSO_CALLBACK_URL: ${DEMO_CLIENT_BASE_URL:?DEMO_CLIENT_BASE_URL must be set}/api/portal/auth/sso/callback
       # The demo's own Redis, never production's.
       NUXT_SESSION_REDIS: hostpanel-demo-redis:${DEMO_REDIS_PORT}
+      # Key the stored sessions are encrypted with (the server refuses to start without it).
+      NUXT_SESSION_ENCRYPTION_KEY: ${DEMO_SESSION_ENCRYPTION_KEY:?DEMO_SESSION_ENCRYPTION_KEY must be set}
+      # How many proxies sit in front of the client portal: the visitor address it forwards is the Nth entry from the right of X-Forwarded-For (.env.example, CLIENT_TRUSTED_PROXY_COUNT).
+      NUXT_TRUSTED_PROXY_COUNT: ${CLIENT_TRUSTED_PROXY_COUNT:-1}
     depends_on: !override
-      - hostpanel-demo-api
+      hostpanel-demo-api:
+        condition: service_healthy
 
   hostpanel-demo-admin:
     extends:
@@ -167,7 +181,8 @@ services:
     ports:
       - "${DEMO_PUBLISH_ADDRESS:?DEMO_PUBLISH_ADDRESS must be set}:${DEMO_ADMIN_HOST_PORT}:80"
     depends_on: !override
-      - hostpanel-demo-api
+      hostpanel-demo-api:
+        condition: service_healthy
 
   # The bundled edge proxy is never part of the demo: the host's proxy (or the published ports) fronts it.
   hostpanel-nginx:

@@ -1,8 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -10,10 +7,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// <c>GET /api/announcements/published</c>: a signed-in member reads the published announcements
 /// feed with drafts excluded, and the action is closed to a caller with no credential.
 /// </summary>
-/// <remarks>
-/// Split out of the deleted <c>KnowledgeBaseAndContentEndpointTests</c>; the anonymous boundary is
-/// new this batch.
-/// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListPublishedAnnouncementsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

@@ -9,15 +9,8 @@
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { ActivityLog, ActivityLogFilters } from '@/types/activitylog'
 import type { EmailLog } from '@/types/emaillog'
+import type { PaginatedList } from '@/types/paginatedlist'
 import { ApiPath } from '@/lib/apiPaths'
-
-/** The paged envelope both history endpoints answer with. */
-interface HistoryPage<T> {
-  /** Entries on the requested page. */
-  items: T[]
-  /** Total number of matching entries. */
-  totalCount: number
-}
 
 /**
  * Endpoint functions for the client history views.
@@ -41,8 +34,8 @@ export const useClientHistoryApi = () => {
     page: number,
     pageSize: number,
     filters: ActivityLogFilters = {},
-  ): Promise<HistoryPage<ActivityLog>> =>
-    request<HistoryPage<ActivityLog>>(`${ApiPath.Clients}/${clientId}/activity-logs${buildQuery({ page, pageSize, ...filters })}`)
+  ): Promise<PaginatedList<ActivityLog>> =>
+    request<PaginatedList<ActivityLog>>(`${ApiPath.Clients}/${clientId}/activity-logs${buildQuery({ page, pageSize, ...filters })}`)
 
   /**
    * Lists the e-mails sent to a client.
@@ -52,8 +45,8 @@ export const useClientHistoryApi = () => {
    * @param pageSize - Entries per page.
    * @returns One page of entries.
    */
-  const emailLogs = (clientId: number, page: number, pageSize: number): Promise<HistoryPage<EmailLog>> =>
-    request<HistoryPage<EmailLog>>(`${ApiPath.AdminEmailLogs}/client/${clientId}${buildQuery({ page, pageSize })}`)
+  const emailLogs = (clientId: number, page: number, pageSize: number): Promise<PaginatedList<EmailLog>> =>
+    request<PaginatedList<EmailLog>>(`${ApiPath.AdminEmailLogs}/client/${clientId}${buildQuery({ page, pageSize })}`)
 
   return { activityLogs, emailLogs }
 }

@@ -1,14 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Auth;
+using Innovayse.Hostpanel.Domain.Auth.Enums;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
@@ -56,7 +53,7 @@ public sealed class ClientPermissionEnforcementTests(IntegrationTestFactory fact
         { "POST", "/api/me/domains/1/renew", ClientPermission.PlaceNewOrders },
         { "GET", "/api/clients/me/contacts", ClientPermission.ViewManageContacts },
         { "POST", "/api/clients/me/contacts", ClientPermission.ViewManageContacts },
-        { "PUT", "/api/clients/me", ClientPermission.ModifyMasterProfile },
+        { "PATCH", "/api/clients/me", ClientPermission.ModifyMasterProfile },
         { "GET", "/api/me/users", ClientPermission.All },
         { "POST", "/api/me/users/invite", ClientPermission.All },
     };
@@ -147,7 +144,7 @@ public sealed class ClientPermissionEnforcementTests(IntegrationTestFactory fact
         var (user, userId, _) = await ClientsTestSeeds.CreateUnlinkedUserAsync(factory, "perm-no-account");
         using (var scope = factory.Services.CreateScope())
         {
-            await scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>().AddAsync(userId, Roles.Client, CancellationToken.None);
+            await scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>().AddAsync(userId, Role.Client, CancellationToken.None);
         }
 
         var response = await user.GetAsync("/api/me/emails");

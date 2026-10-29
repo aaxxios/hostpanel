@@ -1,13 +1,13 @@
 /**
  * Tests for the integrations store: list with category normalisation, detail, save-then-reread
- * and the connection test, through the real `useApi` transport. A refusal keeps the API's own
+ * the connection test and the live CWP status, through the real `useApi` transport. A refusal keeps the API's own
  * sentence; nothing throws.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useIntegrationsStore } from '@/stores/integrations'
-import { json, problem, stubFetch, stubOffline } from '../helpers/fetch'
+import { callOf, json, problem, stubFetch, stubOffline } from '../helpers/fetch'
 
 /** The sentence shown when nothing answered. */
 const NO_ANSWER = 'Could not reach the server. Check your connection and try again.'
@@ -68,7 +68,7 @@ describe('integrationsStore.saveConfig', () => {
     const mock = stubFetch(new Response(null, { status: 204 }), json({ slug: 'stripe', enabled: true }))
     const store = useIntegrationsStore()
 
-    await store.saveConfig('stripe', { enabled: true, config: {} } as never)
+    expect(await store.saveConfig('stripe', { enabled: true, config: {} } as never)).toBe(true)
     expect(mock).toHaveBeenCalledTimes(2)
     expect(store.current).toEqual({ slug: 'stripe', enabled: true })
   })
@@ -77,22 +77,20 @@ describe('integrationsStore.saveConfig', () => {
     const mock = stubFetch(problem('Required field missing.', 422))
     const store = useIntegrationsStore()
 
-    await store.saveConfig('stripe', {} as never)
+    expect(await store.saveConfig('stripe', {} as never)).toBe(false)
     expect(store.error).toBe('Required field missing.')
     expect(mock).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('integrationsStore.testConnection', () => {
-  it('keeps the result with a duration and mirrors the last tested time', async () => {
+  it('keeps the result with its test time and a duration', async () => {
     stubFetch(json({ success: true, message: 'ok', testedAt: '2026-01-01T00:00:00Z' }))
     const store = useIntegrationsStore()
-    store.current = { slug: 'stripe', lastTestedAt: null } as unknown as NonNullable<typeof store.current>
-
     await store.testConnection('stripe')
     expect(store.testResult?.success).toBe(true)
     expect(store.testResult?.durationMs).toBeTypeOf('number')
-    expect(store.current?.lastTestedAt).toBe('2026-01-01T00:00:00Z')
+    expect(store.testResult?.testedAt).toBe('2026-01-01T00:00:00Z')
     expect(store.testing).toBe(false)
   })
 
@@ -111,5 +109,37 @@ describe('integrationsStore.testConnection', () => {
 
     await store.testConnection('stripe')
     expect(store.testResult).toMatchObject({ success: false, message: NO_ANSWER })
+  })
+})
+
+describe('integrationsStore.fetchCwpServerInfo', () => {
+  it('reads the CWP endpoint and fills the status', async () => {
+    const mock = stubFetch(json({ connected: true }))
+    const store = useIntegrationsStore()
+
+    await store.fetchCwpServerInfo()
+    expect(callOf(mock).url).toBe('/api/admin/integrations/cwp/server-info')
+    expect(store.cwpServerInfo).toEqual({ connected: true })
+    expect(store.cwpServerInfoError).toBeNull()
+  })
+
+  it('keeps the API sentence and the previous status on refusal', async () => {
+    const store = useIntegrationsStore()
+    stubFetch(json({ connected: true }))
+    await store.fetchCwpServerInfo()
+
+    stubFetch(problem('Server unreachable.', 502))
+    await store.fetchCwpServerInfo()
+    expect(store.cwpServerInfoError).toBe('Server unreachable.')
+    expect(store.cwpServerInfo).toEqual({ connected: true })
+    expect(store.error).toBeNull()
+  })
+
+  it('keeps the no-answer sentence offline', async () => {
+    stubOffline()
+    const store = useIntegrationsStore()
+
+    await store.fetchCwpServerInfo()
+    expect(store.cwpServerInfoError).toBe(NO_ANSWER)
   })
 })

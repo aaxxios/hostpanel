@@ -13,7 +13,7 @@ namespace Innovayse.Hostpanel.Domain.Orders;
 public static class OrdersErrors
 {
     /// <summary>
-    /// The order is not Pending (400) — <see cref="Order.Accept"/>, <see cref="Order.Cancel"/> and
+    /// The order is not Pending (400): <see cref="Order.Accept"/>, <see cref="Order.Cancel"/> and
     /// <see cref="Order.MarkFraud"/> all require it.
     /// </summary>
     public const string OrderNotPending = "ORDER_NOT_PENDING";

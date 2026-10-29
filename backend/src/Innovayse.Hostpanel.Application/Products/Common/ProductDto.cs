@@ -1,7 +1,8 @@
 using Innovayse.Hostpanel.Domain.Products;
-
 using Innovayse.Hostpanel.Domain.Products.Enums;
+
 namespace Innovayse.Hostpanel.Application.Products.Common;
+
 /// <summary>Represents a product in list and detail responses.</summary>
 /// <param name="Id">Primary key.</param>
 /// <param name="GroupId">Parent product group ID.</param>

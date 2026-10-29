@@ -1,12 +1,18 @@
 <script setup lang="ts">
 /**
  * Support tickets list: a paged, searchable table of all tickets with a status filter, flagging
- * and bulk actions.
+ * and bulk actions. A refused load offers a retry; a flag or bulk action shows its outcome (success,
+ * or the API's sentence) next to the bulk bar; a bulk delete is confirmed first in a danger prompt.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SupportTicketStatusBadge from '@/components/support/SupportTicketStatusBadge.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
+import { UiDialogVariant } from '@/utils/ui/dialog'
+import { UiTone } from '@/utils/ui/tone'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiCheckbox from '@/components/ui/UiCheckbox.vue'
@@ -34,7 +40,7 @@ import { pageCount } from '@/lib/paging'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiTableDensity } from '@/utils/ui/injection'
 import { UiSize } from '@/utils/ui/size'
-import { toneTextClasses, UiTone } from '@/utils/ui/tone'
+import { toneTextClasses } from '@/utils/ui/tone'
 import { SEARCH_DEBOUNCE_MS } from '@/lib/limits'
 import { AppRoute, supportTicketPath } from '@/lib/routes'
 
@@ -75,6 +81,32 @@ const bulkActions = computed(() => [
 
 /** IDs of tickets selected via checkbox. */
 const selectedIds = ref<number[]>([])
+
+/** The outcome line of the last flag or bulk action. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/** True while the bulk delete confirmation is open. */
+const confirmingBulkDelete = ref(false)
+
+/** True while a bulk action is in flight. */
+const bulkRunning = ref(false)
+
+/**
+ * Shows the outcome of a change: the success sentence, or the API's refusal.
+ *
+ * @param ok - Whether the API accepted the change.
+ * @param successKey - Locale key of the success sentence.
+ */
+const report = (ok: boolean, successKey: string): void => {
+  if (ok) {
+    feedback.show(t(successKey), false)
+  } else {
+    feedback.show(store.actionError ?? t('errors.noAnswer'), true)
+  }
+}
 
 /** Whether every ticket on the page is selected. */
 const allSelected = computed<boolean>(
@@ -141,23 +173,63 @@ const applyFilter = (value: TicketListFilter | null): void => {
  * @param id - The ticket identifier.
  */
 const handleToggleFlag = async (id: number): Promise<void> => {
-  if (await store.toggleFlag(id)) {
+  feedback.clear()
+  const toggled = await store.toggleFlag(id)
+  report(toggled, 'shared.changesSavedSuccessfully')
+  if (toggled) {
     await store.fetchAll()
   }
 }
 
 /**
- * Runs a bulk action on the selected tickets and reloads on success.
+ * Runs a bulk action on the selected tickets, shows its outcome and reloads on success.
  *
  * @param action - The action to run.
+ * @returns Resolves when the action (and the reload) has settled.
  */
-const handleBulkAction = async (action: TicketBulkAction): Promise<void> => {
+const runBulkAction = async (action: TicketBulkAction): Promise<void> => {
   if (selectedIds.value.length === 0) {
     return
   }
-  if (await store.bulkAction(selectedIds.value, action)) {
+  feedback.clear()
+  bulkRunning.value = true
+  const done = await store.bulkAction(selectedIds.value, action)
+  bulkRunning.value = false
+  report(done, action === TicketBulkAction.Delete ? 'shared.recordDeleted' : 'shared.changesSavedSuccessfully')
+  if (done) {
     clearSelection()
     await store.fetchAll()
+  }
+}
+
+/**
+ * Starts a bulk action from its button; a delete asks for confirmation first.
+ *
+ * @param action - The action to run.
+ * @returns Resolves when the action has settled, or at once when it waits for confirmation.
+ */
+const handleBulkAction = async (action: TicketBulkAction): Promise<void> => {
+  if (action === TicketBulkAction.Delete) {
+    confirmingBulkDelete.value = true
+    return
+  }
+  await runBulkAction(action)
+}
+
+/**
+ * Deletes the selected tickets once the operator confirmed.
+ *
+ * @returns Resolves when the delete has settled.
+ */
+const confirmBulkDelete = async (): Promise<void> => {
+  await runBulkAction(TicketBulkAction.Delete)
+  confirmingBulkDelete.value = false
+}
+
+/** Closes the bulk delete confirmation; ignored while the delete runs. */
+const dismissBulkDelete = (): void => {
+  if (!bulkRunning.value) {
+    confirmingBulkDelete.value = false
   }
 }
 
@@ -256,9 +328,17 @@ onMounted(() => {
       </UiStack>
     </UiCard>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="support-tickets-error">{{ store.error }}</UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="support-tickets-feedback" />
 
-    <UiCard class="overflow-x-auto">
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="support-tickets-error"
+      @retry="store.fetchAll()"
+    />
+
+    <UiCard v-else class="overflow-x-auto">
       <UiTable
         :density="UiTableDensity.Comfortable"
         :loading="store.loading && store.tickets.length === 0"
@@ -319,7 +399,7 @@ onMounted(() => {
               </UiLink>
             </UiTableCell>
             <UiTableCell muted>{{ ticket.departmentName ?? '—' }}</UiTableCell>
-            <UiTableCell muted>{{ ticket.clientName ?? t('support.supportTickets.clientClientid', { clientId: ticket.clientId }) }}</UiTableCell>
+            <UiTableCell muted>{{ ticket.clientName }}</UiTableCell>
             <UiTableCell><SupportTicketStatusBadge :status="ticket.status" /></UiTableCell>
             <UiTableCell muted>{{ formatElapsed(ticket.lastReplyAt) }}</UiTableCell>
           </UiTableRow>
@@ -339,6 +419,18 @@ onMounted(() => {
       :page-size="store.pageSize"
       testid="support-tickets-pagination"
       @update:page="goToPage"
+    />
+
+    <UiDialog
+      :open="confirmingBulkDelete"
+      :variant="UiDialogVariant.Confirm"
+      :title="t('support.supportTickets.confirmBulkDeleteTitle')"
+      :message="t('support.supportTickets.confirmBulkDeleteMessage', { count: selectedIds.length })"
+      :confirm-label="t('shared.delete')"
+      :loading="bulkRunning"
+      :tone="UiTone.Danger"
+      @confirm="confirmBulkDelete"
+      @close="dismissBulkDelete"
     />
   </UiStack>
 </template>

@@ -1,16 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>AddDnsRecord</c> use case —
+/// Integration tests for the admin <c>AddDnsRecord</c> use case:
 /// <c>POST /api/domains/{id}/dns</c>. The client-facing equivalent is
 /// <c>AddMyDomainDnsRecord</c>; the sibling use cases in the same zone lifecycle are
 /// <c>UpdateDnsRecord</c> and <c>DeleteDnsRecord</c>.
@@ -19,10 +16,11 @@ namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 public sealed class AddDnsRecordTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>
-    /// POST .../dns with <c>{ type, host, value, ttl, priority }</c> — the exact shape
-    /// <c>DnsRecordsTable.vue</c>'s <c>saveAdd</c> sends — succeeds with 201, and the record
-    /// round-trips through GET /api/domains/{id}. Then PUT .../dns/{recordId} with the same
-    /// shape updates it, and DELETE removes it — the full lifecycle the admin table drives.
+    /// <c>POST /api/domains/{id}/dns</c> with <c>{ type, host, value, ttl, priority }</c>, the exact
+    /// shape <c>DnsRecordsTable.vue</c>'s <c>saveAdd</c> sends, succeeds with 201, and the record
+    /// round-trips through <c>GET /api/domains/{id}</c>. Then <c>PUT /api/domains/{id}/dns/{recordId}</c>
+    /// with the same shape updates it, and <c>DELETE</c> removes it: the full lifecycle the admin
+    /// table drives.
     /// </summary>
     [Fact]
     public async Task AddUpdateDeleteDnsRecord_FullLifecycle_SucceedsAsync()
@@ -57,7 +55,7 @@ public sealed class AddDnsRecordTests(IntegrationTestFactory factory) : IClassFi
         domainAfterDelete.GetProperty("dnsRecords").GetArrayLength().Should().Be(0);
     }
 
-    /// <summary>An MX record with no priority refuses with 400 — the validator's own rule.</summary>
+    /// <summary>An MX record with no priority refuses with 400 by the validator's own rule.</summary>
     [Fact]
     public async Task AddDnsRecord_MxWithoutPriority_Returns400Async()
     {

@@ -20,7 +20,7 @@ const REVEALING = {
 
 /** Blocks that must stay fully opaque while they enter: the page header only slides. */
 const SLIDING = {
-  UiPageHero: () => mountWithKit(UiPageHero),
+  UiPageHero: () => mountWithKit(UiPageHero, { props: { title: 'Knowledgebase' } }),
 }
 
 describe('entrance reveal markup', () => {

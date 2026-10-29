@@ -3,10 +3,10 @@
  */
 import type { GatewayLogEntry } from '../../src/types/gatewaylog'
 import { GatewayLogResult } from '../../src/types/gatewaylog'
-import type { PagedResult } from '../../src/types/pagedresult'
+import type { PaginatedList } from '../../src/types/paginatedlist'
 
 /** `GET /api/gateway-logs`: one open session and one settled payment. */
-export const gatewayLogPage: PagedResult<GatewayLogEntry> = {
+export const gatewayLogPage: PaginatedList<GatewayLogEntry> = {
   items: [
     {
       id: 'session-9',
@@ -25,7 +25,8 @@ export const gatewayLogPage: PagedResult<GatewayLogEntry> = {
       invoiceId: 4,
     },
   ],
-  totalCount: 2,
-  page: 1,
+  pageNumber: 1,
   pageSize: 20,
+  totalCount: 2,
+  totalPages: 1,
 }

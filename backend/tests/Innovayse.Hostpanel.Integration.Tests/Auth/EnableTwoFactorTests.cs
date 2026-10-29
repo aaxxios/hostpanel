@@ -1,15 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 
 /// <summary>
-/// Integration tests for the <c>EnableTwoFactor</c> use case — <c>POST /api/me/2fa/enable</c>.
+/// Integration tests for the <c>EnableTwoFactor</c> use case: <c>POST /api/me/2fa/enable</c>.
 /// </summary>
 /// <remarks>
 /// Runs in CI, where Testcontainers can start PostgreSQL; on a laptop without a reachable docker

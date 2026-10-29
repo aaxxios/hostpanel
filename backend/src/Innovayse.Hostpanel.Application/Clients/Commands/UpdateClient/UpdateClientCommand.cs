@@ -1,74 +1,46 @@
+using Innovayse.Hostpanel.Application.Clients.Common;
+using Innovayse.Hostpanel.Domain.Clients;
+using Innovayse.Hostpanel.Domain.Clients.Enums;
+
 namespace Innovayse.Hostpanel.Application.Clients.Commands.UpdateClient;
 
 /// <summary>
-/// Command to update an existing client's profile, billing address, preferences,
+/// Command to replace an existing client's profile, billing address, preferences,
 /// notification settings, billing settings, and status.
 /// </summary>
+/// <remarks>
+/// A full replacement, not a patch: every group is written whole. A notification or billing flag the
+/// body leaves out is stored as <c>false</c>, and an optional text field it leaves out is cleared.
+/// Only <see cref="Email"/>, <see cref="Preferences"/> language and currency, and <see cref="Status"/>
+/// are left alone when null. Callers send the whole record as it was read.
+/// </remarks>
 /// <param name="ClientId">The client's primary key.</param>
 /// <param name="Email">Updated email address (null to keep current).</param>
 /// <param name="FirstName">Updated first name.</param>
 /// <param name="LastName">Updated last name.</param>
 /// <param name="CompanyName">Updated company name (null to clear).</param>
 /// <param name="Phone">Updated phone number (null to clear).</param>
-/// <param name="Street">Updated billing street.</param>
-/// <param name="Address2">Updated second address line.</param>
-/// <param name="City">Updated billing city.</param>
-/// <param name="State">Updated billing state.</param>
-/// <param name="PostCode">Updated billing postcode.</param>
-/// <param name="Country">Updated billing country code (2 chars, ISO 3166-1 alpha-2).</param>
-/// <param name="Language">
-/// Preferred UI language code, or null to leave it alone. Written only where this deployment
-/// owns the account, and only when it differs from what the account already holds.
+/// <param name="Address">
+/// Updated billing address. Each line null clears it; the country is a 2-character
+/// ISO 3166-1 alpha-2 code.
 /// </param>
-/// <param name="Currency">ISO 4217 currency code (null to keep current).</param>
-/// <param name="PaymentMethod">Payment method label (null to keep current).</param>
-/// <param name="BillingContact">Billing contact reference (null to keep current).</param>
-/// <param name="AdminNotes">Internal admin notes (null to keep current).</param>
-/// <param name="NotifyGeneral">General email notifications.</param>
-/// <param name="NotifyInvoice">Invoice email notifications.</param>
-/// <param name="NotifySupport">Support email notifications.</param>
-/// <param name="NotifyProduct">Product email notifications.</param>
-/// <param name="NotifyDomain">Domain email notifications.</param>
-/// <param name="NotifyAffiliate">Affiliate email notifications.</param>
-/// <param name="LateFees">Apply late fees.</param>
-/// <param name="OverdueNotices">Send overdue notices.</param>
-/// <param name="TaxExempt">Tax exempt flag.</param>
-/// <param name="SeparateInvoices">Separate invoices per service.</param>
-/// <param name="DisableCcProcessing">Disable CC auto-charge.</param>
-/// <param name="MarketingOptIn">Marketing emails opt-in.</param>
-/// <param name="StatusUpdate">Send status update emails.</param>
-/// <param name="AllowSso">Allow single sign-on.</param>
-/// <param name="Status">Client status (Active, Inactive, Suspended, Closed). Null to keep current.</param>
-public record UpdateClientCommand(
+/// <param name="Preferences">
+/// Updated preferences. A null language is left alone (written only where this deployment owns the
+/// account, and only when it differs from what the account already holds), a null currency keeps the
+/// current one, and a null payment method, billing contact or admin notes clears it.
+/// </param>
+/// <param name="Notifications">Updated email notification flags.</param>
+/// <param name="Settings">Updated billing and account switches.</param>
+/// <param name="Status">The status to move the client to; null keeps the current one. The move follows the client's own transitions.</param>
+public sealed record UpdateClientCommand(
     int ClientId,
     string? Email,
     string FirstName,
     string LastName,
     string? CompanyName,
     string? Phone,
-    string? Street,
-    string? Address2,
-    string? City,
-    string? State,
-    string? PostCode,
-    string? Country,
-    string? Language,
-    string? Currency,
-    string? PaymentMethod,
-    string? BillingContact,
-    string? AdminNotes,
-    bool NotifyGeneral,
-    bool NotifyInvoice,
-    bool NotifySupport,
-    bool NotifyProduct,
-    bool NotifyDomain,
-    bool NotifyAffiliate,
-    bool LateFees,
-    bool OverdueNotices,
-    bool TaxExempt,
-    bool SeparateInvoices,
-    bool DisableCcProcessing,
-    bool MarketingOptIn,
-    bool StatusUpdate,
-    bool AllowSso,
-    string? Status);
+    PostalAddress Address,
+    ClientPreferencesDto Preferences,
+    ContactNotifications Notifications,
+    ClientSettingsDto Settings,
+    ClientStatus? Status);

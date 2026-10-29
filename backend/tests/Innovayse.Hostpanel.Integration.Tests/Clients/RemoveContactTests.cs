@@ -1,15 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
 /// <summary><c>DELETE /api/clients/{id}/contacts/{contactId}</c>: removing a contact from a client account.</summary>
-/// <remarks>Split from the deleted <c>ClientsAdminEndpointTests</c> (A7 Task 5).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class RemoveContactTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -20,7 +16,7 @@ public sealed class RemoveContactTests(IntegrationTestFactory factory) : IClassF
         var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
         var admin = await ClientsTestSeeds.AdminClientAsync(factory);
         var added = await admin.PostAsJsonAsync($"/api/clients/{clientId}/contacts", ClientsTestSeeds.ContactBody("Billing"));
-        added.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        added.StatusCode.Should().Be(HttpStatusCode.Created);
         var contacts = await admin.GetFromJsonAsync<JsonElement>($"/api/clients/{clientId}");
         var contactId = contacts.GetProperty("contacts").EnumerateArray().Single().GetProperty("id").GetInt32();
 
@@ -43,7 +39,7 @@ public sealed class RemoveContactTests(IntegrationTestFactory factory) : IClassF
         await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_NOT_FOUND);
     }
 
-    /// <summary>Removing a contact id that is not this client's answers 404 with <c>MY_CONTACT_NOT_FOUND</c>.</summary>
+    /// <summary>Removing a contact id that is not this client's answers 404 with <c>CLIENT_CONTACT_NOT_FOUND</c>.</summary>
     [Fact]
     public async Task RemoveRefusesAWrongContactId()
     {
@@ -54,7 +50,7 @@ public sealed class RemoveContactTests(IntegrationTestFactory factory) : IClassF
         var response = await admin.DeleteAsync($"/api/clients/{clientId}/contacts/{wrongContactId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.MY_CONTACT_NOT_FOUND);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_CONTACT_NOT_FOUND);
     }
 
     /// <summary>Removing a contact is not for anonymous callers.</summary>
@@ -75,5 +71,20 @@ public sealed class RemoveContactTests(IntegrationTestFactory factory) : IClassF
         var response = await client.DeleteAsync($"/api/clients/{clientId}/contacts/1");
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>Removing a contact leaves one activity line naming the client and the acting admin.</summary>
+    [Fact]
+    public async Task RemoveIsAuditedWithTheActingAdmin()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+        var contactId = await (await admin.PostAsJsonAsync(
+            $"/api/clients/{clientId}/contacts", ClientsTestSeeds.ContactBody("Billing"))).Content.ReadFromJsonAsync<int>();
+
+        (await admin.DeleteAsync($"/api/clients/{clientId}/contacts/{contactId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        await ClientsTestSeeds.AssertAuditedByAdminAsync(factory, clientId, "Deleted Contact");
     }
 }

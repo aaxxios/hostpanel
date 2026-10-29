@@ -8,6 +8,7 @@
 import { expect, test } from './support/test'
 import { CLIENT } from './support/fixtures.mjs'
 import { resetStub, scriptStub, setEmailVerified, signIn, stubRequests, waitForHydration } from './support/helpers'
+import { HttpMethod } from '../types/httpmethod'
 
 test('an unconfirmed address shows the banner and the resend button reaches the backend', async ({ page, context, request, baseURL }) => {
   await resetStub(request)
@@ -29,7 +30,7 @@ test('a refused resend shows the backend sentence', async ({ page, context, requ
   await resetStub(request)
   await setEmailVerified(request, false)
   await signIn(context, baseURL ?? 'http://127.0.0.1:3100')
-  await scriptStub(request, { method: 'POST', path: '/api/auth/resend-verification', status: 400, code: 'RATE_LIMITED', detail: 'E2E: wait before asking again.' })
+  await scriptStub(request, { method: HttpMethod.Post, path: '/api/auth/resend-verification', status: 400, code: 'RATE_LIMITED', detail: 'E2E: wait before asking again.' })
 
   await page.goto('/client/dashboard')
   await waitForHydration(page)

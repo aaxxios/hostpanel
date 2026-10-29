@@ -1,14 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 
 /// <summary>
-/// Integration tests for the <c>ListEmailTemplates</c> use case — <c>GET /api/admin/email-templates</c>.
+/// Integration tests for the <c>ListEmailTemplates</c> use case: <c>GET /api/admin/email-templates</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListEmailTemplatesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>

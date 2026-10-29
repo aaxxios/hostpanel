@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
@@ -28,7 +29,7 @@ public sealed class ResetPasswordHandler
     /// <returns>
     /// Success, <c>DEMO_ACTION_DISABLED</c> for a published demo account on a demo deployment,
     /// <c>TOKEN_INVALID_OR_EXPIRED</c> when the token does not match, or
-    /// <c>USER_PROVISIONING_NOT_ALLOWED_SET_PASSWORD</c> where an SSO owns the accounts.
+    /// <c>USER_PROVISIONING_NOT_ALLOWED_SET_PASSWORD</c> where an external sign-on provider owns the accounts.
     /// </returns>
     public async Task<Result> HandleAsync(ResetPasswordCommand cmd, CancellationToken ct)
     {
@@ -40,7 +41,8 @@ public sealed class ResetPasswordHandler
             return allowed;
         }
 
-        var outcome = await _provisioning.ResetPasswordWithTokenAsync(cmd.Email, cmd.Token, cmd.NewPassword, ct);
+        var outcome = await _provisioning.ResetPasswordWithTokenAsync(
+            new PasswordResetWithToken(cmd.Email, cmd.Token, cmd.NewPassword), ct);
         if (outcome.IsFailure)
         {
             return Result.FailureCode(outcome.ErrorCode!);

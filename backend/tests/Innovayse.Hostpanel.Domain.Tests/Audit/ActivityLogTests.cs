@@ -1,6 +1,5 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Audit;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Domain.Tests.Audit;
 
 /// <summary>Unit tests for the <see cref="ActivityLog"/> entity.</summary>
@@ -17,5 +16,15 @@ public sealed class ActivityLogTests
 
         entry.CreatedAt.Should().Be(performed);
         entry.AdminName.Should().Be("Staff");
+    }
+
+    /// <summary>A system-wide action is recorded without a client.</summary>
+    [Fact]
+    public void Create_WithoutAClient_RecordsASystemWideAction()
+    {
+        var entry = ActivityLog.Create(clientId: null, "Installed plugin demo", "staff-1", "Staff", "staff@example.test", "203.0.113.5");
+
+        entry.ClientId.Should().BeNull();
+        entry.Description.Should().Be("Installed plugin demo");
     }
 }

@@ -2,8 +2,7 @@
   <!--
     Deliberately `info`, not `error`. Nothing failed: the API answered that this signed-in
     identity has no customer record, which is the normal state of a staff account. Rendering
-    it in red told the person something had broken and gave them nowhere to go — the defect
-    this component replaces.
+    it in red would tell the person something had broken and give them nowhere to go.
   -->
   <UiAlert variant="info" :title="$t('client.noProfile.title')" data-testid="no-profile-notice">
     {{ message }}
@@ -12,7 +11,7 @@
       <UiStack direction="row" align="center" gap="xs" class="flex-shrink-0">
         <!--
           The recovery action: a state the user cannot act on is a dead end. The admin panel
-          is a separate app on the same host, so it is an href rather than a route — a
+          is a separate app on the same host, so it is an href rather than a route: a
           NuxtLink would try to resolve it inside this app and 404.
         -->
         <UiButton size="sm" variant="subtle" href="/admin" data-testid="no-profile-admin">
@@ -31,14 +30,13 @@
  * Explains that the signed-in account has no client profile, and offers a way out.
  *
  * Shown wherever the client portal would otherwise render an empty section or a red alert
- * for an account that simply is not a customer — most often the platform superadmin, who
+ * for an account that simply is not a customer: most often the platform superadmin, who
  * authenticates fine and has no row in the backend's `clients` table.
  *
  * The explanation is the API's own sentence, kept by `stores/client.ts` when it recognised
- * the CLIENT_PROFILE_NOT_FOUND code, and already in the caller's language — the backend
- * resolves it from `ApplicationValidationMessages*.resx` in the culture `Accept-Language` asked for. No
- * sentence is written in this template, and there is no longer a mapping table to look one up
- * in.
+ * the CLIENT_PROFILE_NOT_FOUND code, and already in the caller's language: the backend
+ * resolves it from `ApplicationValidationMessages*.resx` in the culture `X-Language` asked for. No
+ * sentence is written in this template.
  */
 import { useClientStore } from '~/stores/client'
 

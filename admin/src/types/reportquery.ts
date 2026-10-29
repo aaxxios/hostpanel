@@ -34,14 +34,6 @@ export interface ReportQueryConfig {
   pageSize: number
 }
 
-/** One page of a query report. */
-export interface ReportQueryResult<T> {
-  /** The rows of the page. */
-  items: T[]
-  /** Number of rows over all pages. */
-  totalCount: number
-}
-
 /** What the query report page reads from the state a screen builds with `useQueryReport`. */
 export interface ReportQueryView {
   /** Rows of the current page. */
@@ -60,6 +52,8 @@ export interface ReportQueryView {
   visibleKeys: Set<string>
   /** Columns to draw. */
   activeColumns: ReportColumn[]
+  /** Loads the current page again (the Retry of a failed load). */
+  load: () => Promise<void>
   /** Starts over from the first page with the chosen filters. */
   generate: () => Promise<void>
   /** Moves to another page. */

@@ -40,7 +40,7 @@
 <script setup lang="ts">
 /**
  * nova closing call to action. The amber button is the page's highest-contrast
- * element on purpose — it is the one thing the section is asking for.
+ * element on purpose: it is the one thing the section is asking for.
  */
 import NovaCta from '~/templates/nova/sections/NovaCta.vue'
 

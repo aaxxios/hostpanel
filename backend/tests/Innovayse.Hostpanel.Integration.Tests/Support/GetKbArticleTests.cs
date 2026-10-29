@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// published or not, an id names no article is refused <c>KBARTICLE_NOT_FOUND</c>, and the action
 /// is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>SupportEndpointTests</c>-family files.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetKbArticleTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

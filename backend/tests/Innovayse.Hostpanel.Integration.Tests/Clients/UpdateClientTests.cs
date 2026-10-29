@@ -1,18 +1,19 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using FluentValidation.TestHelper;
 using Innovayse.Hostpanel.Application.Clients.Commands.UpdateClient;
+using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Resources;
 using Innovayse.Hostpanel.Domain.Billing;
+using Innovayse.Hostpanel.Domain.Clients;
+using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
-using Moq;
-using Xunit;
+using Innovayse.Hostpanel.Integration.Tests.Shared;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
@@ -20,7 +21,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 /// <c>PUT /api/clients/{id}</c>: an admin edits a client's profile, address, preferences,
 /// currency and status.
 /// </summary>
-/// <remarks>Split from the deleted <c>ClientsAdminEndpointTests</c> (A7 Task 5).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateClientTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -36,6 +36,27 @@ public sealed class UpdateClientTests(IntegrationTestFactory factory) : IClassFi
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         var fetched = await admin.GetFromJsonAsync<JsonElement>($"/api/clients/{clientId}");
         fetched.GetProperty("firstName").GetString().Should().Be("Katherine");
+    }
+
+    /// <summary>
+    /// An admin can still move a client's sign-in to a new address at once, and doing so ends every
+    /// session the client held: the client's earlier token is refused and the new address signs in.
+    /// </summary>
+    [Fact]
+    public async Task UpdateEmailMovesTheSignInAndEndsTheClientSessions()
+    {
+        var (client, clientId, _, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "admin-email-change");
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+        var newEmail = $"admin-moved-{Guid.NewGuid():N}@example.test";
+
+        var response = await admin.PutAsJsonAsync(
+            $"/api/clients/{clientId}", ClientsTestSeeds.UpdateBody(firstName: "Moved", email: newEmail));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await client.GetAsync("/api/clients/me")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await factory.CreateClient().PostAsJsonAsync(
+            "/api/auth/login", new { email = newEmail, password = ClientsTestSeeds.TestPassword }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     /// <summary>Updating an id that names no client answers 404 with <c>CLIENT_NOT_FOUND</c>.</summary>
@@ -62,7 +83,7 @@ public sealed class UpdateClientTests(IntegrationTestFactory factory) : IClassFi
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Invoices.Add(Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(14), "USD"));
+            db.Invoices.Add(Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(14), "USD", DateTimeOffset.UtcNow));
             await db.SaveChangesAsync();
         }
 
@@ -89,13 +110,10 @@ public sealed class UpdateClientTests(IntegrationTestFactory factory) : IClassFi
         await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CURRENCY_NOT_FOUND);
     }
 
-    /// <summary>An unparsable status string answers <c>CLIENT_STATUS_INVALID</c>.</summary>
+    /// <summary>A status word that names no member of the enum is refused with 400 before the handler runs.</summary>
     /// <remarks>
-    /// The validator refuses an unparsable status before the handler ever sees it, so this drives
-    /// the request past the bound FluentValidation pipeline rather than the handler's own direct-
-    /// caller defence, which is unreachable from HTTP. The status enum member closest to that
-    /// defence is exercised through the domain tests instead; here the contract under test is "an
-    /// unparsable status is refused", and the validator is what actually answers it first.
+    /// The status is bound as the enum, so a word outside it fails binding and never reaches the
+    /// handler; a number outside it is refused by the validator (see <see cref="UndefinedStatus_ShouldFail"/>).
     /// </remarks>
     [Fact]
     public async Task UpdateRefusesAnInvalidStatus()
@@ -130,42 +148,122 @@ public sealed class UpdateClientTests(IntegrationTestFactory factory) : IClassFi
     }
 
     /// <summary>
-    /// Updating the caller's own profile through <c>PUT /api/clients/me</c> writes the change and
-    /// never lets the currency be set from the body -- the same handler, dispatched from
-    /// <c>ClientProfileController</c> instead of the admin route.
+    /// Moving a client's sign-in to an address another account holds answers 409
+    /// <c>EMAIL_ALREADY_IN_USE</c> instead of a 500, and nothing is saved: the profile and the
+    /// sign-in address stay as they were.
     /// </summary>
-    /// <remarks>Split from the deleted <c>MyProfileEndpointTests</c> (A7 Task 5).</remarks>
     [Fact]
-    public async Task UpdateMyProfileWritesTheProfileAndIgnoresCurrency()
+    public async Task UpdateRefusesAnEmailAnotherAccountHolds()
     {
-        var (client, _, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "my-update-happy");
-        var before = await client.GetFromJsonAsync<JsonElement>("/api/clients/me");
-        var originalCurrency = before.GetProperty("currency").GetString();
+        var (client, clientId, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "admin-email-taken");
+        var (_, takenEmail) = await ClientsTestSeeds.RegisterRealClientAsync(factory, "admin-email-holder");
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
 
-        var response = await client.PutAsJsonAsync(
-            "/api/clients/me", ClientsTestSeeds.UpdateBody(firstName: "Ada", currency: "AMD"));
+        var response = await admin.PutAsJsonAsync(
+            $"/api/clients/{clientId}", ClientsTestSeeds.UpdateBody(firstName: "Changed", email: takenEmail));
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var updated = await response.Content.ReadFromJsonAsync<JsonElement>();
-        updated.GetProperty("firstName").GetString().Should().Be("Ada");
-        updated.GetProperty("currency").GetString().Should().Be(originalCurrency);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.EMAIL_ALREADY_IN_USE);
+        var fetched = await admin.GetFromJsonAsync<JsonElement>($"/api/clients/{clientId}");
+        fetched.GetProperty("firstName").GetString().Should().NotBe("Changed");
+        (await client.GetAsync("/api/clients/me")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// A save that repeats the address the account already signs in with changes nothing about the
+    /// account: the client's session stays valid.
+    /// </summary>
+    [Fact]
+    public async Task UpdateWithTheSameEmailKeepsTheClientSessions()
+    {
+        var signedIn = await ClientsTestSeeds.RegisterClientAsync(factory, "admin-email-same");
+        var (client, clientId) = (signedIn.Client, signedIn.ClientId);
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.PutAsJsonAsync(
+            $"/api/clients/{clientId}", ClientsTestSeeds.UpdateBody(firstName: "Renamed", email: signedIn.Email.ToUpperInvariant()));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await client.GetAsync("/api/clients/me")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>A malformed address is refused as a validation error before anything is read or written.</summary>
+    [Fact]
+    public async Task UpdateRefusesAMalformedEmail()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.PutAsJsonAsync(
+            $"/api/clients/{clientId}", ClientsTestSeeds.UpdateBody(email: "not-an-email"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>
+    /// A save leaves one activity line naming the client and the acting admin, one more when the notes
+    /// changed and one when the status changed, and none of them carries what was written.
+    /// </summary>
+    [Fact]
+    public async Task UpdateIsAuditedWithoutPersonalData()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+        var body = ClientsTestSeeds.UpdateBody(firstName: "Katherine", status: "Suspended", adminNotes: "private note about the customer");
+
+        (await admin.PutAsJsonAsync($"/api/clients/{clientId}", body)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        await ClientsTestSeeds.AssertAuditedByAdminAsync(factory, clientId, "Modified Client - Client ID");
+        await ClientsTestSeeds.AssertAuditedByAdminAsync(factory, clientId, "Modified Client Notes");
+        await ClientsTestSeeds.AssertAuditedByAdminAsync(factory, clientId, "Changed Client Status");
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var lines = await db.ActivityLogs.AsNoTracking().Where(l => l.ClientId == clientId).ToListAsync();
+        lines.Should().OnlyContain(l => !l.Description.Contains("private note") && !l.Description.Contains("Katherine"));
+    }
+
+    /// <summary>An email that is not a well-formed address fails validation.</summary>
+    /// <param name="email">An address that is not a well-formed email address.</param>
+    [Theory]
+    [InlineData("not-an-email")]
+    [InlineData("a@b@c.example")]
+    public void MalformedEmail_ShouldFail(string email)
+    {
+        _validator.TestValidate(MakeValidCommand(email: email)).ShouldHaveValidationErrorFor(x => x.Email);
+    }
+
+    /// <summary>An email longer than 256 characters fails validation even when it is well formed.</summary>
+    [Fact]
+    public void OverlongEmail_ShouldFail()
+    {
+        var email = new string('a', 250) + "@example.test";
+
+        _validator.TestValidate(MakeValidCommand(email: email)).ShouldHaveValidationErrorFor(x => x.Email);
+    }
+
+    /// <summary>A status that is a member of the enum passes.</summary>
+    [Fact]
+    public void DefinedStatus_ShouldPass()
+    {
+        _validator.TestValidate(MakeValidCommand(status: ClientStatus.Suspended)).ShouldNotHaveValidationErrorFor(x => x.Status);
+    }
+
+    /// <summary>A number the JSON binder accepts but that names no member of the enum fails.</summary>
+    [Fact]
+    public void UndefinedStatus_ShouldFail()
+    {
+        _validator.TestValidate(MakeValidCommand(status: (ClientStatus)99)).ShouldHaveValidationErrorFor(x => x.Status);
+    }
+
+    /// <summary>A blank email means "keep the address the account has" and passes.</summary>
+    [Fact]
+    public void BlankEmail_ShouldPass()
+    {
+        _validator.TestValidate(MakeValidCommand(email: null)).ShouldNotHaveValidationErrorFor(x => x.Email);
     }
 
     /// <summary>Validator instance under test.</summary>
-    private readonly UpdateClientValidator _validator = new(BuildLocalizer());
-
-    /// <summary>
-    /// Builds a localizer that answers every key with the key itself. These tests do not depend
-    /// on the .resx sentences -- only on which rule fired -- so a stand-in that echoes the key is
-    /// enough, and needs no resource files loaded.
-    /// </summary>
-    /// <returns>The localizer.</returns>
-    private static IStringLocalizer<ApplicationValidationMessages> BuildLocalizer()
-    {
-        var localizer = new Mock<IStringLocalizer<ApplicationValidationMessages>>();
-        localizer.Setup(l => l[It.IsAny<string>()]).Returns((string key) => new LocalizedString(key, key));
-        return localizer.Object;
-    }
+    private readonly UpdateClientValidator _validator = new(new EchoLocalizer<ApplicationValidationMessages>());
 
     /// <summary>Creates a valid command with sensible defaults for all fields.</summary>
     /// <param name="clientId">The client id to put on the command.</param>
@@ -205,13 +303,13 @@ public sealed class UpdateClientTests(IntegrationTestFactory factory) : IClassFi
         string? paymentMethod = null,
         string? billingContact = null,
         string? adminNotes = null,
-        string? status = null) =>
+        ClientStatus? status = null) =>
         new(
             clientId, email, firstName, lastName, companyName, phone,
-            street, address2, city, state, postCode, country,
-            language, currency, paymentMethod, billingContact, adminNotes,
-            true, true, true, true, true, true,
-            true, true, false, false, false, false, true, true,
+            new PostalAddress(street, address2, city, state, postCode, country),
+            new ClientPreferencesDto(language, currency, paymentMethod, billingContact, adminNotes),
+            new ContactNotifications(true, true, true, true, true, true),
+            new ClientSettingsDto(true, true, false, false, false, true, true),
             status);
 
     /// <summary>Valid command should pass.</summary>
@@ -238,7 +336,7 @@ public sealed class UpdateClientTests(IntegrationTestFactory factory) : IClassFi
     public void UnsupportedLanguage_ShouldFail()
     {
         var cmd = MakeValidCommand(language: "english");
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Language);
+        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Preferences.Language);
     }
 
     /// <summary>A supported language code should pass, whatever its casing.</summary>
@@ -250,7 +348,7 @@ public sealed class UpdateClientTests(IntegrationTestFactory factory) : IClassFi
     public void SupportedLanguage_ShouldPass(string language)
     {
         var cmd = MakeValidCommand(language: language);
-        _validator.TestValidate(cmd).ShouldNotHaveValidationErrorFor(x => x.Language);
+        _validator.TestValidate(cmd).ShouldNotHaveValidationErrorFor(x => x.Preferences.Language);
     }
 
     /// <summary>
@@ -264,7 +362,7 @@ public sealed class UpdateClientTests(IntegrationTestFactory factory) : IClassFi
     public void BlankLanguage_ShouldPass(string? language)
     {
         var cmd = MakeValidCommand(language: language);
-        _validator.TestValidate(cmd).ShouldNotHaveValidationErrorFor(x => x.Language);
+        _validator.TestValidate(cmd).ShouldNotHaveValidationErrorFor(x => x.Preferences.Language);
     }
 
     /// <summary>Country code with wrong length should fail.</summary>
@@ -272,7 +370,7 @@ public sealed class UpdateClientTests(IntegrationTestFactory factory) : IClassFi
     public void WrongLengthCountry_ShouldFail()
     {
         var cmd = MakeValidCommand(country: "USA");
-        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Country);
+        _validator.TestValidate(cmd).ShouldHaveValidationErrorFor(x => x.Address.Country);
     }
 
     /// <summary>Empty FirstName should fail.</summary>

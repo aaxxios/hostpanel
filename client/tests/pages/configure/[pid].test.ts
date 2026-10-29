@@ -37,7 +37,7 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
 
 /** The product the address names. */
 const starter: PortalProduct = {
-  id: 2, pid: 2, groupId: 1, name: 'Starter', description: 'Small sites<br />✔ 5 GB SSD<br />✔ 10 Emails', pricing: { monthly: 5, annual: 50 },
+  id: 2, groupId: 1, name: 'Starter', description: 'Small sites<br />✔ 5 GB SSD<br />✔ 10 Emails', pricing: { monthly: 5, annual: 50 },
 }
 
 /** The `navigateTo` spy of the current test. */
@@ -63,7 +63,7 @@ describe('configure page', () => {
     api.fetchProducts.mockReset()
     api.fetchProducts.mockResolvedValue([starter])
     api.fetchProductGroups.mockReset()
-    api.fetchProductGroups.mockResolvedValue([{ id: 1, name: 'Web Hosting', isActive: true, productCount: 1 }])
+    api.fetchProductGroups.mockResolvedValue([{ id: 1, name: 'Web Hosting', productCount: 1 }])
     window.localStorage.clear()
   })
 

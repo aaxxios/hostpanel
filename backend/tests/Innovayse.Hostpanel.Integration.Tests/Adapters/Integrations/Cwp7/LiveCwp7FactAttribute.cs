@@ -1,11 +1,10 @@
-using Xunit;
-
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Integrations.Cwp7;
+
 /// <summary>
 /// Marks a test that talks to a real CWP7 server, and skips it unless one is configured.
 /// </summary>
 /// <remarks>
-/// The alternative — returning early from the test body — makes the runner report a pass, and a
+/// Returning early from the test body instead makes the runner report a pass, and a
 /// test that passes without asserting anything is worse than no test: it reads as coverage of the
 /// very call it did not make. Deciding here, at discovery, means the run says "Skipped" and says
 /// why.

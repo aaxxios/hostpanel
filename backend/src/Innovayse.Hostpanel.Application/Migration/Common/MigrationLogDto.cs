@@ -1,17 +1,20 @@
-using Innovayse.Hostpanel.Domain.Migration;
+using Innovayse.Hostpanel.Domain.Migration.Enums;
 
 namespace Innovayse.Hostpanel.Application.Migration.Common;
-/// <summary>Single migration log entry returned to the admin frontend.</summary>
-/// <param name="Id">The identifier.</param>
-/// <param name="EntityType">The entity type.</param>
-/// <param name="Identifier">The identifier.</param>
-/// <param name="Action">The action.</param>
-/// <param name="Reason">The reason.</param>
-/// <param name="CreatedAt">The created at.</param>
+
+/// <summary>One line of a migration job's report: what happened to one record pulled from the legacy source.</summary>
+/// <param name="Id">The log row, used by the admin report as its row key.</param>
+/// <param name="EntityType">The kind of record the line is about (client, invoice, ticket and so on).</param>
+/// <param name="Identifier">How the legacy source names the record (an email, an invoice number), so an operator can find it there.</param>
+/// <param name="Action">What the pull did with the record: imported it, skipped it, or failed on it.</param>
+/// <param name="SkipReason">Why a record was skipped; null unless it was skipped. The admin report translates it.</param>
+/// <param name="Reason">Technical detail of the error for a failed record; null otherwise.</param>
+/// <param name="CreatedAt">When the pull handled the record (UTC).</param>
 public sealed record MigrationLogDto(
     int Id,
-    string EntityType,
+    MigrationEntityType EntityType,
     string Identifier,
-    string Action,
+    MigrationLogAction Action,
+    MigrationSkipReason? SkipReason,
     string? Reason,
     DateTimeOffset CreatedAt);

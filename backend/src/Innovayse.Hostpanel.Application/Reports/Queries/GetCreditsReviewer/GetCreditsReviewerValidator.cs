@@ -1,4 +1,5 @@
 using FluentValidation;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
@@ -17,5 +18,7 @@ public sealed class GetCreditsReviewerValidator : LocalizedValidator<GetCreditsR
             .GreaterThan(0)
             .When(x => x.ClientId.HasValue)
             .WithMessage(L["ReportClientIdInvalid"]);
+        RuleFor(x => x.Page).MustBePage(L["ReportPageRequired"]);
+        RuleFor(x => x.PageSize).MustBePageSize(PagingLimits.MaxReportPageSize, L["ReportPageSizeRange"]);
     }
 }

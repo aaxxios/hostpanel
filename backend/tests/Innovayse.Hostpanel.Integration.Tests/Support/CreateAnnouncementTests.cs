@@ -1,8 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -13,7 +10,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// <remarks>
 /// Runs in CI, where Testcontainers can start PostgreSQL; on a laptop without a reachable docker
 /// socket every test in this project fails before the API boots, and that is the environment, not
-/// these tests. Split out of the deleted <c>KnowledgeBaseAndContentEndpointTests</c>.
+/// these tests.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateAnnouncementTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>

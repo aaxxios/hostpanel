@@ -1,6 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Architecture.Tests;
 
@@ -10,15 +8,6 @@ namespace Innovayse.Hostpanel.Architecture.Tests;
 /// </summary>
 public sealed class ExplicitConstructorTests
 {
-    /// <summary>
-    /// Controllers still on a primary constructor, recorded rather than fixed here. Remove the entry when
-    /// the controller is converted.
-    /// </summary>
-    private static readonly HashSet<string> PrimaryConstructorControllers =
-    [
-        "Innovayse.Hostpanel.API.Auth.LocalAuthController",
-    ];
-
     /// <summary>No handler in the Application layer captures a primary-constructor parameter.</summary>
     [Fact]
     public void Handlers_UseExplicitConstructors()
@@ -33,7 +22,7 @@ public sealed class ExplicitConstructorTests
         offenders.Should().BeEmpty("write the field and the constructor");
     }
 
-    /// <summary>No controller outside the allow-list captures a primary-constructor parameter.</summary>
+    /// <summary>No controller captures a primary-constructor parameter.</summary>
     [Fact]
     public void Controllers_UseExplicitConstructors()
     {
@@ -42,7 +31,6 @@ public sealed class ExplicitConstructorTests
                 && type.Name.EndsWith("Controller", StringComparison.Ordinal))
             .Where(CapturesPrimaryConstructorParameters)
             .Select(type => type.FullName!)
-            .Where(name => !PrimaryConstructorControllers.Contains(name))
             .ToList();
 
         offenders.Should().BeEmpty("write the field and the constructor");

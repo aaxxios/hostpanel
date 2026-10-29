@@ -11,9 +11,9 @@ namespace Innovayse.Hostpanel.Domain.Projects;
 /// </remarks>
 public static class ProjectErrors
 {
-    /// <summary>The sort order is negative (400) — <see cref="Project.Create"/>, <see cref="Project.Update"/> and <see cref="Project.SetSortOrder"/>.</summary>
+    /// <summary>The sort order is negative (400): <see cref="Project.Create"/>, <see cref="Project.Update"/> and <see cref="Project.SetSortOrder"/>.</summary>
     public const string SortOrderNegative = "PROJECT_SORT_ORDER_NEGATIVE";
 
-    /// <summary>The slug is empty or whitespace (400) — <see cref="Project.Create"/> and <see cref="Project.Update"/>.</summary>
+    /// <summary>The slug is empty or whitespace (400): <see cref="Project.Create"/> and <see cref="Project.Update"/>.</summary>
     public const string SlugRequired = "PROJECT_SLUG_REQUIRED";
 }

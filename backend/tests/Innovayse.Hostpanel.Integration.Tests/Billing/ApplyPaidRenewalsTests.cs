@@ -1,9 +1,7 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Commands.ApplyPaidRenewals;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
-using System.Collections.Concurrent;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Notifications;
@@ -11,14 +9,12 @@ using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Services.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -50,28 +46,24 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
     /// <returns>The seeded service.</returns>
     private static async Task<ClientService> SeedActiveServiceAsync(IHostpanelDbContext context, DateTimeOffset? nextRenewalAt)
     {
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(client);
 
         var group = ProductGroup.Create($"apply-renewals-{Guid.NewGuid():N}", null);
         context.ProductGroups.Add(group);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 5m, 50m, DateTimeOffset.UtcNow);
         context.Products.Add(product);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var service = ClientService.Create(client.Id, product.Id, BillingCycleNames.Monthly);
-        service.Activate("panel-ref");
-        service.Update(
-            domain: null, dedicatedIp: null, username: null, password: null, billingCycle: BillingCycleNames.Monthly,
-            recurringAmount: 5m, paymentMethod: null, nextRenewalAt: nextRenewalAt, subscriptionId: null,
-            overrideAutoSuspend: false, suspendUntil: null, autoTerminateEndOfCycle: false,
-            autoTerminateReason: null, adminNotes: null, provisioningRef: service.ProvisioningRef,
-            firstPaymentAmount: 5m, promotionCode: null, terminatedAt: null,
-            serverId: null, quantity: 1, productId: null);
+        var service = ClientService.Create(client.Id, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        await ServicesTestSeeds.AddActivatedAsync(context, service, "panel-ref", DateTimeOffset.UtcNow);
+        service.ChangeBillingTerms(new ServiceBillingTerms(
+            BillingCycle: BillingCycle.Monthly, Quantity: 1, FirstPaymentAmount: 5m,
+            RecurringAmount: 5m, NextRenewalAt: nextRenewalAt, PaymentMethod: null,
+            PromotionCode: null, SubscriptionId: null));
 
-        context.ClientServices.Add(service);
         await context.SaveChangesAsync(CancellationToken.None);
         return service;
     }
@@ -89,9 +81,8 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
     {
         var clientId = await DomainsTestSeeds.SeedClientAsync(context);
         var domain = RegisteredDomain.Register(
-            clientId, $"{Guid.NewGuid():N}.test", expiresAt, autoRenew: false, whoisPrivacy: false);
-        domain.Activate("REF-STUB");
-        context.Domains.Add(domain);
+            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow, expiresAt, autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
+        await DomainsTestSeeds.AddActivatedAsync(context, domain, "REF-STUB", domain.ExpiresAt, DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
         return domain;
     }
@@ -103,7 +94,7 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
     /// <returns>The saved invoice (still tracked).</returns>
     private static async Task<Invoice> SeedServiceRenewalInvoiceAsync(IHostpanelDbContext context, ClientService service, DateTimeOffset start)
     {
-        var invoice = Invoice.Create(service.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(service.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         invoice.AddServiceRenewal("Starter renewal", 5m, service.Id, start, start.AddMonths(1));
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);
@@ -152,7 +143,7 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var start = DateTimeOffset.UtcNow.AddDays(5);
         var service = await SeedActiveServiceAsync(context, start);
         var invoice = await SeedServiceRenewalInvoiceAsync(context, service, start);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         var result = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
@@ -162,11 +153,85 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         line.RenewalAppliedAt.Should().NotBeNull();
         (await ReloadServiceAsync(context, service.Id)).NextRenewalAt.Should().Be(line.RenewalPeriodEnd);
 
-        // Exactly once: the marker, not the call, decides -- a second dispatch changes nothing.
+        // Exactly once: the marker, not the call, decides: a second dispatch changes nothing.
         var again = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
         again.IsSuccess.Should().BeTrue();
         (await ReloadServiceAsync(context, service.Id)).NextRenewalAt.Should().Be(line.RenewalPeriodEnd);
         (await ReloadLineAsync(context, invoice.Id)).RenewalAppliedAt.Should().Be(line.RenewalAppliedAt);
+    }
+
+    /// <summary>
+    /// A run that extended the service but crashed before marking the line (the extension is saved by
+    /// the Services module in its own scope) is retried without a second period: the line is marked
+    /// and the renewal date stays at the paid period's end.
+    /// </summary>
+    [Fact]
+    public async Task ExtensionSavedButMarkerLost_RetryDoesNotExtendTwice()
+    {
+        var host = Host(new FakeEmailSender());
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var start = DateTimeOffset.UtcNow.AddDays(5);
+        var service = await SeedActiveServiceAsync(context, start);
+        var invoice = await SeedServiceRenewalInvoiceAsync(context, service, start);
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
+        service.ExtendRenewalTo(start.AddMonths(1));
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var result = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var line = await ReloadLineAsync(context, invoice.Id);
+        line.RenewalAppliedAt.Should().NotBeNull();
+        (await ReloadServiceAsync(context, service.Id)).NextRenewalAt.Should().Be(line.RenewalPeriodEnd);
+    }
+
+    /// <summary>
+    /// A service line has no claim, so the payment event and the sweep can both extend it. The
+    /// runner whose marker save loses to the other runner's marker skips that line and still
+    /// applies the invoice's other lines and lifts the overdue suspension.
+    /// </summary>
+    [Fact]
+    public async Task LostServiceMarkerRace_SkipsLineAndContinues()
+    {
+        var host = Host(new FakeEmailSender());
+        using var scope = host.Services.CreateScope();
+        using var rivalScope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var rivalContext = rivalScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var start = DateTimeOffset.UtcNow.AddDays(-4);
+        var raced = await SeedActiveServiceAsync(context, start);
+        var other = await SeedActiveServiceAsync(context, start);
+        var invoice = await SeedServiceRenewalInvoiceAsync(context, raced, start);
+        invoice.AddServiceRenewal("Starter renewal (second)", 5m, other.Id, start, start.AddMonths(1));
+        invoice.MarkOverdue(DateTimeOffset.UtcNow);
+        raced.Suspend(DateTimeOffset.UtcNow, "overdue", hostingAlreadyUpdated: true, source: SuspensionSource.Overdue);
+        await context.SaveChangesAsync(CancellationToken.None);
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
+        await context.SaveChangesAsync(CancellationToken.None);
+        var racedLineId = invoice.Items.Single(l => l.ClientServiceId == raced.Id).Id;
+        var rivalMarker = DateTimeOffset.UtcNow.AddMinutes(-1);
+
+        // The rival runner's marker lands from its own scope while this scope still tracks the line
+        // unapplied: the handler here extends again (a no-op) and its marker save is the one that loses.
+        await rivalContext.InvoiceItems.Where(l => l.Id == racedLineId)
+            .ExecuteUpdateAsync(set => set.SetProperty(l => l.RenewalAppliedAt, rivalMarker));
+        var handler = ActivatorUtilities.CreateInstance<ApplyPaidRenewalsHandler>(scope.ServiceProvider);
+
+        var result = await handler.HandleAsync(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var lines = await rivalContext.InvoiceItems.AsNoTracking()
+            .Where(l => l.InvoiceId == invoice.Id).ToListAsync(CancellationToken.None);
+        lines.Single(l => l.Id == racedLineId).RenewalAppliedAt.Should().BeCloseTo(rivalMarker, TimeSpan.FromMilliseconds(1));
+        var otherLine = lines.Single(l => l.ClientServiceId == other.Id);
+        otherLine.RenewalAppliedAt.Should().NotBeNull();
+        (await ReloadServiceAsync(rivalContext, other.Id)).NextRenewalAt.Should().Be(otherLine.RenewalPeriodEnd);
+        var racedService = await ReloadServiceAsync(rivalContext, raced.Id);
+        racedService.Status.Should().Be(ServiceStatus.Active);
+        // PostgreSQL keeps microseconds, so the stored date is the expected one to the microsecond.
+        racedService.NextRenewalAt.Should().BeCloseTo(start.AddMonths(1), TimeSpan.FromMicroseconds(1));
     }
 
     /// <summary>A partial manual payment applies nothing.</summary>
@@ -191,10 +256,7 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         (await ReloadLineAsync(context, invoice.Id)).RenewalAppliedAt.Should().BeNull();
     }
 
-    /// <summary>
-    /// A partial payment followed by the rest renews once the invoice is covered. Before, the first
-    /// payment marked the invoice Paid and the second was refused, so the renewal stayed stuck.
-    /// </summary>
+    /// <summary>A partial payment followed by the rest renews once the payments cover the invoice.</summary>
     [Fact]
     public async Task PartialPaymentThenTheRest_Renews()
     {
@@ -262,11 +324,11 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var service = await SeedActiveServiceAsync(context, DateTimeOffset.UtcNow.AddDays(5));
         var before = (await ReloadServiceAsync(context, service.Id)).NextRenewalAt;
-        var invoice = Invoice.Create(service.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(service.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         invoice.AddItem("Starter (legacy line)", 5m, 1, service.Id);
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         var result = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
@@ -289,10 +351,10 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var start = DateTimeOffset.UtcNow.AddDays(-4);
         var service = await SeedActiveServiceAsync(context, start);
         var invoice = await SeedServiceRenewalInvoiceAsync(context, service, start);
-        invoice.MarkOverdue();
-        service.Suspend("overdue", hostingAlreadyUpdated: true, source: SuspensionSource.Overdue);
+        invoice.MarkOverdue(DateTimeOffset.UtcNow);
+        service.Suspend(DateTimeOffset.UtcNow, "overdue", hostingAlreadyUpdated: true, source: SuspensionSource.Overdue);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
@@ -314,9 +376,9 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var start = DateTimeOffset.UtcNow.AddDays(-4);
         var service = await SeedActiveServiceAsync(context, start);
         var invoice = await SeedServiceRenewalInvoiceAsync(context, service, start);
-        service.Suspend("abuse", hostingAlreadyUpdated: true, source: SuspensionSource.Manual);
+        service.Suspend(DateTimeOffset.UtcNow, "abuse", hostingAlreadyUpdated: true, source: SuspensionSource.Manual);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
@@ -340,16 +402,16 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var start = DateTimeOffset.UtcNow.AddDays(-4);
         var service = await SeedActiveServiceAsync(context, start);
         var invoice = await SeedServiceRenewalInvoiceAsync(context, service, start);
-        invoice.MarkOverdue();
+        invoice.MarkOverdue(DateTimeOffset.UtcNow);
 
-        var other = Invoice.Create(service.ClientId, DateTimeOffset.UtcNow.AddDays(-10), "USD");
+        var other = Invoice.Create(service.ClientId, DateTimeOffset.UtcNow.AddDays(-10), "USD", DateTimeOffset.UtcNow);
         other.AddItem("Starter add-on", 3m, 1, service.Id);
         context.Invoices.Add(other);
         await context.SaveChangesAsync(CancellationToken.None);
-        other.MarkOverdue();
-        service.Suspend("overdue", hostingAlreadyUpdated: true, source: SuspensionSource.Overdue);
+        other.MarkOverdue(DateTimeOffset.UtcNow);
+        service.Suspend(DateTimeOffset.UtcNow, "overdue", hostingAlreadyUpdated: true, source: SuspensionSource.Overdue);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
@@ -369,14 +431,14 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var service = await SeedActiveServiceAsync(context, DateTimeOffset.UtcNow.AddDays(-4));
-        var invoice = Invoice.Create(service.ClientId, DateTimeOffset.UtcNow.AddDays(-4), "USD");
+        var invoice = Invoice.Create(service.ClientId, DateTimeOffset.UtcNow.AddDays(-4), "USD", DateTimeOffset.UtcNow);
         invoice.AddItem("Starter (legacy line)", 5m, 1, service.Id);
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkOverdue();
-        service.Suspend("overdue", hostingAlreadyUpdated: true, source: SuspensionSource.Overdue);
+        invoice.MarkOverdue(DateTimeOffset.UtcNow);
+        service.Suspend(DateTimeOffset.UtcNow, "overdue", hostingAlreadyUpdated: true, source: SuspensionSource.Overdue);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
@@ -397,11 +459,11 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var domain = await SeedDomainAsync(context, DateTimeOffset.UtcNow.AddDays(10));
         var expiry = await context.Domains.AsNoTracking().Where(d => d.Id == domain.Id).Select(d => d.ExpiresAt).FirstAsync();
-        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         invoice.AddDomainRenewal($"{domain.Name} renewal", 12m, domain.Id, expiry, expiry.AddYears(1));
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         var result = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
@@ -434,11 +496,11 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var expiry = await context.Domains.AsNoTracking().Where(d => d.Id == domain.Id).Select(d => d.ExpiresAt).FirstAsync();
 
         // The invoice was raised for the period starting a year ago; the domain moved on since.
-        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         invoice.AddDomainRenewal($"{domain.Name} renewal", 12m, domain.Id, expiry.AddYears(-1), expiry);
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         var result = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
@@ -465,11 +527,11 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var domain = await SeedDomainAsync(context, DateTimeOffset.UtcNow.AddDays(10));
         var expiry = await context.Domains.AsNoTracking().Where(d => d.Id == domain.Id).Select(d => d.ExpiresAt).FirstAsync();
-        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         invoice.AddDomainRenewal($"{domain.Name} renewal", 12m, domain.Id, expiry, expiry.AddYears(1));
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         var nudged = expiry.AddHours(9);
@@ -500,11 +562,11 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var domain = await SeedDomainAsync(context, DateTimeOffset.UtcNow.AddDays(10));
         var expiry = await context.Domains.AsNoTracking().Where(d => d.Id == domain.Id).Select(d => d.ExpiresAt).FirstAsync();
-        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         invoice.AddDomainRenewal($"{domain.Name} renewal", 12m, domain.Id, expiry, expiry.AddYears(1));
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         var result = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
@@ -535,15 +597,15 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var clientId = await DomainsTestSeeds.SeedClientAsync(context);
         var domain = RegisteredDomain.Register(
-            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow.AddDays(10), autoRenew: false, whoisPrivacy: false);
+            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(10), autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
         context.Domains.Add(domain);
         await context.SaveChangesAsync(CancellationToken.None);
         var expiry = await context.Domains.AsNoTracking().Where(d => d.Id == domain.Id).Select(d => d.ExpiresAt).FirstAsync();
-        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         invoice.AddDomainRenewal($"{domain.Name} renewal", 12m, domain.Id, expiry, expiry.AddYears(1));
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         var result = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
@@ -614,6 +676,41 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var line = await ReloadLineAsync(context, invoice.Id);
         line.RenewalAppliedAt.Should().BeNull();
         line.RenewalAttemptAt.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// A runner that read the line unclaimed but loses the claim save to another runner backs off:
+    /// the registrar is not called, the other runner's claim stays, and the lost claim is not
+    /// retried by a later save in the same scope.
+    /// </summary>
+    [Fact]
+    public async Task LostClaimRace_BacksOffWithoutRenewing()
+    {
+        var host = Host(new FakeEmailSender()).WithWebHostBuilder(b =>
+            b.ConfigureTestServices(s => s.AddScoped<IRegistrarProvider, CountingRegistrar>()));
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var (domain, invoice) = await SeedPaidDomainRenewalAsync(context, DateTimeOffset.UtcNow.AddDays(10));
+        var expiry = await context.Domains.AsNoTracking().Where(d => d.Id == domain.Id).Select(d => d.ExpiresAt).FirstAsync();
+        var lineId = invoice.Items.Single().Id;
+        var rivalClaim = DateTimeOffset.UtcNow.AddMinutes(-1);
+
+        // The scope still tracks the line as unclaimed, so the handler reads it unclaimed while the
+        // database already holds the rival runner's claim: its own claim save is the one that loses.
+        await context.InvoiceItems.Where(l => l.Id == lineId)
+            .ExecuteUpdateAsync(set => set.SetProperty(l => l.RenewalAttemptAt, rivalClaim));
+        var handler = ActivatorUtilities.CreateInstance<ApplyPaidRenewalsHandler>(scope.ServiceProvider);
+
+        var result = await handler.HandleAsync(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        TestRegistrar.RenewCallsFor(domain.Name).Should().Be(0);
+        (await context.Domains.AsNoTracking().FirstAsync(d => d.Id == domain.Id)).ExpiresAt.Should().Be(expiry);
+        invoice.Items.Single().RenewalAttemptAt.Should().NotBeNull("the lost claim reloads the rival's claim into the tracked line");
+        await context.SaveChangesAsync(CancellationToken.None);
+        var line = await ReloadLineAsync(context, invoice.Id);
+        line.RenewalAppliedAt.Should().BeNull();
+        line.RenewalAttemptAt.Should().BeCloseTo(rivalClaim, TimeSpan.FromMilliseconds(1));
     }
 
     /// <summary>
@@ -704,14 +801,14 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
         var start = DateTimeOffset.UtcNow.AddDays(-4);
         var service = await SeedActiveServiceAsync(context, start);
         var invoice = await SeedServiceRenewalInvoiceAsync(context, service, start);
-        invoice.MarkOverdue();
+        invoice.MarkOverdue(DateTimeOffset.UtcNow);
 
-        var next = Invoice.Create(service.ClientId, DateTimeOffset.UtcNow.AddDays(20), "USD");
+        var next = Invoice.Create(service.ClientId, DateTimeOffset.UtcNow.AddDays(20), "USD", DateTimeOffset.UtcNow);
         next.AddServiceRenewal("Starter renewal (next)", 5m, service.Id, start.AddMonths(1), start.AddMonths(2));
         context.Invoices.Add(next);
-        service.Suspend("overdue", hostingAlreadyUpdated: true, source: SuspensionSource.Overdue);
+        service.Suspend(DateTimeOffset.UtcNow, "overdue", hostingAlreadyUpdated: true, source: SuspensionSource.Overdue);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
@@ -723,167 +820,17 @@ public sealed class ApplyPaidRenewalsTests(IntegrationTestFactory factory) : ICl
     /// <param name="context">The data context to seed through.</param>
     /// <param name="expiresAt">The domain's current expiry.</param>
     /// <returns>The domain and the paid invoice (both still tracked).</returns>
-    private static async Task<(RegisteredDomain Domain, Invoice Invoice)> SeedPaidDomainRenewalAsync(
+    private static async Task<PaidDomainRenewal> SeedPaidDomainRenewalAsync(
         IHostpanelDbContext context, DateTimeOffset expiresAt)
     {
         var domain = await SeedDomainAsync(context, expiresAt);
         var expiry = await context.Domains.AsNoTracking().Where(d => d.Id == domain.Id).Select(d => d.ExpiresAt).FirstAsync();
-        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(domain.ClientId, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         invoice.AddDomainRenewal($"{domain.Name} renewal", 12m, domain.Id, expiry, expiry.AddYears(1));
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);
-        invoice.MarkPaid("t");
+        invoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
-        return (domain, invoice);
+        return new(domain, invoice);
     }
-}
-
-/// <summary>
-/// The test registrars' common shape: behaves like <see cref="StubRegistrarProvider"/> in every
-/// member but <see cref="RenewAsync"/>, which each variant defines, and counts renewal calls per
-/// domain name. Top-level and internal, not nested and private: Wolverine's generated handler code
-/// must be able to name the type it resolves for <c>RenewDomainHandler</c>. The counter is static
-/// because the registrar is scoped and a fresh instance serves every handler.
-/// </summary>
-internal abstract class TestRegistrar : IRegistrarProvider
-{
-    /// <summary>Renewal calls per domain name, across every instance.</summary>
-    private static readonly ConcurrentDictionary<string, int> RenewCalls = new();
-
-    /// <summary>The stub every non-renewal call goes to.</summary>
-    private readonly StubRegistrarProvider _inner = new();
-
-    /// <summary>How many times any test registrar was asked to renew <paramref name="domainName"/>.</summary>
-    /// <param name="domainName">The domain name.</param>
-    /// <returns>The call count.</returns>
-    public static int RenewCallsFor(string domainName) => RenewCalls.GetValueOrDefault(domainName);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> RenewAsync(DomainRenewalOrder request, CancellationToken ct)
-    {
-        RenewCalls.AddOrUpdate(request.DomainName, 1, (_, n) => n + 1);
-        return Renew(request, _inner, ct);
-    }
-
-    /// <summary>The variant's answer to a renewal.</summary>
-    /// <param name="request">The renewal order.</param>
-    /// <param name="stub">The succeeding stub, for variants that delegate.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>The registrar's answer.</returns>
-    protected abstract Task<RegistrarResult> Renew(DomainRenewalOrder request, StubRegistrarProvider stub, CancellationToken ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> RegisterAsync(DomainRegistrationOrder request, CancellationToken ct) => _inner.RegisterAsync(request, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> TransferAsync(DomainTransferOrder request, CancellationToken ct) => _inner.TransferAsync(request, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> CancelTransferAsync(string domainName, string registrarRef, CancellationToken ct) =>
-        _inner.CancelTransferAsync(domainName, registrarRef, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> InitiateOutgoingTransferAsync(string domainName, string registrarRef, CancellationToken ct) =>
-        _inner.InitiateOutgoingTransferAsync(domainName, registrarRef, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> SetAutoRenewAsync(string domainName, string registrarRef, bool enabled, CancellationToken ct) =>
-        _inner.SetAutoRenewAsync(domainName, registrarRef, enabled, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> SetWhoisPrivacyAsync(string domainName, string registrarRef, bool enabled, CancellationToken ct) =>
-        _inner.SetWhoisPrivacyAsync(domainName, registrarRef, enabled, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> SetRegistrarLockAsync(string domainName, string registrarRef, bool locked, CancellationToken ct) =>
-        _inner.SetRegistrarLockAsync(domainName, registrarRef, locked, ct);
-
-    /// <inheritdoc/>
-    public Task<string?> GetEppCodeAsync(string domainName, string registrarRef, CancellationToken ct) =>
-        _inner.GetEppCodeAsync(domainName, registrarRef, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> SetNameserversAsync(string domainName, string registrarRef, IReadOnlyList<string> nameservers, CancellationToken ct) =>
-        _inner.SetNameserversAsync(domainName, registrarRef, nameservers, ct);
-
-    /// <inheritdoc/>
-    public Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(string domainName, string registrarRef, CancellationToken ct) =>
-        _inner.GetDnsRecordsAsync(domainName, registrarRef, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> AddDnsRecordAsync(string domainName, string registrarRef, DnsRecord record, CancellationToken ct) =>
-        _inner.AddDnsRecordAsync(domainName, registrarRef, record, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> UpdateDnsRecordAsync(string domainName, string registrarRef, DnsRecord record, CancellationToken ct) =>
-        _inner.UpdateDnsRecordAsync(domainName, registrarRef, record, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> DeleteDnsRecordAsync(string domainName, string registrarRef, int recordId, CancellationToken ct) =>
-        _inner.DeleteDnsRecordAsync(domainName, registrarRef, recordId, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> ModifyContactDetailsAsync(string domainName, DomainContact contact, CancellationToken ct) =>
-        _inner.ModifyContactDetailsAsync(domainName, contact, ct);
-
-    /// <inheritdoc/>
-    public Task<DomainContact?> GetContactDetailsAsync(string domainName, CancellationToken ct) =>
-        _inner.GetContactDetailsAsync(domainName, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> SetEmailForwardingAsync(string domainName, bool enabled, CancellationToken ct) =>
-        _inner.SetEmailForwardingAsync(domainName, enabled, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> AddEmailForwardingRuleAsync(string domainName, string source, string destination, CancellationToken ct) =>
-        _inner.AddEmailForwardingRuleAsync(domainName, source, destination, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> UpdateEmailForwardingRuleAsync(string domainName, string source, string destination, CancellationToken ct) =>
-        _inner.UpdateEmailForwardingRuleAsync(domainName, source, destination, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> DeleteEmailForwardingRuleAsync(string domainName, string source, CancellationToken ct) =>
-        _inner.DeleteEmailForwardingRuleAsync(domainName, source, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> SetDnsManagementAsync(string domainName, bool enabled, CancellationToken ct) =>
-        _inner.SetDnsManagementAsync(domainName, enabled, ct);
-
-    /// <inheritdoc/>
-    public Task<bool> CheckAvailabilityAsync(string domainName, CancellationToken ct) => _inner.CheckAvailabilityAsync(domainName, ct);
-
-    /// <inheritdoc/>
-    public Task<WhoisInfo?> GetWhoisAsync(string domainName, CancellationToken ct) => _inner.GetWhoisAsync(domainName, ct);
-
-    /// <inheritdoc/>
-    public Task<RegistrarResult> CheckDomainActiveAsync(string domainName, CancellationToken ct) =>
-        _inner.CheckDomainActiveAsync(domainName, ct);
-
-    /// <inheritdoc/>
-    public Task<IReadOnlyList<TldPricing>> GetTldPricingAsync(CancellationToken ct) => _inner.GetTldPricingAsync(ct);
-}
-
-/// <summary>A registrar that cleanly refuses every renewal.</summary>
-internal sealed class RefusingRegistrar : TestRegistrar
-{
-    /// <inheritdoc/>
-    protected override Task<RegistrarResult> Renew(DomainRenewalOrder request, StubRegistrarProvider stub, CancellationToken ct)
-        => Task.FromResult(new RegistrarResult(false, null, null, "refused"));
-}
-
-/// <summary>A registrar whose renewal call throws, as a timeout does: the outcome is unknown.</summary>
-internal sealed class ThrowingRegistrar : TestRegistrar
-{
-    /// <inheritdoc/>
-    protected override Task<RegistrarResult> Renew(DomainRenewalOrder request, StubRegistrarProvider stub, CancellationToken ct)
-        => throw new HttpRequestException("registrar timed out");
-}
-
-/// <summary>A registrar that renews like the stub, and only counts the calls.</summary>
-internal sealed class CountingRegistrar : TestRegistrar
-{
-    /// <inheritdoc/>
-    protected override Task<RegistrarResult> Renew(DomainRenewalOrder request, StubRegistrarProvider stub, CancellationToken ct)
-        => stub.RenewAsync(request, ct);
 }

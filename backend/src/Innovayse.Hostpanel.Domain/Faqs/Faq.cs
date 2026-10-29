@@ -8,7 +8,7 @@ namespace Innovayse.Hostpanel.Domain.Faqs;
 /// A frequently asked question shown on the storefront, with per-locale translations.
 /// Stored in the <c>Faqs</c> table.
 /// </summary>
-public sealed class Faq : BaseEntity, IAggregateRoot
+public sealed class Faq : BaseEntity, IAggregateRoot, ISortable
 {
     /// <summary>Gets the topic the question belongs to.</summary>
     public FaqCategory Category { get; private set; }
@@ -28,7 +28,7 @@ public sealed class Faq : BaseEntity, IAggregateRoot
     /// <summary>Gets the per-locale translations.</summary>
     public IReadOnlyList<FaqTranslation> Translations => _translations.AsReadOnly();
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Faq() { }
 
     /// <summary>
@@ -48,7 +48,6 @@ public sealed class Faq : BaseEntity, IAggregateRoot
             Category = category,
             SortOrder = sortOrder,
             IsActive = isActive,
-            CreatedAt = DateTimeOffset.UtcNow
         };
     }
 
@@ -112,6 +111,23 @@ public sealed class Faq : BaseEntity, IAggregateRoot
         if (existing is not null)
         {
             _translations.Remove(existing);
+        }
+    }
+
+    /// <summary>
+    /// Makes the question's translations exactly the given set: locales that are not in it are
+    /// removed, the rest are added or updated in place.
+    /// </summary>
+    /// <param name="translations">The complete set of translations, keyed by BCP-47 locale code.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="translations"/> is null.</exception>
+    public void ReplaceTranslations(IReadOnlyDictionary<string, FaqTranslationContent> translations)
+    {
+        ArgumentNullException.ThrowIfNull(translations);
+
+        _translations.RemoveAll(t => !translations.ContainsKey(t.Locale));
+        foreach (var (locale, content) in translations)
+        {
+            SetTranslation(locale, content.Question, content.Answer);
         }
     }
 

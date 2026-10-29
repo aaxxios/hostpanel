@@ -1,12 +1,11 @@
 /**
- * Tests for the knowledgebase mapping in `server/utils/kb.ts`: the article shape the pages read
- * and the category list derived from the published articles.
+ * Tests for the knowledgebase mapping in `server/utils/kb.ts`: the article shape the pages read.
  *
  * @module tests/server/utils/kb.test
  */
 
 import { describe, expect, it } from 'vitest'
-import { toKbArticle, toKbCategories } from '~/server/utils/kb'
+import { toKbArticle } from '~/server/utils/kb'
 import type { BackendKbArticle } from '~/types/backendkbarticle'
 
 /**
@@ -20,7 +19,6 @@ const article = (overrides: Partial<BackendKbArticle> = {}): BackendKbArticle =>
   title: 'Reset a password',
   content: '<p>Open <strong>settings</strong>.</p>',
   category: 'Account',
-  isPublished: true,
   ...overrides,
 })
 
@@ -40,24 +38,5 @@ describe('toKbArticle', () => {
   it('invents no view count or update date', () => {
     expect(toKbArticle(article())).not.toHaveProperty('views')
     expect(toKbArticle(article())).not.toHaveProperty('dateupdated')
-  })
-})
-
-describe('toKbCategories', () => {
-  it('counts articles per category, alphabetically, the name doubling as the id', () => {
-    const categories = toKbCategories([
-      article({ id: 1, category: 'Billing' }),
-      article({ id: 2, category: 'Account' }),
-      article({ id: 3, category: 'Billing' }),
-    ])
-
-    expect(categories).toEqual([
-      { id: 'Account', name: 'Account', articlecount: 1 },
-      { id: 'Billing', name: 'Billing', articlecount: 2 },
-    ])
-  })
-
-  it('skips articles with a blank category', () => {
-    expect(toKbCategories([article({ category: '  ' })])).toEqual([])
   })
 })

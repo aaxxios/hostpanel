@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Billing.Enums;
+
 /// <summary>Classifies financial transactions recorded against an <see cref="Invoice"/>.</summary>
 public enum InvoiceTransactionType
 {

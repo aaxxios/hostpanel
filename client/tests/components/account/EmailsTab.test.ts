@@ -16,12 +16,12 @@ vi.mock('qrcode', () => ({ default: { toDataURL: async (): Promise<string> => ''
  * Builds a list of sent emails.
  *
  * @param count - How many to build.
- * @returns The emails, subjects "Mail 1" ... "Mail N".
+ * @returns The emails, subjects "Mail 1" to "Mail N".
  */
 const emails = (count: number): ClientEmailSummary[] =>
   Array.from({ length: count }, (_, index) => ({
-    id: String(index + 1), subject: `Mail ${index + 1}`, date: '2026-01-01 10:00:00'
-  } as unknown as ClientEmailSummary))
+    id: index + 1, to: 'ada@example.test', subject: `Mail ${index + 1}`, sentAt: '2026-01-01T10:00:00Z', success: true
+  }))
 
 describe('EmailsTab', () => {
   it('shows a skeleton while loading', async () => {

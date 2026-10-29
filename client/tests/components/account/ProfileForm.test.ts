@@ -1,5 +1,7 @@
 /**
- * Unit tests for ProfileForm: the seeded draft, the save call, outcomes and the language field.
+ * Unit tests for ProfileForm: the seeded draft, the save call, outcomes and the language field,
+ * the check that refuses a blank required field before anything is sent, and the absence of the
+ * sign-in address, which changes only through the confirmed address change.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountAccount } from '~/tests/helpers/mountAccount'
@@ -7,6 +9,7 @@ import ProfileForm from '~/components/account/ProfileForm.vue'
 import { useAccountStore } from '~/stores/account'
 import { ActionOutcome } from '~/types/actionoutcome'
 import type { ClientUser } from '~/types/clientuser'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 
 vi.mock('~/composables/apis/useClientApi', () => ({ useClientApi: () => ({}) }))
 vi.mock('~/composables/apis/useBillingApi', () => ({ useBillingApi: () => ({}) }))
@@ -18,7 +21,12 @@ vi.mock('~/stores/catalog', async () => {
 })
 
 /** The profile being edited. */
-const user: ClientUser = { id: 1, firstname: 'Jane', lastname: 'Doe', email: 'jane@example.com', permissions: 0, country: 'AM' }
+const user: ClientUser = makeClientUser({
+  firstName: 'Jane',
+  lastName: 'Doe',
+  email: 'jane@example.com',
+  address: { street: null, address2: null, city: null, state: null, postCode: null, country: 'AM' }
+})
 
 /**
  * Mounts the form.
@@ -45,7 +53,17 @@ describe('ProfileForm', () => {
     const wrapper = mountForm()
 
     expect((wrapper.find('[data-testid="account-firstname"]').element as HTMLInputElement).value).toBe('Jane')
-    expect((wrapper.find('[data-testid="account-email"]').element as HTMLInputElement).value).toBe('jane@example.com')
+  })
+
+  it('neither shows nor sends the sign-in address', async () => {
+    const wrapper = mountForm()
+    const save = vi.spyOn(useAccountStore(), 'saveProfile').mockResolvedValue(ActionOutcome.Succeeded)
+
+    await wrapper.find('form').trigger('submit')
+    await Promise.resolve()
+
+    expect(wrapper.find('[data-testid="account-email"]').exists()).toBe(false)
+    expect(save.mock.calls[0]?.[0]).not.toHaveProperty('email')
   })
 
   it('gives every text field a placeholder', () => {
@@ -64,8 +82,22 @@ describe('ProfileForm', () => {
     await wrapper.find('form').trigger('submit')
     await Promise.resolve()
 
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ firstname: 'Janet', emailprefs: expect.any(Object) }))
-    expect(wrapper.emitted('saved')).toHaveLength(1)
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({
+      firstName: 'Janet',
+      notifications: expect.objectContaining({ general: true, affiliate: true })
+    }))
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="ui-form-success"]').text()).toBe('client.profile.saved')
+  })
+
+  it('leaves the language out where the deployment does not store it', async () => {
+    const wrapper = mountForm(false)
+    const save = vi.spyOn(useAccountStore(), 'saveProfile').mockResolvedValue(ActionOutcome.Succeeded)
+
+    await wrapper.find('form').trigger('submit')
+    await Promise.resolve()
+
+    expect(save.mock.calls[0]?.[0].language).toBeUndefined()
   })
 
   it('stays open when the save is refused', async () => {
@@ -75,7 +107,20 @@ describe('ProfileForm', () => {
     await wrapper.find('form').trigger('submit')
     await Promise.resolve()
 
-    expect(wrapper.emitted('saved')).toBeUndefined()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="ui-form-success"]').exists()).toBe(false)
+  })
+
+  it('refuses a blank required field on its input without saving', async () => {
+    const wrapper = mountForm()
+    const save = vi.spyOn(useAccountStore(), 'saveProfile').mockResolvedValue(ActionOutcome.Succeeded)
+
+    await wrapper.find('[data-testid="account-firstname"]').setValue('  ')
+    await wrapper.find('form').trigger('submit')
+    await wrapper.vm.$nextTick()
+
+    expect(save).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('client.profile.validation.firstNameRequired')
   })
 
   it('emits cancel from the cancel button', async () => {

@@ -46,8 +46,12 @@ export interface StorefrontForm {
   loadingEntry: Ref<boolean>
   /** True while the form is being saved. */
   saving: Ref<boolean>
-  /** Sentence for a failed load or save, null when none. */
+  /** Sentence for a failed load of the stored entry, null when none. */
+  loadError: Ref<string | null>
+  /** Sentence for a refused save, null when none. */
   saveError: Ref<string | null>
+  /** Loads the stored entry again after a refused load. */
+  reload: () => Promise<void>
   /** True when the form has edits not yet saved. */
   isDirty: Ref<boolean>
   /** Saves the form and, on success, resolves once the list is shown again. */
@@ -78,7 +82,10 @@ export const useStorefrontForm = <TItem extends StorefrontEntity, TPayload>(
   /** True while the form is being saved. */
   const saving = ref(false)
 
-  /** Sentence for a failed load or save, null when none. */
+  /** Sentence for a failed load of the stored entry, null when none. */
+  const loadError = ref<string | null>(null)
+
+  /** Sentence for a refused save, null when none. */
   const saveError = ref<string | null>(null)
 
   /** True when the form has edits not yet saved. */
@@ -88,25 +95,30 @@ export const useStorefrontForm = <TItem extends StorefrontEntity, TPayload>(
     isDirty.value = true
   }, { deep: true })
 
-  onMounted(async () => {
-    // Sentences left by another form or page must not show up on this one.
-    options.store.resetErrors()
-    if (!isEditMode.value) {
-      return
-    }
+  /** Loads the stored entry into the form; a refusal or a missing entry is kept in `loadError`. */
+  const reload = async (): Promise<void> => {
+    loadError.value = null
     loadingEntry.value = true
     const id = Number(route.params.id)
     const item = await options.store.fetchOne(id)
     loadingEntry.value = false
     if (!item) {
       // A refused load carries the API's own sentence; "not found" is only for a list that loaded without the entry.
-      saveError.value = options.store.error ?? t('storefront.notFound', { id })
+      loadError.value = options.store.error ?? t('storefront.notFound', { id })
       return
     }
     options.populate(item)
     // The watcher above runs on the next flush; clearing the flag after it keeps loading from counting as an edit.
     await nextTick()
     isDirty.value = false
+  }
+
+  onMounted(async () => {
+    // Sentences left by another form or page must not show up on this one.
+    options.store.resetErrors()
+    if (isEditMode.value) {
+      await reload()
+    }
   })
 
   /** Saves the form through the store and returns to the list on success. */
@@ -134,5 +146,5 @@ export const useStorefrontForm = <TItem extends StorefrontEntity, TPayload>(
     void router.push(options.listPath)
   }
 
-  return { isEditMode, loadingEntry, saving, saveError, isDirty, save, cancel }
+  return { isEditMode, loadingEntry, saving, loadError, saveError, isDirty, reload, save, cancel }
 }

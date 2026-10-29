@@ -6,18 +6,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Email.Settings;
 /// <c>Smtp__From__Address</c> and <c>Smtp__From__Name</c>.
 /// </summary>
 /// <remarks>
-/// A nested subsection rather than the flat <c>Smtp__FromEmail</c> / <c>Smtp__FromName</c> pair
-/// this product used to read, because the nested shape is the one the rest of the Innovayse
-/// platform's mail configuration already uses and hostpanel was the only product spelling it
-/// differently. The two values are one thing -- an address and the name shown beside it -- and
+/// A nested subsection rather than a flat pair of keys, because the two values are one thing,
+/// an address and the name shown beside it, and
 /// neither is meaningful without the other.
 /// </remarks>
 public sealed class SmtpFromOptions
 {
     /// <summary>
-    /// Gets the sender email address. Carries no default: the one that used to be baked into
-    /// <c>appsettings.json</c> was this operator's own, which is the wrong address for anyone
-    /// else running this product and the wrong thing to discover on delivered mail.
+    /// Gets the sender email address. Carries no default: any built-in address would be the wrong
+    /// one for whoever runs this product.
     /// </summary>
     public required string Address { get; init; }
 

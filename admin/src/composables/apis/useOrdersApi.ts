@@ -5,8 +5,8 @@
  */
 
 import { buildQuery, useApi } from '@/composables/useApi'
-import type { OrderDetail, OrderFilter, OrderListItem } from '@/types/order'
-import type { PagedResult } from '@/types/pagedresult'
+import type { OrderDetail, OrderFilter, OrderFulfillment, OrderListItem } from '@/types/order'
+import type { PaginatedList } from '@/types/paginatedlist'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
 
@@ -24,8 +24,8 @@ export const useOrdersApi = () => {
    * @param filter - Page, page size and status.
    * @returns The page and the total count.
    */
-  const listOrders = (filter: OrderFilter): Promise<PagedResult<OrderListItem>> =>
-    request<PagedResult<OrderListItem>>(
+  const listOrders = (filter: OrderFilter): Promise<PaginatedList<OrderListItem>> =>
+    request<PaginatedList<OrderListItem>>(
       `${ApiPath.Orders}${buildQuery({ page: filter.page, pageSize: filter.pageSize, status: filter.status })}`,
     )
 
@@ -38,12 +38,13 @@ export const useOrdersApi = () => {
   const getOrder = (id: number): Promise<OrderDetail> => request<OrderDetail>(`${ApiPath.Orders}/${id}`)
 
   /**
-   * Accepts a pending order.
+   * Accepts a pending order and fulfils its lines.
    *
    * @param id - Order id.
-   * @returns Nothing.
+   * @returns The lines that could not be fulfilled.
    */
-  const acceptOrder = (id: number): Promise<void> => request<void>(`${ApiPath.Orders}/${id}/accept`, { method: HttpMethod.Post })
+  const acceptOrder = (id: number): Promise<OrderFulfillment> =>
+    request<OrderFulfillment>(`${ApiPath.Orders}/${id}/accept`, { method: HttpMethod.Post })
 
   /**
    * Cancels a pending order.

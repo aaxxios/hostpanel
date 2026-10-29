@@ -1,5 +1,5 @@
 /**
- * Tests of NewCustomersView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of NewCustomersView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -16,4 +16,5 @@ runReportCase({
     'GET /reports/new-customers': () => json([{ month: 'Jan', newSignups: 3, ordersPlaced: 2, ordersCompleted: 1, conversionRate: 0.5 }]),
   },
   expected: ['New Customers', 'Jan', 'New Signups'],
+  retryable: true,
 })

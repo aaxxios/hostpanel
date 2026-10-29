@@ -2,25 +2,28 @@ using System.Collections;
 using System.Globalization;
 using System.Reflection;
 using System.Resources;
-using FluentAssertions;
+using System.Text.RegularExpressions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Resources;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
+using Innovayse.Hostpanel.Shared.Controllers;
 
 namespace Innovayse.Hostpanel.Architecture.Tests;
 
 /// <summary>
-/// Every error code has a sentence in every language, and every error sentence belongs to a code.
-/// <c>IStringLocalizer</c> answers the key on a miss, so without this a customer would read
+/// Every error code has a sentence in every language and a status, and every error sentence belongs
+/// to a code. <c>IStringLocalizer</c> answers the key on a miss, so without this a customer would read
 /// <c>INVOICE_NOT_FOUND</c> and nothing would fail.
 /// </summary>
 /// <remarks>
-/// <c>ApplicationValidationMessages</c> (Application and Shared) joins the translated-keys theory in A4, when
-/// the validators move to <c>LocalizedValidator&lt;T&gt;</c> and their untranslated keys are written.
+/// The validators' keys are held to the same standard: every key a validator looks up has a sentence
+/// in every language, and no validation sentence outlives the last validator that used it.
 /// </remarks>
-public sealed class ResourceCoverageTests
+public sealed partial class ResourceCoverageTests
 {
+    /// <summary>The failure statuses <c>rules/api.md</c> allows a code to answer with.</summary>
+    private static readonly int[] AllowedFailureStatuses = [400, 401, 402, 403, 404, 409, 410, 413, 422, 423, 429, 500, 502, 503];
+
     /// <summary>The codes the registry declares.</summary>
     private static readonly IReadOnlyList<string> Codes = typeof(HostpanelErrorCodes)
         .GetFields(BindingFlags.Public | BindingFlags.Static)
@@ -110,7 +113,7 @@ public sealed class ResourceCoverageTests
             .ToDictionary(entry => entry.Key, entry => entry.Value);
         var translated = OwnEntries(typeof(ApplicationValidationMessages), locale);
 
-        neutral.Keys.Should().Contain(["SlideIconNameRequired", "SlideIconNameTooLong", "SlideImageUrlRequired", "SlideImageUrlTooLong", "SlideImageRequired"]);
+        neutral.Keys.Should().Contain(["SlideIconNameRequired", "SlideIconNameTooLong", "SlideImageUrlRequired", "SlideImageUrlTooLong"]);
 
         var untranslated = neutral.Keys
             .Where(key => !translated.TryGetValue(key, out var value)
@@ -119,6 +122,83 @@ public sealed class ResourceCoverageTests
             .ToList();
 
         untranslated.Should().BeEmpty("ApplicationValidationMessages.{0}.resx lacks its own slide sentences", locale);
+    }
+
+    /// <summary>
+    /// Every code answers with a failure status <c>rules/api.md</c> names, through <see cref="StatusMapping"/>.
+    /// A code that reaches no row answers 400, which is still a valid status, so this pins the table
+    /// against a row that answers something no client is prepared for.
+    /// </summary>
+    [Fact]
+    public void EveryCode_MapsToAnAllowedFailureStatus()
+    {
+        var offenders = Codes
+            .Where(code => !AllowedFailureStatuses.Contains(StatusMapping.For(code).Status))
+            .ToList();
+
+        offenders.Should().BeEmpty("every error code answers with a status from rules/api.md");
+    }
+
+    /// <summary>
+    /// Every key a validator looks up (<c>L["Key"]</c> in the Application sources) has its own
+    /// non-empty sentence in every supported locale, so no caller is shown a bare key.
+    /// </summary>
+    /// <param name="locale">A supported locale.</param>
+    [Theory]
+    [InlineData("en")]
+    [InlineData("ru")]
+    [InlineData("hy")]
+    public void EveryValidatorKey_InSupportedLocale_HasASentence(string locale)
+    {
+        var entries = OwnEntries(typeof(ApplicationValidationMessages), locale);
+
+        var missing = ValidatorKeys()
+            .Where(key => !entries.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
+            .ToList();
+
+        missing.Should().BeEmpty("ApplicationValidationMessages resx for {0} lacks {1}", locale, string.Join(", ", missing));
+    }
+
+    /// <summary>
+    /// No validation sentence is left behind once the last validator that used its key is gone; a dead
+    /// key is translated and reviewed for nothing.
+    /// </summary>
+    [Fact]
+    public void EveryValidationSentence_IsUsedByAValidator()
+    {
+        var used = ValidatorKeys();
+
+        var unused = OwnEntries(typeof(ApplicationValidationMessages), SupportedLanguages.Default).Keys
+            .Where(key => !used.Contains(key))
+            .ToList();
+
+        unused.Should().BeEmpty("ApplicationValidationMessages.resx holds keys no validator uses");
+    }
+
+    /// <summary>Matches a localizer lookup by a literal key, <c>L["Key"]</c> or <c>L["Key", arg]</c>.</summary>
+    /// <returns>The compiled expression; group <c>key</c> is the resource key.</returns>
+    [GeneratedRegex("""\bL\["(?<key>\w+)"\s*[,\]]""")]
+    private static partial Regex LocalizerLookup();
+
+    /// <summary>Matches an XML documentation line, whose examples are not lookups.</summary>
+    /// <returns>The compiled expression.</returns>
+    [GeneratedRegex("^\\s*///.*$", RegexOptions.Multiline)]
+    private static partial Regex DocumentationLine();
+
+    /// <summary>The keys the Application sources look up through a localizer.</summary>
+    /// <returns>The distinct keys.</returns>
+    private static HashSet<string> ValidatorKeys()
+    {
+        var backendRoot = UseCaseShapeTests.FindBackendRoot(AppContext.BaseDirectory);
+        var applicationRoot = Path.Combine(backendRoot, "src", "Innovayse.Hostpanel.Application");
+
+        return Directory
+            .EnumerateFiles(applicationRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                           && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .SelectMany(path => LocalizerLookup().Matches(DocumentationLine().Replace(File.ReadAllText(path), string.Empty)))
+            .Select(match => match.Groups["key"].Value)
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     /// <summary>

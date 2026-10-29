@@ -1,16 +1,18 @@
 <script setup lang="ts">
 /**
- * Products settings view — list and manage all products/plans.
+ * Products settings view: list and manage all products/plans.
  *
  * Shows the products in a table with create, edit and specification actions; fetches the products,
- * the groups and (when needed) the currencies on mount.
+ * the groups and (when needed) the currencies on mount. A refused load offers a retry; a refused save
+ * shows inside the product dialog next to its save button, a finished one above the table.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ProductFeaturesModal from '@/components/settings/ProductFeaturesModal.vue'
 import ProductFormModal from '@/components/settings/ProductFormModal.vue'
 import SettingsLoading from '@/components/settings/SettingsLoading.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -31,6 +33,8 @@ import { formatAffixed } from '@/lib/money'
 import { useSettingsStore } from '@/stores/settings'
 import type { CreateProductPayload, Product } from '@/types/product'
 import { ProductStatus, ProductType } from '@/types/productenums'
+import { useResultBanner } from '@/composables/useResultBanner'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
 
@@ -68,13 +72,23 @@ const typeLabels = computed<Record<string, string>>(() => ({
   [ProductType.Other]: t('settings.products.typeOther'),
 }))
 
-onMounted(async () => {
+/**
+ * Loads the products, their groups and (once) the currencies.
+ *
+ * @returns Resolves when every load has settled.
+ */
+const loadAll = async (): Promise<void> => {
   await Promise.all([
     store.fetchProducts(),
     store.fetchProductGroups(),
     currenciesStore.currencies.length === 0 ? currenciesStore.fetchAll() : Promise.resolve(),
   ])
-})
+}
+
+onMounted(loadAll)
+
+/** The success line of the last save, shown above the table; a refusal shows inside the dialog. */
+const feedback = useResultBanner()
 
 /**
  * Lists the other currencies (besides the base) a product sells in, for the "+AMD, EUR" hint.
@@ -89,7 +103,7 @@ const otherCurrencyCodes = (product: Product): string[] =>
  * Resolves the group name for a product.
  *
  * @param groupId - Product group ID.
- * @returns Group name or "—" if not found.
+ * @returns Group name, or a dash placeholder if not found.
  */
 const groupName = (groupId: number): string => store.productGroups.find((g) => g.id === groupId)?.name ?? '—'
 
@@ -98,7 +112,7 @@ const groupName = (groupId: number): string => store.productGroups.find((g) => g
  * currency has no figure for it, and the grid shows a dash rather than a number.
  *
  * @param amount - The price, or null when the product has none for that cycle.
- * @returns The formatted amount, or "—" when there is none.
+ * @returns The formatted amount, or a dash placeholder when there is none.
  */
 const formatPrice = (amount: number | null): string => {
   if (amount === null) {
@@ -113,6 +127,7 @@ const formatPrice = (amount: number | null): string => {
 
 /** Opens the dialog in create mode. */
 const openCreate = (): void => {
+  store.actionError = null
   editingProduct.value = null
   showModal.value = true
 }
@@ -123,6 +138,7 @@ const openCreate = (): void => {
  * @param product - The product to edit.
  */
 const openEdit = (product: Product): void => {
+  store.actionError = null
   editingProduct.value = product
   showModal.value = true
 }
@@ -133,6 +149,7 @@ const openEdit = (product: Product): void => {
  * @param payload - The product data to save.
  */
 const handleSave = async (payload: CreateProductPayload): Promise<void> => {
+  feedback.clear()
   saving.value = true
   let saved: boolean
   if (editingProduct.value) {
@@ -153,15 +170,14 @@ const handleSave = async (payload: CreateProductPayload): Promise<void> => {
   saving.value = false
   if (saved) {
     showModal.value = false
+    feedback.show(t('shared.changesSavedSuccessfully'), false)
   }
 }
 </script>
 
 <template>
   <UiStack gap="none" data-testid="products-view">
-    <UiAlert v-if="store.actionError" variant="danger" class="mb-4" data-testid="products-action-error">
-      {{ store.actionError }}
-    </UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="UiTone.Success" class="mb-4" data-testid="products-feedback" />
 
     <UiPageHeader :title="t('settings.products.products')" :subtitle="t('settings.products.manageHostingPlansAndServices')">
       <template #actions>
@@ -173,9 +189,12 @@ const handleSave = async (payload: CreateProductPayload): Promise<void> => {
 
     <SettingsLoading v-if="store.loading" :message="t('settings.products.loadingProducts')" />
 
-    <UiAlert v-else-if="store.error" variant="danger" data-testid="products-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="store.error"
+      :message="store.error"
+      testid="products-error"
+      @retry="loadAll"
+    />
 
     <UiCard v-else class="overflow-hidden">
       <UiTable density="comfortable" :empty="store.products.length === 0" :colspan="7">
@@ -247,6 +266,7 @@ const handleSave = async (payload: CreateProductPayload): Promise<void> => {
       :product="editingProduct"
       :groups="store.productGroups"
       :saving="saving"
+      :error="store.actionError"
       @save="handleSave"
       @close="showModal = false"
     />

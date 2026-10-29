@@ -1,6 +1,8 @@
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Shared.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Support.Commands.CreateDownload;
 
@@ -20,10 +22,17 @@ public sealed class CreateDownloadHandler
     /// <summary>Handles the command.</summary>
     /// <param name="cmd">The download's details.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success with the new download's id. This use case answers no refusal code.</returns>
+    /// <returns>
+    /// Success with the new download's id, or <c>DOWNLOAD_CATEGORY_NOT_FOUND</c> when the category names no category.
+    /// </returns>
     public async Task<Result<int>> HandleAsync(CreateDownloadCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
+
+        if (!await _context.DownloadCategories.AnyAsync(c => c.Id == cmd.CategoryId, ct))
+        {
+            return Result<int>.FailureCode(HostpanelErrorCodes.DOWNLOAD_CATEGORY_NOT_FOUND);
+        }
 
         var download = Download.Create(
             cmd.Title,

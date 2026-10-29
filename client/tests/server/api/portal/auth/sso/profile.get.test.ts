@@ -70,6 +70,24 @@ describe('GET /api/portal/auth/sso/profile', () => {
     expect(result['ssoSub']).toBe('')
   })
 
+  it('answers 502 with a code and no internal address when the SSO fails', async () => {
+    backend.respondWith(() => ({ status: 500, body: {} }))
+
+    const error = await refusal(async () => route.default(makeEvent({ cookies: await signedIn('jwt') })))
+
+    expect(error).toMatchObject({ statusCode: 502, data: { code: 'SIGN_ON_UNAVAILABLE' } })
+    expect(String(error['message'] ?? '')).not.toContain(backend.baseUrl)
+  })
+
+  it('keeps the status of an SSO refusal and carries only a code', async () => {
+    backend.respondWith(() => ({ status: 401, body: { detail: 'secret internal text' } }))
+
+    const error = await refusal(async () => route.default(makeEvent({ cookies: await signedIn('jwt') })))
+
+    expect(error).toMatchObject({ statusCode: 401, data: { code: 'SIGN_ON_REFUSED' } })
+    expect(error['statusMessage']).toBeUndefined()
+  })
+
   it('refuses with 401 and calls nothing when there is no session', async () => {
     const error = await refusal(() => route.default(makeEvent()))
 

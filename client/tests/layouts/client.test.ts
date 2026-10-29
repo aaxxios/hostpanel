@@ -12,6 +12,7 @@ import { nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { mountClient } from '~/tests/helpers/mountClient'
 import { stubAuthRuntime } from '~/tests/helpers/authScreens'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 
 /** The mocked identity call, re-created for every test. */
 const fetchMe = vi.fn()
@@ -47,7 +48,7 @@ const { useClientStore } = await import('~/stores/client')
 const STUBS = { UiThemeToggle: true, UiLanguageSwitcher: true, UiCookieBanner: { template: '<div data-testid="cookie-banner" />' } }
 
 /** The signed-in person the identity call answers with. */
-const ME = { firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com', permissions: Permission.All }
+const ME = makeClientUser({ email: 'ada@example.com', permissions: Permission.All })
 
 // Unmounting releases the drawer's scroll lock and key listener between tests.
 enableAutoUnmount(afterEach)

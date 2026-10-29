@@ -1,6 +1,7 @@
 /**
  * Tests for ReportPage: title and description, the filters slot, the loading placeholder, the
- * refusal sentence from the store, and the "generated on" line after the content.
+ * refusal sentence from the store with its Retry button, and the "generated on" line after the
+ * content.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -12,11 +13,12 @@ import { createTestI18n } from '../../helpers/i18n'
 /**
  * Mounts the page with a filter and a body.
  *
+ * @param retry - The screen's reload, when it offers one.
  * @returns The wrapper.
  */
-const mountPage = () =>
+const mountPage = (retry?: () => unknown) =>
   mount(ReportPage, {
-    props: { title: 'Aging', description: 'Overdue invoices' },
+    props: { title: 'Aging', description: 'Overdue invoices', retry },
     slots: { filters: '<p data-testid="filter-slot">filters</p>', default: '<p data-testid="body-slot">body</p>' },
     global: { plugins: [createTestI18n(), createPinia()] },
   })
@@ -57,5 +59,18 @@ describe('ReportPage', () => {
 
     expect(wrapper.get('[data-testid="report-error"]').text()).toBe('No access.')
     expect(wrapper.find('[data-testid="body-slot"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="report-error-retry"]').exists()).toBe(false)
+  })
+
+  it('offers Retry on a refused load when the screen can reload', async () => {
+    const retry = vi.fn()
+    const wrapper = mountPage(retry)
+    useReportsStore().error = 'No access.'
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-testid="report-error"]').text()).toBe('No access.')
+    await wrapper.get('[data-testid="report-error-retry"]').trigger('click')
+
+    expect(retry).toHaveBeenCalledTimes(1)
   })
 })

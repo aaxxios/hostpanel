@@ -1,10 +1,12 @@
 using System.Globalization;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Support.Common;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Support.Queries.ListClientTickets;
 
@@ -17,18 +19,23 @@ public sealed class ListClientTicketsHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>Wolverine bus, used to name the tickets' client through the Clients module.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public ListClientTicketsHandler(IHostpanelDbContext context)
+    /// <param name="bus">Wolverine bus, used to name the tickets' client through the Clients module.</param>
+    public ListClientTicketsHandler(IHostpanelDbContext context, IMessageBus bus)
     {
         _context = context;
+        _bus = bus;
     }
 
     /// <summary>Handles the query.</summary>
     /// <param name="query">The client, paging window and optional subject search.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The page of ticket summaries. This use case answers no refusal code.</returns>
-    public async Task<Result<PagedResult<TicketListItemDto>>> HandleAsync(
+    public async Task<Result<PaginatedList<TicketListItemDto>>> HandleAsync(
         ListClientTicketsQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -61,17 +68,23 @@ public sealed class ListClientTicketsHandler
                 (x, department) => new TicketListItemDto(
                     x.Ticket.Id,
                     x.Ticket.Subject,
-                    x.Ticket.Status.ToString(),
-                    x.Ticket.Priority.ToString(),
+                    x.Ticket.Status,
+                    x.Ticket.Priority,
                     x.Ticket.CreatedAt,
                     x.Ticket.Replies.Count,
                     department != null ? department.Name : null,
                     x.Ticket.Replies.Count > 0 ? x.Ticket.Replies.Max(r => r.CreatedAt) : (DateTimeOffset?)null,
                     x.Ticket.IsFlagged,
                     x.Ticket.ClientId,
-                    null))
+                    string.Empty))
             .ToListAsync(ct);
 
-        return Result.Success(new PagedResult<TicketListItemDto>(items, totalCount, page, pageSize));
+        // FK_Tickets_Clients_ClientId restricts deleting a client that has tickets, so a page that
+        // holds a ticket names a client that exists; an empty page asks for nobody.
+        var clientIds = items.Select(t => t.ClientId).Distinct().ToList();
+        var clients = await _bus.GetRequiredClientBriefsByIdAsync(clientIds, ct);
+        var named = items.Select(t => t with { ClientName = clients[t.ClientId].FullName }).ToList();
+
+        return Result.Success(new PaginatedList<TicketListItemDto>(named, totalCount, page, pageSize));
     }
 }

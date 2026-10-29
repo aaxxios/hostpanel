@@ -33,6 +33,9 @@ test('uploading a logo stages its URL and saving persists it', async ({ page }) 
       },
     ],
   })
+  // The preview loads the returned URL as an image; the stub serves it, as the API's static files
+  // would, so the request never falls through to the preview server's proxy.
+  await page.route(uploadedLogoUrl, (route) => route.fulfill({ contentType: 'image/png', body: tinyPng }))
 
   await page.goto('/settings')
 

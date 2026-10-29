@@ -240,3 +240,20 @@ export const SettingToggle = {
 
 /** One of the {@link SettingToggle} values. */
 export type SettingToggle = (typeof SettingToggle)[keyof typeof SettingToggle]
+
+/** What a card's save callback answers once the API has replied. */
+export interface SettingSaveResult {
+  /** Whether the API stored the value. */
+  saved: boolean
+  /** The API's own sentence when it refused; null on success. */
+  error: string | null
+}
+
+/**
+ * Persists one setting row on behalf of a card.
+ *
+ * @param id - Setting ID.
+ * @param value - New value.
+ * @returns The outcome, which the control shows next to itself.
+ */
+export type SettingSave = (id: number, value: string) => Promise<SettingSaveResult>

@@ -58,7 +58,7 @@ export const useSlidesStore = defineStore('slides', () => {
    * @returns The stored image's URL, or null when refused (see `uploadError`).
    */
   const uploadImage = async (file: File): Promise<string | null> => {
-    const result = await runAction(uploadError, async () => (await upload(ImageUploadScope.Slides, file)).url)
+    const result = await runAction(uploadError, async () => (await upload(ImageUploadScope.Storefront, file)).url)
     return result.ok ? result.value : null
   }
 

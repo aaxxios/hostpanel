@@ -1,12 +1,12 @@
 /**
- * Smoke tests for AnnouncementsListView: the list, the delete confirmation and the empty and error
- * states, through the real store and transport with `fetch` stubbed.
+ * Smoke tests for AnnouncementsListView: the list, the delete confirmation and its outcome, and the
+ * empty and error states (with Retry), through the real store and transport with `fetch` stubbed.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import AnnouncementsListView from '@/views/AnnouncementsListView.vue'
 import { mountView } from '../helpers/mount'
-import { problem, stubFetch, callOf } from '../helpers/fetch'
+import { json, problem, stubFetch, callOf } from '../helpers/fetch'
 import { stubPathRoutes } from '../helpers/routes'
 
 /** One announcement as the list endpoint returns it. */
@@ -56,5 +56,53 @@ describe('AnnouncementsListView', () => {
     const wrapper = await mountView(AnnouncementsListView)
 
     expect(wrapper.get('[data-testid="announcements-error"]').text()).toBe('Not allowed.')
+  })
+
+  it('reports a successful delete next to the list', async () => {
+    const list = { items: [announcement], totalCount: 1 }
+    stubFetch(json(list), new Response(null, { status: 204 }), json(list))
+    const wrapper = await mountView(AnnouncementsListView)
+
+    await wrapper.get('[data-testid="announcements-3-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="announcements-feedback"]').text()).toBe('Announcement deleted.')
+  })
+
+  it('shows the API sentence when the delete is refused and keeps the list', async () => {
+    stubFetch(json({ items: [announcement], totalCount: 1 }), problem('Announcement is locked.', 409))
+    const wrapper = await mountView(AnnouncementsListView)
+
+    await wrapper.get('[data-testid="announcements-3-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="announcements-feedback"]').text()).toBe('Announcement is locked.')
+    expect(wrapper.find('[data-testid="announcements-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="announcements-row-3"]').exists()).toBe(true)
+  })
+
+  it('does not delete when the confirmation is cancelled', async () => {
+    const mock = stubFetch(json({ items: [announcement], totalCount: 1 }))
+    const wrapper = await mountView(AnnouncementsListView)
+
+    await wrapper.get('[data-testid="announcements-3-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+
+    expect(mock).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+  })
+
+  it('reloads the list from the Retry of a refused load', async () => {
+    stubFetch(problem('Not allowed.', 403), json({ items: [announcement], totalCount: 1 }))
+    const wrapper = await mountView(AnnouncementsListView)
+
+    await wrapper.get('[data-testid="announcements-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="announcements-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="announcements-row-3"]').exists()).toBe(true)
   })
 })

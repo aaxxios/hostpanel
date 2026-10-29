@@ -45,6 +45,13 @@ export enum NetworkIssueTab {
   Resolved = 'Resolved',
 }
 
+/** The statuses each list tab asks the API for. */
+export const NETWORK_ISSUE_TAB_STATUSES: Readonly<Record<NetworkIssueTab, readonly NetworkIssueStatus[]>> = {
+  [NetworkIssueTab.Open]: [NetworkIssueStatus.Reported, NetworkIssueStatus.Investigating],
+  [NetworkIssueTab.Scheduled]: [NetworkIssueStatus.Scheduled],
+  [NetworkIssueTab.Resolved]: [NetworkIssueStatus.Resolved],
+}
+
 /** DTO representing a network issue. */
 export interface NetworkIssue {
   /** Network issue primary key. */

@@ -6,4 +6,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.SetWhoisPrivacy;
 /// member here would make the body required before <c>with { DomainId = id }</c> ever ran.
 /// </param>
 /// <param name="Enabled">The desired WHOIS privacy flag value.</param>
-public record SetWhoisPrivacyCommand(int? DomainId, bool Enabled);
+public sealed record SetWhoisPrivacyCommand(int? DomainId, bool Enabled);

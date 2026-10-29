@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core configuration for <see cref="Invitation"/>.</summary>
 public sealed class InvitationConfiguration : IEntityTypeConfiguration<Invitation>
 {
@@ -23,7 +24,6 @@ public sealed class InvitationConfiguration : IEntityTypeConfiguration<Invitatio
         builder.HasIndex(x => x.Token).IsUnique();
         builder.HasIndex(x => x.ClientId);
 
-        builder.Ignore(x => x.IsExpired);
         builder.Ignore(x => x.IsAccepted);
     }
 }

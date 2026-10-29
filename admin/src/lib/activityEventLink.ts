@@ -9,9 +9,9 @@ import { AppRoute, clientPath, invoicePath } from '@/lib/routes'
 /**
  * Resolves where a notification-feed item should navigate to.
  *
- * A domain has no top-level detail route — only nested under its client
+ * A domain has no top-level detail route, only one nested under its client
  * (`/clients/:id/domains/:domainId`), and the feed does not carry the owning
- * client's id — so a domain-expiring event links to the domains list instead
+ * client's id, so a domain-expiring event links to the domains list instead
  * of a specific record.
  *
  * @param event - The activity event to link.

@@ -12,8 +12,8 @@ import {
   currencySymbol,
   formatAffixed,
   formatCurrencyCode,
+  formatCurrencyWhole,
   formatMoney,
-  formatMoneyWhole,
   formatPrice,
   formatReportAmount,
   formatPlainAmount,
@@ -27,10 +27,6 @@ describe('money', () => {
   it('formats dollars with two decimals', () => {
     expect(formatMoney(12.5)).toBe('$12.50')
     expect(formatMoney(0)).toBe('$0.00')
-  })
-
-  it('formats a dashboard total with grouping and no decimals', () => {
-    expect(formatMoneyWhole(12500)).toBe('$12,500')
   })
 
   it('formats a price with the currency symbol and code', () => {
@@ -116,6 +112,17 @@ describe('formatCurrencyCode', () => {
 
   it('falls back to the number and the code for a malformed code', () => {
     expect(formatCurrencyCode(3, 'not-a-code')).toBe('3.00 not-a-code')
+  })
+})
+
+describe('formatCurrencyWhole', () => {
+  it('formats a dashboard total in its currency with grouping and no decimals', () => {
+    expect(formatCurrencyWhole(12500, 'USD')).toBe('$12,500')
+    expect(formatCurrencyWhole(900.4, 'EUR')).toBe('€900')
+  })
+
+  it('falls back to the rounded number and the code for a malformed code', () => {
+    expect(formatCurrencyWhole(12500.6, 'not-a-code')).toBe('12,501 not-a-code')
   })
 })
 

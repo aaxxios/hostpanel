@@ -3,21 +3,21 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Provisioning;
 
 /// <summary>
 /// Integration tests for <c>GET /api/me/services/{id}/cpanel-sso</c>: the caller may obtain an
-/// SSO URL for their own provisioned service, a stranger's is refused.
+/// control-panel sign-in link for their own provisioned service, a stranger's is refused.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetMyServiceControlPanelSsoUrlTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>The owner can fetch their own service's control panel SSO URL.</summary>
+    /// <summary>The owner can fetch their own service's control-panel sign-in link.</summary>
     [Fact]
     public async Task GetControlPanelSsoUrl_TheCallersOwnService_Returns200()
     {
@@ -61,7 +61,7 @@ public sealed class GetMyServiceControlPanelSsoUrlTests(IntegrationTestFactory f
         (await ProvisioningTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.SERVICE_NOT_FOUND);
     }
 
-    /// <summary>Requesting the SSO URL without authentication is refused.</summary>
+    /// <summary>Requesting the control-panel sign-in link without authentication is refused.</summary>
     [Fact]
     public async Task GetControlPanelSsoUrl_Returns401_WithoutAuthAsync()
     {
@@ -82,5 +82,28 @@ public sealed class GetMyServiceControlPanelSsoUrlTests(IntegrationTestFactory f
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
+    }
+
+    /// <summary>An account that does not allow single sign-on is refused with 403 and no link is issued.</summary>
+    [Fact]
+    public async Task GetControlPanelSsoUrl_ByAccountWithSsoDisabled_Returns403WithClientSsoDisabled()
+    {
+        var http = factory.CreateClient();
+        var adminToken = await factory.GetAdminTokenAsync();
+        var (serviceId, ownerToken) = await ProvisioningTestSeeds.SeedOwnedServiceAsync(factory, http, adminToken);
+        (await http.PostAsync($"/api/provisioning/{serviceId}/provision", null)).EnsureSuccessStatusCode();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            var clientId = await context.ClientServices.Where(x => x.Id == serviceId).Select(x => x.ClientId).FirstAsync();
+            await ClientSettingsSeeds.SetAsync(factory, clientId, allowSso: false);
+        }
+
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
+
+        var response = await http.GetAsync($"/api/me/services/{serviceId}/cpanel-sso");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await ProvisioningTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.CLIENT_SSO_DISABLED);
     }
 }

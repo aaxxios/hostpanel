@@ -26,9 +26,8 @@ describe('SessionCookie', () => {
     expect(SessionCookie.SsoSilentReturn).toBe('sso_silent_return')
   })
 
-  it('keeps the wire names of the legacy account cookie and the client session', () => {
+  it('keeps the wire names of the legacy account cookie', () => {
     expect(SessionCookie.PendingAccount).toBe('inno_pending_account')
-    expect(SessionCookie.ClientSession).toBe('client_session')
   })
 
   it('gives every cookie a distinct name', () => {

@@ -25,7 +25,7 @@ const FAMILY_PRIORITY = 0.8
 /** Handler: one sitemap entry per product family; `[]` (after logging) when the catalogue cannot be read. */
 export default defineEventHandler(async (event) => {
   try {
-    const groups = await internalApiCall<PortalProductGroup[]>(event, '/products/groups')
+    const groups = await internalApiCall<PortalProductGroup[]>(event, '/public/product-groups')
     return groups
       // Hosting has its own page (`/hosting`), which the static entries already list.
       .filter((group) => isFamilyGroup(group) && group.id !== HOSTING_GROUP_ID)

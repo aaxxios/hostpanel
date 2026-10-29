@@ -29,8 +29,11 @@ export const useTransactionsStore = defineStore('billingTransactions', () => {
   /** True while a request is in flight. */
   const loading = ref(false)
 
-  /** Sentence for the last failed request, null when none. */
+  /** Sentence for the last failed load, create or update, null when none. */
   const error = ref<string | null>(null)
+
+  /** Sentence for the last refused delete, null when none. */
+  const actionError = ref<string | null>(null)
 
   /** Per-field messages of the last refused request, keyed by camelCase field name. */
   const fieldErrors = ref<Record<string, string>>({})
@@ -122,10 +125,12 @@ export const useTransactionsStore = defineStore('billingTransactions', () => {
    * Deletes a transaction, then reloads the current page.
    *
    * @param id - The transaction id.
-   * @returns True when deleted; false when refused (see `error`).
+   * @returns True when deleted; false when refused (see `actionError`).
    */
   const remove = async (id: number): Promise<boolean> => {
-    const result = await run(() => api.remove(id))
+    loading.value = true
+    const result = await runAction(actionError, () => api.remove(id))
+    loading.value = false
     if (result.ok) {
       await fetchAll(page.value, pageSize.value)
     }
@@ -139,6 +144,7 @@ export const useTransactionsStore = defineStore('billingTransactions', () => {
     summary,
     loading,
     error,
+    actionError,
     fieldErrors,
     page,
     pageSize,

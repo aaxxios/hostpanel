@@ -1,6 +1,7 @@
 using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
+using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Notifications.Commands.CreateEmailTemplate;
@@ -26,6 +27,10 @@ public sealed class CreateEmailTemplateValidator : LocalizedValidator<CreateEmai
             .NotEmpty()
             .MaximumLength(SlugMaxLength)
             .WithMessage(L["EmailTemplateSlugRequired"]);
+
+        RuleFor(x => x.Language)
+            .Must(SupportedLanguages.IsSupported)
+            .WithMessage(L["EmailTemplateLanguageInvalid"]);
 
         RuleFor(x => x.Subject)
             .NotEmpty()

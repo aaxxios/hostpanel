@@ -11,7 +11,7 @@ const progress = {} as MigrationJob['progress']
 const selection = {} as MigrationJob['entitySelection']
 
 for (const key of MIGRATION_ENTITY_KEYS) {
-  progress[key] = { imported: 0, skipped: 0, total: 0, done: false }
+  progress[key] = { imported: 0, skipped: 0, failed: 0, total: 0, done: false }
   selection[key] = key === 'clients' || key === 'invoices'
 }
 
@@ -22,7 +22,7 @@ export const pendingJob: MigrationJob = {
   sourceUrl: 'https://old.example.test',
   status: MigrationStatus.Pending,
   label: 'Production',
-  errorMessage: null,
+  failure: null,
   entitySelection: selection,
   progress,
   overallPercent: 0,

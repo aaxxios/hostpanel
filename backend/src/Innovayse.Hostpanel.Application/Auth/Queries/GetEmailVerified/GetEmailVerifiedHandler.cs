@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
@@ -6,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Auth.Queries.GetEmailVerified;
 
 /// <summary>
 /// Reports whether the caller's email is confirmed: the user store's answer in local mode, the
-/// credential's claim in SSO mode.
+/// credential's claim in single sign-on mode.
 /// </summary>
 public sealed class GetEmailVerifiedHandler
 {
@@ -41,7 +42,7 @@ public sealed class GetEmailVerifiedHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // SSO is the identity, so its claim is the answer and no lookup is made. Locally the claim
+        // the sign-on provider is the identity, so its claim is the answer and no lookup is made. Locally the claim
         // is frozen at sign-in, so the user store is asked instead.
         var subject = _caller.UserId;
         if (!_mode.IsLocalMode || subject is null)

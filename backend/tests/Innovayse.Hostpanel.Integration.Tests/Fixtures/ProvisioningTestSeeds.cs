@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Products;
@@ -20,8 +19,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 /// <summary>
 /// Seeding and assertion helpers shared by every <c>Provisioning/&lt;UseCase&gt;Tests.cs</c>
 /// class, so each per-use-case file states only what makes it different rather than
-/// re-deriving a provisionable service or an admin host with a fake provider. Moved out of the
-/// deleted <c>ProvisioningEndpointTests</c>.
+/// re-deriving a provisionable service or an admin host with a fake provider.
 /// </summary>
 public static class ProvisioningTestSeeds
 {
@@ -45,31 +43,29 @@ public static class ProvisioningTestSeeds
 
     /// <summary>
     /// Same as <see cref="SeedServiceAsync"/>, and also returns a bearer token for the client user
-    /// who owns the service -- the portal routes under <c>/api/me</c> admit the Client role only, so
+    /// who owns the service: the portal routes under <c>/api/me</c> admit the Client role only, so
     /// a test of the owner's own view must call them as the owner, not as the admin.
     /// </summary>
     /// <param name="factory">The shared API + PostgreSQL host.</param>
     /// <param name="http">Authenticated HTTP client to use for setup calls.</param>
     /// <param name="adminToken">Admin JWT token for admin-only setup operations.</param>
     /// <returns>The ID of the newly created client service and the owner's JWT.</returns>
-    public static async Task<(int ServiceId, string OwnerToken)> SeedOwnedServiceAsync(
+    public static async Task<OwnedService> SeedOwnedServiceAsync(
         IntegrationTestFactory factory, HttpClient http, string adminToken)
     {
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
 
         // A server to provision onto. Without one, ServerSelector finds nothing eligible
-        // and ProvisionServiceHandler refuses with NO_ELIGIBLE_SERVER -- so every test here
+        // and ProvisionServiceHandler refuses with NO_ELIGIBLE_SERVER, so every test here
         // failed on setup rather than on what it meant to assert. Nothing is reached over
         // the network: the factory hands the handler a StubProvisioningProviderFactory.
-        var serverResponse = await http.PostAsJsonAsync("/api/admin/servers", new
-        {
-            name = $"Prov-Server-{Guid.NewGuid():N}",
-            hostname = "stub-server.example.com",
-            module = ServerModule.Cwp7,
-            username = "root",
-            accessHash = "stub-access-hash",
-            isDefault = true,
-        });
+        var serverResponse = await http.PostAsJsonAsync(
+            "/api/admin/servers",
+            ServersTestSeeds.ServerBody(
+                $"Prov-Server-{Guid.NewGuid():N}",
+                hostname: "stub-server.example.com",
+                accessHash: "stub-access-hash",
+                isDefault: true));
         serverResponse.EnsureSuccessStatusCode();
 
         var groupResponse = await http.PostAsJsonAsync("/api/products/groups",
@@ -83,48 +79,40 @@ public static class ProvisioningTestSeeds
                 groupId,
                 name = $"Prov-Plan-{Guid.NewGuid():N}",
                 type = ProductType.SharedHosting,
+                packageName = "starter",
                 monthlyPrice = 9.99m,
                 annualPrice = 99.99m
             });
         productResponse.EnsureSuccessStatusCode();
         var productId = await productResponse.Content.ReadFromJsonAsync<int>();
 
-        var email = $"prov-client-{Guid.NewGuid():N}@example.com";
-        http.DefaultRequestHeaders.Authorization = null;
-
-        var registerResponse = await http.PostAsJsonAsync("/api/auth/register", new
-        {
-            email,
-            password = "Pass@123!",
-            firstName = "Prov",
-            lastName = "Client"
-        });
-        registerResponse.EnsureSuccessStatusCode();
-
-        var clientToken = await factory.GetClientTokenAsync(email, "Pass@123!");
+        // The client row the order needs is written inline by the registration helper, so the order
+        // is placed once instead of being retried until a queued handler has caught up.
+        var account = await ClientsTestSeeds.RegisterRealClientAsync(factory, "prov-client");
+        var clientToken = await factory.GetClientTokenAsync(account.Email, ClientsTestSeeds.TestPassword);
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", clientToken);
 
-        HttpResponseMessage? orderResponse = null;
-        for (var i = 0; i < 5; i++)
+        var orderResponse = await http.PostAsJsonAsync("/api/me/services", new
         {
-            await Task.Delay(300);
-            orderResponse = await http.PostAsJsonAsync("/api/me/services", new
-            {
-                ProductId = productId,
-                BillingCycle = BillingCycleNames.Monthly
-            });
+            ProductId = productId,
+            BillingCycle = nameof(BillingCycle.Monthly)
+        });
 
-            if (orderResponse.StatusCode == HttpStatusCode.Created)
-            {
-                break;
-            }
-        }
-
-        orderResponse!.StatusCode.Should().Be(HttpStatusCode.Created);
+        orderResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var serviceId = await orderResponse.Content.ReadFromJsonAsync<int>();
 
+        // Provisioning refuses a service with no domain or username, so the seed stores the
+        // details the client's setup wizard would have stored.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            var service = await context.ClientServices.SingleAsync(s => s.Id == serviceId);
+            service.AssignHostingAccount($"prov{serviceId}.example.com", $"prov{serviceId}", "Passw0rd!");
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
-        return (serviceId, clientToken);
+        return new OwnedService(serviceId, clientToken);
     }
 
     /// <summary>
@@ -134,22 +122,43 @@ public static class ProvisioningTestSeeds
     /// <remarks>
     /// Overrides both <see cref="IProvisioningProviderFactory"/>, which every handler but
     /// <c>GetServiceCredentialsHandler</c> resolves a provider through, and the bare
-    /// <see cref="IProvisioningProvider"/> that one handler injects directly -- missing either
+    /// <see cref="IProvisioningProvider"/> that one handler injects directly: missing either
     /// leaves that handler still talking to the always-succeeding host-wide stub.
     /// </remarks>
     /// <param name="factory">The shared API + PostgreSQL host.</param>
     /// <param name="provider">The fake provider the host should provision through.</param>
     /// <returns>An authenticated admin client.</returns>
-    public static async Task<HttpClient> AdminClientWithFakeProviderAsync(
+    public static Task<HttpClient> AdminClientWithFakeProviderAsync(
         IntegrationTestFactory factory, FakeProvisioningProvider provider)
     {
-        var host = factory.WithWebHostBuilder(builder =>
+        return AdminClientOnAsync(factory, HostWithFakeProvider(factory, provider));
+    }
+
+    /// <summary>
+    /// Builds a host that resolves every server's provisioning provider to <paramref name="provider"/>;
+    /// a test that must wait for the messages a request publishes tracks activity on this host.
+    /// </summary>
+    /// <param name="factory">The shared API + PostgreSQL host.</param>
+    /// <param name="provider">The fake provider the host should provision through.</param>
+    /// <returns>The derived host.</returns>
+    public static WebApplicationFactory<Program> HostWithFakeProvider(
+        IntegrationTestFactory factory, FakeProvisioningProvider provider)
+    {
+        return factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
             {
-                services.AddScoped<IProvisioningProviderFactory>(_ => new FakeProvisioningProviderFactory(provider));
-                services.AddScoped<IProvisioningProvider>(_ => provider);
+                services.AddSingleton<IProvisioningProviderFactory>(new FakeProvisioningProviderFactory(provider));
+                services.AddSingleton<IProvisioningProvider>(provider);
             }));
+    }
 
+    /// <summary>Builds an admin client against <paramref name="host"/>.</summary>
+    /// <param name="factory">The shared API + PostgreSQL host, which issues the admin token.</param>
+    /// <param name="host">The host the client talks to.</param>
+    /// <returns>An authenticated admin client.</returns>
+    public static async Task<HttpClient> AdminClientOnAsync(
+        IntegrationTestFactory factory, WebApplicationFactory<Program> host)
+    {
         var token = await factory.GetAdminTokenAsync();
         var client = host.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -160,7 +169,7 @@ public static class ProvisioningTestSeeds
     /// <remarks>
     /// There is no admin endpoint that provisions a service and then strips its server, and the
     /// domain method that sets a provisioning reference always sets the server alongside it (see
-    /// <c>ClientService.ActivateOn</c>) -- on purpose, so every real caller keeps the two together.
+    /// <c>ClientService.ActivateOn</c>), on purpose, so every real caller keeps the two together.
     /// Reaching <c>SERVICE_NO_SERVER_ASSIGNED</c> therefore needs a row not attainable through the
     /// API, which is what this helper builds by writing around the aggregate directly.
     /// </remarks>
@@ -196,12 +205,12 @@ public static class ProvisioningTestSeeds
         IntegrationTestFactory factory, RecordingProvisioningProvider provider) =>
         factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
-                services.AddScoped<IProvisioningProviderFactory>(_ => new RecordingProvisioningProviderFactory(provider))));
+                services.AddSingleton<IProvisioningProviderFactory>(new RecordingProvisioningProviderFactory(provider))));
 
     /// <summary>Seeds a client, a server and an active hosting service assigned to that server.</summary>
     /// <param name="context">The data context to seed through.</param>
     /// <returns>The seeded client id, server id and service id.</returns>
-    public static async Task<(int ClientId, int ServerId, int ServiceId)> SeedActiveServiceAsync(IHostpanelDbContext context)
+    public static async Task<SeededActiveService> SeedActiveServiceAsync(IHostpanelDbContext context)
     {
         var (client, product) = await SeedClientAndProductAsync(context);
 
@@ -212,9 +221,7 @@ public static class ProvisioningTestSeeds
             AssignedIpAddresses: null,
             Module: ServerModule.Cwp7,
             Username: "api",
-            Password: "secret",
-            ApiToken: null,
-            AccessHash: null,
+            Credentials: new ServerCredentials("secret", null, null),
             UseSSL: true,
             MaxAccounts: null,
             IsDefault: false,
@@ -222,54 +229,44 @@ public static class ProvisioningTestSeeds
             MonthlyCost: 0m,
             Datacenter: null,
             ServerStatusAddress: null,
-            Ns1Hostname: null,
-            Ns1Ip: null,
-            Ns2Hostname: null,
-            Ns2Ip: null,
-            Ns3Hostname: null,
-            Ns3Ip: null,
-            Ns4Hostname: null,
-            Ns4Ip: null,
-            Ns5Hostname: null,
-            Ns5Ip: null));
+            NameServers: ServerNameServers.None), DateTimeOffset.UtcNow);
         context.Servers.Add(server);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var service = ClientService.Create(client.Id, product.Id, BillingCycleNames.Monthly);
-        service.ActivateOn(server.Id, "provisioning-ref-1");
-        context.ClientServices.Add(service);
+        var service = ClientService.Create(client.Id, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        await ServicesTestSeeds.AddActivatedAsync(context, service, "provisioning-ref-1", DateTimeOffset.UtcNow, server.Id);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        return (client.Id, server.Id, service.Id);
+        return new SeededActiveService(client.Id, server.Id, service.Id);
     }
 
     /// <summary>Seeds a client and a hosting service that has no server assigned.</summary>
     /// <param name="context">The data context to seed through.</param>
     /// <returns>The seeded client id and service id.</returns>
-    public static async Task<(int ClientId, int ServiceId)> SeedUnassignedServiceAsync(IHostpanelDbContext context)
+    public static async Task<SeededUnassignedService> SeedUnassignedServiceAsync(IHostpanelDbContext context)
     {
         var (client, product) = await SeedClientAndProductAsync(context);
-        var service = ClientService.Create(client.Id, product.Id, BillingCycleNames.Monthly);
+        var service = ClientService.Create(client.Id, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow);
         context.ClientServices.Add(service);
         await context.SaveChangesAsync(CancellationToken.None);
-        return (client.Id, service.Id);
+        return new SeededUnassignedService(client.Id, service.Id);
     }
 
     /// <summary>Seeds a client and a shared-hosting product, the two rows a service is created against.</summary>
     /// <param name="context">The data context to seed through.</param>
     /// <returns>The saved client and product.</returns>
-    private static async Task<(Client Client, Product Product)> SeedClientAndProductAsync(IHostpanelDbContext context)
+    private static async Task<ClientProductEntities> SeedClientAndProductAsync(IHostpanelDbContext context)
     {
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(client);
 
         var group = ProductGroup.Create($"provisioning-events-{Guid.NewGuid():N}", null);
         context.ProductGroups.Add(group);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
         context.Products.Add(product);
         await context.SaveChangesAsync(CancellationToken.None);
-        return (client, product);
+        return new ClientProductEntities(client, product);
     }
 }

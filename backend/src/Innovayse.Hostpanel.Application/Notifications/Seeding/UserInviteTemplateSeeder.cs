@@ -1,0 +1,66 @@
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+
+namespace Innovayse.Hostpanel.Application.Notifications.Seeding;
+
+/// <summary>
+/// Lazily seeds the "user-invite" email template, in every supported language, on first use: the
+/// mail a person receives when they are invited to manage a client account. Each language version
+/// is seeded once and never overwritten.
+/// </summary>
+public static class UserInviteTemplateSeeder
+{
+    /// <summary>The template slug the invitation is sent with.</summary>
+    public const string Slug = "user-invite";
+
+    /// <summary>The highlighted client name, styled the same in every language.</summary>
+    private const string ClientName = """<strong style="color:#f0f0f5;">{{ client_name }}</strong>""";
+
+    /// <summary>Ensures every language version of the invitation template exists, creating the missing ones on first use.</summary>
+    /// <param name="context">The data context the template rows live in.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task that completes once every version exists.</returns>
+    public static Task EnsureSeededAsync(IHostpanelDbContext context, CancellationToken ct)
+    {
+        return EmailTemplateSeeding.AddMissingAsync(context, EmailTemplateSeeding.Branded(
+            Slug,
+            "Sent when a user is invited to manage a client account.",
+            [
+                new SeededEmailVersion("You've been invited to {{ site.name }}", new SeededEmailCopy(
+                    "en",
+                    "You've Been Invited!",
+                    [
+                        "Hi {{ first_name }},",
+                        $"You've been invited to manage the account for {ClientName}.",
+                        "Click the button below to set your password and get started:",
+                    ],
+                    "{{ invite_link }}",
+                    "Set Your Password",
+                    "This link expires in 7 days. If you didn't expect this invitation, you can safely ignore this email.",
+                    EchoButtonUrl: true)),
+                new SeededEmailVersion("Вас пригласили в {{ site.name }}", new SeededEmailCopy(
+                    "ru",
+                    "Вас пригласили!",
+                    [
+                        "Здравствуйте, {{ first_name }}!",
+                        $"Вас пригласили управлять аккаунтом {ClientName}.",
+                        "Нажмите кнопку ниже, чтобы задать пароль и начать работу:",
+                    ],
+                    "{{ invite_link }}",
+                    "Задать пароль",
+                    "Ссылка действует 7 дней. Если вы не ждали этого приглашения, просто проигнорируйте это письмо.",
+                    EchoButtonUrl: true)),
+                new SeededEmailVersion("Ձեզ հրավիրել են {{ site.name }}", new SeededEmailCopy(
+                    "hy",
+                    "Ձեզ հրավիրել են",
+                    [
+                        "Բարև, {{ first_name }},",
+                        $"Ձեզ հրավիրել են կառավարելու {ClientName} հաշիվը։",
+                        "Սեղմեք ստորև կոճակը՝ գաղտնաբառ սահմանելու և սկսելու համար։",
+                    ],
+                    "{{ invite_link }}",
+                    "Սահմանել գաղտնաբառ",
+                    "Հղումը գործում է 7 օր։ Եթե չէիք սպասում այս հրավերին, պարզապես անտեսեք այս նամակը։",
+                    EchoButtonUrl: true)),
+            ]), ct);
+    }
+}

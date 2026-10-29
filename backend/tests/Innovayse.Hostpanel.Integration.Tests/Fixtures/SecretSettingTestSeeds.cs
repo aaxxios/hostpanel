@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Settings;
+using Innovayse.Hostpanel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -41,15 +42,32 @@ internal static class SecretSettingTestSeeds
         return existing.Id;
     }
 
-    /// <summary>Reads the stored value of a setting row.</summary>
+    /// <summary>Reads the plain value of a setting row, decrypted when it is a protected secret.</summary>
+    /// <param name="factory">The shared API + PostgreSQL host.</param>
+    /// <param name="key">The full setting key.</param>
+    /// <returns>The plain value, or <c>null</c> when there is no row.</returns>
+    public static async Task<string?> ReadAsync(IntegrationTestFactory factory, string key)
+    {
+        var stored = await ReadRawAsync(factory, key);
+        if (stored is null)
+        {
+            return null;
+        }
+
+        return factory.Services.GetRequiredService<ISecretSettingCipher>().Reveal(stored);
+    }
+
+    /// <summary>Reads the value exactly as the database holds it, with raw SQL so no mapping touches it.</summary>
     /// <param name="factory">The shared API + PostgreSQL host.</param>
     /// <param name="key">The full setting key.</param>
     /// <returns>The stored value, or <c>null</c> when there is no row.</returns>
-    public static async Task<string?> ReadAsync(IntegrationTestFactory factory, string key)
+    public static async Task<string?> ReadRawAsync(IntegrationTestFactory factory, string key)
     {
         using var scope = factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var row = await context.Settings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == key, CancellationToken.None);
-        return row?.Value;
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var rows = await context.Database
+            .SqlQuery<string>($"SELECT \"Value\" AS \"Value\" FROM \"Settings\" WHERE \"Key\" = {key}")
+            .ToListAsync(CancellationToken.None);
+        return rows.SingleOrDefault();
     }
 }

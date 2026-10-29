@@ -1,17 +1,14 @@
 using System.Net;
 using System.Net.Http.Headers;
-using FluentAssertions;
+using System.Text.Json;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
 /// <summary><c>GET /api/clients/me</c>: the authenticated client reads their own profile.</summary>
-/// <remarks>Split from the deleted <c>ClientsEndpointTests</c> (A7 Task 5).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetMyProfileTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -29,11 +26,41 @@ public sealed class GetMyProfileTests(IntegrationTestFactory factory) : IClassFi
     }
 
     /// <summary>
-    /// A caller holding the Client role but no client row -- the account was onboarded and then
-    /// the client record went away underneath it -- answers 404, not 200 of nothing.
+    /// The client's own profile carries none of the staff-owned fields: an internal note written
+    /// on the record never reaches the client, and neither do the staff switches.
+    /// </summary>
+    [Fact]
+    public async Task GetMyProfileCarriesNoStaffOwnedField()
+    {
+        var (client, clientId, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "my-profile-no-staff-fields");
+        const string note = "internal note for staff only";
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Clients
+                .Where(c => c.Id == clientId)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.AdminNotes, note));
+        }
+
+        var response = await client.GetAsync("/api/clients/me");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var json = await response.Content.ReadAsStringAsync();
+        json.Should().NotContain(note);
+        using var body = JsonDocument.Parse(json);
+        foreach (var field in new[] { "adminNotes", "status", "overdueNotices", "taxExempt", "separateInvoices", "disableCcProcessing", "allowSso", "billingContact", "userId" })
+        {
+            body.RootElement.TryGetProperty(field, out _).Should().BeFalse($"the client's own profile must not carry {field}");
+        }
+    }
+
+    /// <summary>
+    /// A caller holding the Client role but no client row (the account was onboarded and then
+    /// the client record went away underneath it) answers 404, not 200 of nothing.
     /// </summary>
     /// <remarks>
-    /// Split from the deleted <c>MyProfileEndpointTests</c> (A7 Task 5). The seeded admin cannot
+    /// The seeded admin cannot
     /// stand in for this: <c>/api/clients/me</c> requires the Client role, which the admin account
     /// never holds, so that caller is refused 403 before the handler ever runs. Deleting the row
     /// straight from the database, after registration has already granted the role and created

@@ -1,90 +1,81 @@
+using Innovayse.Hostpanel.Application.Billing.Currencies.Common;
+using Innovayse.Hostpanel.Application.Billing.Currencies.Queries.ListCurrencies;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Domain.Billing.Enums;
+using Innovayse.Hostpanel.Application.Reports.Common;
+using Innovayse.Hostpanel.Application.Reports.Common.Enums;
+using Innovayse.Hostpanel.Application.Reports.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Reports.Queries.AgingInvoicesSummary;
 
 /// <summary>Handles <see cref="AgingInvoicesSummaryQuery"/>.</summary>
 /// <remarks>
-/// The per-currency, per-period pivot below is a dynamic shape SQL cannot return directly (the
-/// column set depends on which currencies are actually in play), so the unpaid invoices are
-/// loaded once — a small, already-filtered set, never the whole invoices table — and pivoted in
-/// memory exactly as the pre-conversion repository did.
+/// The amount owed per currency and period is summed in SQL; only the pivot into one row per
+/// period with a column per currency is shaped here, because its column set depends on which
+/// currencies are in play. The columns are every enabled currency (base first, as the currencies
+/// page lists them) plus any other currency an open invoice still bills in.
 /// </remarks>
 public sealed class AgingInvoicesSummaryHandler
 {
-    /// <summary>Statuses counted as still owed.</summary>
-    private static readonly InvoiceStatus[] UnpaidStatuses = [InvoiceStatus.Unpaid, InvoiceStatus.Overdue];
-
-    /// <summary>Aging bucket labels, in display order.</summary>
-    private static readonly string[] PeriodNames = ["0 - 30", "30 - 60", "60 - 90", "90 - 120", "120 +"];
-
-    /// <summary>Currencies always shown even when no invoice currently uses them.</summary>
-    private static readonly string[] DefaultCurrencies = ["USD", "EUR", "AMD", "RUB"];
+    /// <summary>Aging buckets, in display order.</summary>
+    private static readonly AgingBucket[] Buckets = Enum.GetValues<AgingBucket>();
 
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
+    /// <summary>The bus the Billing module's currency list is read through.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public AgingInvoicesSummaryHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    /// <param name="bus">The bus the Billing module's currency list is read through.</param>
+    public AgingInvoicesSummaryHandler(IHostpanelDbContext context, IClock clock, IMessageBus bus)
     {
         _context = context;
+        _clock = clock;
+        _bus = bus;
     }
 
     /// <summary>Handles the query.</summary>
     /// <param name="query">The query. Carries no filters.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Totals owed per aging period and currency, plus the grand total per currency. Never refuses.</returns>
+    /// <returns>Amounts still owed per aging period and invoice currency, plus the grand total per currency. Never refuses.</returns>
     public async Task<Result<AgingInvoiceSummaryDto>> HandleAsync(AgingInvoicesSummaryQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime);
 
-        var invoices = await _context.Invoices
+        var sums = await _context.Invoices
             .AsNoTracking()
-            .Where(i => UnpaidStatuses.Contains(i.Status))
-            .Join(_context.Clients.AsNoTracking(), inv => inv.ClientId, c => c.Id,
-                (inv, c) => new { inv.Total, inv.DueDate, Currency = c.Currency ?? "USD" })
+            .SelectAgedBalances(today)
+            .GroupBy(b => new { b.Currency, b.Bucket })
+            .Select(g => new { g.Key.Currency, g.Key.Bucket, Amount = g.Sum(b => b.AmountDue) })
             .ToListAsync(ct);
 
-        var invoiceCurrencies = invoices.Select(x => x.Currency).Distinct();
-        var currencies = DefaultCurrencies.Union(invoiceCurrencies).Distinct().OrderBy(c => c).ToList();
+        var configured = await _bus.InvokeAsync<Result<IReadOnlyList<CurrencyDto>>>(
+            new ListCurrenciesQuery(EnabledOnly: true), ct);
+        var currencies = (configured.Value ?? [])
+            .Select(c => c.Code)
+            .Concat(sums.Select(s => s.Currency).Distinct().Order(StringComparer.Ordinal))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
-        var periods = new List<AgingPeriodDto>();
-        var totals = new Dictionary<string, decimal>();
-        foreach (var c in currencies)
-        {
-            totals[c] = 0m;
-        }
-
-        foreach (var periodName in PeriodNames)
-        {
-            var amounts = new Dictionary<string, decimal>();
-            foreach (var c in currencies)
-            {
-                amounts[c] = 0m;
-            }
-
-            foreach (var inv in invoices)
-            {
-                var due = DateOnly.FromDateTime(inv.DueDate.DateTime);
-                var days = today.DayNumber - due.DayNumber;
-                var bucket = days <= 30 ? "0 - 30" : days <= 60 ? "30 - 60" : days <= 90 ? "60 - 90" : days <= 120 ? "90 - 120" : "120 +";
-                if (bucket != periodName)
-                {
-                    continue;
-                }
-
-                amounts[inv.Currency] += inv.Total;
-                totals[inv.Currency] += inv.Total;
-            }
-
-            periods.Add(new AgingPeriodDto(periodName, amounts));
-        }
+        var totals = currencies.ToDictionary(c => c, c => sums.Where(s => s.Currency == c).Sum(s => s.Amount), StringComparer.Ordinal);
+        var periods = Buckets
+            .Select(bucket => new AgingPeriodDto(
+                bucket,
+                currencies.ToDictionary(
+                    c => c,
+                    c => sums.Where(s => s.Currency == c && s.Bucket == bucket).Sum(s => s.Amount),
+                    StringComparer.Ordinal)))
+            .ToList();
 
         return Result<AgingInvoiceSummaryDto>.Success(new AgingInvoiceSummaryDto(periods, totals, currencies));
     }

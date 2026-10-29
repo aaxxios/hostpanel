@@ -4,12 +4,15 @@
  *
  * Body: { message }
  */
+
+import { HttpMethod } from '~/types/httpmethod'
+
 export default defineEventHandler(async (event) => {
   const id = requireRouteParam(event, 'id')
 
   const body = await readBody(event)
   return await internalApiCall<Record<string, unknown>>(event, `/me/tickets/${id}/reply`, {
-    method: 'POST',
+    method: HttpMethod.Post,
     body,
   })
 })

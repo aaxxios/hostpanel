@@ -11,6 +11,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useNavigationStore } from '@/stores/navigation'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
@@ -57,6 +58,15 @@ const router = useRouter()
 
 /** Current route, to mark the active item. */
 const route = useRoute()
+
+/** The navigation in flight, whose target is marked while its screen downloads. */
+const navigation = useNavigationStore()
+
+/**
+ * The path the menu marks as active: the target of a navigation still downloading its screen, so
+ * the clicked item lights up at once, or else the current route.
+ */
+const activePath = computed<string>(() => navigation.pending?.path ?? route.path)
 
 /** Set of expanded parent item routes (keyed by `to`, stable across locales). */
 const expanded = ref<Set<string>>(new Set())
@@ -203,10 +213,10 @@ const handleLogout = async (): Promise<void> => {
  * @returns True if the current route matches.
  */
 const isActive = (item: NavItem): boolean => {
-  if (item.to !== AppRoute.Dashboard && route.path.startsWith(item.to)) {
+  if (item.to !== AppRoute.Dashboard && activePath.value.startsWith(item.to)) {
     return true
   }
-  return route.path === item.to
+  return activePath.value === item.to
 }
 
 /**
@@ -217,9 +227,9 @@ const isActive = (item: NavItem): boolean => {
  */
 const isChildActive = (to: string): boolean => {
   if (to === AppRoute.Clients || to === AppRoute.Settings) {
-    return route.path === to
+    return activePath.value === to
   }
-  return route.path.startsWith(to)
+  return activePath.value.startsWith(to)
 }
 
 /**

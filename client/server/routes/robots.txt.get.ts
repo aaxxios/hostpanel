@@ -3,11 +3,11 @@
  *
  * The crawler rules, built per request so the `Sitemap:` line carries the operator's own origin
  * (the configured public address, else the one the request came in on, honouring a proxy's
- * forwarded host). This replaced a static `public/robots.txt`, which could not name a sitemap
- * without hard-coding one deployment's domain.
+ * forwarded host). A static file could not name a sitemap without hard-coding one deployment's
+ * domain.
  *
- * One `*` group on purpose: a crawler that matches a named group ignores `*`, so per-bot groups
- * that only said `Allow: /` used to let those bots into the private areas.
+ * One `*` group on purpose: a crawler that matches a named group ignores `*`, so a per-bot group
+ * that only said `Allow: /` would let that bot into the private areas.
  *
  * @module server/routes/robots.txt.get
  */

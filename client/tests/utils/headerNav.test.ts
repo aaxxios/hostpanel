@@ -33,10 +33,20 @@ const hasPage = (route: string): boolean => {
   return existsSync(parent) && readdirSync(parent).some((entry: string) => /^\[[^\]]+\]\.vue$/.test(entry))
 }
 
-/** Translator that echoes the key. */
+/**
+ * Translator that echoes the key.
+ *
+ * @param key Message key.
+ * @returns The key itself.
+ */
 const t = (key: string): string => key
 
-/** Locale prefixer that adds `/en`. */
+/**
+ * Locale prefixer that adds `/en`.
+ *
+ * @param path Unprefixed path.
+ * @returns The path under `/en`.
+ */
 const localePath = (path: string): string => `/en${path}`
 
 /**
@@ -46,7 +56,7 @@ const localePath = (path: string): string => `/en${path}`
  * @param name - Group name.
  * @returns The group.
  */
-const group = (id: number, name: string): PortalProductGroup => ({ id, name, isActive: true, productCount: 1 })
+const group = (id: number, name: string): PortalProductGroup => ({ id, name, productCount: 1 })
 
 /**
  * Builds a product of a group and type.
@@ -133,10 +143,10 @@ describe('buildHeaderNav', () => {
     expect(hosting.children?.map((child) => child.desc)).toEqual(['nav.hostingDesc', 'Bare metal in our own racks', 'nav.vpsDesc'])
   })
 
-  it('ignores a group that is inactive or empty', () => {
+  it('ignores an empty group', () => {
     const items = nav(
-      [{ ...group(9, 'Cloud servers'), isActive: false }, { ...group(10, 'Metal'), productCount: 0 }],
-      [product(9, ProductType.Vps), product(10, ProductType.Dedicated)],
+      [{ ...group(10, 'Metal'), productCount: 0 }],
+      [product(10, ProductType.Dedicated)],
     )
 
     expect(items.map((item) => item.key)).toEqual(['hosting', 'domains', 'products', 'support'])
@@ -199,7 +209,11 @@ describe('isHeaderPathActive', () => {
 })
 
 describe('activeHeaderKey', () => {
-  /** A catalogue whose Hosting dropdown holds a mailbox group living under `/products`. */
+  /**
+   * A catalogue whose Hosting dropdown holds a mailbox group living under `/products`.
+   *
+   * @returns The header items.
+   */
   const mailNav = (): HeaderNavItem[] =>
     nav([group(1, 'Web hosting'), group(7, 'Business Email')], [product(7, ProductType.Email)])
 

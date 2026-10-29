@@ -1,7 +1,9 @@
 using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Clients;
+
 /// <summary>
 /// Represents a non-owner user linked to a client account with granular permissions.
 /// The account owner is identified by <see cref="Client.UserId"/> and always has all permissions.
@@ -21,7 +23,7 @@ public sealed class ClientUser : BaseEntity
     /// <summary>Gets the UTC timestamp when this link was created.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private ClientUser() { }
 
     /// <summary>
@@ -38,7 +40,6 @@ public sealed class ClientUser : BaseEntity
             ClientId = clientId,
             UserId = userId,
             Permissions = permissions,
-            CreatedAt = DateTimeOffset.UtcNow,
         };
     }
 

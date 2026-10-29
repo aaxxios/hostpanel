@@ -58,7 +58,8 @@ export const errorCode = (cause: unknown): string | null =>
   cause instanceof ApiError ? stringMember(cause.body, 'type') : null
 
 /**
- * The per-field messages of a rejected request, keyed by camelCase field name.
+ * The per-field messages of a rejected request, keyed by camelCase field name; a field of a nested
+ * object is keyed by its dotted path with every segment camelCased (`endpoint.hostname`).
  *
  * @param cause - The value caught from a rejected {@link useApi} request.
  * @returns Field name to its first message; an empty object when the response named no fields.
@@ -75,7 +76,7 @@ export const fieldErrors = (cause: unknown): Record<string, string> => {
   for (const [name, messages] of Object.entries(fields)) {
     const first = Array.isArray(messages) ? messages[0] : messages
     if (typeof first === 'string' && first.length > 0) {
-      result[name.charAt(0).toLowerCase() + name.slice(1)] = first
+      result[name.split('.').map(segment => segment.charAt(0).toLowerCase() + segment.slice(1)).join('.')] = first
     }
   }
   return result

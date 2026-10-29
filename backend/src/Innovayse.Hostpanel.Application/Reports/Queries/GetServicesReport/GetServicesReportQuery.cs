@@ -15,7 +15,7 @@ namespace Innovayse.Hostpanel.Application.Reports.Queries.GetServicesReport;
 /// <param name="PageSize">Rows per page.</param>
 public sealed record GetServicesReportQuery(
     string? Status = null,
-    string? BillingCycle = null,
+    BillingCycle? BillingCycle = null,
     DateOnly? CreatedFrom = null,
     DateOnly? CreatedTo = null,
     DateOnly? NextDueFrom = null,

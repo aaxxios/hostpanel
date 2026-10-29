@@ -128,6 +128,26 @@ describe('TldConfigsView', () => {
     await vi.waitFor(() => {
       expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
     })
+    expect(wrapper.get('[data-testid="tld-configs-result"]').text()).toBe('Record deleted.')
+  })
+
+  it('shows the API sentence when a delete is refused, and sends nothing when dismissed', async () => {
+    const id = item('com').id
+    const mock = stubRouteTable({
+      'GET /admin/tld-configs': () => json([item('com')]),
+      [`DELETE /admin/tld-configs/${id}`]: () => problem('The TLD has domains.', 409),
+    })
+    const { wrapper } = await mountScreen(TldConfigsView)
+
+    await wrapper.get('[data-testid="tld-delete-com"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    expect(requestsOf(mock)).not.toContain(`DELETE /admin/tld-configs/${id}`)
+
+    await wrapper.get('[data-testid="tld-delete-com"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="tld-configs-result"]').text()).toBe('The TLD has domains.')
+    })
   })
 
   it('navigates to the create and edit pages', async () => {
@@ -153,5 +173,25 @@ describe('TldConfigsView', () => {
     stubRouteTable({ 'GET /admin/tld-configs': () => problem('Pricing is unavailable.', 503) })
     const failed = await mountScreen(TldConfigsView)
     expect(failed.wrapper.get('[data-testid="tld-configs-error"]').text()).toBe('Pricing is unavailable.')
+  })
+
+  it('loads the list again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRouteTable({
+      'GET /admin/tld-configs': () => {
+        calls += 1
+        return calls === 1 ? problem('Pricing is unavailable.', 503) : json([item('com')])
+      },
+    })
+    const { wrapper } = await mountScreen(TldConfigsView)
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="tld-configs-error"]').text()).toBe('Pricing is unavailable.')
+    })
+    await wrapper.get('[data-testid="tld-configs-error-retry"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="tld-delete-com"]').exists()).toBe(true)
+    })
   })
 })

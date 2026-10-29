@@ -44,7 +44,7 @@ const series = computed<UiChartSeries[]>(() => [
 </script>
 
 <template>
-  <ReportPage :title="t('reports.ticketTags.ticketTagsOverview')" :description="t('reports.ticketTags.thisReportProvidesAnOverview')">
+  <ReportPage :retry="load" :title="t('reports.ticketTags.ticketTagsOverview')" :description="t('reports.ticketTags.thisReportProvidesAnOverview')">
     <template #filters>
       <ReportFilterBar :generate-label="t('shared.generateReport')" @generate="load">
         <template #fields>

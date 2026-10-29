@@ -4,7 +4,7 @@ using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Billing.Commands.ProcessRenewalsCron;
 
-/// <summary>Validates <see cref="ProcessRenewalsCronCommand"/>: no rules — the command carries no input.</summary>
+/// <summary>Validates <see cref="ProcessRenewalsCronCommand"/>: no rules; the command carries no input.</summary>
 public sealed class ProcessRenewalsCronValidator : LocalizedValidator<ProcessRenewalsCronCommand>
 {
     /// <summary>Initializes the validator with the localization service.</summary>

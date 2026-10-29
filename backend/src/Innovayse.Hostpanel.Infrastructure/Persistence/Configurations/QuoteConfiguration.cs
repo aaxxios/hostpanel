@@ -1,8 +1,10 @@
 using Innovayse.Hostpanel.Domain.Billing;
+using Innovayse.Hostpanel.Domain.Clients;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core configuration for the <see cref="Quote"/> aggregate.</summary>
 public sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
 {
@@ -10,6 +12,13 @@ public sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
     public void Configure(EntityTypeBuilder<Quote> builder)
     {
         builder.HasKey(x => x.Id);
+
+        // Two staff actions or a staff action and a client's accept or decline on the same quote
+        // cannot both save over each other; the second save fails with ConcurrencyConflictException.
+        builder.UseXminConcurrencyToken();
+
+        // The client's quotes.
+        builder.HasIndex(x => x.ClientId);
 
         builder.Property(x => x.ClientId).IsRequired();
         builder.Property(x => x.Subject).IsRequired().HasMaxLength(500);
@@ -32,5 +41,12 @@ public sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
         builder.Navigation(x => x.Items)
             .HasField("_items")
             .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        // A client who still has this record cannot be deleted: billing, service and support history
+        // is kept, so the database refuses the delete instead of leaving rows without an owner.
+        builder.HasOne<Client>()
+            .WithMany()
+            .HasForeignKey(x => x.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

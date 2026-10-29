@@ -1,4 +1,5 @@
 using FluentValidation;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
@@ -16,10 +17,7 @@ public sealed class UpdateTestimonialOrderValidator : LocalizedValidator<UpdateT
         : base(localizer)
     {
         RuleFor(x => x.Items).NotNull().WithMessage(L["ContentOrderItemsRequired"]);
-        RuleForEach(x => x.Items).ChildRules(item =>
-        {
-            item.RuleFor(i => i.Id).MustBePositiveId(L["ContentIdInvalid"]);
-            item.RuleFor(i => i.SortOrder).GreaterThanOrEqualTo(0).WithMessage(L["ContentSortOrderInvalid"]);
-        });
+        RuleFor(x => x.Items).MustNotExceedSortOrderLimit(L["ContentOrderItemsTooMany", SortOrderLimits.MaxItems]);
+        RuleForEach(x => x.Items).SetValidator(new SortOrderItemValidator(localizer));
     }
 }

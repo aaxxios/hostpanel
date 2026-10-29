@@ -1,47 +1,56 @@
 name: Mirror to GitLab
 
-# hostpanel's CI/CD lives on GitLab (build + test + the manual production deploy
-# job), because that's where its runners are — one on ProdServer itself, tagged
-# `prod`. GitHub stays the public source of record. This workflow is the bridge:
-# every push to main or develop is mirrored to GitLab, which reuses that repo's
-# own `.gitlab-ci.yml` workflow rules to start a pipeline for the branch that
-# arrived.
+# The release pipeline (image builds, deploys) runs on GitLab, where its runners are. GitHub stays
+# the public source of record. This workflow is the bridge: every push to main or develop is
+# mirrored to GitLab, which reuses that repo's own `.gitlab-ci.yml` workflow rules to start a
+# pipeline for the branch that arrived.
 #
-# Both branches have to cross, because the two tiers are cut from different ones,
-# the same way the rest of the Innovayse suite does it:
+# Both branches have to cross, because the two tiers are cut from different ones, following the
+# usual release flow:
 #
-#   develop -> staging (LocalServer)
-#   main    -> production (ProdServer, manual)
+#   develop -> staging
+#   main    -> production (manual)
 #
-# Mirroring only main, as this did at first, left the GitLab side with no develop
-# to run a staging pipeline from at all.
+# Mirroring only main, as this did at first, left the GitLab side with no develop to run a
+# staging pipeline from at all.
 #
-# GITLAB_MIRROR_TOKEN is a GitLab *project* access token (write_repository only,
-# Maintainer role, scoped to the mirror project) — not the broad personal token
-# used elsewhere in this infra, so a leaked secret here can only push to this one
-# repo, nothing else on the account. The mirror itself is the repository variable
-# GITLAB_MIRROR_URL: host and path of the GitLab project, without a scheme.
+# GITLAB_MIRROR_TOKEN is a GitLab *project* access token (write_repository only, Maintainer role,
+# scoped to the mirror project), so a leaked secret here can only push to this one repository.
+# The mirror itself is the repository variable GITLAB_MIRROR_URL: host and path of the GitLab
+# project, without a scheme.
 on:
   push:
     branches: [main, develop]
+
+permissions:
+  contents: read
 
 jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # Full history: a shallow mirror push would truncate the GitLab
           # repo's log on the very first sync.
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Push to GitLab
         run: |
+          set -eu
           # Push to the branch the event came from, not a hardcoded main, or a
           # develop push would land on GitLab's main and deploy staging code to
           # the production branch.
           : "${GITLAB_MIRROR_URL:?GITLAB_MIRROR_URL must be set as a repository variable}"
-          git push "https://project-access-token:${GITLAB_MIRROR_TOKEN}@${GITLAB_MIRROR_URL}" "HEAD:${GITHUB_REF_NAME}"
+          : "${GITLAB_MIRROR_TOKEN:?GITLAB_MIRROR_TOKEN must be set as a repository secret}"
+          # The token reaches git through an askpass helper that reads it from the environment,
+          # so it is never part of the remote URL, a command line or the git config.
+          askpass="$(mktemp)"
+          trap 'rm -f "$askpass"' EXIT
+          printf '%s\n' '#!/bin/sh' 'case "$1" in' '  Username*) echo project-access-token ;;' '  *) echo "$GITLAB_MIRROR_TOKEN" ;;' 'esac' > "$askpass"
+          chmod 700 "$askpass"
+          GIT_ASKPASS="$askpass" GIT_TERMINAL_PROMPT=0 git push "https://${GITLAB_MIRROR_URL}" "HEAD:refs/heads/${GITHUB_REF_NAME}"
         env:
           GITLAB_MIRROR_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
           GITLAB_MIRROR_URL: ${{ vars.GITLAB_MIRROR_URL }}

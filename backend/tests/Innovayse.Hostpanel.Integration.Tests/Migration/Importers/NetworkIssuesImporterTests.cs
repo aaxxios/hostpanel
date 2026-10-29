@@ -3,17 +3,15 @@ using Innovayse.Hostpanel.Application.Migration.Common;
 using Innovayse.Hostpanel.Application.Migration.Importers;
 using Innovayse.Hostpanel.Application.Migration.Pull;
 using Innovayse.Hostpanel.Domain.Migration.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Migration.Importers;
 
 /// <summary>
 /// <see cref="NetworkIssuesImporter"/>, driven end to end through
 /// <c>MigrationPullWorker.RunAsync</c> against a <see cref="FakeMigrationPullSource"/>: creates a
-/// network issue record. Not deduplicated -- every record the source plugin holds is created, so
+/// network issue record. Not deduplicated: every record the source plugin holds is created, so
 /// no idempotent re-import is asserted.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -23,7 +21,7 @@ public sealed class NetworkIssuesImporterTests(IntegrationTestFactory factory) :
     [Fact]
     public async Task RunAsync_NetworkIssues_ImportsAResolvedIssueAsync()
     {
-        var source = new FakeMigrationPullSource { Totals = new MigrationSourceTotals(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1) };
+        var source = new FakeMigrationPullSource { Totals = MigrationSourceTotals.Empty with { Support = new MigrationSupportTotals(NetworkIssues: 1) } };
         using var host = MigrationTestSeeds.HostWithFakeSource(factory, source);
         using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();

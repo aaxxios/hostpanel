@@ -1,4 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Reports.Common;
+using Innovayse.Hostpanel.Application.Reports.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,14 +50,14 @@ public sealed class GetDomainRenewalEmailsHandler
 
         if (query.From.HasValue)
         {
-            var fromDto = new DateTimeOffset(query.From.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+            var fromDto = query.From.Value.StartOfDayUtc();
             reminders = reminders.Where(x => x.rem.SentAt >= fromDto);
         }
 
         if (query.To.HasValue)
         {
-            var toDto = new DateTimeOffset(query.To.Value.ToDateTime(TimeOnly.MaxValue), TimeSpan.Zero);
-            reminders = reminders.Where(x => x.rem.SentAt <= toDto);
+            var toDto = query.To.Value.EndOfDayExclusiveUtc();
+            reminders = reminders.Where(x => x.rem.SentAt < toDto);
         }
 
         var raw = await reminders

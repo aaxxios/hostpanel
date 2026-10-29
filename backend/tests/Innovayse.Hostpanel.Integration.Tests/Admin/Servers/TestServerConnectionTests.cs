@@ -1,13 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Domain.Servers.Enums;
 using Innovayse.SDK.Plugins;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
@@ -18,7 +16,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 /// caller with only the Client role is refused, and the route is closed to a caller with no
 /// credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>ServersEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class TestServerConnectionTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -31,7 +28,7 @@ public sealed class TestServerConnectionTests(IntegrationTestFactory factory) : 
     {
         var cwp7 = new FakeHostingPanelV7ApiClient { PackagesCount = 11 };
         var host = factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services => services.AddScoped<IHostingPanelV7ApiClient>(_ => cwp7)));
+            builder.ConfigureTestServices(services => services.AddSingleton<IHostingPanelV7ApiClient>(cwp7)));
 
         var token = await factory.GetAdminTokenAsync();
         var client = host.CreateClient();
@@ -49,15 +46,15 @@ public sealed class TestServerConnectionTests(IntegrationTestFactory factory) : 
     }
 
     /// <summary>
-    /// A failed probe still answers 200 -- the diagnostic result is the answer the caller asked
-    /// for -- and never puts the provider's own exception text on the wire.
+    /// A failed probe still answers 200 (the diagnostic result is the answer the caller asked
+    /// for) and never puts the provider's own exception text on the wire.
     /// </summary>
     [Fact]
     public async Task WhenProviderFails_ReportsDisconnectedWithoutLeakingDetailAsync()
     {
         var cwp7 = new FakeHostingPanelV7ApiClient { ShouldThrow = true };
         var host = factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services => services.AddScoped<IHostingPanelV7ApiClient>(_ => cwp7)));
+            builder.ConfigureTestServices(services => services.AddSingleton<IHostingPanelV7ApiClient>(cwp7)));
 
         var token = await factory.GetAdminTokenAsync();
         var client = host.CreateClient();
@@ -74,6 +71,52 @@ public sealed class TestServerConnectionTests(IntegrationTestFactory factory) : 
 
         using var doc = System.Text.Json.JsonDocument.Parse(body);
         doc.RootElement.GetProperty("connected").GetBoolean().Should().BeFalse();
+        doc.RootElement.GetProperty("errorMessage").GetString()
+            .Should().Be("Could not reach the server. See the server log for detail.");
+    }
+
+    /// <summary>A failed probe words its reason in the language the request asked for, not in English only.</summary>
+    [Fact]
+    public async Task WhenProviderFails_WordsTheReasonInTheRequestLanguageAsync()
+    {
+        var cwp7 = new FakeHostingPanelV7ApiClient { ShouldThrow = true };
+        var host = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services => services.AddSingleton<IHostingPanelV7ApiClient>(cwp7)));
+
+        var token = await factory.GetAdminTokenAsync();
+        var client = host.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        client.DefaultRequestHeaders.Add("X-Language", "ru");
+
+        var id = await ServersTestSeeds.CreateServerAsync(client, $"Server-{Guid.NewGuid():N}");
+
+        var response = await client.PostAsync($"/api/admin/servers/{id}/test-connection", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        body.GetProperty("errorMessage").GetString()
+            .Should().Be("Не удалось связаться с сервером. Подробности в журнале сервера.");
+    }
+
+    /// <summary>
+    /// A server whose host is the cloud metadata address is never dialled: the outbound guard
+    /// refuses it, and the test reports the server as unreachable.
+    /// </summary>
+    [Fact]
+    public async Task MetadataAddress_IsRefusedAsUnreachableAsync()
+    {
+        var client = await ServersTestSeeds.AdminClientAsync(factory);
+        var name = $"Server-{Guid.NewGuid():N}";
+        var id = await ServersTestSeeds.CreateServerAsync(client, name);
+        var update = await client.PutAsJsonAsync(
+            $"/api/admin/servers/{id}", ServersTestSeeds.ServerBody(name, hostname: "169.254.169.254"));
+        update.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var response = await client.PostAsync($"/api/admin/servers/{id}/test-connection", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        body.GetProperty("connected").GetBoolean().Should().BeFalse();
     }
 
     /// <summary>Testing the connection of an unknown server id answers 404 with <c>SERVER_NOT_FOUND</c>.</summary>

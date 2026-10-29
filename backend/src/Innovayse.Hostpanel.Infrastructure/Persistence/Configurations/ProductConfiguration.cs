@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table and column configuration for <see cref="Product"/>.</summary>
 public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
@@ -13,10 +14,11 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.GroupId).IsRequired();
         builder.Property(x => x.Name).IsRequired().HasMaxLength(200);
         builder.Property(x => x.Description).HasMaxLength(1000);
+        builder.Property(x => x.Website).HasMaxLength(Product.WebsiteMaxLength);
         builder.Property(x => x.Slug).HasMaxLength(200);
         builder.Property(x => x.PackageName).HasMaxLength(100);
-        builder.Property(x => x.Type).IsRequired().HasConversion<string>();
-        builder.Property(x => x.Status).IsRequired().HasConversion<string>();
+        builder.Property(x => x.Type).IsRequired().HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.Status).IsRequired().HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.MonthlyPrice).IsRequired().HasColumnType("numeric(18,4)");
         builder.Property(x => x.AnnualPrice).IsRequired().HasColumnType("numeric(18,4)");
         builder.Property(x => x.ServerGroupId).IsRequired(false);
@@ -24,7 +26,7 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.SortOrder).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
 
-        // Per-currency prices. ProductPrice.ProductId is never set in memory — SetPrice leaves it 0 —
+        // Per-currency prices. ProductPrice.ProductId is never set in memory, SetPrice leaves it 0,
         // so this foreign key is what stamps it when the product is saved.
         builder.HasMany(x => x.Prices)
             .WithOne()

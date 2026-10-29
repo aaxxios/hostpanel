@@ -8,8 +8,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Integrations.Telegram.Settings;
 /// <para>
 /// Telegram is optional in the same way Stripe and Name.am are: a deployment that runs no bot
 /// configures none of this, and the contact form works exactly as it did before, delivering by
-/// mail alone. A partly filled section is a different thing -- a misconfiguration, because a
-/// token with no chat id can post nowhere -- and <see cref="IsUsable"/> is what the composition
+/// mail alone. A partly filled section is a different thing, a misconfiguration, because a
+/// token with no chat id can post nowhere, and <see cref="IsUsable"/> is what the composition
 /// root checks to refuse it at startup rather than at the first enquiry.
 /// </para>
 /// <para>
@@ -37,14 +37,14 @@ public sealed class TelegramOptions
     public string BotToken { get; set; } = string.Empty;
 
     /// <summary>
-    /// The chat an enquiry is posted to -- a numeric id (negative for a group) or an
+    /// The chat an enquiry is posted to: a numeric id (negative for a group) or an
     /// <c>@channelusername</c>. Kept as a string because both spellings are valid and Telegram
     /// accepts either in the same field. Empty means no bot is configured.
     /// </summary>
     public string ChatId { get; set; } = string.Empty;
 
     /// <summary>
-    /// Whether the whole section was left unset -- a deployment that posts no enquiries to chat,
+    /// Whether the whole section was left unset: a deployment that posts no enquiries to chat,
     /// which is allowed.
     /// </summary>
     public bool IsAbsent => BotToken.Length == 0 && ChatId.Length == 0;
@@ -53,9 +53,9 @@ public sealed class TelegramOptions
     public bool IsConfigured => BotToken.Length > 0 && ChatId.Length > 0;
 
     /// <summary>
-    /// Whether this section is in a state the process may start with -- entirely unset, or
+    /// Whether this section is in a state the process may start with: entirely unset, or
     /// complete. Half-filled is neither: a token with no chat id posts nowhere while looking
-    /// configured, which is the shape of failure this feature was moved to stop repeating.
+    /// configured, so it is refused at startup.
     /// </summary>
     public bool IsUsable => IsAbsent || IsConfigured;
 }

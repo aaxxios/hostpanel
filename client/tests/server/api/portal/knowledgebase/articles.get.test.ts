@@ -1,6 +1,6 @@
 /**
- * Tests for `GET /api/portal/knowledgebase/articles`: it filters the published articles by
- * category and search text, pages the result, and returns id, title and excerpt only.
+ * Tests for `GET /api/portal/knowledgebase/articles`: it forwards the filters and paging to the
+ * backend unchanged and passes the backend page through as sent.
  *
  * @module tests/server/api/portal/knowledgebase/articles.get.test
  */
@@ -16,15 +16,20 @@ let backend: StubServer
 /** The route under test. */
 let route: RouteModule
 
-/** The published articles the backend holds. */
-const articles = [
-  { id: 1, title: 'Set up mail', content: '<p>Open the <b>panel</b></p>', category: 'Email', isPublished: true },
-  { id: 2, title: 'Renew a domain', content: 'Renewal steps', category: 'Domains', isPublished: true },
-  { id: 3, title: 'Mail forwarding', content: 'Forward rules', category: 'email', isPublished: true },
-]
+/** The page the backend answers. */
+const page = {
+  items: [
+    { id: 1, title: 'Set up mail', excerpt: 'Open the panel', category: 'Email' },
+    { id: 3, title: 'Mail forwarding', excerpt: 'Forward rules', category: 'email' },
+  ],
+  pageNumber: 2,
+  pageSize: 2,
+  totalCount: 4,
+  totalPages: 2,
+}
 
 beforeEach(async () => {
-  backend = await startBackend(() => ({ body: articles }))
+  backend = await startBackend(() => ({ body: page }))
   route = await import('~/server/api/portal/knowledgebase/articles.get')
 })
 
@@ -33,40 +38,17 @@ afterEach(async () => {
 })
 
 describe('GET /api/portal/knowledgebase/articles', () => {
-  it('lists every article as id, title and a tag-free excerpt, forwarding the reader language', async () => {
-    const result = await route.default(makeEvent({ headers: { 'x-language': 'hy' } }))
+  it('forwards the query and the reader language to the backend', async () => {
+    await route.default(makeEvent({ query: { category: 'Email', search: 'mail', page: '2', pageSize: '2' }, headers: { 'x-language': 'hy' } }))
 
-    expect(backend.requests[0]?.url).toBe('/api/knowledgebase')
+    expect(backend.requests[0]?.url).toBe('/api/knowledgebase/articles?category=Email&search=mail&page=2&pageSize=2')
     expect(backend.requests[0]?.headers['x-language']).toBe('hy')
-    expect(result).toEqual({
-      items: [
-        { id: 1, title: 'Set up mail', excerpt: 'Open the panel' },
-        { id: 2, title: 'Renew a domain', excerpt: 'Renewal steps' },
-        { id: 3, title: 'Mail forwarding', excerpt: 'Forward rules' },
-      ],
-    })
   })
 
-  it('filters by category without regard to case', async () => {
-    const result = await route.default(makeEvent({ query: { categoryid: 'EMAIL' } })) as { items: { id: number }[] }
+  it('passes the backend page through as sent', async () => {
+    const result = await route.default(makeEvent())
 
-    expect(result.items.map(item => item.id)).toEqual([1, 3])
-  })
-
-  it('filters by search text in the title or the content', async () => {
-    const byTitle = await route.default(makeEvent({ query: { search: ' RENEW ' } })) as { items: { id: number }[] }
-    const byContent = await route.default(makeEvent({ query: { search: 'forward rules' } })) as { items: { id: number }[] }
-
-    expect(byTitle.items.map(item => item.id)).toEqual([2])
-    expect(byContent.items.map(item => item.id)).toEqual([3])
-  })
-
-  it('pages the result by start and count', async () => {
-    const page = await route.default(makeEvent({ query: { limitstart: '1', limitnum: '1' } })) as { items: { id: number }[] }
-    const tail = await route.default(makeEvent({ query: { limitstart: '2' } })) as { items: { id: number }[] }
-
-    expect(page.items.map(item => item.id)).toEqual([2])
-    expect(tail.items.map(item => item.id)).toEqual([3])
+    expect(result).toEqual(page)
   })
 
   it('passes the backend refusal through with its code and sentence', async () => {

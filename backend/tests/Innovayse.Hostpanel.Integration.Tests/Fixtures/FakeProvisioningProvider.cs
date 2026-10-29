@@ -11,22 +11,36 @@ namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 public sealed class FakeProvisioningProvider : IProvisioningProvider
 {
     /// <summary>
-    /// When <see langword="true"/>, every member throws instead of answering — the shape an
+    /// When <see langword="true"/>, every member throws instead of answering: the shape an
     /// upstream provider failure takes, whatever its real cause.
     /// </summary>
     public bool ShouldFail { get; set; }
 
+    /// <summary>
+    /// The answer <see cref="ProvisionAsync"/> gives when <see cref="ShouldFail"/> is not set; a
+    /// created account by default. Set it to stage an existing account or a reference-less success.
+    /// </summary>
+    public ProvisioningResult ProvisionAnswer { get; set; } = ProvisioningResult.Created("fake-ref-123");
+
+    /// <summary>How many times <see cref="ProvisionAsync"/> was called.</summary>
+    public int ProvisionCalls { get; private set; }
+
+    /// <summary>How many times <see cref="SuspendAsync"/> was called.</summary>
+    public int SuspendCalls { get; private set; }
+
     /// <inheritdoc/>
     public Task<ProvisioningResult> ProvisionAsync(ProvisionAccountOrder req, CancellationToken ct)
     {
+        ProvisionCalls++;
         return ShouldFail
-            ? Task.FromResult(new ProvisioningResult(false, null, "fake provider refused to provision"))
-            : Task.FromResult(new ProvisioningResult(true, "fake-ref-123", null));
+            ? Task.FromResult(ProvisioningResult.Refused("fake provider refused to provision"))
+            : Task.FromResult(ProvisionAnswer);
     }
 
     /// <inheritdoc/>
     public Task SuspendAsync(SuspendAccountOrder req, CancellationToken ct)
     {
+        SuspendCalls++;
         ThrowIfShouldFail();
         return Task.CompletedTask;
     }

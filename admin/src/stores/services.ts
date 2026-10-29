@@ -1,6 +1,6 @@
 /**
  * Pinia store for admin services management: the service list with enriched client, domain and
- * pricing data, one service's detail, the save and the provisioning commands.
+ * pricing data, one service's detail, the per-section saves and the provisioning commands.
  *
  * Owns every request the service pages make and the sentence for a refusal, so the pages hold
  * no `catch`. A load puts its sentence in `error`; a mutation puts its sentence in `actionError`.
@@ -9,8 +9,16 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useServicesApi } from '@/composables/apis/useServicesApi'
 import { runAction } from '@/lib/runAction'
-import type { PagedResult } from '@/types/pagedresult'
-import type { ServiceDetail, ServiceListItem, UpdateServicePayload } from '@/types/service'
+import type { PaginatedList } from '@/types/paginatedlist'
+import type {
+  ServiceAutomationPayload,
+  ServiceBillingTermsPayload,
+  ServiceDetail,
+  ServiceHostingAccountPayload,
+  ServiceListItem,
+  ServiceNotesPayload,
+  ServiceStatus,
+} from '@/types/service'
 import { DEFAULT_PAGE_SIZE, LOOKUP_PAGE_SIZE } from '@/lib/limits'
 
 /** Loads and changes services. */
@@ -72,7 +80,7 @@ export const useServicesStore = defineStore('services', () => {
     clientId: number | string,
     pageNumber: number,
     size: number,
-  ): Promise<PagedResult<ServiceListItem> | null> => {
+  ): Promise<PaginatedList<ServiceListItem> | null> => {
     loading.value = true
     const result = await runAction(error, () =>
       api.listServices({ clientId, page: pageNumber, pageSize: size }),
@@ -121,14 +129,64 @@ export const useServicesStore = defineStore('services', () => {
     (await runAction(actionError, task, fieldErrors)).ok
 
   /**
-   * Saves the editable fields of a service.
+   * Saves what a service is billed.
    *
    * @param id - Service primary key.
-   * @param payload - Updated field values.
+   * @param payload - The billing terms.
    * @returns True when saved; false when refused (see `actionError` and `fieldErrors`).
    */
-  const update = (id: number | string, payload: UpdateServicePayload): Promise<boolean> =>
-    mutate(() => api.updateService(id, payload))
+  const updateBillingTerms = (id: number | string, payload: ServiceBillingTermsPayload): Promise<boolean> =>
+    mutate(() => api.updateBillingTerms(id, payload))
+
+  /**
+   * Saves the hosting account record of a service.
+   *
+   * @param id - Service primary key.
+   * @param payload - The hosting account details.
+   * @returns True when saved; false when refused (see `actionError` and `fieldErrors`).
+   */
+  const updateHostingAccount = (id: number | string, payload: ServiceHostingAccountPayload): Promise<boolean> =>
+    mutate(() => api.updateHostingAccount(id, payload))
+
+  /**
+   * Saves the suspension hold and the end-of-cycle termination of a service.
+   *
+   * @param id - Service primary key.
+   * @param payload - The automation settings.
+   * @returns True when saved; false when refused (see `actionError` and `fieldErrors`).
+   */
+  const updateAutomation = (id: number | string, payload: ServiceAutomationPayload): Promise<boolean> =>
+    mutate(() => api.updateAutomation(id, payload))
+
+  /**
+   * Saves the admin notes of a service.
+   *
+   * @param id - Service primary key.
+   * @param payload - The notes.
+   * @returns True when saved; false when refused (see `actionError` and `fieldErrors`).
+   */
+  const updateNotes = (id: number | string, payload: ServiceNotesPayload): Promise<boolean> =>
+    mutate(() => api.updateNotes(id, payload))
+
+  /**
+   * Moves a service to another status.
+   *
+   * @param id - Service primary key.
+   * @param status - The status asked for.
+   * @returns True when moved; false when refused (see `actionError`).
+   */
+  const changeStatus = (id: number | string, status: ServiceStatus): Promise<boolean> =>
+    mutate(() => api.changeStatus(id, { status }))
+
+  /**
+   * Corrects the termination date of a terminated service.
+   *
+   * @param id - Service primary key.
+   * @param terminatedAt - ISO 8601 date the service really ended.
+   * @returns True when saved; false when refused (see `actionError`).
+   */
+  const correctTerminationDate = (id: number | string, terminatedAt: string): Promise<boolean> =>
+    mutate(() => api.correctTerminationDate(id, { terminatedAt }))
 
   /**
    * Asks the provisioning server for a one-time control-panel login URL.
@@ -200,6 +258,7 @@ export const useServicesStore = defineStore('services', () => {
   return {
     services, current, page, pageSize, totalCount, loading, error, actionError, fieldErrors,
     fetchAll, fetchClientPage, fetchById, fetchClientServices,
-    update, fetchPanelLoginUrl, provision, changePassword, changePackage, suspend, unsuspend, terminate,
+    updateBillingTerms, updateHostingAccount, updateAutomation, updateNotes, changeStatus, correctTerminationDate,
+    fetchPanelLoginUrl, provision, changePassword, changePackage, suspend, unsuspend, terminate,
   }
 })

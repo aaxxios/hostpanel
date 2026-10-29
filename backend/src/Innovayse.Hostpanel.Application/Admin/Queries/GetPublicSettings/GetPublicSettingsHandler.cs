@@ -10,7 +10,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Queries.GetPublicSettings;
 /// Handles <see cref="GetPublicSettingsQuery"/> by returning only the settings the
 /// public storefront needs.
 /// <para>
-/// The keys come from <see cref="PortalSettingKeys.Public"/> — an allow-list rather
+/// The keys come from <see cref="PortalSettingKeys.Public"/>: an allow-list rather
 /// than a prefix match on purpose. A prefix would silently start exposing anything a
 /// future contributor happens to name <c>portal.*</c>, and this response is served
 /// without authentication from a table that also holds integration credentials.
@@ -40,13 +40,12 @@ public sealed class GetPublicSettingsHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success with the exposed key/value pairs; empty when none are set. This use case refuses
-    /// nothing — it is read anonymously by the storefront.
+    /// nothing: it is read anonymously by the storefront.
     /// </returns>
     public async Task<Result<IReadOnlyList<PublicSettingDto>>> HandleAsync(
         GetPublicSettingsQuery query,
         CancellationToken ct)
     {
-        // Was ISettingRepository.ListAsync -- read-only, so no tracking is needed.
         var settings = await _context.Settings.AsNoTracking().OrderBy(s => s.Key).ToListAsync(ct);
 
         // The allow-list never names a secret (PortalSettingKeys tests hold that), and the secrecy

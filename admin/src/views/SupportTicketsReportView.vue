@@ -74,7 +74,7 @@ const totals = computed<Record<string, string | number>>(() => ({
 </script>
 
 <template>
-  <ReportPage :title="title" :description="t('reports.supportTicketsReport.thisReportShowsABreakdown')">
+  <ReportPage :retry="load" :title="title" :description="t('reports.supportTicketsReport.thisReportShowsABreakdown')">
     <template #filters>
       <ReportFilterBar @generate="load">
         <template #fields>

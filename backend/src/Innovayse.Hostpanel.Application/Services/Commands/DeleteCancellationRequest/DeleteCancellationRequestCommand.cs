@@ -2,4 +2,4 @@ namespace Innovayse.Hostpanel.Application.Services.Commands.DeleteCancellationRe
 
 /// <summary>Command to delete a cancellation request.</summary>
 /// <param name="Id">The cancellation request primary key.</param>
-public record DeleteCancellationRequestCommand(int Id);
+public sealed record DeleteCancellationRequestCommand(int Id);

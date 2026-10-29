@@ -1,5 +1,5 @@
 /**
- * Endpoints for money — invoices under `/api/portal/client/invoices`, the saved payment
+ * Endpoints for money: invoices under `/api/portal/client/invoices`, the saved payment
  * methods at `/api/portal/client/payment-methods`, and ordering under `/api/portal/order`.
  *
  * Every function returns a plain `Promise`. Nothing here is cached or held.
@@ -9,10 +9,13 @@
 
 import { apiFetch } from '~/composables/useApi'
 import type { ClientInvoice } from '~/types/clientinvoice'
+import type { GatewayCompletion } from '~/types/gatewaycompletion'
 import type { GatewayMethod } from '~/types/gatewaymethod'
 import type { PaymentMethod, PaymentMethodWire } from '~/types/payment'
+import type { PlaceOrderResult } from '~/types/placeorderresult'
 import { PaymentTarget } from '~/types/paymenttarget'
 import { toPaymentMethod } from '~/utils/paymentMethodMapper'
+import { HttpMethod } from '~/types/httpmethod'
 
 /**
  * The billing surface, one function per endpoint.
@@ -58,25 +61,16 @@ export const useBillingApi = () => {
    *
    * @param invoiceId - Invoice to pay.
    * @param payMethodId - Saved payment method to charge.
+   * @param attemptId - The payment attempt, new for each pay action and the same on a retry of it,
+   * so a retried request is one charge and a new action after a decline is a new one.
    * @returns Whatever the endpoint answers with.
-   * @throws Whatever `apiFetch` throws — a declined card included.
+   * @throws Whatever `apiFetch` throws: a declined card included.
    */
-  const payInvoice = (invoiceId: string, payMethodId: string | number): Promise<unknown> =>
+  const payInvoice = (invoiceId: string, payMethodId: string | number, attemptId: string): Promise<unknown> =>
     apiFetch(`/api/portal/client/invoices/${invoiceId}/pay`, {
-      method: 'POST',
-      body: { paymethodid: payMethodId }
+      method: HttpMethod.Post,
+      body: { paymentMethodId: payMethodId, attemptId }
     })
-
-  /**
-   * Updates a saved payment method's details.
-   *
-   * @param id - Payment method to update.
-   * @param body - The fields to change.
-   * @returns Whatever the endpoint answers with.
-   * @throws Whatever `apiFetch` throws.
-   */
-  const updatePaymentMethod = (id: string, body: Record<string, unknown>): Promise<unknown> =>
-    apiFetch(`/api/portal/client/payment-methods/${id}`, { method: 'PUT', body })
 
   /**
    * Makes a saved payment method the account default.
@@ -87,8 +81,8 @@ export const useBillingApi = () => {
    */
   const setDefaultPaymentMethod = (id: string): Promise<unknown> =>
     apiFetch(`/api/portal/client/payment-methods/${id}`, {
-      method: 'PUT',
-      body: { set_as_default: true }
+      method: HttpMethod.Put,
+      body: { setAsDefault: true }
     })
 
   /**
@@ -99,18 +93,19 @@ export const useBillingApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const removePaymentMethod = (id: string): Promise<unknown> =>
-    apiFetch(`/api/portal/client/payment-methods/${id}`, { method: 'DELETE' })
+    apiFetch(`/api/portal/client/payment-methods/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Places an order, creating the order and its invoice on the backend.
    *
    * @param order - Cart contents, billing details and chosen payment method.
-   * @returns The new order and invoice ids, plus the payment token that authorises paying for the order.
+   * @returns The new order's id and number, its invoice id, the payment token that authorises paying for it,
+   * and the billed total; a total of zero means the backend already settled and fulfilled the order.
    * @throws Whatever `apiFetch` throws.
    */
-  const createOrder = (order: Record<string, unknown>): Promise<{ orderId: number, invoiceId: number, paymentToken: string, paid?: boolean }> =>
-    apiFetch<{ orderId: number, invoiceId: number, paymentToken: string, paid?: boolean }>('/api/portal/order/create', {
-      method: 'POST',
+  const createOrder = (order: Record<string, unknown>): Promise<PlaceOrderResult> =>
+    apiFetch<PlaceOrderResult>('/api/portal/order/create', {
+      method: HttpMethod.Post,
       body: order
     })
 
@@ -127,7 +122,7 @@ export const useBillingApi = () => {
     paymentToken: string
   ): Promise<{ clientSecret: string }> =>
     apiFetch<{ clientSecret: string }>(`/api/portal/order/${orderId}/create-payment-intent`, {
-      method: 'POST',
+      method: HttpMethod.Post,
       body: { paymentToken }
     })
 
@@ -149,7 +144,7 @@ export const useBillingApi = () => {
     paymentToken: string
   ): Promise<{ redirectUrl: string }> =>
     apiFetch<{ redirectUrl: string }>(`/api/portal/order/${orderId}/gateway-payment/start`, {
-      method: 'POST',
+      method: HttpMethod.Post,
       body: { module, returnUrl, paymentToken }
     })
 
@@ -169,7 +164,7 @@ export const useBillingApi = () => {
   ): Promise<{ redirectUrl: string }> =>
     apiFetch<{ redirectUrl: string }>(
       `/api/portal/client/invoices/${invoiceId}/gateway-payment/start`,
-      { method: 'POST', body: { module, returnUrl } }
+      { method: HttpMethod.Post, body: { module, returnUrl } }
     )
 
   /**
@@ -181,21 +176,21 @@ export const useBillingApi = () => {
    * @param paymentToken - The order's payment token. Required when `target` is `PaymentTarget.Order`; ignored
    * for an invoice, which is authorised by the caller's own credential.
    * @returns What the bank said the payment did.
-   * @throws Whatever `apiFetch` throws — the caller must not read a failure here as a
+   * @throws Whatever `apiFetch` throws: the caller must not read a failure here as a
    * declined payment; the money may well have moved.
    */
   const completeGatewayPayment = (
     target: PaymentTarget,
     id: string | number,
     paymentToken?: string
-  ): Promise<{ state: 'paid' | 'pending' | 'declined' }> =>
-    apiFetch<{ state: 'paid' | 'pending' | 'declined' }>(
+  ): Promise<GatewayCompletion> =>
+    apiFetch<GatewayCompletion>(
       target === PaymentTarget.Order
         ? `/api/portal/order/${id}/gateway-payment/complete`
         : `/api/portal/client/invoices/${id}/gateway-payment/complete`,
       // Only the order endpoint reads a token; the invoice one is behind the client's own
       // credential and is sent an empty body, exactly as before.
-      { method: 'POST', body: target === PaymentTarget.Order ? { paymentToken } : {} }
+      { method: HttpMethod.Post, body: target === PaymentTarget.Order ? { paymentToken } : {} }
     )
 
   /**
@@ -213,7 +208,7 @@ export const useBillingApi = () => {
     paymentToken: string
   ): Promise<unknown> =>
     apiFetch(`/api/portal/order/${orderId}/confirm-payment`, {
-      method: 'POST',
+      method: HttpMethod.Post,
       body: { ...body, paymentToken }
     })
 
@@ -241,7 +236,6 @@ export const useBillingApi = () => {
     startInvoiceGatewayPayment,
     completeGatewayPayment,
     payInvoice,
-    updatePaymentMethod,
     setDefaultPaymentMethod,
     removePaymentMethod,
     confirmOrderPayment

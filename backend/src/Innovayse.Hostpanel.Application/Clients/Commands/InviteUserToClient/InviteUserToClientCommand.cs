@@ -6,4 +6,4 @@ namespace Innovayse.Hostpanel.Application.Clients.Commands.InviteUserToClient;
 /// <param name="FirstName">The invitee's first name.</param>
 /// <param name="LastName">The invitee's last name.</param>
 /// <param name="Permissions">Permissions to grant as bit-flags integer.</param>
-public record InviteUserToClientCommand(int ClientId, string Email, string FirstName, string LastName, int Permissions);
+public sealed record InviteUserToClientCommand(int ClientId, string Email, string FirstName, string LastName, int Permissions);

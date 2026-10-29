@@ -2,27 +2,22 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Audit.Common;
 using Innovayse.Hostpanel.Application.Audit.Queries.ListClientActivityLogs;
-using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Audit;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Audit;
 
 /// <summary>
 /// <see cref="ListClientActivityLogsQuery"/>, both through the real <see cref="IMessageBus"/> (the
-/// date window, the admin/description/IP substring filters, and the newest-first order -- inlined
-/// from the dissolved <c>IActivityLogRepository.ListByClientIdAsync</c> in A6 Task 6) and through
+/// date window, the admin/description/IP substring filters, and the newest-first order)
+/// and through
 /// <c>ClientActivityLogsController</c>'s <c>GET /api/clients/{id}/activity-logs</c> (the
-/// authorization boundary and the paging shape). Merged from the deleted
-/// <c>ActivityLogQueryTests</c> and <c>ClientActivityLogsEndpointTests</c> (A7 Task 4): this query
-/// is the module's only use case.
+/// authorization boundary and the paging shape). This query is the module's only use case.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListClientActivityLogsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -32,7 +27,7 @@ public sealed class ListClientActivityLogsTests(IntegrationTestFactory factory) 
 
     /// <summary>
     /// Adds a log entry for <paramref name="clientId"/> and back-dates <c>CreatedAt</c> directly on
-    /// the tracked entry -- <see cref="ActivityLog.Create"/> always stamps <see cref="DateTimeOffset.UtcNow"/>
+    /// the tracked entry: <see cref="ActivityLog.Create"/> always stamps <see cref="DateTimeOffset.UtcNow"/>
     /// and takes no timestamp argument, so a specific date can only be written this way.
     /// </summary>
     /// <param name="context">The data context to seed into.</param>
@@ -64,39 +59,20 @@ public sealed class ListClientActivityLogsTests(IntegrationTestFactory factory) 
         return client;
     }
 
-    /// <summary>Creates a client record and returns its assigned id.</summary>
-    /// <param name="admin">Authenticated admin client.</param>
-    /// <returns>The new client's id.</returns>
-    private static async Task<int> CreateClientAsync(HttpClient admin)
-    {
-        var userId = $"user-{Guid.NewGuid():N}";
-        var response = await admin.PostAsJsonAsync("/api/clients", new
-        {
-            subjectUserId = userId,
-            email = $"{userId}@example.test",
-            firstName = "Ada",
-            lastName = "Lovelace",
-            companyName = (string?)null,
-        });
-
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
-        return await response.Content.ReadFromJsonAsync<int>();
-    }
-
-    /// <summary>Results come back newest first, matching the dissolved repository's own ordering.</summary>
+    /// <summary>Results come back newest first, so the latest activity leads.</summary>
     [Fact]
     public async Task HandleAsync_OrdersNewestFirstAsync()
     {
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        var clientId = new Random().Next(1_000_000, 2_000_000);
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
         var now = DateTimeOffset.UtcNow;
         await SeedLogAsync(context, clientId, "Oldest", now.AddDays(-2));
         await SeedLogAsync(context, clientId, "Newest", now);
         await SeedLogAsync(context, clientId, "Middle", now.AddDays(-1));
 
-        var result = await bus.InvokeAsync<Result<PagedResult<ActivityLogDto>>>(
+        var result = await bus.InvokeAsync<Result<PaginatedList<ActivityLogDto>>>(
             new ListClientActivityLogsQuery(clientId, 1, 10, null, null, null, null));
 
         Assert.True(result.IsSuccess);
@@ -110,13 +86,13 @@ public sealed class ListClientActivityLogsTests(IntegrationTestFactory factory) 
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        var clientId = new Random().Next(2_000_000, 3_000_000);
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
         var targetDay = new DateTimeOffset(2025, 6, 15, 10, 0, 0, TimeSpan.Zero);
         await SeedLogAsync(context, clientId, "OnTargetDay", targetDay);
         await SeedLogAsync(context, clientId, "DayBefore", targetDay.AddDays(-1));
         await SeedLogAsync(context, clientId, "DayAfter", targetDay.AddDays(1));
 
-        var result = await bus.InvokeAsync<Result<PagedResult<ActivityLogDto>>>(
+        var result = await bus.InvokeAsync<Result<PaginatedList<ActivityLogDto>>>(
             new ListClientActivityLogsQuery(clientId, 1, 10, targetDay, null, null, null));
 
         Assert.True(result.IsSuccess);
@@ -130,13 +106,13 @@ public sealed class ListClientActivityLogsTests(IntegrationTestFactory factory) 
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        var clientId = new Random().Next(3_000_000, 4_000_000);
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
         var now = DateTimeOffset.UtcNow;
         await SeedLogAsync(context, clientId, "ByName", now, adminName: "Ada Lovelace");
         await SeedLogAsync(context, clientId, "ByEmail", now.AddMinutes(-1), adminEmail: "ada@example.test");
         await SeedLogAsync(context, clientId, "NoMatch", now.AddMinutes(-2), adminName: "Grace Hopper");
 
-        var result = await bus.InvokeAsync<Result<PagedResult<ActivityLogDto>>>(
+        var result = await bus.InvokeAsync<Result<PaginatedList<ActivityLogDto>>>(
             new ListClientActivityLogsQuery(clientId, 1, 10, null, "ada", null, null));
 
         Assert.True(result.IsSuccess);
@@ -150,12 +126,12 @@ public sealed class ListClientActivityLogsTests(IntegrationTestFactory factory) 
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        var clientId = new Random().Next(4_000_000, 5_000_000);
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
         var now = DateTimeOffset.UtcNow;
         await SeedLogAsync(context, clientId, "Added Invoice Payment", now);
         await SeedLogAsync(context, clientId, "Refunded Invoice", now.AddMinutes(-1));
 
-        var result = await bus.InvokeAsync<Result<PagedResult<ActivityLogDto>>>(
+        var result = await bus.InvokeAsync<Result<PaginatedList<ActivityLogDto>>>(
             new ListClientActivityLogsQuery(clientId, 1, 10, null, null, "PAYMENT", null));
 
         Assert.True(result.IsSuccess);
@@ -169,12 +145,12 @@ public sealed class ListClientActivityLogsTests(IntegrationTestFactory factory) 
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        var clientId = new Random().Next(5_000_000, 6_000_000);
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
         var now = DateTimeOffset.UtcNow;
         await SeedLogAsync(context, clientId, "FromOffice", now, ipAddress: "10.0.0.5");
         await SeedLogAsync(context, clientId, "FromHome", now.AddMinutes(-1), ipAddress: "192.168.1.1");
 
-        var result = await bus.InvokeAsync<Result<PagedResult<ActivityLogDto>>>(
+        var result = await bus.InvokeAsync<Result<PaginatedList<ActivityLogDto>>>(
             new ListClientActivityLogsQuery(clientId, 1, 10, null, null, null, "10.0.0"));
 
         Assert.True(result.IsSuccess);
@@ -188,13 +164,14 @@ public sealed class ListClientActivityLogsTests(IntegrationTestFactory factory) 
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
-        var clientId = new Random().Next(6_000_000, 7_000_000);
-        var otherClientId = clientId + 1;
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
+        // A real second client: the log's client is a foreign key, so another client's entry needs one.
+        var otherClientId = await DomainsTestSeeds.SeedClientAsync(context);
         var now = DateTimeOffset.UtcNow;
         await SeedLogAsync(context, clientId, "Mine", now);
         await SeedLogAsync(context, otherClientId, "TheirsNotMine", now);
 
-        var result = await bus.InvokeAsync<Result<PagedResult<ActivityLogDto>>>(
+        var result = await bus.InvokeAsync<Result<PaginatedList<ActivityLogDto>>>(
             new ListClientActivityLogsQuery(clientId, 1, 10, null, null, null, null));
 
         Assert.True(result.IsSuccess);
@@ -215,7 +192,7 @@ public sealed class ListClientActivityLogsTests(IntegrationTestFactory factory) 
     public async Task Get_ClientWithNoActivity_ReturnsAnEmptyPageAsync()
     {
         var admin = await AdminClientAsync();
-        var clientId = await CreateClientAsync(admin);
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
 
         var response = await admin.GetAsync($"/api/clients/{clientId}/activity-logs");
 
@@ -236,5 +213,17 @@ public sealed class ListClientActivityLogsTests(IntegrationTestFactory factory) 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         body.GetProperty("items").GetArrayLength().Should().Be(0);
+    }
+
+    /// <summary>A search filter past the length limit is refused before the handler runs.</summary>
+    [Fact]
+    public async Task Get_OverlongFilter_IsRefusedAsync()
+    {
+        var admin = await AdminClientAsync();
+        var filter = new string('a', 201);
+
+        var response = await admin.GetAsync($"/api/clients/{NoSuchClientId}/activity-logs?description={filter}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

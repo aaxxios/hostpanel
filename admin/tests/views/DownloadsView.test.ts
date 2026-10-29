@@ -7,8 +7,8 @@ import { flushPromises } from '@vue/test-utils'
 import DownloadsView from '@/views/DownloadsView.vue'
 import { DownloadType } from '@/types/downloaditem'
 import { mountView } from '../helpers/mount'
-import { problem, stubFetch, callOf } from '../helpers/fetch'
-import { stubPathRoutes } from '../helpers/routes'
+import { json, problem, stubFetch, callOf } from '../helpers/fetch'
+import { stubPathRoutes, stubRoutes } from '../helpers/routes'
 
 /** One top-level category as the endpoint returns it. */
 const category = { id: 1, name: 'Drivers', description: 'Hardware drivers', isHidden: false, parentCategoryId: null, downloadCount: 2 }
@@ -90,5 +90,62 @@ describe('DownloadsView', () => {
     const wrapper = await mountView(DownloadsView)
 
     expect(wrapper.get('[data-testid="downloads-error"]').text()).toBe('Not allowed.')
+  })
+
+  /**
+   * Stubs the two loads and the answer of the file's delete.
+   *
+   * @param answer - The answer of `DELETE /api/downloads/9`.
+   * @returns The fetch mock.
+   */
+  const stubDelete = (answer: () => Response): ReturnType<typeof vi.fn> =>
+    stubRoutes({
+      'GET /api/downloads/categories': () => json([category]),
+      'GET /api/downloads': () => json([download]),
+      'DELETE /api/downloads/9': answer,
+    })
+
+  it('reports a successful delete under the header', async () => {
+    stubDelete(() => new Response(null, { status: 204 }))
+    const wrapper = await mountView(DownloadsView)
+
+    await wrapper.get('[data-testid="downloads-download-9-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="downloads-feedback"]').text()).toBe('Deleted.')
+  })
+
+  it('shows the API sentence when the delete is refused, without the load error', async () => {
+    stubDelete(() => problem('The file is in use.', 409))
+    const wrapper = await mountView(DownloadsView)
+
+    await wrapper.get('[data-testid="downloads-download-9-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="downloads-feedback"]').text()).toBe('The file is in use.')
+    expect(wrapper.find('[data-testid="downloads-error"]').exists()).toBe(false)
+  })
+
+  it('does not delete when the confirmation is cancelled', async () => {
+    const mock = stubDelete(() => new Response(null, { status: 204 }))
+    const wrapper = await mountView(DownloadsView)
+
+    await wrapper.get('[data-testid="downloads-download-9-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(false)
+  })
+
+  it('reloads from the Retry of a refused load', async () => {
+    stubFetch(problem('Not allowed.', 403), problem('Not allowed.', 403), json([category]), json([download]))
+    const wrapper = await mountView(DownloadsView)
+
+    await wrapper.get('[data-testid="downloads-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="downloads-error"]').exists()).toBe(false)
   })
 })

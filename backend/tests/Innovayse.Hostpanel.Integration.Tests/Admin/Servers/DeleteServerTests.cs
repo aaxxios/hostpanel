@@ -1,18 +1,21 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Clients;
+using Innovayse.Hostpanel.Domain.Products;
+using Innovayse.Hostpanel.Domain.Products.Enums;
+using Innovayse.Hostpanel.Domain.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
 /// <summary>
 /// <c>DELETE /api/admin/servers/{id}</c>: creating then deleting a server removes it from the
-/// list, deleting it again answers <c>SERVER_NOT_FOUND</c>, a caller with only the Client role is
+/// list, deleting it again answers <c>SERVER_NOT_FOUND</c>, a server a client service still lives
+/// on is refused with <c>SERVER_IN_USE</c>, a caller with only the Client role is
 /// refused, and the route is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>ServersEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DeleteServerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -35,6 +38,23 @@ public sealed class DeleteServerTests(IntegrationTestFactory factory) : IClassFi
         await ServersTestSeeds.AssertCodeAsync(deleteAgain, HostpanelErrorCodes.SERVER_NOT_FOUND);
     }
 
+    /// <summary>A server a client service still lives on is refused with 409 and stays in the list.</summary>
+    [Fact]
+    public async Task ServerHostingAService_IsRefusedAsync()
+    {
+        var client = await ServersTestSeeds.AdminClientAsync(factory);
+        var name = $"Server-{Guid.NewGuid():N}";
+        var id = await ServersTestSeeds.CreateServerAsync(client, name);
+        await PlaceServiceOnAsync(id);
+
+        var delete = await client.DeleteAsync($"/api/admin/servers/{id}");
+
+        delete.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await ServersTestSeeds.AssertCodeAsync(delete, HostpanelErrorCodes.SERVER_IN_USE);
+        var list = await client.GetFromJsonAsync<List<System.Text.Json.JsonElement>>("/api/admin/servers");
+        list!.Should().Contain(r => r.GetProperty("name").GetString() == name);
+    }
+
     /// <summary>A caller with only the Client role is refused with 403.</summary>
     [Fact]
     public async Task IsClosedToTheClientRoleAsync()
@@ -53,5 +73,27 @@ public sealed class DeleteServerTests(IntegrationTestFactory factory) : IClassFi
         var response = await factory.CreateClient().DeleteAsync($"/api/admin/servers/{ServersTestSeeds.NoSuchId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>Activates a fresh client service on the server, so the server is in use.</summary>
+    /// <param name="serverId">The server the service is placed on.</param>
+    /// <returns>A task that completes once the service is saved.</returns>
+    private async Task PlaceServiceOnAsync(int serverId)
+    {
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var owner = Client.Create($"server-use-{Guid.NewGuid():N}", "Server", "User", $"server-use-{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
+        var group = ProductGroup.Create($"server-use-{Guid.NewGuid():N}", null);
+        context.Clients.Add(owner);
+        context.ProductGroups.Add(group);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var product = Product.Create(group.Id, $"Plan {Guid.NewGuid():N}", null, null, null, "plan", ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
+        context.Products.Add(product);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var service = ClientService.Create(owner.Id, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        await ServicesTestSeeds.AddActivatedAsync(context, service, $"ref-{Guid.NewGuid():N}", DateTimeOffset.UtcNow, serverId);
+        await context.SaveChangesAsync(CancellationToken.None);
     }
 }

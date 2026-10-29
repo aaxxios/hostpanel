@@ -1,41 +1,39 @@
 /**
- * Fixtures for the servers screen: one provisioning server as `GET /api/admin/servers` returns it.
+ * Fixtures for the servers screen: one provisioning server as `GET /api/admin/servers` returns it,
+ * with its SSH key management settings and agent installer setup.
  */
 import type { ServerDto, TestConnectionResultDto } from '../../src/types/server'
-import type { ServerSshSettingsDto } from '../../src/types/serverssh'
+import type { ServerSshSettingsDto, ServerSshSetupDto } from '../../src/types/serverssh'
+import { SshAgentProfile } from '../../src/types/sshenums'
 
 /** A reachable control-panel server that is the default for its module. */
 export const hostServer: ServerDto = {
   id: 1,
   name: 'host1',
-  hostname: 'host1.example.test',
-  ipAddress: '203.0.113.10',
-  assignedIpAddresses: null,
+  endpoint: { hostname: 'host1.example.test', ipAddress: '203.0.113.10', assignedIpAddresses: null, useSSL: true },
   module: 'Cwp7',
   username: 'root',
-  useSSL: true,
-  maxAccounts: 100,
-  isDefault: true,
-  isDisabled: false,
-  monthlyCost: 20,
-  datacenter: null,
-  serverStatusAddress: null,
-  ns1Hostname: null,
-  ns1Ip: null,
-  ns2Hostname: null,
-  ns2Ip: null,
-  ns3Hostname: null,
-  ns3Ip: null,
-  ns4Hostname: null,
-  ns4Ip: null,
-  ns5Hostname: null,
-  ns5Ip: null,
+  limits: { maxAccounts: 100, isDefault: true, isDisabled: false },
+  hosting: { datacenter: null, serverStatusAddress: null, monthlyCost: 20 },
+  nameServers: {
+    ns1Hostname: null,
+    ns1Ip: null,
+    ns2Hostname: null,
+    ns2Ip: null,
+    ns3Hostname: null,
+    ns3Ip: null,
+    ns4Hostname: null,
+    ns4Ip: null,
+    ns5Hostname: null,
+    ns5Ip: null,
+  },
   serverGroupId: null,
   serverGroupName: null,
   createdAt: '2026-01-01T00:00:00Z',
   isOnline: null,
   lastTestedAt: null,
   accountsCount: 12,
+  credentials: { hasPassword: false, hasApiToken: false, hasAccessHash: true },
 }
 
 /** `POST /api/admin/servers/1/test-connection` when the panel answers. */
@@ -63,4 +61,17 @@ export const hostServerSsh: ServerSshSettingsDto = {
   operationTimeoutSeconds: 20,
   isHealthy: null,
   lastHealthCheckAt: null,
+}
+
+/** Agent installer setup of {@link hostServer} before any identity exists, with no source address configured. */
+export const hostServerSshSetup: ServerSshSetupDto = {
+  serverId: hostServer.id,
+  profile: SshAgentProfile.Cwp,
+  publicKey: null,
+  binding: null,
+  agentUsername: 'hpsshkeys',
+  bundleVersion: '1.1.0',
+  bundleSha256: 'e'.repeat(64),
+  bundlePath: '/api/public/ssh-agent/bundle.tar.gz',
+  sourceAddresses: [],
 }

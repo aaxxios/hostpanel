@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-/** aurora services grid — four editorial cards (hosting, servers, domains, billing), each with an icon on a gradient tile, no data dependency. */
+/** aurora services grid: four editorial cards (hosting, servers, domains, billing), each with an icon on a gradient tile, no data dependency. */
 import { Cpu, Globe, Receipt, Server } from 'lucide-vue-next'
 import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
 import { HomeSectionId } from '~/types/homesectionid'

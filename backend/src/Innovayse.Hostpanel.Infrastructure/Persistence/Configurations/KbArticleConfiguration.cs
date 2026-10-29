@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core configuration for the <see cref="KbArticle"/> entity.</summary>
 public sealed class KbArticleConfiguration : IEntityTypeConfiguration<KbArticle>
 {
@@ -14,7 +15,7 @@ public sealed class KbArticleConfiguration : IEntityTypeConfiguration<KbArticle>
 
         builder.Property(x => x.Title).IsRequired().HasMaxLength(500);
         builder.Property(x => x.Content).IsRequired();
-        builder.Property(x => x.Category).IsRequired().HasMaxLength(255);
+        builder.Property(x => x.Category).IsRequired().HasMaxLength(KbArticle.CategoryMaxLength);
         builder.Property(x => x.IsPublished).IsRequired();
 
         builder.HasIndex(x => x.IsPublished);

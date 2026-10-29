@@ -3,6 +3,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Billing;
+
 /// <summary>
 /// A currency this panel bills in. One row is the base; every other row carries a rate to it.
 /// </summary>
@@ -96,7 +97,7 @@ public sealed class Currency : BaseEntity, IAggregateRoot
         };
     }
 
-    /// <summary>Formats an amount in this currency's own shape — decimals, prefix, suffix. Locale plays no part.</summary>
+    /// <summary>Formats an amount in this currency's own shape: decimals, prefix, suffix. Locale plays no part.</summary>
     /// <param name="amount">The amount in this currency.</param>
     /// <returns>E.g. "$2.99" or "1200 ֏".</returns>
     public string Format(decimal amount)

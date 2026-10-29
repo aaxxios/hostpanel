@@ -1,21 +1,19 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Persistence;
+
 /// <summary>
 /// Pins the composition root's EF Core query-splitting default.
 /// </summary>
 /// <remarks>
-/// Several repositories load more than one collection navigation in a single query —
-/// <c>DomainRepository</c> alone includes four — and EF Core's default is one SQL
-/// statement whose row count is the product of those collections. Production logged
-/// EF's warning about it on every domain cron run. The fix is a default in
-/// <c>Infrastructure/DependencyInjection.cs</c>, and this test is what would notice if
-/// that line were lost in a later edit of the options builder.
+/// Some queries load more than one collection navigation at once, and EF Core's default
+/// is one SQL statement whose row count is the product of those collections. EF logs a
+/// warning about it on every such run. Splitting is the default set in
+/// <c>Infrastructure/DependencyInjection.cs</c>, and this test notices if that line is lost
+/// from the options builder.
 /// </remarks>
 public sealed class QuerySplittingBehaviorTests(IntegrationTestFactory factory)
     : IClassFixture<IntegrationTestFactory>

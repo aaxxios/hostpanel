@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table and column configuration for <see cref="ProductFeature"/>.</summary>
 public sealed class ProductFeatureConfiguration : IEntityTypeConfiguration<ProductFeature>
 {

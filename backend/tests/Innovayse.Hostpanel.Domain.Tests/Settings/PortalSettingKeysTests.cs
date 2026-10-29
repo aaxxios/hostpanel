@@ -1,13 +1,12 @@
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Domain.Settings.Enums;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Settings;
 
 /// <summary>
 /// Tests for <see cref="PortalSettingKeys"/>: the invariants that keep the seed list, the
-/// public allow-list and the value vocabularies from drifting apart. Nothing else would notice
-/// — a key seeded but not public just renders the build-time default, silently.
+/// public allow-list and the value vocabularies from drifting apart. Nothing else would notice:
+/// a key seeded but not public just renders the build-time default, silently.
 /// </summary>
 /// <remarks>The type under test is a Domain policy class with no Application dependency.</remarks>
 public class PortalSettingKeysTests
@@ -58,7 +57,7 @@ public class PortalSettingKeysTests
         }
     }
 
-    /// <summary>Every shaped key is seeded, public, and seeds empty — the shape only applies to a set value.</summary>
+    /// <summary>Every shaped key is seeded, public, and seeds empty; the shape only applies to a set value.</summary>
     [Fact]
     public void Patterns_OnlyNameSeededKeysThatAllowEmpty()
     {
@@ -301,5 +300,59 @@ public class PortalSettingKeysTests
         var pattern = PortalSettingKeys.Patterns[PortalSettingKeys.ContactMapUrl];
 
         Assert.Equal(valid, pattern.Regex.IsMatch(value));
+    }
+
+    /// <summary>Every social and app launcher link has the https pattern, and it refuses anything else.</summary>
+    /// <param name="value">The candidate value.</param>
+    /// <param name="valid">Whether every link key must accept it.</param>
+    [Theory]
+    [InlineData("https://www.example.com/page", true)]
+    [InlineData("http://www.example.com/page", false)]
+    [InlineData("javascript:alert(1)", false)]
+    [InlineData("/uploads/branding/logo.png", false)]
+    public void LinkKeys_PatternAcceptsOnlyHttps(string value, bool valid)
+    {
+        string[] keys =
+        [
+            PortalSettingKeys.SocialFacebook, PortalSettingKeys.SocialInstagram, PortalSettingKeys.SocialLinkedin,
+            PortalSettingKeys.SocialYoutube, PortalSettingKeys.SocialTwitter, PortalSettingKeys.AppsAccount,
+            PortalSettingKeys.AppsTasks, PortalSettingKeys.AppsErp, PortalSettingKeys.AppsHostpanel,
+            PortalSettingKeys.AppsSheets, PortalSettingKeys.AppsMail, PortalSettingKeys.AppsDocs,
+            PortalSettingKeys.AppsCalendar,
+        ];
+
+        foreach (var key in keys)
+        {
+            Assert.Equal(valid, PortalSettingKeys.Patterns[key].Regex.IsMatch(value));
+        }
+    }
+
+    /// <summary>Every logo key accepts an https address or an uploaded path, and nothing else.</summary>
+    /// <param name="value">The candidate value.</param>
+    /// <param name="valid">Whether every logo key must accept it.</param>
+    [Theory]
+    [InlineData("https://cdn.example.com/logo.svg", true)]
+    [InlineData("/uploads/branding/abc/logo.png", true)]
+    [InlineData("/etc/passwd", false)]
+    [InlineData("http://cdn.example.com/logo.svg", false)]
+    [InlineData("javascript:alert(1)", false)]
+    public void LogoKeys_PatternAcceptsHttpsOrUploads(string value, bool valid)
+    {
+        foreach (var key in new[] { PortalSettingKeys.Logo, PortalSettingKeys.LogoDark, PortalSettingKeys.LogoMark })
+        {
+            Assert.Equal(valid, PortalSettingKeys.Patterns[key].Regex.IsMatch(value));
+        }
+    }
+
+    /// <summary>Every template is stored as its lower-case name.</summary>
+    /// <param name="template">The template.</param>
+    /// <param name="expected">The stored value.</param>
+    [Theory]
+    [InlineData(StorefrontTemplate.Classic, "classic")]
+    [InlineData(StorefrontTemplate.Aurora, "aurora")]
+    [InlineData(StorefrontTemplate.Nova, "nova")]
+    public void TemplateValue_IsTheLowerCaseName(StorefrontTemplate template, string expected)
+    {
+        Assert.Equal(expected, PortalSettingKeys.TemplateValue(template));
     }
 }

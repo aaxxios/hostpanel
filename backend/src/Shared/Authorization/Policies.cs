@@ -1,13 +1,13 @@
 namespace Innovayse.Hostpanel.Shared.Authorization;
 
 /// <summary>
-/// The authorization policy names every controller action names in <c>[Authorize(Policy = …)]</c>.
+/// The authorization policy names every controller action names in <c>[Authorize(Policy = name)]</c>.
 /// Registered once, in <c>Program.cs</c>, over hostpanel's roles.
 /// </summary>
 /// <remarks>
-/// hostpanel has no organizations, so the reference set's <c>OrgAdmin</c>/<c>PlatformAdmin</c> have no
-/// meaning here; the roles it does have are the staff <c>Admin</c>, the <c>Reseller</c> and the
-/// <c>Client</c> (conformance spec §2).
+/// The roles are the staff <c>Admin</c>, the <c>Reseller</c> and the <c>Client</c>. The <c>Reseller</c> role has no policy of its own: a reseller is linked to
+/// no clients (no <c>ResellerId</c> on any record), so there is no data to scope a reseller to and every staff
+/// route is <see cref="Admin"/> only.
 /// </remarks>
 public static class Policies
 {
@@ -16,9 +16,6 @@ public static class Policies
 
     /// <summary>Staff: the admin panel's operators.</summary>
     public const string Admin = "Admin";
-
-    /// <summary>A reseller acting on its own clients, or staff.</summary>
-    public const string ResellerOrAdmin = "ResellerOrAdmin";
 
     /// <summary>A client of the portal acting on its own account.</summary>
     public const string Client = "Client";

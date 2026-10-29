@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Main authenticated layout — sidebar + topbar + content area.
+ * Main authenticated layout: sidebar + topbar + content area.
  *
  * Handles responsive sidebar state:
  * - Desktop (lg+): always visible, full width
@@ -8,11 +8,12 @@
  */
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterView, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppTopbar from '@/components/layout/AppTopbar.vue'
 import DemoBanner from '@/components/layout/DemoBanner.vue'
 import EmailVerificationBanner from '@/components/layout/EmailVerificationBanner.vue'
+import RoutedView from '@/components/layout/RoutedView.vue'
 import UiDrawer from '@/components/ui/UiDrawer.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import { useLinkPrefetch } from '@/composables/useLinkPrefetch'
@@ -62,7 +63,7 @@ const closeDrawer = (): void => {
           page keeps its bottom padding when scrolled to the end.
         -->
         <UiStack gap="none" class="min-h-full w-full p-4 sm:p-6 lg:p-8">
-          <RouterView :key="locale" />
+          <RoutedView :key="locale" />
         </UiStack>
         <EmailVerificationBanner />
       </main>

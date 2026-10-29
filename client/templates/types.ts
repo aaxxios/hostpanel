@@ -15,8 +15,8 @@ export const DEFAULT_TEMPLATE: TemplateName = TemplateName.Classic
 /**
  * Narrows an untrusted configuration value to a template name.
  *
- * Anything unrecognised — a typo in an admin settings field, an unset
- * environment variable, a template removed from a later release — resolves to
+ * Anything unrecognised (a typo in an admin settings field, an unset
+ * environment variable, a template removed from a later release) resolves to
  * {@link DEFAULT_TEMPLATE} so a bad value degrades to the default design
  * instead of leaving the site with nothing to render.
  *

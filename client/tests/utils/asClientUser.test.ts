@@ -6,7 +6,7 @@ import { asClientUser } from '~/utils/asClientUser'
 
 describe('asClientUser', () => {
   it('returns an account record untouched', () => {
-    const record = { id: 3, firstname: 'Ann', lastname: 'Lee', email: 'ann@acme.test' }
+    const record = { id: 3, firstName: 'Ann', lastName: 'Lee', email: 'ann@acme.test' }
 
     expect(asClientUser(record)).toBe(record)
   })

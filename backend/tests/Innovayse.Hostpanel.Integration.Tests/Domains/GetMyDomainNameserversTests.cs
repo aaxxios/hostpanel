@@ -1,14 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the client-facing <c>GetMyDomainNameservers</c> use case —
+/// Integration tests for the client-facing <c>GetMyDomainNameservers</c> use case:
 /// <c>GET /api/me/domains/{id}/nameservers</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>

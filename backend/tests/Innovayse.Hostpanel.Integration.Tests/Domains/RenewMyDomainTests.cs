@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Billing.Commands.RaiseClientRenewalInvoices;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
@@ -9,15 +9,16 @@ using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Constants;
+using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the client-facing <c>RenewMyDomain</c> use case —
+/// Integration tests for the client-facing <c>RenewMyDomain</c> use case:
 /// <c>POST /api/me/domains/{id}/renew</c>, which places an order to renew the caller's own
 /// domain rather than renewing it outright. The admin equivalent is <c>RenewDomain</c>.
 /// </summary>
@@ -25,7 +26,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 public sealed class RenewMyDomainTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>
-    /// A renewal order cannot be placed against a stranger's domain -- refused before an order
+    /// A renewal order cannot be placed against a stranger's domain, refused before an order
     /// number is spent, by the same ownership check every other action here goes through.
     /// </summary>
     [Fact]
@@ -59,7 +60,7 @@ public sealed class RenewMyDomainTests(IntegrationTestFactory factory) : IClassF
     /// </summary>
     /// <param name="label">A short label folded into the owner's unique email.</param>
     /// <returns>The authenticated owner, its client id, the domain to renew and another of its domains.</returns>
-    private async Task<(HttpClient Owner, int ClientId, int DomainId, int OtherDomainId)> ArrangeAsync(string label)
+    private async Task<RenewableDomainScenario> ArrangeAsync(string label)
     {
         var admin = await DomainsTestSeeds.AdminClientAsync(factory);
         var (owner, ownerClientId) = await DomainsTestSeeds.RegisterOwnerAsync(factory, label);
@@ -85,7 +86,7 @@ public sealed class RenewMyDomainTests(IntegrationTestFactory factory) : IClassF
             context.ProductGroups.Add(group);
             await context.SaveChangesAsync(CancellationToken.None);
             context.Products.Add(Product.Create(
-                group.Id, "Domain Registration", null, null, null, null, ProductType.Domain, 0m, 0m));
+                group.Id, "Domain Registration", null, null, null, null, ProductType.Domain, 0m, 0m, DateTimeOffset.UtcNow));
             await context.SaveChangesAsync(CancellationToken.None);
         }
 
@@ -99,7 +100,7 @@ public sealed class RenewMyDomainTests(IntegrationTestFactory factory) : IClassF
             await context.SaveChangesAsync(CancellationToken.None);
         }
 
-        return (owner, ownerClientId, domainId, otherDomainId);
+        return new(owner, ownerClientId, domainId, otherDomainId);
     }
 
     /// <summary>Seeds an invoice for the client through a fresh scope, shaped by <paramref name="build"/>.</summary>
@@ -112,7 +113,7 @@ public sealed class RenewMyDomainTests(IntegrationTestFactory factory) : IClassF
     {
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var invoice = Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(10), "USD");
+        var invoice = Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(10), "USD", DateTimeOffset.UtcNow);
         build(invoice);
         if (clientCredit > 0)
         {
@@ -196,7 +197,7 @@ public sealed class RenewMyDomainTests(IntegrationTestFactory factory) : IClassF
     public async Task RenewMyDomain_LeavesAPaidRenewalInvoiceAloneAsync()
     {
         var (owner, clientId, domainId, _) = await ArrangeAsync("renew-my-domain-paid");
-        var invoiceId = await SeedInvoiceAsync(clientId, i => AddRenewal(i, domainId), after: i => i.MarkPaid("t"));
+        var invoiceId = await SeedInvoiceAsync(clientId, i => AddRenewal(i, domainId), after: i => i.RecordPaidHistory("t", DateTimeOffset.UtcNow));
 
         var response = await RenewAsync(owner, domainId);
 
@@ -255,7 +256,7 @@ public sealed class RenewMyDomainTests(IntegrationTestFactory factory) : IClassF
     {
         var (owner, clientId, domainId, _) = await ArrangeAsync("renew-my-domain-overdue");
         var invoiceId = await SeedInvoiceAsync(
-            clientId, i => { AddRenewal(i, domainId); i.AddItem("Hosting", 10m, 1); }, after: i => i.MarkOverdue());
+            clientId, i => { AddRenewal(i, domainId); i.AddItem("Hosting", 10m, 1); }, after: i => i.MarkOverdue(DateTimeOffset.UtcNow));
 
         var response = await RenewAsync(owner, domainId);
 
@@ -291,5 +292,59 @@ public sealed class RenewMyDomainTests(IntegrationTestFactory factory) : IClassF
         var reloaded = await LoadInvoiceAsync(invoiceId);
         reloaded.Status.Should().Be(InvoiceStatus.PaymentPending);
         reloaded.Items.Should().ContainSingle();
+    }
+
+    /// <summary>
+    /// When the open auto-renewal invoice was released but the order could not be placed (here an
+    /// unknown payment method), the domain is not left without a renewal: the next renewal run
+    /// raises a fresh invoice for it. Fails if the cancelled line still blocks its period.
+    /// </summary>
+    [Fact]
+    public async Task RenewMyDomain_ReleasedButOrderFailed_NextRenewalRunRaisesANewInvoiceAsync()
+    {
+        var (owner, clientId, domainId, _) = await ArrangeAsync("renew-my-domain-reraise");
+        using (var arrange = factory.Services.CreateScope())
+        {
+            // Due inside the renewal lead time and auto-renewing, so the renewal run bills it.
+            var context = arrange.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            await context.Domains.Where(d => d.Id == domainId)
+                .ExecuteUpdateAsync(
+                    set => set
+                        .SetProperty(d => d.AutoRenew, true)
+                        .SetProperty(d => d.ExpiresAt, DateTimeOffset.UtcNow.AddDays(10)),
+                    CancellationToken.None);
+        }
+
+        var invoiceId = await SeedInvoiceAsync(clientId, i => AddRenewal(i, domainId));
+
+        var response = await owner.PostAsJsonAsync(
+            $"/api/me/domains/{domainId}/renew", new { years = 1, paymentMethod = "no-such-method" });
+
+        response.IsSuccessStatusCode.Should().BeFalse();
+        (await LoadInvoiceAsync(invoiceId)).Status.Should().Be(InvoiceStatus.Cancelled);
+
+        using var scope = factory.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var raised = await bus.InvokeAsync<Result<int>>(new RaiseClientRenewalInvoicesCommand(clientId), CancellationToken.None);
+
+        raised.IsSuccess.Should().BeTrue();
+        var readContext = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var fresh = await readContext.Invoices.AsNoTracking().Include(i => i.Items)
+            .Where(i => i.ClientId == clientId && i.Id != invoiceId && i.Status == InvoiceStatus.Unpaid)
+            .ToListAsync(CancellationToken.None);
+        fresh.Should().ContainSingle(i => i.Items.Any(l => l.RegisteredDomainId == domainId));
+    }
+
+    /// <summary>A period outside one to ten years is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task RenewMyDomain_YearsOutOfRange_Returns400ValidationErrorAsync()
+    {
+        var owner = await DomainsTestSeeds.RegisterOwnerAsync(factory, "renew-my-domain-invalid");
+
+        var response = await owner.Client.PostAsJsonAsync(
+            $"/api/me/domains/{DomainsTestSeeds.UnknownId}/renew", new { years = 0, paymentMethod = "bank-gateway" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

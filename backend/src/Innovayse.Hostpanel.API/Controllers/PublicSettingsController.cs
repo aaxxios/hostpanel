@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Admin.Common;
 using Innovayse.Hostpanel.Application.Admin.Queries.GetPublicSettings;
 using Innovayse.Hostpanel.Shared.Controllers;
 using Innovayse.Hostpanel.Shared.Models;
@@ -18,6 +19,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 /// </para>
 /// </summary>
 [Route("api/settings")]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class PublicSettingsController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -30,9 +32,9 @@ public sealed class PublicSettingsController : BaseApiController
         _bus = bus;
     }
 
-    /// <summary>Returns the storefront's settings — template choice and contact channels.</summary>
+    /// <summary>Returns the storefront's settings: template choice and contact channels.</summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the allow-listed keys that have a value.</returns>
+    /// <returns>200 with the allow-listed keys that have a value; no failure status is possible; 429 when the rate limit is hit.</returns>
     [HttpGet("public")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IReadOnlyList<PublicSettingDto>), StatusCodes.Status200OK)]

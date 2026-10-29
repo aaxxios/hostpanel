@@ -5,6 +5,7 @@ using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Services.Queries.ListCancellationRequests;
+
 /// <summary>Validates <see cref="ListCancellationRequestsQuery"/> before the handler executes.</summary>
 public sealed class ListCancellationRequestsValidator : LocalizedValidator<ListCancellationRequestsQuery>
 {

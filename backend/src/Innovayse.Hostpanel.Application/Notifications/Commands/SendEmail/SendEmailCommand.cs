@@ -1,7 +1,20 @@
+using Innovayse.Hostpanel.Application.Notifications.Common;
+using Innovayse.Hostpanel.Application.Notifications.Common.TemplateModels;
+
 namespace Innovayse.Hostpanel.Application.Notifications.Commands.SendEmail;
 
 /// <summary>Command to send an email using a registered template.</summary>
 /// <param name="To">The recipient email address.</param>
+/// <param name="Language">The recipient's language; the template's version in it is used when one exists, the default language's otherwise.</param>
 /// <param name="TemplateSlug">The unique slug of the email template to use.</param>
-/// <param name="TemplateData">The data model passed to the Liquid template renderer.</param>
-public sealed record SendEmailCommand(string To, string TemplateSlug, object TemplateData);
+/// <param name="TemplateData">The typed data the template's subject and body render against.</param>
+/// <param name="Copy">
+/// When set, the same message is also sent to the additional contacts of that client who switched the
+/// kind of email on; null sends it to <paramref name="To"/> only.
+/// </param>
+public sealed record SendEmailCommand(
+    string To,
+    string? Language,
+    string TemplateSlug,
+    EmailTemplateModel TemplateData,
+    ContactCopy? Copy = null);

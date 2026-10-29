@@ -2,7 +2,7 @@
   "id": "innovayse-cwp",
   "name": "CentOS Web Panel",
   "version": "1.0.0",
-  "author": "Innovayse",
+  "author": "Hostpanel",
   "description": "Provisioning provider for CentOS Web Panel (CWP).",
   "type": "Provisioning",
   "category": "Hosting / Provisioning",

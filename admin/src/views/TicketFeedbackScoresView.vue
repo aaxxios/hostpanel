@@ -50,7 +50,7 @@ const series = computed<UiChartSeries[]>(() => [
 </script>
 
 <template>
-  <ReportPage
+  <ReportPage :retry="load"
     :title="t('reports.ticketFeedbackScores.ticketFeedbackScores')"
     :description="t('reports.ticketFeedbackScores.thisReportProvidesASummary')"
   >

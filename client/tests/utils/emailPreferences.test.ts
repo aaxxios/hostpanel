@@ -1,27 +1,36 @@
 /**
- * Unit tests for `utils/emailPreferences.ts`: decoding of the profile's email preferences.
+ * Unit tests for `utils/emailPreferences.ts`: picking the editable categories out of the profile's
+ * notification flags.
  */
 import { describe, expect, it } from 'vitest'
 import { decodeEmailPrefs } from '~/utils/emailPreferences'
+import type { MyProfileNotifications } from '~/types/myprofilenotifications'
+
+/** Notification flags as the backend sends them, two categories switched off. */
+const notifications: MyProfileNotifications = {
+  general: false,
+  invoice: true,
+  support: true,
+  product: false,
+  domain: true,
+  affiliate: true,
+  marketingOptIn: false,
+  statusUpdate: true
+}
 
 describe('decodeEmailPrefs', () => {
-  it('treats a missing object as every category on', () => {
-    const flags = decodeEmailPrefs(undefined)
+  it('treats missing flags as every category on', () => {
+    for (const prefs of [undefined, null]) {
+      const flags = decodeEmailPrefs(prefs)
 
-    expect(Object.values(flags).every(Boolean)).toBe(true)
-    expect(Object.keys(flags)).toHaveLength(6)
+      expect(Object.values(flags).every(Boolean)).toBe(true)
+      expect(Object.keys(flags)).toHaveLength(6)
+    }
   })
 
-  it('reads numbers and numeric strings alike', () => {
-    const flags = decodeEmailPrefs({ general: 0, invoice: '0', support: 1, product: '1' })
+  it('keeps the six editable categories as the backend sent them', () => {
+    const flags = decodeEmailPrefs(notifications)
 
-    expect(flags.general).toBe(false)
-    expect(flags.invoice).toBe(false)
-    expect(flags.support).toBe(true)
-    expect(flags.product).toBe(true)
-  })
-
-  it('treats an omitted category as on', () => {
-    expect(decodeEmailPrefs({ general: 0 }).affiliate).toBe(true)
+    expect(flags).toEqual({ general: false, invoice: true, support: true, product: false, domain: true, affiliate: true })
   })
 })

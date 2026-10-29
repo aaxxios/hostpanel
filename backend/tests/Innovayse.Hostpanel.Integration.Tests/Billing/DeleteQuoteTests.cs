@@ -1,8 +1,5 @@
 using System.Net;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -10,11 +7,10 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>DELETE /api/billing/quotes/{id}</c> against Postgres: permanently removing a quote, and the
 /// <c>QUOTE_NOT_FOUND</c> refusal for an id that names no quote.
 /// </summary>
-/// <remarks>Split from the deleted <c>QuotesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DeleteQuoteTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>Deleting a quote removes it — a later read answers 404.</summary>
+    /// <summary>Deleting a quote removes it: a later read answers 404.</summary>
     [Fact]
     public async Task DeleteRemovesTheQuote()
     {

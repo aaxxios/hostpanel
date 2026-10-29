@@ -13,8 +13,8 @@ import type { Feature } from '~/templates/nova/types/feature'
  * A {@link Feature} without `requiresSetting` is always shown: those lines
  * describe what the platform itself does, and they are true of every install.
  * A feature that names a setting appears only once an operator has switched that
- * setting on (`true`), because the thing it claims — NVMe disks, a CDN, a malware
- * scanner, a backup schedule — belongs to their servers and is invisible from
+ * setting on (`true`), because the thing it claims (NVMe disks, a CDN, a malware
+ * scanner, a backup schedule) belongs to their servers and is invisible from
  * here. The alternative was to print them regardless, which is how a hosting
  * page ends up advertising hardware nobody bought.
  *

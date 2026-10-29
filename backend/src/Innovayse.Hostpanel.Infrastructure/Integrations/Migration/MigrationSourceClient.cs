@@ -1,35 +1,31 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Migration.Common;
+using Innovayse.Hostpanel.Infrastructure.Integrations.Migration.Settings;
 using Innovayse.Hostpanel.Infrastructure.Resilience;
+using Innovayse.Hostpanel.Infrastructure.Security;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.Migration;
+
 /// <summary>
 /// Talks to the legacy system's migration plugin over HTTP: every operation is a JSON POST to the
 /// job's configured URL carrying the job key and the name of the operation, and the plugin answers
 /// with a JSON body. This is the only place in the product that knows the migration source speaks
 /// HTTP at all.
 /// </summary>
+/// <remarks>
+/// The URL is admin input this server calls, so it is checked before every request: HTTPS only
+/// unless <see cref="MigrationSourceOptions.AllowInsecureHttp"/> is set, and the named client's
+/// connection callback refuses internal addresses (<see cref="OutboundConnector"/>, with the migration
+/// source's own private network setting). A refused scheme or address throws
+/// <see cref="MigrationSourceAddressRefusedException"/>, so the job records it as a source address that
+/// is not allowed, not as an unreachable source.
+/// </remarks>
 public sealed class MigrationSourceClient : IMigrationSource
 {
-    /// <summary>Factory for the named client that carries the pull timeout.</summary>
-    private readonly IHttpClientFactory _httpClientFactory;
-
-    /// <summary>Logger used to record what the source answered when it refused a request.</summary>
-    private readonly ILogger<MigrationSourceClient> _logger;
-
-    /// <summary>Initializes a new instance of the <see cref="MigrationSourceClient"/> class.</summary>
-    /// <param name="httpClientFactory">Factory for the named client that carries the pull timeout.</param>
-    /// <param name="logger">Logger used to record what the source answered when it refused a request.</param>
-    public MigrationSourceClient(IHttpClientFactory httpClientFactory, ILogger<MigrationSourceClient> logger)
-    {
-        _httpClientFactory = httpClientFactory;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Name of the configured <see cref="HttpClient"/>. It carries a deliberately long timeout,
     /// because a single page of a large export can take minutes to assemble on the source side.
@@ -49,85 +45,138 @@ public sealed class MigrationSourceClient : IMigrationSource
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    /// <inheritdoc />
-    public async Task PingAsync(string sourceUrl, string accessKey, CancellationToken ct = default)
-    {
-        var client = _httpClientFactory.CreateClient(HttpClientName);
+    /// <summary>Factory for the named client that carries the pull timeout, the size cap and the address check.</summary>
+    private readonly IHttpClientFactory _httpClientFactory;
 
-        var payload = new { key = accessKey, action = PingAction };
-        var response = await client.PostAsJsonAsync(sourceUrl, payload, ct);
-        response.EnsureSuccessStatusCode();
+    /// <summary>Which source addresses are accepted and how large an answer may be.</summary>
+    private readonly MigrationSourceOptions _options;
+
+    /// <summary>Logger used to record a refused address or a refused request.</summary>
+    private readonly ILogger<MigrationSourceClient> _logger;
+
+    /// <summary>Initializes a new instance of the <see cref="MigrationSourceClient"/> class.</summary>
+    /// <param name="httpClientFactory">Factory for the named client that carries the pull timeout, the size cap and the address check.</param>
+    /// <param name="options">Which source addresses are accepted and how large an answer may be.</param>
+    /// <param name="logger">Logger used to record a refused address or a refused request.</param>
+    public MigrationSourceClient(
+        IHttpClientFactory httpClientFactory, IOptions<MigrationSourceOptions> options, ILogger<MigrationSourceClient> logger)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        _httpClientFactory = httpClientFactory;
+        _options = options.Value;
+        _logger = logger;
     }
 
     /// <inheritdoc />
-    public Task<MigrationSourceTotals> GetTotalsAsync(
-        string sourceUrl,
-        string accessKey,
-        CancellationToken ct = default) =>
-        PostActionAsync<MigrationSourceTotals>(sourceUrl, accessKey, TotalsAction, null, ct);
+    public async Task PingAsync(MigrationSourceEndpoint source, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        using var response = await PostAsync(source, new MigrationSourceActionWire(source.AccessKey, PingAction), PingAction, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<MigrationSourceTotals> GetTotalsAsync(MigrationSourceEndpoint source, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        var wire = await PostActionAsync<MigrationSourceActionWire, MigrationSourceTotalsWire>(
+            source, new MigrationSourceActionWire(source.AccessKey, TotalsAction), TotalsAction, ct);
+        return wire.ToTotals();
+    }
 
     /// <inheritdoc />
     public Task<MigrationRecordPage<TRecord>> GetRecordPageAsync<TRecord>(
-        string sourceUrl,
-        string accessKey,
-        string dataSet,
-        int page,
-        int perPage,
-        CancellationToken ct = default)
+        MigrationSourceEndpoint source, MigrationPageSelection selection, CancellationToken ct)
     {
-        var extra = new Dictionary<string, object> { ["page"] = page, ["perPage"] = perPage };
-        return PostActionAsync<MigrationRecordPage<TRecord>>(sourceUrl, accessKey, dataSet, extra, ct);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(selection);
+
+        var wire = new MigrationSourcePageWire(
+            source.AccessKey, selection.DataSet, selection.Page, selection.PerPage, selection.AfterId);
+        return PostActionAsync<MigrationSourcePageWire, MigrationRecordPage<TRecord>>(source, wire, selection.DataSet, ct);
     }
 
-    /// <summary>
-    /// Posts one operation to the source and reads its answer.
-    /// </summary>
+    /// <summary>Posts one operation to the source and reads its answer, within the size cap.</summary>
+    /// <typeparam name="TWire">The body sent to the source.</typeparam>
     /// <typeparam name="T">Shape the answer is read back as.</typeparam>
-    /// <param name="sourceUrl">Where the source listens.</param>
-    /// <param name="key">The job's shared key, which the source checks before answering.</param>
-    /// <param name="action">The operation to run — the source's own name for it.</param>
-    /// <param name="extra">
-    /// Additional fields to send alongside the key and the action, or null where the operation
-    /// takes none. Added after the two mandatory fields, never replacing them.
-    /// </param>
+    /// <param name="source">Where the source listens.</param>
+    /// <param name="wire">The body to send.</param>
+    /// <param name="action">The operation's name, for the log.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The deserialized answer.</returns>
-    /// <exception cref="HttpRequestException">The source answered a non-success status.</exception>
+    /// <exception cref="MigrationSourceAddressRefusedException">The URL or the address it resolves to is not allowed.</exception>
+    /// <exception cref="HttpRequestException">The source answered a non-success status, or the answer exceeded the size cap.</exception>
     /// <exception cref="InvalidOperationException">The source answered a body that read as null.</exception>
-    private async Task<T> PostActionAsync<T>(
-        string sourceUrl,
-        string key,
-        string action,
-        Dictionary<string, object>? extra,
-        CancellationToken ct)
+    private async Task<T> PostActionAsync<TWire, T>(MigrationSourceEndpoint source, TWire wire, string action, CancellationToken ct)
     {
+        using var response = await PostAsync(source, wire, action, ct);
+
+        // Read into a bounded buffer: the headers were read alone, so nothing has been buffered yet
+        // and a body over the cap fails here instead of filling memory.
+        await response.Content.LoadIntoBufferAsync(_options.MaxResponseBytes, ct);
+        return await response.Content.ReadFromJsonAsync<T>(JsonOpts, ct)
+            ?? throw new InvalidOperationException($"Empty response for action '{action}'.");
+    }
+
+    /// <summary>Checks the address, posts the body and returns a successful response with only its headers read.</summary>
+    /// <typeparam name="TWire">The body sent to the source.</typeparam>
+    /// <param name="source">Where the source listens.</param>
+    /// <param name="wire">The body to send.</param>
+    /// <param name="action">The operation's name, for the log.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The response; the caller disposes it.</returns>
+    /// <exception cref="MigrationSourceAddressRefusedException">The URL or the address it resolves to is not allowed.</exception>
+    /// <exception cref="HttpRequestException">The source could not be reached or answered a non-success status.</exception>
+    private async Task<HttpResponseMessage> PostAsync<TWire>(
+        MigrationSourceEndpoint source, TWire wire, string action, CancellationToken ct)
+    {
+        var uri = RequireAllowedUri(source.Url);
         var client = _httpClientFactory.CreateClient(HttpClientName);
 
-        var payload = new Dictionary<string, object> { ["key"] = key, ["action"] = action };
-        if (extra is not null)
+        using var request = new HttpRequestMessage(HttpMethod.Post, uri) { Content = JsonContent.Create(wire) };
+        HttpResponseMessage response;
+        try
         {
-            foreach (var kv in extra)
-            {
-                payload[kv.Key] = kv.Value;
-            }
+            response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        }
+        catch (HttpRequestException ex) when (ex.InnerException is OutboundAddressRefusedException)
+        {
+            _logger.LogWarning("Migration source address refused: it resolves only to addresses that are not allowed.");
+            throw new MigrationSourceAddressRefusedException(ex);
         }
 
-        var response = await client.PostAsJsonAsync(sourceUrl, payload, ct);
-        if (!response.IsSuccessStatusCode)
+        if (response.IsSuccessStatusCode)
         {
-            // Log the body before throwing: EnsureSuccessStatusCode discards it, and the source
-            // puts the reason it refused in there rather than in the status.
-            var errorBody = await response.Content.ReadAsStringAsync(ct);
-            _logger.LogError("WHMCS api.php returned {Status} for action '{Action}': {Body}",
-                (int)response.StatusCode, action, errorBody);
-            response.EnsureSuccessStatusCode();
+            return response;
         }
 
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return JsonSerializer.Deserialize<T>(json, JsonOpts)
-            ?? throw new InvalidOperationException($"Empty response for action '{action}'.");
+        // The error body is never read: it can carry client records, and an unread body costs
+        // nothing. Only the status and the declared length reach the log.
+        _logger.LogError(
+            "Migration source returned {Status} for action '{Action}', declared body length {Length}",
+            (int)response.StatusCode, action, response.Content.Headers.ContentLength);
+        var status = response.StatusCode;
+        response.Dispose();
+        throw new HttpRequestException($"The migration source answered {(int)status}.", inner: null, status);
+    }
+
+    /// <summary>Parses the source URL and refuses a scheme the options do not allow.</summary>
+    /// <param name="url">The job's source URL.</param>
+    /// <returns>The parsed address.</returns>
+    /// <exception cref="MigrationSourceAddressRefusedException">The URL is not absolute, or not HTTPS while plain HTTP is not allowed.</exception>
+    private Uri RequireAllowedUri(string url)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttps || (uri.Scheme == Uri.UriSchemeHttp && _options.AllowInsecureHttp)))
+        {
+            return uri;
+        }
+
+        _logger.LogWarning("Migration source URL refused: only HTTPS is allowed.");
+        throw new MigrationSourceAddressRefusedException();
     }
 }

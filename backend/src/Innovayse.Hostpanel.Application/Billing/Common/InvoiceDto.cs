@@ -5,42 +5,26 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <summary>DTO representing a full invoice with its line items and transactions.</summary>
 /// <param name="Id">Invoice primary key.</param>
 /// <param name="ClientId">FK to the owning client.</param>
+/// <param name="ClientName">Display name of the owning client; every invoice has one, since its client cannot be deleted.</param>
 /// <param name="Status">Current lifecycle status.</param>
-/// <param name="DueDate">Payment due date (UTC).</param>
-/// <param name="CreatedAt">Creation timestamp (UTC).</param>
-/// <param name="PaidAt">Payment timestamp (UTC); null when unpaid.</param>
-/// <param name="Total">Final total after tax and credit.</param>
-/// <param name="SubTotal">Sum of all line item amounts before tax and credit.</param>
-/// <param name="Tax">Computed tax amount.</param>
-/// <param name="TaxRate">Tax rate percentage.</param>
-/// <param name="Credit">Total credit applied.</param>
-/// <param name="AmountDue">What is still owed: the total less the payments recorded against it.</param>
-/// <param name="GatewayTransactionId">Payment gateway reference; null when unpaid.</param>
-/// <param name="Notes">Optional invoice notes.</param>
-/// <param name="InvoiceDate">Invoice issue date (UTC).</param>
-/// <param name="PaymentMethod">Preferred payment method; null when not specified.</param>
-/// <param name="ClientName">Display name of the owning client. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
 /// <param name="Currency">ISO 4217 currency code the invoice was raised and is payable in.</param>
+/// <param name="Dates">Issue, due, creation and payment dates.</param>
+/// <param name="Amounts">Sub total, credit, tax, tax rate and total.</param>
+/// <param name="AmountDue">What is still owed: the total less the payments recorded against it; zero once the invoice is closed.</param>
+/// <param name="Payment">Payment method and gateway reference.</param>
+/// <param name="Notes">Optional invoice notes.</param>
 /// <param name="Items">Line items on the invoice.</param>
 /// <param name="Transactions">Financial transactions recorded against the invoice.</param>
-public record InvoiceDto(
+public sealed record InvoiceDto(
     int Id,
     int ClientId,
+    string ClientName,
     InvoiceStatus Status,
-    DateTimeOffset DueDate,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset? PaidAt,
-    decimal Total,
-    decimal SubTotal,
-    decimal Tax,
-    decimal TaxRate,
-    decimal Credit,
-    decimal AmountDue,
-    string? GatewayTransactionId,
-    string? Notes,
-    DateTimeOffset InvoiceDate,
-    string? PaymentMethod,
-    string? ClientName,
     string Currency,
+    InvoiceDatesDto Dates,
+    InvoiceAmountsDto Amounts,
+    decimal AmountDue,
+    InvoicePaymentDto Payment,
+    string? Notes,
     IReadOnlyList<InvoiceItemDto> Items,
     IReadOnlyList<InvoiceTransactionDto> Transactions);

@@ -1,19 +1,15 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
 /// <summary>
 /// <c>GET /api/billing/quotes</c> against Postgres: the admin-wide, paginated quote list.
 /// </summary>
-/// <remarks>New coverage — gap-filled for A7 Task 3, ruling 2; no grouped file exercised this route.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListQuotesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>A quote just created appears in the admin's list.</summary>
+    /// <summary>A quote just created appears in the admin's list, named after its client.</summary>
     [Fact]
     public async Task ListIncludesAFreshlyCreatedQuote()
     {
@@ -27,6 +23,9 @@ public sealed class ListQuotesTests(IntegrationTestFactory factory) : IClassFixt
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         body.RootElement.GetProperty("items").EnumerateArray()
             .Select(i => i.GetProperty("id").GetInt32()).Should().Contain(quoteId);
+        body.RootElement.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetInt32() == quoteId)
+            .GetProperty("clientName").GetString().Should().Be("Ada Lovelace");
     }
 
     /// <summary>A quote is priced in its client's currency, and the list and the detail both say so.</summary>

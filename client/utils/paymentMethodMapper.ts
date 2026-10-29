@@ -1,7 +1,7 @@
 /**
  * Turning the API's saved payment method into the shape the client renders.
  *
- * The API sends camelCase fields (`brand`, `last4`, `expiryMonth`, ...); the screens read
+ * The API sends camelCase fields (`brand`, `last4`, `expiryMonth` and the rest); the screens read
  * {@link PaymentMethod}. One mapper at the API boundary keeps every consumer on one shape.
  *
  * @module utils/paymentMethodMapper
@@ -61,11 +61,11 @@ export const toPaymentMethod = (wire: PaymentMethodWire): PaymentMethod => {
     id: wire.id,
     type: wire.type,
     description: [name, masked].filter(Boolean).join(' '),
-    gateway_name: wire.type,
-    card_last_four: wire.last4 ?? null,
-    card_expiry: formatSavedExpiry(wire.expiryMonth, wire.expiryYear),
-    card_type: isBank ? null : (wire.brand ?? null),
-    bank_name: isBank ? (wire.brand ?? null) : null,
-    is_default: wire.isDefault
+    gatewayName: wire.type,
+    cardLastFour: wire.last4 ?? null,
+    cardExpiry: formatSavedExpiry(wire.expiryMonth, wire.expiryYear),
+    cardType: isBank ? null : (wire.brand ?? null),
+    bankName: isBank ? (wire.brand ?? null) : null,
+    isDefault: wire.isDefault
   }
 }

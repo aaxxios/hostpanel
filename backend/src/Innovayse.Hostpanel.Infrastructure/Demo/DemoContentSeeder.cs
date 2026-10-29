@@ -1,5 +1,3 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using Innovayse.Hostpanel.Domain.Slides;
 using Innovayse.Hostpanel.Domain.Slides.Enums;
 using Innovayse.Hostpanel.Domain.Support;
@@ -15,9 +13,6 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// </summary>
 internal sealed class DemoContentSeeder
 {
-    /// <summary>Writes the feature list as JSON without turning Armenian and Russian letters into escapes.</summary>
-    private static readonly JsonSerializerOptions FeatureJson = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-
     /// <summary>The call-to-action text per locale, in the order en, ru, hy.</summary>
     private static readonly string[] CallToAction = ["Get Started", "Начать", "Սկսել"];
 
@@ -122,15 +117,16 @@ internal sealed class DemoContentSeeder
         for (var sortOrder = 0; sortOrder < slides.Length; sortOrder++)
         {
             var (icon, color, image, learnMore, active, audience, windowed, text) = slides[sortOrder];
-            var slide = Slide.Create(
+            var slide = Slide.Create(new SlideSettings(
                 icon, color, image, null, learnMore, null, sortOrder, active, audience,
-                windowed ? _today.AddDays(-30) : null, windowed ? _today.AddDays(120) : null);
+                windowed ? _today.AddDays(-30) : null, windowed ? _today.AddDays(120) : null),
+                _today);
 
             for (var l = 0; l < Locales.Length; l++)
             {
                 var (title, tagline, description, features) = text[l];
                 slide.SetTranslation(
-                    Locales[l], title, tagline, description, JsonSerializer.Serialize(features, FeatureJson), CallToAction[l], learnMore);
+                    Locales[l], title, tagline, description, features, CallToAction[l], learnMore);
             }
 
             _db.Slides.Add(slide);

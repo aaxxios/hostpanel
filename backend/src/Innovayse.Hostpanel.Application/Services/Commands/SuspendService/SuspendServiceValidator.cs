@@ -4,6 +4,7 @@ using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Services.Commands.SuspendService;
+
 /// <summary>Validates <see cref="SuspendServiceCommand"/> before the handler executes.</summary>
 public sealed class SuspendServiceValidator : LocalizedValidator<SuspendServiceCommand>
 {

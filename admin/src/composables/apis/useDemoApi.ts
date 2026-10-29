@@ -1,7 +1,7 @@
 /**
  * The anonymous demo-mode endpoint.
  *
- * No state lives here — the demo store owns that. This file only says what the backend offers.
+ * No state lives here: the demo store owns that. This file only says what the backend offers.
  */
 
 import { useApi } from '@/composables/useApi'

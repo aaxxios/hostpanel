@@ -1,7 +1,6 @@
 /**
- * Endpoints behind the integrations store and the CWP server-info composables: the integration
- * list, per-integration config, the connection test and the live server status of the two
- * control-panel integrations.
+ * Endpoints behind the integrations store: the integration list, per-integration config, the
+ * connection test and the live status of the CWP server.
  *
  * No state lives here; every function rejects with an `ApiError` carrying the problem+json body.
  */
@@ -14,7 +13,6 @@ import type {
   IntegrationTestResult,
 } from '@/types/integration'
 import type { CwpServerInfoDto } from '@/types/cwp'
-import type { Cwp7ServerInfoDto } from '@/types/cwp7'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
 
@@ -70,20 +68,11 @@ export const useIntegrationsApi = () => {
   const getCwpServerInfo = (): Promise<CwpServerInfoDto> =>
     request<CwpServerInfoDto>(`${ApiPath.AdminIntegrations}/cwp/server-info`)
 
-  /**
-   * Reads the live status of the connected CWP7 server.
-   *
-   * @returns The server status.
-   */
-  const getCwp7ServerInfo = (): Promise<Cwp7ServerInfoDto> =>
-    request<Cwp7ServerInfoDto>(`${ApiPath.AdminIntegrations}/cwp7/server-info`)
-
   return {
     listIntegrations,
     getIntegration,
     saveIntegration,
     testIntegration,
     getCwpServerInfo,
-    getCwp7ServerInfo,
   }
 }

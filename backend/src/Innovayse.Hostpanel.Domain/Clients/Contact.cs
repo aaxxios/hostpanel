@@ -1,13 +1,21 @@
 using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Clients;
+
 /// <summary>
 /// An additional contact linked to a <see cref="Client"/> account.
 /// Stored in the <c>Contacts</c> table.
 /// </summary>
 public sealed class Contact : BaseEntity
 {
+    /// <summary>Longest first or last name the stored column holds.</summary>
+    private const int NameMaxLength = 100;
+
+    /// <summary>Longest email address the stored column holds.</summary>
+    private const int EmailMaxLength = 256;
+
     /// <summary>Gets the ID of the owning client.</summary>
     public int ClientId { get; private set; }
 
@@ -68,105 +76,73 @@ public sealed class Contact : BaseEntity
     /// <summary>Gets the UTC timestamp when this contact was created.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Contact() { }
 
     /// <summary>
     /// Creates a new contact for a client.
     /// </summary>
     /// <param name="clientId">The owning client's ID.</param>
-    /// <param name="firstName">The contact's first name.</param>
-    /// <param name="lastName">The contact's last name.</param>
-    /// <param name="companyName">Optional company name.</param>
-    /// <param name="email">The contact's email address.</param>
-    /// <param name="phone">Optional phone number.</param>
-    /// <param name="type">The contact type classification.</param>
-    /// <param name="street">Optional street address.</param>
-    /// <param name="address2">Optional second address line.</param>
-    /// <param name="city">Optional city.</param>
-    /// <param name="state">Optional state or region.</param>
-    /// <param name="postCode">Optional postal code.</param>
-    /// <param name="country">Optional ISO 3166-1 alpha-2 country code.</param>
-    /// <param name="notifyGeneral">General email notifications.</param>
-    /// <param name="notifyInvoice">Invoice email notifications.</param>
-    /// <param name="notifySupport">Support email notifications.</param>
-    /// <param name="notifyProduct">Product email notifications.</param>
-    /// <param name="notifyDomain">Domain email notifications.</param>
-    /// <param name="notifyAffiliate">Affiliate email notifications.</param>
-    internal Contact(
-        int clientId, string firstName, string lastName, string? companyName,
-        string email, string? phone, ContactType type,
-        string? street, string? address2, string? city, string? state, string? postCode, string? country,
-        bool notifyGeneral, bool notifyInvoice, bool notifySupport,
-        bool notifyProduct, bool notifyDomain, bool notifyAffiliate)
+    /// <param name="details">What was entered about the contact.</param>
+    internal Contact(int clientId, ContactDetails details)
     {
         ClientId = clientId;
-        FirstName = firstName;
-        LastName = lastName;
-        CompanyName = companyName;
-        Email = email;
-        Phone = phone;
-        Type = type;
-        Street = street;
-        Address2 = address2;
-        City = city;
-        State = state;
-        PostCode = postCode;
-        Country = country;
-        NotifyGeneral = notifyGeneral;
-        NotifyInvoice = notifyInvoice;
-        NotifySupport = notifySupport;
-        NotifyProduct = notifyProduct;
-        NotifyDomain = notifyDomain;
-        NotifyAffiliate = notifyAffiliate;
-        CreatedAt = DateTimeOffset.UtcNow;
+        Apply(details);
     }
 
     /// <summary>
     /// Updates all editable fields on this contact.
     /// </summary>
-    /// <param name="firstName">New first name.</param>
-    /// <param name="lastName">New last name.</param>
-    /// <param name="companyName">New company name (null to clear).</param>
-    /// <param name="email">New email address.</param>
-    /// <param name="phone">New phone number (null to clear).</param>
-    /// <param name="type">New contact type.</param>
-    /// <param name="street">New street address (null to clear).</param>
-    /// <param name="address2">New second address line (null to clear).</param>
-    /// <param name="city">New city (null to clear).</param>
-    /// <param name="state">New state or region (null to clear).</param>
-    /// <param name="postCode">New postal code (null to clear).</param>
-    /// <param name="country">New ISO 3166-1 alpha-2 country code (null to clear).</param>
-    /// <param name="notifyGeneral">General email notifications.</param>
-    /// <param name="notifyInvoice">Invoice email notifications.</param>
-    /// <param name="notifySupport">Support email notifications.</param>
-    /// <param name="notifyProduct">Product email notifications.</param>
-    /// <param name="notifyDomain">Domain email notifications.</param>
-    /// <param name="notifyAffiliate">Affiliate email notifications.</param>
-    internal void Update(
-        string firstName, string lastName, string? companyName,
-        string email, string? phone, ContactType type,
-        string? street, string? address2, string? city, string? state, string? postCode, string? country,
-        bool notifyGeneral, bool notifyInvoice, bool notifySupport,
-        bool notifyProduct, bool notifyDomain, bool notifyAffiliate)
+    /// <param name="details">The new values for every editable field.</param>
+    internal void Update(ContactDetails details)
     {
-        FirstName = firstName;
-        LastName = lastName;
-        CompanyName = companyName;
-        Email = email;
-        Phone = phone;
-        Type = type;
-        Street = street;
-        Address2 = address2;
-        City = city;
-        State = state;
-        PostCode = postCode;
-        Country = country;
-        NotifyGeneral = notifyGeneral;
-        NotifyInvoice = notifyInvoice;
-        NotifySupport = notifySupport;
-        NotifyProduct = notifyProduct;
-        NotifyDomain = notifyDomain;
-        NotifyAffiliate = notifyAffiliate;
+        Apply(details);
+    }
+
+    /// <summary>
+    /// Writes every editable field from <paramref name="details"/>; the one place a contact's input
+    /// is checked and normalised, so creating and updating cannot drift apart.
+    /// </summary>
+    /// <param name="details">The values to write.</param>
+    /// <exception cref="ArgumentException">Thrown when a name is blank or a value is longer than its column.</exception>
+    private void Apply(ContactDetails details)
+    {
+        ArgumentNullException.ThrowIfNull(details);
+
+        FirstName = Required(details.FirstName, NameMaxLength, nameof(details.FirstName));
+        LastName = Required(details.LastName, NameMaxLength, nameof(details.LastName));
+        Email = Required(details.Email, EmailMaxLength, nameof(details.Email));
+        CompanyName = details.CompanyName;
+        Phone = details.Phone;
+        Type = details.Type;
+        Street = details.Address.Street;
+        Address2 = details.Address.Address2;
+        City = details.Address.City;
+        State = details.Address.State;
+        PostCode = details.Address.PostCode;
+        Country = CountryCode.Normalize(details.Address.Country);
+        NotifyGeneral = details.Notifications.General;
+        NotifyInvoice = details.Notifications.Invoice;
+        NotifySupport = details.Notifications.Support;
+        NotifyProduct = details.Notifications.Product;
+        NotifyDomain = details.Notifications.Domain;
+        NotifyAffiliate = details.Notifications.Affiliate;
+    }
+
+    /// <summary>Checks that a required text value is present and fits its column.</summary>
+    /// <param name="value">The value to check.</param>
+    /// <param name="maxLength">The longest the stored column allows.</param>
+    /// <param name="name">The name of the value, for the exception.</param>
+    /// <returns>The value, trimmed.</returns>
+    /// <exception cref="ArgumentException">Thrown when the value is blank or longer than <paramref name="maxLength"/>.</exception>
+    private static string Required(string value, int maxLength, string name)
+    {
+        var trimmed = value?.Trim();
+        if (string.IsNullOrEmpty(trimmed) || trimmed.Length > maxLength)
+        {
+            throw new ArgumentException($"A contact's {name} is required and at most {maxLength} characters.", name);
+        }
+
+        return trimmed;
     }
 }

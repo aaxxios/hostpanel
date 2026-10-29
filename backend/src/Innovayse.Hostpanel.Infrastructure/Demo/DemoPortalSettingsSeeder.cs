@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
+using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.Hostpanel.Shared.Settings;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +15,9 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// </summary>
 internal sealed class DemoPortalSettingsSeeder
 {
+    /// <summary>The name of the demo site, set as the site name and used wherever the demo's copy names the site.</summary>
+    internal const string SiteName = "Hostpanel Demo";
+
     /// <summary>The contact email shown when <see cref="DemoOptions.ContactEmail"/> is empty; reserved <c>.example</c> domain.</summary>
     internal const string DefaultContactEmail = "demo@hostpanel-demo.example";
 
@@ -24,7 +28,7 @@ internal sealed class DemoPortalSettingsSeeder
     private const string WelcomeTemplateSlug = "welcome";
 
     /// <summary>The welcome mail's subject in the demo, which names the demo site like the rest of the demo's copy.</summary>
-    private const string WelcomeSubject = "Welcome to Hostpanel Demo!";
+    private const string WelcomeSubject = $"Welcome to {SiteName}!";
 
     /// <summary>The fictional company story shown on the demo's About page, in English.</summary>
     private const string AboutEn =
@@ -48,76 +52,76 @@ internal sealed class DemoPortalSettingsSeeder
         + "Ազատ ուսումնասիրեք․ տվյալները վերականգնվում են ժամանակացույցով, ուստի ձեր փոփոխությունները չեն պահպանվում։";
 
     /// <summary>The values the demo sets that no option changes, by setting key.</summary>
-    private static readonly (string Key, string Value)[] FixedValues =
+    private static readonly DemoSettingValue[] FixedValues =
     [
         // The demo shows the default template; a reset restores it after a visitor switches templates in the admin.
-        (PortalSettingKeys.Template, PortalSettingKeys.TemplateValue(PortalSettingKeys.DefaultTemplate)),
-        (PortalSettingKeys.SiteName, "Hostpanel Demo"),
-        (PortalSettingKeys.SiteTagline, "Hosting, domains and servers, managed in one place."),
-        (PortalSettingKeys.ThemeDefault, "light"),
-        (PortalSettingKeys.ThemeUserToggle, "true"),
+        new(PortalSettingKeys.Template, PortalSettingKeys.TemplateValue(PortalSettingKeys.DefaultTemplate)),
+        new(PortalSettingKeys.SiteName, SiteName),
+        new(PortalSettingKeys.SiteTagline, "Hosting, domains and servers, managed in one place."),
+        new(PortalSettingKeys.ThemeDefault, "light"),
+        new(PortalSettingKeys.ThemeUserToggle, "true"),
         // Empty brand colours make the brand-tokens plugin emit no colour scale, so the template renders its own
         // palette; a seeded colour would replace the gradient on every primary button with that colour.
-        (PortalSettingKeys.BrandPrimary, string.Empty),
-        (PortalSettingKeys.BrandAccent, string.Empty),
-        (PortalSettingKeys.BrandFontHeading, "inter"),
-        (PortalSettingKeys.BrandFontBody, "inter"),
+        new(PortalSettingKeys.BrandPrimary, string.Empty),
+        new(PortalSettingKeys.BrandAccent, string.Empty),
+        new(PortalSettingKeys.BrandFontHeading, "inter"),
+        new(PortalSettingKeys.BrandFontBody, "inter"),
         // The storefront hides every row whose setting is empty, so the demo fills each one with a fictional value
         // to show the contact page, the hero figures, the nova claims and the About page complete.
-        (PortalSettingKeys.ContactAddress, "1 Market Street, Fairhaven"),
-        (PortalSettingKeys.ContactHours, "Mon-Fri 09:00-18:00"),
-        (PortalSettingKeys.ContactTimezone, "UTC"),
-        (PortalSettingKeys.ContactAddressRu, "Рыночная улица, 1, Фэрхейвен"),
-        (PortalSettingKeys.ContactAddressHy, "Շուկայի փողոց 1, Ֆերհեյվեն"),
-        (PortalSettingKeys.ContactHoursRu, "Пн-Пт 09:00-18:00"),
-        (PortalSettingKeys.ContactHoursHy, "Երկ-Ուրբ 09:00-18:00"),
-        (PortalSettingKeys.LegalTaxId, "DEMO-000-0000"),
+        new(PortalSettingKeys.ContactAddress, "1 Market Street, Fairhaven"),
+        new(PortalSettingKeys.ContactHours, "Mon-Fri 09:00-18:00"),
+        new(PortalSettingKeys.ContactTimezone, "UTC"),
+        new(PortalSettingKeys.ContactAddressRu, "Рыночная улица, 1, Фэрхейвен"),
+        new(PortalSettingKeys.ContactAddressHy, "Շուկայի փողոց 1, Ֆերհեյվեն"),
+        new(PortalSettingKeys.ContactHoursRu, "Пн-Пт 09:00-18:00"),
+        new(PortalSettingKeys.ContactHoursHy, "Երկ-Ուրբ 09:00-18:00"),
+        new(PortalSettingKeys.LegalTaxId, "DEMO-000-0000"),
         // The hero figures (clients, uptime, regions) and the contact map are owned by DemoStorefrontSeeder, which runs after this one.
-        (PortalSettingKeys.FeaturesBackups, "true"),
-        (PortalSettingKeys.FeaturesStorage, "true"),
-        (PortalSettingKeys.FeaturesCaching, "true"),
-        (PortalSettingKeys.FeaturesCdn, "true"),
-        (PortalSettingKeys.FeaturesFirewall, "true"),
-        (PortalSettingKeys.FeaturesMalware, "true"),
-        (PortalSettingKeys.MigrationFree, "true"),
-        (PortalSettingKeys.StatsResponseTime, "180 ms"),
-        (PortalSettingKeys.StatsSitesHosted, "12,000+"),
-        (PortalSettingKeys.StatsSupportResponse, "15 min"),
-        (PortalSettingKeys.FeaturesSsl, "true"),
-        (PortalSettingKeys.FeaturesDdos, "true"),
-        (PortalSettingKeys.InstallerAppCount, "150+"),
-        (PortalSettingKeys.GuaranteeMoneyBackDays, "30"),
-        (PortalSettingKeys.GuaranteeNoHiddenFees, "true"),
-        (PortalSettingKeys.SupportResponseChat, "2 min"),
-        (PortalSettingKeys.SupportResponseTicket, "1 hour"),
-        (PortalSettingKeys.SupportResponseEmail, "4 hours"),
-        (PortalSettingKeys.SupportResponsePhone, "immediate"),
+        new(PortalSettingKeys.FeaturesBackups, "true"),
+        new(PortalSettingKeys.FeaturesStorage, "true"),
+        new(PortalSettingKeys.FeaturesCaching, "true"),
+        new(PortalSettingKeys.FeaturesCdn, "true"),
+        new(PortalSettingKeys.FeaturesFirewall, "true"),
+        new(PortalSettingKeys.FeaturesMalware, "true"),
+        new(PortalSettingKeys.MigrationFree, "true"),
+        new(PortalSettingKeys.StatsResponseTime, "180 ms"),
+        new(PortalSettingKeys.StatsSitesHosted, "12,000+"),
+        new(PortalSettingKeys.StatsSupportResponse, "15 min"),
+        new(PortalSettingKeys.FeaturesSsl, "true"),
+        new(PortalSettingKeys.FeaturesDdos, "true"),
+        new(PortalSettingKeys.InstallerAppCount, "150+"),
+        new(PortalSettingKeys.GuaranteeMoneyBackDays, "30"),
+        new(PortalSettingKeys.GuaranteeNoHiddenFees, "true"),
+        new(PortalSettingKeys.SupportResponseChat, "2 min"),
+        new(PortalSettingKeys.SupportResponseTicket, "1 hour"),
+        new(PortalSettingKeys.SupportResponseEmail, "4 hours"),
+        new(PortalSettingKeys.SupportResponsePhone, "immediate"),
         // The chat support card shows once a provider is named; the demo names one so every support channel appears.
-        (PortalSettingKeys.ChatProvider, "chatwoot"),
+        new(PortalSettingKeys.ChatProvider, "chatwoot"),
         // Every home-page section is on in the demo, including the portfolio projects that a fresh install keeps off.
-        (PortalSettingKeys.SectionStats, "true"),
-        (PortalSettingKeys.SectionPartners, "true"),
-        (PortalSettingKeys.SectionServices, "true"),
-        (PortalSettingKeys.SectionProcess, "true"),
-        (PortalSettingKeys.SectionPlans, "true"),
-        (PortalSettingKeys.SectionComparison, "true"),
-        (PortalSettingKeys.SectionDashboard, "true"),
-        (PortalSettingKeys.SectionUseCases, "true"),
-        (PortalSettingKeys.SectionMigration, "true"),
-        (PortalSettingKeys.SectionProjects, "true"),
-        (PortalSettingKeys.SectionTestimonials, "true"),
-        (PortalSettingKeys.SectionFaq, "true"),
-        (PortalSettingKeys.SectionCta, "true"),
-        (PortalSettingKeys.SectionLocations, "true"),
-        (PortalSettingKeys.SectionPerformance, "true"),
-        (PortalSettingKeys.SectionSecurity, "true"),
-        (PortalSettingKeys.SectionApps, "true"),
-        (PortalSettingKeys.SectionGuarantees, "true"),
-        (PortalSettingKeys.SectionSupport, "true"),
-        (PortalSettingKeys.SectionTrusted, "true"),
-        (PortalSettingKeys.AboutText, AboutEn),
-        (PortalSettingKeys.AboutTextRu, AboutRu),
-        (PortalSettingKeys.AboutTextHy, AboutHy),
+        new(PortalSettingKeys.SectionStats, "true"),
+        new(PortalSettingKeys.SectionPartners, "true"),
+        new(PortalSettingKeys.SectionServices, "true"),
+        new(PortalSettingKeys.SectionProcess, "true"),
+        new(PortalSettingKeys.SectionPlans, "true"),
+        new(PortalSettingKeys.SectionComparison, "true"),
+        new(PortalSettingKeys.SectionDashboard, "true"),
+        new(PortalSettingKeys.SectionUseCases, "true"),
+        new(PortalSettingKeys.SectionMigration, "true"),
+        new(PortalSettingKeys.SectionProjects, "true"),
+        new(PortalSettingKeys.SectionTestimonials, "true"),
+        new(PortalSettingKeys.SectionFaq, "true"),
+        new(PortalSettingKeys.SectionCta, "true"),
+        new(PortalSettingKeys.SectionLocations, "true"),
+        new(PortalSettingKeys.SectionPerformance, "true"),
+        new(PortalSettingKeys.SectionSecurity, "true"),
+        new(PortalSettingKeys.SectionApps, "true"),
+        new(PortalSettingKeys.SectionGuarantees, "true"),
+        new(PortalSettingKeys.SectionSupport, "true"),
+        new(PortalSettingKeys.SectionTrusted, "true"),
+        new(PortalSettingKeys.AboutText, AboutEn),
+        new(PortalSettingKeys.AboutTextRu, AboutRu),
+        new(PortalSettingKeys.AboutTextHy, AboutHy),
     ];
 
     /// <summary>The data context the settings are read and saved through.</summary>
@@ -137,10 +141,10 @@ internal sealed class DemoPortalSettingsSeeder
 
     /// <summary>Every value the demo sets: the fixed ones plus the contact pair, configured or the fictional default.</summary>
     /// <returns>The values by setting key.</returns>
-    private (string Key, string Value)[] Values() =>
+    private DemoSettingValue[] Values() =>
     [
-        (PortalSettingKeys.ContactEmail, OrDefault(_options.ContactEmail, DefaultContactEmail)),
-        (PortalSettingKeys.ContactPhone, OrDefault(_options.ContactPhone, DefaultContactPhone)),
+        new(PortalSettingKeys.ContactEmail, OrDefault(_options.ContactEmail, DefaultContactEmail)),
+        new(PortalSettingKeys.ContactPhone, OrDefault(_options.ContactPhone, DefaultContactPhone)),
         .. FixedValues,
     ];
 
@@ -169,7 +173,8 @@ internal sealed class DemoPortalSettingsSeeder
         }
 
         // The mail templates come from the migrations with the product's own wording; the demo's welcome mail names the demo.
-        var welcome = await _db.EmailTemplates.FirstOrDefaultAsync(t => t.Slug == WelcomeTemplateSlug, ct);
+        var welcome = await _db.EmailTemplates.FirstOrDefaultAsync(
+            t => t.Slug == WelcomeTemplateSlug && t.Language == SupportedLanguages.Default, ct);
         if (welcome is not null && welcome.Subject != WelcomeSubject)
         {
             welcome.Update(WelcomeSubject, welcome.Body, welcome.Description);

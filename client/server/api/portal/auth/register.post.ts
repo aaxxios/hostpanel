@@ -10,6 +10,9 @@
  * @module server/api/portal/auth/register.post
  */
 
+import { HttpMethod } from '~/types/httpmethod'
+import { readBodyObject } from '~/server/utils/readBodyObject'
+
 /** What the backend answers a sign-up with. */
 interface RegisterResult {
   /** Identifier of the account that was created. */
@@ -20,10 +23,10 @@ interface RegisterResult {
  * Forwards the sign-up to the backend.
  */
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
+  const body = await readBodyObject(event)
 
   return await internalApiCall<RegisterResult>(event, '/auth/register', {
-    method: 'POST',
+    method: HttpMethod.Post,
     body,
     anonymous: true,
   })

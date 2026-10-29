@@ -1,8 +1,10 @@
 using Innovayse.Hostpanel.Domain.Notifications;
+using Innovayse.Hostpanel.Infrastructure.Persistence.Converters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core configuration for the <see cref="EmailLog"/> entity.</summary>
 public sealed class EmailLogConfiguration : IEntityTypeConfiguration<EmailLog>
 {
@@ -17,6 +19,9 @@ public sealed class EmailLogConfiguration : IEntityTypeConfiguration<EmailLog>
         builder.Property(x => x.Body).IsRequired();
         builder.Property(x => x.SentAt).IsRequired();
         builder.Property(x => x.Success).IsRequired();
-        builder.Property(x => x.Error).HasMaxLength(1000);
+        builder.Property(x => x.Failure).HasColumnName("Error").HasConversion(new EmailSendFailureConverter()).HasMaxLength(1000);
+
+        // A client's mail history is read by recipient address, newest first.
+        builder.HasIndex(x => new { x.To, x.SentAt });
     }
 }

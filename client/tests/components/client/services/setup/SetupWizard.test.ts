@@ -4,7 +4,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountClient, stubClientRuntime } from '~/tests/helpers/mountClient'
 import SetupWizard from '~/components/client/services/setup/SetupWizard.vue'
-import type { ServiceDetail } from '~/types/servicedetail'
+import { makeClientService } from '~/tests/helpers/clientServiceFixture'
+import type { ClientService } from '~/types/clientservice'
+import { ServiceStatus } from '~/types/servicestatus'
 
 /** The mocked client endpoints the store reaches. */
 const api = vi.hoisted(() => ({ setUpService: vi.fn() }))
@@ -15,7 +17,7 @@ vi.mock('~/composables/apis/useClientApi', () => ({ useClientApi: () => api }))
 const navigate = vi.fn()
 
 /** A service waiting for setup. */
-const service = { id: 4, name: 'Starter', domain: '', status: 'Pending', username: '' } as ServiceDetail
+const service = makeClientService({ domain: null, status: ServiceStatus.Pending, username: null })
 
 /**
  * Mounts the wizard.
@@ -23,7 +25,7 @@ const service = { id: 4, name: 'Starter', domain: '', status: 'Pending', usernam
  * @param overrides - Service fields to override.
  * @returns The wrapper.
  */
-const mountWizard = (overrides: Partial<ServiceDetail> = {}) =>
+const mountWizard = (overrides: Partial<ClientService> = {}) =>
   mountClient(SetupWizard, { props: { service: { ...service, ...overrides }, serviceId: '4' } })
 
 describe('SetupWizard', () => {

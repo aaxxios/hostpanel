@@ -2,10 +2,10 @@ namespace Innovayse.Providers.Inecobank;
 
 /// <summary>
 /// Raised when the Inecobank gateway answers with a non-zero errorCode, or when the
-/// gateway could not be reached / did not answer with valid JSON at all (see
-/// <see cref="InecobankApiClient.TransportErrorCode"/>). Callers rely on this being the
+/// gateway could not be reached / did not answer with valid JSON at all (a negative
+/// <see cref="ErrorCode"/> that no gateway-reported code can collide with). Callers rely on this being the
 /// only exception type <see cref="InecobankApiClient"/> throws, so every failure surfaced
-/// to them — gateway-reported or transport-level — is wrapped in this type.
+/// to them, gateway-reported or transport-level, is wrapped in this type.
 /// </summary>
 public sealed class InecobankApiException : Exception
 {
@@ -17,7 +17,7 @@ public sealed class InecobankApiException : Exception
 
     /// <summary>Initializes the exception wrapping a lower-level transport or parsing failure.</summary>
     /// <param name="errorCode">
-    /// <see cref="InecobankApiClient.TransportErrorCode"/> for a failure detected on this
+    /// A negative code for a failure detected on this
     /// side of the HTTP call (never a code the gateway itself reported).
     /// </param>
     /// <param name="message">A message naming the endpoint and describing the failure.</param>

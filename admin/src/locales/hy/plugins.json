@@ -1,5 +1,6 @@
 {
   "pluginCard": {
+    "builtIn": "Ներկառուցված",
     "pendingRestart": "Սպասում է վերագործարկման",
     "categoryByAuthor": "{category} · հեղինակ՝ {author}",
     "removing": "Հեռացվում է…",
@@ -27,6 +28,10 @@
     "uploadA": "Վերբեռնեք",
     "fileAboveToGetStarted": "ֆայլ վերևում՝ սկսելու համար",
     "zip": ".zip",
-    "installedPlugins": "Տեղադրված պլագիններ"
+    "installedPlugins": "Տեղադրված պլագիններ",
+    "pluginInstalled": "Պլագինը տեղադրված է։",
+    "pluginRemoved": "Պլագինը հեռացված է։",
+    "confirmRemoveTitle": "Հեռացնե՞լ այս պլագինը",
+    "confirmRemoveMessage": "{id} պլագինը կհեռացվի սերվերից։"
   }
 }

@@ -8,10 +8,10 @@ namespace Innovayse.Hostpanel.Application.Products.Commands.CreateProductFeature
 /// <summary>Validates <see cref="CreateProductFeatureCommand"/> before it reaches the handler.</summary>
 public sealed class CreateProductFeatureValidator : LocalizedValidator<CreateProductFeatureCommand>
 {
-    /// <summary>Longest a label may be — matches the <c>ProductFeatures.Label</c> column.</summary>
+    /// <summary>Longest a label may be: matches the <c>ProductFeatures.Label</c> column.</summary>
     private const int LabelMaxLength = 120;
 
-    /// <summary>Longest a value may be — matches the <c>ProductFeatures.Value</c> column.</summary>
+    /// <summary>Longest a value may be: matches the <c>ProductFeatures.Value</c> column.</summary>
     private const int ValueMaxLength = 200;
 
     /// <summary>

@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import QuoteDetailView from '@/views/QuoteDetailView.vue'
-import { json } from '../helpers/fetch'
+import { json, problem } from '../helpers/fetch'
 import { mountRouted } from '../helpers/mount'
 import { stubRoutes } from '../helpers/routes'
 
@@ -52,6 +52,55 @@ describe('QuoteDetailView', () => {
       stage: 'Draft',
       items: [{ id: 31, quantity: 2 }],
     })
+    expect(wrapper.get('[data-testid="billing-quote-success"]').text()).toBe('Quote #3 saved.')
+  })
+
+  it('shows the API sentence when the save is refused', async () => {
+    stubRoutes({
+      'GET /api/quotes/3': () => json(quote),
+      'PUT /api/quotes/3': () => problem('Quote is accepted.', 409),
+    })
+    const { wrapper } = await mountRouted(QuoteDetailView, '/billing/quotes/:id', '/billing/quotes/3')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="billing-quote-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="billing-quote-error"]').text()).toBe('Quote is accepted.')
+  })
+
+  it('stays on the quote with the API sentence when the delete is refused', async () => {
+    stubRoutes({
+      'GET /api/quotes/3': () => json(quote),
+      'DELETE /api/quotes/3': () => problem('Quote is accepted.', 409),
+    })
+    const { wrapper, router } = await mountRouted(QuoteDetailView, '/billing/quotes/:id', '/billing/quotes/3')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="billing-quote-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/billing/quotes/3')
+    expect(wrapper.get('[data-testid="billing-quote-error"]').text()).toBe('Quote is accepted.')
+  })
+
+  it('offers a retry when the quote cannot be loaded', async () => {
+    let calls = 0
+    stubRoutes({
+      'GET /api/quotes/3': () => {
+        calls += 1
+        return calls === 1 ? problem('No such quote.', 404) : json(quote)
+      },
+    })
+    const { wrapper } = await mountRouted(QuoteDetailView, '/billing/quotes/:id', '/billing/quotes/3')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="billing-quote-load-error"]').text()).toBe('No such quote.')
+    await wrapper.get('[data-testid="billing-quote-load-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect((wrapper.get('[data-testid="billing-quote-subject"]').element as HTMLInputElement).value).toBe('Hosting renewal')
   })
 
   it('deletes the quote only after the confirmation', async () => {

@@ -1,9 +1,8 @@
 using Innovayse.Hostpanel.Application.Billing.Commands.StartGatewayPayment;
-using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Orders.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
-using Microsoft.EntityFrameworkCore;
 using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Orders.Commands.StartOrderGatewayPayment;
@@ -14,9 +13,8 @@ namespace Innovayse.Hostpanel.Application.Orders.Commands.StartOrderGatewayPayme
 /// <remarks>
 /// Dispatches <see cref="StartGatewayPaymentCommand"/> rather than repeating its work, the same
 /// way <c>StartMyGatewayPaymentHandler</c> does for a client's own invoice: every check that
-/// command makes -- payability, the allowed return-URL origins, the live-session window, the
-/// currency match -- stays in one place, and this handler adds only the order-to-invoice step
-/// the endpoint used to perform for itself.
+/// command makes, payability, the allowed return-URL origins, the live-session window, the
+/// currency match, stays in one place, and this handler adds only the order-to-invoice step.
 /// </remarks>
 public sealed class StartOrderGatewayPaymentHandler
 {
@@ -47,24 +45,19 @@ public sealed class StartOrderGatewayPaymentHandler
     /// <c>GATEWAY_SESSION_ALREADY_STARTED</c>, <c>CURRENCY_NOT_FOUND</c> or
     /// <c>GATEWAY_CURRENCY_MISMATCH</c>).
     /// </returns>
-    public async Task<Result<string>> HandleAsync(StartOrderGatewayPaymentCommand cmd, CancellationToken ct)
+    public async Task<Result<RedirectDto>> HandleAsync(StartOrderGatewayPaymentCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var found = await _context.Orders.FirstOrDefaultAsync(o => o.Id == cmd.OrderId, ct);
-        var payable = found.EnsurePayableWith(cmd.PaymentToken);
+        var payable = await _context.FindPayableInvoicedOrderAsync(cmd.OrderId, cmd.PaymentToken, ct);
         if (payable.IsFailure)
         {
-            return Result<string>.FailureCode(payable.ErrorCode!);
+            return Result<RedirectDto>.FailureCode(payable.ErrorCode!);
         }
 
         var order = payable.Value!;
-        if (order.InvoiceId is null)
-        {
-            return Result<string>.FailureCode(HostpanelErrorCodes.ORDER_NOT_INVOICED);
-        }
 
-        return await _bus.InvokeAsync<Result<string>>(
-            new StartGatewayPaymentCommand(order.InvoiceId.Value, cmd.Module, cmd.ReturnUrl), ct);
+        return await _bus.InvokeAsync<Result<RedirectDto>>(
+            new StartGatewayPaymentCommand(order.InvoiceId!.Value, cmd.Module, cmd.ReturnUrl), ct);
     }
 }

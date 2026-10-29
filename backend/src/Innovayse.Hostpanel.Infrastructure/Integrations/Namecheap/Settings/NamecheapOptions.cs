@@ -30,7 +30,7 @@ public sealed class NamecheapOptions
     public string ClientIp { get; set; } = string.Empty;
 
     /// <summary>
-    /// Absolute base URL of the Namecheap XML API endpoint, scheme included -- the live endpoint
+    /// Absolute base URL of the Namecheap XML API endpoint, scheme included: the live endpoint
     /// is <c>https://api.namecheap.com/xml.response</c> and the sandbox endpoint is a different
     /// host, so this is set alongside <see cref="Sandbox"/> rather than derived from it.
     /// </summary>
@@ -43,7 +43,7 @@ public sealed class NamecheapOptions
     public bool Sandbox { get; set; }
 
     /// <summary>
-    /// Whether the whole section was left unset -- a deployment that does not use Namecheap.
+    /// Whether the whole section was left unset: a deployment that does not use Namecheap.
     /// </summary>
     public bool IsAbsent =>
         ApiUser.Length == 0 && ApiKey.Length == 0 && ClientIp.Length == 0 && ApiUrl.Length == 0;
@@ -58,7 +58,7 @@ public sealed class NamecheapOptions
         ApiUser.Length > 0 && ApiKey.Length > 0 && ApiUrl.Length > 0;
 
     /// <summary>
-    /// Whether this section is in a state the process may start with -- entirely unset, or
+    /// Whether this section is in a state the process may start with: entirely unset, or
     /// complete. Half-filled is neither.
     /// </summary>
     public bool IsUsable => IsAbsent || IsConfigured;

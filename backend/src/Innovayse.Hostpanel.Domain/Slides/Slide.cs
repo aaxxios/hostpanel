@@ -2,13 +2,30 @@ using Innovayse.Hostpanel.Domain.Slides.Enums;
 using Innovayse.Hostpanel.Domain.Slides.Events;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Slides;
+
 /// <summary>
 /// A homepage slider slide with per-locale translations.
 /// Stored in the <c>Slides</c> table.
 /// </summary>
-public sealed class Slide : BaseEntity, IAggregateRoot
+public sealed class Slide : BaseEntity, IAggregateRoot, ISortable
 {
+    /// <summary>Longest an icon name may be: matches the <c>Slides.IconName</c> column.</summary>
+    public const int IconNameMaxLength = 100;
+
+    /// <summary>Longest a brand color may be: matches the <c>Slides.BrandColor</c> column.</summary>
+    public const int BrandColorMaxLength = 20;
+
+    /// <summary>Longest an image URL may be: matches the <c>Slides.ImageUrl</c> column.</summary>
+    public const int ImageUrlMaxLength = 500;
+
+    /// <summary>Longest a demo or learn-more link may be: matches the <c>Slides.DemoUrl</c> and <c>Slides.LearnMoreUrl</c> columns.</summary>
+    public const int LinkMaxLength = 500;
+
+    /// <summary>Longest a target-audience name may be: matches the <c>Slides.TargetAudience</c> column.</summary>
+    public const int TargetAudienceMaxLength = 20;
+
     /// <summary>Gets the MDI icon name (e.g. "cloud-check").</summary>
     public string IconName { get; private set; } = string.Empty;
 
@@ -51,80 +68,32 @@ public sealed class Slide : BaseEntity, IAggregateRoot
     /// <summary>Gets the per-locale translations.</summary>
     public IReadOnlyList<SlideTranslation> Translations => _translations.AsReadOnly();
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Slide() { }
 
-    /// <summary>
-    /// Creates a new active slide and raises <see cref="SlideCreatedEvent"/>.
-    /// </summary>
-    /// <param name="iconName">MDI icon name.</param>
-    /// <param name="brandColor">Hex brand color.</param>
-    /// <param name="imageUrl">Image URL or path.</param>
-    /// <param name="demoUrl">Optional external demo link.</param>
-    /// <param name="learnMoreUrl">Optional learn-more page link.</param>
-    /// <param name="productId">Optional FK to a Product for pricing data.</param>
-    /// <param name="sortOrder">Display order (ascending).</param>
-    /// <param name="isActive">Whether the slide is active.</param>
-    /// <param name="targetAudience">Target audience for this slide.</param>
-    /// <param name="visibleFrom">Optional start of the visibility window.</param>
-    /// <param name="visibleUntil">Optional end of the visibility window.</param>
+    /// <summary>Creates a slide from its settings and raises <see cref="SlideCreatedEvent"/>.</summary>
+    /// <param name="settings">The slide's settings.</param>
+    /// <param name="occurredAt">The moment the slide was added, UTC.</param>
     /// <returns>A new <see cref="Slide"/>.</returns>
-    public static Slide Create(
-        string iconName, string brandColor, string imageUrl,
-        string? demoUrl, string? learnMoreUrl, int? productId,
-        int sortOrder, bool isActive, SlideAudience targetAudience,
-        DateTimeOffset? visibleFrom, DateTimeOffset? visibleUntil)
+    public static Slide Create(SlideSettings settings, DateTimeOffset occurredAt)
     {
-        var slide = new Slide
-        {
-            IconName = iconName,
-            BrandColor = brandColor,
-            ImageUrl = imageUrl,
-            DemoUrl = demoUrl,
-            LearnMoreUrl = learnMoreUrl,
-            ProductId = productId,
-            SortOrder = sortOrder,
-            IsActive = isActive,
-            TargetAudience = targetAudience,
-            VisibleFrom = visibleFrom,
-            VisibleUntil = visibleUntil,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-        slide.AddDomainEvent(new SlideCreatedEvent(0, iconName));
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var slide = new Slide();
+        slide.Apply(settings);
+        slide.AddDomainEvent(new SlideCreatedEvent(0, settings.IconName) { OccurredAt = occurredAt });
         return slide;
     }
 
     /// <summary>
-    /// Updates all non-translation fields.
+    /// Replaces the slide's settings as one edit of the slide form. Translations are not touched.
     /// </summary>
-    /// <param name="iconName">New MDI icon name.</param>
-    /// <param name="brandColor">New hex brand color.</param>
-    /// <param name="imageUrl">New image URL or path.</param>
-    /// <param name="demoUrl">New optional external demo link.</param>
-    /// <param name="learnMoreUrl">New optional learn-more page link.</param>
-    /// <param name="productId">New optional FK to a Product.</param>
-    /// <param name="sortOrder">New display order.</param>
-    /// <param name="isActive">New active state.</param>
-    /// <param name="targetAudience">New target audience.</param>
-    /// <param name="visibleFrom">New optional start of the visibility window.</param>
-    /// <param name="visibleUntil">New optional end of the visibility window.</param>
-    public void Update(
-        string iconName, string brandColor, string imageUrl,
-        string? demoUrl, string? learnMoreUrl, int? productId,
-        int sortOrder, bool isActive, SlideAudience targetAudience,
-        DateTimeOffset? visibleFrom, DateTimeOffset? visibleUntil)
+    /// <param name="settings">The new settings.</param>
+    public void Reconfigure(SlideSettings settings)
     {
-        IconName = iconName;
-        BrandColor = brandColor;
-        ImageUrl = imageUrl;
-        DemoUrl = demoUrl;
-        LearnMoreUrl = learnMoreUrl;
-        ProductId = productId;
-        SortOrder = sortOrder;
-        IsActive = isActive;
-        TargetAudience = targetAudience;
-        VisibleFrom = visibleFrom;
-        VisibleUntil = visibleUntil;
+        ArgumentNullException.ThrowIfNull(settings);
+
+        Apply(settings);
     }
 
     /// <summary>Marks the slide as active.</summary>
@@ -133,6 +102,10 @@ public sealed class Slide : BaseEntity, IAggregateRoot
     /// <summary>Marks the slide as inactive.</summary>
     public void Deactivate() => IsActive = false;
 
+    /// <summary>Moves the slide to a new position in the display order.</summary>
+    /// <param name="sortOrder">The new display order (ascending).</param>
+    public void SetSortOrder(int sortOrder) => SortOrder = sortOrder;
+
     /// <summary>
     /// Adds or updates a translation for the given locale.
     /// </summary>
@@ -140,10 +113,11 @@ public sealed class Slide : BaseEntity, IAggregateRoot
     /// <param name="title">Slide headline.</param>
     /// <param name="tagline">Optional subtitle.</param>
     /// <param name="description">Optional body text.</param>
-    /// <param name="features">Optional JSON array of feature strings.</param>
+    /// <param name="features">Optional bullet points, in display order.</param>
     /// <param name="ctaText">Optional CTA button label.</param>
     /// <param name="ctaUrl">Optional CTA button link.</param>
-    public void SetTranslation(string locale, string title, string? tagline, string? description, string? features, string? ctaText, string? ctaUrl)
+    public void SetTranslation(
+        string locale, string title, string? tagline, string? description, IReadOnlyList<string>? features, string? ctaText, string? ctaUrl)
     {
         var existing = _translations.FirstOrDefault(t => t.Locale == locale);
         if (existing is not null)
@@ -170,6 +144,25 @@ public sealed class Slide : BaseEntity, IAggregateRoot
     }
 
     /// <summary>
+    /// Makes the slide's translations exactly the given set: locales that are not in it are removed,
+    /// the rest are added or updated in place. When a locale appears twice the later entry wins.
+    /// </summary>
+    /// <param name="translations">The complete set of translations, one per locale.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="translations"/> is null.</exception>
+    public void ReplaceTranslations(IReadOnlyList<SlideTranslationContent> translations)
+    {
+        ArgumentNullException.ThrowIfNull(translations);
+
+        var locales = translations.Select(t => t.Locale).ToHashSet(StringComparer.Ordinal);
+        _translations.RemoveAll(t => !locales.Contains(t.Locale));
+        foreach (var content in translations)
+        {
+            SetTranslation(
+                content.Locale, content.Title, content.Tagline, content.Description, content.Features, content.CtaText, content.CtaUrl);
+        }
+    }
+
+    /// <summary>
     /// Checks whether this slide should be visible at the given time.
     /// </summary>
     /// <param name="now">The point in time to check visibility against.</param>
@@ -192,5 +185,22 @@ public sealed class Slide : BaseEntity, IAggregateRoot
         }
 
         return true;
+    }
+
+    /// <summary>Copies the settings onto the slide; the one place both creation and reconfiguration write them.</summary>
+    /// <param name="settings">The settings to apply.</param>
+    private void Apply(SlideSettings settings)
+    {
+        IconName = settings.IconName;
+        BrandColor = settings.BrandColor;
+        ImageUrl = settings.ImageUrl;
+        DemoUrl = settings.DemoUrl;
+        LearnMoreUrl = settings.LearnMoreUrl;
+        ProductId = settings.ProductId;
+        SortOrder = settings.SortOrder;
+        IsActive = settings.IsActive;
+        TargetAudience = settings.TargetAudience;
+        VisibleFrom = settings.VisibleFrom;
+        VisibleUntil = settings.VisibleUntil;
     }
 }

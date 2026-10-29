@@ -4,24 +4,27 @@
  *
  * Lists the migration jobs (history), shows the selected job's progress card, the one-time setup
  * instructions of a pending job and the import report of a finished one, and opens a dialog that
- * creates a job. Jobs, polling, and every refusal sentence belong to the migration store.
+ * creates a job. Jobs, polling, and every refusal sentence belong to the migration store. Deleting
+ * a job is confirmed first; creating and deleting report their outcome (success, or the API's
+ * sentence) next to the action, and a refused history load shows the sentence with a Retry.
  */
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMigrationStore } from '@/stores/migration'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { isJobActive, migrationStatusLabelKey } from '@/lib/migrationStatus'
 import { migrationStatusTone } from '@/lib/tones'
 import { MIGRATION_ENTITY_KEYS, MigrationStatus } from '@/types/migration'
 import type { MigrationEntityKey, MigrationExportFlags, MigrationJob } from '@/types/migration'
 import MigrationProgressCard from '@/components/migration/MigrationProgressCard.vue'
 import MigrationReportTable from '@/components/migration/MigrationReportTable.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiCheckbox from '@/components/ui/UiCheckbox.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
@@ -32,9 +35,11 @@ import UiLink from '@/components/ui/UiLink.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { API_BASE } from '@/lib/apiPaths'
 import { COPIED_VISIBLE_MS } from '@/lib/limits'
+import { UiTone } from '@/utils/ui/tone'
 
 /** Translation function. */
 const { t } = useI18n()
@@ -82,8 +87,33 @@ const copiedKey = ref(false)
 /** Timer that hides the "Copied" confirmation. */
 const copiedTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
-/** Id of the job whose deletion is in flight. */
-const deletingId = ref<number | null>(null)
+/** The job waiting for the delete confirmation, null when the prompt is closed. */
+const deleteTarget = ref<MigrationJob | null>(null)
+
+/** True while the delete is in flight. */
+const deleting = ref(false)
+
+/** The sentence of the last refused history load, shown with Retry; null when it loaded. */
+const loadError = ref<string | null>(null)
+
+/** The sentence of the last refused create, shown inside the dialog; null when none. */
+const createError = ref<string | null>(null)
+
+/** The outcome line of the last create or delete. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Loads the history and records whether the load was refused.
+ *
+ * @returns Resolves when the history has settled.
+ */
+const load = async (): Promise<void> => {
+  await store.fetchAll()
+  loadError.value = store.error
+}
 
 /** Which entity groups the new job exports; all on by default. */
 const flags = reactive<MigrationExportFlags>({
@@ -127,6 +157,8 @@ const toggleAll = (): void => {
 
 /** Creates the job from the dialog, then selects it and follows its progress. */
 const handleCreateJob = async (): Promise<void> => {
+  feedback.clear()
+  createError.value = null
   creatingJob.value = true
   const job = await store.createJob({
     label: newJobLabel.value || undefined,
@@ -140,7 +172,16 @@ const handleCreateJob = async (): Promise<void> => {
     newJobLabel.value = ''
     newJobSourceUrl.value = ''
     showNewJobModal.value = false
+    feedback.show(t('migration.migration.migrationCreated'), false)
+  } else {
+    createError.value = store.error ?? t('errors.noAnswer')
   }
+}
+
+/** Closes the new-job dialog and forgets its last refusal. */
+const closeNewJob = (): void => {
+  showNewJobModal.value = false
+  createError.value = null
 }
 
 /**
@@ -172,18 +213,38 @@ const copyKey = async (key: string): Promise<void> => {
 }
 
 /**
- * Deletes a job from the history.
+ * Deletes the job the operator confirmed and shows the outcome.
  *
- * @param id - Id of the job to delete.
+ * @returns Resolves when the delete has settled.
  */
-const handleDelete = async (id: number): Promise<void> => {
-  deletingId.value = id
-  await store.deleteJob(id)
-  deletingId.value = null
+const confirmDelete = async (): Promise<void> => {
+  const job = deleteTarget.value
+  if (job === null) {
+    return
+  }
+  feedback.clear()
+  deleting.value = true
+  const deleted = await store.deleteJob(job.id)
+  deleting.value = false
+  deleteTarget.value = null
+  if (deleted) {
+    feedback.show(t('migration.migration.migrationDeleted'), false)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    deleteTarget.value = null
+  }
 }
 
 /** Loads the history. */
-onMounted(store.fetchAll)
+onMounted(() => {
+  void load()
+})
 
 /** Stops following a running job and the copy confirmation timer. */
 onUnmounted(() => {
@@ -196,7 +257,13 @@ onUnmounted(() => {
 
 <template>
   <UiStack gap="md" class="w-full">
-    <UiAlert v-if="store.error" variant="error" data-testid="migration-error">{{ store.error }}</UiAlert>
+    <UiErrorState
+      v-if="loadError !== null"
+      :message="loadError"
+      :loading="store.loading"
+      testid="migration-error"
+      @retry="load"
+    />
 
     <UiPageHeader
       :title="t('migration.migration.migrationTools')"
@@ -208,6 +275,8 @@ onUnmounted(() => {
         </UiButton>
       </template>
     </UiPageHeader>
+
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="migration-feedback" />
 
     <!-- Loading -->
     <UiSkeleton v-if="store.loading" :lines="4" data-testid="migration-loading" />
@@ -258,9 +327,9 @@ onUnmounted(() => {
               :label="t('migration.migration.deleteMigration')"
               variant="danger"
               size="sm"
-              :disabled="deletingId === job.id"
+              :disabled="deleting && deleteTarget?.id === job.id"
               :data-testid="`migration-delete-${job.id}`"
-              @click="handleDelete(job.id)"
+              @click="deleteTarget = job"
             >
               ×
             </UiIconButton>
@@ -355,9 +424,11 @@ onUnmounted(() => {
       :open="showNewJobModal"
       :title="t('migration.migration.newMigration')"
       size="lg"
-      @close="showNewJobModal = false"
+      @close="closeNewJob"
     >
       <UiStack gap="md">
+        <UiStatusMessage :message="createError" :tone="UiTone.Danger" data-testid="migration-create-error" />
+
         <UiText tone="muted" size="sm">{{ t('migration.migration.aSecretKeyWillBe') }}</UiText>
 
         <UiField :label="t('migration.migration.sourceUrl')" :hint="t('migration.migration.modulesAddonsInnovayseMigrationApi')" required>
@@ -405,7 +476,7 @@ onUnmounted(() => {
       </UiStack>
 
       <template #footer>
-        <UiButton variant="secondary" data-testid="migration-dialog-cancel" @click="showNewJobModal = false">
+        <UiButton variant="secondary" data-testid="migration-dialog-cancel" @click="closeNewJob">
           {{ t('shared.cancel') }}
         </UiButton>
         <UiButton
@@ -419,5 +490,19 @@ onUnmounted(() => {
         </UiButton>
       </template>
     </UiDialog>
+
+    <UiDialog
+      variant="confirm"
+      :open="deleteTarget !== null"
+      :title="t('migration.migration.deleteMigration')"
+      :message="t('migration.migration.confirmDeleteMigration', { id: deleteTarget?.id ?? 0 })"
+      :confirm-label="t('shared.delete')"
+      :loading-label="t('shared.deleting')"
+      :loading="deleting"
+      :tone="UiTone.Danger"
+      data-testid="migration-delete-dialog"
+      @confirm="confirmDelete"
+      @close="dismissDelete"
+    />
   </UiStack>
 </template>

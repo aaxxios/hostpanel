@@ -116,6 +116,12 @@ describe('SectionsProductsSlide', () => {
     expect(demo.attributes('rel')).toBe('noopener noreferrer')
   })
 
+  it('offers no demo button for an address with an unsafe scheme', () => {
+    const wrapper = mountSlide(item({ demoUrl: 'javascript:alert(1)' }))
+
+    expect(wrapper.find('[data-testid="slider-demo-7"]').exists()).toBe(false)
+  })
+
   it('paints the slide in its own colour', () => {
     const wrapper = mountSlide(item())
 

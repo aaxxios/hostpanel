@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.SyncTldCostPrices;
 /// </summary>
 /// <remarks>
 /// No rule: the command carries no parameters, so there is no shape of input this validator could
-/// refuse. It still exists and still derives from <see cref="LocalizedValidator{T}"/> — the
+/// refuse. It still exists and still derives from <see cref="LocalizedValidator{T}"/>: the
 /// absence of a rule here is decided, not forgotten.
 /// </remarks>
 public sealed class SyncTldCostPricesValidator : LocalizedValidator<SyncTldCostPricesCommand>

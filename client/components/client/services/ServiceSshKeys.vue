@@ -109,6 +109,25 @@
             <UiText size="sm">{{ $t('client.services.ssh.howToNeverPrivate') }}</UiText>
           </UiStack>
         </template>
+        <template #content-1>
+          <UiStack gap="md" data-testid="service-ssh-deploy">
+            <UiText size="sm">{{ $t('client.services.ssh.deploy.intro') }}</UiText>
+            <UiStack v-for="step in deploySteps" :key="step.key" gap="xs">
+              <UiText size="sm" weight="semibold">{{ $t(`client.services.ssh.deploy.${step.key}`, { secret: DEPLOY_SECRET_NAME }) }}</UiText>
+              <UiText v-if="step.hint" size="xs" tone="muted">{{ $t(`client.services.ssh.deploy.${step.hint}`, { secret: DEPLOY_SECRET_NAME }) }}</UiText>
+              <UiStack v-if="step.code" direction="row" gap="sm" align="start">
+                <pre
+                  class="flex-1 min-w-0 overflow-x-auto rounded bg-gray-900 text-gray-100 px-3 py-2 text-xs font-mono"
+                  :data-testid="`service-ssh-deploy-${step.key}`"
+                >{{ step.code }}</pre>
+                <UiButton variant="secondary" size="sm" :data-testid="`service-ssh-deploy-copy-${step.key}`" @click="copySnippet(step.key, step.code)">
+                  <component :is="copiedSnippet === step.key ? Check : Copy" :size="14" :stroke-width="2" class="mr-1.5" />
+                  {{ copiedSnippet === step.key ? $t('client.services.ssh.copied') : $t('client.services.ssh.copy') }}
+                </UiButton>
+              </UiStack>
+            </UiStack>
+          </UiStack>
+        </template>
       </UiAccordion>
     </UiStack>
 
@@ -142,6 +161,7 @@ import type { SshKey } from '~/types/sshkey'
 import { SshKeySyncState } from '~/types/sshkeysyncstate'
 import { formatDate } from '~/utils/formatDate'
 import { suggestedLabel } from '~/utils/sshKey'
+import { DEPLOY_KEYGEN_COMMAND, DEPLOY_SECRET_NAME, githubDeployWorkflow, gitlabDeployJob } from '~/utils/sshDeploy'
 import { UiAlertVariant } from '~/utils/ui/enums'
 
 /** The command that generates an ED25519 key pair. */
@@ -193,8 +213,41 @@ const stateVariant = computed(() => {
 /** The form's error line: a browser-side refusal first, else the API's sentence. */
 const formError = computed(() => (localError.value ? t(`client.services.ssh.localError.${localError.value}`) : addError.value))
 
-/** The single instructions panel. */
-const howTo = computed(() => [{ title: t('client.services.ssh.howToTitle') }])
+/** One step of the deployment guide: its text, an optional hint and an optional snippet to copy. */
+interface DeployStep {
+  /** Locale key under client.services.ssh.deploy, also the snippet's test id. */
+  key: string
+  /** Locale key of a muted hint line, if any. */
+  hint?: string
+  /** Text to show in a code block with a copy button, if any. */
+  code?: string
+}
+
+/** The deployment guide, filled with this account's details; empty until they are known. */
+const deploySteps = computed<DeployStep[]>(() => {
+  const a = access.value
+  if (!a?.hostname || !a.port || !a.username) {
+    return []
+  }
+  const target = { hostname: a.hostname, port: a.port, username: a.username }
+  return [
+    { key: 'step1', hint: 'step1Hint', code: DEPLOY_KEYGEN_COMMAND },
+    { key: 'step2', hint: 'step2Hint' },
+    { key: 'step3', hint: 'step3Hint' },
+    { key: 'step4GitHub', hint: 'step4GitHubHint', code: githubDeployWorkflow(target) },
+    { key: 'step4GitLab', hint: 'step4GitLabHint', code: gitlabDeployJob(target) },
+    { key: 'step5' }
+  ]
+})
+
+/** The instruction panels: creating a key, then deploying from CI once the account is known. */
+const howTo = computed(() => [
+  { title: t('client.services.ssh.howToTitle') },
+  ...(deploySteps.value.length ? [{ title: t('client.services.ssh.deploy.title') }] : [])
+])
+
+/** Which deployment snippet was just copied, if any. */
+const copiedSnippet = ref('')
 
 /**
  * The badge a key carries, if any: stale first, then an unconfirmed state, then missing on the server.
@@ -268,6 +321,23 @@ const copy = async (text: string): Promise<void> => {
     copied.value = true
     setTimeout(() => {
       copied.value = false
+    }, COPIED_FLASH_MS)
+  }, () => undefined)
+}
+
+/**
+ * Copies a deployment snippet and flags its button briefly. A blocked clipboard leaves the
+ * snippet selectable, so the failure needs no message.
+ *
+ * @param key - The step the snippet belongs to.
+ * @param text - The snippet.
+ * @returns Resolves when the attempt has ended.
+ */
+const copySnippet = async (key: string, text: string): Promise<void> => {
+  await navigator.clipboard?.writeText(text).then(() => {
+    copiedSnippet.value = key
+    setTimeout(() => {
+      copiedSnippet.value = ''
     }, COPIED_FLASH_MS)
   }, () => undefined)
 }

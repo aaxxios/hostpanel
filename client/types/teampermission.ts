@@ -4,32 +4,32 @@
  * @module types/teampermission
  */
 
-/** One grantable permission; the value is the word the API stores. */
+/** One grantable permission; the value is the API's permission name. */
 export enum TeamPermission {
   /** Edit the profile. */
-  Profile = 'profile',
+  Profile = 'ModifyMasterProfile',
   /** Manage contacts. */
-  Contacts = 'contacts',
+  Contacts = 'ViewManageContacts',
   /** Manage products and services. */
-  Products = 'products',
+  Products = 'ViewProductsServices',
   /** View service passwords. */
-  Passwords = 'passwords',
+  Passwords = 'ViewModifyPasswords',
   /** Single sign-on to services. */
-  Sso = 'sso',
+  Sso = 'AllowSingleSignOn',
   /** View domains. */
-  Domains = 'domains',
+  Domains = 'ViewDomains',
   /** Change domain settings. */
-  DomainSettings = 'domainsettings',
+  DomainSettings = 'ManageDomainSettings',
   /** View and pay invoices. */
-  Invoices = 'invoices',
+  Invoices = 'ViewPayInvoices',
   /** View quotes. */
-  Quotes = 'quotes',
+  Quotes = 'ViewAcceptQuotes',
   /** Open and answer tickets. */
-  Tickets = 'tickets',
+  Tickets = 'ViewOpenSupportTickets',
   /** Use the affiliate area. */
-  Affiliate = 'affiliate',
+  Affiliate = 'ViewManageAffiliate',
   /** Read the sent-mail history. */
-  Emails = 'emails',
+  Emails = 'ViewEmails',
   /** Place orders. */
-  Orders = 'orders'
+  Orders = 'PlaceNewOrders'
 }

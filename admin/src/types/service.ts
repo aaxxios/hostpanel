@@ -1,25 +1,7 @@
 /**
- * A provisioned service in its three depths, plus a pending cancellation against one.
+ * A provisioned service as the list and the detail page read it, plus a pending cancellation against one.
  */
 
-
-/** Represents a hosted service (hosting, VPS, etc.). */
-export interface Service {
-  /** Unique service identifier. */
-  id: number
-  /** Associated client identifier. */
-  clientId: number
-  /** Product name (e.g. Shared Hosting, VPS); null when unresolved. */
-  productName: string | null
-  /** Primary domain assigned to the service. */
-  domain: string
-  /** Service status (active, suspended, cancelled, pending). */
-  status: string
-  /** ISO 8601 next due date for renewal. */
-  nextDueDate: string
-  /** ISO 8601 creation timestamp. */
-  createdAt: string
-}
 
 /** Enriched service DTO for admin service list views. */
 export interface ServiceListItem {
@@ -27,22 +9,78 @@ export interface ServiceListItem {
   id: number
   /** Associated client identifier. */
   clientId: number
-  /** Full name of the owning client; null when unresolved. */
-  clientName: string | null
-  /** Product display name; null when unresolved. */
-  productName: string | null
+  /** Full name of the owning client; every service has one, since its client cannot be deleted. */
+  clientName: string
+  /** Name of the ordered product; every service has one, since its product cannot be deleted. */
+  productName: string
   /** Linked domain name, or null if no domain is linked. */
   domain: string | null
   /** Resolved price based on billing cycle. */
   price: number
   /** ISO 4217 currency code (e.g. "USD"). */
   priceCurrency: string
-  /** Billing cycle: "monthly" or "annual". */
-  billingCycle: string
-  /** Current lifecycle status (Active, Pending, Suspended, Terminated). */
-  status: string
+  /** Billing cycle. */
+  billingCycle: BillingCycle
+  /** Current lifecycle status. */
+  status: ServiceStatus
   /** ISO 8601 next renewal date, or null if not yet active. */
   nextDueDate: string | null
+}
+
+/** The provisioning server a service is hosted on, as far as it could be resolved. */
+export interface ServiceServer {
+  /** Display name of the server. */
+  name: string
+  /** Hostname of the server. */
+  hostname: string
+  /** IP address of the server, or null when it has none. */
+  ipAddress: string | null
+}
+
+/** The hosting account a service was provisioned as. */
+export interface ServiceAccount {
+  /** Dedicated IP address, if assigned. */
+  dedicatedIp: string | null
+  /** Control panel or service username. */
+  username: string | null
+  /** Control panel or service password. */
+  password: string | null
+  /** External provisioning reference (the hosting panel's account id). */
+  provisioningRef: string | null
+}
+
+/** What a service costs, how often and how it is paid for. */
+export interface ServiceBillingTerms {
+  /** Quantity of units purchased. */
+  quantity: number
+  /** Amount charged for the first payment. */
+  firstPaymentAmount: number
+  /** Recurring charge per billing cycle. */
+  recurringAmount: number
+  /** Payment method identifier or label. */
+  paymentMethod: string | null
+  /** Applied promotion code, if any. */
+  promotionCode: string | null
+  /** External subscription ID at the payment gateway. */
+  subscriptionId: string | null
+  /** Billing cycle. */
+  billingCycle: BillingCycle
+  /** ISO 8601 next renewal date, if applicable. */
+  nextDueDate: string | null
+  /** Whether the billing runs look after the service; false means staff bill it by hand. */
+  autoRenew: boolean
+}
+
+/** The automatic suspension and termination settings of a service. */
+export interface ServiceAutomation {
+  /** Whether automatic suspension is overridden. */
+  overrideAutoSuspend: boolean
+  /** ISO 8601 date until which the service is suspended. */
+  suspendUntil: string | null
+  /** Whether the service auto-terminates at end of billing cycle. */
+  autoTerminateEndOfCycle: boolean
+  /** Reason for auto-termination, if applicable. */
+  autoTerminateReason: string | null
 }
 
 /** Full service detail returned by GET /api/services/{id}. */
@@ -51,58 +89,32 @@ export interface ServiceDetail {
   id: number
   /** Associated client identifier. */
   clientId: number
-  /** Full name of the owning client; null when unresolved. */
-  clientName: string | null
+  /** Full name of the owning client; every service has one, since its client cannot be deleted. */
+  clientName: string
   /** Product identifier. */
   productId: number
-  /** Product display name; null when unresolved. */
-  productName: string | null
+  /** Name of the ordered product; every service has one, since its product cannot be deleted. */
+  productName: string
   /** Linked domain name, if any. */
-  domain?: string
-  /** Dedicated IP address, if assigned. */
-  dedicatedIp?: string
-  /** Control panel or service username. */
-  username?: string
-  /** Control panel or service password. */
-  password?: string
-  /** Quantity of units purchased. */
-  quantity: number
-  /** Amount charged for the first payment. */
-  firstPaymentAmount: number
-  /** Recurring charge per billing cycle. */
-  recurringAmount: number
-  /** Payment method identifier or label. */
-  paymentMethod?: string
-  /** Applied promotion code, if any. */
-  promotionCode?: string
-  /** External subscription ID (e.g. Stripe subscription). */
-  subscriptionId?: string
-  /** Billing cycle: "monthly" or "annual". */
-  billingCycle: string
-  /** Current lifecycle status (Active, Pending, Suspended, Terminated). */
-  status: string
-  /** External provisioning reference (e.g. cPanel account ID). */
-  provisioningRef?: string
-  /** ISO 8601 next renewal date, if applicable. */
-  nextDueDate?: string
+  domain: string | null
+  /** Current lifecycle status. */
+  status: ServiceStatus
   /** ISO 8601 creation timestamp. */
   createdAt: string
   /** ISO 8601 termination timestamp, if terminated. */
-  terminatedAt?: string
-  /** Whether automatic suspension is overridden. */
-  overrideAutoSuspend: boolean
-  /** ISO 8601 date until which the service is suspended. */
-  suspendUntil?: string
-  /** Whether the service auto-terminates at end of billing cycle. */
-  autoTerminateEndOfCycle: boolean
-  /** Reason for auto-termination, if applicable. */
-  autoTerminateReason?: string
+  terminatedAt: string | null
   /** Internal admin notes. */
-  adminNotes?: string
+  adminNotes: string | null
   /** FK to the assigned server, if any. */
-  serverId?: number
-  /** Display name of the assigned server. */
-  serverName?: string
+  serverId: number | null
+  /** The assigned server; null when none is assigned or it could not be resolved. */
+  server: ServiceServer | null
+  /** The hosting account: dedicated IP, credentials and provisioning reference. */
+  account: ServiceAccount
+  /** Quantity, prices, payment details, cycle and renewal. */
+  billing: ServiceBillingTerms
+  /** The automatic suspension and termination settings. */
+  automation: ServiceAutomation
 }
 
 /** DTO for a cancellation request in the admin list. */
@@ -111,21 +123,18 @@ export interface CancellationRequestItem {
   id: number
   /** ID of the service being cancelled. */
   serviceId: number
-  /** Name of the product/service; null when unresolved. */
-  serviceName: string | null
+  /** Product name of the service; every request has one, since its service's product cannot be deleted. */
+  serviceName: string
   /** ID of the owning client. */
   clientId: number
-  /** Full name of the owning client; null when unresolved. */
-  clientName: string | null
-  /**
-   * Cancellation type as the backend enum member name -- `"Immediate"` or
-   * `"EndOfBillingPeriod"`. Not display text; the screen owns the wording.
-   */
-  type: string
+  /** Full name of the owning client; every request has one, since its service's client cannot be deleted. */
+  clientName: string
+  /** How the cancellation ends the service. */
+  type: CancellationType
   /** Reason provided by the client. */
   reason: string | null
-  /** Request status ("Open" or "Closed"). */
-  status: string
+  /** Where the request stands. */
+  status: CancellationStatus
   /** ISO 8601 creation date. */
   createdAt: string
 }
@@ -140,54 +149,74 @@ export interface ServiceFilter {
   clientId?: number | string
 }
 
-/** Body of a service save: the editable fields of the detail page. */
-export interface UpdateServicePayload {
-  /** Primary domain of the service. */
-  domain: string | null
-  /** Dedicated IP address. */
-  dedicatedIp: string | null
-  /** Hosting account username. */
-  username: string | null
-  /** Hosting account password. */
-  password: string | null
-  /** Reference on the provisioning server. */
-  provisioningRef: string | null
-  /** Recurring amount. */
-  recurringAmount: number
+/** Body of the billing section save: what the service is billed. */
+export interface ServiceBillingTermsPayload {
+  /** Product the service is of. */
+  productId: number
+  /** Quantity; at least one. */
+  quantity: number
+  /** Billing cycle. */
+  billingCycle: BillingCycle
   /** First payment amount. */
   firstPaymentAmount: number
-  /** ISO 8601 next renewal date. */
+  /** Recurring amount. */
+  recurringAmount: number
+  /** ISO 8601 next renewal date, or null to clear it. */
   nextRenewalAt: string | null
-  /** ISO 8601 creation date. */
-  createdAt: string | null
-  /** ISO 8601 termination date. */
-  terminatedAt: string | null
-  /** Billing cycle label. */
-  billingCycle: string
-  /** Payment method label. */
+  /** Payment method label, or null. */
   paymentMethod: string | null
-  /** Applied promotion code. */
+  /** Applied promotion code, or null. */
   promotionCode: string | null
-  /** External subscription reference. */
+  /** External subscription reference, or null. */
   subscriptionId: string | null
-  /** Whether auto-suspend is overridden. */
+}
+
+/** Body of the hosting account section save: where and under which account the service is hosted. */
+export interface ServiceHostingAccountPayload {
+  /** Server the service runs on, or null for none. */
+  serverId: number | null
+  /** Primary domain, or null. */
+  domain: string | null
+  /** Reference on the provisioning server, or null. */
+  provisioningRef: string | null
+  /** Dedicated IP address, or null. */
+  dedicatedIp: string | null
+  /** Hosting account username, or null. */
+  username: string | null
+  /** Hosting account password, or null. */
+  password: string | null
+}
+
+/** Body of the automation section save: manual or automatic billing, the suspension hold and the end-of-cycle termination. */
+export interface ServiceAutomationPayload {
+  /** Whether the billing runs look after the service; false means staff bill it by hand. */
+  autoRenew: boolean
+  /** Whether the overdue suspension is held off. */
   overrideAutoSuspend: boolean
-  /** ISO 8601 date the override lasts until. */
+  /** ISO 8601 date the hold lasts until; null without the hold. */
   suspendUntil: string | null
   /** Whether the service terminates at the end of the cycle. */
   autoTerminateEndOfCycle: boolean
-  /** Reason recorded for the automatic termination. */
+  /** Reason recorded for the termination; null without it. */
   autoTerminateReason: string | null
-  /** Free-text admin notes. */
+}
+
+/** Body of the notes section save. */
+export interface ServiceNotesPayload {
+  /** Free-text admin notes, or null to clear them. */
   adminNotes: string | null
-  /** Lifecycle status. */
-  status: string
-  /** Quantity. */
-  quantity: number
-  /** Server the service runs on. */
-  serverId: number | null
-  /** Product the service is of. */
-  productId: number | null
+}
+
+/** Body of a status change. */
+export interface ServiceStatusPayload {
+  /** The status to move the service to. */
+  status: ServiceStatus
+}
+
+/** Body of a termination date correction. */
+export interface ServiceTerminationDatePayload {
+  /** ISO 8601 date the service really ended. */
+  terminatedAt: string
 }
 
 /** Body of the suspend and terminate provisioning commands. */
@@ -212,26 +241,13 @@ export enum ServiceStatus {
   Terminated = 'Terminated',
 }
 
-/** Closed set of billing cycles a service can renew on, as the API sends them. */
-export const BillingCycle = {
-  /** Never billed. */
-  Free: 'free',
+/** Billing cycles a service can renew on, exactly as the API sends them. */
+export enum BillingCycle {
   /** Every month. */
-  Monthly: 'monthly',
-  /** Every three months. */
-  Quarterly: 'quarterly',
-  /** Every six months. */
-  SemiAnnual: 'semi-annual',
+  Monthly = 'Monthly',
   /** Every year. */
-  Annual: 'annual',
-  /** Every two years. */
-  Biennial: 'biennial',
-  /** Every three years. */
-  Triennial: 'triennial',
-} as const
-
-/** One of the billing cycles. */
-export type BillingCycle = (typeof BillingCycle)[keyof typeof BillingCycle]
+  Annual = 'Annual',
+}
 
 /** How a cancellation request ends the service, exactly as the API sends it. */
 export enum CancellationType {
@@ -247,4 +263,20 @@ export enum CancellationStatus {
   Open = 'Open',
   /** Handled. */
   Closed = 'Closed',
+}
+
+/** Path segment of each separately saved section of a service, under `/services/{id}/`. */
+export enum ServiceSection {
+  /** What the service is billed. */
+  Billing = 'billing',
+  /** Where and under which account it is hosted. */
+  HostingAccount = 'hosting-account',
+  /** Suspension hold and end-of-cycle termination. */
+  Automation = 'automation',
+  /** Admin notes. */
+  Notes = 'notes',
+  /** Lifecycle status. */
+  Status = 'status',
+  /** Termination date correction. */
+  TerminationDate = 'termination-date',
 }

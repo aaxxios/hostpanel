@@ -18,6 +18,13 @@ const mountForm = (props: Record<string, unknown> = {}) =>
   mountWithApp(IntegrationConfigForm, { props: { integration: integrationDetail(), loading: false, testing: false, ...props } })
 
 describe('IntegrationConfigForm', () => {
+  it('heads the form with the name from the API and the short description the admin keeps for the slug', () => {
+    const wrapper = mountForm()
+
+    expect(wrapper.text()).toContain('Stripe')
+    expect(wrapper.text()).toContain('Accept credit card payments online')
+  })
+
   it('renders one control per field definition', () => {
     const wrapper = mountForm()
 

@@ -32,9 +32,8 @@ public sealed class CreateServerGroupHandler
         _context.ServerGroups.Add(group);
         await _context.SaveChangesAsync(ct);
 
-        // A server named in the list but not found is silently skipped -- the same shape the
-        // pre-conversion handler used, and asking for a server that does not exist is not treated
-        // as a refusal of the group's own creation.
+        // A server named in the list but not found is silently skipped: asking for a server that
+        // does not exist is not treated as a refusal of the group's own creation.
         var servers = await _context.Servers
             .Where(s => cmd.ServerIds.Contains(s.Id))
             .ToListAsync(ct);

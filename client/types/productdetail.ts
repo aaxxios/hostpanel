@@ -12,8 +12,6 @@ export interface ProductDetail {
   id: string
   /** Catalogue group id, which the family's specification lines are read by. */
   gid: number
-  /** Catalogue product id of the product the address named. */
-  pid: number | undefined
   /** Display name of the family (its group), never a plan's. */
   name: string
   /** Full icon name, e.g. `mdi:server`. */

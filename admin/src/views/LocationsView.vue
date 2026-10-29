@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Storefront server locations list — the data-centre locations shown on the portal.
+ * Storefront server locations list: the data-centre locations shown on the portal.
  *
  * Shows the locations ordered by sort order with drag-and-drop reordering and status, and
  * navigation to the dedicated create and edit pages. Deleting asks first.
@@ -101,6 +101,7 @@ const navigateEdit = (item: ServerLocation): void => {
     :loading="store.loading"
     :error="store.error"
     :action-error="store.actionError"
+    :outcome="list.outcome.value"
     :saving-order="list.savingOrder.value"
     :delete-target="list.deleteTarget.value"
     :deleting="list.deleting.value"
@@ -111,6 +112,7 @@ const navigateEdit = (item: ServerLocation): void => {
     @confirm-delete="list.confirmDelete"
     @cancel-delete="list.cancelDelete"
     @reorder="list.saveOrder"
+    @retry="store.fetchAll"
   >
     <template #row="{ item }">
       <UiTableCell>

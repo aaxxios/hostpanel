@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table configuration for <see cref="KbCategory"/>.</summary>
 public sealed class KbCategoryConfiguration : IEntityTypeConfiguration<KbCategory>
 {
@@ -17,5 +18,11 @@ public sealed class KbCategoryConfiguration : IEntityTypeConfiguration<KbCategor
         builder.Property(x => x.ParentCategoryId);
 
         builder.HasIndex(x => x.Name);
+
+        // A category with sub-categories cannot be deleted; the delete use case refuses it first.
+        builder.HasOne<KbCategory>()
+            .WithMany()
+            .HasForeignKey(x => x.ParentCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

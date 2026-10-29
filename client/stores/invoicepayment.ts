@@ -18,15 +18,10 @@ import type { ClientInvoice } from '~/types/clientinvoice'
 import type { GatewayMethod } from '~/types/gatewaymethod'
 import { GatewayPaymentState } from '~/types/gatewaypaymentstate'
 import type { PaymentMethod } from '~/types/payment'
-import { PAYMENT_MODULE_BANK_TRANSFER, PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
 import type { PaymentTarget } from '~/types/paymenttarget'
-
-/** How the backend's settled-payment words map onto the page's states. */
-const STATE_BY_WIRE: Record<'paid' | 'pending' | 'declined', GatewayPaymentState> = {
-  paid: GatewayPaymentState.Paid,
-  pending: GatewayPaymentState.Pending,
-  declined: GatewayPaymentState.Declined
-}
+import { isSafeRedirectUrl } from '~/utils/externalRedirect'
+import { isHostedGatewayModule } from '~/utils/paymentModules'
+import { translate } from '~/utils/translate'
 
 /**
  * Payment state for the invoice payment page.
@@ -57,7 +52,7 @@ export const useInvoicePaymentStore = defineStore('invoicePayment', () => {
    */
   const hostedGatewayModule = computed<string | null>(() =>
     gatewayMethods.value
-      .find(m => m.module !== PAYMENT_MODULE_STRIPE && m.module !== PAYMENT_MODULE_BANK_TRANSFER)?.module ?? null)
+      .find(m => isHostedGatewayModule(m.module))?.module ?? null)
 
   /**
    * Reads one invoice with its line items.
@@ -94,8 +89,12 @@ export const useInvoicePaymentStore = defineStore('invoicePayment', () => {
     gatewayMethods.value = gateways
   }
 
+  /** The number of the order the last verified payment was for; empty for an invoice or before an answer. */
+  const verifiedOrderNumber = ref('')
+
   /**
-   * Asks the backend to settle a hosted-gateway payment with the bank.
+   * Asks the backend to settle a hosted-gateway payment with the bank, and keeps the order's
+   * number from the answer in {@link verifiedOrderNumber}.
    *
    * A failure is never read as a decline: the money may well have moved, so it is reported as
    * {@link GatewayPaymentState.Unknown} and the reconciler settles the record regardless.
@@ -111,8 +110,9 @@ export const useInvoicePaymentStore = defineStore('invoicePayment', () => {
     paymentToken?: string
   ): Promise<GatewayPaymentState> => {
     try {
-      const { state } = await billing.completeGatewayPayment(target, id, paymentToken)
-      return STATE_BY_WIRE[state]
+      const { state, orderNumber } = await billing.completeGatewayPayment(target, id, paymentToken)
+      verifiedOrderNumber.value = orderNumber ?? ''
+      return state
     } catch {
       return GatewayPaymentState.Unknown
     }
@@ -152,13 +152,15 @@ export const useInvoicePaymentStore = defineStore('invoicePayment', () => {
    *
    * @param invoiceId - Invoice to pay.
    * @param methodId - Id of the saved payment method.
+   * @param attemptId - The payment attempt the caller chose for this pay action; a retry of the
+   * same action passes the same one, so the gateway takes the money once.
    * @returns How the attempt ended; on failure {@link error} holds the sentence to show.
    */
-  const payWithSavedMethod = async (invoiceId: string, methodId: string): Promise<ActionOutcome> => {
+  const payWithSavedMethod = async (invoiceId: string, methodId: string, attemptId: string): Promise<ActionOutcome> => {
     error.value = ''
     submitting.value = true
     try {
-      await billing.payInvoice(invoiceId, methodId)
+      await billing.payInvoice(invoiceId, methodId, attemptId)
       paySuccess.value = true
       return ActionOutcome.Succeeded
     } catch (e: unknown) {
@@ -190,6 +192,12 @@ export const useInvoicePaymentStore = defineStore('invoicePayment', () => {
     submitting.value = true
     try {
       const { redirectUrl } = await billing.startInvoiceGatewayPayment(invoiceId, module, returnUrl)
+      if (!isSafeRedirectUrl(redirectUrl)) {
+        // An address the browser must not follow is a failed start, not a destination.
+        error.value = translate('checkout.errors.generic')
+        submitting.value = false
+        return null
+      }
       return redirectUrl
     } catch (e: unknown) {
       error.value = apiErrorMessage(e)
@@ -235,6 +243,7 @@ export const useInvoicePaymentStore = defineStore('invoicePayment', () => {
     loadInvoice,
     loadPaymentOptions,
     verifyGatewayPayment,
+    verifiedOrderNumber,
     submitting,
     paySuccess,
     error,

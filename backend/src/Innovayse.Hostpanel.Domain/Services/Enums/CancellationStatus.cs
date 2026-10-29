@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Services.Enums;
+
 /// <summary>Lifecycle status of a cancellation request.</summary>
 public enum CancellationStatus
 {

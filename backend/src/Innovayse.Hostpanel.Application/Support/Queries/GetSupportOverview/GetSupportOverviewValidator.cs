@@ -7,8 +7,7 @@ namespace Innovayse.Hostpanel.Application.Support.Queries.GetSupportOverview;
 
 /// <summary>
 ///     Validator for GetSupportOverviewQuery.
-///     Only requires the period to be present; an unrecognised value is handled by the handler,
-///     which falls back to "today" rather than refusing — unchanged from the previous behaviour.
+///     Requires the period to be a named member; the model binder also accepts a numeric value that is not one.
 /// </summary>
 public sealed class GetSupportOverviewValidator : LocalizedValidator<GetSupportOverviewQuery>
 {
@@ -18,7 +17,7 @@ public sealed class GetSupportOverviewValidator : LocalizedValidator<GetSupportO
         : base(localizer)
     {
         RuleFor(x => x.Period)
-            .NotEmpty()
-            .WithMessage(L["TicketPeriodRequired"]);
+            .IsInEnum()
+            .WithMessage(L["TicketPeriodInvalid"]);
     }
 }

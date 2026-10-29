@@ -4,8 +4,9 @@
  * renders, so these tests are the sanitiser's contract.
  */
 import { describe, expect, it } from 'vitest'
-import { ALLOWED_TAGS, decodeEntities, isSafeUrl, parseRichText } from '~/utils/ui/richText'
+import { ALLOWED_TAGS, decodeEntities, EXTERNAL_LINK_REL, parseRichText } from '~/utils/ui/richText'
 import type { RichNode } from '~/utils/ui/richText'
+import { UiRichNodeType } from '~/utils/ui/enums'
 
 /**
  * Serialises a tree to a compact string for readable assertions.
@@ -16,7 +17,7 @@ import type { RichNode } from '~/utils/ui/richText'
 const dump = (nodes: RichNode[]): string =>
   nodes
     .map((node) => {
-      if (node.type === 'text') {
+      if (node.type === UiRichNodeType.Text) {
         return node.text
       }
       const attrs = Object.entries(node.attrs).map(([name, value]) => ` ${name}=${value}`).join('')
@@ -38,8 +39,8 @@ const parse = (html: string): string => dump(parseRichText(html))
  * @param nodes Parsed nodes.
  * @returns The elements.
  */
-const elements = (nodes: RichNode[]): Array<Extract<RichNode, { type: 'element' }>> =>
-  nodes.flatMap((node) => (node.type === 'element' ? [node, ...elements(node.children)] : []))
+const elements = (nodes: RichNode[]): Array<Extract<RichNode, { type: UiRichNodeType.Element }>> =>
+  nodes.flatMap((node) => (node.type === UiRichNodeType.Element ? [node, ...elements(node.children)] : []))
 
 describe('decodeEntities', () => {
   it('decodes named, decimal and hex references', () => {
@@ -51,35 +52,13 @@ describe('decodeEntities', () => {
   })
 })
 
-describe('isSafeUrl', () => {
-  const links = new Set(['http', 'https', 'mailto', 'tel'])
-
-  it.each([['https://example.com'], ['http://example.com'], ['mailto:a@b.co'], ['tel:+123'], ['/path'], ['#anchor'], ['?q=1'], ['page.html']])(
-    'accepts %s',
-    (url) => {
-      expect(isSafeUrl(url, links)).toBe(true)
-    },
-  )
-
-  it.each([['javascript:alert(1)'], ['JavaScript:alert(1)'], [' java\tscript:alert(1)'], ['vbscript:x'], ['data:text/html,x'], ['file:///etc/passwd'], ['']])(
-    'rejects %j',
-    (url) => {
-      expect(isSafeUrl(url, links)).toBe(false)
-    },
-  )
-
-  it('applies the scheme set it is given', () => {
-    expect(isSafeUrl('mailto:a@b.co', new Set(['https']))).toBe(false)
-  })
-})
-
 describe('parseRichText', () => {
   it('returns an empty tree for empty input', () => {
     expect(parseRichText('')).toEqual([])
   })
 
   it('keeps plain text as a text node', () => {
-    expect(parseRichText('hello')).toEqual([{ type: 'text', text: 'hello' }])
+    expect(parseRichText('hello')).toEqual([{ type: UiRichNodeType.Text, text: 'hello' }])
   })
 
   it('keeps allow-listed tags and nests them', () => {
@@ -99,11 +78,11 @@ describe('parseRichText', () => {
   })
 
   it('merges adjacent text', () => {
-    expect(parseRichText('a<unknown>b</unknown>c')).toEqual([{ type: 'text', text: 'abc' }])
+    expect(parseRichText('a<unknown>b</unknown>c')).toEqual([{ type: UiRichNodeType.Text, text: 'abc' }])
   })
 
   it('decodes entities into text, never into markup', () => {
-    expect(parseRichText('&lt;script&gt;alert(1)&lt;/script&gt;')).toEqual([{ type: 'text', text: '<script>alert(1)</script>' }])
+    expect(parseRichText('&lt;script&gt;alert(1)&lt;/script&gt;')).toEqual([{ type: UiRichNodeType.Text, text: '<script>alert(1)</script>' }])
   })
 
   it('drops comments, doctype and processing instructions', () => {
@@ -155,7 +134,8 @@ describe('parseRichText attributes', () => {
   it('sends off-site links to a new tab without leaking the opener', () => {
     const [link] = parseRichText('<a href="https://example.com">x</a>')
 
-    expect(link).toMatchObject({ attrs: { href: 'https://example.com', target: '_blank', rel: 'noopener noreferrer nofollow' } })
+    expect(link).toMatchObject({ attrs: { href: 'https://example.com', target: '_blank', rel: EXTERNAL_LINK_REL } })
+    expect(EXTERNAL_LINK_REL.split(' ')).toEqual(expect.arrayContaining(['noopener', 'noreferrer', 'ugc']))
   })
 
   it('treats a protocol-relative link as off-site', () => {

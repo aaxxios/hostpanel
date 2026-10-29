@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
@@ -22,14 +23,21 @@ namespace Innovayse.Hostpanel.Infrastructure.Persistence;
 /// request that already succeeded.
 /// </para>
 /// <para>
+/// A save inside an explicit transaction has not committed yet when it returns, so its events are
+/// held until that transaction commits and dropped when it rolls back, fails, or is abandoned for a
+/// new one. Holding them here, in the scope's interceptor, is what keeps a rolled-back write from
+/// ever being announced.
+/// </para>
+/// <para>
 /// Events are read after the save, not before, because a creation event names the entity's own
 /// id and the database assigns it on insert. A save that throws leaves the events on the entities,
-/// so a retried save still delivers them exactly once. The synchronous <c>SaveChanges</c> is
-/// deliberately not intercepted: publishing is asynchronous and nothing in the product saves
-/// synchronously; its events are delivered by the next asynchronous save of the same context.
+/// so a retried save still delivers them exactly once. The synchronous <c>SaveChanges</c> and
+/// <c>Commit</c> are deliberately not intercepted: publishing is asynchronous and nothing in the
+/// product saves or commits synchronously; their events are delivered by the next asynchronous
+/// save or commit of the same context.
 /// </para>
 /// </remarks>
-public sealed class DomainEventDispatchInterceptor : SaveChangesInterceptor
+public sealed class DomainEventDispatchInterceptor : SaveChangesInterceptor, IDbTransactionInterceptor
 {
     /// <summary>The scope's provider; the bus is resolved lazily so building the context never builds the bus.</summary>
     private readonly IServiceProvider _services;
@@ -39,6 +47,9 @@ public sealed class DomainEventDispatchInterceptor : SaveChangesInterceptor
 
     /// <summary>Records a publish that failed after the data was already committed.</summary>
     private readonly ILogger<DomainEventDispatchInterceptor> _logger;
+
+    /// <summary>Events saved inside the open explicit transaction, in raise order, waiting for its commit.</summary>
+    private readonly List<IDomainEvent> _awaitingCommit = [];
 
     /// <summary>Initializes a new instance of the <see cref="DomainEventDispatchInterceptor"/> class.</summary>
     /// <param name="services">The scope's provider; the bus is resolved lazily so building the context never builds the bus.</param>
@@ -57,18 +68,89 @@ public sealed class DomainEventDispatchInterceptor : SaveChangesInterceptor
         int result,
         CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is not null)
+        if (eventData.Context is null)
         {
-            await DispatchAsync(eventData.Context);
+            return result;
         }
 
+        var raised = TakeEvents(eventData.Context);
+        if (raised.Count == 0 || _gate.IsSuppressed)
+        {
+            return result;
+        }
+
+        if (eventData.Context.Database.CurrentTransaction is not null)
+        {
+            // Not committed yet: the transaction's own commit publishes these, its rollback drops them.
+            _awaitingCommit.AddRange(raised);
+            return result;
+        }
+
+        await PublishAsync(raised);
         return result;
     }
 
-    /// <summary>Takes every tracked aggregate's events, clears them, and publishes them in raise order.</summary>
+    /// <inheritdoc/>
+    public ValueTask<DbTransaction> TransactionStartedAsync(
+        DbConnection connection,
+        TransactionEndEventData eventData,
+        DbTransaction result,
+        CancellationToken cancellationToken = default)
+    {
+        // A transaction disposed without commit or rollback reports neither; whatever it held never
+        // committed, so a new transaction starts with nothing waiting.
+        _awaitingCommit.Clear();
+        return ValueTask.FromResult(result);
+    }
+
+    /// <inheritdoc/>
+    public async Task TransactionCommittedAsync(
+        DbTransaction transaction,
+        TransactionEndEventData eventData,
+        CancellationToken cancellationToken = default)
+    {
+        if (_awaitingCommit.Count == 0)
+        {
+            return;
+        }
+
+        // Copied and cleared first, so a handler that saves on this context cannot see them twice.
+        var committed = _awaitingCommit.ToList();
+        _awaitingCommit.Clear();
+        await PublishAsync(committed);
+    }
+
+    /// <inheritdoc/>
+    public Task TransactionRolledBackAsync(
+        DbTransaction transaction,
+        TransactionEndEventData eventData,
+        CancellationToken cancellationToken = default)
+    {
+        _awaitingCommit.Clear();
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public void TransactionRolledBack(DbTransaction transaction, TransactionEndEventData eventData)
+    {
+        _awaitingCommit.Clear();
+    }
+
+    /// <inheritdoc/>
+    public Task TransactionFailedAsync(
+        DbTransaction transaction,
+        TransactionErrorEventData eventData,
+        CancellationToken cancellationToken = default)
+    {
+        // A failed commit or rollback leaves nothing known to be committed.
+        _awaitingCommit.Clear();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Takes every tracked aggregate's events and clears them, in raise order.</summary>
     /// <param name="context">The context that just saved.</param>
-    /// <returns>A task that completes once every event has been handed to the bus.</returns>
-    private async Task DispatchAsync(DbContext context)
+    /// <returns>The events taken; empty when nothing was raised.</returns>
+    private static List<IDomainEvent> TakeEvents(DbContext context)
     {
         var pending = new List<IDomainEvent>();
         foreach (var entity in context.ChangeTracker.Entries<BaseEntity>().Select(e => e.Entity))
@@ -86,11 +168,14 @@ public sealed class DomainEventDispatchInterceptor : SaveChangesInterceptor
             entity.ClearDomainEvents();
         }
 
-        if (pending.Count == 0 || _gate.IsSuppressed)
-        {
-            return;
-        }
+        return pending;
+    }
 
+    /// <summary>Hands every committed event to the bus, in raise order.</summary>
+    /// <param name="pending">Events whose state change has committed.</param>
+    /// <returns>A task that completes once every event has been handed to the bus.</returns>
+    private async Task PublishAsync(IReadOnlyList<IDomainEvent> pending)
+    {
         var bus = _services.GetRequiredService<IMessageBus>();
         foreach (var domainEvent in pending)
         {

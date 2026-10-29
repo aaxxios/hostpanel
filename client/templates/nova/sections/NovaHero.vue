@@ -58,7 +58,7 @@
 
 <script setup lang="ts">
 /**
- * nova hero — the page's first conversion point, and the owner of its only h1.
+ * nova hero: the page's first conversion point, and the owner of its only h1.
  *
  * The benefit list is filtered through `useVisibleFeatures`, so a claim this
  * install cannot back never reaches the fold. Nothing here is a number: uptime

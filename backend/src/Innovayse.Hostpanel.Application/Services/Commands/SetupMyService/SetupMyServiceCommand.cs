@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.Application.Services.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Services.Commands.SetupMyService;
+
 /// <summary>
 /// Command for a signed-in client to supply the hosting details of one of their own pending
 /// services and have it provisioned.

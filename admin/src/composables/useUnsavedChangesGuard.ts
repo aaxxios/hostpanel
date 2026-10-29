@@ -6,20 +6,19 @@ import { onBeforeRouteLeave } from 'vue-router'
 export interface UnsavedChangesGuard {
   /** True while the question is on screen and the navigation is parked. */
   pending: Ref<boolean>
-  /** Answers "leave anyway" — the parked navigation proceeds. */
+  /** Answers "leave anyway": the parked navigation proceeds. */
   confirmLeave: () => void
-  /** Answers "stay" — the parked navigation is cancelled. */
+  /** Answers "stay": the parked navigation is cancelled. */
   cancelLeave: () => void
 }
 
 /**
  * Parks a route change while the reader is asked about unsaved edits.
  *
- * A form that navigates away silently loses whatever was typed, so the guard exists; what it
- * used to use was the browser's `confirm()`, because a guard taking `next()` has to answer on
- * the spot and a modal answers a tick later. That constraint is not real: `onBeforeRouteLeave`
- * also accepts a returned promise, and the router waits for it. So the guard returns one, and
- * this composable resolves it when the view's modal reports an answer.
+ * A form that navigates away silently loses whatever was typed, so the guard exists. It asks
+ * through the view's modal rather than the browser's `confirm()`: `onBeforeRouteLeave` accepts
+ * a returned promise and the router waits for it, so the guard returns one and this composable
+ * resolves it when the modal reports an answer.
  *
  * @param isDirty Called at navigation time; return true to ask, false to leave without asking.
  *                It is a function rather than a ref so the caller can fold in conditions like

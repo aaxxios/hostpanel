@@ -5,4 +5,4 @@ namespace Innovayse.Hostpanel.Application.Support.Commands.UpdateKbCategory;
 /// <param name="Name">The new category display name.</param>
 /// <param name="Description">The new category description text.</param>
 /// <param name="IsHidden">Whether the category should be hidden from clients.</param>
-public record UpdateKbCategoryCommand(int Id, string Name, string Description, bool IsHidden);
+public sealed record UpdateKbCategoryCommand(int Id, string Name, string Description, bool IsHidden);

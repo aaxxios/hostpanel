@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Clients;
@@ -14,8 +13,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
 /// Seeding and authentication helpers shared by every Billing (including Currencies) use-case
-/// test file, extracted from the endpoint-grouped files this A7 Task 3 batch split apart so the
-/// seeding logic exists exactly once rather than once per use case.
+/// test file, so the seeding logic exists exactly once rather than once per use case.
 /// </summary>
 public static class BillingTestSeeds
 {
@@ -54,7 +52,7 @@ public static class BillingTestSeeds
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
 
         var client = Client.Create(
-            $"user-{Guid.NewGuid():N}", firstName, lastName, $"{firstName.ToLowerInvariant()}-{Guid.NewGuid():N}@example.test");
+            $"user-{Guid.NewGuid():N}", firstName, lastName, $"{firstName.ToLowerInvariant()}-{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         if (currency is not null)
         {
             client.SetCurrency(currency);
@@ -85,6 +83,25 @@ public static class BillingTestSeeds
     }
 
     /// <summary>
+    /// Clears the base flag on every stored currency, leaving the installation with no base currency.
+    /// Only for a host the calling test owns, since every other test of that database relies on one.
+    /// </summary>
+    /// <param name="host">The host whose database to change.</param>
+    /// <returns>A task that completes once the change is saved.</returns>
+    public static async Task RemoveBaseCurrencyAsync(WebApplicationFactory<Program> host)
+    {
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var bases = await context.Currencies.Where(c => c.IsBase).ToListAsync(CancellationToken.None);
+        foreach (var currency in bases)
+        {
+            currency.UnmakeBase();
+        }
+
+        await context.SaveChangesAsync(CancellationToken.None);
+    }
+
+    /// <summary>
     /// Registers a new client user over HTTP, logs in, and waits for the Wolverine handler that
     /// creates the corresponding <see cref="Client"/> row.
     /// </summary>
@@ -92,7 +109,7 @@ public static class BillingTestSeeds
     /// <param name="host">The host to register against, or <paramref name="factory"/> itself when null.</param>
     /// <param name="label">Distinguishes the seeded email between callers in the same test.</param>
     /// <returns>The authenticated client and its numeric client id.</returns>
-    public static async Task<(HttpClient Client, int ClientId)> RegisterClientAsync(
+    public static async Task<SignedInClient> RegisterClientAsync(
         IntegrationTestFactory factory, WebApplicationFactory<Program>? host, string label)
     {
         var httpClient = (host ?? factory).CreateClient();
@@ -105,6 +122,7 @@ public static class BillingTestSeeds
             lastName = label,
         });
         registered.StatusCode.Should().Be(HttpStatusCode.OK);
+        var userId = (await registered.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("userId").GetString()!;
 
         var token = await factory.GetClientTokenAsync(email, TestPassword);
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -125,10 +143,10 @@ public static class BillingTestSeeds
         }
 
         clientId.Should().BeGreaterThan(0, "the Wolverine handler should have created the client record");
-        return (httpClient, clientId);
+        return new SignedInClient(httpClient, clientId, userId, email);
     }
 
-    /// <summary>Registers a client user who owns nothing — the "somebody else" of an ownership test.</summary>
+    /// <summary>Registers a client user who owns nothing: the "somebody else" of an ownership test.</summary>
     /// <param name="factory">The factory to mint a client token from.</param>
     /// <param name="host">The host to register against, or <paramref name="factory"/> itself when null.</param>
     /// <param name="label">Distinguishes the seeded email between callers in the same test.</param>
@@ -159,7 +177,7 @@ public static class BillingTestSeeds
     /// <param name="isDraft">Whether the invoice should be created as a Draft rather than Unpaid.</param>
     /// <returns>The new invoice's primary key.</returns>
     /// <remarks>
-    /// The invoice's currency is not a field on <c>CreateInvoiceCommand</c> — it comes from the
+    /// The invoice's currency is not a field on <c>CreateInvoiceCommand</c>; it comes from the
     /// invoiced client's own stamped currency, resolved through <c>IPayerCurrencyResolver</c>. A
     /// caller who needs a specific currency stamps the client first, through
     /// <see cref="SeedClientAsync"/>.
@@ -176,6 +194,23 @@ public static class BillingTestSeeds
         });
         created.StatusCode.Should().Be(HttpStatusCode.Created);
         return await created.Content.ReadFromJsonAsync<int>();
+    }
+
+    /// <summary>Records a manual payment for the whole invoice as the admin, which marks it paid.</summary>
+    /// <param name="admin">The authenticated admin client.</param>
+    /// <param name="invoiceId">The invoice to settle.</param>
+    /// <param name="amount">The payment amount, the invoice's total.</param>
+    public static async Task MarkPaidAsync(HttpClient admin, int invoiceId, decimal amount)
+    {
+        var response = await admin.PostAsJsonAsync($"/api/billing/{invoiceId}/payment", new
+        {
+            date = DateTimeOffset.UtcNow,
+            gateway = PaymentMethodNames.Manual,
+            transactionId = $"manual-{Guid.NewGuid():N}",
+            amount,
+            fees = 0m,
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     /// <summary>Creates a quote for <paramref name="clientId"/> as the admin and returns its id.</summary>
@@ -234,6 +269,33 @@ public static class BillingTestSeeds
         var client = await context.Clients.FirstAsync(c => c.Id == clientId, CancellationToken.None);
         client.SetCardGatewayCustomerId(customerId);
         await context.SaveChangesAsync(CancellationToken.None);
+    }
+
+    /// <summary>Adds credit to a client's balance directly against the host's database.</summary>
+    /// <param name="host">The host whose database the client lives in.</param>
+    /// <param name="clientId">The client to credit.</param>
+    /// <param name="amount">The credit to add.</param>
+    public static async Task GiveCreditAsync(WebApplicationFactory<Program> host, int clientId, decimal amount)
+    {
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var client = await context.Clients.FirstAsync(c => c.Id == clientId, CancellationToken.None);
+        client.AddCredit(amount);
+        await context.SaveChangesAsync(CancellationToken.None);
+    }
+
+    /// <summary>Reads a client's credit balance from the host's database.</summary>
+    /// <param name="host">The host whose database the client lives in.</param>
+    /// <param name="clientId">The client.</param>
+    /// <returns>The current credit balance.</returns>
+    public static async Task<decimal> CreditBalanceOfAsync(WebApplicationFactory<Program> host, int clientId)
+    {
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        return await context.Clients.AsNoTracking()
+            .Where(c => c.Id == clientId)
+            .Select(c => c.CreditBalance)
+            .FirstAsync(CancellationToken.None);
     }
 
     /// <summary>Reads the <c>type</c> field of a refusal answered by <c>BaseApiController</c>.</summary>

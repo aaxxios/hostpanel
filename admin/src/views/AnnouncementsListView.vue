@@ -1,20 +1,22 @@
 <script setup lang="ts">
 /**
  * Announcements list: every announcement with create, edit and delete actions, one page of
- * records at a time.
+ * records at a time. Deleting is confirmed first and its outcome (success, or the API's sentence)
+ * shows above the table; a refused load shows the sentence with a Retry.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SupportRowActions from '@/components/support/SupportRowActions.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiLink from '@/components/ui/UiLink.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -22,6 +24,7 @@ import UiTableHead from '@/components/ui/UiTableHead.vue'
 import UiTableHeader from '@/components/ui/UiTableHeader.vue'
 import UiTableRow from '@/components/ui/UiTableRow.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { formatDateTimeCompact } from '@/lib/format'
 import { useAnnouncementsStore } from '@/stores/announcements'
 import { pageCount } from '@/lib/paging'
@@ -43,6 +46,24 @@ const deleteTarget = ref<number | null>(null)
 /** Whether a delete request is in flight. */
 const deleting = ref(false)
 
+/** The sentence of the last refused list load, shown with Retry; null when the list loaded. */
+const loadError = ref<string | null>(null)
+
+/** The outcome line of the last delete. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Loads the current page and records whether the load was refused.
+ *
+ * @returns Resolves when the list has settled.
+ */
+const load = async (): Promise<void> => {
+  loadError.value = (await store.fetchAll()) ? null : store.error
+}
+
 /** Number of pages for the record count. */
 const totalPages = computed<number>(() => pageCount(store.totalCount, store.pageSize))
 
@@ -53,27 +74,42 @@ const totalPages = computed<number>(() => pageCount(store.totalCount, store.page
  */
 const goToPage = (page: number): void => {
   store.page = page
-  store.fetchAll()
+  void load()
 }
 
 /**
- * Deletes the announcement the dialog asked about, then reloads the list.
+ * Deletes the announcement the dialog asked about, shows the outcome and reloads the list on
+ * success.
+ *
+ * @returns Resolves when the delete (and the reload) has settled.
  */
 const handleDelete = async (): Promise<void> => {
   if (deleteTarget.value === null) {
     return
   }
+  feedback.clear()
   deleting.value = true
   const removed = await store.remove(deleteTarget.value)
-  if (removed) {
-    deleteTarget.value = null
-    await store.fetchAll()
-  }
   deleting.value = false
+  deleteTarget.value = null
+  if (removed) {
+    feedback.show(t('support.announcementsList.announcementDeleted'), false)
+    await load()
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
 }
 
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    deleteTarget.value = null
+  }
+}
+
+/** Loads the first page. */
 onMounted(() => {
-  store.fetchAll()
+  void load()
 })
 </script>
 
@@ -103,7 +139,15 @@ onMounted(() => {
       </UiText>
     </UiStack>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="announcements-error">{{ store.error }}</UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="announcements-feedback" />
+
+    <UiErrorState
+      v-if="loadError !== null"
+      :message="loadError"
+      :loading="store.loading"
+      testid="announcements-error"
+      @retry="load"
+    />
 
     <UiCard class="overflow-x-auto">
       <UiTable
@@ -171,7 +215,7 @@ onMounted(() => {
       :loading="deleting"
       tone="danger"
       @confirm="handleDelete"
-      @close="deleteTarget = null"
+      @close="dismissDelete"
     />
   </UiStack>
 </template>

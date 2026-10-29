@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Client domains list -- shows all domain registrations belonging to the current client.
+ * Client domains list: shows all domain registrations belonging to the current client.
  * Navigates to the domain detail page when a row is clicked.
  */
 import { ref, computed, onMounted } from 'vue'
@@ -10,10 +10,10 @@ import { useDomainsStore } from '@/stores/domains'
 import { domainStatusTone } from '@/lib/tones'
 import { formatDate } from '@/lib/format'
 import type { DomainRegistration } from '@/types/domain'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
@@ -105,9 +105,13 @@ onMounted(() => fetchDomains())
       <UiText :tone="UiTextTone.Secondary">{{ t('clients.clientDomainsList.loadingDomains') }}</UiText>
     </UiStack>
 
-    <UiAlert v-else-if="error" variant="error" data-testid="client-domains-error">
-      {{ error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="error"
+      :message="error"
+      :loading="loading"
+      testid="client-domains-error"
+      @retry="fetchDomains()"
+    />
 
     <UiCard v-else-if="domains.length > 0">
       <UiTable density="comfortable" data-testid="client-domains-table">

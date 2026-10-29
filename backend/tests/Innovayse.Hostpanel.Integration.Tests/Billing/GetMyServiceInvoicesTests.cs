@@ -2,23 +2,20 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
 /// <summary>
 /// <c>GET /api/me/services/{id}/invoices</c> against Postgres: the read is scoped to the calling
-/// client through <c>IServiceOwnership</c>, which this batch converted from a thrown exception to
-/// a <c>Result</c> refusal alongside the Provisioning use cases that share the port.
+/// client through <c>IServiceOwnership</c>, which answers a <c>Result</c> refusal shared with the
+/// Provisioning use cases that use the same port.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetMyServiceInvoicesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -30,19 +27,18 @@ public sealed class GetMyServiceInvoicesTests(IntegrationTestFactory factory) : 
     {
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var group = ProductGroup.Create($"my-invoices-{Guid.NewGuid():N}", null);
         context.ProductGroups.Add(group);
-        await uow.SaveChangesAsync(CancellationToken.None);
+        await context.SaveChangesAsync(CancellationToken.None);
 
-        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 2m, 20m);
+        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 2m, 20m, DateTimeOffset.UtcNow);
         context.Products.Add(product);
-        await uow.SaveChangesAsync(CancellationToken.None);
+        await context.SaveChangesAsync(CancellationToken.None);
 
-        var service = ClientService.Create(clientId, product.Id, BillingCycleNames.Monthly);
+        var service = ClientService.Create(clientId, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow);
         context.ClientServices.Add(service);
-        await uow.SaveChangesAsync(CancellationToken.None);
+        await context.SaveChangesAsync(CancellationToken.None);
 
         return service.Id;
     }

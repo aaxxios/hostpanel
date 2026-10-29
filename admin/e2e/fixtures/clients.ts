@@ -1,8 +1,8 @@
 /**
  * Fixtures for the clients list and the client profile.
  */
-import type { ClientDetail, ClientListItem } from '../../src/types/client'
-import type { PagedResult } from '../../src/types/pagedresult'
+import { ClientStatus, type ClientDetail, type ClientListItem } from '../../src/types/client'
+import type { PaginatedList } from '../../src/types/paginatedlist'
 
 /** The client the specs open. */
 export const ada: ClientListItem = {
@@ -12,7 +12,7 @@ export const ada: ClientListItem = {
   firstName: 'Ada',
   lastName: 'Lovelace',
   companyName: 'Analytical Engines',
-  status: 'Active',
+  status: ClientStatus.Active,
   isUserDeleted: false,
   twoFactorEnabled: true,
   createdAt: '2026-01-15T10:00:00Z',
@@ -25,41 +25,43 @@ export const grace: ClientListItem = {
   email: 'grace@example.test',
   firstName: 'Grace',
   lastName: 'Hopper',
-  status: 'Active',
+  status: ClientStatus.Active,
   isUserDeleted: false,
   twoFactorEnabled: false,
   createdAt: '2026-02-01T10:00:00Z',
 }
 
-/** `GET /api/clients` — one page holding both clients. */
-export const clientsPage: PagedResult<ClientListItem> = {
+/** `GET /api/clients`: one page holding both clients. */
+export const clientsPage: PaginatedList<ClientListItem> = {
   items: [ada, grace],
   totalCount: 2,
-  page: 1,
+  pageNumber: 1,
+  totalPages: 1,
   pageSize: 20,
 }
 
-/** `GET /api/clients/7` — the full record behind the profile form. */
+/** `GET /api/clients/7`: the full record behind the profile form. */
 export const adaDetail: ClientDetail = {
   ...ada,
   phone: '+1 5550100',
-  street: '1 Difference Way',
-  city: 'London',
-  country: 'GB',
-  currency: 'USD',
-  notifyGeneral: true,
-  notifyInvoice: true,
-  notifySupport: true,
-  notifyProduct: true,
-  notifyDomain: true,
-  notifyAffiliate: false,
-  lateFees: false,
-  overdueNotices: true,
-  taxExempt: false,
-  separateInvoices: false,
-  disableCcProcessing: false,
-  marketingOptIn: false,
-  statusUpdate: false,
-  allowSso: false,
+  address: { street: '1 Difference Way', city: 'London', country: 'GB' },
+  preferences: { currency: 'USD' },
+  notifications: {
+    general: true,
+    invoice: true,
+    support: true,
+    product: true,
+    domain: true,
+    affiliate: false,
+  },
+  settings: {
+    overdueNotices: true,
+    taxExempt: false,
+    separateInvoices: false,
+    disableCcProcessing: false,
+    marketingOptIn: false,
+    statusUpdate: false,
+    allowSso: false,
+  },
   contacts: [],
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Domain registrations — paged table of every domain registration across clients.
+ * Domain registrations: paged table of every domain registration across clients.
  *
  * Shows ID, domain, client, registration period, registrar, price, next due date, expiry date and
  * status. Reads `stores/domains`; a refused load shows the API's sentence.
@@ -8,10 +8,10 @@
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFallbackLabels } from '@/composables/useFallbackLabels'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiLink from '@/components/ui/UiLink.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
@@ -37,7 +37,7 @@ const { t } = useI18n()
 
 /** Fallback text for fields the API leaves unresolved. */
 
-const { clientLabel, yearsLabel } = useFallbackLabels()
+const { yearsLabel } = useFallbackLabels()
 
 /** Domains store: the page, its paging and the load state. */
 const store = useDomainsStore()
@@ -66,9 +66,13 @@ onMounted(() => store.fetchAll())
       data-testid="domain-registrations-header"
     />
 
-    <UiAlert v-if="store.error" variant="error" data-testid="domain-registrations-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="domain-registrations-error"
+      @retry="store.fetchAll()"
+    />
 
     <UiCard v-else-if="hasRows || store.loading">
       <UiTable
@@ -106,7 +110,7 @@ onMounted(() => store.fetchAll())
                 :to="clientPath(domain.clientId)"
                 :data-testid="`domain-registrations-client-${domain.id}`"
               >
-                {{ clientLabel(domain.clientName, domain.clientId) }}
+                {{ domain.clientName }}
               </UiLink>
             </UiTableCell>
             <UiTableCell>{{ yearsLabel(domain.regPeriodYears) }}</UiTableCell>

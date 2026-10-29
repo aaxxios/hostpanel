@@ -53,7 +53,7 @@ describe('kit template hooks', () => {
       ['accent panel', mountWithKit(UiAccentPanel).classes()],
       ['accent tile', mountWithKit(UiAccentTile, { props: { icon: 'mdi:cube' } }).classes()],
       ['section', mountWithKit(UiSection, { props: { tone: UiSectionTone.Muted } }).classes()],
-      ['toggle', mountWithKit(UiToggle, { props: { modelValue: true } }).classes()],
+      ['toggle', mountWithKit(UiToggle, { props: { modelValue: true, label: 'Auto-renew' } }).classes()],
     ]
 
     for (const [, classes] of cases) {

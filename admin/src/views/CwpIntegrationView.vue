@@ -3,12 +3,13 @@
  * Full CWP integration configuration page.
  *
  * Renders CwpBrandHeader, IntegrationConfigForm, and the provider status card in a two-column
- * layout. Fetches config and server-info in parallel on mount.
+ * layout. Fetches config and server-info in parallel on mount; a refused load shows the API's
+ * sentence with a Retry, and a save reports its outcome (success, or the sentence) under the form.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useIntegrationsStore } from '@/stores/integrations'
-import { useCwpServerInfo } from '@/composables/useCwpServerInfo'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { IntegrationSlug } from '@/types/integration'
 import type { IntegrationConfigPayload } from '@/types/integration'
 import { ProviderConnectionState } from '@/types/providerstatus'
@@ -18,17 +19,17 @@ import IntegrationBreadcrumb from '@/components/integrations/IntegrationBreadcru
 import IntegrationConfigForm from '@/components/integrations/IntegrationConfigForm.vue'
 import ProviderStatusCard from '@/components/integrations/ProviderStatusCard.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiSplit from '@/components/ui/UiSplit.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
+import { UiTone } from '@/utils/ui/tone'
 
 /** Translation function. */
 const { t } = useI18n()
 
-/** Integrations store: the CWP config, the test state and the refusal sentence. */
+/** Integrations store: the CWP config, the live server status, the test state and the refusal sentence. */
 const store = useIntegrationsStore()
-
-/** Live server info and the call that refreshes it. */
-const { info, fetch: fetchInfo } = useCwpServerInfo()
 
 /** True while the test connection request is in progress. */
 const testing = ref(false)
@@ -39,21 +40,43 @@ const testError = ref<string | null>(null)
 /** True while the config save is in progress. */
 const saving = ref(false)
 
+/** The sentence of a refused load of the config, shown with Retry; null when it loaded. */
+const loadError = ref<string | null>(null)
+
+/** The outcome line of the last save. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Loads the config and the live server info in parallel and records whether the config was refused.
+ *
+ * @returns Resolves when both have settled.
+ */
+const load = async (): Promise<void> => {
+  await Promise.all([
+    store.fetchOne(IntegrationSlug.Cwp),
+    store.fetchCwpServerInfo(),
+  ])
+  loadError.value = store.error
+}
+
 /** Derived header status from server-info. */
 const headerStatus = computed(() => {
-  if (!info.value) {
+  if (!store.cwpServerInfo) {
     return ProviderConnectionState.Unknown
   }
-  return info.value.connected ? ProviderConnectionState.Connected : ProviderConnectionState.Error
+  return store.cwpServerInfo.connected ? ProviderConnectionState.Connected : ProviderConnectionState.Error
 })
 
 /** Figures of the status card: accounts on the server and the CWP version. */
 const metrics = computed<ProviderMetric[]>(() => {
   const figures: ProviderMetric[] = [
-    { label: t('shared.accounts'), value: info.value?.accountsCount ?? null, large: true },
+    { label: t('shared.accounts'), value: store.cwpServerInfo?.accountsCount ?? null, large: true },
   ]
-  if (info.value?.cwpVersion) {
-    figures.push({ label: t('integrations.providerStatus.cwpVersion'), value: info.value.cwpVersion, mono: true })
+  if (store.cwpServerInfo?.version) {
+    figures.push({ label: t('integrations.providerStatus.cwpVersion'), value: store.cwpServerInfo.version, mono: true })
   }
   return figures
 })
@@ -65,9 +88,15 @@ const metrics = computed<ProviderMetric[]>(() => {
  * @returns Promise resolving when save and re-fetch complete.
  */
 const handleSave = async (payload: IntegrationConfigPayload): Promise<void> => {
+  feedback.clear()
   saving.value = true
-  await store.saveConfig(IntegrationSlug.Cwp, payload)
-  await fetchInfo()
+  const saved = await store.saveConfig(IntegrationSlug.Cwp, payload)
+  if (saved) {
+    feedback.show(t('integrations.integrationDetail.saved'), false)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
+  await store.fetchCwpServerInfo()
   saving.value = false
 }
 
@@ -83,16 +112,13 @@ const handleTest = async (): Promise<void> => {
   if (store.testResult && !store.testResult.success) {
     testError.value = store.testResult.message
   }
-  await fetchInfo()
+  await store.fetchCwpServerInfo()
   testing.value = false
 }
 
 /** Loads the config and the live server info in parallel. */
-onMounted(async () => {
-  await Promise.all([
-    store.fetchOne(IntegrationSlug.Cwp),
-    fetchInfo(),
-  ])
+onMounted(() => {
+  void load()
 })
 </script>
 
@@ -100,12 +126,19 @@ onMounted(async () => {
   <UiStack gap="md" class="w-full">
     <IntegrationBreadcrumb :name="t('integrations.cwpIntegration.centosWebPanel')" />
 
-    <CwpBrandHeader :version="info?.cwpVersion ?? null" :status="headerStatus" />
+    <CwpBrandHeader :version="store.cwpServerInfo?.version ?? null" :status="headerStatus" />
 
     <UiSplit>
       <UiStack gap="md">
+        <UiErrorState
+          v-if="loadError !== null"
+          :message="loadError"
+          :loading="store.loading"
+          testid="cwp-load-error"
+          @retry="load"
+        />
         <IntegrationConfigForm
-          v-if="store.current"
+          v-else-if="store.current"
           :integration="store.current"
           :loading="saving || store.loading"
           :testing="store.testing"
@@ -113,13 +146,16 @@ onMounted(async () => {
           @test="handleTest"
         />
 
+        <!-- The outcome of the last save -->
+        <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="cwp-save-feedback" />
+
         <!-- The refusal the test returned, in the server's words -->
         <UiAlert v-if="testError" variant="error" data-testid="cwp-test-error">
           {{ testError }}
         </UiAlert>
       </UiStack>
 
-      <ProviderStatusCard :info="info" :metrics="metrics" :testing="testing" @test="handleTest" />
+      <ProviderStatusCard :info="store.cwpServerInfo" :metrics="metrics" :testing="testing" @test="handleTest" />
     </UiSplit>
   </UiStack>
 </template>

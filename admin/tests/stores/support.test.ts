@@ -76,7 +76,7 @@ describe('supportStore', () => {
     expect(store.overviewStats).toEqual({ openTickets: 3 })
   })
 
-  it('fetchDepartments fills the list and stays silent when it fails', async () => {
+  it('fetchDepartments fills the list and keeps the sentence in departmentsError when it fails', async () => {
     const store = useSupportStore()
     stubFetch(json([{ id: 1, name: 'Sales' }]))
     expect(await store.fetchDepartments()).toBe(true)
@@ -85,6 +85,7 @@ describe('supportStore', () => {
     stubOffline()
     expect(await store.fetchDepartments()).toBe(false)
     expect(store.error).toBeNull()
+    expect(store.departmentsError).not.toBeNull()
     expect(store.departments).toHaveLength(1)
   })
 
@@ -97,7 +98,7 @@ describe('supportStore', () => {
 
     stubFetch(invalid('Check the form.', { Subject: ['Subject is required.'] }))
     expect(await store.createTicket(payload)).toBeNull()
-    expect(store.error).toBe('Check the form.')
+    expect(store.actionError).toBe('Check the form.')
     expect(store.fieldErrors).toEqual({ subject: 'Subject is required.' })
   })
 
@@ -125,6 +126,7 @@ describe('supportStore', () => {
 
     stubFetch(problem('Ticket is locked.', 409))
     expect(await store.deleteTicket(5)).toBe(false)
-    expect(store.error).toBe('Ticket is locked.')
+    expect(store.actionError).toBe('Ticket is locked.')
+    expect(store.error).toBeNull()
   })
 })

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountPage, stubClientRuntime } from '~/tests/helpers/mountClient'
 import TicketPage from '~/pages/client/tickets/[id].vue'
 import { useAuthStore } from '~/stores/auth'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 import { TicketStatus } from '~/types/ticketstatus'
 
 /** The mocked support endpoints the store reaches. */
@@ -22,9 +23,9 @@ vi.mock('~/composables/apis/useClientApi', () => ({ useClientApi: () => ({}) }))
  * @returns The thread with one client message and one staff reply.
  */
 const thread = (status: string) => ({
-  id: 12, clientId: 1, subject: 'Site is down', status, priority: 'High', departmentId: 1, departmentName: 'Support',
-  createdAt: '2026-01-01T10:00:00Z', message: 'My site is down.', isFlagged: false, tags: [],
-  assignedToStaffId: null, assignedToStaffName: null, rating: null, feedbackComment: null, feedbackLeftBy: null, feedbackAt: null,
+  id: 12, subject: 'Site is down', status, priority: 'High', departmentId: 1, departmentName: 'Support',
+  createdAt: '2026-01-01T10:00:00Z', message: 'My site is down.',
+  rating: null, feedbackComment: null, feedbackAt: null,
   replies: [{ id: 1, authorName: 'Grace', isStaffReply: true, createdAt: '2026-01-01T11:00:00Z', message: 'Looking into it.' }]
 })
 
@@ -79,7 +80,7 @@ describe('ticket page', () => {
     supportApi.fetchTicket.mockResolvedValue(thread(TicketStatus.Open))
     supportApi.replyToTicket.mockResolvedValue({})
     const wrapper = await mountPage(TicketPage)
-    useAuthStore().user = { firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com' } as never
+    useAuthStore().user = makeClientUser({ email: 'ada@example.com' })
 
     await wrapper.find('[data-testid="ticket-reply-message"]').setValue('Thanks')
     await wrapper.find('form').trigger('submit')

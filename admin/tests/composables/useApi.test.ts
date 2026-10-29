@@ -1,6 +1,6 @@
 /**
  * Tests for the admin `useApi` transport: every API call carries `X-Language`, read from the
- * active i18n locale at call time.
+ * active i18n locale at call time; queries, failures, the 401 probe, and `href` for browser-opened addresses.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { i18n } from '@/i18n'
@@ -56,7 +56,7 @@ describe('useApi language header', () => {
     const mock = stubFetch()
     i18n.global.locale.value = MessageLanguage.Ru
 
-    await useApi().upload('/admin/slides/upload-image', new File(['x'], 'a.png'))
+    await useApi().upload('/admin/storefront/upload-image', new File(['x'], 'a.png'))
 
     expect(sentHeaders(mock)['X-Language']).toBe('ru')
   })
@@ -114,5 +114,15 @@ describe('useApi probe', () => {
     vi.stubGlobal('fetch', vi.fn(async () => json({ detail: 'Boom.' }, 500)))
 
     await expect(useApi().probe('/auth/me')).rejects.toMatchObject({ status: 500 })
+  })
+})
+
+describe('useApi href', () => {
+  it('builds the address of an endpoint the browser opens itself, without a request', () => {
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+
+    expect(useApi().href('/billing/5/pdf')).toBe('/api/billing/5/pdf')
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 })

@@ -2,16 +2,12 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
 /// <summary>
 /// <c>GET /api/me/invoices</c> against Postgres: a client lists their own invoices.
 /// </summary>
-/// <remarks>Split from the deleted <c>BillingEndpointTests</c> and <c>MyInvoicesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetMyInvoicesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

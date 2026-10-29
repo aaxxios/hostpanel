@@ -1,24 +1,26 @@
 using System.Text.RegularExpressions;
 using FluentValidation;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Services.Commands.SetupService;
+
 /// <summary>Validates <see cref="SetupServiceCommand"/> before the service is provisioned.</summary>
 /// <remarks>
 /// The chokepoint every provisioning path funnels through: the client-facing
 /// <c>SetupMyServiceCommand</c> delegates here, and any future staff route dispatches this same
 /// command, so the rules cannot be bypassed by choosing a different entry. They mirror the
 /// setup wizard's own field checks, because a form check the server does not repeat is not a
-/// check at all — a caller reaching the endpoint directly must be refused a malformed domain,
+/// check at all: a caller reaching the endpoint directly must be refused a malformed domain,
 /// a bad username, or a too-short password exactly as the UI would refuse them.
 /// </remarks>
 public sealed class SetupServiceValidator : LocalizedValidator<SetupServiceCommand>
 {
     /// <summary>
     /// A hostname of two or more dot-separated labels ending in a letters-only TLD, e.g.
-    /// <c>example.com</c>. Each label is a–z/0–9/hyphen without a leading or trailing hyphen;
+    /// <c>example.com</c>. Each label is a to z/0 to 9/hyphen without a leading or trailing hyphen;
     /// the whole name is capped at 253 characters. Case-insensitive.
     /// </summary>
     private static readonly Regex DomainPattern = new(
@@ -44,6 +46,7 @@ public sealed class SetupServiceValidator : LocalizedValidator<SetupServiceComma
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage(L["ServicePasswordRequired"])
-            .MinimumLength(8).WithMessage(L["ServicePasswordInvalid"]);
+            .MinimumLength(8).WithMessage(L["ServicePasswordInvalid"])
+            .MaximumLength(ProtectedValueLimits.ServicePassword).WithMessage(L["HostingAccountPasswordTooLong"]);
     }
 }

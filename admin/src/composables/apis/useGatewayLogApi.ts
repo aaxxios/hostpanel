@@ -6,7 +6,7 @@
  */
 
 import { buildQuery, useApi } from '@/composables/useApi'
-import type { PagedResult } from '@/types/pagedresult'
+import type { PaginatedList } from '@/types/paginatedlist'
 import type { GatewayLogEntry, GatewayLogFilters } from '@/types/gatewaylog'
 
 /**
@@ -25,8 +25,8 @@ export const useGatewayLogApi = () => {
    * @param pageSize - Entries per page.
    * @returns One page of log entries.
    */
-  const list = (filters: GatewayLogFilters, page: number, pageSize: number): Promise<PagedResult<GatewayLogEntry>> =>
-    request<PagedResult<GatewayLogEntry>>(
+  const list = (filters: GatewayLogFilters, page: number, pageSize: number): Promise<PaginatedList<GatewayLogEntry>> =>
+    request<PaginatedList<GatewayLogEntry>>(
       `/gateway-logs${buildQuery({
         page,
         pageSize,

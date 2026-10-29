@@ -5,12 +5,16 @@ import { describe, expect, it } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
 import PaySummary from '~/components/client/invoices/PaySummary.vue'
 import type { ClientInvoice } from '~/types/clientinvoice'
+import { InvoiceTransactionType } from '~/types/invoicetransactiontype'
 
-/** An invoice of 100, part-paid by 40. */
+/** An invoice of 100, part-paid by 40, with 10 of that refunded. */
 const invoice = {
   id: 9, currency: 'USD', subTotal: 100, credit: 0, total: 100, amountDue: 60,
   items: [{ id: 1, description: 'Hosting', amount: 60 }, { id: 2, description: 'Domain', amount: 40 }],
-  transactions: [{ id: 1, amount: 40 }]
+  transactions: [
+    { id: 1, amount: 40, type: InvoiceTransactionType.Payment },
+    { id: 2, amount: 10, type: InvoiceTransactionType.Refund }
+  ]
 } as unknown as ClientInvoice
 
 describe('PaySummary', () => {
@@ -28,7 +32,7 @@ describe('PaySummary', () => {
     expect(wrapper.text()).toContain('Domain')
   })
 
-  it('shows what was received and what is still due', () => {
+  it('shows what was paid and what is still due, not counting the refund as paid', () => {
     const wrapper = mountClient(PaySummary, { props: { invoice } })
 
     expect(wrapper.text()).toContain('$40.00')

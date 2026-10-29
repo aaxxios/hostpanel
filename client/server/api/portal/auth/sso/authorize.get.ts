@@ -1,8 +1,8 @@
 /**
  * GET /api/portal/auth/sso/authorize
  *
- * Generates a PKCE pair, stores code_verifier in a short-lived httpOnly cookie,
- * then redirects the browser to the SSO authorization endpoint.
+ * Starts the sign-on flow (PKCE verifier, state and return path in short-lived httpOnly cookies,
+ * see `server/utils/signon-flow.ts`), then redirects the browser to the SSO authorization endpoint.
  *
  * An `authuser` query (the account a visitor arrived for, as the products of a shared sign-on add
  * to their links) is passed on as `login_hint`, so the identity provider picks or pre-fills that
@@ -11,86 +11,38 @@
  * @module server/api/portal/auth/sso/authorize.get
  */
 
-import { randomBytes, createHash } from 'node:crypto'
 import { LOGIN_HINT_QUERY } from '~/constants/clientRoutes'
-import { SessionCookie } from '~/constants/sessionCookie'
-import { SSO_FLOW_COOKIE_MAX_AGE } from '~/server/utils/auth-cookie'
-import { requireSsoSetting } from '~/server/utils/requireSsoSetting'
-
-/** The longest `login_hint` passed on; the longest valid e-mail address is 254 characters. */
-const MAX_LOGIN_HINT_LENGTH = 254
+import { readQueryString } from '~/server/utils/readQueryString'
+import { MAX_LOGIN_HINT_LENGTH, safeReturnPath, startSignonFlow } from '~/server/utils/signon-flow'
 
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig()
-  // Fail closed before any cookie is set: an unconfigured SSO has nowhere to send the browser.
-  const ssoPublicUrl = requireSsoSetting(config.public.ssoPublicUrl)
-  const redirectUri = requireSsoSetting(config.ssoCallbackUrl)
-
-  // Generate PKCE
-  const codeVerifier = randomBytes(32).toString('base64url')
-  const codeChallenge = createHash('sha256')
-    .update(codeVerifier)
-    .digest('base64url')
-
-  // Store verifier server-side in an httpOnly cookie (5 min TTL)
-  setCookie(event, SessionCookie.PkceVerifier, codeVerifier, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: SSO_FLOW_COOKIE_MAX_AGE,
-    path: '/',
-  })
-
-  // Generate and store state for CSRF protection
-  const state = randomBytes(16).toString('hex')
-  setCookie(event, SessionCookie.OauthState, state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: SSO_FLOW_COOKIE_MAX_AGE,
-    path: '/',
-  })
-
+  // A repeated key is refused (400) before any cookie is set.
   const query = getQuery(event)
-  const params = new URLSearchParams({
-    client_id: config.ssoClientId,
-    response_type: 'code',
-    redirect_uri: redirectUri,
-    scope: 'openid profile email offline_access',
-    code_challenge: codeChallenge,
-    code_challenge_method: 'S256',
-    state,
-  })
-
-  // If the user explicitly wants to switch accounts, pass prompt=select_account
-  if (query.prompt) {
-    params.set('prompt', query.prompt as string)
-  }
-
-  // The account the visitor arrived for. Capped: an address is never longer, and the value travels on in a URL.
-  const loginHint = query[LOGIN_HINT_QUERY]
-  if (typeof loginHint === 'string' && loginHint.trim() && loginHint.length <= MAX_LOGIN_HINT_LENGTH) {
-    params.set('login_hint', loginHint.trim())
-  }
+  const prompt = readQueryString(query.prompt)
+  const loginHint = readQueryString(query[LOGIN_HINT_QUERY])
+  const requestedReturnTo = readQueryString(query.returnTo)
 
   // Save current page so callback can return here instead of always going to dashboard
-  let returnTo = (query.returnTo as string | undefined) || ''
+  let returnTo = requestedReturnTo || ''
   if (!returnTo) {
     const referer = getHeader(event, 'referer') || ''
     if (referer) {
       try { returnTo = new URL(referer).pathname } catch { /* ignore */ }
     }
   }
-  if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('/api/')) {
-    setCookie(event, SessionCookie.PostLoginRedirect, returnTo, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: SSO_FLOW_COOKIE_MAX_AGE,
-      path: '/',
-    })
+
+  // Fails closed with 503 before any cookie is set when the sign-on addresses are not configured.
+  const { ssoPublicUrl, params } = startSignonFlow(event, safeReturnPath(returnTo))
+
+  // If the user explicitly wants to switch accounts, pass prompt=select_account
+  if (prompt) {
+    params.set('prompt', prompt)
   }
 
-  const authorizeUrl = `${ssoPublicUrl}/connect/authorize?${params}`
-  return sendRedirect(event, authorizeUrl, 302)
+  // The account the visitor arrived for. Capped: an address is never longer, and the value travels on in a URL.
+  if (loginHint && loginHint.trim() && loginHint.length <= MAX_LOGIN_HINT_LENGTH) {
+    params.set('login_hint', loginHint.trim())
+  }
+
+  return sendRedirect(event, `${ssoPublicUrl}/connect/authorize?${params}`, 302)
 })

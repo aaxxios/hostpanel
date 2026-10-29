@@ -5,7 +5,7 @@
  * Draws the themed field (surface, border, focus ring, invalid state) from tokens, so it follows
  * light/dark. With a `label` or an `icon` slot it also renders the caption and the leading icon;
  * otherwise the native `<input>` is the root. Attributes (`class`, `data-testid`, `maxlength`,
- * `min`, `readonly`, `autocomplete`...) always land on the `<input>`. Emits the raw string, so
+ * `min`, `readonly`, `autocomplete` and the rest) always land on the `<input>`. Emits the raw string, so
  * `v-model.number` and `.trim` convert through Vue's own modifier handling.
  */
 import { computed, useAttrs, useSlots } from 'vue'
@@ -13,7 +13,6 @@ import {
   fieldBaseClasses,
   fieldInvalidClasses,
   fieldWidthClasses,
-  UNSTYLED_INPUT_TYPES,
 } from '@/utils/ui/input'
 import type { UiInputType } from '@/utils/ui/input'
 import { fieldSizeClasses } from '@/utils/ui/size'
@@ -67,19 +66,14 @@ const hasIcon = computed<boolean>(() => slots.icon !== undefined)
 /** Whether the label/icon wrapper is rendered around the input. */
 const wrapped = computed<boolean>(() => props.label !== undefined || hasIcon.value)
 
-/** Field classes; skipped for types the browser draws itself (a colour well). */
-const fieldClasses = computed<string[]>(() => {
-  if (UNSTYLED_INPUT_TYPES.includes(props.type)) {
-    return []
-  }
-  return [
-    fieldWidthClasses,
-    fieldBaseClasses,
-    fieldSizeClasses[props.size],
-    props.invalid ? fieldInvalidClasses : '',
-    hasIcon.value ? 'pl-9' : '',
-  ]
-})
+/** Field classes: the themed box, the size, the invalid state and room for the icon. */
+const fieldClasses = computed<string[]>(() => [
+  fieldWidthClasses,
+  fieldBaseClasses,
+  fieldSizeClasses[props.size],
+  props.invalid ? fieldInvalidClasses : '',
+  hasIcon.value ? 'pl-9' : '',
+])
 
 /**
  * Forwards the native input event as a model update.

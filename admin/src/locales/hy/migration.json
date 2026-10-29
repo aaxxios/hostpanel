@@ -10,7 +10,8 @@
     "checking": "Ստուգվում է…",
     "check": "Ստուգել",
     "notReachable": "Անհասանելի է",
-    "startImport": "Սկսել ներմուծումը"
+    "startImport": "Սկսել ներմուծումը",
+    "retryImport": "Կրկնել ներմուծումը"
   },
   "migrationReportTable": {
     "importReport": "Ներմուծման հաշվետվություն",
@@ -58,12 +59,43 @@
     "createMigration": "Ստեղծել միգրացիա",
     "urlPlaceholder": "https://your-source.com",
     "deleteMigration": "Ջնջել միգրացիան",
-    "pluginPath": "/modules/addons/innovayse_migration/"
+    "pluginPath": "/modules/addons/innovayse_migration/",
+    "migrationCreated": "Միգրացիան ստեղծվեց։",
+    "migrationDeleted": "Միգրացիան ջնջվեց։",
+    "confirmDeleteMigration": "Ջնջե՞լ #{id} միգրացիան և դրա ներմուծման հաշվետվությունը։ Այս գործողությունը հնարավոր չէ չեղարկել։"
   },
   "status": {
     "pending": "Սպասում է",
     "inProgress": "Ընթանում է",
     "completed": "Ավարտված է",
-    "failed": "Ձախողված է"
+    "failed": "Ձախողված է",
+    "queued": "Հերթում է"
+  },
+  "jobFailure": {
+    "unknown": "Անհայտ սխալ",
+    "sourceUnreachable": "Աղբյուրը հասանելի չէ",
+    "sourceRefused": "Աղբյուրը մերժեց հարցումը, ստուգեք բանալին",
+    "importFailed": "Գրառումները հնարավոր չեղավ ներմուծել",
+    "cancelled": "Ներմուծումը դադարեցվեց",
+    "interrupted": "Սերվերը կանգ առավ մինչև ներմուծման ավարտը",
+    "sourceAddressNotAllowed": "Աղբյուրի հասցեն թույլատրված չէ, նշեք հանրային HTTPS հասցե"
+  },
+  "skipReason": {
+    "alreadyExists": "Արդեն գոյություն ունի",
+    "clientNotFound": "Հաճախորդը չի գտնվել",
+    "accountNotProvisioned": "Հաշիվը հնարավոր չեղավ ստեղծել",
+    "productGroupNotFound": "Ապրանքների խումբը չի գտնվել",
+    "noProducts": "Ոչ մի ապրանք չկա",
+    "ticketNotFound": "Տոմսը չի գտնվել",
+    "ticketClosed": "Տոմսը փակված է",
+    "importFailed": "Ներմուծումը ձախողվեց",
+    "productNotFound": "Ապրանքը չի գտնվել",
+    "invoiceNotFound": "Հաշիվը չի գտնվել",
+    "dateMissing": "Պարտադիր ամսաթիվը բացակայում է",
+    "departmentNotFound": "Բաժին գոյություն չունի",
+    "downloadCategoryNotFound": "Ներբեռնումների կատեգորիա գոյություն չունի",
+    "nameMissing": "Հաճախորդի անունը և էլ. հասցեն բացակայում են",
+    "billingCycleUnsupported": "Վճարման այս պարբերությունն այստեղ չի աջակցվում",
+    "noProductLines": "Պատվերում կան միայն դոմենի կամ հավելումի տողեր, առանց այստեղի պրոդուկտի"
   }
 }

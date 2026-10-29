@@ -10,7 +10,8 @@
     "checking": "Проверка…",
     "check": "Проверить",
     "notReachable": "Недоступен",
-    "startImport": "Начать импорт"
+    "startImport": "Начать импорт",
+    "retryImport": "Повторить импорт"
   },
   "migrationReportTable": {
     "importReport": "Отчёт об импорте",
@@ -58,12 +59,43 @@
     "createMigration": "Создать миграцию",
     "urlPlaceholder": "https://your-source.com",
     "deleteMigration": "Удалить миграцию",
-    "pluginPath": "/modules/addons/innovayse_migration/"
+    "pluginPath": "/modules/addons/innovayse_migration/",
+    "migrationCreated": "Миграция создана.",
+    "migrationDeleted": "Миграция удалена.",
+    "confirmDeleteMigration": "Удалить миграцию #{id} и её отчёт об импорте? Это действие нельзя отменить."
   },
   "status": {
     "pending": "Ожидает",
     "inProgress": "Выполняется",
     "completed": "Завершена",
-    "failed": "Ошибка"
+    "failed": "Ошибка",
+    "queued": "В очереди"
+  },
+  "jobFailure": {
+    "unknown": "Неизвестная ошибка",
+    "sourceUnreachable": "Источник недоступен",
+    "sourceRefused": "Источник отклонил запрос, проверьте ключ",
+    "importFailed": "Не удалось импортировать записи",
+    "cancelled": "Импорт был остановлен",
+    "interrupted": "Сервер остановился до завершения импорта",
+    "sourceAddressNotAllowed": "Адрес источника не разрешён, укажите публичный HTTPS-адрес"
+  },
+  "skipReason": {
+    "alreadyExists": "Уже существует",
+    "clientNotFound": "Клиент не найден",
+    "accountNotProvisioned": "Не удалось создать учётную запись",
+    "productGroupNotFound": "Группа продуктов не найдена",
+    "noProducts": "Нет ни одного продукта",
+    "ticketNotFound": "Тикет не найден",
+    "ticketClosed": "Тикет закрыт",
+    "importFailed": "Ошибка импорта",
+    "productNotFound": "Продукт не найден",
+    "invoiceNotFound": "Счёт не найден",
+    "dateMissing": "Отсутствует обязательная дата",
+    "departmentNotFound": "Нет ни одного отдела",
+    "downloadCategoryNotFound": "Нет ни одной категории загрузок",
+    "nameMissing": "Нет ни имени клиента, ни адреса почты, из которого его взять",
+    "billingCycleUnsupported": "Этот период оплаты здесь не поддерживается",
+    "noProductLines": "В заказе только строки доменов или дополнений, без продукта здесь"
   }
 }

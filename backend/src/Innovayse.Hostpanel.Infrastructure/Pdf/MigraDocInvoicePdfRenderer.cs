@@ -238,7 +238,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// Adds a paragraph of text, setting any character the main font lacks in the fallback font.
     /// </summary>
     /// <param name="elements">Where the paragraph goes: a section's or a cell's elements.</param>
-    /// <param name="text">The text.</param>
+    /// <param name="text">The text to set.</param>
     /// <param name="bold">Whether it is set in bold.</param>
     /// <param name="size">Font size in points.</param>
     /// <param name="color">Colour; the body text colour when null.</param>
@@ -277,7 +277,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// Such a word gets a zero-width space between its characters, never before a combining mark.
     /// Words that fit are left alone, so they still wrap whole.
     /// </remarks>
-    /// <param name="text">The text.</param>
+    /// <param name="text">The text to set.</param>
     /// <param name="bold">Whether it is set in bold.</param>
     /// <param name="size">Font size in points.</param>
     /// <returns>The text, with break opportunities inside any word too wide to fit.</returns>
@@ -370,7 +370,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     /// <summary>Adds a party: an optional label, the name in bold, then its lines.</summary>
     /// <param name="elements">Where the paragraphs go.</param>
     /// <param name="label">A heading above the name, or null for none.</param>
-    /// <param name="party">The party.</param>
+    /// <param name="party">The seller or the billed client.</param>
     /// <param name="firstSpaceBefore">Space above the first paragraph.</param>
     /// <returns>The first paragraph added, for spacing it from what comes before.</returns>
     private static Paragraph AddParty(DocumentElements elements, string? label, InvoicePdfParty party, double firstSpaceBefore = 0)
@@ -422,8 +422,8 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
             var row = table.AddRow();
             AddText(row.Cells[0].Elements, line.Description);
             AddText(row.Cells[1].Elements, line.Quantity.ToString(CultureInfo.InvariantCulture), alignment: ParagraphAlignment.Right);
-            AddText(row.Cells[2].Elements, model.Money.Format(line.UnitPrice), alignment: ParagraphAlignment.Right);
-            AddText(row.Cells[3].Elements, model.Money.Format(line.Amount), alignment: ParagraphAlignment.Right);
+            AddText(row.Cells[2].Elements, FormatMoney(model.Money, line.UnitPrice), alignment: ParagraphAlignment.Right);
+            AddText(row.Cells[3].Elements, FormatMoney(model.Money, line.Amount), alignment: ParagraphAlignment.Right);
         }
     }
 
@@ -434,12 +434,12 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
     {
         var rows = new List<(string Label, string Value)>
         {
-            ("Subtotal", model.Money.Format(model.SubTotal)),
-            ($"Tax ({model.TaxRate.ToString("0.##", CultureInfo.InvariantCulture)}%)", model.Money.Format(model.Tax)),
+            ("Subtotal", FormatMoney(model.Money, model.SubTotal)),
+            ($"Tax ({model.TaxRate.ToString("0.##", CultureInfo.InvariantCulture)}%)", FormatMoney(model.Money, model.Tax)),
         };
         if (model.Credit > 0)
         {
-            rows.Add(("Credit", "-" + model.Money.Format(model.Credit)));
+            rows.Add(("Credit", "-" + FormatMoney(model.Money, model.Credit)));
         }
 
         var table = section.AddTable();
@@ -466,7 +466,7 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
         var total = table.AddRow();
         total.TopPadding = RuleGap;
         AddText(total.Cells[0].Elements, "Total", bold: true, EmphasisSize);
-        AddText(total.Cells[1].Elements, model.Money.Format(model.Total), bold: true, EmphasisSize, alignment: ParagraphAlignment.Right);
+        AddText(total.Cells[1].Elements, FormatMoney(model.Money, model.Total), bold: true, EmphasisSize, alignment: ParagraphAlignment.Right);
 
         table.Rows[0].KeepWith = rows.Count;
     }
@@ -515,6 +515,19 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
             centre,
             XStringFormats.Center);
     }
+
+    /// <summary>Writes an amount in the invoice's currency.</summary>
+    /// <remarks>
+    /// Digits and grouping are invariant (<c>1,234.50</c>) because the labels are English; the
+    /// prefix, suffix and decimal places are the currency's own.
+    /// </remarks>
+    /// <param name="money">How the invoice's currency is written.</param>
+    /// <param name="amount">The amount; rounded to the currency's decimal places.</param>
+    /// <returns>The prefix, the grouped amount and the suffix.</returns>
+    private static string FormatMoney(InvoicePdfMoneyFormat money, decimal amount) =>
+        money.Prefix
+        + amount.ToString("N" + money.Decimals.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture)
+        + money.Suffix;
 
     /// <summary>Turns an enum name into words: <c>PaymentPending</c> becomes <c>Payment pending</c>.</summary>
     /// <param name="name">The enum member's name.</param>
@@ -569,10 +582,4 @@ public sealed partial class MigraDocInvoicePdfRenderer : IInvoicePdfRenderer
             return null;
         }
     }
-
-    /// <summary>A logo ready to place on the page.</summary>
-    /// <param name="Bytes">The stored logo file. Uploads are re-encoded to PNG, but any image PDFsharp reads works.</param>
-    /// <param name="Width">Width to draw it at, in points, already scaled to fit.</param>
-    /// <param name="Height">Height to draw it at, in points, already scaled to fit.</param>
-    private sealed record PdfLogo(byte[] Bytes, double Width, double Height);
 }

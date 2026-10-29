@@ -2,19 +2,15 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
 /// <summary>
 /// <c>GET /api/billing</c> against Postgres: the admin-wide, paginated invoice list.
 /// </summary>
-/// <remarks>Split from the deleted <c>BillingEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListInvoicesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -40,7 +36,7 @@ public sealed class ListInvoicesTests(IntegrationTestFactory factory) : IClassFi
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    /// <summary>An invoice just created for a client appears in the admin's list.</summary>
+    /// <summary>An invoice just created for a client appears in the admin's list, named after its client.</summary>
     [Fact]
     public async Task ListIncludesAFreshlyCreatedInvoice()
     {
@@ -54,6 +50,9 @@ public sealed class ListInvoicesTests(IntegrationTestFactory factory) : IClassFi
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         body.RootElement.GetProperty("items").EnumerateArray()
             .Select(i => i.GetProperty("id").GetInt32()).Should().Contain(invoiceId);
+        body.RootElement.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetInt32() == invoiceId)
+            .GetProperty("clientName").GetString().Should().Be("Ada Lovelace");
     }
 
     /// <summary>Every row of the list names the currency its amounts are in, so a list can print a figure with the right unit.</summary>
@@ -66,7 +65,7 @@ public sealed class ListInvoicesTests(IntegrationTestFactory factory) : IClassFi
         using (var scope = factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-            var invoice = Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(14), "EUR");
+            var invoice = Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(14), "EUR", DateTimeOffset.UtcNow);
             invoice.AddItem("Hosting", 12m, 1, null);
             context.Invoices.Add(invoice);
             await context.SaveChangesAsync(CancellationToken.None);
@@ -79,5 +78,16 @@ public sealed class ListInvoicesTests(IntegrationTestFactory factory) : IClassFi
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var row = body.RootElement.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("id").GetInt32() == invoiceId);
         row.GetProperty("currency").GetString().Should().Be("EUR");
+    }
+
+    /// <summary>A status filter that names no invoice status is refused instead of silently ignored.</summary>
+    [Fact]
+    public async Task UnknownStatusFilterIsRefused()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.GetAsync("/api/billing?page=1&pageSize=20&status=NotAStatus");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

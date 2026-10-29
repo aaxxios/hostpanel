@@ -1,4 +1,5 @@
 using FluentValidation;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
@@ -27,15 +28,22 @@ public sealed class CreateServerValidator : LocalizedValidator<CreateServerComma
         RuleFor(x => x.Name).NotEmpty().WithMessage(L["ServerNameRequired"])
             .MaximumLength(NameMaxLength).WithMessage(L["ServerNameTooLong", NameMaxLength]);
 
-        RuleFor(x => x.Hostname).NotEmpty().WithMessage(L["ServerHostnameRequired"])
+        RuleFor(x => x.Endpoint.Hostname).NotEmpty().WithMessage(L["ServerHostnameRequired"])
             .MaximumLength(HostnameMaxLength).WithMessage(L["ServerHostnameTooLong", HostnameMaxLength]);
 
         RuleFor(x => x.Username).NotEmpty().WithMessage(L["ServerUsernameRequired"])
             .MaximumLength(UsernameMaxLength).WithMessage(L["ServerUsernameTooLong", UsernameMaxLength]);
 
-        RuleFor(x => x.MonthlyCost).GreaterThanOrEqualTo(0).WithMessage(L["ServerMonthlyCostInvalid"]);
+        RuleFor(x => x.Credentials.Password).MaximumLength(ProtectedValueLimits.ServerPassword)
+            .WithMessage(L["ServerCredentialTooLong", ProtectedValueLimits.ServerPassword]);
+        RuleFor(x => x.Credentials.ApiToken).MaximumLength(ProtectedValueLimits.ServerApiToken)
+            .WithMessage(L["ServerCredentialTooLong", ProtectedValueLimits.ServerApiToken]);
+        RuleFor(x => x.Credentials.AccessHash).MaximumLength(ProtectedValueLimits.ServerAccessHash)
+            .WithMessage(L["ServerCredentialTooLong", ProtectedValueLimits.ServerAccessHash]);
 
-        RuleFor(x => x.MaxAccounts).GreaterThan(0).When(x => x.MaxAccounts.HasValue)
+        RuleFor(x => x.Hosting.MonthlyCost).GreaterThanOrEqualTo(0).WithMessage(L["ServerMonthlyCostInvalid"]);
+
+        RuleFor(x => x.Limits.MaxAccounts).GreaterThan(0).When(x => x.Limits.MaxAccounts.HasValue)
             .WithMessage(L["ServerMaxAccountsInvalid"]);
     }
 }

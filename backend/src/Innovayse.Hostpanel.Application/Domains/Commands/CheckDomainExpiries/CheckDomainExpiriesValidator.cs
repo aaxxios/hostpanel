@@ -4,7 +4,7 @@ using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.CheckDomainExpiries;
 
-/// <summary>Validates <see cref="CheckDomainExpiriesCommand"/>: no rules — the command carries no input.</summary>
+/// <summary>Validates <see cref="CheckDomainExpiriesCommand"/>: no rules; the command carries no input.</summary>
 public sealed class CheckDomainExpiriesValidator : LocalizedValidator<CheckDomainExpiriesCommand>
 {
     /// <summary>Initializes the validator with the localization service.</summary>

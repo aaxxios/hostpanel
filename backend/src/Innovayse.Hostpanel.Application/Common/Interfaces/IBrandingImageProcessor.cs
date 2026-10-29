@@ -3,23 +3,23 @@ using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
+
 /// <summary>
 /// Decides what an uploaded branding file really is, and renders the set of files the storefront
 /// needs from it.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>This port is the trust boundary for uploaded bytes.</b> Everything above it -- the
-/// controller, the handler -- treats an upload as an opaque byte array with an untrusted name.
+/// <b>This port is the trust boundary for uploaded bytes.</b> Everything above it, the
+/// controller, the handler, treats an upload as an opaque byte array with an untrusted name.
 /// The implementation is the only place that decodes it, and it decides the format from the
 /// content, never from the request's <c>Content-Type</c> or the filename's extension. A caller
 /// that reaches a <see cref="BrandingRendition"/> is holding bytes this layer has re-encoded
 /// itself, which is what makes the stored file safe to serve.
 /// </para>
 /// <para>
-/// Named for the work rather than the library. The implementation today is SkiaSharp (it was
-/// ImageSharp until that line stopped receiving fixes), and nothing in Application had to change
-/// when it was swapped, which is the point of the abstraction.
+/// Named for the work rather than the library, so the imaging library can be replaced without
+/// any change in Application.
 /// </para>
 /// </remarks>
 public interface IBrandingImageProcessor

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Providers.Inecobank;
+
 /// <summary>
 /// Inecobank (Armenian Card) hosted-payment-page gateway plugin.
 /// Configured from the admin Integrations page via <c>integration:inecobank:*</c> settings.
@@ -16,17 +17,10 @@ public sealed class InecobankPaymentGateway : PaymentGatewayBase, IPaymentPlugin
     public const string PluginId = "inecobank";
 
     /// <summary>
-    /// The gateway's getOrderStatusExtended.do errorCode meaning "unregistered orderId" —
+    /// The gateway's getOrderStatusExtended.do errorCode meaning "unregistered orderId":
     /// the session is unknown to the gateway (e.g. it never completed registration or has
     /// expired) and is treated as declined rather than surfaced as an API error.
     /// </summary>
-    /// <summary>
-    /// Path the API client appends to the configured base URL. Present here only so the
-    /// configuration check below and the client that builds the request cannot disagree.
-    /// </summary>
-    private const string ApiPathSegment = "/payment/rest";
-
-    /// <summary>Error code the gateway answers with for an order id it never registered.</summary>
     private const int UnregisteredOrderIdErrorCode = 6;
 
     /// <summary>
@@ -37,7 +31,7 @@ public sealed class InecobankPaymentGateway : PaymentGatewayBase, IPaymentPlugin
     /// The manual documents only <see cref="UnregisteredOrderIdErrorCode"/>, but the live
     /// gateway returns this one, and the difference matters in both directions. A reconciler
     /// asking about a session the bank never registered must read "no such order" and settle,
-    /// not raise; and the admin panel's connection probe is built on exactly this response --
+    /// not raise; and the admin panel's connection probe is built on exactly this response:
     /// reaching it proves the credentials were accepted, since a bad password never gets far
     /// enough to be told the order id is wrong.
     /// </remarks>
@@ -63,7 +57,7 @@ public sealed class InecobankPaymentGateway : PaymentGatewayBase, IPaymentPlugin
 
     /// <summary>
     /// Test seam: initializes the gateway with an explicit HTTP client.
-    /// Internal on purpose — ActivatorUtilities must only ever see the factory ctor
+    /// Internal on purpose: ActivatorUtilities must only ever see the factory ctor
     /// (an ambient HttpClient is not registered in DI and would fail resolution).
     /// </summary>
     /// <param name="configuration">Composed configuration carrying the integration settings.</param>
@@ -103,7 +97,7 @@ public sealed class InecobankPaymentGateway : PaymentGatewayBase, IPaymentPlugin
     {
         var status = await CreateClient().GetOrderStatusAsync(gatewayOrderId, Language(), ct);
 
-        // The session is unknown to the gateway — treat as declined.
+        // The session is unknown to the gateway: treat as declined.
         if (status.ErrorCode is UnregisteredOrderIdErrorCode or WrongOrderIdErrorCode)
         {
             return new GatewayPaymentStatus(GatewayPaymentState.Declined, null, $"errorCode:{status.ErrorCode}");
@@ -111,15 +105,21 @@ public sealed class InecobankPaymentGateway : PaymentGatewayBase, IPaymentPlugin
 
         if (status.ErrorCode != 0)
         {
+            // The gateway's own text goes to the log only; the exception carries the code.
+            _logger.LogWarning(
+                "Inecobank {Endpoint} answered error {Code}: {GatewayMessage}",
+                InecobankEndpoints.GetOrderStatusExtended,
+                status.ErrorCode,
+                status.ErrorMessage);
             throw new InecobankApiException(
-                status.ErrorCode, status.ErrorMessage ?? $"getOrderStatusExtended error {status.ErrorCode}");
+                status.ErrorCode, $"{InecobankEndpoints.GetOrderStatusExtended}: gateway error {status.ErrorCode}.");
         }
 
-        // errorCode 0 says only "request processed" — the payment verdict lives in orderStatus.
+        // errorCode 0 says only "request processed": the payment verdict lives in orderStatus.
         return (InecobankOrderStatusCode?)status.OrderStatus switch
         {
             InecobankOrderStatusCode.Deposited => new GatewayPaymentStatus(
-                GatewayPaymentState.Paid, status.AuthRefNum ?? gatewayOrderId, "orderStatus:2"),
+                GatewayPaymentState.Paid, status.AuthRefNum ?? gatewayOrderId, "orderStatus:2", status.Amount, status.Currency),
             InecobankOrderStatusCode.AuthorizationReversed
                 or InecobankOrderStatusCode.Refunded
                 or InecobankOrderStatusCode.AuthorizationDeclined => new GatewayPaymentStatus(
@@ -132,7 +132,7 @@ public sealed class InecobankPaymentGateway : PaymentGatewayBase, IPaymentPlugin
     /// <inheritdoc/>
     public async Task<string> RefundAsync(string gatewayOrderId, long amountMinor, CancellationToken ct)
     {
-        // refund.do returns only errorCode — the gateway order id is the only usable reference.
+        // refund.do returns only errorCode: the gateway order id is the only usable reference.
         await CreateClient().RefundAsync(gatewayOrderId, amountMinor, ct);
         return gatewayOrderId;
     }
@@ -152,11 +152,11 @@ public sealed class InecobankPaymentGateway : PaymentGatewayBase, IPaymentPlugin
         // admin copying an endpoint URL out of the merchant manual is the easy mistake here, and
         // left alone it produces a doubled path and a bare "request to the gateway failed" that
         // says nothing about which of the five fields is wrong. Naming it costs one comparison.
-        if (baseUrl.Contains(ApiPathSegment, StringComparison.OrdinalIgnoreCase))
+        if (baseUrl.Contains(InecobankEndpoints.BasePath, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
                 $"The Inecobank gateway URL must be the base address only (e.g. https://pg.inecoecom.am), " +
-                $"but '{baseUrl}' already contains '{ApiPathSegment}'.");
+                $"but '{baseUrl}' already contains '{InecobankEndpoints.BasePath}'.");
         }
         return new InecobankApiClient(_http, new InecobankClientOptions(baseUrl, userName, password), _logger);
     }

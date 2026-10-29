@@ -1,6 +1,7 @@
-using Innovayse.Hostpanel.Application.Admin.Common;
+using Innovayse.Hostpanel.Application.Auth.Common;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
+
 /// <summary>
 /// Abstraction over ASP.NET Core Identity user management operations.
 /// Implemented in Infrastructure; isolates Application from <c>IdentityUser</c> concrete types.
@@ -10,17 +11,14 @@ public interface IUserService
     /// <summary>
     /// Creates a new user with the specified email and password.
     /// </summary>
-    /// <param name="email">The user's email address (also used as username).</param>
-    /// <param name="password">The plain-text password to hash and store.</param>
-    /// <param name="firstName">Optional first name to set on the user profile.</param>
-    /// <param name="lastName">Optional last name to set on the user profile.</param>
+    /// <param name="input">The new account's email, password and optional name.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The newly created user's ID on success.
     /// Throws <see cref="InvalidOperationException"/> on failure.
     /// </returns>
     /// <exception cref="InvalidOperationException">Thrown when user creation fails with Identity errors.</exception>
-    Task<string> CreateAsync(string email, string password, string? firstName = null, string? lastName = null, CancellationToken ct = default);
+    Task<string> CreateAsync(CreateUserInput input, CancellationToken ct);
 
     /// <summary>
     /// Assigns a role to an existing user.
@@ -28,96 +26,26 @@ public interface IUserService
     /// <param name="userId">The user's unique identifier.</param>
     /// <param name="role">The role name to assign.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task that completes once the role is assigned.</returns>
     Task AddToRoleAsync(string userId, string role, CancellationToken ct);
 
     /// <summary>
-    /// Finds a user by email and verifies the supplied password.
+    /// Checks a password sign-in. A wrong password counts toward the account lockout, a right one
+    /// clears the count, and an unknown address costs the same password hash check as a known one so
+    /// the answer time does not tell whether an account exists.
     /// </summary>
-    /// <param name="email">The user's email address.</param>
-    /// <param name="password">The plain-text password to verify.</param>
+    /// <param name="input">The email and the plain-text password.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>
-    /// Tuple of user ID and email if credentials are valid; <see langword="null"/> otherwise.
-    /// </returns>
-    Task<(string Id, string Email)?> FindByEmailAndPasswordAsync(string email, string password, CancellationToken ct);
-
-    /// <summary>
-    /// Finds a user by their exact email address (case-insensitive).
-    /// </summary>
-    /// <param name="email">The exact email address to look up.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>Tuple of user ID and email, or <see langword="null"/> if not found.</returns>
-    Task<(string Id, string Email)?> FindByEmailAsync(string email, CancellationToken ct);
+    /// <returns>The outcome, with the account when it succeeded.</returns>
+    Task<PasswordSignInResult> SignInWithPasswordAsync(PasswordSignInInput input, CancellationToken ct);
 
     /// <summary>
     /// Finds a user by their unique identifier.
     /// </summary>
     /// <param name="userId">The user's unique identifier.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Tuple of user ID and email, or <see langword="null"/> if not found.</returns>
-    Task<(string Id, string Email)?> FindByIdAsync(string userId, CancellationToken ct);
-
-    /// <summary>
-    /// Retrieves the primary role for a user.
-    /// </summary>
-    /// <param name="userId">The user's unique identifier.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>The first role name, or <see langword="null"/> if the user has no roles.</returns>
-    Task<string?> GetPrimaryRoleAsync(string userId, CancellationToken ct);
-
-    /// <summary>
-    /// Retrieves email addresses for a batch of user IDs.
-    /// </summary>
-    /// <param name="userIds">The user identifiers to look up.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>Dictionary mapping user ID to email address.</returns>
-    Task<Dictionary<string, string>> GetEmailsByIdsAsync(IEnumerable<string> userIds, CancellationToken ct);
-
-    /// <summary>
-    /// Retrieves two-factor status for a batch of user IDs.
-    /// </summary>
-    /// <remarks>
-    /// Exists for the same reason as <see cref="GetEmailsByIdsAsync"/>: callers need a
-    /// page of users at once, and asking per user concurrently is not an option. The
-    /// implementation runs on Identity's UserManager, which shares the request's scoped
-    /// DbContext, and EF Core rejects overlapping operations on one context.
-    /// </remarks>
-    /// <param name="userIds">The user identifiers to look up.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>Dictionary mapping user ID to whether two-factor is enabled.</returns>
-    Task<Dictionary<string, bool>> GetTwoFactorEnabledByIdsAsync(IEnumerable<string> userIds, CancellationToken ct);
-
-    /// <summary>
-    /// Finds user IDs whose email contains the given search term (case-insensitive).
-    /// </summary>
-    /// <param name="emailSearch">Partial email to search for.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>List of matching user IDs.</returns>
-    Task<List<string>> FindUserIdsByEmailAsync(string emailSearch, CancellationToken ct);
-
-    /// <summary>
-    /// Checks whether any users exist in the system.
-    /// </summary>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>True if at least one user exists; false otherwise.</returns>
-    Task<bool> AnyUsersExistAsync(CancellationToken ct);
-
-    /// <summary>
-    /// Generates an email confirmation token for the specified user.
-    /// </summary>
-    /// <param name="userId">The user's unique identifier.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>The generated email confirmation token string.</returns>
-    Task<string> GenerateEmailConfirmationTokenAsync(string userId, CancellationToken ct);
-
-    /// <summary>
-    /// Confirms the user's email address using the provided token.
-    /// </summary>
-    /// <param name="email">The user's email address.</param>
-    /// <param name="token">The email confirmation token.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>True if confirmation succeeded; false otherwise.</returns>
-    Task<bool> ConfirmEmailAsync(string email, string token, CancellationToken ct);
+    /// <returns>The account, or <see langword="null"/> if not found.</returns>
+    Task<UserIdentity?> FindByIdAsync(string userId, CancellationToken ct);
 
     /// <summary>
     /// Checks whether the specified user's email has been confirmed.
@@ -128,73 +56,11 @@ public interface IUserService
     Task<bool> IsEmailConfirmedAsync(string userId, CancellationToken ct);
 
     /// <summary>
-    /// Returns a paginated list of all users, optionally filtered by search term.
-    /// </summary>
-    /// <param name="page">1-based page number.</param>
-    /// <param name="pageSize">Items per page.</param>
-    /// <param name="search">Optional search term (matches name or email).</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>Tuple of user list items and total count.</returns>
-    Task<(List<Admin.Common.UserListItemDto> Items, int TotalCount)> ListUsersAsync(
-        int page, int pageSize, string? search, CancellationToken ct);
-
-    /// <summary>
-    /// Returns a user by ID with their linked client accounts.
-    /// </summary>
-    /// <param name="userId">The user's unique identifier.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>User detail DTO or null if not found.</returns>
-    Task<Admin.Common.UserDetailDto?> GetUserWithAccountsAsync(string userId, CancellationToken ct);
-
-    /// <summary>
-    /// Updates a user's profile fields (name, email, language).
-    /// </summary>
-    /// <param name="userId">The user's unique identifier.</param>
-    /// <param name="firstName">New first name.</param>
-    /// <param name="lastName">New last name.</param>
-    /// <param name="email">New email address.</param>
-    /// <param name="language">Preferred language code or null for default.</param>
-    /// <param name="ct">Cancellation token.</param>
-    Task UpdateUserAsync(string userId, string firstName, string lastName, string email, string? language, CancellationToken ct);
-
-    /// <summary>
-    /// Deletes an Identity user. Does not remove linked client records.
-    /// </summary>
-    /// <param name="userId">The user's unique identifier.</param>
-    /// <param name="ct">Cancellation token.</param>
-    Task DeleteUserAsync(string userId, CancellationToken ct);
-
-    /// <summary>
-    /// Generates a password reset token for the given user.
-    /// </summary>
-    /// <param name="userId">The user's unique identifier.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>The password reset token string.</returns>
-    Task<string> GeneratePasswordResetTokenAsync(string userId, CancellationToken ct);
-
-    /// <summary>
-    /// Sets a new password for a user (admin action, no old password required).
-    /// </summary>
-    /// <param name="userId">The user's unique identifier.</param>
-    /// <param name="newPassword">The new password to set.</param>
-    /// <param name="ct">Cancellation token.</param>
-    Task ChangePasswordAsync(string userId, string newPassword, CancellationToken ct);
-
-    /// <summary>
-    /// Resets a user's password using a previously issued reset token.
-    /// </summary>
-    /// <param name="email">The user's email address.</param>
-    /// <param name="token">The password reset token.</param>
-    /// <param name="newPassword">The new password to set.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>True if the reset succeeded; false otherwise.</returns>
-    Task<bool> ResetPasswordWithTokenAsync(string email, string token, string newPassword, CancellationToken ct);
-
-    /// <summary>
     /// Updates the last login timestamp for a user.
     /// </summary>
     /// <param name="userId">The user's unique identifier.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task that completes once the timestamp is saved.</returns>
     Task UpdateLastLoginAsync(string userId, CancellationToken ct);
 
     /// <summary>
@@ -206,8 +72,9 @@ public interface IUserService
     Task<bool> IsTwoFactorEnabledAsync(string userId, CancellationToken ct);
 
     /// <summary>
-    /// Generates and persists a new Base32-encoded TOTP secret for the user.
-    /// Does not enable 2FA — the caller must confirm with a valid code first.
+    /// Generates a new Base32-encoded TOTP secret and stores it as the account's pending secret.
+    /// Does not enable 2FA and never replaces the secret an enabled account signs in with;
+    /// <see cref="EnableTwoFactorAsync"/> promotes it once a code proves the app holds it.
     /// </summary>
     /// <param name="userId">The user's unique identifier.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -215,25 +82,22 @@ public interface IUserService
     Task<string> GenerateTwoFactorSecretAsync(string userId, CancellationToken ct);
 
     /// <summary>
-    /// Retrieves the stored Base32-encoded TOTP secret for the user, or null if not set.
+    /// Checks <paramref name="code"/> against the account's pending secret and, when it matches,
+    /// makes that secret the active one and marks two-factor authentication as enabled.
     /// </summary>
     /// <param name="userId">The user's unique identifier.</param>
+    /// <param name="code">The 6-digit TOTP code from the authenticator app.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The TOTP secret, or null if 2FA has not been configured.</returns>
-    Task<string?> GetTwoFactorSecretAsync(string userId, CancellationToken ct);
+    /// <returns>True when it was enabled; false when there is no pending secret or the code did not match.</returns>
+    Task<bool> EnableTwoFactorAsync(string userId, string code, CancellationToken ct);
 
     /// <summary>
-    /// Marks two-factor authentication as enabled for the user in Identity.
+    /// Disables two-factor authentication for the user, clears the active and pending TOTP
+    /// secrets and changes the security stamp, so every session issued before ends.
     /// </summary>
     /// <param name="userId">The user's unique identifier.</param>
     /// <param name="ct">Cancellation token.</param>
-    Task EnableTwoFactorAsync(string userId, CancellationToken ct);
-
-    /// <summary>
-    /// Disables two-factor authentication for the user and clears the stored TOTP secret.
-    /// </summary>
-    /// <param name="userId">The user's unique identifier.</param>
-    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task that completes once the flag and the secret are cleared.</returns>
     Task DisableTwoFactorAsync(string userId, CancellationToken ct);
 
     /// <summary>
@@ -246,15 +110,31 @@ public interface IUserService
     /// <returns>True if the code is valid within the allowed time window; false otherwise.</returns>
     Task<bool> VerifyTwoFactorCodeAsync(string userId, string code, CancellationToken ct);
 
-    /// <summary>Finds a user by their SSO subject identifier (the 'sub' claim).</summary>
-    Task<(string Id, string Email)?> FindBySsoSubjectAsync(string sub, CancellationToken ct);
+    /// <summary>
+    /// Checks the account's current password.
+    /// </summary>
+    /// <param name="userId">The user's unique identifier.</param>
+    /// <param name="password">The plain-text password to verify.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>True when the account exists and the password is its current one; false otherwise.</returns>
+    Task<bool> CheckPasswordAsync(string userId, string password, CancellationToken ct);
 
+    /// <summary>
+    /// Returns the account's current session version: a value derived from its security stamp that
+    /// changes whenever the password is reset, two-factor is switched off or the sign-in address
+    /// changes. An access token carries the version it was issued with and stops being accepted
+    /// once the account's version moves on.
+    /// </summary>
+    /// <param name="userId">The user's unique identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The current version, or <see langword="null"/> when the account does not exist or is deleted.</returns>
+    Task<string?> GetSessionVersionAsync(string userId, CancellationToken ct);
 
     /// <summary>
     /// Retrieves all roles assigned to the specified user.
     /// </summary>
     /// <param name="userId">The user's unique identifier.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>List of role names assigned to the user.</returns>
-    Task<IList<string>> GetRolesAsync(string userId, CancellationToken ct);
+    /// <returns>The role names assigned to the user.</returns>
+    Task<IReadOnlyList<string>> GetRolesAsync(string userId, CancellationToken ct);
 }

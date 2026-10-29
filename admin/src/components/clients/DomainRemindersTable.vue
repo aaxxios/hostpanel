@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * Read-only table displaying domain reminder history.
- * Shows date, reminder type, recipient, and sent timestamp for each reminder.
+ * Shows the reminder type, the recipient and when it was sent for each reminder (the record holds
+ * one timestamp, so there is one date column).
  */
 import { useI18n } from 'vue-i18n'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -14,6 +15,7 @@ import UiTableHead from '@/components/ui/UiTableHead.vue'
 import UiTableHeader from '@/components/ui/UiTableHeader.vue'
 import UiTableRow from '@/components/ui/UiTableRow.vue'
 import { formatDate } from '@/lib/format'
+import { DOMAIN_REMINDER_TYPE_LABEL_KEYS } from '@/types/domain'
 import type { DomainReminderItem } from '@/types/domain'
 
 const { t } = useI18n()
@@ -34,12 +36,11 @@ defineProps<{
       <UiTable
         density="compact"
         :empty="reminders.length === 0"
-        :colspan="4"
+        :colspan="3"
         data-testid="clients-domain-reminders-table"
       >
         <UiTableHead>
           <UiTableRow>
-            <UiTableHeader>{{ t('shared.date') }}</UiTableHeader>
             <UiTableHeader>{{ t('clients.domainRemindersTable.reminder') }}</UiTableHeader>
             <UiTableHeader>{{ t('shared.to') }}</UiTableHeader>
             <UiTableHeader>{{ t('clients.domainRemindersTable.sent') }}</UiTableHeader>
@@ -47,8 +48,7 @@ defineProps<{
         </UiTableHead>
         <UiTableBody divided>
           <UiTableRow v-for="reminder in reminders" :key="reminder.id" hoverable>
-            <UiTableCell muted>{{ formatDate(reminder.sentAt) }}</UiTableCell>
-            <UiTableCell>{{ reminder.reminderType }}</UiTableCell>
+            <UiTableCell>{{ t(DOMAIN_REMINDER_TYPE_LABEL_KEYS[reminder.reminderType]) }}</UiTableCell>
             <UiTableCell>{{ reminder.sentTo }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(reminder.sentAt) }}</UiTableCell>
           </UiTableRow>

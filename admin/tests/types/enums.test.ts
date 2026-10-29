@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import { ActivityEventType } from '@/types/activityevent'
 import { LogoutScope } from '@/types/auth'
-import { BillableInvoiceAction, RecurrencePeriod } from '@/types/billableitem'
+import { BillableItemType, RecurringPeriod } from '@/types/billableitem'
 import { ClientStatus } from '@/types/client'
 import { ContactType } from '@/types/contact'
 import { CurrencyCode } from '@/types/currency'
@@ -39,15 +39,9 @@ describe('billing value sets', () => {
     expect(PaymentMethod.Card).toBe('Credit/Debit Card')
     expect(PaymentMethod.BankTransfer).toBe('Bank Transfer')
     expect(PaymentGateway.BankTransfer).toBe('BankTransfer')
-    expect(BillingCycle.SemiAnnual).toBe('semi-annual')
-    expect(Object.values(BillableInvoiceAction)).toEqual([
-      'DontInvoice',
-      'InvoiceOnNextCron',
-      'AddToNextInvoice',
-      'InvoiceForDueDate',
-      'Recur',
-    ])
-    expect(Object.values(RecurrencePeriod)).toEqual(['Days', 'Weeks', 'Months', 'Years'])
+    expect(Object.values(BillingCycle)).toEqual(['Monthly', 'Annual'])
+    expect(Object.values(BillableItemType)).toEqual(['OneTime', 'Recurring'])
+    expect(Object.values(RecurringPeriod)).toEqual(['weekly', 'monthly', 'quarterly', 'annually'])
     expect(Object.values(DnsRecordType)).toEqual(['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SRV'])
     expect(Object.values(CurrencyCode)).toEqual(['AMD', 'USD', 'EUR', 'GBP', 'RUB'])
     expect(Object.values(InvoiceOpenAction)).toEqual(['view', 'edit'])
@@ -58,7 +52,7 @@ describe('screen value sets', () => {
   it('keep the strings the API and the routes use', () => {
     expect(Object.values(ActivityEventType)).toEqual(['ClientRegistered', 'InvoiceOverdue', 'DomainExpiring'])
     expect(Object.values(LogoutScope)).toEqual(['this', 'all'])
-    expect(Object.values(IntegrationFieldType)).toEqual(['text', 'password', 'select', 'textarea', 'toggle'])
+    expect(Object.values(IntegrationFieldType)).toEqual(['Text', 'Password', 'Secret', 'Select', 'TextArea', 'Toggle'])
     expect(Object.values(BrandingImageKind)).toEqual(['logo', 'logodark', 'logomark', 'favicon'])
     expect(Object.values(ServerRefresh)).toEqual(['servers', 'both'])
     expect(MigrationEntityType.TicketReplies).toBe('TicketReplies')

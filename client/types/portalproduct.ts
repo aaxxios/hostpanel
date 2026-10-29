@@ -1,42 +1,31 @@
 /**
  * One catalogue product, as `GET /api/portal/public/products` returns it.
  *
- * The route spreads the C# `ProductDto` verbatim and adds exactly one thing: `pid`, a
- * legacy-compatible alias of `id`. Every other field below is `ProductDto`'s own, camelCase, as
- * `System.Text.Json` writes it — including `pricing` and `prices`, which the route used to
- * replace with a hardcoded `pricing.USD` block of decimal strings under six billing-cycle
- * keys. The backend prices only monthly and annually, and `pricing` already arrives in the
- * caller's own currency (the signed-in client's, or the base currency for a guest) — see
- * `Innovayse.Application.Products.Common.ProductPricingDto` and
- * `PayerCurrencyResolver.ForCallerAsync`. Relabelling it `USD` and formatting it with `$` was
- * wrong for every currency but the base, and a page's language was never the right thing to
- * decide it either (`docs/superpowers/specs/2026-09-13-multi-currency-pricing-design.md` §5).
+ * The route forwards the C# `CatalogProductDto` verbatim: every field below is its own,
+ * camelCase, as `System.Text.Json` writes it, including `pricing` and `prices`. The backend
+ * prices only monthly and annually, and `pricing` already arrives in the caller's own currency
+ * (the signed-in client's, or the base currency for a guest): see
+ * `Innovayse.Hostpanel.Application.Products.Common.ProductPricingDto` and
+ * `PayerCurrencyResolver.ForCallerAsync`. Neither a fixed currency nor the page's language
+ * decides it.
  *
  * ## `groupId`, not `gid`
  *
- * This declared `gid`, and the public site reads `Number(p.gid)` in four places to group plans
- * into product families. `ProductDto` has always sent `groupId`; nothing anywhere adds `gid` to
- * a product (the BFF's `gid` handling is a *query* parameter it translates to `groupId` on the
- * way out, not a response field). So `Number(p.gid)` was `NaN` on every product, no group ever
- * matched, and `components/sections/Products.vue` dropped every family it tried to build.
+ * `ProductDto` sends `groupId`. The BFF's `gid` is a *query* parameter it translates to
+ * `groupId` on the way out, not a response field, so reading `gid` off a product would give
+ * `NaN` and no plan would ever be grouped into a family.
  *
- * ## There are no `translated_*` fields, and nothing reads them any more
+ * ## There are no `translated_*` fields
  *
- * `translated_name`, `translated_tagline`, `translated_shortdescription`,
- * `translated_description`, `group_translations` and `group_features` used to be read across
- * `pages/products/`, `pages/hosting/`, `pages/trial/`, `components/sections/Products.vue`,
- * `templates/classic/pages/Hosting.vue` and `utils/catalogGroups.ts`. `ProductDto` carries none of
- * them, `GET /api/products` was checked against a live backend and sends none of them, and
- * every read sat in front of an `|| p.name` / `|| p.description` fallback that was the only
- * branch ever taken. They are gone, along with the `lang` parameter the BFF forwarded to feed
- * them — see `server/api/portal/public/products.get.ts`.
+ * `ProductDto` carries no `translated_*`, `group_translations` or `group_features` fields,
+ * and the BFF forwards no `lang`: see `server/api/portal/public/products.get.ts`.
  *
  * **Localised product copy does not exist in the backend.** There is no product translations
  * table, no `lang` on `ProductsController`, nothing under `Application/Products/`. `Slide` is
  * the one entity with a `*Translation` sibling (`SlideTranslation`), and
  * `useCatalogStore().loadSlides(lang)` is the one place a `lang` parameter still means anything.
- * Making product copy translatable starts there — a `ProductTranslation` entity and a locale
- * on the query — and only then does a field belong back on this interface.
+ * Making product copy translatable starts there, a `ProductTranslation` entity and a locale
+ * on the query, and only then does a field belong back on this interface.
  *
  * **`group_features` already has a successor.** Structured, per-product specification lines
  * are `ProductFeature` (label / value / sortOrder), served by
@@ -49,13 +38,12 @@
 
 import type { PortalProductPricing } from '~/types/portalproductpricing'
 import type { PortalProductCurrencyPrice } from '~/types/portalproductcurrencyprice'
+import type { ProductType } from '~/types/producttype'
 
 /** One catalogue product. */
 export interface PortalProduct {
   /** Product primary key. */
   id: number
-  /** legacy-compatible alias of {@link PortalProduct.id}, added by the proxy. */
-  pid?: number
   /** Product group id this product belongs to. */
   groupId: number
   /** Product name. */
@@ -66,20 +54,14 @@ export interface PortalProduct {
   website?: string | null
   /** URL slug, when the product has one. */
   slug?: string | null
-  /** Hosting package name used for provisioning. */
-  packageName?: string | null
   /** Product type, as `ProductType` serialises. */
-  type?: string
-  /** Current status, as `ProductStatus` serialises. */
-  status?: string
-  /** FK to the server group used for provisioning. */
-  serverGroupId?: number | null
+  type?: ProductType
   /** Display order, ascending, when the API supplies one; plans fall back to price order without it. */
   sortOrder?: number | null
   /** True when the operator marked this product as its group's recommended plan. */
   isFeatured?: boolean
   /** The product's price in the caller's own currency; null when it carries no price at all. */
   pricing?: PortalProductPricing | null
-  /** The product's price in every currency it is sold in — what the admin pricing grid edits. */
+  /** The product's price in every currency it is sold in: what the admin pricing grid edits. */
   prices?: PortalProductCurrencyPrice[]
 }

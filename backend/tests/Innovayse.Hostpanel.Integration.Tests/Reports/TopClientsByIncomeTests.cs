@@ -1,45 +1,38 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
 /// <summary>
 /// <c>GET /api/reports/top-clients-by-income</c> against Postgres: the top clients by
-/// transaction income, highest first.
+/// net invoice income, highest first, in the base currency.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingRemainderEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class TopClientsByIncomeTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>A client with transaction income is ranked in the Top Clients by Income report.</summary>
+    /// <summary>
+    /// Clients are ranked by net invoice income converted to the base currency: the base client's
+    /// 340 taken less 50 refunded comes before the foreign client's 40,000 (100 in the base), and its
+    /// 1,000 credit top-up is not income.
+    /// </summary>
     [Fact]
-    public async Task RanksAClientWithTransactions()
+    public async Task RanksClientsByTheirConvertedInvoiceIncome()
     {
-        var marker = $"Top{Guid.NewGuid():N}";
-        var clientId = await ReportsTestSeeds.CreateClientAsync(factory, marker);
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var tx = Transaction.Create(
-                clientId, DateTimeOffset.UtcNow, "Top income", $"tx-{Guid.NewGuid():N}",
-                invoiceId: null, paymentMethod: "manual", amountIn: 999999m, amountOut: 0m, fees: 0m, addedToCredit: false, currency: "USD");
-            db.Transactions.Add(tx);
-            await db.SaveChangesAsync();
-        }
-
+        var scenario = await IncomeTestSeeds.SeedAsync(factory, 2034);
         var client = await ReportsTestSeeds.AdminClientAsync(factory);
-        var response = await client.GetAsync("/api/reports/top-clients-by-income?take=5");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var rows = await response.Content.ReadFromJsonAsync<List<JsonElement>>();
-        rows!.Should().Contain(r => r.GetProperty("clientName").GetString()!.Contains(marker));
+        var rows = await client.GetFromJsonAsync<List<JsonElement>>("/api/reports/top-clients-by-income?take=2");
+
+        rows.Should().HaveCount(2);
+        rows![0].GetProperty("clientId").GetInt32().Should().Be(scenario.BaseClientId);
+        rows[0].GetProperty("clientName").GetString().Should().Be("Base Payer");
+        rows[0].GetProperty("totalAmountIn").GetDecimal().Should().Be(340m);
+        rows[0].GetProperty("totalAmountOut").GetDecimal().Should().Be(50m);
+        rows[0].GetProperty("balance").GetDecimal().Should().Be(290m);
+        rows[1].GetProperty("clientId").GetInt32().Should().Be(scenario.ForeignClientId);
+        rows[1].GetProperty("balance").GetDecimal().Should().Be(100m);
+        rows.Should().OnlyContain(r => r.GetProperty("currency").GetString() == scenario.BaseCurrency);
     }
 
     /// <summary>A <c>take</c> outside the allowed range is refused rather than reaching the database's <c>LIMIT</c>.</summary>
@@ -62,7 +55,7 @@ public sealed class TopClientsByIncomeTests(IntegrationTestFactory factory) : IC
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

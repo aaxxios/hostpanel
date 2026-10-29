@@ -1,13 +1,12 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the client-facing <c>InitiateMyOutgoingTransfer</c> use case —
+/// Integration tests for the client-facing <c>InitiateMyOutgoingTransfer</c> use case:
 /// <c>POST /api/me/domains/{id}/epp</c>, which retrieves the EPP authorization code for an
 /// outgoing transfer. The admin equivalent is <c>InitiateOutgoingTransfer</c>.
 /// </summary>
@@ -30,8 +29,8 @@ public sealed class InitiateMyOutgoingTransferTests(IntegrationTestFactory facto
 
         var ownersAttempt = await owner.PostAsync($"/api/me/domains/{domainId}/epp", null);
         ownersAttempt.StatusCode.Should().Be(HttpStatusCode.OK);
-        var json = await ownersAttempt.Content.ReadAsStringAsync();
-        json.Should().Contain("STUB-EPP-CODE");
+        var body = await ownersAttempt.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("eppCode").GetString().Should().Be("STUB-EPP-CODE");
     }
 
     /// <summary>An unauthenticated caller is refused with 401.</summary>

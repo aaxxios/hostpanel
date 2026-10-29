@@ -12,15 +12,14 @@ name: Branch flow
 # Marked as a required status check on main, so a pull request from anywhere else
 # cannot be merged. develop is deliberately unrestricted, which keeps the
 # main -> develop backmerge after a hotfix working.
-#
-# This mirrors ci/guard.yml in innovayse-workspace and the guard:branch-flow job
-# in innovayse-main, which do the same thing for the two repos whose merges do
-# happen on GitLab.
 
 on:
   pull_request:
     types: [opened, reopened, synchronize, edited]
     branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   guard:

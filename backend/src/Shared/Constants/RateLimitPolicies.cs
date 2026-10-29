@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Shared.Constants;
 /// <remarks>
 /// <para>
 /// Constants rather than literals because the attribute takes a string and a policy that was
-/// never registered does not fail to compile -- it throws at first request, on whichever route
+/// never registered does not fail to compile: it throws at first request, on whichever route
 /// nobody exercised before deploying.
 /// </para>
 /// <para>
@@ -18,7 +18,7 @@ namespace Innovayse.Hostpanel.Shared.Constants;
 /// </para>
 /// <para>
 /// None of these is the default. Everything is limited by the global limiter whether or not it
-/// carries an attribute -- see <c>RateLimitingExtensions</c> for why that is the load-bearing
+/// carries an attribute: see <c>RateLimitingExtensions</c> for why that is the load-bearing
 /// part on an API with fifty-eight controllers.
 /// </para>
 /// </remarks>
@@ -32,7 +32,7 @@ public static class RateLimitPolicies
     public const string Auth = "auth";
 
     /// <summary>
-    /// Endpoints where serving one request costs a call to a third-party system -- the domain
+    /// Endpoints where serving one request costs a call to a third-party system: the domain
     /// registrar, a WHOIS server. The budget protects somebody else's quota and bill, not this
     /// server's CPU.
     /// </summary>
@@ -54,7 +54,7 @@ public static class RateLimitPolicies
 
     /// <summary>
     /// Operations whose cost is measured in what they hold rather than how often they are asked
-    /// for -- report exports, a migration run. Limited by how many may be in flight at once,
+    /// for: report exports, a migration run. Limited by how many may be in flight at once,
     /// because a per-minute budget does not describe the harm.
     /// </summary>
     public const string Concurrent = "concurrent";

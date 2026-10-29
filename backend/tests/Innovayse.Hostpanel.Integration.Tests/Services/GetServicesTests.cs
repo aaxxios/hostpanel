@@ -1,20 +1,18 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Products;
+using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
 /// <summary>
 /// Integration tests for <c>GET /api/services</c>, the admin paged list of client services.
 /// </summary>
-/// <remarks>Moved from the deleted <c>ServicesEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetServicesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -29,7 +27,7 @@ public sealed class GetServicesTests(IntegrationTestFactory factory) : IClassFix
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A plain client calling GET /api/services is refused -- the policy is reseller or admin.</summary>
+    /// <summary>A plain client calling GET /api/services is refused: the policy is admin only.</summary>
     [Fact]
     public async Task GetServicesAsync_Returns403_AsPlainClientAsync()
     {
@@ -51,7 +49,26 @@ public sealed class GetServicesTests(IntegrationTestFactory factory) : IClassFix
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    /// <summary>A service that runs on a site of its own, not on a registered domain, shows that site in the admin list instead of an empty cell.</summary>
+    /// <summary>The list answers the shared page shape: items with page number, size, total count and total pages.</summary>
+    [Fact]
+    public async Task GetServicesAsync_AnswersTheSharedPageShapeAsync()
+    {
+        var client = await ServicesTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.GetAsync("/api/services?page=2&pageSize=5");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = body.RootElement;
+        root.GetProperty("items").ValueKind.Should().Be(JsonValueKind.Array);
+        root.GetProperty("pageNumber").GetInt32().Should().Be(2);
+        root.GetProperty("pageSize").GetInt32().Should().Be(5);
+        root.TryGetProperty("totalCount", out _).Should().BeTrue();
+        root.TryGetProperty("totalPages", out _).Should().BeTrue();
+        root.TryGetProperty("page", out _).Should().BeFalse();
+    }
+
+    /// <summary>A service that runs on a site of its own, not on a registered domain, shows that site in the admin list instead of an empty cell, beside its owner's name.</summary>
     [Fact]
     public async Task GetServicesAsync_ShowsTheServicesOwnDomainWhenNoRegisteredDomainIsLinkedAsync()
     {
@@ -62,13 +79,13 @@ public sealed class GetServicesTests(IntegrationTestFactory factory) : IClassFix
         {
             var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
             var (clientId, productId) = await ServicesTestSeeds.SeedClientAndProductAsync(scope, monthlyPrice: 5m);
-            var service = ClientService.Create(clientId, productId, BillingCycleNames.Monthly);
-            service.Update(
-                domain: domain, dedicatedIp: null, username: null, password: null, billingCycle: BillingCycleNames.Monthly,
-                recurringAmount: 5m, paymentMethod: null, nextRenewalAt: null, subscriptionId: null, overrideAutoSuspend: false,
-                suspendUntil: null, autoTerminateEndOfCycle: false, autoTerminateReason: null, adminNotes: null,
-                provisioningRef: null, firstPaymentAmount: 5m, promotionCode: null, terminatedAt: null, serverId: null,
-                quantity: 1, productId: null);
+            var service = ClientService.Create(clientId, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+            service.ChangeBillingTerms(new ServiceBillingTerms(
+                BillingCycle: BillingCycle.Monthly, Quantity: 1, FirstPaymentAmount: 5m,
+                RecurringAmount: 5m, NextRenewalAt: null, PaymentMethod: null,
+                PromotionCode: null, SubscriptionId: null));
+            service.RecordHostingAccount(new ServiceHostingAccount(
+                ServerId: null, Domain: domain, ProvisioningRef: null, DedicatedIp: null, Username: null, Password: null));
             context.ClientServices.Add(service);
             await context.SaveChangesAsync(CancellationToken.None);
             serviceId = service.Id;
@@ -80,5 +97,40 @@ public sealed class GetServicesTests(IntegrationTestFactory factory) : IClassFix
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var row = body.RootElement.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("id").GetInt32() == serviceId);
         row.GetProperty("domain").GetString().Should().Be(domain);
+        row.GetProperty("clientName").GetString().Should().Be("Ada Lovelace");
+        row.GetProperty("productName").GetString().Should().Be("Starter");
+    }
+
+    /// <summary>The list's price is the one the product entity resolves for the owner's currency and the service's cycle.</summary>
+    [Fact]
+    public async Task GetServicesAsync_PriceEqualsTheProductsOwnResolutionAsync()
+    {
+        var admin = await ServicesTestSeeds.AdminClientAsync(factory);
+        int serviceId;
+        int productId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            var ids = await ServicesTestSeeds.SeedClientAndProductAsync(scope, monthlyPrice: 7.25m);
+            productId = ids.ProductId;
+            var service = ClientService.Create(ids.ClientId, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+            context.ClientServices.Add(service);
+            await context.SaveChangesAsync(CancellationToken.None);
+            serviceId = service.Id;
+        }
+
+        var response = await admin.GetAsync("/api/services?page=1&pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var row = body.RootElement.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("id").GetInt32() == serviceId);
+        var currency = row.GetProperty("priceCurrency").GetString()!;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            var product = context.Products.Include(p => p.Prices).Single(p => p.Id == productId);
+            var expected = product.PriceFor(currency, BillingCycle.Monthly) ?? 0m;
+            row.GetProperty("price").GetDecimal().Should().Be(expected);
+        }
     }
 }

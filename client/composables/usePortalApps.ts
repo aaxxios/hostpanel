@@ -1,8 +1,8 @@
 /**
  * The app-launcher entries the header offers.
  *
- * The launcher points at sibling products (task tracker, ERP, webmail and so on)
- * that only exist in a deployment running them. Every URL in `runtimeConfig` has
+ * The launcher points at other web applications (task tracker, ERP, webmail and so
+ * on) that only exist in a deployment running them. Every URL in `runtimeConfig` has
  * a `*.local` development default, so "has a value" cannot decide whether an app
  * is really there; the launcher is therefore off unless an operator turns it on
  * with `portal.apps.enabled`, and each entry still has to resolve to a URL of
@@ -59,9 +59,15 @@ const APP_DEFS: ReadonlyArray<AppDefinition> = [
  *
  * @param setting Value of `portal.apps.enabled`, empty when unset.
  * @param fromConfig Value of `runtimeConfig.public.portalAppsEnabled`.
+ * @returns Whether the launcher is shown.
  */
 export const isLauncherEnabled = (setting: string, fromConfig: unknown): boolean => {
-  /** Whether a text value reads as switched on. */
+  /**
+   * Whether a text value reads as switched on.
+   *
+   * @param value Setting or config text.
+   * @returns True for `true`, `1`, `yes` or `on`, in any case.
+   */
   const truthy = (value: string): boolean => /^(true|1|yes|on)$/i.test(value.trim())
 
   if (setting) {
@@ -83,6 +89,7 @@ export const isLauncherEnabled = (setting: string, fromConfig: unknown): boolean
  * @param override Operator-set `portal.apps.<id>` value.
  * @param base URL from `runtimeConfig.public`.
  * @param path Path the app lives under, for hosts shared with other apps.
+ * @returns The URL, or empty when neither value is set.
  */
 export const resolveAppUrl = (override: string, base: string, path = ''): string => {
   if (override) {
@@ -95,12 +102,11 @@ export const resolveAppUrl = (override: string, base: string, path = ''): string
 }
 
 /**
- * Tells a sibling product which account to open as.
+ * Tells a linked application which account to open as.
  *
- * Every sibling product accepts `?authuser=<email>` and routes the visit to that
- * account's slot (or to the SSO chooser when it does not hold one). Without it a click
- * from a browser signed in to two accounts lands on the first — the platform-wide
- * regression fixed on 2026-09-18. Same rule as the portal's `withAccountHandoff`.
+ * The linked applications accept `?authuser=<email>` and open the visit as that
+ * account (or ask which account to use when they do not hold it). Without it a click
+ * from a browser signed in to two accounts lands on the first one.
  *
  * @param url Resolved app URL.
  * @param email The signed-in account, or nothing when nobody is.
@@ -125,7 +131,7 @@ export const withAccountHandoff = (url: string, email: string | undefined): stri
 /**
  * Resolves the launcher entries for the current deployment.
  *
- * @returns The entries to show — empty when the launcher is switched off.
+ * @returns The entries to show: empty when the launcher is switched off.
  */
 export const usePortalApps = () => {
   const { get } = usePortalSettings()
@@ -137,6 +143,7 @@ export const usePortalApps = () => {
    * The deployment's URL for an app, before any per-app setting overrides it.
    *
    * @param envKey Key in `runtimeConfig.public`, or empty for a settings-only app.
+   * @returns The trimmed URL, or empty when the key is empty or holds no string.
    */
   const fromEnv = (envKey: string): string => {
     if (!envKey) {

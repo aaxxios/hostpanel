@@ -1,12 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Domain.Ssh.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,9 +14,17 @@ namespace Innovayse.Hostpanel.Integration.Tests.Services;
 /// <summary><c>POST api/me/services/{id}/ssh/keys</c>: validation, routing to the right server and failure handling.</summary>
 public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>Posts a key to the add endpoint of a service.</summary>
+    /// <param name="http">The signed-in client.</param>
+    /// <param name="serviceId">The target service.</param>
+    /// <param name="publicKey">The public key text.</param>
+    /// <param name="label">The key label.</param>
+    /// <returns>The raw response.</returns>
     private static Task<HttpResponseMessage> AddAsync(HttpClient http, int serviceId, string publicKey, string label = "laptop") =>
         http.PostAsJsonAsync($"/api/me/services/{serviceId}/ssh/keys", new { label, publicKey });
 
+    /// <summary>A valid key answers 201 with a trimmed label, is installed without its comment only on the service's own server, and is written to the activity log.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task ValidKey_IsInstalledOnlyOnTheServiceServerAndAuditedAsync()
     {
@@ -42,6 +48,10 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
         (await context.ActivityLogs.AnyAsync(l => l.ClientId == clientId && l.Description.Contains("Added SSH key"))).Should().BeTrue();
     }
 
+    /// <summary>An unsupported, malformed or private key answers 400 with its code and the server is never called.</summary>
+    /// <param name="key">The rejected key text.</param>
+    /// <param name="code">The expected error code.</param>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Theory]
     [InlineData("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ me", "SSH_KEY_INVALID")]
     [InlineData("ssh-ed25519 not-base64", "SSH_KEY_INVALID")]
@@ -57,6 +67,8 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
         SshTestSeeds.Agents(factory).AgentFor(serverId).Calls.Should().BeEmpty();
     }
 
+    /// <summary>The same key blob added twice, even with another comment, answers 409 as already installed.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task SameKeyTwice_IsRefusedAsDuplicateAsync()
     {
@@ -69,6 +81,8 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
         (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.SSH_KEY_ALREADY_INSTALLED);
     }
 
+    /// <summary>Adding a key to another client's service answers 404 and the server is never called.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task AStrangersService_Returns404Async()
     {
@@ -81,14 +95,20 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
         SshTestSeeds.Agents(factory).AgentFor(serverId).Calls.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// An agent refusal because the account may not use SSH (no shell, suspended on the server, or
+    /// not eligible) answers 409 and leaves no key record.
+    /// </summary>
+    /// <param name="failure">The refusal the agent answers with.</param>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Theory]
-    [InlineData("ssh_disabled")]
-    [InlineData("account_suspended")]
-    [InlineData("account_not_eligible")]
-    public async Task AgentAccessRefusal_LeavesNoRecordAsync(string agentCode)
+    [InlineData(SshProviderFailure.SshDisabled)]
+    [InlineData(SshProviderFailure.AccountSuspended)]
+    [InlineData(SshProviderFailure.AccountNotEligible)]
+    public async Task AgentAccessRefusal_LeavesNoRecordAsync(SshProviderFailure failure)
     {
-        var (http, _, serverId, serviceId) = await SshTestSeeds.OwnerWithServiceAsync(factory, "ssh-add-noshell");
-        SshTestSeeds.Agents(factory).AgentFor(serverId).FailWith = agentCode;
+        var (http, _, serverId, serviceId) = await SshTestSeeds.OwnerWithServiceAsync(factory, $"ssh-add-noshell-{failure}");
+        SshTestSeeds.Agents(factory).AgentFor(serverId).FailWith = failure;
 
         var response = await AddAsync(http, serviceId, SshTestSeeds.Key(1));
 
@@ -97,11 +117,14 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
         (await KeysOfAsync(serviceId)).Should().BeEmpty();
     }
 
+    /// <summary>An unreachable server answers 503 and keeps an install-failed record with the failure on that server.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task UnreachableServer_KeepsAnInstallFailedRecordAsync()
     {
         var (http, _, serverId, serviceId) = await SshTestSeeds.OwnerWithServiceAsync(factory, "ssh-add-down");
-        SshTestSeeds.Agents(factory).AgentFor(serverId).FailWith = SshProviderException.Unreachable;
+        SshTestSeeds.Agents(factory).AgentFor(serverId).FailWith = SshProviderFailure.Unreachable;
+
 
         var response = await AddAsync(http, serviceId, SshTestSeeds.Key(1));
 
@@ -110,8 +133,12 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
         var record = (await KeysOfAsync(serviceId)).Single();
         record.SyncState.Should().Be(SshKeySyncState.InstallFailed);
         record.ServerId.Should().Be(serverId);
+        record.LastSyncError.Should().Be(SshProviderFailure.Unreachable);
     }
 
+
+    /// <summary>Extra body fields such as server, account or path are ignored, so the key lands only on the service account.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task ExtraBodyFields_CannotRedirectTheKeyAsync()
     {
@@ -131,6 +158,8 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
         SshTestSeeds.Agents(factory).AgentFor(serverId).KeysOf("root").Should().BeEmpty();
     }
 
+    /// <summary>An empty label answers 400 with the validation error code.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task EmptyLabel_Returns400ValidationErrorAsync()
     {
@@ -142,6 +171,9 @@ public sealed class AddMySshKeyTests(IntegrationTestFactory factory) : IClassFix
         (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 
+    /// <summary>Loads the stored key records of a service.</summary>
+    /// <param name="serviceId">The service.</param>
+    /// <returns>The key records.</returns>
     private async Task<List<SshKey>> KeysOfAsync(int serviceId)
     {
         using var scope = factory.Services.CreateScope();

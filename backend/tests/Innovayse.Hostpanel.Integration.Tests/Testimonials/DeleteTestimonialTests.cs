@@ -1,15 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Testimonials;
 
 /// <summary>
-/// Integration tests for the <c>DeleteTestimonial</c> use case — <c>DELETE /api/admin/testimonials/{id}</c>.
+/// Integration tests for the <c>DeleteTestimonial</c> use case: <c>DELETE /api/admin/testimonials/{id}</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DeleteTestimonialTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -47,5 +45,17 @@ public sealed class DeleteTestimonialTests(IntegrationTestFactory factory) : ICl
         var response = await factory.CreateClient().DeleteAsync("/api/admin/testimonials/1");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A non-positive id is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task Delete_NonPositiveId_RefusesWithValidationError()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.DeleteAsync("/api/admin/testimonials/0");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await StorefrontContentTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
     }
 }

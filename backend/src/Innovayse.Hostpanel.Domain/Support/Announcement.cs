@@ -2,9 +2,10 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Support;
+
 /// <summary>
 /// Represents an announcement that can be published and made visible to clients.
-/// Created via <see cref="Create"/> factory — no public constructor.
+/// Created via <see cref="Create"/> factory: no public constructor.
 /// </summary>
 public sealed class Announcement : BaseEntity
 {
@@ -20,10 +21,10 @@ public sealed class Announcement : BaseEntity
     /// <summary>Gets the UTC timestamp when this announcement was created.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Announcement() { }
 
-    /// <summary>Internal constructor — use <see cref="Create"/> factory instead.</summary>
+    /// <summary>Internal constructor: use <see cref="Create"/> factory instead.</summary>
     /// <param name="title">The announcement title.</param>
     /// <param name="content">The announcement body content.</param>
     /// <param name="isPublished">Whether the announcement should be immediately published.</param>
@@ -32,7 +33,6 @@ public sealed class Announcement : BaseEntity
         Title = title;
         Content = content;
         IsPublished = isPublished;
-        CreatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <summary>

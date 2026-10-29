@@ -1,24 +1,27 @@
 using Innovayse.Hostpanel.Application.Clients.Common;
-using Innovayse.Hostpanel.Application.Clients.Queries.GetMyProfile;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
-using Wolverine;
+using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Clients.Queries.GetMyContacts;
 
-/// <summary>
-/// Reads the caller's contacts from their profile, which already carries them -- see
-/// <see cref="ClientDto.Contacts"/> -- rather than querying the table a second way.
-/// </summary>
+/// <summary>Reads the additional contacts of the account the caller acts for, owner or linked user.</summary>
 public sealed class GetMyContactsHandler
 {
-    /// <summary>Wolverine bus used to reach the profile read.</summary>
-    private readonly IMessageBus _bus;
+    /// <summary>The module's data context, for the account's contacts.</summary>
+    private readonly IHostpanelDbContext _context;
+
+    /// <summary>Resolves the account the caller acts for, owner or linked user.</summary>
+    private readonly IClientAccess _access;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="bus">Wolverine bus used to reach the profile read.</param>
-    public GetMyContactsHandler(IMessageBus bus)
+    /// <param name="context">The module's data context, for the account's contacts.</param>
+    /// <param name="access">Resolves the account the caller acts for, owner or linked user.</param>
+    public GetMyContactsHandler(IHostpanelDbContext context, IClientAccess access)
     {
-        _bus = bus;
+        _context = context;
+        _access = access;
     }
 
     /// <summary>Handles <see cref="GetMyContactsQuery"/>.</summary>
@@ -31,12 +34,19 @@ public sealed class GetMyContactsHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var profile = await _bus.InvokeAsync<Result<ClientDto>>(new GetMyProfileQuery(), ct);
-        if (profile.IsFailure)
+        var clientId = await _access.RequireClientIdAsync(ct);
+        if (clientId.IsFailure)
         {
-            return Result<IReadOnlyList<ContactDto>>.FailureCode(profile.ErrorCode!);
+            return Result<IReadOnlyList<ContactDto>>.FailureCode(clientId.ErrorCode!);
         }
 
-        return Result<IReadOnlyList<ContactDto>>.Success(profile.Value!.Contacts);
+        // Read-only, so no tracking is needed.
+        var contacts = await _context.Contacts
+            .AsNoTracking()
+            .Where(c => c.ClientId == clientId.Value)
+            .OrderBy(c => c.Id)
+            .ToListAsync(ct);
+
+        return Result<IReadOnlyList<ContactDto>>.Success(contacts.Select(c => c.ToContactDto()).ToList());
     }
 }

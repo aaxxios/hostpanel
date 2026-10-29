@@ -12,13 +12,18 @@ public sealed class ListMigrationJobsHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>
     ///     Initializes the handler.
     /// </summary>
     /// <param name="context">The module's data context.</param>
-    public ListMigrationJobsHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public ListMigrationJobsHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>
@@ -37,6 +42,7 @@ public sealed class ListMigrationJobsHandler
             .OrderByDescending(j => j.CreatedAt)
             .ToListAsync(ct);
 
-        return Result<IReadOnlyList<MigrationJobDto>>.Success(jobs.Select(j => j.ToDto()).ToList());
+        var now = _clock.UtcNow;
+        return Result<IReadOnlyList<MigrationJobDto>>.Success(jobs.Select(j => j.ToDto(now)).ToList());
     }
 }

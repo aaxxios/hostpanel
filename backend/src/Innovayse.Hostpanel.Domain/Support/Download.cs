@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Support;
+
 /// <summary>
 /// Represents a downloadable file that can be associated with a category
 /// and optionally restricted to authenticated clients or linked to products.
@@ -38,7 +39,7 @@ public sealed class Download : BaseEntity
     /// <summary>Gets the UTC timestamp when this download was created.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Download() { }
 
     /// <summary>
@@ -75,7 +76,6 @@ public sealed class Download : BaseEntity
             ClientsOnly = clientsOnly,
             ProductDownload = productDownload,
             IsHidden = isHidden,
-            CreatedAt = DateTimeOffset.UtcNow,
         };
     }
 

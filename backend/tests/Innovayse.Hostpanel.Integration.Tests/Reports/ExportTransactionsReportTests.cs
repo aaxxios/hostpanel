@@ -1,10 +1,7 @@
 using System.Net;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
@@ -12,11 +9,10 @@ namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 /// <c>GET /api/reports/transactions/export</c> against Postgres: the transactions report as a
 /// CSV file.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingRemainderEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ExportTransactionsReportTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>The Transactions CSV export answers with the exact pre-conversion headers, content type and filename.</summary>
+    /// <summary>The Transactions CSV export answers with the expected headers, content type and filename.</summary>
     [Fact]
     public async Task ReturnsTheExpectedCsvShape()
     {
@@ -44,6 +40,36 @@ public sealed class ExportTransactionsReportTests(IntegrationTestFactory factory
         csv.Should().Contain(marker);
     }
 
+    /// <summary>
+    /// A row is written with the transaction's own currency and invoice id, and a description that
+    /// would run as a spreadsheet formula is defused.
+    /// </summary>
+    [Fact]
+    public async Task WritesTheCurrencyAndDefusesAFormula()
+    {
+        var marker = $"ExportTxnCur{Guid.NewGuid():N}";
+        var clientId = await ReportsTestSeeds.CreateClientAsync(factory, marker);
+        var invoiceId = await ReportsTestSeeds.CreatePaidInvoiceAsync(factory, clientId, 0m, 9m);
+        var reference = $"tx-{Guid.NewGuid():N}";
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Transactions.Add(Transaction.Create(
+                clientId, DateTimeOffset.UtcNow, "=HYPERLINK(\"x\")", reference,
+                invoiceId: invoiceId, paymentMethod: "manual", amountIn: 9m, amountOut: 0m, fees: 0m, addedToCredit: false, currency: "EUR"));
+            await db.SaveChangesAsync();
+        }
+
+        var client = await ReportsTestSeeds.AdminClientAsync(factory);
+        var response = await client.GetAsync("/api/reports/transactions/export");
+
+        var csv = await response.Content.ReadAsStringAsync();
+        var line = csv.Split("\r\n").Single(l => l.Contains(reference, StringComparison.Ordinal));
+        line.Should().Contain(",EUR,manual,");
+        line.Should().Contain("\"'=HYPERLINK(\"\"x\"\")\"");
+        line.Should().Contain($",{invoiceId},{reference},9");
+    }
+
     /// <summary>The route is not for anonymous callers.</summary>
     [Fact]
     public async Task RefusesAnonymous()
@@ -53,7 +79,7 @@ public sealed class ExportTransactionsReportTests(IntegrationTestFactory factory
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

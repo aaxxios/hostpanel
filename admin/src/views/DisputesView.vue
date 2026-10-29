@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Disputes — payment disputes raised by cardholders.
+ * Disputes: payment disputes raised by cardholders.
  *
  * The feature is not built yet, so the screen says so instead of showing records that do not exist.
  */

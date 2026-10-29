@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Domains list view — paged, searchable table of all domain registrations.
+ * Domains list view: paged, searchable table of all domain registrations.
  *
  * Shows domain name, client, status, expiry date, renewal price and auto-renew flag. A domain
  * name opens its detail page under the owning client. Reads `stores/domains`; a refused load
@@ -8,11 +8,10 @@
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiLink from '@/components/ui/UiLink.vue'
@@ -37,11 +36,6 @@ import { SEARCH_DEBOUNCE_MS } from '@/lib/limits'
 import { ClientSection, clientItemPath, clientPath } from '@/lib/routes'
 
 const { t } = useI18n()
-
-
-/** Fallback text for fields the API leaves unresolved. */
-
-const { clientLabel } = useFallbackLabels()
 
 const store = useDomainsStore()
 
@@ -108,9 +102,13 @@ onUnmounted(() => {
       </template>
     </UiInput>
 
-    <UiAlert v-if="store.error" variant="danger" data-testid="domains-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="domains-error"
+      @retry="store.fetchAll()"
+    />
 
     <UiCard v-else-if="hasRows || store.loading">
       <UiTable density="comfortable" :loading="store.loading && !hasRows" :colspan="7" data-testid="domains-table">
@@ -144,7 +142,7 @@ onUnmounted(() => {
             </UiTableCell>
             <UiTableCell>
               <UiLink variant="link" :to="clientPath(domain.clientId)" :data-testid="`domains-client-${domain.id}`">
-                {{ clientLabel(domain.clientName, domain.clientId) }}
+                {{ domain.clientName }}
               </UiLink>
             </UiTableCell>
             <UiTableCell>

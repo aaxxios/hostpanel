@@ -3,8 +3,10 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.SetAutoRenew;
 
@@ -13,24 +15,27 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.SetAutoRenew;
 /// </summary>
 public sealed class SetAutoRenewHandler
 {
-    /// <summary>The registrar provider the auto-renew flag is written to.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
 
     /// <summary>The data context the domain aggregate is loaded, mutated and saved through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work the aggregate is saved through.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>Logger that records the registrar's refusal code for operators.</summary>
+    private readonly ILogger<SetAutoRenewHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="registrar">The registrar provider the auto-renew flag is written to.</param>
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
     /// <param name="context">The data context the domain aggregate is loaded, mutated and saved through.</param>
-    /// <param name="uow">Unit of work the aggregate is saved through.</param>
-    public SetAutoRenewHandler(IRegistrarProvider registrar, IHostpanelDbContext context, IUnitOfWork uow)
+    /// <param name="logger">Logger that records the registrar's refusal code for operators.</param>
+    public SetAutoRenewHandler(
+        RegistrarProviderResolver registrars,
+        IHostpanelDbContext context,
+        ILogger<SetAutoRenewHandler> logger)
     {
-        _registrar = registrar;
+        _registrars = registrars;
         _context = context;
-        _uow = uow;
+        _logger = logger;
     }
 
     /// <summary>
@@ -54,18 +59,21 @@ public sealed class SetAutoRenewHandler
 
         if (domain.RegistrarRef is not null)
         {
-            var result = await _registrar.SetAutoRenewAsync(domain.Name, domain.RegistrarRef, cmd.Value, ct);
+            var registrar = await _registrars.ResolveAsync(domain, ct);
+            var result = await registrar.SetAutoRenewAsync(
+                new RegistrarFlagChange(new DomainRef(domain.Name, domain.RegistrarRef), cmd.Value), ct);
 
             if (!result.Success)
             {
-                return Result.Failure(
-                    $"Registrar failed to update auto-renew for '{domain.Name}': {result.ErrorMessage}",
-                    HostpanelErrorCodes.DOMAIN_AUTO_RENEW_UPSTREAM_FAILED);
+                _logger.LogWarning(
+                    "Registrar failed to update auto-renew for '{DomainName}': {Reason}",
+                    domain.Name, result.ErrorCode);
+                return Result.FailureCode(result.ToFailureCode(HostpanelErrorCodes.DOMAIN_AUTO_RENEW_UPSTREAM_FAILED));
             }
         }
 
         domain.SetAutoRenew(cmd.Value);
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
         return Result.Success();
     }
 }

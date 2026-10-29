@@ -8,16 +8,16 @@ namespace Innovayse.Hostpanel.Domain.Locations;
 /// </summary>
 public sealed class ServerLocationTranslation : BaseEntity
 {
-    /// <summary>Longest a locale code may be — matches the <c>ServerLocationTranslations.Locale</c> column.</summary>
+    /// <summary>Longest a locale code may be: matches the <c>ServerLocationTranslations.Locale</c> column.</summary>
     public const int LocaleMaxLength = 10;
 
-    /// <summary>Longest Name may be — matches the <c>ServerLocationTranslations.Name</c> column.</summary>
+    /// <summary>Longest Name may be: matches the <c>ServerLocationTranslations.Name</c> column.</summary>
     public const int NameMaxLength = 120;
 
-    /// <summary>Longest City may be — matches the <c>ServerLocationTranslations.City</c> column.</summary>
+    /// <summary>Longest City may be: matches the <c>ServerLocationTranslations.City</c> column.</summary>
     public const int CityMaxLength = 120;
 
-    /// <summary>Longest LatencyNote may be — matches the <c>ServerLocationTranslations.LatencyNote</c> column.</summary>
+    /// <summary>Longest LatencyNote may be: matches the <c>ServerLocationTranslations.LatencyNote</c> column.</summary>
     public const int LatencyNoteMaxLength = 200;
 
     /// <summary>Gets the FK to the parent <see cref="ServerLocation"/>.</summary>
@@ -35,7 +35,7 @@ public sealed class ServerLocationTranslation : BaseEntity
     /// <summary>Gets the short latency note in this locale, or <c>null</c>.</summary>
     public string? LatencyNote { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private ServerLocationTranslation() { }
 
     /// <summary>

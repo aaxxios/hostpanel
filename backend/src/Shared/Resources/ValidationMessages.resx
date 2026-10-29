@@ -106,14 +106,13 @@
   <data name="Forbidden" xml:space="preserve">
     <value>Forbidden</value>
   </data>
+  <data name="CsrfHeaderMissingDetail" xml:space="preserve">
+    <value>This request must be sent from the panel itself. Reload the page and try again.</value>
+  </data>
   <data name="ForbiddenDetail" xml:space="preserve">
     <value>You do not have permission to perform this action.</value>
   </data>
   <data name="InvalidFieldValue" xml:space="preserve">
     <value>This value is not valid.</value>
-  </data>
-  <data name="RateLimited" xml:space="preserve">
-    <value>Too many requests. Please wait a moment before trying again.</value>
-    <comment>RATE_LIMITED. Wording reused from client/locales/*/error.json -&gt; error.rateLimited.</comment>
   </data>
 </root>

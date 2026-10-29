@@ -1,8 +1,8 @@
 /**
- * Tests for the knowledge-base landing page: categories and the popular list read through the
+ * Tests for the knowledge-base landing page: categories and the landing article list read through the
  * content store, and the search that swaps them for results and writes `?q=`.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import { mountPage, registerPageComponents, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
@@ -33,22 +33,22 @@ const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() }
 
 /** Two categories, one holding a single article. */
 const CATEGORIES = [
-  { id: 1, name: 'Billing', articlecount: 4 },
-  { id: 2, name: 'Domains', articlecount: 1 },
+  { name: 'Billing', articleCount: 4 },
+  { name: 'Domains', articleCount: 1 },
 ]
 
-/** Articles the popular list and the search both return. */
+/** Articles the landing list and the search both return. */
 const ARTICLES = {
   items: [
-    { id: 30, title: 'Fewer views', views: 5 },
-    { id: 31, title: 'Most views', views: 90, excerpt: 'Start here' },
+    { id: 31, title: 'Getting started', excerpt: 'Start here', category: 'General' },
+    { id: 30, title: 'Next steps', excerpt: '', category: 'General' },
   ],
 }
 
 /**
  * Answers the content endpoints with the fixtures above.
  *
- * @param articles - What the article endpoint returns (popular list and search alike).
+ * @param articles - What the article endpoint returns (landing list and search alike).
  */
 const answerWith = (articles: { items: unknown[] } = ARTICLES): void => {
   api.fetchKbCategories.mockResolvedValue(CATEGORIES)
@@ -62,6 +62,12 @@ describe('pages/knowledgebase/index', () => {
     stubPublicPageRuntime()
     vi.stubGlobal('useRouter', () => router)
     registerPageComponents({ KbArticleRow })
+  })
+
+  // One test swaps `useAsyncData` for a read that stays pending; undo it so the next test gets the
+  // setup file's stand-in again (it reinstalls the auto-imports before every test).
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('shows the hero and the search box with its placeholder', async () => {
@@ -78,19 +84,19 @@ describe('pages/knowledgebase/index', () => {
 
     const wrapper = await mountPage(Page)
 
-    const billing = wrapper.find('[data-testid="kb-category-1"]')
-    expect(billing.attributes('href')).toBe('/en/knowledgebase/category/1')
+    const billing = wrapper.find('[data-testid="kb-category-card-billing"]')
+    expect(billing.attributes('href')).toBe('/en/knowledgebase/category/billing')
     expect(billing.text()).toContain('Billing')
     expect(billing.text()).toContain('4 kb.articles')
-    expect(wrapper.find('[data-testid="kb-category-2"]').text()).toContain('1 kb.article')
+    expect(wrapper.find('[data-testid="kb-category-card-domains"]').text()).toContain('1 kb.article')
   })
 
-  it('lists the popular articles, most viewed first', async () => {
+  it('lists the first articles in the order the backend sent them', async () => {
     answerWith()
 
     const wrapper = await mountPage(Page)
 
-    const rows = wrapper.findAll('[data-testid="kb-popular"] [data-testid^="kb-article-"][href]')
+    const rows = wrapper.findAll('[data-testid="kb-articles"] [data-testid^="kb-article-"][href]')
     expect(rows.map(row => row.attributes('data-testid'))).toEqual(['kb-article-31', 'kb-article-30'])
   })
 
@@ -101,7 +107,7 @@ describe('pages/knowledgebase/index', () => {
     const wrapper = await mountPage(Page)
 
     expect(wrapper.find('[data-testid="kb-categories"]').text()).toContain('kb.empty')
-    expect(wrapper.find('[data-testid="kb-popular"]').text()).toContain('kb.empty')
+    expect(wrapper.find('[data-testid="kb-articles"]').text()).toContain('kb.empty')
   })
 
   it('runs a search, writes it to the URL and shows the results instead of the landing view', async () => {
@@ -179,6 +185,23 @@ describe('pages/knowledgebase/index', () => {
     const wrapper = await mountPage(Page)
 
     expect(wrapper.find('[data-testid="kb-categories"]').findAll('[data-testid="ui-skeleton"]')).toHaveLength(4)
-    expect(wrapper.find('[data-testid="kb-popular"]').findAll('[data-testid="ui-skeleton"]')).toHaveLength(5)
+    expect(wrapper.find('[data-testid="kb-articles"]').findAll('[data-testid="ui-skeleton"]')).toHaveLength(5)
+  })
+  it('shows the read failure with a retry instead of the empty text, and reads again on retry', async () => {
+    api.fetchKbCategories.mockRejectedValueOnce({ data: { detail: 'Content is unavailable.' } })
+    api.fetchKbArticles.mockResolvedValueOnce(ARTICLES)
+
+    const wrapper = await mountPage(Page)
+
+    expect(wrapper.find('[data-testid="kb-load-error"]').text()).toContain('Content is unavailable.')
+    expect(wrapper.text()).not.toContain('kb.empty')
+
+    answerWith()
+    await wrapper.find('[data-testid="kb-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(api.fetchKbCategories).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[data-testid="kb-load-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="kb-categories"]').exists()).toBe(true)
   })
 })

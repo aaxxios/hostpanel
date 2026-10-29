@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Application.Migration.Importers.Enums;
 
 /// <summary>
 /// The outcome of importing one plugin record: created, deliberately left alone, or errored.
-/// Shared by every <see cref="IMigrationEntityImporter"/> and by <see cref="MigrationLogWriter"/>,
+/// Shared by every <see cref="IMigrationEntityImporter"/> and by <see cref="MigrationRecordRunner"/>,
 /// which maps it onto the persisted <see cref="Domain.Migration.Enums.MigrationLogAction"/>.
 /// </summary>
 public enum ImportOutcome

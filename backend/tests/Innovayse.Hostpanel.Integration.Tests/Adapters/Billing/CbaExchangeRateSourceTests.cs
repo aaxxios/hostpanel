@@ -1,10 +1,12 @@
 using System.Net;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Billing.Currencies.Common;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Infrastructure.Currency;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Shared.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Billing;
+
 /// <summary>
 /// The Central Bank of Armenia publishes "1 unit = X AMD" as strings; the source turns that
 /// into "1 unit = X base" for whatever the base is, without touching the network.
@@ -41,15 +43,22 @@ public sealed class CbaExchangeRateSourceTests : IAsyncLifetime
     /// <summary>Builds the source over a client aimed at the stub server.</summary>
     /// <returns>The source under test.</returns>
     private CbaExchangeRateSource Source() =>
-        new(new HttpClient { BaseAddress = http.BaseAddress });
+        new(new HttpClient { BaseAddress = http.BaseAddress }, NullLogger<CbaExchangeRateSource>.Instance);
+
+    /// <summary>Asks the source under test for a set of codes against a base.</summary>
+    /// <param name="baseCode">The base currency.</param>
+    /// <param name="codes">The codes to quote.</param>
+    /// <returns>The source's answer.</returns>
+    private Task<Result<ExchangeRateQuotes>> QuoteAsync(string baseCode, params string[] codes) =>
+        Source().QuoteAsync(new ExchangeRateLookup(baseCode, codes), CancellationToken.None);
 
     /// <summary>With base USD, one AMD is 1/363.28 USD and one EUR is 421.11/363.28 USD.</summary>
     [Fact]
-    public async Task RatesToAsync_ConvertsQuotesToTheBase()
+    public async Task QuoteAsync_ConvertsQuotesToTheBase()
     {
         http.Enqueue(Quotes);
 
-        var rates = await Source().RatesToAsync("USD", ["AMD", "EUR"], CancellationToken.None);
+        var rates = (await QuoteAsync("USD", "AMD", "EUR")).Value!.RatesToBase;
 
         rates.Should().HaveCount(2);
         rates["AMD"].Should().BeApproximately(1m / AmdPerUsd, 0.0000001m);
@@ -59,46 +68,75 @@ public sealed class CbaExchangeRateSourceTests : IAsyncLifetime
 
     /// <summary>With base AMD, the quotes are the answer as published.</summary>
     [Fact]
-    public async Task RatesToAsync_WithAmdBaseReadsQuotesDirectly()
+    public async Task QuoteAsync_WithAmdBaseReadsQuotesDirectly()
     {
         http.Enqueue(Quotes);
 
-        var rates = await Source().RatesToAsync("AMD", ["USD", "EUR"], CancellationToken.None);
+        var rates = (await QuoteAsync("AMD", "USD", "EUR")).Value!.RatesToBase;
 
         rates["USD"].Should().Be(AmdPerUsd);
         rates["EUR"].Should().Be(AmdPerEur);
     }
 
+    /// <summary>
+    /// A quote given per 100 units is divided down to one unit: "100 JPY = 243 AMD" is 2.43 AMD per
+    /// yen, never 243.
+    /// </summary>
+    [Fact]
+    public async Task QuoteAsync_HonoursTheQuotedUnitAmount()
+    {
+        http.Enqueue("""{"USD":"363.28","JPY":{"rate":"243","amount":100},"IRR":{"Rate":"0.95","Amount":"10"}}""");
+
+        var rates = (await QuoteAsync("AMD", "JPY", "IRR", "USD")).Value!.RatesToBase;
+
+        rates["JPY"].Should().Be(2.43m);
+        rates["IRR"].Should().Be(0.095m);
+        rates["USD"].Should().Be(AmdPerUsd);
+    }
+
     /// <summary>A code the bank does not quote, or quotes as null, is simply absent from the answer.</summary>
     [Fact]
-    public async Task RatesToAsync_OmitsUnquotedCodes()
+    public async Task QuoteAsync_OmitsUnquotedCodes()
     {
         http.Enqueue(Quotes);
 
-        var rates = await Source().RatesToAsync("usd", ["ars", "zzz", "gbp"], CancellationToken.None);
+        var rates = (await QuoteAsync("usd", "ars", "zzz", "gbp")).Value!.RatesToBase;
 
         rates.Keys.Should().BeEquivalentTo(["GBP"]);
     }
 
     /// <summary>A base the bank does not quote cannot anchor a conversion; the whole call refuses.</summary>
     [Fact]
-    public async Task RatesToAsync_RefusesAnUnquotedBase()
+    public async Task QuoteAsync_RefusesAnUnquotedBase()
     {
         http.Enqueue(Quotes);
 
-        var act = () => Source().RatesToAsync("ZZZ", ["USD"], CancellationToken.None);
+        var result = await QuoteAsync("ZZZ", "USD");
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*ZZZ*");
+        result.IsFailure.Should().BeTrue();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.EXCHANGE_RATE_BASE_NOT_QUOTED);
     }
 
-    /// <summary>A non-success answer is an error, not an empty rate table.</summary>
+    /// <summary>A non-success answer is the source being unavailable, not an empty rate table.</summary>
     [Fact]
-    public async Task RatesToAsync_ThrowsOnAFailedResponse()
+    public async Task QuoteAsync_FailedResponseIsUnavailable()
     {
         http.Enqueue(HttpStatusCode.BadGateway, "down");
 
-        var act = () => Source().RatesToAsync("USD", ["AMD"], CancellationToken.None);
+        var result = await QuoteAsync("USD", "AMD");
 
-        await act.Should().ThrowAsync<HttpRequestException>();
+        result.IsFailure.Should().BeTrue();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.EXCHANGE_RATE_SOURCE_UNAVAILABLE);
+    }
+
+    /// <summary>A body that is not the published object is the source being unavailable too.</summary>
+    [Fact]
+    public async Task QuoteAsync_UnreadableBodyIsUnavailable()
+    {
+        http.Enqueue("<html>maintenance</html>");
+
+        var result = await QuoteAsync("USD", "AMD");
+
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.EXCHANGE_RATE_SOURCE_UNAVAILABLE);
     }
 }

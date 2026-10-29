@@ -1,6 +1,6 @@
 /**
- * Tests of SalesTaxView: it mounts, shows its title and data, and shows the refusal sentence when the API
- * refuses.
+ * Tests of SalesTaxView: it mounts, shows its title, the totals per currency and the rows in their
+ * own currency, and shows the refusal sentence with Retry when the API refuses.
  */
 import { vi } from 'vitest'
 import SalesTaxView from '@/views/SalesTaxView.vue'
@@ -14,9 +14,13 @@ runReportCase({
   view: SalesTaxView,
   routes: {
     'GET /reports/sales-tax': () => json({
-      totalInvoices: 1, totalInvoiced: 11, taxLevel1Liability: 1, taxLevel2Liability: 0,
-      rows: [{ id: 3, clientName: 'Beta', invoiceDate: '2024-01-01', datePaid: null, subTotal: 10, tax: 1, credit: 0, total: 11 }],
+      totals: [{ currency: 'EUR', totalInvoices: 1, totalInvoiced: 11, taxLiability: 1 }],
+      rows: {
+        items: [{ id: 3, clientName: 'Beta', invoiceDate: '2024-01-01', datePaid: '2024-01-02', currency: 'EUR', subTotal: 10, tax: 1, credit: 0, total: 11 }],
+        pageNumber: 1, pageSize: 50, totalCount: 1, totalPages: 1,
+      },
     }),
   },
-  expected: ['Sales Tax Liability', 'Beta', '$11.00 USD'],
+  expected: ['Sales Tax Liability', 'Beta', '€11.00', 'EUR'],
+  retryable: true,
 })

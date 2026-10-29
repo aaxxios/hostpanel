@@ -108,6 +108,7 @@ describe('ProjectsView', () => {
     await vi.waitFor(() => {
       expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
     })
+    expect(wrapper.get('[data-testid="projects-action-error"]').text()).toBe('Record deleted.')
   })
 
   it('shows the API sentence when a delete is refused', async () => {

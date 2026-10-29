@@ -1,12 +1,16 @@
+using Innovayse.Hostpanel.Application.Billing.Commands.InvoiceClientBillableItems;
+using Innovayse.Hostpanel.Application.Billing.Extensions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Shared.Infrastructure;
+using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Wolverine;
+
 namespace Innovayse.Hostpanel.Application.Billing.Commands.ProcessBillableItemsCron;
+
 /// <summary>
 /// Handles <see cref="ProcessBillableItemsCronCommand"/> by invoicing all billable items
 /// that are due for automatic processing, including recurring items.
@@ -14,45 +18,39 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.ProcessBillableItemsC
 /// </summary>
 public sealed class ProcessBillableItemsCronHandler
 {
-    /// <summary>Hour (UTC) at which this job runs daily.</summary>
-    private const int CronHour = 6;
-
-    /// <summary>Default payment term in days for auto-generated invoices.</summary>
-    private const int PaymentTermDays = 14;
-
-    /// <summary>The module's data context, for the billable items due and the invoices created for them.</summary>
+    /// <summary>The module's data context, for the clients that have billable items due.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>The currency each invoiced client is billed in, stamped on their invoice.</summary>
-    private readonly IPayerCurrencyResolver _payerCurrency;
-
-    /// <summary>Unit of work.</summary>
-    private readonly IUnitOfWork _uow;
-
-    /// <summary>Message bus, for re-scheduling the job.</summary>
+    /// <summary>Message bus, for the per-client invoicing commands.</summary>
     private readonly IMessageBus _bus;
+
+    /// <summary>Runs the passes under their lease and schedules the next run.</summary>
+    private readonly RecurringJobs _jobs;
 
     /// <summary>Structured logger.</summary>
     private readonly ILogger<ProcessBillableItemsCronHandler> _logger;
 
+    /// <summary>The clock every moment in this handler is read from.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
-    /// <param name="context">The module's data context, for the billable items due and the invoices created for them.</param>
-    /// <param name="payerCurrency">The currency each invoiced client is billed in, stamped on their invoice.</param>
-    /// <param name="uow">Unit of work.</param>
-    /// <param name="bus">Message bus, for re-scheduling the job.</param>
+    /// <param name="context">The module's data context, for the clients that have billable items due.</param>
+    /// <param name="bus">Message bus, for the per-client invoicing commands.</param>
+    /// <param name="jobs">Runs the passes under their lease and schedules the next run.</param>
     /// <param name="logger">Structured logger.</param>
+    /// <param name="clock">The clock the current moment is read from.</param>
     public ProcessBillableItemsCronHandler(
         IHostpanelDbContext context,
-        IPayerCurrencyResolver payerCurrency,
-        IUnitOfWork uow,
         IMessageBus bus,
-        ILogger<ProcessBillableItemsCronHandler> logger)
+        RecurringJobs jobs,
+        ILogger<ProcessBillableItemsCronHandler> logger,
+        IClock clock)
     {
         _context = context;
-        _payerCurrency = payerCurrency;
-        _uow = uow;
         _bus = bus;
+        _jobs = jobs;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>
@@ -63,115 +61,70 @@ public sealed class ProcessBillableItemsCronHandler
     public Task HandleAsync(ProcessBillableItemsCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
+        var now = _clock.UtcNow;
 
-        return RecurringJob.RunAsync(
-            nameof(ProcessBillableItemsCronCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+        return _jobs.RunAsync<ProcessBillableItemsCronCommand>(
+            _jobs.Schedules.ProcessBillableItems, () => RunAsync(now, ct), ct);
     }
 
-    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJobs"/>.</summary>
+    /// <param name="now">The moment this pass started.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task.</returns>
-    private async Task RunAsync(CancellationToken ct)
+    private async Task RunAsync(DateTimeOffset now, CancellationToken ct)
     {
-        await ProcessCronItemsAsync(ct);
-        await ProcessRecurringItemsAsync(ct);
-    }
-
-    /// <summary>Schedules the next pass.</summary>
-    /// <returns>A task.</returns>
-    private async Task ScheduleNextAsync()
-    {
-        var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
-        await _bus.ScheduleAsync(new ProcessBillableItemsCronCommand(), nextRun);
-        _logger.LogInformation("ProcessBillableItemsCronCommand re-scheduled for {NextRun:u}.", nextRun);
+        await InvoiceDueClientsAsync(BillableItemType.OneTime, now, ct);
+        await InvoiceDueClientsAsync(BillableItemType.Recurring, now, ct);
     }
 
     /// <summary>
-    /// Invoices all one-time cron items (InvoiceOnNextCron, InvoiceForDueDate with DueDate &lt;= now).
-    /// Groups items by client and creates one invoice per client.
+    /// Walks the clients with due items of one type in batches of ids (keyset on the client id, so a
+    /// client that fails is not read again this pass) and dispatches one command per client. Each
+    /// command runs in its own message scope and data context: one client's failure is logged and
+    /// leaves nothing tracked that could fail the next client.
     /// </summary>
+    /// <param name="type">Whether the one-time or the recurring items are invoiced.</param>
+    /// <param name="now">The moment this pass started.</param>
     /// <param name="ct">Cancellation token.</param>
-    private async Task ProcessCronItemsAsync(CancellationToken ct)
+    /// <returns>A task.</returns>
+    private async Task InvoiceDueClientsAsync(BillableItemType type, DateTimeOffset now, CancellationToken ct)
     {
-        // Was IBillableItemRepository.GetDueForCronInvoicingAsync. Tracked, not AsNoTracking: each
-        // matching item has MarkInvoiced() called on it below and is saved in this same pass.
-        var now = DateTimeOffset.UtcNow;
-        var items = await _context.BillableItems
-            .Where(x => !x.IsInvoiced && x.Type == BillableItemType.OneTime && x.NextDueDate <= now)
-            .ToListAsync(ct);
-        if (items.Count == 0)
+        var lastClientId = 0;
+        while (true)
         {
-            return;
-        }
-
-        var grouped = items.GroupBy(i => i.ClientId);
-
-        foreach (var group in grouped)
-        {
-            var clientId = group.Key;
-            var currency = (await _payerCurrency.ForClientAsync(clientId, ct)).Code;
-            var invoice = Invoice.CreateForBillableItems(
-                clientId, DateTimeOffset.UtcNow.AddDays(PaymentTermDays), currency, group);
-
-            _context.Invoices.Add(invoice);
-            await _uow.SaveChangesAsync(ct);
-
-            foreach (var item in group)
+            var clientIds = await _context.BillableItems.AsNoTracking()
+                .DueForInvoicing(type, now)
+                .Where(x => x.ClientId > lastClientId)
+                .Select(x => x.ClientId)
+                .Distinct()
+                .OrderBy(id => id)
+                .Take(JobBatch.Size)
+                .ToListAsync(ct);
+            if (clientIds.Count == 0)
             {
-                item.MarkInvoiced(invoice.Id);
+                return;
             }
 
-            await _uow.SaveChangesAsync(ct);
-
-            _logger.LogInformation(
-                "Created invoice {InvoiceId} for client {ClientId} with {Count} cron billable items.",
-                invoice.Id, clientId, group.Count());
-        }
-    }
-
-    /// <summary>
-    /// Processes recurring billable items whose due date has arrived.
-    /// Creates an invoice for each recurring item, increments the invoice count,
-    /// advances the due date, and resets for the next cycle.
-    /// </summary>
-    /// <param name="ct">Cancellation token.</param>
-    private async Task ProcessRecurringItemsAsync(CancellationToken ct)
-    {
-        // Was IBillableItemRepository.GetDueForRecurrenceAsync. Tracked, not AsNoTracking: each
-        // matching item has MarkInvoiced()/AdvanceDueDate() called on it below and is saved in
-        // this same pass.
-        var now = DateTimeOffset.UtcNow;
-        var items = await _context.BillableItems
-            .Where(x => x.Type == BillableItemType.Recurring && x.NextDueDate != null && x.NextDueDate <= now)
-            .ToListAsync(ct);
-        if (items.Count == 0)
-        {
-            return;
-        }
-
-        var grouped = items.GroupBy(i => i.ClientId);
-
-        foreach (var group in grouped)
-        {
-            var clientId = group.Key;
-            var currency = (await _payerCurrency.ForClientAsync(clientId, ct)).Code;
-            var invoice = Invoice.CreateForBillableItems(
-                clientId, DateTimeOffset.UtcNow.AddDays(PaymentTermDays), currency, group);
-
-            _context.Invoices.Add(invoice);
-            await _uow.SaveChangesAsync(ct);
-
-            foreach (var item in group)
+            foreach (var clientId in clientIds)
             {
-                item.MarkInvoiced(invoice.Id);
-                item.AdvanceDueDate();
+                try
+                {
+                    var outcome = await _bus.InvokeAsync<Result>(new InvoiceClientBillableItemsCommand(clientId, type), ct);
+                    if (outcome.IsFailure)
+                    {
+                        _logger.LogWarning(
+                            "Invoicing {Type} billable items of client {ClientId} was refused ({ErrorCode}); the next run retries it.",
+                            type, clientId, outcome.ErrorCode);
+                    }
+                }
+                catch (Exception ex) when (JobFailure.IsFailure(ex, ct))
+                {
+                    _logger.LogError(
+                        ex, "Invoicing {Type} billable items of client {ClientId} failed; the next run retries it.", type, clientId);
+                }
             }
 
-            await _uow.SaveChangesAsync(ct);
-
-            _logger.LogInformation(
-                "Created recurring invoice {InvoiceId} for client {ClientId} with {Count} items.",
-                invoice.Id, clientId, group.Count());
+            lastClientId = clientIds[^1];
         }
     }
 }

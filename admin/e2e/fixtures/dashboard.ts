@@ -11,4 +11,5 @@ export const dashboardStats: DashboardStats = {
   overdueInvoices: 5,
   openTickets: 11,
   totalClients: 64,
+  currency: 'USD',
 }

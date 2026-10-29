@@ -1,5 +1,5 @@
 /**
- * `npm run audit` — prints the conformance numbers of the admin (spec section 2).
+ * `npm run audit`: prints the conformance numbers of the admin against the frontend rules.
  *
  * Every count is a heuristic over the source text, good enough to watch the gap close; the lint
  * gates (`lint:ci`, `lint:i18n`) stay the source of truth. Every number should reach zero except

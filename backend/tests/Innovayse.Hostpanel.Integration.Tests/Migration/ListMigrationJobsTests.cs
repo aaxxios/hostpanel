@@ -1,14 +1,11 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Migration;
 
 /// <summary>
 /// <c>GET /api/admin/migrations</c>, dispatching <c>ListMigrationJobsQuery</c>: every migration
 /// job, most recently created first. Its happy path is exercised alongside
-/// <see cref="CreateMigrationJobTests"/>, which reads the list back after creating -- the content
+/// <see cref="CreateMigrationJobTests"/>, which reads the list back after creating: the content
 /// the test's name actually asserts on.
 /// </summary>
 /// <remarks>

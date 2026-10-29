@@ -2,10 +2,11 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Support;
+
 /// <summary>
 /// Represents a pre-written reply that support staff can insert into ticket responses.
 /// Belongs to a <see cref="PredefinedReplyCategory"/>.
-/// Created via <see cref="Create"/> factory — no public constructor.
+/// Created via <see cref="Create"/> factory: no public constructor.
 /// </summary>
 public sealed class PredefinedReply : BaseEntity
 {
@@ -18,7 +19,7 @@ public sealed class PredefinedReply : BaseEntity
     /// <summary>Gets the FK to the category this reply belongs to.</summary>
     public int CategoryId { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private PredefinedReply() { }
 
     /// <summary>

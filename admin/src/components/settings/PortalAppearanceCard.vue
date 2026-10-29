@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
- * Portal appearance card — the storefront template, the colour mode a visitor starts in, and
+ * Portal appearance card: the storefront template, the colour mode a visitor starts in, and
  * whether visitors may switch it.
  *
  * Constrained controls rather than the free-text fields the settings table offers. The API
  * refuses a value outside each key's vocabulary, and the portal falls back to its default on
- * anything it does not recognise, so a typo would not break the site — but it would silently
+ * anything it does not recognise, so a typo would not break the site, but it would silently
  * revert an operator's choice with no indication why. A dropdown and a radio group remove the
  * failure entirely.
  */
@@ -13,6 +13,7 @@ import { computed, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingDraft } from '@/composables/useSettingDraft'
 import SettingNotSeeded from '@/components/settings/SettingNotSeeded.vue'
+import SettingOutcome from '@/components/settings/SettingOutcome.vue'
 import SettingSaveButton from '@/components/settings/SettingSaveButton.vue'
 import SettingsSection from '@/components/settings/SettingsSection.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
@@ -24,7 +25,7 @@ import UiText from '@/components/ui/UiText.vue'
 import UiToggle from '@/components/ui/UiToggle.vue'
 import { PortalTemplate, PortalThemeMode } from '@/types/portalappearance'
 import { SettingEnv, SettingKey, SettingToggle } from '@/types/setting'
-import type { Setting } from '@/types/setting'
+import type { Setting, SettingSave } from '@/types/setting'
 
 const { t } = useI18n()
 
@@ -32,13 +33,8 @@ const { t } = useI18n()
 const props = defineProps<{
   /** All system settings, as loaded from the backend. */
   settings: Setting[]
-  /** True while a save is in flight. */
-  saving?: boolean
-}>()
-
-const emit = defineEmits<{
-  /** Emitted with the row id and the new value when the operator saves a control. */
-  save: [id: number, value: string]
+  /** Persists one row and answers how it went; each control shows its own outcome. */
+  save: SettingSave
 }>()
 
 /** Templates with their label and hint keys. */
@@ -137,10 +133,11 @@ const missingKeys = computed<SettingKey[]>(() => {
       />
       <SettingSaveButton
         :dirty="templateDraft.dirty.value"
-        :saving="saving"
+        :saving="templateDraft.saving.value"
         data-testid="portal-template-save"
-        @click="templateDraft.submit((id, value) => emit('save', id, value))"
+        @click="templateDraft.submit(save)"
       />
+      <SettingOutcome :outcome="templateDraft.outcome.value" />
       <UiText tone="muted" size="md">
         {{ templateHint }}
       </UiText>
@@ -166,10 +163,11 @@ const missingKeys = computed<SettingKey[]>(() => {
         </UiLabel>
         <SettingSaveButton
           :dirty="themeDraft.dirty.value"
-          :saving="saving"
+          :saving="themeDraft.saving.value"
           data-testid="portal-theme-save"
-          @click="themeDraft.submit((id, value) => emit('save', id, value))"
+          @click="themeDraft.submit(save)"
         />
+        <SettingOutcome :outcome="themeDraft.outcome.value" />
       </UiStack>
     </UiStack>
 
@@ -186,10 +184,11 @@ const missingKeys = computed<SettingKey[]>(() => {
       </UiStack>
       <SettingSaveButton
         :dirty="toggleDraft.dirty.value"
-        :saving="saving"
+        :saving="toggleDraft.saving.value"
         data-testid="portal-user-toggle-save"
-        @click="toggleDraft.submit((id, value) => emit('save', id, value))"
+        @click="toggleDraft.submit(save)"
       />
+      <SettingOutcome :outcome="toggleDraft.outcome.value" />
     </UiStack>
   </SettingsSection>
 </template>

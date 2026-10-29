@@ -4,7 +4,7 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 import type { RouteLocationNormalized } from 'vue-router'
-import { lazyView } from '@/lib/lazyView'
+import { withRetry } from '@/lib/lazyRoute'
 import { prefetchRoute } from '@/lib/prefetchRoute'
 
 /**
@@ -28,10 +28,10 @@ describe('prefetchRoute', () => {
     expect(layout.mock.invocationCallOrder[0]).toBeLessThan(view.mock.invocationCallOrder[0] as number)
   })
 
-  it('starts the import behind an async screen made by lazyView', () => {
+  it('starts the import behind a retrying route loader', () => {
     const loader = vi.fn(() => Promise.resolve({}))
 
-    prefetchRoute(routeOf({ default: lazyView(loader) }))
+    prefetchRoute(routeOf({ default: withRetry(loader) }))
 
     expect(loader).toHaveBeenCalledTimes(1)
   })

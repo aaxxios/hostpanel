@@ -12,6 +12,7 @@ vi.mock('chart.js', async () => (await import('../helpers/chartJsMock')).chartJs
 runReportCase({
   name: 'ClientsReportView',
   view: ClientsReportView,
-  routes: { 'GET /reports/clients': () => json({ items: [], totalCount: 0 }) },
+  routes: { 'GET /reports/clients': () => json({ items: [], pageNumber: 1, pageSize: 50, totalCount: 0, totalPages: 0 }) },
   expected: ['Clients', '0 client(s) found', 'No clients found. Click Filter to load results.'],
+  retryable: true,
 })

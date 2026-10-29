@@ -1,31 +1,32 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Auth.Commands.CompleteSetup;
 using Innovayse.Hostpanel.Application.Auth.Seeding;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Auth;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Domain.Auth.Enums;
+using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 
 /// <summary>
-/// <c>POST /api/auth/setup</c> — the first-run bootstrap that grants the Admin role, once, to the
+/// <c>POST /api/auth/setup</c>: the first-run bootstrap that grants the Admin role, once, to the
 /// caller who can prove they hold this installation's setup token.
 /// </summary>
 /// <remarks>
 /// Each test builds its own <see cref="IntegrationTestFactory"/> rather than sharing one through
 /// <see cref="IClassFixture{TFixture}"/>: "nobody holds Admin yet" is a real one-shot fact about an
 /// installation, not a row a test can reset in a <c>finally</c> block the way
-/// <c>CurrenciesEndpointTests</c> puts the base currency back. Sharing one factory across these
+/// <c>SetBaseCurrencyTests</c> puts the base currency back. Sharing one factory across these
 /// tests would make whichever runs first decide the precondition every other one needs.
 /// </remarks>
 public sealed class CompleteSetupTests
@@ -59,7 +60,7 @@ public sealed class CompleteSetupTests
     /// <returns>The outstanding token.</returns>
     /// <remarks>
     /// <c>Program.cs</c> skips its whole startup-seeding block, this one included, under
-    /// <c>ASPNETCORE_ENVIRONMENT=Testing</c> — <see cref="IntegrationTestFactory"/> migrates and
+    /// <c>ASPNETCORE_ENVIRONMENT=Testing</c>; <see cref="IntegrationTestFactory"/> migrates and
     /// seeds roles itself instead, precisely because the host does not in that environment. The
     /// token is therefore issued here, through the same <see cref="SetupTokenSeeder"/> the
     /// composition root calls, rather than assumed already present on the settings table.
@@ -68,9 +69,8 @@ public sealed class CompleteSetupTests
     {
         using var scope = factory.Services.CreateScope();
         var token = await SetupTokenSeeder.EnsureIssuedAsync(
-            scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(),
-            scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>(),
-            scope.ServiceProvider.GetRequiredService<IUnitOfWork>());
+            scope.ServiceProvider.GetRequiredService<ISetupTokenStore>(),
+            scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>());
         token.Should().NotBeNull("nobody holds Admin yet on a freshly migrated host");
         return token!;
     }
@@ -196,7 +196,7 @@ public sealed class CompleteSetupTests
     }
 
     /// <summary>
-    /// <see cref="CompleteSetupHandler"/>'s own defensive answer for a request with no subject —
+    /// <see cref="CompleteSetupHandler"/>'s own defensive answer for a request with no subject,
     /// reachable only by resolving the handler outside a request, since the route it serves is
     /// <c>[Authorize]</c> and never lets an unauthenticated call reach it.
     /// </summary>
@@ -208,9 +208,8 @@ public sealed class CompleteSetupTests
         using var scope = factory.Services.CreateScope();
         var handler = new CompleteSetupHandler(
             scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>(),
-            scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(),
+            scope.ServiceProvider.GetRequiredService<ISetupTokenStore>(),
             scope.ServiceProvider.GetRequiredService<IAuthModeProvider>(),
-            scope.ServiceProvider.GetRequiredService<IUnitOfWork>(),
             scope.ServiceProvider.GetRequiredService<ICurrentUserService>(),
             scope.ServiceProvider.GetRequiredService<IUserProvisioning>());
 
@@ -218,5 +217,68 @@ public sealed class CompleteSetupTests
 
         outcome.IsFailure.Should().BeTrue();
         outcome.ErrorCode.Should().Be(SharedErrorCodes.Unauthorized);
+    }
+
+    /// <summary>
+    /// Builds the handler as an external sign-on deployment composes it, with the scope's request
+    /// signed in as <paramref name="subject"/>.
+    /// </summary>
+    /// <param name="scope">The DI scope the handler's dependencies come from.</param>
+    /// <param name="subject">The signed-in caller.</param>
+    /// <returns>The handler under external sign-on mode.</returns>
+    private static CompleteSetupHandler ExternalSignOnHandler(IServiceScope scope, string subject)
+    {
+        var accessor = scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
+        accessor.HttpContext = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(ClaimTypes.NameIdentifier, subject)], authenticationType: "Test")),
+        };
+
+        return new CompleteSetupHandler(
+            scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>(),
+            scope.ServiceProvider.GetRequiredService<ISetupTokenStore>(),
+            new ConfigurationAuthModeProvider(isLocalMode: false),
+            scope.ServiceProvider.GetRequiredService<ICurrentUserService>(),
+            scope.ServiceProvider.GetRequiredService<IUserProvisioning>());
+    }
+
+    /// <summary>
+    /// Under an external sign-on provider a signed-in caller without the setup token is refused and
+    /// granted nothing: being known to the provider does not prove the caller runs the installation.
+    /// </summary>
+    [Fact]
+    public async Task ExternalSignOnModeRefusesWithoutTheToken()
+    {
+        await using var factory = new IntegrationTestFactory();
+        await factory.InitializeAsync();
+        await IssueAndReadTokenAsync(factory);
+        using var scope = factory.Services.CreateScope();
+        var subject = $"external-{Guid.NewGuid():N}";
+
+        var outcome = await ExternalSignOnHandler(scope, subject)
+            .HandleAsync(new CompleteSetupCommand(null), CancellationToken.None);
+
+        outcome.ErrorCode.Should().Be(HostpanelErrorCodes.SETUP_TOKEN_INVALID);
+        (await scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>().AnyHasRoleAsync(Role.Admin, CancellationToken.None))
+            .Should().BeFalse();
+    }
+
+    /// <summary>Under an external sign-on provider the issued token grants Admin, as in local mode.</summary>
+    [Fact]
+    public async Task ExternalSignOnModeGrantsAdminWithTheToken()
+    {
+        await using var factory = new IntegrationTestFactory();
+        await factory.InitializeAsync();
+        var issued = await IssueAndReadTokenAsync(factory);
+        using var scope = factory.Services.CreateScope();
+        var subject = $"external-{Guid.NewGuid():N}";
+
+        var outcome = await ExternalSignOnHandler(scope, subject)
+            .HandleAsync(new CompleteSetupCommand(issued), CancellationToken.None);
+
+        outcome.IsSuccess.Should().BeTrue();
+        (await scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>().AnyHasRoleAsync(Role.Admin, CancellationToken.None))
+            .Should().BeTrue();
     }
 }

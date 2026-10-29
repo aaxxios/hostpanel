@@ -1,9 +1,13 @@
+using Innovayse.Hostpanel.Domain.Clients;
+using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
-using Innovayse.Hostpanel.Infrastructure.Security;
+using Innovayse.Hostpanel.Infrastructure.Persistence.Converters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table and column configuration for <see cref="ClientService"/>.</summary>
 public sealed class ClientServiceConfiguration : IEntityTypeConfiguration<ClientService>
 {
@@ -11,25 +15,29 @@ public sealed class ClientServiceConfiguration : IEntityTypeConfiguration<Client
     public void Configure(EntityTypeBuilder<ClientService> builder)
     {
         builder.HasKey(x => x.Id);
+
+        // Two staff actions or a cron and a staff action that load the same service cannot both
+        // save over it; the second save fails with ConcurrencyConflictException.
+        builder.UseXminConcurrencyToken();
+
+        // The client's service list, the renewal sweeps (Status, NextRenewalAt) and the status
+        // counts the dashboard and reports run.
+        builder.HasIndex(x => x.ClientId);
+        builder.HasIndex(x => new { x.Status, x.NextRenewalAt });
+
         builder.Property(x => x.ClientId).IsRequired();
         builder.Property(x => x.ProductId).IsRequired();
-        builder.Property(x => x.BillingCycle).IsRequired().HasMaxLength(20);
-        builder.Property(x => x.Status).IsRequired().HasConversion<string>();
+        builder.Property(x => x.BillingCycle).IsRequired().HasConversion(new BillingCycleConverter()).HasMaxLength(20);
+        builder.Property(x => x.Status).IsRequired().HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.FirstPaymentAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.RecurringAmount).HasColumnType("numeric(18,4)");
         builder.Property(x => x.ProvisioningRef).HasMaxLength(500);
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.Domain).HasMaxLength(253);
         builder.Property(x => x.DedicatedIp).HasMaxLength(45);
         builder.Property(x => x.Username).HasMaxLength(100);
 
-        var converter = EncryptionServiceHolder.CreateConverter();
-        // Sized for the encrypted form regardless of whether a key is configured, so the model
-        // does not change with the environment; only the converter does.
-        var password = builder.Property(x => x.Password).HasMaxLength(512);
-        if (converter is not null)
-        {
-            password.HasConversion(converter);
-        }
-
+        // Password is encrypted and sized by ProtectedColumns.
         builder.Property(x => x.SuspendedAt);
 
         // Default true in the database too, so every existing service keeps being renewed. The
@@ -44,5 +52,18 @@ public sealed class ClientServiceConfiguration : IEntityTypeConfiguration<Client
         builder.Property(x => x.AutoTerminateReason).HasMaxLength(2000);
         builder.Property(x => x.AdminNotes).HasMaxLength(2000);
         builder.Ignore(x => x.DomainEvents);
+
+        // A client who still has this record cannot be deleted: billing, service and support history
+        // is kept, so the database refuses the delete instead of leaving rows without an owner.
+        builder.HasOne<Client>()
+            .WithMany()
+            .HasForeignKey(x => x.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // A product that clients still hold services of cannot be deleted.
+        builder.HasOne<Product>()
+            .WithMany()
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

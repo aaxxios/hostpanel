@@ -20,7 +20,7 @@ export type ReportCellFormat = (typeof ReportCellFormat)[keyof typeof ReportCell
 
 /** One column of a report table. */
 export interface ReportColumn {
-  /** Property of the row the column reads; also the suffix of its `cell-<key>` slot. */
+  /** Property of the row the column reads, or a dot path into a nested record (`dates.created`); also the suffix of its `cell-<key>` slot. */
   key: string
   /** Header caption (already translated). */
   label: string
@@ -28,4 +28,9 @@ export interface ReportColumn {
   align?: UiAlign
   /** How the raw value is turned into text; `text` when omitted. */
   format?: ReportCellFormat
+  /**
+   * Property of the row (or dot path into a nested record) holding the ISO 4217 code a `money` cell is in. When set, the cell is
+   * written in that row's own currency instead of through the table's `formatMoney`.
+   */
+  currencyKey?: string
 }

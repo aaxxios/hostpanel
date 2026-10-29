@@ -18,26 +18,12 @@ public sealed class DomainEventGate : IDomainEventGate
     public IDisposable Suppress()
     {
         _depth++;
-        return new Release(this);
+        return new DomainEventGateRelease(this);
     }
 
-    /// <summary>The handle returned by <see cref="Suppress"/>; disposing it lifts one suppression.</summary>
-    /// <param name="gate">The gate to release.</param>
-    private sealed class Release(DomainEventGate gate) : IDisposable
+    /// <summary>Lifts one suppression; called once by the <see cref="DomainEventGateRelease"/> handle.</summary>
+    internal void Lift()
     {
-        /// <summary>Guards against a double dispose lifting someone else's suppression.</summary>
-        private bool _disposed;
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            _disposed = true;
-            gate._depth--;
-        }
+        _depth--;
     }
 }

@@ -2,15 +2,15 @@
  * Mapping between the account's contacts and the WHOIS contact fields of a domain.
  *
  * The domain contact tab pre-fills the registrant contact from the account's primary profile or
- * from one of its other contacts. The profile comes from the client API in the BFF's own field
- * names (`firstname`, `phonenumber`...), the contacts in the backend `ContactDto` names
- * (`firstName`, `phone`, `postCode`...); the domain endpoint takes `DomainContactFields`. These
- * pure functions do the renaming so the panel only wires state.
+ * from one of its other contacts. The profile comes in the backend `MyProfileDto` shape (address
+ * nested), the contacts in the backend `ContactDto` shape (address flat); the domain endpoint takes
+ * `DomainContactFields`. These pure functions do the renaming so the panel only wires state.
  *
  * @module utils/domainContacts
  */
 
 import type { AccountContact } from '~/types/accountcontact'
+import type { ClientUser } from '~/types/clientuser'
 import type { DomainContactChoice } from '~/types/domaincontactchoice'
 import type { DomainContactFields } from '~/types/domaincontactfields'
 import type { RegistrantContact } from '~/types/registrantcontact'
@@ -54,21 +54,21 @@ export const contactFromRegistrant = (contact: RegistrantContact): DomainContact
 /**
  * Maps the account's primary profile to WHOIS contact fields.
  *
- * @param profile - The profile as the client API returns it; absent fields read as empty.
+ * @param profile - The profile as the client API returns it; a null field is an empty form field.
  * @returns The contact fields.
  */
-export const contactFromProfile = (profile: Record<string, string>): DomainContactFields => ({
-  firstName: profile.firstname || '',
-  lastName: profile.lastname || '',
-  organization: profile.companyname || '',
-  email: profile.email || '',
-  address1: profile.address1 || '',
-  address2: profile.address2 || '',
-  city: profile.city || '',
-  state: profile.state || '',
-  postalCode: profile.postcode || '',
-  country: profile.country || '',
-  phone: profile.phonenumber || ''
+export const contactFromProfile = (profile: ClientUser): DomainContactFields => ({
+  firstName: profile.firstName,
+  lastName: profile.lastName,
+  organization: profile.companyName ?? '',
+  email: profile.email,
+  address1: profile.address?.street ?? '',
+  address2: profile.address?.address2 ?? '',
+  city: profile.address?.city ?? '',
+  state: profile.address?.state ?? '',
+  postalCode: profile.address?.postCode ?? '',
+  country: profile.address?.country ?? '',
+  phone: profile.phone ?? ''
 })
 
 /**
@@ -89,12 +89,12 @@ export const toContactChoices = (contacts: AccountContact[]): DomainContactChoic
       lastName: contact.lastName,
       organization: contact.companyName ?? '',
       email: contact.email,
-      address1: contact.street ?? '',
-      address2: contact.address2 ?? '',
-      city: contact.city ?? '',
-      state: contact.state ?? '',
-      postalCode: contact.postCode ?? '',
-      country: contact.country ?? '',
+      address1: contact.address.street ?? '',
+      address2: contact.address.address2 ?? '',
+      city: contact.address.city ?? '',
+      state: contact.address.state ?? '',
+      postalCode: contact.address.postCode ?? '',
+      country: contact.address.country ?? '',
       phone: contact.phone ?? ''
     }
   }))

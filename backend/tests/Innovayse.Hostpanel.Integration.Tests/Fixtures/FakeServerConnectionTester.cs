@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Application.Admin.Servers.Common;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Servers;
 
@@ -24,13 +26,12 @@ public sealed class FakeServerConnectionTester : IServerConnectionTester
     public List<Server> TestedServers { get; } = [];
 
     /// <inheritdoc/>
-    public Task<(bool Connected, int? AccountsCount, string? Version, string? ErrorMessage)> TestAsync(
-        Server server, CancellationToken ct)
+    public Task<ServerConnectionTestResult> TestAsync(Server server, CancellationToken ct)
     {
         TestedServers.Add(server);
 
-        return ShouldFail
-            ? Task.FromResult<(bool, int?, string?, string?)>((false, null, null, "fake connection refused"))
-            : Task.FromResult<(bool, int?, string?, string?)>((true, AccountsCount, "fake-1.0", null));
+        return Task.FromResult(ShouldFail
+            ? ServerConnectionTestResult.Failed(HostpanelErrorCodes.SERVER_CONNECTION_UNREACHABLE)
+            : ServerConnectionTestResult.Succeeded(AccountsCount, "fake-1.0"));
     }
 }

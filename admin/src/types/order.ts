@@ -2,6 +2,8 @@
  * An order, its detail and one line on it.
  */
 
+import type { InvoiceStatus } from '@/types/invoice'
+import type { BillingCycle } from '@/types/service'
 
 /** DTO for order list items in admin view. */
 export interface OrderListItem {
@@ -11,8 +13,8 @@ export interface OrderListItem {
   orderNumber: string
   /** FK to the owning client. */
   clientId: number
-  /** Client display name; null when unresolved. */
-  clientName: string | null
+  /** Client display name; every order has one, since its client cannot be deleted. */
+  clientName: string
   /** Current order status. */
   status: OrderStatus
   /** Payment gateway module name. */
@@ -32,7 +34,9 @@ export interface OrderListItem {
 /** DTO for full order details in admin view. */
 export interface OrderDetail extends OrderListItem {
   /** Invoice status if invoice exists. */
-  invoiceStatus: string | null
+  invoiceStatus: InvoiceStatus | null
+  /** Invoice total, tax included and credit taken off, when an invoice exists; `total` is the lines' pre-tax sum. */
+  invoiceTotal: number | null
   /** Client IP address at checkout. */
   ipAddress: string | null
   /** Admin notes. */
@@ -50,7 +54,7 @@ export interface OrderItemDetail {
   /** Product name snapshot at order time. */
   productName: string
   /** Billing cycle. */
-  billingCycle: string
+  billingCycle: BillingCycle
   /** Domain name if applicable. */
   domain: string | null
   /** Hostname if applicable. */
@@ -63,6 +67,36 @@ export interface OrderItemDetail {
   status: OrderItemStatus
 }
 
+/** What a line of an order is fulfilled as, exactly as the API sends it. */
+export enum OrderLineKind {
+  Service = 'Service',
+  Domain = 'Domain',
+}
+
+/** One order line that accepting the order could not fulfil. */
+export interface OrderLineFailure {
+  /** The order line. */
+  itemId: number
+  /** Whether the line is a service or a domain line. */
+  kind: OrderLineKind
+  /** Product name the line was ordered under. */
+  productName: string
+  /** Domain the line names, if any. */
+  domain: string | null
+  /** The line's first payment before tax. */
+  firstPaymentAmount: number
+  /** The refusal code, if the use case gave one. */
+  errorCode: string | null
+  /** Human-readable reason. */
+  reason: string
+}
+
+/** What accepting an order left unfulfilled. */
+export interface OrderFulfillment {
+  /** Lines that could not be fulfilled; empty when every line was. */
+  failedLines: OrderLineFailure[]
+}
+
 /** Filter and paging of the order list. */
 export interface OrderFilter {
   /** Page, 1-based. */
@@ -70,7 +104,7 @@ export interface OrderFilter {
   /** Items per page. */
   pageSize: number
   /** Status to keep; null or empty for all. */
-  status?: string | null
+  status?: OrderStatus | null
 }
 
 /** Status of an order, exactly as the API sends it. */

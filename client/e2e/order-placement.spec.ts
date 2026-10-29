@@ -10,6 +10,7 @@
 import { expect, test } from './support/test'
 import { ORDER, PLAN } from './support/fixtures.mjs'
 import { resetStub, scriptStub, signIn, stubRequests, waitForHydration } from './support/helpers'
+import { HttpMethod } from '../types/httpmethod'
 
 /** localStorage key the cart is persisted under (`stores/cart.ts`). */
 const CART_KEY = 'innovayse_cart'
@@ -47,7 +48,7 @@ test('a signed-in customer places an order and lands on its invoice', async ({ p
 })
 
 test('a refused order keeps the customer on the checkout with the backend sentence', async ({ page, request }) => {
-  await scriptStub(request, { method: 'POST', path: '/api/orders', status: 400, code: 'ORDER_REFUSED', detail: 'E2E: the order was refused.' })
+  await scriptStub(request, { method: HttpMethod.Post, path: '/api/orders', status: 400, code: 'ORDER_REFUSED', detail: 'E2E: the order was refused.' })
 
   await page.goto('/checkout')
   await waitForHydration(page)

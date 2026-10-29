@@ -51,7 +51,12 @@ describe('buildClientMenu', () => {
   })
 
   it('translates the labels: ru and hy differ from en and from each other', () => {
-    /** The menu labels, in order, for one language. */
+    /**
+     * The menu labels, in order, for one language.
+     *
+     * @param language Language to build the menu in.
+     * @returns The labels.
+     */
     const labels = (language: AppLocale): string[] => buildClientMenu(language).map(item => item.label)
 
     expect(labels(AppLocale.Ru)).toEqual(['Панель управления', 'Мои услуги', 'Мои домены', 'Счета', 'Поддержка'])

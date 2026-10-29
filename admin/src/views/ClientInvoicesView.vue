@@ -1,19 +1,21 @@
 <script setup lang="ts">
 /**
- * Client-scoped invoices list -- shows invoices for a specific client
- * with filtering, bulk actions, pagination, and create functionality.
+ * Client-scoped invoices list: shows invoices for a specific client with filtering, bulk actions,
+ * pagination, and create functionality. Deleting and cancelling are confirmed first; every action
+ * reports its outcome (success, or the API's sentence) above the list, and a refused load shows
+ * the sentence with a Retry.
  */
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useBillingStore } from '@/stores/billing'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { INVOICE_STATUS_OPTIONS } from '@/lib/constants'
 import { invoiceStatusTone } from '@/lib/tones'
 import { formatDate } from '@/lib/format'
 import { formatSymbolPrice } from '@/lib/money'
 import { CurrencyCode } from '@/types/currency'
 import { InvoiceBulkAction, InvoiceOpenAction } from '@/types/invoice'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -22,6 +24,7 @@ import UiDatePicker from '@/components/ui/UiDatePicker.vue'
 import { UiDatePickerDirection } from '@/utils/ui/datePicker'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
@@ -34,6 +37,7 @@ import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -110,6 +114,32 @@ const newIsDraft = ref(true)
 /** True while creating an invoice. */
 const creating = ref(false)
 
+/** The sentence of the last refused list load, shown with Retry; null when the list loaded. */
+const loadError = ref<string | null>(null)
+
+/** The outcome line of the last action. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/** True while a bulk action or a delete is in flight. */
+const processing = ref(false)
+
+/**
+ * Shows the outcome of one action: the success sentence, or the API's sentence of the refusal.
+ *
+ * @param ok - Whether the API accepted the action.
+ * @param successKey - Locale key of the success sentence.
+ */
+const report = (ok: boolean, successKey: string): void => {
+  if (ok) {
+    feedback.show(t(successKey), false)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
+}
+
 /** Whether any items are selected. */
 const hasSelection = computed(() => selectedIds.value.size > 0)
 
@@ -122,6 +152,11 @@ const bulkActions = [
   { value: InvoiceBulkAction.Duplicate, label: t('billing.quoteDetail.duplicate') },
   { value: InvoiceBulkAction.Delete, label: t('shared.delete') },
 ]
+
+/** True when the chosen bulk action deletes or cancels invoices, so its prompt is in danger style. */
+const bulkIsDestructive = computed<boolean>(() =>
+  bulkActionValue.value === InvoiceBulkAction.Delete || bulkActionValue.value === InvoiceBulkAction.MarkCancelled,
+)
 
 /** Caption of the chosen bulk action. */
 const bulkActionLabel = computed<string>(() => bulkActions.find(a => a.value === bulkActionValue.value)?.label ?? '')
@@ -136,6 +171,7 @@ const fetchInvoices = async (): Promise<void> => {
     clientId.value, page.value, pageSize.value,
     filterStatus.value, filterFrom.value, filterTo.value,
   )
+  loadError.value = store.error
 }
 
 /**
@@ -203,19 +239,33 @@ const toggleSelect = (id: number): void => {
 }
 
 /**
- * Executes the selected bulk action.
+ * Executes the selected bulk action, shows its outcome and reloads the list on success.
  *
  * @returns Promise that resolves when the action and the reload finish.
  */
 const executeBulkAction = async (): Promise<void> => {
-  showBulkConfirmModal.value = false
   if (!bulkActionValue.value || selectedIds.value.size === 0) {
+    showBulkConfirmModal.value = false
     return
   }
-  await store.bulkAction(Array.from(selectedIds.value), bulkActionValue.value)
-  clearSelection()
-  bulkActionValue.value = ''
-  await fetchInvoices()
+  feedback.clear()
+  processing.value = true
+  const ok = await store.bulkAction(Array.from(selectedIds.value), bulkActionValue.value)
+  processing.value = false
+  showBulkConfirmModal.value = false
+  report(ok, 'clients.clientInvoices.bulkActionDone')
+  if (ok) {
+    clearSelection()
+    bulkActionValue.value = ''
+    await fetchInvoices()
+  }
+}
+
+/** Closes the bulk confirmation; ignored while the action runs. */
+const dismissBulk = (): void => {
+  if (!processing.value) {
+    showBulkConfirmModal.value = false
+  }
 }
 
 /**
@@ -269,12 +319,15 @@ const removeNewItem = (index: number): void => {
  * @returns Promise that resolves when created.
  */
 const handleCreate = async (): Promise<void> => {
+  feedback.clear()
   creating.value = true
   const id = await store.createInvoice(Number(clientId.value), newDueDate.value, newItems.value, newIsDraft.value)
   creating.value = false
   if (id) {
     showCreateForm.value = false
     router.push(invoicePath(id))
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
   }
 }
 
@@ -296,7 +349,7 @@ const confirmDelete = (id: number): void => {
 }
 
 /**
- * Deletes the targeted invoice and refreshes the list.
+ * Deletes the targeted invoice, shows the outcome and refreshes the list on success.
  *
  * @returns Promise that resolves when deletion completes.
  */
@@ -304,10 +357,24 @@ const executeDelete = async (): Promise<void> => {
   if (!deleteTargetId.value) {
     return
   }
-  await store.deleteInvoice(deleteTargetId.value)
+  feedback.clear()
+  processing.value = true
+  const ok = await store.deleteInvoice(deleteTargetId.value)
+  processing.value = false
   showDeleteModal.value = false
   deleteTargetId.value = null
-  await fetchInvoices()
+  report(ok, 'clients.clientInvoices.invoiceDeleted')
+  if (ok) {
+    await fetchInvoices()
+  }
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!processing.value) {
+    showDeleteModal.value = false
+    deleteTargetId.value = null
+  }
 }
 
 /**
@@ -321,6 +388,7 @@ const openInvoice = (id: number, mode: InvoiceOpenAction): void => {
   router.push(`${invoicePath(id)}?mode=${mode}`)
 }
 
+/** Loads the first page. */
 onMounted(() => fetchInvoices())
 </script>
 
@@ -443,9 +511,15 @@ onMounted(() => fetchInvoices())
       </UiButton>
     </UiStack>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="client-invoices-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="client-invoices-feedback" />
+
+    <UiErrorState
+      v-if="loadError !== null"
+      :message="loadError"
+      :loading="store.loading"
+      testid="client-invoices-error"
+      @retry="fetchInvoices()"
+    />
 
     <UiStack v-if="store.loading && store.clientInvoices.length === 0" data-testid="client-invoices-loading">
       <UiSkeleton :lines="3" />
@@ -582,10 +656,10 @@ onMounted(() => fetchInvoices())
       :message="t('clients.clientInvoices.confirmDeleteInvoice', { id: deleteTargetId })"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
-      :loading="store.loading"
+      :loading="processing"
       tone="danger"
       @confirm="executeDelete"
-      @close="showDeleteModal = false"
+      @close="dismissDelete"
     />
 
     <UiDialog
@@ -595,10 +669,10 @@ onMounted(() => fetchInvoices())
       :message="t('clients.clientInvoices.confirmBulkApply', { action: bulkActionLabel, count: selectedIds.size }, selectedIds.size)"
       :confirm-label="bulkActionLabel"
       :loading-label="t('shared.processing')"
-      :loading="store.loading"
-      :tone="bulkActionValue === InvoiceBulkAction.Delete ? UiTone.Danger : UiTone.Primary"
+      :loading="processing"
+      :tone="bulkIsDestructive ? UiTone.Danger : UiTone.Primary"
       @confirm="executeBulkAction"
-      @close="showBulkConfirmModal = false"
+      @close="dismissBulk"
     />
   </UiStack>
 </template>

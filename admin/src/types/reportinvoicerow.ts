@@ -1,3 +1,21 @@
+/**
+ * The row shape of the invoices report.
+ */
+
+import type { InvoiceAmounts, InvoiceStatus } from '@/types/invoice'
+
+/** The dates of an invoice row, each `yyyy-MM-dd`. */
+export interface ReportInvoiceDates {
+  /** Creation date. */
+  created: string
+  /** Due date. */
+  due: string
+  /** Date paid, when paid. */
+  paid: string | null
+  /** Day of the latest refund; null when nothing was refunded. */
+  refunded: string | null
+}
+
 /** One row of the invoices report. */
 export interface ReportInvoiceRow {
   /** Invoice id. */
@@ -6,34 +24,14 @@ export interface ReportInvoiceRow {
   clientId: number
   /** Client name. */
   clientName: string
-  /** Invoice number, when numbering is on. */
-  invoiceNumber: string | null
-  /** Creation date. */
-  createdDate: string
-  /** Due date. */
-  dueDate: string
-  /** Date paid, when paid. */
-  datePaid: string | null
-  /** Date refunded, when refunded. */
-  dateRefunded: string | null
-  /** Date cancelled, when cancelled. */
-  dateCancelled: string | null
-  /** Sub total. */
-  subTotal: number
-  /** Credit applied. */
-  credit: number
-  /** First tax amount. */
-  tax: number
-  /** Second tax amount. */
-  tax2: number
-  /** First tax rate in percent. */
-  taxRate: number
-  /** Second tax rate in percent. */
-  taxRate2: number
-  /** Total. */
-  total: number
+  /** Created, due, paid and refunded dates. */
+  dates: ReportInvoiceDates
+  /** ISO 4217 code the invoice bills in; every amount on the row is in it. */
+  currency: string
+  /** Sub total, credit, tax, tax rate and total. */
+  amounts: InvoiceAmounts
   /** Invoice status. */
-  status: string
+  status: InvoiceStatus
   /** Payment method, when set. */
   paymentMethod: string | null
   /** Staff notes. */

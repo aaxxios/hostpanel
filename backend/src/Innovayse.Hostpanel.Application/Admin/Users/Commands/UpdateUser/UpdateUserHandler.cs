@@ -1,11 +1,12 @@
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 
 namespace Innovayse.Hostpanel.Application.Admin.Users.Commands.UpdateUser;
 
 /// <summary>
-/// Handles <see cref="UpdateUserCommand"/>: renames the person, then moves their sign-in
-/// address.
+/// Handles <see cref="UpdateUserCommand"/>: the name, language and sign-in address of one account,
+/// applied as one write.
 /// </summary>
 public sealed class UpdateUserHandler
 {
@@ -19,25 +20,20 @@ public sealed class UpdateUserHandler
         _provisioning = provisioning;
     }
 
-    /// <summary>Applies both profile writes.</summary>
+    /// <summary>Applies the edit.</summary>
     /// <param name="cmd">The subject and the new profile fields.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// Success, or <c>USER_PROVISIONING_NOT_ALLOWED_CHANGE_NAME</c> /
-    /// <c>USER_PROVISIONING_NOT_ALLOWED_CHANGE_EMAIL</c> where an SSO owns the accounts, naming
-    /// whichever of the two writes was attempted first.
+    /// Success; <c>USER_NOT_FOUND</c> when the subject names no live account;
+    /// <c>EMAIL_ALREADY_IN_USE</c> when another account holds the new address, refused before
+    /// anything is written; or <c>USER_PROVISIONING_NOT_ALLOWED_CHANGE_NAME</c> where an external
+    /// sign-on provider owns the accounts.
     /// </returns>
     public async Task<Result> HandleAsync(UpdateUserCommand cmd, CancellationToken ct)
     {
-        // Two writes, because they are two different things: a rename, and a change to the
-        // address someone signs in with. Both refuse together where an SSO owns the person,
-        // so neither can land without the other.
-        var renamed = await _provisioning.UpdateProfileAsync(cmd.Id!, cmd.FirstName, cmd.LastName, cmd.Language, ct);
-        if (renamed.IsFailure)
-        {
-            return renamed;
-        }
-
-        return await _provisioning.ChangeEmailAsync(cmd.Id!, cmd.Email, ct);
+        // One port call, so the name and the address land together or not at all. The address is
+        // moved (and the person's sessions ended) only when it actually differs from the stored one.
+        return await _provisioning.UpdateAccountAsync(
+            new UserAccountUpdate(cmd.Id!, cmd.FirstName, cmd.LastName, cmd.Email, cmd.Language), ct);
     }
 }

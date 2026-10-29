@@ -1,17 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Products;
 
 /// <summary>
 /// <c>DELETE /api/product-features/{id}</c> against Postgres: the happy path, the missing-line
 /// refusal, and the authorization boundary.
 /// </summary>
-/// <remarks>Split from the deleted <c>ProductFeaturesEndpointTests</c> (A7 Task 6).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DeleteProductFeatureTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

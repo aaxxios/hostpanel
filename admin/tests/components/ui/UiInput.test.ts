@@ -47,12 +47,6 @@ describe('UiInput', () => {
     expect(wrapper.classes()).toEqual(expect.arrayContaining(['bg-surface-field', 'border-border', 'rounded-[10px]']))
   })
 
-  it('does not box a colour input', () => {
-    const wrapper = mount(UiInput, { props: { type: 'color' } })
-
-    expect(wrapper.classes()).not.toContain('bg-surface-field')
-  })
-
   it('marks an invalid field', () => {
     const wrapper = mount(UiInput, { props: { invalid: true } })
 

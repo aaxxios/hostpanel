@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Shared.Contracts.Interfaces;
+
 namespace Innovayse.Hostpanel.Application.Demo.Commands.ResetDemoData;
 
 /// <summary>
@@ -5,4 +7,4 @@ namespace Innovayse.Hostpanel.Application.Demo.Commands.ResetDemoData;
 /// <c>DemoScheduledJobsStartup</c> and re-scheduled by its own handler every
 /// <c>Demo:ResetIntervalHours</c> hours. Carries no payload.
 /// </summary>
-public sealed record ResetDemoDataCommand;
+public sealed record ResetDemoDataCommand : IRecurringJob;

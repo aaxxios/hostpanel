@@ -1,7 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Infrastructure.Monitoring;
 using Innovayse.Hostpanel.Shared.Settings;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -18,22 +17,25 @@ internal static class DemoServiceRegistration
 {
     /// <summary>Registers the demo options, manager, schedule and, when enabled, the fake adapters.</summary>
     /// <param name="services">The service collection to extend.</param>
-    /// <param name="configuration">Application configuration, read for the switch.</param>
+    /// <param name="demo">The <c>Demo</c> section as the composition root read it, consulted only for
+    /// the <see cref="DemoOptions.Enabled"/> switch that decides which adapters are registered. The
+    /// validated options consumers receive are bound here from the host's configuration service.</param>
     /// <param name="ownsItsUsers">Whether accounts live in this product's own store (local mode).</param>
     /// <returns>The same <paramref name="services"/> for chaining.</returns>
     /// <exception cref="InvalidOperationException">The demo is enabled in a mode that has no local accounts.</exception>
     internal static IServiceCollection AddDemoMode(
-        this IServiceCollection services, IConfiguration configuration, bool ownsItsUsers)
+        this IServiceCollection services, DemoOptions demo, bool ownsItsUsers)
     {
         services.AddSingleton<IValidateOptions<DemoOptions>, DemoOptionsValidator>();
         services.AddOptions<DemoOptions>()
-            .Bind(configuration.GetSection(DemoOptions.SectionName))
+            .BindConfiguration(DemoOptions.SectionName)
             .ValidateOnStart();
         services.AddSingleton<IDemoResetSchedule, DemoResetSchedule>();
         services.AddScoped<IDemoAccountGuard, DemoAccountGuard>();
 
-        var enabled = configuration.GetValue<bool>($"{DemoOptions.SectionName}:{nameof(DemoOptions.Enabled)}");
-        if (!enabled)
+        ArgumentNullException.ThrowIfNull(demo);
+
+        if (!demo.Enabled)
         {
             services.AddScoped<IDemoDataManager, DisabledDemoDataManager>();
             return services;
@@ -52,7 +54,6 @@ internal static class DemoServiceRegistration
         services.AddSingleton<DemoCardState>();
         services.AddScoped<IDemoDataManager, DemoDataManager>();
 
-        services.Replace(ServiceDescriptor.Scoped<IPaymentGateway, DemoPaymentGateway>());
         services.Replace(ServiceDescriptor.Scoped<ICardPaymentGateway, DemoCardPaymentGateway>());
         services.Replace(ServiceDescriptor.Scoped<IPaymentPluginResolver, DemoPaymentPluginResolver>());
         services.Replace(ServiceDescriptor.Scoped<IRegistrarProvider, DemoRegistrarProvider>());
@@ -62,6 +63,7 @@ internal static class DemoServiceRegistration
         services.Replace(ServiceDescriptor.Scoped<IServerConnectionTester, DemoServerConnectionTester>());
         services.Replace(ServiceDescriptor.Scoped<IExchangeRateSource, DemoExchangeRateSource>());
         services.Replace(ServiceDescriptor.Scoped<IContactNotifier, DemoContactNotifier>());
+        services.Replace(ServiceDescriptor.Scoped<IHostingProbe, DemoHostingProbe>());
 
         // The monitoring decorators read the stored results through the real services.
         services.AddScoped<SslMonitoringService>();

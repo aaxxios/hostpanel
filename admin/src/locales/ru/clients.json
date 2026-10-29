@@ -1,11 +1,6 @@
 {
   "addBillableItem": {
-    "selectAService": "Выберите услугу",
-    "describeTheCharge": "Опишите начисление...",
-    "recurEvery": "Повторять каждые",
-    "for": "на",
-    "times": "раз",
-    "invoiceCount": "Количество счетов"
+    "describeTheCharge": "Опишите начисление..."
   },
   "addTimeBilling": {
     "addTimeBillingEntries": "Добавить записи учёта времени",
@@ -36,6 +31,9 @@
     "generating": "Формирование…",
     "profileData": "Данные профиля",
     "payMethods": "Способы оплаты",
+    "users": "Связанные пользователи",
+    "invitations": "Приглашения",
+    "storageNote": "История согласий содержит только текущий выбор по рассылкам, а раздел способов оплаты показывает предпочитаемый способ и наличие сохранённой карты у платёжного шлюза. Раздел без данных экспортируется пустым списком. Списки писем и действий ограничены 500 последними записями, и файл сообщает об обрезке.",
     "consentHistory": "История согласий"
   },
   "clientForm": {
@@ -66,7 +64,9 @@
     "ttl": "TTL",
     "noDnsRecordsFound": "DNS-записи не найдены",
     "deleteDnsRecord": "Удалить DNS-запись",
-    "deleteThisDnsRecord": "Удалить эту DNS-запись?"
+    "deleteThisDnsRecord": "Удалить эту DNS-запись?",
+    "saved": "DNS-запись сохранена.",
+    "deleted": "DNS-запись удалена."
   },
   "domainContact": {
     "modifyContactDetails": "Изменить контактные данные",
@@ -77,7 +77,16 @@
   "domainRemindersTable": {
     "domainReminderHistory": "История напоминаний о домене",
     "reminder": "Напоминание",
-    "sent": "Отправлено"
+    "sent": "Отправлено",
+    "types": {
+      "thirtyDaysBeforeExpiry": "За 30 дней до истечения",
+      "fourteenDaysBeforeExpiry": "За 14 дней до истечения",
+      "sevenDaysBeforeExpiry": "За 7 дней до истечения",
+      "oneDayBeforeExpiry": "За 1 день до истечения",
+      "expiredNotice": "Уведомление об истечении",
+      "redemptionNotice": "Уведомление о периоде восстановления",
+      "unknown": "Неизвестное напоминание"
+    }
   },
   "emailForwardingTable": {
     "emailForwardingRules": "Правила пересылки почты",
@@ -85,7 +94,9 @@
     "destination": "Получатель",
     "noEmailForwardingRulesFound": "Правила пересылки почты не найдены",
     "deleteForwardingRule": "Удалить правило пересылки",
-    "deleteThisEmailForwardingRule": "Удалить это правило пересылки почты?"
+    "deleteThisEmailForwardingRule": "Удалить это правило пересылки почты?",
+    "saved": "Правило переадресации сохранено.",
+    "deleted": "Правило переадресации удалено."
   },
   "userForm": {
     "manageUserEmail": "Управление пользователем: {email}",
@@ -122,7 +133,8 @@
     "totalcountRequestValue": "Запросов: {totalCount}",
     "noCancellationRequestsFound": "Запросы на отмену не найдены",
     "deleteCancellationRequest": "Удалить запрос на отмену",
-    "areYouSureYouWant": "Вы уверены, что хотите удалить этот запрос на отмену?"
+    "areYouSureYouWant": "Вы уверены, что хотите удалить этот запрос на отмену?",
+    "requestDeleted": "Запрос на отмену удалён."
   },
   "clientBillableItems": {
     "billableItems": "Оплачиваемые позиции",
@@ -139,7 +151,11 @@
     "areYouSureYouWant": "Вы уверены, что хотите немедленно выставить счёт по выбранным позициям?",
     "confirmDelete": "Подтвердите удаление",
     "areYouSureYouWant2": "Вы уверены, что хотите удалить эту оплачиваемую позицию?",
-    "confirmDeleteSelected": "Вы уверены, что хотите удалить {count} выбранный элемент? | Вы уверены, что хотите удалить {count} выбранных элемента? | Вы уверены, что хотите удалить {count} выбранных элементов?"
+    "confirmDeleteSelected": "Вы уверены, что хотите удалить {count} выбранный элемент? | Вы уверены, что хотите удалить {count} выбранных элемента? | Вы уверены, что хотите удалить {count} выбранных элементов?",
+    "itemsInvoiced": "Позиции выставлены в счёт.",
+    "itemsDeleted": "Оплачиваемые позиции удалены.",
+    "itemAdded": "Оплачиваемая позиция добавлена.",
+    "timeBillingAdded": "Записи учёта времени добавлены."
   },
   "clientContacts": {
     "contactsLength": "Контакты ({length})",
@@ -191,7 +207,9 @@
     "registerThisDomainWithThe": "Зарегистрировать этот домен у регистратора?",
     "eppAuthorizationCode": "Код авторизации EPP",
     "useThisCodeToTransfer": "Используйте этот код для переноса домена к другому регистратору. Храните его в тайне.",
-    "copy": "Копировать"
+    "copy": "Копировать",
+    "registrarCommandDone": "Готово. Регистратор принял изменение.",
+    "contactSaved": "Контактные данные сохранены."
   },
   "clientDomainsList": {
     "loadingDomains": "Загрузка доменов...",
@@ -200,7 +218,19 @@
   "clientEmails": {
     "emails": "Письма",
     "loadingEmails": "Загрузка писем...",
-    "totalcountEmailValue": "Писем: {totalCount}"
+    "totalcountEmailValue": "Писем: {totalCount}",
+    "status": "Статус",
+    "delivered": "Доставлено",
+    "failure": {
+      "unknown": "Не доставлено",
+      "relayUnreachable": "Почтовый сервер недоступен",
+      "timeout": "Почтовый сервер не ответил вовремя",
+      "secureConnectionFailed": "Не удалось установить защищённое соединение",
+      "authenticationRejected": "Почтовый сервер отклонил учётные данные",
+      "recipientRejected": "Адрес получателя отклонён",
+      "senderRejected": "Адрес отправителя отклонён",
+      "messageRejected": "Письмо отклонено"
+    }
   },
   "clientInvoices": {
     "createInvoice": "+ Создать счёт",
@@ -219,7 +249,9 @@
     "deleteInvoice": "Удалить счёт",
     "confirmBulkAction": "Подтвердите массовое действие",
     "confirmBulkApply": "Применить «{action}» к {count} выбранному счёту? | Применить «{action}» к {count} выбранным счетам? | Применить «{action}» к {count} выбранным счетам?",
-    "confirmDeleteInvoice": "Вы уверены, что хотите удалить счёт #{id}?"
+    "confirmDeleteInvoice": "Вы уверены, что хотите удалить счёт #{id}?",
+    "bulkActionDone": "Выполнено для выбранных счетов.",
+    "invoiceDeleted": "Счёт удалён."
   },
   "clientLayout": {
     "loadingClient": "Загрузка клиента…",
@@ -240,6 +272,20 @@
     "openTicket": "Открыть тикет"
   },
   "clientProfile": {
+    "statusEffects": {
+      "Suspended": "Клиент по-прежнему может войти и просматривать свой аккаунт, но не может оформлять заказы и начинать новые оплаты картой, а продления не выставляются, пока аккаунт приостановлен. Его услуги продолжают работать.",
+      "Closed": "Закрытие необратимо. Сессии клиента завершаются, его активные услуги приостанавливаются, неоплаченные счета на продление отменяются, и он больше не может оформлять заказы и платить. Закрытый аккаунт нельзя открыть заново."
+    },
+    "statusConfirm": {
+      "Suspended": {
+        "title": "Приостановить клиента?",
+        "action": "Приостановить клиента"
+      },
+      "Closed": {
+        "title": "Закрыть клиента?",
+        "action": "Закрыть клиента"
+      }
+    },
     "profile": "Профиль",
     "clientId": "ID клиента:",
     "joined": "Дата регистрации:",
@@ -258,7 +304,8 @@
     "noQuotesFound": "Предложения не найдены.",
     "clientquotestotalQuoteValue": "Предложений: {clientQuotesTotal}",
     "deleteQuote": "Удалить предложение",
-    "confirmDeleteQuote": "Вы уверены, что хотите удалить предложение #{id}?"
+    "confirmDeleteQuote": "Вы уверены, что хотите удалить предложение #{id}?",
+    "quoteDeleted": "Предложение удалено."
   },
   "clientServiceDetail": {
     "loadingService": "Загрузка услуги...",
@@ -276,6 +323,7 @@
     "suspend": "Приостановить",
     "changePackage": "Сменить тариф",
     "unsuspend": "Возобновить",
+    "changeStatus": "Изменить статус",
     "addons": "Дополнения",
     "noAddonsFound": "Дополнения не найдены.",
     "billing": "Оплата",
@@ -287,6 +335,7 @@
     "promotionCode": "Промокод",
     "subscriptionId": "ID подписки",
     "autoManagement": "Автоматическое управление",
+    "autoRenew": "Автоматический биллинг (счета на продление, приостановка и удаление за неуплату)",
     "overrideAutoSuspend": "Отменить автоприостановку",
     "suspendUntil": "Приостановить до",
     "autoTerminateEndOfCycle": "Автозавершение в конце периода",
@@ -302,7 +351,19 @@
     "suspendService": "Приостановить услугу",
     "areYouSureYouWant": "Вы уверены, что хотите приостановить эту услугу? Клиент потеряет доступ, пока услуга не будет возобновлена.",
     "terminateService": "Завершить услугу",
-    "thisActionCannotBeUndone": "Это действие нельзя отменить. Услуга будет завершена безвозвратно."
+    "thisActionCannotBeUndone": "Это действие нельзя отменить. Услуга будет завершена безвозвратно.",
+    "saveServiceInfo": "Сохранить данные услуги",
+    "saveBilling": "Сохранить оплату",
+    "saveAutomation": "Сохранить автоматизацию",
+    "saveNotes": "Сохранить заметки",
+    "saveTerminationDate": "Сохранить дату прекращения",
+    "changeStatusTo": "Сменить статус на {status}",
+    "provisioned": "Услуга создана на сервере.",
+    "passwordChanged": "Пароль изменён.",
+    "packageChanged": "Пакет изменён.",
+    "suspended": "Услуга приостановлена.",
+    "unsuspended": "Услуга возобновлена.",
+    "terminated": "Услуга прекращена."
   },
   "clientServicesList": {
     "loadingServices": "Загрузка услуг...",
@@ -376,7 +437,8 @@
     "noDomainsFound": "Домены не найдены",
     "currentQuotes": "Текущие предложения",
     "createDate": "Дата создания",
-    "noQuotesFound": "Предложения не найдены"
+    "noQuotesFound": "Предложения не найдены",
+    "notesSaved": "Заметки сохранены."
   },
   "clientTicketDetail": {
     "loadingTicket": "Загрузка тикета...",
@@ -388,7 +450,11 @@
     "conversation": "Переписка",
     "staff": "Сотрудник",
     "deleteTicket": "Удалить тикет",
-    "confirmDeleteTicket": "Вы уверены, что хотите удалить тикет #TKT-{id}? Это действие нельзя отменить."
+    "confirmDeleteTicket": "Вы уверены, что хотите удалить тикет #TKT-{id}? Это действие нельзя отменить.",
+    "ticketSaved": "Тикет сохранён.",
+    "ticketClosed": "Тикет закрыт.",
+    "ticketReopened": "Тикет снова открыт.",
+    "replySent": "Ответ отправлен."
   },
   "clientTickets": {
     "tickets": "Тикеты",
@@ -411,7 +477,9 @@
     "totalOut": "Всего расходов",
     "totalcountTransactionValue": "Транзакций: {totalCount}",
     "deleteTransaction": "Удалить транзакцию",
-    "confirmDeleteTransaction": "Вы уверены, что хотите удалить транзакцию #{id}?"
+    "confirmDeleteTransaction": "Вы уверены, что хотите удалить транзакцию #{id}?",
+    "transactionAdded": "Транзакция добавлена.",
+    "transactionDeleted": "Транзакция удалена."
   },
   "clientUsers": {
     "loadingUsers": "Загрузка пользователей...",
@@ -468,7 +536,10 @@
     "totalcountUserValue": "Пользователей: {totalCount}",
     "noUsersFound": "Пользователи не найдены",
     "passwordResetEmailSent": "Письмо для сброса пароля отправлено.",
-    "never": "Никогда"
+    "never": "Никогда",
+    "userSaved": "Пользователь сохранён.",
+    "userDeleted": "Пользователь удалён.",
+    "passwordChanged": "Пароль изменён."
   },
   "serviceAddons": {
     "serviceAddons": "Дополнения к услугам",

@@ -1,6 +1,5 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Support;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Domain.Tests.Support;
 
 /// <summary>Unit tests for the <see cref="Download"/> entity.</summary>

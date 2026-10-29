@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
 /// An <see cref="IPaymentPluginResolver"/> that hands back whatever plugin a test registered for
-/// a module id, or <see langword="null"/> for an unregistered one — the same "not loaded, not
+/// a module id, or <see langword="null"/> for an unregistered one: the same "not loaded, not
 /// configured, disabled" answer the real resolver gives. A fake port standing in for the plugin
 /// host, which a test must not load a real plugin assembly through.
 /// </summary>

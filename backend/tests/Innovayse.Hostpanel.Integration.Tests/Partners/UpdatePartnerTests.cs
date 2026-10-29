@@ -1,20 +1,18 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Partners;
 
 /// <summary>
-/// Integration tests for the <c>UpdatePartner</c> use case — <c>PUT /api/admin/partners/{id}</c>.
+/// Integration tests for the <c>UpdatePartner</c> use case: <c>PUT /api/admin/partners/{id}</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdatePartnerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>Updating replaces the fields and the whole translation set — a locale left out is removed.</summary>
+    /// <summary>Updating replaces the fields and the whole translation set: a locale left out is removed.</summary>
     [Fact]
     public async Task Update_ReplacesFieldsAndTranslations()
     {
@@ -52,5 +50,18 @@ public sealed class UpdatePartnerTests(IntegrationTestFactory factory) : IClassF
         var response = await factory.CreateClient().PutAsJsonAsync("/api/admin/partners/1", new { logoUrl = (string?)null, url = (string?)"https://edited.example", sortOrder = 9, isActive = false, translations = new { en = new { name = "Edited name" } } });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A negative sort order is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task Update_NegativeSortOrder_RefusesWithValidationError()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+        var id = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/partners", StorefrontContentTestSeeds.PartnerBody());
+
+        var response = await client.PutAsJsonAsync($"/api/admin/partners/{id}", StorefrontContentTestSeeds.PartnerBody(sortOrder: -1));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await StorefrontContentTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
     }
 }

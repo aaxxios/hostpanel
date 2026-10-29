@@ -5,23 +5,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
-using SharedValidationMessages = Innovayse.Hostpanel.Shared.Resources.ValidationMessages;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Shared;
 
 /// <summary>
 /// Proves a request that asks for Russian or Armenian is answered in Russian or Armenian.
 /// <para>
-/// The portal ships three languages and the backend used to ship one. The frontend papered over
-/// that with a mapping table of its own (<c>client/utils/portalErrorMessages.ts</c>) covering five
-/// codes, so every other refusal reached a Russian or Armenian customer in English. That table is
-/// gone and the sentence now comes from
+/// The client app ships three languages and does not translate error codes itself: the sentence
+/// comes from
 /// <c>Innovayse.Hostpanel.Application/Resources/ApplicationValidationMessages*.resx</c>, selected by the culture
-/// <c>UseRequestLocalization</c> reads off <c>Accept-Language</c>.
+/// <c>UsePlatformLocalization</c> reads off <c>X-Language</c>.
 /// </para>
 /// <para>
-/// <b>This is the test that stops it regressing silently.</b> Nothing throws when the resource
+/// <b>This is the test that stops it breaking silently.</b> Nothing throws when the resource
 /// wiring breaks: <see cref="IStringLocalizer"/> answers a missing key with the key itself, so a
 /// renamed folder, a moved marker type or a <c>ResourcesPath</c> set by mistake would turn every
 /// refusal into <c>DomainNotFound</c> on the screen and no build or startup would object.
@@ -40,13 +36,13 @@ public sealed class ValidationMessagesLocalizationTests
 
     /// <summary>
     /// A language tag no resource file is shipped for. Every key resolves through the culture
-    /// fallback to the neutral (English) file, which is what pins the fallback now that
-    /// <c>ru</c> and <c>hy</c> carry every key.
+    /// fallback to the neutral (English) file; <c>ru</c> and <c>hy</c> carry every key, so only a
+    /// language with no file exercises the fallback.
     /// </summary>
     private const string LocaleWithoutTranslations = "de";
 
-    /// <summary>A key of the neutral file whose English sentence takes the service ID.</summary>
-    private const string FallbackKey = "ServiceNotProvisioned";
+    /// <summary>A key of the neutral file whose English sentence takes a length limit.</summary>
+    private const string FallbackKey = "ProductNameTooLong";
 
     /// <summary>
     /// Builds the localizer the API resolves, without a web host.
@@ -70,7 +66,7 @@ public sealed class ValidationMessagesLocalizationTests
     }
 
     /// <summary>
-    /// Looks a key up as if a request had arrived carrying the given <c>Accept-Language</c>.
+    /// Looks a key up as if a request had arrived carrying the given <c>X-Language</c>.
     /// </summary>
     /// <typeparam name="TResource">The marker type naming the resource set.</typeparam>
     /// <param name="languageTag">The culture the request asked for.</param>
@@ -103,11 +99,11 @@ public sealed class ValidationMessagesLocalizationTests
     [Fact]
     public void RussianCallerGetsTheRussianSentence()
     {
-        var message = Resolve<ApplicationValidationMessages>(Russian, "DomainNotFound");
+        var message = Resolve<ApplicationValidationMessages>(Russian, "PaymentMethodRequired");
 
-        Assert.NotEqual("No such domain.", message);
-        Assert.NotEqual("DomainNotFound", message);
-        Assert.Contains("домен", message, StringComparison.Ordinal);
+        Assert.NotEqual("Select a payment method.", message);
+        Assert.NotEqual("PaymentMethodRequired", message);
+        Assert.Contains("способ", message, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -118,28 +114,12 @@ public sealed class ValidationMessagesLocalizationTests
     [Fact]
     public void ArmenianCallerGetsTheArmenianSentence()
     {
-        var message = Resolve<ApplicationValidationMessages>(Armenian, "DomainNotFound");
+        var message = Resolve<ApplicationValidationMessages>(Armenian, "PaymentMethodRequired");
 
-        Assert.NotEqual("No such domain.", message);
+        Assert.NotEqual("Select a payment method.", message);
         Assert.All(
             message.Where(char.IsLetter).Take(1),
             first => Assert.InRange(first, '԰', '֏'));
-    }
-
-    /// <summary>
-    /// Every language the portal ships answers the rate-limit refusal with something other than
-    /// the key, which is what a broken resource lookup would return.
-    /// </summary>
-    [Fact]
-    public void EverySupportedLocaleResolvesTheRateLimitSentence()
-    {
-        foreach (var locale in LocaleOptions.SupportedLocales)
-        {
-            var message = Resolve<SharedValidationMessages>(locale, "RateLimited");
-
-            Assert.NotEqual("RateLimited", message);
-            Assert.NotEmpty(message);
-        }
     }
 
     /// <summary>
@@ -149,13 +129,13 @@ public sealed class ValidationMessagesLocalizationTests
     [Fact]
     public void ThreeLocalesGiveThreeDifferentSentences()
     {
-        const string key = "DomainNotFound";
+        const string key = "PaymentMethodRequired";
 
         var english = Resolve<ApplicationValidationMessages>("en", key);
         var russian = Resolve<ApplicationValidationMessages>(Russian, key);
         var armenian = Resolve<ApplicationValidationMessages>(Armenian, key);
 
-        Assert.Equal("No such domain.", english);
+        Assert.Equal("Select a payment method.", english);
         Assert.NotEqual(english, russian);
         Assert.NotEqual(english, armenian);
         Assert.NotEqual(russian, armenian);
@@ -186,9 +166,9 @@ public sealed class ValidationMessagesLocalizationTests
     {
         foreach (var locale in LocaleOptions.SupportedLocales)
         {
-            var message = Resolve<ApplicationValidationMessages>(locale, "UserAlreadyLinked", "jane@example.com");
+            var message = Resolve<ApplicationValidationMessages>(locale, "ProductNameTooLong", 64);
 
-            Assert.Contains("jane@example.com", message, StringComparison.Ordinal);
+            Assert.Contains("64", message, StringComparison.Ordinal);
         }
     }
 

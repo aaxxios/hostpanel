@@ -8,7 +8,7 @@
  *
  * Every stack ends in Noto Sans Armenian: Inter has no Armenian glyphs, and an
  * Armenian-locale page set to Inter would otherwise fall through to whatever the device
- * has — usually a serif that matches nothing else on the page.
+ * has: usually a serif that matches nothing else on the page.
  *
  * @module utils/brandFonts
  */
@@ -43,7 +43,7 @@ export const BRAND_FONTS = Object.values(BrandFont)
  * Resolves a setting value to a stack.
  *
  * @param value Raw `portal.brand.font_*` value.
- * @returns The stack, or `''` when the value is empty or unknown — the template then keeps its own.
+ * @returns The stack, or `''` when the value is empty or unknown: the template then keeps its own.
  */
 export const fontStack = (value: string | null | undefined): string => {
   return value && value in FONT_STACKS ? FONT_STACKS[value as BrandFont] : ''

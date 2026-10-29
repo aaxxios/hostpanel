@@ -126,6 +126,9 @@
 <data name="PAYMENT_METHOD_NOT_OWNED" xml:space="preserve">
     <value>Այդ վճարման եղանակը այս հաշվինը չէ։</value>
   </data>
+<data name="PAYMENT_METHOD_UNAVAILABLE" xml:space="preserve">
+    <value>Այս պահպանված վճարման եղանակից գումար հանել հնարավոր չէ, քանի որ այս տեղակայման մեջ քարտային վճարային դարպասը կարգավորված չէ։</value>
+  </data>
 <data name="NO_SAVED_PAYMENT_METHODS" xml:space="preserve">
     <value>Այս հաշիվը պահպանված վճարման եղանակներ չունի։</value>
   </data>
@@ -135,14 +138,17 @@
 <data name="GATEWAY_CHARGE_UPSTREAM_FAILED" xml:space="preserve">
     <value>Վճարային համակարգը մերժեց գումարի գանձումը։</value>
   </data>
+  <data name="PAYMENT_GATEWAY_SERVICE_UNAVAILABLE" xml:space="preserve">
+    <value>Վճարային համակարգը ժամանակավորապես անհասանելի է։ Խնդրում ենք փորձել մի փոքր ուշ։</value>
+  </data>
+  <data name="PAYMENT_METHOD_UPSTREAM_FAILED" xml:space="preserve">
+    <value>Վճարային համակարգը չկարողացավ մշակել ձեր պահպանված վճարման եղանակների հարցումը։ Խնդրում ենք փորձել ավելի ուշ կամ դիմել աջակցությանը։</value>
+  </data>
 <data name="GATEWAY_TRANSACTION_MISSING_UPSTREAM_FAILED" xml:space="preserve">
     <value>Վճարային համակարգը հայտնել է հաջողության մասին, բայց չի վերադարձրել գործարքի հղումը։</value>
   </data>
 <data name="CLIENT_PROFILE_NOT_FOUND" xml:space="preserve">
     <value>Այս հաշիվը հաճախորդի պրոֆիլ չունի, ուստի հաճախորդի բաժնում ցուցադրելու բան չկա։</value>
-  </data>
-<data name="MY_CONTACT_NOT_FOUND" xml:space="preserve">
-    <value>Այդպիսի կոնտակտ չկա։</value>
   </data>
 <data name="INVITATION_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի հրավեր չկա։</value>
@@ -174,14 +180,14 @@
 <data name="CLIENT_CURRENCY_ALREADY_INVOICED" xml:space="preserve">
     <value>Այս հաճախորդին արդեն ինվոյս է ուղարկվել, ուստի նրա արժույթը հնարավոր չէ փոխել։</value>
   </data>
-<data name="CLIENT_STATUS_INVALID" xml:space="preserve">
-    <value>Դա այս տեղակայմանը հայտնի հաճախորդի կարգավիճակ չէ։</value>
-  </data>
 <data name="EMAIL_LOG_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի նամակ չկա։</value>
   </data>
 <data name="EMAIL_TEMPLATE_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի նամակի ձևանմուշ չկա։</value>
+  </data>
+<data name="EMAIL_TEMPLATE_ALREADY_EXISTS" xml:space="preserve">
+    <value>Այս ձևանմուշն արդեն ունի տարբերակ այդ լեզվով։</value>
   </data>
 <data name="TICKET_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի տոմս չի գտնվել։</value>
@@ -273,14 +279,14 @@
 <data name="KBCATEGORY_NOT_FOUND" xml:space="preserve">
     <value>Գիտելիքների բազայի նման կատեգորիա չի գտնվել։</value>
   </data>
+<data name="KBCATEGORY_IN_USE" xml:space="preserve">
+    <value>Գիտելիքների բազայի այս կատեգորիայում դեռ կան ենթակատեգորիաներ։ Նախ տեղափոխեք կամ հեռացրեք դրանք։</value>
+  </data>
 <data name="ANNOUNCEMENT_NOT_FOUND" xml:space="preserve">
     <value>Նման հայտարարություն չի գտնվել։</value>
   </data>
 <data name="NETWORKISSUE_NOT_FOUND" xml:space="preserve">
     <value>Ցանցային նման խնդիր չի գտնվել։</value>
-  </data>
-<data name="KB_PUBLISHED_ARTICLE_UNAVAILABLE" xml:space="preserve">
-    <value>Գիտելիքների բազայի նման հոդված հասանելի չէ։</value>
   </data>
 <data name="ORDER_NOT_FOUND" xml:space="preserve">
     <value>Նման պատվեր չի գտնվել։</value>
@@ -296,6 +302,12 @@
   </data>
 <data name="ORDER_CURRENCY_UNAVAILABLE" xml:space="preserve">
     <value>Այդ արժույթը հասանելի չէ։</value>
+  </data>
+  <data name="ACCOUNT_EMAIL_EXISTS" xml:space="preserve">
+    <value>Այս էլ. հասցեով հաշիվ արդեն կա։ Մուտք գործեք՝ շարունակելու համար։</value>
+  </data>
+  <data name="ORDER_NUMBER_RANGE_EXHAUSTED" xml:space="preserve">
+    <value>Այժմ հնարավոր չէ համար տալ պատվերին։ Փորձեք ավելի ուշ։</value>
   </data>
 <data name="ORDER_GUEST_DETAILS_REQUIRED" xml:space="preserve">
     <value>Այս պատվերը կատարելու համար անհրաժեշտ են ձեր անունը, էլ. փոստը և գաղտնաբառը։</value>
@@ -315,11 +327,17 @@
 <data name="DOWNLOAD_CATEGORY_NOT_FOUND" xml:space="preserve">
     <value>Ներբեռնումների նման կատեգորիա չի գտնվել։</value>
   </data>
+<data name="DOWNLOAD_CATEGORY_IN_USE" xml:space="preserve">
+    <value>Ներբեռնումների այս կատեգորիայում դեռ կան ենթակատեգորիաներ կամ ֆայլեր։ Նախ տեղափոխեք կամ հեռացրեք դրանք։</value>
+  </data>
 <data name="PREDEFINED_REPLY_NOT_FOUND" xml:space="preserve">
     <value>Պատրաստի պատասխանի նման տարբերակ չի գտնվել։</value>
   </data>
 <data name="PREDEFINED_REPLY_CATEGORY_NOT_FOUND" xml:space="preserve">
     <value>Պատրաստի պատասխանների նման կատեգորիա չի գտնվել։</value>
+  </data>
+<data name="PREDEFINED_REPLY_CATEGORY_IN_USE" xml:space="preserve">
+    <value>Պատրաստի պատասխանների այս կատեգորիայում դեռ կան ենթակատեգորիաներ կամ պատասխաններ։ Նախ տեղափոխեք կամ հեռացրեք դրանք։</value>
   </data>
 <data name="CONTACT_NOT_CONFIGURED" xml:space="preserve">
     <value>Կապի ձևը այս պահին հասանելի չէ։ Խնդրում ենք գրել կամ զանգահարել այս էջում նշված կոնտակտներով։</value>
@@ -332,6 +350,9 @@
   </data>
 <data name="CANCELLATION_ALREADY_PENDING" xml:space="preserve">
     <value>Այս ծառայության համար արդեն կա չեղարկման սպասող հայտ։</value>
+  </data>
+  <data name="SERVICE_ALREADY_TERMINATED" xml:space="preserve">
+    <value>Այս ծառայությունն արդեն դադարեցված է, այն չի կարող չեղարկվել։</value>
   </data>
 <data name="CANCELLATION_REQUEST_NOT_FOUND" xml:space="preserve">
     <value>Չեղարկման այդպիսի հայտ չի գտնվել։</value>
@@ -351,8 +372,11 @@
 <data name="PROVISIONING_UPSTREAM_FAILED" xml:space="preserve">
     <value>Ծառայության տեղակայումը ձախողվեց։ Խնդրում ենք փորձել կրկին կամ դիմել աջակցությանը։</value>
   </data>
-<data name="INVALID_SERVICE_STATUS" xml:space="preserve">
-    <value>Սա ծառայության հայտնի կարգավիճակ չէ։</value>
+<data name="SERVICE_FIRST_INVOICE_UNPAID" xml:space="preserve">
+    <value>Այս ծառայությունը կարելի է կարգավորել առաջին հաշիվն ամբողջությամբ վճարելուց հետո։</value>
+  </data>
+<data name="PROVISIONING_ACCOUNT_CONFLICT" xml:space="preserve">
+    <value>Հոսթինգ հաշվի անունն արդեն զբաղված է սերվերում։ Մեր թիմը տեղեկացված է և կավարտի կարգավորումը։</value>
   </data>
 <data name="SERVICE_NOT_PROVISIONED" xml:space="preserve">
     <value>Այս ծառայությունը դեռ տեղակայված չէ։</value>
@@ -393,12 +417,6 @@
 <data name="SLIDE_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի սլայդ չի գտնվել։</value>
   </data>
-<data name="SLIDE_IMAGE_TYPE_INVALID" xml:space="preserve">
-    <value>Ֆայլի այդ տեսակը չի ապահովվում։ Վերբեռնեք JPEG, PNG, WebP, GIF կամ SVG պատկեր։</value>
-  </data>
-<data name="SLIDE_IMAGE_EXCEEDS_LIMIT" xml:space="preserve">
-    <value>Այդ պատկերը չափազանց մեծ է։ Վերբեռնեք 5 ՄԲ-ից փոքր ֆայլ։</value>
-  </data>
 <data name="SETUP_ALREADY_COMPLETED" xml:space="preserve">
     <value>Այս տեղադրումը արդեն կարգավորված է, և ադմինիստրատորի դերն արդեն անցել է մեկուն. Խնդրեք նրանցից, որ ձեզ մուտք տրամադրի։</value>
   </data>
@@ -411,14 +429,14 @@
 <data name="SIGN_IN_UNAUTHORIZED" xml:space="preserve">
     <value>Էլ. փոստը կամ գաղտնաբառը սխալ է։</value>
   </data>
+<data name="SIGN_IN_ACCOUNT_LOCKED" xml:space="preserve">
+    <value>Չափազանց շատ սխալ գաղտնաբառեր։ Հաշիվը ժամանակավորապես արգելափակված է, փորձեք ավելի ուշ։</value>
+  </data>
 <data name="PENDING_TOKEN_UNAUTHORIZED" xml:space="preserve">
     <value>Մուտքի այս քայլը ժամկետանց է կամ վավեր չէ։ Մուտք գործեք նորից։</value>
   </data>
 <data name="TWO_FACTOR_CODE_UNAUTHORIZED" xml:space="preserve">
     <value>Կոդը չի համընկնում։ Ստուգեք նույնականացման հավելվածը և փորձեք նորից։</value>
-  </data>
-<data name="SESSION_UNAUTHORIZED" xml:space="preserve">
-    <value>Սեսիան ավարտվել է։ Մուտք գործեք նորից։</value>
   </data>
 <data name="TOKEN_INVALID_OR_EXPIRED" xml:space="preserve">
     <value>Հղումը անվավեր է կամ ժամկետանց։ Պահանջեք նորը։</value>
@@ -426,14 +444,26 @@
 <data name="REGISTRATION_FAILED" xml:space="preserve">
     <value>Չհաջողվեց ստեղծել հաշիվը։ Ստուգեք տվյալները և փորձեք նորից։</value>
   </data>
+<data name="TWO_FACTOR_ALREADY_ENABLED" xml:space="preserve">
+    <value>Երկքայլ նույնականացումն արդեն միացված է։ Անջատեք այն՝ նորից կարգավորելուց առաջ։</value>
+  </data>
+<data name="CURRENT_PASSWORD_INVALID" xml:space="preserve">
+    <value>Ընթացիկ գաղտնաբառը սխալ է։</value>
+  </data>
+<data name="EMAIL_ALREADY_IN_USE" xml:space="preserve">
+    <value>Այս էլ. հասցեն արդեն օգտագործվում է այլ հաշվի կողմից։</value>
+  </data>
 <data name="MIGRATION_JOB_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի միգրացիայի առաջադրանք չի գտնվել։</value>
   </data>
 <data name="MIGRATION_JOB_NOT_PENDING" xml:space="preserve">
     <value>Այս միգրացիայի առաջադրանքն արդեն սկսվել կամ ավարտվել է և չի կարող կրկին սկսվել։</value>
   </data>
-<data name="MIGRATION_JOB_ALREADY_FINISHED" xml:space="preserve">
-    <value>Այս միգրացիայի առաջադրանքն արդեն ավարտվել կամ ձախողվել է. նոր խմբաքանակներ այլևս չեն ընդունվում։</value>
+<data name="MIGRATION_JOB_NOT_FAILED" xml:space="preserve">
+    <value>Միգրացիայի այս առաջադրանքը չի ձախողվել, ուստի այն հնարավոր չէ կրկնել։</value>
+  </data>
+<data name="MIGRATION_JOB_INVALID_TRANSITION" xml:space="preserve">
+    <value>Միգրացիայի այս առաջադրանքը չի կարող դա անել իր ներկայիս վիճակում։</value>
   </data>
 <data name="MIGRATION_PLUGIN_NOT_FOUND" xml:space="preserve">
     <value>Միգրացիայի պլագինը հասանելի չէ այս տեղակայման վրա։</value>
@@ -443,6 +473,18 @@
   </data>
 <data name="SERVER_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի սպասարկման սերվեր չի գտնվել։</value>
+  </data>
+<data name="SERVER_CONNECTION_UNREACHABLE" xml:space="preserve">
+    <value>Չհաջողվեց կապ հաստատել սերվերի հետ։ Մանրամասները տես սերվերի մատյանում։</value>
+  </data>
+<data name="SERVER_CONNECTION_NO_ACCESS_HASH" xml:space="preserve">
+    <value>Այս սերվերի համար մուտքի հեշ սահմանված չէ։</value>
+  </data>
+<data name="SERVER_CONNECTION_NO_API_KEY" xml:space="preserve">
+    <value>Այս սերվերի համար API բանալի կամ մուտքի հեշ սահմանված չէ։</value>
+  </data>
+<data name="SERVER_CONNECTION_MODULE_UNSUPPORTED" xml:space="preserve">
+    <value>Այս սերվերի մոդուլի համար կապի ստուգումը չի աջակցվում։</value>
   </data>
 <data name="SERVER_GROUP_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի սերվերների խումբ չի գտնվել։</value>
@@ -461,6 +503,18 @@
   </data>
 <data name="PLUGIN_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի հավելագրիչ տեղադրված չէ։</value>
+  </data>
+<data name="PLUGIN_ARCHIVE_TOO_LARGE" xml:space="preserve">
+    <value>Այդ արխիվը չափազանց մեծ է տեղադրելու համար. այն ունի չափազանց շատ ֆայլեր կամ բացվելուց հետո գերազանցում է թույլատրելի չափը։</value>
+  </data>
+<data name="PLUGIN_HOST_ASSEMBLY_REFUSED" xml:space="preserve">
+    <value>Այդ արխիվը պարունակում է գրադարան, որի անունը համընկնում է սերվերում արդեն առկայի հետ, և մերժվեց։ Հեռացրեք այն փաթեթից և կրկին վերբեռնեք։</value>
+  </data>
+<data name="PLUGIN_NOT_TRUSTED" xml:space="preserve">
+    <value>Այդ արխիվը սերվերի վստահելի հավելագրիչների փաթեթների ցանկում չէ։</value>
+  </data>
+<data name="PLUGIN_BUILT_IN" xml:space="preserve">
+    <value>Այս հավելագրիչը սերվերի կազմում է և չի կարող հեռացվել կամ փոխարինվել։</value>
   </data>
 <data name="INTEGRATION_NOT_FOUND" xml:space="preserve">
     <value>Այդպիսի ինտեգրում չի գտնվել։</value>
@@ -518,7 +572,7 @@
     <value>Ժամկետանց կարելի է նշել միայն չվճարված հաշիվ-ապրանքագիրը։</value>
   </data>
   <data name="INVOICE_CANCEL_NOT_ALLOWED" xml:space="preserve">
-    <value>Վճարված հաշիվ-ապրանքագիրը հնարավոր չէ չեղարկել։</value>
+    <value>Վճարված, վերադարձված կամ արդեն չեղարկված հաշիվ-ապրանքագիրը հնարավոր չէ չեղարկել։</value>
   </data>
   <data name="INVOICE_NOT_PAID" xml:space="preserve">
     <value>Այս գործողությունը պահանջում է, որ հաշիվ-ապրանքագիրը վճարված լինի։</value>
@@ -562,11 +616,32 @@
   <data name="CLIENT_ACTIVATE_NOT_ALLOWED" xml:space="preserve">
     <value>Փակված հաշիվը հնարավոր չէ վերականգնել այս եղանակով։</value>
   </data>
+  <data name="CLIENT_DEACTIVATE_NOT_ALLOWED" xml:space="preserve">
+    <value>Ապաակտիվացնել կարելի է միայն ակտիվ հաշիվը։ Կասեցված հաշիվը նախ ակտիվացրեք, փակված հաշիվը հնարավոր չէ փոխել։</value>
+  </data>
+  <data name="CLIENT_SUSPENDED" xml:space="preserve">
+    <value>Այս հաշիվը կասեցված է, ուստի չի կարող պատվերներ տալ կամ առցանց վճարել։ Հաշվի վերականգնման համար դիմեք աջակցության։</value>
+  </data>
+  <data name="CLIENT_CLOSED" xml:space="preserve">
+    <value>Այս հաշիվը փակված է և այլևս չի կարող պատվերներ տալ կամ հաշիվներ ստանալ։</value>
+  </data>
+  <data name="CLIENT_OWNER_CANNOT_BE_REMOVED" xml:space="preserve">
+    <value>Հաշվի սեփականատիրոջը հնարավոր չէ հեռացնել։ Նախ փոխանցեք սեփականությունը մեկ այլ օգտատիրոջ։</value>
+  </data>
+  <data name="CONTACT_EMAIL_IN_USE" xml:space="preserve">
+    <value>Այս հաճախորդի մեկ այլ կոնտակտ արդեն օգտագործում է այս էլ. փոստի հասցեն։</value>
+  </data>
+  <data name="CLIENT_RECORD_CLOSED" xml:space="preserve">
+    <value>Այս հաշիվը փակված է, ուստի նրա կոնտակտներն ու օգտատերերն այլևս չեն կարող փոփոխվել։</value>
+  </data>
   <data name="DOMAIN_CANCEL_NOT_ALLOWED" xml:space="preserve">
     <value>Այս դոմենի կարգավիճակը թույլ չի տալիս չեղարկում։</value>
   </data>
   <data name="DOMAIN_RENEW_NOT_ALLOWED" xml:space="preserve">
     <value>Այս դոմենի կարգավիճակը թույլ չի տալիս երկարացում։</value>
+  </data>
+  <data name="DOMAIN_LINK_NOT_ALLOWED" xml:space="preserve">
+    <value>Այս դոմենի կարգավիճակը թույլ չի տալիս դրան կապել հոստինգի ծառայություն։</value>
   </data>
   <data name="DOMAIN_DNS_RECORD_NOT_FOUND" xml:space="preserve">
     <value>Այս դոմենի վրա այդպիսի DNS գրառում չկա։</value>
@@ -687,5 +762,122 @@
   </data>
   <data name="SSH_AGENT_ENDPOINT_IN_USE" xml:space="preserve">
     <value>Այս agent-ի հոսթն ու պորտն արդեն օգտագործում է մեկ այլ սերվեր։</value>
+  </data>
+  <data name="PAYMENT_INTENT_MISMATCH" xml:space="preserve">
+    <value>Այս քարտային վճարումը չի համապատասխանում այս պատվերի հաշիվ-ապրանքագրին։</value>
+  </data>
+  <data name="PAYMENT_INTENT_ALREADY_USED" xml:space="preserve">
+    <value>Այս քարտային վճարումն արդեն գրանցված է։</value>
+  </data>
+  <data name="REGISTRAR_NOT_CONFIGURED" xml:space="preserve">
+    <value>Այս դոմենի ռեգիստրատորը կարգավորված չէ։</value>
+  </data>
+  <data name="REGISTRAR_ORDER_UPSTREAM_FAILED" xml:space="preserve">
+    <value>Ռեգիստրատորը մերժեց հարցումը։ Փորձեք կրկին փոքր-ինչ ուշ։</value>
+  </data>
+  <data name="REGISTRAR_OPERATION_UNSUPPORTED" xml:space="preserve">
+    <value>Ռեգիստրատորը չի առաջարկում այս գործողությունը։ Դիմեք ռեգիստրատորի աջակցությանը։</value>
+  </data>
+  <data name="REGISTRAR_DOMAIN_NOT_FOUND" xml:space="preserve">
+    <value>Ռեգիստրատորի մոտ այս դոմենը չկա։</value>
+  </data>
+  <data name="REGISTRAR_DOMAIN_NOT_ACTIVE" xml:space="preserve">
+    <value>Ռեգիստրատորը դեռ չի ակտիվացրել այս դոմենը։</value>
+  </data>
+  <data name="REGISTRAR_WHOIS_PRIVACY_UNAVAILABLE" xml:space="preserve">
+    <value>Այս դոմենը ռեգիստրատորի մոտ WHOIS գաղտնիության բաժանորդագրություն չունի։</value>
+  </data>
+  <data name="REGISTRAR_DOMAIN_UNAVAILABLE" xml:space="preserve">
+    <value>Ռեգիստրատորը հայտնում է, որ այս դոմենի անունը հասանելի չէ։</value>
+  </data>
+  <data name="REGISTRAR_INSUFFICIENT_FUNDS" xml:space="preserve">
+    <value>Ռեգիստրատորի հաշվին այս գնման համար բավարար միջոցներ չկան։</value>
+  </data>
+  <data name="REGISTRAR_CONTACT_VALIDATION_FAILED" xml:space="preserve">
+    <value>Դոմենի սեփականատիրոջ կոնտակտային տվյալները թերի են, ուստի պատվերը չի կարող ուղարկվել ռեգիստրատորին։</value>
+  </data>
+  <data name="TRANSACTION_AMOUNT_REQUIRED" xml:space="preserve">
+    <value>Գործարքը պետք է ունենա մուտքային կամ ելքային գումար։</value>
+  </data>
+  <data name="INVOICE_REFUND_EXCEEDS_PAID" xml:space="preserve">
+    <value>Վերադարձը գերազանցում է վճարված և դեռ չվերադարձված գումարը։</value>
+  </data>
+  <data name="INVOICE_CREDIT_EXCEEDS_DUE" xml:space="preserve">
+    <value>Կրեդիտը գերազանցում է հաշիվ-ապրանքագրի դեռ վճարելիք գումարը։</value>
+  </data>
+  <data name="INVOICE_NOT_GATEWAY_PAID" xml:space="preserve">
+    <value>Այս հաշիվ-ապրանքագրի համար գումար չի ընդունել որևէ վճարային շլյուզ, ուստի այն հնարավոր չէ վերադարձնել շլյուզով։</value>
+  </data>
+  <data name="CARD_REFUND_REFUSED" xml:space="preserve">
+    <value>Քարտային վճարային շլյուզը մերժել է վերադարձը։ Այն մասը, որն արդեն վերադարձվել է, գրանցված է հաշիվ-ապրանքագրում։</value>
+  </data>
+  <data name="INVOICE_REFUND_CONFLICT" xml:space="preserve">
+    <value>Այս հաշիվ-ապրանքագրի մեկ այլ վերադարձ դեռ սպասում է վճարային շլյուզի պատասխանին։ Կրկին փորձեք, երբ այն ավարտվի։</value>
+  </data>
+  <data name="GATEWAY_REFUND_REFUSED" xml:space="preserve">
+    <value>Վճարային շլյուզը մերժել է վերադարձը կամ չի կարողացել այն կատարել։ Դրա միջոցով ոչինչ չի վերադարձվել։</value>
+  </data>
+  <data name="GATEWAY_PAYMENT_MISMATCH" xml:space="preserve">
+    <value>Վճարային շլյուզը հաղորդել է գումար կամ արժույթ, որը չի համապատասխանում հաշիվ-ապրանքագրին։</value>
+  </data>
+  <data name="INVOICE_NOT_DELETABLE" xml:space="preserve">
+    <value>Հնարավոր է ջնջել միայն սևագիր կամ չեղարկված հաշիվ-ապրանքագիր։</value>
+  </data>
+  <data name="SERVICE_STATUS_CHANGE_NOT_ALLOWED" xml:space="preserve">
+    <value>Այս ծառայությունը հնարավոր չէ տեղափոխել այդ կարգավիճակ։</value>
+  </data>
+  <data name="SERVICE_AUTOMATION_INCONSISTENT" xml:space="preserve">
+    <value>Հետաձգման ամսաթիվը նշեք միայն կասեցման հետաձգման հետ, իսկ դադարեցման պատճառը՝ միայն ցիկլի վերջում դադարեցման հետ։</value>
+  </data>
+  <data name="SERVICE_NOT_TERMINATED" xml:space="preserve">
+    <value>Դադարեցման ամսաթիվը կարելի է ուղղել միայն դադարեցված ծառայության համար։</value>
+  </data>
+  <data name="SERVICE_HOSTING_DETAILS_MISSING" xml:space="preserve">
+    <value>Ծառայությունը դեռ չունի դոմեն կամ օգտանուն։ Նախ կարգավորեք հոսթինգի հաշիվը։</value>
+  </data>
+  <data name="PRODUCT_PACKAGE_MISSING" xml:space="preserve">
+    <value>Ապրանքի համար հոսթինգի փաթեթ նշված չէ։ Նախ ընտրեք այն ապրանքի կարգավորումներում։</value>
+  </data>
+  <data name="INVOICE_PAYMENT_EXCEEDS_DUE" xml:space="preserve">
+    <value>Վճարումը գերազանցում է հաշիվ-ապրանքագրի դեռ վճարելիք գումարը։</value>
+  </data>
+  <data name="INVOICE_AMOUNT_STILL_DUE" xml:space="preserve">
+    <value>Հաշիվ-ապրանքագրով դեռ վճարելիք գումար կա, ուստի այն պետք է մարել, ոչ թե պարզապես նշել վճարված։</value>
+  </data>
+  <data name="INVOICE_HAS_PAYMENTS" xml:space="preserve">
+    <value>Հաշիվ-ապրանքագրով արդեն վճարում է ընդունվել։ Նախ վերադարձրեք կամ ջնջեք այդ վճարումը։</value>
+  </data>
+  <data name="INVOICE_TOTAL_BELOW_PAID" xml:space="preserve">
+    <value>Փոփոխությունից հետո հաշիվ-ապրանքագիրը փոքր կլիներ արդեն ընդունված վճարումներից։</value>
+  </data>
+  <data name="SERVER_IN_USE" xml:space="preserve">
+    <value>Այս սերվերում դեռ կան հաճախորդների ծառայություններ կամ SSH բանալիներ։ Նախ տեղափոխեք կամ հեռացրեք դրանք։</value>
+  </data>
+  <data name="SERVER_GROUP_IN_USE" xml:space="preserve">
+    <value>Այս սերվերների խումբը դեռ օգտագործվում է ապրանքների կողմից։ Նախ նրանց նշանակեք այլ խումբ։</value>
+  </data>
+  <data name="USER_NOT_FOUND" xml:space="preserve">
+    <value>Այդպիսի օգտատեր չի գտնվել։</value>
+  </data>
+  <data name="USER_CANNOT_DELETE_SELF" xml:space="preserve">
+    <value>Չեք կարող ջնջել ձեր սեփական հաշիվը։</value>
+  </data>
+  <data name="USER_LAST_ADMIN" xml:space="preserve">
+    <value>Սա վերջին ակտիվ ադմինիստրատորն է։ Նախ այլ օգտատիրոջ դարձրեք ադմինիստրատոր։</value>
+  </data>
+  <data name="EXCHANGE_RATE_SOURCE_UNAVAILABLE" xml:space="preserve">
+    <value>Փոխարժեքների աղբյուրը հիմա չի պատասխանում։ Փորձեք ավելի ուշ։</value>
+  </data>
+  <data name="EXCHANGE_RATE_BASE_NOT_QUOTED" xml:space="preserve">
+    <value>Փոխարժեքների աղբյուրը չի հրապարակում հիմնական արժույթի փոխարժեքը։</value>
+  </data>
+  <data name="CLIENT_CARD_PAYMENT_DISABLED" xml:space="preserve">
+    <value>Այս հաշվի համար քարտային վճարումն անջատված է։ Վճարեք այլ եղանակով կամ դիմեք աջակցությանը։</value>
+  </data>
+  <data name="CLIENT_SSO_DISABLED" xml:space="preserve">
+    <value>Այս հաշվի համար հոսթինգի վահանակ միասնական մուտքը միացված չէ։</value>
+  </data>
+  <data name="CLIENT_TAX_EXEMPT" xml:space="preserve">
+    <value>Այս հաճախորդն ազատված է հարկից, ուստի նրա հաշիվ-ապրանքագրերի համար հարկի դրույք սահմանել հնարավոր չէ։</value>
   </data>
 </root>

@@ -85,4 +85,77 @@ describe('MigrationView', () => {
 
     expect(wrapper.get('[data-testid="migration-error"]').text()).toContain('Migrations are unavailable.')
   })
+
+  it('reloads the history from the Retry of a refused load', async () => {
+    let refused = true
+    stubRoutes({ 'GET /api/admin/migrations': () => (refused ? problem('Migrations are unavailable.', 503) : json([migrationJob()])) })
+    const wrapper = await mountMigration()
+
+    refused = false
+    await wrapper.get('[data-testid="migration-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="migration-error"]').exists()).toBe(false)
+  })
+
+  it('deletes a job only after the confirmation and reports it', async () => {
+    const job = migrationJob()
+    const mock = stubRoutes({
+      [`DELETE /api/admin/migrations/${job.id}`]: () => new Response(null, { status: 204 }),
+      'GET /api/admin/migrations': () => json([job]),
+    })
+    const wrapper = await mountMigration()
+
+    await wrapper.get(`[data-testid="migration-delete-${job.id}"]`).trigger('click')
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(false)
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(true)
+    expect(wrapper.get('[data-testid="migration-feedback"]').text()).toBe('Migration deleted.')
+  })
+
+  it('shows the API sentence when the delete is refused, without the load error', async () => {
+    const job = migrationJob()
+    stubRoutes({
+      [`DELETE /api/admin/migrations/${job.id}`]: () => problem('The migration is running.', 409),
+      'GET /api/admin/migrations': () => json([job]),
+    })
+    const wrapper = await mountMigration()
+
+    await wrapper.get(`[data-testid="migration-delete-${job.id}"]`).trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="migration-feedback"]').text()).toBe('The migration is running.')
+    expect(wrapper.find('[data-testid="migration-error"]').exists()).toBe(false)
+  })
+
+  it('keeps the job when the confirmation is cancelled', async () => {
+    const job = migrationJob()
+    const mock = stubRoutes({ 'GET /api/admin/migrations': () => json([job]) })
+    const wrapper = await mountMigration()
+
+    await wrapper.get(`[data-testid="migration-delete-${job.id}"]`).trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(false)
+  })
+
+  it('shows the API sentence inside the dialog when the create is refused', async () => {
+    stubRoutes({
+      'GET /api/admin/migrations': () => json([]),
+      'POST /api/admin/migrations': () => problem('The source address is unreachable.', 400),
+    })
+    const wrapper = await mountMigration()
+
+    await wrapper.get('[data-testid="migration-new"]').trigger('click')
+    await wrapper.get('[data-testid="migration-source-url"]').setValue('https://old.example.com')
+    await wrapper.get('[data-testid="migration-create"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="migration-create-error"]').text()).toBe('The source address is unreachable.')
+    expect(wrapper.find('[data-testid="migration-error"]').exists()).toBe(false)
+  })
 })

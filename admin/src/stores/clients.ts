@@ -10,11 +10,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useClientsApi } from '@/composables/apis/useClientsApi'
+import { toUpdateClientPayload } from '@/lib/clientPayload'
 import { runAction } from '@/lib/runAction'
 import type { AdminCreateClientPayload } from '@/types/admincreateclientpayload'
 import type { ClientDetail, ClientFilters, ClientListItem } from '@/types/client'
 import type { ClientOption } from '@/types/clientoption'
 import type { UserSearchHit } from '@/types/clientuser'
+import type { UpdateClientPayload } from '@/types/updateclientpayload'
 import type { CountryOption } from '@/types/countryoption'
 import type { CurrencyOption } from '@/types/currencyoption'
 import { DEFAULT_PAGE_SIZE, LOOKUP_PAGE_SIZE } from '@/lib/limits'
@@ -117,13 +119,13 @@ export const useClientsStore = defineStore('clients', () => {
   }
 
   /**
-   * Updates a client profile, address, notifications, settings and status.
+   * Replaces a client profile, address, notifications, settings and status (the API takes the whole record).
    *
    * @param id - The client identifier.
-   * @param payload - Updated client fields.
+   * @param payload - The complete client record.
    * @returns True when saved and the detail refreshed; false when refused (see `saveError`, `fieldErrors`).
    */
-  const updateClient = async (id: number | string, payload: Record<string, unknown>): Promise<boolean> => {
+  const updateClient = async (id: number | string, payload: UpdateClientPayload): Promise<boolean> => {
     saving.value = true
     const result = await runAction(
       saveError,
@@ -137,6 +139,24 @@ export const useClientsStore = defineStore('clients', () => {
     )
     saving.value = false
     return result.ok
+  }
+
+  /**
+   * Saves the internal notes of the open client and nothing else. The API replaces the whole
+   * record, so the rest of it is sent back as it was loaded.
+   *
+   * @param id - The client identifier; must be the open client.
+   * @param adminNotes - The new notes; an empty text clears them.
+   * @returns True when saved; false when no such client is open or the API refused (see `saveError`).
+   */
+  const saveAdminNotes = async (id: number | string, adminNotes: string): Promise<boolean> => {
+    const detail = current.value
+    if (!detail || String(detail.id) !== String(id)) {
+      return false
+    }
+    return updateClient(id, toUpdateClientPayload(detail, {
+      preferences: { ...detail.preferences, adminNotes: adminNotes.trim() || null },
+    }))
   }
 
   /**
@@ -310,6 +330,7 @@ export const useClientsStore = defineStore('clients', () => {
     fetchById,
     createClient,
     updateClient,
+    saveAdminNotes,
     fetchClientOptions,
     searchClients,
     searchUsers,

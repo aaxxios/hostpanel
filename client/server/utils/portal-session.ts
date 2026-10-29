@@ -3,9 +3,9 @@
  *
  * The browser holds one small opaque cookie (`SessionCookie.Session`, a random id) and the readable
  * `authed` hint; the access and refresh tokens stay in the session store
- * (`server/utils/session-store.ts`). Tokens used to travel as cookies, and a refresh token from the
- * identity provider can be larger than the 4 KB a browser keeps per cookie: the browser dropped it
- * without a word, and the session ended the moment the access token expired.
+ * (`server/utils/session-store.ts`). A refresh token from the identity provider can be larger than
+ * the 4 KB a browser keeps per cookie: as a cookie the browser would drop it without a word, and the
+ * session would end the moment the access token expired.
  *
  * Every route that needs the person's bearer asks `resolveAccessToken`, which also renews an access
  * token that is about to expire; `internalApiCall` refreshes once more on a 401. Signing in starts a
@@ -23,10 +23,14 @@ import {
   ACCESS_TOKEN_FALLBACK_MAX_AGE,
   AUTHED_FLAG_MAX_AGE,
   REFRESH_TOKEN_MAX_AGE,
+  cookieOptions,
   readTokenExpiry,
   readTokenPayload
 } from '~/server/utils/auth-cookie'
 import { useSessionStore } from '~/server/utils/session-store'
+import { signOnFetch } from '~/server/utils/signon-http'
+import { SignOnErrorCode } from '~/types/signonerrorcode'
+import { HttpMethod } from '~/types/httpmethod'
 
 /** The tokens a sign-in hands over. */
 export interface SessionTokens {
@@ -61,6 +65,18 @@ const SESSION_ID_BYTES = 32
 
 /** An access token this close to its expiry, in seconds, is renewed before it is used. */
 const REFRESH_LEEWAY_SECONDS = 30
+
+/** How long a refresh lock lives if its holder never releases it, in seconds: longer than the exchange can take. */
+const REFRESH_LOCK_SECONDS = 15
+
+/** How long a request waits between looks for the renewal another replica is performing, in milliseconds. */
+const REFRESH_WAIT_INTERVAL_MS = 250
+
+/** How many times a request looks for another replica's renewal before answering 503. */
+const REFRESH_WAIT_ATTEMPTS = 20
+
+/** Statuses of the token endpoint that mean the refresh token is no longer good (OAuth `invalid_grant` is a 400). */
+const REFUSED_GRANT_STATUSES: ReadonlySet<number> = new Set([400, 401])
 
 /** Refreshes in flight, by session id, so concurrent requests of one session share one refresh. */
 const refreshesInFlight = new Map<string, Promise<string | null>>()
@@ -116,7 +132,7 @@ const buildSession = (tokens: SessionTokens, previous?: PortalSession): PortalSe
 }
 
 /**
- * Writes the session cookie: httpOnly, Secure in production, SameSite=Lax (the sign-in callback is
+ * Writes the session cookie: httpOnly, Secure outside development, SameSite=Lax (the sign-in callback is
  * reached by a top-level redirect from the identity provider, which Strict would not let carry it).
  *
  * @param event - The incoming request.
@@ -124,13 +140,7 @@ const buildSession = (tokens: SessionTokens, previous?: PortalSession): PortalSe
  * @param maxAge - Lifetime in seconds.
  */
 const writeSessionCookie = (event: H3Event, id: string, maxAge: number): void => {
-  setCookie(event, SessionCookie.Session, id, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge,
-    path: '/',
-  })
+  setCookie(event, SessionCookie.Session, id, cookieOptions(maxAge))
 }
 
 /**
@@ -139,11 +149,11 @@ const writeSessionCookie = (event: H3Event, id: string, maxAge: number): void =>
  * @param event - The incoming request.
  */
 const clearSessionCookies = (event: H3Event): void => {
-  deleteCookie(event, SessionCookie.Session, { path: '/' })
-  deleteCookie(event, SessionCookie.Authed, { path: '/' })
-  deleteCookie(event, SessionCookie.LegacyAuthToken, { path: '/' })
-  deleteCookie(event, SessionCookie.LegacyRefreshToken, { path: '/' })
-  deleteCookie(event, SessionCookie.PendingAccount, { path: '/' })
+  deleteCookie(event, SessionCookie.Session, cookieOptions(0))
+  deleteCookie(event, SessionCookie.Authed, cookieOptions(0))
+  deleteCookie(event, SessionCookie.LegacyAuthToken, cookieOptions(0))
+  deleteCookie(event, SessionCookie.LegacyRefreshToken, cookieOptions(0))
+  deleteCookie(event, SessionCookie.PendingAccount, cookieOptions(0))
 }
 
 /**
@@ -192,16 +202,10 @@ export const startSession = async (event: H3Event, tokens: SessionTokens): Promi
 
   writeSessionCookie(event, id, lifetime)
   // The readable hint the route middleware checks; not a credential.
-  setCookie(event, SessionCookie.Authed, '1', {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: AUTHED_FLAG_MAX_AGE,
-    path: '/',
-  })
-  // Browsers signed in before sessions moved to the server still carry the token cookies.
-  deleteCookie(event, SessionCookie.LegacyAuthToken, { path: '/' })
-  deleteCookie(event, SessionCookie.LegacyRefreshToken, { path: '/' })
+  setCookie(event, SessionCookie.Authed, '1', cookieOptions(AUTHED_FLAG_MAX_AGE, false))
+  // A browser may still carry token cookies from before sessions were kept on the server.
+  deleteCookie(event, SessionCookie.LegacyAuthToken, cookieOptions(0))
+  deleteCookie(event, SessionCookie.LegacyRefreshToken, cookieOptions(0))
 }
 
 /**
@@ -238,54 +242,117 @@ export const updateAccessToken = async (event: H3Event, accessToken: string): Pr
 }
 
 /**
- * Exchanges the stored refresh token for a new access token at the SSO token endpoint.
+ * Waits.
+ *
+ * @param milliseconds - How long to wait.
+ * @returns Resolves after the wait.
+ */
+const delay = (milliseconds: number): Promise<void> => new Promise((resolve) => {
+  setTimeout(resolve, milliseconds)
+})
+
+/**
+ * The error for a renewal that could not be tried or finished through no fault of the session: the
+ * sign-on service did not answer, or another replica holds the renewal. The session stays.
+ *
+ * @returns An H3 error: 503 with `data.code` and no message.
+ */
+const refreshUnavailable = () => createError({ statusCode: 503, data: { code: SignOnErrorCode.Unavailable } })
+
+/**
+ * Exchanges the stored refresh token for a new access token at the sign-on token endpoint. Called
+ * with the refresh lock held, so no other replica presents the same (rotating) token meanwhile.
+ *
+ * The session is read again first: a replica that held the lock a moment ago may already have
+ * renewed it, in which case its token is the answer and nothing is presented twice.
  *
  * @param event - The incoming request.
- * @param current - The session to renew.
- * @returns The new access token, or null when the session cannot be renewed (it is then ended).
+ * @param current - The session to renew, as this request read it.
+ * @returns The new access token, or null when the session is gone or the grant was refused (it is then ended).
+ * @throws H3Error 503 when the sign-on service did not answer, or answered without a token; the session stays.
  */
-const performRefresh = async (event: H3Event, current: ActiveSession): Promise<string | null> => {
-  const refreshToken = current.session.refreshToken
-  if (!refreshToken) {
+const exchangeRefreshToken = async (event: H3Event, current: ActiveSession): Promise<string | null> => {
+  const latest = await useSessionStore().get(current.id)
+  if (!latest) {
     await endSession(event)
     return null
   }
+  if (latest.accessToken !== current.session.accessToken) {
+    return latest.accessToken
+  }
+  if (!latest.refreshToken) {
+    await endSession(event)
+    return null
+  }
+
+  const config = useRuntimeConfig()
+  let response: RefreshTokenResponse
   try {
-    const config = useRuntimeConfig()
-    // Bound to a plain `string`: handed a template literal, Nitro tries to match it against its own
-    // route table and the inferred reply type recurses (TS2321).
-    const tokenUrl: string = `${config.ssoUrl}/connect/token`
-    const response = await $fetch<RefreshTokenResponse>(tokenUrl, {
-      method: 'POST',
+    response = await signOnFetch<RefreshTokenResponse>('/connect/token', {
+      method: HttpMethod.Post,
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'refresh_token',
-        refresh_token: refreshToken,
+        refresh_token: latest.refreshToken,
         client_id: config.ssoClientId as string,
         client_secret: config.ssoClientSecret as string,
       }).toString(),
     })
-    if (!response?.access_token) {
+  } catch (err: unknown) {
+    // Only a refused grant (revoked, expired, already rotated) leaves nothing to renew the session with.
+    // A timeout, a network failure or a 5xx says nothing about the token, so the session stays for the next try.
+    if (REFUSED_GRANT_STATUSES.has((err as { statusCode?: number }).statusCode ?? 0)) {
       await endSession(event)
       return null
     }
-    const tokens: SessionTokens = { accessToken: response.access_token }
-    if (response.refresh_token) {
-      tokens.refreshToken = response.refresh_token
-    }
-    if (response.expires_in !== undefined) {
-      tokens.expiresIn = response.expires_in
-    }
-    const session = buildSession(tokens, current.session)
-    const lifetime = sessionLifetime(session)
-    await useSessionStore().set(current.id, session, lifetime)
-    writeSessionCookie(event, current.id, lifetime)
-    return session.accessToken
-  } catch {
-    // A refused grant (revoked, expired, already rotated) ends the session: there is nothing left to renew it with.
+    throw refreshUnavailable()
+  }
+  if (!response?.access_token) {
+    throw refreshUnavailable()
+  }
+  const tokens: SessionTokens = { accessToken: response.access_token }
+  if (response.refresh_token) {
+    tokens.refreshToken = response.refresh_token
+  }
+  if (response.expires_in !== undefined) {
+    tokens.expiresIn = response.expires_in
+  }
+  const session = buildSession(tokens, latest)
+  const lifetime = sessionLifetime(session)
+  await useSessionStore().set(current.id, session, lifetime)
+  writeSessionCookie(event, current.id, lifetime)
+  return session.accessToken
+}
+
+/**
+ * Renews a session under the store's refresh lock, so several replicas serving one person do not
+ * present the rotating refresh token twice. A request that finds the lock held looks again every
+ * moment until the holder is done (its renewal is then read, not repeated) or the wait runs out.
+ *
+ * @param event - The incoming request.
+ * @param current - The session to renew.
+ * @returns The new access token, or null when the session cannot be renewed (it is then ended).
+ * @throws H3Error 503 when the sign-on service did not answer, or the lock stayed with another replica; the session stays.
+ */
+const performRefresh = async (event: H3Event, current: ActiveSession): Promise<string | null> => {
+  if (!current.session.refreshToken) {
     await endSession(event)
     return null
   }
+  const store = useSessionStore()
+  for (let attempt = 0; attempt <= REFRESH_WAIT_ATTEMPTS; attempt += 1) {
+    const holder = await store.acquireRefreshLock(current.id, REFRESH_LOCK_SECONDS)
+    if (holder) {
+      try {
+        return await exchangeRefreshToken(event, current)
+      } finally {
+        // A release that fails leaves the lock to expire on its own; it must not replace the outcome of the renewal.
+        await store.releaseRefreshLock(current.id, holder).catch(() => undefined)
+      }
+    }
+    await delay(REFRESH_WAIT_INTERVAL_MS)
+  }
+  throw refreshUnavailable()
 }
 
 /**
@@ -295,7 +362,8 @@ const performRefresh = async (event: H3Event, current: ActiveSession): Promise<s
  * presented twice.
  *
  * @param event - The incoming request.
- * @returns The new access token, or null when there is no session or it cannot be renewed (it is then ended).
+ * @returns The new access token, or null when there is no session or its grant was refused (it is then ended).
+ * @throws H3Error 503 when the renewal could not be completed through no fault of the session; it stays.
  */
 export const refreshSession = async (event: H3Event): Promise<string | null> => {
   const current = await readSession(event)

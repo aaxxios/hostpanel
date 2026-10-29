@@ -1,6 +1,8 @@
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Shared.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Support.Commands.CreatePredefinedReply;
 
@@ -20,10 +22,17 @@ public sealed class CreatePredefinedReplyHandler
     /// <summary>Handles the command.</summary>
     /// <param name="cmd">The reply's details.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success with the new reply's id. This use case answers no refusal code.</returns>
+    /// <returns>
+    /// Success with the new reply's id, or <c>PREDEFINED_REPLY_CATEGORY_NOT_FOUND</c> when the category names no category.
+    /// </returns>
     public async Task<Result<int>> HandleAsync(CreatePredefinedReplyCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
+
+        if (!await _context.PredefinedReplyCategories.AnyAsync(c => c.Id == cmd.CategoryId, ct))
+        {
+            return Result<int>.FailureCode(HostpanelErrorCodes.PREDEFINED_REPLY_CATEGORY_NOT_FOUND);
+        }
 
         var reply = PredefinedReply.Create(cmd.Name, cmd.Content, cmd.CategoryId);
 

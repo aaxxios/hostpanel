@@ -15,7 +15,7 @@
       </template>
     </UiPageHeader>
 
-    <!-- Not a customer account — a staff identity signed into the client portal. The API
+    <!-- Not a customer account: a staff identity signed into the client portal. The API
          said so with a code, so this is one explanation with somewhere to go, not four red
          alerts about a failure that never happened. -->
     <ClientNoProfileNotice v-if="store.clientProfileMissing" />
@@ -50,7 +50,7 @@
 
 <script setup lang="ts">
 /**
- * Client dashboard: the account at a glance — counters, attention banners, and cards for
+ * Client dashboard: the account at a glance, with counters, attention banners, and cards for
  * services, invoices, domains, tickets, news and a quick domain search.
  *
  * The page loads the data through the stores and lays the cards out; each card reads its own

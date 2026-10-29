@@ -12,6 +12,12 @@ namespace Innovayse.Hostpanel.Application.Reports.Queries.GetVatMoss;
 /// </summary>
 public sealed class GetVatMossValidator : LocalizedValidator<GetVatMossQuery>
 {
+    /// <summary>Earliest calendar year a report can be asked for; the VAT MOSS scheme did not exist before it.</summary>
+    private const int MinYear = 2015;
+
+    /// <summary>Latest calendar year a report can be asked for.</summary>
+    private const int MaxYear = 2100;
+
     /// <summary>Smallest valid calendar quarter.</summary>
     private const int MinQuarter = 1;
 
@@ -23,6 +29,11 @@ public sealed class GetVatMossValidator : LocalizedValidator<GetVatMossQuery>
     public GetVatMossValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
+        RuleFor(x => x.Year!.Value)
+            .InclusiveBetween(MinYear, MaxYear)
+            .When(x => x.Year.HasValue)
+            .WithMessage(L["ReportYearInvalid"]);
+
         RuleFor(x => x.Quarter!.Value)
             .InclusiveBetween(MinQuarter, MaxQuarter)
             .When(x => x.Quarter.HasValue)

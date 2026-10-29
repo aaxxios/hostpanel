@@ -3,8 +3,8 @@
  *
  * Every list below is what the sections iterate: adding a use case or a feature
  * card is a line here plus its i18n keys in the three locale
- * files, and no component changes. The strings themselves are never here — only
- * the keys — so a translator never has to open a `.ts` file.
+ * files, and no component changes. The strings themselves are never here, only
+ * the keys, so a translator never has to open a `.ts` file.
  *
  * @module templates/nova/content
  */
@@ -29,8 +29,8 @@ import type { ComparisonRow } from '~/types/comparisonrow'
  * `/websites`, `/email` and `/pricing` do not exist in this portal, so the
  * entries that would carry those names point at the routes that answer them:
  * the product catalogue for both product lines, and the hosting page's plan
- * anchor for pricing. Inventing the routes to match the labels would have
- * shipped three 404s off the header of every page.
+ * anchor for pricing. Linking to routes named after the labels would put
+ * three 404s in the header of every page.
  */
 export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'hosting', labelKey: 'nova.nav.hosting', to: '/hosting' },
@@ -44,7 +44,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
 /**
  * The hero's benefit list.
  *
- * Titles only — the hero is not the place to argue a point, and every line here
+ * Titles only: the hero is not the place to argue a point, and every line here
  * is expanded on further down the page. `requiresSetting` gates the two claims
  * this codebase cannot check for itself.
  */
@@ -65,7 +65,7 @@ export const HERO_BENEFITS: readonly Feature[] = [
  *
  * Qualitative on purpose. An uptime figure is a measurement, and nothing in
  * this repository measures it, so the one numeric line is gated behind an
- * operator setting that holds the figure itself — `portal.stats.uptime`, the same figure the hero prints.
+ * operator setting that holds the figure itself: `portal.stats.uptime`, the same figure the hero prints.
  */
 export const TRUST_ITEMS: readonly Feature[] = [
   { key: 'performance', icon: 'lucide:zap', titleKey: 'nova.trust.performance' },
@@ -126,7 +126,7 @@ export const WHY_FEATURES: readonly Feature[] = [
  * Storage medium, caching and a CDN are properties of the machines an operator
  * runs, not of this application: it provisions accounts through a hosting
  * control panel and never learns what is underneath. Those three are gated. What is left
- * ungated is true of every install — plans can be upgraded, provisioning is
+ * ungated is true of every install: plans can be upgraded, provisioning is
  * automated, and the operator chooses the server an account lands on.
  */
 export const PERFORMANCE_FEATURES: readonly Feature[] = [
@@ -191,8 +191,8 @@ export const SECURITY_FEATURES: readonly Feature[] = [
  * The card of each operator-configured security claim.
  *
  * Which of them render is decided by `useSecurityFeatures()`; this table only says how each one
- * looks, so the SSL, backup, firewall and malware wording that used to be listed in
- * {@link SECURITY_FEATURES} is stated once, here.
+ * looks, so the SSL, backup, firewall and malware wording is stated once, here, and not in
+ * {@link SECURITY_FEATURES}.
  */
 export const SECURITY_FEATURE_CARDS: Readonly<Record<SecurityFeatureKey, Feature>> = {
   [SecurityFeatureKey.Ssl]: {
@@ -418,8 +418,8 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
  * The rows themselves are whatever an operator entered under Admin → Products →
  * Specification, so this list cannot add one: it only says which order the
  * familiar lines read best in when they are present. Matching is
- * case-insensitive on the label, and anything unrecognised — a line in Armenian,
- * a line this list never anticipated — keeps its original position after the
+ * case-insensitive on the label, and anything unrecognised (a line in Armenian,
+ * a line this list never anticipated) keeps its original position after the
  * ones that matched, rather than being dropped.
  */
 export const COMPARISON_LABEL_ORDER: readonly string[] = [

@@ -1,6 +1,7 @@
+using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Common.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Testimonials.Commands.UpdateTestimonialOrder;
 
@@ -27,18 +28,14 @@ public sealed class UpdateTestimonialOrderHandler
     /// </summary>
     /// <param name="cmd">The testimonial id and new sort order pairs.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success. Unknown ids in the list are silently skipped.</returns>
+    /// <returns>Success, or <c>TESTIMONIAL_NOT_FOUND</c> when an id names no row; nothing is moved then.</returns>
     public async Task<Result> HandleAsync(UpdateTestimonialOrderCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var orderMap = cmd.Items.GroupBy(i => i.Id).ToDictionary(g => g.Key, g => g.Last().SortOrder);
-        var ids = orderMap.Keys.ToList();
-        var rows = await _context.Testimonials.Where(x => ids.Contains(x.Id)).ToListAsync(ct);
-
-        foreach (var row in rows)
+        if (!await _context.Testimonials.ApplySortOrderAsync(cmd.Items, ct))
         {
-            row.SetSortOrder(orderMap[row.Id]);
+            return Result.FailureCode(HostpanelErrorCodes.TESTIMONIAL_NOT_FOUND);
         }
 
         await _context.SaveChangesAsync(ct);

@@ -9,7 +9,7 @@ export interface AppRuntimeConfig {
   basePath: string
   /**
    * Public origin of the storefront, e.g. `https://host.example.com`, or `''` when unknown.
-   * Image paths the storefront stores as root-relative (`/demo/...`) live there, not on the
+   * Image paths the storefront stores as root-relative (`/demo/<file>`) live there, not on the
    * admin's own origin.
    */
   clientBaseUrl: string

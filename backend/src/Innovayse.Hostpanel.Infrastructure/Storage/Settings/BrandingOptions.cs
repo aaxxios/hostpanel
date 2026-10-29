@@ -43,7 +43,7 @@ public sealed class BrandingOptions
     /// The per-edge ceiling narrows the decompression-bomb hole; it does not close it. An
     /// 8000&#215;8000 upload satisfies <see cref="MaxSourceEdge"/> and still allocates
     /// 8000&#160;&#215;&#160;8000&#160;&#215;&#160;4 = 256&#160;MB for the pixel buffer alone,
-    /// before a single rendition is cloned — and the API container is capped at 1536&#160;MB, so
+    /// before a single rendition is cloned, and the API container is capped at 1536&#160;MB, so
     /// three concurrent uploads inside the per-edge limit are enough to kill it. Area is the
     /// dimension that maps to memory, so area is what is capped.
     /// </remarks>

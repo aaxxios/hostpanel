@@ -10,7 +10,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useBillableItemsApi } from '@/composables/apis/useBillableItemsApi'
 import { runAction } from '@/lib/runAction'
-import type { BillableItemsResult, ServiceOption } from '@/types/billableitem'
+import type { BillableItemsResult, CreateClientBillableItemPayload, ServiceOption } from '@/types/billableitem'
 
 /** Loads, adds, invoices and deletes the billable items of a client. */
 export const useClientBillableItemsStore = defineStore('clientBillableItems', () => {
@@ -86,17 +86,17 @@ export const useClientBillableItemsStore = defineStore('clientBillableItems', ()
     /** Throwaway error ref: the failure is deliberately not surfaced. */
     const quiet = ref<string | null>(null)
     const result = await runAction(quiet, () => api.listServices(clientId))
-    return result.ok ? result.value.items.map(s => ({ value: s.id, label: s.productName ?? `#${s.id}` })) : []
+    return result.ok ? result.value.items.map(s => ({ value: s.id, label: s.productName })) : []
   }
 
   /**
    * Adds one billable item.
    *
    * @param clientId - Client id.
-   * @param payload - The item fields.
+   * @param payload - The item, shaped as the API's create command.
    * @returns True when saved; false when refused (see `saveError`, `fieldErrors`).
    */
-  const addItem = async (clientId: string, payload: Record<string, unknown>): Promise<boolean> => {
+  const addItem = async (clientId: string, payload: CreateClientBillableItemPayload): Promise<boolean> => {
     const result = await runAction(saveError, () => api.addForClient(clientId, payload), fieldErrors)
     return result.ok
   }
@@ -113,6 +113,12 @@ export const useClientBillableItemsStore = defineStore('clientBillableItems', ()
     return result.ok
   }
 
+  /** Forgets the sentence and field messages of the last refused add, so a newly opened form starts clean. */
+  const clearSaveErrors = (): void => {
+    saveError.value = null
+    fieldErrors.value = {}
+  }
+
   return {
     error,
     saveError,
@@ -124,5 +130,6 @@ export const useClientBillableItemsStore = defineStore('clientBillableItems', ()
     fetchServiceOptions,
     addItem,
     addTimeBilling,
+    clearSaveErrors,
   }
 })

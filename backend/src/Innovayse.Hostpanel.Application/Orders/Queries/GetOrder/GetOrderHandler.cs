@@ -1,25 +1,34 @@
+using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Billing.Queries.GetInvoiceBrief;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Products.Enums;
+using Innovayse.Hostpanel.Application.Orders.Common;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Orders.Queries.GetOrder;
 
 /// <summary>
 /// Loads a single order with all its items and maps it to <see cref="OrderDetailDto"/>.
-/// Resolves the client display name and the linked invoice status.
+/// Resolves the client display name and the linked invoice status and total from their own modules.
 /// </summary>
 public sealed class GetOrderHandler
 {
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The message bus, for the client's brief and the invoice's brief; Orders reads neither table.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetOrderHandler(IHostpanelDbContext context)
+    /// <param name="bus">The message bus, for the client's brief and the invoice's brief.</param>
+    public GetOrderHandler(IHostpanelDbContext context, IMessageBus bus)
     {
         _context = context;
+        _bus = bus;
     }
 
     /// <summary>Handles the query.</summary>
@@ -30,58 +39,55 @@ public sealed class GetOrderHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var order = await _context.Orders
+        var dto = await _context.Orders
             .AsNoTracking()
-            .Include(o => o.Items)
-            .FirstOrDefaultAsync(o => o.Id == query.OrderId, ct);
-        if (order is null)
+            .Where(o => o.Id == query.OrderId)
+            .Select(o => new OrderDetailDto(
+                o.Id,
+                o.OrderNumber,
+                o.ClientId,
+                string.Empty,
+                o.Status,
+                o.PaymentMethod,
+                o.Items.Sum(item => item.FirstPaymentAmount),
+                o.Currency,
+                o.InvoiceId,
+                null,
+                null,
+                o.IpAddress,
+                o.Notes,
+                o.Items
+                    .OrderBy(item => item.Id)
+                    .Select(item => new OrderItemDto(
+                        item.Id,
+                        item.ProductId,
+                        item.ProductName,
+                        item.BillingCycle,
+                        item.Domain,
+                        item.Hostname,
+                        item.FirstPaymentAmount,
+                        item.RecurringAmount,
+                        item.Status))
+                    .ToList(),
+                o.CreatedAt))
+            .FirstOrDefaultAsync(ct);
+        if (dto is null)
         {
             return Result<OrderDetailDto>.FailureCode(HostpanelErrorCodes.ORDER_NOT_FOUND);
         }
 
-        var client = await _context.Clients
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == order.ClientId, ct);
-        var clientName = client is not null ? $"{client.FirstName} {client.LastName}" : null;
+        // FK_Orders_Clients_ClientId restricts deleting a client that has orders, so a missing client
+        // is a broken database, not an answer to render. A missing invoice reads as null.
+        var client = await _bus.GetRequiredClientBriefAsync(dto.ClientId, withEmail: false, ct);
+        var invoice = dto.InvoiceId is { } invoiceId
+            ? await _bus.InvokeAsync<Result<InvoiceBriefDto>>(new GetInvoiceBriefQuery(invoiceId), ct)
+            : null;
 
-        string? invoiceStatus = null;
-        if (order.InvoiceId.HasValue)
+        return Result.Success(dto with
         {
-            var invoice = await _context.Invoices
-                .AsNoTracking()
-                .FirstOrDefaultAsync(i => i.Id == order.InvoiceId.Value, ct);
-            invoiceStatus = invoice?.Status.ToString();
-        }
-
-        var items = order.Items
-            .Select(i => new OrderItemDto(
-                i.Id,
-                i.ProductId,
-                i.ProductName,
-                i.BillingCycle,
-                i.Domain,
-                i.Hostname,
-                i.FirstPaymentAmount,
-                i.RecurringAmount,
-                i.Status.ToString()))
-            .ToList();
-
-        var dto = new OrderDetailDto(
-            order.Id,
-            order.OrderNumber,
-            order.ClientId,
-            clientName,
-            order.Status.ToString(),
-            order.PaymentMethod,
-            order.Items.Sum(i => i.FirstPaymentAmount),
-            order.Currency,
-            order.InvoiceId,
-            invoiceStatus,
-            order.IpAddress,
-            order.Notes,
-            items,
-            order.CreatedAt);
-
-        return Result.Success(dto);
+            ClientName = client.FullName,
+            InvoiceStatus = invoice is { IsSuccess: true } ? invoice.Value!.Status : null,
+            InvoiceTotal = invoice is { IsSuccess: true } ? invoice.Value!.Total : null,
+        });
     }
 }

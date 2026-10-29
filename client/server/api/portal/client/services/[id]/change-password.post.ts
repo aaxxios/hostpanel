@@ -7,6 +7,8 @@
  * @module server/api/portal/client/services/[id]/change-password.post
  */
 
+import { HttpMethod } from '~/types/httpmethod'
+
 /** Body this route accepts. */
 interface ChangePasswordBody {
   /** The new hosting account password. */
@@ -21,7 +23,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<ChangePasswordBody>(event)
 
   return await internalApiCall<Record<string, unknown>>(event, `/me/services/${id}/change-password`, {
-    method: 'POST',
+    method: HttpMethod.Post,
     body: { newPassword: body.password },
   })
 })

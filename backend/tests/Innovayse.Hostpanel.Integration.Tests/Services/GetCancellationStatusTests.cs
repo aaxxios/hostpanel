@@ -1,15 +1,14 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Services.Common;
 using Innovayse.Hostpanel.Application.Services.Queries.GetCancellationStatus;
+using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Services;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
@@ -28,10 +27,9 @@ public sealed class GetCancellationStatusTests(IntegrationTestFactory factory) :
         using var scope = factory.Services.CreateScope();
         var (clientId, productId) = await ServicesTestSeeds.SeedClientAndProductAsync(scope, monthlyPrice: 1m);
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var service = ClientService.Create(clientId, productId, BillingCycleNames.Monthly);
+        var service = ClientService.Create(clientId, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
         context.ClientServices.Add(service);
-        await uow.SaveChangesAsync(CancellationToken.None);
+        await context.SaveChangesAsync(CancellationToken.None);
 
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var outcome = await bus.InvokeAsync<Result<CancellationStatusDto>>(
@@ -53,5 +51,31 @@ public sealed class GetCancellationStatusTests(IntegrationTestFactory factory) :
 
         outcome.IsSuccess.Should().BeTrue();
         outcome.Value!.Pending.Should().BeFalse();
+    }
+
+    /// <summary>A closed request stored before an open one does not hide the open one.</summary>
+    [Fact]
+    public async Task GetCancellationStatus_ClosedAndOpenRequests_AnswersTheOpenType()
+    {
+        using var scope = factory.Services.CreateScope();
+        var (clientId, productId) = await ServicesTestSeeds.SeedClientAndProductAsync(scope, monthlyPrice: 1m);
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var service = ClientService.Create(clientId, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        context.ClientServices.Add(service);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var closed = CancellationRequest.Create(service.Id, CancellationType.Immediate, null);
+        closed.Close();
+        context.CancellationRequests.Add(closed);
+        context.CancellationRequests.Add(CancellationRequest.Create(service.Id, CancellationType.EndOfBillingPeriod, null));
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var outcome = await bus.InvokeAsync<Result<CancellationStatusDto>>(
+            new GetCancellationStatusQuery(service.Id), CancellationToken.None);
+
+        outcome.IsSuccess.Should().BeTrue();
+        outcome.Value!.Pending.Should().BeTrue();
+        outcome.Value.Type.Should().Be(CancellationType.EndOfBillingPeriod);
     }
 }

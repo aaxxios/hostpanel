@@ -5,30 +5,31 @@ import { authMiddleware } from '@/middleware/auth'
 import { getRuntimeConfig } from '@/lib/runtimeConfig'
 import { REPORTS } from '@/lib/reports'
 import { AppRoute } from '@/lib/routes'
-import { lazyView, withRetry } from '@/lib/lazyView'
+import { withRetry } from '@/lib/lazyRoute'
 import { prefetchRoute } from '@/lib/prefetchRoute'
+import { navigationAdmitted, navigationFailed, navigationSettled } from '@/middleware/navigation'
 
 /** Every view and layout as a lazy loader, keyed by its path relative to this file; Vite splits each into its own chunk. */
 const loaders = import.meta.glob<{ default: Component }>(['../views/*.vue', '../layouts/*.vue'])
 
 /**
- * Looks up one routed file and makes it lazy.
+ * Looks up one routed file and makes it a lazy route component.
  *
- * A view becomes an async component: the router switches to it at once and the screen shows a
- * skeleton while its chunk downloads, instead of the URL waiting on the download. A layout has to be
- * in place before anything can draw inside it, so it stays a plain loader the router awaits. Both
- * retry a failed download, so one dropped request does not leave the click with no effect.
+ * Views and layouts alike are plain `() => import()` loaders, the lazy form vue-router supports; the
+ * router awaits them before it switches screens, and the navigation store tells the shell about that
+ * wait (see `middleware/navigation.ts`). Each loader retries a failed download, so one dropped request
+ * does not leave the click with no effect.
  *
  * @param file - Path under `src/`, such as `views/LoginView.vue` or `layouts/AppLayout.vue`.
- * @returns The component to put in a route record.
+ * @returns The loader to put in a route record.
  * @throws When no such file exists, so a typo fails when the table is built rather than on navigation.
  */
-const lazy = (file: string): Component | (() => Promise<{ default: Component }>) => {
+const lazy = (file: string): (() => Promise<{ default: Component }>) => {
   const loader = loaders[`../${file}`]
   if (!loader) {
     throw new Error(`Unknown routed file: ${file}`)
   }
-  return file.startsWith('views/') ? lazyView(loader) : withRetry(loader)
+  return withRetry(loader)
 }
 
 /**
@@ -47,14 +48,14 @@ const clientSummaryRedirect = (to: { path: string }): { path: string } => ({ pat
  */
 const scrollToTop = (): { top: number } => ({ top: 0 })
 
-/** The application router; every screen is a lazy view under the authenticated layout. */
+/** The application router; every screen is a lazily loaded view under the authenticated layout. */
 const router = createRouter({
   history: createWebHistory(getRuntimeConfig().basePath),
   scrollBehavior: scrollToTop,
   routes: [
     {
-      // Not `public: true`. The guard judges this route on its own terms — setup still
-      // outstanding, and a deployment that owns its own accounts — and the public rule
+      // Not `public: true`. The guard judges this route on its own terms (setup still
+      // outstanding, and a deployment that owns its own accounts) and the public rule
       // would bounce the operator to /dashboard the moment registration signed them in,
       // before they had claimed the Admin role.
       path: AppRoute.Setup,
@@ -140,7 +141,7 @@ const router = createRouter({
           children: [
             { path: '', redirect: AppRoute.ReportsDailyPerformance },
             /** One route per catalogued report. */
-            ...REPORTS.map(r => ({ path: r.slug, component: lazyView(r.component) })),
+            ...REPORTS.map(r => ({ path: r.slug, component: withRetry(r.component) })),
           ],
         },
         { path: 'orders', component: lazy('views/OrdersListView.vue') },
@@ -214,5 +215,11 @@ router.beforeEach((to) => {
 })
 
 router.beforeEach(authMiddleware)
+
+// Last: the navigation passed every guard, so the shell may now stand a skeleton in for the screen
+// whose chunk is still on its way. The two hooks below end that state, or turn it into the load error.
+router.beforeEach(navigationAdmitted)
+router.afterEach(navigationSettled)
+router.onError(navigationFailed)
 
 export default router

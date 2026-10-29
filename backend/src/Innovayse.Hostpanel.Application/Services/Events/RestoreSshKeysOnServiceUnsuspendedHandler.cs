@@ -1,79 +1,54 @@
-using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Audit;
+using Innovayse.Hostpanel.Application.Services.Commands.RestoreServiceSshKeys;
 using Innovayse.Hostpanel.Domain.Services.Events;
-using Innovayse.Hostpanel.Domain.Ssh.Enums;
-using Microsoft.EntityFrameworkCore;
+using Innovayse.Hostpanel.Shared.Models;
+using Microsoft.Extensions.Logging;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Services.Events;
 
 /// <summary>
-/// When a service is unsuspended, puts back the SSH keys <see cref="SuspendSshKeysOnServiceSuspendedHandler"/>
-/// took off, on the server each was issued on and under the same id.
+/// When a service is unsuspended, dispatches <see cref="RestoreServiceSshKeysCommand"/>, which puts
+/// back the SSH keys taken off at suspension. The provisioning handler sends the same command again
+/// once the panel unlocked the hosting account. A non-notification handler, and safe as one: it only
+/// triggers that idempotent command.
 /// </summary>
-/// <remarks>
-/// Runs on <see cref="ClientServiceUnsuspendedEvent"/> and again on <see cref="RestoreSuspendedSshKeys"/>,
-/// sent once the panel has unlocked the account: the two unsuspensions are not ordered, and the agent
-/// refuses keys for a locked account. That refusal leaves the key suspended for the second pass; any
-/// other failure makes it <see cref="SshKeySyncState.InstallFailed"/> with the reason, and the
-/// customer can remove it and add it again.
-/// </remarks>
 public sealed class RestoreSshKeysOnServiceUnsuspendedHandler
 {
-    /// <summary>Data context.</summary>
-    private readonly IHostpanelDbContext _context;
+    /// <summary>Dispatches the command.</summary>
+    private readonly IMessageBus _bus;
 
-    /// <summary>Changes keys on the server they were issued on.</summary>
-    private readonly ISshKeyRevoker _revoker;
+    /// <summary>Records a failure, so staff can settle the keys by hand.</summary>
+    private readonly ILogger<RestoreSshKeysOnServiceUnsuspendedHandler> _logger;
 
-    /// <summary>Initialises the handler.</summary>
-    /// <param name="context">Data context.</param>
-    /// <param name="revoker">Changes keys on the server they were issued on.</param>
-    public RestoreSshKeysOnServiceUnsuspendedHandler(IHostpanelDbContext context, ISshKeyRevoker revoker)
+    /// <summary>Initializes the handler.</summary>
+    /// <param name="bus">Dispatches the command.</param>
+    /// <param name="logger">Records a failure, so staff can settle the keys by hand.</param>
+    public RestoreSshKeysOnServiceUnsuspendedHandler(IMessageBus bus, ILogger<RestoreSshKeysOnServiceUnsuspendedHandler> logger)
     {
-        _context = context;
-        _revoker = revoker;
+        _bus = bus;
+        _logger = logger;
     }
 
     /// <summary>Handles <see cref="ClientServiceUnsuspendedEvent"/>.</summary>
     /// <param name="evt">The event.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>A task that completes once every suspended key was attempted.</returns>
-    public Task HandleAsync(ClientServiceUnsuspendedEvent evt, CancellationToken ct) =>
-        RestoreAsync(evt.ServiceId, evt.ClientId, ct);
-
-    /// <summary>Handles <see cref="RestoreSuspendedSshKeys"/>.</summary>
-    /// <param name="msg">The message.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A task that completes once every suspended key was attempted.</returns>
-    public Task HandleAsync(RestoreSuspendedSshKeys msg, CancellationToken ct) =>
-        RestoreAsync(msg.ServiceId, msg.ClientId, ct);
-
-    /// <summary>Puts back every suspended key of the service.</summary>
-    /// <param name="serviceId">The service.</param>
-    /// <param name="clientId">Its owner, for the activity log.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A task that completes once every suspended key was attempted.</returns>
-    private async Task RestoreAsync(int serviceId, int clientId, CancellationToken ct)
+    /// <returns>A task that completes once the command ran.</returns>
+    public async Task HandleAsync(ClientServiceUnsuspendedEvent evt, CancellationToken ct)
     {
-        var keys = await _context.SshKeys
-            .Where(k => k.ClientServiceId == serviceId && k.SyncState == SshKeySyncState.Suspended)
-            .ToListAsync(ct);
-        if (keys.Count == 0)
+        try
         {
-            return;
-        }
-
-        foreach (var key in keys)
-        {
-            if (!await _revoker.RestoreOnPinnedServerAsync(key, ct) && key.SyncState is SshKeySyncState.InstallFailed)
+            var outcome = await _bus.InvokeAsync<Result>(new RestoreServiceSshKeysCommand(evt.ServiceId), ct);
+            if (outcome.IsFailure)
             {
-                _context.ActivityLogs.Add(ActivityLog.Create(
-                    clientId,
-                    $"Could not restore SSH key \"{key.Label}\" ({key.Fingerprint}) of unsuspended service #{serviceId}: {key.LastSyncError}",
-                    null, "system", null, null));
+                _logger.LogWarning(
+                    "Restoring the SSH keys of service {ServiceId} was refused with {ErrorCode}.", evt.ServiceId, outcome.ErrorCode);
             }
         }
-
-        await _context.SaveChangesAsync(ct);
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Wolverine combines every handler of one message into a single chain, so a throw here
+            // would also stop the other handlers of the same event.
+            _logger.LogError(ex, "Restoring the SSH keys of service {ServiceId} failed.", evt.ServiceId);
+        }
     }
 }

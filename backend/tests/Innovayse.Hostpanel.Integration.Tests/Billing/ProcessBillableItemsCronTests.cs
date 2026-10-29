@@ -1,15 +1,12 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Commands.ProcessBillableItemsCron;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Products;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -25,21 +22,21 @@ public sealed class ProcessBillableItemsCronTests(IntegrationTestFactory factory
     /// <param name="type">Whether the item is one-time or recurring.</param>
     /// <param name="nextDueDate">The item's recorded due date.</param>
     /// <returns>The client id and the seeded item.</returns>
-    private static async Task<(int ClientId, BillableItem Item)> SeedDueItemAsync(
+    private static async Task<DueBillableItem> SeedDueItemAsync(
         IHostpanelDbContext context, BillableItemType type, DateTimeOffset? nextDueDate)
     {
         var client = Client.Create(
-            $"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+            $"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(client);
         await context.SaveChangesAsync(CancellationToken.None);
 
         var item = BillableItem.Create(
             client.Id, "Consulting", 40m, "USD", type,
-            recurringPeriod: type == BillableItemType.Recurring ? BillingCycleNames.Monthly : null, nextDueDate: nextDueDate);
+            recurringPeriod: type == BillableItemType.Recurring ? RecurringPeriodNames.Monthly : null, nextDueDate: nextDueDate);
         context.BillableItems.Add(item);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        return (client.Id, item);
+        return new(client.Id, item);
     }
 
     /// <summary>A one-time item due now is invoiced and marked invoiced.</summary>
@@ -110,5 +107,73 @@ public sealed class ProcessBillableItemsCronTests(IntegrationTestFactory factory
         reloaded.IsInvoiced.Should().BeFalse();
         reloaded.InvoiceId.Should().BeNull();
         reloaded.NextDueDate.Should().BeAfter(due);
+    }
+
+    /// <summary>
+    /// Due is decided by the host clock: a one-time item due in five days is not invoiced today and
+    /// is invoiced once the clock stands past its due date.
+    /// </summary>
+    [Fact]
+    public async Task FutureOneTimeItem_IsInvoicedOnceTheClockReachesItsDueDate()
+    {
+        using var host = new ClockedHost(factory);
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var (clientId, item) = await SeedDueItemAsync(
+            context, BillableItemType.OneTime, host.Clock.GetUtcNow().AddDays(5));
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        await bus.InvokeAsync(new ProcessBillableItemsCronCommand(), CancellationToken.None);
+        var invoicedToday = await context.Invoices.AnyAsync(i => i.ClientId == clientId, CancellationToken.None);
+
+        host.Clock.Advance(TimeSpan.FromDays(6));
+        await bus.InvokeAsync(new ProcessBillableItemsCronCommand(), CancellationToken.None);
+        var reloaded = await context.BillableItems.AsNoTracking()
+            .FirstAsync(x => x.Id == item.Id, CancellationToken.None);
+
+        invoicedToday.Should().BeFalse();
+        reloaded.IsInvoiced.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// One client whose invoicing fails midway does not stop the run and leaves nothing behind: the
+    /// other client is invoiced, the failing one has neither an invoice nor an invoiced item, so the
+    /// next run invoices it once rather than twice.
+    /// </summary>
+    [Fact]
+    public async Task OneFailingClient_DoesNotStopTheOthersAndLeavesNoInvoice()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var poisonedItemId = 0;
+        using var host = FailingSaveHost.Create(
+            factory,
+            new ManualTimeProvider(now),
+            tracker => tracker.Entries<BillableItem>().Any(e => e.State == EntityState.Modified && e.Entity.Id == poisonedItemId));
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var (failingClientId, failingItem) = await SeedDueItemAsync(context, BillableItemType.OneTime, now.AddDays(-1));
+        var (otherClientId, otherItem) = await SeedDueItemAsync(context, BillableItemType.OneTime, now.AddDays(-1));
+        poisonedItemId = failingItem.Id;
+
+        await scope.ServiceProvider.GetRequiredService<IMessageBus>()
+            .InvokeAsync(new ProcessBillableItemsCronCommand(), CancellationToken.None);
+
+        (await context.Invoices.AsNoTracking().AnyAsync(i => i.ClientId == failingClientId, CancellationToken.None))
+            .Should().BeFalse();
+        (await context.BillableItems.AsNoTracking().FirstAsync(x => x.Id == failingItem.Id, CancellationToken.None))
+            .IsInvoiced.Should().BeFalse();
+        (await context.Invoices.AsNoTracking().CountAsync(i => i.ClientId == otherClientId, CancellationToken.None))
+            .Should().Be(1);
+        (await context.BillableItems.AsNoTracking().FirstAsync(x => x.Id == otherItem.Id, CancellationToken.None))
+            .IsInvoiced.Should().BeTrue();
+
+        poisonedItemId = 0;
+        await scope.ServiceProvider.GetRequiredService<IMessageBus>()
+            .InvokeAsync(new ProcessBillableItemsCronCommand(), CancellationToken.None);
+
+        (await context.Invoices.AsNoTracking().CountAsync(i => i.ClientId == failingClientId, CancellationToken.None))
+            .Should().Be(1);
+        (await context.Invoices.AsNoTracking().CountAsync(i => i.ClientId == otherClientId, CancellationToken.None))
+            .Should().Be(1);
     }
 }

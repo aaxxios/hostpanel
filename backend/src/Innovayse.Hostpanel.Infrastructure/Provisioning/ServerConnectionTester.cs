@@ -1,25 +1,29 @@
+using Innovayse.Hostpanel.Application.Admin.Servers.Common;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
 using Innovayse.SDK.Plugins;
 using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Infrastructure.Provisioning;
+
 /// <summary>Tests server connectivity using the appropriate API client based on server module.</summary>
 public sealed class ServerConnectionTester : IServerConnectionTester
 {
-    /// <summary>The cwp client this class uses.</summary>
+    /// <summary>The CWP API client, for servers on the CWP module.</summary>
     private readonly IHostingPanelApiClient _cwpClient;
 
-    /// <summary>The cwp7 client this class uses.</summary>
+    /// <summary>The CWP7 API client, for servers on the CWP7 module.</summary>
     private readonly IHostingPanelV7ApiClient _cwp7Client;
 
-    /// <summary>The logger this class uses.</summary>
+    /// <summary>Records why a connection test failed, detail the caller never sees.</summary>
     private readonly ILogger<ServerConnectionTester> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ServerConnectionTester"/> class.</summary>
-    /// <param name="cwpClient">The cwp client this class uses.</param>
-    /// <param name="cwp7Client">The cwp7 client this class uses.</param>
-    /// <param name="logger">The logger this class uses.</param>
+    /// <param name="cwpClient">The CWP API client, for servers on the CWP module.</param>
+    /// <param name="cwp7Client">The CWP7 API client, for servers on the CWP7 module.</param>
+    /// <param name="logger">Records why a connection test failed, detail the caller never sees.</param>
     public ServerConnectionTester(IHostingPanelApiClient cwpClient, IHostingPanelV7ApiClient cwp7Client, ILogger<ServerConnectionTester> logger)
     {
         _cwpClient = cwpClient;
@@ -33,15 +37,14 @@ public sealed class ServerConnectionTester : IServerConnectionTester
     /// </summary>
     /// <param name="server">The server to test.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Connection result tuple.</returns>
-    public async Task<(bool Connected, int? AccountsCount, string? Version, string? ErrorMessage)> TestAsync(
-        Server server, CancellationToken ct)
+    /// <returns>The connection result.</returns>
+    public async Task<ServerConnectionTestResult> TestAsync(Server server, CancellationToken ct)
     {
         return server.Module switch
         {
             ServerModule.Cwp7 => await TestCwp7Async(server, ct),
             ServerModule.Centos => await TestLegacyCwpAsync(server, ct),
-            _ => (false, null, null, $"Connection testing is not yet supported for module '{server.Module}'."),
+            _ => ServerConnectionTestResult.Failed(HostpanelErrorCodes.SERVER_CONNECTION_MODULE_UNSUPPORTED),
         };
     }
 
@@ -51,29 +54,26 @@ public sealed class ServerConnectionTester : IServerConnectionTester
     /// </summary>
     /// <param name="server">The CWP7 server.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Connection result tuple.</returns>
-    private async Task<(bool Connected, int? AccountsCount, string? Version, string? ErrorMessage)> TestCwp7Async(
-        Server server, CancellationToken ct)
+    /// <returns>The connection result.</returns>
+    private async Task<ServerConnectionTestResult> TestCwp7Async(Server server, CancellationToken ct)
     {
         var apiKey = server.AccessHash;
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            return (false, null, null, "No access hash configured for this server.");
+            return ServerConnectionTestResult.Failed(HostpanelErrorCodes.SERVER_CONNECTION_NO_ACCESS_HASH);
         }
-
-        const string port = "2304";
 
         try
         {
-            var packagesCount = await _cwp7Client.GetServerInfoAsync(server.Hostname, port, apiKey, ct);
-            return (true, packagesCount, null, null);
+            var info = await _cwp7Client.GetServerInfoAsync(ConnectionTo(server, apiKey), ct);
+            return ServerConnectionTestResult.Succeeded(info.PackagesCount, null);
         }
         catch (Exception ex)
         {
             // The provider's own message never reaches the caller (rules on upstream detail); it
             // is logged here for whoever has to chase the failure up.
             _logger.LogWarning(ex, "CWP7 connection test failed for server {ServerId} ({Hostname})", server.Id, server.Hostname);
-            return (false, null, null, "Could not reach the server. See the server log for detail.");
+            return ServerConnectionTestResult.Failed(HostpanelErrorCodes.SERVER_CONNECTION_UNREACHABLE);
         }
     }
 
@@ -82,29 +82,33 @@ public sealed class ServerConnectionTester : IServerConnectionTester
     /// </summary>
     /// <param name="server">The legacy CWP server.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Connection result tuple.</returns>
-    private async Task<(bool Connected, int? AccountsCount, string? Version, string? ErrorMessage)> TestLegacyCwpAsync(
-        Server server, CancellationToken ct)
+    /// <returns>The connection result.</returns>
+    private async Task<ServerConnectionTestResult> TestLegacyCwpAsync(Server server, CancellationToken ct)
     {
         var apiKey = server.AccessHash ?? server.ApiToken;
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            return (false, null, null, "No API key or access hash configured for this server.");
+            return ServerConnectionTestResult.Failed(HostpanelErrorCodes.SERVER_CONNECTION_NO_API_KEY);
         }
-
-        const string port = "2304";
 
         try
         {
-            var (accountsCount, version) = await _cwpClient.GetServerInfoAsync(server.Hostname, port, apiKey, ct);
-            return (true, accountsCount, version, null);
+            var info = await _cwpClient.GetServerInfoAsync(ConnectionTo(server, apiKey), ct);
+            return ServerConnectionTestResult.Succeeded(info.AccountsCount, info.Version);
         }
         catch (Exception ex)
         {
             // The provider's own message never reaches the caller (rules on upstream detail); it
             // is logged here for whoever has to chase the failure up.
             _logger.LogWarning(ex, "CWP connection test failed for server {ServerId} ({Hostname})", server.Id, server.Hostname);
-            return (false, null, null, "Could not reach the server. See the server log for detail.");
+            return ServerConnectionTestResult.Failed(HostpanelErrorCodes.SERVER_CONNECTION_UNREACHABLE);
         }
     }
+
+    /// <summary>Builds the panel connection for a server on the panel's default API port.</summary>
+    /// <param name="server">The server to reach.</param>
+    /// <param name="apiKey">The credential the server stores for its panel API.</param>
+    /// <returns>The connection to hand the panel client.</returns>
+    private static HostingPanelConnection ConnectionTo(Server server, string apiKey) =>
+        new(server.Hostname, IHostingPanelApiClient.DefaultApiPort, apiKey);
 }

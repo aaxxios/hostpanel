@@ -28,8 +28,11 @@ export const useNetworkIssuesStore = defineStore('networkIssues', () => {
   /** True while a load or save request is in flight. */
   const loading = ref(false)
 
-  /** Sentence for the last failed call, null when none. */
+  /** Sentence for the last failed load or save, null when none. */
   const error = ref<string | null>(null)
+
+  /** Sentence for the last refused delete, null when none. */
+  const actionError = ref<string | null>(null)
 
   /** Per-field messages of the last refused save, keyed by camelCase field name. */
   const fieldErrors = ref<Record<string, string>>({})
@@ -109,13 +112,13 @@ export const useNetworkIssuesStore = defineStore('networkIssues', () => {
    * Deletes a network issue.
    *
    * @param id - The issue identifier.
-   * @returns True when deleted; false when refused (see `error`).
+   * @returns True when deleted; false when refused (see `actionError`).
    */
   const remove = async (id: number | string): Promise<boolean> =>
-    (await runAction(error, () => api.deleteNetworkIssue(id))).ok
+    (await runAction(actionError, () => api.deleteNetworkIssue(id))).ok
 
   return {
-    issues, totalCount, current, loading, error, fieldErrors, statusFilter, page, pageSize,
+    issues, totalCount, current, loading, error, actionError, fieldErrors, statusFilter, page, pageSize,
     fetchAll, fetchById, create, update, remove,
   }
 })

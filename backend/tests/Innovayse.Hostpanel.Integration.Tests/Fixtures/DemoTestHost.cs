@@ -1,7 +1,6 @@
 using Innovayse.Hostpanel.Shared.Settings;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
@@ -44,19 +43,14 @@ public static class DemoTestHost
     /// <summary>
     /// Derives a host that is composed as a demo (the container reads the switch while it is being
     /// built) but whose options then report the demo as off, so the guards inside the real services
-    /// can be exercised: the manager and the reset handler must do nothing outside a demo.
+    /// can be exercised: the manager and the reset handler must do nothing outside a demo. The switch
+    /// is turned off through app configuration, which the composition root does not see but the
+    /// options binding and its start-up validation do, so the real <see cref="DemoOptions"/> path runs.
     /// </summary>
     /// <param name="factory">The shared API + PostgreSQL host to derive from.</param>
     /// <returns>A host whose services are the demo's and whose <see cref="DemoOptions.Enabled"/> is false.</returns>
     public static WebApplicationFactory<Program> EnabledThenSwitchedOff(IntegrationTestFactory factory) =>
         Enabled(factory).WithWebHostBuilder(builder =>
-            builder.ConfigureServices(services => services.AddSingleton(Options.Create(new DemoOptions
-            {
-                Enabled = false,
-                ResetIntervalHours = ResetIntervalHours,
-                AdminEmail = AdminEmail,
-                AdminPassword = AdminPassword,
-                ClientEmail = ClientEmail,
-                ClientPassword = ClientPassword,
-            }))));
+            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
+                new Dictionary<string, string?> { ["Demo:Enabled"] = "false" })));
 }

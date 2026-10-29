@@ -3,13 +3,6 @@
     "makePayment": "Произвести оплату",
     "invoiceNum": "Счёт #{id}",
     "paymentMethod": "Способ оплаты",
-    "enterCardBelow": "Введите данные новой карты ниже",
-    "newCard": "Ввести данные новой карты",
-    "cardNumber": "Номер карты",
-    "expiryDate": "Срок действия",
-    "cvv": "CVV/CVC2",
-    "cardDescription": "Описание карты",
-    "cardDescriptionPlaceholder": "Введите название карты (Необязательно)",
     "submitPayment": "Оплатить",
     "processing": "Обработка...",
     "paymentsToDate": "Оплачено на сегодня",
@@ -19,8 +12,7 @@
     "paymentSuccess": "Оплата прошла успешно!",
     "securityNotice": "Все введённые данные передаются в зашифрованном виде для защиты от мошенничества",
     "payByCardHosted": "Оплатить картой",
-    "cardNumberPlaceholder": "1234 1234 1234 1234",
-    "expiryPlaceholder": "ММ / ГГ",
-    "cvvPlaceholder": "CVC"
+    "noSavedCardsHosted": "У вас нет сохранённых карт. Нажмите «Оплатить картой», чтобы завершить оплату на защищённой странице платёжного провайдера.",
+    "noPaymentOption": "Онлайн-оплата сейчас недоступна. Чтобы оплатить этот счёт, обратитесь в поддержку."
   }
 }

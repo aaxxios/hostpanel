@@ -1,6 +1,6 @@
 /**
- * Tests for `GET /api/portal/knowledgebase/categories`: it derives the category list, with article
- * counts, from the published articles.
+ * Tests for `GET /api/portal/knowledgebase/categories`: it passes the backend's category list,
+ * with article counts, through as sent.
  *
  * @module tests/server/api/portal/knowledgebase/categories.get.test
  */
@@ -26,24 +26,18 @@ afterEach(async () => {
 })
 
 describe('GET /api/portal/knowledgebase/categories', () => {
-  it('counts articles per category, sorted by name, skipping articles without one', async () => {
-    backend.respondWith(() => ({
-      body: [
-        { id: 1, title: 'a', content: '', category: 'Email', isPublished: true },
-        { id: 2, title: 'b', content: '', category: 'Domains', isPublished: true },
-        { id: 3, title: 'c', content: '', category: 'Email', isPublished: true },
-        { id: 4, title: 'd', content: '', category: '  ', isPublished: true },
-      ],
-    }))
+  it('reads the backend category list and passes it through as sent', async () => {
+    const categories = [
+      { name: 'Domains', articleCount: 1 },
+      { name: 'Email', articleCount: 2 },
+    ]
+    backend.respondWith(() => ({ body: categories }))
 
     const result = await route.default(makeEvent({ headers: { 'x-language': 'ru' } }))
 
-    expect(backend.requests[0]?.url).toBe('/api/knowledgebase')
+    expect(backend.requests[0]?.url).toBe('/api/knowledgebase/categories')
     expect(backend.requests[0]?.headers['x-language']).toBe('ru')
-    expect(result).toEqual([
-      { id: 'Domains', name: 'Domains', articlecount: 1 },
-      { id: 'Email', name: 'Email', articlecount: 2 },
-    ])
+    expect(result).toEqual(categories)
   })
 
   it('passes the backend refusal through with its code and sentence', async () => {

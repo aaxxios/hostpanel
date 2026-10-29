@@ -1,4 +1,5 @@
 using System.Globalization;
+using Innovayse.Hostpanel.Application.Audit.Common;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Extensions;
@@ -21,19 +22,19 @@ public sealed class ListClientActivityLogsHandler
     }
 
     /// <summary>Handles <see cref="ListClientActivityLogsQuery"/>.</summary>
-    /// <param name="query">The query.</param>
+    /// <param name="query">The client and the page of activity entries to return.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success with the page of activity log entries. A client id that names nobody simply
     /// answers an empty page; this use case refuses nothing.
     /// </returns>
-    public async Task<Result<PagedResult<ActivityLogDto>>> HandleAsync(
+    public async Task<Result<PaginatedList<ActivityLogDto>>> HandleAsync(
         ListClientActivityLogsQuery query, CancellationToken ct)
     {
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
-        // Was IActivityLogRepository.ListByClientIdAsync -- read-only, so no tracking is needed.
+        // Read-only, so no tracking is needed.
         var logsQuery = _context.ActivityLogs.AsNoTracking().Where(l => l.ClientId == query.ClientId);
 
         if (query.Date.HasValue)
@@ -75,7 +76,7 @@ public sealed class ListClientActivityLogsHandler
             .Select(l => new ActivityLogDto(l.Id, l.Description, l.AdminName, l.AdminEmail, l.IpAddress, l.CreatedAt))
             .ToList();
 
-        var result = new PagedResult<ActivityLogDto>(dtos, total, page, pageSize);
-        return Result<PagedResult<ActivityLogDto>>.Success(result);
+        var result = new PaginatedList<ActivityLogDto>(dtos, total, page, pageSize);
+        return Result<PaginatedList<ActivityLogDto>>.Success(result);
     }
 }

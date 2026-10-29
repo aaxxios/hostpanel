@@ -1,10 +1,13 @@
+using Innovayse.Hostpanel.Application.Audit.Common;
+using Innovayse.Hostpanel.Application.Billing.Extensions;
+using Innovayse.Hostpanel.Application.Clients.Common;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Audit;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Shared.Models;
-using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Commands.CreateTransaction;
 
@@ -16,34 +19,60 @@ public sealed class CreateTransactionHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Current request context, providing the acting admin's identity and IP for the audit trail.</summary>
-    private readonly ICurrentUserService _ctx;
+    /// <summary>Records the activity log line for this action, saved with the change it describes.</summary>
+    private readonly IActivityLogger _activity;
 
     /// <summary>Resolves the currency of a transaction that settles no invoice: the client's.</summary>
     private readonly IPayerCurrencyResolver _payerCurrency;
 
+    /// <summary>Adjusts the client's credit balance in the same save as the ledger row.</summary>
+    private readonly IClientCredit _clientCredit;
+
+    /// <summary>Wolverine bus the owning modules' existence queries are dispatched through.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    /// <param name="ctx">Current request context providing admin identity and IP.</param>
+    /// <param name="activity">Records the activity log line for this action, saved with the change it describes.</param>
     /// <param name="payerCurrency">Resolves the currency of a transaction that settles no invoice.</param>
+    /// <param name="clientCredit">Adjusts the client's credit balance in the same save as the ledger row.</param>
+    /// <param name="bus">Wolverine bus the owning modules' existence queries are dispatched through.</param>
     public CreateTransactionHandler(
-        IHostpanelDbContext context, ICurrentUserService ctx, IPayerCurrencyResolver payerCurrency)
+        IHostpanelDbContext context,
+        IActivityLogger activity,
+        IPayerCurrencyResolver payerCurrency,
+        IClientCredit clientCredit,
+        IMessageBus bus)
     {
         _context = context;
-        _ctx = ctx;
+        _activity = activity;
         _payerCurrency = payerCurrency;
+        _clientCredit = clientCredit;
+        _bus = bus;
     }
 
     /// <summary>Handles <see cref="CreateTransactionCommand"/>.</summary>
     /// <param name="cmd">The create command.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// Success with the newly created transaction's ID, or <c>CLIENT_NOT_FOUND</c> when
-    /// <paramref name="cmd"/> asks for a credit adjustment against a client that does not exist.
+    /// Success with the newly created transaction's ID, <c>CLIENT_NOT_FOUND</c> when
+    /// <paramref name="cmd"/> names a client that does not exist, <c>INVOICE_NOT_FOUND</c> when it
+    /// names an invoice that does not exist, or <c>CLIENT_CREDIT_INSUFFICIENT</c> when the amount
+    /// out is more than the balance holds.
     /// </returns>
     public async Task<Result<int>> HandleAsync(CreateTransactionCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
+
+        if (!await _bus.ClientExistsAsync(cmd.ClientId, ct))
+        {
+            return Result<int>.FailureCode(HostpanelErrorCodes.CLIENT_NOT_FOUND);
+        }
+
+        if (cmd.InvoiceId is { } linkedInvoiceId && !await _context.InvoiceExistsAsync(linkedInvoiceId, ct))
+        {
+            return Result<int>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
+        }
 
         // The amounts are in the currency of the invoice they settle; with no invoice, the client's.
         var invoiceCurrency = cmd.InvoiceId is { } invoiceId
@@ -69,31 +98,28 @@ public sealed class CreateTransactionHandler
 
         _context.Transactions.Add(transaction);
 
-        if (cmd.AddToCredit)
+        if (cmd.AddToCredit && cmd.AmountIn > 0)
         {
-            var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == cmd.ClientId, ct);
-            if (client is null)
+            var added = await _clientCredit.AddAsync(new ClientCreditChange(cmd.ClientId, cmd.AmountIn), ct);
+            if (added.IsFailure)
             {
-                return Result<int>.FailureCode(HostpanelErrorCodes.CLIENT_NOT_FOUND);
+                return Result<int>.FailureCode(added.ErrorCode!);
             }
+        }
 
-            if (cmd.AmountIn > 0)
+        if (cmd.AddToCredit && cmd.AmountOut > 0)
+        {
+            var taken = await _clientCredit.DeductAsync(new ClientCreditChange(cmd.ClientId, cmd.AmountOut), ct);
+            if (taken.IsFailure)
             {
-                client.AddCredit(cmd.AmountIn);
-            }
-
-            if (cmd.AmountOut > 0)
-            {
-                client.DeductCredit(cmd.AmountOut);
+                return Result<int>.FailureCode(taken.ErrorCode!);
             }
         }
 
         await _context.SaveChangesAsync(ct);
 
-        _context.ActivityLogs.Add(ActivityLog.Create(
-            cmd.ClientId,
-            $"Added Transaction - Transaction ID: {transaction.Id}",
-            _ctx.UserId, _ctx.UserName, _ctx.Email, _ctx.IpAddress));
+        await _activity.RecordAsync(
+            new ActivityLogEntry(cmd.ClientId, $"Added Transaction - Transaction ID: {transaction.Id}"), ct);
         await _context.SaveChangesAsync(ct);
 
         return Result<int>.Success(transaction.Id);

@@ -5,4 +5,4 @@ namespace Innovayse.Hostpanel.Application.Admin.Common;
 /// </summary>
 /// <param name="Code">ISO 3166-1 alpha-2 two-letter country code (e.g. "US").</param>
 /// <param name="Name">English name of the country (e.g. "United States").</param>
-public record CountryDto(string Code, string Name);
+public sealed record CountryDto(string Code, string Name);

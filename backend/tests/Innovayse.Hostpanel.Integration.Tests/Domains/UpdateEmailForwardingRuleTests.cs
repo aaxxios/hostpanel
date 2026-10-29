@@ -1,17 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Commands.UpdateEmailForwardingRule;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>UpdateEmailForwardingRule</c> use case —
+/// Integration tests for the admin <c>UpdateEmailForwardingRule</c> use case:
 /// <c>PUT /api/domains/{id}/email-forwarding/{ruleId}</c>. The sibling use cases in the same
 /// lifecycle are <c>AddEmailForwardingRule</c> and <c>DeleteEmailForwardingRule</c>; the
 /// client-facing equivalent is <c>UpdateMyDomainEmailForwardingRule</c>.
@@ -21,10 +19,10 @@ public sealed class UpdateEmailForwardingRuleTests(IntegrationTestFactory factor
 {
     /// <summary>
     /// The full admin lifecycle: add with <c>{ source, destination }</c> (no <c>isActive</c>),
-    /// then update with the same two fields and no <c>isActive</c> — exactly what
-    /// <c>EmailForwardingTable.vue</c>'s plain edit form sends — and the rule stays active,
+    /// then update with the same two fields and no <c>isActive</c>, exactly what
+    /// <c>EmailForwardingTable.vue</c>'s plain edit form sends, and the rule stays active,
     /// because <see cref="UpdateEmailForwardingRuleCommand"/> defaults <c>IsActive</c> to
-    /// <see langword="true"/> the same way a deleted request DTO's property initializer did.
+    /// <see langword="true"/>.
     /// Then delete.
     /// </summary>
     [Fact]
@@ -44,7 +42,7 @@ public sealed class UpdateEmailForwardingRuleTests(IntegrationTestFactory factor
         rules.Should().ContainSingle();
         var ruleId = rules[0].GetProperty("id").GetInt32();
 
-        // The plain edit form never sends isActive -- only the dedicated toggle does.
+        // The plain edit form never sends isActive; only the dedicated toggle does.
         var updateResponse = await client.PutAsJsonAsync(
             $"/api/domains/{domainId}/email-forwarding/{ruleId}",
             new { source = "sales", destination = "sales@example.test" });
@@ -84,5 +82,19 @@ public sealed class UpdateEmailForwardingRuleTests(IntegrationTestFactory factor
             new { source = "sales", destination = "sales@example.test" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A non-positive rule id is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task UpdateEmailForwardingRule_NonPositiveRuleId_Returns400ValidationErrorAsync()
+    {
+        var client = await DomainsTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/domains/{DomainsTestSeeds.UnknownId}/email-forwarding/0",
+            new { source = "info", destination = "info@example.test" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

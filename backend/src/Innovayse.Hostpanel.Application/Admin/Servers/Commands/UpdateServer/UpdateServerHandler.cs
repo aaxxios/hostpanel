@@ -36,15 +36,13 @@ public sealed class UpdateServerHandler
         }
 
         var details = new ServerDetails(
-            cmd.Name, cmd.Hostname, cmd.IpAddress, cmd.AssignedIpAddresses,
-            cmd.Module, cmd.Username, cmd.Password, cmd.ApiToken, cmd.AccessHash,
-            cmd.UseSSL, cmd.MaxAccounts, cmd.IsDefault, cmd.IsDisabled,
-            cmd.MonthlyCost, cmd.Datacenter, cmd.ServerStatusAddress,
-            cmd.Ns1Hostname, cmd.Ns1Ip, cmd.Ns2Hostname, cmd.Ns2Ip,
-            cmd.Ns3Hostname, cmd.Ns3Ip, cmd.Ns4Hostname, cmd.Ns4Ip,
-            cmd.Ns5Hostname, cmd.Ns5Ip);
+            cmd.Name, cmd.Endpoint.Hostname, cmd.Endpoint.IpAddress, cmd.Endpoint.AssignedIpAddresses,
+            cmd.Module, cmd.Username, cmd.Credentials, cmd.Endpoint.UseSSL,
+            cmd.Limits.MaxAccounts, cmd.Limits.IsDefault, cmd.Limits.IsDisabled,
+            cmd.Hosting.MonthlyCost, cmd.Hosting.Datacenter, cmd.Hosting.ServerStatusAddress,
+            cmd.NameServers);
 
-        server.Update(details);
+        server.Reconfigure(details, cmd.Clears ?? ServerCredentialClears.None);
         await _context.SaveChangesAsync(ct);
         return Result.Success();
     }

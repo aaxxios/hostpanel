@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Application.Common.Errors;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -10,7 +8,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// <c>POST /api/downloads</c>: an admin can create a download entry, and the action is closed to
 /// a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>DownloadsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateDownloadTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -34,6 +31,28 @@ public sealed class CreateDownloadTests(IntegrationTestFactory factory) : IClass
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    /// <summary>A category that does not exist is refused with 404 <c>DOWNLOAD_CATEGORY_NOT_FOUND</c>.</summary>
+    [Fact]
+    public async Task CreateRefusesAnUnknownCategoryAsync()
+    {
+        var client = await SupportTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync("/api/downloads", new
+        {
+            title = $"File-{Guid.NewGuid():N}",
+            description = "A file.",
+            type = "ZIP File",
+            filename = "file.zip",
+            categoryId = SupportTestSeeds.NoSuchId,
+            clientsOnly = false,
+            productDownload = false,
+            isHidden = false,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await SupportTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.DOWNLOAD_CATEGORY_NOT_FOUND);
     }
 
     /// <summary>A caller with no credential cannot create a download entry.</summary>

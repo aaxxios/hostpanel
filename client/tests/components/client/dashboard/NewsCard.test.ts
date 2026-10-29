@@ -10,15 +10,15 @@ import { nextTick } from 'vue'
 import { mountClient } from '~/tests/helpers/mountClient'
 import NewsCard from '~/components/client/dashboard/NewsCard.vue'
 import { useContentStore } from '~/stores/content'
-import type { AnnouncementSummary } from '~/types/announcementsummary'
+import type { PublishedAnnouncement } from '~/types/publishedannouncement'
 
 /**
- * Builds an announcement summary.
+ * Builds a published announcement.
  *
  * @param id - Announcement id.
- * @returns A summary with a title and a date.
+ * @returns An announcement with a title and a publication time.
  */
-const news = (id: number): AnnouncementSummary => ({ id, title: `News ${id}`, date: '2026-10-01' }) as AnnouncementSummary
+const news = (id: number): PublishedAnnouncement => ({ id, title: `News ${id}`, content: '', publishedAt: '2026-10-01T09:00:00Z' })
 
 describe('ClientDashboardNewsCard', () => {
   it('says there are no announcements when the list is empty', () => {

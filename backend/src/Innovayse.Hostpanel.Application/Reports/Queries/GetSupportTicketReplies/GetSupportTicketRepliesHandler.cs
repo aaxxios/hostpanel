@@ -11,11 +11,16 @@ public sealed class GetSupportTicketRepliesHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetSupportTicketRepliesHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public GetSupportTicketRepliesHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the query.</summary>
@@ -29,7 +34,7 @@ public sealed class GetSupportTicketRepliesHandler
 
         // The period defaults here rather than at the endpoint so every caller of the query,
         // HTTP or not, lands on the same month.
-        var period = ReportMonth.Resolve(query.Year, query.Month, DateTimeOffset.UtcNow);
+        var period = ReportMonth.Resolve(query.Year, query.Month, _clock.UtcNow);
         var year = period.Year;
         var month = period.Month;
         var from = period.From;

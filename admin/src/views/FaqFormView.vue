@@ -103,6 +103,8 @@ const breadcrumb = computed(() => [
     :saving="flow.saving.value"
     :dirty="flow.isDirty.value"
     :error="flow.saveError.value"
+    :load-error="flow.loadError.value"
+    @retry="flow.reload"
     @save="flow.save"
     @cancel="flow.cancel"
   >

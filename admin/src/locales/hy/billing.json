@@ -2,7 +2,12 @@
   "invoiceCreditTab": {
     "addCreditToInvoice": "Ավելացնել կրեդիտ հաշվին",
     "valueUsdAvailable": "Հասանելի է՝ ${value} USD",
-    "removeCreditFromInvoice": "Հանել կրեդիտը հաշվից"
+    "removeCreditFromInvoice": "Հանել կրեդիտը հաշվից",
+    "creditApplied": "Կրեդիտը կիրառվեց հաշվին։",
+    "creditRemoved": "Կրեդիտը հանվեց հաշվից։",
+    "confirmRemoveCreditTitle": "Հանե՞լ կրեդիտը",
+    "confirmRemoveCreditMessage": "Հանե՞լ {amount} կրեդիտ #{id} հաշվից։",
+    "removeCredit": "Հանել կրեդիտը"
   },
   "invoiceNotesTab": {
     "thereAreNoNotesOn": "Այս հաշվում նշումներ չկան։"
@@ -15,14 +20,14 @@
     "publishTheInvoiceBeforeAdding": "Վճարումներ ավելացնելուց առաջ հրապարակեք հաշիվը։",
     "invoiceIsCancelledPleaseMark": "Հաշիվը չեղարկված է. վճարում կիրառելու համար նախ նշեք այն որպես չվճարված։",
     "addPayment": "Ավելացնել վճարում",
-    "gatewayReference": "Վճարային դարպասի հղում"
+    "gatewayReference": "Վճարային դարպասի հղում",
+    "paymentAdded": "Վճարումը գրանցվեց։"
   },
   "invoiceRefundTab": {
     "thereAreNoTransactionsThat": "Վերադարձի համար պիտանի գործարքներ չկան։",
     "publishTheInvoiceBeforeRequesting": "Վերադարձ պահանջելուց առաջ հրապարակեք հաշիվը։",
     "cannotRefundACancelledInvoice": "Չեղարկված հաշվի դեպքում վերադարձ հնարավոր չէ։",
     "thisInvoiceHasAlreadyBeen": "Այս հաշվի համար վերադարձն արդեն կատարվել է։",
-    "leaveBlankForFullRefund": "Թողեք դատարկ՝ լրիվ վերադարձի համար",
     "refundType": "Վերադարձի տեսակ",
     "externalRefundReference": "Վերադարձի արտաքին հղում",
     "warning": "ԶԳՈՒՇԱՑՈՒՄ",
@@ -35,34 +40,32 @@
     "refundThroughGateway": "Վերադարձ դարպասի միջոցով",
     "manualRefundProcessedExternally": "Ձեռքով վերադարձ, կատարված համակարգից դուրս",
     "noTransactionsAppliedToThis": "Այս հաշվին դեռ ոչ մի գործարք չի կիրառվել",
-    "selectATransaction": "Ընտրեք գործարքը..."
+    "selectATransaction": "Ընտրեք գործարքը...",
+    "confirmRefundTitle": "Վերադարձի հաստատում",
+    "confirmRefundMessage": "Վերադարձնե՞լ {amount}՝ «{method}» եղանակով։ Այս գործողությունը հնարավոր չէ հետարկել։",
+    "refunded": "Վերադարձն ուղարկված է։"
   },
   "invoiceSummaryTab": {
     "thisIsADraftInvoice": "Սա հաշվի սևագիր է։ Հաճախորդը չի տեսնում այս հաշիվը և հասանելիություն չունի դրան՝ մինչև այն հրապարակվի։",
     "viewInvoices": "( Դիտել հաշիվները )",
     "invoiceAmount": "Հաշվի գումար",
-    "lastCaptureAttempt": "Վերջին գանձման փորձ՝",
     "paymentMethod": "Վճարման եղանակ՝",
     "publish": "Հրապարակել",
-    "attemptCapture": "Փորձել գանձել",
-    "markPaid": "Նշել որպես վճարված"
+    "markPaid": "Նշել որպես վճարված",
+    "published": "Հաշիվը հրապարակված է։",
+    "cancelled": "Հաշիվը չեղարկված է։",
+    "markedPaid": "Հաշիվը նշված է որպես վճարված։",
+    "confirmCancelTitle": "Հաշվի չեղարկում",
+    "confirmCancelMessage": "Չեղարկե՞լ #{id} հաշիվը։ Հաճախորդն այլևս չի կարողանա այն վճարել։",
+    "confirmMarkPaidTitle": "Նշել որպես վճարված",
+    "confirmMarkPaidMessage": "Նշե՞լ #{id} հաշիվը որպես վճարված։ Մնացած {amount} գումարը կփակվի առանց վճարման գրանցման։"
   },
   "addBillableItem": {
     "createANewBillableItem": "Ստեղծեք նոր վճարվող դիրք հաճախորդի համար",
     "whatIsThisChargeFor": "Ինչի՞ համար է այս գանձումը",
-    "recurEvery": "Կրկնել յուրաքանչյուր",
-    "nextDueDate": "(Հաջորդ) վճարման ժամկետ",
-    "donTInvoiceForNow": "Առայժմ հաշիվ դուրս չգրել",
-    "invoiceOnNextCronRun": "Դուրս գրել պլանավորողի հաջորդ գործարկման ժամանակ",
-    "addToUserSNext": "Ավելացնել օգտատիրոջ հաջորդ հաշվին",
-    "invoiceAsNormalForDue": "Դուրս գրել սովորական կարգով վճարման ժամկետին",
-    "recurringEvery": "Կրկնել յուրաքանչյուր",
-    "dayS": "օր",
-    "weekS": "շաբաթ",
-    "monthS": "ամիս",
-    "yearS": "տարի",
-    "oneTime": "Միանվագ",
-    "recurUnit": "Ժամանակահատված"
+    "invoiceOn": "Հաշվի դուրսգրման օր",
+    "nextDueDate": "Հաջորդ վճարման ժամկետ",
+    "recurringPeriod": "Կրկնման ժամանակահատված"
   },
   "addQuote": {
     "createQuote": "Ստեղծել առաջարկ",
@@ -108,7 +111,8 @@
     "activeRecurring": "Ակտիվ կրկնվող",
     "completedRecurring": "Ավարտված կրկնվող",
     "deleteItems": "Ջնջել հաշվեգրվող կետերը",
-    "deleteItemsMessage": "Ջնջե՞լ ընտրված {count} հաշվեգրվող կետը։ Այս գործողությունը հնարավոր չէ չեղարկել։ | Ջնջե՞լ ընտրված {count} հաշվեգրվող կետերը։ Այս գործողությունը հնարավոր չէ չեղարկել։"
+    "deleteItemsMessage": "Ջնջե՞լ ընտրված {count} հաշվեգրվող կետը։ Այս գործողությունը հնարավոր չէ չեղարկել։ | Ջնջե՞լ ընտրված {count} հաշվեգրվող կետերը։ Այս գործողությունը հնարավոր չէ չեղարկել։",
+    "itemsDeleted": "Վճարովի կետերը ջնջվեցին։"
   },
   "disputes": {
     "listDisputes": "Վեճերի ցանկ",
@@ -152,7 +156,6 @@
   "invoicesList": {
     "manageBillingInvoices": "Վճարման հաշիվների կառավարում",
     "dateRefunded": "Վերադարձի ամսաթիվ",
-    "dateCancelled": "Չեղարկման ամսաթիվ",
     "totalcountRecordsFoundShowingValue": "Գտնվել է գրառում՝ {totalCount}, ցուցադրված են {value}–{value2}",
     "markPaid": "Նշել որպես վճարված",
     "markUnpaid": "Նշել որպես չվճարված",
@@ -162,7 +165,11 @@
     "deleteInvoice": "Ջնջել հաշիվը",
     "deleteInvoiceMessage": "Ջնջե՞լ №{id} հաշիվը։ Այս գործողությունը հնարավոր չէ չեղարկել։",
     "deleteInvoices": "Ջնջել հաշիվները",
-    "deleteInvoicesMessage": "Ջնջե՞լ ընտրված {count} հաշիվը։ Այս գործողությունը հնարավոր չէ չեղարկել։ | Ջնջե՞լ ընտրված {count} հաշիվները։ Այս գործողությունը հնարավոր չէ չեղարկել։"
+    "deleteInvoicesMessage": "Ջնջե՞լ ընտրված {count} հաշիվը։ Այս գործողությունը հնարավոր չէ չեղարկել։ | Ջնջե՞լ ընտրված {count} հաշիվները։ Այս գործողությունը հնարավոր չէ չեղարկել։",
+    "bulkActionDone": "Կատարվեց ընտրված հաշիվների համար։",
+    "invoiceDeleted": "Հաշիվը ջնջվեց։",
+    "cancelInvoices": "Չեղարկել հաշիվները",
+    "cancelInvoicesMessage": "Նշե՞լ ընտրված {count} հաշիվը որպես չեղարկված։ | Նշե՞լ ընտրված {count} հաշիվները որպես չեղարկված։"
   },
   "offlineCC": {
     "offlineCreditCardProcessing": "Օֆլայն քարտային վճարումների մշակում",

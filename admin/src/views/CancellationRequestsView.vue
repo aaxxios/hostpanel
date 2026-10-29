@@ -1,24 +1,26 @@
 <script setup lang="ts">
 /**
- * Cancellation requests — paged table of every service cancellation request.
+ * Cancellation requests: paged table of every service cancellation request.
  *
  * Shows date, product/service, client, reason, type, status and a delete action that asks first.
- * Reads and writes `stores/cancellationRequests`; a refusal shows the API's sentence.
+ * Reads and writes `stores/cancellationRequests`. The outcome of a delete (success, or the API's
+ * sentence) shows above the table; a refused load shows the sentence with a Retry.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiLink from '@/components/ui/UiLink.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -35,11 +37,6 @@ import { clientPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
-
-/** Fallback text for fields the API leaves unresolved. */
-
-const { clientLabel, orUnknown } = useFallbackLabels()
-
 /** Cancellation requests store: the page, its paging and the load state. */
 const store = useCancellationRequestsStore()
 
@@ -51,6 +48,25 @@ const deleteTarget = ref<number | null>(null)
 
 /** True while the staged request is being deleted. */
 const deleting = ref(false)
+
+/** The sentence of the last refused list load, shown with Retry; null when the list loaded. */
+const loadError = ref<string | null>(null)
+
+/** The outcome line of the last delete. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Loads the current page and records whether the load was refused.
+ *
+ * @returns Resolves when the list has settled.
+ */
+const load = async (): Promise<void> => {
+  await store.fetchAll()
+  loadError.value = store.error
+}
 
 /** Whether the current page has any request to list. */
 const hasRows = computed<boolean>(() => store.cancellations.length > 0)
@@ -71,7 +87,7 @@ const shorten = (text: string): string =>
  */
 const goToPage = (page: number): void => {
   store.page = page
-  void store.fetchAll()
+  void load()
 }
 
 /**
@@ -85,9 +101,7 @@ const confirmDelete = (id: number): void => {
 }
 
 /**
- * Deletes the staged cancellation request and clears the prompt.
- *
- * The store puts a refusal into its own `error`, which the page renders, so nothing is caught here.
+ * Deletes the staged cancellation request, clears the prompt and shows the outcome.
  *
  * @returns Promise that resolves when the delete attempt has finished.
  */
@@ -96,13 +110,27 @@ const handleDelete = async (): Promise<void> => {
   if (id === null) {
     return
   }
+  feedback.clear()
   deleting.value = true
-  await store.deleteRequest(id)
+  const deleted = await store.deleteRequest(id)
   deleting.value = false
   deleteTarget.value = null
+  if (deleted) {
+    feedback.show(t('clients.cancellationRequests.requestDeleted'), false)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
 }
 
-onMounted(() => store.fetchAll())
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    deleteTarget.value = null
+  }
+}
+
+/** Loads the first page. */
+onMounted(() => load())
 </script>
 
 <template>
@@ -113,9 +141,15 @@ onMounted(() => store.fetchAll())
       data-testid="cancellations-header"
     />
 
-    <UiAlert v-if="store.error" variant="error" data-testid="cancellations-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="cancellations-feedback" />
+
+    <UiErrorState
+      v-if="loadError !== null"
+      :message="loadError"
+      :loading="store.loading"
+      testid="cancellations-error"
+      @retry="load"
+    />
 
     <UiCard v-if="hasRows || store.loading">
       <UiTable density="comfortable" :loading="store.loading && !hasRows" :colspan="7" data-testid="cancellations-table">
@@ -139,10 +173,10 @@ onMounted(() => store.fetchAll())
             :data-testid="`cancellations-row-${item.id}`"
           >
             <UiTableCell muted>{{ formatDate(item.createdAt) }}</UiTableCell>
-            <UiTableCell>{{ orUnknown(item.serviceName) }}</UiTableCell>
+            <UiTableCell>{{ item.serviceName }}</UiTableCell>
             <UiTableCell>
               <UiLink variant="link" :to="clientPath(item.clientId)" :data-testid="`cancellations-client-${item.id}`">
-                {{ clientLabel(item.clientName, item.clientId) }}
+                {{ item.clientName }}
               </UiLink>
             </UiTableCell>
             <UiTableCell>
@@ -208,7 +242,7 @@ onMounted(() => store.fetchAll())
       :tone="UiTone.Danger"
       data-testid="cancellations-delete-dialog"
       @confirm="handleDelete"
-      @close="deleteTarget = null"
+      @close="dismissDelete"
     />
   </UiStack>
 </template>

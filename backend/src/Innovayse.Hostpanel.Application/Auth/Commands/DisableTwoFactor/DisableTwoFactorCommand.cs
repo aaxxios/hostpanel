@@ -6,4 +6,7 @@ namespace Innovayse.Hostpanel.Application.Auth.Commands.DisableTwoFactor;
 /// no field a caller could set to disarm somebody else's second factor.
 /// </remarks>
 /// <param name="Code">A current code from the authenticator app.</param>
-public sealed record DisableTwoFactorCommand(string Code);
+/// <param name="CurrentPassword">
+/// The account's current password, required where this deployment owns the accounts. Never logged.
+/// </param>
+public sealed record DisableTwoFactorCommand(string Code, string? CurrentPassword = null);

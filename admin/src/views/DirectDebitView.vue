@@ -15,7 +15,7 @@ import { UiAlign } from '@/utils/ui/table'
 
 const { t } = useI18n()
 
-const { data } = useReport<ReportDirectDebit>(() => '/reports/direct-debit')
+const { data, load } = useReport<ReportDirectDebit>(() => '/reports/direct-debit')
 
 /** Table columns. */
 const columns = computed<ReportColumn[]>(() => [
@@ -35,7 +35,7 @@ const columns = computed<ReportColumn[]>(() => [
 </script>
 
 <template>
-  <ReportPage :title="t('reports.directDebit.directDebitProcessing')" :description="t('reports.directDebit.thisReportDisplaysAllUnpaid')">
+  <ReportPage :retry="load" :title="t('reports.directDebit.directDebitProcessing')" :description="t('reports.directDebit.thisReportDisplaysAllUnpaid')">
     <ReportTable
       v-if="data"
       :columns="columns"

@@ -1,9 +1,11 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Domains.Queries.GetTldConfig;
 
 /// <summary>
@@ -59,12 +61,14 @@ public sealed class GetTldConfigHandler
             config.IsEnabled,
             config.SortOrder,
             config.Categories.ToList(),
-            new Dictionary<int, decimal>(config.CostRegister),
-            new Dictionary<int, decimal>(config.CostTransfer),
-            new Dictionary<int, decimal>(config.CostRenew),
-            new Dictionary<int, decimal>(config.SellRegister),
-            new Dictionary<int, decimal>(config.SellTransfer),
-            new Dictionary<int, decimal>(config.SellRenew),
+            new TldPriceTableDto(
+                new Dictionary<int, decimal>(config.CostRegister),
+                new Dictionary<int, decimal>(config.CostTransfer),
+                new Dictionary<int, decimal>(config.CostRenew)),
+            new TldPriceTableDto(
+                new Dictionary<int, decimal>(config.SellRegister),
+                new Dictionary<int, decimal>(config.SellTransfer),
+                new Dictionary<int, decimal>(config.SellRenew)),
             config.LastSyncedAt,
             config.CreatedAt);
     }

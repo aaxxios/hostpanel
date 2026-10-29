@@ -1,3 +1,6 @@
+/**
+ * Unit tests for `utils/liveChat.ts`: the loader, opening and closing the panel and the locale.
+ */
 import { describe, expect, it, vi } from 'vitest'
 import {
   LIVE_CHAT_READY_EVENT,
@@ -6,11 +9,12 @@ import {
   openLiveChat,
   setLiveChatLocale,
 } from '~/utils/liveChat'
+import { LiveChatPanelState } from '~/types/livechatpanelstate'
 
 /** The widget API the SDK defines on the window once it has started. */
 interface FakeWidget {
   /** Opens or closes the chat panel. */
-  toggle: () => void
+  toggle: (state: LiveChatPanelState) => void
   /** Sets the widget language. */
   setLocale: (locale: string) => void
   /** Sets visitor attributes shown to the operator. */
@@ -45,7 +49,7 @@ interface FakeScript {
  * Modelled on what the real bundle at the chat host actually does: it defines
  * `window.innochatSDK`, and `run()` starts the widget, which some time later
  * defines `window.$innochat` and fires `innochat:ready`. Nothing here knows
- * about the underlying engine, which is the point — the bundle this application loads does
+ * about the underlying engine, which is the point: the bundle this application loads does
  * not either.
  *
  * The delay is why `fireReady` is separate rather than being called from inside
@@ -88,6 +92,7 @@ const installSdk = (win: FakeWindow) => {
  * fire its `onload` at the right moment.
  *
  * @param source Loader source from {@link buildLiveChatLoader}.
+ * @returns The stub window and the script element the loader inserted.
  */
 const runLoader = (source: string) => {
   const inserted: FakeScript[] = []
@@ -135,9 +140,9 @@ describe('buildLiveChatLoader', () => {
 
     script.onload()
 
-    // This is the assertion the old loader failed. It looked for the engine's
-    // global the Innochat bundle never defines, returned early, and left the
-    // page with a chat button wired to an API that was never created.
+    // The loader must start the SDK the bundle defines: looking for the engine's own
+    // global, which the bundle never defines, would return early and leave the page
+    // with a chat button wired to an API that was never created.
     expect(win.innochatSDK?.run).toHaveBeenCalledWith({
       websiteToken: 'test-token',
       baseUrl: 'https://chat.example.com',
@@ -171,12 +176,11 @@ describe('openLiveChat', () => {
     win.$innochat = widget
 
     expect(openLiveChat(win)).toBe(true)
-    expect(widget.toggle).toHaveBeenCalledWith('open')
+    expect(widget.toggle).toHaveBeenCalledWith(LiveChatPanelState.Open)
   })
 
   it('reports failure rather than pretending, when the widget never started', () => {
-    // The whole bug in one line: the click handler used to reach for a global
-    // that was not there and say nothing about it.
+    // The click handler must not reach for a missing global and say nothing about it.
     expect(openLiveChat({})).toBe(false)
   })
 
@@ -190,7 +194,7 @@ describe('closeLiveChat', () => {
     const widget = { toggle: vi.fn(), setLocale: vi.fn(), setCustomAttributes: vi.fn() }
 
     expect(closeLiveChat({ $innochat: widget })).toBe(true)
-    expect(widget.toggle).toHaveBeenCalledWith('close')
+    expect(widget.toggle).toHaveBeenCalledWith(LiveChatPanelState.Close)
   })
 
   it('reports failure when there is no widget', () => {

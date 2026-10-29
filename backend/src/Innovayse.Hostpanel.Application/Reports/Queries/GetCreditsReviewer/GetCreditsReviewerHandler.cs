@@ -1,4 +1,7 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Reports.Common;
+using Innovayse.Hostpanel.Application.Reports.Extensions;
+using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,62 +21,71 @@ public sealed class GetCreditsReviewerHandler
     }
 
     /// <summary>Handles the query.</summary>
-    /// <param name="query">The filters to apply.</param>
+    /// <param name="query">The filters and the page to apply.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Every matching credit, newest first, with the count and sum of what matched. Never refuses.</returns>
+    /// <returns>
+    /// The count and sum of the matching credits per currency, summed in SQL, and one page of them,
+    /// newest first. Never refuses.
+    /// </returns>
     public async Task<Result<CreditsReviewerDto>> HandleAsync(GetCreditsReviewerQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var transactions = _context.Transactions
+        var credits = _context.Transactions
             .AsNoTracking()
             .Where(t => t.AddedToCredit && t.AmountIn > 0);
 
         if (query.ClientId.HasValue)
         {
-            transactions = transactions.Where(t => t.ClientId == query.ClientId.Value);
+            var clientId = query.ClientId.Value;
+            credits = credits.Where(t => t.ClientId == clientId);
         }
 
         if (query.From.HasValue)
         {
-            var fromDt = new DateTimeOffset(query.From.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
-            transactions = transactions.Where(t => t.Date >= fromDt);
+            var from = query.From.Value.StartOfDayUtc();
+            credits = credits.Where(t => t.Date >= from);
         }
 
         if (query.To.HasValue)
         {
-            var toDt = new DateTimeOffset(query.To.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc));
-            transactions = transactions.Where(t => t.Date <= toDt);
+            var toExclusive = query.To.Value.EndOfDayExclusiveUtc();
+            credits = credits.Where(t => t.Date < toExclusive);
         }
 
         if (query.MinAmount.HasValue)
         {
-            transactions = transactions.Where(t => t.AmountIn >= query.MinAmount.Value);
+            var min = query.MinAmount.Value;
+            credits = credits.Where(t => t.AmountIn >= min);
         }
 
         if (query.MaxAmount.HasValue)
         {
-            transactions = transactions.Where(t => t.AmountIn <= query.MaxAmount.Value);
+            var max = query.MaxAmount.Value;
+            credits = credits.Where(t => t.AmountIn <= max);
         }
 
-        var raw = await transactions
-            .OrderByDescending(t => t.Date)
-            .Join(_context.Clients.AsNoTracking(), t => t.ClientId, c => c.Id, (t, c) => new
-            {
-                t.Id,
-                ClientId = c.Id,
-                ClientName = c.FirstName + " " + c.LastName,
-                t.Date,
-                t.Description,
-                Amount = t.AmountIn,
-            })
+        var totals = await credits
+            .GroupBy(t => t.Currency)
+            .OrderBy(g => g.Key)
+            .Select(g => new CreditsReviewerCurrencyTotalDto(g.Key, g.Count(), g.Sum(t => t.AmountIn)))
             .ToListAsync(ct);
 
-        var rows = raw.Select(r => new CreditsReviewerRowDto(
-            r.Id, r.ClientId, r.ClientName,
-            r.Date.ToString("dd/MM/yyyy"),
-            r.Description, r.Amount, AdminUser: null)).ToList();
+        var rows = await credits
+            .OrderByDescending(t => t.Date)
+            .ThenByDescending(t => t.Id)
+            .Paginate(query.Page, query.PageSize)
+            .Join(_context.Clients.AsNoTracking(), t => t.ClientId, c => c.Id, (t, c) => new CreditsReviewerRowDto(
+                t.Id,
+                c.Id,
+                c.FirstName + " " + c.LastName,
+                t.Date.ToString("yyyy-MM-dd"),
+                t.Description,
+                t.Currency,
+                t.AmountIn))
+            .ToListAsync(ct);
 
-        return Result<CreditsReviewerDto>.Success(new CreditsReviewerDto(rows.Count, rows.Sum(r => r.Amount), rows));
+        var page = new PaginatedList<CreditsReviewerRowDto>(rows, totals.Sum(t => t.TotalCount), query.Page, query.PageSize);
+        return Result<CreditsReviewerDto>.Success(new CreditsReviewerDto(totals, page));
     }
 }

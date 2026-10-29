@@ -1,6 +1,8 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Services.Commands.SuspendService;
+using Innovayse.Hostpanel.Application.Services.Extensions;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Shared.Infrastructure;
@@ -14,43 +16,53 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.SuspendOverdueService
 /// <summary>
 /// Handles <see cref="SuspendOverdueServicesCronCommand"/>, the daily overdue run: suspends, with
 /// <see cref="SuspensionSource.Overdue"/>, only the Active services referenced by lines of invoices that
-/// stayed Overdue past <c>billing.renewal.suspend_after_overdue_days</c>. Services that opted out
-/// (<c>OverrideAutoSuspend</c>) or are held by a future <c>SuspendUntil</c> are skipped. Coverage by an
+/// stayed Overdue past <c>billing.renewal.suspend_after_overdue_days</c>. Services billed by hand
+/// (<c>AutoRenew</c> off) or under a suspension hold (<c>OverrideAutoSuspend</c>, until its
+/// <c>SuspendUntil</c> when it names one) are skipped. Coverage by an
 /// overdue invoice is re-checked right before each suspension. Each suspension is its own
 /// <see cref="SuspendServiceCommand"/> so one failure cannot stop the rest. Re-schedules itself for the next day.
 /// </summary>
 public sealed class SuspendOverdueServicesCronHandler
 {
-    /// <summary>Hour (UTC) at which this job runs daily -- after CheckOverdueInvoicesCron (07:00) has marked today's overdue invoices.</summary>
-    private const int CronHour = 9;
-
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
     /// <summary>Reads the grace period.</summary>
     private readonly RenewalSettingsReader _settings;
 
-    /// <summary>Message bus, for the suspensions and re-scheduling.</summary>
+    /// <summary>Message bus, for the suspensions.</summary>
     private readonly IMessageBus _bus;
+
+    /// <summary>Runs the passes under their lease and schedules the next run.</summary>
+    private readonly RecurringJobs _jobs;
 
     /// <summary>Structured logger.</summary>
     private readonly ILogger<SuspendOverdueServicesCronHandler> _logger;
 
+    /// <summary>The clock every moment in this handler is read from.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="settings">Reads the grace period.</param>
-    /// <param name="bus">Message bus, for the suspensions and re-scheduling.</param>
+    /// <param name="bus">Message bus, for the suspensions.</param>
+    /// <param name="jobs">Runs the passes under their lease and schedules the next run.</param>
     /// <param name="logger">Structured logger.</param>
+    /// <param name="clock">The clock the current moment is read from.</param>
     public SuspendOverdueServicesCronHandler(
         IHostpanelDbContext context,
         RenewalSettingsReader settings,
         IMessageBus bus,
-        ILogger<SuspendOverdueServicesCronHandler> logger)
+        RecurringJobs jobs,
+        ILogger<SuspendOverdueServicesCronHandler> logger,
+        IClock clock)
     {
         _context = context;
         _settings = settings;
         _bus = bus;
+        _jobs = jobs;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>Suspends services on invoices overdue past the grace period, then re-schedules itself.</summary>
@@ -60,18 +72,19 @@ public sealed class SuspendOverdueServicesCronHandler
     public Task HandleAsync(SuspendOverdueServicesCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
+        var now = _clock.UtcNow;
 
-        return RecurringJob.RunAsync(
-            nameof(SuspendOverdueServicesCronCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+        return _jobs.RunAsync<SuspendOverdueServicesCronCommand>(
+            _jobs.Schedules.SuspendOverdueServices, () => RunAsync(now, ct), ct);
     }
 
-    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJobs"/>.</summary>
+    /// <param name="now">The moment this pass started.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task.</returns>
-    private async Task RunAsync(CancellationToken ct)
+    private async Task RunAsync(DateTimeOffset now, CancellationToken ct)
     {
         var settings = await _settings.ReadAsync(ct);
-        var now = DateTimeOffset.UtcNow;
         var cutoff = now.AddDays(-settings.SuspendAfterOverdueDays);
 
         var serviceIds = await _context.Invoices.AsNoTracking()
@@ -82,12 +95,15 @@ public sealed class SuspendOverdueServicesCronHandler
             .Distinct()
             .ToListAsync(ct);
 
-        var eligible = await _context.ClientServices.AsNoTracking()
-            .Where(s => serviceIds.Contains(s.Id) && s.Status == ServiceStatus.Active && !s.OverrideAutoSuspend
-                        && (s.SuspendUntil == null || s.SuspendUntil <= now))
-            .OrderBy(s => s.Id)
+        var states = await _bus.GetServiceBillingStatesAsync(serviceIds, ct);
+        // A hold (OverrideAutoSuspend) protects a service until its SuspendUntil, or for good when it
+        // names no date; a date only ever comes with the hold, so an elapsed one ends it.
+        var eligible = states.Values
+            .Where(s => s.Status == ServiceStatus.Active && s.AutoRenew
+                        && (!s.OverrideAutoSuspend || (s.SuspendUntil != null && s.SuspendUntil <= now)))
             .Select(s => s.Id)
-            .ToListAsync(ct);
+            .Order()
+            .ToList();
 
         var suspended = 0;
         foreach (var id in eligible)
@@ -117,21 +133,12 @@ public sealed class SuspendOverdueServicesCronHandler
                     suspended++;
                 }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            catch (Exception ex) when (JobFailure.IsFailure(ex, ct))
             {
                 _logger.LogError(ex, "Overdue suspension failed for service {ServiceId}; the next run retries it.", id);
             }
         }
 
         _logger.LogInformation("SuspendOverdueServicesCron suspended {Count} of {Eligible} eligible services.", suspended, eligible.Count);
-    }
-
-    /// <summary>Schedules the next pass.</summary>
-    /// <returns>A task.</returns>
-    private async Task ScheduleNextAsync()
-    {
-        var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
-        await _bus.ScheduleAsync(new SuspendOverdueServicesCronCommand(), nextRun);
-        _logger.LogInformation("SuspendOverdueServicesCronCommand re-scheduled for {NextRun:u}.", nextRun);
     }
 }

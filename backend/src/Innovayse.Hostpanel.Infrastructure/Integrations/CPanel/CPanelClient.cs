@@ -1,29 +1,31 @@
 using System.Text.Json;
-using Innovayse.Hostpanel.Infrastructure.Integrations.CPanel.Settings;
-using Microsoft.Extensions.Options;
+using Innovayse.SDK.Plugins;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.CPanel;
+
 /// <summary>
 /// Typed <see cref="HttpClient"/> wrapper for the cPanel WHM JSON API v1.
-/// Handles authentication header injection, request dispatch, and error mapping.
+/// Handles request dispatch and error mapping; the authorization header is set by the
+/// <c>IHttpClientFactory</c> registration.
 /// </summary>
 public sealed class CPanelClient
 {
     /// <summary>The underlying HTTP client used to call the WHM API.</summary>
     private readonly HttpClient _http;
 
-    /// <summary>Resolved cPanel configuration settings.</summary>
-    private readonly CPanelOptions _settings;
+    /// <summary>Records the panel's own refusal text, which never travels further than the log.</summary>
+    private readonly ILogger<CPanelClient> _logger;
 
     /// <summary>
     /// Initializes a new instance of <see cref="CPanelClient"/>.
     /// </summary>
     /// <param name="http">The <see cref="HttpClient"/> configured by <c>IHttpClientFactory</c>.</param>
-    /// <param name="options">Bound <see cref="CPanelOptions"/> options.</param>
-    public CPanelClient(HttpClient http, IOptions<CPanelOptions> options)
+    /// <param name="logger">Records the panel's own refusal text, which never travels further than the log.</param>
+    public CPanelClient(HttpClient http, ILogger<CPanelClient> logger)
     {
         _http = http;
-        _settings = options.Value;
+        _logger = logger;
     }
 
     /// <summary>
@@ -52,7 +54,7 @@ public sealed class CPanelClient
             ["plan"] = package
         };
 
-        await CallApiAsync("createacct", parameters, ct);
+        using var doc = await CallApiAsync("createacct", parameters, ct);
     }
 
     /// <summary>
@@ -72,7 +74,7 @@ public sealed class CPanelClient
             ["reason"] = reason
         };
 
-        await CallApiAsync("suspendacct", parameters, ct);
+        using var doc = await CallApiAsync("suspendacct", parameters, ct);
     }
 
     /// <summary>
@@ -90,7 +92,7 @@ public sealed class CPanelClient
             ["user"] = username
         };
 
-        await CallApiAsync("unsuspendacct", parameters, ct);
+        using var doc = await CallApiAsync("unsuspendacct", parameters, ct);
     }
 
     /// <summary>
@@ -105,13 +107,13 @@ public sealed class CPanelClient
     {
         var parameters = new Dictionary<string, string>
         {
-            // WHM's removeacct names the account "user", not "username" — the same spelling
+            // WHM's removeacct names the account "user", not "username": the same spelling
             // every other account function on this client uses. "username" is silently ignored
             // and the call reports success without removing anything.
             ["user"] = username
         };
 
-        await CallApiAsync("removeacct", parameters, ct);
+        using var doc = await CallApiAsync("removeacct", parameters, ct);
     }
 
     /// <summary>
@@ -131,7 +133,7 @@ public sealed class CPanelClient
             ["password"] = newPassword
         };
 
-        await CallApiAsync("passwd", parameters, ct);
+        using var doc = await CallApiAsync("passwd", parameters, ct);
     }
 
     /// <summary>
@@ -151,16 +153,58 @@ public sealed class CPanelClient
             ["pkg"] = newPackage
         };
 
-        await CallApiAsync("changepackage", parameters, ct);
+        using var doc = await CallApiAsync("changepackage", parameters, ct);
+    }
+
+    /// <summary>
+    /// Reads one account's primary domain and suspension state via the WHM <c>accountsummary</c>
+    /// API function.
+    /// </summary>
+    /// <param name="username">cPanel username of the account to look up.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The account's summary, or <see langword="null"/> when WHM holds no such account.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the WHM API returns a failure status, so an unreachable answer is never read
+    /// as "no such account".
+    /// </exception>
+    public async Task<WhmAccountSummary?> FindAccountAsync(string username, CancellationToken ct)
+    {
+        var parameters = new Dictionary<string, string>
+        {
+            ["user"] = username
+        };
+
+        using var doc = await CallApiAsync("accountsummary", parameters, ct);
+
+        if (!doc.RootElement.TryGetProperty("data", out var data)
+            || data.ValueKind is not JsonValueKind.Object
+            || !data.TryGetProperty("acct", out var accounts)
+            || accounts.ValueKind is not JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        foreach (var account in accounts.EnumerateArray())
+        {
+            var user = ReadString(account, "user");
+            if (!string.Equals(user, username, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return new WhmAccountSummary(user!, ReadString(account, "domain") ?? string.Empty, IsSuspended(account));
+        }
+
+        return null;
     }
 
     /// <summary>
     /// Generates a cPanel single-sign-on URL for the given username via the UAPI
     /// <c>create_user_session</c> endpoint.
     /// </summary>
-    /// <param name="username">cPanel username for which to create the SSO session.</param>
+    /// <param name="username">cPanel username for which to create the sign-on provider session.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>A time-limited cPanel SSO URL string.</returns>
+    /// <returns>A time-limited control-panel sign-in link string.</returns>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the WHM API returns a failure status or the URL is absent.
     /// </exception>
@@ -172,12 +216,12 @@ public sealed class CPanelClient
             ["service"] = "cpaneld"
         };
 
-        var doc = await CallApiAsync("create_user_session", parameters, ct);
+        using var doc = await CallApiAsync("create_user_session", parameters, ct);
 
-        var url = doc.RootElement
-            .GetProperty("data")
-            .GetProperty("url")
-            .GetString();
+        var url = doc.RootElement.TryGetProperty("data", out var data)
+            && data.ValueKind is JsonValueKind.Object
+            ? ReadString(data, "url")
+            : null;
 
         if (string.IsNullOrWhiteSpace(url))
         {
@@ -188,19 +232,41 @@ public sealed class CPanelClient
         return url;
     }
 
+    /// <summary>Reads a string property, tolerating a missing or non-string value.</summary>
+    /// <param name="element">The JSON object holding the property.</param>
+    /// <param name="name">The property name.</param>
+    /// <returns>The string, or <see langword="null"/> when absent or not a string.</returns>
+    private static string? ReadString(JsonElement element, string name) =>
+        element.ValueKind is JsonValueKind.Object
+            && element.TryGetProperty(name, out var value)
+            && value.ValueKind is JsonValueKind.String
+                ? value.GetString()
+                : null;
+
+    /// <summary>Reads whether an account entry carries the suspended flag.</summary>
+    /// <param name="account">The account entry from <c>accountsummary</c>.</param>
+    /// <returns><see langword="true"/> when WHM marks the account suspended; an absent flag is <see langword="false"/>.</returns>
+    private static bool IsSuspended(JsonElement account) =>
+        account.TryGetProperty("suspended", out var flag) && HostingPanelApiReader.IsFlagSet(flag);
+
     /// <summary>
-    /// Calls a WHM JSON API v1 function and returns the parsed <see cref="JsonDocument"/>.
+    /// Calls a WHM JSON API v1 function and returns the parsed <see cref="JsonDocument"/>, which
+    /// the caller disposes.
     /// </summary>
     /// <remarks>
     /// The request asks for <c>api.version=1</c>, whose envelope is
-    /// <c>{"metadata":{"result":0|1,"reason":"…"},"data":{…}}</c>. <c>result</c> is <c>1</c> for
+    /// <c>{"metadata":{"result":0|1,"reason":"text"},"data":{}}</c>. <c>result</c> is <c>1</c> for
     /// success and <c>0</c> for a refusal, and <c>reason</c> carries WHM's own sentence. The
-    /// <c>result.status</c> / <c>statusmsg</c> pair this used to read is the **API v0** shape and
-    /// never appears in a v1 body, so every refusal — account already exists, unknown package,
-    /// access denied — was returning as a success.
+    /// <c>result.status</c> / <c>statusmsg</c> pair is the API v0 shape and never appears in a
+    /// v1 body, so it is not read.
+    /// <para>
+    /// Every parameter travels in a form-encoded POST body, never in the query string: account
+    /// passwords are parameters of <c>createacct</c> and <c>passwd</c>, and a URL ends up in
+    /// proxy and access logs. The URL carries only the function name.
+    /// </para>
     /// </remarks>
     /// <param name="function">The WHM API function name (e.g. <c>createacct</c>).</param>
-    /// <param name="parameters">Query-string parameters for the function call.</param>
+    /// <param name="parameters">Form fields for the function call.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The parsed JSON document of the successful API response.</returns>
     /// <exception cref="InvalidOperationException">
@@ -212,19 +278,24 @@ public sealed class CPanelClient
         Dictionary<string, string> parameters,
         CancellationToken ct)
     {
-        var queryString = string.Join("&",
-            parameters.Select(kvp =>
-                $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
+        var fields = new List<KeyValuePair<string, string>>(parameters) { new("api.version", "1") };
+        using var content = new FormUrlEncodedContent(fields);
 
-        var url = $"/json-api/{function}?api.version=1&{queryString}";
-
-        using var response = await _http.GetAsync(url, ct);
+        using var response = await _http.PostAsync($"/json-api/{function}", content, ct);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync(ct);
         var doc = JsonDocument.Parse(json);
 
-        EnsureSucceeded(function, doc);
+        try
+        {
+            EnsureSucceeded(function, doc);
+        }
+        catch
+        {
+            doc.Dispose();
+            throw;
+        }
 
         return doc;
     }
@@ -235,10 +306,10 @@ public sealed class CPanelClient
     /// <param name="function">The WHM API function name, used in the failure message.</param>
     /// <param name="doc">The parsed response body.</param>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when <c>metadata.result</c> is not <c>1</c>, or when the envelope is absent —
+    /// Thrown when <c>metadata.result</c> is not <c>1</c>, or when the envelope is absent:
     /// an unrecognised body is a failure to report, never an unverified success.
     /// </exception>
-    private static void EnsureSucceeded(string function, JsonDocument doc)
+    private void EnsureSucceeded(string function, JsonDocument doc)
     {
         var root = doc.RootElement;
 
@@ -267,12 +338,13 @@ public sealed class CPanelClient
             return;
         }
 
-        var reason = metadata.TryGetProperty("reason", out var reasonEl)
-            && reasonEl.ValueKind is JsonValueKind.String
-                ? reasonEl.GetString()
-                : null;
+        // WHM's own sentence can name accounts and domains, so it goes to the log and not into
+        // the exception message that callers pass on.
+        _logger.LogWarning(
+            "WHM API '{Function}' refused the request: {Reason}",
+            function,
+            ReadString(metadata, "reason") ?? "no reason given");
 
-        throw new InvalidOperationException(
-            $"WHM API '{function}' failed: {reason ?? "no reason given"}");
+        throw new InvalidOperationException($"WHM API '{function}' refused the request.");
     }
 }

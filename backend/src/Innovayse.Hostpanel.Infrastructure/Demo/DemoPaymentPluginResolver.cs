@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// Resolves every payment module to the one demo gateway, installed or not. The gateway accepts
 /// every currency the shop has, read from the stored currencies so the seed stays the one list.
 /// </summary>
-internal sealed class DemoPaymentPluginResolver : IPaymentPluginResolver
+public sealed class DemoPaymentPluginResolver : IPaymentPluginResolver
 {
     /// <summary>ISO 4217 numeric code of USD, used only when no currency has been stored yet.</summary>
     private const string FallbackNumericCode = "840";

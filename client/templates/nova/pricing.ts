@@ -19,15 +19,14 @@ interface PricedPlan {
 /**
  * Reads the amount back out of a price `stores/catalog.ts` `planCards` has already formatted.
  *
- * The composable returns `${prefix}${value.toFixed(2)}${suffix}` and keeps the
- * raw number to itself, so a template that needs to compare two prices has only
- * the formatted strings to work with. Extending the composable's return shape
- * would have been cleaner, but `PlanCard` is aurora's type and aurora is not
- * being touched in this change.
+ * The store returns `${prefix}${value.toFixed(2)}${suffix}` and keeps the raw
+ * number to itself, so a template that needs to compare two prices has only the
+ * formatted strings to work with. `PlanCard` is shared with the aurora template,
+ * so its shape is not widened for nova alone.
  *
  * The first numeric run wins: a currency prefix is a symbol or a letter code,
- * never a digit. `—`, the composable's own marker for an unpriced product,
- * yields null, and so does anything else without a number in it.
+ * never a digit. The store's dash marker for an unpriced product yields null,
+ * and so does anything else without a number in it.
  *
  * @param formatted Price as the card would display it.
  * @returns The amount, or null when the string carries no usable price.
@@ -49,8 +48,8 @@ export const parseAmount = (formatted: string | undefined | null): number | null
 /**
  * Yearly saving against paying month to month, as a whole percent.
  *
- * Both inputs are per-month figures — `priceAnnual` is the annual price divided
- * by twelve — so comparing them is the same comparison as twelve monthly
+ * Both inputs are per-month figures, `priceAnnual` is the annual price divided
+ * by twelve, so comparing them is the same comparison as twelve monthly
  * payments against one annual one, without re-deriving either.
  *
  * @param priceMonthly Formatted monthly price.
@@ -72,7 +71,7 @@ export const yearlyDiscountPercent = (
  * The rule is the mid-priced plan by monthly price, which is the plan a visitor
  * is being nudged toward anyway, and it is derived rather than configured so no
  * operator has to maintain it. Plans without a usable monthly price take no
- * part — an unpriced product must not decide the badge for the priced ones.
+ * part: an unpriced product must not decide the badge for the priced ones.
  *
  * A free plan takes no part either. It is not competing with the others on
  * price, and letting a zero sit at the bottom of the ordering drags the middle

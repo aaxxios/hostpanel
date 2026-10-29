@@ -1,10 +1,8 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Infrastructure.Pdf;
 using Innovayse.Hostpanel.Infrastructure.Storage.Settings;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using SkiaSharp;
@@ -16,8 +14,8 @@ namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Pdf;
 /// Tests for the invoice PDF renderer.
 /// </summary>
 /// <remarks>
-/// The output is read back with PdfPig, so the assertions are about what a reader of the PDF sees --
-/// the text, the pages, the images -- rather than about how the bytes are laid out.
+/// The output is read back with PdfPig, so the assertions are about what a reader of the PDF sees
+/// (the text, the pages, the images) rather than about how the bytes are laid out.
 /// </remarks>
 public sealed class MigraDocInvoicePdfRendererTests : IDisposable
 {
@@ -285,13 +283,22 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
         pieces.Should().OnlyContain(w => w.BoundingBox.Right <= descriptionRight);
     }
 
-    /// <summary>Amounts follow the currency's prefix, suffix and decimal places.</summary>
+    /// <summary>Amounts follow the currency's prefix, suffix and decimal places, grouped the invariant way.</summary>
     [Fact]
-    public void MoneyFormat_RespectsDecimalsAndAffixes()
+    public async Task Render_WritesAmountsInTheCurrencysFormat()
     {
-        new InvoicePdfMoneyFormat(string.Empty, " ֏", 0).Format(12m).Should().Be("12 ֏");
-        new InvoicePdfMoneyFormat("$", string.Empty, 2).Format(1234.5m).Should().Be("$1,234.50");
-        InvoicePdfMoneyFormat.FallbackFor("EUR").Format(3m).Should().Be("3.00 EUR");
+        using var dollars = await RenderAsync(SampleModel() with
+        {
+            Lines = [new InvoicePdfLine("Dedicated server", 1, 1234.5m, 1234.5m)],
+        });
+        using var drams = await RenderAsync(SampleModel() with
+        {
+            Lines = [new InvoicePdfLine("Dedicated server", 1, 12m, 12m)],
+            Money = new InvoicePdfMoneyFormat(string.Empty, " ֏", 0),
+        });
+
+        CompactText(dollars).Should().Contain("$1,234.50");
+        CompactText(drams).Should().Contain("12֏").And.NotContain("12.00");
     }
 
     /// <summary>An invoice too long for one page carries on, with the table header and page numbers on each.</summary>
@@ -345,6 +352,7 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
 
         CompactText(document).Should().Contain("DRAFT");
     }
+
     /// <summary>A cancelled invoice is stamped CANCELLED.</summary>
     [Fact]
     public async Task Render_StampsCancelled()
@@ -362,6 +370,7 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
 
         CompactText(document).Should().Contain("REFUNDED");
     }
+
     /// <summary>An unpaid invoice carries no stamp.</summary>
     [Fact]
     public async Task Render_NoStampForUnpaid()
@@ -371,6 +380,8 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
         var text = CompactText(document);
         text.Should().NotContain("PAID");
         text.Should().NotContain("DRAFT");
+        text.Should().NotContain("CANCELLED");
+        text.Should().NotContain("REFUNDED");
     }
 
     /// <summary>A logo uploaded to the branding directory is drawn on the first page.</summary>
@@ -514,5 +525,37 @@ public sealed class MigraDocInvoicePdfRendererTests : IDisposable
         using var document = await RenderAsync(model);
 
         CompactText(document).Should().Contain("6,000֏");
+    }
+
+    /// <summary>
+    /// Invoices rendered side by side on different threads each come out with their own text, the
+    /// fallback-font glyphs included: the fonts used to tell which face has a glyph are not shared
+    /// between renders.
+    /// </summary>
+    [Fact]
+    public async Task Render_InParallel_KeepsEveryInvoiceIntact()
+    {
+        const int invoices = 16;
+        var renderer = Create();
+
+        var rendered = await Task.WhenAll(Enumerable.Range(1, invoices).Select(id => Task.Run(async () =>
+        {
+            var model = SampleModel() with
+            {
+                InvoiceId = id,
+                Money = new InvoicePdfMoneyFormat(string.Empty, " ֏", 0),
+                Lines = Enumerable.Range(1, 20).Select(i => new InvoicePdfLine($"Service {id}-{i} Ծաղկաձոր", 1, 1m, 1m)).ToList(),
+            };
+            return (Id: id, Bytes: await renderer.RenderAsync(model, CancellationToken.None));
+        })));
+
+        foreach (var (id, bytes) in rendered)
+        {
+            using var document = PdfDocument.Open(bytes);
+            var text = CompactText(document);
+            text.Should().Contain($"Invoice#{id}");
+            text.Should().Contain($"Service{id}-20Ծաղկաձոր");
+            text.Should().Contain("15֏");
+        }
     }
 }

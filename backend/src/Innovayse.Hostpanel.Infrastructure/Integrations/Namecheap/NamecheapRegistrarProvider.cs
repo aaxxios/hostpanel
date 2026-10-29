@@ -1,24 +1,41 @@
-using System.Globalization;
 using System.Xml.Linq;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Domains.Common;
+using Innovayse.Hostpanel.Application.Domains.Extensions;
 using Innovayse.Hostpanel.Domain.Domains;
-
 using Innovayse.Hostpanel.Domain.Domains.Enums;
+using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.Namecheap;
+
 /// <summary>
 /// Implements <see cref="IRegistrarProvider"/> using the Namecheap XML API v2.
 /// All operations are dispatched through <see cref="NamecheapClient"/>.
 /// </summary>
 public sealed class NamecheapRegistrarProvider : IRegistrarProvider
 {
-    /// <summary>The client this class uses.</summary>
+    /// <summary>The four contact roles Namecheap's create and set-contacts commands take; each is sent the same contact.</summary>
+    private static readonly string[] ContactRoles = ["Registrant", "Tech", "Admin", "AuxBilling"];
+
+    /// <summary>The Namecheap XML API client every registrar call goes through.</summary>
     private readonly NamecheapClient _client;
 
+    /// <summary>Where the registrar's own refusal wording goes; the caller only sees an error code.</summary>
+    private readonly ILogger<NamecheapRegistrarProvider> _logger;
+
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes a new instance of the <see cref="NamecheapRegistrarProvider"/> class.</summary>
-    /// <param name="client">The client this class uses.</param>
-    public NamecheapRegistrarProvider(NamecheapClient client)
+    /// <param name="client">The Namecheap XML API client every registrar call goes through.</param>
+    /// <param name="logger">Where the registrar's own refusal wording goes.</param>
+    /// <param name="clock">The source of the current moment.</param>
+    public NamecheapRegistrarProvider(NamecheapClient client, ILogger<NamecheapRegistrarProvider> logger, IClock clock)
     {
         _client = client;
+        _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>
@@ -28,7 +45,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     /// the handlers skip the registrar for them.
     /// </summary>
     private static readonly RegistrarResult NotConfiguredResult =
-        new(false, null, null, "Namecheap is not configured.");
+        new(false, null, null, HostpanelErrorCodes.REGISTRAR_NOT_CONFIGURED);
 
     /// <inheritdoc/>
     public async Task<RegistrarResult> RegisterAsync(DomainRegistrationOrder request, CancellationToken ct)
@@ -38,7 +55,13 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             return NotConfiguredResult;
         }
 
-        var (sld, tld) = SplitDomain(request.DomainName);
+        if (!request.Contact.IsCompleteForPurchase())
+        {
+            _logger.LogWarning("The registrant contact for '{DomainName}' is incomplete; nothing was ordered", request.DomainName);
+            return new RegistrarResult(false, null, null, HostpanelErrorCodes.REGISTRAR_CONTACT_VALIDATION_FAILED);
+        }
+
+        var (sld, tld) = RegistrarDomainName.Split(request.DomainName);
 
         var parameters = new Dictionary<string, string>
         {
@@ -54,22 +77,23 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             parameters["Nameservers"] = BuildNameserverString(request.Nameserver1, request.Nameserver2);
         }
 
-        var (doc, refusal) = await ExecutePurchaseAsync("namecheap.domains.create", parameters, ct);
-        if (refusal is not null)
+        AddContactParameters(parameters, request.Contact);
+
+        var (doc, refusalCode) = await ExecutePurchaseAsync(new NamecheapCommand("namecheap.domains.create", parameters), ct);
+        if (refusalCode is not null)
         {
-            return refusal;
+            return await SettleRefusalAsync(request.DomainName, refusalCode, includeTransfers: false, ct);
         }
 
         var result = ConfirmedResult(doc!, "DomainCreateResult", "Registered");
         if (result is null)
         {
-            return new RegistrarResult(false, null, null, "Namecheap did not confirm the registration.");
+            _logger.LogWarning("Namecheap did not confirm the registration of '{DomainName}'", request.DomainName);
+            return new RegistrarResult(false, null, null, HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
         }
 
-        var expiresAtRaw = result.Attribute("ExpireDate")?.Value;
-        DateTimeOffset expiresAt = expiresAtRaw is not null
-            ? DateTimeOffset.Parse(expiresAtRaw, CultureInfo.InvariantCulture)
-            : DateTimeOffset.UtcNow.AddYears(request.Years);
+        var expiresAt = RegistrarDate.Parse(result.Attribute("ExpireDate")?.Value)
+            ?? _clock.UtcNow.AddYears(request.Years);
 
         return new RegistrarResult(true, ReferenceOrName(result, "DomainID", request.DomainName), expiresAt, null);
     }
@@ -82,8 +106,6 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             return NotConfiguredResult;
         }
 
-        var (sld, tld) = SplitDomain(request.DomainName);
-
         var parameters = new Dictionary<string, string>
         {
             ["DomainName"] = request.DomainName,
@@ -91,30 +113,30 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ["AddFreeWhoisguard"] = request.WhoisPrivacy ? "yes" : "no",
         };
 
-        _ = sld;
-        _ = tld;
-
-        var (doc, refusal) = await ExecutePurchaseAsync("namecheap.domains.transfer.create", parameters, ct);
-        if (refusal is not null)
+        var (doc, refusalCode) = await ExecutePurchaseAsync(
+            new NamecheapCommand("namecheap.domains.transfer.create", parameters), ct);
+        if (refusalCode is not null)
         {
-            return refusal;
+            return await SettleRefusalAsync(request.DomainName, refusalCode, includeTransfers: true, ct);
         }
 
         var result = ConfirmedResult(doc!, "DomainTransferCreateResult", "Transfer");
         if (result is null)
         {
-            return new RegistrarResult(false, null, null, "Namecheap did not confirm the transfer.");
+            _logger.LogWarning("Namecheap did not confirm the transfer of '{DomainName}'", request.DomainName);
+            return new RegistrarResult(false, null, null, HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
         }
 
-        var expiresAtRaw = result.Attribute("ExpireDate")?.Value;
-        DateTimeOffset? expiresAt = expiresAtRaw is not null
-            ? DateTimeOffset.Parse(expiresAtRaw, CultureInfo.InvariantCulture)
-            : null;
+        var expiresAt = RegistrarDate.Parse(result.Attribute("ExpireDate")?.Value);
 
         return new RegistrarResult(true, ReferenceOrName(result, "TransferID", request.DomainName), expiresAt, null);
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Unlike a registration or a transfer, a refused renewal is never turned into success because
+    /// the account holds the domain: holding it says nothing about whether it was renewed.
+    /// </remarks>
     public async Task<RegistrarResult> RenewAsync(DomainRenewalOrder request, CancellationToken ct)
     {
         if (!_client.IsConfigured)
@@ -122,7 +144,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             return NotConfiguredResult;
         }
 
-        var (sld, tld) = SplitDomain(request.DomainName);
+        var (sld, tld) = RegistrarDomainName.Split(request.DomainName);
 
         var parameters = new Dictionary<string, string>
         {
@@ -131,160 +153,142 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ["Years"] = request.Years.ToString(),
         };
 
-        var (doc, refusal) = await ExecutePurchaseAsync("namecheap.domains.renew", parameters, ct);
-        if (refusal is not null)
+        var (doc, refusalCode) = await ExecutePurchaseAsync(new NamecheapCommand("namecheap.domains.renew", parameters), ct);
+        if (refusalCode is not null)
         {
-            return refusal;
+            return new RegistrarResult(false, null, null, refusalCode);
         }
 
         var result = ConfirmedResult(doc!, "DomainRenewResult", "Renew");
         if (result is null)
         {
-            return new RegistrarResult(false, null, null, "Namecheap did not confirm the renewal.");
+            _logger.LogWarning("Namecheap did not confirm the renewal of '{DomainName}'", request.DomainName);
+            return new RegistrarResult(false, null, null, HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
         }
 
         // No expiry in the answer leaves it to the caller to extend the current one; now + years
-        // would cost an early renewal its remaining days. Invariant culture: the request's
-        // culture (ru, hy) must not decide how the registrar's date is read.
-        var expiresAtRaw = result.Attribute("ExpireDate")?.Value;
-        DateTimeOffset? expiresAt = expiresAtRaw is not null
-            ? DateTimeOffset.Parse(expiresAtRaw, CultureInfo.InvariantCulture)
-            : null;
+        // would cost an early renewal its remaining days.
+        var expiresAt = RegistrarDate.Parse(result.Attribute("ExpireDate")?.Value);
 
         return new RegistrarResult(true, request.RegistrarRef, expiresAt, null);
     }
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> CancelTransferAsync(
-        string domainName,
-        string registrarRef,
-        CancellationToken ct)
+    /// <remarks>
+    /// The registrar exposes no cancel-transfer endpoint, so an in-progress transfer can only be
+    /// cancelled through its support; this always answers a failure.
+    /// </remarks>
+    public Task<RegistrarResult> CancelTransferAsync(DomainRef domain, CancellationToken ct)
     {
-        // TODO: Namecheap does not expose a direct cancel-transfer endpoint.
-        // Manual intervention via support is required for in-progress transfers.
-        return Task.FromResult(new RegistrarResult(false, registrarRef, null,
-            "Namecheap does not support programmatic transfer cancellation."));
+        return Task.FromResult(new RegistrarResult(false, domain.RegistrarRef, null,
+            HostpanelErrorCodes.REGISTRAR_OPERATION_UNSUPPORTED));
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> InitiateOutgoingTransferAsync(
-        string domainName,
-        string registrarRef,
-        CancellationToken ct)
+    public async Task<RegistrarResult> InitiateOutgoingTransferAsync(DomainRef domain, CancellationToken ct)
     {
         // Unlock the domain to permit outgoing transfer.
-        return await SetRegistrarLockAsync(domainName, registrarRef, false, ct);
+        return await SetRegistrarLockAsync(new RegistrarFlagChange(domain, false), ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> SetAutoRenewAsync(
-        string domainName,
-        string registrarRef,
-        bool enabled,
-        CancellationToken ct)
+    public async Task<RegistrarResult> SetAutoRenewAsync(RegistrarFlagChange change, CancellationToken ct)
     {
         if (!_client.IsConfigured)
         {
             return NotConfiguredResult;
         }
 
-        var (sld, tld) = SplitDomain(domainName);
+        var (sld, tld) = RegistrarDomainName.Split(change.Domain.Name);
 
         var parameters = new Dictionary<string, string>
         {
             ["SLD"] = sld,
             ["TLD"] = tld,
-            ["IsAutoRenew"] = enabled ? "true" : "false",
+            ["IsAutoRenew"] = change.Enabled ? "true" : "false",
         };
 
-        await _client.ExecuteAsync("namecheap.domains.setAutoRenew", parameters, ct);
-        return new RegistrarResult(true, registrarRef, null, null);
+        return await ChangeAsync(
+            "switching auto-renew", new NamecheapCommand("namecheap.domains.setAutoRenew", parameters), change.Domain.RegistrarRef, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> SetWhoisPrivacyAsync(
-        string domainName,
-        string registrarRef,
-        bool enabled,
-        CancellationToken ct)
-    {
-        if (!_client.IsConfigured)
-        {
-            return NotConfiguredResult;
-        }
-        // Step 1: Get the WhoisguardID from domain info
-        var (sld, tld) = SplitDomain(domainName);
-
-        var infoParams = new Dictionary<string, string>
-        {
-            ["DomainName"] = domainName,
-        };
-
-        var infoDoc = await _client.ExecuteAsync("namecheap.domains.getInfo", infoParams, ct);
-        var ns = GetNamespace(infoDoc);
-
-        var whoisguardNode = infoDoc.Root
-            ?.Element(XName.Get("CommandResponse", ns))
-            ?.Element(XName.Get("DomainGetInfoResult", ns))
-            ?.Element(XName.Get("Whoisguard", ns));
-
-        var whoisguardId = whoisguardNode?.Element(XName.Get("ID", ns))?.Value;
-
-        if (string.IsNullOrEmpty(whoisguardId))
-        {
-            return new RegistrarResult(false, registrarRef, null,
-                "No WhoisGuard subscription found for this domain. Enable WhoisGuard via the Namecheap dashboard first.");
-        }
-
-        // Step 2: Enable or disable WhoisGuard using the retrieved ID
-        var command = enabled ? "namecheap.whoisguard.enable" : "namecheap.whoisguard.disable";
-        var parameters = new Dictionary<string, string>
-        {
-            ["WhoisguardID"] = whoisguardId,
-            ["ForwardedToEmail"] = string.Empty,
-        };
-
-        await _client.ExecuteAsync(command, parameters, ct);
-        return new RegistrarResult(true, registrarRef, null, null);
-    }
-
-    /// <inheritdoc/>
-    public async Task<RegistrarResult> SetRegistrarLockAsync(
-        string domainName,
-        string registrarRef,
-        bool locked,
-        CancellationToken ct)
+    public async Task<RegistrarResult> SetWhoisPrivacyAsync(RegistrarFlagChange change, CancellationToken ct)
     {
         if (!_client.IsConfigured)
         {
             return NotConfiguredResult;
         }
 
-        var (sld, tld) = SplitDomain(domainName);
+        return await GuardAsync("switching WHOIS privacy", async () =>
+        {
+            // Step 1: Get the WhoisguardID from domain info
+            var infoParams = new Dictionary<string, string>
+            {
+                ["DomainName"] = change.Domain.Name,
+            };
+
+            var infoDoc = await _client.ExecuteAsync(new NamecheapCommand("namecheap.domains.getInfo", infoParams), ct);
+            var ns = GetNamespace(infoDoc);
+
+            var whoisguardNode = infoDoc.Root
+                ?.Element(XName.Get("CommandResponse", ns))
+                ?.Element(XName.Get("DomainGetInfoResult", ns))
+                ?.Element(XName.Get("Whoisguard", ns));
+
+            var whoisguardId = whoisguardNode?.Element(XName.Get("ID", ns))?.Value;
+
+            if (string.IsNullOrEmpty(whoisguardId))
+            {
+                _logger.LogWarning(
+                    "Namecheap holds no WhoisGuard subscription for '{DomainName}'", change.Domain.Name);
+                return new RegistrarResult(false, change.Domain.RegistrarRef, null,
+                    HostpanelErrorCodes.REGISTRAR_WHOIS_PRIVACY_UNAVAILABLE);
+            }
+
+            // Step 2: Enable or disable WhoisGuard using the retrieved ID
+            var command = change.Enabled ? "namecheap.whoisguard.enable" : "namecheap.whoisguard.disable";
+            var parameters = new Dictionary<string, string>
+            {
+                ["WhoisguardID"] = whoisguardId,
+                ["ForwardedToEmail"] = string.Empty,
+            };
+
+            await _client.ExecuteAsync(new NamecheapCommand(command, parameters), ct);
+            return new RegistrarResult(true, change.Domain.RegistrarRef, null, null);
+        }, ct);
+    }
+
+    /// <inheritdoc/>
+    public async Task<RegistrarResult> SetRegistrarLockAsync(RegistrarFlagChange change, CancellationToken ct)
+    {
+        if (!_client.IsConfigured)
+        {
+            return NotConfiguredResult;
+        }
+
+        var (sld, tld) = RegistrarDomainName.Split(change.Domain.Name);
 
         var parameters = new Dictionary<string, string>
         {
             ["SLD"] = sld,
             ["TLD"] = tld,
-            ["LockAction"] = locked ? "LOCK" : "UNLOCK",
+            ["LockAction"] = change.Enabled ? "LOCK" : "UNLOCK",
         };
 
-        await _client.ExecuteAsync("namecheap.domains.setRegistrarLock", parameters, ct);
-        return new RegistrarResult(true, registrarRef, null, null);
+        return await ChangeAsync(
+            "switching the registrar lock", new NamecheapCommand("namecheap.domains.setRegistrarLock", parameters), change.Domain.RegistrarRef, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<string?> GetEppCodeAsync(
-        string domainName,
-        string registrarRef,
-        CancellationToken ct)
+    public async Task<string?> GetEppCodeAsync(DomainRef domain, CancellationToken ct)
     {
         if (!_client.IsConfigured)
         {
             return null;
         }
 
-        var (sld, tld) = SplitDomain(domainName);
+        var (sld, tld) = RegistrarDomainName.Split(domain.Name);
 
         var parameters = new Dictionary<string, string>
         {
@@ -292,7 +296,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ["TLD"] = tld,
         };
 
-        var doc = await _client.ExecuteAsync("namecheap.domains.getEPPCode", parameters, ct);
+        var doc = await _client.ExecuteAsync(new NamecheapCommand("namecheap.domains.getEPPCode", parameters), ct);
 
         var ns = GetNamespace(doc);
         var result = doc.Root
@@ -303,42 +307,35 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> SetNameserversAsync(
-        string domainName,
-        string registrarRef,
-        IReadOnlyList<string> nameservers,
-        CancellationToken ct)
+    public async Task<RegistrarResult> SetNameserversAsync(NameserverChange change, CancellationToken ct)
     {
         if (!_client.IsConfigured)
         {
             return NotConfiguredResult;
         }
 
-        var (sld, tld) = SplitDomain(domainName);
+        var (sld, tld) = RegistrarDomainName.Split(change.Domain.Name);
 
         var parameters = new Dictionary<string, string>
         {
             ["SLD"] = sld,
             ["TLD"] = tld,
-            ["Nameservers"] = string.Join(",", nameservers),
+            ["Nameservers"] = string.Join(",", change.Nameservers),
         };
 
-        await _client.ExecuteAsync("namecheap.domains.dns.setCustom", parameters, ct);
-        return new RegistrarResult(true, registrarRef, null, null);
+        return await ChangeAsync(
+            "setting nameservers", new NamecheapCommand("namecheap.domains.dns.setCustom", parameters), change.Domain.RegistrarRef, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(
-        string domainName,
-        string registrarRef,
-        CancellationToken ct)
+    public async Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(DomainRef domain, CancellationToken ct)
     {
         if (!_client.IsConfigured)
         {
             return [];
         }
 
-        var (sld, tld) = SplitDomain(domainName);
+        var (sld, tld) = RegistrarDomainName.Split(domain.Name);
 
         var parameters = new Dictionary<string, string>
         {
@@ -346,7 +343,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ["TLD"] = tld,
         };
 
-        var doc = await _client.ExecuteAsync("namecheap.domains.dns.getHosts", parameters, ct);
+        var doc = await _client.ExecuteAsync(new NamecheapCommand("namecheap.domains.dns.getHosts", parameters), ct);
 
         var ns = GetNamespace(doc);
         var hostNodes = doc.Root
@@ -356,7 +353,6 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ?? [];
 
         var records = new List<DnsRecord>();
-        var idCounter = 1;
 
         foreach (var host in hostNodes)
         {
@@ -374,56 +370,52 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             int? priority = int.TryParse(mxPrefRaw, out var pref) ? pref : null;
 
             records.Add(DnsRecord.CreateDetached(recordType, hostName, address, ttl, priority));
-            idCounter++;
         }
 
         return records.AsReadOnly();
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> AddDnsRecordAsync(
-        string domainName,
-        string registrarRef,
-        DnsRecord record,
-        CancellationToken ct)
+    public async Task<RegistrarResult> AddDnsRecordAsync(DnsRecordChange change, CancellationToken ct)
     {
-        var existing = await GetDnsRecordsAsync(domainName, registrarRef, ct);
-        var updated = existing.ToList();
-        updated.Add(record);
-        return await SetAllHostsAsync(domainName, registrarRef, updated, ct);
+        return await GuardAsync("adding a DNS record", async () =>
+        {
+            var existing = await GetDnsRecordsAsync(change.Domain, ct);
+            var updated = existing.ToList();
+            updated.Add(change.Record);
+            return await SetAllHostsAsync(change.Domain.Name, change.Domain.RegistrarRef, updated, ct);
+        }, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> UpdateDnsRecordAsync(
-        string domainName,
-        string registrarRef,
-        DnsRecord record,
-        CancellationToken ct)
+    public async Task<RegistrarResult> UpdateDnsRecordAsync(DnsRecordChange change, CancellationToken ct)
     {
-        var existing = await GetDnsRecordsAsync(domainName, registrarRef, ct);
+        return await GuardAsync("updating a DNS record", async () =>
+        {
+            var existing = await GetDnsRecordsAsync(change.Domain, ct);
 
-        var updated = existing
-            .Select(r => r.Host == record.Host && r.Type == record.Type ? record : r)
-            .ToList();
+            var updated = existing
+                .Select(r => r.Host == change.Record.Host && r.Type == change.Record.Type ? change.Record : r)
+                .ToList();
 
-        return await SetAllHostsAsync(domainName, registrarRef, updated, ct);
+            return await SetAllHostsAsync(change.Domain.Name, change.Domain.RegistrarRef, updated, ct);
+        }, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> DeleteDnsRecordAsync(
-        string domainName,
-        string registrarRef,
-        int recordId,
-        CancellationToken ct)
+    public async Task<RegistrarResult> DeleteDnsRecordAsync(DnsRecordRemoval removal, CancellationToken ct)
     {
-        var existing = await GetDnsRecordsAsync(domainName, registrarRef, ct);
+        return await GuardAsync("deleting a DNS record", async () =>
+        {
+            var existing = await GetDnsRecordsAsync(removal.Domain, ct);
 
-        // Namecheap has no native record IDs — skip the record at the given 1-based position index.
-        var updated = existing
-            .Where((_, idx) => idx + 1 != recordId)
-            .ToList();
+            // Namecheap has no native record IDs: skip the record at the given 1-based position index.
+            var updated = existing
+                .Where((_, idx) => idx + 1 != removal.RecordId)
+                .ToList();
 
-        return await SetAllHostsAsync(domainName, registrarRef, updated, ct);
+            return await SetAllHostsAsync(removal.Domain.Name, removal.Domain.RegistrarRef, updated, ct);
+        }, ct);
     }
 
     /// <inheritdoc/>
@@ -431,7 +423,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     {
         if (!_client.IsConfigured)
         {
-            // Not "taken" — unknown. A change is refused with a failed result, but a yes/no
+            // Not "taken": unknown. A change is refused with a failed result, but a yes/no
             // question has no such answer: a storefront that reports every domain as taken
             // sells nothing and looks like it is working. Surfacing it means an operator who forgot to
             // configure a registrar finds out, instead of quietly selling nothing.
@@ -445,7 +437,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ["DomainList"] = domainName,
         };
 
-        var doc = await _client.ExecuteAsync("namecheap.domains.check", parameters, ct);
+        var doc = await _client.ExecuteAsync(new NamecheapCommand("namecheap.domains.check", parameters), ct);
 
         var ns = GetNamespace(doc);
         var result = doc.Root
@@ -457,17 +449,14 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> ModifyContactDetailsAsync(
-        string domainName,
-        DomainContact contact,
-        CancellationToken ct)
+    public async Task<RegistrarResult> ModifyContactDetailsAsync(DomainContactChange change, CancellationToken ct)
     {
         if (!_client.IsConfigured)
         {
             return NotConfiguredResult;
         }
 
-        var (sld, tld) = SplitDomain(domainName);
+        var (sld, tld) = RegistrarDomainName.Split(change.DomainName);
 
         var parameters = new Dictionary<string, string>
         {
@@ -476,25 +465,12 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
         };
 
         // Namecheap's setContacts applies to all four contact roles in one call.
-        // We have no per-role data, so the same contact is used for every role —
+        // We have no per-role data, so the same contact is used for every role:
         // this matches how NameAm's ModifyContactDetailsAsync treats the same input.
-        foreach (var role in new[] { "Registrant", "Tech", "Admin", "AuxBilling" })
-        {
-            parameters[$"{role}FirstName"] = contact.FirstName;
-            parameters[$"{role}LastName"] = contact.LastName;
-            parameters[$"{role}OrganizationName"] = contact.Organization ?? string.Empty;
-            parameters[$"{role}EmailAddress"] = contact.Email;
-            parameters[$"{role}Phone"] = contact.Phone;
-            parameters[$"{role}Address1"] = contact.Address1;
-            parameters[$"{role}Address2"] = contact.Address2 ?? string.Empty;
-            parameters[$"{role}City"] = contact.City;
-            parameters[$"{role}StateProvince"] = contact.State;
-            parameters[$"{role}PostalCode"] = contact.PostalCode;
-            parameters[$"{role}Country"] = contact.Country;
-        }
+        AddContactParameters(parameters, change.Contact);
 
-        await _client.ExecuteAsync("namecheap.domains.setContacts", parameters, ct);
-        return new RegistrarResult(true, null, null, null);
+        return await ChangeAsync(
+            "changing contact details", new NamecheapCommand("namecheap.domains.setContacts", parameters), null, ct);
     }
 
     /// <inheritdoc/>
@@ -505,7 +481,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             return null;
         }
 
-        var (sld, tld) = SplitDomain(domainName);
+        var (sld, tld) = RegistrarDomainName.Split(domainName);
 
         var parameters = new Dictionary<string, string>
         {
@@ -513,7 +489,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ["TLD"] = tld,
         };
 
-        var doc = await _client.ExecuteAsync("namecheap.domains.getContacts", parameters, ct);
+        var doc = await _client.ExecuteAsync(new NamecheapCommand("namecheap.domains.getContacts", parameters), ct);
 
         var ns = GetNamespace(doc);
         var registrant = doc.Root
@@ -546,99 +522,91 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> SetEmailForwardingAsync(
-        string domainName,
-        bool enabled,
-        CancellationToken ct)
+    public async Task<RegistrarResult> SetEmailForwardingAsync(DomainFeatureToggle toggle, CancellationToken ct)
     {
         if (!_client.IsConfigured)
         {
             return NotConfiguredResult;
         }
 
-        // Namecheap has no dedicated on/off switch — email forwarding is implicit
+        // Namecheap has no dedicated on/off switch: email forwarding is implicit
         // in whether any forwarding rules exist. Disabling clears every rule;
         // enabling with none configured yet is a no-op until rules are added.
-        if (!enabled)
+        if (!toggle.Enabled)
         {
-            return await SetAllEmailForwardsAsync(domainName, [], ct);
+            return await SetAllEmailForwardsAsync(toggle.DomainName, [], ct);
         }
 
         return new RegistrarResult(true, null, null, null);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> AddEmailForwardingRuleAsync(
-        string domainName,
-        string source,
-        string destination,
-        CancellationToken ct)
+    public async Task<RegistrarResult> AddEmailForwardingRuleAsync(EmailForwardingRuleChange change, CancellationToken ct)
     {
-        var existing = await GetEmailForwardsAsync(domainName, ct);
-        var updated = existing
-            .Where(r => !string.Equals(r.Mailbox, source, StringComparison.OrdinalIgnoreCase))
-            .Append((Mailbox: source, ForwardTo: destination))
-            .ToList();
+        return await GuardAsync("adding an email forwarding rule", async () =>
+        {
+            var existing = await GetEmailForwardsAsync(change.DomainName, ct);
+            var updated = existing
+                .Where(r => !string.Equals(r.Mailbox, change.Source, StringComparison.OrdinalIgnoreCase))
+                .Append(new NamecheapEmailForward(change.Source, change.Destination))
+                .ToList();
 
-        return await SetAllEmailForwardsAsync(domainName, updated, ct);
+            return await SetAllEmailForwardsAsync(change.DomainName, updated, ct);
+        }, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> UpdateEmailForwardingRuleAsync(
-        string domainName,
-        string source,
-        string destination,
-        CancellationToken ct)
+    public async Task<RegistrarResult> UpdateEmailForwardingRuleAsync(EmailForwardingRuleChange change, CancellationToken ct)
     {
-        var existing = await GetEmailForwardsAsync(domainName, ct);
-        var updated = existing
-            .Select(r => string.Equals(r.Mailbox, source, StringComparison.OrdinalIgnoreCase)
-                ? (Mailbox: source, ForwardTo: destination)
-                : r)
-            .ToList();
+        return await GuardAsync("updating an email forwarding rule", async () =>
+        {
+            var existing = await GetEmailForwardsAsync(change.DomainName, ct);
+            var updated = existing
+                .Select(r => string.Equals(r.Mailbox, change.Source, StringComparison.OrdinalIgnoreCase)
+                    ? new NamecheapEmailForward(change.Source, change.Destination)
+                    : r)
+                .ToList();
 
-        return await SetAllEmailForwardsAsync(domainName, updated, ct);
+            return await SetAllEmailForwardsAsync(change.DomainName, updated, ct);
+        }, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> DeleteEmailForwardingRuleAsync(
-        string domainName,
-        string source,
-        CancellationToken ct)
+    public async Task<RegistrarResult> DeleteEmailForwardingRuleAsync(EmailForwardingRuleRemoval removal, CancellationToken ct)
     {
-        var existing = await GetEmailForwardsAsync(domainName, ct);
-        var updated = existing
-            .Where(r => !string.Equals(r.Mailbox, source, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        return await GuardAsync("deleting an email forwarding rule", async () =>
+        {
+            var existing = await GetEmailForwardsAsync(removal.DomainName, ct);
+            var updated = existing
+                .Where(r => !string.Equals(r.Mailbox, removal.Source, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-        return await SetAllEmailForwardsAsync(domainName, updated, ct);
+            return await SetAllEmailForwardsAsync(removal.DomainName, updated, ct);
+        }, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> SetDnsManagementAsync(
-        string domainName,
-        bool enabled,
-        CancellationToken ct)
+    public async Task<RegistrarResult> SetDnsManagementAsync(DomainFeatureToggle toggle, CancellationToken ct)
     {
         if (!_client.IsConfigured)
         {
             return NotConfiguredResult;
         }
 
-        // "DNS management" here means "let Namecheap host the DNS" — enabling it
+        // "DNS management" here means "let Namecheap host the DNS": enabling it
         // repoints the domain at Namecheap's own nameservers. Disabling has no
         // corresponding API call; the caller is expected to point nameservers
         // elsewhere via SetNameserversAsync instead.
-        if (!enabled)
+        if (!toggle.Enabled)
         {
             return new RegistrarResult(true, null, null, null);
         }
 
-        var (sld, tld) = SplitDomain(domainName);
+        var (sld, tld) = RegistrarDomainName.Split(toggle.DomainName);
         var parameters = new Dictionary<string, string> { ["SLD"] = sld, ["TLD"] = tld };
 
-        await _client.ExecuteAsync("namecheap.domains.dns.setDefault", parameters, ct);
-        return new RegistrarResult(true, null, null, null);
+        return await ChangeAsync(
+            "switching DNS management", new NamecheapCommand("namecheap.domains.dns.setDefault", parameters), null, ct);
     }
 
     /// <inheritdoc/>
@@ -649,7 +617,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             return null;
         }
 
-        var (sld, tld) = SplitDomain(domainName);
+        var (sld, tld) = RegistrarDomainName.Split(domainName);
 
         var parameters = new Dictionary<string, string>
         {
@@ -657,7 +625,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ["TLD"] = tld,
         };
 
-        var doc = await _client.ExecuteAsync("namecheap.domains.getInfo", parameters, ct);
+        var doc = await _client.ExecuteAsync(new NamecheapCommand("namecheap.domains.getInfo", parameters), ct);
 
         var ns = GetNamespace(doc);
         var info = doc.Root
@@ -675,16 +643,8 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ?.Element(XName.Get("OrganizationName", ns))
             ?.Value ?? string.Empty;
 
-        var createdRaw = info.Attribute("CreatedDate")?.Value;
-        var expiresRaw = info.Attribute("ExpiredDate")?.Value;
-
-        DateTimeOffset createdAt = createdRaw is not null
-            ? DateTimeOffset.Parse(createdRaw, CultureInfo.InvariantCulture)
-            : DateTimeOffset.MinValue;
-
-        DateTimeOffset expiresAt = expiresRaw is not null
-            ? DateTimeOffset.Parse(expiresRaw, CultureInfo.InvariantCulture)
-            : DateTimeOffset.MaxValue;
+        var createdAt = RegistrarDate.Parse(info.Attribute("CreatedDate")?.Value) ?? DateTimeOffset.MinValue;
+        var expiresAt = RegistrarDate.Parse(info.Attribute("ExpiredDate")?.Value) ?? DateTimeOffset.MaxValue;
 
         return new WhoisInfo(registrar, registrant, createdAt, expiresAt);
     }
@@ -697,7 +657,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             return NotConfiguredResult;
         }
 
-        var (sld, tld) = SplitDomain(domainName);
+        var (sld, tld) = RegistrarDomainName.Split(domainName);
 
         var parameters = new Dictionary<string, string>
         {
@@ -705,30 +665,36 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ["TLD"] = tld,
         };
 
-        var doc = await _client.ExecuteAsync("namecheap.domains.getInfo", parameters, ct);
-        var ns = GetNamespace(doc);
-        var info = doc.Root
-            ?.Element(XName.Get("CommandResponse", ns))
-            ?.Element(XName.Get("DomainGetInfoResult", ns));
-
-        if (info is null)
+        return await GuardAsync("checking a domain's status", async () =>
         {
-            return new RegistrarResult(false, null, null, "Domain not found at Namecheap.");
-        }
+            var doc = await _client.ExecuteAsync(new NamecheapCommand("namecheap.domains.getInfo", parameters), ct);
+            var ns = GetNamespace(doc);
+            var info = doc.Root
+                ?.Element(XName.Get("CommandResponse", ns))
+                ?.Element(XName.Get("DomainGetInfoResult", ns));
 
-        var expiresRaw = info.Attribute("ExpiredDate")?.Value;
-        var domainId = info.Attribute("ID")?.Value ?? domainName;
+            if (info is null)
+            {
+                return new RegistrarResult(false, null, null, HostpanelErrorCodes.REGISTRAR_DOMAIN_NOT_FOUND);
+            }
 
-        DateTimeOffset expiresAt = expiresRaw is not null
-            ? DateTimeOffset.Parse(expiresRaw, CultureInfo.InvariantCulture)
-            : DateTimeOffset.UtcNow.AddYears(1);
+            var domainId = info.Attribute("ID")?.Value ?? domainName;
+            var expiresAt = RegistrarDate.Parse(info.Attribute("ExpiredDate")?.Value) ?? _clock.UtcNow.AddYears(1);
 
-        return new RegistrarResult(true, domainId, expiresAt, null);
+            return new RegistrarResult(true, domainId, expiresAt, null);
+        }, ct);
+    }
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyList<TldPricing>> GetTldPricingAsync(CancellationToken ct)
+    {
+        // Namecheap does not expose a TLD pricing API in a compatible format.
+        return Task.FromResult<IReadOnlyList<TldPricing>>([]);
     }
 
     /// <summary>
     /// Pushes the complete list of DNS host records to Namecheap using <c>namecheap.domains.dns.setHosts</c>.
-    /// Namecheap requires the full record set on every write — partial updates are not supported.
+    /// Namecheap requires the full record set on every write: partial updates are not supported.
     /// </summary>
     /// <param name="domainName">The fully-qualified domain name.</param>
     /// <param name="registrarRef">The registrar's reference for this domain.</param>
@@ -747,7 +713,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             return NotConfiguredResult;
         }
 
-        var (sld, tld) = SplitDomain(domainName);
+        var (sld, tld) = RegistrarDomainName.Split(domainName);
 
         var parameters = new Dictionary<string, string>
         {
@@ -770,7 +736,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             }
         }
 
-        await _client.ExecuteAsync("namecheap.domains.dns.setHosts", parameters, ct);
+        await _client.ExecuteAsync(new NamecheapCommand("namecheap.domains.dns.setHosts", parameters), ct);
         return new RegistrarResult(true, registrarRef, null, null);
     }
 
@@ -779,8 +745,8 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     /// </summary>
     /// <param name="domainName">The fully-qualified domain name.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The mailbox → forward-to pairs currently configured.</returns>
-    private async Task<List<(string Mailbox, string ForwardTo)>> GetEmailForwardsAsync(
+    /// <returns>The forwarding rules currently configured.</returns>
+    private async Task<List<NamecheapEmailForward>> GetEmailForwardsAsync(
         string domainName,
         CancellationToken ct)
     {
@@ -790,7 +756,7 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
         }
 
         var parameters = new Dictionary<string, string> { ["DomainName"] = domainName };
-        var doc = await _client.ExecuteAsync("namecheap.domains.dns.getEmailForwarding", parameters, ct);
+        var doc = await _client.ExecuteAsync(new NamecheapCommand("namecheap.domains.dns.getEmailForwarding", parameters), ct);
 
         var ns = GetNamespace(doc);
         var forwardNodes = doc.Root
@@ -799,14 +765,14 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             ?.Elements(XName.Get("Forward", ns))
             ?? [];
 
-        var forwards = new List<(string Mailbox, string ForwardTo)>();
+        var forwards = new List<NamecheapEmailForward>();
         foreach (var node in forwardNodes)
         {
             var mailbox = node.Attribute("mailbox")?.Value;
             var forwardTo = node.Value;
             if (!string.IsNullOrEmpty(mailbox) && !string.IsNullOrEmpty(forwardTo))
             {
-                forwards.Add((mailbox, forwardTo));
+                forwards.Add(new NamecheapEmailForward(mailbox, forwardTo));
             }
         }
 
@@ -816,15 +782,15 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     /// <summary>
     /// Pushes the complete set of email forwarding rules to Namecheap using
     /// <c>namecheap.domains.dns.setEmailForwarding</c>. As with DNS hosts, Namecheap
-    /// requires the full rule set on every write — there is no add/remove-single-rule call.
+    /// requires the full rule set on every write: there is no add/remove-single-rule call.
     /// </summary>
     /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="forwards">The complete list of mailbox → forward-to pairs to persist.</param>
+    /// <param name="forwards">The complete list of forwarding rules to persist.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the operation succeeded.</returns>
     private async Task<RegistrarResult> SetAllEmailForwardsAsync(
         string domainName,
-        IReadOnlyList<(string Mailbox, string ForwardTo)> forwards,
+        IReadOnlyList<NamecheapEmailForward> forwards,
         CancellationToken ct)
     {
         if (!_client.IsConfigured)
@@ -841,8 +807,53 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
             parameters[$"ForwardTo{n}"] = forwards[i].ForwardTo;
         }
 
-        await _client.ExecuteAsync("namecheap.domains.dns.setEmailForwarding", parameters, ct);
-        return new RegistrarResult(true, null, null, null);
+        return await ChangeAsync(
+            "setting email forwarding", new NamecheapCommand("namecheap.domains.dns.setEmailForwarding", parameters), null, ct);
+    }
+
+    /// <summary>
+    /// Runs a command that changes something and is not a purchase, and answers success once
+    /// Namecheap accepted it.
+    /// </summary>
+    /// <param name="operation">What is being done, for the log.</param>
+    /// <param name="command">The command to run.</param>
+    /// <param name="registrarRef">The registrar reference to hand back on success; <see langword="null"/> when there is none.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Success, or the failed result when Namecheap did not make the change.</returns>
+    private Task<RegistrarResult> ChangeAsync(
+        string operation, NamecheapCommand command, string? registrarRef, CancellationToken ct)
+    {
+        return GuardAsync(operation, async () =>
+        {
+            await _client.ExecuteAsync(command, ct);
+            return new RegistrarResult(true, registrarRef, null, null);
+        }, ct);
+    }
+
+    /// <summary>
+    /// Runs a change that is not a purchase and turns every way the registrar call can fail into a
+    /// failed result, so the handler answers with a code instead of an exception carrying the
+    /// registrar's wording. That wording is logged here and goes no further.
+    /// </summary>
+    /// <param name="operation">What is being done, for the log.</param>
+    /// <param name="action">The change to run.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The change's result, or a failed one when the registrar call failed.</returns>
+    private async Task<RegistrarResult> GuardAsync(string operation, Func<Task<RegistrarResult>> action, CancellationToken ct)
+    {
+        try
+        {
+            return await action();
+        }
+        catch (Exception ex) when (RegistrarFailure.IsUpstream(ex, ct))
+        {
+            _logger.LogWarning(ex, "Namecheap failed while {Operation}", operation);
+            return new RegistrarResult(
+                false,
+                null,
+                null,
+                ex is RegistrarException refusal ? RefusalCodeFor(refusal) : HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
+        }
     }
 
     /// <summary>
@@ -851,22 +862,137 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     /// rather than an exception it would have to treat as an unknown outcome.
     /// </summary>
     /// <param name="command">The Namecheap command.</param>
-    /// <param name="parameters">The command parameters.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The response, or the refusal when Namecheap answered <c>ERROR</c>.</returns>
+    /// <returns>The response, or the refusal code when Namecheap answered <c>ERROR</c>.</returns>
     /// <exception cref="HttpRequestException">
-    /// Thrown on a transport failure or a non-success status: the outcome is unknown.
+    /// Thrown on a transport failure, a non-success status or an answer that is not XML: the
+    /// outcome is unknown.
     /// </exception>
-    private async Task<(XDocument? Doc, RegistrarResult? Refusal)> ExecutePurchaseAsync(
-        string command, Dictionary<string, string> parameters, CancellationToken ct)
+    private async Task<NamecheapPurchaseOutcome> ExecutePurchaseAsync(NamecheapCommand command, CancellationToken ct)
     {
         try
         {
-            return (await _client.ExecuteAsync(command, parameters, ct), null);
+            return new NamecheapPurchaseOutcome(await _client.ExecuteAsync(command, ct), null);
         }
         catch (RegistrarException ex)
         {
-            return (null, new RegistrarResult(false, null, null, ex.Message));
+            _logger.LogWarning(ex, "Namecheap refused {Command}: {Error}", command.Name, ex.Message);
+            return new NamecheapPurchaseOutcome(null, RefusalCodeFor(ex));
+        }
+    }
+
+    /// <summary>
+    /// Picks the error code for a refusal Namecheap sent: its two causes a caller can act on get
+    /// their own code, everything else is the plain refusal.
+    /// </summary>
+    /// <param name="refusal">The refusal Namecheap answered with.</param>
+    /// <returns>A <c>REGISTRAR_*</c> code.</returns>
+    private static string RefusalCodeFor(RegistrarException refusal)
+    {
+        return refusal switch
+        {
+            InsufficientFundsException => HostpanelErrorCodes.REGISTRAR_INSUFFICIENT_FUNDS,
+            DomainNotAvailableException => HostpanelErrorCodes.REGISTRAR_DOMAIN_UNAVAILABLE,
+            _ => HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED,
+        };
+    }
+
+    /// <summary>
+    /// Settles a refused registration or transfer. A purchase whose answer was lost (a timeout, a
+    /// 5xx) may have gone through, and its retry is then refused as "domain unavailable" because
+    /// the account already holds the name; refusing that would refund a domain we own. So that one
+    /// refusal is checked against the account first, and the order counts as placed when it holds
+    /// the name. A failure to look escapes, so an unconfirmed refusal is never reported as one.
+    /// </summary>
+    /// <param name="domainName">The domain that was ordered.</param>
+    /// <param name="refusalCode">The refusal code the purchase ended with.</param>
+    /// <param name="includeTransfers">Whether a transfer still in progress counts as the order being placed.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Success when the account holds the domain, otherwise the refusal.</returns>
+    private async Task<RegistrarResult> SettleRefusalAsync(
+        string domainName, string refusalCode, bool includeTransfers, CancellationToken ct)
+    {
+        if (refusalCode == HostpanelErrorCodes.REGISTRAR_DOMAIN_UNAVAILABLE)
+        {
+            var placed = await FindPlacedOrderAsync(domainName, includeTransfers, ct);
+            if (placed is not null)
+            {
+                _logger.LogWarning(
+                    "Namecheap refused the order for '{DomainName}' but the account already holds it; counting it as placed",
+                    domainName);
+                return placed;
+            }
+        }
+
+        return new RegistrarResult(false, null, null, refusalCode);
+    }
+
+    /// <summary>
+    /// Looks for a domain in the account (<c>namecheap.domains.getList</c>), and for a transfer of
+    /// it still in progress (<c>namecheap.domains.transfer.getList</c>) when asked.
+    /// </summary>
+    /// <param name="domainName">The domain that was ordered.</param>
+    /// <param name="includeTransfers">Whether to look at transfers in progress too.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A success result for what is found, or <see langword="null"/> when the account holds nothing by that name.</returns>
+    private async Task<RegistrarResult?> FindPlacedOrderAsync(string domainName, bool includeTransfers, CancellationToken ct)
+    {
+        var listParameters = new Dictionary<string, string> { ["SearchTerm"] = domainName };
+        var listDoc = await _client.ExecuteAsync(new NamecheapCommand("namecheap.domains.getList", listParameters), ct);
+        var ns = GetNamespace(listDoc);
+
+        var held = listDoc.Root
+            ?.Element(XName.Get("CommandResponse", ns))
+            ?.Element(XName.Get("DomainGetListResult", ns))
+            ?.Elements(XName.Get("Domain", ns))
+            .FirstOrDefault(d => string.Equals(d.Attribute("Name")?.Value, domainName, StringComparison.OrdinalIgnoreCase));
+
+        if (held is not null)
+        {
+            // The list gives the expiry as MM/dd/yyyy, which the invariant culture reads.
+            return new RegistrarResult(
+                true, ReferenceOrName(held, "ID", domainName), RegistrarDate.Parse(held.Attribute("Expires")?.Value), null);
+        }
+
+        if (!includeTransfers)
+        {
+            return null;
+        }
+
+        var transferParameters = new Dictionary<string, string> { ["ListType"] = "INPROGRESS", ["SearchTerm"] = domainName };
+        var transferDoc = await _client.ExecuteAsync(
+            new NamecheapCommand("namecheap.domains.transfer.getList", transferParameters), ct);
+        var transferNs = GetNamespace(transferDoc);
+
+        var inProgress = transferDoc.Root
+            ?.Element(XName.Get("CommandResponse", transferNs))
+            ?.Element(XName.Get("DomainTransferGetListResult", transferNs))
+            ?.Elements(XName.Get("Transfer", transferNs))
+            .Any(t => string.Equals(t.Attribute("DomainName")?.Value, domainName, StringComparison.OrdinalIgnoreCase));
+
+        return inProgress == true ? new RegistrarResult(true, domainName, null, null) : null;
+    }
+
+    /// <summary>
+    /// Adds a contact to a command's parameters once for each of the four roles Namecheap takes.
+    /// </summary>
+    /// <param name="parameters">The command's parameters; written to.</param>
+    /// <param name="contact">The contact every role is given.</param>
+    private static void AddContactParameters(Dictionary<string, string> parameters, DomainContact contact)
+    {
+        foreach (var role in ContactRoles)
+        {
+            parameters[$"{role}FirstName"] = contact.FirstName;
+            parameters[$"{role}LastName"] = contact.LastName;
+            parameters[$"{role}OrganizationName"] = contact.Organization ?? string.Empty;
+            parameters[$"{role}EmailAddress"] = contact.Email;
+            parameters[$"{role}Phone"] = contact.Phone;
+            parameters[$"{role}Address1"] = contact.Address1;
+            parameters[$"{role}Address2"] = contact.Address2 ?? string.Empty;
+            parameters[$"{role}City"] = contact.City;
+            parameters[$"{role}StateProvince"] = contact.State;
+            parameters[$"{role}PostalCode"] = contact.PostalCode;
+            parameters[$"{role}Country"] = contact.Country;
         }
     }
 
@@ -905,19 +1031,6 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     }
 
     /// <summary>
-    /// Splits a fully-qualified domain name into its second-level and top-level parts.
-    /// </summary>
-    /// <param name="domainName">Fully-qualified domain name (e.g. <c>example.co.uk</c>).</param>
-    /// <returns>A tuple of (SLD, TLD) where SLD is the first label and TLD is the remainder.</returns>
-    private static (string Sld, string Tld) SplitDomain(string domainName)
-    {
-        var parts = domainName.Split('.');
-        var sld = parts[0];
-        var tld = string.Join(".", parts[1..]);
-        return (sld, tld);
-    }
-
-    /// <summary>
     /// Extracts the default XML namespace URI from the root element of a Namecheap API response document.
     /// </summary>
     /// <param name="doc">The parsed XML response document.</param>
@@ -936,12 +1049,5 @@ public sealed class NamecheapRegistrarProvider : IRegistrarProvider
     private static string BuildNameserverString(string ns1, string? ns2)
     {
         return ns2 is not null ? $"{ns1},{ns2}" : ns1;
-    }
-
-    /// <inheritdoc/>
-    public Task<IReadOnlyList<TldPricing>> GetTldPricingAsync(CancellationToken ct)
-    {
-        // Namecheap does not expose a TLD pricing API in a compatible format.
-        return Task.FromResult<IReadOnlyList<TldPricing>>([]);
     }
 }

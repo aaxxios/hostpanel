@@ -13,4 +13,4 @@ namespace Innovayse.Hostpanel.Application.Admin.Common;
 /// <param name="Description">Optional human-readable description of this setting.</param>
 /// <param name="IsSecret">Whether the setting holds a secret and is write only.</param>
 /// <param name="HasValue">Whether a non-blank value is stored.</param>
-public record SettingDto(int Id, string Key, string? Value, string? Description, bool IsSecret, bool HasValue);
+public sealed record SettingDto(int Id, string Key, string? Value, string? Description, bool IsSecret, bool HasValue);

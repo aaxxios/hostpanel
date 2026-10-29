@@ -1,9 +1,10 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Application.Support.Commands.BulkUpdateTickets.Enums;
+using Innovayse.Hostpanel.Application.Support.Common.Enums;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Support.Commands.BulkUpdateTickets;
 
 /// <summary>Performs a bulk action (close, delete, flag, unflag) on multiple tickets.</summary>
@@ -12,11 +13,16 @@ public sealed class BulkUpdateTicketsHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The clock that dates each closing.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public BulkUpdateTicketsHandler(IHostpanelDbContext context)
+    /// <param name="clock">The clock that dates each closing.</param>
+    public BulkUpdateTicketsHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the command.</summary>
@@ -24,22 +30,21 @@ public sealed class BulkUpdateTicketsHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success. The action's shape was already checked by <c>BulkUpdateTicketsValidator</c>; an id
-    /// that names no ticket is silently skipped rather than refusing the whole batch, unchanged
-    /// from the previous behaviour.
+    /// that names no ticket is silently skipped rather than refusing the whole batch.
     /// </returns>
     public async Task<Result> HandleAsync(BulkUpdateTicketsCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var action = Enum.Parse<BulkTicketAction>(cmd.Action, ignoreCase: true);
         var tickets = await _context.Tickets
             .Include(t => t.Replies)
             .Where(t => cmd.TicketIds.Contains(t.Id))
             .ToListAsync(ct);
 
+        var now = _clock.UtcNow;
         foreach (var ticket in tickets)
         {
-            ApplyAction(ticket, action);
+            ApplyAction(ticket, cmd.Action, now);
         }
 
         await _context.SaveChangesAsync(ct);
@@ -48,15 +53,16 @@ public sealed class BulkUpdateTicketsHandler
 
     /// <summary>Applies one bulk action to one ticket.</summary>
     /// <param name="ticket">The ticket to act on.</param>
-    /// <param name="action">The parsed bulk action.</param>
-    private void ApplyAction(Ticket ticket, BulkTicketAction action)
+    /// <param name="action">The bulk action.</param>
+    /// <param name="now">The moment of the batch, UTC.</param>
+    private void ApplyAction(Ticket ticket, BulkTicketAction action, DateTimeOffset now)
     {
         switch (action)
         {
             case BulkTicketAction.Close:
                 if (ticket.Status != TicketStatus.Closed)
                 {
-                    ticket.Close();
+                    ticket.Close(now);
                 }
 
                 break;

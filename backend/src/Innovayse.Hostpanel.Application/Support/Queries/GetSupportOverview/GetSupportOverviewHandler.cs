@@ -1,4 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Support.Common;
+using Innovayse.Hostpanel.Application.Support.Common.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,25 +15,30 @@ public sealed class GetSupportOverviewHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetSupportOverviewHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public GetSupportOverviewHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the query.</summary>
     /// <param name="query">The period to aggregate over.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// Success with the aggregated stats. This use case refuses nothing: an unrecognised period
-    /// falls back to "today", unchanged from the previous behaviour.
+    /// Success with the aggregated stats. This use case refuses nothing; the period is validated
+    /// before it reaches here.
     /// </returns>
     public async Task<Result<SupportOverviewDto>> HandleAsync(GetSupportOverviewQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var (from, to) = ResolvePeriod(query.Period);
+        var (from, to) = ResolvePeriod(query.Period, _clock.UtcNow);
         var tickets = await _context.Tickets
             .AsNoTracking()
             .Include(t => t.Replies)
@@ -93,20 +100,20 @@ public sealed class GetSupportOverviewHandler
         return FormatTimeSpan(TimeSpan.FromTicks(avgTicks));
     }
 
-    /// <summary>Resolves a period string into a date range.</summary>
-    /// <param name="period">The period identifier.</param>
-    /// <returns>A tuple of (from, to) date boundaries.</returns>
-    private static (DateTimeOffset From, DateTimeOffset To) ResolvePeriod(string period)
+    /// <summary>Resolves a period into a date range.</summary>
+    /// <param name="period">The reporting period.</param>
+    /// <param name="now">The current moment the window ends at.</param>
+    /// <returns>The date boundaries of the period.</returns>
+    private static ReportingWindow ResolvePeriod(SupportOverviewPeriod period, DateTimeOffset now)
     {
-        var now = DateTimeOffset.UtcNow;
         var todayStart = new DateTimeOffset(now.Date, TimeSpan.Zero);
 
-        return period.ToLowerInvariant() switch
+        return period switch
         {
-            SupportOverviewPeriods.Yesterday => (todayStart.AddDays(-1), todayStart),
-            SupportOverviewPeriods.Last7Days => (todayStart.AddDays(-7), now),
-            SupportOverviewPeriods.Last30Days => (todayStart.AddDays(-30), now),
-            _ => (todayStart, now), // Today or default
+            SupportOverviewPeriod.Yesterday => new ReportingWindow(todayStart.AddDays(-1), todayStart),
+            SupportOverviewPeriod.Last7Days => new ReportingWindow(todayStart.AddDays(-7), now),
+            SupportOverviewPeriod.Last30Days => new ReportingWindow(todayStart.AddDays(-30), now),
+            _ => new ReportingWindow(todayStart, now), // Today or default
         };
     }
 

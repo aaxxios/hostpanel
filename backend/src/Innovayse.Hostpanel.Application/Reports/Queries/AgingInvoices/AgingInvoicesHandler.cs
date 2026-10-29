@@ -1,6 +1,8 @@
+using System.Globalization;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Domain.Billing.Enums;
+using Innovayse.Hostpanel.Application.Reports.Common;
+using Innovayse.Hostpanel.Application.Reports.Extensions;
+using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,51 +11,59 @@ namespace Innovayse.Hostpanel.Application.Reports.Queries.AgingInvoices;
 /// <summary>Handles <see cref="AgingInvoicesQuery"/>.</summary>
 public sealed class AgingInvoicesHandler
 {
-    /// <summary>Statuses counted as still owed.</summary>
-    private static readonly InvoiceStatus[] UnpaidStatuses = [InvoiceStatus.Unpaid, InvoiceStatus.Overdue];
-
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public AgingInvoicesHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public AgingInvoicesHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the query.</summary>
-    /// <param name="query">The query. Carries no filters.</param>
+    /// <param name="query">The page to return.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Every unpaid or overdue invoice with its aging bucket. Never refuses.</returns>
-    public async Task<Result<IReadOnlyList<AgingInvoiceDto>>> HandleAsync(AgingInvoicesQuery query, CancellationToken ct)
+    /// <returns>
+    /// One page of the open invoices that still owe money, oldest due date first, each with the
+    /// amount due in its own currency and its aging period. Never refuses.
+    /// </returns>
+    public async Task<Result<PaginatedList<AgingInvoiceDto>>> HandleAsync(AgingInvoicesQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime);
+        var balances = _context.Invoices.AsNoTracking().SelectAgedBalances(today);
 
-        var rows = await _context.Invoices
-            .AsNoTracking()
-            .Where(i => UnpaidStatuses.Contains(i.Status))
-            .Join(_context.Clients.AsNoTracking(), inv => inv.ClientId, c => c.Id,
-                (inv, c) => new { inv, ClientName = c.FirstName + " " + c.LastName })
-            .OrderBy(x => x.inv.DueDate)
+        var totalCount = await balances.CountAsync(ct);
+
+        var rows = await balances
+            .OrderBy(b => b.DueDate)
+            .ThenBy(b => b.InvoiceId)
+            .Paginate(query.Page, query.PageSize)
+            .Join(_context.Clients.AsNoTracking(), b => b.ClientId, c => c.Id,
+                (b, c) => new { Balance = b, ClientName = c.FirstName + " " + c.LastName })
             .ToListAsync(ct);
 
-        IReadOnlyList<AgingInvoiceDto> result = rows.Select(x =>
+        var items = rows.Select(x =>
         {
-            var due = DateOnly.FromDateTime(x.inv.DueDate.DateTime);
-            var days = today.DayNumber - due.DayNumber;
-            var bucket = days <= 30 ? "0-30" : days <= 60 ? "31-60" : days <= 90 ? "61-90" : "90+";
+            var due = DateOnly.FromDateTime(x.Balance.DueDate.UtcDateTime);
             return new AgingInvoiceDto(
-                InvoiceId: x.inv.Id,
+                InvoiceId: x.Balance.InvoiceId,
                 Client: x.ClientName,
-                Amount: x.inv.Total,
-                DueDate: due.ToString("yyyy-MM-dd"),
-                DaysOutstanding: Math.Max(0, days),
-                Bucket: bucket);
+                Currency: x.Balance.Currency,
+                AmountDue: x.Balance.AmountDue,
+                DueDate: due.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                DaysOutstanding: Math.Max(0, today.DayNumber - due.DayNumber),
+                Bucket: x.Balance.Bucket);
         }).ToList();
 
-        return Result<IReadOnlyList<AgingInvoiceDto>>.Success(result);
+        return Result<PaginatedList<AgingInvoiceDto>>.Success(
+            new PaginatedList<AgingInvoiceDto>(items, totalCount, query.Page, query.PageSize));
     }
 }

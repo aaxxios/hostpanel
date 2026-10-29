@@ -22,6 +22,8 @@
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="Mapster" />
+    <!-- Auth: the Data Protection key ring is persisted through AppDbContext; see DependencyInjection.cs. -->
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <!--

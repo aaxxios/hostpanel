@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Resilience.Settings;
 /// Every property here carries a default that is the measured, intended value, so a deployment
 /// that configures none of this section gets the profiles described below rather than nothing.
 /// The section exists so an operator on a slow link, or in front of an unusually slow registrar,
-/// can move one number without a rebuild — not because the defaults are guesses.
+/// can move one number without a rebuild, not because the defaults are guesses.
 /// </para>
 /// <para>
 /// <b>Do not collapse these into a shared constant.</b> The numbers differ because the calls
@@ -24,23 +24,23 @@ public sealed class HttpResilienceOptions
     public const string SectionName = "HttpResilience";
 
     /// <summary>
-    /// The SSO's service API — profile lookups by subject, by email, in batches and by page.
+    /// The sign-on provider's service API: profile lookups by subject, by email, in batches and by page.
     /// Every operation on it is a GET that reads a person, so all of them are safe to repeat.
     /// </summary>
     /// <remarks>
     /// <para>
     /// <b>3 seconds an attempt, 10 seconds in total.</b> This runs inside request handling on an
-    /// authenticated page in SSO mode, so its budget is what a person will sit through, not what
-    /// the SSO might eventually manage. Three attempts of three seconds plus jittered backoff
+    /// authenticated page in single sign-on mode, so its budget is what a person will sit through, not what
+    /// the sign-on provider might eventually manage. Three attempts of three seconds plus jittered backoff
     /// fits inside ten.
     /// </para>
     /// <para>
     /// <b>The breaker is deliberately hard to open: 90% of at least 20 calls in 30 seconds, and
     /// it reopens after 5.</b> The failure mode worth thinking about here is that an open breaker
-    /// means nobody can be looked up, and in SSO mode that reads to a visitor as "nobody can sign
-    /// in". The alternative — no breaker — is worse, and not by a little: during a real SSO
+    /// means nobody can be looked up, and in single sign-on mode that reads to a visitor as "nobody can sign
+    /// in". The alternative, no breaker, is worse, and not by a little: during a real sign-on provider
     /// outage every request would still spend its full three seconds holding a thread, so the
-    /// SSO's outage becomes hostpanel's thread pool. A breaker converts that into an immediate
+    /// the sign-on provider's outage becomes hostpanel's thread pool. A breaker converts that into an immediate
     /// failure that self-heals within one page refresh, and nothing that would have succeeded is
     /// lost, because the calls it sheds are calls that were failing anyway.
     /// </para>
@@ -66,7 +66,7 @@ public sealed class HttpResilienceOptions
     };
 
     /// <summary>
-    /// The SSO's TOTP endpoints — enable, verify, disable. Registered with no retry stage at all.
+    /// The sign-on provider's TOTP endpoints: enable, verify, disable. Registered with no retry stage at all.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -105,14 +105,14 @@ public sealed class HttpResilienceOptions
     /// <para>
     /// <b>No retries, and the HTTP method is no guide here.</b> WHM's JSON API v1 is addressed
     /// entirely over GET, so a method-based predicate would happily repeat <c>createacct</c>,
-    /// <c>removeacct</c> and <c>passwd</c> — every one of the seven functions this client calls
+    /// <c>removeacct</c> and <c>passwd</c>: every one of the seven functions this client calls
     /// is a write dressed as a GET. <c>create_user_session</c> is the only one that reads like a
     /// lookup and it is not: it mints a login session. There is no read on this client for a
     /// predicate to let through, so there is no retry stage.
     /// </para>
     /// <para>
     /// <b>45 seconds an attempt, 55 in total.</b> Account creation on a loaded WHM box is
-    /// genuinely slow — it builds a home directory, a mail store and a DNS zone — and the
+    /// genuinely slow, it builds a home directory, a mail store and a DNS zone, and the
     /// registration's existing 60-second <see cref="HttpClient.Timeout"/> stays the outer
     /// backstop. What changes is that a hung connection is now abandoned at 45 seconds rather
     /// than at WHM's leisure.
@@ -181,8 +181,8 @@ public sealed class HttpResilienceOptions
     /// admin screen; a retry stage that exists only for it is machinery with no user.
     /// </para>
     /// <para>
-    /// <b>No breaker.</b> This client addresses a different server on every call — the base URL
-    /// is a per-call argument, not a base address — so a breaker would be shared across every
+    /// <b>No breaker.</b> This client addresses a different server on every call, the base URL
+    /// is a per-call argument, not a base address, so a breaker would be shared across every
     /// CWP node the platform owns and one dead box would stop provisioning on all of them.
     /// </para>
     /// <para>
@@ -234,14 +234,14 @@ public sealed class HttpResilienceOptions
     /// <para>
     /// <b>Retries everything, despite every call being a POST.</b> This is the one client where
     /// the method is misleading in the safe direction: the source's protocol posts a signed
-    /// payload and answers with data, and all three operations — ping, totals, and a page of
-    /// records — read. Nothing on the far side is created or spent, so a repeat is free. Two
+    /// payload and answers with data, and all three operations, ping, totals, and a page of
+    /// records, read. Nothing on the far side is created or spent, so a repeat is free. Two
     /// retries, five seconds apart, because a foreign install mid-migration is exactly the kind
     /// of host that drops one connection in twenty.
     /// </para>
     /// <para>
     /// <b>60 seconds an attempt, 240 in total</b>, inside the registration's existing five-minute
-    /// <see cref="HttpClient.Timeout"/>. A page of records from a large WHMCS install is a real
+    /// <see cref="HttpClient.Timeout"/>. A page of records from a large source billing system is a real
     /// query on someone else's database; this is a background pull worker, not a request a person
     /// is waiting on.
     /// </para>
@@ -262,7 +262,7 @@ public sealed class HttpResilienceOptions
 
     /// <summary>
     /// The Name.am registrar API. Retries only the requests that cannot register or renew
-    /// anything — see the predicate in <c>HttpClientResilienceExtensions</c>.
+    /// anything: see the predicate in <c>HttpClientResilienceExtensions</c>.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -270,9 +270,9 @@ public sealed class HttpResilienceOptions
     /// two very different things: <c>/client/domains/check</c>, a pure availability lookup a
     /// visitor is waiting on, and <c>/client/carts/purchase</c>, which registers, transfers or
     /// renews a domain and bills for it. Retrying the whole client because most of its traffic is
-    /// reads would buy a second registration on a dropped response. GET and PUT are repeated —
+    /// reads would buy a second registration on a dropped response. GET and PUT are repeated,
     /// PUT here is a whole-resource update of nameservers, contacts or the registrar lock, which
-    /// ends in the state a single call would have — and POST only for the two paths named in the
+    /// ends in the state a single call would have, and POST only for the two paths named in the
     /// predicate.
     /// </para>
     /// <para>
@@ -301,7 +301,7 @@ public sealed class HttpResilienceOptions
     };
 
     /// <summary>
-    /// The Namecheap XML API. Retries only its read commands — see the predicate in
+    /// The Namecheap XML API. Retries only its read commands: see the predicate in
     /// <c>HttpClientResilienceExtensions</c>.
     /// </summary>
     /// <remarks>
@@ -314,7 +314,7 @@ public sealed class HttpResilienceOptions
     /// </para>
     /// <para>
     /// <b>10 seconds an attempt, 25 in total</b>, matching <see cref="NameAm"/> and inside the
-    /// registration's existing 30-second <see cref="HttpClient.Timeout"/> — the same availability
+    /// registration's existing 30-second <see cref="HttpClient.Timeout"/>: the same availability
     /// check on the same ordering path, so the same budget. The breaker is on for the same reason
     /// too: one registrar behind one endpoint.
     /// </para>
@@ -333,21 +333,21 @@ public sealed class HttpResilienceOptions
     };
 
     /// <summary>
-    /// The Inecobank (Armenian Card) hosted-payment gateway — the payment plugin's own named
+    /// The Inecobank (Armenian Card) hosted-payment gateway: the payment plugin's own named
     /// client. Retries only the order-status lookup; see the predicate in
     /// <c>HttpClientResilienceExtensions</c>.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>All three of its operations are POSTs to the same host, so the method says nothing</b>
-    /// — the same lesson WHM, Namecheap and both CWP panels already taught. The operation is the
+    /// <b>All three of its operations are POSTs to the same host, so the method says nothing</b>:
+    /// the same lesson WHM, Namecheap and both CWP panels already taught. The operation is the
     /// final path segment: <c>register.do</c> opens a payment session for a customer standing at
     /// the pay button, <c>refund.do</c> sends money back to a cardholder, and
     /// <c>getOrderStatusExtended.do</c> reads. Only the read is repeated. <c>refund.do</c> takes
     /// an order id and an amount and carries no idempotency key of any kind, so a repeat is
     /// simply a second refund; <c>register.do</c> is keyed by the merchant order number, so a
-    /// repeat either comes back as a duplicate-order error — turning a dropped response into a
-    /// hard checkout failure — or opens a second payment session against the same invoice.
+    /// repeat either comes back as a duplicate-order error, turning a dropped response into a
+    /// hard checkout failure, or opens a second payment session against the same invoice.
     /// </para>
     /// <para>
     /// <b>15 seconds an attempt, 40 in total</b>, inside the registration's 60-second
@@ -356,8 +356,8 @@ public sealed class HttpResilienceOptions
     /// it runs inside checkout with the customer watching a spinner, and it is not retried, so
     /// the per-attempt budget <em>is</em> what they wait. Fifteen seconds is well past the
     /// gateway's normal sub-second answer and still under a sixth of the 100-second default it
-    /// replaces. The total is sized for the one operation that does retry — two attempts of 15
-    /// plus a jittered backoff fit inside 40 with room — and caps everything else besides.
+    /// replaces. The total is sized for the one operation that does retry, two attempts of 15
+    /// plus a jittered backoff fit inside 40 with room, and caps everything else besides.
     /// </para>
     /// <para>
     /// <b>The breaker is on, and it is the only money-moving client here that has one.</b> The
@@ -366,7 +366,7 @@ public sealed class HttpResilienceOptions
     /// rather than to every server the platform owns the way it would on cPanel or the migration
     /// source. Weighed against a customer mid-payment: the worst an open breaker can do is refuse
     /// a <c>register.do</c>, which is a checkout that never started and which the customer can
-    /// start again. <b>It cannot lose money already taken</b> — a payment completed on the hosted
+    /// start again. <b>It cannot lose money already taken</b>: a payment completed on the hosted
     /// page is recovered by <c>ReconcileGatewayPaymentsCronHandler</c>, which re-reads the order
     /// status on its own schedule long after any 15-second break has closed, and which is the
     /// designed safety net for this whole no-webhook flow. Set against that, a gateway outage
@@ -375,7 +375,7 @@ public sealed class HttpResilienceOptions
     /// <para>
     /// <b><see cref="ResilienceProfileOptions.MinimumThroughput"/> is 20, twice everyone else's,
     /// and <see cref="ResilienceProfileOptions.BreakDuration"/> is 15 seconds, the shortest
-    /// here.</b> Both move the same way — open reluctantly, close quickly — because the call
+    /// here.</b> Both move the same way, open reluctantly, close quickly, because the call
     /// being shed is somebody's payment. A payment gateway sees an order of magnitude less
     /// traffic than a registrar availability lookup, and the usual threshold of 10 would let a
     /// quiet minute with two bad calls refuse the next customer who arrives.
@@ -406,7 +406,7 @@ public sealed class HttpResilienceOptions
     /// </para>
     /// <para>
     /// <b>No breaker.</b> The bulletin is fetched a few times a day at most, and a breaker over a
-    /// call that rare would never see the throughput it needs to open — so the setting would be
+    /// call that rare would never see the throughput it needs to open, so the setting would be
     /// documentation of a mechanism that cannot fire. A failure is answered to the operator as a
     /// failure, and the stored rates are left as they were.
     /// </para>
@@ -452,20 +452,20 @@ public sealed class HttpResilienceOptions
     /// Every profile paired with the configuration key it binds from, for the startup validator
     /// to walk. Kept here rather than in the validator so adding a profile above is one edit.
     /// </summary>
-    /// <returns>Key-and-profile pairs in declaration order.</returns>
-    public IEnumerable<(string Key, ResilienceProfileOptions Profile)> EnumerateProfiles()
+    /// <returns>The profiles with their keys, in declaration order.</returns>
+    public IEnumerable<NamedResilienceProfile> EnumerateProfiles()
     {
-        yield return (nameof(SsoRead), SsoRead);
-        yield return (nameof(SsoTwoFactor), SsoTwoFactor);
-        yield return (nameof(CPanel), CPanel);
-        yield return (nameof(Telegram), Telegram);
-        yield return (nameof(Cwp), Cwp);
-        yield return (nameof(Cwp7), Cwp7);
-        yield return (nameof(Migration), Migration);
-        yield return (nameof(NameAm), NameAm);
-        yield return (nameof(Namecheap), Namecheap);
-        yield return (nameof(Inecobank), Inecobank);
-        yield return (nameof(Cba), Cba);
-        yield return (nameof(Default), Default);
+        yield return new NamedResilienceProfile(nameof(SsoRead), SsoRead);
+        yield return new NamedResilienceProfile(nameof(SsoTwoFactor), SsoTwoFactor);
+        yield return new NamedResilienceProfile(nameof(CPanel), CPanel);
+        yield return new NamedResilienceProfile(nameof(Telegram), Telegram);
+        yield return new NamedResilienceProfile(nameof(Cwp), Cwp);
+        yield return new NamedResilienceProfile(nameof(Cwp7), Cwp7);
+        yield return new NamedResilienceProfile(nameof(Migration), Migration);
+        yield return new NamedResilienceProfile(nameof(NameAm), NameAm);
+        yield return new NamedResilienceProfile(nameof(Namecheap), Namecheap);
+        yield return new NamedResilienceProfile(nameof(Inecobank), Inecobank);
+        yield return new NamedResilienceProfile(nameof(Cba), Cba);
+        yield return new NamedResilienceProfile(nameof(Default), Default);
     }
 }

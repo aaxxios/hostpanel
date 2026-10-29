@@ -17,8 +17,9 @@ vi.mock('qrcode', () => ({ default: { toDataURL: async (): Promise<string> => ''
 
 /** A contact with the support mail switched off. */
 const contact: AccountContact = makeContact({
-  id: 7, phone: '555', street: '1 Pier', city: 'Arlington', type: ContactType.Billing,
-  notifyInvoice: false, notifyDomain: true, notifySupport: false
+  id: 7, phone: '555', type: ContactType.Billing,
+  address: { street: '1 Pier', address2: null, city: 'Arlington', state: null, postCode: null, country: null },
+  notifications: { general: true, invoice: false, support: false, product: true, domain: true, affiliate: false }
 })
 
 describe('ContactDialog', () => {
@@ -53,7 +54,7 @@ describe('ContactDialog', () => {
     await wrapper.find('form').trigger('submit')
     await Promise.resolve()
 
-    expect(save).toHaveBeenCalledWith(null, expect.objectContaining({ firstName: 'Ann', phone: null, street: null }))
+    expect(save).toHaveBeenCalledWith(null, expect.objectContaining({ firstName: 'Ann', phone: null, address: expect.objectContaining({ street: null }) }))
     expect(wrapper.emitted('saved')).toHaveLength(1)
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([false])
   })
@@ -66,7 +67,9 @@ describe('ContactDialog', () => {
     await Promise.resolve()
 
     expect(save).toHaveBeenCalledWith(7, expect.objectContaining({
-      lastName: 'Lee', notifySupport: false, type: ContactType.Billing, street: '1 Pier', city: 'Arlington', companyName: null
+      lastName: 'Lee', type: ContactType.Billing, companyName: null,
+      notifications: expect.objectContaining({ support: false }),
+      address: expect.objectContaining({ street: '1 Pier', city: 'Arlington' })
     }))
   })
 

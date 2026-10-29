@@ -22,5 +22,6 @@ public sealed class TransferDomainValidator : LocalizedValidator<TransferDomainC
             .NotEmpty()
             .MinimumLength(MinEppCodeLength)
             .WithMessage(L["DomainEppCodeRequired"]);
+        RuleFor(x => x.Years).InclusiveBetween(1, 10).WithMessage(L["DomainYearsRange"]);
     }
 }

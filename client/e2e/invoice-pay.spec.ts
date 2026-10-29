@@ -31,5 +31,8 @@ test('a customer pays an unpaid invoice with a saved card', async ({ page, conte
   await expect(page.getByTestId('invoice-pay-error')).toHaveCount(0)
 
   const requests = await stubRequests(request)
-  expect(requests.some(r => r.method === 'POST' && r.path === `/api/me/invoices/${INVOICE.id}/pay`)).toBe(true)
+  const pay = requests.find(r => r.method === 'POST' && r.path === `/api/me/invoices/${INVOICE.id}/pay`)
+  expect(pay).toBeDefined()
+  // Each pay action carries its own attempt id, the key the backend deduplicates the charge by.
+  expect(pay?.body).toEqual({ paymentMethodId: expect.any(String), attemptId: expect.stringMatching(/^[0-9a-f-]{36}$/) })
 })

@@ -10,7 +10,8 @@
     "checking": "Checking…",
     "check": "Check",
     "notReachable": "Not reachable",
-    "startImport": "Start Import"
+    "startImport": "Start Import",
+    "retryImport": "Retry import"
   },
   "migrationReportTable": {
     "importReport": "Import Report",
@@ -58,12 +59,43 @@
     "createMigration": "Create Migration",
     "urlPlaceholder": "https://your-source.com",
     "deleteMigration": "Delete migration",
-    "pluginPath": "/modules/addons/innovayse_migration/"
+    "pluginPath": "/modules/addons/innovayse_migration/",
+    "migrationCreated": "Migration created.",
+    "migrationDeleted": "Migration deleted.",
+    "confirmDeleteMigration": "Delete migration #{id} and its import report? This action cannot be undone."
   },
   "status": {
     "pending": "Pending",
     "inProgress": "Running",
     "completed": "Completed",
-    "failed": "Failed"
+    "failed": "Failed",
+    "queued": "Queued"
+  },
+  "jobFailure": {
+    "unknown": "Unknown error",
+    "sourceUnreachable": "Source could not be reached",
+    "sourceRefused": "Source refused the request, check the key",
+    "importFailed": "Records could not be imported",
+    "cancelled": "Import was stopped",
+    "interrupted": "The server stopped before the import finished",
+    "sourceAddressNotAllowed": "The source address is not allowed, use a public HTTPS address"
+  },
+  "skipReason": {
+    "alreadyExists": "Already exists",
+    "clientNotFound": "Client not found",
+    "accountNotProvisioned": "Account could not be created",
+    "productGroupNotFound": "Product group not found",
+    "noProducts": "No products exist",
+    "ticketNotFound": "Ticket not found",
+    "ticketClosed": "Ticket is closed",
+    "importFailed": "Import failed",
+    "productNotFound": "Product not found",
+    "invoiceNotFound": "Invoice not found",
+    "dateMissing": "Required date is missing",
+    "departmentNotFound": "No department exists",
+    "downloadCategoryNotFound": "No download category exists",
+    "nameMissing": "No client name or email to take one from",
+    "billingCycleUnsupported": "The billing cycle cannot be billed here",
+    "noProductLines": "The order has only domain or addon lines, with no product here"
   }
 }

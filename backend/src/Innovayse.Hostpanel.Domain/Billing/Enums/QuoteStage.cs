@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Billing.Enums;
+
 /// <summary>Lifecycle stages for a <see cref="Quote"/>.</summary>
 public enum QuoteStage
 {

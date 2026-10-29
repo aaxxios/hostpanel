@@ -2,7 +2,9 @@ using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Domain.Support.Events;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Support;
+
 /// <summary>
 /// Aggregate root representing a client support ticket.
 /// Owns a collection of <see cref="TicketReply"/> entities.
@@ -43,7 +45,7 @@ public sealed class Ticket : BaseEntity, IAggregateRoot
     /// <summary>Gets whether this ticket has been flagged by staff for attention.</summary>
     public bool IsFlagged { get; private set; }
 
-    /// <summary>Gets the client feedback rating (1–10), or null if not yet rated.</summary>
+    /// <summary>Gets the client feedback rating (1 to 10), or null if not yet rated.</summary>
     public int? Rating { get; private set; }
 
     /// <summary>Gets the optional feedback comment left by the client.</summary>
@@ -61,7 +63,7 @@ public sealed class Ticket : BaseEntity, IAggregateRoot
     /// <summary>Gets a read-only view of all tags on this ticket.</summary>
     public IReadOnlyList<TicketTag> Tags => _tags.AsReadOnly();
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Ticket() { }
 
     /// <summary>
@@ -73,9 +75,10 @@ public sealed class Ticket : BaseEntity, IAggregateRoot
     /// <param name="message">The initial message body.</param>
     /// <param name="departmentId">FK to the target department.</param>
     /// <param name="priority">Priority level for this ticket.</param>
+    /// <param name="occurredAt">The moment the ticket was opened, UTC.</param>
     /// <returns>A new <see cref="Ticket"/> in <see cref="TicketStatus.Open"/> state.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="subject"/> or <paramref name="message"/> is null or whitespace.</exception>
-    public static Ticket Create(int clientId, string subject, string message, int departmentId, TicketPriority priority)
+    public static Ticket Create(int clientId, string subject, string message, int departmentId, TicketPriority priority, DateTimeOffset occurredAt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(subject);
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
@@ -88,10 +91,9 @@ public sealed class Ticket : BaseEntity, IAggregateRoot
             DepartmentId = departmentId,
             Priority = priority,
             Status = TicketStatus.Open,
-            CreatedAt = DateTimeOffset.UtcNow,
         };
 
-        ticket.AddDomainEvent(() => new TicketCreatedEvent(ticket.Id, clientId, departmentId));
+        ticket.AddDomainEvent(() => new TicketCreatedEvent(ticket.Id, clientId, departmentId) { OccurredAt = occurredAt });
         return ticket;
     }
 
@@ -104,9 +106,10 @@ public sealed class Ticket : BaseEntity, IAggregateRoot
     /// <param name="message">The reply body text.</param>
     /// <param name="authorName">Display name of the reply author.</param>
     /// <param name="isStaffReply">Whether the author is a staff member.</param>
+    /// <param name="occurredAt">The moment the reply was posted, UTC.</param>
     /// <exception cref="DomainRuleException">Thrown when the ticket is already closed.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="message"/> or <paramref name="authorName"/> is null or whitespace.</exception>
-    public void AddReply(string message, string authorName, bool isStaffReply)
+    public void AddReply(string message, string authorName, bool isStaffReply, DateTimeOffset occurredAt)
     {
         if (Status == TicketStatus.Closed)
         {
@@ -117,7 +120,7 @@ public sealed class Ticket : BaseEntity, IAggregateRoot
         _replies.Add(reply);
 
         Status = isStaffReply ? TicketStatus.AwaitingReply : TicketStatus.Open;
-        AddDomainEvent(new TicketRepliedEvent(Id, isStaffReply));
+        AddDomainEvent(new TicketRepliedEvent(Id, isStaffReply) { OccurredAt = occurredAt });
     }
 
     /// <summary>
@@ -155,8 +158,9 @@ public sealed class Ticket : BaseEntity, IAggregateRoot
     /// <summary>
     /// Closes this ticket and raises <see cref="TicketClosedEvent"/>.
     /// </summary>
+    /// <param name="occurredAt">The moment the ticket was closed, UTC.</param>
     /// <exception cref="DomainRuleException">Thrown when the ticket is already closed.</exception>
-    public void Close()
+    public void Close(DateTimeOffset occurredAt)
     {
         if (Status == TicketStatus.Closed)
         {
@@ -164,7 +168,7 @@ public sealed class Ticket : BaseEntity, IAggregateRoot
         }
 
         Status = TicketStatus.Closed;
-        AddDomainEvent(new TicketClosedEvent(Id, ClientId));
+        AddDomainEvent(new TicketClosedEvent(Id, ClientId) { OccurredAt = occurredAt });
     }
 
     /// <summary>
@@ -204,8 +208,9 @@ public sealed class Ticket : BaseEntity, IAggregateRoot
     /// <param name="rating">Score from 1 to 10.</param>
     /// <param name="comment">Optional feedback comment.</param>
     /// <param name="leftBy">Display name of the client submitting the feedback.</param>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when rating is outside 1–10.</exception>
-    public void LeaveFeedback(int rating, string? comment, string leftBy)
+    /// <param name="leftAt">When the feedback was left, UTC.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when rating is outside 1 to 10.</exception>
+    public void LeaveFeedback(int rating, string? comment, string leftBy, DateTimeOffset leftAt)
     {
         if (rating < 1 || rating > 10)
         {
@@ -215,7 +220,7 @@ public sealed class Ticket : BaseEntity, IAggregateRoot
         Rating = rating;
         FeedbackComment = comment;
         FeedbackLeftBy = leftBy;
-        FeedbackAt = DateTimeOffset.UtcNow;
+        FeedbackAt = leftAt;
     }
 
     /// <summary>Adds a tag to this ticket. Duplicate tags are ignored.</summary>

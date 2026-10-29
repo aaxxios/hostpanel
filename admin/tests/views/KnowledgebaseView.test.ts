@@ -72,6 +72,63 @@ describe('KnowledgebaseView', () => {
 
     expect(wrapper.get('[data-testid="knowledgebase-error"]').text()).toBe('Not allowed.')
   })
+
+  /**
+   * Stubs the category list and the answer of the category's delete.
+   *
+   * @param answer - The answer of `DELETE /api/admin/knowledgebase/categories/1`.
+   * @returns The fetch mock.
+   */
+  const stubDelete = (answer: () => Response): ReturnType<typeof vi.fn> =>
+    stubRoutes({
+      'DELETE /api/admin/knowledgebase/categories/1': answer,
+      'GET /api/admin/knowledgebase/categories': () => json([category]),
+    })
+
+  it('reports a deleted category under the header', async () => {
+    stubDelete(() => new Response(null, { status: 204 }))
+    const wrapper = await mountView(KnowledgebaseView)
+
+    await wrapper.get('[data-testid="knowledgebase-category-1-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="knowledgebase-feedback"]').text()).toBe('Category deleted.')
+  })
+
+  it('shows the API sentence when the delete is refused, without the load error', async () => {
+    stubDelete(() => problem('The category still has articles.', 409))
+    const wrapper = await mountView(KnowledgebaseView)
+
+    await wrapper.get('[data-testid="knowledgebase-category-1-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="knowledgebase-feedback"]').text()).toBe('The category still has articles.')
+    expect(wrapper.find('[data-testid="knowledgebase-error"]').exists()).toBe(false)
+  })
+
+  it('does not delete when the confirmation is cancelled', async () => {
+    const mock = stubDelete(() => new Response(null, { status: 204 }))
+    const wrapper = await mountView(KnowledgebaseView)
+
+    await wrapper.get('[data-testid="knowledgebase-category-1-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(false)
+  })
+
+  it('reloads the categories from the Retry of a refused load', async () => {
+    stubFetch(problem('Not allowed.', 403), json([category]))
+    const wrapper = await mountView(KnowledgebaseView)
+
+    await wrapper.get('[data-testid="knowledgebase-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="knowledgebase-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="knowledgebase-category-1"]').exists()).toBe(true)
+  })
 })
 
 /** One category the article form can file under. */

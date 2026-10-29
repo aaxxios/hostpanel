@@ -7,8 +7,8 @@ import { flushPromises } from '@vue/test-utils'
 import SupportTicketDetailView from '@/views/SupportTicketDetailView.vue'
 import { TicketPriority, TicketStatus } from '@/types/ticket'
 import { mountView } from '../helpers/mount'
-import { problem, stubFetch, callOf } from '../helpers/fetch'
-import { stubPathRoutes } from '../helpers/routes'
+import { json, problem, stubFetch, callOf } from '../helpers/fetch'
+import { stubPathRoutes, stubRoutes } from '../helpers/routes'
 
 /** A ticket with one staff reply. */
 const ticket = {
@@ -18,10 +18,8 @@ const ticket = {
   message: 'Nothing resolves.',
   status: TicketStatus.Open,
   priority: TicketPriority.Medium,
-  departmentId: 1,
-  departmentName: 'Support',
-  assignedToStaffId: null,
-  assignedToStaffName: null,
+  department: { id: 1, name: 'Support' },
+  assignee: { id: null, name: null },
   createdAt: '2026-10-01T00:00:00Z',
   replies: [{ id: 1, message: 'Looking into it.', authorName: 'Ann', isStaffReply: true, createdAt: '2026-10-01T01:00:00Z' }],
 }
@@ -64,6 +62,42 @@ describe('SupportTicketDetailView', () => {
 
     const reply = mock.mock.calls.map((_, index) => callOf(mock, index)).find((call) => call.method === 'POST')
     expect(reply).toMatchObject({ url: '/api/tickets/5/reply', body: { message: 'Fixed now.' } })
+    expect(wrapper.get('[data-testid="ticket-reply-feedback"]').text()).toBe('Reply sent.')
+  })
+
+  it('shows the API sentence next to the reply form when the reply is refused', async () => {
+    stubRoutes({
+      'POST /api/tickets/5/reply': () => problem('The ticket is closed.', 409),
+      'GET /api/tickets/departments': () => json([]),
+      'GET /api/tickets/5': () => json(ticket),
+    })
+    const wrapper = await mountView(SupportTicketDetailView, location)
+
+    await wrapper.get('[data-testid="ticket-reply-message"]').setValue('Fixed now.')
+    await wrapper.get('[data-testid="ticket-reply-submit"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="ticket-reply-feedback"]').text()).toBe('The ticket is closed.')
+  })
+
+  it('deletes only after the danger confirmation and stays on a refusal', async () => {
+    const mock = stubRoutes({
+      'DELETE /api/tickets/5': () => problem('The ticket is locked.', 409),
+      'GET /api/tickets/departments': () => json([]),
+      'GET /api/tickets/5': () => json(ticket),
+    })
+    const wrapper = await mountView(SupportTicketDetailView, location)
+
+    await wrapper.get('[data-testid="ticket-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(false)
+
+    await wrapper.get('[data-testid="ticket-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="ticket-action-feedback"]').text()).toBe('The ticket is locked.')
+    expect(wrapper.get('[data-testid="ticket-title"]').text()).toContain('DNS is down')
   })
 
   it('closes the ticket with a status update', async () => {
@@ -75,6 +109,7 @@ describe('SupportTicketDetailView', () => {
 
     const update = mock.mock.calls.map((_, index) => callOf(mock, index)).find((call) => call.method === 'PUT')
     expect(update).toMatchObject({ url: '/api/tickets/5', body: { status: 'Closed' } })
+    expect(wrapper.get('[data-testid="ticket-action-feedback"]').text()).toBe('Ticket closed.')
   })
 
   it('shows the API sentence when the ticket is refused', async () => {
@@ -83,5 +118,41 @@ describe('SupportTicketDetailView', () => {
     const wrapper = await mountView(SupportTicketDetailView, location)
 
     expect(wrapper.get('[data-testid="ticket-error"]').text()).toBe('Ticket not found.')
+  })
+
+  it('shows the departments sentence with a Retry in place of the selector, then the selector again', async () => {
+    let healthy = false
+    stubRoutes({
+      'GET /api/tickets/departments': () => (healthy ? json([{ id: 1, name: 'Support', email: 'support@example.test' }]) : problem('Departments unavailable.', 500)),
+      'GET /api/tickets/5': () => json(ticket),
+    })
+    const wrapper = await mountView(SupportTicketDetailView, location)
+
+    expect(wrapper.get('[data-testid="ticket-departments-error"]').text()).toBe('Departments unavailable.')
+    expect(wrapper.find('[data-testid="ticket-department"]').exists()).toBe(false)
+
+    healthy = true
+    await wrapper.get('[data-testid="ticket-departments-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="ticket-departments-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ticket-department"]').exists()).toBe(true)
+  })
+
+  it('loads the ticket again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRoutes({
+      'GET /api/tickets/departments': () => json([]),
+      'GET /api/tickets/5': () => {
+        calls += 1
+        return calls === 1 ? problem('Ticket not found.', 404) : json(ticket)
+      },
+    })
+    const wrapper = await mountView(SupportTicketDetailView, location)
+
+    await wrapper.get('[data-testid="ticket-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="ticket-title"]').text()).toContain('DNS is down')
   })
 })

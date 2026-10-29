@@ -1,5 +1,6 @@
 {
   "pluginCard": {
+    "builtIn": "Встроенный",
     "pendingRestart": "Ожидает перезапуска",
     "categoryByAuthor": "{category} · автор: {author}",
     "removing": "Удаление…",
@@ -27,6 +28,10 @@
     "uploadA": "Загрузите",
     "fileAboveToGetStarted": "файл выше, чтобы начать",
     "zip": ".zip",
-    "installedPlugins": "Установленные плагины"
+    "installedPlugins": "Установленные плагины",
+    "pluginInstalled": "Плагин установлен.",
+    "pluginRemoved": "Плагин удалён.",
+    "confirmRemoveTitle": "Удалить этот плагин?",
+    "confirmRemoveMessage": "Плагин {id} будет удалён с сервера."
   }
 }

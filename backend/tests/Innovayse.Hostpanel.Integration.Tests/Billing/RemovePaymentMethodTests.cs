@@ -1,14 +1,12 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -17,7 +15,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <see cref="FakeCardPaymentGateway"/>: detaching a saved card from the authenticated client's own
 /// account, and the <c>NO_SAVED_PAYMENT_METHODS</c> / <c>PAYMENT_METHOD_NOT_OWNED</c> refusals.
 /// </summary>
-/// <remarks>New coverage — gap-filled for A7 Task 3, ruling 2; no grouped file exercised this route.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class RemovePaymentMethodTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -26,7 +23,7 @@ public sealed class RemovePaymentMethodTests(IntegrationTestFactory factory) : I
     /// <returns>The test host.</returns>
     private WebApplicationFactory<Program> BuildHost(FakeCardPaymentGateway cardGateway) =>
         factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services => services.AddScoped<ICardPaymentGateway>(_ => cardGateway)));
+            builder.ConfigureTestServices(services => services.AddSingleton<ICardPaymentGateway>(cardGateway)));
 
     /// <summary>Removing a saved card the client owns detaches it from card payment gateway.</summary>
     [Fact]
@@ -34,7 +31,7 @@ public sealed class RemovePaymentMethodTests(IntegrationTestFactory factory) : I
     {
         var cardGateway = new FakeCardPaymentGateway
         {
-            SavedPaymentMethods = [new CardPaymentMethodDto("pm_1", "card", "visa", "4242", 12, 2030, true)],
+            SavedPaymentMethods = [new CardPaymentMethodDto("pm_1", SavedPaymentMethodType.Card, "visa", "4242", 12, 2030, true)],
         };
         var host = BuildHost(cardGateway);
         var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "remove-owned");
@@ -65,7 +62,7 @@ public sealed class RemovePaymentMethodTests(IntegrationTestFactory factory) : I
     {
         var cardGateway = new FakeCardPaymentGateway
         {
-            SavedPaymentMethods = [new CardPaymentMethodDto("pm_mine", "card", "visa", "4242", 12, 2030, true)],
+            SavedPaymentMethods = [new CardPaymentMethodDto("pm_mine", SavedPaymentMethodType.Card, "visa", "4242", 12, 2030, true)],
         };
         var host = BuildHost(cardGateway);
         var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "remove-unowned");
@@ -75,6 +72,46 @@ public sealed class RemovePaymentMethodTests(IntegrationTestFactory factory) : I
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.PAYMENT_METHOD_NOT_OWNED);
+    }
+
+    /// <summary>A card gateway that cannot be reached for the detach answers 503 with <c>PAYMENT_GATEWAY_SERVICE_UNAVAILABLE</c>.</summary>
+    [Fact]
+    public async Task Remove_GatewayUnavailable_Answers503()
+    {
+        var cardGateway = new FakeCardPaymentGateway
+        {
+            SavedPaymentMethods = [new CardPaymentMethodDto("pm_1", SavedPaymentMethodType.Card, "visa", "4242", 12, 2030, true)],
+            MethodChangeFailure = CardGatewayFailure.Unavailable,
+        };
+        var host = BuildHost(cardGateway);
+        var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "remove-unavailable");
+        await BillingTestSeeds.StampCardCustomerAsync(host, clientId, "cus_1");
+
+        var response = await client.DeleteAsync("/api/me/payment-methods/pm_1");
+
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.PAYMENT_GATEWAY_SERVICE_UNAVAILABLE);
+        response.Headers.RetryAfter.Should().NotBeNull();
+        cardGateway.LastDetachedPaymentMethodId.Should().BeNull();
+    }
+
+    /// <summary>A card gateway that refuses the detach answers 502 with <c>PAYMENT_METHOD_UPSTREAM_FAILED</c>.</summary>
+    [Fact]
+    public async Task Remove_GatewayRefuses_Answers502()
+    {
+        var cardGateway = new FakeCardPaymentGateway
+        {
+            SavedPaymentMethods = [new CardPaymentMethodDto("pm_1", SavedPaymentMethodType.Card, "visa", "4242", 12, 2030, true)],
+            MethodChangeFailure = CardGatewayFailure.Refused,
+        };
+        var host = BuildHost(cardGateway);
+        var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "remove-refused");
+        await BillingTestSeeds.StampCardCustomerAsync(host, clientId, "cus_1");
+
+        var response = await client.DeleteAsync("/api/me/payment-methods/pm_1");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadGateway);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.PAYMENT_METHOD_UPSTREAM_FAILED);
     }
 
     /// <summary>Removing a payment method is not for anonymous callers.</summary>

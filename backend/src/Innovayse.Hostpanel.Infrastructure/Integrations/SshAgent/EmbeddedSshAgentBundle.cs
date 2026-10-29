@@ -38,8 +38,8 @@ public sealed partial class EmbeddedSshAgentBundle : ISshAgentBundle
         var root = $"hostpanel-ssh-key-agent-{Version}/";
         using var buffer = new MemoryStream();
         using (var gzip = new GZipStream(buffer, CompressionLevel.Optimal, leaveOpen: true))
-        using (var tar = new TarWriter(gzip, TarEntryFormat.Ustar, leaveOpen: true))
         {
+            using var tar = new TarWriter(gzip, TarEntryFormat.Ustar, leaveOpen: true);
             foreach (var (path, bytes) in files)
             {
                 var executable = path is "hostpanel-ssh-key-agent" or "install.sh" or "uninstall.sh" || path.StartsWith("providers/", StringComparison.Ordinal);

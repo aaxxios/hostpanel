@@ -2,17 +2,15 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Domain.Support.Events;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
 /// <summary>
 /// Tests for <c>TicketCreatedHandler</c>: a created ticket notifies its department.
 /// Each test builds its own host from <see cref="IntegrationTestFactory"/> with the one port this platform
-/// does not own -- the SMTP relay -- replaced by <see cref="FakeEmailSender"/>, publishes the event exactly once
+/// does not own (the SMTP relay) replaced by <see cref="FakeEmailSender"/>, publishes the event exactly once
 /// through the real message bus and asserts the handler's one effect happened exactly once.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -33,11 +31,12 @@ public sealed class TicketCreatedHandlerTests(IntegrationTestFactory factory) : 
         context.Departments.Add(department);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var ticket = Ticket.Create(clientId: 1, "Help", "Something's broken", department.Id, TicketPriority.Medium);
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
+        var ticket = Ticket.Create(clientId, "Help", "Something's broken", department.Id, TicketPriority.Medium, DateTimeOffset.UtcNow);
         context.Tickets.Add(ticket);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        await bus.InvokeAsync(new TicketCreatedEvent(ticket.Id, 1, department.Id), CancellationToken.None);
+        await bus.InvokeAsync(new TicketCreatedEvent(ticket.Id, clientId, department.Id) { OccurredAt = DateTimeOffset.UtcNow }, CancellationToken.None);
 
         var message = Assert.Single(emailSender.Sent);
         Assert.Equal(departmentEmail, message.To);
@@ -53,7 +52,7 @@ public sealed class TicketCreatedHandlerTests(IntegrationTestFactory factory) : 
         using var scope = host.Services.CreateScope();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        await bus.InvokeAsync(new TicketCreatedEvent(1, 1, 999_999_999), CancellationToken.None);
+        await bus.InvokeAsync(new TicketCreatedEvent(1, 1, 999_999_999) { OccurredAt = DateTimeOffset.UtcNow }, CancellationToken.None);
 
         Assert.Empty(emailSender.Sent);
     }

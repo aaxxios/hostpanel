@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Shared.Filters;
 
 /// <summary>
 /// Times every controller action and logs its start, completion (Warning when slow) or failure.
-/// Only the operation name, the duration, the status and the exception object are logged — never
+/// Only the operation name, the duration, the status and the exception object are logged: never
 /// a body, header, route value or query string, because prompts and tokens travel in them.
 /// </summary>
 public sealed class ActionTimingFilter : IAsyncActionFilter

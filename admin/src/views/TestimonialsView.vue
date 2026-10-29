@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Storefront testimonials list — customer quotes shown on the portal.
+ * Storefront testimonials list: customer quotes shown on the portal.
  *
  * Shows the testimonials ordered by sort order with drag-and-drop reordering, rating and status,
  * and navigation to the dedicated create and edit pages. Deleting asks first.
@@ -107,6 +107,7 @@ const navigateEdit = (item: Testimonial): void => {
     :loading="store.loading"
     :error="store.error"
     :action-error="store.actionError"
+    :outcome="list.outcome.value"
     :saving-order="list.savingOrder.value"
     :delete-target="list.deleteTarget.value"
     :deleting="list.deleting.value"
@@ -117,6 +118,7 @@ const navigateEdit = (item: Testimonial): void => {
     @confirm-delete="list.confirmDelete"
     @cancel-delete="list.cancelDelete"
     @reorder="list.saveOrder"
+    @retry="store.fetchAll"
   >
     <template #row="{ item }">
       <UiTableCell>

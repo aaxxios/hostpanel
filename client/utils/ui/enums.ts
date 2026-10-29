@@ -9,7 +9,7 @@
  * @module utils/ui/enums
  */
 
-/** Three-step scale shared by controls (button, input, select, badge, avatar...). */
+/** Three-step scale shared by controls (button, input, select, badge, avatar). */
 export enum UiSize {
   /** Compact control. */
   Sm = 'sm',
@@ -77,6 +77,14 @@ export enum UiAlertVariant {
   Info = 'info',
   /** Something worked. */
   Success = 'success',
+}
+
+/** Live-region role an alert banner announces itself with. */
+export enum UiAlertRole {
+  /** Assertive: read out at once, for errors and warnings. */
+  Alert = 'alert',
+  /** Polite: read out when the reader is idle, for information and success. */
+  Status = 'status',
 }
 
 /** Inner padding of a card. */
@@ -479,4 +487,12 @@ export enum UiFooterLinkVariant {
   Nova = 'nova',
   /** classic: the classic surface tokens, which carry a light and a dark value each. */
   Classic = 'classic',
+}
+
+/** The kind of a node `parseRichText` produces, the discriminator `UiRichText` renders by. */
+export enum UiRichNodeType {
+  /** A decoded text run. */
+  Text = 'text',
+  /** An allow-listed element with children. */
+  Element = 'element',
 }

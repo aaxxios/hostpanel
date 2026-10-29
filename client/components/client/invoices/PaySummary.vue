@@ -43,7 +43,7 @@ interface Props {
 /** The props of the component. */
 const props = defineProps<Props>()
 
-/** How much has actually been received against this invoice -- see `utils/invoice.ts`. */
+/** How much has actually been received against this invoice: see `utils/invoice.ts`. */
 const received = computed(() => paymentsToDate(props.invoice.transactions))
 
 /** What is still owed: the total less everything received. */
@@ -52,7 +52,7 @@ const outstanding = computed(() => balanceDue(props.invoice))
 /**
  * Formats one amount in the invoice's own billing currency.
  *
- * An invoice's currency is fixed at creation (`InvoiceDto.Currency`), not the account's current
+ * An invoice's currency is fixed at creation (`MyInvoiceDto.Currency`), not the account's current
  * one, so it is the authority.
  *
  * @param amount - The amount to format.

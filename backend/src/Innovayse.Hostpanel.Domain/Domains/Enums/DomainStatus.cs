@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Domains.Enums;
+
 /// <summary>Lifecycle status of a registered domain.</summary>
 public enum DomainStatus
 {
@@ -14,7 +15,7 @@ public enum DomainStatus
     /// <summary>Domain registration has expired and is no longer resolving.</summary>
     Expired = 3,
 
-    /// <summary>Domain is in the registrar redemption grace period — recoverable with a fee.</summary>
+    /// <summary>Domain is in the registrar redemption grace period: recoverable with a fee.</summary>
     Redemption = 4,
 
     /// <summary>Domain has been transferred out to another registrar.</summary>

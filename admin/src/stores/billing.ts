@@ -13,6 +13,7 @@ import { runAction } from '@/lib/runAction'
 import type {
   CreateInvoicePayload,
   Invoice,
+  InvoiceDetail,
   InvoiceItemInput,
   InvoiceItemUpdate,
   InvoiceOptionsPayload,
@@ -20,10 +21,6 @@ import type {
   InvoiceRefundPayload,
 } from '@/types/invoice'
 import { LEDGER_PAGE_SIZE } from '@/lib/limits'
-import { CurrencyCode } from '@/types/currency'
-
-/** Currency a gateway capture is requested in; the API has no per-invoice choice yet. */
-const CAPTURE_CURRENCY = CurrencyCode.Usd
 
 /** Loads, creates and changes invoices for the admin billing screens. */
 export const useBillingStore = defineStore('billing', () => {
@@ -45,7 +42,7 @@ export const useBillingStore = defineStore('billing', () => {
   const fieldErrors = ref<Record<string, string>>({})
 
   /** Currently loaded invoice detail. */
-  const currentInvoice = ref<Invoice | null>(null)
+  const currentInvoice = ref<InvoiceDetail | null>(null)
 
   /** Client-scoped invoices list. */
   const clientInvoices = ref<Invoice[]>([])
@@ -200,14 +197,6 @@ export const useBillingStore = defineStore('billing', () => {
   const publishInvoice = (id: number): Promise<boolean> => mutateInvoice(id, () => api.publish(id))
 
   /**
-   * Attempts to capture payment through the configured gateway, then reloads the invoice.
-   *
-   * @param id - The invoice id.
-   * @returns True when the capture was accepted; false when refused (see `error`).
-   */
-  const payInvoice = (id: number): Promise<boolean> => mutateInvoice(id, () => api.pay(id, CAPTURE_CURRENCY))
-
-  /**
    * Cancels an invoice, then reloads it.
    *
    * @param id - The invoice id.
@@ -319,7 +308,6 @@ export const useBillingStore = defineStore('billing', () => {
     updateOptions,
     updateNotes,
     publishInvoice,
-    payInvoice,
     cancelInvoice,
     addPayment,
     applyCredit,
