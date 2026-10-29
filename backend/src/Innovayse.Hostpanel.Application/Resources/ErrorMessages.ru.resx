@@ -880,4 +880,19 @@
   <data name="CLIENT_TAX_EXEMPT" xml:space="preserve">
     <value>Клиент освобождён от налога, поэтому для его счетов нельзя задать налоговую ставку.</value>
   </data>
+  <data name="PRODUCT_SKU_ALREADY_IN_USE" xml:space="preserve">
+    <value>Этот SKU уже используется другим продуктом. Выберите другой.</value>
+  </data>
+  <data name="EXTERNAL_ACCOUNT_ALREADY_LINKED" xml:space="preserve">
+    <value>Эта внешняя учётная запись уже привязана к другому клиенту.</value>
+  </data>
+  <data name="FULFILMENT_RECORD_NOT_FOUND" xml:space="preserve">
+    <value>Запись о выполнении не найдена.</value>
+  </data>
+  <data name="FULFILMENT_RECORD_NOT_RETRYABLE" xml:space="preserve">
+    <value>Повторить можно только неудавшуюся запись о выполнении.</value>
+  </data>
+  <data name="FULFILMENT_ADVICE_UNAVAILABLE" xml:space="preserve">
+    <value>Сейчас не удалось проверить возврат, поэтому средства не возвращены. Повторите попытку позже.</value>
+  </data>
 </root>

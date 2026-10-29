@@ -142,6 +142,23 @@ public static class HostpanelErrorCodes
     /// </summary>
     public const string PAYMENT_PLUGIN_NOT_CONFIGURED = "PAYMENT_PLUGIN_NOT_CONFIGURED";
 
+    // Billing: fulfilment
+
+    /// <summary>The id names no fulfilment record on this invoice (404).</summary>
+    public const string FULFILMENT_RECORD_NOT_FOUND = "FULFILMENT_RECORD_NOT_FOUND";
+
+    /// <summary>
+    /// The fulfilment record has not failed, so there is nothing to retry (409, an exact
+    /// <c>StatusMapping</c> row): only a failed record may be sent again.
+    /// </summary>
+    public const string FULFILMENT_RECORD_NOT_RETRYABLE = "FULFILMENT_RECORD_NOT_RETRYABLE";
+
+    /// <summary>
+    /// A fulfilment plugin could not be asked how much of the payment may be refunded, so the refund
+    /// is refused and no money moved (503, an exact <c>StatusMapping</c> row).
+    /// </summary>
+    public const string FULFILMENT_ADVICE_UNAVAILABLE = "FULFILMENT_ADVICE_UNAVAILABLE";
+
     // Billing: gateway payments and saved payment methods
 
     /// <summary>The invoice is not in a status a payment may be started or charged for (400).</summary>
@@ -246,6 +263,9 @@ public static class HostpanelErrorCodes
 
     /// <summary>The client has already been invoiced, so its currency is fixed (409).</summary>
     public const string CLIENT_CURRENCY_ALREADY_INVOICED = "CLIENT_CURRENCY_ALREADY_INVOICED";
+
+    /// <summary>The external account is already linked to another client, so it cannot be linked to this one (409).</summary>
+    public const string EXTERNAL_ACCOUNT_ALREADY_LINKED = "EXTERNAL_ACCOUNT_ALREADY_LINKED";
 
     // Notifications
 
@@ -758,6 +778,9 @@ public static class HostpanelErrorCodes
     /// table keys its rows on the label and would render only the first one (400).
     /// </summary>
     public const string PRODUCT_FEATURE_LABEL_DUPLICATE = "PRODUCT_FEATURE_LABEL_DUPLICATE";
+
+    /// <summary>Another product already uses this SKU; a SKU names one product only (409).</summary>
+    public const string PRODUCT_SKU_ALREADY_IN_USE = "PRODUCT_SKU_ALREADY_IN_USE";
 
     // Slides
 

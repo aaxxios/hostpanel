@@ -880,4 +880,19 @@
   <data name="CLIENT_TAX_EXEMPT" xml:space="preserve">
     <value>Այս հաճախորդն ազատված է հարկից, ուստի նրա հաշիվ-ապրանքագրերի համար հարկի դրույք սահմանել հնարավոր չէ։</value>
   </data>
+  <data name="PRODUCT_SKU_ALREADY_IN_USE" xml:space="preserve">
+    <value>Այս SKU-ն արդեն օգտագործվում է մեկ այլ ապրանքում։ Ընտրեք այլ SKU։</value>
+  </data>
+  <data name="EXTERNAL_ACCOUNT_ALREADY_LINKED" xml:space="preserve">
+    <value>Այս արտաքին հաշիվն արդեն կապված է մեկ այլ հաճախորդի։</value>
+  </data>
+  <data name="FULFILMENT_RECORD_NOT_FOUND" xml:space="preserve">
+    <value>Կատարման գրառումը չի գտնվել։</value>
+  </data>
+  <data name="FULFILMENT_RECORD_NOT_RETRYABLE" xml:space="preserve">
+    <value>Կրկին փորձել կարելի է միայն ձախողված կատարման գրառումը։</value>
+  </data>
+  <data name="FULFILMENT_ADVICE_UNAVAILABLE" xml:space="preserve">
+    <value>Վերադարձը հիմա հնարավոր չեղավ ստուգել, ուստի գումար չի վերադարձվել։ Փորձեք ավելի ուշ։</value>
+  </data>
 </root>
