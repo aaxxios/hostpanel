@@ -143,20 +143,32 @@ final class ProductsExporterTest extends TestCase
     }
 
     /**
-     * A product with no price row, or a source with no pricing table, is sold on neither cycle.
+     * A product with no price row is sold on neither cycle.
      */
     public function testProductWithoutAPriceRowIsSoldOnNeitherCycle(): void
     {
-        $withoutRow = $this->exporter()->map(self::row('recurring'));
-        $this->connection->getSchemaBuilder()->drop('tblpricing');
-        $withoutTable = $this->exporter()->map(self::row('recurring'));
+        $record = $this->exporter()->map(self::row('recurring'));
 
-        self::assertNotNull($withoutRow);
-        self::assertNull($withoutRow['monthlyPrice']);
-        self::assertNull($withoutRow['annualPrice']);
-        self::assertNotNull($withoutTable);
-        self::assertNull($withoutTable['monthlyPrice']);
-        self::assertNull($withoutTable['annualPrice']);
+        self::assertNotNull($record);
+        self::assertNull($record['monthlyPrice']);
+        self::assertNull($record['annualPrice']);
+    }
+
+    /**
+     * A source version without the pricing table sells every product on neither cycle.
+     */
+    public function testSourceWithoutAPricingTableSellsOnNeitherCycle(): void
+    {
+        // The gateway remembers which tables exist for the length of an export, so the source
+        // without the table is opened after it is dropped, as a real export would see it.
+        $this->connection->getSchemaBuilder()->drop('tblpricing');
+        $database = new SourceDatabase($this->connection);
+
+        $record = (new ProductsExporter($database, $database->defaultCurrencyId()))->map(self::row('recurring'));
+
+        self::assertNotNull($record);
+        self::assertNull($record['monthlyPrice']);
+        self::assertNull($record['annualPrice']);
     }
 
     /**
