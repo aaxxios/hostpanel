@@ -158,6 +158,15 @@ public sealed class PlaceOrderHandler
         // and claiming max + 1 are two steps, so two concurrent orders claimed the same number and
         // the second hit the unique index. A sequence also never frees a number for reuse, so a
         // deleted order's number stays retired.
+        // A signed-in caller who orders is a customer, whoever created their client row: this
+        // handler, or the registration handler that can win the race to it. An SSO sign-up holds
+        // no Client role, and without it every portal call answered 403 and the portal told the
+        // customer who had just ordered that theirs was not a customer account. Idempotent.
+        if (_caller.UserId is { } subject)
+        {
+            await _roles.AddAsync(subject, Roles.Client, ct);
+        }
+
         var nextNumber = await _numbers.NextAsync(NumberKind.Order, ct);
         var orderNumber = $"ORD-{nextNumber:D4}";
 
@@ -447,11 +456,6 @@ public sealed class PlaceOrderHandler
         client.SetCurrency(currencyCode);
 
         var (saved, created) = await _clientRecords.AddOrGetAsync(client, ct);
-
-        // The row is reachable only through the Client role. An SSO sign-up holds none, so without
-        // this grant every portal call answered 403 and the portal told the customer who had just
-        // ordered that theirs was not a customer account. The store ignores a role already held.
-        await _roles.AddAsync(subject, Roles.Client, ct);
 
         return created ? saved.Id : null;
     }
