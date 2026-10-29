@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- SSH key agent 1.2.0: optional jailed SSH enrolment (`jail_enrol`). The first key HostPanel adds jails the account (jailkit tree, home bind-mounted by a systemd unit, `sftp-ssh` group, bash) and removing the last managed key withdraws it; off by default.
 - `PanelNetwork:HostAddresses` (`PANEL_HOST_ADDRESSES`): reach a control panel's API over a VPN address while requests and TLS keep its hostname, so customer links and certificate checks are unchanged.
 - Storefront content: testimonials, partners, projects and FAQs, with English, Russian and Armenian translations, served from `/api/public/{testimonials,partners,projects,faqs}`.
 - Admin pages under "Storefront content" to create, edit and order the storefront content.
