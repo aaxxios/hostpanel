@@ -414,6 +414,7 @@
     "overdue": "Overdue",
     "cancelled": "Cancelled",
     "refunded": "Refunded",
+    "partiallyRefunded": "Partially Refunded",
     "grossRevenue": "Gross Revenue",
     "clientExpenses": "Client Expenses",
     "netIncome": "Net Income",

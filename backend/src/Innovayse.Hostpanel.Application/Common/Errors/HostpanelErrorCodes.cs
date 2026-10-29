@@ -922,8 +922,8 @@ public static class HostpanelErrorCodes
     public const string INVOICE_CANCEL_NOT_ALLOWED = Domain.Billing.BillingErrors.InvoiceCancelNotAllowed;
 
     /// <summary>
-    /// The invoice must be Paid for this action (400): <see cref="Domain.Billing.Invoice.MarkUnpaid"/>
-    /// and <see cref="Domain.Billing.Invoice.Refund"/>.
+    /// The invoice must be Paid for this action (400): <see cref="Domain.Billing.Invoice.MarkUnpaid"/>;
+    /// or Paid or PartiallyRefunded for a refund: <see cref="Domain.Billing.Invoice.Refund"/>.
     /// </summary>
     public const string INVOICE_NOT_PAID = Domain.Billing.BillingErrors.InvoiceNotPaid;
 
