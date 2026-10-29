@@ -56,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A signed-in customer's first order now grants them the Client role. An SSO sign-up held none, so after ordering every portal page answered 403 and the portal called them "not a customer account"; an email sent as the display name is no longer stored as their first and last name.
 - Free orders ($0 total) are settled at checkout and fulfilled at once; they used to wait on a payment that never came, so their services were never created and checkout still asked for a payment method's payment step.
 - A CWP7 connection test refused by the panel (wrong API key, address not allowed) now logs CWP7's reason instead of a JSON conversion error.
 - A partial payment no longer marks an invoice Paid. The invoice stays Unpaid (or Overdue) and takes further payments until they cover the total; only then is it Paid and are its order fulfilled, renewals applied and receipt sent. Every way of paying the rest (hosted gateway, card, order card payment, bulk mark-paid) now charges what is still due, never the whole total again, and the invoice API sends `amountDue`, which the client portal shows on its pay button and payment page. An invoice whose payments end up covering it after a credit or a removed line is settled at once; marking a paid invoice unpaid records a reversal so the whole total is due again. Payments above what is due settle the invoice and are not turned into credit automatically.

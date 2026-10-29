@@ -335,6 +335,18 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
 
         // The body rides along as the reason: a bare 500 says nothing about which side failed.
         response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+
+        // The new client row is only reachable through the Client role: without it every portal
+        // call answers 403 and the portal tells a paying customer they are not one. An SSO
+        // sign-up holds no Client role until this order grants it.
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var placed = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var orderId = placed.RootElement.GetProperty("orderId").GetInt32();
+        var clientId = (await db.Orders.AsNoTracking().SingleAsync(o => o.Id == orderId)).ClientId;
+        var subject = (await db.Clients.AsNoTracking().SingleAsync(c => c.Id == clientId)).UserId;
+        (await db.SubjectRoles.AsNoTracking().AnyAsync(r => r.Subject == subject && r.Role == "Client"))
+            .Should().BeTrue();
     }
 
     /// <summary>A checkout naming a product id nothing in the catalogue carries is refused.</summary>
