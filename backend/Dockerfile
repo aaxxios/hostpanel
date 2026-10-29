@@ -92,12 +92,15 @@ COPY . .
 # also what keeps it from going stale. The host is built in the auth mode the image runs in: the two
 # modes register different account adapters, and code generated for one cannot resolve the other's
 # (a sign-on image whose handlers were generated for local mode asks for Identity, which sso never
-# registers). Sign-on mode refuses to build the host without an authority and a client id; the
-# placeholders below only let it be built here, the running container takes its own from the environment.
+# registers). Sign-on mode refuses to build the host without its sign-on settings (this product's and
+# the shared sign-on package's); the placeholders below only let it be built here, nothing is contacted
+# because the host is never started, and the running container takes its own from the environment.
 RUN SSO=$([ "$AUTH_MODE" = "sso" ] && echo "-p:InnovayseSso=true"); \
     cd src/Innovayse.Hostpanel.API && \
     ASPNETCORE_ENVIRONMENT=Testing Auth__Mode="${AUTH_MODE:-local}" \
     Sso__Authority=https://sign-on.invalid Sso__ClientId=codegen \
+    Auth__AppName=codegen Auth__Authority=https://sign-on.invalid Auth__PublicAuthority=https://sign-on.invalid \
+    Auth__ClientId=codegen Auth__ClientSecret=codegen Auth__RedisConnection=localhost:6379 \
     dotnet run -c Release --no-restore --no-launch-profile $SSO -- codegen write
 
 RUN SSO=$([ "$AUTH_MODE" = "sso" ] && echo "-p:InnovayseSso=true"); \

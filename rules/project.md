@@ -39,10 +39,15 @@ repositories. The departures are short:
   `API/Controllers/`, derives from `BaseApiController` and each action binds a command and
   dispatches it once (`SignIn`, `TwoFactorSignIn`, `Register`, `ConfirmEmail`, `ForgotPassword`,
   `ResetPassword`, `SignOut`). Every route answers 404 unless the deployment is in local mode:
-  `API/Auth/LocalModeOnlyFilter`, a resource filter, refuses before binding and before the bus, which
-  is what lets `SignInHandler`, `TwoFactorSignInHandler` and `RegisterHandler` depend on
-  `IUserService` and `ITwoFactorChallengeService`, registered only in the `if (ownsItsUsers)` branch
-  of `Infrastructure/DependencyInjection.cs`, and never be resolved under `sso` mode. A sign-in sets
+  `API/Auth/LocalModeOnlyFilter`, a resource filter, refuses before binding and before the bus, so
+  `SignInHandler`, `TwoFactorSignInHandler` and `RegisterHandler` never run under `sso` mode. Their
+  handler code is still generated in that mode (the image runs `codegen write` in its own auth mode with
+  service location refused), so every port they take is registered in both modes: the Identity-backed
+  `UserService`, `TwoFactorChallengeService` and `TwoFactorCodeGuard` in local mode, and in `sso` mode
+  the stand-ins `SsoUserService`, `SsoTwoFactorChallengeService` and `SsoTwoFactorCodeGuard`
+  (`Infrastructure/Auth/`), which hold no accounts, answer every read as for an unknown account, throw
+  on every write and never touch Identity. `SsoModeHandlerChainTests` builds every chain in `sso` mode
+  (an `InnovayseSso=true` build). A sign-in sets
   the httpOnly session cookie through `BaseApiController.HandleSession` (the handler returns an
   `ISessionGrant`, `Shared/Models/Interfaces`; `LocalSessionCookie` lives in `Shared/Infrastructure`)
   and still returns the token in the body for scripted callers, and `logout` clears the cookie
@@ -940,16 +945,22 @@ responses; `Fixtures/StubHttpServer` is the in-process HTTP fake for external AP
 has vitest (`npm test`, `admin/tests/`) and Playwright (`npm run e2e`, `admin/e2e/`) — see "The admin's shape".
 `Integration.Tests/Persistence/ModelDiffBaselineTests` is the schema guard (the spec's "snapshot unchanged" test): the EF differ's operations between the migrations snapshot and the live model must equal `Fixtures/model-diff-baseline.txt` (`(no differences)`), so an entity change without a migration fails.
 
-**The Integration suite runs in four shards, one at a time, because one `dotnet test` host holds
+**The Integration suite runs in five shards, one at a time, because one `dotnet test` host holds
 the EF model and a Postgres container for every test class and grows to several gigabytes, and the
 12 GB builder is shared with other products.** Two half-suite shards running together were
-OOM-killed on every attempt. The shards (the same split as `.github/workflows/ci.yml`) are
-`backend:test:integration:a` to `:d`, share a `resource_group` so only one runs at a time, and split
-by namespace with `--filter "FullyQualifiedName~Integration.Tests.<Ns>."`: A is Adapters, Admin,
-Audit, Auth, Clients, Common, Demo, Health, Identity, Security, Shared; B is Billing, Domains; C is
-Reports, Slides, Support, Faqs, Locations, Partners, Projects, Testimonials; D is Migration, Notifications, Orders, Persistence, Products,
-Provisioning, Services. **A new top-level folder in `Integration.Tests/` must be added to one
-shard in `.gitlab-ci.yml` and in `ci.yml`, or its tests run nowhere.**
+OOM-killed on every attempt. The shards (the same split as `.github/workflows/ci.yml`, where they run
+in parallel as `Backend integration (1 of 5)` to `(5 of 5)`) are `backend:test:integration:a` to `:e`,
+share a `resource_group` so only one runs at a time, and split by namespace with
+`--filter "FullyQualifiedName~Integration.Tests.<Ns>."`: A is Adapters, Admin, Audit, Common, Health,
+Identity, Security, Shared; B is Auth, Clients, Demo, Scheduling, Time and Billing classes A to K;
+C is Billing classes L to Z, Reports, Slides, Faqs, Locations, Partners, Projects, Testimonials; D is
+Domains, Support; E is Migration, Notifications, Orders, Persistence, Products, Provisioning, Services.
+Billing in one shard took a hosted GitHub runner to its limit, so it is split by the first letter of
+the test class name, one `FullyQualifiedName~Integration.Tests.Billing.<Letter>` entry per letter
+(`Billing.Currencies` falls under C). **A new top-level folder in `Integration.Tests/` must be added
+to one shard in `.gitlab-ci.yml` and in `ci.yml`, or its tests run nowhere;**
+`scripts/check-integration-shards.sh` fails the pipeline when a folder is missing or doubled, or when
+the letters of a split folder do not cover A to Z exactly once.
 
 ## Packages worth knowing
 

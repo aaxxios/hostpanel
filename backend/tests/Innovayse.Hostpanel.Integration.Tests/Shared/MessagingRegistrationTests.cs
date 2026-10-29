@@ -240,7 +240,7 @@ public sealed class MessagingRegistrationTests(IntegrationTestFactory factory) :
     /// <summary>Builds the handler of every chain the host discovered and names the ones that fail.</summary>
     /// <param name="host">The host whose chains are built.</param>
     /// <returns>One line per chain that could not be built: its message type and the first line of the reason.</returns>
-    private static List<string> ChainsThatFailToBuild(WebApplicationFactory<Program> host)
+    internal static List<string> ChainsThatFailToBuild(WebApplicationFactory<Program> host)
     {
         var graph = host.Services.GetRequiredService<HandlerGraph>();
         var offenders = new List<string>();
