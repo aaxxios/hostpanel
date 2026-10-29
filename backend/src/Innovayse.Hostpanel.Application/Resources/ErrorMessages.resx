@@ -880,4 +880,19 @@
   <data name="CLIENT_TAX_EXEMPT" xml:space="preserve">
     <value>This client is tax exempt, so a tax rate cannot be set on their invoices.</value>
   </data>
+  <data name="PRODUCT_SKU_ALREADY_IN_USE" xml:space="preserve">
+    <value>Another product already uses this SKU. Choose a different one.</value>
+  </data>
+  <data name="EXTERNAL_ACCOUNT_ALREADY_LINKED" xml:space="preserve">
+    <value>This external account is already linked to another client.</value>
+  </data>
+  <data name="FULFILMENT_RECORD_NOT_FOUND" xml:space="preserve">
+    <value>The fulfilment record was not found.</value>
+  </data>
+  <data name="FULFILMENT_RECORD_NOT_RETRYABLE" xml:space="preserve">
+    <value>Only a failed fulfilment record can be retried.</value>
+  </data>
+  <data name="FULFILMENT_ADVICE_UNAVAILABLE" xml:space="preserve">
+    <value>The refund could not be checked right now, so nothing was refunded. Try again later.</value>
+  </data>
 </root>
