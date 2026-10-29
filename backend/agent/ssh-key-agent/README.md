@@ -158,8 +158,11 @@ hand-installed keys either: `gpasswd -d <user> <jail_group>`, and `usermod -s /s
 the shell is still `jail_shell`. The jail and its mount stay, so the next key re-enables SSH at
 once. Both events are written to the audit log (`jail_enrol`, `jail_withdraw`).
 
-To remove a jail entirely: `systemctl disable --now <unit>`, delete the unit file,
-`systemctl daemon-reload`, then `rm -rf <jail_root>/<user>` once nothing is mounted under it.
+To remove a jail entirely: `systemctl disable --now <unit>`, delete the unit file and
+`systemctl daemon-reload`. **Before deleting anything**, check that `findmnt -R <jail_root>/<user>`
+prints nothing: while the bind mount is active, `<jail_root>/<user>/home/<user>` *is* the
+customer's website, and `rm -rf` on the jail would delete it. Only when nothing is mounted, remove
+the jail with `rm -rf --one-file-system <jail_root>/<user>`.
 
 ## Lifecycle
 
