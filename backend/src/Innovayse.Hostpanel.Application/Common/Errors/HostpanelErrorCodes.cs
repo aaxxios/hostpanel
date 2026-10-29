@@ -149,9 +149,10 @@ public static class HostpanelErrorCodes
 
     /// <summary>
     /// The fulfilment record has not failed, so there is nothing to retry (409, an exact
-    /// <c>StatusMapping</c> row): only a failed record may be sent again.
+    /// <c>StatusMapping</c> row): only a failed record may be sent again,
+    /// <see cref="Domain.Billing.FulfilmentRecord.Retry"/>.
     /// </summary>
-    public const string FULFILMENT_RECORD_NOT_RETRYABLE = "FULFILMENT_RECORD_NOT_RETRYABLE";
+    public const string FULFILMENT_RECORD_NOT_RETRYABLE = Domain.Billing.BillingErrors.FulfilmentRecordNotRetryable;
 
     /// <summary>
     /// A fulfilment plugin could not be asked how much of the payment may be refunded, so the refund
@@ -941,6 +942,12 @@ public static class HostpanelErrorCodes
     /// </summary>
     public const string INVOICE_NOT_UNPAID = Domain.Billing.BillingErrors.InvoiceNotUnpaid;
 
+    /// <summary>
+    /// The invoice is not eligible to be marked lapsed (400): <see cref="Domain.Billing.Invoice.MarkLapsed"/>
+    /// requires Overdue.
+    /// </summary>
+    public const string INVOICE_NOT_OVERDUE = Domain.Billing.BillingErrors.InvoiceNotOverdue;
+
     /// <summary>A paid, refunded or already cancelled invoice cannot be cancelled (400): <see cref="Domain.Billing.Invoice.Cancel"/>.</summary>
     public const string INVOICE_CANCEL_NOT_ALLOWED = Domain.Billing.BillingErrors.InvoiceCancelNotAllowed;
 
@@ -1100,6 +1107,21 @@ public static class HostpanelErrorCodes
     /// <see cref="Domain.Orders.Order.Cancel"/> and <see cref="Domain.Orders.Order.MarkFraud"/>.
     /// </summary>
     public const string ORDER_NOT_PENDING = Domain.Orders.OrdersErrors.OrderNotPending;
+
+    /// <summary>
+    /// The SKU is not letters and digits joined by single hyphens, underscores or dots, or is too long
+    /// (400): <see cref="Domain.Products.Product.SetSku"/>.
+    /// </summary>
+    public const string PRODUCT_SKU_INVALID = Domain.Products.ProductsErrors.ProductSkuInvalid;
+
+    /// <summary>The product metadata is not a JSON object (400): <see cref="Domain.Products.Product.SetMetadata"/>.</summary>
+    public const string PRODUCT_METADATA_INVALID = Domain.Products.ProductsErrors.ProductMetadataInvalid;
+
+    /// <summary>
+    /// The grace period is outside the accepted range of days (400):
+    /// <see cref="Domain.Products.Product.SetGracePeriodDays"/>.
+    /// </summary>
+    public const string PRODUCT_GRACE_PERIOD_OUT_OF_RANGE = Domain.Products.ProductsErrors.ProductGracePeriodOutOfRange;
 
     /// <summary>The service is not Active (400): <see cref="Domain.Services.ClientService.Suspend"/>.</summary>
     public const string SERVICE_NOT_ACTIVE = Domain.Services.ServicesErrors.ServiceNotActive;
