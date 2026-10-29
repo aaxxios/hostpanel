@@ -12,19 +12,43 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // A free product is sold monthly at zero, so a legacy 'Free Account' cycle on a row that
+            // recurs at zero is the monthly cycle under another name. A priced 'Free Account' row is
+            // left alone and stops the migration at the guard below.
+            migrationBuilder.Sql(
+                """
+                UPDATE "ClientServices"
+                SET "BillingCycle" = 'Monthly'
+                WHERE lower(btrim("BillingCycle")) = 'free account' AND "RecurringAmount" = 0;
+
+                UPDATE "OrderItems"
+                SET "BillingCycle" = 'Monthly'
+                WHERE lower(btrim("BillingCycle")) = 'free account' AND "RecurringAmount" = 0;
+                """);
+
             // Data the new constraints and narrower columns cannot hold stops the migration before any
             // change, so an operator resolves those rows by hand instead of losing them. Every check
-            // only reads the schema as it stands before this migration.
+            // only reads the schema as it stands before this migration. The billing cycle check names
+            // every unknown value it found, so the operator knows which rows to resolve.
             migrationBuilder.Sql(
                 """
                 DO $$
+                DECLARE
+                    UnknownCycles text;
                 BEGIN
                     IF EXISTS (SELECT 1 FROM "Domains" GROUP BY lower("Name") HAVING count(*) > 1) THEN
                         RAISE EXCEPTION 'Domains contains names that differ only by case; resolve them before migrating.';
                     END IF;
-                    IF EXISTS (SELECT 1 FROM "ClientServices" WHERE lower(btrim("BillingCycle")) NOT IN ('monthly', 'annual', 'annually'))
-                       OR EXISTS (SELECT 1 FROM "OrderItems" WHERE lower(btrim("BillingCycle")) NOT IN ('monthly', 'annual', 'annually')) THEN
-                        RAISE EXCEPTION 'ClientServices or OrderItems hold a billing cycle other than monthly or annual; resolve those rows before migrating.';
+                    SELECT string_agg(DISTINCT quote_literal(c."BillingCycle"), ', ' ORDER BY quote_literal(c."BillingCycle"))
+                    INTO UnknownCycles
+                    FROM (
+                        SELECT "BillingCycle" FROM "ClientServices"
+                        UNION
+                        SELECT "BillingCycle" FROM "OrderItems"
+                    ) c
+                    WHERE lower(btrim(c."BillingCycle")) NOT IN ('monthly', 'annual', 'annually');
+                    IF UnknownCycles IS NOT NULL THEN
+                        RAISE EXCEPTION 'ClientServices or OrderItems hold billing cycles other than monthly or annual (%); resolve those rows before migrating.', UnknownCycles;
                     END IF;
                     IF EXISTS (SELECT 1 FROM "BillableItems" r WHERE NOT EXISTS (SELECT 1 FROM "Clients" p WHERE p."Id" = r."ClientId"))
                        OR EXISTS (SELECT 1 FROM "ClientServices" r WHERE NOT EXISTS (SELECT 1 FROM "Clients" p WHERE p."Id" = r."ClientId"))
