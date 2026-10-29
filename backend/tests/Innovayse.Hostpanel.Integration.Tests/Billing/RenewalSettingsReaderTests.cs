@@ -1,11 +1,8 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Settings;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -22,7 +19,7 @@ public sealed class RenewalSettingsReaderTests(IntegrationTestFactory factory) :
         var reader = scope.ServiceProvider.GetRequiredService<RenewalSettingsReader>();
 
         var settings = await reader.ReadAsync(CancellationToken.None);
-        settings.Should().Be(new RenewalSettings(14, [7, 3, 1], true, 3), "seeded defaults");
+        settings.Should().Be(new RenewalSettings(14, [7, 3, 1], true, 3, 14), "seeded defaults");
 
         var row = await context.Settings.FirstAsync(s => s.Key == BillingSettingKeys.InvoiceDaysBefore);
         row.UpdateValue("not-a-number");

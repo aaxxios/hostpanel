@@ -1,12 +1,12 @@
+using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
-using Innovayse.Hostpanel.Domain.Ssh;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 
 /// <summary>
 /// Resolves the SSH key capability of a server from its <see cref="Server.Module"/> and its
-/// <see cref="ServerSshSettings"/>. Answers <see langword="null"/> — explicitly unsupported —
+/// <see cref="ServerSshSettings"/>. Answers <see langword="null"/>, explicitly unsupported,
 /// for any module without an implementation, so existing provisioning providers need no change.
 /// </summary>
 public interface ISshKeyProviderFactory
@@ -25,8 +25,7 @@ public interface ISshKeyProviderFactory
     public string? AgentProfileFor(ServerModule module);
 
     /// <summary>Creates a provider bound to one server.</summary>
-    /// <param name="server">The server.</param>
-    /// <param name="settings">Its SSH settings; must be complete.</param>
+    /// <param name="target">The server and its SSH settings; the settings must be present and complete.</param>
     /// <returns>The provider, or <see langword="null"/> when the module is unsupported.</returns>
-    public ISshKeyProvider? CreateFor(Server server, ServerSshSettings settings);
+    public ISshKeyProvider? CreateFor(ServerSshTargetDto target);
 }

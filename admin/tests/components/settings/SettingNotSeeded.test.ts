@@ -1,6 +1,6 @@
 /**
  * Tests for SettingNotSeeded: the warning shown instead of a control whose settings row does not
- * exist. It is plain text now — the message used to be rendered as HTML.
+ * exist, rendered as plain text and never as HTML.
  */
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'

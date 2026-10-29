@@ -1,5 +1,4 @@
 using System.Net.Http.Headers;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 

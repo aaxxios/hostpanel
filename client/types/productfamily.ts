@@ -5,6 +5,7 @@
  */
 
 import type { ProductPricingRow } from '~/types/productpricingrow'
+import type { ProductType } from '~/types/producttype'
 
 /** One product-family card: the static domains entry or a catalogue group. */
 export interface ProductFamily {
@@ -31,7 +32,7 @@ export interface ProductFamily {
   /** One pricing row per plan. */
   pricing: ProductPricingRow[]
   /** Service type the family sells, as `ProductType` serialises; picks the generated cover. Absent when unknown. */
-  type?: string | null
+  type?: ProductType | null
   /** Cover image an operator uploaded for the group; replaces the generated cover when set. */
   image?: string | null
   /** True when one of the family's plans is its group's recommended plan; the card wears a badge. */

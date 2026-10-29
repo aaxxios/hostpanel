@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
@@ -14,7 +11,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 /// Client role is refused, and the route is closed to a caller with no credential. This use case
 /// always succeeds once validation has passed.
 /// </summary>
-/// <remarks>Split out of the deleted <c>ServerGroupsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateServerGroupTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

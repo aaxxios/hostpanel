@@ -15,10 +15,8 @@ public sealed class RegisterDomainValidator : LocalizedValidator<RegisterDomainC
     {
         RuleFor(x => x.ClientId).MustBePositiveId(L["DomainClientIdRequired"]);
 
-        // Any number of labels, not exactly two. The previous pattern was
-        // `^[a-zA-Z0-9\-]+\.[a-zA-Z]{2,}$`, which accepts "example.com" and rejects
-        // "example.co.uk", "example.com.am" and "shop.example.com" -- all of them orderable
-        // today, because nothing ran this rule. RegisterDomainCommand is also dispatched from
+        // Any number of labels, not exactly two: "example.co.uk", "example.com.am" and
+        // "shop.example.com" are all orderable. RegisterDomainCommand is also dispatched from
         // FulfillPaidOrderHandler against a name the customer has already paid for, so a name
         // this rule refused would fail *after* the money moved.
         RuleFor(x => x.DomainName)

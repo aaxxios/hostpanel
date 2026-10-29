@@ -25,7 +25,7 @@ public sealed class ListAnnouncementsHandler
     /// <param name="query">The paging window.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Success with the page. This use case answers no refusal code.</returns>
-    public async Task<Result<PagedResult<AnnouncementDto>>> HandleAsync(ListAnnouncementsQuery query, CancellationToken ct)
+    public async Task<Result<PaginatedList<AnnouncementDto>>> HandleAsync(ListAnnouncementsQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -40,6 +40,6 @@ public sealed class ListAnnouncementsHandler
             .SelectDto()
             .ToListAsync(ct);
 
-        return Result.Success(new PagedResult<AnnouncementDto>(items, totalCount, page, pageSize));
+        return Result.Success(new PaginatedList<AnnouncementDto>(items, totalCount, page, pageSize));
     }
 }

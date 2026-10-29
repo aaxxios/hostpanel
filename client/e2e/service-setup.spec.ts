@@ -15,6 +15,7 @@ import { expect, test } from './support/test'
 import type { Page } from '@playwright/test'
 import { SERVICE, SERVICE_PENDING, SETUP } from './support/fixtures.mjs'
 import { resetStub, scriptStub, signIn, stubRequests, waitForHydration } from './support/helpers'
+import { HttpMethod } from '../types/httpmethod'
 
 /**
  * Types the domain and the credentials and arrives on the review step.
@@ -87,7 +88,7 @@ test('finishing the wizard sends the setup and opens the service', async ({ page
 })
 
 test('a setup the backend refuses shows its sentence and stays on the review step', async ({ page, request }) => {
-  await scriptStub(request, { method: 'POST', path: `/api/me/services/${SERVICE_PENDING.id}/setup`, status: 400, code: 'SETUP_REFUSED', detail: 'E2E: the account could not be created.' })
+  await scriptStub(request, { method: HttpMethod.Post, path: `/api/me/services/${SERVICE_PENDING.id}/setup`, status: 400, code: 'SETUP_REFUSED', detail: 'E2E: the account could not be created.' })
 
   await page.goto(`/client/services/${SERVICE_PENDING.id}/setup`)
   await waitForHydration(page)

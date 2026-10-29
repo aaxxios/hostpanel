@@ -82,4 +82,27 @@ describe('useModalSurface', () => {
     await nextTick()
     expect(document.activeElement?.id).toBe('inside')
   })
+
+  it('closes only the topmost of nested surfaces, whichever one the keystroke reached', async () => {
+    const closed: string[] = []
+    const outer = mount(
+      surface(ref(true), () => closed.push('outer')),
+      { attachTo: document.body },
+    )
+    await nextTick()
+    const inner = mount(
+      surface(ref(true), () => closed.push('inner')),
+      { attachTo: document.body },
+    )
+    await nextTick()
+
+    outer.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    inner.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(closed).toEqual(['inner', 'inner'])
+
+    inner.unmount()
+    outer.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(closed).toEqual(['inner', 'inner', 'outer'])
+    outer.unmount()
+  })
 })

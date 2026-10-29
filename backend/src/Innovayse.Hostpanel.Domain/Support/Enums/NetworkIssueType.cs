@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Support.Enums;
+
 /// <summary>Type of network issue.</summary>
 public enum NetworkIssueType
 {

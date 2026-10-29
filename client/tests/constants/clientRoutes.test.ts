@@ -23,6 +23,7 @@ import {
   SSO_AUTHORIZE_PATH,
 } from '~/constants/clientRoutes'
 import { AccountTab } from '~/types/accounttab'
+import { DomainOrderAction } from '~/types/domainorderaction'
 
 describe('client routes', () => {
   it('keeps the well-known paths', () => {
@@ -57,7 +58,8 @@ describe('client routes', () => {
 
   it('builds the account tab and order-success paths', () => {
     expect(clientAccountTabPath(AccountTab.Users)).toBe('/client/account?tab=users')
-    expect(clientOrderSuccessPath('ORD-0042')).toBe('/client/order-success?order=ORD-0042')
-    expect(clientOrderSuccessPath('ORD-0042', '&amount=5')).toBe('/client/order-success?order=ORD-0042&amount=5')
+    expect(clientOrderSuccessPath({ order: 'ORD-0042' })).toBe('/client/order-success?order=ORD-0042')
+    expect(clientOrderSuccessPath({ order: 'A 1', invoice: 7, domain: 'a&b.com', action: DomainOrderAction.Transfer }))
+      .toBe('/client/order-success?order=A+1&invoice=7&domain=a%26b.com&action=transfer')
   })
 })

@@ -1,12 +1,12 @@
 /**
- * Text-like field vocabulary shared by `UiInput`, `UiTextarea`, `UiNativeSelect` and `UiSelect`.
+ * Text-like field vocabulary shared by `UiInput`, `UiTextarea` and `UiSelect`.
  *
  * Fields draw from one class set so a form of mixed controls lines up, and every colour comes
  * from the theme tokens (surface-field, border, text-*), which is what makes them follow the
  * light/dark switch.
  */
 
-/** Input types `UiInput` renders. File inputs have their own `UiFileInput`. */
+/** Input types `UiInput` renders. File inputs have their own `UiFileInput`, colours `UiColorField`. */
 export const UiInputType = {
   /** The `text` input type. */
   Text: 'text',
@@ -30,18 +30,10 @@ export const UiInputType = {
   DatetimeLocal: 'datetime-local',
   /** The `month` input type. */
   Month: 'month',
-  /** The `color` input type. */
-  Color: 'color',
 } as const
 
 /** One of the input types. */
 export type UiInputType = (typeof UiInputType)[keyof typeof UiInputType]
-
-/**
- * Input types that are not drawn as a bordered text box (a colour well keeps the browser's
- * own swatch), so the field classes are skipped for them.
- */
-export const UNSTYLED_INPUT_TYPES: readonly UiInputType[] = ['color']
 
 /**
  * Width is applied through `:where()` so it has zero specificity: a screen's own `w-24` or

@@ -7,8 +7,8 @@
     <ClientLayoutTopBar
       :full-name="store.fullName"
       :widget-user="widgetUser"
-      :first-name="store.user?.firstname"
-      :last-name="store.user?.lastname"
+      :first-name="store.user?.firstName"
+      :last-name="store.user?.lastName"
       :email="store.user?.email"
       :nav-items="visibleNavItems"
       :sidebar-open="sidebarOpen"
@@ -130,7 +130,7 @@ const widgetUser = computed(() => {
   if (!user?.email) {
     return undefined
   }
-  return JSON.stringify({ email: user.email, firstName: user.firstname, lastName: user.lastname })
+  return JSON.stringify({ email: user.email, firstName: user.firstName, lastName: user.lastName })
 })
 
 /**
@@ -156,7 +156,7 @@ let unmounted = false
 onMounted(async () => {
   // No `userLoaded` check: the store is the one authority on whether this needs a request,
   // and the flag read here answered "not loaded yet" for a request that was already on the
-  // wire — which is how the same page load asked for the identity more than once.
+  // wire, which is how the same page load asked for the identity more than once.
   await store.fetchUser()
   // Reinit the widget after Vue renders the mount points. Poll until it is available: its
   // script may still be loading, because it is included with `async`.

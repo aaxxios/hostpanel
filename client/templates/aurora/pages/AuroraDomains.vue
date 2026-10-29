@@ -40,7 +40,7 @@
 <script setup lang="ts">
 /**
  * aurora domains page.
- * Presentation only — pricing, lookup results and cart state arrive from
+ * Presentation only: pricing, lookup results and cart state arrive from
  * pages/domains/index.vue, and adding to the cart is emitted back to it.
  */
 import AuroraDomainSearchBar from '~/templates/aurora/sections/DomainSearchBar.vue'

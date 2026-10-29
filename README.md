@@ -145,7 +145,7 @@ docker compose -p hostpanel-demo -f docker/docker-compose.shared.yml -f docker/d
 The API runs with `Demo__Enabled`: the adapters are fakes, outgoing mail goes to the demo inbox, and the database is
 re-seeded every `DEMO_RESET_INTERVAL_HOURS` hours with the accounts from `DEMO_ADMIN_*` and `DEMO_CLIENT_*`. The seed is
 fixed and deterministic: the same sample data on every reset, rich enough to show every feature, and the site name is
-`Hostpanel Demo`. It uses its own `hostpanel-demo-*` containers, volumes and a private network, and its three public-facing services sit on the dedicated external network `hostpanel_demo_edge` (create it once: `docker network create --subnet 172.29.0.0/16 hostpanel_demo_edge`), never `innovayse_network`, so it cannot reach a
+`Hostpanel Demo`. It uses its own `hostpanel-demo-*` containers, volumes and a private network, and its three public-facing services sit on the dedicated external network `hostpanel_demo_edge` (create it once: `docker network create --subnet 172.29.0.0/16 hostpanel_demo_edge`), never the production network, so it cannot reach a
 production stack on the same host. See [docker/README.md](docker/README.md). A public instance is at
 [hostpanel.innovayse.com](https://hostpanel.innovayse.com).
 
@@ -166,7 +166,7 @@ Copy `docker/.env.example` to `docker/.env`; the file documents every variable. 
 
 | Variable | Description |
 |---|---|
-| `AUTH_MODE` | `local` (standalone, email and password, optional TOTP) or `sso` (Innovayse deployments only, needs a private package) |
+| `AUTH_MODE` | `local` (standalone, email and password, optional TOTP) or `sso` (single sign-on through an external identity provider, needs an optional private package) |
 | `DOMAIN` / `ADMIN_DOMAIN` | Public hosts of the portal and the admin panel |
 | `ASPNETCORE_ENVIRONMENT` | `Production` for a real install: no demo data, no seeded accounts |
 | `JWT_SECRET` | JWT signing key, at least 32 characters |
@@ -195,7 +195,7 @@ docker compose -f docker-compose.shared.yml -f docker-compose.dev.yml logs -f ho
 |---|---|
 | Client portal | http://localhost:3001 |
 | Admin panel | http://localhost:5174 |
-| API docs (Scalar) | http://localhost:5149/scalar |
+| API docs (Swagger) | http://localhost:5149/swagger |
 | Dev mail inbox | http://localhost:8027 |
 
 In Development the API seeds an admin `admin@example.test` / `Admin123!` and sample clients such as `customer@example.test`.

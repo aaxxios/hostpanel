@@ -63,58 +63,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="InvoiceNotFound" xml:space="preserve">
-    <value>Այդպիսի հաշիվ-ապրանքագիր չկա։</value>
-    <comment>INVOICE_NOT_FOUND.</comment>
-  </data>
-  <data name="DomainNotFound" xml:space="preserve">
-    <value>Այդպիսի դոմեն չկա։</value>
-    <comment>DOMAIN_NOT_FOUND.</comment>
-  </data>
-  <data name="InternalError" xml:space="preserve">
-    <value>Տեղի ունեցավ անսպասելի սխալ։</value>
-    <comment>INTERNAL_ERROR. The last-resort sentence; deliberately says nothing about what failed.</comment>
-  </data>
-  <data name="InvitationTokenInvalid" xml:space="preserve">
-    <value>Սխալ կամ ժամկետանց հրավերի հղում։</value>
-    <comment>AcceptInvitationHandler.</comment>
-  </data>
-  <data name="InvitationExpired" xml:space="preserve">
-    <value>Այս հրավերի ժամկետը լրացել է։</value>
-    <comment>AcceptInvitationHandler.</comment>
-  </data>
-  <data name="InvitationAlreadyAccepted" xml:space="preserve">
-    <value>Այս հրավերն արդեն ընդունված է։</value>
-    <comment>AcceptInvitationHandler.</comment>
-  </data>
-  <data name="AccountOwnerNotFound" xml:space="preserve">
-    <value>Այս հաշվի սեփականը չգտնվեց։</value>
-    <comment>InviteUserToClientHandler.</comment>
-  </data>
-  <data name="CannotInviteAccountOwner" xml:space="preserve">
-    <value>Հաշվի սեփականին հնարավոր չէ հրավիրել որպես լրացուցիչ օգտատեր։</value>
-    <comment>InviteUserToClientHandler.</comment>
-  </data>
-  <data name="UserAlreadyLinked" xml:space="preserve">
-    <value>«{0}» հասցեով օգտատերն արդեն կապված է այս հաշվին։</value>
-    <comment>InviteUserToClientHandler. {0} is the email address that was submitted.</comment>
-  </data>
-  <data name="InvitationAlreadyPending" xml:space="preserve">
-    <value>«{0}»-ի համար արդեն կա չընդունված հրավեր այս հաշվի համար։</value>
-    <comment>InviteUserToClientHandler. {0} is the email address that was submitted.</comment>
-  </data>
-  <data name="InvalidPermissionsValue" xml:space="preserve">
-    <value>Թույլտրերի անթույլատրելի արժեք՝ {0}։</value>
-    <comment>InviteUserToClientHandler. {0} is the value that was submitted.</comment>
-  </data>
-  <data name="NoSavedPaymentMethods" xml:space="preserve">
-    <value>Այս հաշիվը պահպանված վճարման եղանակներ չունի։</value>
-    <comment>RemovePaymentMethodHandler and SetDefaultPaymentMethodHandler.</comment>
-  </data>
-  <data name="PaymentMethodNotOwned" xml:space="preserve">
-    <value>Այդ վճարման եղանակը այս հաշվինը չէ։</value>
-    <comment>RemovePaymentMethodHandler and SetDefaultPaymentMethodHandler.</comment>
-  </data>
   <data name="SetAsDefaultMustBeTrue" xml:space="preserve">
     <value>Քարտի տվյալները հնարավոր չէ փոփոխել։ Հեռացրեք այն և ավելացրեք նոր քարտ։</value>
     <comment>SetDefaultPaymentMethodValidator. The only update this endpoint accepts is making a card the default.</comment>
@@ -154,10 +102,6 @@
   <data name="ContactFieldSubmittedAt" xml:space="preserve">
     <value>Ուղարկման ժամանակ</value>
     <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
-  </data>
-  <data name="ValidationFailed" xml:space="preserve">
-    <value>Հարցման մեկ կամ մի քանի դաշտեր չեն ընդունվել։</value>
-    <comment>ExceptionMiddleware, for a message the Wolverine FluentValidation middleware refused. One sentence for every field failure on purpose: the per-field messages are English literals in the validators and are logged, not sent.</comment>
   </data>
   <data name="InvalidFilterValue" xml:space="preserve">
     <value>Զտիչի անթույլատրելի արժեք՝ {0}։</value>
@@ -421,14 +365,20 @@
   <data name="DomainPageSizeRange" xml:space="preserve">
     <value>Էջի չափը պետք է լինի 1-ից 100-ի սահմաններում։</value>
   </data>
+  <data name="EmailLogPageRequired" xml:space="preserve">
+    <value>Էջի համարը պետք է լինի 1 կամ ավելի։</value>
+  </data>
+  <data name="EmailLogPageSizeRange" xml:space="preserve">
+    <value>Էջի չափը պետք է լինի 1-ից 100-ի սահմաններում։</value>
+  </data>
   <data name="GatewayLogPageRequired" xml:space="preserve">
     <value>Էջի համարը պետք է լինի առնվազն 1։</value>
   </data>
   <data name="GatewayLogPageSizeRange" xml:space="preserve">
     <value>Էջի չափը պետք է լինի 1-ից 100-ի սահմաններում։</value>
   </data>
-  <data name="TicketPeriodRequired" xml:space="preserve">
-    <value>Ժամանակահատվածը պարտադիր է։</value>
+  <data name="TicketPeriodInvalid" xml:space="preserve">
+    <value>Ժամանակահատվածը վավեր հաշվետու ժամանակահատված չէ։</value>
   </data>
   <data name="KbArticleIdInvalid" xml:space="preserve">
     <value>Հոդվածի ID-ն պետք է լինի դրական թիվ։</value>
@@ -441,6 +391,18 @@
   </data>
   <data name="KbArticleCategoryRequired" xml:space="preserve">
     <value>Կատեգորիան պարտադիր է։</value>
+  </data>
+  <data name="KbArticleCategoryTooLong" xml:space="preserve">
+    <value>Կատեգորիան չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="KbArticleSearchTooLong" xml:space="preserve">
+    <value>Որոնման տեքստը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="KbArticlePageRequired" xml:space="preserve">
+    <value>Էջի համարը պետք է լինի 1 կամ ավելի։</value>
+  </data>
+  <data name="KbArticlePageSizeRange" xml:space="preserve">
+    <value>Էջի չափը պետք է լինի 1-ից 100-ի սահմաններում։</value>
   </data>
   <data name="KbCategoryIdInvalid" xml:space="preserve">
     <value>Կատեգորիայի ID-ն պետք է լինի դրական թիվ։</value>
@@ -567,6 +529,9 @@
   </data>
   <data name="ClientIdInvalid" xml:space="preserve">
     <value>Հաճախորդի ID-ն պետք է լինի դրական թիվ։</value>
+  </data>
+  <data name="UserSubjectInvalid" xml:space="preserve">
+    <value>Օգտատիրոջ նույնացուցիչը չի կարող դատարկ լինել։</value>
   </data>
   <data name="ClientContactFirstNameInvalid" xml:space="preserve">
     <value>Անունը պարտադիր է և չպետք է գերազանցի 100 նիշը։</value>
@@ -760,12 +725,6 @@
   <data name="ServicePackageRequired" xml:space="preserve">
     <value>Հոսթինգի փաթեթը պարտադիր է։</value>
   </data>
-  <data name="SuspendReasonRequired" xml:space="preserve">
-    <value>Կասեցման պատճառը պարտադիր է։</value>
-  </data>
-  <data name="TerminateReasonRequired" xml:space="preserve">
-    <value>Դադարեցման պատճառը պարտադիր է։</value>
-  </data>
   <data name="ServicePageInvalid" xml:space="preserve">
     <value>Էջի համարը պետք է լինի 1 կամ ավելի։</value>
   </data>
@@ -775,56 +734,65 @@
   <data name="ServiceClientIdFilterInvalid" xml:space="preserve">
     <value>Զտման համար նշեք վավեր հաճախորդ։</value>
   </data>
-  <data name="UpdateServiceDomainInvalid" xml:space="preserve">
+  <data name="HostingAccountDomainTooLong" xml:space="preserve">
     <value>Դոմեյնը չի կարող գերազանցել 253 նիշը։</value>
   </data>
-  <data name="UpdateServiceDedicatedIpInvalid" xml:space="preserve">
+  <data name="HostingAccountDedicatedIpTooLong" xml:space="preserve">
     <value>Առանձնացված IP-ն չի կարող գերազանցել 45 նիշը։</value>
   </data>
-  <data name="UpdateServiceUsernameInvalid" xml:space="preserve">
+  <data name="HostingAccountUsernameTooLong" xml:space="preserve">
     <value>Օգտանունը չի կարող գերազանցել 100 նիշը։</value>
   </data>
-  <data name="UpdateServicePasswordInvalid" xml:space="preserve">
+  <data name="HostingAccountPasswordTooLong" xml:space="preserve">
     <value>Գաղտնաբառը չի կարող գերազանցել 256 նիշը։</value>
   </data>
-  <data name="UpdateServiceBillingCycleInvalid" xml:space="preserve">
+  <data name="ServiceBillingCycleInvalid" xml:space="preserve">
     <value>Վճարման ցիկլը պարտադիր է և չի կարող գերազանցել 20 նիշը։</value>
   </data>
-  <data name="UpdateServiceRecurringAmountInvalid" xml:space="preserve">
+  <data name="ServiceRecurringAmountInvalid" xml:space="preserve">
     <value>Պարբերական վճարման գումարը չի կարող բացասական լինել։</value>
   </data>
-  <data name="UpdateServicePaymentMethodInvalid" xml:space="preserve">
+  <data name="ServicePaymentMethodInvalid" xml:space="preserve">
     <value>Վճարման եղանակը չի կարող գերազանցել 50 նիշը։</value>
   </data>
-  <data name="UpdateServiceSubscriptionIdInvalid" xml:space="preserve">
+  <data name="ServiceSubscriptionIdInvalid" xml:space="preserve">
     <value>Բաժանորդագրության հղումը չի կարող գերազանցել 256 նիշը։</value>
   </data>
-  <data name="UpdateServiceAutoTerminateReasonInvalid" xml:space="preserve">
+  <data name="ServiceAutoTerminateReasonInvalid" xml:space="preserve">
     <value>Ինքնաշխատ դադարեցման պատճառը չի կարող գերազանցել 2000 նիշը։</value>
   </data>
-  <data name="UpdateServiceAdminNotesInvalid" xml:space="preserve">
+  <data name="ServiceAdminNotesInvalid" xml:space="preserve">
     <value>Ադմինիստրատորի նշումները չեն կարող գերազանցել 2000 նիշը։</value>
   </data>
-  <data name="UpdateServiceProvisioningRefInvalid" xml:space="preserve">
+  <data name="HostingAccountProvisioningRefTooLong" xml:space="preserve">
     <value>Տեղակայման հղումը չի կարող գերազանցել 256 նիշը։</value>
   </data>
-  <data name="UpdateServiceFirstPaymentAmountInvalid" xml:space="preserve">
+  <data name="ServiceFirstPaymentAmountInvalid" xml:space="preserve">
     <value>Առաջին վճարման գումարը չի կարող բացասական լինել։</value>
   </data>
-  <data name="UpdateServicePromotionCodeInvalid" xml:space="preserve">
+  <data name="ServicePromotionCodeInvalid" xml:space="preserve">
     <value>Ակցիայի կոդը չի կարող գերազանցել 50 նիշը։</value>
   </data>
-  <data name="UpdateServiceStatusInvalid" xml:space="preserve">
-    <value>Կարգավիճակը պետք է լինի հետևյալներից մեկը՝ Pending, Active, Suspended, Terminated։</value>
+  <data name="ServiceStatusInvalid" xml:space="preserve">
+    <value>Կարգավիճակը պետք է լինի հետևյալներից մեկը՝ Active, Suspended, Terminated։</value>
   </data>
-  <data name="UpdateServiceQuantityInvalid" xml:space="preserve">
+  <data name="ServiceQuantityInvalid" xml:space="preserve">
     <value>Քանակը պետք է լինի առնվազն 1։</value>
   </data>
-  <data name="UpdateServiceProductIdInvalid" xml:space="preserve">
+  <data name="ServiceProductIdInvalid" xml:space="preserve">
     <value>Նշեք վավեր ապրանք։</value>
   </data>
-  <data name="UpdateServiceServerIdInvalid" xml:space="preserve">
+  <data name="HostingAccountServerIdInvalid" xml:space="preserve">
     <value>Նշեք վավեր սերվեր։</value>
+  </data>
+  <data name="ServiceSuspendUntilWithoutOverride" xml:space="preserve">
+    <value>Հետաձգման ամսաթիվը նշեք միայն այն դեպքում, երբ կասեցման հետաձգումը միացված է։</value>
+  </data>
+  <data name="ServiceAutoTerminateReasonWithoutFlag" xml:space="preserve">
+    <value>Դադարեցման պատճառը նշեք միայն այն դեպքում, երբ ծառայությունն ավարտվում է ցիկլի վերջում։</value>
+  </data>
+  <data name="ServiceTerminatedAtRequired" xml:space="preserve">
+    <value>Նշեք ծառայության դադարեցման ամսաթիվը։</value>
   </data>
   <data name="EmailTemplateSlugRequired" xml:space="preserve">
     <value>Ձևանմուշի սլագը պարտադիր է։</value>
@@ -837,6 +805,9 @@
   </data>
   <data name="EmailTemplateDescriptionInvalid" xml:space="preserve">
     <value>Նկարագրությունը չպետք է գերազանցի 500 նիշը։</value>
+  </data>
+  <data name="EmailTemplateLanguageInvalid" xml:space="preserve">
+    <value>Ընտրեք ձևանմուշի համար աջակցվող լեզուներից մեկը։</value>
   </data>
   <data name="EmailTemplateIdInvalid" xml:space="preserve">
     <value>Նշեք նամակի ձևանմուշի վավեր ID։</value>
@@ -937,9 +908,6 @@
   <data name="SlideTranslationTitleRequired" xml:space="preserve">
     <value>Յուրաքանչյուր թարգմանություն պահանջում է վերնագիր։</value>
   </data>
-  <data name="SlideImageRequired" xml:space="preserve">
-    <value>Ընտրեք վերբեռնման ֆայլ։</value>
-  </data>
   <data name="ServerNameRequired" xml:space="preserve">
     <value>Սերվերի անունը պարտադիր է։</value>
   </data>
@@ -982,6 +950,9 @@
   <data name="PluginIdRequired" xml:space="preserve">
     <value>Հավելագրիչի նույնացուցիչը պարտադիր է։</value>
   </data>
+  <data name="PluginIdInvalid" xml:space="preserve">
+    <value>Հավելագրիչի նույնացուցիչը կարող է պարունակել միայն փոքրատառ լատինական տառեր, թվեր և միայնակ գծիկներ՝ առավելագույնը 64 նիշ։</value>
+  </data>
   <data name="IntegrationSlugRequired" xml:space="preserve">
     <value>Ինտեգրման սլագը պարտադիր է։</value>
   </data>
@@ -1009,6 +980,9 @@
   <data name="SettingIdInvalid" xml:space="preserve">
     <value>Նշեք կարգավորման վավեր ID։</value>
   </data>
+  <data name="SettingKeysRequired" xml:space="preserve">
+    <value>Նշեք կարգավորման առնվազն մեկ բանալի։</value>
+  </data>
   <data name="BrandingKindInvalid" xml:space="preserve">
     <value>Տեսակը պետք է լինի 'logo', 'logodark', 'logomark' կամ 'favicon'։</value>
   </data>
@@ -1017,6 +991,9 @@
   </data>
   <data name="ActivityLogClientIdInvalid" xml:space="preserve">
     <value>Նշեք հաճախորդի վավեր ID։</value>
+  </data>
+  <data name="ActivityLogFilterTooLong" xml:space="preserve">
+    <value>Որոնման զտիչը կարող է լինել առավելագույնը 200 նիշ։</value>
   </data>
   <data name="ReportDateRangeInvalid" xml:space="preserve">
     <value>Ավարտի ամսաթիվը չի կարող լինել սկզբի ամսաթվից առաջ։</value>
@@ -1036,6 +1013,9 @@
   <data name="ReportQuarterInvalid" xml:space="preserve">
     <value>Եռամսյակը պետք է լինի 1-ից 4-ի սահմաններում։</value>
   </data>
+  <data name="ReportYearInvalid" xml:space="preserve">
+    <value>Տարին պետք է լինի 2015-ից 2100-ի սահմաններում։</value>
+  </data>
   <data name="ReportTakeInvalid" xml:space="preserve">
     <value>Քանակը պետք է լինի 1-ից 100-ի սահմաններում։</value>
   </data>
@@ -1048,6 +1028,18 @@
   <data name="SignInPasswordRequired" xml:space="preserve">
     <value>Գաղտնաբառը պարտադիր է։</value>
   </data>
+  <data name="RegisterEmailRequired" xml:space="preserve">
+    <value>Էլ. փոստի հասցեն պարտադիր է։</value>
+  </data>
+  <data name="RegisterPasswordRequired" xml:space="preserve">
+    <value>Գաղտնաբառը պարտադիր է։</value>
+  </data>
+  <data name="RegisterFirstNameRequired" xml:space="preserve">
+    <value>Անունը պարտադիր է։</value>
+  </data>
+  <data name="RegisterLastNameRequired" xml:space="preserve">
+    <value>Ազգանունը պարտադիր է։</value>
+  </data>
   <data name="SlideIconNameTooLong" xml:space="preserve">
     <value>Պատկերակի անունը չպետք է գերազանցի {0} նիշը։</value>
   </data>
@@ -1057,11 +1049,23 @@
   <data name="SlideImageUrlTooLong" xml:space="preserve">
     <value>Պատկերի հղումը չպետք է գերազանցի {0} նիշը։</value>
   </data>
-  <data name="SlideTranslationLocaleTooLong" xml:space="preserve">
-    <value>Թարգմանության լոկալը չպետք է գերազանցի {0} նիշը։</value>
-  </data>
   <data name="SlideTranslationTitleTooLong" xml:space="preserve">
     <value>Թարգմանության վերնագիրը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="SlideTranslationTaglineTooLong" xml:space="preserve">
+    <value>Թարգմանության ենթավերնագիրը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="SlideTranslationDescriptionTooLong" xml:space="preserve">
+    <value>Թարգմանության նկարագրությունը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="SlideTranslationCtaTextTooLong" xml:space="preserve">
+    <value>Թարգմանության կոճակի մակագրությունը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="SlideTranslationFeaturesTooMany" xml:space="preserve">
+    <value>Կետերի ցանկը չպետք է գերազանցի {0} կետը։</value>
+  </data>
+  <data name="SlideTranslationFeatureTooLong" xml:space="preserve">
+    <value>Յուրաքանչյուր կետը չպետք է գերազանցի {0} նիշը։</value>
   </data>
   <data name="ContentIdInvalid" xml:space="preserve">
     <value>Նշեք վավեր նույնացուցիչ։</value>
@@ -1075,14 +1079,17 @@
   <data name="ContentTranslationLocaleInvalid" xml:space="preserve">
     <value>Թարգմանություն կարելի է նշել միայն աջակցվող լեզվով՝ en, ru կամ hy։</value>
   </data>
+  <data name="ContentDefaultTranslationRequired" xml:space="preserve">
+    <value>Պահանջվում է թարգմանություն լռելյայն լեզվով (en)։</value>
+  </data>
+  <data name="ContentTranslationLocaleDuplicate" xml:space="preserve">
+    <value>Յուրաքանչյուր լեզու կարելի է նշել միայն մեկ անգամ։</value>
+  </data>
   <data name="ContentUrlTooLong" xml:space="preserve">
     <value>Հղումը կարող է պարունակել առավելագույնը {0} նիշ։</value>
   </data>
   <data name="ContentUrlInvalid" xml:space="preserve">
     <value>Հղումը պետք է սկսվի https://, http:// կամ / նշանով։</value>
-  </data>
-  <data name="ContentImageRequired" xml:space="preserve">
-    <value>Ընտրեք վերբեռնվող պատկերի ֆայլը։</value>
   </data>
   <data name="TestimonialNameRequired" xml:space="preserve">
     <value>Նշեք հաճախորդի անունը։</value>
@@ -1174,23 +1181,20 @@
   <data name="ContentOrderItemsRequired" xml:space="preserve">
     <value>Փոխանցեք նույնացուցիչների և դիրքերի ցանկը։</value>
   </data>
-  <data name="ClientServiceNotFound" xml:space="preserve">
-    <value>Ծառայություն {0}-ը չի գտնվել։</value>
-  </data>
-  <data name="ServiceNoProvisioningReference" xml:space="preserve">
-    <value>Ծառայություն {0}-ը չունի տրամադրման հղում։</value>
-  </data>
-  <data name="ServiceNoServerAssigned" xml:space="preserve">
-    <value>Ծառայություն {0}-ին սերվեր չի նշանակվել։</value>
-  </data>
-  <data name="ServiceNotProvisioned" xml:space="preserve">
-    <value>Ծառայություն {0}-ը դեռ չի տրամադրվել։</value>
+  <data name="ContentOrderItemsTooMany" xml:space="preserve">
+    <value>Կարգի փոփոխության մեկ հարցումը կարող է պարունակել առավելագույնը {0} տարր։</value>
   </data>
   <data name="OrderIdInvalid" xml:space="preserve">
     <value>Պատվերի նույնացուցիչը պետք է մեծ լինի զրոյից։</value>
   </data>
   <data name="PlaceOrderPaymentMethodRequired" xml:space="preserve">
     <value>Ընտրեք վճարման եղանակը։</value>
+  </data>
+  <data name="PaymentMethodRequired" xml:space="preserve">
+    <value>Ընտրեք վճարման եղանակը։</value>
+  </data>
+  <data name="PaymentAttemptRequired" xml:space="preserve">
+    <value>Սկսեք վճարումը նորից։</value>
   </data>
   <data name="PlaceOrderItemsRequired" xml:space="preserve">
     <value>Ավելացրեք պատվերում առնվազն մեկ ապրանք։</value>
@@ -1200,6 +1204,9 @@
   </data>
   <data name="PlaceOrderItemBillingCycleInvalid" xml:space="preserve">
     <value>Հաշվարկային ժամանակաշրջանը պետք է լինի «monthly», «annual» կամ «annually»։</value>
+  </data>
+  <data name="PlaceOrderItemDomainActionInvalid" xml:space="preserve">
+    <value>Դոմենի գործողությունը պետք է լինի «register», «transfer» կամ «renew»։</value>
   </data>
   <data name="PlaceOrderGuestFirstNameRequired" xml:space="preserve">
     <value>Հյուրի ռեժիմով պատվիրելու համար անհրաժեշտ է անունը։</value>
@@ -1218,6 +1225,9 @@
   </data>
   <data name="ReturnUrlRequired" xml:space="preserve">
     <value>Վերադարձի հղումը պարտադիր է։</value>
+  </data>
+  <data name="ReturnUrlInvalid" xml:space="preserve">
+    <value>Վերադարձի հղումը պետք է լինի բացարձակ http կամ https հասցե։</value>
   </data>
   <data name="PaymentIntentIdRequired" xml:space="preserve">
     <value>Վճարման մտադրության նույնացուցիչը պարտադիր է։</value>
@@ -1254,5 +1264,56 @@
   </data>
   <data name="SshTimeoutInvalid" xml:space="preserve">
     <value>Ժամկետները թույլատրելի միջակայքից դուրս են։</value>
+  </data>
+  <data name="InvoiceStatusInvalid" xml:space="preserve">
+    <value>Կարգավիճակը պետք է լինի հաշիվ-ապրանքագրի հայտնի կարգավիճակներից մեկը։</value>
+  </data>
+  <data name="PaymentMethodIdRequired" xml:space="preserve">
+    <value>Նշեք պահպանված վճարման եղանակը։</value>
+  </data>
+  <data name="ClientNewEmailInvalid" xml:space="preserve">
+    <value>Մուտքագրեք վավեր նոր էլ. հասցե։</value>
+  </data>
+  <data name="ClientCurrentPasswordRequired" xml:space="preserve">
+    <value>Մուտքագրեք ձեր ընթացիկ գաղտնաբառը։</value>
+  </data>
+  <data name="ClientEmailChangeTokenRequired" xml:space="preserve">
+    <value>Հաստատման հղումը թերի է։ Կրկին բացեք նամակի հղումը։</value>
+  </data>
+  <data name="IntegrationFieldUnknown" xml:space="preserve">
+    <value>Ինտեգրացիան չի հայտարարում ուղարկված դաշտերից մեկը։</value>
+  </data>
+  <data name="CurrencyCodeDuplicate" xml:space="preserve">
+    <value>Յուրաքանչյուր արժույթ կարելի է նշել միայն մեկ անգամ։</value>
+  </data>
+  <data name="ClientListPageRequired" xml:space="preserve">
+    <value>Էջի համարը պետք է լինի 1 կամ ավելի։</value>
+  </data>
+  <data name="ClientListPageSizeRange" xml:space="preserve">
+    <value>Էջի չափը պետք է լինի 1-ից 100-ի սահմաններում։</value>
+  </data>
+  <data name="ClientListStatusInvalid" xml:space="preserve">
+    <value>Կարգավիճակը պետք է լինի հետևյալներից մեկը՝ Active, Inactive, Suspended, Closed։</value>
+  </data>
+  <data name="ClientListSearchTooLong" xml:space="preserve">
+    <value>Որոնման տեքստը չի կարող լինել {0} նիշից երկար։</value>
+  </data>
+  <data name="ClientListEmailTooLong" xml:space="preserve">
+    <value>Էլ. փոստի ֆիլտրը չի կարող լինել {0} նիշից երկար։</value>
+  </data>
+  <data name="ClientListPhoneTooLong" xml:space="preserve">
+    <value>Հեռախոսի ֆիլտրը չի կարող լինել {0} նիշից երկար։</value>
+  </data>
+  <data name="ClientExportFieldUnknown" xml:space="preserve">
+    <value>Արտահանման անհայտ բաժին՝ {0}։</value>
+  </data>
+  <data name="ServerCredentialTooLong" xml:space="preserve">
+    <value>Սերվերի հավատարմագրերը չպետք է գերազանցեն {0} նիշը։</value>
+  </data>
+  <data name="SettingValueTooLong" xml:space="preserve">
+    <value>Կարգավորման արժեքը չպետք է գերազանցի {0} նիշը։</value>
+  </data>
+  <data name="ContactNotificationTopicInvalid" xml:space="preserve">
+    <value>Ծանուցման տեսակը վավեր չէ։</value>
   </data>
 </root>

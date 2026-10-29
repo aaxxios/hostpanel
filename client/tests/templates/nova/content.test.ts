@@ -47,7 +47,12 @@ const ROUTES = [
   '/acceptable-use',
 ]
 
-/** Strips any fragment, so `/hosting#plans` is checked as `/hosting`. */
+/**
+ * Strips any fragment, so `/hosting#plans` is checked as `/hosting`.
+ *
+ * @param to Link target.
+ * @returns The path without its fragment.
+ */
 const routeOf = (to: string) => to.split('#')[0]!
 
 /** Every feature record the Nova sections render, flattened for the gating checks. */
@@ -137,7 +142,12 @@ describe('nova section card tables', () => {
 })
 
 describe('orderComparisonRows', () => {
-  /** Builds a comparison row that has a label and no values. */
+  /**
+   * Builds a comparison row that has a label and no values.
+   *
+   * @param label Row label.
+   * @returns The row.
+   */
   const row = (label: string): ComparisonRow => ({ label, values: [] })
 
   it('sorts the familiar lines into the order they read best in', () => {

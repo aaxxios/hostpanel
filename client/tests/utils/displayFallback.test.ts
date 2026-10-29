@@ -1,10 +1,10 @@
 /**
  * Tests for the shared fallback wording: a name the backend left null or blank becomes the
- * localised "Unknown" or "Product #id", and a real name passes through untouched.
+ * localised "Unknown", and a real name passes through untouched.
  */
 
 import { describe, expect, it } from 'vitest'
-import { nameOrUnknown, productNameOrFallback } from '~/utils/displayFallback'
+import { nameOrUnknown } from '~/utils/displayFallback'
 
 /**
  * A translator that shows the key and the named values, so a test sees what was asked for.
@@ -22,15 +22,5 @@ describe('nameOrUnknown', () => {
 
   it.each([null, undefined, '', '   '])('answers "Unknown" for %j', (value) => {
     expect(nameOrUnknown(t, value)).toBe('fallback.unknown')
-  })
-})
-
-describe('productNameOrFallback', () => {
-  it('passes a real product name through', () => {
-    expect(productNameOrFallback(t, 'Starter', 4)).toBe('Starter')
-  })
-
-  it.each([null, undefined, ''])('answers "Product #id" for %j', (value) => {
-    expect(productNameOrFallback(t, value, 4)).toBe('fallback.product:{"id":4}')
   })
 })

@@ -2,9 +2,10 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Domains;
+
 /// <summary>
 /// Represents a name server assigned to a domain.
-/// Owned by the <see cref="Domain"/> aggregate — cannot exist independently.
+/// Owned by the <see cref="Domain"/> aggregate: cannot exist independently.
 /// </summary>
 public sealed class Nameserver : BaseEntity
 {
@@ -14,7 +15,7 @@ public sealed class Nameserver : BaseEntity
     /// <summary>Gets the fully-qualified name server hostname (e.g. "ns1.example.com").</summary>
     public string Host { get; private set; } = string.Empty;
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Nameserver() { }
 
     /// <summary>

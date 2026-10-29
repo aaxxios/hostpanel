@@ -8,90 +8,92 @@ using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Application.Migration.Importers;
 
 /// <summary>
 /// Imports support ticket records, deduplicated by client and subject, matched against this
-/// install's own departments by name. Split out of <c>MigrationPullWorker</c> (A6 Task 6).
+/// install's own departments by name.
 /// </summary>
-/// <param name="context">The module's data context.</param>
-/// <param name="uow">Unit of work the imported ticket is saved through.</param>
-/// <param name="pager">Pages through the source plugin's <c>tickets</c> dataset.</param>
-/// <param name="logWriter">Writes one migration log row per record.</param>
-/// <param name="clientResolver">Resolves each record's client email to a local client id.</param>
-/// <param name="logger">Logs a skipped or failed record.</param>
-public sealed class TicketsImporter(
-    IHostpanelDbContext context,
-    IUnitOfWork uow,
-    MigrationRecordPager pager,
-    MigrationLogWriter logWriter,
-    MigrationClientResolver clientResolver,
-    ILogger<TicketsImporter> logger) : IMigrationEntityImporter
+public sealed class TicketsImporter : IMigrationEntityImporter
 {
+    /// <summary>The module's data context.</summary>
+    private readonly IHostpanelDbContext _context;
+
+    /// <summary>Pages through the source plugin's <c>tickets</c> dataset and records each record's outcome.</summary>
+    private readonly MigrationRecordRunner _runner;
+
+    /// <summary>Resolves each record's client email to a local client id.</summary>
+    private readonly MigrationClientResolver _clientResolver;
+
+    /// <summary>Dates the opening and closing of an imported ticket.</summary>
+    private readonly IClock _clock;
+
+    /// <summary>Initializes a new instance of the <see cref="TicketsImporter"/> class.</summary>
+    /// <param name="context">The module's data context.</param>
+    /// <param name="runner">Pages through the source plugin's <c>tickets</c> dataset and records each record's outcome.</param>
+    /// <param name="clientResolver">Resolves each record's client email to a local client id.</param>
+    /// <param name="clock">Dates the opening and closing of an imported ticket.</param>
+    public TicketsImporter(
+        IHostpanelDbContext context,
+        MigrationRecordRunner runner,
+        MigrationClientResolver clientResolver,
+        IClock clock)
+    {
+        _context = context;
+        _runner = runner;
+        _clientResolver = clientResolver;
+        _clock = clock;
+    }
+
+    /// <inheritdoc/>
+    public MigrationEntityType EntityType => MigrationEntityType.Tickets;
+
     /// <inheritdoc/>
     public async Task ImportAsync(MigrationJob job, CancellationToken ct)
     {
-        int imported = 0, skipped = 0;
+        // Read-only, so no tracking is needed.
+        var departments = await _context.Departments.AsNoTracking().OrderBy(d => d.Name).ToListAsync(ct);
+        var defaultDeptId = departments.FirstOrDefault()?.Id;
 
-        // Was IDepartmentRepository.ListAllAsync -- read-only, so no tracking is needed.
-        var departments = await context.Departments.AsNoTracking().OrderBy(d => d.Name).ToListAsync(ct);
-        var defaultDeptId = departments.FirstOrDefault()?.Id ?? 1;
-
-        await foreach (var page in pager.PagesAsync<TicketRecord>(job, "tickets", ct))
-        {
-            foreach (var rec in page)
-            {
-                try
+        await _runner.RunAsync(
+            new MigrationRecordRun<TicketRecord>(
+                job,
+                EntityType,
+                "tickets",
+                (rec, token) =>
                 {
                     var deptId = departments.FirstOrDefault(d =>
                                      string.Equals(d.Name, rec.DepartmentName, StringComparison.OrdinalIgnoreCase))
                                  ?.Id ?? defaultDeptId;
-
-                    var result = await ImportTicketAsync(rec, deptId, ct);
-                    if (result.Action == ImportOutcome.Imported)
-                    {
-                        imported++;
-                    }
-                    else if (result.Action == ImportOutcome.Skipped)
-                    {
-                        skipped++;
-                    }
-
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Tickets, rec.Subject, result.Action, result.Reason, ct);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Skipped ticket '{Subject}' during migration", rec.Subject);
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Tickets, rec.ClientEmail, ImportOutcome.Failed, ex.Message, ct);
-                }
-            }
-
-            job.UpdateProgress(MigrationEntityType.Tickets, imported, skipped);
-            await uow.SaveChangesAsync(ct);
-        }
+                    return ImportTicketAsync(rec, deptId, token);
+                }),
+            ct);
     }
 
     /// <summary>Imports one plugin-side ticket record into the resolved department.</summary>
     /// <param name="rec">The ticket record read from the source plugin.</param>
-    /// <param name="departmentId">The local department id resolved for this record.</param>
+    /// <param name="departmentId">The local department id resolved for this record, or null when no department exists here.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Whether the ticket was imported or skipped, and why when skipped.</returns>
-    private async Task<(ImportOutcome Action, string? Reason)> ImportTicketAsync(TicketRecord rec, int departmentId, CancellationToken ct)
+    private async Task<RecordImportResult> ImportTicketAsync(TicketRecord rec, int? departmentId, CancellationToken ct)
     {
-        var clientId = await clientResolver.ResolveClientIdAsync(rec.ClientEmail, ct);
+        var clientId = await _clientResolver.ResolveClientIdAsync(rec.ClientEmail, ct);
         if (clientId is null)
         {
-            logger.LogWarning("Ticket skipped — client {Email} not found", rec.ClientEmail);
-            return (ImportOutcome.Skipped, $"Client '{rec.ClientEmail}' not found");
+            return RecordImportResult.Skipped(MigrationSkipReason.ClientNotFound);
         }
 
-        // Was ITicketRepository.FindByClientAndSubjectAsync.
-        var existingTicket = await context.Tickets
+        if (departmentId is null)
+        {
+            return RecordImportResult.Skipped(MigrationSkipReason.DepartmentNotFound);
+        }
+
+        var existingTicket = await _context.Tickets
             .FirstOrDefaultAsync(t => t.ClientId == clientId.Value && t.Subject.ToLower() == rec.Subject.ToLower(), ct);
         if (existingTicket is not null)
         {
-            return (ImportOutcome.Skipped, "Ticket already exists");
+            return RecordImportResult.Skipped(MigrationSkipReason.AlreadyExists);
         }
 
         var priority = rec.Priority switch
@@ -101,21 +103,22 @@ public sealed class TicketsImporter(
             _ => TicketPriority.Medium,
         };
 
+        var now = _clock.UtcNow;
         var ticket = Ticket.Create(
             clientId.Value,
             rec.Subject,
             string.IsNullOrWhiteSpace(rec.Message) ? "(no message)" : rec.Message,
-            departmentId,
-            priority);
+            departmentId.Value,
+            priority,
+            now);
 
         if (rec.Status is SourceTicketStatuses.Closed or SourceTicketStatuses.Answered)
         {
-            ticket.Close();
+            ticket.Close(now);
         }
 
-        // Was ITicketRepository.Add.
-        context.Tickets.Add(ticket);
-        await uow.SaveChangesAsync(ct);
-        return (ImportOutcome.Imported, null);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync(ct);
+        return RecordImportResult.Imported;
     }
 }

@@ -11,6 +11,7 @@ import CartHero from '~/components/cart/CartHero.vue'
 import CartContent from '~/components/cart/CartContent.vue'
 import { useCartStore } from '~/stores/cart'
 import type { BillingCurrency } from '~/types/currency'
+import { PricingCycle } from '~/types/pricingcycle'
 
 /** The currencies the stood-in currency endpoint answers with. */
 const currencies: BillingCurrency[] = [
@@ -27,7 +28,11 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
   useCurrencyApi: () => ({ loadBillingCurrencies: () => Promise.resolve(currencies) }),
 }))
 
-/** Mounts the page and lets the currencies load. */
+/**
+ * Mounts the page and lets the currencies load.
+ *
+ * @returns The wrapper.
+ */
 const mountCart = async () => {
   stubPublicPageRuntime()
   const wrapper = await mountPage(CartPage, { components: { CartHero, CartContent } })
@@ -44,7 +49,7 @@ const mountCart = async () => {
  * @param currency The currency the price is in.
  */
 const addLine = async (pid: number, name: string, amount: number, currency: string): Promise<void> => {
-  useCartStore().addItem({ pid, name, billingcycle: 'monthly', cycleLabel: 'Monthly', amount, currency })
+  useCartStore().addItem({ pid, name, billingcycle: PricingCycle.Monthly, cycleLabel: 'Monthly', amount, currency })
   await nextTick()
 }
 

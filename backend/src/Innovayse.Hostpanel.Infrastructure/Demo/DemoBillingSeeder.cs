@@ -173,8 +173,8 @@ internal sealed class DemoBillingSeeder
         var dueDate = invoiceDate.AddDays(PaymentTermDays);
 
         var invoice = status == InvoiceStatus.Draft
-            ? Invoice.CreateDraft(client.Id, dueDate, currency)
-            : Invoice.Create(client.Id, dueDate, currency);
+            ? Invoice.CreateDraft(client.Id, dueDate, currency, invoiceDate)
+            : Invoice.Create(client.Id, dueDate, currency, invoiceDate);
 
         var price = product?.PriceFor(currency, BillingCycle.Monthly) ?? service?.RecurringAmount ?? 0m;
         invoice.AddItem($"{product?.Name ?? "Hosting"} - monthly", price, 1, service?.Id);
@@ -190,7 +190,7 @@ internal sealed class DemoBillingSeeder
         switch (status)
         {
             case InvoiceStatus.Overdue:
-                invoice.MarkOverdue();
+                invoice.MarkOverdue(dueDate);
                 break;
             case InvoiceStatus.Cancelled:
                 invoice.Cancel();

@@ -20,7 +20,7 @@
     <ClientNoProfileNotice v-else-if="store.clientProfileMissing" />
 
     <!-- Failed. Checked before the list, which a failure otherwise renders as the toolbar
-         above an empty state -- a search box over "no domains" rather than a reason. -->
+         above an empty state: a search box over "no domains" rather than a reason. -->
     <UiAlert v-else-if="store.domainsError" variant="error" data-testid="domains-error">{{ store.domainsError }}</UiAlert>
 
     <template v-else>

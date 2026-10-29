@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Application.Demo.Queries.GetDemo.Enums;
+using Innovayse.Hostpanel.Application.Demo.Common;
+using Innovayse.Hostpanel.Application.Demo.Common.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.Hostpanel.Shared.Settings;
 using Microsoft.Extensions.Options;

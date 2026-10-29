@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Support.Queries.ListPredefinedReplies;
 /// <summary>
 /// Validator for <see cref="ListPredefinedRepliesQuery"/>. Its one input is an optional category
 /// filter, which every value of (including <see langword="null"/>) is valid, so no rule is
-/// declared — decided, not forgotten.
+/// declared: decided, not forgotten.
 /// </summary>
 public sealed class ListPredefinedRepliesValidator : LocalizedValidator<ListPredefinedRepliesQuery>
 {

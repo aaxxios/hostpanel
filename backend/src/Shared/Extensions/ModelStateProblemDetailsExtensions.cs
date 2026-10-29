@@ -10,30 +10,26 @@ using Microsoft.Extensions.Localization;
 namespace Innovayse.Hostpanel.Shared.Extensions;
 
 /// <summary>
-/// Replaces <c>[ApiController]</c>'s stock model-binding failure body — a bare
-/// <c>ValidationProblemDetails</c> whose per-field text is raw deserializer output — with the same
+/// Replaces <c>[ApiController]</c>'s stock model-binding failure body, a bare
+/// <c>ValidationProblemDetails</c> whose per-field text is raw deserializer output, with the same
 /// localized <see cref="ErrorResponse"/> every other refusal answers with.
 /// </summary>
 /// <remarks>
 /// <c>[ApiController]</c>'s model-validation filter short-circuits before any handler or controller
 /// action runs, so neither <c>ExceptionHandlingMiddleware</c> nor <c>BaseApiController</c> is
-/// consulted for this status. This is a separate file rather than a private method on
-/// <c>Innovayse.Hostpanel.API.DependencyInjection</c> because the six-surface index that
-/// <c>rules/api.md</c> and the localization brief both name lists it as its own file, matching the
-/// other five surfaces (<c>ErrorResponse</c>, <c>BaseApiController</c>,
-/// <c>ExceptionHandlingMiddleware</c>, <c>ProblemDetailsAuthorizationResponseExtensions</c>,
-/// <c>RateLimitingExtensions</c>) — every one of which already lives in its own file under
-/// <c>Shared/</c> — and because it is testable on its own, the way
-/// <see cref="RateLimitingExtensions"/>' rejection writer is, without pulling in the rest of the
-/// API layer's registrations.
+/// consulted for this status. It is its own file under <c>Shared/</c>, like the other error
+/// surfaces (<c>ErrorResponse</c>, <c>BaseApiController</c>, <c>ExceptionHandlingMiddleware</c>,
+/// <c>ProblemDetailsAuthorizationResponseExtensions</c>, <c>RateLimitingExtensions</c>), so it is
+/// testable on its own, the way <see cref="RateLimitingExtensions"/>' rejection writer is, without
+/// pulling in the rest of the API layer's registrations.
 /// </remarks>
 public static class ModelStateProblemDetailsExtensions
 {
     /// <summary>
     /// Substrings that mark a model-state message as deserializer or CLR output rather than a
-    /// person-facing sentence — a bad enum value or a malformed date answers with one of these
-    /// verbatim unless this factory intervenes. Adapted from the reference's list to this product's
-    /// own namespace prefix; <c>System.</c> is kept because a <c>System.Text.Json</c> message is
+    /// person-facing sentence: a bad enum value or a malformed date answers with one of these
+    /// verbatim unless this factory intervenes. Includes this product's own namespace prefix;
+    /// <c>System.</c> is kept because a <c>System.Text.Json</c> message is
     /// just as much machinery as one naming an internal type.
     /// </summary>
     private static readonly string[] InternalMarkers =

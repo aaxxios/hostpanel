@@ -1,8 +1,8 @@
 # Edge of the standalone (Docker Hub) stack: routes the client portal, the admin panel and the API,
 # and obtains Let's Encrypt certificates for both hosts on its own. Every value comes from .env
 # through docker-compose.hub.yml: {$DOMAIN}, {$ADMIN_DOMAIN}, {$API_PORT}, {$CLIENT_PORT}, {$ACME_EMAIL},
-# {$EDGE_MAX_BODY_SIZE}, {$EDGE_ADMIN_MAX_BODY_SIZE} and {$EDGE_SCHEME} ("https://" = automatic HTTPS,
-# "http://" = plain HTTP behind an existing proxy).
+# {$EDGE_MAX_BODY_SIZE}, {$EDGE_ADMIN_MAX_BODY_SIZE}, {$EDGE_SCHEME} ("https://" = automatic HTTPS,
+# "http://" = plain HTTP behind an existing proxy) and the optional {$EDGE_CLIENT_CSP_SOURCES}.
 {
 	email {$ACME_EMAIL}
 
@@ -18,8 +18,23 @@
 # browser deciding that a stored file is something executable.
 (uploads) {
 	handle /uploads/* {
-		header X-Content-Type-Options nosniff
+		import security_headers
+		# A file opened on its own may load nothing and run nothing.
+		header Content-Security-Policy "default-src 'none'; sandbox"
 		reverse_proxy hostpanel-api:{$API_PORT}
+	}
+}
+
+# Response headers every public answer carries. HSTS is ignored by a browser on a plain-HTTP origin, so
+# it is harmless in the mode that serves HTTP behind another TLS proxy. Caddy sets (never appends) a
+# header, so importing this where the upstream sends the same header cannot duplicate it.
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), usb=()"
 	}
 }
 
@@ -27,6 +42,14 @@
 {$EDGE_SCHEME}{$DOMAIN} {
 	# Never name the web server in a response.
 	header -Server
+	import security_headers
+	# The portal's own scripts, styles and fonts come from this origin. Nuxt inlines its payload and Vue
+	# writes style attributes, hence 'unsafe-inline'. The payment provider's script, frames and API are
+	# named, and so are the optional tag manager and analytics. Frames and images are operator content
+	# (maps, videos, logos), so any https origin may supply them; a form may post to a payment page on any
+	# https origin. EDGE_CLIENT_CSP_SOURCES adds origins a deployment needs (a chat server, other
+	# analytics) to the script, connect, frame and image sources.
+	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com {$EDGE_CLIENT_CSP_SOURCES:}; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https: {$EDGE_CLIENT_CSP_SOURCES:}; connect-src 'self' https://api.stripe.com https://m.stripe.network https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com {$EDGE_CLIENT_CSP_SOURCES:}; frame-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self' https:; frame-ancestors 'none'"
 	request_body {
 		max_size {$EDGE_MAX_BODY_SIZE}
 	}
@@ -34,12 +57,15 @@
 	handle /api/* {
 		reverse_proxy hostpanel-api:{$API_PORT} {
 			header_up X-Real-IP {client_ip}
+			# Replaced, never appended: a value the visitor sent must not reach the client or the API.
+			header_up X-Forwarded-For {remote_host}
 		}
 	}
 
 	import uploads
 
-	handle /scalar/* {
+	# Liveness probe; the API serves it at the root, outside /api/.
+	handle /health {
 		reverse_proxy hostpanel-api:{$API_PORT}
 	}
 
@@ -47,11 +73,14 @@
 	handle {
 		reverse_proxy hostpanel-client:{$CLIENT_PORT} {
 			header_up X-Real-IP {client_ip}
+			# Replaced, never appended: a value the visitor sent must not reach the client or the API.
+			header_up X-Forwarded-For {remote_host}
 		}
 	}
 }
 
-# Admin panel
+# Admin panel. The admin image sends its own security headers and Content-Security-Policy
+# (docker/nginx/admin.conf); they pass through untouched.
 {$EDGE_SCHEME}{$ADMIN_DOMAIN} {
 	# Never name the web server in a response.
 	header -Server

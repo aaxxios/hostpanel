@@ -1,10 +1,7 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>POST /api/billing/{id}/publish</c> against Postgres: a draft invoice becomes payable, and
 /// the <c>INVOICE_NOT_FOUND</c> refusal for an id that names no invoice.
 /// </summary>
-/// <remarks>Split from the deleted <c>InvoicesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class PublishInvoiceTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

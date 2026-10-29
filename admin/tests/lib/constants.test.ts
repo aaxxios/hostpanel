@@ -5,24 +5,24 @@
  */
 import { describe, expect, it } from 'vitest'
 import {
+  BILLABLE_ITEM_TYPE_OPTIONS,
   BILLING_CYCLE_OPTIONS,
   CLIENT_STATUS_OPTIONS,
   CURRENCY_OPTIONS,
   DNS_RECORD_TYPE_OPTIONS,
   DOMAIN_STATUS_OPTIONS,
   GATEWAY_OPTIONS,
-  INVOICE_ACTION_OPTIONS,
   ORDER_STATUS_OPTIONS,
   PAYMENT_METHOD_OPTIONS,
   QUOTE_STAGE_OPTIONS,
-  RECURRENCE_PERIOD_OPTIONS,
+  RECURRING_PERIOD_OPTIONS,
   SERVICE_STATUS_OPTIONS,
   TICKET_PRIORITY_OPTIONS,
   TRANSACTION_METHOD_OPTIONS,
 } from '@/lib/constants'
 import type { SelectOption } from '@/lib/constants'
 import { translate } from '@/lib/translate'
-import { BillableInvoiceAction, RecurrencePeriod } from '@/types/billableitem'
+import { BillableItemType, RecurringPeriod } from '@/types/billableitem'
 import { ClientStatus } from '@/types/client'
 import { DnsRecordType, DomainStatus } from '@/types/domain'
 import { PaymentGateway } from '@/types/gateway'
@@ -59,8 +59,8 @@ describe('option lists', () => {
     expect(valuesOf(TICKET_PRIORITY_OPTIONS)).toEqual(membersOf(TicketPriority))
     expect(valuesOf(DNS_RECORD_TYPE_OPTIONS)).toEqual(membersOf(DnsRecordType))
     expect(valuesOf(BILLING_CYCLE_OPTIONS)).toEqual(membersOf(BillingCycle))
-    expect(valuesOf(INVOICE_ACTION_OPTIONS)).toEqual(membersOf(BillableInvoiceAction))
-    expect(valuesOf(RECURRENCE_PERIOD_OPTIONS)).toEqual(membersOf(RecurrencePeriod))
+    expect(valuesOf(BILLABLE_ITEM_TYPE_OPTIONS)).toEqual(membersOf(BillableItemType))
+    expect(valuesOf(RECURRING_PERIOD_OPTIONS)).toEqual(membersOf(RecurringPeriod))
     expect(valuesOf(GATEWAY_OPTIONS)).toEqual(membersOf(PaymentGateway))
   })
 

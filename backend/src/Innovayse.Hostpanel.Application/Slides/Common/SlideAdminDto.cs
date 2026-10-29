@@ -1,7 +1,8 @@
 using Innovayse.Hostpanel.Domain.Slides;
-
 using Innovayse.Hostpanel.Domain.Slides.Enums;
+
 namespace Innovayse.Hostpanel.Application.Slides.Common;
+
 /// <summary>DTO representing a slide for the admin panel, including all fields and all translations.</summary>
 /// <param name="Id">Slide identifier.</param>
 /// <param name="IconName">MDI icon name (e.g. "cloud-check").</param>

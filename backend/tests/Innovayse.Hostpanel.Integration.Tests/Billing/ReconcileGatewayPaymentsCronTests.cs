@@ -1,26 +1,24 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Commands.ReconcileGatewayPaymentsCron;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.SDK.Plugins;
+using Innovayse.SDK.Plugins.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Wolverine;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
 /// <summary>
 /// <see cref="ReconcileGatewayPaymentsCronHandler"/> against Postgres: which unpaid/overdue
-/// invoices its 25-minute-to-24-hour gateway-session window picks up, now that the query is
-/// inlined against <see cref="IHostpanelDbContext"/> instead of the deleted
-/// <c>IInvoiceRepository.ListPendingGatewayPaymentsAsync</c> (A6 Task 4, ruling 2 -- this pins
-/// that dissolved method's semantics).
+/// invoices it picks up once their gateway session is old enough to have left the payment page,
+/// and how a settled invoice whose kept session later reports paid is credited once.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -35,8 +33,8 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <para>
 /// <see cref="IntegrationTestFactory"/> is a class fixture, so the same Postgres database is
 /// shared by every test method here; the reconciler's query is not scoped to one client, so a
-/// module id shared across tests would let one test's leftover invoice be resolved -- and
-/// counted -- against a later test's plugin. Each test therefore mints its own module id, so an
+/// module id shared across tests would let one test's leftover invoice be resolved, and
+/// counted, against a later test's plugin. Each test therefore mints its own module id, so an
 /// older test's invoice (still in the window when a later test runs moments later) resolves to
 /// no plugin at all for that later test and is silently skipped, exactly as an unconfigured
 /// module id is in production.
@@ -52,12 +50,11 @@ public sealed class ReconcileGatewayPaymentsCronTests(IntegrationTestFactory fac
     private WebApplicationFactory<Program> BuildHost(FakePaymentPluginResolver resolver) =>
         factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
-                services.AddScoped<IPaymentPluginResolver>(_ => resolver)));
+                services.AddSingleton<IPaymentPluginResolver>(resolver)));
 
     /// <summary>
     /// Seeds a client and one invoice carrying a gateway session under <paramref name="module"/>,
-    /// with <see cref="Invoice.GatewayStartedAt"/> backdated directly at the database, the way
-    /// <see cref="Invoice.SetGatewaySession"/>'s <c>DateTimeOffset.UtcNow</c> stamp cannot be.
+    /// started at <paramref name="gatewayStartedAt"/>.
     /// </summary>
     /// <param name="db">The data context to seed through.</param>
     /// <param name="module">This test's own plugin module id.</param>
@@ -67,21 +64,18 @@ public sealed class ReconcileGatewayPaymentsCronTests(IntegrationTestFactory fac
     private static async Task<int> SeedPendingInvoiceAsync(
         AppDbContext db, string module, InvoiceStatus status, DateTimeOffset gatewayStartedAt)
     {
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Gateway", "Payer", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Gateway", "Payer", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         db.Clients.Add(client);
         await db.SaveChangesAsync(CancellationToken.None);
 
-        var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         if (status == InvoiceStatus.Overdue)
         {
-            invoice.MarkOverdue();
+            invoice.MarkOverdue(DateTimeOffset.UtcNow);
         }
 
-        invoice.SetGatewaySession(module, $"gw-{Guid.NewGuid():N}");
+        invoice.SetGatewaySession(module, $"gw-{Guid.NewGuid():N}", gatewayStartedAt);
         db.Invoices.Add(invoice);
-        await db.SaveChangesAsync(CancellationToken.None);
-
-        db.Entry(invoice).Property(i => i.GatewayStartedAt).CurrentValue = gatewayStartedAt;
         await db.SaveChangesAsync(CancellationToken.None);
 
         return invoice.Id;
@@ -111,7 +105,7 @@ public sealed class ReconcileGatewayPaymentsCronTests(IntegrationTestFactory fac
     }
 
     /// <summary>
-    /// An Overdue invoice within the window is reconciled too -- the filter ORs Unpaid and
+    /// An Overdue invoice within the window is reconciled too: the filter ORs Unpaid and
     /// Overdue, it does not restrict to Unpaid alone.
     /// </summary>
     [Fact]
@@ -134,7 +128,7 @@ public sealed class ReconcileGatewayPaymentsCronTests(IntegrationTestFactory fac
     }
 
     /// <summary>
-    /// A session that started 10 minutes ago is younger than the 25-minute settle margin --
+    /// A session that started 10 minutes ago is younger than the 25-minute settle margin:
     /// the payer may still be on the payment page, so it is left alone.
     /// </summary>
     [Fact]
@@ -157,11 +151,11 @@ public sealed class ReconcileGatewayPaymentsCronTests(IntegrationTestFactory fac
     }
 
     /// <summary>
-    /// A session that started 25 hours ago is past the 24-hour abandoned cutoff -- it is left
-    /// for audit rather than checked forever.
+    /// A session of a still unpaid invoice that started 25 hours ago is not given up on: the
+    /// reconciler keeps asking the gateway until it gives a final answer.
     /// </summary>
     [Fact]
-    public async Task SessionOlderThanAbandonedCutoff_IsNotReconciled()
+    public async Task UnpaidSessionOlderThanADay_IsStillReconciled()
     {
         var module = $"reconcile-test-{Guid.NewGuid():N}";
         var plugin = new FakePaymentPlugin();
@@ -176,7 +170,7 @@ public sealed class ReconcileGatewayPaymentsCronTests(IntegrationTestFactory fac
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         await bus.InvokeAsync(new ReconcileGatewayPaymentsCronCommand(), CancellationToken.None);
 
-        plugin.GetStatusCallCount.Should().Be(0);
+        plugin.GetStatusCallCount.Should().Be(1);
     }
 
     /// <summary>An Unpaid invoice with no gateway session at all is never picked up.</summary>
@@ -191,10 +185,10 @@ public sealed class ReconcileGatewayPaymentsCronTests(IntegrationTestFactory fac
 
         using var scope = host.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "No", "Session", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "No", "Session", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         db.Clients.Add(client);
         await db.SaveChangesAsync(CancellationToken.None);
-        var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         db.Invoices.Add(invoice);
         await db.SaveChangesAsync(CancellationToken.None);
 
@@ -202,5 +196,75 @@ public sealed class ReconcileGatewayPaymentsCronTests(IntegrationTestFactory fac
         await bus.InvokeAsync(new ReconcileGatewayPaymentsCronCommand(), CancellationToken.None);
 
         plugin.GetStatusCallCount.Should().Be(0);
+    }
+
+    /// <summary>
+    /// An administrator settles the invoice while its hosted session is open; the gateway later
+    /// reports the session paid and the customer never returns. The reconciler, on a fixed clock an
+    /// hour later, credits what the session took to the client's balance once; a second run credits
+    /// nothing more.
+    /// </summary>
+    [Fact]
+    public async Task SettledInvoiceWithLatePaidSession_IsCreditedOnce()
+    {
+        var module = $"reconcile-test-{Guid.NewGuid():N}";
+        var plugin = new FakePaymentPlugin();
+        var resolver = new FakePaymentPluginResolver();
+        resolver.Register(module, plugin);
+        var clock = new ManualTimeProvider(DateTimeOffset.UtcNow);
+        using var host = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddSingleton<IPaymentPluginResolver>(resolver);
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(clock);
+            }));
+
+        int invoiceId;
+        int clientId;
+        using (var seedScope = host.Services.CreateScope())
+        {
+            var db = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var now = clock.GetUtcNow();
+            var client = Client.Create($"subject-{Guid.NewGuid():N}", "Late", "Payer", $"{Guid.NewGuid():N}@example.test", now);
+            db.Clients.Add(client);
+            await db.SaveChangesAsync(CancellationToken.None);
+
+            var invoice = Invoice.Create(client.Id, now.AddDays(7), "USD", now);
+            invoice.AddItem("Hosting", 10m, 1);
+            invoice.SetGatewaySession(module, $"gw-{Guid.NewGuid():N}", now);
+            db.Invoices.Add(invoice);
+            await db.SaveChangesAsync(CancellationToken.None);
+
+            // The administrator settles it while the session is still open.
+            db.Transactions.Add(invoice.Settle(PaymentMethodNames.Manual, $"manual-{Guid.NewGuid():N}", now)!);
+            await db.SaveChangesAsync(CancellationToken.None);
+            invoiceId = invoice.Id;
+            clientId = client.Id;
+        }
+
+        var gatewayReference = $"ref-{Guid.NewGuid():N}";
+        plugin.StatusResult = new(GatewayPaymentState.Paid, gatewayReference, "orderStatus:2", AmountMinor: 1000);
+        clock.Advance(TimeSpan.FromHours(1));
+
+        using (var scope = host.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IMessageBus>()
+                .InvokeAsync(new ReconcileGatewayPaymentsCronCommand(), CancellationToken.None);
+        }
+
+        (await BillingTestSeeds.CreditBalanceOfAsync(host, clientId)).Should().Be(10m);
+
+        using (var scope = host.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IMessageBus>()
+                .InvokeAsync(new ReconcileGatewayPaymentsCronCommand(), CancellationToken.None);
+        }
+
+        (await BillingTestSeeds.CreditBalanceOfAsync(host, clientId)).Should().Be(10m);
+        using var checkScope = host.Services.CreateScope();
+        var check = checkScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await check.Transactions.AsNoTracking().CountAsync(t => t.TransactionId == gatewayReference)).Should().Be(1);
+        (await check.Invoices.AsNoTracking().SingleAsync(i => i.Id == invoiceId)).Status.Should().Be(InvoiceStatus.Paid);
     }
 }

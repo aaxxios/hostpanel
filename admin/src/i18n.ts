@@ -3,7 +3,7 @@
  *
  * Every shell and screen string is translated from `locales/<lang>/<area>.json` (assembled in
  * `locales/messages.ts`). Settings `key`/`description` values come from the backend as plain
- * strings — configuration identifiers and operator-facing copy stored in the database — so they
+ * strings, configuration identifiers and operator-facing copy stored in the database, so they
  * are not part of this catalogue.
  */
 import { createI18n } from 'vue-i18n'

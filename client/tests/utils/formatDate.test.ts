@@ -1,10 +1,10 @@
 /**
  * Tests for rendering a date the API sent.
  *
- * The two cases that matter most are the two that shipped. `/client/services/16` printed
- * `2026-09-08T08:19:37.756135+00:00` verbatim into a description list, and the row above it
- * printed nothing at all because `services/[id]/index.get.ts` hardcodes `regdate: ''`. Both
- * are asserted here against the exact production values rather than against invented ones.
+ * The two cases that matter most are a full backend timestamp
+ * (`2026-09-08T08:19:37.756135+00:00`), which must never print verbatim, and an empty
+ * registration date, which must never print nothing at all. Both are asserted against values in
+ * the exact shape the backend sends.
  *
  * The timezone case is the one a reader is most likely to think is over-cautious. It is not:
  * the suite runs under whatever `TZ` the machine has, so it asserts the *day* survives rather
@@ -12,7 +12,7 @@
  * implementation is provably wrong.
  *
  * Locale is always passed explicitly here. Outside a Nuxt render `useNuxtApp()` throws and the
- * util falls back to `en` — which is itself asserted, because that fallback is what keeps the
+ * util falls back to `en`, which is itself asserted, because that fallback is what keeps the
  * util callable from a test at all.
  *
  * @module tests/utils/formatDate.test
@@ -21,7 +21,7 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_DATE, formatDate, formatDateTime } from '~/utils/formatDate'
 
-/** The `nextduedate` production serves for service 16, microseconds and offset included. */
+/** The renewal date production served for service 16, microseconds and offset included. */
 const PRODUCTION_NEXT_DUE = '2026-09-08T08:19:37.756135+00:00'
 
 describe('formatDate', () => {
@@ -29,15 +29,15 @@ describe('formatDate', () => {
     const rendered = formatDate(PRODUCTION_NEXT_DUE, 'en')
 
     expect(rendered).toBe('Sep 8, 2026')
-    // The specific failure that shipped: no ISO punctuation, no microseconds, no offset.
+    // No ISO punctuation, no microseconds, no offset.
     expect(rendered).not.toContain('T')
     expect(rendered).not.toContain('756135')
     expect(rendered).not.toContain('+00:00')
   })
 
-  it('renders an empty registration date as the em dash, not as Invalid Date', () => {
-    // `regdate: ''` is a literal in `server/api/portal/client/services/[id]/index.get.ts`,
-    // so this path is live on every service page, not a defensive hypothetical.
+  it('renders an absent date as the em dash, not as Invalid Date', () => {
+    // A service that is not active yet has no renewal date (`nextRenewalAt: null`), so this
+    // path is live on the service pages, not a defensive hypothetical.
     for (const absent of ['', null, undefined]) {
       expect(formatDate(absent, 'en')).toBe(EMPTY_DATE)
     }
@@ -52,8 +52,8 @@ describe('formatDate', () => {
   })
 
   it('treats the zero-date sentinels as absent', () => {
-    // MySQL's `0000-00-00` and .NET's `default(DateTime)`. Pages guarded these with scattered
-    // `startsWith` checks before this util existed; the guard lives in one place now.
+    // MySQL's `0000-00-00` and .NET's `default(DateTime)`. The guard lives in this util, not in
+    // per-page checks.
     expect(formatDate('0000-00-00', 'en')).toBe(EMPTY_DATE)
     expect(formatDate('0001-01-01T00:00:00Z', 'en')).toBe(EMPTY_DATE)
   })
@@ -61,7 +61,7 @@ describe('formatDate', () => {
   it('keeps the calendar day the backend wrote, in a timezone that would shift it', () => {
     const original = process.env.TZ
     // UTC-11. `new Date('2026-09-08')` is UTC midnight, so a naive implementation renders the
-    // 7th here — a renewal date a day early on the screen a customer pays from.
+    // 7th here: a renewal date a day early on the screen a customer pays from.
     process.env.TZ = 'Pacific/Pago_Pago'
     try {
       expect(formatDate('2026-09-08', 'en')).toBe('Sep 8, 2026')
@@ -73,7 +73,7 @@ describe('formatDate', () => {
   })
 
   it('formats in the language the visitor is reading', () => {
-    // Not asserting exact punctuation — date-fns may reword a locale between releases. What
+    // Not asserting exact punctuation: date-fns may reword a locale between releases. What
     // must hold is that the three languages differ and that hy is not silently English.
     const en = formatDate(PRODUCTION_NEXT_DUE, 'en')
     const ru = formatDate(PRODUCTION_NEXT_DUE, 'ru')
@@ -89,7 +89,7 @@ describe('formatDate', () => {
   })
 
   it('falls back to English outside a Nuxt render rather than throwing', () => {
-    // `useNuxtApp()` does not exist here — it is a Nuxt auto-import. The util must survive
+    // `useNuxtApp()` does not exist here: it is a Nuxt auto-import. The util must survive
     // that, or no page util is testable and no util is callable from a Nitro route.
     expect(formatDate(PRODUCTION_NEXT_DUE)).toBe(formatDate(PRODUCTION_NEXT_DUE, 'en'))
   })
@@ -111,7 +111,7 @@ describe('formatDateTime', () => {
     process.env.TZ = 'Pacific/Pago_Pago'
     try {
       // 08:19 UTC is the previous evening at UTC-11. That is correct for an instant and wrong
-      // for a billing day — which is exactly why the two functions are separate.
+      // for a billing day, which is exactly why the two functions are separate.
       expect(formatDateTime(PRODUCTION_NEXT_DUE, 'en')).toMatch(/Sep 7, 2026/)
       expect(formatDate(PRODUCTION_NEXT_DUE, 'en')).toBe('Sep 8, 2026')
     }

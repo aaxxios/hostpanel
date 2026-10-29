@@ -1,3 +1,7 @@
+/**
+ * Server records, the control panel module set and its localised labels.
+ */
+
 import { translate } from '@/lib/translate'
 
 /** Closed set of the supported control panel module identifiers. */
@@ -8,7 +12,6 @@ export const ServerModule = {
   Centos: 'Centos',
   Cwp7: 'Cwp7',
   Lukittu: 'Lukittu',
-  InnovayseWordPressHosting: 'InnovayseWordPressHosting',
   Virtualmin: 'Virtualmin',
   HyperVm: 'HyperVm',
 } as const
@@ -27,36 +30,40 @@ export const ServerFillType = {
 /** Account distribution strategy for a server group. */
 export type ServerFillType = (typeof ServerFillType)[keyof typeof ServerFillType]
 
-/** DTO for a single provisioning server. */
-export interface ServerDto {
-  /** Unique server identifier. */
-  id: number
-  /** Display name. */
-  name: string
+/** Where and how a server's API is reached. */
+export interface ServerEndpoint {
   /** Hostname or IP used for API access. */
   hostname: string
   /** Primary public IP address, or null. */
   ipAddress: string | null
   /** Additional assigned IPs (newline-separated), or null. */
   assignedIpAddresses: string | null
-  /** Control panel module type string. */
-  module: ServerModule
-  /** API username. */
-  username: string
   /** Whether SSL is used for API connections. */
   useSSL: boolean
+}
+
+/** Account capacity of a server and whether it takes new accounts. */
+export interface ServerLimits {
   /** Account capacity limit, or null for unlimited. */
   maxAccounts: number | null
   /** Whether this is the default server for the module. */
   isDefault: boolean
   /** Whether this server is disabled. */
   isDisabled: boolean
-  /** Monthly cost in USD. */
-  monthlyCost: number
+}
+
+/** Where a server is hosted and what it costs. */
+export interface ServerHosting {
   /** Datacenter or NOC provider name, or null. */
   datacenter: string | null
   /** Status page URL, or null. */
   serverStatusAddress: string | null
+  /** Monthly cost in USD. */
+  monthlyCost: number
+}
+
+/** The five nameservers (hostname and IP each) a server's accounts are delegated to. */
+export interface ServerNameServers {
   /** Primary nameserver hostname. */
   ns1Hostname: string | null
   /** Primary nameserver IP. */
@@ -77,6 +84,56 @@ export interface ServerDto {
   ns5Hostname: string | null
   /** Fifth nameserver IP. */
   ns5Ip: string | null
+}
+
+/** Which secrets are stored for a server; the secrets themselves are never sent. */
+export interface ServerCredentialStatus {
+  /** Whether an API password is stored. */
+  hasPassword: boolean
+  /** Whether an API token is stored. */
+  hasApiToken: boolean
+  /** Whether an access hash is stored. */
+  hasAccessHash: boolean
+}
+
+/** The secrets sent when saving a server; null keeps the stored value. */
+export interface ServerCredentials {
+  /** API password, or null to keep the stored one. */
+  password: string | null
+  /** API token, or null to keep the stored one. */
+  apiToken: string | null
+  /** Access hash, or null to keep the stored one. */
+  accessHash: string | null
+}
+
+/** Which stored secrets a save removes; a clear wins over a value sent alongside it. */
+export interface ServerCredentialClears {
+  /** Remove the stored API password. */
+  password: boolean
+  /** Remove the stored API token. */
+  apiToken: boolean
+  /** Remove the stored access hash. */
+  accessHash: boolean
+}
+
+/** DTO for a single provisioning server. */
+export interface ServerDto {
+  /** Unique server identifier. */
+  id: number
+  /** Display name. */
+  name: string
+  /** Where and how the server's API is reached. */
+  endpoint: ServerEndpoint
+  /** Control panel module type string. */
+  module: ServerModule
+  /** API username. */
+  username: string
+  /** Account capacity and whether the server takes new accounts. */
+  limits: ServerLimits
+  /** Datacenter, status page and monthly cost. */
+  hosting: ServerHosting
+  /** Nameservers the server's accounts are delegated to. */
+  nameServers: ServerNameServers
   /** ID of the assigned group, or null. */
   serverGroupId: number | null
   /** Name of the assigned group, or null. */
@@ -89,6 +146,8 @@ export interface ServerDto {
   lastTestedAt: string | null
   /** Account count from the last test, or null if unknown. */
   accountsCount: number | null
+  /** Which secrets are stored. */
+  credentials: ServerCredentialStatus
 }
 
 /** Result of a server connection test. */
@@ -123,56 +182,22 @@ export interface ServerGroupDto {
 export interface ServerPayload {
   /** Display name. */
   name: string
-  /** Hostname or IP used for API access. */
-  hostname: string
-  /** Primary public IP address, or null. */
-  ipAddress: string | null
-  /** Additional assigned IPs (newline-separated), or null. */
-  assignedIpAddresses: string | null
+  /** Where and how the server's API is reached. */
+  endpoint: ServerEndpoint
   /** Control panel module type. */
   module: ServerModule
   /** API username. */
   username: string
-  /** API password, or null to keep the stored one. */
-  password: string | null
-  /** API token, or null to keep the stored one. */
-  apiToken: string | null
-  /** Access hash, or null to keep the stored one. */
-  accessHash: string | null
-  /** Whether SSL is used for API connections. */
-  useSSL: boolean
-  /** Account capacity limit, or null for unlimited. */
-  maxAccounts: number | null
-  /** Whether this is the default server for the module. */
-  isDefault: boolean
-  /** Whether this server is disabled. */
-  isDisabled: boolean
-  /** Monthly cost in USD. */
-  monthlyCost: number
-  /** Datacenter or NOC provider name, or null. */
-  datacenter: string | null
-  /** Status page URL, or null. */
-  serverStatusAddress: string | null
-  /** Nameserver 1 hostname, or null. */
-  ns1Hostname: string | null
-  /** Nameserver 1 IP, or null. */
-  ns1Ip: string | null
-  /** Nameserver 2 hostname, or null. */
-  ns2Hostname: string | null
-  /** Nameserver 2 IP, or null. */
-  ns2Ip: string | null
-  /** Nameserver 3 hostname, or null. */
-  ns3Hostname: string | null
-  /** Nameserver 3 IP, or null. */
-  ns3Ip: string | null
-  /** Nameserver 4 hostname, or null. */
-  ns4Hostname: string | null
-  /** Nameserver 4 IP, or null. */
-  ns4Ip: string | null
-  /** Nameserver 5 hostname, or null. */
-  ns5Hostname: string | null
-  /** Nameserver 5 IP, or null. */
-  ns5Ip: string | null
+  /** API secrets; null members keep the stored ones. */
+  credentials: ServerCredentials
+  /** Stored secrets to remove on update. */
+  clears: ServerCredentialClears
+  /** Account capacity and whether the server takes new accounts. */
+  limits: ServerLimits
+  /** Datacenter, status page and monthly cost. */
+  hosting: ServerHosting
+  /** Nameservers the server's accounts are delegated to. */
+  nameServers: ServerNameServers
 }
 
 /** Payload for creating or updating a server group. */
@@ -185,7 +210,7 @@ export interface ServerGroupPayload {
   serverIds: number[]
 }
 
-/** Human-readable labels for each module; product names stay as they are, the in-house hosting product is read from the catalogue. */
+/** Human-readable labels for each module. */
 export const MODULE_LABELS: Record<ServerModule, string> = {
   CPanel: 'cPanel / WHM',
   Plesk: 'Plesk',
@@ -193,7 +218,6 @@ export const MODULE_LABELS: Record<ServerModule, string> = {
   Centos: 'CentOS Web Panel',
   Cwp7: 'CWP7',
   Lukittu: 'Lukittu',
-  get InnovayseWordPressHosting() { return translate('servers.moduleLabels.wordPressHosting') },
   Virtualmin: 'Virtualmin',
   HyperVm: 'HyperVM',
 }

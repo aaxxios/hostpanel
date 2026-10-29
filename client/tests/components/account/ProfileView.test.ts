@@ -5,12 +5,17 @@ import { describe, expect, it } from 'vitest'
 import { mountAccount } from '~/tests/helpers/mountAccount'
 import ProfileView from '~/components/account/ProfileView.vue'
 import type { ClientUser } from '~/types/clientuser'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 import { decodeEmailPrefs } from '~/utils/emailPreferences'
 
-/** A profile with a company and no address. */
-const user: ClientUser = {
-  id: 1, firstname: 'Jane', lastname: 'Doe', companyname: 'Acme', email: 'jane@example.com', permissions: 0, countryname: 'Armenia'
-}
+/** A profile with a company and an address holding only its country. */
+const user: ClientUser = makeClientUser({
+  firstName: 'Jane',
+  lastName: 'Doe',
+  companyName: 'Acme',
+  email: 'jane@example.com',
+  address: { street: null, address2: null, city: null, state: null, postCode: null, country: 'AM' }
+})
 
 /**
  * Mounts the view with the given overrides.
@@ -37,7 +42,7 @@ describe('ProfileView', () => {
     expect(text).toContain('Jane')
     expect(text).toContain('Acme')
     expect(text).toContain('Card')
-    expect(text).toContain('Armenia')
+    expect(text).toContain('AM')
   })
 
   it('shows a dash for an empty address field', () => {

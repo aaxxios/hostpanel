@@ -14,7 +14,7 @@ export interface RouteStubOptions {
   /** The route parameters (`route.params`). */
   params?: Record<string, string>
   /** The route query (`route.query`). */
-  query?: Record<string, string>
+  query?: Record<string, string | string[]>
   /** The full path (`route.fullPath`). */
   fullPath?: string
 }

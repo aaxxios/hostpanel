@@ -4,6 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountPage, stubClientRuntime } from '~/tests/helpers/mountClient'
 import ServicesPage from '~/pages/client/services/index.vue'
+import { makeClientService } from '~/tests/helpers/clientServiceFixture'
 import type { ClientService } from '~/types/clientservice'
 
 /** The mocked client endpoints the store reaches. */
@@ -15,11 +16,11 @@ vi.mock('~/composables/apis/useClientApi', () => ({ useClientApi: () => clientAp
  * Builds a service with the fields the card reads.
  *
  * @param id - Service id.
- * @param username - Control-panel account; empty for a service that still needs setup.
+ * @param username - Control-panel account; null for a service that still needs setup.
  * @returns A service.
  */
-const service = (id: number, username = 'webmstr'): ClientService =>
-  ({ id, name: `Plan ${id}`, domain: `site${id}.com`, username, status: 'Active', nextduedate: '2026-12-01', recurringamount: '10', diskusage: '1', disklimit: '10' } as ClientService)
+const service = (id: number, username: string | null = 'webmstr'): ClientService =>
+  makeClientService({ id, productName: `Plan ${id}`, domain: `site${id}.com`, username })
 
 describe('service list page', () => {
   beforeEach(() => {
@@ -37,7 +38,7 @@ describe('service list page', () => {
   })
 
   it('announces how many services still need setup', async () => {
-    clientApi.fetchServices.mockResolvedValue([service(1), service(2, ''), service(3, '')])
+    clientApi.fetchServices.mockResolvedValue([service(1), service(2, null), service(3, null)])
 
     const wrapper = await mountPage(ServicesPage)
 

@@ -1,11 +1,13 @@
 /**
- * Unit tests for PaymentMethodsTab: loading, failed read vs empty, actions and the add hand-off.
+ * Unit tests for PaymentMethodsTab: loading, failed read vs empty and the actions on a saved method.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountAccount } from '~/tests/helpers/mountAccount'
+import { stubLocalePath } from '~/tests/helpers/runtimeStubs'
 import PaymentMethodsTab from '~/components/account/PaymentMethodsTab.vue'
 import { useAccountStore } from '~/stores/account'
 import { ActionOutcome } from '~/types/actionoutcome'
+import { PaymentMethodType } from '~/types/payment'
 import type { PaymentMethod } from '~/types/payment'
 
 vi.mock('~/composables/apis/useClientApi', () => ({ useClientApi: () => ({}) }))
@@ -14,9 +16,13 @@ vi.mock('~/composables/apis/useAuthApi', () => ({ useAuthApi: () => ({}) }))
 vi.mock('qrcode', () => ({ default: { toDataURL: async (): Promise<string> => '' } }))
 
 /** One saved card. */
-const method: PaymentMethod = { id: '9', type: 'card', description: 'My card', gateway_name: 'stripe', card_last_four: '4242' }
+const method: PaymentMethod = { id: '9', type: PaymentMethodType.Card, description: 'My card', gatewayName: 'stripe', cardLastFour: '4242' }
 
 describe('PaymentMethodsTab', () => {
+  beforeEach(() => {
+    stubLocalePath('/en')
+  })
+
   afterEach(() => {
     vi.unstubAllGlobals()
   })
@@ -33,7 +39,14 @@ describe('PaymentMethodsTab', () => {
     const wrapper = mountAccount(PaymentMethodsTab)
 
     expect(wrapper.find('[data-testid="ui-empty-state"]').text()).toContain('client.payment.empty')
+    expect(wrapper.find('[data-testid="ui-empty-state"]').text()).toContain('client.payment.emptyDesc')
     expect(wrapper.find('[data-testid="account-payment-load-error"]').exists()).toBe(false)
+  })
+
+  it('links a customer without a saved card to the invoices, where the hosted gateway takes the payment', () => {
+    const wrapper = mountAccount(PaymentMethodsTab)
+
+    expect(wrapper.find('[data-testid="account-payment-invoices"]').attributes('href')).toBe('/en/client/invoices')
   })
 
   it('shows the failure, not the empty state, when the read failed', async () => {
@@ -45,20 +58,11 @@ describe('PaymentMethodsTab', () => {
     expect(wrapper.find('[data-testid="ui-empty-state"]').exists()).toBe(false)
   })
 
-  it('does not offer "add" without a billing-portal URL', () => {
+  it('offers no add action, since the API has no way to add a card', () => {
     const wrapper = mountAccount(PaymentMethodsTab)
 
     expect(wrapper.find('[data-testid="account-payment-add"]').exists()).toBe(false)
-  })
-
-  it('opens the billing portal in a new tab when a URL is configured', async () => {
-    vi.stubGlobal('useRuntimeConfig', () => ({ public: { billingPortalUrl: 'https://billing.example.com' } }))
-    const open = vi.spyOn(window, 'open').mockReturnValue(null)
-    const wrapper = mountAccount(PaymentMethodsTab)
-
-    await wrapper.find('[data-testid="account-payment-add"]').trigger('click')
-
-    expect(open).toHaveBeenCalledWith('https://billing.example.com/clientarea.php?action=creditcard', '_blank')
+    expect(wrapper.find('[data-testid="payment-methods-add"]').exists()).toBe(false)
   })
 
   it('makes a method the default and reports it', async () => {

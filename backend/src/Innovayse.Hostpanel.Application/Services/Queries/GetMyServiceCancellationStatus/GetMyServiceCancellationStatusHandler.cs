@@ -5,6 +5,7 @@ using Wolverine;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Services.Queries.GetMyServiceCancellationStatus;
+
 /// <summary>
 /// Reads the cancellation status of one of the calling client's own services, refusing every
 /// service that is not theirs.

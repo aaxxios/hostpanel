@@ -1,89 +1,69 @@
 <?php
 
+declare(strict_types=1);
+
 /**
- * Innovayse Migration — WHMCS Addon Module
+ * Hostpanel migration addon module for the source billing system.
  *
- * Exposes a pull API so the Innovayse panel can fetch data from this WHMCS instance.
+ * Exposes a pull API (api.php) so hostpanel can fetch data from this billing system. The source
+ * system calls the functions below by name; each one builds the addon's object for it and
+ * delegates.
  *
  * Installation:
  *   1. Upload this folder to /modules/addons/innovayse_migration/
- *   2. Activate in WHMCS Admin → Setup → Addon Modules
- *   3. Enter the Migration Key from your Innovayse panel in the settings
+ *   2. Activate it in the billing system's admin area under the addon modules setup
+ *   3. Enter the Migration Key from hostpanel in the module settings
+ *
+ * The folder and module id stay `innovayse_migration`: existing installations store their key
+ * under that id.
  */
 
+use HostpanelMigration\Addon\AddonModule;
+use HostpanelMigration\Addon\AdminPage;
+
+// The source billing system defines this constant before it loads a module.
 if (!defined('WHMCS')) {
     die('This file cannot be accessed directly');
 }
 
-// ── Module metadata ──────────────────────────────────────────────────────────
+require_once __DIR__ . '/autoload.php';
 
+/**
+ * The module's configuration: name, version and the migration key setting.
+ *
+ * @return array<string, mixed> The configuration in the source system's shape.
+ */
 function innovayse_migration_config(): array
 {
-    return [
-        'name'        => 'Innovayse Migration',
-        'description' => 'Connect your WHMCS instance to the Innovayse hosting panel.',
-        'version'     => '1.1.0',
-        'author'      => 'Innovayse',
-        'fields'      => [
-            'migration_key' => [
-                'FriendlyName' => 'Migration Key',
-                'Type'         => 'password',
-                'Size'         => '60',
-                'Description'  => 'Secret key from your Innovayse panel → Migration Tools → New Migration',
-                'Default'      => '',
-            ],
-        ],
-    ];
+    return (new AddonModule())->config();
 }
 
+/**
+ * Called when an administrator activates the module.
+ *
+ * @return array<string, string> The answer in the source system's shape.
+ */
 function innovayse_migration_activate(): array
 {
-    return ['status' => 'success', 'description' => 'Innovayse Migration activated.'];
+    return (new AddonModule())->activate();
 }
 
+/**
+ * Called when an administrator deactivates the module.
+ *
+ * @return array<string, string> The answer in the source system's shape.
+ */
 function innovayse_migration_deactivate(): array
 {
-    return ['status' => 'success', 'description' => 'Innovayse Migration deactivated.'];
+    return (new AddonModule())->deactivate();
 }
 
-// ── Admin UI ─────────────────────────────────────────────────────────────────
-
+/**
+ * Renders the module's admin page.
+ *
+ * @param array<string, mixed> $vars The module variables the source system passes.
+ */
 function innovayse_migration_output(array $vars): void
 {
-    $migrationKey = $vars['migration_key'] ?? '';
-    $configured   = !empty($migrationKey);
-
-    $protocol    = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host        = $_SERVER['HTTP_HOST'] ?? '';
-    $apiEndpoint = $protocol . '://' . $host . '/modules/addons/innovayse_migration/api.php';
-    ?>
-    <div style="font-family:sans-serif;max-width:620px;padding:20px">
-
-        <h2 style="margin-top:0">Innovayse Migration</h2>
-
-        <?php if (!$configured): ?>
-        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;
-                    padding:14px 18px;color:#991b1b;font-weight:600;margin-bottom:20px">
-            &#9888; Not configured — enter your Migration Key in the settings above and save.
-        </div>
-        <?php else: ?>
-        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;
-                    padding:14px 18px;color:#166534;font-weight:600;margin-bottom:20px">
-            &#10003; Plugin is ready. The Innovayse panel can now connect and pull your data.
-        </div>
-        <?php endif; ?>
-
-        <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:20px">
-            <p style="margin:0 0 6px 0;font-weight:600;font-size:14px">Source URL</p>
-            <p style="margin:0 0 10px 0;color:#666;font-size:13px">
-                Enter this URL as the <strong>Source URL</strong> when creating a migration in your Innovayse panel:
-            </p>
-            <code style="display:block;background:#e9ecef;padding:8px 12px;border-radius:6px;
-                          font-size:13px;word-break:break-all">
-                <?= htmlspecialchars($apiEndpoint) ?>
-            </code>
-        </div>
-
-    </div>
-    <?php
+    echo (new AdminPage())->render($vars, $_SERVER);
 }

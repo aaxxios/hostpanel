@@ -1,7 +1,7 @@
 /**
  * Endpoint functions for the report screens.
  *
- * No state lives here — the reports store owns loading and error. Each report screen
+ * No state lives here: the reports store owns loading and error. Each report screen
  * supplies its own endpoint path (with query string), so these functions take the path
  * and add only the verb and the response type. Every function rejects with an `ApiError`.
  */

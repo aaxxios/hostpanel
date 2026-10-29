@@ -1,6 +1,6 @@
 using Innovayse.Hostpanel.Domain.Domains;
-
 using Innovayse.Hostpanel.Domain.Domains.Enums;
+
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 
 /// <summary>

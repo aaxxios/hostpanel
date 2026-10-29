@@ -1,17 +1,23 @@
 /**
- * C# backend API utility -- server-side only
+ * C# backend API utility: server-side only
  *
- * All backend API calls go through `internalApiCall`. It:
+ * All backend API calls go through `internalApiCall`, or `internalApiBinaryCall` when the answer is
+ * a file. Both:
  * - Reads `apiUrl` from runtimeConfig (set via API_URL env var)
  * - Attaches the access token of the server-side session (`server/utils/portal-session.ts`); the
  *   browser holds only the opaque session cookie, never a token
  * - Forwards the browser's `X-Language` on every backend call (the retry after a refresh included)
  *   so the backend answers its sentences in the reader's language
+ * - Forwards the visitor's address in `X-Forwarded-For`, so the backend rate limits and records
+ *   the visitor rather than this server; the backend honours it only from a configured proxy. The
+ *   address is read from the right of the incoming header by the configured number of trusted
+ *   proxies (`server/utils/clientAddress.ts`), never from the leftmost entry a visitor can write
  * - Sliding session: when the backend answers with a renewed access token
  *   (`X-Renewed-Access-Token`), stores it in the session so it outlives the 15-minute token for as
  *   long as the person keeps working
  * - On 401: refreshes the session's token with its refresh token and retries the request once
- * - Throws appropriate H3 errors on failure; the sentence is always the backend's own `detail`
+ * - Throws appropriate H3 errors on failure; the sentence is always the backend's own `detail`,
+ *   and the backend's `Retry-After` and `X-Request-Id` travel to the browser with it
  *
  * @module server/utils/api
  */
@@ -19,30 +25,49 @@
 import type { H3Event } from 'h3'
 import { LANGUAGE_HEADER, resolveLanguage } from '~/utils/transportLanguage'
 import { CSRF_HEADER, CSRF_HEADER_VALUE } from '~/constants/csrfHeader'
+import { HttpMethod } from '~/types/httpmethod'
+import { resolveClientAddress } from '~/server/utils/clientAddress'
 import { refreshSession, resolveAccessToken, updateAccessToken } from '~/server/utils/portal-session'
 
 /** What a failed backend call exposes that `backendError` reads. */
 interface UpstreamError {
   /** The backend's JSON body, when it sent one. */
   data?: unknown
+  /** The backend's answer, whose headers a refusal passes on; absent when nothing answered. */
+  response?: { headers: Headers }
 }
 
 /** Options of one `internalApiCall`. */
 interface InternalApiOptions {
   /** HTTP method; GET when absent. */
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
-  // `unknown` before, which `$fetch` will not accept as a body -- every caller passes an
-  // object literal, so this states what they already send rather than widening at the call.
-  /** Request body. */
-  body?: Record<string, unknown> | BodyInit | null
+  method?: HttpMethod
+  // `object` rather than `Record<string, unknown>`: the routes pass their typed body interfaces
+  // (`ProfileUpdate`, `EmailChangeInput` and the rest), and an interface has no index signature, so it
+  // would not fit a record type. `$fetch` serialises any plain object to JSON.
+  /** Request body: a JSON object, or an already encoded body. */
+  body?: object | BodyInit | null
   /** Extra request headers. */
   headers?: Record<string, string>
   /** Omit the bearer token, for the calls made before a session exists. */
   anonymous?: boolean
 }
 
+/** Request header that carries the visitor's address to the backend. */
+const FORWARDED_FOR_HEADER = 'X-Forwarded-For'
+
 /** Response header the backend uses to hand a bearer caller a renewed access token. */
 const RENEWED_TOKEN_HEADER = 'x-renewed-access-token'
+
+/**
+ * The backend headers a refusal passes on to the browser, each with the shape it may have. A
+ * throttled caller needs `Retry-After` to know when to come back, and support needs the backend's
+ * `X-Request-Id` to find the failing request in its log; anything else the backend sends stays
+ * behind, and a value of another shape is dropped rather than echoed.
+ */
+const FORWARDED_ERROR_HEADERS: ReadonlyArray<{ name: string, shape: RegExp }> = [
+  { name: 'Retry-After', shape: /^\d{1,6}$/ },
+  { name: 'X-Request-Id', shape: /^[A-Za-z0-9-]{1,64}$/ }
+]
 
 /**
  * Resolve the C# backend base URL from runtime config.
@@ -108,16 +133,31 @@ const errorBody = (data: unknown): BackendErrorBody | undefined => {
  * When the backend sent no body at all (it was unreachable, or answered a bare status) there is
  * no sentence to forward and none is invented here: `statusMessage` stays empty and the client's
  * one "no answer" sentence is shown. `err.message` is deliberately not a fallback: on a response
- * with no JSON body -- a bare 401 above all -- `$fetch` composes its own message and embeds the
+ * with no JSON body, a bare 401 above all, `$fetch` composes its own message and embeds the
  * address it called, which would publish the internal host and port of a service the browser
  * cannot reach.
  *
+ * The backend's `Retry-After` and `X-Request-Id` are set on the response of `event` before the error
+ * is returned, so they reach the browser beside the body.
+ *
+ * @param event - H3 event of the incoming browser request, whose response carries the forwarded headers.
  * @param status - HTTP status the backend answered with.
  * @param err - The `$fetch` rejection, whose `data` holds the backend's JSON body.
  * @returns An H3 error ready to be thrown.
  */
-const backendError = (status: number, err: UpstreamError) => {
+const backendError = (event: H3Event, status: number, err: UpstreamError) => {
   const data = errorBody(err?.data)
+
+  const forwarded: Record<string, string> = {}
+  for (const { name, shape } of FORWARDED_ERROR_HEADERS) {
+    const value = err?.response?.headers?.get(name)
+    if (value && shape.test(value)) {
+      forwarded[name] = value
+    }
+  }
+  if (Object.keys(forwarded).length > 0) {
+    setResponseHeaders(event, forwarded)
+  }
 
   return createError({
     statusCode: status,
@@ -138,6 +178,8 @@ interface UpstreamFailure {
   statusCode?: number
   /** The upstream response body. */
   data?: unknown
+  /** The upstream response, whose headers a refusal passes on. */
+  response?: { headers: Headers }
 }
 
 /**
@@ -165,6 +207,12 @@ const backendHeaders = (event: H3Event, options: InternalApiOptions, bearerToken
     // The backend's SSO build refuses an anonymous state-changing call without it (a bearer call is exempt).
     [CSRF_HEADER]: CSRF_HEADER_VALUE,
     ...options.headers,
+  }
+  // The backend sees this server as the caller; without the visitor's address every guest
+  // would share one rate-limit bucket and every order would record this server's address.
+  const clientIp = resolveClientAddress(event)
+  if (clientIp) {
+    headers[FORWARDED_FOR_HEADER] = clientIp
   }
   if (bearerToken) {
     headers['Authorization'] = `Bearer ${bearerToken}`
@@ -211,7 +259,9 @@ const withSession = async <T>(
     } finally {
       // Only a bearer call belongs to a session; an anonymous call has nothing to renew.
       if (renewal.token && bearerToken) {
-        await updateAccessToken(event, renewal.token)
+        // Best effort: a store failure here must not replace the backend's own error, or turn a
+        // successful call into a failure. The session keeps its old token, which a refresh renews.
+        await updateAccessToken(event, renewal.token).catch(() => undefined)
       }
     }
   }
@@ -231,12 +281,12 @@ const withSession = async <T>(
           return await attempt(newToken)
         } catch (retryErr: unknown) {
           const retryFailure = retryErr as UpstreamFailure
-          throw backendError(upstreamStatus(retryFailure), retryFailure)
+          throw backendError(event, upstreamStatus(retryFailure), retryFailure)
         }
       }
     }
 
-    throw backendError(status, failure)
+    throw backendError(event, status, failure)
   }
 }
 
@@ -248,7 +298,7 @@ const withSession = async <T>(
  */
 const backendUrl = (endpoint: string): string => {
   // Bound to a plain `string` first. Passed as a template literal, Nitro tries to match the URL
-  // against its own route table and answers with `TypedInternalResponse<...>` rather than `T` --
+  // against its own route table and answers with a `TypedInternalResponse` rather than `T`:
   // even though this address is the external C# API and matches no Nitro route at all.
   const url: string = `${getApiUrl()}/api${endpoint}`
   return url
@@ -274,9 +324,11 @@ export const internalApiCall = <T>(
 ): Promise<T> => {
   const url = backendUrl(endpoint)
 
+  // The request type is stated as a plain `string`: left to its default, `$fetch` types the reply
+  // as a union over every Nitro route, although this address is the C# API and matches none.
   return withSession(event, endpoint, options, (bearerToken, watchRenewal) =>
-    $fetch<T>(url, {
-      method: options.method ?? 'GET',
+    $fetch<T, string>(url, {
+      method: options.method ?? HttpMethod.Get,
       headers: backendHeaders(event, options, bearerToken),
       body: options.body,
       onResponse: watchRenewal,
@@ -297,8 +349,8 @@ export interface BinaryResponse {
 }
 
 /**
- * Makes an authenticated GET to the backend for a file rather than JSON, with the same token
- * refresh and error forwarding as `internalApiCall`.
+ * Makes an authenticated GET to the backend for a file rather than JSON, with the same session,
+ * token refresh and error forwarding as `internalApiCall`.
  *
  * @param event - H3 event from the Nuxt server route handler
  * @param endpoint - API path after `/api`, e.g. `/me/invoices/7/pdf`
@@ -310,7 +362,7 @@ export const internalApiBinaryCall = (event: H3Event, endpoint: string): Promise
 
   return withSession(event, endpoint, {}, async (bearerToken, watchRenewal) => {
     const response = await $fetch.raw<ArrayBuffer>(url, {
-      method: 'GET',
+      method: HttpMethod.Get,
       headers: backendHeaders(event, {}, bearerToken),
       responseType: 'arrayBuffer',
       onResponse: watchRenewal,

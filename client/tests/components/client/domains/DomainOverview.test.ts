@@ -8,10 +8,11 @@ import { Permission } from '~/composables/usePermissions'
 import DomainOverview from '~/components/client/domains/DomainOverview.vue'
 import type { DomainDetail } from '~/types/domaindetail'
 import { DomainTab } from '~/types/domaintab'
+import { DomainStatus } from '~/types/domainstatus'
 
 /** A domain with the fields the overview reads. */
 const domain = {
-  id: 1, name: 'example.com', status: 'Active', registeredAt: '2025-03-05', expiresAt: '2027-03-05', nextDueDate: '2027-02-05',
+  id: 1, name: 'example.com', status: DomainStatus.Active, registeredAt: '2025-03-05', expiresAt: '2027-03-05', nextDueDate: '2027-02-05',
   firstPaymentAmount: 15, recurringAmount: 12, registrationPeriod: 1, paymentMethod: 'card', priceCurrency: 'USD'
 } as DomainDetail
 

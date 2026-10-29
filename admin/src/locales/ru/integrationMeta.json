@@ -1,10 +1,8 @@
 {
   "stripe": {
     "shortDescription": "Принимайте онлайн-платежи картами через платёжную платформу Stripe.",
-    "hint": "Добавьте этот webhook-адрес в панели Stripe: https://yourdomain.com/api/webhooks/stripe",
     "fieldSecretKey": "Секретный ключ",
     "fieldPublishableKey": "Публичный ключ",
-    "fieldWebhookSecret": "Секрет вебхука",
     "fieldMode": "Режим"
   },
   "paypal": {

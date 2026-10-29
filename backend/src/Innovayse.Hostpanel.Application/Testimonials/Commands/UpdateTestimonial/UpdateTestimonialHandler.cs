@@ -41,7 +41,7 @@ public sealed class UpdateTestimonialHandler
         }
 
         entity.Update(cmd.Name, cmd.Company, cmd.AvatarUrl, cmd.Rating, cmd.SortOrder, cmd.IsActive, cmd.PublishedAt);
-        entity.ApplyTranslations(cmd.Translations);
+        entity.ReplaceTranslations(cmd.Translations.ToContent());
 
         await _context.SaveChangesAsync(ct);
         return Result.Success();

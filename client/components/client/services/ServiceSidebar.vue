@@ -28,7 +28,7 @@
       </UiNavItem>
     </UiNavGroup>
 
-    <UiNavGroup v-if="service.serverhostname" :title="$t('client.services.sectionQuickLinks')" :icon="Link2">
+    <UiNavGroup v-if="service.server" :title="$t('client.services.sectionQuickLinks')" :icon="Link2">
       <UiNavItem v-if="canSignIn" :icon="Monitor" :loading="ssoLoading" testid="service-link-cpanel" @click="emit('cpanel')">
         {{ $t('client.services.linkCpanel') }}
       </UiNavItem>
@@ -52,7 +52,7 @@ import { KeyRound, LayoutGrid, Link2, Mail, MessageSquare, Monitor, Settings, Te
 import { CLIENT_TICKET_NEW_PATH, clientServiceSetupPath } from '~/constants/clientRoutes'
 import { Permission } from '~/composables/usePermissions'
 import { useClientStore } from '~/stores/client'
-import type { ServiceDetail } from '~/types/servicedetail'
+import type { ClientService } from '~/types/clientservice'
 import { ServiceStatus } from '~/types/servicestatus'
 import { ServiceTab } from '~/types/servicetab'
 import { webmailUrl as buildWebmailUrl } from '~/utils/controlPanel'
@@ -63,7 +63,7 @@ const { t } = useI18n()
 /** Props of ServiceSidebar. */
 interface Props {
   /** The service being shown. */
-  service: ServiceDetail
+  service: ClientService
   /** The id of the service, for the setup link. */
   serviceId: string
   /** The panel currently shown, a `ServiceTab` value. */
@@ -100,8 +100,8 @@ const canSignIn = computed(() => store.mayDo(Permission.AllowSingleSignOn))
 /** Whether the person may change the service's control-panel password. */
 const canChangePassword = computed(() => store.mayDo(Permission.ViewModifyPasswords))
 
-/** Address of the service's webmail, on its own server. */
-const webmailUrl = computed(() => buildWebmailUrl(props.service.serverhostname))
+/** Address of the service's webmail, on its own server; undefined while no server is assigned (the links are hidden then). */
+const webmailUrl = computed(() => (props.service.server ? buildWebmailUrl(props.service.server.hostname) : undefined))
 
 /** The panels the menu switches between. */
 const tabs = computed(() => [

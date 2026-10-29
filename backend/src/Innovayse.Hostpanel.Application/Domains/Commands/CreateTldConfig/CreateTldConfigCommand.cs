@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Domain.Domains.Enums;
+
 namespace Innovayse.Hostpanel.Application.Domains.Commands.CreateTldConfig;
 
 /// <summary>Command to create a new TLD configuration with pricing and administrative settings.</summary>
@@ -15,7 +16,7 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.CreateTldConfig;
 /// <param name="SellRegister">Client-facing sell price for registration, keyed by period in years.</param>
 /// <param name="SellTransfer">Client-facing sell price for transfer, keyed by period in years.</param>
 /// <param name="SellRenew">Client-facing sell price for renewal, keyed by period in years.</param>
-public record CreateTldConfigCommand(
+public sealed record CreateTldConfigCommand(
     string Tld,
     string RegistrarModule,
     string Currency,

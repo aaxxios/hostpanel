@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Clients.Commands.AddMyContact;
 /// <summary>
 /// Validator for <see cref="AddMyContactCommand"/>. Declares no rules: the handler forwards the
 /// fields to <c>AddContactCommand</c>, whose validator owns every field rule and which only runs
-/// once the caller's profile has been found -- so a caller with no profile still answers 404.
+/// once the caller's profile has been found, so a caller with no profile still answers 404.
 /// </summary>
 public sealed class AddMyContactValidator : LocalizedValidator<AddMyContactCommand>
 {

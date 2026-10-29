@@ -7,7 +7,7 @@
  */
 
 import { buildQuery, useApi } from '@/composables/useApi'
-import type { EmailTemplate } from '@/types/emailtemplate'
+import type { CreateEmailTemplatePayload, EmailTemplate, EmailTemplateContent } from '@/types/emailtemplate'
 import type { CreateProductPayload, Product, ProductGroup, UpdateProductPayload } from '@/types/product'
 import type { Setting } from '@/types/setting'
 import { ApiPath } from '@/lib/apiPaths'
@@ -51,10 +51,29 @@ export const useSettingsApi = () => {
   /**
    * Lists the email templates.
    *
-   * @returns Every template.
+   * @returns Every language version of every template.
    */
   const listEmailTemplates = (): Promise<EmailTemplate[]> =>
     request<EmailTemplate[]>(ApiPath.AdminEmailTemplates)
+
+  /**
+   * Adds a language version to a template.
+   *
+   * @param payload - Slug, language and words of the new version.
+   * @returns The new version's id.
+   */
+  const createEmailTemplate = (payload: CreateEmailTemplatePayload): Promise<number> =>
+    request<number>(ApiPath.AdminEmailTemplates, { method: HttpMethod.Post, body: JSON.stringify(payload) })
+
+  /**
+   * Rewrites the words of one stored language version.
+   *
+   * @param id - Version id.
+   * @param content - New subject, body and description.
+   * @returns Nothing; the API answers 204.
+   */
+  const updateEmailTemplate = (id: number, content: EmailTemplateContent): Promise<void> =>
+    request<void>(`${ApiPath.AdminEmailTemplates}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(content) })
 
   /**
    * Lists every product, inactive and unsellable ones included.
@@ -96,6 +115,8 @@ export const useSettingsApi = () => {
     updateSetting,
     clearSetting,
     listEmailTemplates,
+    createEmailTemplate,
+    updateEmailTemplate,
     listProducts,
     listProductGroups,
     createProduct,

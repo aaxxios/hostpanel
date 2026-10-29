@@ -3,8 +3,10 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.DeleteEmailForwardingRule;
 
@@ -14,24 +16,27 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.DeleteEmailForwarding
 /// </summary>
 public sealed class DeleteEmailForwardingRuleHandler
 {
-    /// <summary>The registrar provider the deletion is synced to.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
 
     /// <summary>The data context the domain aggregate is loaded, mutated and saved through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work the aggregate is saved through.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>Logger that records the registrar's refusal code for operators.</summary>
+    private readonly ILogger<DeleteEmailForwardingRuleHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="registrar">The registrar provider the deletion is synced to.</param>
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
     /// <param name="context">The data context the domain aggregate is loaded, mutated and saved through.</param>
-    /// <param name="uow">Unit of work the aggregate is saved through.</param>
-    public DeleteEmailForwardingRuleHandler(IRegistrarProvider registrar, IHostpanelDbContext context, IUnitOfWork uow)
+    /// <param name="logger">Logger that records the registrar's refusal code for operators.</param>
+    public DeleteEmailForwardingRuleHandler(
+        RegistrarProviderResolver registrars,
+        IHostpanelDbContext context,
+        ILogger<DeleteEmailForwardingRuleHandler> logger)
     {
-        _registrar = registrar;
+        _registrars = registrars;
         _context = context;
-        _uow = uow;
+        _logger = logger;
     }
 
     /// <summary>
@@ -63,14 +68,17 @@ public sealed class DeleteEmailForwardingRuleHandler
         var source = rule.Source;
 
         domain.RemoveForwardingRule(cmd.RuleId!.Value);
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
 
-        var result = await _registrar.DeleteEmailForwardingRuleAsync(domain.Name, source, ct);
+        var registrar = await _registrars.ResolveAsync(domain, ct);
+        var result = await registrar.DeleteEmailForwardingRuleAsync(
+            new EmailForwardingRuleRemoval(domain.Name, source), ct);
         if (!result.Success)
         {
-            return Result.Failure(
-                $"Registrar failed to delete email forwarding rule for '{domain.Name}': {result.ErrorMessage}",
-                HostpanelErrorCodes.EMAIL_FORWARDING_RULE_UPSTREAM_FAILED);
+            _logger.LogWarning(
+                "Registrar failed to delete email forwarding rule for '{DomainName}': {Reason}",
+                domain.Name, result.ErrorCode);
+            return Result.FailureCode(result.ToFailureCode(HostpanelErrorCodes.EMAIL_FORWARDING_RULE_UPSTREAM_FAILED));
         }
 
         return Result.Success();

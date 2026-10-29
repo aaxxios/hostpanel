@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
@@ -9,12 +8,10 @@ using Innovayse.Hostpanel.Application.Services.Commands.OrderService;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
@@ -23,9 +20,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Services;
 /// caller leaves an amount unset, honouring a zero amount from order fulfilment, and refusing an
 /// unknown or inactive product.
 /// </summary>
-/// <remarks>
-/// Moved from the deleted <c>ServiceLifecycleEndpointTests</c> and <c>ServicesEndpointTests</c>.
-/// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class OrderServiceTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -73,7 +67,7 @@ public sealed class OrderServiceTests(IntegrationTestFactory factory) : IClassFi
             orderResponse = await client.PostAsJsonAsync("/api/me/services", new
             {
                 ProductId = productId,
-                BillingCycle = BillingCycleNames.Monthly
+                BillingCycle = nameof(BillingCycle.Monthly)
             });
 
             if (orderResponse.StatusCode == HttpStatusCode.Created)
@@ -96,7 +90,7 @@ public sealed class OrderServiceTests(IntegrationTestFactory factory) : IClassFi
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
         var outcome = await bus.InvokeAsync<Result<int>>(
-            new OrderServiceCommand(clientId, productId, BillingCycleNames.Monthly, 0m, 0m, "Card"), CancellationToken.None);
+            new OrderServiceCommand(clientId, productId, BillingCycle.Monthly, 0m, 0m, "Card"), CancellationToken.None);
 
         outcome.IsSuccess.Should().BeTrue();
 
@@ -116,7 +110,7 @@ public sealed class OrderServiceTests(IntegrationTestFactory factory) : IClassFi
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
         var outcome = await bus.InvokeAsync<Result<int>>(
-            new OrderServiceCommand(clientId, productId, BillingCycleNames.Monthly, null, null), CancellationToken.None);
+            new OrderServiceCommand(clientId, productId, BillingCycle.Monthly, null, null), CancellationToken.None);
 
         outcome.IsSuccess.Should().BeTrue();
 
@@ -136,7 +130,7 @@ public sealed class OrderServiceTests(IntegrationTestFactory factory) : IClassFi
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
         var outcome = await bus.InvokeAsync<Result<int>>(
-            new OrderServiceCommand(clientId, productId, BillingCycleNames.Monthly, null, null), CancellationToken.None);
+            new OrderServiceCommand(clientId, productId, BillingCycle.Monthly, null, null), CancellationToken.None);
 
         outcome.IsFailure.Should().BeTrue();
         outcome.ErrorCode.Should().Be(HostpanelErrorCodes.PRODUCT_NOT_AVAILABLE);
@@ -149,13 +143,12 @@ public sealed class OrderServiceTests(IntegrationTestFactory factory) : IClassFi
         using var scope = factory.Services.CreateScope();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(client);
-        await uow.SaveChangesAsync(CancellationToken.None);
+        await context.SaveChangesAsync(CancellationToken.None);
 
         var outcome = await bus.InvokeAsync<Result<int>>(
-            new OrderServiceCommand(client.Id, ServicesTestSeeds.NoSuchServiceId, BillingCycleNames.Monthly, 1m, 1m), CancellationToken.None);
+            new OrderServiceCommand(client.Id, ServicesTestSeeds.NoSuchServiceId, BillingCycle.Monthly, 1m, 1m), CancellationToken.None);
 
         outcome.IsFailure.Should().BeTrue();
         outcome.ErrorCode.Should().Be(HostpanelErrorCodes.PRODUCT_NOT_FOUND);
@@ -168,14 +161,13 @@ public sealed class OrderServiceTests(IntegrationTestFactory factory) : IClassFi
         using var scope = factory.Services.CreateScope();
         var (clientId, productId) = await ServicesTestSeeds.SeedClientAndProductAsync(scope, monthlyPrice: 2m);
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var product = await context.Products.FirstOrDefaultAsync(p => p.Id == productId);
         product!.Deactivate();
-        await uow.SaveChangesAsync(CancellationToken.None);
+        await context.SaveChangesAsync(CancellationToken.None);
 
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var outcome = await bus.InvokeAsync<Result<int>>(
-            new OrderServiceCommand(clientId, productId, BillingCycleNames.Monthly, 1m, 1m), CancellationToken.None);
+            new OrderServiceCommand(clientId, productId, BillingCycle.Monthly, 1m, 1m), CancellationToken.None);
 
         outcome.IsFailure.Should().BeTrue();
         outcome.ErrorCode.Should().Be(HostpanelErrorCodes.PRODUCT_NOT_AVAILABLE);
@@ -187,8 +179,23 @@ public sealed class OrderServiceTests(IntegrationTestFactory factory) : IClassFi
     {
         var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/me/services", new { ProductId = 1, BillingCycle = BillingCycleNames.Monthly });
+        var response = await client.PostAsJsonAsync("/api/me/services", new { ProductId = 1, BillingCycle = nameof(BillingCycle.Monthly) });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>An unknown client id refuses <c>CLIENT_NOT_FOUND</c> and creates no service.</summary>
+    [Fact]
+    public async Task OrderService_UnknownClientRefusesNotFound()
+    {
+        using var scope = factory.Services.CreateScope();
+        var (_, productId) = await ServicesTestSeeds.SeedClientAndProductAsync(scope, monthlyPrice: 2.99m);
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        var outcome = await bus.InvokeAsync<Result<int>>(
+            new OrderServiceCommand(ClientsTestSeeds.NoSuchClientId, productId, BillingCycle.Monthly, 1m, 1m), CancellationToken.None);
+
+        outcome.IsFailure.Should().BeTrue();
+        outcome.ErrorCode.Should().Be(HostpanelErrorCodes.CLIENT_NOT_FOUND);
     }
 }

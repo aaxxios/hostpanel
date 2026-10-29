@@ -1,3 +1,4 @@
+using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
@@ -6,8 +7,8 @@ namespace Innovayse.Hostpanel.Application.Support.Queries.ListNetworkIssues;
 
 /// <summary>Validator for <see cref="ListNetworkIssuesQuery"/>.</summary>
 /// <remarks>
-/// No rule: the handler clamps <c>Page</c>/<c>PageSize</c> itself and silently ignores a
-/// <c>Status</c> value that does not parse, treating it the same as no filter at all.
+/// The handler clamps <c>Page</c>/<c>PageSize</c> itself. A status outside the enum is refused,
+/// so a bad filter is a 400 instead of silently listing every issue.
 /// </remarks>
 public sealed class ListNetworkIssuesValidator : LocalizedValidator<ListNetworkIssuesQuery>
 {
@@ -16,5 +17,8 @@ public sealed class ListNetworkIssuesValidator : LocalizedValidator<ListNetworkI
     public ListNetworkIssuesValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
+        RuleForEach(x => x.Statuses)
+            .IsInEnum()
+            .WithMessage(L["NetworkIssueStatusInvalid"]);
     }
 }

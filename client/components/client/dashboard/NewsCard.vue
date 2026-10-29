@@ -24,7 +24,7 @@
         :data-testid="`dashboard-news-${announcement.id}`"
       >
         <UiText size="sm" weight="medium">{{ announcement.title }}</UiText>
-        <UiText size="xs" tone="subtle" class="mt-0.5">{{ formatDate(announcement.date) }}</UiText>
+        <UiText size="xs" tone="subtle" class="mt-0.5">{{ formatDate(announcement.publishedAt) }}</UiText>
       </div>
     </UiStack>
   </UiCard>
@@ -34,8 +34,8 @@
 /**
  * The dashboard's "Recent News" card: the latest three published announcements.
  *
- * The server route behind the store's `recentNews` returns only published rows and only
- * `{ id, title, date }` — no draft rows and no editorial `isPublished` flag.
+ * The server route behind the store's `recentNews` returns only published rows, with no
+ * editorial `isPublished` flag; the card shows each one's title and publication date.
  */
 import { ArrowRight, Megaphone } from 'lucide-vue-next'
 import { useContentStore } from '~/stores/content'

@@ -1,13 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
@@ -15,7 +12,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 /// <c>GET /api/reports/ticket-tags</c> against Postgres: one row per distinct tag, with its
 /// usage count, most used first.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingRemainderEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetTicketTagsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -28,7 +24,9 @@ public sealed class GetTicketTagsTests(IntegrationTestFactory factory) : IClassF
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var ticket = Ticket.Create(clientId, "Subject", "Body", 1, TicketPriority.Low);
+            // A real department: a ticket's department is a foreign key.
+            var departmentId = await SupportTestSeeds.SeedDepartmentAsync(db);
+            var ticket = Ticket.Create(clientId, "Subject", "Body", departmentId, TicketPriority.Low, DateTimeOffset.UtcNow);
             ticket.AddTag(marker);
             db.Tickets.Add(ticket);
             await db.SaveChangesAsync();
@@ -52,7 +50,7 @@ public sealed class GetTicketTagsTests(IntegrationTestFactory factory) : IClassF
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

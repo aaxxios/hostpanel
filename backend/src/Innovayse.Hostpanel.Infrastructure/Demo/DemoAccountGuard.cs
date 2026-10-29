@@ -10,7 +10,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// <see cref="IDemoAccountGuard"/> over <see cref="DemoOptions"/>: reads the switch and the two
 /// account emails on every call, so it follows configuration rather than a startup snapshot.
 /// </summary>
-internal sealed class DemoAccountGuard : IDemoAccountGuard
+public sealed class DemoAccountGuard : IDemoAccountGuard
 {
     /// <summary>The demo switch and the published account emails.</summary>
     private readonly IOptions<DemoOptions> _options;
@@ -40,16 +40,14 @@ internal sealed class DemoAccountGuard : IDemoAccountGuard
     }
 
     /// <inheritdoc/>
-    public Result EnsureCredentialsUnchanged(string email)
+    public Result EnsureCredentialsUnchanged(string email) =>
+        IsPublishedDemoAccount(email) ? Result.FailureCode(HostpanelErrorCodes.DEMO_ACTION_DISABLED) : Result.Success();
+
+    /// <inheritdoc/>
+    public bool IsPublishedDemoAccount(string email)
     {
         var options = _options.Value;
-        if (!options.Enabled)
-        {
-            return Result.Success();
-        }
-
-        var isDemoAccount = Matches(email, options.AdminEmail) || Matches(email, options.ClientEmail);
-        return isDemoAccount ? Result.FailureCode(HostpanelErrorCodes.DEMO_ACTION_DISABLED) : Result.Success();
+        return options.Enabled && (Matches(email, options.AdminEmail) || Matches(email, options.ClientEmail));
     }
 
     /// <summary>Whether an email equals a configured demo email, ignoring case and surrounding blanks.</summary>

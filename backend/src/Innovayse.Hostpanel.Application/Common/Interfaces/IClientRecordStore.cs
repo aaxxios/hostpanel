@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Domain.Clients;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
@@ -22,8 +23,8 @@ public interface IClientRecordStore
     /// <param name="candidate">The new client record, not yet added to the context.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// The saved candidate with <c>Created</c> true, or the record that already existed for the
-    /// user with <c>Created</c> false. Any other failure to save is thrown as it was.
+    /// The saved candidate with <see cref="ClientRecordWriteResult.Created"/> true, or the record
+    /// that already existed for the user with it false. Any other failure to save is thrown as it was.
     /// </returns>
-    Task<(Client Client, bool Created)> AddOrGetAsync(Client candidate, CancellationToken ct);
+    Task<ClientRecordWriteResult> AddOrGetAsync(Client candidate, CancellationToken ct);
 }

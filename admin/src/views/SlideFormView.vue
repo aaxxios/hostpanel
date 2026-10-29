@@ -4,6 +4,8 @@
  *
  * Detects edit mode from the route params, loads the slide when editing, and carries
  * locale-tabbed translations with dynamic feature lists. Asks before leaving with unsaved edits.
+ * A refused load (or a missing slide) shows with a retry instead of the form; a refused save shows
+ * next to the save bar, a saved slide returns to the list.
  */
 import { Icon as MdiIcon } from '@iconify/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
@@ -13,10 +15,11 @@ import SettingsBreadcrumb from '@/components/settings/SettingsBreadcrumb.vue'
 import SettingsFormFooter from '@/components/settings/SettingsFormFooter.vue'
 import SettingsLoading from '@/components/settings/SettingsLoading.vue'
 import SettingsSection from '@/components/settings/SettingsSection.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiColorField from '@/components/ui/UiColorField.vue'
 import UiDateTimePicker from '@/components/ui/UiDateTimePicker.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
@@ -28,6 +31,8 @@ import UiNumberInput from '@/components/ui/UiNumberInput.vue'
 import UiRadio from '@/components/ui/UiRadio.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
+import { UiTone } from '@/utils/ui/tone'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
@@ -133,8 +138,11 @@ const loadingSlide = ref(false)
 /** True while saving the form. */
 const saving = ref(false)
 
-/** Error message from save or load operations. */
+/** The API's sentence for the last refused save, null when none. */
 const saveError = ref<string | null>(null)
+
+/** Sentence for a failed load of the slide being edited (or its absence), null when none. */
+const loadError = ref<string | null>(null)
 
 /** Tracks whether the form has been modified since loading. */
 const isDirty = ref(false)
@@ -278,18 +286,20 @@ watch(translations, () => {
   isDirty.value = true
 }, { deep: true })
 
-onMounted(async () => {
-  await settingsStore.fetchProducts()
-
-  if (!isEditMode.value) {
-    return
-  }
+/**
+ * Loads the slide being edited into the form; a refusal or a missing slide is kept in `loadError`.
+ *
+ * @returns Resolves when the load has settled.
+ */
+const loadSlide = async (): Promise<void> => {
+  loadError.value = null
   loadingSlide.value = true
   const id = Number(route.params.id)
   const slide = await slidesStore.fetchSlide(id)
   loadingSlide.value = false
   if (!slide) {
-    saveError.value = t('settings.slideForm.notFound', { id })
+    // A refused load carries the API's own sentence; "not found" is only for a list that loaded without the slide.
+    loadError.value = slidesStore.error ?? t('settings.slideForm.notFound', { id })
     return
   }
 
@@ -324,6 +334,13 @@ onMounted(async () => {
 
   // Populating the form is not an edit.
   isDirty.value = false
+}
+
+onMounted(async () => {
+  await settingsStore.fetchProducts()
+  if (isEditMode.value) {
+    await loadSlide()
+  }
 })
 
 /**
@@ -420,10 +437,9 @@ const handleCancel = (): void => {
 
     <SettingsLoading v-if="loadingSlide" :message="t('settings.slideForm.loadingSlideData')" />
 
+    <UiErrorState v-else-if="loadError" :message="loadError" testid="slide-form-load-error" @retry="loadSlide" />
+
     <template v-else>
-      <UiAlert v-if="saveError" variant="danger" class="mb-5" data-testid="slide-form-error">
-        {{ saveError }}
-      </UiAlert>
 
       <!-- Section 1: General settings -->
       <SettingsSection :title="t('settings.slideForm.generalSettings')">
@@ -461,23 +477,12 @@ const handleCancel = (): void => {
 
         <!-- Brand colour -->
         <UiField :label="t('settings.slideForm.brandColor')">
-          <UiStack direction="row" align="center" gap="sm">
-            <UiInput
-              v-model="brandColor"
-              type="color"
-              :placeholder="t('shared.examples.colorHex')"
-              :aria-label="t('settings.slideForm.brandColor')"
-              data-testid="slide-form-brand-color"
-              class="h-10 w-12 cursor-pointer"
-            />
-            <UiInput
-              v-model="brandColor"
-              type="text"
-              :placeholder="t('shared.examples.colorHex')"
-              data-testid="slide-form-brand-color-hex"
-              class="flex-1 font-mono"
-            />
-          </UiStack>
+          <UiColorField
+            v-model="brandColor"
+            :placeholder="t('shared.examples.colorHex')"
+            :aria-label="t('settings.slideForm.brandColor')"
+            data-testid="slide-form-brand-color-hex"
+          />
         </UiField>
 
         <!-- Image -->
@@ -725,6 +730,8 @@ const handleCancel = (): void => {
           </UiField>
         </UiGrid>
       </SettingsSection>
+
+      <UiStatusMessage :message="saveError" :tone="UiTone.Danger" class="mb-5" data-testid="slide-form-error" />
 
       <SettingsFormFooter
         :save-label="isEditMode ? t('shared.saveChanges') : t('settings.slideForm.createSlide')"

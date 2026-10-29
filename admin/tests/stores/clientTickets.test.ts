@@ -32,7 +32,7 @@ describe('clientTicketStore', () => {
     expect(store.error).toBe('Ticket not found.')
   })
 
-  it('fetchStats and fetchDepartments fill their state and stay silent on failure', async () => {
+  it('fetchStats and fetchDepartments fill their state; stats stay silent and departments keep their sentence on failure', async () => {
     const store = useClientTicketsStore()
     stubFetch(json({ openedThisMonth: 2, openedLastMonth: 1, openedThisYear: 5, openedLastYear: 4 }))
     await store.fetchStats(7)
@@ -44,7 +44,12 @@ describe('clientTicketStore', () => {
 
     stubOffline()
     await store.fetchStats(7)
+    expect(store.error).toBeNull()
+    expect(store.departmentsError).toBeNull()
+
+    stubFetch(problem('Departments unavailable.', 500))
     await store.fetchDepartments()
+    expect(store.departmentsError).toBe('Departments unavailable.')
     expect(store.error).toBeNull()
   })
 

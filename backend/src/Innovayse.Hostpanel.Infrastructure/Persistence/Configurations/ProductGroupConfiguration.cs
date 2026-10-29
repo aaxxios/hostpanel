@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table and column configuration for <see cref="ProductGroup"/>.</summary>
 public sealed class ProductGroupConfiguration : IEntityTypeConfiguration<ProductGroup>
 {

@@ -1,20 +1,24 @@
 <script setup lang="ts">
 /**
- * TLD pricing list view — searchable, filterable table of all TLD configurations.
+ * TLD pricing list view: searchable, filterable table of all TLD configurations.
  *
  * Shows the TLD, provider, status, cost and sell price, margin, categories, last sync time and the
  * edit and delete actions. Supports import from a registrar provider and a manual price sync, and
- * asks before deleting.
+ * asks before deleting in a danger prompt. The outcome of an import, sync or delete (success, or the
+ * API's sentence) shows in the result line; a refused load offers a retry.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import SettingsLoading from '@/components/settings/SettingsLoading.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
+import { UiDialogVariant } from '@/utils/ui/dialog'
+import { UiTone } from '@/utils/ui/tone'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -38,7 +42,6 @@ import { pageFirstRow, pageLastRow, pageSlice } from '@/lib/paging'
 import { RegistrarModule } from '@/types/registrarmodule'
 import type { TldConfigListItem } from '@/types/tldconfig'
 import { TldStatusFilter } from '@/types/tldstatusfilter'
-import type { UiTone } from '@/utils/ui/tone'
 import { DEFAULT_PAGE_SIZE, SEARCH_DEBOUNCE_MS } from '@/lib/limits'
 import { AppRoute, createPath, editPath } from '@/lib/routes'
 
@@ -50,8 +53,11 @@ const router = useRouter()
 /** TLD configs store: the list, the loading flag and the refusal sentences. */
 const store = useTldConfigsStore()
 
-/** The result banner for import and sync. */
+/** The result banner for import, sync and delete. */
 const banner = useResultBanner()
+
+/** Tone of the result banner: danger for a refusal, success otherwise. */
+const bannerTone = computed<UiTone>(() => (banner.isError.value ? UiTone.Danger : UiTone.Success))
 
 /** Local search model bound to the input. */
 const searchInput = ref('')
@@ -179,13 +185,23 @@ const confirmDelete = async (): Promise<void> => {
   if (!deleteTarget.value) {
     return
   }
+  banner.clear()
   deleting.value = true
   const removed = await store.remove(deleteTarget.value.id)
-  if (!removed && store.actionError) {
-    banner.show(store.actionError, true)
+  if (removed) {
+    banner.show(t('shared.recordDeleted'), false)
+  } else {
+    banner.show(store.actionError ?? t('errors.noAnswer'), true)
   }
   deleting.value = false
   deleteTarget.value = null
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    deleteTarget.value = null
+  }
 }
 
 /**
@@ -223,7 +239,7 @@ const handleSync = async (): Promise<void> => {
  * @param module - Registrar module name as the API sent it.
  * @returns The kit tone.
  */
-const providerTone = (module: string): UiTone => PROVIDER_TONES[module as RegistrarModule] ?? 'neutral'
+const providerTone = (module: string): UiTone => PROVIDER_TONES[module as RegistrarModule] ?? UiTone.Neutral
 
 /**
  * Describes when a TLD was last synced, in the active language.
@@ -282,14 +298,7 @@ watch(statusFilter, () => {
       </template>
     </UiPageHeader>
 
-    <UiAlert
-      v-if="banner.message.value"
-      :variant="banner.isError.value ? 'danger' : 'success'"
-      class="mb-5"
-      data-testid="tld-configs-result"
-    >
-      {{ banner.message.value }}
-    </UiAlert>
+    <UiStatusMessage :message="banner.message.value" :tone="bannerTone" class="mb-5" data-testid="tld-configs-result" />
 
     <!-- Filters -->
     <UiStack direction="row" align="center" wrap class="mb-5">
@@ -322,9 +331,7 @@ watch(statusFilter, () => {
 
     <SettingsLoading v-if="store.loading" :message="t('settings.tldConfigs.loadingTldConfigurations')" />
 
-    <UiAlert v-else-if="store.error" variant="danger" data-testid="tld-configs-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState v-else-if="store.error" :message="store.error" testid="tld-configs-error" @retry="store.fetchAll()" />
 
     <UiCard v-else class="overflow-hidden">
       <UiTable density="comfortable" :empty="paginatedConfigs.length === 0" :colspan="9">
@@ -427,15 +434,15 @@ watch(statusFilter, () => {
     <!-- Delete confirmation -->
     <UiDialog
       v-if="deleteTarget"
-      variant="confirm"
+      :variant="UiDialogVariant.Confirm"
       :title="t('settings.tldConfigs.deleteTldConfiguration')"
       :message="t('settings.tldConfigs.deleteMessage', { tld: deleteTarget.tld })"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="deleting"
-      tone="danger"
+      :tone="UiTone.Danger"
       @confirm="confirmDelete"
-      @close="deleteTarget = null"
+      @close="dismissDelete"
     />
   </UiStack>
 </template>

@@ -8,7 +8,4 @@ public static class HostingPanelCacheKeys
 {
     /// <summary>Key of the cached CentOS Web Panel server-info result.</summary>
     public const string Cwp = "cwp:server-info";
-
-    /// <summary>Key of the cached CentOS Web Panel 7 server-info result.</summary>
-    public const string Cwp7 = "cwp7:server-info";
 }

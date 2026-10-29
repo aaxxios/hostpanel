@@ -1,11 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -14,7 +11,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// uninvoiced billable item, and the <c>BILLABLE_ITEM_NOT_FOUND</c> refusal for an id that names
 /// no billable item.
 /// </summary>
-/// <remarks>Split from the deleted <c>BillableItemsEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DeleteBillableItemTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

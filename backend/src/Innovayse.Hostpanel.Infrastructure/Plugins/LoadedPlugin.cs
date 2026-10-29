@@ -1,6 +1,7 @@
 using Innovayse.SDK.Plugins;
 
 namespace Innovayse.Hostpanel.Infrastructure.Plugins;
+
 /// <summary>
 /// Represents a plugin that was successfully loaded at startup.
 /// </summary>

@@ -24,6 +24,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 [Route("api/me/tickets")]
 [Authorize(Policy = Policies.Client)]
 [RequiresClientPermission(ClientPermission.ViewOpenSupportTickets)]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class MyTicketsController : BaseApiController
 {
     /// <summary>Wolverine message bus every action dispatches through.</summary>
@@ -39,14 +40,19 @@ public sealed class MyTicketsController : BaseApiController
     /// <summary>Returns all tickets belonging to the authenticated client.</summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 200 with the client's ticket summaries; 401;
-    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewOpenSupportTickets</c>.
+    /// 200 with the client's ticket summaries; 401 without a session; 403 with <c>CLIENT_PERMISSION_DENIED</c> when the
+    /// user lacks <c>ViewOpenSupportTickets</c>; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c> when the
+    /// caller has no client record;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpGet]
-    [ProducesResponseType(typeof(IReadOnlyList<TicketListItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IReadOnlyList<MyTicketListItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ListAsync(CancellationToken ct)
     {
-        var outcome = await _bus.InvokeAsync<Result<IReadOnlyList<TicketListItemDto>>>(new GetMyTicketsQuery(), ct);
+        var outcome = await _bus.InvokeAsync<Result<IReadOnlyList<MyTicketListItemDto>>>(new GetMyTicketsQuery(), ct);
         return HandleResult(outcome);
     }
 
@@ -54,17 +60,22 @@ public sealed class MyTicketsController : BaseApiController
     /// <param name="id">Ticket primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 200 with the ticket. A ticket belonging to another client and a ticket that does not exist
-    /// both answer 404 with <c>TICKET_NOT_FOUND</c>: ids here are sequential, and telling those two
-    /// apart is itself a way of enumerating them;
-    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewOpenSupportTickets</c>.
+    /// 200 with the ticket; 400 with <c>VALIDATION_ERROR</c> for a non-positive id; 401 without a session; 403 with
+    /// <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewOpenSupportTickets</c>; 404 with
+    /// <c>TICKET_NOT_FOUND</c>. A ticket belonging to another client and a ticket that does not exist
+    /// answer alike: ids here are sequential, and telling those two apart is itself a way of
+    /// enumerating them;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpGet("{id:int}")]
-    [ProducesResponseType(typeof(TicketDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(MyTicketDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByIdAsync(int id, CancellationToken ct)
     {
-        var outcome = await _bus.InvokeAsync<Result<TicketDto>>(new GetMyTicketQuery(id), ct);
+        var outcome = await _bus.InvokeAsync<Result<MyTicketDto>>(new GetMyTicketQuery(id), ct);
         return HandleResult(outcome);
     }
 
@@ -72,15 +83,21 @@ public sealed class MyTicketsController : BaseApiController
     /// <param name="command">Ticket creation data.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 201 with the new ticket's id; 401; 422 when a field is refused;
-    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewOpenSupportTickets</c>.
+    /// 201 with the new ticket's id; 400 with <c>VALIDATION_ERROR</c> when a field is refused; 401 without a session; 403 for a caller without client access
+    /// with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewOpenSupportTickets</c>; 404 with
+    /// <c>CLIENT_PROFILE_NOT_FOUND</c> when the caller has no client record;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost]
     [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreateAsync([FromBody] CreateTicketCommand command, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<int>>(command, ct);
-        return HandleResult(outcome, id => CreatedResult($"api/me/tickets/{id}", id));
+        return HandleResult(outcome, id => CreatedResult($"/api/me/tickets/{id}", id));
     }
 
     /// <summary>Adds a client reply to an existing ticket.</summary>
@@ -88,12 +105,17 @@ public sealed class MyTicketsController : BaseApiController
     /// <param name="command">Reply body and author name.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 No Content on success. A ticket belonging to another client and a ticket that does not
-    /// exist both answer 404 with <c>TICKET_NOT_FOUND</c>, for the same reason as the read above;
-    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewOpenSupportTickets</c>.
+    /// 204 on success; 400 with <c>VALIDATION_ERROR</c> when a field is refused; 401 without a session; 403 with
+    /// <c>CLIENT_PERMISSION_DENIED</c> when the user lacks <c>ViewOpenSupportTickets</c>; 404 with
+    /// <c>TICKET_NOT_FOUND</c>. A ticket belonging to another client and a ticket that does not exist
+    /// answer alike, for the same reason as the read above;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost("{id:int}/reply")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ReplyAsync(int id, [FromBody] ReplyToMyTicketCommand command, CancellationToken ct)
     {

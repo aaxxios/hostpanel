@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
+using Innovayse.Hostpanel.API.Extensions;
 using Innovayse.Hostpanel.API.Identity;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Infrastructure.Scheduling;
 using Innovayse.Hostpanel.Shared.Constants;
@@ -8,13 +10,16 @@ using Innovayse.Hostpanel.Shared.Filters;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Innovayse.Hostpanel.Shared.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using CorsPolicyOptions = Microsoft.AspNetCore.Cors.Infrastructure.CorsOptions;
 
 namespace Innovayse.Hostpanel.API;
 
 /// <summary>
 /// Registers what the web edge owns: CORS and the redirect-safe origins list, the client
-/// portal and compatibility options, the request-scoped identity adapter, MVC and OpenAPI, the
+/// portal and compatibility options, the request-scoped identity adapter, MVC and the Swagger document, the
 /// action-timing filter, the ProblemDetails surfaces that answer before a controller runs, the
 /// domain and billing cron jobs, and the edge rate limiter.
 /// </summary>
@@ -27,24 +32,25 @@ public static class DependencyInjection
     /// <returns>The container, for chaining.</returns>
     public static IServiceCollection AddApi(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
-        // CORS
-        var allowedOrigins = configuration
-            .GetSection("Cors:AllowedOrigins")
-            .Get<string[]>() ?? [];
-
-        services.AddCors(opts =>
-            opts.AddDefaultPolicy(policy =>
-                policy.WithOrigins(allowedOrigins)
-                      .AllowAnyHeader()
-                      .AllowAnyMethod()
-                      .AllowCredentials()));
-
-        // Not a section of its own. A payer may only be handed back to an origin the web edge
-        // already trusts, so the list is the CORS one read just above rather than a second copy
-        // that could drift from it -- see GatewayReturnUrlOptions for why it carries no SectionName.
-        services.AddOptions<GatewayReturnUrlOptions>()
-            .Configure(o => o.AllowedOrigins = allowedOrigins)
+        // One Cors section feeds both the CORS policy and the gateway return URL check, so a payer
+        // may only be handed back to an origin the web edge already trusts. Blank entries are
+        // optional slots a deployment left unset and are skipped, never a startup failure.
+        services.AddOptions<CorsOptions>()
+            .Bind(configuration.GetSection(CorsOptions.SectionName))
+            .Validate(
+                o => o.IsValid,
+                $"{CorsOptions.SectionName}:{nameof(CorsOptions.AllowedOrigins)} "
+                    + "must contain absolute origins only, e.g. https://host.example.com.")
             .ValidateOnStart();
+
+        services.AddCors();
+        services.AddOptions<CorsPolicyOptions>()
+            .Configure<IOptions<CorsOptions>>((cors, origins) =>
+                cors.AddDefaultPolicy(policy =>
+                    policy.WithOrigins(origins.Value.Origins)
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials()));
 
         // ClientBaseUrl and DefaultLocale are bare top-level keys, never sections, so they are read
         // by key here and left at the option class's default when the deployment sets neither.
@@ -95,26 +101,33 @@ public static class DependencyInjection
                 $"{DefaultDepartmentsOptions.SectionName} addresses must each be a mailbox such as support@example.com.")
             .ValidateOnStart();
 
-        // The caller of the request, for handlers. One scoped instance answers both ports, so the
-        // display name it looks up is resolved once per request whichever port asked first.
-        services.AddHttpContextAccessor();
-        services.AddScoped<HttpCurrentUserService>();
-        services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<HttpCurrentUserService>());
+        // Order numbering and the payment term of an order's invoice.
+        services.AddOptions<OrderOptions>()
+            .Bind(configuration.GetSection(OrderOptions.SectionName))
+            .Validate(
+                o => o.IsValid,
+                $"{OrderOptions.SectionName} needs at least one number digit, a prefix and digits that fit an order "
+                    + "number, and an invoice payment term of 0 to 365 days.")
+            .ValidateOnStart();
 
-        // MVC + OpenAPI
+        // The caller of the request, for handlers. Registered by type, not through a factory, so
+        // Wolverine's generated handler code builds it as a constructor call like any other adapter.
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUserService, HttpCurrentUserService>();
+
+        // The caller's own bearer token, for an adapter that acts as the person against an outside service.
+        services.AddScoped<ICallerAccessToken, HttpCallerAccessToken>();
+
+        // MVC and the generated OpenAPI document
         services.AddMemoryCache();
         services.AddControllers(opts =>
             {
-                // Every 201 Created in this API is built with CreatedAtAction(nameof(GetAsync), …),
-                // and MVC trims the "Async" suffix from action names by default — so the name never
-                // matched and the framework threw "No route matches the supplied values". The request
-                // had already succeeded by then: the row was written, then the response failed, and
-                // the caller saw a 400 for a creation that worked. An admin clicking again got a
-                // duplicate.
-                //
-                // Five controllers do this — TldConfigs, Slides, ServerGroups, Clients and
-                // EmailTemplates — so the fix belongs here rather than in each of them. No action
-                // name is referenced as a string anywhere, so nothing depends on the trimmed form.
+                // Every 201 Created in this API is built with CreatedAtAction and nameof(GetAsync).
+                // MVC trims the "Async" suffix from action names by default, so the name would never
+                // match and the framework would throw "No route matches the supplied values" after the
+                // row was written: the caller sees a 400 for a creation that worked, and a retry makes
+                // a duplicate. Setting it here covers every controller at once. No action name is
+                // referenced as a string anywhere, so nothing depends on the trimmed form.
                 opts.SuppressAsyncSuffixInActionNames = false;
 
                 // Required-ness is the validators' business, where every message is localized. Without this MVC
@@ -127,7 +140,7 @@ public static class DependencyInjection
                 opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
         // Three of the error surfaces that short-circuit before a controller or the exception
-        // middleware runs (rules/api.md): model binding, the bearer challenge/forbid, and an
+        // middleware runs: model binding, the bearer challenge/forbid, and an
         // authorization-policy refusal. Each writes the one ErrorResponse body instead of the
         // framework's ValidationProblemDetails or an empty 401/403.
         // BaseApiController carries [ServiceFilter(typeof(ActionTimingFilter))], so the filter and its
@@ -135,52 +148,27 @@ public static class DependencyInjection
         // BaseApiController controller fails before it runs.
         services.AddOptions<ActionTimingOptions>()
             .BindConfiguration(ActionTimingOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // Every 503 the error surfaces write carries Retry-After from these options.
+        services.AddOptions<ServiceUnavailableOptions>()
+            .BindConfiguration(ServiceUnavailableOptions.SectionName)
+            .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddScoped<ActionTimingFilter>();
+
+        // When every recurring job runs and how the instances share them; read by the startup services and the handlers.
+        services.AddOptions<ScheduledJobsOptions>()
+            .BindConfiguration(ScheduledJobsOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
         services.ConfigureModelStateProblemDetails();
         services.ConfigureProblemDetailsAuthEvents();
         services.PostConfigure<JwtBearerOptions>(LocalJwtScheme.Name, o => o.UseProblemDetailsResponses());
         services.AddProblemDetailsAuthorizationResponses();
-        services.AddOpenApi(options =>
-        {
-            options.AddDocumentTransformer((doc, ctx, ct) =>
-            {
-                doc.Info = new()
-                {
-                    Title = "Innovayse API",
-                    Version = "v1",
-                    Description = "Innovayse hosting panel API — self-hosted hosting management platform built with ASP.NET Core",
-                    Contact = new() { Name = "Hostpanel" },
-                };
-                doc.Components ??= new();
-                doc.Components.SecuritySchemes ??= new Dictionary<string, OpenApiSecurityScheme>();
-                doc.Components.SecuritySchemes[JwtBearerDefaults.AuthenticationScheme] = new OpenApiSecurityScheme
-                {
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "bearer",
-                    BearerFormat = "JWT",
-                    Description = "Enter JWT token (without 'Bearer' prefix)",
-                };
-                return Task.CompletedTask;
-            });
-            options.AddOperationTransformer((operation, context, ct) =>
-            {
-                operation.Security ??= [];
-                operation.Security.Add(new OpenApiSecurityRequirement
-                {
-                    [new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = JwtBearerDefaults.AuthenticationScheme,
-                        },
-                    }] = [],
-                });
-                return Task.CompletedTask;
-            });
-        });
+        services.AddHostpanelSwagger();
 
         // The two cron startups below each hand Wolverine a message to deliver hours from now. Wolverine
         // keeps that delay as a timer in the process-wide timer queue and does not cancel it when the
@@ -190,14 +178,20 @@ public static class DependencyInjection
         // and never wait for the clock, so the Testing environment does not schedule them (issue 373).
         if (!environment.IsEnvironment(EnvironmentNames.Testing))
         {
-            // Domain scheduled jobs — daily expiry check (09:00 UTC) and auto-renew (10:00 UTC)
+            // Domain scheduled jobs: the expiry check, the TLD price sync and the pending status sync.
+            // Their hours and intervals are the ScheduledJobsOptions values, not constants here.
             services.AddHostedService<DomainScheduledJobsStartup>();
 
-            // Billing scheduled jobs — daily billable items cron processing (06:00 UTC)
+            // Billing scheduled jobs: the daily billing, renewal and suspension crons and the gateway reconcile.
             services.AddHostedService<BillingScheduledJobsStartup>();
+
+            // Recurring recovery of migration jobs left queued or in progress with a stale heartbeat. Not in Testing:
+            // the tests derive extra hosts over one database mid-test, and a recovery there would
+            // fail the pull another host of the same test is running.
+            services.AddHostedService<MigrationRecoveryStartup>();
         }
 
-        // Demo data reset — schedules the first run only when Demo:Enabled is true; a no-op otherwise.
+        // Demo data reset: schedules the first run only when Demo:Enabled is true; a no-op otherwise.
         // Registered in every environment because the demo tests read the reset time it publishes.
         services.AddHostedService<DemoScheduledJobsStartup>();
 
@@ -206,9 +200,9 @@ public static class DependencyInjection
         // of "the caller" disagrees with the rest of the pipeline's is worse than none: it would
         // partition every browser onto nginx's address and let one visitor's burst refuse everybody.
         //
-        // Everything is limited by a global budget whether or not its action names a policy — see
+        // Everything is limited by a global budget whether or not its action names a policy: see
         // RateLimitingExtensions for why an opt-in scheme does not survive fifty-eight controllers.
-        services.AddPlatformRateLimiting(configuration, environment);
+        services.AddPlatformRateLimiting(environment);
 
         return services;
     }

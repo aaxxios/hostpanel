@@ -1,8 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -10,7 +7,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// <c>POST /api/admin/knowledgebase</c>: an admin can create a knowledge base article
 /// (unpublished by default), and the action is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>KnowledgeBaseAndContentEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateKbArticleTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

@@ -1,15 +1,22 @@
 /**
- * Module ids for the payment methods built into checkout rather than loaded as a plugin.
- * Mirrors the backend's `Innovayse.API.Billing.BuiltInPaymentModules` — the two must stay
- * in lockstep, since the API returns these exact strings in the `module` field of
- * `GET /api/payment-methods`.
+ * Helpers that classify a payment module id.
+ *
+ * @module utils/paymentModules
  */
 
-/** Module id for the built-in Stripe card payment method. */
-export const PAYMENT_MODULE_STRIPE = 'stripe'
+import { PaymentModule } from '~/types/paymentmodule'
 
-/** Module id for the built-in manual bank transfer payment method. */
-export const PAYMENT_MODULE_BANK_TRANSFER = 'bank_transfer'
-
-/** Module id of the Inecobank card gateway, a plugin rather than a built-in; it is known here only to pick its icon. */
-export const PAYMENT_MODULE_INECOBANK = 'inecobank'
+/**
+ * Whether a payment module is a hosted gateway, which hands the browser off to the bank.
+ *
+ * Every plugin-backed module is one: anything that is neither the built-in card method nor the
+ * built-in bank transfer. Branching on that rather than on a specific plugin id keeps a second
+ * gateway plugin from being silently ignored.
+ *
+ * @param module - The module id as the API sent it; empty when nothing is chosen.
+ * @returns True for a plugin-backed gateway, false for the built-ins and for an empty id.
+ */
+export const isHostedGatewayModule = (module: string): boolean =>
+  module !== ''
+    && module !== PaymentModule.Stripe
+    && module !== PaymentModule.BankTransfer

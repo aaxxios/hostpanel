@@ -1,8 +1,11 @@
 using System.Net;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Migration;
+using Innovayse.Hostpanel.Domain.Migration.Enums;
+using Innovayse.Hostpanel.Shared.Constants;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Migration;
 
@@ -33,6 +36,28 @@ public sealed class DeleteMigrationJobTests(IntegrationTestFactory factory) : IC
         await MigrationTestSeeds.AssertCodeAsync(afterwards, HostpanelErrorCodes.MIGRATION_JOB_NOT_FOUND);
     }
 
+    /// <summary>Deleting a job removes its import report with it.</summary>
+    [Fact]
+    public async Task DeleteRemovesTheJobsLogs()
+    {
+        var client = await MigrationTestSeeds.AdminClientAsync(factory);
+        var id = await MigrationTestSeeds.CreateJobAsync(client, "http://delete-logs.example.test");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            context.MigrationLogs.Add(MigrationLog.Create(
+                id, MigrationEntityType.Clients, "someone@example.test", MigrationLogAction.Imported));
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        var deleted = await client.DeleteAsync($"/api/admin/migrations/{id}");
+
+        deleted.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        using var check = factory.Services.CreateScope();
+        var reread = check.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        (await reread.MigrationLogs.AnyAsync(l => l.JobId == id, CancellationToken.None)).Should().BeFalse();
+    }
+
     /// <summary>An id naming no job is refused as missing.</summary>
     [Fact]
     public async Task DeleteRefusesAnUnknownId()
@@ -53,5 +78,17 @@ public sealed class DeleteMigrationJobTests(IntegrationTestFactory factory) : IC
         var response = await factory.CreateClient().DeleteAsync("/api/admin/migrations/1");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A non-positive job id is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task DeleteRefusesANonPositiveId()
+    {
+        var client = await MigrationTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.DeleteAsync("/api/admin/migrations/0");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await MigrationTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
     }
 }

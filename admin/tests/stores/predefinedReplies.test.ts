@@ -72,7 +72,8 @@ describe('predefinedRepliesStore', () => {
 
     stubFetch(problem('Category is in use.', 409))
     expect(await store.deleteCategory(6)).toBe(false)
-    expect(store.error).toBe('Category is in use.')
+    expect(store.actionError).toBe('Category is in use.')
+    expect(store.error).toBeNull()
   })
 
   it('searchReplies returns the hits and null with the sentence when refused', async () => {
@@ -84,7 +85,7 @@ describe('predefinedRepliesStore', () => {
 
     stubOffline()
     expect(await store.searchReplies('hi')).toBeNull()
-    expect(store.error).toBe(translate('errors.noAnswer'))
+    expect(store.actionError).toBe(translate('errors.noAnswer'))
   })
 
   it('reply writes report the outcome and the field messages', async () => {
@@ -119,11 +120,11 @@ describe('predefinedRepliesStore', () => {
     expect(store.replies).toEqual([{ id: 9 }])
   })
 
-  it('searchReplies returns null and sets error when the search fails', async () => {
+  it('searchReplies returns null and sets actionError when the search fails', async () => {
     stubOffline()
     const store = usePredefinedRepliesStore()
 
     expect(await store.searchReplies('hi')).toBeNull()
-    expect(store.error).toBe(translate('errors.noAnswer'))
+    expect(store.actionError).toBe(translate('errors.noAnswer'))
   })
 })

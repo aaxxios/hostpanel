@@ -1,21 +1,17 @@
 using System.Net;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Users;
 
 /// <summary>
 /// <c>POST /api/admin/users/{id}/reset-password</c>: sending a reset link for a known account
-/// succeeds, an unknown subject is refused <c>IDENTITY_USER_NOT_FOUND</c>, where an SSO owns the
+/// succeeds, an unknown subject is refused <c>IDENTITY_USER_NOT_FOUND</c>, where an external sign-on provider owns the
 /// accounts the write refuses with its own code once the identity read finds an account, a
 /// caller with only the Client role is refused, and the route is closed to a caller with no
 /// credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>AdminUsersEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host, in local mode.</param>
 public sealed class SendPasswordResetTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -45,7 +41,7 @@ public sealed class SendPasswordResetTests(IntegrationTestFactory factory) : ICl
 
 #if INNOVAYSE_SSO
     /// <summary>
-    /// Where an SSO owns the accounts, issuing a password-reset link refuses with its own code --
+    /// Where an external sign-on provider owns the accounts, issuing a password-reset link refuses with its own code,
     /// reached only once the identity read finds an account, so the fake is seeded with one.
     /// </summary>
     [Fact]

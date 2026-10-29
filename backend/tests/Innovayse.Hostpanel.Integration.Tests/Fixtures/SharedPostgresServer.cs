@@ -4,16 +4,14 @@ using Testcontainers.PostgreSql;
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
-/// The one PostgreSQL server the whole integration run shares. <see cref="IntegrationTestFactory"/> used to
-/// start a container of its own for every test class, so a full run launched several hundred servers and
-/// the machine ran out of memory before the tests did (issue 373). Now a single container serves the
-/// process and each factory takes a database of its own on it: the isolation a test class had before (an
-/// empty, migrated, seeded database nobody else writes to) is unchanged, only the server underneath it is
-/// shared.
+/// The one PostgreSQL server the whole integration run shares. Each <see cref="IntegrationTestFactory"/>
+/// takes a database of its own on it (empty, migrated, seeded, written by nobody else), so test classes
+/// stay isolated while a full run starts one container instead of one per test class, which would
+/// exhaust the machine's memory.
 /// </summary>
 /// <remarks>
 /// The container is disposed when the test process exits. The reaper sidecar would remove it too, but
-/// the GitLab runner turns the reaper off, so the run cleans up after itself rather than leave a server
+/// the CI runner turns the reaper off, so the run cleans up after itself rather than leave a server
 /// behind on the builder.
 /// </remarks>
 public static class SharedPostgresServer

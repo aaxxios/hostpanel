@@ -3,17 +3,15 @@
  *
  * Returns the invoices charged to one of the authenticated client's own services.
  *
- * This had no backend behind it and answered 404 for every attempt, because nothing in the data
- * model tied an invoice to a service: `Invoice` carried a `ClientId`, and an `InvoiceItem` was a
- * description, a unit price and a quantity. `InvoiceItem.ClientServiceId` now records the link
- * where it is known, and `GET /me/services/{id}/invoices` reads it — scoped to the caller's own
+ * `InvoiceItem.ClientServiceId` records the link between an invoice line and a service where it
+ * is known, and `GET /me/services/{id}/invoices` reads it, scoped to the caller's own
  * account by `GetMyServiceInvoicesQuery`, which resolves the client from the credential and
  * refuses a service that is not theirs with the same 404 every other client-facing refusal uses.
  *
  * **The reply is not a bare list, and must not be flattened into one.** It carries
- * `unattributedInvoiceCount` beside `invoices`: no backfill was written for rows that predate the
- * column, and none could be — inferring which service an old line was for from its description
- * text would be a guess rendered as fact on a page a customer uses to check a charge. An empty
+ * `unattributedInvoiceCount` beside `invoices`: lines that predate the column have no link, and
+ * inferring which service an old line was for from its description text would be a guess
+ * rendered as fact on a page a customer uses to check a charge. An empty
  * `invoices` array therefore means "nothing is recorded against this service", which is a weaker
  * claim than "nothing was charged", and the page has to be able to tell the two apart.
  */

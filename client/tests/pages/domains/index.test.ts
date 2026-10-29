@@ -74,7 +74,7 @@ vi.mock('~/composables/apis/useClientApi', () => ({
  */
 const pricing = (sellCurrency: string): TldPricing => ({
   currency: { code: 'USD', prefix: '$' },
-  pricing: { '.com': { sellCurrency, register: { 1: '10.00' }, categories: ['popular'] } },
+  pricing: [{ tld: '.com', sellCurrency, register: [{ years: 1, amount: 10 }], categories: ['popular'] }],
 })
 
 /** What the template component is given, recorded for the assertions. */
@@ -104,6 +104,7 @@ let spies: PublicPageSpies
 /**
  * Mounts the page and lets the price table, the catalogue and the currencies load.
  *
+ * @param template Template the stood-in `useTemplate` reports.
  * @returns The wrapper.
  */
 const mountDomains = async (template: TemplateName = TemplateName.Aurora) => {
@@ -118,7 +119,7 @@ describe('domains page', () => {
     spies = stubPublicPageRuntime()
     vi.stubGlobal('useTemplate', () => ({ slot: () => TemplateDomains }))
     catalogApi.fetchProducts.mockReset()
-    catalogApi.fetchProducts.mockResolvedValue([{ id: 7, pid: 7, groupId: 2, name: 'Domain Registration' }])
+    catalogApi.fetchProducts.mockResolvedValue([{ id: 7, groupId: 2, name: 'Domain Registration' }])
     catalogApi.fetchTldPricing.mockReset()
     catalogApi.fetchTldPricing.mockResolvedValue(pricing('USD'))
     window.localStorage.clear()

@@ -6,6 +6,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useBillableItemsApi } from '@/composables/apis/useBillableItemsApi'
 import { ApiError } from '@/composables/useApi'
+import { BillableItemType, RecurringPeriod } from '@/types/billableitem'
 import { json, problem, stubFetch, callOf } from '../../helpers/fetch'
 
 afterEach(() => {
@@ -26,7 +27,7 @@ describe('useBillableItemsApi', () => {
   it('create POSTs the payload and remove DELETEs by id', async () => {
     const mock = stubFetch(new Response(null, { status: 204 }))
     const api = useBillableItemsApi()
-    const payload = { clientId: 1, description: 'x', amount: 2, currency: 'USD', type: 'OneTime' }
+    const payload = { clientId: 1, description: 'x', amount: 2, currency: 'USD', type: BillableItemType.OneTime }
 
     await api.create(payload)
     await api.remove(4)
@@ -47,11 +48,21 @@ describe('useBillableItemsApi', () => {
 
     await api.invoiceSelected('7', [1, 2])
     await api.removeForClient('7', 3)
-    await api.addForClient('7', { amount: 1 })
+    await api.addForClient('7', {
+      description: 'Backup',
+      amount: 1,
+      currency: 'USD',
+      type: BillableItemType.Recurring,
+      recurringPeriod: RecurringPeriod.Monthly,
+    })
     await api.addTimeBilling('7', [{ hours: 2 }])
     expect(callOf(mock, 0)).toMatchObject({ url: '/api/clients/7/billable-items/invoice-selected', method: 'POST', body: { billableItemIds: [1, 2] } })
     expect(callOf(mock, 1)).toMatchObject({ url: '/api/clients/7/billable-items/3', method: 'DELETE' })
-    expect(callOf(mock, 2)).toMatchObject({ url: '/api/clients/7/billable-items', method: 'POST', body: { amount: 1 } })
+    expect(callOf(mock, 2)).toMatchObject({
+      url: '/api/clients/7/billable-items',
+      method: 'POST',
+      body: { description: 'Backup', amount: 1, currency: 'USD', type: 'Recurring', recurringPeriod: 'monthly' },
+    })
     expect(callOf(mock, 3)).toMatchObject({ url: '/api/clients/7/billable-items/time-billing', method: 'POST', body: { entries: [{ hours: 2 }] } })
   })
 

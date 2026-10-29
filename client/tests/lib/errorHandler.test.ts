@@ -14,7 +14,13 @@
 import { describe, expect, it } from 'vitest'
 import { PortalErrorCode, apiErrorCode, apiErrorMessage, apiFieldErrors } from '~/lib/errorHandler'
 
-/** The BFF envelope `internalApiCall` + `server/error.ts` produce, as `$fetch` exposes it in `err.data`. */
+/**
+ * The BFF envelope `internalApiCall` + `server/error.ts` produce, as `$fetch` exposes it in `err.data`.
+ *
+ * @param statusMessage The error's status message, if any.
+ * @param data The envelope's `data` member.
+ * @returns The error-shaped object.
+ */
 const bff = (statusMessage: string | undefined, data: Record<string, unknown>) => ({
   data: { statusCode: 400, statusMessage, message: statusMessage ?? '', data },
 })
@@ -48,6 +54,12 @@ describe('apiFieldErrors', () => {
 
   it('reads the `errors` of a problem+json body that was not re-wrapped', () => {
     expect(apiFieldErrors({ data: { type: 'VALIDATION_ERROR', errors: { name: ['Required.'] } } })).toEqual({ name: 'Required.' })
+  })
+
+  it('names each segment of a nested field in camelCase', () => {
+    const err = bff('x', { errors: { 'Address.PostCode': ['Too long.'], FirstName: ['Required.'] } })
+
+    expect(apiFieldErrors(err)).toEqual({ 'address.postCode': 'Too long.', firstName: 'Required.' })
   })
 
   it('skips fields with no usable message and answers an empty object when there are none', () => {

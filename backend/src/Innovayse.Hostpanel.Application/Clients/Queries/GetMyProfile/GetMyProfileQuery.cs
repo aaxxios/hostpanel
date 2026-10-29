@@ -8,4 +8,4 @@ namespace Innovayse.Hostpanel.Application.Clients.Queries.GetMyProfile;
 /// a query able to name the subject is a query able to read somebody else's account, and
 /// this one is dispatched from six different controllers.
 /// </remarks>
-public record GetMyProfileQuery();
+public sealed record GetMyProfileQuery();

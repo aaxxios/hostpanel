@@ -100,7 +100,7 @@ describe('FaqFormView', () => {
     stubRouteTable(routes)
     const { wrapper } = await mountScreen(FaqFormView, {}, '/storefront/faqs/99/edit', '/storefront/faqs/:id/edit')
 
-    expect(wrapper.get('[data-testid="faq-form-error"]').text()).toBe('Entry #99 was not found.')
+    expect(wrapper.get('[data-testid="faq-form-load-error"]').text()).toBe('Entry #99 was not found.')
   })
 
   it('shows the API sentence when saving is refused and stays on the form', async () => {

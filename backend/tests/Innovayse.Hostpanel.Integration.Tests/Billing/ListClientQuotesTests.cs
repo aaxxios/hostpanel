@@ -1,8 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -10,7 +7,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>GET /api/billing/quotes/client/{clientId}</c> against Postgres: the staff-facing, paginated
 /// list of one client's own quotes.
 /// </summary>
-/// <remarks>New coverage — gap-filled for A7 Task 3, ruling 2; no grouped file exercised this route.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListClientQuotesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

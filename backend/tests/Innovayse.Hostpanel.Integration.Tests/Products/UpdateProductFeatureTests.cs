@@ -1,9 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Products;
 
 /// <summary>
@@ -11,10 +9,10 @@ namespace Innovayse.Hostpanel.Integration.Tests.Products;
 /// refusals, and the authorization boundary.
 /// </summary>
 /// <remarks>
-/// Split from the deleted <c>ProductFeaturesEndpointTests</c>. Pins the
-/// <c>PRODUCT_FEATURE_NOT_FOUND</c> refusal (404, was a bare 400 <c>InvalidOperationException</c>)
+/// Pins the
+/// <c>PRODUCT_FEATURE_NOT_FOUND</c> refusal (404)
 /// and the rename-onto-another-line's-label rule, excluding the line under edit from its own
-/// check (A7 Task 6).
+/// check.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateProductFeatureTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -64,7 +62,7 @@ public sealed class UpdateProductFeatureTests(IntegrationTestFactory factory) : 
         diskId.Should().NotBe(bandwidthId);
     }
 
-    /// <summary>Saving a line without renaming it succeeds — the line under edit excludes itself from the check.</summary>
+    /// <summary>Saving a line without renaming it succeeds: the line under edit excludes itself from the check.</summary>
     [Fact]
     public async Task WithoutRenaming_Succeeds()
     {

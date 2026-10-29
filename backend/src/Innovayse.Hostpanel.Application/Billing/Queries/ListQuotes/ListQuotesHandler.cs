@@ -1,11 +1,13 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Billing.Extensions;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.ListQuotes;
 
@@ -15,18 +17,23 @@ public sealed class ListQuotesHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The message bus, for the Clients module's client briefs; Billing never reads the client tables.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public ListQuotesHandler(IHostpanelDbContext context)
+    /// <param name="bus">The message bus, for the Clients module's client briefs; Billing never reads the client tables.</param>
+    public ListQuotesHandler(IHostpanelDbContext context, IMessageBus bus)
     {
         _context = context;
+        _bus = bus;
     }
 
     /// <summary>Handles the query.</summary>
     /// <param name="query">The list quotes query.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Success with a page of quote list items. Never refuses.</returns>
-    public async Task<Result<PagedResult<QuoteListItemDto>>> HandleAsync(
+    public async Task<Result<PaginatedList<QuoteListItemDto>>> HandleAsync(
         ListQuotesQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -42,17 +49,13 @@ public sealed class ListQuotesHandler
             .ToListAsync(ct);
 
         var clientIds = items.Select(q => q.ClientId).Distinct().ToList();
-        var clientMap = await _context.Clients
-            .AsNoTracking()
-            .Where(c => clientIds.Contains(c.Id))
-            .Select(c => new { c.Id, Name = (c.FirstName + " " + c.LastName).Trim() })
-            .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
+        var clientMap = await _bus.GetRequiredClientBriefsByIdAsync(clientIds, ct);
 
         var dtos = items
-            .Select(q => q with { ClientName = clientMap.TryGetValue(q.ClientId, out var name) ? name : null })
+            .Select(q => q with { ClientName = clientMap[q.ClientId].FullName })
             .ToList();
 
-        return Result<PagedResult<QuoteListItemDto>>.Success(
-            new PagedResult<QuoteListItemDto>(dtos, total, page, pageSize));
+        return Result<PaginatedList<QuoteListItemDto>>.Success(
+            new PaginatedList<QuoteListItemDto>(dtos, total, page, pageSize));
     }
 }

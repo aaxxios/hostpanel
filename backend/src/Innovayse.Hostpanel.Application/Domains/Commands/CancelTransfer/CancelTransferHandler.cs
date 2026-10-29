@@ -3,8 +3,10 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.CancelTransfer;
 
@@ -13,24 +15,27 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.CancelTransfer;
 /// </summary>
 public sealed class CancelTransferHandler
 {
-    /// <summary>The registrar provider the cancellation is placed against.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
 
     /// <summary>The data context the domain aggregate is loaded, mutated and saved through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work the aggregate is saved through.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>Logger that records the registrar's refusal code for operators.</summary>
+    private readonly ILogger<CancelTransferHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="registrar">The registrar provider the cancellation is placed against.</param>
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
     /// <param name="context">The data context the domain aggregate is loaded, mutated and saved through.</param>
-    /// <param name="uow">Unit of work the aggregate is saved through.</param>
-    public CancelTransferHandler(IRegistrarProvider registrar, IHostpanelDbContext context, IUnitOfWork uow)
+    /// <param name="logger">Logger that records the registrar's refusal code for operators.</param>
+    public CancelTransferHandler(
+        RegistrarProviderResolver registrars,
+        IHostpanelDbContext context,
+        ILogger<CancelTransferHandler> logger)
     {
-        _registrar = registrar;
+        _registrars = registrars;
         _context = context;
-        _uow = uow;
+        _logger = logger;
     }
 
     /// <summary>
@@ -40,6 +45,7 @@ public sealed class CancelTransferHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success, or <c>DOMAIN_NOT_FOUND</c> when the id names no domain, or
+    /// <c>REGISTRAR_OPERATION_UNSUPPORTED</c> when the registrar offers no programmatic cancellation, or
     /// <c>DOMAIN_TRANSFER_CANCEL_UPSTREAM_FAILED</c> when the registrar rejects the cancellation.
     /// </returns>
     public async Task<Result> HandleAsync(CancelTransferCommand cmd, CancellationToken ct)
@@ -52,17 +58,20 @@ public sealed class CancelTransferHandler
             return Result.FailureCode(HostpanelErrorCodes.DOMAIN_NOT_FOUND);
         }
 
-        var result = await _registrar.CancelTransferAsync(domain.Name, domain.RegistrarRef ?? string.Empty, ct);
+        var registrar = await _registrars.ResolveAsync(domain, ct);
+        var result = await registrar.CancelTransferAsync(
+            new DomainRef(domain.Name, domain.RegistrarRef ?? string.Empty), ct);
 
         if (!result.Success)
         {
-            return Result.Failure(
-                $"Registrar rejected transfer cancellation for '{domain.Name}': {result.ErrorMessage}",
-                HostpanelErrorCodes.DOMAIN_TRANSFER_CANCEL_UPSTREAM_FAILED);
+            _logger.LogWarning(
+                "Registrar rejected transfer cancellation for '{DomainName}': {Reason}",
+                domain.Name, result.ErrorCode);
+            return Result.FailureCode(result.ToFailureCode(HostpanelErrorCodes.DOMAIN_TRANSFER_CANCEL_UPSTREAM_FAILED));
         }
 
         domain.Cancel();
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
         return Result.Success();
     }
 }

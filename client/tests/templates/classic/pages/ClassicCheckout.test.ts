@@ -13,8 +13,9 @@ import { useAuthStore } from '~/stores/auth'
 import { useCartStore } from '~/stores/cart'
 import type { BillingCurrency } from '~/types/currency'
 import type { CartItem } from '~/types/cartitem'
-import type { ClientUser } from '~/types/clientuser'
-import { PAYMENT_MODULE_BANK_TRANSFER, PAYMENT_MODULE_INECOBANK, PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
+import { makeClientUser } from '~/tests/helpers/clientUser'
+import { PaymentModule } from '~/types/paymentmodule'
+import { PricingCycle } from '~/types/pricingcycle'
 
 /** The mocked billing endpoints, re-created for every test. */
 const billing = { fetchGatewayMethods: vi.fn(), createOrder: vi.fn() }
@@ -92,7 +93,7 @@ const PhoneInputStub = defineComponent({
 })
 
 /** A signed-in client. */
-const client = { id: 1, firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.test' } as ClientUser
+const client = makeClientUser()
 
 /**
  * Builds a hosting cart line.
@@ -105,7 +106,7 @@ const client = { id: 1, firstname: 'Ada', lastname: 'Lovelace', email: 'ada@exam
 const line = (pid: number, amount: number, currency = 'USD'): CartItem => ({
   pid,
   name: `Plan ${pid}`,
-  billingcycle: 'monthly',
+  billingcycle: PricingCycle.Monthly,
   cycleLabel: 'Monthly',
   amount,
   currency,
@@ -144,11 +145,11 @@ describe('ClassicCheckout', () => {
     stubPublicPageRuntime()
     billing.fetchGatewayMethods.mockReset()
     billing.fetchGatewayMethods.mockResolvedValue([
-      { module: PAYMENT_MODULE_BANK_TRANSFER, displayName: 'Bank transfer' },
-      { module: PAYMENT_MODULE_STRIPE, displayName: 'Card' },
+      { module: PaymentModule.BankTransfer, displayName: 'Bank transfer' },
+      { module: PaymentModule.Stripe, displayName: 'Card' },
     ])
     billing.createOrder.mockReset()
-    billing.createOrder.mockResolvedValue({ orderId: 7, invoiceId: 12, paymentToken: 'token' })
+    billing.createOrder.mockResolvedValue({ orderId: 7, invoiceId: 12, paymentToken: 'token', total: 12, currency: 'USD' })
     loginMock.mockReset()
     loginMock.mockResolvedValue(client)
     vi.mocked(navigateTo).mockClear()
@@ -203,8 +204,8 @@ describe('ClassicCheckout', () => {
   it('lists the gateways with the first preselected', async () => {
     const wrapper = await mountCheckout()
 
-    const bank = wrapper.find(`[data-testid="checkout-method-${PAYMENT_MODULE_BANK_TRANSFER}"]`)
-    const card = wrapper.find(`[data-testid="checkout-method-${PAYMENT_MODULE_STRIPE}"]`)
+    const bank = wrapper.find(`[data-testid="checkout-method-${PaymentModule.BankTransfer}"]`)
+    const card = wrapper.find(`[data-testid="checkout-method-${PaymentModule.Stripe}"]`)
     expect(bank.text()).toContain('Bank transfer')
     expect(bank.text()).toContain('checkout.gatewayKinds.bankTransfer')
     expect(card.text()).toContain('Card')
@@ -235,7 +236,7 @@ describe('ClassicCheckout', () => {
     const wrapper = await mountCheckout()
     expect(wrapper.find('[data-testid="checkout-card-form"]').exists()).toBe(false)
 
-    await wrapper.find(`[data-testid="checkout-method-${PAYMENT_MODULE_STRIPE}-input"]`).setValue(true)
+    await wrapper.find(`[data-testid="checkout-method-${PaymentModule.Stripe}-input"]`).setValue(true)
 
     expect(wrapper.find('[data-testid="checkout-card-form"]').exists()).toBe(true)
   })
@@ -248,7 +249,7 @@ describe('ClassicCheckout', () => {
     await flushPromises()
 
     expect(billing.createOrder).toHaveBeenCalledWith(expect.objectContaining({
-      paymentmethod: PAYMENT_MODULE_BANK_TRANSFER,
+      paymentmethod: PaymentModule.BankTransfer,
       currency: 'USD',
       firstname: 'Ada',
       lastname: 'Lovelace',
@@ -265,7 +266,7 @@ describe('ClassicCheckout', () => {
   })
 
   it('keeps the busy label short and explains the bank hand-off in a polite line under the button', async () => {
-    billing.fetchGatewayMethods.mockResolvedValue([{ module: PAYMENT_MODULE_INECOBANK, displayName: 'Bank card' }])
+    billing.fetchGatewayMethods.mockResolvedValue([{ module: PaymentModule.Inecobank, displayName: 'Bank card' }])
     // An order that never settles keeps the page in its busy state.
     billing.createOrder.mockReturnValue(new Promise(() => undefined))
     const wrapper = await mountCheckout()

@@ -1,6 +1,6 @@
 using Innovayse.Hostpanel.Domain.Domains;
-
 using Innovayse.Hostpanel.Domain.Domains.Enums;
+
 namespace Innovayse.Hostpanel.Application.Domains.Commands.AddDnsRecord;
 
 /// <summary>Command to add a new DNS record to a domain's zone.</summary>
@@ -13,7 +13,7 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.AddDnsRecord;
 /// <param name="Value">Record value (e.g. IP address, target hostname, TXT string).</param>
 /// <param name="Ttl">Time-to-live in seconds.</param>
 /// <param name="Priority">Priority for MX/SRV records; null for other types.</param>
-public record AddDnsRecordCommand(
+public sealed record AddDnsRecordCommand(
     int? DomainId,
     DnsRecordType Type,
     string Host,

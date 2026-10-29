@@ -10,6 +10,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
+import { PortalErrorCode } from '~/constants/portalErrorCode'
 import { CancellationType } from '~/types/cancellationtype'
 
 /** The mocked client-area API composable, re-created for every test. */
@@ -235,7 +236,19 @@ describe('useServiceManagementStore reads', () => {
     expect(await store.loadService('4')).toBeNull()
     expect(store.service).toBeNull()
     expect(store.serviceError).toBe('Not yours.')
+    expect(store.serviceNotFound).toBe(false)
     expect(store.serviceLoading).toBe(false)
+  })
+
+  it('marks a read refused as not found, and clears the mark on the next read', async () => {
+    api.fetchService.mockRejectedValueOnce({ data: { data: { code: PortalErrorCode.ServiceNotFound } } }).mockResolvedValueOnce({ id: 3, name: 'Pro' })
+    const store = useServiceManagementStore()
+
+    await store.loadService('9')
+    expect(store.serviceNotFound).toBe(true)
+
+    await store.loadService('3')
+    expect(store.serviceNotFound).toBe(false)
   })
 
   it('keeps the hosting info and falls back to the empty default when it cannot be read', async () => {

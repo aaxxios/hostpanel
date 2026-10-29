@@ -2,8 +2,8 @@
  * Regression test for the admin SPA's nginx config (`docker/nginx/admin.conf`): a route that
  * shares its name with a folder in `public/` must still fall through to the SPA.
  *
- * nginx cannot be run here, so the test reads the config and holds the one directive that broke:
- * `try_files $uri $uri/ ...` answers a directory hit (`/integrations`, the folder of integration
+ * nginx cannot be run here, so the test reads the config and checks the one directive that matters:
+ * a `try_files` that lists `$uri/` answers a directory hit (`/integrations`, the folder of integration
  * logos) with a 301 to the container's own host and port, so reloading or deep-linking that page
  * sent the browser to an address that does not exist.
  */

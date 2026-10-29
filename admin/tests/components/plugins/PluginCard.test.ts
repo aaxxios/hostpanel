@@ -1,5 +1,5 @@
 /**
- * Unit tests for PluginCard: name, version and status, and the remove event.
+ * Unit tests for PluginCard: name, version and status, the built-in mark, and the remove event.
  */
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -17,6 +17,7 @@ const plugin = {
   category: 'Payments',
   color: '#123456',
   isLoaded: true,
+  isBuiltIn: false,
 }
 
 /**
@@ -49,6 +50,19 @@ describe('PluginCard', () => {
     await wrapper.get('[data-testid="plugin-remove-ineco"]').trigger('click')
 
     expect(wrapper.emitted('remove')).toEqual([['ineco']])
+  })
+
+  it('marks a built-in plugin and offers no remove button', () => {
+    const wrapper = mountCard({ plugin: { ...plugin, isBuiltIn: true } })
+
+    expect(wrapper.get('[data-testid="plugin-builtin-ineco"]').text()).toBe('Built-in')
+    expect(wrapper.find('[data-testid="plugin-remove-ineco"]').exists()).toBe(false)
+  })
+
+  it('does not mark an uploaded plugin as built-in', () => {
+    const wrapper = mountCard()
+
+    expect(wrapper.find('[data-testid="plugin-builtin-ineco"]').exists()).toBe(false)
   })
 
   it('disables the remove button while removing', () => {

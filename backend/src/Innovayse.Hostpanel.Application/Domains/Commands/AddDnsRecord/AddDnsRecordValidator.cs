@@ -4,6 +4,7 @@ using Innovayse.Hostpanel.Application.Resources;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Microsoft.Extensions.Localization;
+
 namespace Innovayse.Hostpanel.Application.Domains.Commands.AddDnsRecord;
 
 /// <summary>Validates <see cref="AddDnsRecordCommand"/> inputs before the handler executes.</summary>

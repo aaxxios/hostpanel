@@ -21,6 +21,10 @@ describe('Ui enums', () => {
     expect(kit.UiHeadingLevel.H6).toBe(6)
   })
 
+  it('keeps the rich-text node kinds', () => {
+    expect(Object.values(kit.UiRichNodeType)).toEqual(['text', 'element'])
+  })
+
   it('has no duplicated value inside any string enum', () => {
     for (const [name, members] of Object.entries(kit)) {
       const values = Object.values(members as Record<string, string | number>).filter(value => typeof value === 'string')

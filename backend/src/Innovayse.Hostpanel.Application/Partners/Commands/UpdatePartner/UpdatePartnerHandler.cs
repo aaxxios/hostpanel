@@ -41,7 +41,7 @@ public sealed class UpdatePartnerHandler
         }
 
         entity.Update(cmd.LogoUrl, cmd.Url, cmd.SortOrder, cmd.IsActive);
-        entity.ApplyTranslations(cmd.Translations);
+        entity.ReplaceTranslations(cmd.Translations.ToContent());
 
         await _context.SaveChangesAsync(ct);
         return Result.Success();

@@ -1,6 +1,6 @@
 /**
- * One function per endpoint on the API's auth surface. No state lives here — no
- * `ref`, no caching — so this file reads as a list of what the backend offers.
+ * One function per endpoint on the API's auth surface. No state lives here (no
+ * `ref`, no caching) so this file reads as a list of what the backend offers.
  *
  * Callers are the auth store, never a `.vue` file.
  */
@@ -32,7 +32,7 @@ export const useAuthApi = () => {
   const { request, probe } = useApi()
 
   /**
-   * Asks how this deployment signs people in. Anonymous, and has to be — a client
+   * Asks how this deployment signs people in. Anonymous, and has to be: a client
    * must read it before it can authenticate.
    *
    * @returns The deployment's auth mode.
@@ -57,7 +57,7 @@ export const useAuthApi = () => {
   const fetchMe = (): Promise<MeResponse | null> => probe<MeResponse>(`${ApiPath.Auth}/me`)
 
   /**
-   * Signs in with email and password. Local mode only — under SSO this same path is
+   * Signs in with email and password. Local mode only: under SSO this same path is
    * a redirect endpoint and the POST answers 404.
    *
    * @param email - The operator's email address.
@@ -84,7 +84,7 @@ export const useAuthApi = () => {
     })
 
   /**
-   * Creates a local account. Local mode only — under SSO this answers 404, because the
+   * Creates a local account. Local mode only: under SSO this answers 404, because the
    * accounts belong to the sign-on service.
    *
    * @param email - Address the account signs in with.
@@ -107,22 +107,20 @@ export const useAuthApi = () => {
 
   /**
    * Claims the Admin role for the caller. Requires an authenticated session and only
-   * succeeds while nobody holds Admin — a second caller gets 409.
+   * succeeds while nobody holds Admin: a second caller gets 409.
    *
-   * @param setupToken - The token this installation printed to its log, required in local
-   * mode and ignored under SSO. Omitted when {@link SetupRequiredResponse.tokenRequired}
-   * said none is wanted.
+   * @param setupToken - The token this installation printed to its log.
    * @returns Confirmation that the role was granted.
    */
-  const claimAdmin = (setupToken?: string): Promise<{ success: boolean }> =>
+  const claimAdmin = (setupToken: string): Promise<{ success: boolean }> =>
     request<{ success: boolean }>(`${ApiPath.Auth}/setup`, {
       method: HttpMethod.Post,
-      body: JSON.stringify({ setupToken: setupToken ?? null }),
+      body: JSON.stringify({ setupToken }),
     })
 
   /**
    * Ends a local-mode session by asking the API to clear the httpOnly session cookie.
-   * The page cannot read that cookie, so it cannot delete it either — signing out has to
+   * The page cannot read that cookie, so it cannot delete it either: signing out has to
    * be a request.
    *
    * The verb carries the distinction, the way it already does for login. Under SSO the
@@ -137,7 +135,7 @@ export const useAuthApi = () => {
     request<{ success: boolean }>(ApiPath.AuthLogout, { method: HttpMethod.Delete })
 
   /**
-   * Confirms an email address with the token mailed to it. Anonymous; local mode only --
+   * Confirms an email address with the token mailed to it. Anonymous; local mode only:
    * the API answers 404 where an SSO owns the accounts, and no SSO route exists for it.
    * Resolves on 200; a 400 (`TOKEN_INVALID_OR_EXPIRED`) rejects with an `ApiError`.
    *
@@ -172,7 +170,7 @@ export const useAuthApi = () => {
   const ssoLoginUrl = (returnTo: string): string => `${API_BASE}${ApiPath.Auth}/login${buildQuery({ returnTo })}`
 
   /**
-   * Ends the session under SSO — this product's, or every product's with scope 'all' — and
+   * Ends the session under SSO (this product's, or every product's with scope 'all') and
    * asks where the SSO wants the browser sent to finish signing out.
    *
    * @param scope - 'this' ends only Hostpanel's session, 'all' ends every product's.

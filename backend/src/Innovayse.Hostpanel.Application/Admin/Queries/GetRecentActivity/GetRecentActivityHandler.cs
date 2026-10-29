@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Application.Admin.Common;
+using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
@@ -7,7 +9,7 @@ using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
-using Innovayse.Hostpanel.Application.Admin.Queries.GetRecentActivity.Enums;
+
 namespace Innovayse.Hostpanel.Application.Admin.Queries.GetRecentActivity;
 
 /// <summary>
@@ -31,11 +33,16 @@ public sealed class GetRecentActivityHandler
     /// <summary>The data context, for recently registered clients, overdue invoices and domains nearing expiry.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The data context, for recently registered clients, overdue invoices and domains nearing expiry.</param>
-    public GetRecentActivityHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public GetRecentActivityHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>
@@ -52,15 +59,13 @@ public sealed class GetRecentActivityHandler
         GetRecentActivityQuery query, CancellationToken ct)
     {
         var limit = query.Limit is > 0 and <= MaxLimit ? query.Limit : DefaultLimit;
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
 
         var lookbackStart = now - ClientLookback;
         var recentClients = await _context.Clients
             .Where(c => c.CreatedAt >= lookbackStart && c.CreatedAt <= now)
             .OrderBy(c => c.CreatedAt)
             .ToListAsync(ct);
-        // Was IInvoiceRepository.ListAsync(1, limit, Overdue, null, null, ct) -- read-only, so no
-        // tracking is needed; the total count that call also returned is unused here.
         var overdueInvoices = await _context.Invoices
             .AsNoTracking()
             .Where(x => x.Status == InvoiceStatus.Overdue)

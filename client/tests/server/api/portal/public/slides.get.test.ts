@@ -1,6 +1,6 @@
 /**
- * Tests for `GET /api/portal/public/slides`: it forwards the audience filter to the slides
- * endpoint and passes the answer or refusal through.
+ * Tests for `GET /api/portal/public/slides`: it asks the slides
+ * endpoint without an audience (the backend decides it) and passes the answer or refusal through.
  *
  * @module tests/server/api/portal/public/slides.get.test
  */
@@ -26,7 +26,7 @@ afterEach(async () => {
 })
 
 describe('GET /api/portal/public/slides', () => {
-  it('requests all slides when no audience is given, forwarding the reader language', async () => {
+  it('requests the slides without an audience, forwarding the reader language', async () => {
     backend.respondWith(() => ({ body: [{ id: 1 }] }))
 
     const result = await route.default(makeEvent({ headers: { 'x-language': 'hy' } }))
@@ -36,10 +36,10 @@ describe('GET /api/portal/public/slides', () => {
     expect(backend.requests[0]?.headers['x-language']).toBe('hy')
   })
 
-  it('forwards the audience filter', async () => {
-    await route.default(makeEvent({ query: { audience: 'guest' } }))
+  it('does not forward an audience a caller put in the query string', async () => {
+    await route.default(makeEvent({ query: { audience: 'authenticated' } }))
 
-    expect(backend.requests[0]?.url).toBe('/api/slides?audience=guest')
+    expect(backend.requests[0]?.url).toBe('/api/slides')
   })
 
   it('passes the backend refusal through with its code and sentence', async () => {

@@ -1,21 +1,20 @@
+using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Commands.MarkDomainExpired;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
 /// Integration tests for the <c>MarkDomainExpired</c> use case, an internal command
-/// <c>CheckDomainExpiriesHandler</c> dispatches -- there is no HTTP route for it, so it is
+/// <c>CheckDomainExpiriesHandler</c> dispatches; there is no HTTP route for it, so it is
 /// exercised here directly through the real bus (<c>IMessageBus.InvokeAsync</c>), the same way
-/// A6 tested crons. Had no Integration coverage of its own before this batch.
+/// the scheduled jobs are tested.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class MarkDomainExpiredTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -49,5 +48,16 @@ public sealed class MarkDomainExpiredTests(IntegrationTestFactory factory) : ICl
 
         Assert.False(outcome.IsSuccess);
         Assert.Equal(DomainsTestSeeds.DomainNotFoundCode, outcome.ErrorCode);
+    }
+
+    /// <summary>A non-positive domain id is refused by the validator before the handler runs.</summary>
+    [Fact]
+    public async Task MarkDomainExpired_NonPositiveId_IsRefusedByTheValidatorAsync()
+    {
+        using var scope = factory.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        await Assert.ThrowsAsync<ValidationException>(
+            () => bus.InvokeAsync<Result>(new MarkDomainExpiredCommand(0), CancellationToken.None));
     }
 }

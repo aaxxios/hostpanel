@@ -1,25 +1,20 @@
 /**
- * One financial transaction recorded against an invoice, as `InvoiceTransactionDto` sends it.
+ * One financial transaction recorded against an invoice, as `MyInvoiceTransactionDto` sends it.
+ * The gateway's own reference, its fee and staff notes are not part of the client's view.
  *
  * @module types/clientinvoicetransaction
  */
 
-/** One financial transaction recorded against an invoice, as `InvoiceTransactionDto` sends it. */
+import type { InvoiceTransactionType } from '~/types/invoicetransactiontype'
+
+/** One financial transaction recorded against an invoice, as `MyInvoiceTransactionDto` sends it. */
 export interface ClientInvoiceTransaction {
   /** Transaction primary key. */
   id: number
   /** UTC timestamp of the transaction, ISO 8601. */
   date: string
-  /** Payment gateway name. */
-  gateway: string
-  /** External transaction reference. */
-  transactionId: string
-  /** Transaction amount. */
+  /** Transaction amount, always positive; {@link ClientInvoiceTransaction.type} says which way the money moved. */
   amount: number
-  /** Fees charged by the gateway. */
-  fees: number
-  /** Transaction type, as `InvoiceTransactionType` serialises. */
-  type: string
-  /** Optional notes; null when not provided. */
-  notes: string | null
+  /** Which way the money moved. */
+  type: InvoiceTransactionType
 }

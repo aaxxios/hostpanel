@@ -17,7 +17,7 @@ import { beforeEach, vi } from 'vitest'
 const VUE_AUTO_IMPORTS = [
   'ref', 'shallowRef', 'reactive', 'computed', 'watch', 'watchEffect', 'toRef', 'toRefs', 'unref', 'isRef',
   'readonly', 'nextTick', 'onMounted', 'onUpdated', 'onBeforeUnmount', 'onUnmounted', 'provide', 'inject', 'h',
-  'defineComponent', 'useId',
+  'defineComponent', 'useId', 'toValue',
 ] as const
 
 /**
@@ -97,7 +97,7 @@ const installAutoImports = (): void => {
 
   /**
    * `useAsyncData` stand-in: runs the handler once, exposes the result as refs, and re-runs the
-   * handler when a source named in `options.watch` changes -- which is how a page refetches in a
+   * handler when a source named in `options.watch` changes, which is how a page refetches in a
    * new currency or language under Nuxt.
    */
   define('useAsyncData', async (

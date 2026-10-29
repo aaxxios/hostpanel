@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// Chat notification for contact-form enquiries on the public demo: does nothing. The enquiry's mail
 /// still goes out through the configured mail relay; only the third-party chat channel is cut.
 /// </summary>
-internal sealed class DemoContactNotifier : IContactNotifier
+public sealed class DemoContactNotifier : IContactNotifier
 {
     /// <inheritdoc/>
     public Task NotifyAsync(ContactEnquiry enquiry, CancellationToken ct) => Task.CompletedTask;

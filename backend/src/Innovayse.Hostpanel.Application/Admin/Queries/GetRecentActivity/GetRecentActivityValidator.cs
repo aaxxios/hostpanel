@@ -8,7 +8,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Queries.GetRecentActivity;
 /// <summary>
 ///     Validates <see cref="GetRecentActivityQuery"/>. Every value of <c>Limit</c> is accepted:
 ///     the handler substitutes its own default for anything outside 1-50, so a caller is never
-///     refused over this field — decided, not forgotten.
+///     refused over this field; decided, not forgotten.
 /// </summary>
 public sealed class GetRecentActivityValidator : LocalizedValidator<GetRecentActivityQuery>
 {

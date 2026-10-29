@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Application.Notifications.Common;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
+
 /// <summary>
 /// Supplies the brand an outgoing mail is rendered with.
 /// </summary>

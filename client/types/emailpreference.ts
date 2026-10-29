@@ -4,7 +4,7 @@
  * @module types/emailpreference
  */
 
-/** One email category; the value is the key in the profile's `email_preferences`. */
+/** One email category; the value is the key in the profile's `notifications`. */
 export enum EmailPreference {
   /** General announcements. */
   General = 'general',

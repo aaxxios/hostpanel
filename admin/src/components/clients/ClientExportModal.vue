@@ -51,6 +51,8 @@ const FIELDS: ExportField[] = [
   { key: 'profileData', label: t('clients.clientExport.profileData') },
   { key: 'payMethods', label: t('clients.clientExport.payMethods') },
   { key: 'contacts', label: t('clients.clientSummary.contacts') },
+  { key: 'users', label: t('clients.clientExport.users') },
+  { key: 'invitations', label: t('clients.clientExport.invitations') },
   { key: 'productsServices', label: t('clients.clientSummary.productsServices2') },
   { key: 'domains', label: t('shared.domains') },
   { key: 'billableItems', label: t('nav.billingChildren.billableItems') },
@@ -153,6 +155,9 @@ const download = async (): Promise<void> => {
       </UiGrid>
       <UiText :tone="UiTextTone.Muted" :size="UiTextSize.Xs">
         {{ t('clients.clientExport.generatingAnExportForA') }}
+      </UiText>
+      <UiText :tone="UiTextTone.Muted" :size="UiTextSize.Xs" data-testid="clients-export-storage-note">
+        {{ t('clients.clientExport.storageNote') }}
       </UiText>
     </UiStack>
     <template #footer>

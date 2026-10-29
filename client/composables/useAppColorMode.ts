@@ -21,12 +21,12 @@ import type { ColorModeSetting } from '~/types/colormodesetting'
  * The storefront's colour mode: what it is, whether the visitor may change it, and
  * how to change it.
  *
- * Resolution order — visitor's cookie, then the operator's `portal.theme.default`,
- * then the device — is implemented in `utils/colorMode.ts`; this composable only
+ * Resolution order (visitor's cookie, then the operator's `portal.theme.default`,
+ * then the device) is implemented in `utils/colorMode.ts`; this composable only
  * binds it to Nuxt state. The `<html>` class itself is written by
  * `plugins/color-mode.ts` from {@link applied}, so no other code should touch
- * `documentElement.classList` — two writers is how the public site ended up pinned
- * dark while the client area had a working toggle.
+ * `documentElement.classList`: a second writer would pin the public site dark while
+ * the client area has a working toggle.
  *
  * The cookie rather than `localStorage`: the server reads it during SSR and renders
  * the right class in the HTML, so a returning light-mode visitor gets a light first

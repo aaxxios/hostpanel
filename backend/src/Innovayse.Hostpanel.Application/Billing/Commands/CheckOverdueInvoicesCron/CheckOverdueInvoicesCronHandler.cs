@@ -1,52 +1,58 @@
+using Innovayse.Hostpanel.Application.Billing.Commands.MarkInvoiceOverdue;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Shared.Infrastructure;
+using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Wolverine;
+
 namespace Innovayse.Hostpanel.Application.Billing.Commands.CheckOverdueInvoicesCron;
+
 /// <summary>
 /// Handles <see cref="CheckOverdueInvoicesCronCommand"/> by marking all unpaid invoices
 /// past their due date as overdue. Re-schedules itself for the next day after completion.
 /// </summary>
 public sealed class CheckOverdueInvoicesCronHandler
 {
-    /// <summary>Hour (UTC) at which this job runs daily.</summary>
-    private const int CronHour = 7;
-
-    /// <summary>The module's data context, for the unpaid invoices past their due date.</summary>
+    /// <summary>The module's data context, for the ids of the unpaid invoices past their due date.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>Runs the passes under their lease and schedules the next run.</summary>
+    private readonly RecurringJobs _jobs;
 
-    /// <summary>Message bus, for re-scheduling the job.</summary>
+    /// <summary>Message bus, for the per-invoice commands.</summary>
     private readonly IMessageBus _bus;
 
     /// <summary>Structured logger.</summary>
     private readonly ILogger<CheckOverdueInvoicesCronHandler> _logger;
 
+    /// <summary>The clock every moment in this handler is read from.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
-    /// <param name="context">The module's data context, for the unpaid invoices past their due date.</param>
-    /// <param name="uow">Unit of work.</param>
-    /// <param name="bus">Message bus, for re-scheduling the job.</param>
+    /// <param name="context">The module's data context, for the ids of the unpaid invoices past their due date.</param>
+    /// <param name="jobs">Runs the passes under their lease and schedules the next run.</param>
+    /// <param name="bus">Message bus, for the per-invoice commands.</param>
     /// <param name="logger">Structured logger.</param>
+    /// <param name="clock">The clock the current moment is read from.</param>
     public CheckOverdueInvoicesCronHandler(
         IHostpanelDbContext context,
-        IUnitOfWork uow,
+        RecurringJobs jobs,
         IMessageBus bus,
-        ILogger<CheckOverdueInvoicesCronHandler> logger)
+        ILogger<CheckOverdueInvoicesCronHandler> logger,
+        IClock clock)
     {
         _context = context;
-        _uow = uow;
+        _jobs = jobs;
         _bus = bus;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>
-    /// Queries all unpaid invoices past their due date and transitions them to Overdue status.
+    /// Finds the unpaid invoices past their due date in batches and sends each a <see cref="MarkInvoiceOverdueCommand"/>.
     /// Each marked invoice raises an <see cref="Innovayse.Hostpanel.Domain.Billing.Events.InvoiceOverdueEvent"/>.
     /// </summary>
     /// <param name="cmd">The scheduled command (marker, no payload).</param>
@@ -54,42 +60,58 @@ public sealed class CheckOverdueInvoicesCronHandler
     public Task HandleAsync(CheckOverdueInvoicesCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
+        var now = _clock.UtcNow;
 
-        return RecurringJob.RunAsync(
-            nameof(CheckOverdueInvoicesCronCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+        return _jobs.RunAsync<CheckOverdueInvoicesCronCommand>(
+            _jobs.Schedules.CheckOverdueInvoices, () => RunAsync(now, ct), ct);
     }
 
-    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJobs"/>.</summary>
+    /// <param name="now">The moment this pass started.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task.</returns>
-    private async Task RunAsync(CancellationToken ct)
+    private async Task RunAsync(DateTimeOffset now, CancellationToken ct)
     {
-        // Was IInvoiceRepository.ListUnpaidOverdueAsync. Tracked, not AsNoTracking: each matching
-        // invoice has MarkOverdue() called on it below and is saved in this same pass.
-        var overdueInvoices = await _context.Invoices
-            .Where(i => i.Status == InvoiceStatus.Unpaid && i.DueDate < DateTimeOffset.UtcNow)
-            .ToListAsync(ct);
-
-        foreach (var invoice in overdueInvoices)
+        var marked = 0;
+        var lastId = 0;
+        while (true)
         {
-            invoice.MarkOverdue();
+            // Ids only, in keyset batches: nothing is tracked here, and a row that fails is not read again this pass.
+            var invoiceIds = await _context.Invoices.AsNoTracking()
+                .Where(i => i.Id > lastId && i.Status == InvoiceStatus.Unpaid && i.DueDate < now)
+                .OrderBy(i => i.Id)
+                .Select(i => i.Id)
+                .Take(JobBatch.Size)
+                .ToListAsync(ct);
+            if (invoiceIds.Count == 0)
+            {
+                break;
+            }
+
+            foreach (var invoiceId in invoiceIds)
+            {
+                // One message (own scope and data context) per invoice: one failure cannot poison the rest.
+                try
+                {
+                    var outcome = await _bus.InvokeAsync<Result>(new MarkInvoiceOverdueCommand(invoiceId), ct);
+                    if (outcome.IsFailure)
+                    {
+                        _logger.LogWarning("Marking invoice {InvoiceId} overdue was refused ({ErrorCode}).", invoiceId, outcome.ErrorCode);
+                    }
+                    else
+                    {
+                        marked++;
+                    }
+                }
+                catch (Exception ex) when (JobFailure.IsFailure(ex, ct))
+                {
+                    _logger.LogError(ex, "Marking invoice {InvoiceId} overdue failed; the next run retries it.", invoiceId);
+                }
+            }
+
+            lastId = invoiceIds[^1];
         }
 
-        if (overdueInvoices.Count > 0)
-        {
-            await _uow.SaveChangesAsync(ct);
-        }
-
-        _logger.LogInformation(
-            "CheckOverdueInvoicesCron marked {Count} invoices as overdue.", overdueInvoices.Count);
-    }
-
-    /// <summary>Schedules the next pass.</summary>
-    /// <returns>A task.</returns>
-    private async Task ScheduleNextAsync()
-    {
-        var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
-        await _bus.ScheduleAsync(new CheckOverdueInvoicesCronCommand(), nextRun);
-        _logger.LogInformation("CheckOverdueInvoicesCronCommand re-scheduled for {NextRun:u}.", nextRun);
+        _logger.LogInformation("CheckOverdueInvoicesCron marked {Count} invoices as overdue.", marked);
     }
 }

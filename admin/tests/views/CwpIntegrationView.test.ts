@@ -1,17 +1,18 @@
 /**
  * Mount tests for CwpIntegrationView: the header, the form and the live status card from the
- * server-info endpoint, and the refusal a failed test returns.
+ * server-info endpoint, the refusal a failed test returns, the outcome of a save and a refused load
+ * with its Retry.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import CwpIntegrationView from '@/views/CwpIntegrationView.vue'
 import { stubRoutes } from '../helpers/routes'
-import { json } from '../helpers/fetch'
+import { json, problem } from '../helpers/fetch'
 import { mountView } from '../helpers/mount'
 import { integrationDetail } from '../helpers/integrationFixtures'
 
 /** Live server info of a connected CWP server. */
-const connectedInfo = { connected: true, accountsCount: 21, cwpVersion: '0.9.8', lastTestedAt: null, errorMessage: null }
+const connectedInfo = { connected: true, accountsCount: 21, version: '0.9.8', lastTestedAt: null, errorMessage: null }
 
 describe('CwpIntegrationView', () => {
   afterEach(() => {
@@ -45,5 +46,53 @@ describe('CwpIntegrationView', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="cwp-test-error"]').text()).toContain('Bad token.')
+  })
+
+  it('reports a saved config under the form', async () => {
+    stubRoutes({
+      'GET /api/admin/integrations/cwp/server-info': () => json(connectedInfo),
+      'PUT /api/admin/integrations/cwp': () => new Response(null, { status: 204 }),
+      'GET /api/admin/integrations/cwp': () => json(integrationDetail({ slug: 'cwp', name: 'CWP' })),
+    })
+    const wrapper = await mountView(CwpIntegrationView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="integration-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="cwp-save-feedback"]').text()).toBe('Settings saved.')
+  })
+
+  it('shows the API sentence under the form when the save is refused', async () => {
+    stubRoutes({
+      'GET /api/admin/integrations/cwp/server-info': () => json(connectedInfo),
+      'PUT /api/admin/integrations/cwp': () => problem('Host is required.', 422),
+      'GET /api/admin/integrations/cwp': () => json(integrationDetail({ slug: 'cwp', name: 'CWP' })),
+    })
+    const wrapper = await mountView(CwpIntegrationView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="integration-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="cwp-save-feedback"]').text()).toBe('Host is required.')
+  })
+
+  it('shows a refused load with a Retry and loads again from it', async () => {
+    let refused = true
+    stubRoutes({
+      'GET /api/admin/integrations/cwp/server-info': () => json(connectedInfo),
+      'GET /api/admin/integrations/cwp': () => (refused ? problem('Not available.', 503) : json(integrationDetail({ slug: 'cwp', name: 'CWP' }))),
+    })
+    const wrapper = await mountView(CwpIntegrationView)
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="cwp-load-error"]').text()).toBe('Not available.')
+    refused = false
+    await wrapper.get('[data-testid="cwp-load-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="cwp-load-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="integration-config-form"]').exists()).toBe(true)
   })
 })

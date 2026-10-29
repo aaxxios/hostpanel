@@ -2,7 +2,7 @@
  * Reads the Redis connection setting the portal shares with the API.
  *
  * The deployment has one Redis setting, `REDIS_CONNECTION`, written in the comma-separated form the
- * API's Redis client reads (`host:port,password=...,ssl=true,defaultDatabase=0`). The portal is fed
+ * API's Redis client reads (`host:port,password=<secret>,ssl=true,defaultDatabase=0`). The portal is fed
  * the same value (`NUXT_SESSION_REDIS`) so an operator configures Redis once; this module turns it
  * into the options the Node Redis client takes. A `redis://` or `rediss://` URL is accepted too.
  *

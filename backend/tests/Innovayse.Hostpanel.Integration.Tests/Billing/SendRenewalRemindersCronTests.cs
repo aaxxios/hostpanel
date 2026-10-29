@@ -1,16 +1,16 @@
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Billing.Commands.SendRenewalReminder;
 using Innovayse.Hostpanel.Application.Billing.Commands.SendRenewalRemindersCron;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Notifications.Seeding;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Wolverine;
-using Xunit;
+using Wolverine.Tracking;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -37,7 +37,7 @@ public sealed class SendRenewalRemindersCronTests(IntegrationTestFactory factory
     /// <param name="paid">Whether the invoice is marked paid.</param>
     /// <param name="optOut">Whether the client has opted out of invoice mail.</param>
     /// <returns>The client's email address and the invoice id.</returns>
-    private static async Task<(string Email, int InvoiceId)> SeedAsync(
+    private static async Task<RenewalReminderTarget> SeedAsync(
         IServiceProvider services, int raisedDaysAgo, int dueInDays, bool renewal = true, bool paid = false, bool optOut = false)
     {
         var context = services.GetRequiredService<IHostpanelDbContext>();
@@ -48,7 +48,7 @@ public sealed class SendRenewalRemindersCronTests(IntegrationTestFactory factory
         }
 
         var now = DateTimeOffset.UtcNow;
-        var invoice = Invoice.Create(client.Id, now.AddDays(dueInDays), "USD");
+        var invoice = Invoice.Create(client.Id, now.AddDays(dueInDays), "USD", now);
         if (renewal)
         {
             invoice.AddServiceRenewal("Hosting renewal", 25m, 1, now.AddDays(dueInDays), now.AddDays(dueInDays + 30));
@@ -63,11 +63,11 @@ public sealed class SendRenewalRemindersCronTests(IntegrationTestFactory factory
         await context.SaveChangesAsync(CancellationToken.None);
         if (paid)
         {
-            invoice.MarkPaid("t");
+            invoice.RecordPaidHistory("t", now);
             await context.SaveChangesAsync(CancellationToken.None);
         }
 
-        return (email, invoice.Id);
+        return new(email, invoice.Id);
     }
 
     /// <summary>Runs the cron once.</summary>
@@ -131,10 +131,9 @@ public sealed class SendRenewalRemindersCronTests(IntegrationTestFactory factory
         var poisoned = new PoisonedInvoice();
         var host = factory.WithWebHostBuilder(b => b.ConfigureTestServices(services =>
         {
-            services.AddScoped<IEmailSender>(_ => sender);
+            services.AddSingleton<IEmailSender>(sender);
             services.AddScoped<IDomainEventGate, SuppressedDomainEventGate>();
-            services.AddScoped<IUnitOfWork>(sp => new PoisonedUnitOfWork(
-                ActivatorUtilities.CreateInstance<UnitOfWork>(sp), sp.GetRequiredService<IHostpanelDbContext>(), poisoned));
+            services.ConfigureDbContext<AppDbContext>(options => options.AddInterceptors(new PoisonedInvoiceSaveInterceptor(poisoned)));
         }));
         using var scope = host.Services.CreateScope();
         var (badEmail, badId) = await SeedAsync(scope.ServiceProvider, raisedDaysAgo: 11, dueInDays: 3);
@@ -148,35 +147,6 @@ public sealed class SendRenewalRemindersCronTests(IntegrationTestFactory factory
         (await context.InvoiceReminders.AsNoTracking().AnyAsync(r => r.InvoiceId == goodId)).Should().BeTrue();
         (await context.InvoiceReminders.AsNoTracking().AnyAsync(r => r.InvoiceId == badId)).Should().BeFalse();
         _ = badEmail;
-    }
-
-    /// <summary>Names the one invoice whose reminder save <see cref="PoisonedUnitOfWork"/> refuses.</summary>
-    private sealed class PoisonedInvoice
-    {
-        /// <summary>The poisoned invoice id.</summary>
-        public int InvoiceId { get; set; }
-    }
-
-    /// <summary>A unit of work that throws when saving a reminder row for the poisoned invoice.</summary>
-    /// <param name="inner">The real unit of work.</param>
-    /// <param name="context">The scope's data context, to inspect pending rows.</param>
-    /// <param name="poisoned">The poisoned invoice.</param>
-    private sealed class PoisonedUnitOfWork(IUnitOfWork inner, IHostpanelDbContext context, PoisonedInvoice poisoned) : IUnitOfWork
-    {
-        /// <inheritdoc/>
-        public Task<int> SaveChangesAsync(CancellationToken ct = default)
-        {
-            if (context is DbContext db
-                && db.ChangeTracker.Entries<InvoiceReminder>().Any(e => e.State == EntityState.Added && e.Entity.InvoiceId == poisoned.InvoiceId))
-            {
-                throw new InvalidOperationException("Simulated failure for the poisoned invoice.");
-            }
-
-            return inner.SaveChangesAsync(ct);
-        }
-
-        /// <inheritdoc/>
-        public void DetachAll() => inner.DetachAll();
     }
 
     /// <summary>Three days before due (raised fourteen days ahead of it) sends the 3-day reminder once; a second run sends nothing.</summary>
@@ -271,5 +241,29 @@ public sealed class SendRenewalRemindersCronTests(IntegrationTestFactory factory
 
         sender.Sent.Where(m => m.To == email).Should().BeEmpty();
         (await context.InvoiceReminders.AsNoTracking().AnyAsync(r => r.InvoiceId == invoiceId)).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// An unpaid invoice that fell due days ago is not walked on the daily run (its reminder window is
+    /// over), while one that fell due hours ago and one due soon still are.
+    /// </summary>
+    [Fact]
+    public async Task LongOverdueInvoice_IsNotDispatchedAgain()
+    {
+        var sender = new FakeEmailSender();
+        var host = Host(sender);
+        using var scope = host.Services.CreateScope();
+        var (_, longOverdueId) = await SeedAsync(scope.ServiceProvider, raisedDaysAgo: 20, dueInDays: -5);
+        var (_, justOverdueId) = await SeedAsync(scope.ServiceProvider, raisedDaysAgo: 14, dueInDays: 0);
+        var (_, dueSoonId) = await SeedAsync(scope.ServiceProvider, raisedDaysAgo: 11, dueInDays: 3);
+
+        var session = await host.Services.GetRequiredService<IHost>()
+            .TrackActivity()
+            .Timeout(TimeSpan.FromSeconds(60))
+            .InvokeMessageAndWaitAsync(new SendRenewalRemindersCronCommand());
+
+        var dispatched = session.Executed.MessagesOf<SendRenewalReminderCommand>().Select(c => c.InvoiceId).ToList();
+        dispatched.Should().NotContain(longOverdueId);
+        dispatched.Should().Contain([justOverdueId, dueSoonId]);
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Endpoints for published editorial content — announcements and the knowledgebase.
+ * Endpoints for published editorial content: announcements and the knowledgebase.
  *
  * Every function returns a plain `Promise` through `apiFetch`, so `stores/content.ts` can call
  * them from a store action, including the action a server-rendered page wraps in
@@ -9,12 +9,12 @@
  */
 
 import { apiFetch } from '~/composables/useApi'
-import type { AnnouncementList } from '~/types/announcementlist'
-import type { AnnouncementSummary } from '~/types/announcementsummary'
 import type { KbArticle } from '~/types/kbarticle'
-import type { KbArticleList } from '~/types/kbarticlelist'
+import type { KbArticleSummary } from '~/types/kbarticlesummary'
 import type { KbArticleQuery } from '~/types/kbarticlequery'
 import type { KbCategory } from '~/types/kbcategory'
+import type { PaginatedList } from '~/types/paginatedlist'
+import type { PublishedAnnouncement } from '~/types/publishedannouncement'
 
 /**
  * The announcements and knowledgebase surface, one function per endpoint.
@@ -25,20 +25,30 @@ export const useContentApi = () => {
   /**
    * Reads the announcement list.
    *
-   * @returns The announcement list.
+   * @returns The first page of published announcements.
    * @throws Whatever `apiFetch` throws.
    */
-  const fetchAnnouncements = (): Promise<AnnouncementList> =>
-    apiFetch<AnnouncementList>('/api/portal/client/announcements')
+  const fetchAnnouncements = (): Promise<PaginatedList<PublishedAnnouncement>> =>
+    apiFetch<PaginatedList<PublishedAnnouncement>>('/api/portal/client/announcements')
 
   /**
-   * Reads the ten most recent published announcements, flattened for the dashboard card.
+   * Reads the ten most recent published announcements for the dashboard card.
    *
-   * @returns The announcement summaries, newest first.
+   * @returns The first page of ten published announcements, newest first.
    * @throws Whatever `apiFetch` throws.
    */
-  const fetchRecentAnnouncements = (): Promise<AnnouncementSummary[]> =>
-    apiFetch<AnnouncementSummary[]>('/api/portal/public/announcements')
+  const fetchRecentAnnouncements = (): Promise<PaginatedList<PublishedAnnouncement>> =>
+    apiFetch<PaginatedList<PublishedAnnouncement>>('/api/portal/public/announcements')
+
+  /**
+   * Reads one published announcement, body included, from the public detail route.
+   *
+   * @param id - Announcement id.
+   * @returns The announcement.
+   * @throws Whatever `apiFetch` throws; an unknown or unpublished id is a refusal.
+   */
+  const fetchAnnouncement = (id: string): Promise<PublishedAnnouncement> =>
+    apiFetch<PublishedAnnouncement>(`/api/portal/public/announcements/${id}`)
 
   /**
    * Reads the knowledgebase categories.
@@ -50,14 +60,14 @@ export const useContentApi = () => {
     apiFetch<KbCategory[]>('/api/portal/knowledgebase/categories')
 
   /**
-   * Reads knowledgebase articles.
+   * Reads one page of knowledgebase articles.
    *
-   * @param query - Which articles to read.
-   * @returns The article list.
+   * @param query - Filters and paging.
+   * @returns The page of articles.
    * @throws Whatever `apiFetch` throws.
    */
-  const fetchKbArticles = (query: KbArticleQuery): Promise<KbArticleList> =>
-    apiFetch<KbArticleList>('/api/portal/knowledgebase/articles', { query })
+  const fetchKbArticles = (query: KbArticleQuery): Promise<PaginatedList<KbArticleSummary>> =>
+    apiFetch<PaginatedList<KbArticleSummary>>('/api/portal/knowledgebase/articles', { query })
 
   /**
    * Reads one knowledgebase article, body included.
@@ -72,6 +82,7 @@ export const useContentApi = () => {
   return {
     fetchAnnouncements,
     fetchRecentAnnouncements,
+    fetchAnnouncement,
     fetchKbCategories,
     fetchKbArticles,
     fetchKbArticle

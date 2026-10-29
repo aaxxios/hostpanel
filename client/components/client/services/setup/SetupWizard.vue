@@ -31,7 +31,7 @@
 
     <ClientServicesSetupReviewStep
       v-else
-      :plan-name="productNameOrFallback(t, service.name, service.id)"
+      :plan-name="service.productName"
       :domain="setupData.domain"
       :username="setupData.username"
       :submitting="setupSubmitting"
@@ -55,9 +55,8 @@ import { computed, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useServiceManagementStore } from '~/stores/servicemanagement'
 import { ActionOutcome } from '~/types/actionoutcome'
-import type { ServiceDetail } from '~/types/servicedetail'
+import type { ClientService } from '~/types/clientservice'
 import { SetupStep } from '~/types/setupstep'
-import { productNameOrFallback } from '~/utils/displayFallback'
 import { domainErrorKey, passwordErrorKey, usernameErrorKey } from '~/utils/hostingSetup'
 
 /** How many steps the wizard has. */
@@ -69,7 +68,7 @@ const { t } = useI18n()
 /** Props of SetupWizard. */
 interface Props {
   /** The service being set up. */
-  service: ServiceDetail
+  service: ClientService
   /** The id of the service, for provisioning and for the page opened afterwards. */
   serviceId: string
 }

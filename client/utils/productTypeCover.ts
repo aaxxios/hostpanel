@@ -40,11 +40,11 @@ export const PRODUCT_TYPE_COVER: Readonly<Record<ProductType, string>> = {
 /**
  * The cover classes of a product type.
  *
- * @param type The type as the API sent it; may be missing or unknown.
+ * @param type The type as the API sent it; may be missing, or a value newer than this build knows.
  * @returns The type's mask classes, or the generic cover's when there is none.
  */
-export const productTypeCover = (type: string | null | undefined): string =>
-  PRODUCT_TYPE_COVER[type as ProductType] ?? DEFAULT_COVER_CLASS
+export const productTypeCover = (type: ProductType | null | undefined): string =>
+  (type ? PRODUCT_TYPE_COVER[type] : undefined) ?? DEFAULT_COVER_CLASS
 
 /** The cover of a home-page slide: its own picture, or the illustration of its topic. */
 export type SlideCover =

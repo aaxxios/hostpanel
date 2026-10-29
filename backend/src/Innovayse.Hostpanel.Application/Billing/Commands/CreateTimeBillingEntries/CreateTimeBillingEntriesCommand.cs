@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Application.Billing.Common;
+
 namespace Innovayse.Hostpanel.Application.Billing.Commands.CreateTimeBillingEntries;
 
 /// <summary>Command to create multiple time billing entries as billable items for a client.</summary>

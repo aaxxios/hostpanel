@@ -6,99 +6,91 @@ using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Migration.Importers;
 
 /// <summary>
 /// Imports ticket reply records onto the ticket they belong to, matched by client and subject.
-/// Split out of <c>MigrationPullWorker</c> (A6 Task 6).
 /// </summary>
-/// <param name="context">The module's data context.</param>
-/// <param name="uow">Unit of work the imported reply is saved through.</param>
-/// <param name="pager">Pages through the source plugin's <c>ticket_replies</c> dataset.</param>
-/// <param name="logWriter">Writes one migration log row per record.</param>
-/// <param name="clientResolver">Resolves each record's client email to a local client id.</param>
-/// <param name="logger">Logs a skipped or failed record, and that no replies were found at all.</param>
-public sealed class TicketRepliesImporter(
-    IHostpanelDbContext context,
-    IUnitOfWork uow,
-    MigrationRecordPager pager,
-    MigrationLogWriter logWriter,
-    MigrationClientResolver clientResolver,
-    ILogger<TicketRepliesImporter> logger) : IMigrationEntityImporter
+public sealed class TicketRepliesImporter : IMigrationEntityImporter
 {
-    /// <inheritdoc/>
-    public async Task ImportAsync(MigrationJob job, CancellationToken ct)
+    /// <summary>The module's data context.</summary>
+    private readonly IHostpanelDbContext _context;
+
+    /// <summary>Pages through each record dataset and records each record's outcome.</summary>
+    private readonly MigrationRecordRunner _runner;
+
+    /// <summary>Resolves each record's client email to a local client id.</summary>
+    private readonly MigrationClientResolver _clientResolver;
+
+    /// <summary>Dates an imported reply.</summary>
+    private readonly IClock _clock;
+
+    /// <summary>Initializes a new instance of the <see cref="TicketRepliesImporter"/> class.</summary>
+    /// <param name="context">The module's data context.</param>
+    /// <param name="runner">Pages through each record dataset and records each record's outcome.</param>
+    /// <param name="clientResolver">Resolves each record's client email to a local client id.</param>
+    /// <param name="clock">Dates an imported reply.</param>
+    public TicketRepliesImporter(
+        IHostpanelDbContext context,
+        MigrationRecordRunner runner,
+        MigrationClientResolver clientResolver,
+        IClock clock)
     {
-        int imported = 0, skipped = 0;
-        bool hasAny = false;
+        _context = context;
+        _runner = runner;
+        _clientResolver = clientResolver;
+        _clock = clock;
+    }
 
-        await foreach (var page in pager.PagesAsync<TicketReplyRecord>(job, "ticket_replies", ct))
+    /// <inheritdoc/>
+    public MigrationEntityType EntityType => MigrationEntityType.TicketReplies;
+
+    /// <inheritdoc/>
+    public Task ImportAsync(MigrationJob job, CancellationToken ct) =>
+        _runner.RunAsync(new MigrationRecordRun<TicketReplyRecord>(job, EntityType, "ticket_replies", ImportReplyAsync), ct);
+
+    /// <summary>Imports one plugin-side ticket reply record.</summary>
+    /// <param name="rec">The ticket reply record read from the source plugin.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Whether the ticket reply was imported or skipped, and why when skipped.</returns>
+    private async Task<RecordImportResult> ImportReplyAsync(TicketReplyRecord rec, CancellationToken ct)
+    {
+        var clientId = await _clientResolver.ResolveClientIdAsync(rec.ClientEmail, ct);
+        if (clientId is null)
         {
-            hasAny = true;
-            foreach (var rec in page)
-            {
-                try
-                {
-                    var clientId = await clientResolver.ResolveClientIdAsync(rec.ClientEmail, ct);
-                    if (clientId is null)
-                    {
-                        logger.LogWarning("Ticket reply skipped — client {Email} not found", rec.ClientEmail);
-                        await logWriter.WriteLogAsync(job.Id, MigrationEntityType.TicketReplies, rec.TicketSubject, ImportOutcome.Skipped, $"Client '{rec.ClientEmail}' not found", ct);
-                        skipped++;
-                        continue;
-                    }
-
-                    // Tracked on purpose: AddReply below mutates the ticket and SaveChanges must see the
-                    // new reply. An untracked ticket reported "Imported" and wrote nothing.
-                    var tickets = await context.Tickets
-                        .Include(t => t.Replies).Include(t => t.Tags)
-                        .Where(t => t.ClientId == clientId.Value)
-                        .OrderByDescending(t => t.CreatedAt)
-                        .ToListAsync(ct);
-                    var ticket = tickets.FirstOrDefault(t =>
-                        string.Equals(t.Subject, rec.TicketSubject, StringComparison.OrdinalIgnoreCase));
-
-                    if (ticket is null)
-                    {
-                        await logWriter.WriteLogAsync(job.Id, MigrationEntityType.TicketReplies, rec.TicketSubject, ImportOutcome.Skipped, "Ticket not found", ct);
-                        skipped++;
-                        continue;
-                    }
-
-                    if (ticket.Status == TicketStatus.Closed)
-                    {
-                        await logWriter.WriteLogAsync(job.Id, MigrationEntityType.TicketReplies, rec.TicketSubject, ImportOutcome.Skipped, "Ticket is closed", ct);
-                        skipped++;
-                        continue;
-                    }
-
-                    ticket.AddReply(
-                        string.IsNullOrWhiteSpace(rec.Message) ? "(no message)" : rec.Message,
-                        // TicketReply.AuthorName is NOT NULL and defaults to empty, so a missing author is stored as the
-                        // empty string -- a neutral value, never display text. The frontend renders its own fallback.
-                        string.IsNullOrWhiteSpace(rec.AuthorName) ? string.Empty : rec.AuthorName,
-                        rec.IsStaffReply);
-
-                    await uow.SaveChangesAsync(ct);
-                    imported++;
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.TicketReplies, rec.TicketSubject, ImportOutcome.Imported, null, ct);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Skipped ticket reply for '{Subject}' during migration", rec.TicketSubject);
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.TicketReplies, rec.TicketSubject, ImportOutcome.Failed, ex.Message, ct);
-                }
-            }
-
-            job.UpdateProgress(MigrationEntityType.TicketReplies, imported, skipped);
-            await uow.SaveChangesAsync(ct);
+            return RecordImportResult.Skipped(MigrationSkipReason.ClientNotFound);
         }
 
-        if (!hasAny)
+        // Tracked on purpose: AddReply below mutates the ticket and SaveChanges must see the
+        // new reply. An untracked ticket reported "Imported" and wrote nothing.
+        var tickets = await _context.Tickets
+            .Include(t => t.Replies).Include(t => t.Tags)
+            .Where(t => t.ClientId == clientId.Value)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync(ct);
+        var ticket = tickets.FirstOrDefault(t =>
+            string.Equals(t.Subject, rec.TicketSubject, StringComparison.OrdinalIgnoreCase));
+
+        if (ticket is null)
         {
-            logger.LogInformation("No ticket replies found in the source system — skipping.");
+            return RecordImportResult.Skipped(MigrationSkipReason.TicketNotFound);
         }
+
+        if (ticket.Status == TicketStatus.Closed)
+        {
+            return RecordImportResult.Skipped(MigrationSkipReason.TicketClosed);
+        }
+
+        ticket.AddReply(
+            string.IsNullOrWhiteSpace(rec.Message) ? "(no message)" : rec.Message,
+            // TicketReply.AuthorName is NOT NULL and defaults to empty, so a missing author is stored as the
+            // empty string: a neutral value, never display text. The frontend renders its own fallback.
+            string.IsNullOrWhiteSpace(rec.AuthorName) ? string.Empty : rec.AuthorName,
+            rec.IsStaffReply,
+            _clock.UtcNow);
+
+        await _context.SaveChangesAsync(ct);
+        return RecordImportResult.Imported;
     }
 }

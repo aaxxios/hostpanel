@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Provisioning.Common;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -19,8 +20,7 @@ public sealed class GetServiceCredentialsHandler
     /// <summary>
     /// The configured provisioning provider. Unlike the other Provisioning use cases this is
     /// injected directly rather than resolved per server through
-    /// <see cref="IProvisioningProviderFactory"/> -- an existing
-    /// shape this conversion carries over unchanged rather than widens.
+    /// <see cref="IProvisioningProviderFactory"/>.
     /// </summary>
     private readonly IProvisioningProvider _provisioningProvider;
 

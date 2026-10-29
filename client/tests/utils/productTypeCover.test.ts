@@ -9,7 +9,7 @@ import { DEFAULT_COVER_CLASS, PRODUCT_TYPE_COVER, productTypeCover, slideCover, 
 import { ProductType } from '~/types/producttype'
 import { SlideCoverKind } from '~/types/slidecoverkind'
 
-/** Matches the file name inside a cover's `url(...)`. */
+/** Matches the file name inside a cover's `url()`. */
 const COVER_FILE = /url\(\/covers\/([a-z-]+\.svg)\)/
 
 /** The folder the illustrations ship in. */
@@ -62,7 +62,8 @@ describe('PRODUCT_TYPE_COVER', () => {
 describe('productTypeCover', () => {
   it('returns the type cover, and the generic one for a missing or unknown type', () => {
     expect(productTypeCover(ProductType.Vps)).toBe(PRODUCT_TYPE_COVER[ProductType.Vps])
-    expect(productTypeCover('Mystery')).toBe(DEFAULT_COVER_CLASS)
+    // A value a newer backend may send that this build's enum does not know yet.
+    expect(productTypeCover('Mystery' as ProductType)).toBe(DEFAULT_COVER_CLASS)
     expect(productTypeCover(undefined)).toBe(DEFAULT_COVER_CLASS)
     expect(productTypeCover(null)).toBe(DEFAULT_COVER_CLASS)
   })

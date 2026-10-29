@@ -54,7 +54,7 @@
 <script setup lang="ts">
 /**
  * aurora template homepage.
- * Presentation only — every value it displays arrives as a prop from pages/index.vue.
+ * Presentation only: every value it displays arrives as a prop from pages/index.vue.
  */
 import AuroraHero from '~/templates/aurora/sections/AuroraHero.vue'
 import AuroraDomainSearch from '~/templates/aurora/sections/DomainSearch.vue'

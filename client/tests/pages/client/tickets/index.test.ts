@@ -6,6 +6,7 @@ import { mountPage, stubClientRuntime } from '~/tests/helpers/mountClient'
 import TicketsPage from '~/pages/client/tickets/index.vue'
 import { useClientStore } from '~/stores/client'
 import type { ClientTicket } from '~/types/clientticket'
+import { TicketPriority } from '~/types/ticketpriority'
 import { TicketStatus } from '~/types/ticketstatus'
 
 /** The mocked client endpoints the store reaches. */
@@ -20,10 +21,10 @@ vi.mock('~/composables/apis/useClientApi', () => ({ useClientApi: () => clientAp
  * @param status - Ticket status.
  * @returns A ticket.
  */
-const ticket = (id: number, status: string): ClientTicket =>
+const ticket = (id: number, status: TicketStatus): ClientTicket =>
   ({
-    id, clientId: 1, subject: `Subject ${id}`, departmentName: 'Support', createdAt: '2026-01-01T10:00:00Z', lastReplyAt: null,
-    priority: 'Medium', status, replyCount: 0, isFlagged: false
+    id, subject: `Subject ${id}`, departmentName: 'Support', createdAt: '2026-01-01T10:00:00Z', lastReplyAt: null,
+    priority: TicketPriority.Medium, status, replyCount: 0
   })
 
 describe('tickets list page', () => {

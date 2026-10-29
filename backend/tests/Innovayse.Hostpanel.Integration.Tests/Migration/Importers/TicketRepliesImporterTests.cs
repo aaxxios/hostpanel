@@ -5,17 +5,15 @@ using Innovayse.Hostpanel.Application.Migration.Pull;
 using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Migration.Importers;
 
 /// <summary>
 /// <see cref="TicketRepliesImporter"/>, driven end to end through
 /// <c>MigrationPullWorker.RunAsync</c> against a <see cref="FakeMigrationPullSource"/>: appends a
-/// reply onto the open ticket it belongs to, matched by client and subject. Not deduplicated --
+/// reply onto the open ticket it belongs to, matched by client and subject. Not deduplicated:
 /// every reply record the source plugin holds is appended, so no idempotent re-import is asserted.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -25,7 +23,7 @@ public sealed class TicketRepliesImporterTests(IntegrationTestFactory factory) :
     [Fact]
     public async Task RunAsync_TicketReplies_AppendsAReplyToAnOpenTicketAsync()
     {
-        var source = new FakeMigrationPullSource { Totals = new MigrationSourceTotals(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0) };
+        var source = new FakeMigrationPullSource { Totals = MigrationSourceTotals.Empty with { Support = new MigrationSupportTotals(TicketReplies: 1) } };
         using var host = MigrationTestSeeds.HostWithFakeSource(factory, source);
         using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
@@ -33,7 +31,8 @@ public sealed class TicketRepliesImporterTests(IntegrationTestFactory factory) :
         var userId = await MigrationTestSeeds.UserIdForEmailAsync(scope.ServiceProvider, email);
         var client = await context.Clients.FirstAsync(c => c.UserId == userId);
         var subject = $"ticket-{Guid.NewGuid():N}";
-        var ticket = Ticket.Create(client.Id, subject, "Initial message", 1, TicketPriority.Medium);
+        var departmentId = await SupportTestSeeds.SeedDepartmentAsync(context);
+        var ticket = Ticket.Create(client.Id, subject, "Initial message", departmentId, TicketPriority.Medium, DateTimeOffset.UtcNow);
         context.Tickets.Add(ticket);
         await context.SaveChangesAsync(CancellationToken.None);
         var job = await MigrationTestSeeds.SeedJobSelectingOnlyAsync(context, MigrationEntityType.TicketReplies);

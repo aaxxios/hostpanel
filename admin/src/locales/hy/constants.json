@@ -12,21 +12,6 @@
   "paymentMethodOptions": {
     "bankTransfer": "Բանկային փոխանցում"
   },
-  "billingCycleOptions": {
-    "free": "Անվճար",
-    "quarterly": "Եռամսյակային",
-    "semiAnnual": "Կիսամյակային",
-    "biennial": "Երկամյա",
-    "triennial": "Եռամյա"
-  },
-  "invoiceActionOptions": {
-    "recur": "Կրկնել"
-  },
-  "recurrencePeriodOptions": {
-    "days": "Օրեր",
-    "weeks": "Շաբաթներ",
-    "months": "Ամիսներ"
-  },
   "quoteStageOptions": {
     "allStages": "Բոլոր փուլերը"
   },
@@ -38,5 +23,11 @@
     "flagged": "Դրոշակավորված",
     "answered": "Պատասխանված",
     "customerReply": "Հաճախորդի պատասխան"
+  },
+  "recurringPeriodOptions": {
+    "weekly": "Շաբաթական",
+    "monthly": "Ամսական",
+    "quarterly": "Եռամսյակային",
+    "annually": "Տարեկան"
   }
 }

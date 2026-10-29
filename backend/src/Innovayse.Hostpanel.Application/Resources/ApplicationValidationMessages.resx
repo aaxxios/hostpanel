@@ -63,58 +63,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="InvoiceNotFound" xml:space="preserve">
-    <value>No such invoice.</value>
-    <comment>INVOICE_NOT_FOUND.</comment>
-  </data>
-  <data name="DomainNotFound" xml:space="preserve">
-    <value>No such domain.</value>
-    <comment>DOMAIN_NOT_FOUND.</comment>
-  </data>
-  <data name="InternalError" xml:space="preserve">
-    <value>An unexpected error occurred.</value>
-    <comment>INTERNAL_ERROR. The last-resort sentence; deliberately says nothing about what failed.</comment>
-  </data>
-  <data name="InvitationTokenInvalid" xml:space="preserve">
-    <value>Invalid or expired invitation token.</value>
-    <comment>AcceptInvitationHandler.</comment>
-  </data>
-  <data name="InvitationExpired" xml:space="preserve">
-    <value>This invitation has expired.</value>
-    <comment>AcceptInvitationHandler.</comment>
-  </data>
-  <data name="InvitationAlreadyAccepted" xml:space="preserve">
-    <value>This invitation has already been accepted.</value>
-    <comment>AcceptInvitationHandler.</comment>
-  </data>
-  <data name="AccountOwnerNotFound" xml:space="preserve">
-    <value>This account's owner could not be found.</value>
-    <comment>InviteUserToClientHandler.</comment>
-  </data>
-  <data name="CannotInviteAccountOwner" xml:space="preserve">
-    <value>Cannot invite the account owner as an additional user.</value>
-    <comment>InviteUserToClientHandler.</comment>
-  </data>
-  <data name="UserAlreadyLinked" xml:space="preserve">
-    <value>A user with email '{0}' is already linked to this account.</value>
-    <comment>InviteUserToClientHandler. {0} is the email address that was submitted.</comment>
-  </data>
-  <data name="InvitationAlreadyPending" xml:space="preserve">
-    <value>A pending invitation for '{0}' already exists for this account.</value>
-    <comment>InviteUserToClientHandler. {0} is the email address that was submitted.</comment>
-  </data>
-  <data name="InvalidPermissionsValue" xml:space="preserve">
-    <value>Invalid permissions value: {0}.</value>
-    <comment>InviteUserToClientHandler. {0} is the value that was submitted.</comment>
-  </data>
-  <data name="NoSavedPaymentMethods" xml:space="preserve">
-    <value>This account has no saved payment methods.</value>
-    <comment>RemovePaymentMethodHandler and SetDefaultPaymentMethodHandler.</comment>
-  </data>
-  <data name="PaymentMethodNotOwned" xml:space="preserve">
-    <value>That payment method does not belong to this account.</value>
-    <comment>RemovePaymentMethodHandler and SetDefaultPaymentMethodHandler.</comment>
-  </data>
   <data name="SetAsDefaultMustBeTrue" xml:space="preserve">
     <value>Card details cannot be changed. Remove and add a new card instead.</value>
     <comment>SetDefaultPaymentMethodValidator. The only update this endpoint accepts is making a card the default.</comment>
@@ -154,26 +102,6 @@
   <data name="ContactFieldSubmittedAt" xml:space="preserve">
     <value>Submitted at</value>
     <comment>Field label substituted into ContactFieldRequired / ContactFieldTooLong.</comment>
-  </data>
-  <data name="ClientServiceNotFound" xml:space="preserve">
-    <value>ClientService {0} not found.</value>
-    <comment>ChangePasswordHandler and GetCPanelSsoUrlHandler (Provisioning, not yet converted). {0} is the service id.</comment>
-  </data>
-  <data name="ServiceNoProvisioningReference" xml:space="preserve">
-    <value>ClientService {0} has no provisioning reference.</value>
-    <comment>ChangePasswordHandler. {0} is the service id.</comment>
-  </data>
-  <data name="ServiceNoServerAssigned" xml:space="preserve">
-    <value>ClientService {0} has no server assigned.</value>
-    <comment>ChangePasswordHandler and GetCPanelSsoUrlHandler. {0} is the service id.</comment>
-  </data>
-  <data name="ServiceNotProvisioned" xml:space="preserve">
-    <value>ClientService {0} has not been provisioned yet.</value>
-    <comment>GetCPanelSsoUrlHandler. {0} is the service id.</comment>
-  </data>
-  <data name="ValidationFailed" xml:space="preserve">
-    <value>One or more fields in the request were not accepted.</value>
-    <comment>ExceptionMiddleware, for a message the Wolverine FluentValidation middleware refused. One sentence for every field failure on purpose: the per-field messages are English literals in the validators and are logged, not sent.</comment>
   </data>
   <data name="InvalidFilterValue" xml:space="preserve">
     <value>Invalid filter value: {0}.</value>
@@ -437,14 +365,20 @@
   <data name="DomainPageSizeRange" xml:space="preserve">
     <value>Page size must be between 1 and 100.</value>
   </data>
+  <data name="EmailLogPageRequired" xml:space="preserve">
+    <value>Page must be 1 or greater.</value>
+  </data>
+  <data name="EmailLogPageSizeRange" xml:space="preserve">
+    <value>Page size must be between 1 and 100.</value>
+  </data>
   <data name="GatewayLogPageRequired" xml:space="preserve">
     <value>Page must be 1 or greater.</value>
   </data>
   <data name="GatewayLogPageSizeRange" xml:space="preserve">
     <value>Page size must be between 1 and 100.</value>
   </data>
-  <data name="TicketPeriodRequired" xml:space="preserve">
-    <value>The period is required.</value>
+  <data name="TicketPeriodInvalid" xml:space="preserve">
+    <value>The period is not a recognised reporting period.</value>
   </data>
   <data name="KbArticleIdInvalid" xml:space="preserve">
     <value>The article id must be a positive number.</value>
@@ -457,6 +391,18 @@
   </data>
   <data name="KbArticleCategoryRequired" xml:space="preserve">
     <value>The category is required.</value>
+  </data>
+  <data name="KbArticleCategoryTooLong" xml:space="preserve">
+    <value>The category can be at most {0} characters.</value>
+  </data>
+  <data name="KbArticleSearchTooLong" xml:space="preserve">
+    <value>The search text can be at most {0} characters.</value>
+  </data>
+  <data name="KbArticlePageRequired" xml:space="preserve">
+    <value>Page must be 1 or greater.</value>
+  </data>
+  <data name="KbArticlePageSizeRange" xml:space="preserve">
+    <value>Page size must be between 1 and 100.</value>
   </data>
   <data name="KbCategoryIdInvalid" xml:space="preserve">
     <value>The category id must be a positive number.</value>
@@ -584,6 +530,12 @@
   <data name="PlaceOrderPaymentMethodRequired" xml:space="preserve">
     <value>Select a payment method.</value>
   </data>
+  <data name="PaymentMethodRequired" xml:space="preserve">
+    <value>Select a payment method.</value>
+  </data>
+  <data name="PaymentAttemptRequired" xml:space="preserve">
+    <value>Start the payment again.</value>
+  </data>
   <data name="PlaceOrderItemsRequired" xml:space="preserve">
     <value>Add at least one item to the order.</value>
   </data>
@@ -592,6 +544,9 @@
   </data>
   <data name="PlaceOrderItemBillingCycleInvalid" xml:space="preserve">
     <value>Billing cycle must be 'monthly', 'annual' or 'annually'.</value>
+  </data>
+  <data name="PlaceOrderItemDomainActionInvalid" xml:space="preserve">
+    <value>Domain action must be 'register', 'transfer' or 'renew'.</value>
   </data>
   <data name="PlaceOrderGuestFirstNameRequired" xml:space="preserve">
     <value>First name is required to check out as a guest.</value>
@@ -611,6 +566,9 @@
   <data name="ReturnUrlRequired" xml:space="preserve">
     <value>A return URL is required.</value>
   </data>
+  <data name="ReturnUrlInvalid" xml:space="preserve">
+    <value>The return URL must be an absolute http or https address.</value>
+  </data>
   <data name="PaymentIntentIdRequired" xml:space="preserve">
     <value>The payment intent id is required.</value>
   </data>
@@ -619,6 +577,9 @@
   </data>
   <data name="ClientIdInvalid" xml:space="preserve">
     <value>Client id must be a positive number.</value>
+  </data>
+  <data name="UserSubjectInvalid" xml:space="preserve">
+    <value>A user subject must not be empty.</value>
   </data>
   <data name="ClientContactFirstNameInvalid" xml:space="preserve">
     <value>First name is required and must not exceed 100 characters.</value>
@@ -812,12 +773,6 @@
   <data name="ServicePackageRequired" xml:space="preserve">
     <value>A hosting package is required.</value>
   </data>
-  <data name="SuspendReasonRequired" xml:space="preserve">
-    <value>A reason for the suspension is required.</value>
-  </data>
-  <data name="TerminateReasonRequired" xml:space="preserve">
-    <value>A reason for the termination is required.</value>
-  </data>
   <data name="ServicePageInvalid" xml:space="preserve">
     <value>Page must be 1 or greater.</value>
   </data>
@@ -827,56 +782,65 @@
   <data name="ServiceClientIdFilterInvalid" xml:space="preserve">
     <value>Provide a valid client to filter by.</value>
   </data>
-  <data name="UpdateServiceDomainInvalid" xml:space="preserve">
+  <data name="HostingAccountDomainTooLong" xml:space="preserve">
     <value>Domain cannot be longer than 253 characters.</value>
   </data>
-  <data name="UpdateServiceDedicatedIpInvalid" xml:space="preserve">
+  <data name="HostingAccountDedicatedIpTooLong" xml:space="preserve">
     <value>Dedicated IP cannot be longer than 45 characters.</value>
   </data>
-  <data name="UpdateServiceUsernameInvalid" xml:space="preserve">
+  <data name="HostingAccountUsernameTooLong" xml:space="preserve">
     <value>Username cannot be longer than 100 characters.</value>
   </data>
-  <data name="UpdateServicePasswordInvalid" xml:space="preserve">
+  <data name="HostingAccountPasswordTooLong" xml:space="preserve">
     <value>Password cannot be longer than 256 characters.</value>
   </data>
-  <data name="UpdateServiceBillingCycleInvalid" xml:space="preserve">
+  <data name="ServiceBillingCycleInvalid" xml:space="preserve">
     <value>Billing cycle is required and cannot be longer than 20 characters.</value>
   </data>
-  <data name="UpdateServiceRecurringAmountInvalid" xml:space="preserve">
+  <data name="ServiceRecurringAmountInvalid" xml:space="preserve">
     <value>Recurring amount cannot be negative.</value>
   </data>
-  <data name="UpdateServicePaymentMethodInvalid" xml:space="preserve">
+  <data name="ServicePaymentMethodInvalid" xml:space="preserve">
     <value>Payment method cannot be longer than 50 characters.</value>
   </data>
-  <data name="UpdateServiceSubscriptionIdInvalid" xml:space="preserve">
+  <data name="ServiceSubscriptionIdInvalid" xml:space="preserve">
     <value>Subscription reference cannot be longer than 256 characters.</value>
   </data>
-  <data name="UpdateServiceAutoTerminateReasonInvalid" xml:space="preserve">
+  <data name="ServiceAutoTerminateReasonInvalid" xml:space="preserve">
     <value>Auto-terminate reason cannot be longer than 2000 characters.</value>
   </data>
-  <data name="UpdateServiceAdminNotesInvalid" xml:space="preserve">
+  <data name="ServiceAdminNotesInvalid" xml:space="preserve">
     <value>Admin notes cannot be longer than 2000 characters.</value>
   </data>
-  <data name="UpdateServiceProvisioningRefInvalid" xml:space="preserve">
+  <data name="HostingAccountProvisioningRefTooLong" xml:space="preserve">
     <value>Provisioning reference cannot be longer than 256 characters.</value>
   </data>
-  <data name="UpdateServiceFirstPaymentAmountInvalid" xml:space="preserve">
+  <data name="ServiceFirstPaymentAmountInvalid" xml:space="preserve">
     <value>First payment amount cannot be negative.</value>
   </data>
-  <data name="UpdateServicePromotionCodeInvalid" xml:space="preserve">
+  <data name="ServicePromotionCodeInvalid" xml:space="preserve">
     <value>Promotion code cannot be longer than 50 characters.</value>
   </data>
-  <data name="UpdateServiceStatusInvalid" xml:space="preserve">
-    <value>Status must be one of: Pending, Active, Suspended, Terminated.</value>
+  <data name="ServiceStatusInvalid" xml:space="preserve">
+    <value>Status must be one of: Active, Suspended, Terminated.</value>
   </data>
-  <data name="UpdateServiceQuantityInvalid" xml:space="preserve">
+  <data name="ServiceQuantityInvalid" xml:space="preserve">
     <value>Quantity must be at least 1.</value>
   </data>
-  <data name="UpdateServiceProductIdInvalid" xml:space="preserve">
+  <data name="ServiceProductIdInvalid" xml:space="preserve">
     <value>Provide a valid product.</value>
   </data>
-  <data name="UpdateServiceServerIdInvalid" xml:space="preserve">
+  <data name="HostingAccountServerIdInvalid" xml:space="preserve">
     <value>Provide a valid server.</value>
+  </data>
+  <data name="ServiceSuspendUntilWithoutOverride" xml:space="preserve">
+    <value>Set a hold date only when the suspension hold is on.</value>
+  </data>
+  <data name="ServiceAutoTerminateReasonWithoutFlag" xml:space="preserve">
+    <value>Give a termination reason only when the service ends with its cycle.</value>
+  </data>
+  <data name="ServiceTerminatedAtRequired" xml:space="preserve">
+    <value>Enter the date the service was terminated.</value>
   </data>
   <data name="EmailTemplateSlugRequired" xml:space="preserve">
     <value>A template slug is required.</value>
@@ -889,6 +853,9 @@
   </data>
   <data name="EmailTemplateDescriptionInvalid" xml:space="preserve">
     <value>Keep the description within 500 characters.</value>
+  </data>
+  <data name="EmailTemplateLanguageInvalid" xml:space="preserve">
+    <value>Choose one of the supported languages for the template.</value>
   </data>
   <data name="EmailTemplateIdInvalid" xml:space="preserve">
     <value>Provide a valid email template id.</value>
@@ -989,9 +956,6 @@
   <data name="SlideTranslationTitleRequired" xml:space="preserve">
     <value>Every translation needs a title.</value>
   </data>
-  <data name="SlideImageRequired" xml:space="preserve">
-    <value>Choose a file to upload.</value>
-  </data>
   <data name="ServerNameRequired" xml:space="preserve">
     <value>A server name is required.</value>
   </data>
@@ -1034,6 +998,9 @@
   <data name="PluginIdRequired" xml:space="preserve">
     <value>A plugin id is required.</value>
   </data>
+  <data name="PluginIdInvalid" xml:space="preserve">
+    <value>A plugin id uses only lower-case letters, digits and single hyphens, up to 64 characters.</value>
+  </data>
   <data name="IntegrationSlugRequired" xml:space="preserve">
     <value>An integration slug is required.</value>
   </data>
@@ -1061,6 +1028,9 @@
   <data name="SettingIdInvalid" xml:space="preserve">
     <value>Provide a valid setting id.</value>
   </data>
+  <data name="SettingKeysRequired" xml:space="preserve">
+    <value>Provide at least one setting key.</value>
+  </data>
   <data name="BrandingKindInvalid" xml:space="preserve">
     <value>Kind must be 'logo', 'logodark', 'logomark' or 'favicon'.</value>
   </data>
@@ -1069,6 +1039,9 @@
   </data>
   <data name="ActivityLogClientIdInvalid" xml:space="preserve">
     <value>Provide a valid client id.</value>
+  </data>
+  <data name="ActivityLogFilterTooLong" xml:space="preserve">
+    <value>A search filter can be at most 200 characters.</value>
   </data>
   <data name="ReportDateRangeInvalid" xml:space="preserve">
     <value>The end date cannot be before the start date.</value>
@@ -1088,6 +1061,9 @@
   <data name="ReportQuarterInvalid" xml:space="preserve">
     <value>Quarter must be between 1 and 4.</value>
   </data>
+  <data name="ReportYearInvalid" xml:space="preserve">
+    <value>Year must be between 2015 and 2100.</value>
+  </data>
   <data name="ReportTakeInvalid" xml:space="preserve">
     <value>Take must be between 1 and 100.</value>
   </data>
@@ -1100,6 +1076,18 @@
   <data name="SignInPasswordRequired" xml:space="preserve">
     <value>A password is required.</value>
   </data>
+  <data name="RegisterEmailRequired" xml:space="preserve">
+    <value>An email address is required.</value>
+  </data>
+  <data name="RegisterPasswordRequired" xml:space="preserve">
+    <value>A password is required.</value>
+  </data>
+  <data name="RegisterFirstNameRequired" xml:space="preserve">
+    <value>A first name is required.</value>
+  </data>
+  <data name="RegisterLastNameRequired" xml:space="preserve">
+    <value>A last name is required.</value>
+  </data>
   <data name="SlideIconNameTooLong" xml:space="preserve">
     <value>Keep the icon name within {0} characters.</value>
   </data>
@@ -1109,11 +1097,23 @@
   <data name="SlideImageUrlTooLong" xml:space="preserve">
     <value>Keep the image link within {0} characters.</value>
   </data>
-  <data name="SlideTranslationLocaleTooLong" xml:space="preserve">
-    <value>Keep the translation locale within {0} characters.</value>
-  </data>
   <data name="SlideTranslationTitleTooLong" xml:space="preserve">
     <value>Keep the translation title within {0} characters.</value>
+  </data>
+  <data name="SlideTranslationTaglineTooLong" xml:space="preserve">
+    <value>Keep the translation tagline within {0} characters.</value>
+  </data>
+  <data name="SlideTranslationDescriptionTooLong" xml:space="preserve">
+    <value>Keep the translation description within {0} characters.</value>
+  </data>
+  <data name="SlideTranslationCtaTextTooLong" xml:space="preserve">
+    <value>Keep the translation button label within {0} characters.</value>
+  </data>
+  <data name="SlideTranslationFeaturesTooMany" xml:space="preserve">
+    <value>Keep the bullet points within {0} items.</value>
+  </data>
+  <data name="SlideTranslationFeatureTooLong" xml:space="preserve">
+    <value>Keep each bullet point within {0} characters.</value>
   </data>
   <data name="ContentIdInvalid" xml:space="preserve">
     <value>Provide a valid id.</value>
@@ -1127,14 +1127,17 @@
   <data name="ContentTranslationLocaleInvalid" xml:space="preserve">
     <value>A translation can only be given for a supported language: en, ru or hy.</value>
   </data>
+  <data name="ContentDefaultTranslationRequired" xml:space="preserve">
+    <value>A translation in the default language (en) is required.</value>
+  </data>
+  <data name="ContentTranslationLocaleDuplicate" xml:space="preserve">
+    <value>Each language can appear only once.</value>
+  </data>
   <data name="ContentUrlTooLong" xml:space="preserve">
     <value>A link can be at most {0} characters.</value>
   </data>
   <data name="ContentUrlInvalid" xml:space="preserve">
     <value>A link must start with https://, http:// or /.</value>
-  </data>
-  <data name="ContentImageRequired" xml:space="preserve">
-    <value>Choose an image file to upload.</value>
   </data>
   <data name="TestimonialNameRequired" xml:space="preserve">
     <value>Enter the client's name.</value>
@@ -1226,6 +1229,9 @@
   <data name="ContentOrderItemsRequired" xml:space="preserve">
     <value>Provide the list of ids and positions to apply.</value>
   </data>
+  <data name="ContentOrderItemsTooMany" xml:space="preserve">
+    <value>A reorder request can name at most {0} items.</value>
+  </data>
   <data name="SshKeyIdInvalid" xml:space="preserve">
     <value>Provide a valid SSH key.</value>
   </data>
@@ -1258,5 +1264,56 @@
   </data>
   <data name="SshTimeoutInvalid" xml:space="preserve">
     <value>The timeouts are out of range.</value>
+  </data>
+  <data name="InvoiceStatusInvalid" xml:space="preserve">
+    <value>Status must be a known invoice status.</value>
+  </data>
+  <data name="PaymentMethodIdRequired" xml:space="preserve">
+    <value>Name the saved payment method.</value>
+  </data>
+  <data name="ClientNewEmailInvalid" xml:space="preserve">
+    <value>Enter a valid new email address.</value>
+  </data>
+  <data name="ClientCurrentPasswordRequired" xml:space="preserve">
+    <value>Enter your current password.</value>
+  </data>
+  <data name="ClientEmailChangeTokenRequired" xml:space="preserve">
+    <value>The confirmation link is incomplete. Open the link from the email again.</value>
+  </data>
+  <data name="IntegrationFieldUnknown" xml:space="preserve">
+    <value>The integration does not declare one of the submitted fields.</value>
+  </data>
+  <data name="CurrencyCodeDuplicate" xml:space="preserve">
+    <value>Each currency may be listed only once.</value>
+  </data>
+  <data name="ClientListPageRequired" xml:space="preserve">
+    <value>Page must be 1 or greater.</value>
+  </data>
+  <data name="ClientListPageSizeRange" xml:space="preserve">
+    <value>Page size must be between 1 and 100.</value>
+  </data>
+  <data name="ClientListStatusInvalid" xml:space="preserve">
+    <value>Status must be one of: Active, Inactive, Suspended, Closed.</value>
+  </data>
+  <data name="ClientListSearchTooLong" xml:space="preserve">
+    <value>The search text may be at most {0} characters.</value>
+  </data>
+  <data name="ClientListEmailTooLong" xml:space="preserve">
+    <value>The email filter may be at most {0} characters.</value>
+  </data>
+  <data name="ClientListPhoneTooLong" xml:space="preserve">
+    <value>The phone filter may be at most {0} characters.</value>
+  </data>
+  <data name="ClientExportFieldUnknown" xml:space="preserve">
+    <value>Unknown export section: {0}.</value>
+  </data>
+  <data name="ServerCredentialTooLong" xml:space="preserve">
+    <value>Keep the server credential within {0} characters.</value>
+  </data>
+  <data name="SettingValueTooLong" xml:space="preserve">
+    <value>Keep the setting value within {0} characters.</value>
+  </data>
+  <data name="ContactNotificationTopicInvalid" xml:space="preserve">
+    <value>The notification kind is not valid.</value>
   </data>
 </root>

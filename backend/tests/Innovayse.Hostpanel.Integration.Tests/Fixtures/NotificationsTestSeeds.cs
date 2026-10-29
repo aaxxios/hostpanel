@@ -2,9 +2,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Notifications;
+using Innovayse.Hostpanel.Domain.Notifications.Enums;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
@@ -50,6 +50,7 @@ internal static class NotificationsTestSeeds
     public static object CreateTemplateBody(string slug) => new
     {
         slug,
+        language = "en",
         subject = "Test subject {{name}}",
         body = "<p>Test body</p>",
         description = "Created by Notifications Integration tests",
@@ -57,8 +58,8 @@ internal static class NotificationsTestSeeds
 
     /// <summary>Registers and signs in a new client, retrying until the async client-creation handler has run.</summary>
     /// <param name="factory">The shared API + PostgreSQL host.</param>
-    /// <returns>An authenticated portal client, plus the client's own primary key and sign-in address.</returns>
-    public static async Task<(HttpClient Http, int ClientId, string Email)> RegisterClientAsync(
+    /// <returns>An authenticated portal client, plus the client's own primary key, identity subject and sign-in address.</returns>
+    public static async Task<SignedInClient> RegisterClientAsync(
         IntegrationTestFactory factory)
     {
         var http = factory.CreateClient();
@@ -68,6 +69,7 @@ internal static class NotificationsTestSeeds
         var registered = await http.PostAsJsonAsync(
             "/api/auth/register", new { email, password, firstName = "Log", lastName = "Reader" });
         registered.StatusCode.Should().Be(HttpStatusCode.OK);
+        var userId = (await registered.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("userId").GetString()!;
 
         var token = await factory.GetClientTokenAsync(email, password);
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -78,7 +80,7 @@ internal static class NotificationsTestSeeds
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 var profile = await response.Content.ReadFromJsonAsync<JsonElement>();
-                return (http, profile.GetProperty("id").GetInt32(), email);
+                return new SignedInClient(http, profile.GetProperty("id").GetInt32(), userId, email);
             }
 
             await Task.Delay(200);
@@ -91,12 +93,14 @@ internal static class NotificationsTestSeeds
     /// <param name="factory">The shared API + PostgreSQL host.</param>
     /// <param name="to">The recipient address the row is addressed to.</param>
     /// <param name="subject">The subject the row carries.</param>
+    /// <param name="failure">Why delivery failed; <see langword="null"/> records a successful send.</param>
     /// <returns>The written row's primary key.</returns>
-    public static async Task<int> SeedLogAsync(IntegrationTestFactory factory, string to, string subject)
+    public static async Task<int> SeedLogAsync(
+        IntegrationTestFactory factory, string to, string subject, EmailSendFailure? failure = null)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var log = EmailLog.Create(to, subject, "<p>Body</p>", success: true, error: null);
+        var log = EmailLog.Create(to, subject, "<p>Body</p>", failure, scope.ServiceProvider.GetRequiredService<IClock>().UtcNow);
         db.EmailLogs.Add(log);
         await db.SaveChangesAsync();
         return log.Id;
@@ -113,13 +117,13 @@ internal static class NotificationsTestSeeds
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var exists = await db.EmailTemplates.AsNoTracking().AnyAsync(t => t.Slug == slug);
+        var exists = await db.EmailTemplates.AsNoTracking().AnyAsync(t => t.Slug == slug && t.Language == "en");
         if (exists)
         {
             return;
         }
 
-        var template = EmailTemplate.Create(slug, subject, "Body {{name}}", null);
+        var template = EmailTemplate.Create(slug, "en", subject, "Body {{name}}", null);
         if (!isActive)
         {
             template.Deactivate();
@@ -138,7 +142,7 @@ internal static class NotificationsTestSeeds
     /// <remarks>
     /// Idempotent because the two "domain-registration-failed" handlers share one event and both
     /// need the same two template rows; whichever test seeds second must not collide with the unique
-    /// index on <see cref="EmailTemplate.Slug"/> the first already satisfied.
+    /// index on <see cref="EmailTemplate.Slug"/> and <see cref="EmailTemplate.Language"/> the first already satisfied.
     /// </remarks>
     /// <param name="context">The data context to seed through.</param>
     /// <param name="slug">The template slug.</param>
@@ -146,13 +150,13 @@ internal static class NotificationsTestSeeds
     /// <returns>A task that completes once the template is known to exist.</returns>
     public static async Task EnsureTemplateAsync(IHostpanelDbContext context, string slug, string subject)
     {
-        var exists = await context.EmailTemplates.AsNoTracking().AnyAsync(t => t.Slug == slug, CancellationToken.None);
+        var exists = await context.EmailTemplates.AsNoTracking().AnyAsync(t => t.Slug == slug && t.Language == "en", CancellationToken.None);
         if (exists)
         {
             return;
         }
 
-        context.EmailTemplates.Add(EmailTemplate.Create(slug, subject, "Body", null));
+        context.EmailTemplates.Add(EmailTemplate.Create(slug, "en", subject, "Body", null));
         await context.SaveChangesAsync(CancellationToken.None);
     }
 
@@ -169,11 +173,11 @@ internal static class NotificationsTestSeeds
         context.ProductGroups.Add(group);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
         context.Products.Add(product);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var service = ClientService.Create(clientId, product.Id, BillingCycleNames.Monthly);
+        var service = ClientService.Create(clientId, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow);
         context.ClientServices.Add(service);
         await context.SaveChangesAsync(CancellationToken.None);
         return service.Id;

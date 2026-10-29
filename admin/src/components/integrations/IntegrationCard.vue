@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
- * Displays a single integration as a clickable card with logo, title, description, and status.
+ * Displays a single integration as a clickable card with logo, title, description, and status,
+ * marking an integration whose required fields are not all stored as not configured.
  *
  * Clicking the card navigates to the integration's configuration page.
  */
@@ -52,10 +53,18 @@ const meta = INTEGRATION_META[props.integration.slug as IntegrationSlug]
           <UiBadge v-if="integration.isPlugin" tone="primary" small>
             {{ t('integrations.integrationCard.plugin') }}
           </UiBadge>
+          <UiBadge
+            v-if="!integration.isConfigured"
+            tone="warning"
+            small
+            :data-testid="`integration-unconfigured-${integration.slug}`"
+          >
+            {{ t('integrations.integrationCard.notConfigured') }}
+          </UiBadge>
         </UiStack>
 
         <UiText tone="muted" size="md" class="flex-1">
-          {{ meta?.shortDescription ?? integration.description }}
+          {{ meta?.shortDescription }}
         </UiText>
 
         <UiText tone="primary" size="sm" class="font-medium">

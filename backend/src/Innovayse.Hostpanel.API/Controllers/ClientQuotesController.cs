@@ -6,7 +6,6 @@ using Innovayse.Hostpanel.Application.Billing.Commands.UpdateQuote;
 using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Billing.Queries.GetQuote;
 using Innovayse.Hostpanel.Application.Billing.Queries.ListClientQuotes;
-using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Shared.Authorization;
 using Innovayse.Hostpanel.Shared.Controllers;
 using Innovayse.Hostpanel.Shared.Models;
@@ -18,10 +17,11 @@ namespace Innovayse.Hostpanel.API.Controllers;
 
 /// <summary>
 /// Client-scoped endpoints for managing quotes, used by the client profile views. Route:
-/// <c>api/quotes</c> — separate from <see cref="QuotesController"/>'s <c>api/billing/quotes</c>.
+/// <c>api/quotes</c>; separate from <see cref="QuotesController"/>'s <c>api/billing/quotes</c>.
 /// </summary>
 [Route("api/quotes")]
-[Authorize(Policy = Policies.ResellerOrAdmin)]
+[Authorize(Policy = Policies.Admin)]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class ClientQuotesController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -38,13 +38,19 @@ public sealed class ClientQuotesController : BaseApiController
     /// <param name="clientId">The client's primary key; wins over any client id in the query.</param>
     /// <param name="query">The page and page size to list by.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the page; 401 without a session; 403 for a caller who is not staff.</returns>
+    /// <returns>
+    /// 200 with the page; 400 when the body, query or route fails validation; 401 without a session; 403 for a caller who is not staff;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpGet("client/{clientId:int}")]
-    [ProducesResponseType(typeof(PagedResult<QuoteListItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedList<QuoteListItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ListByClientAsync(
         int clientId, [FromQuery] ListClientQuotesQuery query, CancellationToken ct)
     {
-        var outcome = await _bus.InvokeAsync<Result<PagedResult<QuoteListItemDto>>>(
+        var outcome = await _bus.InvokeAsync<Result<PaginatedList<QuoteListItemDto>>>(
             query with { ClientId = clientId }, ct);
         return HandleResult(outcome);
     }
@@ -53,10 +59,14 @@ public sealed class ClientQuotesController : BaseApiController
     /// <param name="id">Quote primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 200 with the quote; 404 when the id names no quote; 401; 403 for a caller who is not staff.
+    /// 200 with the quote; 404 with <c>QUOTE_NOT_FOUND</c>; 400 when the body, query or route fails validation; 401 without a session; 403 for a caller who is not staff;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(QuoteDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByIdAsync(int id, CancellationToken ct)
     {
@@ -67,10 +77,17 @@ public sealed class ClientQuotesController : BaseApiController
     /// <summary>Creates a new quote for a client.</summary>
     /// <param name="command">The quote to create.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>201 with the new quote ID; 401; 403 for a caller who is not an admin.</returns>
+    /// <returns>
+    /// 201 with the new quote ID; 400 when the body, query or route fails validation; 404 when the client does not exist; 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpPost]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreateAsync([FromBody] CreateQuoteCommand command, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<int>>(command, ct);
@@ -82,11 +99,15 @@ public sealed class ClientQuotesController : BaseApiController
     /// <param name="command">The quote data to write.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when written; 404 when the id names no quote; 401; 403 for a caller who is not an admin.
+    /// 204 when written; 404 with <c>QUOTE_NOT_FOUND</c>; 400 when the body, query or route fails validation; 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPut("{id:int}")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateAsync(int id, [FromBody] UpdateQuoteCommand command, CancellationToken ct)
     {
@@ -98,12 +119,15 @@ public sealed class ClientQuotesController : BaseApiController
     /// <param name="id">Quote primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 201 with the new draft quote ID; 404 when the id names no quote; 401;
-    /// 403 for a caller who is not an admin.
+    /// 201 with the new draft quote ID; 404 with <c>QUOTE_NOT_FOUND</c>; 400 when the body, query or route fails validation; 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost("{id:int}/duplicate")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DuplicateAsync(int id, CancellationToken ct)
     {
@@ -115,12 +139,15 @@ public sealed class ClientQuotesController : BaseApiController
     /// <param name="id">Quote primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 201 with the new draft invoice ID; 404 when the id names no quote; 401;
-    /// 403 for a caller who is not an admin.
+    /// 201 with the new draft invoice ID; 404 with <c>QUOTE_NOT_FOUND</c>; 400 when the body, query or route fails validation; 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost("{id:int}/convert-to-invoice")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ConvertToInvoiceAsync(int id, CancellationToken ct)
     {
@@ -132,11 +159,15 @@ public sealed class ClientQuotesController : BaseApiController
     /// <param name="id">Quote primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when deleted; 404 when the id names no quote; 401; 403 for a caller who is not an admin.
+    /// 204 when deleted; 404 with <c>QUOTE_NOT_FOUND</c>; 400 when the body, query or route fails validation; 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpDelete("{id:int}")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct)
     {

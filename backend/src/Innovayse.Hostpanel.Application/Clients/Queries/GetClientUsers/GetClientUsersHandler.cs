@@ -5,6 +5,7 @@ using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Clients.Queries.GetClientUsers;
 
 /// <summary>Returns all users linked to a client (owner + additional non-owner users).</summary>
@@ -57,7 +58,7 @@ public sealed class GetClientUsersHandler
                 IsOwner: true, (int)ClientPermission.All,
                 owner.LastLoginAt,
                 // When they became this client's owner, not when their account was created: the
-                // account may predate the client and may belong to an SSO this product cannot ask.
+                // account may predate the client and may belong to an external sign-on provider this product cannot ask.
                 client.CreatedAt));
         }
 

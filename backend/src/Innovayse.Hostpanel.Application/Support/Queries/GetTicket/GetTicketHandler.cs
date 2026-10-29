@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Support.Common;
+using Innovayse.Hostpanel.Application.Support.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,19 +38,9 @@ public sealed class GetTicketHandler
             return Result<TicketDto>.FailureCode(HostpanelErrorCodes.TICKET_NOT_FOUND);
         }
 
-        string? departmentName = null;
-        if (ticket.DepartmentId.HasValue)
-        {
-            departmentName = await _context.Departments
-                .AsNoTracking()
-                .Where(d => d.Id == ticket.DepartmentId.Value)
-                .Select(d => d.Name)
-                .FirstOrDefaultAsync(ct);
-        }
+        var departmentName = await _context.FindDepartmentNameAsync(ticket.DepartmentId, ct);
 
-        var replies = ticket.Replies
-            .Select(r => new TicketReplyDto(r.Id, r.Message, r.AuthorName, r.IsStaffReply, r.CreatedAt))
-            .ToList();
+        var replies = ticket.Replies.Select(r => r.ToDto()).ToList();
 
         var tags = ticket.Tags.Select(t => t.Name).ToList();
 
@@ -58,20 +49,15 @@ public sealed class GetTicketHandler
             ticket.ClientId,
             ticket.Subject,
             ticket.Message,
-            ticket.Status.ToString(),
-            ticket.Priority.ToString(),
-            ticket.DepartmentId,
-            departmentName,
-            ticket.AssignedToStaffId,
-            null,
+            ticket.Status,
+            ticket.Priority,
+            new TicketDepartmentDto(ticket.DepartmentId, departmentName),
+            new TicketAssigneeDto(ticket.AssignedToStaffId, null),
             ticket.CreatedAt,
             ticket.IsFlagged,
             replies,
             tags,
-            ticket.Rating,
-            ticket.FeedbackComment,
-            ticket.FeedbackLeftBy,
-            ticket.FeedbackAt);
+            new TicketFeedbackDto(ticket.Rating, ticket.FeedbackComment, ticket.FeedbackLeftBy, ticket.FeedbackAt));
 
         return Result.Success(dto);
     }

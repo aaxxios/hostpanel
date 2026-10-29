@@ -34,6 +34,8 @@ vi.mock('~/stores/auth', () => ({ useAuthStore: () => fakes.auth }))
 const buildStores = (destination: { kind: CheckoutDestinationKind, target: string } | null) => {
   const placeOrder = vi.fn(async () => destination)
   const changeGuestCurrency = vi.fn()
+  const resetFlow = vi.fn()
+  const refreshCartPrices = vi.fn(async () => undefined)
   fakes.cart = reactive({ init: vi.fn() })
   fakes.currency = reactive({ currencies: [{ code: 'USD' }, { code: 'EUR' }], init: vi.fn(), load: vi.fn() })
   fakes.checkout = {
@@ -47,11 +49,13 @@ const buildStores = (destination: { kind: CheckoutDestinationKind, target: strin
     error: ref(''),
     itemPrice: () => '',
     changeGuestCurrency,
+    resetFlow,
+    refreshCartPrices,
     loadPaymentMethods: vi.fn(async () => undefined),
     placeOrder,
   }
   fakes.auth = { user: ref({ email: 'ann@acme.test' }), isLoggedIn: ref(true), fetchUser: vi.fn(), logout: vi.fn() }
-  return { placeOrder, changeGuestCurrency }
+  return { placeOrder, changeGuestCurrency, resetFlow, refreshCartPrices }
 }
 
 /**
@@ -93,6 +97,14 @@ describe('useCheckoutPage', () => {
     expect(fakes.currency?.load).toHaveBeenCalled()
   })
 
+  it('releases the submit button and re-prices the cart from the catalogue when the page opens', async () => {
+    const { resetFlow, refreshCartPrices } = buildStores(null)
+    await runInPage()
+
+    expect(resetFlow).toHaveBeenCalled()
+    expect(refreshCartPrices).toHaveBeenCalled()
+  })
+
   it('asks the visitor before the store changes the currency', async () => {
     const { changeGuestCurrency } = buildStores(null)
     const page = await runInPage()
@@ -111,6 +123,31 @@ describe('useCheckoutPage', () => {
 
     expect(placeOrder).toHaveBeenCalledWith(expect.objectContaining({ guest: expect.objectContaining({ email: 'guest@acme.test' }) }))
     expect(navigateTo).toHaveBeenCalledWith('/client/order-success')
+  })
+
+  it('offers the store a confirmation for a total that changed, and asks the visitor with both amounts', async () => {
+    const { placeOrder } = buildStores({ kind: CheckoutDestinationKind.Route, target: '/client/order-success' })
+    const confirmSpy = vi.fn(() => true)
+    vi.stubGlobal('confirm', confirmSpy)
+    const page = await runInPage()
+
+    await page.submitOrder()
+    const input = (placeOrder.mock.calls[0] as unknown as [{ confirmTotalChange: (shown: string, charged: string) => boolean }])[0]
+
+    expect(input.confirmTotalChange('$10.00', '$12.00')).toBe(true)
+    expect(confirmSpy).toHaveBeenCalledWith('checkout.totalChangedConfirm')
+  })
+
+  it('does not follow an external destination that is not a secure address', async () => {
+    buildStores({ kind: CheckoutDestinationKind.External, target: 'javascript:alert(1)' })
+    vi.mocked(navigateTo).mockClear()
+    const before = window.location.href
+    const page = await runInPage()
+
+    await page.submitOrder()
+
+    expect(window.location.href).toBe(before)
+    expect(navigateTo).not.toHaveBeenCalled()
   })
 
   it('stays put when the store refuses the order', async () => {

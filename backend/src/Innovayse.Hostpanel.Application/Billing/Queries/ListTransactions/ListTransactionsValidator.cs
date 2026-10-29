@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.ListTransactions;
 
 /// <summary>
 ///     Validator for ListTransactionsQuery. Page and page size carry safe defaults and the handler
-///     does not clamp them further, so no rule is declared here — decided, not forgotten.
+///     does not clamp them further, so no rule is declared here: decided, not forgotten.
 /// </summary>
 public sealed class ListTransactionsValidator : LocalizedValidator<ListTransactionsQuery>
 {

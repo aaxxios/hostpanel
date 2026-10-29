@@ -7,11 +7,11 @@ namespace Innovayse.Hostpanel.Domain.Projects;
 /// A portfolio project shown on the storefront, with per-locale translations.
 /// Stored in the <c>Projects</c> table.
 /// </summary>
-public sealed class Project : BaseEntity, IAggregateRoot
+public sealed class Project : BaseEntity, IAggregateRoot, ISortable
 {
-    /// <summary>Longest Slug may be — matches the <c>Projects.Slug</c> column.</summary>
+    /// <summary>Longest Slug may be: matches the <c>Projects.Slug</c> column.</summary>
     public const int SlugMaxLength = 100;
-    /// <summary>Longest Url may be — matches the <c>Projects.Url</c> column.</summary>
+    /// <summary>Longest Url may be: matches the <c>Projects.Url</c> column.</summary>
     public const int UrlMaxLength = 500;
     /// <summary>Most images a project may carry.</summary>
     public const int MaxImages = 10;
@@ -44,7 +44,7 @@ public sealed class Project : BaseEntity, IAggregateRoot
     /// <summary>Gets the per-locale translations.</summary>
     public IReadOnlyList<ProjectTranslation> Translations => _translations.AsReadOnly();
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Project() { }
 
     /// <summary>
@@ -68,7 +68,6 @@ public sealed class Project : BaseEntity, IAggregateRoot
             ImageUrls = imageUrls.ToArray(),
             SortOrder = sortOrder,
             IsActive = isActive,
-            CreatedAt = DateTimeOffset.UtcNow
         };
     }
 
@@ -137,6 +136,23 @@ public sealed class Project : BaseEntity, IAggregateRoot
         if (existing is not null)
         {
             _translations.Remove(existing);
+        }
+    }
+
+    /// <summary>
+    /// Makes the project's translations exactly the given set: locales that are not in it are
+    /// removed, the rest are added or updated in place.
+    /// </summary>
+    /// <param name="translations">The complete set of translations, keyed by BCP-47 locale code.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="translations"/> is null.</exception>
+    public void ReplaceTranslations(IReadOnlyDictionary<string, ProjectTranslationContent> translations)
+    {
+        ArgumentNullException.ThrowIfNull(translations);
+
+        _translations.RemoveAll(t => !translations.ContainsKey(t.Locale));
+        foreach (var (locale, content) in translations)
+        {
+            SetTranslation(locale, content.Title, content.Summary, content.Description);
         }
     }
 

@@ -2,7 +2,7 @@ namespace Innovayse.Hostpanel.Application.Support.Common;
 
 /// <summary>
 /// One submission of the public website's contact form, after the handler has trimmed it and
-/// checked its lengths -- the shape a notification channel renders.
+/// checked its lengths: the shape a notification channel renders.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -14,8 +14,7 @@ namespace Innovayse.Hostpanel.Application.Support.Common;
 /// <para>
 /// In <c>Support/Common/</c> rather than beside the command because it is the vocabulary
 /// <see cref="Innovayse.Hostpanel.Application.Common.Interfaces.IContactNotifier"/> is written in, and a
-/// port's contract has to be readable without opening the use case that happens to call it
-/// today.
+/// port's contract has to be readable without opening the use case that calls it.
 /// </para>
 /// </remarks>
 /// <param name="Name">The sender's name, trimmed. Never empty.</param>

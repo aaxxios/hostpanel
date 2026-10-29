@@ -12,6 +12,7 @@ import DomainsCard from '~/components/client/dashboard/DomainsCard.vue'
 import { useClientStore } from '~/stores/client'
 import type { ClientDomain } from '~/types/clientdomain'
 import { EMPTY_DATE } from '~/utils/formatDate'
+import { DomainStatus } from '~/types/domainstatus'
 
 /**
  * Builds a domain row.
@@ -20,7 +21,7 @@ import { EMPTY_DATE } from '~/utils/formatDate'
  * @returns A domain with the given dates.
  */
 const domain = (fields: Partial<ClientDomain> & { id: number }): ClientDomain =>
-  ({ name: `d${fields.id}.test`, status: 'Active', expiresAt: '', nextDueDate: '', registeredAt: '', ...fields }) as unknown as ClientDomain
+  ({ name: `d${fields.id}.test`, status: DomainStatus.Active, expiresAt: '', nextDueDate: '', registeredAt: '', ...fields }) as unknown as ClientDomain
 
 describe('ClientDashboardDomainsCard', () => {
   it('shows skeletons while loading', async () => {

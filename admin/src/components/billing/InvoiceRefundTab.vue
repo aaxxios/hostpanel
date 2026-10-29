@@ -2,8 +2,9 @@
 /**
  * Refund tab of the invoice screen: pick a payment, the amount and the kind of refund, decide
  * what happens to the credit the payment created, and send it. A draft, cancelled or already
- * refunded invoice takes no refund, so the form is replaced by the reason. The line items and
- * the transaction ledgers sit below.
+ * refunded invoice takes no refund, so the form is replaced by the reason. The refund is confirmed
+ * first (amount and method in the prompt), and its outcome (success, or the API's sentence) shows
+ * in the tab. The line items and the transaction ledgers sit below.
  */
 import { computed, ref, watch } from 'vue'
 import { formatUsd, formatUsdPlain } from '@/lib/money'
@@ -13,6 +14,7 @@ import InvoiceTransactionsSection from '@/components/billing/InvoiceTransactions
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
+import UiDialog from '@/components/ui/UiDialog.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiForm from '@/components/ui/UiForm.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -22,30 +24,28 @@ import UiRadio from '@/components/ui/UiRadio.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { useBillingStore } from '@/stores/billing'
 import { InvoiceRefundType, InvoiceTransactionType, InvoiceStatus } from '@/types/invoice'
-import type { Invoice, InvoiceTransaction } from '@/types/invoice'
+import type { InvoiceDetail, InvoiceTransaction } from '@/types/invoice'
+import { UiTone } from '@/utils/ui/tone'
+import { UiDialogVariant } from '@/utils/ui/dialog'
 
 const { t } = useI18n()
 
 const props = defineProps<{
   /** The invoice to refund a payment of. */
-  invoice: Invoice
+  invoice: InvoiceDetail
   /** True to show the notice and the items without the refund form. */
   readonly?: boolean
 }>()
 
-const emit = defineEmits<{
-  /** Emitted after a refund was sent or the items were saved. */
-  updated: []
-}>()
-
 /** What happens to the credit a refunded payment created. */
-const CreditAction = {
-  None: '',
-  Remove: 'remove',
-  Leave: 'leave',
-} as const
+enum CreditAction {
+  None = '',
+  Remove = 'remove',
+  Leave = 'leave',
+}
 
 const store = useBillingStore()
 
@@ -56,20 +56,42 @@ const selectedTransactionId = ref('')
 const refundAmount = ref(0)
 
 /** Kind of refund. */
-const refundType = ref<string>(InvoiceRefundType.Gateway)
+const refundType = ref<InvoiceRefundType>(InvoiceRefundType.Gateway)
 
 /** Reference of the refund, for a refund made outside the gateway. */
 const refundReference = ref('')
 
 /** The choice about the credit; the refund waits for it. */
-const creditAction = ref<string>(CreditAction.None)
+const creditAction = ref<CreditAction>(CreditAction.None)
 
 /** True while the refund is being sent. */
 const processing = ref(false)
 
+/** True while the confirmation prompt of the refund is open. */
+const confirming = ref(false)
+
+/** The outcome line of the last refund, shown in the tab. */
+const feedback = useResultBanner()
+
 /** Payments that can still be refunded. */
 const payments = computed<InvoiceTransaction[]>(() =>
   (props.invoice.transactions ?? []).filter((transaction) => transaction.type === InvoiceTransactionType.Payment),
+)
+
+/**
+ * What can still be refunded: the payments recorded against the invoice less the refunds already
+ * made. The API refuses a larger amount; this only proposes a starting value.
+ */
+const refundable = computed<number>(() =>
+  (props.invoice.transactions ?? []).reduce((sum, transaction) => {
+    if (transaction.type === InvoiceTransactionType.Payment) {
+      return sum + transaction.amount
+    }
+    if (transaction.type === InvoiceTransactionType.Refund) {
+      return sum - Math.abs(transaction.amount)
+    }
+    return sum
+  }, 0),
 )
 
 /** The picked payment, if any. */
@@ -92,9 +114,16 @@ const isRefunded = computed<boolean>(() => props.invoice.status === InvoiceStatu
 /** True when the refund form is replaced by a notice. */
 const formBlocked = computed<boolean>(() => isDraft.value || isCancelled.value || isRefunded.value)
 
-/** True when the refund can be sent: a payment is picked and the credit question answered. */
+/**
+ * True when the refund can be sent: a payment is picked, the amount is above zero and the credit
+ * question answered.
+ */
 const canRefund = computed<boolean>(
-  () => selectedTransactionId.value !== '' && creditAction.value !== CreditAction.None && !processing.value,
+  () =>
+    selectedTransactionId.value !== ''
+    && refundAmount.value > 0
+    && creditAction.value !== CreditAction.None
+    && !processing.value,
 )
 
 /** Options of the payment select. */
@@ -118,44 +147,79 @@ const refundTypeOptions = computed(() => [
   { value: InvoiceRefundType.CreditBalance, label: t('billing.addTransaction.addToClientSCredit') },
 ])
 
+/** The kind of refund actually sent: removing the credit turns it into a credit-balance refund. */
+const sentKind = computed<InvoiceRefundType>(() =>
+  creditAction.value === CreditAction.Remove ? InvoiceRefundType.CreditBalance : refundType.value,
+)
+
+/** The confirmation sentence, naming the amount and the method of the refund. */
+const confirmMessage = computed<string>(() =>
+  t('billing.invoiceRefundTab.confirmRefundMessage', {
+    amount: formatUsd(refundAmount.value),
+    method: refundTypeOptions.value.find((option) => option.value === sentKind.value)?.label ?? sentKind.value,
+  }),
+)
+
 /** The warning that explains what the credit question is about. */
 const creditWarning = computed<string>(() => {
   const refunded = formatUsd(selectedPayment.value?.amount)
-  const balance = formatUsd(props.invoice.credit)
+  const balance = formatUsd(props.invoice.amounts.credit)
   return `${t('billing.invoiceRefundTab.theseTransactionsResultedInA')} ${refunded}${t('billing.invoiceRefundTab.theCurrentCreditBalanceIs')} ${balance}.`
 })
 
-/** Picking a payment resets the credit answer and proposes the full amount. */
+/** Picking a payment resets the credit answer and proposes the payment, capped at what is still refundable. */
 watch(selectedTransactionId, () => {
   creditAction.value = CreditAction.None
   if (selectedPayment.value !== undefined) {
-    refundAmount.value = selectedPayment.value.amount
+    refundAmount.value = Math.max(0, Math.min(selectedPayment.value.amount, refundable.value))
   }
 })
 
-/** Sends the refund, then clears the form. */
+/** Opens the confirmation prompt when the form is complete. */
+const askRefund = (): void => {
+  if (canRefund.value) {
+    confirming.value = true
+  }
+}
+
+/** Closes the confirmation prompt; ignored while the refund is being sent. */
+const dismiss = (): void => {
+  if (!processing.value) {
+    confirming.value = false
+  }
+}
+
+/**
+ * Sends the confirmed refund and shows the outcome; on success the form is cleared.
+ *
+ * @returns Resolves when the request has settled.
+ */
 const refund = async (): Promise<void> => {
   if (!canRefund.value) {
     return
   }
+  feedback.clear()
   processing.value = true
-  const kind = creditAction.value === CreditAction.Remove ? InvoiceRefundType.CreditBalance : refundType.value
+  const kind = sentKind.value
+  const manual = kind === InvoiceRefundType.Manual
   const ok = await store.refundPayment(props.invoice.id, {
-    transactionId: selectedTransactionId.value,
     amount: refundAmount.value,
     refundType: kind,
-    gateway: props.invoice.paymentMethod ?? 'None',
-    refundTransactionId: isManual.value ? refundReference.value : undefined,
+    gateway: manual ? selectedPayment.value?.gateway : undefined,
+    refundTransactionId: manual ? refundReference.value : undefined,
   })
   processing.value = false
-  if (ok) {
-    selectedTransactionId.value = ''
-    refundAmount.value = 0
-    refundType.value = InvoiceRefundType.Gateway
-    refundReference.value = ''
-    creditAction.value = CreditAction.None
-    emit('updated')
+  confirming.value = false
+  if (!ok) {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+    return
   }
+  selectedTransactionId.value = ''
+  refundAmount.value = 0
+  refundType.value = InvoiceRefundType.Gateway
+  refundReference.value = ''
+  creditAction.value = CreditAction.None
+  feedback.show(t('billing.invoiceRefundTab.refunded'), false)
 }
 </script>
 
@@ -177,7 +241,7 @@ const refund = async (): Promise<void> => {
       </UiAlert>
 
       <UiCard v-if="!formBlocked" padding="md">
-        <UiForm stacked data-testid="billing-invoice-refund-form" @submit="refund">
+        <UiForm stacked data-testid="billing-invoice-refund-form" @submit="askRefund">
           <UiField :label="t('shared.transactions')">
             <UiSelect
               v-model="selectedTransactionId"
@@ -186,7 +250,7 @@ const refund = async (): Promise<void> => {
               data-testid="billing-invoice-refund-transaction"
             />
           </UiField>
-          <UiField :label="t('shared.amount')" :hint="t('billing.invoiceRefundTab.leaveBlankForFullRefund')" :error="store.fieldErrors.amount">
+          <UiField :label="t('shared.amount')" :error="store.fieldErrors.amount">
             <UiNumberInput v-model="refundAmount" :step="0.01" :min="0" placeholder="0.00" data-testid="billing-invoice-refund-amount" />
           </UiField>
           <UiField :label="t('billing.invoiceRefundTab.refundType')" :error="store.fieldErrors.refundType">
@@ -240,9 +304,29 @@ const refund = async (): Promise<void> => {
           </UiStack>
         </UiForm>
       </UiCard>
+
+      <UiAlert
+        v-if="feedback.message.value"
+        :variant="feedback.isError.value ? UiTone.Danger : UiTone.Success"
+        data-testid="billing-invoice-refund-feedback"
+      >
+        {{ feedback.message.value }}
+      </UiAlert>
+
+      <UiDialog
+        :open="confirming"
+        :variant="UiDialogVariant.Confirm"
+        :title="t('billing.invoiceRefundTab.confirmRefundTitle')"
+        :message="confirmMessage"
+        :confirm-label="t('billing.invoiceRefundTab.refund')"
+        :loading="processing"
+        :tone="UiTone.Danger"
+        @confirm="refund"
+        @close="dismiss"
+      />
     </template>
 
-    <InvoiceItemsSection :invoice="invoice" :readonly="readonly" @updated="emit('updated')" />
+    <InvoiceItemsSection :invoice="invoice" :readonly="readonly" />
     <InvoiceTransactionsSection :invoice="invoice" />
   </UiStack>
 </template>

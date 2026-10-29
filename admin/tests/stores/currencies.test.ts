@@ -9,7 +9,11 @@ import { useCurrenciesStore } from '@/stores/currencies'
 import { json, problem, stubFetch } from '../helpers/fetch'
 import { installStoreHooks } from '../helpers/storeHooks'
 
-/** A problem+json refusal carrying a finished sentence. */
+/**
+ * A problem+json refusal carrying a finished sentence.
+ *
+ * @returns A 400 response with a `detail` sentence.
+ */
 const refusal = (): Response =>
   json({ type: 'CURRENCY_REFUSED', title: 'Refused', status: 400, detail: 'Not allowed.' }, 400)
 

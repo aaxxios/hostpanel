@@ -1,6 +1,6 @@
 /**
- * Tests for `GET /api/portal/client/services`: it lists the signed-in client's services and maps
- * each to the portal's service row, with defaults for what the list does not carry.
+ * Tests for `GET /api/portal/client/services`: it lists the signed-in client's services exactly as
+ * the backend sends them.
  *
  * @module tests/server/api/portal/client/services/index.get.test
  */
@@ -26,45 +26,16 @@ afterEach(async () => {
 })
 
 describe('GET /api/portal/client/services', () => {
-  it('maps the backend rows with the bearer and the reader language', async () => {
-    backend.respondWith(() => ({
-      body: [{ id: 4, productId: 12, productName: 'Hosting S', domain: 'a.test', price: '9.99', billingCycle: 'Monthly', nextRenewalAt: '2026-05-01', status: 'Suspended', username: 'u1', createdAt: '2026-01-05T09:00:00Z' }],
-    }))
+  it('passes the backend rows through unchanged with the bearer and the reader language', async () => {
+    const row = { id: 4, productId: 12, productName: 'Hosting S', billingCycle: 'Monthly', status: 'Suspended', nextRenewalAt: '2026-05-01T00:00:00Z', domain: 'a.test', username: 'u1', price: 9.99, firstPaymentAmount: 9.99, paymentMethod: null, server: null, createdAt: '2026-01-05T09:00:00Z' }
+    backend.respondWith(() => ({ body: [row] }))
 
-    const result = await route.default(makeEvent({ cookies: await signedIn('jwt'), headers: { 'x-language': 'ru' } })) as Record<string, unknown>[]
+    const result = await route.default(makeEvent({ cookies: await signedIn('jwt'), headers: { 'x-language': 'ru' } }))
 
     expect(backend.requests[0]?.url).toBe('/api/me/services')
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
     expect(backend.requests[0]?.headers['x-language']).toBe('ru')
-    expect(result[0]).toMatchObject({
-      id: 4,
-      pid: 12,
-      regdate: '2026-01-05T09:00:00Z',
-      name: 'Hosting S',
-      translated_name: 'Hosting S',
-      domain: 'a.test',
-      recurringamount: '9.99',
-      billingcycle: 'Monthly',
-      nextduedate: '2026-05-01',
-      status: 'Suspended',
-      username: 'u1',
-    })
-  })
-
-  it('fills the defaults when the backend row omits optional fields', async () => {
-    backend.respondWith(() => ({ body: [{ id: 1, productId: 2, productName: 'P' }] }))
-
-    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') })) as Record<string, unknown>[]
-
-    expect(result[0]).toMatchObject({ domain: '', recurringamount: '0.00', billingcycle: '', nextduedate: '', status: 'Active', username: 'provisioned' })
-  })
-
-  it('keeps a null product name null for the page to word', async () => {
-    backend.respondWith(() => ({ body: [{ id: 1, productId: 2, productName: null }] }))
-
-    const result = await route.default(makeEvent({ cookies: await signedIn('jwt') })) as Record<string, unknown>[]
-
-    expect(result[0]).toMatchObject({ name: null, translated_name: null })
+    expect(result).toEqual([row])
   })
 
   it('answers an empty list for a client without services', async () => {

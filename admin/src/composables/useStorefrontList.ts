@@ -6,6 +6,7 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
 import type { StorefrontCrud } from '@/composables/useStorefrontCrud'
+import { StorefrontListOutcome } from '@/types/storefront'
 import type { StorefrontEntity, StorefrontOrderItem } from '@/types/storefront'
 
 /** What {@link useStorefrontList} hands the list view. */
@@ -16,6 +17,8 @@ export interface StorefrontList<TItem> {
   deleteTarget: Ref<TItem | null>
   /** True while the staged entry is being deleted. */
   deleting: Ref<boolean>
+  /** What the last successful delete or reorder did; null before one and while one runs or after a refusal. */
+  outcome: Ref<StorefrontListOutcome | null>
   /** Opens the delete question for an entry. */
   stageDelete: (item: TItem) => void
   /** Closes the delete question. */
@@ -44,6 +47,9 @@ export const useStorefrontList = <TItem extends StorefrontEntity>(
   /** True while the staged entry is being deleted. */
   const deleting = ref(false)
 
+  /** What the last successful delete or reorder did. */
+  const outcome = ref<StorefrontListOutcome | null>(null)
+
   /**
    * Stages an entry for deletion. Only opens the question; {@link confirmDelete} does the work.
    *
@@ -64,10 +70,14 @@ export const useStorefrontList = <TItem extends StorefrontEntity>(
     if (!target) {
       return
     }
+    outcome.value = null
     deleting.value = true
-    await store.remove(target.id)
+    const removed = await store.remove(target.id)
     deleting.value = false
     deleteTarget.value = null
+    if (removed) {
+      outcome.value = StorefrontListOutcome.Deleted
+    }
   }
 
   /**
@@ -76,10 +86,14 @@ export const useStorefrontList = <TItem extends StorefrontEntity>(
    * @param order - Entry ID and new sort order pairs.
    */
   const saveOrder = async (order: StorefrontOrderItem[]): Promise<void> => {
+    outcome.value = null
     savingOrder.value = true
-    await store.updateOrder(order)
+    const saved = await store.updateOrder(order)
     savingOrder.value = false
+    if (saved) {
+      outcome.value = StorefrontListOutcome.OrderSaved
+    }
   }
 
-  return { savingOrder, deleteTarget, deleting, stageDelete, cancelDelete, confirmDelete, saveOrder }
+  return { savingOrder, deleteTarget, deleting, outcome, stageDelete, cancelDelete, confirmDelete, saveOrder }
 }

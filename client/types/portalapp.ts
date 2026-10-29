@@ -8,7 +8,7 @@ import type { PortalAppId } from './portalappid'
 
 /** One app-launcher entry, ready to render. */
 export interface PortalApp {
-  /** Stable key for the app, e.g. "tasks" — also the admin-panel setting name. */
+  /** Stable key for the app, e.g. "tasks": also the admin-panel setting name. */
   id: PortalAppId
   /** Two-letter tile label. */
   tag: string

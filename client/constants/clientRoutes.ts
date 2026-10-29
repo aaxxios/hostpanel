@@ -6,6 +6,7 @@
  */
 
 import type { AccountTab } from '~/types/accounttab'
+import type { OrderSuccessQuery } from '~/types/ordersuccessquery'
 
 /** The root of the customer area; every client page lives below it. */
 export const CLIENT_AREA_PATH = '/client'
@@ -30,6 +31,9 @@ export const CLIENT_RESET_PASSWORD_PATH = '/client/reset-password'
 
 /** The page that confirms an e-mail address. */
 export const CLIENT_CONFIRM_EMAIL_PATH = '/client/confirm-email'
+
+/** The page a sign-in address change link opens, on the new address. */
+export const CLIENT_CONFIRM_EMAIL_CHANGE_PATH = '/client/confirm-email-change'
 
 /** The customer's services list. */
 export const CLIENT_SERVICES_PATH = '/client/services'
@@ -157,11 +161,21 @@ export const clientEmailPath = (id: number | string): string => `${CLIENT_EMAILS
 export const clientAccountTabPath = (tab: AccountTab): string => `${CLIENT_ACCOUNT_PATH}?tab=${tab}`
 
 /**
- * Path of the order-success page for an order.
+ * Path of the order-success page for an order; every query value is encoded.
  *
- * @param order - The order reference, such as `ORD-0042`.
- * @param extraQuery - Further query string to append, starting with `&`; empty for none.
- * @returns `/client/order-success?order=<order>` plus the extra query.
+ * @param query - The order number and, when known, the invoice and the domain bought.
+ * @returns `/client/order-success?order=<order>` plus the optional values.
  */
-export const clientOrderSuccessPath = (order: string, extraQuery: string = ''): string =>
-  `${CLIENT_ORDER_SUCCESS_PATH}?order=${order}${extraQuery}`
+export const clientOrderSuccessPath = (query: OrderSuccessQuery): string => {
+  const params = new URLSearchParams({ order: query.order })
+  if (query.invoice) {
+    params.set('invoice', String(query.invoice))
+  }
+  if (query.domain) {
+    params.set('domain', query.domain)
+  }
+  if (query.action) {
+    params.set('action', query.action)
+  }
+  return `${CLIENT_ORDER_SUCCESS_PATH}?${params.toString()}`
+}

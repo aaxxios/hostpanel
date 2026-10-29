@@ -2,15 +2,16 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Provisioning;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
+
 /// <summary>
 /// Test stub for <see cref="IProvisioningProvider"/>.
 /// Returns hardcoded success results without making any real network calls.
 /// </summary>
-internal sealed class StubProvisioningProvider : IProvisioningProvider
+public sealed class StubProvisioningProvider : IProvisioningProvider
 {
     /// <inheritdoc/>
     public Task<ProvisioningResult> ProvisionAsync(ProvisionAccountOrder req, CancellationToken ct)
-        => Task.FromResult(new ProvisioningResult(true, "stub-user-123", null));
+        => Task.FromResult(ProvisioningResult.Created("stub-user-123"));
 
     /// <inheritdoc/>
     public Task SuspendAsync(SuspendAccountOrder req, CancellationToken ct)

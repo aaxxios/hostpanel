@@ -5,6 +5,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useInvoicesApi } from '@/composables/apis/useInvoicesApi'
+import { InvoiceRefundType } from '@/types/invoice'
 import { ApiError } from '@/composables/useApi'
 import { json, problem, stubFetch, callOf } from '../../helpers/fetch'
 
@@ -17,7 +18,7 @@ afterEach(() => {
 
 describe('useInvoicesApi', () => {
   it('list sends page, size and only the filters that are set', async () => {
-    const mock = stubFetch(json({ items: [], totalCount: 0, page: 1, pageSize: 25 }))
+    const mock = stubFetch(json({ items: [], pageNumber: 1, pageSize: 25, totalCount: 0, totalPages: 0 }))
 
     await useInvoicesApi().list(2, 25, { status: 'Paid', from: '', to: '2026-01-31' })
     expect(callOf(mock)).toMatchObject({ url: '/api/billing?page=2&pageSize=25&status=Paid&to=2026-01-31', method: 'GET' })
@@ -49,7 +50,6 @@ describe('useInvoicesApi', () => {
     ['updateItems', (a: InvoicesApi) => a.updateItems(5, []), '/api/billing/5/items', 'PUT', { items: [] }],
     ['updateNotes', (a: InvoicesApi) => a.updateNotes(5, 'n'), '/api/billing/5/notes', 'PUT', { notes: 'n' }],
     ['publish', (a: InvoicesApi) => a.publish(5), '/api/billing/5/publish', 'POST', undefined],
-    ['pay', (a: InvoicesApi) => a.pay(5, 'USD'), '/api/billing/5/pay', 'POST', { currency: 'USD' }],
     ['cancel', (a: InvoicesApi) => a.cancel(5), '/api/billing/5/cancel', 'POST', undefined],
     ['applyCredit', (a: InvoicesApi) => a.applyCredit(5, 3), '/api/billing/5/credit', 'POST', { amount: 3 }],
     ['removeCredit', (a: InvoicesApi) => a.removeCredit(5, 3), '/api/billing/5/credit/remove', 'POST', { amount: 3 }],
@@ -67,7 +67,7 @@ describe('useInvoicesApi', () => {
     const api = useInvoicesApi()
     const options = { invoiceDate: 'a', dueDate: 'b', paymentMethod: 'Manual', taxRate: 5 }
     const payment = { date: 'a', gateway: 'g', transactionId: 't', amount: 1 }
-    const refund = { transactionId: 't', amount: 1, refundType: 'Full', gateway: 'g' }
+    const refund = { amount: 1, refundType: InvoiceRefundType.Gateway }
 
     await api.updateOptions(5, options)
     await api.addPayment(5, payment)

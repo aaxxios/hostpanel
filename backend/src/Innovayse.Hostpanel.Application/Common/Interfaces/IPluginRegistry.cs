@@ -1,6 +1,7 @@
 using Innovayse.SDK.Plugins;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
+
 /// <summary>
 /// Provides read access to the set of plugins that were successfully loaded at startup.
 /// </summary>

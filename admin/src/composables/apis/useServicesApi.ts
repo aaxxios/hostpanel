@@ -1,18 +1,24 @@
 /**
- * Endpoints behind the services store: the service list, one service's detail, the save and the
+ * Endpoints behind the services store: the service list, one service's detail, the per-section saves and the
  * provisioning commands that act on the hosting server.
  *
  * No state lives here; every function rejects with an `ApiError` carrying the problem+json body.
  */
 
 import { buildQuery, useApi } from '@/composables/useApi'
-import type { PagedResult } from '@/types/pagedresult'
-import type {
-  ProvisioningReasonPayload,
-  ServiceDetail,
-  ServiceFilter,
-  ServiceListItem,
-  UpdateServicePayload,
+import type { PaginatedList } from '@/types/paginatedlist'
+import {
+  type ProvisioningReasonPayload,
+  type ServiceAutomationPayload,
+  type ServiceBillingTermsPayload,
+  type ServiceDetail,
+  type ServiceFilter,
+  type ServiceHostingAccountPayload,
+  type ServiceListItem,
+  type ServiceNotesPayload,
+  ServiceSection,
+  type ServiceStatusPayload,
+  type ServiceTerminationDatePayload,
 } from '@/types/service'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
@@ -31,8 +37,8 @@ export const useServicesApi = () => {
    * @param filter - Page, page size and owning client.
    * @returns The page and the total count.
    */
-  const listServices = (filter: ServiceFilter): Promise<PagedResult<ServiceListItem>> =>
-    request<PagedResult<ServiceListItem>>(
+  const listServices = (filter: ServiceFilter): Promise<PaginatedList<ServiceListItem>> =>
+    request<PaginatedList<ServiceListItem>>(
       `${ApiPath.Services}${buildQuery({ clientId: filter.clientId, page: filter.page, pageSize: filter.pageSize })}`,
     )
 
@@ -45,14 +51,75 @@ export const useServicesApi = () => {
   const getService = (id: number | string): Promise<ServiceDetail> => request<ServiceDetail>(`${ApiPath.Services}/${id}`)
 
   /**
-   * Saves the editable fields of a service.
+   * PUTs one section of a service to its own endpoint.
    *
    * @param id - Service id.
-   * @param payload - The editable fields.
+   * @param section - The section's path segment.
+   * @param payload - The section's fields.
    * @returns Nothing.
    */
-  const updateService = (id: number | string, payload: UpdateServicePayload): Promise<void> =>
-    request<void>(`${ApiPath.Services}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
+  const putSection = (id: number | string, section: ServiceSection, payload: object): Promise<void> =>
+    request<void>(`${ApiPath.Services}/${id}/${section}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
+
+  /**
+   * Saves what a service is billed.
+   *
+   * @param id - Service id.
+   * @param payload - The billing terms.
+   * @returns Nothing.
+   */
+  const updateBillingTerms = (id: number | string, payload: ServiceBillingTermsPayload): Promise<void> =>
+    putSection(id, ServiceSection.Billing, payload)
+
+  /**
+   * Saves the hosting account record of a service.
+   *
+   * @param id - Service id.
+   * @param payload - The hosting account details.
+   * @returns Nothing.
+   */
+  const updateHostingAccount = (id: number | string, payload: ServiceHostingAccountPayload): Promise<void> =>
+    putSection(id, ServiceSection.HostingAccount, payload)
+
+  /**
+   * Saves the suspension hold and the end-of-cycle termination of a service.
+   *
+   * @param id - Service id.
+   * @param payload - The automation settings.
+   * @returns Nothing.
+   */
+  const updateAutomation = (id: number | string, payload: ServiceAutomationPayload): Promise<void> =>
+    putSection(id, ServiceSection.Automation, payload)
+
+  /**
+   * Saves the admin notes of a service.
+   *
+   * @param id - Service id.
+   * @param payload - The notes.
+   * @returns Nothing.
+   */
+  const updateNotes = (id: number | string, payload: ServiceNotesPayload): Promise<void> =>
+    putSection(id, ServiceSection.Notes, payload)
+
+  /**
+   * Moves a service to another status.
+   *
+   * @param id - Service id.
+   * @param payload - The status asked for.
+   * @returns Nothing.
+   */
+  const changeStatus = (id: number | string, payload: ServiceStatusPayload): Promise<void> =>
+    putSection(id, ServiceSection.Status, payload)
+
+  /**
+   * Corrects the termination date of a terminated service.
+   *
+   * @param id - Service id.
+   * @param payload - The date the service really ended.
+   * @returns Nothing.
+   */
+  const correctTerminationDate = (id: number | string, payload: ServiceTerminationDatePayload): Promise<void> =>
+    putSection(id, ServiceSection.TerminationDate, payload)
 
   /**
    * Asks the provisioning server for a one-time control-panel login URL.
@@ -122,7 +189,8 @@ export const useServicesApi = () => {
     request<void>(`${ApiPath.Provisioning}/${id}/terminate`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   return {
-    listServices, getService, updateService, getPanelLoginUrl,
+    listServices, getService, updateBillingTerms, updateHostingAccount, updateAutomation, updateNotes,
+    changeStatus, correctTerminationDate, getPanelLoginUrl,
     provisionService, changePassword, changePackage, suspendService, unsuspendService, terminateService,
   }
 }

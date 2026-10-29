@@ -6,4 +6,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.SetDnsManagement;
 /// member here would make the body required before <c>with { DomainId = id }</c> ever ran.
 /// </param>
 /// <param name="Enabled">Whether DNS management should be enabled.</param>
-public record SetDnsManagementCommand(int? DomainId, bool Enabled);
+public sealed record SetDnsManagementCommand(int? DomainId, bool Enabled);

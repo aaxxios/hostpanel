@@ -1,5 +1,5 @@
 /**
- * Endpoints under `/api/portal/client` — the signed-in client's own account and the four
+ * Endpoints under `/api/portal/client`: the signed-in client's own account and the four
  * collections hanging off it.
  *
  * This file is the list of what that backend area offers, and nothing else: no `ref`, no
@@ -12,12 +12,16 @@
 import { apiFetch } from '~/composables/useApi'
 import type { ClientEmail } from '~/types/clientemail'
 import type { ClientEmailSummary } from '~/types/clientemailsummary'
+import type { PaginatedList } from '~/types/paginatedlist'
 import type { TeamMember } from '~/types/teammember'
+import type { InviteUserPayload } from '~/types/inviteuserpayload'
 import type { AccountContact } from '~/types/accountcontact'
 import type { AccountContactInput } from '~/types/accountcontactinput'
 import type { SshAccess } from '~/types/sshaccess'
 import type { SshKey } from '~/types/sshkey'
 import type { ClientUser } from '~/types/clientuser'
+import type { EmailChangeInput } from '~/types/emailchangeinput'
+import type { ProfileUpdate } from '~/types/profileupdate'
 import type { ClientService } from '~/types/clientservice'
 import type { ClientInvoice } from '~/types/clientinvoice'
 import type { ClientDomain } from '~/types/clientdomain'
@@ -25,7 +29,7 @@ import type { ClientTicket } from '~/types/clientticket'
 import type { CancellationStatus } from '~/types/cancellationstatus'
 import type { CancellationType } from '~/types/cancellationtype'
 import type { HostingInfo } from '~/types/hostinginfo'
-import type { ServiceDetail } from '~/types/servicedetail'
+import { HttpMethod } from '~/types/httpmethod'
 
 /**
  * The `/api/portal/client` surface, one function per endpoint.
@@ -37,7 +41,7 @@ export const useClientApi = () => {
    * Reads the signed-in client's profile.
    *
    * @returns The client profile.
-   * @throws Whatever `apiFetch` throws — notably the `client_profile_not_found` answer for an
+   * @throws Whatever `apiFetch` throws: notably the `client_profile_not_found` answer for an
    * identity that has no client record. Callers decide what that means; this layer does not.
    */
   const fetchMe = (): Promise<ClientUser> =>
@@ -81,14 +85,36 @@ export const useClientApi = () => {
 
 
   /**
-   * Updates the signed-in client's profile.
+   * Partially updates the signed-in client's profile; members left out keep their stored value.
    *
-   * @param profile - The fields to change, including the email preference flags.
+   * @param profile - The members to change, including the email preference flags.
    * @returns Whatever the endpoint answers with.
    * @throws Whatever `apiFetch` throws.
    */
-  const updateMe = (profile: Record<string, unknown>): Promise<unknown> =>
-    apiFetch('/api/portal/client/me', { method: 'PUT', body: profile })
+  const updateMe = (profile: ProfileUpdate): Promise<unknown> =>
+    apiFetch('/api/portal/client/me', { method: HttpMethod.Patch, body: profile })
+
+  /**
+   * Asks to move the signed-in client's sign-in to a new address; a link goes to that address.
+   *
+   * @param input - The new address and the current password.
+   * @returns Nothing the caller reads; success is the absence of a throw.
+   * @throws Whatever `apiFetch` throws, a wrong password or an address in use included.
+   */
+  const startEmailChange = (input: EmailChangeInput): Promise<unknown> =>
+    apiFetch('/api/portal/client/email-change', { method: HttpMethod.Post, body: input })
+
+  /**
+   * Makes an address change effective with the link's address and token. Every session of the
+   * account ends with it, this one included.
+   *
+   * @param email - The new address from the link.
+   * @param token - The token from the link.
+   * @returns Nothing the caller reads; success is the absence of a throw.
+   * @throws Whatever `apiFetch` throws, an invalid or expired link included.
+   */
+  const confirmEmailChange = (email: string, token: string): Promise<unknown> =>
+    apiFetch('/api/portal/client/email-change/confirm', { method: HttpMethod.Post, body: { email, token } })
 
   /**
    * Reads the signed-in client's profile as a one-shot call.
@@ -96,8 +122,8 @@ export const useClientApi = () => {
    * @returns The client profile.
    * @throws Whatever `apiFetch` throws.
    */
-  const fetchMeOnce = (): Promise<Record<string, string>> =>
-    apiFetch<Record<string, string>>('/api/portal/client/me')
+  const fetchMeOnce = (): Promise<ClientUser> =>
+    apiFetch<ClientUser>('/api/portal/client/me')
 
   /**
    * Reads the people who may sign in to this client account.
@@ -111,12 +137,12 @@ export const useClientApi = () => {
   /**
    * Invites somebody to this client account.
    *
-   * @param invite - Email and the permissions to grant.
+   * @param invite - Email, names and the permissions to grant.
    * @returns Whatever the endpoint answers with.
    * @throws Whatever `apiFetch` throws.
    */
-  const inviteUser = (invite: Record<string, unknown>): Promise<unknown> =>
-    apiFetch('/api/portal/client/users/invite', { method: 'POST', body: invite })
+  const inviteUser = (invite: InviteUserPayload): Promise<unknown> =>
+    apiFetch('/api/portal/client/users/invite', { method: HttpMethod.Post, body: invite })
 
   /**
    * Removes somebody's access to this client account.
@@ -126,17 +152,17 @@ export const useClientApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const removeUser = (id: string): Promise<unknown> =>
-    apiFetch(`/api/portal/client/users/${id}`, { method: 'DELETE' })
+    apiFetch(`/api/portal/client/users/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Adds a sub-contact.
    *
    * @param contact - The contact's details, in the backend's `AddContactCommand` shape.
-   * @returns Whatever the endpoint answers with.
+   * @returns The new contact's id.
    * @throws Whatever `apiFetch` throws.
    */
-  const createContact = (contact: AccountContactInput): Promise<unknown> =>
-    apiFetch('/api/portal/client/contacts', { method: 'POST', body: contact })
+  const createContact = (contact: AccountContactInput): Promise<number> =>
+    apiFetch('/api/portal/client/contacts', { method: HttpMethod.Post, body: contact })
 
   /**
    * Updates a sub-contact.
@@ -147,7 +173,7 @@ export const useClientApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const updateContact = (id: number, contact: AccountContactInput): Promise<unknown> =>
-    apiFetch(`/api/portal/client/contacts/${id}`, { method: 'PUT', body: contact })
+    apiFetch(`/api/portal/client/contacts/${id}`, { method: HttpMethod.Put, body: contact })
 
   /**
    * Removes a sub-contact.
@@ -157,7 +183,7 @@ export const useClientApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const removeContact = (id: number): Promise<unknown> =>
-    apiFetch(`/api/portal/client/contacts/${id}`, { method: 'DELETE' })
+    apiFetch(`/api/portal/client/contacts/${id}`, { method: HttpMethod.Delete })
 
   /**
    * Reads the sub-contacts as a one-shot call.
@@ -171,11 +197,11 @@ export const useClientApi = () => {
   /**
    * Reads the mail the system has sent this account.
    *
-   * @returns The message list.
+   * @returns The first page of up to 100 messages.
    * @throws Whatever `apiFetch` throws.
    */
-  const fetchEmails = (): Promise<ClientEmailSummary[]> =>
-    apiFetch<ClientEmailSummary[]>('/api/portal/client/emails')
+  const fetchEmails = (): Promise<PaginatedList<ClientEmailSummary>> =>
+    apiFetch<PaginatedList<ClientEmailSummary>>('/api/portal/client/emails')
 
   /**
    * Reads one of the messages the system sent this account.
@@ -194,8 +220,8 @@ export const useClientApi = () => {
    * @returns The service.
    * @throws Whatever `apiFetch` throws.
    */
-  const fetchService = (id: string): Promise<ServiceDetail> =>
-    apiFetch<ServiceDetail>(`/api/portal/client/services/${id}`)
+  const fetchService = (id: string): Promise<ClientService> =>
+    apiFetch<ClientService>(`/api/portal/client/services/${id}`)
 
   /**
    * Reads the nameservers and certificate of one hosting service.
@@ -237,7 +263,7 @@ export const useClientApi = () => {
    */
   const changeServicePassword = (id: string, password: string): Promise<unknown> =>
     apiFetch(`/api/portal/client/services/${id}/change-password`, {
-      method: 'POST',
+      method: HttpMethod.Post,
       body: { password }
     })
 
@@ -270,7 +296,7 @@ export const useClientApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const addSshKey = (id: string, body: { label: string, publicKey: string }): Promise<SshKey> =>
-    apiFetch<SshKey>(`/api/portal/client/services/${id}/ssh/keys`, { method: 'POST', body })
+    apiFetch<SshKey>(`/api/portal/client/services/${id}/ssh/keys`, { method: HttpMethod.Post, body })
 
   /**
    * Revokes one SSH key of one hosting service.
@@ -281,7 +307,7 @@ export const useClientApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const revokeSshKey = (id: string, keyId: string): Promise<unknown> =>
-    apiFetch(`/api/portal/client/services/${id}/ssh/keys/${encodeURIComponent(keyId)}`, { method: 'DELETE' })
+    apiFetch(`/api/portal/client/services/${id}/ssh/keys/${encodeURIComponent(keyId)}`, { method: HttpMethod.Delete })
 
   /**
    * Requests cancellation of one hosting service.
@@ -297,15 +323,15 @@ export const useClientApi = () => {
     id: string,
     body: { type: CancellationType; reason: string }
   ): Promise<unknown> =>
-    apiFetch(`/api/portal/client/services/${id}/cancel`, { method: 'POST', body })
+    apiFetch(`/api/portal/client/services/${id}/cancel`, { method: HttpMethod.Post, body })
 
   /**
-   * Mints a single-sign-on URL into the service's cPanel.
+   * Mints a single-sign-on URL into the service's control panel.
    *
    * @param id - Service id.
    * @returns The URL to open; it is short-lived, so it is fetched at click time rather than
    * rendered into the page.
-   * @throws Whatever `apiFetch` throws — the caller falls back to the plain login page.
+   * @throws Whatever `apiFetch` throws: the caller falls back to the plain login page.
    */
   const fetchCpanelSsoUrl = (id: string): Promise<{ url: string }> =>
     apiFetch<{ url: string }>(`/api/portal/client/services/${id}/cpanel-sso`)
@@ -319,12 +345,14 @@ export const useClientApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const setUpService = (id: string, body: Record<string, unknown>): Promise<unknown> =>
-    apiFetch(`/api/portal/client/services/${id}/setup`, { method: 'POST', body })
+    apiFetch(`/api/portal/client/services/${id}/setup`, { method: HttpMethod.Post, body })
 
   return {
     fetchMe,
     fetchMeOnce,
     updateMe,
+    startEmailChange,
+    confirmEmailChange,
     fetchServices,
     fetchInvoices,
     fetchDomains,

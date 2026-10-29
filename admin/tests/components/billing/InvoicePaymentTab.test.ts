@@ -7,7 +7,7 @@ import { flushPromises } from '@vue/test-utils'
 import InvoicePaymentTab from '@/components/billing/InvoicePaymentTab.vue'
 import UiDatePicker from '@/components/ui/UiDatePicker.vue'
 import { invoiceFixture } from '../../helpers/billingFixtures'
-import { json } from '../../helpers/fetch'
+import { json, problem } from '../../helpers/fetch'
 import { mountWithApp } from '../../helpers/mount'
 import { stubRoutes } from '../../helpers/routes'
 
@@ -39,7 +39,7 @@ describe('InvoicePaymentTab', () => {
     expect(wrapper.get('[data-testid="billing-invoice-payment-submit"]').attributes('disabled')).toBeUndefined()
   })
 
-  it('records the payment and tells the parent', async () => {
+  it('records the payment and confirms it under the form', async () => {
     const mock = stubRoutes({
       'POST /api/billing/1/payment': () => new Response(null, { status: 204 }),
       'GET /api/billing/1': () => json(invoiceFixture()),
@@ -53,6 +53,18 @@ describe('InvoicePaymentTab', () => {
 
     const post = mock.mock.calls.find(([url]) => String(url).endsWith('/billing/1/payment'))
     expect(JSON.parse(String((post?.[1] as RequestInit | undefined)?.body))).toMatchObject({ amount: 25, fees: 0 })
-    expect(wrapper.emitted('updated')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="billing-invoice-payment-feedback"]').text()).toBe('Payment recorded.')
+  })
+
+  it('shows the API sentence under the form when the payment is refused', async () => {
+    stubRoutes({ 'POST /api/billing/1/payment': () => problem('The amount exceeds the balance.', 409) })
+    const wrapper = mountWithApp(InvoicePaymentTab, { props: { invoice: invoiceFixture() } })
+
+    wrapper.findComponent(UiDatePicker).vm.$emit('update:modelValue', '2026-10-20')
+    await wrapper.get('[data-testid="billing-invoice-payment-amount"] input').setValue('25')
+    await wrapper.get('[data-testid="billing-invoice-payment-form"]').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="billing-invoice-payment-feedback"]').text()).toBe('The amount exceeds the balance.')
   })
 })

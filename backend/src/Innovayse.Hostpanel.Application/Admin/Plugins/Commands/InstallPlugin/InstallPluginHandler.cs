@@ -1,129 +1,65 @@
-using System.IO.Compression;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Innovayse.Hostpanel.Application.Admin.Plugins.Common;
-using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Admin.Plugins.Common.Enums;
+using Innovayse.Hostpanel.Application.Audit.Common;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
-using Innovayse.SDK.Plugins;
-using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Admin.Plugins.Commands.InstallPlugin;
 
 /// <summary>
-/// Handles <see cref="InstallPluginCommand"/> -- extracts and validates the uploaded ZIP, then
-/// writes the plugin's files to the plugins directory.
+/// Handles <see cref="InstallPluginCommand"/>: hands the upload to the plugin store, which checks
+/// and unpacks it, and records the install in the activity log.
 /// </summary>
 public sealed class InstallPluginHandler
 {
-    /// <summary>Supported SDK version. Plugins built against a different one are rejected.</summary>
-    private const string SupportedSdkVersion = "1.0";
+    /// <summary>Checks and unpacks the uploaded archive.</summary>
+    private readonly IPluginPackageStore _store;
 
-    /// <summary>JSON options for deserialising plugin manifests.</summary>
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
+    /// <summary>Stages the audit line for the install.</summary>
+    private readonly IActivityLogger _activityLogger;
 
-    /// <summary>Logs the reason an upload was rejected, since the response only carries a code.</summary>
-    private readonly ILogger<InstallPluginHandler> _logger;
+    /// <summary>Saves the audit line.</summary>
+    private readonly IHostpanelDbContext _db;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="logger">Logs the reason an upload was rejected, since the response only carries a code.</param>
-    public InstallPluginHandler(ILogger<InstallPluginHandler> logger)
+    /// <param name="store">Checks and unpacks the uploaded archive.</param>
+    /// <param name="activityLogger">Stages the audit line for the install.</param>
+    /// <param name="db">Saves the audit line.</param>
+    public InstallPluginHandler(IPluginPackageStore store, IActivityLogger activityLogger, IHostpanelDbContext db)
     {
-        _logger = logger;
+        _store = store;
+        _activityLogger = activityLogger;
+        _db = db;
     }
 
     /// <summary>
-    /// Extracts the ZIP, validates the manifest, and writes plugin files to disk.
+    /// Installs the uploaded plugin and records who installed which package.
     /// </summary>
     /// <param name="command">Command containing the uploaded ZIP stream.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// A result requiring a restart, or <c>PLUGIN_MANIFEST_INVALID</c> when <c>plugin.json</c> is
-    /// missing or malformed, <c>PLUGIN_SDK_VERSION_UNSUPPORTED</c> when the plugin targets a
-    /// different SDK version, or <c>PLUGIN_ARCHIVE_UNSAFE</c> when an entry would write outside the
-    /// plugin's own directory.
+    /// A result requiring a restart, or <c>PLUGIN_MANIFEST_INVALID</c> when the upload is empty, not
+    /// a readable archive, or its <c>plugin.json</c> is missing or malformed;
+    /// <c>PLUGIN_SDK_VERSION_UNSUPPORTED</c> when the plugin targets a different SDK version;
+    /// <c>PLUGIN_ID_INVALID</c> when the manifest's id breaks the plugin id rule;
+    /// <c>PLUGIN_ARCHIVE_UNSAFE</c> when an entry would write outside the plugin's own folder;
+    /// <c>PLUGIN_ARCHIVE_TOO_LARGE</c> when the archive exceeds the configured limits;
+    /// <c>PLUGIN_HOST_ASSEMBLY_REFUSED</c> when it carries a host or framework assembly;
+    /// <c>PLUGIN_NOT_TRUSTED</c> when a trusted-package list is set and the archive is not on it;
+    /// <c>PLUGIN_BUILT_IN</c> when the id belongs to a plugin shipped with the build.
     /// </returns>
     public async Task<Result<PluginActionResultDto>> HandleAsync(InstallPluginCommand command, CancellationToken ct)
     {
-        // Copied into memory first: ZipArchive needs a seekable stream, and the request body is not
-        // guaranteed to be one.
-        using var zipStream = new MemoryStream();
-        await command.Content.CopyToAsync(zipStream, ct);
-        zipStream.Position = 0;
-        using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
-
-        var manifestEntry = archive.GetEntry("plugin.json");
-        if (manifestEntry is null)
+        // The validator refuses a missing file before this runs, so Content is set here.
+        var outcome = await _store.InstallAsync(new PluginPackageUpload(command.Content!), ct);
+        if (outcome.Outcome != PluginPackageOutcome.Installed)
         {
-            _logger.LogWarning("Plugin install refused: plugin.json not found in ZIP root.");
-            return Result<PluginActionResultDto>.FailureCode(HostpanelErrorCodes.PLUGIN_MANIFEST_INVALID);
+            return Result<PluginActionResultDto>.FailureCode(PluginPackageErrors.CodeFor(outcome.Outcome));
         }
 
-        string json;
-        using (var reader = new StreamReader(manifestEntry.Open()))
-        {
-            json = await reader.ReadToEndAsync(ct);
-        }
-
-        PluginManifest? manifest;
-        try
-        {
-            manifest = JsonSerializer.Deserialize<PluginManifest>(json, JsonOptions);
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(ex, "Plugin install refused: plugin.json could not be parsed.");
-            return Result<PluginActionResultDto>.FailureCode(HostpanelErrorCodes.PLUGIN_MANIFEST_INVALID);
-        }
-
-        if (manifest is null || string.IsNullOrWhiteSpace(manifest.Id))
-        {
-            _logger.LogWarning("Plugin install refused: manifest is missing the required id field.");
-            return Result<PluginActionResultDto>.FailureCode(HostpanelErrorCodes.PLUGIN_MANIFEST_INVALID);
-        }
-
-        if (manifest.SdkVersion != SupportedSdkVersion)
-        {
-            _logger.LogWarning(
-                "Plugin install refused: plugin {PluginId} requires SDK version '{Requested}', supported is '{Supported}'.",
-                manifest.Id, manifest.SdkVersion, SupportedSdkVersion);
-            return Result<PluginActionResultDto>.FailureCode(HostpanelErrorCodes.PLUGIN_SDK_VERSION_UNSUPPORTED);
-        }
-
-        var pluginsRoot = Path.Combine(AppContext.BaseDirectory, "plugins");
-        var targetDir = Path.Combine(pluginsRoot, manifest.Id);
-        Directory.CreateDirectory(targetDir);
-
-        var resolvedTargetDir = Path.GetFullPath(targetDir) + Path.DirectorySeparatorChar;
-
-        foreach (var entry in archive.Entries)
-        {
-            if (string.IsNullOrEmpty(entry.Name))
-            {
-                continue; // directory entry -- skip
-            }
-
-            var relativePath = entry.FullName.Replace('\\', '/');
-            var targetPath = Path.GetFullPath(Path.Combine(targetDir, relativePath));
-
-            // Guard against zip-slip path traversal.
-            if (!targetPath.StartsWith(resolvedTargetDir, StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogWarning(
-                    "Plugin install refused: zip entry '{Entry}' for plugin {PluginId} would escape the plugin directory.",
-                    entry.FullName, manifest.Id);
-                return Result<PluginActionResultDto>.FailureCode(HostpanelErrorCodes.PLUGIN_ARCHIVE_UNSAFE);
-            }
-
-            Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
-
-            await using var entryStream = entry.Open();
-            await using var fileStream = File.Create(targetPath);
-            await entryStream.CopyToAsync(fileStream, ct);
-        }
+        await _activityLogger.RecordAsync(
+            new ActivityLogEntry(null, $"Installed Plugin - Plugin ID: {outcome.PluginId} - SHA-256: {outcome.Sha256}"), ct);
+        await _db.SaveChangesAsync(ct);
 
         return Result<PluginActionResultDto>.Success(new PluginActionResultDto(RequiresRestart: true));
     }

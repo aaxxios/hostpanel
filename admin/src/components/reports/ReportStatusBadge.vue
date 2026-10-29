@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Badge for a status word a report endpoint sent (Active, Overdue, ...), toned by its meaning.
+ * Badge for a status word a report endpoint sent (Active, Overdue and so on), toned by its meaning.
  */
 import { computed } from 'vue'
 import UiBadge from '@/components/ui/UiBadge.vue'

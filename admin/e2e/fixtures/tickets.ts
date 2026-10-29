@@ -1,7 +1,7 @@
 /**
  * Fixtures for the support tickets list: two tickets on one page as `GET /api/tickets` returns them.
  */
-import type { PagedResult } from '../../src/types/pagedresult'
+import type { PaginatedList } from '../../src/types/paginatedlist'
 import { TicketPriority, TicketStatus } from '../../src/types/ticket'
 import type { TicketListItem } from '../../src/types/ticket'
 
@@ -17,6 +17,7 @@ export const openListed: TicketListItem = {
   lastReplyAt: null,
   isFlagged: false,
   clientId: 7,
+  clientName: 'Ada Lovelace',
 }
 
 /** A second ticket, so the list is seen to hold more than the one that gets selected. */
@@ -26,12 +27,14 @@ export const billingListed: TicketListItem = {
   subject: 'Invoice question',
   departmentName: 'Billing',
   clientId: 8,
+  clientName: 'Grace Hopper',
 }
 
-/** `GET /api/tickets` — one page holding both tickets. */
-export const ticketsPage: PagedResult<TicketListItem> = {
+/** `GET /api/tickets`: one page holding both tickets. */
+export const ticketsPage: PaginatedList<TicketListItem> = {
   items: [openListed, billingListed],
   totalCount: 2,
-  page: 1,
+  pageNumber: 1,
+  totalPages: 1,
   pageSize: 20,
 }

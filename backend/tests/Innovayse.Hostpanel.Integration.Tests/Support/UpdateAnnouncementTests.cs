@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// announcement is refused <c>ANNOUNCEMENT_NOT_FOUND</c>, and the action is closed to a caller
 /// with no credential.
 /// </summary>
-/// <remarks>New this batch: no grouped file exercised the update route before.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateAnnouncementTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

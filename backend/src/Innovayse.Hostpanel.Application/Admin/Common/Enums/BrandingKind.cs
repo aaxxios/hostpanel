@@ -12,7 +12,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Common.Enums;
 /// it through the use case and into the image code.
 /// </para>
 /// <para>
-/// The three logo kinds are processed identically — one rendition, aspect ratio preserved —
+/// The three logo kinds are processed identically, one rendition, aspect ratio preserved,
 /// and differ only in which setting the admin panel saves the URL into and which directory the
 /// files land in. The mark is deliberately <b>not</b> square-cropped: an operator who uploads a
 /// wide image as a mark sees a wide mark in the preview, which is the mistake surfacing rather

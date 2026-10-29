@@ -3,7 +3,7 @@ using Innovayse.Hostpanel.Shared.Models;
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 
 /// <summary>
-/// Enforces that a support ticket belongs to the calling client.
+/// Enforces that a support ticket belongs to the client account the caller acts for.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -23,14 +23,14 @@ namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 public interface ITicketOwnership
 {
     /// <summary>
-    /// Verifies that the ticket belongs to the client the current credential names.
+    /// Verifies that the ticket belongs to the account the caller acts for, as owner or linked user.
     /// </summary>
     /// <param name="ticketId">Ticket primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success when the ticket is the caller's own, or a failed <see cref="Result"/> carrying
     /// <c>TICKET_NOT_FOUND</c> when the ticket belongs to somebody else, when no such ticket
-    /// exists, or when the caller has no client record. The three answer alike on purpose:
+    /// exists, or when the caller acts for no account. The three answer alike on purpose:
     /// telling them apart would let the route be used to enumerate ticket ids.
     /// </returns>
     /// <exception cref="UnauthorizedAccessException">Thrown when the request carries no subject.</exception>

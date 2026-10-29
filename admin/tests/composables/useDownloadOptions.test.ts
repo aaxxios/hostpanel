@@ -11,7 +11,13 @@ import type { DownloadCategory } from '@/types/downloadcategory'
 import { DownloadType } from '@/types/downloaditem'
 import { createTestI18n } from '../helpers/i18n'
 
-/** A category with the given id and name. */
+/**
+ * A category with the given id and name.
+ *
+ * @param id - Category id.
+ * @param name - Category name the options list shows.
+ * @returns The category.
+ */
 const category = (id: number, name: string): DownloadCategory => ({
   id,
   name,

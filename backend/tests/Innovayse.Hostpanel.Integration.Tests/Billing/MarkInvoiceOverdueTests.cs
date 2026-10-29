@@ -1,10 +1,7 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -13,7 +10,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// Overdue, the refusal when the invoice is not Unpaid, and the <c>INVOICE_NOT_FOUND</c> refusal
 /// for an id that names no invoice.
 /// </summary>
-/// <remarks>Split from the deleted <c>InvoicesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class MarkInvoiceOverdueTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -33,7 +29,7 @@ public sealed class MarkInvoiceOverdueTests(IntegrationTestFactory factory) : IC
         body.RootElement.GetProperty("status").GetString().Should().Be(nameof(InvoiceStatus.Overdue));
     }
 
-    /// <summary>Marking a draft invoice overdue is refused with a 400 — only Unpaid transitions.</summary>
+    /// <summary>Marking a draft invoice overdue is refused with a 400: only Unpaid transitions.</summary>
     [Fact]
     public async Task MarkOverdueOnADraftInvoiceRefusesBadRequest()
     {

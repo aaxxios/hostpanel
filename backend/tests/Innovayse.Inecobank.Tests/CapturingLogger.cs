@@ -1,9 +1,10 @@
 using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Inecobank.Tests;
+
 /// <summary>
 /// <see cref="ILogger"/> implementation that records every formatted message and scope it
-/// receives, without asserting on them itself — used to prove sensitive values (merchant
+/// receives, without asserting on them itself. Tests use it to prove sensitive values (merchant
 /// credentials) never reach the logger, no matter which log call or overload writes them.
 /// </summary>
 public sealed class CapturingLogger : ILogger
@@ -36,18 +37,6 @@ public sealed class CapturingLogger : ILogger
             // The exception's own message/ToString() is a distinct channel a credential could
             // leak through (e.g. an HTTP client embedding the request body in its message).
             Messages.Add(exception.ToString());
-        }
-    }
-
-    /// <summary>No-op <see cref="IDisposable"/> returned by <see cref="BeginScope{TState}"/>.</summary>
-    private sealed class NullScope : IDisposable
-    {
-        /// <summary>Gets the shared singleton instance.</summary>
-        public static readonly NullScope Instance = new();
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
         }
     }
 }

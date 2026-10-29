@@ -2,8 +2,8 @@
  * What the client dashboard derives from the client store: the lists behind its alert banners,
  * the loading flag for its stat tiles and the de-duplicated load errors.
  *
- * Reads the store only; the data is fetched by the page. The derivations used to sit in the
- * page itself, which made the 485-line template the only place they could be tested.
+ * Reads the store only; the data is fetched by the page. Kept out of the page so the
+ * derivations can be tested without mounting it.
  *
  * @module composables/useDashboardSummary
  */

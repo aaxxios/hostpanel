@@ -1,23 +1,27 @@
 <script setup lang="ts">
 /**
- * Client ticket detail page -- displays full ticket data with admin controls,
- * reply form, and conversation thread. Supports status changes, priority/department
- * updates, and ticket deletion.
+ * Client ticket detail page: displays full ticket data with admin controls, reply form, and
+ * conversation thread. Supports status changes, priority/department updates, and ticket deletion.
+ * Deleting is confirmed first and leaves for the tickets list; every other action reports its
+ * outcome (success, or the API's sentence) under the header, and a refused load shows the
+ * sentence with a Retry; a refused department lookup shows its sentence with a Retry in place of
+ * the department selector.
  */
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useFallbackLabels } from '@/composables/useFallbackLabels'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { useClientTicketsStore } from '@/stores/clientTickets'
 import { formatDate, formatDateTimeCompact } from '@/lib/format'
 import { TICKET_PRIORITY_OPTIONS } from '@/lib/constants'
 import { ticketStatusLabel, ticketStatusTone } from '@/lib/tones'
 import { TicketPriority, TicketStatus } from '@/types/ticket'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
@@ -26,6 +30,7 @@ import UiLink from '@/components/ui/UiLink.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
 import { UiButtonVariant } from '@/utils/ui/button'
@@ -103,20 +108,45 @@ const populateForm = (): void => {
   if (!ticket) {
     return
   }
-  editDepartmentId.value = ticket.departmentId ?? 0
+  editDepartmentId.value = ticket.department.id ?? 0
   editPriority.value = ticket.priority
 }
 
+/** The outcome line of the last change. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/** True while the delete is in flight. */
+const deleting = ref(false)
+
 /**
- * Reloads the open ticket after a successful change.
+ * Loads the ticket and the departments.
  *
- * @param ok - Whether the change was accepted.
- * @returns Promise that resolves when the ticket is reloaded.
+ * @returns Promise that resolves when both have settled.
  */
-const reloadIf = async (ok: boolean): Promise<void> => {
+const load = async (): Promise<void> => {
+  await Promise.all([store.fetchById(ticketId.value), store.fetchDepartments()])
+}
+
+/**
+ * Runs one change of the ticket, shows its outcome and reloads the ticket when it was accepted.
+ *
+ * @param change - The store call to run.
+ * @param successKey - Locale key of the success sentence.
+ * @returns True when the change was accepted.
+ */
+const runChange = async (change: () => Promise<boolean>, successKey: string): Promise<boolean> => {
+  feedback.clear()
+  const ok = await change()
   if (ok) {
+    feedback.show(t(successKey), false)
     await store.fetchById(ticketId.value)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
   }
+  return ok
 }
 
 /**
@@ -131,7 +161,7 @@ const handleSaveChanges = async (): Promise<void> => {
   }
   payload.priority = editPriority.value
 
-  await reloadIf(await store.updateTicket(ticketId.value, payload))
+  await runChange(() => store.updateTicket(ticketId.value, payload), 'clients.clientTicketDetail.ticketSaved')
 }
 
 /**
@@ -140,7 +170,7 @@ const handleSaveChanges = async (): Promise<void> => {
  * @returns Promise that resolves when update completes.
  */
 const handleClose = async (): Promise<void> => {
-  await reloadIf(await store.updateTicket(ticketId.value, { status: TicketStatus.Closed }))
+  await runChange(() => store.updateTicket(ticketId.value, { status: TicketStatus.Closed }), 'clients.clientTicketDetail.ticketClosed')
 }
 
 /**
@@ -149,7 +179,7 @@ const handleClose = async (): Promise<void> => {
  * @returns Promise that resolves when update completes.
  */
 const handleReopen = async (): Promise<void> => {
-  await reloadIf(await store.updateTicket(ticketId.value, { status: TicketStatus.Open }))
+  await runChange(() => store.updateTicket(ticketId.value, { status: TicketStatus.Open }), 'clients.clientTicketDetail.ticketReopened')
 }
 
 /**
@@ -162,23 +192,35 @@ const handleReply = async (): Promise<void> => {
     return
   }
 
-  const ok = await store.replyToTicket(ticketId.value, replyMessage.value.trim())
-  if (ok) {
+  const message = replyMessage.value.trim()
+  if (await runChange(() => store.replyToTicket(ticketId.value, message), 'clients.clientTicketDetail.replySent')) {
     replyMessage.value = ''
-    await store.fetchById(ticketId.value)
   }
 }
 
 /**
- * Deletes the ticket and navigates back to the tickets list.
+ * Deletes the ticket and navigates back to the tickets list; a refusal shows the API's sentence
+ * under the header.
  *
  * @returns Promise that resolves when deletion completes.
  */
 const handleDelete = async (): Promise<void> => {
-  showDeleteModal.value = false
+  feedback.clear()
+  deleting.value = true
   const ok = await store.deleteTicket(ticketId.value)
+  deleting.value = false
+  showDeleteModal.value = false
   if (ok) {
-    router.push(clientSectionPath(clientId.value, ClientSection.Tickets))
+    await router.push(clientSectionPath(clientId.value, ClientSection.Tickets))
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    showDeleteModal.value = false
   }
 }
 
@@ -187,9 +229,9 @@ watch(() => store.currentTicket, () => {
   populateForm()
 })
 
+/** Loads the ticket and the departments. */
 onMounted(() => {
-  store.fetchById(ticketId.value)
-  store.fetchDepartments()
+  void load()
 })
 </script>
 
@@ -200,9 +242,13 @@ onMounted(() => {
       <UiText :tone="UiTextTone.Secondary">{{ t('clients.clientTicketDetail.loadingTicket') }}</UiText>
     </UiStack>
 
-    <UiAlert v-else-if="store.error && !store.currentTicket" variant="error" data-testid="client-ticket-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="store.error && !store.currentTicket"
+      :message="store.error"
+      :loading="store.loading"
+      testid="client-ticket-error"
+      @retry="load"
+    />
 
     <template v-else-if="store.currentTicket">
       <UiStack direction="row" wrap :justify="UiJustify.Between" :align="UiAlignItems.Center">
@@ -252,16 +298,20 @@ onMounted(() => {
         </UiStack>
       </UiStack>
 
-      <UiAlert v-if="store.error" variant="error" data-testid="client-ticket-action-error">
-        {{ store.error }}
-      </UiAlert>
+      <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="client-ticket-feedback" />
 
       <UiCard padding="md">
         <UiStack>
           <UiHeading :level="2" variant="card">{{ t('clients.clientTicketDetail.ticketSettings') }}</UiHeading>
           <UiGrid :columns="4">
             <UiField :label="t('shared.department')">
-              <UiSelect v-model="editDepartmentId" :options="departmentOptions" :placeholder="t('shared.selectDepartment')" data-testid="client-ticket-department" />
+              <UiErrorState
+                v-if="store.departmentsError !== null"
+                :message="store.departmentsError"
+                testid="client-ticket-departments-error"
+                @retry="store.fetchDepartments"
+              />
+              <UiSelect v-else v-model="editDepartmentId" :options="departmentOptions" :placeholder="t('shared.selectDepartment')" data-testid="client-ticket-department" />
             </UiField>
             <UiField :label="t('shared.priority')">
               <UiSelect v-model="editPriority" :options="priorityOptions" :placeholder="t('shared.selectPriority')" data-testid="client-ticket-priority" />
@@ -362,10 +412,10 @@ onMounted(() => {
       :message="t('clients.clientTicketDetail.confirmDeleteTicket', { id: ticketId })"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
-      :loading="store.loading"
+      :loading="deleting"
       tone="danger"
       @confirm="handleDelete"
-      @close="showDeleteModal = false"
+      @close="dismissDelete"
     />
   </UiStack>
 </template>

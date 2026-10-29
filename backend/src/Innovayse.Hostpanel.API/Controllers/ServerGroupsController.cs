@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.CreateServerGroup;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.DeleteServerGroup;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.UpdateServerGroup;
+using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Application.Admin.Servers.Queries.ListServerGroups;
 using Innovayse.Hostpanel.Shared.Authorization;
 using Innovayse.Hostpanel.Shared.Controllers;
@@ -14,6 +15,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 /// <summary>Staff administration of the named groups servers are pooled into for account placement.</summary>
 [Route("api/admin/server-groups")]
 [Authorize(Policy = Policies.Admin)]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class ServerGroupsController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -28,9 +30,15 @@ public sealed class ServerGroupsController : BaseApiController
 
     /// <summary>Every configured server group with its assigned servers.</summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the groups; 401; 403.</returns>
+    /// <returns>
+    /// 200 with the groups; 401 when the caller is not signed in;
+    /// 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ServerGroupDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ListAsync(CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<IReadOnlyList<ServerGroupDto>>>(new ListServerGroupsQuery(), ct);
@@ -40,10 +48,16 @@ public sealed class ServerGroupsController : BaseApiController
     /// <summary>Creates a new server group and optionally assigns existing servers to it.</summary>
     /// <param name="command">The group's name, fill strategy and initial server membership.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>201 with the new group's location; 400 when a field is refused; 401; 403.</returns>
+    /// <returns>
+    /// 201 with the new group's id; 400 when a value is refused; 401 when the caller is not signed in;
+    /// 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpPost]
     [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateAsync([FromBody] CreateServerGroupCommand command, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<int>>(command, ct);
@@ -54,10 +68,17 @@ public sealed class ServerGroupsController : BaseApiController
     /// <param name="id">Group primary key; wins over any id in the body.</param>
     /// <param name="command">The updated name, fill strategy and complete server membership.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>204 on success; 404 when the id names no group; 400; 401; 403.</returns>
+    /// <returns>
+    /// 204 on success; 400 when a value is refused; 404 when the id names no group;
+    /// 401 when the caller is not signed in; 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> UpdateAsync(
         int id, [FromBody] UpdateServerGroupCommand command, CancellationToken ct)
     {
@@ -68,10 +89,19 @@ public sealed class ServerGroupsController : BaseApiController
     /// <summary>Deletes a server group. Servers in the group are unassigned, not deleted.</summary>
     /// <param name="id">Group primary key.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>204 on success; 404 when the id names no group; 401; 403.</returns>
+    /// <returns>
+    /// 204 on success; 400 when a value is refused; 404 when the id names no group; 409 with
+    /// <c>SERVER_GROUP_IN_USE</c> when a product still provisions into it;
+    /// 401 when the caller is not signed in; 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result>(new DeleteServerGroupCommand(id), ct);

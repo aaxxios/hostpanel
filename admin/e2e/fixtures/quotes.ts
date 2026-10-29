@@ -1,7 +1,7 @@
 /**
  * Fixtures for the quotes list: a draft and an accepted quote on one page.
  */
-import type { PagedResult } from '../../src/types/pagedresult'
+import type { PaginatedList } from '../../src/types/paginatedlist'
 import { QuoteStage } from '../../src/types/quote'
 import type { QuoteListItem } from '../../src/types/quote'
 
@@ -29,10 +29,11 @@ export const acceptedQuote: QuoteListItem = {
   stage: QuoteStage.Accepted,
 }
 
-/** `GET /api/billing/quotes` — one page holding both quotes. */
-export const quotesPage: PagedResult<QuoteListItem> = {
+/** `GET /api/billing/quotes`: one page holding both quotes. */
+export const quotesPage: PaginatedList<QuoteListItem> = {
   items: [draftQuote, acceptedQuote],
-  totalCount: 2,
-  page: 1,
+  pageNumber: 1,
   pageSize: 20,
+  totalCount: 2,
+  totalPages: 1,
 }

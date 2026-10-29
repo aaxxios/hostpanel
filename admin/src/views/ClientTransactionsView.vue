@@ -1,19 +1,22 @@
 <script setup lang="ts">
 /**
- * Client transactions page -- displays financial ledger entries with summary cards.
- * Allows adding new transactions and deleting existing ones.
+ * Client transactions page: displays financial ledger entries with summary cards and allows adding
+ * new transactions and deleting existing ones. A delete is confirmed first; adding and deleting
+ * report their outcome (success, or the API's sentence) above the ledger, and a refused load shows
+ * the sentence with a Retry.
  */
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useClientTransactionsStore } from '@/stores/clientTransactions'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { formatDate } from '@/lib/format'
 import { formatPlainAmount } from '@/lib/money'
 import AddTransactionModal from '@/components/clients/AddTransactionModal.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
@@ -22,6 +25,7 @@ import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiStatTile from '@/components/ui/UiStatTile.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -65,6 +69,18 @@ const showDeleteModal = ref(false)
 /** ID of the transaction pending deletion. */
 const deleteTargetId = ref<number | null>(null)
 
+/** True while the delete is in flight. */
+const deleting = ref(false)
+
+/** The sentence of the last refused ledger load, shown with Retry; null when the ledger loaded. */
+const loadError = ref<string | null>(null)
+
+/** The outcome line of the last add or delete. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
 /**
  * Fetches transactions for the current client.
  *
@@ -72,6 +88,7 @@ const deleteTargetId = ref<number | null>(null)
  */
 const fetchTransactions = async (): Promise<void> => {
   await store.fetchByClient(clientId.value, page.value, pageSize.value)
+  loadError.value = store.error
 }
 
 /**
@@ -92,7 +109,8 @@ const goToPage = (p: number): void => {
  */
 const onTransactionSaved = (): void => {
   showAddModal.value = false
-  fetchTransactions()
+  feedback.show(t('clients.clientTransactions.transactionAdded'), false)
+  void fetchTransactions()
 }
 
 /**
@@ -107,7 +125,7 @@ const confirmDelete = (id: number): void => {
 }
 
 /**
- * Executes the pending delete and refreshes the list.
+ * Executes the pending delete, shows the outcome and refreshes the list on success.
  *
  * @returns Promise that resolves when deletion completes.
  */
@@ -115,12 +133,29 @@ const executeDelete = async (): Promise<void> => {
   if (!deleteTargetId.value) {
     return
   }
-  await store.remove(deleteTargetId.value)
+  feedback.clear()
+  deleting.value = true
+  const ok = await store.remove(deleteTargetId.value)
+  deleting.value = false
   showDeleteModal.value = false
   deleteTargetId.value = null
-  await fetchTransactions()
+  if (ok) {
+    feedback.show(t('clients.clientTransactions.transactionDeleted'), false)
+    await fetchTransactions()
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
 }
 
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    showDeleteModal.value = false
+    deleteTargetId.value = null
+  }
+}
+
+/** Loads the first page. */
 onMounted(() => fetchTransactions())
 </script>
 
@@ -138,9 +173,15 @@ onMounted(() => fetchTransactions())
       </UiButton>
     </UiStack>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="client-transactions-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="client-transactions-feedback" />
+
+    <UiErrorState
+      v-if="loadError !== null"
+      :message="loadError"
+      :loading="store.loading"
+      testid="client-transactions-error"
+      @retry="fetchTransactions()"
+    />
 
     <UiStack v-if="store.loading && store.transactions.length === 0" data-testid="client-transactions-loading">
       <UiSkeleton :lines="3" />
@@ -245,10 +286,10 @@ onMounted(() => fetchTransactions())
       :message="t('clients.clientTransactions.confirmDeleteTransaction', { id: deleteTargetId })"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
-      :loading="store.loading"
+      :loading="deleting"
       tone="danger"
       @confirm="executeDelete"
-      @close="showDeleteModal = false"
+      @close="dismissDelete"
     />
 
     <AddTransactionModal

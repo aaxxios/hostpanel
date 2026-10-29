@@ -1,7 +1,9 @@
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Billing;
+
 /// <summary>
 /// A quotation (estimate) issued to a client for products or services.
 /// Owns a collection of <see cref="QuoteItem"/> line items.
@@ -49,7 +51,7 @@ public sealed class Quote : BaseEntity, IAggregateRoot
     /// <summary>Gets the read-only view of quote line items.</summary>
     public IReadOnlyList<QuoteItem> Items => _items.AsReadOnly();
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Quote() { }
 
     /// <summary>
@@ -79,7 +81,6 @@ public sealed class Quote : BaseEntity, IAggregateRoot
             CustomerNotes = customerNotes,
             AdminNotes = adminNotes,
             Total = 0m,
-            CreatedAt = DateTimeOffset.UtcNow,
         };
     }
 
@@ -89,7 +90,7 @@ public sealed class Quote : BaseEntity, IAggregateRoot
     /// <param name="description">Human-readable charge description.</param>
     /// <param name="unitPrice">Price per unit (≥ 0).</param>
     /// <param name="quantity">Number of units (≥ 1).</param>
-    /// <param name="discountPercent">Discount percentage (0–100). Defaults to 0.</param>
+    /// <param name="discountPercent">Discount percentage (0 to 100). Defaults to 0.</param>
     /// <param name="taxed">Whether this item is taxed. Defaults to false.</param>
     /// <exception cref="DomainRuleException">Thrown when the quote is not in an editable stage.</exception>
     public void AddItem(string description, decimal unitPrice, int quantity, decimal discountPercent = 0, bool taxed = false)
@@ -236,7 +237,7 @@ public sealed class Quote : BaseEntity, IAggregateRoot
     /// <param name="description">New description.</param>
     /// <param name="unitPrice">New unit price.</param>
     /// <param name="quantity">New quantity.</param>
-    /// <param name="discountPercent">New discount percentage (0–100).</param>
+    /// <param name="discountPercent">New discount percentage (0 to 100).</param>
     /// <param name="taxed">Whether this item is taxed.</param>
     public void UpdateItem(int itemId, string description, decimal unitPrice, int quantity, decimal discountPercent = 0, bool taxed = false)
     {
@@ -264,7 +265,7 @@ public sealed class Quote : BaseEntity, IAggregateRoot
     /// <summary>
     /// Returns the line item data needed to generate an invoice.
     /// </summary>
-    /// <returns>Read-only list of item tuples (Description, UnitPrice, Quantity).</returns>
-    public IReadOnlyList<(string Description, decimal UnitPrice, int Quantity)> GetInvoiceItemData()
-        => _items.Select(i => (i.Description, i.UnitPrice, i.Quantity)).ToList();
+    /// <returns>Read-only list of the lines to bill.</returns>
+    public IReadOnlyList<QuoteInvoiceLine> GetInvoiceItemData()
+        => _items.Select(i => new QuoteInvoiceLine(i.Description, i.UnitPrice, i.Quantity)).ToList();
 }

@@ -1,5 +1,9 @@
+using Innovayse.Hostpanel.Application.Clients.Common.Enums;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Notifications.Commands.SendEmail;
+using Innovayse.Hostpanel.Application.Notifications.Common;
+using Innovayse.Hostpanel.Application.Notifications.Common.TemplateModels;
 using Innovayse.Hostpanel.Domain.Support.Events;
 using Microsoft.EntityFrameworkCore;
 using Wolverine;
@@ -18,18 +22,13 @@ public sealed class TicketClosedHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Resolves the identity account behind a client's subject.</summary>
-    private readonly IIdentityProvider _identity;
-
     /// <summary>Initializes the handler.</summary>
     /// <param name="bus">Wolverine bus, used to dispatch the notification email.</param>
     /// <param name="context">The module's data context.</param>
-    /// <param name="identity">Resolves the identity account behind a client's subject.</param>
-    public TicketClosedHandler(IMessageBus bus, IHostpanelDbContext context, IIdentityProvider identity)
+    public TicketClosedHandler(IMessageBus bus, IHostpanelDbContext context)
     {
         _bus = bus;
         _context = context;
-        _identity = identity;
     }
 
     /// <summary>
@@ -39,18 +38,8 @@ public sealed class TicketClosedHandler
     /// <param name="ct">Cancellation token.</param>
     public async Task HandleAsync(TicketClosedEvent evt, CancellationToken ct)
     {
-        var userId = await _context.Clients
-            .AsNoTracking()
-            .Where(c => c.Id == evt.ClientId)
-            .Select(c => c.UserId)
-            .FirstOrDefaultAsync(ct);
-        if (userId is null)
-        {
-            return;
-        }
-
-        var user = await _identity.FindBySubjectAsync(userId, ct);
-        if (user is null)
+        var client = await _bus.FindClientBriefAsync(evt.ClientId, withEmail: true, ct);
+        if (client is not { Email: { } email })
         {
             return;
         }
@@ -61,8 +50,8 @@ public sealed class TicketClosedHandler
             .Select(t => t.Subject)
             .FirstOrDefaultAsync(ct) ?? string.Empty;
 
-        var data = new { ticket = new { id = evt.TicketId, subject } };
+        var data = new TicketClosedTemplateModel(new TicketTemplateData(evt.TicketId, subject));
 
-        await _bus.InvokeAsync(new SendEmailCommand(user.Email, "ticket-closed", data), ct);
+        await _bus.InvokeAsync(new SendEmailCommand(email, client.Language, "ticket-closed", data, new ContactCopy(evt.ClientId, ContactNotification.Support)), ct);
     }
 }

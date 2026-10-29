@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Application.Auth.Commands.CompleteSetup;
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Shared.Models;
 using Wolverine;
 

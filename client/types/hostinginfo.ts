@@ -8,9 +8,9 @@ export interface HostingInfo {
     valid: boolean
     /** Who issued it. */
     issuer: string
-    /** Start of its validity. */
+    /** Start of its validity, as the ISO date-time the API sends; the page formats it. */
     startDate: string
-    /** End of its validity. */
+    /** End of its validity, as the ISO date-time the API sends; the page formats it. */
     expiryDate: string
   } | null
 }

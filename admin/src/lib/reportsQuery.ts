@@ -6,6 +6,7 @@ import type { FilterRow } from '@/components/ui/UiAdvancedFilters.vue'
 import { buildQuery } from '@/composables/useApi'
 import type { QueryValue } from '@/composables/useApi'
 import type { ReportQueryConfig, ReportQueryRange, ReportRangeValue } from '@/types/reportquery'
+import { valueAtPath } from '@/lib/valueAtPath'
 import { UiFilterCondition } from '@/utils/ui/filter'
 
 /** What the operator has chosen on a query report. */
@@ -71,7 +72,7 @@ export const filterPage = <T extends object>(items: T[], filters: FilterRow[], s
       if (serverFields.includes(filter.field)) {
         continue
       }
-      const cell = String((row as Record<string, unknown>)[filter.field] ?? '').toLowerCase()
+      const cell = String(valueAtPath(row, filter.field) ?? '').toLowerCase()
       const wanted = filter.value.toLowerCase()
       if (filter.condition === UiFilterCondition.Exact && cell !== wanted) {
         return false

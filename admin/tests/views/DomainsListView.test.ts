@@ -8,7 +8,8 @@ import { flushPromises } from '@vue/test-utils'
 import DomainsListView from '@/views/DomainsListView.vue'
 import { mountRouted } from '../helpers/mount'
 import { stubRoutes } from '../helpers/routes'
-import { json, problem } from '../helpers/fetch'
+import { json, problem, stubFetch } from '../helpers/fetch'
+import { DomainStatus } from '@/types/domain'
 
 /** One active domain as the list endpoint returns it. */
 const domain = {
@@ -23,7 +24,7 @@ const domain = {
   nextDueDate: '2027-01-01T00:00:00Z',
   expiresAt: '2027-01-01T00:00:00Z',
   autoRenew: true,
-  status: 'Active',
+  status: DomainStatus.Active,
 }
 
 /**
@@ -83,5 +84,18 @@ describe('DomainsListView', () => {
     const wrapper = await mountList()
 
     expect(wrapper.get('[data-testid="domains-error"]').text()).toContain('Not allowed.')
+  })
+
+  it('loads again from the Retry of a refused load', async () => {
+    stubFetch(problem('Not allowed.', 403))
+    const wrapper = await mountList()
+    await flushPromises()
+    const fetchMock = vi.mocked(fetch)
+    const before = fetchMock.mock.calls.length
+
+    await wrapper.get('[data-testid="domains-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(before)
   })
 })

@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Application.Billing.Common;
+
 namespace Innovayse.Hostpanel.Application.Billing.Commands.UpdateInvoiceItems;
 
 /// <summary>Command to add, update, or remove line items on an invoice.</summary>

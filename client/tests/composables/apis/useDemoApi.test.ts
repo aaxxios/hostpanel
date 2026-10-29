@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { expectLastRequest, startTransport } from '../../helpers/stubTransport'
 import type { StubServer } from '../../helpers/stubServer'
 import { useDemoApi } from '~/composables/apis/useDemoApi'
+import { HttpMethod } from '~/types/httpmethod'
 
 /** The stub started by the current test. */
 let stub: StubServer | undefined
@@ -29,7 +30,7 @@ describe('useDemoApi', () => {
 
     await api.fetchDemo()
 
-    expectLastRequest(stub, { name: 'fetchDemo', call: () => api.fetchDemo(), method: 'GET', url: '/api/portal/demo' })
+    expectLastRequest(stub, { name: 'fetchDemo', call: () => api.fetchDemo(), method: HttpMethod.Get, url: '/api/portal/demo' })
   })
 
   it('returns the status as the endpoint promises', async () => {

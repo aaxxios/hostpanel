@@ -12,11 +12,16 @@ public sealed class CreateServerHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The clock that dates the new server.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public CreateServerHandler(IHostpanelDbContext context)
+    /// <param name="clock">The clock that dates the new server.</param>
+    public CreateServerHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>
@@ -28,15 +33,13 @@ public sealed class CreateServerHandler
     public async Task<Result<int>> HandleAsync(CreateServerCommand cmd, CancellationToken ct)
     {
         var details = new ServerDetails(
-            cmd.Name, cmd.Hostname, cmd.IpAddress, cmd.AssignedIpAddresses,
-            cmd.Module, cmd.Username, cmd.Password, cmd.ApiToken, cmd.AccessHash,
-            cmd.UseSSL, cmd.MaxAccounts, cmd.IsDefault, cmd.IsDisabled,
-            cmd.MonthlyCost, cmd.Datacenter, cmd.ServerStatusAddress,
-            cmd.Ns1Hostname, cmd.Ns1Ip, cmd.Ns2Hostname, cmd.Ns2Ip,
-            cmd.Ns3Hostname, cmd.Ns3Ip, cmd.Ns4Hostname, cmd.Ns4Ip,
-            cmd.Ns5Hostname, cmd.Ns5Ip);
+            cmd.Name, cmd.Endpoint.Hostname, cmd.Endpoint.IpAddress, cmd.Endpoint.AssignedIpAddresses,
+            cmd.Module, cmd.Username, cmd.Credentials, cmd.Endpoint.UseSSL,
+            cmd.Limits.MaxAccounts, cmd.Limits.IsDefault, cmd.Limits.IsDisabled,
+            cmd.Hosting.MonthlyCost, cmd.Hosting.Datacenter, cmd.Hosting.ServerStatusAddress,
+            cmd.NameServers);
 
-        var server = Server.Create(details);
+        var server = Server.Create(details, _clock.UtcNow);
         _context.Servers.Add(server);
         await _context.SaveChangesAsync(ct);
         return Result<int>.Success(server.Id);

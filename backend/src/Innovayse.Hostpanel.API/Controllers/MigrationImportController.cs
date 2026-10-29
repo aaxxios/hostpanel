@@ -9,10 +9,11 @@ using Wolverine;
 namespace Innovayse.Hostpanel.API.Controllers;
 
 /// <summary>
-/// Public migration endpoints -- the legacy system being migrated away from downloads its
+/// Public migration endpoints: the legacy system being migrated away from downloads its
 /// importer plugin from here, before it has any credential this platform would recognise.
 /// </summary>
 [Route("api/migrations")]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class MigrationImportController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -29,7 +30,8 @@ public sealed class MigrationImportController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 200 with the zipped plugin; 404 with <c>MIGRATION_PLUGIN_NOT_FOUND</c> when this
-    /// deployment carries no plugin files.
+    /// deployment carries no plugin files;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpGet("plugin/download")]
     [AllowAnonymous]

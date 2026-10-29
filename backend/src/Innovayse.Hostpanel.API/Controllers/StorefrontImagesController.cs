@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Application.Admin.Commands.UploadBrandingImage;
+using Innovayse.Hostpanel.Application.Admin.Common;
 using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 using Innovayse.Hostpanel.Shared.Authorization;
 using Innovayse.Hostpanel.Shared.Constants;
@@ -12,11 +13,12 @@ namespace Innovayse.Hostpanel.API.Controllers;
 
 /// <summary>
 /// The picture upload behind the storefront content editors (testimonial avatars, partner logos, project
-/// images). It runs the branding pipeline — the bytes are decoded, re-encoded and stored by this process —
+/// images). It runs the branding pipeline, the bytes are decoded, re-encoded and stored by this process,
 /// under the <see cref="BrandingKind.Content"/> kind, so what is served is never what was uploaded.
 /// </summary>
 [Route("api/admin/storefront")]
 [Authorize(Policy = Policies.Admin)]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class StorefrontImagesController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -37,14 +39,18 @@ public sealed class StorefrontImagesController : BaseApiController
     /// <param name="file">The image file to upload.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 200 with the stored picture's URL; 400 with <c>BRANDING_IMAGE_INVALID</c> or a validation failure;
-    /// 413 with <c>BRANDING_IMAGE_TOO_LARGE</c>; 401; 403.
+    /// 200 with the stored picture's URL; 400 when the image is not acceptable;
+    /// 413 when the file is over the size limit; 401 when the caller is not signed in;
+    /// 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost("upload-image")]
     [RequestSizeLimit(BrandingUploadLimits.RequestSizeLimitBytes)]
     [ProducesResponseType(typeof(BrandingUploadResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> UploadAsync(IFormFile file, CancellationToken ct)
     {
         await using var content = file?.OpenReadStream() ?? Stream.Null;

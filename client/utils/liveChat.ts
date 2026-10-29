@@ -2,8 +2,8 @@
  * Live chat widget integration.
  *
  * The provider is Innochat, self-hosted at the operator's own chat host. It is
- * built on an open-source chat engine and keeps that engine's DOM class names —
- * `.woot-widget-holder` is still what the widget mounts into — but its SDK is
+ * built on an open-source chat engine and keeps that engine's DOM class names,
+ * `.woot-widget-holder` is still what the widget mounts into, but its SDK is
  * rebranded all the way down and exposes none of the engine's globals. Everything
  * the page talks to is named here rather than spelled out at each call site,
  * because the two sets differ by one word and the wrong one fails silently: calling
@@ -12,6 +12,7 @@
  */
 import type { LiveChatApi } from '~/types/livechatapi'
 import type { LiveChatLoaderOptions } from '~/types/livechatloaderoptions'
+import { LiveChatPanelState } from '~/types/livechatpanelstate'
 
 
 /** Global the SDK reads its configuration from, before it runs. */
@@ -26,7 +27,7 @@ export const LIVE_CHAT_API_GLOBAL = '$innochat'
 /** Event the SDK fires on `window` when the widget is ready to be called. */
 export const LIVE_CHAT_READY_EVENT = 'innochat:ready'
 
-/** Class the widget's container carries — inherited from the underlying engine, still emitted. */
+/** Class the widget's container carries: inherited from the underlying engine, still emitted. */
 export const LIVE_CHAT_HOLDER_SELECTOR = '.woot-widget-holder'
 
 /** Path of the SDK bundle under the chat host. */
@@ -38,7 +39,7 @@ export const LIVE_CHAT_SDK_PATH = '/packs/js/sdk.js'
  * Deliberately not exported and deliberately not moved to `types/`: it is used in exactly one
  * file and never exported, which is the carve-out to the one-type-per-file rule. Its key is
  * the {@link LIVE_CHAT_API_GLOBAL} constant declared above, so a copy in `types/` would have
- * to import this module for a *value* — dragging the whole widget helper behind any file that
+ * to import this module for a *value*: dragging the whole widget helper behind any file that
  * wanted the name, which is the exact cost that rule exists to avoid.
  */
 interface LiveChatWindow {
@@ -69,7 +70,7 @@ const api = (win: unknown): LiveChatApi | null => {
  * Opens the widget.
  *
  * @param win The browser window.
- * @returns Whether the widget was there to open. A false is worth acting on —
+ * @returns Whether the widget was there to open. A false is worth acting on:
  *   it means the visitor clicked a control that did nothing.
  */
 export const openLiveChat = (win: unknown): boolean => {
@@ -78,7 +79,7 @@ export const openLiveChat = (win: unknown): boolean => {
     return false
   }
 
-  widget.toggle('open')
+  widget.toggle(LiveChatPanelState.Open)
   return true
 }
 
@@ -94,7 +95,7 @@ export const closeLiveChat = (win: unknown): boolean => {
     return false
   }
 
-  widget.toggle('close')
+  widget.toggle(LiveChatPanelState.Close)
   return true
 }
 
@@ -128,9 +129,7 @@ export const setLiveChatLocale = (
  * Returned as source rather than executed here because it is injected through
  * `useHead` at `bodyClose`, so the fetch starts from the server-rendered HTML
  * instead of waiting for hydration. Building it in a function is what lets the
- * globals it names be asserted in a test — the previous version was a template
- * literal inside `app.vue`, unreachable from anything that could have caught
- * the names being wrong.
+ * globals it names be asserted in a test.
  *
  * The message bubble is suppressed: the floating contact button is the only way
  * into the widget, so a second launcher would sit on top of it.

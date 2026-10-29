@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Ssh;
+using Innovayse.Hostpanel.Domain.Ssh.Enums;
 
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 
@@ -11,21 +12,21 @@ namespace Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 /// account whose server id is not that server's, so a key operation can never be routed to the
 /// wrong machine even if a caller builds the wrong <see cref="SshAccount"/>.
 /// </summary>
-public sealed class AgentSshKeyProvider : ISshKeyProvider
+internal sealed class AgentSshKeyProvider : ISshKeyProvider
 {
-    /// <summary>This server's agent _endpoint.</summary>
+    /// <summary>This server's agent endpoint.</summary>
     private readonly SshAgentEndpoint _endpoint;
 
-    /// <summary>The transport.</summary>
-    private readonly ISshAgentTransport _transport;
+    /// <summary>Carries each request to the agent.</summary>
+    private readonly SshAgentSend _send;
 
     /// <summary>Initialises a provider bound to one server.</summary>
-    /// <param name="endpoint">This server's agent _endpoint.</param>
-    /// <param name="transport">The transport.</param>
-    public AgentSshKeyProvider(SshAgentEndpoint endpoint, ISshAgentTransport transport)
+    /// <param name="endpoint">This server's agent endpoint.</param>
+    /// <param name="send">Carries each request to the agent over SSH.</param>
+    public AgentSshKeyProvider(SshAgentEndpoint endpoint, SshAgentSend send)
     {
         _endpoint = endpoint;
-        _transport = transport;
+        _send = send;
     }
 
     /// <summary>The agent contract version this provider speaks.</summary>
@@ -88,7 +89,7 @@ public sealed class AgentSshKeyProvider : ISshKeyProvider
 
     /// <summary>Builds a request for an account, refusing an account of another server.</summary>
     /// <param name="op">Operation name.</param>
-    /// <param name="account">The account.</param>
+    /// <param name="account">The hosting account the request is for.</param>
     /// <returns>The request object.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the account belongs to another server.</exception>
     private JsonObject Request(string op, SshAccount account)
@@ -110,7 +111,7 @@ public sealed class AgentSshKeyProvider : ISshKeyProvider
     private async Task<JsonObject> SendAsync(JsonObject request, CancellationToken ct)
     {
         request["v"] = ContractVersion;
-        var raw = await _transport.SendAsync(_endpoint, request.ToJsonString(), ct);
+        var raw = await _send(_endpoint, request.ToJsonString(), ct);
 
         JsonObject? response;
         try
@@ -119,18 +120,20 @@ public sealed class AgentSshKeyProvider : ISshKeyProvider
         }
         catch (JsonException)
         {
-            throw new SshProviderException("internal_error", $"Agent on server {_endpoint.ServerId} answered non-JSON.");
+            throw new SshProviderException(SshProviderFailure.InternalError, $"Agent on server {_endpoint.ServerId} answered non-JSON.");
         }
 
         if (response is null || response["v"]?.GetValue<int>() != ContractVersion)
         {
-            throw new SshProviderException("unsupported_version", $"Agent on server {_endpoint.ServerId} speaks another contract version.");
+            throw new SshProviderException(SshProviderFailure.UnsupportedVersion, $"Agent on server {_endpoint.ServerId} speaks another contract version.");
         }
 
         if (response["ok"]?.GetValue<bool>() != true)
         {
-            var code = response["error"]?.GetValue<string>() ?? "internal_error";
-            throw new SshProviderException(code, $"Agent on server {_endpoint.ServerId} refused: {code}.");
+            var code = response["error"]?.GetValue<string>();
+            var failure = code is null ? SshProviderFailure.InternalError : AgentFailureCodes.Parse(code);
+            throw new SshProviderException(failure, $"Agent on server {_endpoint.ServerId} refused: {code}.");
+
         }
 
         return response;

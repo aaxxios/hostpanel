@@ -1,10 +1,12 @@
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Support;
+
 /// <summary>
 /// Represents a network issue or maintenance event that affects services.
-/// Created via <see cref="Create"/> factory — no public constructor.
+/// Created via <see cref="Create"/> factory: no public constructor.
 /// </summary>
 public sealed class NetworkIssue : BaseEntity
 {
@@ -35,7 +37,7 @@ public sealed class NetworkIssue : BaseEntity
     /// <summary>Gets the UTC timestamp when this record was created.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private NetworkIssue() { }
 
     /// <summary>
@@ -69,7 +71,6 @@ public sealed class NetworkIssue : BaseEntity
             Status = NetworkIssueStatus.Reported,
             StartDate = startDate,
             Description = description,
-            CreatedAt = DateTimeOffset.UtcNow,
         };
     }
 
@@ -110,10 +111,11 @@ public sealed class NetworkIssue : BaseEntity
 
     /// <summary>
     /// Resolves this network issue by setting <see cref="Status"/> to <see cref="NetworkIssueStatus.Resolved"/>
-    /// and <see cref="EndDate"/> to the current UTC time.
+    /// and <see cref="EndDate"/> to <paramref name="resolvedAt"/>.
     /// </summary>
+    /// <param name="resolvedAt">When the issue was resolved, UTC.</param>
     /// <exception cref="InvalidOperationException">Thrown when the issue is already resolved.</exception>
-    public void Resolve()
+    public void Resolve(DateTimeOffset resolvedAt)
     {
         if (Status == NetworkIssueStatus.Resolved)
         {
@@ -121,6 +123,6 @@ public sealed class NetworkIssue : BaseEntity
         }
 
         Status = NetworkIssueStatus.Resolved;
-        EndDate = DateTimeOffset.UtcNow;
+        EndDate = resolvedAt;
     }
 }

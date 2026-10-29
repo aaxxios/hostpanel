@@ -3,7 +3,7 @@
  * drawn as a kit badge: one module maps each value to a `UiTone`, so no screen owns a colour and
  * two screens cannot disagree about what "Overdue" looks like.
  *
- * The value sets themselves (`OrderStatus`, `TicketStatus`, ...) live in `types/`. A table keyed by
+ * The value sets themselves (`OrderStatus`, `TicketStatus` and the rest) live in `types/`. A table keyed by
  * a whole enum is exported as a `Record` (the compiler proves it is complete); a table looked up
  * with a raw API string is wrapped in a function that falls back to the neutral tone, so a value
  * the API adds later is shown as received instead of breaking the screen.
@@ -148,7 +148,7 @@ const REPORT_STATUS_TONES: Record<string, UiTone> = {
  * @param status - Order status as sent by the API.
  * @returns The kit tone.
  */
-export const orderStatusTone = (status: string): UiTone => toneOf(ORDER_TONES, status)
+export const orderStatusTone = (status: OrderStatus): UiTone => toneOf(ORDER_TONES, status)
 
 /**
  * Tone of an order item status badge.
@@ -156,7 +156,7 @@ export const orderStatusTone = (status: string): UiTone => toneOf(ORDER_TONES, s
  * @param status - Order item status as sent by the API.
  * @returns The kit tone.
  */
-export const orderItemStatusTone = (status: string): UiTone => toneOf(ORDER_ITEM_TONES, status)
+export const orderItemStatusTone = (status: OrderItemStatus): UiTone => toneOf(ORDER_ITEM_TONES, status)
 
 /**
  * Tone of a service status badge.
@@ -164,7 +164,7 @@ export const orderItemStatusTone = (status: string): UiTone => toneOf(ORDER_ITEM
  * @param status - Service status as sent by the API.
  * @returns The kit tone.
  */
-export const serviceStatusTone = (status: string): UiTone => toneOf(SERVICE_TONES, status)
+export const serviceStatusTone = (status: ServiceStatus): UiTone => toneOf(SERVICE_TONES, status)
 
 /**
  * Tone of a domain status badge.
@@ -267,6 +267,7 @@ export const migrationStatusTone: Record<MigrationJob['status'], UiTone> = {
   [MigrationStatus.InProgress]: UiTone.Primary,
   [MigrationStatus.Completed]: UiTone.Success,
   [MigrationStatus.Failed]: UiTone.Danger,
+  [MigrationStatus.Queued]: UiTone.Primary,
 }
 
 /** Badge tone per migration import-log outcome. */
@@ -294,7 +295,7 @@ const CANCELLATION_STATUS_TONES: Record<CancellationStatus, UiTone> = {
  * @param type - Cancellation type as sent by the API.
  * @returns The kit tone.
  */
-export const cancellationTypeTone = (type: string): UiTone => toneOf(CANCELLATION_TYPE_TONES, type)
+export const cancellationTypeTone = (type: CancellationType): UiTone => toneOf(CANCELLATION_TYPE_TONES, type)
 
 /**
  * Tone of a cancellation request status badge.
@@ -302,7 +303,7 @@ export const cancellationTypeTone = (type: string): UiTone => toneOf(CANCELLATIO
  * @param status - Cancellation status as sent by the API.
  * @returns The kit tone.
  */
-export const cancellationStatusTone = (status: string): UiTone => toneOf(CANCELLATION_STATUS_TONES, status)
+export const cancellationStatusTone = (status: CancellationStatus): UiTone => toneOf(CANCELLATION_STATUS_TONES, status)
 
 /**
  * Translated name of a cancellation type; a type the API adds later is shown as received.
@@ -310,7 +311,7 @@ export const cancellationStatusTone = (status: string): UiTone => toneOf(CANCELL
  * @param type - Cancellation type as sent by the API.
  * @returns The label to show.
  */
-export const cancellationTypeLabel = (type: string): string => {
+export const cancellationTypeLabel = (type: CancellationType): string => {
   switch (type) {
     case CancellationType.Immediate:
       return translate('cancellationTypes.immediate')
@@ -327,7 +328,7 @@ export const cancellationTypeLabel = (type: string): string => {
  * @param status - Cancellation status as sent by the API.
  * @returns The label to show.
  */
-export const cancellationStatusLabel = (status: string): string => {
+export const cancellationStatusLabel = (status: CancellationStatus): string => {
   switch (status) {
     case CancellationStatus.Open:
       return translate('cancellationTypes.statusOpen')

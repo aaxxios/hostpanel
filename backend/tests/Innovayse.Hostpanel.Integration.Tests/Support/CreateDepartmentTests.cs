@@ -1,8 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -10,7 +7,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// <c>POST /api/departments</c>: an admin can create a support department, and the action is
 /// closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>DepartmentsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateDepartmentTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

@@ -2,8 +2,10 @@
  * Pinia store for migration jobs: the job list, the job being watched, status polling, the
  * connection probe, start and the import log.
  *
- * The only caller of `useMigrationApi`; a refusal is kept as the API's own sentence in `error`,
- * never thrown.
+ * The only caller of `useMigrationApi`; a refusal is kept as the API's own sentence, never
+ * thrown: in `error` for the list and the job lifecycle, in `jobError` for the requests about
+ * one job's run (connection check, import start, import log), which the card that made the request
+ * shows itself.
  */
 
 import { defineStore } from 'pinia'
@@ -11,10 +13,11 @@ import { ref } from 'vue'
 import { useMigrationApi } from '@/composables/apis/useMigrationApi'
 import { runAction } from '@/lib/runAction'
 import { MigrationStatus } from '@/types/migration'
+import type { PaginatedList } from '@/types/paginatedlist'
 import type {
   CreateMigrationJobOptions,
   MigrationJob,
-  MigrationLogPage,
+  MigrationLogEntry,
   MigrationLogQuery,
 } from '@/types/migration'
 import { POLL_INTERVAL_MS } from '@/lib/limits'
@@ -34,6 +37,9 @@ export const useMigrationStore = defineStore('migration', () => {
 
   /** Sentence for the last failed request, null when none. */
   const error = ref<string | null>(null)
+
+  /** Sentence for the last refused connection check, import start or log read, null when none. */
+  const jobError = ref<string | null>(null)
 
   /** Handle of the running status poll, null when not polling. */
   let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -137,10 +143,10 @@ export const useMigrationStore = defineStore('migration', () => {
    * Probes the source plugin connection of a job.
    *
    * @param id - Migration job id.
-   * @returns The updated job, or null when refused (see `error`).
+   * @returns The updated job, or null when refused (see `jobError`).
    */
   const testConnection = async (id: number): Promise<MigrationJob | null> => {
-    const result = await runAction(error, () => api.testJobConnection(id))
+    const result = await runAction(jobError, () => api.testJobConnection(id))
     if (!result.ok) {
       return null
     }
@@ -152,10 +158,25 @@ export const useMigrationStore = defineStore('migration', () => {
    * Starts the import of a job.
    *
    * @param id - Migration job id.
-   * @returns The updated job, or null when refused (see `error`).
+   * @returns The updated job, or null when refused (see `jobError`).
    */
   const startImport = async (id: number): Promise<MigrationJob | null> => {
-    const result = await runAction(error, () => api.startJob(id))
+    const result = await runAction(jobError, () => api.startJob(id))
+    if (!result.ok) {
+      return null
+    }
+    replaceJob(result.value)
+    return result.value
+  }
+
+  /**
+   * Queues a failed job's import again.
+   *
+   * @param id - Migration job id.
+   * @returns The updated job, or null when refused (see `jobError`).
+   */
+  const retryImport = async (id: number): Promise<MigrationJob | null> => {
+    const result = await runAction(jobError, () => api.retryJob(id))
     if (!result.ok) {
       return null
     }
@@ -215,13 +236,13 @@ export const useMigrationStore = defineStore('migration', () => {
    * Loads one page of a job's import log.
    *
    * @param jobId - Migration job id.
-   * @param opts - Optional action/entity filters and paging.
-   * @returns The log page, or null when refused (see `error`).
+   * @param opts - Optional action/entity filters and the page to read.
+   * @returns The log page, or null when refused (see `jobError`).
    */
-  const fetchLogs = async (jobId: number, opts: MigrationLogQuery = {}): Promise<MigrationLogPage | null> => {
-    const result = await runAction(error, () => api.getJobLogs(jobId, opts))
+  const fetchLogs = async (jobId: number, opts: MigrationLogQuery): Promise<PaginatedList<MigrationLogEntry> | null> => {
+    const result = await runAction(jobError, () => api.getJobLogs(jobId, opts))
     return result.ok ? result.value : null
   }
 
-  return { jobs, activeJob, loading, error, fetchAll, createJob, deleteJob, pollStatus, startPolling, stopPolling, setActiveJob, testConnection, startImport, fetchLogs }
+  return { jobs, activeJob, loading, error, jobError, fetchAll, createJob, deleteJob, pollStatus, startPolling, stopPolling, setActiveJob, testConnection, startImport, retryImport, fetchLogs }
 })

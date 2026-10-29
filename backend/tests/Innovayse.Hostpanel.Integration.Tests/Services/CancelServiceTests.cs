@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
@@ -6,19 +5,19 @@ using Innovayse.Hostpanel.Application.Services.Commands.CancelService;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Services.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
 /// <summary>
 /// Integration tests for <see cref="CancelServiceCommand"/>: refusing a second open cancellation
-/// request, and refusing an unknown service.
+/// request, accepting a new one beside a closed one, refusing an unknown or terminated service, and
+/// acting on the request (an immediate one terminates, an end-of-period one marks the service to end
+/// with its cycle).
 /// </summary>
-/// <remarks>Moved from the deleted <c>ServiceLifecycleEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CancelServiceTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -26,23 +25,40 @@ public sealed class CancelServiceTests(IntegrationTestFactory factory) : IClassF
     [Fact]
     public async Task CancelService_ASecondOpenRequestIsRefused()
     {
+        var serviceId = await ServicesTestSeeds.SeedServiceAsync(factory, ServiceStatus.Active);
         using var scope = factory.Services.CreateScope();
-        var (clientId, productId) = await ServicesTestSeeds.SeedClientAndProductAsync(scope, monthlyPrice: 1m);
-        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var service = ClientService.Create(clientId, productId, BillingCycleNames.Monthly);
-        context.ClientServices.Add(service);
-        await uow.SaveChangesAsync(CancellationToken.None);
-
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
         var first = await bus.InvokeAsync<Result>(
-            new CancelServiceCommand(service.Id, nameof(CancellationType.Immediate), "Changed my mind"), CancellationToken.None);
+            new CancelServiceCommand(serviceId, CancellationType.EndOfBillingPeriod, "Changed my mind"), CancellationToken.None);
         first.IsSuccess.Should().BeTrue();
 
         var second = await bus.InvokeAsync<Result>(
-            new CancelServiceCommand(service.Id, nameof(CancellationType.Immediate), null), CancellationToken.None);
+            new CancelServiceCommand(serviceId, CancellationType.EndOfBillingPeriod, null), CancellationToken.None);
 
         second.IsFailure.Should().BeTrue();
+        second.ErrorCode.Should().Be(HostpanelErrorCodes.CANCELLATION_ALREADY_PENDING);
+    }
+
+    /// <summary>A closed earlier request does not hide an open one: a second open request is still refused.</summary>
+    [Fact]
+    public async Task CancelService_AClosedRequestDoesNotHideAnOpenOne()
+    {
+        var serviceId = await ServicesTestSeeds.SeedServiceAsync(factory, ServiceStatus.Active);
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var closed = CancellationRequest.Create(serviceId, CancellationType.EndOfBillingPeriod, "Earlier request");
+        closed.Close();
+        context.CancellationRequests.Add(closed);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var first = await bus.InvokeAsync<Result>(
+            new CancelServiceCommand(serviceId, CancellationType.EndOfBillingPeriod, null), CancellationToken.None);
+        var second = await bus.InvokeAsync<Result>(
+            new CancelServiceCommand(serviceId, CancellationType.EndOfBillingPeriod, null), CancellationToken.None);
+
+        first.IsSuccess.Should().BeTrue();
         second.ErrorCode.Should().Be(HostpanelErrorCodes.CANCELLATION_ALREADY_PENDING);
     }
 
@@ -54,9 +70,63 @@ public sealed class CancelServiceTests(IntegrationTestFactory factory) : IClassF
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
         var outcome = await bus.InvokeAsync<Result>(
-            new CancelServiceCommand(ServicesTestSeeds.NoSuchServiceId, nameof(CancellationType.Immediate), null), CancellationToken.None);
+            new CancelServiceCommand(ServicesTestSeeds.NoSuchServiceId, CancellationType.Immediate, null), CancellationToken.None);
 
         outcome.IsFailure.Should().BeTrue();
         outcome.ErrorCode.Should().Be(HostpanelErrorCodes.SERVICE_NOT_FOUND);
+    }
+
+    /// <summary>A terminated service has nothing left to cancel: refused, and no request is recorded.</summary>
+    [Fact]
+    public async Task CancelService_TerminatedServiceIsRefused()
+    {
+        var serviceId = await ServicesTestSeeds.SeedServiceAsync(factory, ServiceStatus.Terminated);
+        using var scope = factory.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        var outcome = await bus.InvokeAsync<Result>(
+            new CancelServiceCommand(serviceId, CancellationType.Immediate, null), CancellationToken.None);
+
+        outcome.ErrorCode.Should().Be(HostpanelErrorCodes.SERVICE_ALREADY_TERMINATED);
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        (await context.CancellationRequests.AnyAsync(r => r.ServiceId == serviceId, CancellationToken.None)).Should().BeFalse();
+    }
+
+    /// <summary>An end-of-period request marks the service to end with its cycle, with the reason, and leaves it running.</summary>
+    [Fact]
+    public async Task CancelService_EndOfBillingPeriodMarksTheServiceToEndWithItsCycle()
+    {
+        var serviceId = await ServicesTestSeeds.SeedServiceAsync(factory, ServiceStatus.Active);
+        using var scope = factory.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        var outcome = await bus.InvokeAsync<Result>(
+            new CancelServiceCommand(serviceId, CancellationType.EndOfBillingPeriod, "Moving elsewhere"), CancellationToken.None);
+
+        outcome.IsSuccess.Should().BeTrue();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var service = await context.ClientServices.AsNoTracking().FirstAsync(s => s.Id == serviceId, CancellationToken.None);
+        service.Status.Should().Be(ServiceStatus.Active);
+        service.AutoTerminateEndOfCycle.Should().BeTrue();
+        service.AutoTerminateReason.Should().Be("Moving elsewhere");
+        (await context.CancellationRequests.AnyAsync(
+            r => r.ServiceId == serviceId && r.Status == CancellationStatus.Open, CancellationToken.None)).Should().BeTrue();
+    }
+
+    /// <summary>An immediate request terminates the service through the terminate use case.</summary>
+    [Fact]
+    public async Task CancelService_ImmediateTerminatesTheService()
+    {
+        var serviceId = await ServicesTestSeeds.SeedServiceAsync(factory, ServiceStatus.Active);
+        using var scope = factory.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+
+        var outcome = await bus.InvokeAsync<Result>(
+            new CancelServiceCommand(serviceId, CancellationType.Immediate, "Done with it"), CancellationToken.None);
+
+        outcome.IsSuccess.Should().BeTrue();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var service = await context.ClientServices.AsNoTracking().FirstAsync(s => s.Id == serviceId, CancellationToken.None);
+        service.Status.Should().Be(ServiceStatus.Terminated);
     }
 }

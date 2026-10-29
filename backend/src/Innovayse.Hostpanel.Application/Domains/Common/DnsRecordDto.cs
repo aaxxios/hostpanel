@@ -1,7 +1,8 @@
 using Innovayse.Hostpanel.Domain.Domains;
-
 using Innovayse.Hostpanel.Domain.Domains.Enums;
+
 namespace Innovayse.Hostpanel.Application.Domains.Common;
+
 /// <summary>DTO representing a single DNS record belonging to a domain.</summary>
 /// <param name="Id">DNS record primary key.</param>
 /// <param name="Type">DNS record type (A, AAAA, MX, etc.).</param>

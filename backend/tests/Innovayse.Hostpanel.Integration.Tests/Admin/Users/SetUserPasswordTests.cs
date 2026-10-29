@@ -1,20 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Users;
 
 /// <summary>
 /// <c>POST /api/admin/users/{id}/change-password</c>: setting a new password lets the account
 /// sign in with it, a too-short password is refused by the validator, an unknown subject is
-/// refused <c>IDENTITY_USER_NOT_FOUND</c>, where an SSO owns the accounts the write refuses with
+/// refused <c>IDENTITY_USER_NOT_FOUND</c>, where an external sign-on provider owns the accounts the write refuses with
 /// its own code, a caller with only the Client role is refused, and the route is closed to a
 /// caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>AdminUsersEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host, in local mode.</param>
 public sealed class SetUserPasswordTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -61,7 +57,7 @@ public sealed class SetUserPasswordTests(IntegrationTestFactory factory) : IClas
     }
 
 #if INNOVAYSE_SSO
-    /// <summary>Where an SSO owns the accounts, setting a password refuses with its own code.</summary>
+    /// <summary>Where an external sign-on provider owns the accounts, setting a password refuses with its own code.</summary>
     [Fact]
     public async Task UnderSso_RefusesWithItsOwnCodeAsync()
     {

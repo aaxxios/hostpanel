@@ -14,8 +14,8 @@ const props = withDefaults(defineProps<{
    *
    * `null` and `''` both mean "no value yet" and are what the callers actually hold:
    * `ServerFormModal`'s optional `maxAccounts` is `number | null`, and `DnsRecordsTable` seeds its
-   * priority fields with `''`. The arithmetic coerces both to 0, which is the behaviour those
-   * screens have always had; narrowing this to `number` would change how they represent "unset".
+   * priority fields with `''`. The arithmetic coerces both to 0; narrowing this to `number` would
+   * change how those screens represent "unset".
    */
   modelValue: number | string | null
   /** Minimum allowed value. */

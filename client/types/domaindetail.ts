@@ -1,13 +1,20 @@
-/** One domain in full, as `GET /api/portal/client/domains/{id}` returns it (the backend's `DomainDto`). */
+/**
+ * One domain in full, as the client area's domain detail endpoint returns it.
+ *
+ * @module types/domaindetail
+ */
+
+import type { DomainManagement } from '~/types/domainmanagement'
+import type { DomainStatus } from '~/types/domainstatus'
+
+/** One domain in full, as `GET /api/portal/client/domains/{id}` returns it (the backend's `MyDomainDto`). */
 export interface DomainDetail {
   /** Domain primary key. */
   id: number
   /** Domain name (e.g. "example"). */
   name: string
-  /** Top-level domain including the dot (e.g. ".com"). */
-  tld: string
   /** Current lifecycle status. */
-  status: string
+  status: DomainStatus
   /** ISO 8601 registration date. */
   registeredAt: string
   /** ISO 8601 expiration date. */
@@ -30,6 +37,6 @@ export interface DomainDetail {
   whoisPrivacy: boolean
   /** ISO 4217 currency code the prices above are denominated in. */
   priceCurrency: string
-  /** Name of the registrar module. */
-  registrar: string | null
+  /** The DNS, nameserver and forwarding settings the client manages. */
+  management: DomainManagement
 }

@@ -1,7 +1,9 @@
+using Innovayse.Hostpanel.Domain.Notifications.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Notifications;
+
 /// <summary>
 /// Records the outcome of an email send attempt.
 /// Used for audit trailing and delivery diagnostics.
@@ -23,8 +25,8 @@ public sealed class EmailLog : BaseEntity
     /// <summary>Gets a value indicating whether the email was sent successfully.</summary>
     public bool Success { get; private set; }
 
-    /// <summary>Gets the error message if the send failed; <see langword="null"/> on success.</summary>
-    public string? Error { get; private set; }
+    /// <summary>Gets why the send failed; <see langword="null"/> on success.</summary>
+    public EmailSendFailure? Failure { get; private set; }
 
     /// <summary>Initialises a new <see cref="EmailLog"/> for EF Core materialisation.</summary>
     internal EmailLog()
@@ -48,19 +50,19 @@ public sealed class EmailLog : BaseEntity
     /// <param name="to">The recipient email address.</param>
     /// <param name="subject">The email subject line.</param>
     /// <param name="body">The rendered email body.</param>
-    /// <param name="success">Whether the email was sent successfully.</param>
-    /// <param name="error">Error message if the send failed; <see langword="null"/> on success.</param>
-    /// <returns>A new <see cref="EmailLog"/> with <see cref="SentAt"/> set to the current UTC time.</returns>
-    public static EmailLog Create(string to, string subject, string body, bool success, string? error)
+    /// <param name="failure">Why the send failed; <see langword="null"/> when the relay accepted it.</param>
+    /// <param name="sentAt">When the send was attempted, UTC.</param>
+    /// <returns>A new <see cref="EmailLog"/> stamped with <paramref name="sentAt"/>, successful exactly when <paramref name="failure"/> is null.</returns>
+    public static EmailLog Create(string to, string subject, string body, EmailSendFailure? failure, DateTimeOffset sentAt)
     {
         return new EmailLog(0)
         {
             To = to,
             Subject = subject,
             Body = body,
-            SentAt = DateTimeOffset.UtcNow,
-            Success = success,
-            Error = error,
+            SentAt = sentAt,
+            Success = failure is null,
+            Failure = failure,
         };
     }
 }

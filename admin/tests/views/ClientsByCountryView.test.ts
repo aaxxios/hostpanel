@@ -1,5 +1,5 @@
 /**
- * Tests of ClientsByCountryView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of ClientsByCountryView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -17,4 +17,5 @@ runReportCase({
     'GET /reports/clients-by-city': () => json([{ city: 'Yerevan', country: 'AM', clientCount: 3 }]),
   },
   expected: ['Clients by Country', 'Armenia', 'Total Clients: 3'],
+  retryable: true,
 })

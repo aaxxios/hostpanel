@@ -6,7 +6,8 @@
 
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { NetworkIssue, NetworkIssueFilter, NetworkIssuePayload } from '@/types/networkissue'
-import type { PagedResult } from '@/types/pagedresult'
+import { NETWORK_ISSUE_TAB_STATUSES } from '@/types/networkissue'
+import type { PaginatedList } from '@/types/paginatedlist'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
 
@@ -24,9 +25,14 @@ export const useNetworkIssuesApi = () => {
    * @param filter - Page, page size and status.
    * @returns The page and the total count.
    */
-  const listNetworkIssues = (filter: NetworkIssueFilter): Promise<PagedResult<NetworkIssue>> =>
-    request<PagedResult<NetworkIssue>>(
-      `${ApiPath.NetworkIssues}${buildQuery({ page: filter.page, pageSize: filter.pageSize, status: filter.status })}`,
+  const listNetworkIssues = (filter: NetworkIssueFilter): Promise<PaginatedList<NetworkIssue>> =>
+    request<PaginatedList<NetworkIssue>>(
+      `${ApiPath.NetworkIssues}${buildQuery({
+        page: filter.page,
+        pageSize: filter.pageSize,
+        // A tab can span several statuses, so it travels as a repeated `statuses` parameter.
+        statuses: filter.status ? NETWORK_ISSUE_TAB_STATUSES[filter.status] : null,
+      })}`,
     )
 
   /**

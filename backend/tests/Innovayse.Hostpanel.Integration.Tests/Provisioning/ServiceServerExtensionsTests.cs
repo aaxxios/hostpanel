@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Provisioning.Common;
 using Innovayse.Hostpanel.Application.Provisioning.Extensions;
@@ -8,15 +7,15 @@ using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
 using Innovayse.Hostpanel.Domain.Services;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Provisioning;
 
 /// <summary>
 /// <see cref="ServiceServerExtensions"/>, the lookup of the server a service is hosted on that every
-/// provisioning command, query and event handler starts from, run against the real PostgreSQL host.
+/// provisioning command, query and event handler starts from, dispatched through the real
+/// <see cref="IMessageBus"/> against the real PostgreSQL host.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ServiceServerExtensionsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -24,16 +23,16 @@ public sealed class ServiceServerExtensionsTests(IntegrationTestFactory factory)
     /// <summary>Seeds a client, a product and a server, and returns the ids a service needs.</summary>
     /// <param name="context">The data context to seed through.</param>
     /// <returns>The client id, product id and server id.</returns>
-    private static async Task<(int ClientId, int ProductId, int ServerId)> SeedAsync(IHostpanelDbContext context)
+    private static async Task<ClientProductServerIds> SeedAsync(IHostpanelDbContext context)
     {
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(client);
 
         var group = ProductGroup.Create($"service-server-{Guid.NewGuid():N}", null);
         context.ProductGroups.Add(group);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
         context.Products.Add(product);
 
         var server = Server.Create(new ServerDetails(
@@ -43,9 +42,7 @@ public sealed class ServiceServerExtensionsTests(IntegrationTestFactory factory)
             AssignedIpAddresses: null,
             Module: ServerModule.Cwp7,
             Username: "api",
-            Password: "secret",
-            ApiToken: null,
-            AccessHash: null,
+            Credentials: new ServerCredentials("secret", null, "hash"),
             UseSSL: true,
             MaxAccounts: null,
             IsDefault: false,
@@ -53,20 +50,11 @@ public sealed class ServiceServerExtensionsTests(IntegrationTestFactory factory)
             MonthlyCost: 0m,
             Datacenter: null,
             ServerStatusAddress: null,
-            Ns1Hostname: null,
-            Ns1Ip: null,
-            Ns2Hostname: null,
-            Ns2Ip: null,
-            Ns3Hostname: null,
-            Ns3Ip: null,
-            Ns4Hostname: null,
-            Ns4Ip: null,
-            Ns5Hostname: null,
-            Ns5Ip: null));
+            NameServers: ServerNameServers.None), DateTimeOffset.UtcNow);
         context.Servers.Add(server);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        return (client.Id, product.Id, server.Id);
+        return new(client.Id, product.Id, server.Id);
     }
 
     /// <summary>A service activated on a server resolves to that server.</summary>
@@ -76,15 +64,17 @@ public sealed class ServiceServerExtensionsTests(IntegrationTestFactory factory)
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var (clientId, productId, serverId) = await SeedAsync(context);
-        var service = ClientService.Create(clientId, productId, BillingCycleNames.Monthly);
-        service.ActivateOn(serverId, "ref-1");
-        context.ClientServices.Add(service);
+        var service = ClientService.Create(clientId, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        await ServicesTestSeeds.AddActivatedAsync(context, service, "ref-1", DateTimeOffset.UtcNow, serverId);
         await context.SaveChangesAsync(CancellationToken.None);
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        var server = await context.FindServerAsync(service, CancellationToken.None);
+        var server = await bus.FindServerAsync(service, CancellationToken.None);
 
         server.Should().NotBeNull();
         server!.Id.Should().Be(serverId);
+        server.Module.Should().Be(ServerModule.Cwp7);
+        server.AccessHash.Should().Be("hash");
     }
 
     /// <summary>A service that was never assigned a server resolves to null.</summary>
@@ -94,11 +84,12 @@ public sealed class ServiceServerExtensionsTests(IntegrationTestFactory factory)
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var (clientId, productId, _) = await SeedAsync(context);
-        var service = ClientService.Create(clientId, productId, BillingCycleNames.Monthly);
+        var service = ClientService.Create(clientId, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
         context.ClientServices.Add(service);
         await context.SaveChangesAsync(CancellationToken.None);
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        var server = await context.FindServerAsync(service, CancellationToken.None);
+        var server = await bus.FindServerAsync(service, CancellationToken.None);
 
         server.Should().BeNull();
     }

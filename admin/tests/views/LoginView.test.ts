@@ -30,7 +30,7 @@ describe('LoginView', () => {
   it('draws the email and password form in local mode', async () => {
     stubRoutes({
       'GET /api/auth/mode': () => json({ mode: 'local' }),
-      'GET /api/auth/setup-required': () => json({ required: false, tokenRequired: false }),
+      'GET /api/auth/setup-required': () => json({ required: false }),
     })
     const wrapper = await mountLogin()
 
@@ -43,7 +43,7 @@ describe('LoginView', () => {
   it('draws the single SSO button in SSO mode', async () => {
     stubRoutes({
       'GET /api/auth/mode': () => json({ mode: 'sso' }),
-      'GET /api/auth/setup-required': () => json({ required: false, tokenRequired: false }),
+      'GET /api/auth/setup-required': () => json({ required: false }),
     })
     const wrapper = await mountLogin()
 
@@ -54,7 +54,7 @@ describe('LoginView', () => {
   it('shows the sentence the API returned when the sign-in is refused', async () => {
     stubRoutes({
       'GET /api/auth/mode': () => json({ mode: 'local' }),
-      'GET /api/auth/setup-required': () => json({ required: false, tokenRequired: false }),
+      'GET /api/auth/setup-required': () => json({ required: false }),
       'POST /api/auth/login': () => problem('Wrong email or password.', 401),
     })
     const wrapper = await mountLogin()
@@ -70,7 +70,7 @@ describe('LoginView', () => {
   it('offers the first-account shortcut while setup is outstanding', async () => {
     stubRoutes({
       'GET /api/auth/mode': () => json({ mode: 'local' }),
-      'GET /api/auth/setup-required': () => json({ required: true, tokenRequired: false }),
+      'GET /api/auth/setup-required': () => json({ required: true }),
     })
     const wrapper = await mountLogin()
 
@@ -104,7 +104,7 @@ describe('LoginView demo account', () => {
   const mountDemoLogin = async (enabled: boolean) => {
     stubRoutes({
       'GET /api/auth/mode': () => json({ mode: 'local' }),
-      'GET /api/auth/setup-required': () => json({ required: false, tokenRequired: false }),
+      'GET /api/auth/setup-required': () => json({ required: false }),
     })
     const wrapper = await mountLogin()
     const demo = useDemoStore()

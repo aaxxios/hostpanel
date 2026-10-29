@@ -16,18 +16,22 @@ public sealed class FakeHostingPanelApiClient : IHostingPanelApiClient
     public int AccountsCount { get; set; } = 5;
 
     /// <summary>The version string returned when <see cref="ShouldThrow"/> is <see langword="false"/>.</summary>
-    public string CwpVersion { get; set; } = "1.9.1";
+    public string Version { get; set; } = "1.9.1";
+
+    /// <summary>The connections this fake was asked to probe, in call order.</summary>
+    public List<HostingPanelConnection> Connections { get; } = [];
 
     /// <inheritdoc/>
-    public Task<(int AccountsCount, string CwpVersion)> GetServerInfoAsync(
-        string host, string port, string apiKey, CancellationToken ct)
+    public Task<HostingPanelServerInfo> GetServerInfoAsync(HostingPanelConnection connection, CancellationToken ct)
     {
+        Connections.Add(connection);
+
         if (ShouldThrow)
         {
             throw new HttpRequestException(
                 "fake hosting panel server refused the request with connection details nobody should see");
         }
 
-        return Task.FromResult((AccountsCount, CwpVersion));
+        return Task.FromResult(new HostingPanelServerInfo(AccountsCount, Version));
     }
 }

@@ -1,13 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
@@ -15,7 +13,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 /// <c>GET /api/reports/ticket-feedback-comments</c> against Postgres: one row per piece of
 /// feedback, newest first.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingRemainderEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetTicketFeedbackCommentsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -28,9 +25,11 @@ public sealed class GetTicketFeedbackCommentsTests(IntegrationTestFactory factor
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var ticket = Ticket.Create(clientId, $"Subject-{marker}", "Body", 1, TicketPriority.Low);
+            // A real department: a ticket's department is a foreign key.
+            var departmentId = await SupportTestSeeds.SeedDepartmentAsync(db);
+            var ticket = Ticket.Create(clientId, $"Subject-{marker}", "Body", departmentId, TicketPriority.Low, DateTimeOffset.UtcNow);
             ticket.Assign(77);
-            ticket.LeaveFeedback(8, "Great support", marker);
+            ticket.LeaveFeedback(8, "Great support", marker, scope.ServiceProvider.GetRequiredService<IClock>().UtcNow);
             db.Tickets.Add(ticket);
             await db.SaveChangesAsync();
         }
@@ -55,7 +54,7 @@ public sealed class GetTicketFeedbackCommentsTests(IntegrationTestFactory factor
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

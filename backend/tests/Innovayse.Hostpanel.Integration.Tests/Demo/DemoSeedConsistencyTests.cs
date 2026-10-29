@@ -1,13 +1,12 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
+using Innovayse.Hostpanel.Domain.Products.Enums;
+using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Infrastructure.Demo;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Demo;
 
@@ -195,8 +194,32 @@ public sealed class DemoSeedConsistencyTests(IntegrationTestFactory factory)
         using var scope = await SeededScopeAsync();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var welcome = await db.EmailTemplates.SingleAsync(t => t.Slug == "welcome");
+        var welcome = await db.EmailTemplates.SingleAsync(t => t.Slug == "welcome" && t.Language == "en");
 
-        welcome.Subject.Should().Contain("Hostpanel Demo");
+        welcome.Subject.Should().Contain(DemoPortalSettingsSeeder.SiteName);
+    }
+
+    /// <summary>
+    /// A visitor can provision any pending service the demo shows: every hosting plan names its panel package, and
+    /// every pending service is a hosting service that already carries the domain and username its account is created with.
+    /// </summary>
+    [Fact]
+    public async Task PendingServices_CarryWhatProvisioningNeedsAsync()
+    {
+        using var scope = await SeededScopeAsync();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var hostingPlans = await db.Products
+            .Where(p => p.Type == ProductType.SharedHosting || p.Type == ProductType.Vps || p.Type == ProductType.Dedicated)
+            .ToListAsync();
+        var pending = await db.ClientServices.Where(s => s.Status == ServiceStatus.Pending).ToListAsync();
+        var productTypes = await db.Products.ToDictionaryAsync(p => p.Id, p => p.Type);
+
+        hostingPlans.Should().NotBeEmpty().And.OnlyContain(p => !string.IsNullOrWhiteSpace(p.PackageName));
+        pending.Should().NotBeEmpty();
+        pending.Should().OnlyContain(s =>
+            DemoCatalogueSeeder.IsHosting(productTypes[s.ProductId])
+            && !string.IsNullOrWhiteSpace(s.Domain)
+            && !string.IsNullOrWhiteSpace(s.Username));
     }
 }

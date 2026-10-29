@@ -1,5 +1,5 @@
 /**
- * Server middleware — CSRF
+ * Server middleware: CSRF
  *
  * Refuses a state-changing request that does not carry
  * `X-Requested-With: XMLHttpRequest`.
@@ -11,11 +11,10 @@
  * on this side. A custom header cannot be set cross-site without a CORS preflight
  * this app never approves, so its presence is evidence the request came from here.
  *
- * This is the same check the platform's .NET products run in
- * `RequireCustomHeaderMiddleware`, and the same refusal text. Without it the two
- * Nuxt portals were the only places in the suite where `POST
- * /api/portal/auth/logout` was accepted from any page on the internet — signing the
- * visitor out with nothing on this side able to tell that it had happened.
+ * The backend's sign-on package runs the same check in `RequireCustomHeaderMiddleware`,
+ * with the same refusal text. Without it `POST /api/portal/auth/logout` would be
+ * accepted from any page on the internet, signing the visitor out with nothing on this
+ * side able to tell that it had happened.
  *
  * Bearer callers are exempt: a bearer token has to be attached deliberately, which
  * a cross-site page cannot do, and the server-to-server callers that use one are
@@ -24,8 +23,10 @@
  * @module server/middleware/csrf
  */
 
+import { HttpMethod } from '~/types/httpmethod'
+
 /** Methods that never change state, and so are never checked. */
-const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+const SAFE_METHODS: ReadonlySet<string> = new Set([HttpMethod.Get, HttpMethod.Head, HttpMethod.Options])
 
 /** Refuses a state-changing `/api/` request that lacks the custom header. */
 export default defineEventHandler((event) => {

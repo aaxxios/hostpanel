@@ -1,5 +1,5 @@
 /**
- * Tests of TicketRatingsReviewerView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of TicketRatingsReviewerView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -18,4 +18,5 @@ runReportCase({
     }),
   },
   expected: ['Support Ticket Ratings Reviewer', 'Thanks a lot', '#5'],
+  retryable: true,
 })

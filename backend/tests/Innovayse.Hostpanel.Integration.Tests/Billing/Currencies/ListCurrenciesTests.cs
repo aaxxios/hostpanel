@@ -1,16 +1,12 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing.Currencies;
 
 /// <summary>
 /// <c>GET /api/admin/currencies</c> against Postgres: the migration-seeded USD/AMD pair, with rates.
 /// </summary>
-/// <remarks>Split from the deleted <c>Billing/CurrenciesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListCurrenciesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

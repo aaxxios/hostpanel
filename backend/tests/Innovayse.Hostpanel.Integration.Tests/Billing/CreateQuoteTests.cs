@@ -1,9 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Application.Common.Errors;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -11,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>POST /api/billing/quotes</c> against Postgres: creating a quote for a client, then reading
 /// it back round-trips the line item and total.
 /// </summary>
-/// <remarks>Split from the deleted <c>QuotesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateQuoteTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -45,5 +42,24 @@ public sealed class CreateQuoteTests(IntegrationTestFactory factory) : IClassFix
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A quote for a client that does not exist answers 404 with <c>CLIENT_NOT_FOUND</c> and writes nothing.</summary>
+    [Fact]
+    public async Task CreateRefusesAnUnknownClient()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.PostAsJsonAsync("/api/billing/quotes", new
+        {
+            clientId = BillingTestSeeds.NoSuchId,
+            subject = "Website redesign",
+            expiryDate = DateTimeOffset.UtcNow.AddDays(30),
+            notes = (string?)null,
+            items = new[] { new { description = "Design", unitPrice = 500m, quantity = 1 } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.CLIENT_NOT_FOUND);
     }
 }

@@ -1,6 +1,7 @@
+using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Common.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Partners.Commands.UpdatePartnerOrder;
 
@@ -27,18 +28,14 @@ public sealed class UpdatePartnerOrderHandler
     /// </summary>
     /// <param name="cmd">The partner id and new sort order pairs.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success. Unknown ids in the list are silently skipped.</returns>
+    /// <returns>Success, or <c>PARTNER_NOT_FOUND</c> when an id names no row; nothing is moved then.</returns>
     public async Task<Result> HandleAsync(UpdatePartnerOrderCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var orderMap = cmd.Items.GroupBy(i => i.Id).ToDictionary(g => g.Key, g => g.Last().SortOrder);
-        var ids = orderMap.Keys.ToList();
-        var rows = await _context.Partners.Where(x => ids.Contains(x.Id)).ToListAsync(ct);
-
-        foreach (var row in rows)
+        if (!await _context.Partners.ApplySortOrderAsync(cmd.Items, ct))
         {
-            row.SetSortOrder(orderMap[row.Id]);
+            return Result.FailureCode(HostpanelErrorCodes.PARTNER_NOT_FOUND);
         }
 
         await _context.SaveChangesAsync(ct);

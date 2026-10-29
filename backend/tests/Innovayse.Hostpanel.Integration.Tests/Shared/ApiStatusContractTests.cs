@@ -2,14 +2,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Shared;
 
@@ -25,36 +22,35 @@ namespace Innovayse.Hostpanel.Integration.Tests.Shared;
 /// Russian-detail assertion this file repeats for the rest; they are not duplicated here. 409 is
 /// pinned in <c>Auth/CompleteSetupTests.AlreadyCompletedRefuses</c>: the only reliable 409 this
 /// deployment answers ("nobody holds Admin yet" claimed twice) needs a fresh, unshared
-/// <c>IntegrationTestFactory</c> to guarantee its precondition, which that test already builds --
-/// duplicating it against the shared factory here would be flaky at best (the shared factory's
+/// <c>IntegrationTestFactory</c> to guarantee its precondition, which that test already builds.
+/// Duplicating it against the shared factory here would be flaky at best (the shared factory's
 /// seeded admin holds the role through ASP.NET Identity's own store, which
 /// <c>CompleteSetupHandler</c> does not read) and wasteful at worst (a second Postgres
 /// container for one assertion).
 /// </para>
 /// <para>
 /// <b>422 and 429 are not exercised over HTTP, on purpose.</b> No handler in this deployment
-/// answers a code containing <c>VALIDATION</c> or <c>CONTENT_REJECTED</c> today -- the plan
-/// deliberately keeps those substrings out of handler-owned codes, so 422 is a real row in
-/// <c>StatusMappingTests</c> (<c>Shared/Controllers/StatusMapping</c>) but not yet a status any
-/// caller can actually receive; adding one here would mean inventing a use case this batch does
-/// not own. 429 is switched off in the <c>Testing</c> environment by
+/// answers a code containing <c>VALIDATION</c> or <c>CONTENT_REJECTED</c>: handler-owned codes keep
+/// those substrings out on purpose, so 422 is a real row in
+/// <c>StatusMappingTests</c> (<c>Shared/Controllers/StatusMapping</c>) but not a status any
+/// caller can actually receive; adding one here would mean inventing a use case. 429 is switched off in the <c>Testing</c> environment by
 /// <c>RateLimitingExtensions.AddPlatformRateLimiting</c> deliberately (api.md: "a suite never
 /// asserts against a 429 it did not intend"), so the shared test host cannot produce one; its body
 /// shape is instead reviewed by reading <c>RateLimitingExtensions.OnRejected</c> alongside this file.
 /// </para>
 /// <para>
-/// 500 is answered only by <see cref="Shared.Middleware.ExceptionHandlingMiddleware"/>'s
-/// catch-all for a fault nothing upstream classified -- deliberately not something this suite
+/// 500 is answered only by <see cref="Innovayse.Hostpanel.Shared.Middleware.ExceptionHandlingMiddleware"/>'s
+/// catch-all for a fault nothing upstream classified, deliberately not something this suite
 /// manufactures against a real route, since doing so would mean shipping a route whose only job
 /// is to throw. <c>ExceptionHandlingMiddlewareTests</c> below covers its body shape directly,
 /// against the middleware rather than through a live endpoint.
 /// </para>
 /// <para>
-/// <see cref="Publish_OnNonDraftInvoice_Answers400WithLocalizedDetailAsync"/> (A6 Task 8) is the
+/// <see cref="Publish_OnNonDraftInvoice_Answers400WithLocalizedDetailAsync"/> is the
 /// one case here that is not a handler's own <c>Result</c> refusal: <c>Invoice.Publish</c> throws
 /// <c>DomainRuleException</c> straight out of the aggregate, uncaught by
-/// <c>PublishInvoiceHandler</c>, and <see cref="Shared.Middleware.ExceptionHandlingMiddleware"/> is
-/// what turns it into the same <c>ErrorResponse</c> shape every other refusal answers with — the
+/// <c>PublishInvoiceHandler</c>, and <see cref="Innovayse.Hostpanel.Shared.Middleware.ExceptionHandlingMiddleware"/> is
+/// what turns it into the same <c>ErrorResponse</c> shape every other refusal answers with: the
 /// same status/title lookup (<c>StatusMapping</c>) and the same code-to-sentence resolution
 /// (<c>IErrorMessageResolver</c>) <c>BaseApiController.MapFailure</c> uses for a <c>Result</c>.
 /// </para>
@@ -141,7 +137,7 @@ public sealed class ApiStatusContractTests(IntegrationTestFactory factory) : ICl
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Language", "ru");
 
-        // One byte over BrandingOptions.MaxBytes' 5 MB default -- garbage bytes are enough,
+        // One byte over BrandingOptions.MaxBytes' 5 MB default: garbage bytes are enough,
         // because the byte-length check runs before anything tries to decode them as an image.
         var oversized = new byte[(5 * 1024 * 1024) + 1];
         using var content = new MultipartFormDataContent();
@@ -180,9 +176,9 @@ public sealed class ApiStatusContractTests(IntegrationTestFactory factory) : ICl
 
     /// <summary>
     /// Publishing an invoice that is not a Draft answers 400 through the aggregate's own thrown
-    /// <c>DomainRuleException</c>, not a handler's <c>Result</c> refusal — proving
-    /// <see cref="Shared.Middleware.ExceptionHandlingMiddleware"/> maps a domain exception to the
-    /// same localized <c>problem+json</c> body every other refusal answers with (A6 Task 8).
+    /// <c>DomainRuleException</c>, not a handler's <c>Result</c> refusal, proving that
+    /// <see cref="Innovayse.Hostpanel.Shared.Middleware.ExceptionHandlingMiddleware"/> maps a domain exception to the
+    /// same localized <c>problem+json</c> body every other refusal answers with.
     /// </summary>
     [Fact]
     public async Task Publish_OnNonDraftInvoice_Answers400WithLocalizedDetailAsync()
@@ -190,13 +186,13 @@ public sealed class ApiStatusContractTests(IntegrationTestFactory factory) : ICl
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var seededClient = Client.Create(
-            $"user-{Guid.NewGuid():N}", "Ada", "Lovelace", $"ada-{Guid.NewGuid():N}@example.test");
+            $"user-{Guid.NewGuid():N}", "Ada", "Lovelace", $"ada-{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         db.Clients.Add(seededClient);
         await db.SaveChangesAsync();
 
         // Invoice.Create (not CreateDraft) starts Unpaid, so Publish's own "must be Draft"
-        // invariant is the only thing that can refuse this call — nothing upstream pre-checks it.
-        var invoice = Invoice.Create(seededClient.Id, DateTimeOffset.UtcNow.AddDays(14), "USD");
+        // invariant is the only thing that can refuse this call; nothing upstream pre-checks it.
+        var invoice = Invoice.Create(seededClient.Id, DateTimeOffset.UtcNow.AddDays(14), "USD", DateTimeOffset.UtcNow);
         db.Invoices.Add(invoice);
         await db.SaveChangesAsync();
 

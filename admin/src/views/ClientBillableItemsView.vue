@@ -1,28 +1,32 @@
 <script setup lang="ts">
 /**
- * Client billable items page -- displays uninvoiced and invoiced billable items.
- * Allows adding new items, time billing entries, and invoicing selected items.
+ * Client billable items page: displays uninvoiced and invoiced billable items and allows adding
+ * new items, time billing entries, and invoicing or deleting selected items. Invoicing and deleting
+ * are confirmed first; every action reports its outcome (success, or the API's sentence) above the
+ * lists, and a refused load shows the sentence with a Retry.
  */
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useClientBillableItemsStore } from '@/stores/clientBillableItems'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { formatMoney } from '@/lib/money'
 import AddBillableItemModal from '@/components/clients/AddBillableItemModal.vue'
 import AddTimeBillingModal from '@/components/clients/AddTimeBillingModal.vue'
-import type { BillableItem } from '@/types/billableitem'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import type { ClientBillableItem } from '@/types/billableitem'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiCheckbox from '@/components/ui/UiCheckbox.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -34,6 +38,7 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { UiTone } from '@/utils/ui/tone'
 import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 const { t } = useI18n()
@@ -53,14 +58,34 @@ const clientId = computed(() => route.params.id as string)
 /** True while the initial load is in flight (owned by the store). */
 const loading = computed(() => store.loading)
 
-/** Error message, null when no error (owned by the store). */
-const error = computed(() => store.error)
+/** The sentence of the last refused load, shown with Retry; null when the items loaded. */
+const loadError = ref<string | null>(null)
+
+/** The outcome line of the last action. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Shows the outcome of one action: the success sentence, or the API's sentence of the refusal.
+ *
+ * @param ok - Whether the API accepted the action.
+ * @param successKey - Locale key of the success sentence.
+ */
+const report = (ok: boolean, successKey: string): void => {
+  if (ok) {
+    feedback.show(t(successKey), false)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
+}
 
 /** Uninvoiced billable items for this client. */
-const uninvoicedItems = ref<BillableItem[]>([])
+const uninvoicedItems = ref<ClientBillableItem[]>([])
 
 /** Invoiced billable items for this client (current page). */
-const invoicedItems = ref<BillableItem[]>([])
+const invoicedItems = ref<ClientBillableItem[]>([])
 
 /** Sum of all uninvoiced item amounts. */
 const uninvoicedTotal = ref(0)
@@ -108,6 +133,7 @@ const deleting = ref(false)
  */
 const fetchBillableItems = async (): Promise<void> => {
   const result = await store.fetchItems(clientId.value, invoicedPage.value, invoicedPageSize.value)
+  loadError.value = result ? null : store.error
   if (result) {
     uninvoicedItems.value = result.uninvoicedItems
     uninvoicedTotal.value = result.uninvoicedTotal
@@ -122,14 +148,23 @@ const fetchBillableItems = async (): Promise<void> => {
  * @returns Promise that resolves when the operation completes.
  */
 const handleInvoiceSelected = async (): Promise<void> => {
+  feedback.clear()
   invoicing.value = true
   const invoiced = await store.invoiceSelected(clientId.value, Array.from(selectedIds.value))
   invoicing.value = false
+  showInvoiceConfirmModal.value = false
+  report(invoiced, 'clients.clientBillableItems.itemsInvoiced')
   if (invoiced) {
     selectedIds.value = new Set()
     selectAll.value = false
-    showInvoiceConfirmModal.value = false
     await fetchBillableItems()
+  }
+}
+
+/** Closes the invoice confirmation; ignored while invoicing runs. */
+const dismissInvoice = (): void => {
+  if (!invoicing.value) {
+    showInvoiceConfirmModal.value = false
   }
 }
 
@@ -150,10 +185,12 @@ const handleDelete = (id: number): void => {
  * @returns Promise that resolves when deletion completes.
  */
 const confirmDelete = async (): Promise<void> => {
-  showDeleteConfirmModal.value = false
+  feedback.clear()
   deleting.value = true
   const ids = pendingDeleteId.value !== null ? [pendingDeleteId.value] : Array.from(selectedIds.value)
   const deleted = await store.deleteItems(clientId.value, ids)
+  showDeleteConfirmModal.value = false
+  report(deleted, 'clients.clientBillableItems.itemsDeleted')
   if (deleted) {
     if (pendingDeleteId.value === null) {
       selectedIds.value = new Set()
@@ -163,6 +200,14 @@ const confirmDelete = async (): Promise<void> => {
   }
   deleting.value = false
   pendingDeleteId.value = null
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    showDeleteConfirmModal.value = false
+    pendingDeleteId.value = null
+  }
 }
 
 /**
@@ -228,7 +273,8 @@ const goToInvoicedPage = (p: number): void => {
  */
 const onItemSaved = (): void => {
   showAddItemModal.value = false
-  fetchBillableItems()
+  feedback.show(t('clients.clientBillableItems.itemAdded'), false)
+  void fetchBillableItems()
 }
 
 /**
@@ -238,17 +284,11 @@ const onItemSaved = (): void => {
  */
 const onTimeBillingSaved = (): void => {
   showTimeBillingModal.value = false
-  fetchBillableItems()
+  feedback.show(t('clients.clientBillableItems.timeBillingAdded'), false)
+  void fetchBillableItems()
 }
 
-/**
- * Names the quantity unit of an item.
- *
- * @param item - The billable item.
- * @returns Translated "hours" or "qty".
- */
-const unitLabel = (item: BillableItem): string => (item.isHours ? t('shared.hours') : t('shared.qty'))
-
+/** Loads the items. */
 onMounted(() => fetchBillableItems())
 </script>
 
@@ -276,14 +316,20 @@ onMounted(() => fetchBillableItems())
       </UiStack>
     </UiStack>
 
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="client-billable-feedback" />
+
     <UiStack v-if="loading && uninvoicedItems.length === 0 && invoicedItems.length === 0" data-testid="client-billable-loading">
       <UiSkeleton :lines="3" />
       <UiText :tone="UiTextTone.Secondary">{{ t('clients.clientBillableItems.loadingBillableItems') }}</UiText>
     </UiStack>
 
-    <UiAlert v-else-if="error" variant="error" data-testid="client-billable-error">
-      {{ error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="loadError !== null"
+      :message="loadError"
+      :loading="loading"
+      testid="client-billable-error"
+      @retry="fetchBillableItems()"
+    />
 
     <template v-else>
       <UiStack>
@@ -305,9 +351,7 @@ onMounted(() => fetchBillableItems())
                 </UiTableHeader>
                 <UiTableHeader>{{ t('shared.id') }}</UiTableHeader>
                 <UiTableHeader>{{ t('shared.description') }}</UiTableHeader>
-                <UiTableHeader>{{ t('shared.hoursQty') }}</UiTableHeader>
                 <UiTableHeader>{{ t('shared.amount') }}</UiTableHeader>
-                <UiTableHeader>{{ t('shared.invoiceAction') }}</UiTableHeader>
                 <UiTableHeader>{{ t('shared.actions') }}</UiTableHeader>
               </UiTableRow>
             </UiTableHead>
@@ -323,9 +367,7 @@ onMounted(() => fetchBillableItems())
                 </UiTableCell>
                 <UiTableCell muted>{{ item.id }}</UiTableCell>
                 <UiTableCell>{{ item.description }}</UiTableCell>
-                <UiTableCell muted>{{ item.hoursQty }} {{ unitLabel(item) }}</UiTableCell>
                 <UiTableCell muted>{{ formatMoney(item.amount) }}</UiTableCell>
-                <UiTableCell muted>{{ item.invoiceAction }}</UiTableCell>
                 <UiTableCell>
                   <UiIconButton
                     :label="t('shared.delete')"
@@ -379,7 +421,6 @@ onMounted(() => fetchBillableItems())
               <UiTableRow>
                 <UiTableHeader>{{ t('shared.id') }}</UiTableHeader>
                 <UiTableHeader>{{ t('shared.description') }}</UiTableHeader>
-                <UiTableHeader>{{ t('shared.hoursQty') }}</UiTableHeader>
                 <UiTableHeader>{{ t('shared.amount') }}</UiTableHeader>
                 <UiTableHeader>{{ t('shared.invoice') }}</UiTableHeader>
               </UiTableRow>
@@ -388,7 +429,6 @@ onMounted(() => fetchBillableItems())
               <UiTableRow v-for="item in invoicedItems" :key="item.id" hoverable>
                 <UiTableCell muted>{{ item.id }}</UiTableCell>
                 <UiTableCell>{{ item.description }}</UiTableCell>
-                <UiTableCell muted>{{ item.hoursQty }} {{ unitLabel(item) }}</UiTableCell>
                 <UiTableCell muted>{{ formatMoney(item.amount) }}</UiTableCell>
                 <UiTableCell>
                   <template v-if="item.invoiceId">#{{ item.invoiceId }}</template>
@@ -431,7 +471,7 @@ onMounted(() => fetchBillableItems())
       :loading-label="t('shared.processing')"
       :loading="invoicing"
       @confirm="handleInvoiceSelected"
-      @close="showInvoiceConfirmModal = false"
+      @close="dismissInvoice"
     />
 
     <UiDialog
@@ -446,13 +486,12 @@ onMounted(() => fetchBillableItems())
       :loading="deleting"
       tone="danger"
       @confirm="confirmDelete"
-      @close="showDeleteConfirmModal = false"
+      @close="dismissDelete"
     />
 
     <AddBillableItemModal
       v-if="showAddItemModal"
       :client-id="clientId"
-      :saving="false"
       @saved="onItemSaved"
       @close="showAddItemModal = false"
     />

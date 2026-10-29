@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { translate } from '@/lib/translate'
 import { useServicesStore } from '@/stores/services'
+import { BillingCycle, ServiceStatus } from '@/types/service'
 import { json, problem, stubFetch, stubOffline, callOf, invalid } from '../helpers/fetch'
 
 describe('servicesStore', () => {
@@ -57,12 +58,9 @@ describe('servicesStore', () => {
     const store = useServicesStore()
     stubFetch(invalid('Check the form.', { Quantity: ['Must be at least 1.'] }))
 
-    expect(await store.update(4, {
-      domain: null, dedicatedIp: null, username: null, password: null, provisioningRef: null,
-      recurringAmount: 0, firstPaymentAmount: 0, nextRenewalAt: null, createdAt: null, terminatedAt: null,
-      billingCycle: 'monthly', paymentMethod: null, promotionCode: null, subscriptionId: null,
-      overrideAutoSuspend: false, suspendUntil: null, autoTerminateEndOfCycle: false, autoTerminateReason: null,
-      adminNotes: null, status: 'Active', quantity: 0, serverId: null, productId: null,
+    expect(await store.updateBillingTerms(4, {
+      productId: 2, quantity: 0, billingCycle: BillingCycle.Monthly, firstPaymentAmount: 0, recurringAmount: 0,
+      nextRenewalAt: null, paymentMethod: null, promotionCode: null, subscriptionId: null,
     })).toBe(false)
     expect(store.actionError).toBe('Check the form.')
     expect(store.fieldErrors).toEqual({ quantity: 'Must be at least 1.' })
@@ -71,6 +69,26 @@ describe('servicesStore', () => {
     expect(await store.unsuspend(4)).toBe(true)
     expect(store.actionError).toBeNull()
     expect(store.fieldErrors).toEqual({})
+  })
+
+  it('section saves send their bodies to their own endpoints', async () => {
+    const store = useServicesStore()
+    const mock = stubFetch(new Response(null, { status: 204 }))
+
+    expect(await store.updateHostingAccount(4, {
+      serverId: null, domain: 'site.example', provisioningRef: null, dedicatedIp: null, username: null, password: null,
+    })).toBe(true)
+    expect(await store.updateAutomation(4, {
+      autoRenew: true, overrideAutoSuspend: false, suspendUntil: null, autoTerminateEndOfCycle: true, autoTerminateReason: 'Leaving',
+    })).toBe(true)
+    expect(await store.updateNotes(4, { adminNotes: 'note' })).toBe(true)
+    expect(await store.changeStatus(4, ServiceStatus.Active)).toBe(true)
+    expect(await store.correctTerminationDate(4, '2030-06-01')).toBe(true)
+    expect(callOf(mock, 0)).toMatchObject({ url: '/api/services/4/hosting-account', method: 'PUT', body: { domain: 'site.example' } })
+    expect(callOf(mock, 1)).toMatchObject({ url: '/api/services/4/automation', body: { autoTerminateReason: 'Leaving' } })
+    expect(callOf(mock, 2)).toMatchObject({ url: '/api/services/4/notes', body: { adminNotes: 'note' } })
+    expect(callOf(mock, 3)).toMatchObject({ url: '/api/services/4/status', body: { status: 'Active' } })
+    expect(callOf(mock, 4)).toMatchObject({ url: '/api/services/4/termination-date', body: { terminatedAt: '2030-06-01' } })
   })
 
   it('password and package changes send their bodies', async () => {

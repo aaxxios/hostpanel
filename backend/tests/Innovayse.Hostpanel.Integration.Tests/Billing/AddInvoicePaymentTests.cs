@@ -1,15 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -18,7 +15,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// invoice paid and writes an activity log entry, and the <c>INVOICE_NOT_FOUND</c> refusal for an
 /// id that names no invoice.
 /// </summary>
-/// <remarks>Split from the deleted <c>InvoicePaymentsEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class AddInvoicePaymentTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -47,9 +43,7 @@ public sealed class AddInvoicePaymentTests(IntegrationTestFactory factory) : ICl
     }
 
     /// <summary>
-    /// Recording a manual payment writes an activity log entry against the invoice's client --
-    /// the effect of the dissolved <c>IActivityLogRepository.Add</c>, now <c>_context.ActivityLogs.Add</c>
-    /// directly in <c>AddInvoicePaymentHandler</c> (A6 Task 6).
+    /// Recording a manual payment writes an activity log entry against the invoice's client.
     /// </summary>
     [Fact]
     public async Task AddPayment_RecordsAnActivityLogEntryForTheInvoicesClientAsync()
@@ -113,6 +107,30 @@ public sealed class AddInvoicePaymentTests(IntegrationTestFactory factory) : ICl
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    /// <summary>A payment above what the invoice still owes is refused with <c>INVOICE_PAYMENT_EXCEEDS_DUE</c> and nothing is recorded.</summary>
+    [Fact]
+    public async Task AddPaymentAboveAmountDueRefusesWithPaymentExceedsDue()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+        var clientId = await BillingTestSeeds.SeedClientAsync(factory);
+        var invoiceId = await BillingTestSeeds.CreateInvoiceAsync(admin, clientId, 100m);
+
+        var response = await admin.PostAsJsonAsync($"/api/billing/{invoiceId}/payment", new
+        {
+            date = DateTimeOffset.UtcNow,
+            gateway = PaymentMethodNames.Manual,
+            transactionId = $"pay-{Guid.NewGuid():N}",
+            amount = 150m,
+            fees = 0m,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.INVOICE_PAYMENT_EXCEEDS_DUE);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        (await db.Transactions.AnyAsync(t => t.InvoiceId == invoiceId)).Should().BeFalse();
+    }
+
     /// <summary>Posts a manual payment of <paramref name="amount"/> against an invoice.</summary>
     /// <param name="admin">The authenticated admin client.</param>
     /// <param name="invoiceId">The invoice.</param>
@@ -131,7 +149,7 @@ public sealed class AddInvoicePaymentTests(IntegrationTestFactory factory) : ICl
     /// <summary>Reads the invoice's status and amount due through the admin route.</summary>
     /// <param name="admin">The authenticated admin client.</param>
     /// <param name="invoiceId">The invoice.</param>
-    /// <returns>The status name and the amount due.</returns>
+    /// <returns>The status name and the amount still due.</returns>
     private static async Task<(string Status, decimal AmountDue)> ReadAsync(HttpClient admin, int invoiceId)
     {
         using var body = JsonDocument.Parse(await (await admin.GetAsync($"/api/billing/{invoiceId}")).Content.ReadAsStringAsync());
@@ -140,7 +158,7 @@ public sealed class AddInvoicePaymentTests(IntegrationTestFactory factory) : ICl
 
     /// <summary>
     /// A payment short of the total leaves the invoice Unpaid with the rest still due, and the
-    /// payment that covers the rest marks it Paid.
+    /// payment that covers the rest marks it Paid with nothing due.
     /// </summary>
     [Fact]
     public async Task PartialPayments_CompleteTheInvoiceOnlyWhenTheyCoverIt()
@@ -156,9 +174,9 @@ public sealed class AddInvoicePaymentTests(IntegrationTestFactory factory) : ICl
         (await ReadAsync(admin, invoiceId)).Should().Be((nameof(InvoiceStatus.Paid), 0m));
     }
 
-    /// <summary>A Paid invoice refuses a further payment instead of recording money against it.</summary>
+    /// <summary>A Paid invoice refuses a further payment with <c>INVOICE_NOT_PAYABLE</c> instead of recording money against it.</summary>
     [Fact]
-    public async Task PaymentOnAPaidInvoice_IsRefused()
+    public async Task PaymentOnAPaidInvoice_RefusesWithInvoiceNotPayable()
     {
         var admin = await BillingTestSeeds.AdminClientAsync(factory);
         var clientId = await BillingTestSeeds.SeedClientAsync(factory);
@@ -167,6 +185,7 @@ public sealed class AddInvoicePaymentTests(IntegrationTestFactory factory) : ICl
 
         var response = await PayAsync(admin, invoiceId, 1m);
 
-        ((int)response.StatusCode).Should().BeInRange(400, 499);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.INVOICE_NOT_PAYABLE);
     }
 }

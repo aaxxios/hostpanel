@@ -89,9 +89,6 @@
     "leastFull": "Добавлять на наименее загруженный сервер",
     "fillUntilFull": "Заполнять активный сервер до предела, затем переключаться"
   },
-  "moduleLabels": {
-    "wordPressHosting": "Innovayse WordPress Hosting"
-  },
   "ssh": {
     "open": "SSH",
     "title": "Управление SSH-ключами — {name}",
@@ -99,8 +96,32 @@
     "healthy": "Агент доступен",
     "unhealthy": "Агент недоступен",
     "notTested": "Не проверялся",
-    "agentVersion": "Агент {version} ({provider})",
-    "agentError": "Последняя проверка не удалась: {code}",
+    "agentVersion": "Агент {version}",
+    "agentVersionWithProvider": "Агент {version} ({provider})",
+    "agentError": "Последняя проверка не удалась: {reason}",
+    "failures": {
+      "Unknown": "неизвестная причина",
+      "Unreachable": "сервер недоступен",
+      "Timeout": "агент не ответил вовремя",
+      "InternalError": "внутренняя ошибка агента",
+      "UnsupportedVersion": "версия агента не поддерживается",
+      "InvalidRequest": "агент отклонил запрос",
+      "UnknownOperation": "агент не поддерживает эту операцию",
+      "RequestTooLarge": "запрос слишком большой",
+      "InvalidAccount": "недопустимое имя аккаунта",
+      "AccountNotFound": "аккаунт не найден",
+      "AccountNotEligible": "для аккаунта нельзя управлять ключами",
+      "SshDisabled": "доступ к оболочке для аккаунта отключён",
+      "InvalidKey": "ключ недействителен",
+      "DuplicateKey": "ключ уже установлен",
+      "KeyIdConflict": "идентификатор ключа уже занят",
+      "TooManyKeys": "достигнут лимит ключей аккаунта",
+      "UnsafePath": "путь к файлу ключей небезопасен",
+      "FileTooLarge": "файл ключей слишком большой",
+      "AccountSuspended": "аккаунт приостановлен на сервере",
+      "AgentNotConfigured": "у сервера нет полных настроек агента",
+      "BindingMismatch": "агент установлен для другого сервера"
+    },
     "enabled": "Клиенты этого сервера могут управлять SSH-ключами",
     "enabledHint": "Включение требует успешной проверки с сохранёнными настройками и никогда не открывает shell-доступ ни для одного аккаунта.",
     "sshHostname": "SSH-хост",
@@ -153,6 +174,9 @@
     "stepTest": "4. Проверка агента",
     "bindingMismatch": "Ответивший агент установлен для другого сервера. Проверьте хост агента или выполните на нём команду установки этого сервера.",
     "stepEnable": "5. Включение для клиентов",
-    "advanced": "Дополнительно: использовать существующий служебный ключ"
+    "advanced": "Дополнительно: использовать существующий служебный ключ",
+    "networkCsf": "CSF",
+    "networkFirewalld": "firewalld",
+    "networkUfw": "ufw"
   }
 }

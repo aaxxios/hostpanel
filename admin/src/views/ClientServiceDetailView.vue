@@ -1,18 +1,20 @@
 <script setup lang="ts">
 /**
- * Editable service detail page -- displays and allows editing all service fields.
- * Supports lifecycle actions: Suspend, Unsuspend, Terminate.
+ * Editable service detail page. Each section (hosting account, billing, automation, notes, status and
+ * the termination date) saves through its own endpoint with its own, distinctly named button, and
+ * shows its outcome (success, or the API's sentence) beside that button in a live region that is
+ * always rendered. Supports lifecycle actions: Suspend, Unsuspend, Terminate; terminating, and
+ * moving the status to Terminated, is confirmed first.
  */
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import { useServicesStore } from '@/stores/services'
 import { useServersStore } from '@/stores/servers'
 import { useSettingsStore } from '@/stores/settings'
 import { SERVICE_STATUS_OPTIONS, BILLING_CYCLE_OPTIONS } from '@/lib/constants'
-import { BillingCycle, ServiceChangeReason, ServiceStatus } from '@/types/service'
-import { toDateInputValue } from '@/lib/format'
+import { BillingCycle, ServiceChangeReason, ServiceSection, ServiceStatus } from '@/types/service'
+import { formatDate, toDateInputValue } from '@/lib/format'
 import type { ServiceListItem } from '@/types/service'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -30,6 +32,7 @@ import UiLink from '@/components/ui/UiLink.vue'
 import UiNumberInput from '@/components/ui/UiNumberInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
@@ -38,13 +41,11 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiLabelVariant, UiTextTone } from '@/utils/ui/text'
-import { NOTICE_VISIBLE_MS } from '@/lib/limits'
+import { UiTone } from '@/utils/ui/tone'
+import { UiDialogVariant } from '@/utils/ui/dialog'
 import { ClientSection, clientItemPath, clientSectionPath } from '@/lib/routes'
 
 const { t } = useI18n()
-
-/** Fallback text for fields the API leaves unresolved. */
-const { productLabel } = useFallbackLabels()
 
 /** Icon markup (shape tags) of the back link. */
 const BACK_ICON = '<polyline points="15 18 9 12 15 6"/>'
@@ -53,7 +54,40 @@ const BACK_ICON = '<polyline points="15 18 9 12 15 6"/>'
 const PANEL_ICON = '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />'
 
 /** Default billing cycle. */
-const DEFAULT_CYCLE: string = BillingCycle.Monthly
+const DEFAULT_CYCLE = BillingCycle.Monthly
+
+/**
+ * Statuses that end the service; moving to one is confirmed like the Terminate command. A service
+ * has no Cancelled status (the API's set is Pending, Active, Suspended, Terminated), so Terminated
+ * is the only one.
+ */
+const TERMINAL_STATUSES: ServiceStatus[] = [ServiceStatus.Terminated]
+
+/** The irreversible changes the danger confirmation guards. */
+enum DangerAction {
+  /** The Terminate module command. */
+  Terminate = 'terminate',
+  /** Saving the status section with a terminal status. */
+  StatusChange = 'status-change',
+}
+
+/** The outcome of one save or command, shown beside its button. */
+interface ActionOutcome {
+  /** True when the request was refused. */
+  failed: boolean
+  /** The finished sentence: the success line or the API's own sentence. */
+  text: string
+}
+
+/** Visible (and accessible) name of each section's save button, so the buttons are told apart. */
+const SAVE_LABEL_KEYS: Record<ServiceSection, string> = {
+  [ServiceSection.HostingAccount]: 'clients.clientServiceDetail.saveServiceInfo',
+  [ServiceSection.Billing]: 'clients.clientServiceDetail.saveBilling',
+  [ServiceSection.Automation]: 'clients.clientServiceDetail.saveAutomation',
+  [ServiceSection.Notes]: 'clients.clientServiceDetail.saveNotes',
+  [ServiceSection.Status]: 'clients.clientServiceDetail.changeStatus',
+  [ServiceSection.TerminationDate]: 'clients.clientServiceDetail.saveTerminationDate',
+}
 
 /** Current route, source of the client and service ids. */
 const route = useRoute()
@@ -85,17 +119,17 @@ const loading = computed(() => store.loading)
 /** Error message from the initial load (owned by the store). */
 const error = computed(() => store.error)
 
-/** True while save is in flight. */
-const saving = ref(false)
+/** The section whose save is in flight, null when none. */
+const saving = ref<ServiceSection | null>(null)
 
-/** Success message after save. */
-const saveSuccess = ref(false)
+/** The outcome of the last save of each section, keyed by section. */
+const sectionOutcomes = ref<Partial<Record<ServiceSection, ActionOutcome>>>({})
 
-/** Timer that hides the success message. */
-let savedTimer: ReturnType<typeof setTimeout> | undefined
+/** The outcome of the last module command, shown in the module commands card. */
+const commandOutcome = ref<ActionOutcome | null>(null)
 
-/** Error message after save or a provisioning command (owned by the store). */
-const saveError = computed(() => store.actionError)
+/** The sentence of a refused control panel sign-in, shown beside its button. */
+const panelError = ref<string | null>(null)
 
 /** True while a module command (suspend/unsuspend/terminate) is in flight. */
 const commandLoading = ref(false)
@@ -119,10 +153,13 @@ const recurringAmount = ref(0)
 const nextDueDate = ref('')
 
 /** Billing cycle. */
-const billingCycle = ref(DEFAULT_CYCLE)
+const billingCycle = ref<BillingCycle>(DEFAULT_CYCLE)
 
 /** Payment method. */
 const paymentMethod = ref('')
+
+/** Automatic billing toggle; off means staff bill the service by hand and no billing run touches it. */
+const autoRenew = ref(true)
 
 /** Override auto-suspend toggle. */
 const overrideAutoSuspend = ref(false)
@@ -151,11 +188,8 @@ const promotionCode = ref('')
 /** Termination date (ISO date string). */
 const terminatedAt = ref('')
 
-/** Registration date (ISO date string). */
-const createdAt = ref('')
-
 /** Status (editable dropdown). */
-const status = ref<string>(ServiceStatus.Active)
+const status = ref<ServiceStatus>(ServiceStatus.Active)
 
 /** Subscription ID. */
 const subscriptionId = ref('')
@@ -193,8 +227,8 @@ const newPackage = ref('')
 /** Whether the suspend confirmation modal is visible. */
 const showSuspendModal = ref(false)
 
-/** Whether the terminate confirmation modal is visible. */
-const showTerminateModal = ref(false)
+/** The irreversible change waiting for confirmation, null when the prompt is closed. */
+const dangerConfirm = ref<DangerAction | null>(null)
 
 /** Whether SSO URL is loading. */
 const ssoLoading = ref(false)
@@ -210,7 +244,7 @@ const serverOptions = computed(() => [
   { value: 0, label: t('shared.none') },
   ...serverList.value.map(s => ({
     value: s.id,
-    label: `${s.name} — ${s.hostname} (${s.accountsCount ?? 0}/${s.maxAccounts ?? '∞'})`,
+    label: `${s.name} — ${s.endpoint.hostname} (${s.accountsCount ?? 0}/${s.limits.maxAccounts ?? '∞'})`,
   })),
 ])
 
@@ -223,54 +257,184 @@ const productOptions = computed(() =>
 const serviceSwitcherOptions = computed(() =>
   clientServices.value.map(s => ({
     value: s.id,
-    label: `#${s.id} — ${productLabel(s.productName)}`,
+    label: `#${s.id} — ${s.productName}`,
   })),
 )
 
+/** Title of the danger confirmation. */
+const dangerTitle = computed<string>(() =>
+  dangerConfirm.value === DangerAction.StatusChange
+    ? t('clients.clientServiceDetail.changeStatusTo', { status: status.value })
+    : t('clients.clientServiceDetail.terminateService'),
+)
+
+/** Confirm label of the danger confirmation. */
+const dangerConfirmLabel = computed<string>(() =>
+  dangerConfirm.value === DangerAction.StatusChange
+    ? t('clients.clientServiceDetail.changeStatus')
+    : t('clients.clientServiceDetail.terminate'),
+)
+
+/** True while the confirmed irreversible change runs. */
+const dangerLoading = computed<boolean>(() => commandLoading.value || saving.value === ServiceSection.Status)
+
 /**
- * Populates all form refs from the fetched service detail.
+ * The outcome of a section's last save.
+ *
+ * @param section - The section.
+ * @returns The outcome, or undefined when the section has none to show.
+ */
+const outcomeOf = (section: ServiceSection): ActionOutcome | undefined => sectionOutcomes.value[section]
+
+/**
+ * The tone of an outcome.
+ *
+ * @param outcome - The outcome, if any.
+ * @returns Danger for a refusal, success otherwise.
+ */
+const outcomeTone = (outcome: ActionOutcome | null | undefined): UiTone =>
+  outcome?.failed === true ? UiTone.Danger : UiTone.Success
+
+/**
+ * The finished outcome of a request that just settled: the success line, or the API's sentence.
+ *
+ * @param ok - Whether the request was accepted.
+ * @param successKey - Locale key of the success line.
+ * @returns The outcome to show.
+ */
+const settle = (ok: boolean, successKey: string): ActionOutcome =>
+  ok
+    ? { failed: false, text: t(successKey) }
+    : { failed: true, text: store.actionError ?? t('errors.noAnswer') }
+
+/**
+ * Populates the hosting account fields from the fetched service detail.
  *
  * @returns Nothing.
  */
-const populateForm = (): void => {
+const populateHostingAccount = (): void => {
   const s = service.value
   if (!s) {
     return
   }
-
-  domain.value = s.domain ?? ''
-  dedicatedIp.value = s.dedicatedIp ?? ''
-  username.value = s.username ?? ''
-  password.value = s.password ?? ''
-  recurringAmount.value = s.recurringAmount
-  firstPaymentAmount.value = s.firstPaymentAmount
-  nextDueDate.value = toDateInputValue(s.nextDueDate)
-  billingCycle.value = s.billingCycle || DEFAULT_CYCLE
-  paymentMethod.value = s.paymentMethod ?? ''
-  provisioningRef.value = s.provisioningRef ?? ''
-  promotionCode.value = s.promotionCode ?? ''
-  subscriptionId.value = s.subscriptionId ?? ''
-  terminatedAt.value = toDateInputValue(s.terminatedAt)
-  createdAt.value = toDateInputValue(s.createdAt)
-  status.value = s.status || ServiceStatus.Active
-  overrideAutoSuspend.value = s.overrideAutoSuspend
-  suspendUntil.value = toDateInputValue(s.suspendUntil)
-  autoTerminateEndOfCycle.value = s.autoTerminateEndOfCycle
-  autoTerminateReason.value = s.autoTerminateReason ?? ''
-  adminNotes.value = s.adminNotes ?? ''
-  quantity.value = s.quantity
   serverId.value = s.serverId ?? null
-  productIdRef.value = s.productId
+  domain.value = s.domain ?? ''
+  provisioningRef.value = s.account.provisioningRef ?? ''
+  dedicatedIp.value = s.account.dedicatedIp ?? ''
+  username.value = s.account.username ?? ''
+  password.value = s.account.password ?? ''
 }
 
 /**
- * Fetches the service detail through the store and populates the form.
+ * Populates the billing fields from the fetched service detail.
+ *
+ * @returns Nothing.
+ */
+const populateBilling = (): void => {
+  const s = service.value
+  if (!s) {
+    return
+  }
+  productIdRef.value = s.productId
+  quantity.value = s.billing.quantity
+  billingCycle.value = s.billing.billingCycle || DEFAULT_CYCLE
+  firstPaymentAmount.value = s.billing.firstPaymentAmount
+  recurringAmount.value = s.billing.recurringAmount
+  nextDueDate.value = toDateInputValue(s.billing.nextDueDate)
+  paymentMethod.value = s.billing.paymentMethod ?? ''
+  promotionCode.value = s.billing.promotionCode ?? ''
+  subscriptionId.value = s.billing.subscriptionId ?? ''
+}
+
+/**
+ * Populates the automation fields from the fetched service detail.
+ *
+ * @returns Nothing.
+ */
+const populateAutomation = (): void => {
+  const s = service.value
+  if (!s) {
+    return
+  }
+  autoRenew.value = s.billing.autoRenew
+  overrideAutoSuspend.value = s.automation.overrideAutoSuspend
+  suspendUntil.value = toDateInputValue(s.automation.suspendUntil)
+  autoTerminateEndOfCycle.value = s.automation.autoTerminateEndOfCycle
+  autoTerminateReason.value = s.automation.autoTerminateReason ?? ''
+}
+
+/**
+ * Populates the admin notes from the fetched service detail.
+ *
+ * @returns Nothing.
+ */
+const populateNotes = (): void => {
+  adminNotes.value = service.value?.adminNotes ?? ''
+}
+
+/**
+ * Populates the status dropdown from the fetched service detail.
+ *
+ * @returns Nothing.
+ */
+const populateStatus = (): void => {
+  status.value = service.value?.status || ServiceStatus.Active
+}
+
+/**
+ * Populates the termination date from the fetched service detail.
+ *
+ * @returns Nothing.
+ */
+const populateTerminationDate = (): void => {
+  terminatedAt.value = toDateInputValue(service.value?.terminatedAt)
+}
+
+/** Fills one section's form fields from the fetched service detail, keyed by section. */
+const sectionPopulators: Record<ServiceSection, () => void> = {
+  [ServiceSection.HostingAccount]: populateHostingAccount,
+  [ServiceSection.Billing]: populateBilling,
+  [ServiceSection.Automation]: populateAutomation,
+  [ServiceSection.Notes]: populateNotes,
+  [ServiceSection.Status]: populateStatus,
+  [ServiceSection.TerminationDate]: populateTerminationDate,
+}
+
+/**
+ * Populates every section's form fields from the fetched service detail.
+ *
+ * @returns Nothing.
+ */
+const populateForm = (): void => {
+  if (!service.value) {
+    return
+  }
+  Object.values(sectionPopulators).forEach(populate => {
+    populate()
+  })
+}
+
+/**
+ * Fetches the service detail through the store and populates the whole form.
  *
  * @returns Promise that resolves when the service is loaded.
  */
 const fetchService = async (): Promise<void> => {
   if (await store.fetchById(serviceId.value)) {
     populateForm()
+  }
+}
+
+/**
+ * Reloads the service after one section was saved and refreshes only that section's fields, so
+ * unsaved edits in the other sections stay.
+ *
+ * @param section - The section that was saved.
+ * @returns Promise that resolves when the service is reloaded.
+ */
+const refreshSection = async (section: ServiceSection): Promise<void> => {
+  if (await store.fetchById(serviceId.value)) {
+    sectionPopulators[section]()
   }
 }
 
@@ -284,85 +448,174 @@ const fetchClientServices = async (): Promise<void> => {
 }
 
 /**
- * Resets form to the last saved state.
+ * Resets form to the last saved state and clears every outcome line.
  *
  * @returns Nothing.
  */
 const handleCancel = (): void => {
   populateForm()
-  store.actionError = null
-  saveSuccess.value = false
+  sectionOutcomes.value = {}
+  commandOutcome.value = null
+  panelError.value = null
 }
 
 /**
- * Submits all editable field changes to the API.
+ * Runs one section's save with its busy flag and shows the outcome beside that section's button;
+ * on success it reloads the service and refreshes only that section's fields. The section's
+ * previous outcome is cleared first (the store clears its `actionError` when the request starts),
+ * so a stale refusal never sits next to a new attempt. A press while any save runs is ignored:
+ * the buttons stay focusable (`aria-disabled`) so keyboard focus is not lost.
+ *
+ * @param section - The section being saved.
+ * @param save - The store call that saves it.
+ * @returns Promise that resolves when the save completes.
+ */
+const saveSection = async (section: ServiceSection, save: () => Promise<boolean>): Promise<void> => {
+  if (saving.value !== null) {
+    return
+  }
+  sectionOutcomes.value = { ...sectionOutcomes.value, [section]: undefined }
+  saving.value = section
+  const saved = await save()
+  saving.value = null
+  sectionOutcomes.value = { ...sectionOutcomes.value, [section]: settle(saved, 'shared.changesSavedSuccessfully') }
+  if (saved) {
+    await refreshSection(section)
+  }
+}
+
+/**
+ * Saves the hosting account section: server, domain, panel reference, dedicated IP and credentials.
  *
  * @returns Promise that resolves when the save completes.
  */
-const handleSave = async (): Promise<void> => {
-  saveSuccess.value = false
-  saving.value = true
-
-  const saved = await store.update(serviceId.value, {
+const saveHostingAccount = (): Promise<void> =>
+  saveSection(ServiceSection.HostingAccount, () => store.updateHostingAccount(serviceId.value, {
+    serverId: serverId.value,
     domain: domain.value.trim() || null,
+    provisioningRef: provisioningRef.value.trim() || null,
     dedicatedIp: dedicatedIp.value.trim() || null,
     username: username.value.trim() || null,
     password: password.value.trim() || null,
-    provisioningRef: provisioningRef.value.trim() || null,
-    recurringAmount: recurringAmount.value,
-    firstPaymentAmount: firstPaymentAmount.value,
-    nextRenewalAt: nextDueDate.value || null,
-    createdAt: createdAt.value || null,
-    terminatedAt: terminatedAt.value || null,
+  }))
+
+/**
+ * Saves the billing section: product, quantity, cycle, amounts, next due date and payment references.
+ *
+ * @returns Promise that resolves when the save completes.
+ */
+const saveBillingTerms = async (): Promise<void> => {
+  if (productIdRef.value === null) {
+    return
+  }
+  const productId = productIdRef.value
+  await saveSection(ServiceSection.Billing, () => store.updateBillingTerms(serviceId.value, {
+    productId,
+    quantity: quantity.value,
     billingCycle: billingCycle.value,
+    firstPaymentAmount: firstPaymentAmount.value,
+    recurringAmount: recurringAmount.value,
+    nextRenewalAt: nextDueDate.value || null,
     paymentMethod: paymentMethod.value.trim() || null,
     promotionCode: promotionCode.value.trim() || null,
     subscriptionId: subscriptionId.value.trim() || null,
+  }))
+}
+
+/**
+ * Saves the automation section. A hold date or a reason is only sent with its switch on, which is
+ * what the API accepts.
+ *
+ * @returns Promise that resolves when the save completes.
+ */
+const saveAutomation = (): Promise<void> =>
+  saveSection(ServiceSection.Automation, () => store.updateAutomation(serviceId.value, {
+    autoRenew: autoRenew.value,
     overrideAutoSuspend: overrideAutoSuspend.value,
     suspendUntil: overrideAutoSuspend.value && suspendUntil.value ? suspendUntil.value : null,
     autoTerminateEndOfCycle: autoTerminateEndOfCycle.value,
     autoTerminateReason: autoTerminateEndOfCycle.value ? autoTerminateReason.value.trim() || null : null,
+  }))
+
+/**
+ * Saves the admin notes.
+ *
+ * @returns Promise that resolves when the save completes.
+ */
+const saveNotes = (): Promise<void> =>
+  saveSection(ServiceSection.Notes, () => store.updateNotes(serviceId.value, {
     adminNotes: adminNotes.value.trim() || null,
-    status: status.value,
-    quantity: quantity.value,
-    serverId: serverId.value || null,
-    productId: productIdRef.value,
-  })
-  if (saved) {
-    saveSuccess.value = true
-    clearTimeout(savedTimer)
-    savedTimer = setTimeout(() => {
-      saveSuccess.value = false
-    }, NOTICE_VISIBLE_MS)
-    await fetchService()
+  }))
+
+/**
+ * Moves the service to the status chosen in the dropdown.
+ *
+ * @returns Promise that resolves when the change completes.
+ */
+const applyStatus = (): Promise<void> =>
+  saveSection(ServiceSection.Status, () => store.changeStatus(serviceId.value, status.value))
+
+/**
+ * Saves the status section; a terminal status (see {@link TERMINAL_STATUSES}) opens the danger
+ * confirmation first.
+ *
+ * @returns Promise that resolves when the change completes or the prompt is open.
+ */
+const saveStatus = async (): Promise<void> => {
+  if (saving.value !== null) {
+    return
   }
-  saving.value = false
+  if (TERMINAL_STATUSES.includes(status.value)) {
+    dangerConfirm.value = DangerAction.StatusChange
+    return
+  }
+  await applyStatus()
 }
 
 /**
- * Opens a cPanel SSO URL in a new browser tab.
+ * Corrects the termination date of a terminated service.
+ *
+ * @returns Promise that resolves when the save completes.
+ */
+const saveTerminationDate = async (): Promise<void> => {
+  if (!terminatedAt.value) {
+    return
+  }
+  const date = terminatedAt.value
+  await saveSection(ServiceSection.TerminationDate, () => store.correctTerminationDate(serviceId.value, date))
+}
+
+/**
+ * Opens a control panel single-sign-on URL in a new browser tab.
  *
  * @returns Promise that resolves when the SSO URL is retrieved.
  */
 const handleLoginToPanel = async (): Promise<void> => {
+  panelError.value = null
   ssoLoading.value = true
   const url = await store.fetchPanelLoginUrl(serviceId.value)
   ssoLoading.value = false
-  if (url !== null) {
-    window.open(url, '_blank')
+  if (url === null) {
+    panelError.value = store.actionError ?? t('errors.noAnswer')
+    return
   }
+  window.open(url, '_blank')
 }
 
 /**
- * Runs a provisioning command with the shared busy flag and reloads the service when it succeeds.
+ * Runs a provisioning command with the shared busy flag, shows its outcome in the module commands
+ * card and reloads the service when it succeeds.
  *
  * @param command - The store call to run.
+ * @param successKey - Locale key of the line shown when the command is accepted.
  * @returns Promise that resolves with whether the command succeeded.
  */
-const runCommand = async (command: () => Promise<boolean>): Promise<boolean> => {
+const runCommand = async (command: () => Promise<boolean>, successKey: string): Promise<boolean> => {
+  commandOutcome.value = null
   commandLoading.value = true
   const ok = await command()
   commandLoading.value = false
+  commandOutcome.value = settle(ok, successKey)
   if (ok) {
     await fetchService()
   }
@@ -375,7 +628,7 @@ const runCommand = async (command: () => Promise<boolean>): Promise<boolean> => 
  * @returns Promise that resolves when provisioning completes.
  */
 const handleProvision = async (): Promise<void> => {
-  await runCommand(() => store.provision(serviceId.value))
+  await runCommand(() => store.provision(serviceId.value), 'clients.clientServiceDetail.provisioned')
 }
 
 /**
@@ -387,7 +640,7 @@ const handleChangePassword = async (): Promise<void> => {
   if (!newPassword.value.trim()) {
     return
   }
-  if (await runCommand(() => store.changePassword(serviceId.value, newPassword.value))) {
+  if (await runCommand(() => store.changePassword(serviceId.value, newPassword.value), 'clients.clientServiceDetail.passwordChanged')) {
     showChangePasswordModal.value = false
     newPassword.value = ''
   }
@@ -402,7 +655,7 @@ const handleChangePackage = async (): Promise<void> => {
   if (!newPackage.value.trim()) {
     return
   }
-  if (await runCommand(() => store.changePackage(serviceId.value, newPackage.value))) {
+  if (await runCommand(() => store.changePackage(serviceId.value, newPackage.value), 'clients.clientServiceDetail.packageChanged')) {
     showChangePackageModal.value = false
     newPackage.value = ''
   }
@@ -415,7 +668,7 @@ const handleChangePackage = async (): Promise<void> => {
  */
 const handleSuspend = async (): Promise<void> => {
   showSuspendModal.value = false
-  await runCommand(() => store.suspend(serviceId.value, ServiceChangeReason.Suspended))
+  await runCommand(() => store.suspend(serviceId.value, ServiceChangeReason.Suspended), 'clients.clientServiceDetail.suspended')
 }
 
 /**
@@ -424,7 +677,7 @@ const handleSuspend = async (): Promise<void> => {
  * @returns Promise that resolves when the action completes.
  */
 const handleUnsuspend = async (): Promise<void> => {
-  await runCommand(() => store.unsuspend(serviceId.value))
+  await runCommand(() => store.unsuspend(serviceId.value), 'clients.clientServiceDetail.unsuspended')
 }
 
 /**
@@ -433,8 +686,28 @@ const handleUnsuspend = async (): Promise<void> => {
  * @returns Promise that resolves when the action completes.
  */
 const handleTerminate = async (): Promise<void> => {
-  showTerminateModal.value = false
-  await runCommand(() => store.terminate(serviceId.value, ServiceChangeReason.Terminated))
+  await runCommand(() => store.terminate(serviceId.value, ServiceChangeReason.Terminated), 'clients.clientServiceDetail.terminated')
+}
+
+/**
+ * Runs the irreversible change the operator confirmed, then closes the prompt.
+ *
+ * @returns Promise that resolves when the change completes.
+ */
+const confirmDanger = async (): Promise<void> => {
+  if (dangerConfirm.value === DangerAction.StatusChange) {
+    await applyStatus()
+  } else {
+    await handleTerminate()
+  }
+  dangerConfirm.value = null
+}
+
+/** Closes the danger confirmation; ignored while the confirmed change runs. */
+const dismissDanger = (): void => {
+  if (!dangerLoading.value) {
+    dangerConfirm.value = null
+  }
 }
 
 /**
@@ -457,9 +730,6 @@ const setServer = (val: number): void => {
   serverId.value = val === 0 ? null : val
 }
 
-// Populate form when service data changes
-watch(service, () => populateForm())
-
 // Re-fetch service when navigating via the service switcher
 watch(serviceId, () => {
   fetchService()
@@ -470,10 +740,6 @@ onMounted(() => {
   fetchClientServices()
   serversStore.fetchServers()
   settingsStore.fetchProducts()
-})
-
-onBeforeUnmount(() => {
-  clearTimeout(savedTimer)
 })
 </script>
 
@@ -489,7 +755,7 @@ onBeforeUnmount(() => {
     </UiAlert>
 
     <template v-else-if="service">
-      <UiForm stacked @submit="handleSave">
+      <UiStack>
         <UiStack direction="row" wrap :justify="UiJustify.Between" :align="UiAlignItems.Center">
           <UiStack direction="row" :align="UiAlignItems.Center">
             <UiLink
@@ -510,21 +776,16 @@ onBeforeUnmount(() => {
               @update:model-value="switchService"
             />
             <UiHeading :level="1" variant="card">
-              {{ t('clients.clientServiceDetail.serviceIdProductname', { id: service.id, productName: productLabel(service.productName) }) }}
+              {{ t('clients.clientServiceDetail.serviceIdProductname', { id: service.id, productName: service.productName }) }}
             </UiHeading>
           </UiStack>
 
           <UiStack direction="row" :align="UiAlignItems.Center" gap="sm">
-            <UiAlert v-if="saveSuccess" variant="success" data-testid="client-service-saved">
-              {{ t('shared.changesSavedSuccessfully') }}
-            </UiAlert>
-            <UiAlert v-if="saveError" variant="error" data-testid="client-service-action-error">
-              {{ saveError }}
-            </UiAlert>
+            <UiStatusMessage :message="panelError" :tone="UiTone.Danger" data-testid="client-service-panel-error" />
             <UiButton
               type="button"
               :variant="UiButtonVariant.Secondary"
-              :disabled="ssoLoading || !service.provisioningRef"
+              :disabled="ssoLoading || !service.account.provisioningRef"
               data-testid="client-service-panel"
               @click="handleLoginToPanel"
             >
@@ -539,35 +800,24 @@ onBeforeUnmount(() => {
             >
               {{ t('shared.cancel') }}
             </UiButton>
-            <UiButton
-              type="submit"
-              :variant="UiButtonVariant.Primary"
-              :disabled="saving"
-              data-testid="client-service-save"
-            >
-              {{ saving ? t('shared.saving') : t('shared.saveChanges') }}
-            </UiButton>
           </UiStack>
         </UiStack>
 
         <UiGrid :columns="2">
           <UiStack>
             <UiCard padding="md">
-              <UiStack>
+              <UiForm
+                stacked
+                :aria-busy="saving === ServiceSection.HostingAccount"
+                data-testid="client-service-hosting-form"
+                @submit="saveHostingAccount"
+              >
                 <UiHeading :level="2" variant="card">{{ t('clients.clientServiceDetail.serviceInfo') }}</UiHeading>
                 <UiGrid :columns="2" gap="sm">
-                  <UiField :label="t('clients.clientServiceDetail.order')">
+                  <UiStack gap="xs">
+                    <UiLabel :variant="UiLabelVariant.Field">{{ t('clients.clientServiceDetail.order') }}</UiLabel>
                     <UiText :tone="UiTextTone.Secondary">{{ service.id }}</UiText>
-                  </UiField>
-                  <UiField :label="t('shared.productService')">
-                    <UiSelect
-                      data-testid="client-service-product"
-                      v-model="productIdRef"
-                      :options="productOptions"
-                      :placeholder="t('shared.productService')"
-                      searchable
-                    />
-                  </UiField>
+                  </UiStack>
                   <UiField :label="t('clients.clientServiceDetail.server')">
                     <UiSelect
                       data-testid="client-service-server"
@@ -634,19 +884,83 @@ onBeforeUnmount(() => {
                     </template>
                   </UiField>
                 </UiGrid>
-                <UiField :label="t('shared.status')">
-                  <UiSelect data-testid="client-service-status" v-model="status" :options="statusOptions" :placeholder="t('shared.status')" />
-                </UiField>
-              </UiStack>
+                <UiButton
+                  type="submit"
+                  :variant="UiButtonVariant.Primary"
+                  :aria-disabled="saving !== null"
+                  data-testid="client-service-save-hosting"
+                >
+                  {{ saving === ServiceSection.HostingAccount ? t('shared.saving') : t(SAVE_LABEL_KEYS[ServiceSection.HostingAccount]) }}
+                </UiButton>
+                <UiStatusMessage
+                  :message="outcomeOf(ServiceSection.HostingAccount)?.text ?? null"
+                  :tone="outcomeTone(outcomeOf(ServiceSection.HostingAccount))"
+                  data-testid="client-service-outcome-hosting-account"
+                />
+              </UiForm>
             </UiCard>
 
             <UiCard padding="md">
               <UiStack>
                 <UiHeading :level="2" variant="card">{{ t('clients.clientServiceDetail.moduleCommands') }}</UiHeading>
 
-                <UiText v-if="service.status === ServiceStatus.Terminated" :tone="UiTextTone.Muted">
-                  {{ t('clients.clientServiceDetail.serviceTerminated') }}
-                </UiText>
+                <UiForm
+                  :aria-busy="saving === ServiceSection.Status"
+                  data-testid="client-service-status-form"
+                  @submit="saveStatus"
+                >
+                  <UiStack direction="row" wrap :align="UiAlignItems.End" gap="sm">
+                    <UiField :label="t('shared.status')">
+                      <UiSelect data-testid="client-service-status" v-model="status" :options="statusOptions" :placeholder="t('shared.status')" />
+                    </UiField>
+                    <UiButton
+                      type="submit"
+                      :variant="UiButtonVariant.Secondary"
+                      :disabled="status === service.status"
+                      :aria-disabled="saving !== null"
+                      data-testid="client-service-status-save"
+                    >
+                      {{ saving === ServiceSection.Status ? t('shared.saving') : t(SAVE_LABEL_KEYS[ServiceSection.Status]) }}
+                    </UiButton>
+                  </UiStack>
+                  <UiStatusMessage
+                    :message="outcomeOf(ServiceSection.Status)?.text ?? null"
+                    :tone="outcomeTone(outcomeOf(ServiceSection.Status))"
+                    data-testid="client-service-outcome-status"
+                  />
+                </UiForm>
+
+                <UiForm
+                  v-if="service.status === ServiceStatus.Terminated"
+                  :aria-busy="saving === ServiceSection.TerminationDate"
+                  data-testid="client-service-termination-form"
+                  @submit="saveTerminationDate"
+                >
+                  <UiStack>
+                    <UiText :tone="UiTextTone.Muted">
+                      {{ t('clients.clientServiceDetail.serviceTerminated') }}
+                    </UiText>
+                    <UiStack direction="row" wrap :align="UiAlignItems.End" gap="sm">
+                      <UiField :label="t('clients.clientServiceDetail.terminationDate')">
+                        <UiDatePicker v-model="terminatedAt" data-testid="client-service-termination-date" />
+                      </UiField>
+                      <UiButton
+                        type="submit"
+                        :variant="UiButtonVariant.Secondary"
+                        :disabled="!terminatedAt"
+                        :aria-disabled="saving !== null"
+                        data-testid="client-service-save-termination-date"
+                      >
+                        {{ saving === ServiceSection.TerminationDate ? t('shared.saving') : t(SAVE_LABEL_KEYS[ServiceSection.TerminationDate]) }}
+                      </UiButton>
+                    </UiStack>
+                    <UiStatusMessage
+                      :message="outcomeOf(ServiceSection.TerminationDate)?.text ?? null"
+                      :tone="outcomeTone(outcomeOf(ServiceSection.TerminationDate))"
+                      data-testid="client-service-outcome-termination-date"
+                    />
+                  </UiStack>
+                </UiForm>
 
                 <UiStack v-else direction="row" wrap gap="sm">
                   <template v-if="service.status === ServiceStatus.Pending">
@@ -664,7 +978,7 @@ onBeforeUnmount(() => {
                       :variant="UiButtonVariant.Danger"
                       :disabled="commandLoading"
                       data-testid="client-service-terminate"
-                      @click="showTerminateModal = true"
+                      @click="dangerConfirm = DangerAction.Terminate"
                     >
                       {{ commandLoading ? t('shared.processing') : t('clients.clientServiceDetail.terminate') }}
                     </UiButton>
@@ -685,14 +999,14 @@ onBeforeUnmount(() => {
                       :variant="UiButtonVariant.Danger"
                       :disabled="commandLoading"
                       data-testid="client-service-terminate"
-                      @click="showTerminateModal = true"
+                      @click="dangerConfirm = DangerAction.Terminate"
                     >
                       {{ commandLoading ? t('shared.processing') : t('clients.clientServiceDetail.terminate') }}
                     </UiButton>
                     <UiButton
                       type="button"
                       :variant="UiButtonVariant.Secondary"
-                      :disabled="commandLoading || !service.provisioningRef"
+                      :disabled="commandLoading || !service.account.provisioningRef"
                       data-testid="client-service-change-package"
                       @click="showChangePackageModal = true"
                     >
@@ -701,7 +1015,7 @@ onBeforeUnmount(() => {
                     <UiButton
                       type="button"
                       :variant="UiButtonVariant.Secondary"
-                      :disabled="commandLoading || !service.provisioningRef"
+                      :disabled="commandLoading || !service.account.provisioningRef"
                       data-testid="client-service-change-password"
                       @click="showChangePasswordModal = true"
                     >
@@ -724,12 +1038,17 @@ onBeforeUnmount(() => {
                       :variant="UiButtonVariant.Danger"
                       :disabled="commandLoading"
                       data-testid="client-service-terminate"
-                      @click="showTerminateModal = true"
+                      @click="dangerConfirm = DangerAction.Terminate"
                     >
                       {{ commandLoading ? t('shared.processing') : t('clients.clientServiceDetail.terminate') }}
                     </UiButton>
                   </template>
                 </UiStack>
+                <UiStatusMessage
+                  :message="commandOutcome?.text ?? null"
+                  :tone="outcomeTone(commandOutcome)"
+                  data-testid="client-service-command-outcome"
+                />
               </UiStack>
             </UiCard>
 
@@ -743,15 +1062,30 @@ onBeforeUnmount(() => {
 
           <UiStack>
             <UiCard padding="md">
-              <UiStack>
+              <UiForm
+                stacked
+                :aria-busy="saving === ServiceSection.Billing"
+                data-testid="client-service-billing-form"
+                @submit="saveBillingTerms"
+              >
                 <UiHeading :level="2" variant="card">{{ t('clients.clientServiceDetail.billing') }}</UiHeading>
+                <UiField :label="t('shared.productService')">
+                  <UiSelect
+                    data-testid="client-service-product"
+                    v-model="productIdRef"
+                    :options="productOptions"
+                    :placeholder="t('shared.productService')"
+                    searchable
+                  />
+                </UiField>
                 <UiField :label="t('clients.clientServiceDetail.quantity')">
                   <UiNumberInput data-testid="client-service-quantity" v-model="quantity" :min="1" placeholder="1" />
                 </UiField>
                 <UiGrid :columns="2" gap="sm">
-                  <UiField :label="t('shared.registrationDate')">
-                    <UiDatePicker v-model="createdAt" />
-                  </UiField>
+                  <UiStack gap="xs">
+                    <UiLabel :variant="UiLabelVariant.Field">{{ t('shared.registrationDate') }}</UiLabel>
+                    <UiText :tone="UiTextTone.Secondary" data-testid="client-service-registered">{{ formatDate(service.createdAt) }}</UiText>
+                  </UiStack>
                   <UiField :label="t('clients.clientServiceDetail.firstPaymentAmount')">
                     <UiNumberInput data-testid="client-service-first-payment" v-model="firstPaymentAmount" :step="0.01" :min="0" placeholder="0.00" />
                   </UiField>
@@ -760,9 +1094,6 @@ onBeforeUnmount(() => {
                   </UiField>
                   <UiField :label="t('shared.nextDueDate')">
                     <UiDatePicker v-model="nextDueDate" />
-                  </UiField>
-                  <UiField :label="t('clients.clientServiceDetail.terminationDate')">
-                    <UiDatePicker v-model="terminatedAt" />
                   </UiField>
                   <UiField :label="t('shared.billingCycle')">
                     <UiSelect data-testid="client-service-billing-cycle" v-model="billingCycle" :options="billingCycleOptions" :placeholder="t('shared.billingCycle')" />
@@ -801,12 +1132,35 @@ onBeforeUnmount(() => {
                     />
                   </template>
                 </UiField>
-              </UiStack>
+                <UiButton
+                  type="submit"
+                  :variant="UiButtonVariant.Primary"
+                  :disabled="productIdRef === null"
+                  :aria-disabled="saving !== null"
+                  data-testid="client-service-save-billing"
+                >
+                  {{ saving === ServiceSection.Billing ? t('shared.saving') : t(SAVE_LABEL_KEYS[ServiceSection.Billing]) }}
+                </UiButton>
+                <UiStatusMessage
+                  :message="outcomeOf(ServiceSection.Billing)?.text ?? null"
+                  :tone="outcomeTone(outcomeOf(ServiceSection.Billing))"
+                  data-testid="client-service-outcome-billing"
+                />
+              </UiForm>
             </UiCard>
 
             <UiCard padding="md">
-              <UiStack>
+              <UiForm
+                stacked
+                :aria-busy="saving === ServiceSection.Automation"
+                data-testid="client-service-automation-form"
+                @submit="saveAutomation"
+              >
                 <UiHeading :level="2" variant="card">{{ t('clients.clientServiceDetail.autoManagement') }}</UiHeading>
+                <UiLabel :variant="UiLabelVariant.Inline">
+                  <UiToggle v-model="autoRenew" data-testid="client-service-auto-renew" />
+                  {{ t('clients.clientServiceDetail.autoRenew') }}
+                </UiLabel>
                 <UiLabel :variant="UiLabelVariant.Inline">
                   <UiToggle v-model="overrideAutoSuspend" data-testid="client-service-override-suspend" />
                   {{ t('clients.clientServiceDetail.overrideAutoSuspend') }}
@@ -829,13 +1183,31 @@ onBeforeUnmount(() => {
                     />
                   </template>
                 </UiField>
-              </UiStack>
+                <UiButton
+                  type="submit"
+                  :variant="UiButtonVariant.Primary"
+                  :aria-disabled="saving !== null"
+                  data-testid="client-service-save-automation"
+                >
+                  {{ saving === ServiceSection.Automation ? t('shared.saving') : t(SAVE_LABEL_KEYS[ServiceSection.Automation]) }}
+                </UiButton>
+                <UiStatusMessage
+                  :message="outcomeOf(ServiceSection.Automation)?.text ?? null"
+                  :tone="outcomeTone(outcomeOf(ServiceSection.Automation))"
+                  data-testid="client-service-outcome-automation"
+                />
+              </UiForm>
             </UiCard>
           </UiStack>
         </UiGrid>
 
         <UiCard padding="md">
-          <UiStack>
+          <UiForm
+            stacked
+            :aria-busy="saving === ServiceSection.Notes"
+            data-testid="client-service-notes-form"
+            @submit="saveNotes"
+          >
             <UiHeading :level="2" variant="card">{{ t('shared.adminNotes') }}</UiHeading>
             <UiTextarea
               v-model="adminNotes"
@@ -843,9 +1215,22 @@ onBeforeUnmount(() => {
               :placeholder="t('shared.internalNotesVisibleOnlyTo')"
               data-testid="client-service-admin-notes"
             />
-          </UiStack>
+            <UiButton
+              type="submit"
+              :variant="UiButtonVariant.Primary"
+              :aria-disabled="saving !== null"
+              data-testid="client-service-save-notes"
+            >
+              {{ saving === ServiceSection.Notes ? t('shared.saving') : t(SAVE_LABEL_KEYS[ServiceSection.Notes]) }}
+            </UiButton>
+            <UiStatusMessage
+              :message="outcomeOf(ServiceSection.Notes)?.text ?? null"
+              :tone="outcomeTone(outcomeOf(ServiceSection.Notes))"
+              data-testid="client-service-outcome-notes"
+            />
+          </UiForm>
         </UiCard>
-      </UiForm>
+      </UiStack>
 
       <UiDialog
         v-if="showChangePasswordModal"
@@ -874,11 +1259,12 @@ onBeforeUnmount(() => {
           </UiButton>
           <UiButton
             :variant="UiButtonVariant.Primary"
-            :disabled="commandLoading || !newPassword.trim()"
+            :disabled="!newPassword.trim()"
+            :loading="commandLoading"
             data-testid="client-service-password-confirm"
             @click="handleChangePassword"
           >
-            {{ commandLoading ? t('shared.processing') : t('clients.clientServiceDetail.confirm') }}
+            {{ t('clients.clientServiceDetail.confirm') }}
           </UiButton>
         </template>
       </UiDialog>
@@ -910,11 +1296,12 @@ onBeforeUnmount(() => {
           </UiButton>
           <UiButton
             :variant="UiButtonVariant.Primary"
-            :disabled="commandLoading || !newPackage.trim()"
+            :disabled="!newPackage.trim()"
+            :loading="commandLoading"
             data-testid="client-service-package-confirm"
             @click="handleChangePackage"
           >
-            {{ commandLoading ? t('shared.processing') : t('clients.clientServiceDetail.confirm') }}
+            {{ t('clients.clientServiceDetail.confirm') }}
           </UiButton>
         </template>
       </UiDialog>
@@ -933,16 +1320,16 @@ onBeforeUnmount(() => {
       />
 
       <UiDialog
-        v-if="showTerminateModal"
-        variant="confirm"
-        :title="t('clients.clientServiceDetail.terminateService')"
+        v-if="dangerConfirm !== null"
+        :variant="UiDialogVariant.Confirm"
+        :title="dangerTitle"
         :message="t('clients.clientServiceDetail.thisActionCannotBeUndone')"
-        :confirm-label="t('clients.clientServiceDetail.terminate')"
+        :confirm-label="dangerConfirmLabel"
         :loading-label="t('shared.processing')"
-        :loading="commandLoading"
-        tone="danger"
-        @confirm="handleTerminate"
-        @close="showTerminateModal = false"
+        :loading="dangerLoading"
+        :tone="UiTone.Danger"
+        @confirm="confirmDanger"
+        @close="dismissDanger"
       />
     </template>
   </UiStack>

@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>PUT /api/billing/quotes/{id}</c> against Postgres: editing a quote's subject, stage and line
 /// items, and the <c>QUOTE_NOT_FOUND</c> refusal for an id that names no quote.
 /// </summary>
-/// <remarks>Split from the deleted <c>QuotesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateQuoteTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

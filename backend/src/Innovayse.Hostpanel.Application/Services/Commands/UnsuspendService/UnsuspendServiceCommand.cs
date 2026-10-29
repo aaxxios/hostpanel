@@ -1,5 +1,8 @@
 namespace Innovayse.Hostpanel.Application.Services.Commands.UnsuspendService;
 
-/// <summary>Command to unsuspend a previously suspended client service.</summary>
+/// <summary>
+/// Re-activates a suspended client service: on the panel its hosting account lives on first, then on
+/// the platform.
+/// </summary>
 /// <param name="ServiceId">The service primary key.</param>
-public record UnsuspendServiceCommand(int ServiceId);
+public sealed record UnsuspendServiceCommand(int ServiceId);

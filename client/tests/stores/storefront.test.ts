@@ -2,7 +2,7 @@
  * Tests for `stores/storefront.ts`.
  *
  * The store, not the sections, owns the lists, the loading flag and the failure sentence, so these
- * assertions pin the contract the sections render from -- including that an empty list is a valid
+ * assertions pin the contract the sections render from, including that an empty list is a valid
  * state and a refusal leaves an empty list rather than stale data.
  *
  * @module tests/stores/storefront.test

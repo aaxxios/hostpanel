@@ -6,19 +6,8 @@ import { mountClient } from '~/tests/helpers/mountClient'
 import { grantPermissions } from '~/tests/helpers/grantPermissions'
 import { Permission } from '~/composables/usePermissions'
 import ServiceHeader from '~/components/client/services/ServiceHeader.vue'
-import type { ServiceDetail } from '~/types/servicedetail'
+import { makeClientService as service } from '~/tests/helpers/clientServiceFixture'
 import { ServiceStatus } from '~/types/servicestatus'
-
-/**
- * Builds a service with the fields the header reads.
- *
- * @param overrides - Fields to set.
- * @returns A service.
- */
-const service = (overrides: Partial<ServiceDetail> = {}): ServiceDetail => ({
-  id: 4, name: 'Starter', domain: 'example.com', groupname: 'Hosting', serverhostname: 'srv1.example.net', status: ServiceStatus.Active,
-  ...overrides
-} as ServiceDetail)
 
 describe('ServiceHeader', () => {
   it('shows the plan name and the domain', () => {
@@ -28,16 +17,10 @@ describe('ServiceHeader', () => {
     expect(wrapper.text()).toContain('example.com')
   })
 
-  it('shows the product fallback when the backend sent no product name', () => {
-    const wrapper = mountClient(ServiceHeader, { props: { service: service({ name: null }), ssoLoading: false } })
+  it('says there is no domain when the service has none', () => {
+    const wrapper = mountClient(ServiceHeader, { props: { service: service({ domain: null }), ssoLoading: false } })
 
-    expect(wrapper.find('h1').text()).toBe('fallback.product')
-  })
-
-  it('falls back to the product group when there is no domain', () => {
-    const wrapper = mountClient(ServiceHeader, { props: { service: service({ domain: '' }), ssoLoading: false } })
-
-    expect(wrapper.text()).toContain('Hosting')
+    expect(wrapper.text()).toContain('client.dashboard.noDomain')
   })
 
   it('offers the control-panel button for an active service on a known server', () => {
@@ -48,7 +31,7 @@ describe('ServiceHeader', () => {
 
   it.each([
     [{ status: ServiceStatus.Suspended }],
-    [{ serverhostname: '' }],
+    [{ server: null }],
   ])('hides the control-panel button for %j', (overrides) => {
     const wrapper = mountClient(ServiceHeader, { props: { service: service(overrides), ssoLoading: false } })
 

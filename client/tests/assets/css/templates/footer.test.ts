@@ -8,7 +8,12 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-/** Reads a template stylesheet. */
+/**
+ * Reads a template stylesheet.
+ *
+ * @param name Template name, the file name without `.css`.
+ * @returns The stylesheet text.
+ */
 const read = (name: string): string => readFileSync(resolve(__dirname, `../../../../assets/css/templates/${name}.css`), 'utf8')
 
 /** The aurora stylesheet source. */

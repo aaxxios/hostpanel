@@ -1,20 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>UpdateDnsRecord</c> use case —
+/// Integration tests for the admin <c>UpdateDnsRecord</c> use case:
 /// <c>PUT /api/domains/{id}/dns/{recordId}</c>. The full add/update/delete lifecycle lives in
-/// <see cref="AddDnsRecordTests"/>; these tests cover this use case's own refusals directly, since
-/// A6 left it with no Integration coverage of its own before this batch.
+/// <see cref="AddDnsRecordTests"/>; these tests cover this use case's own refusals directly.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateDnsRecordTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -86,5 +83,19 @@ public sealed class UpdateDnsRecordTests(IntegrationTestFactory factory) : IClas
             new { value = "5.6.7.8", ttl = 1800, priority = (int?)null });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A non-positive record id is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task UpdateDnsRecord_NonPositiveRecordId_Returns400ValidationErrorAsync()
+    {
+        var client = await DomainsTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/domains/{DomainsTestSeeds.UnknownId}/dns/0",
+            new { value = "5.6.7.8", ttl = 1800, priority = (int?)null });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

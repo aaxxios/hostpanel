@@ -23,7 +23,8 @@
       "phonenumber": "Phone Number"
     },
     "errors": {
-      "generic": "An error occurred. Please try again."
+      "generic": "An error occurred. Please try again.",
+      "totalNotAccepted": "The order total changed, so it was not paid. Review your cart and try again."
     },
     "success": {
       "title": "Payment Successful!",
@@ -33,7 +34,7 @@
       "paid": "Paid",
       "amount": "Amount",
       "setupService": "Set Up My Service",
-      "viewInvoices": "View Invoices",
+      "viewInvoices": "View invoices",
       "domain": "Domain",
       "action": "Action",
       "registration": "Registration",
@@ -56,6 +57,7 @@
       "email": "you{'@'}example.com",
       "password": "••••••••"
     },
+    "totalChangedConfirm": "The total changed from {shown} to {charged}. Pay the new total?",
     "card": {
       "notInitialized": "The card form is not ready yet. Please wait a moment and try again.",
       "failed": "The card payment could not be completed.",

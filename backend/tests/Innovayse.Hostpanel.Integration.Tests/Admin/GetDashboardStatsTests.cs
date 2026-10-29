@@ -1,25 +1,21 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 
 /// <summary>
-/// <c>GET /api/admin/dashboard/stats</c>: an admin or reseller reads every counter, including the
+/// <c>GET /api/admin/dashboard/stats</c>: an admin reads every counter, including the
 /// open-ticket count which reflects only <see cref="TicketStatus.Open"/> tickets, a caller with
 /// only the Client role is refused, and the route is closed to a caller with no credential. This
 /// use case refuses nothing once authorized.
 /// </summary>
-/// <remarks>Split out of the deleted <c>DashboardEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetDashboardStatsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -38,10 +34,8 @@ public sealed class GetDashboardStatsTests(IntegrationTestFactory factory) : ICl
     }
 
     /// <summary>
-    /// The open ticket count reflects only <see cref="TicketStatus.Open"/> tickets -- the effect of
-    /// the dissolved <c>ITicketRepository.CountByStatusAsync</c>, now inlined as
-    /// <c>_context.Tickets.CountAsync(t =&gt; t.Status == TicketStatus.Open, ct)</c> in
-    /// <c>GetDashboardStatsHandler</c> (A6 Task 6).
+    /// The open ticket count reflects only <see cref="TicketStatus.Open"/> tickets, as counted by
+    /// <c>GetDashboardStatsHandler</c>.
     /// </summary>
     [Fact]
     public async Task OpenTicketsCountsOnlyOpenStatusAsync()
@@ -59,12 +53,13 @@ public sealed class GetDashboardStatsTests(IntegrationTestFactory factory) : ICl
 
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var client = Client.Create($"user-{Guid.NewGuid():N}", "Ada", "Lovelace", $"ada-{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"user-{Guid.NewGuid():N}", "Ada", "Lovelace", $"ada-{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(client);
         await context.SaveChangesAsync(CancellationToken.None);
-        var openTicket = Ticket.Create(client.Id, "Open one", "Help", departmentId: 1, TicketPriority.Medium);
-        var closedTicket = Ticket.Create(client.Id, "Closed one", "Help", departmentId: 1, TicketPriority.Medium);
-        closedTicket.Close();
+        var departmentId = await SupportTestSeeds.SeedDepartmentAsync(context);
+        var openTicket = Ticket.Create(client.Id, "Open one", "Help", departmentId, TicketPriority.Medium, DateTimeOffset.UtcNow);
+        var closedTicket = Ticket.Create(client.Id, "Closed one", "Help", departmentId, TicketPriority.Medium, DateTimeOffset.UtcNow);
+        closedTicket.Close(DateTimeOffset.UtcNow);
         context.Tickets.Add(openTicket);
         context.Tickets.Add(closedTicket);
         await context.SaveChangesAsync(CancellationToken.None);
@@ -95,6 +90,25 @@ public sealed class GetDashboardStatsTests(IntegrationTestFactory factory) : ICl
     }
 
     /// <summary>
+    /// Total revenue is income as the reports read it: the scenario adds 390 (payments less the
+    /// partial refund, the imported history, the converted foreign payment, no credit), all of it
+    /// long before the last 30 days, so the monthly figure does not move.
+    /// </summary>
+    [Fact]
+    public async Task RevenueIsIncomeNetOfRefundsAsync()
+    {
+        var admin = await AdminTestSeeds.AdminClientAsync(factory);
+        var before = await admin.GetFromJsonAsync<JsonElement>("/api/admin/dashboard/stats");
+
+        var scenario = await IncomeTestSeeds.SeedAsync(factory, 2019);
+        var after = await admin.GetFromJsonAsync<JsonElement>("/api/admin/dashboard/stats");
+
+        (after.GetProperty("totalRevenue").GetDecimal() - before.GetProperty("totalRevenue").GetDecimal()).Should().Be(390m);
+        after.GetProperty("monthlyRevenue").GetDecimal().Should().Be(before.GetProperty("monthlyRevenue").GetDecimal());
+        after.GetProperty("currency").GetString().Should().Be(scenario.BaseCurrency);
+    }
+
+    /// <summary>
     /// Revenue adds invoices up in the base currency: a paid invoice in a currency worth half the base adds half
     /// its total, not the whole of it, so a mixed-currency demo does not report a thousand times its real revenue.
     /// </summary>
@@ -116,11 +130,11 @@ public sealed class GetDashboardStatsTests(IntegrationTestFactory factory) : ICl
         {
             var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
             context.Currencies.Add(Currency.Create("ZQD", "999", string.Empty, " ZQD", 2, 0.5m, isBase: false));
-            var client = Client.Create($"user-{Guid.NewGuid():N}", "Ada", "Lovelace", $"ada-{Guid.NewGuid():N}@example.test");
+            var client = Client.Create($"user-{Guid.NewGuid():N}", "Ada", "Lovelace", $"ada-{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
             context.Clients.Add(client);
             await context.SaveChangesAsync(CancellationToken.None);
 
-            var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(14), "ZQD");
+            var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(14), "ZQD", DateTimeOffset.UtcNow);
             invoice.AddItem("Hosting", 100m, 1);
             invoice.AddPayment(DateTimeOffset.UtcNow, "Card", $"tx-{Guid.NewGuid():N}", 100m, 0m, null);
             context.Invoices.Add(invoice);

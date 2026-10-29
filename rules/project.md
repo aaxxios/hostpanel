@@ -7,14 +7,13 @@
 > ([jsdoc.md](jsdoc.md)), plus inline comments wherever the *reason* for the code is not
 > visible from the code. Undocumented code is unfinished code.
 >
-> `backend/src/Directory.Build.props` sets `GenerateDocumentationFile` **and**
-> `TreatWarningsAsErrors`, so an undocumented public member under `src/` is a build failure,
-> not a review comment. `backend/tests/` inherits neither — documentation there is a rule the
-> compiler is not enforcing.
+> `backend/src/Directory.Build.props` and `backend/tests/Directory.Build.props` both set
+> `GenerateDocumentationFile` **and** `TreatWarningsAsErrors`, so an undocumented public member
+> under `src/` or `tests/` is a build failure, not a review comment.
 
 **What it is:** the self-hosted hosting-management platform — open-source hosting billing and
 automation. Clients order services, manage domains, pay invoices and open tickets; staff run
-products, billing, provisioning and integrations. Production is `host.innovayse.com`. A public demo
+products, billing, provisioning and integrations. A public demo
 is the same build with `Demo__Enabled=true` (`deploy:demo`); its sign-in page shows the demo accounts,
 served by `GET /api/public/demo` — they are not written in `README.md`.
 
@@ -32,39 +31,56 @@ repository.
 
 ## Where this project's rules differ from the workspace — read this before your first review
 
-After the conformance pass (A1–A7) this backend is on the workspace shape. The old list of
-deliberate departures (primary constructors, `*Request` records, exception-only refusals,
-feature-local `Interfaces/` folders, repositories) is **gone** — do not resurrect any of it from
-memory. What remains is short:
+This backend is on the workspace shape: no primary constructors on handlers or controllers, no
+`*Request` records, no exception-only refusals, no feature-local `Interfaces/` folders, no
+repositories. The departures are short:
 
-- **`LocalAuthController` is the one controller outside the shape, and the architecture tests
-  say so.** It derives from `ControllerBase`, keeps a primary constructor, resolves
-  `IUserService` from an injected `IServiceProvider`, and takes six `*Request` bodies from
-  `API/Auth/Requests/` — `ConfirmEmailRequest`, `ForgotPasswordRequest`, `LoginRequest`,
-  `RegisterRequest`, `ResetPasswordRequest`, `TwoFactorLoginRequest`. Each is a named allow-list
-  entry (`ControllerBaseTests`, `ExplicitConstructorTests`, `NoRequestTypesTests`); the entry is
-  removed when the controller is converted. Why it stays: its actions call
-  `IUserService`/`IJwtService` and issue the session cookie directly, and none dispatches one
-  command, so there is no command for a body to bind to; the token/cookie contract on `login`,
-  `2fa-login` and `logout` is what the admin SPA's refresh code and `LocalSessionCookie` depend
-  on. `IUserService` is registered only in the `if (ownsItsUsers)` branch of
-  `Infrastructure/DependencyInjection.cs`, so a constructor parameter would fail every route under
-  `sso` mode (including the ones that answer 404 on purpose). Converting it is its own reviewed
-  change, after the login flow is re-verified end to end. `HealthController` is **not** an
-  exception: it derives from `BaseApiController` with `[AllowAnonymous]`.
-- **Anonymous public storefront feeds.** `/api/public/{faqs,locations,partners,projects,testimonials}` (like `/api/public/slides` and
+- **`LocalAuthController` follows the shape like every other controller.** It sits in
+  `API/Controllers/`, derives from `BaseApiController` and each action binds a command and
+  dispatches it once (`SignIn`, `TwoFactorSignIn`, `Register`, `ConfirmEmail`, `ForgotPassword`,
+  `ResetPassword`, `SignOut`). Every route answers 404 unless the deployment is in local mode:
+  `API/Auth/LocalModeOnlyFilter`, a resource filter, refuses before binding and before the bus, which
+  is what lets `SignInHandler`, `TwoFactorSignInHandler` and `RegisterHandler` depend on
+  `IUserService` and `ITwoFactorChallengeService`, registered only in the `if (ownsItsUsers)` branch
+  of `Infrastructure/DependencyInjection.cs`, and never be resolved under `sso` mode. A sign-in sets
+  the httpOnly session cookie through `BaseApiController.HandleSession` (the handler returns an
+  `ISessionGrant`, `Shared/Models/Interfaces`; `LocalSessionCookie` lives in `Shared/Infrastructure`)
+  and still returns the token in the body for scripted callers, and `logout` clears the cookie
+  through `HandleSessionEnded`. `HealthController` derives from `BaseApiController` with
+  `[AllowAnonymous]` like the rest.
+- **Anonymous public storefront feeds.** `/api/public/{faqs,locations,partners,product-groups,products,projects,testimonials}` (like `/api/public/slides` and
   `/api/public/demo` before them) are `[AllowAnonymous]` read-only queries: the storefront renders them before anyone has
   signed in, so they cannot carry the usual `[Authorize]` on every action. They stay on `BaseApiController`, dispatch one
   query, return only active, already-localised records and never expose an admin field; writes remain behind `Policies.Admin`.
 - **Handler and validator naming is `<UseCase>Handler` / `<UseCase>Validator`; the product rule wins over
-  workspace `cqrs.md`.** Use-case names are unique across modules (`SuspendHostedAccount` in Provisioning,
-  `SuspendService` in Services), and a DTO two use cases share lives once in `<Module>/Common/` (one
+  workspace `cqrs.md`.** Use-case names are unique across modules (`ProvisionService` in Provisioning,
+  `SetupService` in Services), one use case per state transition (`SuspendService`, `UnsuspendService`,
+  `TerminateService`: every route, cron and status change dispatches them, and each checks the state
+  before it asks the panel), and a DTO two use cases share lives once in `<Module>/Common/` (one
   `ProductPriceDto`, one `FileDownloadDto` in `Application/Common/` for every export and download).
-- **No `*Request` types in Application, API (bar the six auth bodies) or Domain.** Provider inputs in Domain
-  are named for what they carry (`ChargeInstruction`, `DomainRegistrationOrder`, `DomainRenewalOrder`,
+- **No `*Request` types in Application, API or Domain.** Provider inputs in Domain
+  are named for what they carry (`DomainRegistrationOrder`, `DomainRenewalOrder`,
   `DomainTransferOrder`, `ProvisionAccountOrder`, `SuspendAccountOrder`, `TerminateAccountOrder`);
   `NoRequestTypesTests` covers all three layers (the `CancellationRequest` entity is exempt). The wire models inside
   `Innovayse.Providers.*` and the SDK's `PaymentRequest` are third-party-facing contracts and keep their names.
+- **Recurring jobs and background handlers return `Task`, not `Result`.** The crons
+  (`CheckOverdueInvoicesCron`, `ProcessBillableItemsCron`, `ProcessRenewalsCron`,
+  `ReconcileGatewayPaymentsCron`, `SendRenewalRemindersCron`, `SuspendOverdueServicesCron`,
+  `AutoTerminateSuspendedCron`, `SyncServerAccountCountsCron`) and `ResetDemoData`,
+  `CheckDomainExpiries` and `SyncPendingDomainStatuses` are scheduled messages, not dispatched by a
+  caller, so nothing would receive a `Result`. So are `RunMigrationPull` (published by
+  `MigrationPullQueue` once a job's queued state is saved; the job row records how the pull ended)
+  and `RecoverInterruptedMigrationJobs` (a recurring job: it fails queued or running pulls whose `MigrationJobs.LastHeartbeatAt` is older than `ScheduledJobs:MigrationStaleAfterMinutes`, so a pull another instance still runs is left alone). The crons run each pass through
+  `Application/Common/RecurringJobs.RunAsync`, which takes the job's lease, logs a failed pass and schedules
+  the next one from the end of the pass; the log line is the record of the failure. Wrapping them in a
+  `Result` nobody reads would add nothing. Every handler a controller dispatches still returns `Result`.
+- **Recurring jobs run on one instance at a time and are caught up after downtime.** The `JobRuns` table
+  (`JobRun` in Domain, `IJobLease` in Application, `Infrastructure/Scheduling/JobLease`) holds a lease per job:
+  a pass takes it first, an instance that does not get it skips the pass and keeps its own chain, and a lease
+  whose holder crashed expires. On startup `RecurringJobs.StartAsync` runs a job at once when its last success
+  is older than its period, and otherwise schedules its next regular run. Every hour and interval lives in
+  `ScheduledJobsOptions` (section `ScheduledJobs`), read by the startup services and the handlers alike; a
+  scheduled run is in memory, so a host that is stopping ends the chain and the next start catches up.
 - **Our own API contracts carry no `[JsonPropertyName]`**: the wire name is the property name in camelCase.
   A route id is overlaid on the bound command with `with { ... }`; there are no `*Body` types. The SDK ports are
   vendor-free too (`IHostingPanelApiClient`, `IHostingPanelV7ApiClient`; `NoVendorNamesTests` covers the SDK).
@@ -72,8 +88,8 @@ memory. What remains is short:
   (`Type`/`Title`/`Status`/`Detail`/`Errors`, camelCase on the wire), written by one serializer,
   `Shared/Infrastructure/ErrorBody.cs`, for every surface: `BaseApiController`,
   `ExceptionHandlingMiddleware`, the model-state factory, the auth-event writers and the rate
-  limiter. The body carries only those members: the old `error`/`code` pair is gone, and both
-  frontends read `type`/`detail`. Do not add the pair back.
+  limiter. The body carries only those members, and both frontends read `type`/`detail`; do not
+  add an `error`/`code` pair beside them.
 - **The API sends the finished sentence, in the caller's language; the frontend does not
   translate codes.** Sentences live in `Application/Resources/ErrorMessages*.resx` (looked up by
   error code through `IErrorMessageResolver`) and `Shared/Resources/ValidationMessages*.resx` (middleware, binders) and
@@ -114,11 +130,21 @@ docker/                              compose set (shared·dev·prod·platform), 
 ```
 
 - **No repositories.** Handlers use `IHostpanelDbContext` (`Application/Common/Interfaces/`)
-  directly; `IUnitOfWork` is a port in `Application/Common/Interfaces/`. Domain has no `Interfaces/` folders.
-- **Every application port is in `Application/Common/Interfaces/`** (`IPaymentGateway`,
+  directly, and the DbContext is the unit of work: a handler saves with
+  `IHostpanelDbContext.SaveChangesAsync`, which also translates a concurrency conflict to
+  `ConcurrencyConflictException`. There is no separate unit-of-work port.
+  Domain has no `Interfaces/` folders.
+- **Every application port is in `Application/Common/Interfaces/`** (`ICardPaymentGateway`,
   `IProvisioningProvider`, `IEmailSender`, `IIdentityProvider`, `IUserService`, …) and
   `PortPlacementTests` fails on one anywhere else. Adapters sit in Infrastructure under a
   capability folder (`Storage/`, `Email/`, `Integrations/<Provider>/`, `Auth/`); EF configurations sit in `Persistence/Configurations/`.
+  Two documented exceptions in `PortPlacementTests`. A request-scoped adapter lives under `API/` and
+  sits in the test's allow-list with what it reads (today `API/Identity/HttpCallerAccessToken`,
+  the `Authorization` header, behind `ICallerAccessToken`). `Innovayse.Providers.CWP7` implements
+  `IProvisioningProvider` and is not scanned: it is not a plugin, Infrastructure links it and
+  `ProvisioningProviderFactory` builds it per server, so it is an Infrastructure adapter in its
+  own assembly. The SDK's `IProvisioningPlugin` is only a marker with no operations, so there is
+  no SDK contract it could implement instead.
 - **"Test Connection" runs a live probe where a provider has one.** `IIntegrationConnectionProbe`
   (a port in `Application/Common/Interfaces/`, keyed by integration slug) is implemented per
   integration in `Infrastructure/Integrations/<Provider>/` (today `NameAmConnectionProbe`, which
@@ -127,7 +153,7 @@ docker/                              compose set (shared·dev·prod·platform), 
   every required field is stored. A probe failure is logged and answered with a fixed sentence —
   the provider's own text never reaches the response. `NameAmClient` reads the e-mail, password,
   API URL and test mode saved on the admin Integrations page over the bound options
-  (`IsConfiguredAsync`), so the page now configures what requests actually use.
+  (`IsConfiguredAsync`), so the page configures what requests use.
 - **Enums live in `Enums/` namespaces** (`Domain/<Area>/Enums/`, `SharedKernel/Domain/Enums/`,
   `Infrastructure/Email/Enums/`); `EnumPlacementTests` enforces it.
 - **Domain refusals are `DomainException(code, message)`** (abstract, in the kernel); the exception
@@ -142,6 +168,35 @@ docker/                              compose set (shared·dev·prod·platform), 
   `Assembly.LoadFrom` over it would give the process two distinct `IPaymentPlugin` types with the
   same name, after which every cast in `PaymentPluginResolver` fails. The CWP providers are
   deliberately **not** staged, so they cannot activate at runtime by accident.
+- **`PaymentPluginResolver` takes `IConfiguration` (documented exception to configuration.md rule 6).**
+  The plugin SDK's payment plugin base classes take an `IConfiguration` in their constructor, so the
+  resolver hands each plugin a configuration built from **its own section only**: the host's
+  `integration:{id}` section with the plugin's `integration:{id}:*` settings rows layered over it
+  (the rows are filtered by prefix in SQL, never the whole `Settings` table). Connection strings,
+  signing keys and other integrations never reach a plugin. The keys keep their full path because
+  the SDK base classes read `integration:{id}:{key}`; a relative `IConfigurationSection` would make
+  every such read miss. This is the public plugin contract; typed plugin settings are planned for a
+  later SDK version, and until then this is the one type below the composition root allowed to hold
+  `IConfiguration` (allow-listed in `ConfigurationTests`). Nothing else may follow it.
+- **Two plugin folders: built-in and uploaded (`PluginOptions`, section `Plugins`).** The build's own
+  `plugins/` folder (`PluginOptions.BuiltInRoot`) holds the plugins shipped with the build; they load
+  first, are listed with `isBuiltIn: true`, and cannot be removed or replaced from the admin panel
+  (`PLUGIN_BUILT_IN`, 409). Uploads go to `Plugins:InstallPath` (default `plugins-installed` beside
+  the app; mount it on a volume to keep uploads across redeploys), which `PluginOptionsValidator`
+  keeps apart from the built-in folder. All plugin file system work sits behind `IPluginPackageStore`
+  (`Infrastructure/Plugins/PluginPackageStore`); Application never touches the disk. An upload is
+  streamed to a staging folder (`.staging`, which fails the plugin id rule and so is never loaded),
+  checked, unpacked there and moved into place with one rename, so a refusal leaves nothing behind.
+  The checks: the plugin id rule (`Domain/Plugins/PluginIdentifier`: lower-case letters, digits and
+  single hyphens, at most 64 characters) and a resolved path that stays a direct child of the upload
+  folder; every entry inside the plugin's own folder; `Plugins:MaxEntryCount` and
+  `Plugins:MaxUncompressedBytes` (counted while unpacking; `PLUGIN_ARCHIVE_TOO_LARGE`, 413); no
+  assembly named like the SDK, `Innovayse.Hostpanel.*`, `System.*`, `Microsoft.*` or anything in the
+  host's trusted platform assembly list (`PLUGIN_HOST_ASSEMBLY_REFUSED`); and, when
+  `Plugins:TrustedPackageSha256` lists any digest, the archive's SHA-256 must be one of them
+  (`PLUGIN_NOT_TRUSTED`; an empty list, the default, accepts any archive that passes the other
+  checks). Every install and removal writes an activity log line with no client (`ActivityLog.ClientId`
+  is nullable for system-wide actions), carrying the plugin id and, for an install, the digest.
 
 ## CQRS — Wolverine, conforming
 
@@ -151,14 +206,25 @@ folder per use case under `Application/<Feature>/{Commands,Queries}/<UseCase>/`.
 
 - **Handlers return `Result` / `Result<T>`** (`Shared/Models`); controllers derive from
   `BaseApiController` and return through `HandleResult`, which maps the failure code to a status
-  with `StatusMapping`. every controller but the two named above derives from it (`ControllerBaseTests`); handlers and
+  with `StatusMapping`. Every controller derives from it (`ControllerBaseTests`); handlers and
   controllers use explicit `private readonly` fields and a written constructor
   (`ExplicitConstructorTests`).
 - **Validation is a Wolverine policy.** `opts.Policies.Add<ValidationPolicy>()` puts
-  `ValidationMiddleware` at position 0 of every chain; validators are registered Scoped with
+  `ValidationMiddleware<TMessage>`, closed over the chain's message type, at position 0 of every chain
+  (its validators arrive through the constructor, never from the service provider); validators are registered Scoped with
   `AddValidatorsFromAssemblyContaining<AcceptInvitationCommand>()` (Scoped is load-bearing:
   validators take `ICurrentUserService`). A failure is a 400 `VALIDATION_ERROR` with the
   field errors grouped under `errors`. Validators exist on both commands and queries.
+- **No service location in generated handler code.** `opts.ServiceLocationPolicy = NotAllowed` in every
+  environment: Wolverine builds each handler's dependencies as constructor calls, so an adapter is
+  registered by type (no `sp => ...` factory for a scoped or transient service), is `public` with a public
+  constructor, and never takes `IServiceProvider`. The services only the container can build are named in
+  `MessagingRegistration.UseServiceLocationForContainerBuiltServices`: the data context and its
+  `IHostpanelDbContext` port, Identity's `UserManager<AppUser>`, `IPaymentPluginResolver` (it activates a
+  plugin type loaded at run time) and every typed HTTP client `AddHttpClient<T>` registers. A test double
+  is registered as an instance (`AddSingleton<IPort>(fake)`) or by type, never through a factory.
+  `MessagingRegistrationTests` builds every chain, with and without the demo, and fails on the first
+  offender.
 - **No identity on a message** (`NoIdentityOnMessagesTests`); handlers read it from
   `ICurrentUserService` (`Shared/MultiTenancy/`).
 - **Client portal permissions are enforced on the server, per action.** Every action behind `Policies.Client` carries
@@ -178,22 +244,73 @@ folder per use case under `Application/<Feature>/{Commands,Queries}/<UseCase>/`.
   `Application/<Feature>/{Commands,Queries}/<UseCase>/` has no
   `Integration.Tests/<Feature>/<UseCase>Tests.cs` (crons and event handlers under `Commands`
   count as use cases).
+- **Time comes from `IClock`; timestamps are stamped on save.** `IClock`
+  (`Application/Common/Interfaces/`) is the port, `Infrastructure/Time/SystemClock` reads the
+  registered `TimeProvider`, so a test that swaps `TimeProvider` moves both. The entities declare
+  their own audit columns rather than deriving from `AuditableEntity`, so
+  `Infrastructure/Persistence/AuditableEntityInterceptor.cs` stamps by convention: `CreatedAt` on
+  insert unless already set (`Backdate` before the first save wins), `UpdatedAt` on change unless
+  the entity set it itself. Factories do not write `CreatedAt`; a domain method that needs a
+  moment takes it from the caller (`ClientService.Activate` gets its billing anchor that way: the
+  activation moment, when provisioning succeeds, not the order date; it never lowers a later renewal date).
+- **A module owns its tables** (`ModuleTableOwnershipTests`, allow-list in `CrossModuleReadModels`). Another
+  module's rows are reached through its query on `IMessageBus` or a port, never its `DbSet`. The shared
+  blocks: `GetClientBriefsQuery` (id, owner subject, name, company, currency, status, invoicing preference, credit balance and, on request, the
+  sign-in email; `ClientBriefBusExtensions` holds the call shapes) for anything that names or mails a client;
+  `ListCurrenciesQuery`, `GetSetting`/`GetPublicSettings`/`GetSettingValues` (several keys read together)
+  and `GetProductSummariesQuery` for currencies, settings and products; `GetCallerClientAsync`
+  (`CallerClientExtensions`) for the caller's own client record; `GetServerConnectionQuery` (through
+  `ServiceServerExtensions.FindServerAsync` in Provisioning) for the server a service is hosted on. Existence of a parent row in another module is asked of its owner too: `ClientExistsAsync` (Clients), `ProductExistsAsync` (Products), `ServiceExistsAsync` (Services) are bus extensions; `IsServerInUseQuery` (Services), `IsServerGroupInUseQuery` (Products) and `GetDiskUsageByDomainsQuery` (Reports) answer the server module's and the service list's questions. Activity-log lines are written through the `IActivityLogger` port, not an Audit
+  command: the port stages the line on the caller's own context, so the line and the change it records
+  commit or fail together, which a separately saving command could not promise. A client's credit
+  balance changes the same way through `IClientCredit`, so moving credit between an invoice and the balance
+  (`InvoiceCreditExtensions` in Billing) is one save. The renewal read models belong to their owners and Billing
+  reaches them over the bus: Services owns `GetRenewableServices`, `GetServiceBillingStates`,
+  `ListOverdueSuspendedServices`, `ListUndatedRenewingServices` and `ExtendServiceRenewal`; Domains owns
+  `GetRenewableDomains`, `GetDomainRenewalStates` and `GetTldRenewPrice`. The setup token kept
+  among the settings is issued, checked and retired through `ISetupTokenStore`. Provisioning counts as part of the
+  Services module (both drive `ClientServices`). One documented writer exception: the migration importers
+  (`Application/Migration/Importers`, with `MigrationClientResolver` and `MigrationProductLookup`) write
+  many modules' tables directly, because they are a bulk import of legacy data across modules that runs as
+  one job with its own log; the reason is written on `IMigrationEntityImporter` and the entry is marked
+  `CrossModuleAccess.Writer` in `CrossModuleReadModels`. No other writer joins it without an owner decision.
 - **Domain events are dispatched.** `BaseEntity.DomainEvents` collects them and
   `Infrastructure/Persistence/DomainEventDispatchInterceptor.cs` publishes them through Wolverine
-  after `SaveChanges`, then clears them. `IDomainEventGate` suppresses dispatch for bulk writers
+  after `SaveChanges` (inside an explicit transaction: on its commit, dropped on rollback), then clears them. `IDomainEventGate` suppresses dispatch for bulk writers
   (`MigrationPullWorker`, `DevDataSeeder`; tests use `Fixtures/SuppressedDomainEventGate`).
+  `DevDataSeeder` reads the passwords of the accounts it creates from `DevDataSeederOptions` (section `DevDataSeed`, both required, no default in code or `appsettings.json`). The dev compose file supplies them as `DevDataSeed__AdminPassword` / `DevDataSeed__ClientPassword` from `DEV_SEED_ADMIN_PASSWORD` / `DEV_SEED_CLIENT_PASSWORD` (documented dev defaults in `docker/.env.example`); no `appsettings.Development.json` is kept, it is git-ignored.
   `BaseEntity.AddDomainEvent(Func<IDomainEvent>)` defers building an event that needs the id
   until after the save. `ClientService.Suspend/Unsuspend/Terminate` take `hostingAlreadyUpdated`
-  (handlers pass `true` after the panel call) so the event handler does not repeat it. The
-  `PaymentReceived`/`InvoiceRefunded` transaction handlers are deleted; only notification
-  handlers remain, with one exception: `Billing/Events/RenewalPaymentReceivedHandler` dispatches
+  (handlers pass `true` after the panel call) so the event handler does not repeat it. Event
+  handlers only send notifications, with these exceptions: `Billing/Events/RenewalPaymentReceivedHandler` dispatches
   `ApplyPaidRenewalsCommand`. It is safe because it only triggers an idempotent command (the line's
   `RenewalAppliedAt` marker decides) that the daily renewal sweep also runs, so a dropped event is
-  applied within a day.
+  applied within a day. The second exception is `Services/Events/ClientServiceTerminatedHandler`, which dispatches
+  `RetireTerminatedServiceCommand` (closes the service's open cancellation requests and revokes its SSH keys on
+  the server each key is pinned to, leaving a key the agent does not confirm removed marked as a failed revoke for
+  staff); it is idempotent, and a failure is logged for staff. `Services/Events/SuspendSshKeysOnServiceSuspendedHandler`
+  dispatches `SuspendServiceSshKeysCommand` on `ClientServiceSuspendedEvent`, which takes the service's installed SSH
+  keys off their server, and `Services/Events/RestoreSshKeysOnServiceUnsuspendedHandler` dispatches
+  `RestoreServiceSshKeysCommand` on `ClientServiceUnsuspendedEvent`, which puts them back. `Provisioning/Events/ServiceUnsuspendedHandler`
+  dispatches the same `RestoreServiceSshKeysCommand` a second time, but only after the panel answered `Updated` for
+  the unlock, because an agent refuses keys for a locked account and the two unsuspensions are not ordered. All three
+  only trigger idempotent commands, log a refusal or failure for staff and never throw, since Wolverine runs every
+  handler of one message in a single chain.
+  The remaining three react to `ClientClosedEvent` and are described under "Client account status" below.
+
+- **`InvoiceItems.ClientServiceId` and `InvoiceItems.RegisteredDomainId` carry no foreign key, on purpose.** An
+  invoice line is a financial record that must outlive what it billed: a terminated service's row or a cancelled
+  domain's row can be removed, and a constraint would either block that delete or, with a cascade, delete the invoice
+  line (and so change a total already sent to a client). Each column is indexed for the reads that filter on it ("the
+  invoices for this service", "this domain's renewals", the renewal duplicate guard) and nothing else enforces it;
+  a line whose target is gone simply bills a name it keeps in its own `Description`. The renewal markers on the line
+  decide what is applied, never the existence of the target, and the sweeps read the target through its module's
+  query, which answers "not found" for a removed row.
 
 ### Recurring billing
 
-Renewal invoicing, payment and suspension run as four crons (UTC): `ProcessRenewalsCron` 05:00 (applies paid but
+Renewal invoicing, payment and suspension run as four crons (UTC, the default hours of `ScheduledJobsOptions`):
+`ProcessRenewalsCron` 05:00 (applies paid but
 unapplied renewal lines, self-heals zero-total open renewal invoices, alerts on stale claimed lines, then raises
 renewal invoices per client), `SendRenewalRemindersCron` 06:00, `CheckOverdueInvoicesCron` 07:00 and
 `SuspendOverdueServicesCron` 09:00. Settings (`BillingSettingKeys`, not public): `billing.renewal.invoice_days_before`
@@ -202,6 +319,111 @@ renewal invoices per client), `SendRenewalRemindersCron` 06:00, `CheckOverdueInv
 `RenewalAttemptAt` claims a domain line before the registrar call. Every suspension carries a `SuspensionSource`
 (`Manual`, `Overdue`, `DomainExpired`, `Other`): payment lifts only `Overdue`, and `DomainRenewedHandler` lifts only
 `DomainExpired`. Renewal alerts go to `Notifications:AdminEmail`, falling back to `Notifications:ContactEmail`.
+
+**Renewal invoice lines are not unique per period, on purpose.** The indexes on `InvoiceItems`
+`(ClientServiceId, RenewalPeriodStart)` and `(RegisteredDomainId, RenewalPeriodStart)` stay non-unique: a
+cancelled invoice's renewal line must not block raising that period again. Double raising is prevented
+by two things instead: the single runner of each recurring pass (the `IJobLease` lease, so one instance
+at a time runs `ProcessRenewalsCron`), and the `AnyAsync` guard in `RaiseClientRenewalInvoicesHandler`,
+which looks only at invoices that are not `Cancelled` and refuses a target that already has an open
+renewal line, a paid line not yet applied, or a line for the same period. A unique index would need a
+filter on the invoice status, which lives on another table, so it cannot be expressed as an index.
+
+### Client account status
+
+`Client.Status` is enforced, not just stored. The transitions live in the aggregate and nowhere else
+(`Suspend`, `Close`, `Activate`, `Deactivate`, each taking the caller's `now` and raising its event):
+
+| From | Suspend | Close | Activate | Deactivate |
+| --- | --- | --- | --- | --- |
+| Active | Suspended | Closed | no-op | Inactive |
+| Inactive | Suspended | Closed | Active | no-op |
+| Suspended | `CLIENT_SUSPEND_NOT_ALLOWED` | Closed | Active | `CLIENT_DEACTIVATE_NOT_ALLOWED` |
+| Closed | `CLIENT_SUSPEND_NOT_ALLOWED` | `CLIENT_CLOSE_NOT_ALLOWED` | `CLIENT_ACTIVATE_NOT_ALLOWED` | `CLIENT_DEACTIVATE_NOT_ALLOWED` |
+
+A no-op raises no event. The events are `ClientSuspendedEvent`, `ClientClosedEvent`,
+`ClientActivatedEvent` and `ClientDeactivatedEvent`, each carrying `OccurredAt`.
+
+What each status means, following the usual billing-panel convention (staff decide, the account is
+never deleted):
+
+- **Active** and **Inactive** behave the same for money. Inactive only marks a client that is no longer a
+  current customer; its services and renewals carry on.
+- **Suspended**: portal sign-in still works and everything is readable, so the client can see their invoices
+  and open tickets, but the account cannot place orders (`PlaceOrder`, `OrderMyService`), cannot start a
+  new card or gateway payment (`PayMyInvoice`, `StartGatewayPayment`, `CreateOrderPaymentIntent`) and is not
+  billed: `RaiseClientRenewalInvoices` refuses it and `ProcessRenewalsCron` leaves it out. The refusal is
+  403 `CLIENT_SUSPENDED`. Settling a payment that is already in flight (`CompleteMyGatewayPayment`,
+  `ConfirmOrderPayment`, `CompleteOrderGatewayPayment`) is never blocked, so money already taken is recorded.
+  Suspending the client does not suspend its services; staff do that per service.
+- **Closed**: everything a suspended account cannot do, with 403 `CLIENT_CLOSED`, and the closing is
+  settled by three handlers of `ClientClosedEvent`, each failure-isolated and logged:
+  `Clients/Events/ClientClosedSessionsHandler` ends the owner's sessions through every `ISessionRevoker`
+  (a security stamp change in local mode), `Services/Events/ClientClosedServicesHandler` suspends every
+  Active service through `SuspendServiceCommand` with `SuspensionSource.Other` (so no payment lifts it) and
+  `Billing/Events/ClientClosedInvoicesHandler` cancels the client's `Unpaid` renewal invoices through
+  `CancelInvoiceCommand` (applied credit returns to the balance). `Overdue` invoices are debts on record and
+  stay. Sign-in itself is not blocked, so a closed client can still read their history. A closed account
+  cannot be reopened.
+
+The guard is `ClientStatusExtensions.EnsureMayTransact` (and `EnsureClientMayTransactAsync` for a caller that
+only has a client id), so every module asks the same question. Staff routes are not guarded: an admin can still
+create an order or record a payment for a suspended client.
+
+### Roles and the Reseller role
+
+Three roles exist: `Admin`, `Reseller` and `Client`. The staff API is `Policies.Admin` only. A reseller is
+linked to no clients (no `ResellerId` on any record), so there is nothing to scope a reseller's view to, and
+every route that once accepted `Reseller` over unscoped data (clients, domains, invoices, orders, services,
+transactions, reports, quotes, dashboard, provisioning, tickets) is now Admin only; `Policies.ResellerOrAdmin`
+no longer exists. Today the Reseller role can sign in and can do what any signed-in user can; it reaches no
+staff route. Introducing reseller-owned clients is a separate design (a `ResellerId` on `Clients` and a scope on
+every query), not a policy change.
+
+### Client account switches and contact copies
+
+The switches an admin sets on a client are enforced where the feature exists, and a switch whose
+feature does not exist is not kept. The decisions:
+
+- **`TaxExempt`.** No tax is added to an invoice automatically (there is no tax engine, only the
+  rate an admin types on the invoice options), so the switch is enforced there:
+  `UpdateInvoiceOptions` refuses a new or higher rate on a tax-exempt client's invoice with 409
+  `CLIENT_TAX_EXEMPT`. A rate the invoice already carries may stay. New and renewal invoices carry no
+  tax to remove.
+- **`OverdueNotices`.** The payment reminder mail for an unpaid renewal invoice
+  (`SendRenewalReminder`) goes only to a client with both `NotifyInvoice` and `OverdueNotices` on. The
+  reminder threshold is still recorded when nobody is mailed, so it is not retried every day. No other
+  overdue mail exists.
+- **`DisableCcProcessing`.** The two card flows refuse an account with it on, with 403
+  `CLIENT_CARD_PAYMENT_DISABLED`: `PayMyInvoice` (charge of a saved card) and
+  `CreateOrderPaymentIntent` (a new card payment). The check is
+  `ClientSettingsExtensions.EnsureClientMayPayByCardAsync`, beside the status guard
+  `EnsureClientMayTransactAsync`. Hosted gateway sessions (`StartGatewayPayment`) and staff-entered
+  payments are not card processing and are not refused.
+- **`AllowSso`.** It means single sign-on into the hosting panel of the client's own services (the
+  product has no per-client external sign-on for the client sign-in itself, which is the same for every
+  account). `GetMyServiceControlPanelSsoUrl` refuses an account with it off, with 403
+  `CLIENT_SSO_DISABLED`; the staff route is unscoped and unaffected. It sits on top of the per-user
+  `AllowSingleSignOn` permission: both must allow.
+- **`LateFees`** had no late fee feature behind it and was removed (entity, DTOs, commands, admin form,
+  the unused `billing.late_fee` seed row). The column is dropped by a migration.
+- **Contact `Notify*` flags.** Every mail goes through `SendEmail`, so a sender that mails a client
+  passes `SendEmailCommand.Copy` (`ContactCopy`: the client and a `ContactNotification` kind) and the
+  handler also sends the same rendered message to the contacts who switched that kind on
+  (`GetContactNotificationEmails`), once per address, one log line each. Invoice created, payment
+  received and renewal reminders use `Invoice`; ticket replied and closed use `Support`; service
+  provisioned uses `Product`; the domain mails use `Domain`. Mail to staff, verification and
+  security mail are never copied. `General` and `Affiliate` have no sender yet.
+- **Client data export** lists the whole profile, contacts with address and `Notify*` flags, linked users
+  with permissions, invitations (never the token), and mail to the account's and every contact's address,
+  matched case-insensitively. The lists with no ceiling, `emails` and `activityLog`, carry the newest 500
+  rows as `{ items, truncated, limit }`. An empty section is an empty list, never a sentence, and a key that
+  names no section is refused with 400.
+- **Client list.** Search is case-insensitive over first name, last name, "First Last", company and,
+  for a whole number, the client id, escaped so `%` and `_` match themselves. Page and page size are
+  validated (400, not clamped), and the order ends in the id so a page never repeats a row. A
+  `pg_trgm` GIN index on `lower("FirstName")`, `lower("LastName")`, `lower("FirstName" || ' ' || "LastName")`
+  and `lower("CompanyName")` would serve the search once the table is large; it is not created yet.
 
 ## Demo mode
 
@@ -216,10 +438,9 @@ renewal invoices per client), `SendRenewalRemindersCron` 06:00, `CheckOverdueInv
 - **Guard.** A command that must not run on a demo carries `IDemoRestricted` (`Shared/Contracts/Interfaces`);
   `DemoGuardPolicy` puts `DemoGuardMiddleware` on exactly those chains and it answers 403
   `DEMO_ACTION_DISABLED`. A new dangerous command is covered by adding the marker, never an `if`.
-  Sign-in in `LocalAuthController` has no command, so the guard does not see it. The demo accounts' own
-  credentials are protected by one rule, `IDemoAccountGuard` (Application port, `Infrastructure/Demo/DemoAccountGuard`):
+  The demo accounts' own credentials are protected by one rule, `IDemoAccountGuard` (Application port, `Infrastructure/Demo/DemoAccountGuard`):
   with demo on, the email and password of `Demo__AdminEmail` / `Demo__ClientEmail` cannot change; password
-  reset (`ResetPasswordCommand`) and `UpdateClientHandler`'s email change ask it and answer 403 `DEMO_ACTION_DISABLED`.
+  reset (`ResetPasswordCommand`) and `UpdateClientHandler`'s email change ask it and answer 403 `DEMO_ACTION_DISABLED`. Local sign-in (`UserService`) asks it too: wrong passwords are not counted against those two accounts, so no visitor can lock them.
 - **Currency.** The demo payment plugin accepts every currency stored (`IPaymentPlugin.AcceptsCurrency`), not only USD.
 - **Data.** `IDemoDataManager` resets (wipes and reseeds) at startup instead of running `DevDataSeeder`, so every deploy shows the current seed, and
   `ResetDemoDataCommand` truncates every table except the identity roles and reseeds in one
@@ -230,9 +451,9 @@ renewal invoices per client), `SendRenewalRemindersCron` 06:00, `CheckOverdueInv
   feature. The site name is `Hostpanel Demo`. The storefront contact is the one operator-set exception: optional
   `Demo__ContactEmail` / `Demo__ContactPhone` (`DEMO_CONTACT_*`) replace the fictional `.example` / `+1 555 0100` pair
   on every seed and reset; they are display only, and demo mail still goes to mailhog.
-- **Network.** The demo's services sit on a demo-private network and join `innovayse_network` only under their
-  `hostpanel-demo-*` names, so the demo cannot reach production's services. See the configuration section below.
-- **Deploy scope.** The demo is deployed through GitLab scope `demo/hostpanel`, with its own `DEPLOY_DIR`.
+- **Network.** The demo's services sit on a demo-private network and never join the shared production
+  network, so the demo cannot reach production's services. See the configuration section below.
+- **Deploy scope.** The demo is deployed with its own deployment CI variables, including its own `DEPLOY_DIR`.
 
 ## Stack
 
@@ -240,7 +461,7 @@ renewal invoices per client), `SendRenewalRemindersCron` 06:00, `CheckOverdueInv
 mode) + JWT bearer · `Innovayse.Auth` (cookie session for the admin SPA, sso builds only) · SkiaSharp (branding images) ·
 Serilog · Scalar + Swashbuckle · Mapster · Stripe.net · MailKit · Otp.NET · Fluid.Core ·
 DnsClient · Redis (sessions + data-protection key ring) · RabbitMQ · xUnit + FluentAssertions +
-Moq + Testcontainers.PostgreSql 4.0.0 · Nuxt 4.3 / Vue 3.5 / Pinia / Tailwind / vitest (client,
+Testcontainers.PostgreSql 4.0.0 · Nuxt 4.3 / Vue 3.5 / Pinia / Tailwind / vitest (client,
 **yarn**) · Vite + Vue 3.5 / Tailwind 4 / vitest (admin, **npm**).
 
 Central package management: versions live once in `backend/Directory.Packages.props`; a
@@ -250,33 +471,33 @@ Central package management: versions live once in `backend/Directory.Packages.pr
 
 **`Innovayse.Auth` is optional at build time.** A plain clone has no credential for the private
 registry, so `backend/Directory.Build.props` defines `InnovayseSso`: true when
-`NuGetPackageSourceCredentials_innovayse` is set (CI, Innovayse's own deployments), false
+`NuGetPackageSourceCredentials_innovayse` is set (CI and deployments that use the external identity provider), false
 otherwise, and forceable with `-p:InnovayseSso=true|false`. When true the package is referenced
 (`Innovayse.Hostpanel.API` and `Innovayse.Hostpanel.Infrastructure`) and `INNOVAYSE_SSO` is
 defined; when false nothing private is restored and the build is `AUTH_MODE=local` only — a
 standalone build started with `AUTH_MODE=sso` throws at startup from `AddHostpanelAuthentication`
 naming the property. Every file that touches the package is inside `#if INNOVAYSE_SSO`:
 `API/Program.cs` (`UseInnovayseAuth`/`MapInnovayseAuth`), `API/Extensions/AuthenticationRegistration.cs`
-(`AddInnovayseAuth`, the claims transformation), `Infrastructure/Auth/SsoSessionClaimsTransformation.cs`
+(`AddInnovayseAuth`, the claims transformation), `API/Auth/SsoSessionClaimsTransformation.cs`
 and `SsoModeAuthenticationSchemeTests`. The cookie scheme name is the one constant
 `AuthenticationRegistration.SsoCookieScheme` (a placeholder in a standalone build), which
 `PolicyRegistration` reads; do not name `Innovayse.Auth.CookieSessionHandler` anywhere else.
 `backend/Dockerfile` passes `-p:InnovayseSso=true` to restore and publish when `AUTH_MODE=sso`
 is the build arg, so a missing credential fails the build rather than yielding an image that
 refuses to boot. The GitHub workflow `.github/workflows/ci.yml` builds the standalone flavour and
-runs the Domain, Architecture, CWP, Inecobank and Integration suites.
+runs the Domain, Architecture, CWP, Inecobank and Integration suites, plus the migration addon's PHP tests.
 
 ```bash
 ./dev up hostpanel                # from the workspace root, when working inside the workspace
 ```
 
-To build without touching the dev stack — **run docker through PowerShell, not Git Bash**,
-which rewrites `-w /src` into `C:/Program Files/Git/src` and exits 125:
+To build without touching the dev stack, **run docker through PowerShell, not Git Bash**,
+which rewrites `-w /src` into a Windows path and exits 125. Run it from the repository root:
 
 ```powershell
 docker run --rm `
-  -v "C:\Users\Dell\Desktop\Projects\innovayse\innovayse-workspace\hostpanel\backend:/src" `
-  -v "C:\Users\Dell\.nuget\packages:/root/.nuget/packages" `
+  -v "${PWD}\backend:/src" `
+  -v "$env:USERPROFILE\.nuget\packages:/root/.nuget/packages" `
   -w /src mcr.microsoft.com/dotnet/sdk:9.0 bash -lc "dotnet build Innovayse.Hostpanel.sln"
 ```
 
@@ -288,11 +509,10 @@ Three attempts in a row abandoned this build as stalled and fell back to a narro
 the cross-project signal it exists for.
 
 The host package cache covers the private feed for a local build: `nuget.config`'s
-`packageSourceMapping` sends only `Innovayse.Auth` to the GitLab registry, and that package is
+`packageSourceMapping` sends only `Innovayse.Auth` to the private registry, and that package is
 already cached. Where a credential *is* needed it is
-`NuGetPackageSourceCredentials_innovayse=Username=<gitlab-account>;Password=<PAT>` — the exact
-spelling NuGet reads; `gitlab-ci-token` as the username is for CI job tokens only and answers
-401 with a personal token. The feed is addressed by **numeric project id**, not by the encoded
+`NuGetPackageSourceCredentials_innovayse=Username=<account>;Password=<token>` — the exact
+spelling NuGet reads; a CI job token user name answers 401 with a personal token. The feed is addressed by **numeric project id**, not by the encoded
 namespace path, which answers 400 to everything and reports as NU1301.
 
 **`Innovayse.Hostpanel.Integration.Tests` needs Testcontainers**, and that means the docker socket plus
@@ -305,14 +525,15 @@ and exits 0 whether or not the assembly is there. The Domain, Architecture, CWP 
 Containers: `hostpanel-api` (5148), `hostpanel-client` (3000, published 3001),
 `hostpanel-admin`, `hostpanel-db`, plus `hostpanel-redis`, `hostpanel-rabbitmq`,
 `hostpanel-mailhog` locally. Services address each other by **network alias**
-(`hostpanel-api`), never by the bare `api` — that name also belongs to `innovayse-main`'s
+(`hostpanel-api`), never by the bare `api` — that name can also belong to another product's
 backend on the shared network, and Docker's DNS round-robins between the two.
 
 ## Operational scripts at the repo root (`scripts/`)
 
 - `scripts/check-client-owner-ids.sh [container]` — read-only check of what `clients.UserId` points at
-  (the local `AspNetUsers.Id` or the SSO subject), run before and after the SSO cut-over. Defaults to the
-  `hostpanel-db` container; over ssh as `ssh prod 'sh -s' < scripts/check-client-owner-ids.sh`.
+  (the local `AspNetUsers.Id` or the external identity provider's subject), run before and after switching
+  `AUTH_MODE`. Defaults to the `hostpanel-db` container; on a remote host pipe it as
+  `ssh <host> 'sh -s' < scripts/check-client-owner-ids.sh`.
 - `scripts/pack-cwp-plugin.sh` — publishes `Innovayse.Providers.CWP` (Release, net8.0) on the host, strips
   PDB/XML and framework DLLs, adds `plugin.json` and writes `dist/innovayse-cwp.zip`.
 
@@ -322,7 +543,7 @@ Both are `*.sh`, which `.gitattributes` (`*.sh text eol=lf`) pins to LF: the ssh
 ## CI is on GitLab. Pull requests are on GitHub. Both halves are load-bearing.
 
 `origin` is GitHub; merges happen there. `.github/workflows/mirror-to-gitlab.yml` pushes
-**only `main` and `develop`** to `gitlab.com/innovayse/hostpanel`, whose `.gitlab-ci.yml`
+**only `main` and `develop`** to the CI mirror, whose `.gitlab-ci.yml`
 starts the pipeline. The consequences are not obvious and cost time every few months:
 
 - **A feature branch never gets a pipeline.** Nothing is mirrored, so nothing builds or tests
@@ -333,7 +554,7 @@ starts the pipeline. The consequences are not obvious and cost time every few mo
   source branch other than `develop` or `hotfix/*`. It enforces what neither platform has a
   setting for.
 - Tests, image builds and both deploys live in `.gitlab-ci.yml`. `deploy:staging` runs on
-  `develop` against LocalServer; `deploy:prod` is **manual** on `main` against ProdServer.
+  `develop` against the staging host; `deploy:prod` is **manual** on `main` against the production host.
 - `.gitlab-ci.yml` inlines its templates. This repo cannot see the workspace's shared
   `ci/templates.yml`, so the hidden jobs are copied in. Change one here and the workspace
   copy does not move with it.
@@ -351,7 +572,7 @@ Its own nginx exists for a standalone install.
 
 ## Configuration and the two switches that decide what this product *is*
 
-- **`AUTH_MODE` (`sso` | `local`).** `sso` authenticates against innovayse-sso and reads every
+- **`AUTH_MODE` (`sso` | `local`).** `sso` authenticates against the external identity provider and reads every
   account out of it through `/api/service/*` with `SSO_SERVICE_KEY`; `local` is the standalone
   open-source path where hostpanel owns its own user table and registers no SSO scheme at all.
   Only this product implements both, and most "why is there a second way to do this" in the
@@ -362,15 +583,16 @@ Its own nginx exists for a standalone install.
   no separate client-secret variable.
 - **`ASPNETCORE_ENVIRONMENT` is set by the deploy job, never by a host's `.env`.**
   `docker/docker-compose.dev.yml` passes it through from `docker/.env`: `Development` is right for a laptop and was what
-  deployed hosts silently inherited. A Development API serves developer exception pages and
-  treats an absent `EncryptionKey` as allowed rather than fatal — which is how server
-  credentials and client-service passwords reached the database in plain text.
+  deployed hosts silently inherited. A Development API serves developer exception pages.
+  `EncryptionKey` is required in every environment, and `AppDbContext` cannot be built without an
+  `IEncryptionService`; the encrypted columns (server credentials, SSH agent keys, client-service
+  passwords, two-factor secrets) are listed once in `ProtectedColumns`, which also sizes them.
   Every deployed tier (staging, prod, demo) sets `Production`, per `rules/environments.md`; the tier
   is named by the job's `environment:`, never by `ASPNETCORE_ENVIRONMENT`.
 - **Demo mode (`Demo__Enabled`).** Set through `DEMO_*` env in `docker/docker-compose.demo.yml`, an overlay
   placed last in the chain (`shared` + `prod` + `platform` + `demo`, project `hostpanel-demo`). It swaps the
   payment, registrar and provisioning adapters for fakes, sends mail to the demo's own mailhog and resets
-  data every `Demo__ResetIntervalHours`. Everything stateful is `hostpanel-demo-*` so it can sit beside prod; its db, broker, redis and mailhog live on a demo-private network and only the api, client and admin (compose services `hostpanel-demo-*`, the names the edge proxy uses) also join the dedicated external network `hostpanel_demo_edge`, **never** `innovayse_network`, so the demo can neither resolve nor reach any production container (the edge proxy `innovayse-edge` is the one production-side container on both networks; `deploy:demo` creates the network when missing, with the **fixed subnet 172.29.0.0/16**, which the edge's `nginx.conf` denies on every host except the two demo ones, so a demo container cannot reach production by sending a production `Host` header; the subnet lives in `deploy:demo`, `edge-proxy/nginx.conf` and `docker/README.md`, and changes in all three together); `deploy:demo` uses its own `DEPLOY_DIR` (a CI/CD variable scoped to `demo/hostpanel`), never prod's;
+  data every `Demo__ResetIntervalHours`. Everything stateful is `hostpanel-demo-*` so it can sit beside prod; its db, broker, redis and mailhog live on a demo-private network and only the api, client and admin (compose services `hostpanel-demo-*`, the names the edge proxy uses) also join the dedicated external network `hostpanel_demo_edge`, **never** the shared network, so the demo can neither resolve nor reach any production container (the edge proxy is the one production-side container on both networks; `deploy:demo` creates the network when missing, with the **fixed subnet 172.29.0.0/16**, which the edge's `nginx.conf` denies on every host except the two demo ones, so a demo container cannot reach production by sending a production `Host` header; the subnet lives in `deploy:demo`, `edge-proxy/nginx.conf` and `docker/README.md`, and changes in all three together); `deploy:demo` uses its own `DEPLOY_DIR` (one of the demo deployment's CI variables), never prod's;
   the demo passwords are `:?`-required like any secret. Deployed by the manual `deploy:demo` job; it needs
   `AUTH_MODE=local`. Fake adapters live behind the existing ports, never in a code path guarded by a literal.
 - **Settings bind into a sealed `*Options` class naming its own `SectionName`** —
@@ -411,9 +633,8 @@ starts downloading the whole `template-aurora` chunk.
 defaults — `nuxt.config.ts` is not re-evaluated at container start as it is in dev. Nitro's own
 escape hatch is reading `NUXT_<KEY>` / `NUXT_PUBLIC_<KEY>` at runtime and overriding the frozen
 default, so `docker/docker-compose.prod.yml` spells every one of them that way. **The plain names used
-in `docker/docker-compose.dev.yml` are silently ignored on a deployed host** — that is how
-`NUXT_PUBLIC_PORTAL_TEMPLATE` and the apps launcher stayed permanently at their build-time
-values on production with no `.env` edit able to change them.
+in `docker/docker-compose.dev.yml` are silently ignored on a deployed host**, so the value stays
+at its build-time default and no `.env` edit can change it.
 
 **The client image has no build args.** The app-launcher `<script src="…/widget/header.js">` tag is
 added by `plugins/header-widget.ts` from `runtimeConfig.public.mainUrl`, so `NUXT_PUBLIC_MAIN_URL`
@@ -421,15 +642,13 @@ is plain runtime env. `site.url` is read at runtime by nuxt-site-config from `NU
 (set in `docker-compose.prod.yml`); the esbuild `drop` depends only on `NODE_ENV`, not on a
 deployment. Do not add a `process.env` read outside `runtimeConfig` that differs per deployment.
 
-That widget is served by **innovayse-main**, not by this product. It must be HTTPS on an HTTPS
+That widget is a host-provided header widget, not served by this product. It must be HTTPS on an HTTPS
 deployment or the browser blocks it as mixed content and the client dashboard's hydration
 hangs.
 
 **The `dark` / `light` class on `<html>` has exactly one writer: `client/plugins/color-mode.ts`.**
-It used to have three — a client-only plugin that forced `dark` on every public page, a blocking
-script in `app.vue` that did the same, and `useAppColorMode()` restoring a `localStorage` value
-on mount — which is why the operator could not ship a light storefront and a light-mode visitor
-got a dark flash on every load. The resolution rule is in `client/utils/colorMode.ts` and reads,
+A second writer lets the operator's chosen mode lose to a stale value and gives a light-mode
+visitor a dark flash on load. The resolution rule is in `client/utils/colorMode.ts` and reads,
 in order: the visitor's `color-mode` **cookie**, then the operator's `portal.theme.default`
 (`light` | `dark` | `system`), then the device. A cookie or a fixed operator mode is rendered
 into the HTML on the server; only `system` with no cookie emits an inline head script, because
@@ -480,11 +699,12 @@ visitor's `cookie-consent` is `all` — `useCookieConsent()` is the one owner of
 banner writes it, the loader watches it. The live-chat widget (`portal.chat.provider`,
 `.base_url`, `.website_token[.ru|.hy]`) loads in `plugins/live-chat.ts` when all three are set,
 without waiting for consent, because it is how a visitor reaches a person. `app.vue` adds no
-script at all; the vendor's own ids that used to live there are gone from the repository and
-belong in the vendor's deployment `.env`.
+script at all; vendor ids never live in the repository, they belong in the deployment `.env`.
 
 **Every e-mail renders with `brand.*` and `site.*` in scope.** `TemplateRenderer` adds them
-beside the caller's model (the caller's own member of the same exact name wins), read on each
+beside the caller's typed model (one `EmailTemplateModel` record per template in
+`Notifications/Common/TemplateModels/`, members read in lower snake case, `brand` and `site`
+reserved), HTML-encodes every value it prints into a body and none in a subject, and reads them on each
 render by `SettingsEmailBrandingProvider` from the same `portal.*` rows, with the logo made
 absolute against `ClientBaseUrl`. A stored template that wants the brand uses
 `{{ brand.primary }}`, `{{ brand.primary_dark }}`, `{{ brand.on_primary }}`,
@@ -533,12 +753,72 @@ rules is deleted and the ESLint conformance block applies to every `.vue` and `.
   (`PortalSessions__RedisConnection`). A failed silent sign-in returns to the page with
   `?signin=required`, which `LayoutSignInPrompt` turns into a sign-in prompt; an `authuser` query is
   passed to the identity provider as `login_hint`.
+- **Sessions are encrypted in Redis, and a renewal is locked.** The stored session (access and refresh
+  token) is AES-256-GCM ciphertext (`server/utils/session-crypto.ts`) under `NUXT_SESSION_ENCRYPTION_KEY`
+  (`runtimeConfig.sessionEncryptionKey`, 32 random bytes, base64; `SESSION_ENCRYPTION_KEY` in
+  `docker/.env.example`). The key is required whenever Redis holds the sessions outside development:
+  the `server/plugins/session-store.ts` plugin builds the store at startup, so a missing or malformed key
+  stops the server instead of failing the first sign-in. The API's `PortalSessionRevoker` only deletes keys, so it
+  does not read the content. Changing the key signs everyone out. A refresh runs under a Redis lock
+  (`hostpanel:portal-session-refresh-lock:<id>`, `SET NX` with an expiry), so replicas never present the
+  rotating refresh token twice; it ends the session only when the sign-on service refuses the grant
+  (400 or 401), and answers 503 and keeps the session on a timeout, a network failure or a 5xx.
+  Every call to the sign-on service goes through `server/utils/signon-http.ts` (timeout, typed errors
+  with `data.code` and no message, so no internal address reaches the browser); the one exception is
+  the callback's code exchange.
+- **Cookies and the silent probe.** Every cookie a route or middleware writes takes its options from
+  `cookieOptions(maxAge)` in `server/utils/auth-cookie.ts` (httpOnly, Secure outside development,
+  SameSite=Lax, path `/`; only the readable `authed` hint is not httpOnly). The silent sign-in probe
+  (`server/middleware/sso-silent.ts`) runs only for a document navigation: a GET (not HEAD) with
+  `Sec-Fetch-Dest: document` or an HTML `Accept`, from a user agent that is not a known bot, preview
+  fetcher, monitor or scripted client (`server/utils/bot-agent.ts`), and never for a page that already
+  carries `?signin=required`. Switching account is `GET /api/portal/auth/sso/switch?sub=&redirect=`, which the external
+  header widget navigates the browser to, so it must stay a GET. It is safe as one because it never
+  changes the local session: it only starts the external sign-on authorize redirect, with a fresh
+  state and PKCE verifier bound to this browser in httpOnly cookies, through the provider's own
+  `switch-init` page (it runs same-origin there, so its remembered-accounts cookie is sent) with
+  the account (`sub`) and a relative authorize address, built with `authorize.get.ts` by
+  `server/utils/signon-flow.ts`. The account changes only in `callback.get.ts`, after the state and PKCE proof are
+  verified, so a cross-site GET can at most send the visitor through the sign-on page for an account
+  they already have. A repeated `sub` or `redirect` key is a 400; only an internal path is kept as
+  the place to return to.
 - **Errors are chosen in one place.** `lib/errorHandler.ts` (`apiErrorMessage`, `apiFieldErrors`,
   `apiErrorCode`) orders `errors[field]`, then `detail`, then `title`, then the client's own
   `errors.noAnswer`. The BFF writes no sentence (`scripts/` and `tests/server/contract.test.ts`
-  fail on a literal `statusMessage:`); a missing route parameter is a coded 400
+  fail on a literal `statusMessage:`); a missing or malformed route parameter is a coded 400
   (`requireRouteParam`). `scripts/check-no-legacy-error-fields.mjs` rejects a read of the old
-  `error`/`code` pair outside the one allow-listed OAuth call.
+  `error`/`code` pair outside the one allow-listed OAuth call. A refusal passes the backend's
+  `Retry-After` and `X-Request-Id` on to the browser (each only in its expected shape).
+- **Visitor text is validated before it is used, in one helper each.** Every `[id]` route reads its
+  parameter through `requireRouteParam(event, name, kind)` (`types/routeparamkind.ts`: a positive
+  32-bit integer by default, a GUID, or an opaque identifier), which validates the shape and returns
+  the value percent-encoded, so no route interpolates a raw parameter into a backend path. The
+  `/uploads/**` routes read their path through `requireUploadPath` (`server/utils/uploadPath.ts`):
+  decoded once, refused when it holds an empty, `.` or `..` segment, a backslash, a control
+  character or a second encoding, and re-encoded per segment under a fixed `/uploads/` prefix; the
+  generic proxy forwards only conditional and range headers and returns only cache and type headers
+  (never a cookie either way). The public catalogue reads its filters through `readCatalogQuery`
+  (`server/utils/catalogQuery.ts`: integers, a bounded group list, a three-letter currency), so its
+  shared-cache key has a fixed shape; the backend does the filtering.
+- **The visitor's address is read from the right.** `server/utils/clientAddress.ts` returns the socket
+  address, or, with `runtimeConfig.trustedProxyCount` (`NUXT_TRUSTED_PROXY_COUNT`, `CLIENT_TRUSTED_PROXY_COUNT`
+  in the compose files) set to N, the Nth entry from the right of `X-Forwarded-For`, the same reading as
+  the API's `RateLimit__TrustedProxyCount`. The leftmost entry is written by the visitor and is never
+  used. The default is 0, which believes no header.
+- **The BFF holds no business logic and opens no connection on a visitor's behalf.** The nameserver and
+  certificate read of a service is the backend use case `GetMyServiceHostingInfo`
+  (`GET /api/me/services/{id}/hosting-info`): ownership through the service rule, the domain taken from
+  the service row, and the probe behind the `IHostingProbe` port, which refuses IP literals, single-label
+  names and any name that resolves to a loopback, private, link-local or metadata address
+  (`Infrastructure/Security/PublicHostGuard`). The Nuxt route is a pass-through.
+- **One documented composition in the BFF: `server/api/portal/client/me.get.ts`.** In the single sign-on
+  mode the signed-in person's email and two-factor state live in the identity provider, not in the API,
+  and the provider is called with the person's own token, which only the BFF holds; the route therefore
+  combines that profile with `/clients/me` and `/auth/me` (permissions) and adds `hasClientProfile`
+  for an identity that has no client record. Moving it into the API would mean the API calling the
+  identity provider with the caller's token for a screen's convenience; until the identity profile is an
+  API concern, this stays the one exception to "a route forwards one backend call". In local mode the
+  route forwards `/clients/me` and adds the permissions.
 - **The kit is `components/ui/` (`Ui*`), and screens are composed from it.** `pages/**`, `layouts/**`
   and `templates/*/{pages,sections,layout}/**` carry no raw tag at all; an area's own components
   (`components/<area>/`) compose the kit and may not hold a card-styled `div` or an interactive
@@ -554,8 +834,8 @@ rules is deleted and the ESLint conformance block applies to every `.vue` and `.
   derived from `AppLocale`; nothing spells `['en','ru','hy']` out. Server and client share
   `types/` and `utils/transportLanguage.ts` only.
 - **Site identity.** The site name is `useSiteIdentity().name` (the operator's `portal.site.name`);
-  `Innovayse` survives as its fallback and in the locale copy, not in page titles, footers or alt
-  text. The billing portal's address is `BILLING_PORTAL_URL` (`NUXT_PUBLIC_BILLING_PORTAL_URL` in
+  `NEUTRAL_SITE_NAME` ("Hostpanel") is its fallback when neither is set, never an operator name, and
+  no page title, footer or alt text hard codes a brand. The billing portal's address is `BILLING_PORTAL_URL` (`NUXT_PUBLIC_BILLING_PORTAL_URL` in
   the production compose file, `runtimeConfig.public.billingPortalUrl`); every link built from it
   is guarded for the unset case.
 - **Locales.** `locales/{en,ru,hy}/<area>.json`, all three in the same change, loaded by
@@ -648,14 +928,14 @@ that once scoped the rules is deleted, and `strictRules` in `eslint.config.ts` a
 ## Tests
 
 `backend/tests/` has five projects: `Domain.Tests`, `Integration.Tests`, `Architecture.Tests`,
-`Innovayse.CWP.Tests`, `Innovayse.Inecobank.Tests`. **`Application.Tests` and
-`Infrastructure.Tests` no longer exist** — use-case tests are `Integration.Tests/<Feature>/<UseCase>Tests.cs`
+`Innovayse.CWP.Tests`, `Innovayse.Inecobank.Tests`. **There is no `Application.Tests` or
+`Infrastructure.Tests`** — use-case tests are `Integration.Tests/<Feature>/<UseCase>Tests.cs`
 (Testcontainers Postgres, fakes in `Fixtures/` for external ports only), and adapter tests live in
-`Integration.Tests/Adapters/{Auth,Billing,Integrations}`. Do not recreate either project.
+`Integration.Tests/Adapters/{Auth,Billing,Integrations}`. Do not add either project.
 `Integration.Tests/Security/LeakGuardTests` guards against leaking secrets/internals in
 responses; `Fixtures/StubHttpServer` is the in-process HTTP fake for external APIs. The admin SPA
 has vitest (`npm test`, `admin/tests/`) and Playwright (`npm run e2e`, `admin/e2e/`) — see "The admin's shape".
-`Integration.Tests/Persistence/ModelDiffBaselineTests` is the schema guard (the spec's "snapshot unchanged" test): the EF differ's operations between the migrations snapshot and the live model must equal `Fixtures/model-diff-baseline.txt` (`(no differences)` since the ConformanceFixes migration), so an entity change without a migration fails.
+`Integration.Tests/Persistence/ModelDiffBaselineTests` is the schema guard (the spec's "snapshot unchanged" test): the EF differ's operations between the migrations snapshot and the live model must equal `Fixtures/model-diff-baseline.txt` (`(no differences)`), so an entity change without a migration fails.
 
 **The Integration suite runs in four shards, one at a time, because one `dotnet test` host holds
 the EF model and a Postgres container for every test class and grows to several gigabytes, and the
@@ -672,10 +952,9 @@ shard in `.gitlab-ci.yml` and in `ci.yml`, or its tests run nowhere.**
 
 - **Branding images are rendered with SkiaSharp (MIT)**, in
   `Infrastructure/ImageProcessing/SkiaBrandingImageProcessor.cs`, behind the
-  `IBrandingImageProcessor` port. It replaced `SixLabors.ImageSharp`: 2.1.x was the last Apache-2.0
-  line, stopped receiving fixes and carried high-severity advisories with no 2.x patch, and 3.x is a
-  split licence this public AGPL repository cannot hand to downstream users. The ImageSharp
-  `NuGetAuditSuppress` block is gone with it, and `.github/dependabot.yml` ignores that package.
+  `IBrandingImageProcessor` port. Do not use `SixLabors.ImageSharp`: its Apache-2.0 2.1.x line
+  receives no fixes and carries high-severity advisories, and 3.x is a split licence this public
+  AGPL repository cannot hand to downstream users; `.github/dependabot.yml` ignores that package.
   `SkiaSharp` and `SkiaSharp.NativeAssets.Linux.NoDependencies` (so the Alpine image needs no apk
   packages) must stay on one version. What the safety of an upload still rests on is unchanged: the
   processor sniffs magic bytes first (PNG/JPEG/GIF/WebP/BMP only — Skia would otherwise also try
@@ -714,7 +993,6 @@ shard in `.gitlab-ci.yml` and in `ci.yml`, or its tests run nowhere.**
 
 Never spread one of these, and never restructure as a side effect of a feature.
 
-- **`LocalAuthController`** — see the top of this file.
 - **Vendor names that remain, on purpose.** Integration slugs (`stripe`, `cwp`, ...) in
   `IntegrationSlugs` / `BuiltInPaymentModules` and the `Integrations/<Vendor>/` adapter folders are
   plugin identifiers: they are stored in settings rows, sent in URLs (`/api/admin/integrations/stripe`)
@@ -723,23 +1001,44 @@ Never spread one of these, and never restructure as a side effect of a feature.
   payment method `Card` (the `ConformanceFixes` migration renamed the column and rewrote old
   `Stripe` ledger rows).
 - **`ClientRegisteredIntegrationEvent` carries five parameters nothing fills.**
-  `LocalAuthController.RegisterAsync` publishes four arguments and stops, so `IpAddress`,
+  `RegisterHandler` publishes four arguments and stops, so `IpAddress`,
   `UserAgent`, `DeviceType`, `OperatingSystem` and `Browser` arrive null and `Client.Create`
   writes five mapped, migrated columns from them. Finish it by capturing all five from the
   request, not by trimming the record. Wolverine runs with discovery only — no broker — so the
   event never leaves the process.
-- **`MigrationPullWorker` is a very large file in the Application layer.** Its transport is
-  already behind `IMigrationSource`, so a fake can drive it without a web server; what is left is
-  size. Splitting it is its own piece of work.
+- **Migration imports go through an importer registry.** `IMigrationEntityImporter` is the one
+  contract: an importer names its `MigrationEntityType` in `EntityType` and imports that kind in
+  `ImportAsync`. Every importer is registered in DI; adding an entity kind means adding an importer
+  and its place in `MigrationImportOrder.Sequence`, the single place that fixes the order (clients
+  first, since invoices, services, domains and tickets reference them); `Arrange` throws unless
+  exactly one importer exists per kind in the sequence. `MigrationPullWorker` holds no per-entity code: it fetches the totals, then iterates
+  the registered importers in that order and runs each one the job selected (`job.Includes(EntityType)`).
+  The contract sits in `Common/Interfaces` but is not a port: the importers are Application code, so
+  `PortPlacementTests` lists it under `ApplicationContracts` instead of asking for an Infrastructure adapter.
 - **The migration job model is slim.** `ImportBatch` and `PingMigrationJob` are removed;
   `CreateMigrationJobCommand` selects entities with `MigrationEntitySelectionDto`.
 - **`Infrastructure/Migration/` cannot exist.** A namespace `Innovayse.Hostpanel.Infrastructure.Migration`
   shadows EF Core's `Migration` base class for every file in `Infrastructure.Migrations` (CS0118).
   The migration subsystem's infrastructure lives in `Infrastructure/Integrations/Migration/`;
   do not "correct" it.
-- **Validator messages are English literals** (`WithMessage(...)`), so the response carries one
-  localised sentence for a rejected form and the field errors as written. Per-field localisation
-  needs a resource key per message and a base validator that resolves it.
+- **The migration source addon is PHP, in `backend/plugins/innovayse_migration/`.** It runs inside the
+  source billing system and answers `MigrationSourceClient`. `modules/addons/innovayse_migration/` is
+  what is installed: the two entry points the source system calls (`innovayse_migration.php`,
+  `api.php`) stay thin and delegate to `lib/` (PHP 8.1, `strict_types`, PSR-4 namespace
+  `HostpanelMigration\`, one class per file, docblocks on every class, method and property). One
+  `Exporter` per record kind, one `Dataset` filter shared by the totals and the pages, one
+  `SourceDatabase` gateway. Its wire members are the C# `*Wire`/`*Record` names in camelCase and change
+  together with them. `composer.json`, `phpunit.xml.dist` and `tests/` sit beside `modules/` and are
+  never packaged (`composer test` needs `pdo_sqlite` and runs in CI as `migration-addon` in
+  `.github/workflows/ci.yml` and `backend:test:migration-addon` in `.gitlab-ci.yml`): `MigrationPluginArchive` zips `modules/` only. The API project copies `modules/`
+  into its build and publish output as `migration-plugin/modules` (never under `plugins/`, which
+  `PluginLoader` scans), and the archive reads it from `MigrationPlugin:Path` (`MigrationPluginOptions`,
+  default `migration-plugin` beside the binaries, blank refused at startup), so the download works on a
+  developer machine, in the tests and in the published image alike; a missing folder answers
+  `MIGRATION_PLUGIN_NOT_FOUND` (404). The source keeps no product prices on the product row: the
+  products exporter reads monthly and annual prices from the source's pricing table in its default
+  currency. It has no order items table either: an order's lines are the services, domains and addons
+  rows that carry the order id.
 
 ## Where things go
 
@@ -781,9 +1080,14 @@ Never spread one of these, and never restructure as a side effect of a feature.
   staff identity with no client row is not a fault, and four such traces per dashboard load
   made a healthy platform read as a failing one. `ControlFlowExceptionLogFilter` drops exactly
   those lines; extend the filter rather than removing it.
-- **Migrations are applied on startup in every environment except `Testing`.** This used to be
-  Development-only, which quietly made Development the only environment whose schema followed
-  the code.
+- **The two-factor attempt cap and replay guard are per API instance.** `TwoFactorChallengeService`
+  and `TwoFactorCodeGuard` keep their counters in `IMemoryCache` with `CacheItemPriority.NeverRemove`,
+  so memory pressure cannot evict a counter and reopen the cap; they fail closed. They hold for one API
+  instance, which is the supported deployment; running several API instances needs a distributed store
+  for these counters first. The password lockout (`SignInLockout:MaxFailedAttempts`, `LockoutMinutes`)
+  is kept on the account row and holds across instances.
+- **Migrations are applied on startup in every environment except `Testing`**, so every deployed
+  environment's schema follows the code.
 - **Role seeding is skipped when this deployment does not own its users.** Under `sso` mode
   Identity is not registered, so `GetRequiredService<RoleManager<…>>` threw before the API
   finished starting and the container never came up.

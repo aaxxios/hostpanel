@@ -1,14 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
 /// <summary><c>POST /api/clients/{id}/users/invite</c>: the admin-side invitation of a user to a client account.</summary>
-/// <remarks>Split from the deleted <c>ClientsAdminEndpointTests</c> (A7 Task 5).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class InviteUserToClientTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -29,6 +25,26 @@ public sealed class InviteUserToClientTests(IntegrationTestFactory factory) : IC
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    /// <summary>An invitation leaves one activity line for the client, stamped with the acting admin and free of the invited address.</summary>
+    [Fact]
+    public async Task InviteWritesAnAuditLine()
+    {
+        var (_, ownerEmail) = await ClientsTestSeeds.RegisterRealClientAsync(factory, "invite-audit");
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+        var clientId = await FindClientIdAsync(admin, ownerEmail);
+
+        var response = await admin.PostAsJsonAsync($"/api/clients/{clientId}/users/invite", new
+        {
+            email = $"invitee-{Guid.NewGuid():N}@example.test",
+            firstName = "Invitee",
+            lastName = "Person",
+            permissions = 1,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await ClientsTestSeeds.AssertAuditedByAdminAsync(factory, clientId, "Invited User");
     }
 
     /// <summary>Inviting to an id that names no client answers 404 with <c>CLIENT_NOT_FOUND</c>.</summary>

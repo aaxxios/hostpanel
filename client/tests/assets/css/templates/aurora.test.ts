@@ -57,7 +57,12 @@ describe('aurora fallbacks agree with the Tailwind ramp', () => {
   })
 
   it('keeps white on both gradient end stops at or above 4.5:1 by fallback', () => {
-    /** Relative luminance of an `r g b` string. */
+    /**
+     * Relative luminance of an `r g b` string.
+     *
+     * @param rgb Space-separated channels, 0 to 255.
+     * @returns Luminance in 0 to 1.
+     */
     const lum = (rgb: string): number => {
       const [r = 0, g = 0, b = 0] = rgb.split(' ').map((v) => {
         const c = Number(v) / 255
@@ -74,7 +79,12 @@ describe('aurora fallbacks agree with the Tailwind ramp', () => {
   })
 
   it('keeps white on primary-500 and primary-600 text above 4.5:1 by fallback', () => {
-    /** Relative luminance of an `r g b` string. */
+    /**
+     * Relative luminance of an `r g b` string.
+     *
+     * @param rgb Space-separated channels, 0 to 255.
+     * @returns Luminance in 0 to 1.
+     */
     const lum = (rgb: string): number => {
       const [r = 0, g = 0, b = 0] = rgb.split(' ').map((v) => {
         const c = Number(v) / 255

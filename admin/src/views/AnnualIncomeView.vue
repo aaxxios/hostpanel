@@ -8,8 +8,9 @@ import ReportChartCard from '@/components/reports/ReportChartCard.vue'
 import ReportPage from '@/components/reports/ReportPage.vue'
 import ReportPeriodFilter from '@/components/reports/ReportPeriodFilter.vue'
 import ReportTable from '@/components/reports/ReportTable.vue'
+import UiText from '@/components/ui/UiText.vue'
 import { useReport } from '@/composables/useReport'
-import { formatReportAmount } from '@/lib/money'
+import { formatCurrencyCode } from '@/lib/money'
 import { reportPath } from '@/lib/reportsQuery'
 import { currentYear } from '@/lib/reportsPeriod'
 import { ReportCellFormat } from '@/types/reportcolumn'
@@ -32,6 +33,17 @@ watch(year, load)
 /** Months with their income; empty until loaded. */
 const rows = computed<ReportMonthIncome[]>(() => data.value ?? [])
 
+/** Base currency the amounts are converted to; empty until loaded. */
+const currency = computed<string>(() => rows.value[0]?.currency ?? '')
+
+/**
+ * Formats an amount in the base currency the API converted the report to.
+ *
+ * @param amount - Amount in the report currency.
+ * @returns The amount with its currency symbol.
+ */
+const formatMoney = (amount: number): string => formatCurrencyCode(amount, currency.value)
+
 /** Table columns. */
 const columns = computed<ReportColumn[]>(() => [
   { key: 'month', label: t('shared.month') },
@@ -46,11 +58,14 @@ const series = computed<UiChartSeries[]>(() => [{ label: t('reports.annualIncome
 </script>
 
 <template>
-  <ReportPage :title="t('reports.annualIncome.annualIncomeReport')" :description="t('reports.annualIncome.totalIncomePerMonthFor')">
+  <ReportPage :retry="load" :title="t('reports.annualIncome.annualIncomeReport')" :description="t('reports.annualIncome.totalIncomePerMonthFor')">
     <template #filters>
       <ReportPeriodFilter v-model:year="year" @generate="load" />
     </template>
-    <ReportChartCard :type="UiChartType.Bar" :labels="labels" :series="series" :value-formatter="formatReportAmount" />
-    <ReportTable :columns="columns" :rows="rows" row-key="month" />
+    <ReportChartCard :type="UiChartType.Bar" :labels="labels" :series="series" :value-formatter="formatMoney" />
+    <ReportTable :columns="columns" :rows="rows" row-key="month" :format-money="formatMoney" />
+    <UiText tone="muted" size="sm">
+      {{ t('reports.common.convertedToBaseCurrency', { currency }) }}
+    </UiText>
   </ReportPage>
 </template>

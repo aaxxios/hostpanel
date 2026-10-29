@@ -1,29 +1,27 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Persistence;
+
 /// <summary>
 /// Pins the one thing about <see cref="ProductPrice"/> persistence that is not visible from the
-/// domain: <see cref="ProductPrice.ProductId"/> is never set in memory — <see cref="Product.SetPrice"/>
-/// leaves it 0 — so the foreign key in <c>ProductConfiguration</c>, over the <c>_prices</c> backing
+/// domain: <see cref="ProductPrice.ProductId"/> is never set in memory (<see cref="Product.SetPrice"/>
+/// leaves it 0), so the foreign key in <c>ProductConfiguration</c>, over the <c>_prices</c> backing
 /// field, is what stamps it at <c>SaveChanges</c>. If that mapping were lost the insert would fail on
 /// the FK, or worse, a price would silently belong to product 0.
 /// </summary>
 /// <remarks>
-/// Reads directly against <see cref="AppDbContext"/> since A6 Task 5 dissolved
-/// <c>IProductRepository</c>; every query here preserves that repository's
+/// Reads directly against <see cref="AppDbContext"/>; every query here uses the
 /// <c>.Include(p =&gt; p.Prices)</c> shape so the FK assertion still exercises a real reload.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ProductPricePersistenceTests(IntegrationTestFactory factory)
     : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>Reloads a product with its prices, the way the deleted repository always did.</summary>
+    /// <summary>Reloads a product with its prices, with a single query.</summary>
     /// <param name="db">The data context to read from.</param>
     /// <param name="productId">The product's primary key.</param>
     /// <returns>The product with its prices loaded, or <see langword="null"/> if not found.</returns>
@@ -43,7 +41,7 @@ public sealed class ProductPricePersistenceTests(IntegrationTestFactory factory)
             db.ProductGroups.Add(group);
             await db.SaveChangesAsync();
 
-            var product = Product.Create(group.Id, "Priced", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+            var product = Product.Create(group.Id, "Priced", null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
             product.SetPrice("usd", BillingCycle.Monthly, 2.99m);
             product.SetPrice("AMD", BillingCycle.Annual, 12000m);
             db.Products.Add(product);
@@ -76,7 +74,7 @@ public sealed class ProductPricePersistenceTests(IntegrationTestFactory factory)
             db.ProductGroups.Add(group);
             await db.SaveChangesAsync();
 
-            var product = Product.Create(group.Id, "Repriced", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+            var product = Product.Create(group.Id, "Repriced", null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
             product.SetPrice("USD", BillingCycle.Monthly, 2.99m);
             db.Products.Add(product);
             await db.SaveChangesAsync();

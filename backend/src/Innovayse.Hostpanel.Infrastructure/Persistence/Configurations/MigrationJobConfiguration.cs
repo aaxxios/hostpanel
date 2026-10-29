@@ -1,8 +1,10 @@
 using Innovayse.Hostpanel.Domain.Migration;
+using Innovayse.Hostpanel.Infrastructure.Persistence.Converters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table configuration for <see cref="MigrationJob"/>.</summary>
 public sealed class MigrationJobConfiguration : IEntityTypeConfiguration<MigrationJob>
 {
@@ -11,12 +13,19 @@ public sealed class MigrationJobConfiguration : IEntityTypeConfiguration<Migrati
     {
         builder.HasKey(x => x.Id);
 
+        // Optimistic concurrency on PostgreSQL's system `xmin` column, mapped the same way as on
+        // Invoice: two admins starting the same job at once both read it pending, and only the first
+        // save may queue it, so only one pull is ever dispatched for a job.
+        builder.Property<uint>("xmin")
+            .HasColumnName("xmin")
+            .IsRowVersion();
+
         builder.Property(x => x.Key).IsRequired().HasMaxLength(64);
         builder.HasIndex(x => x.Key).IsUnique();
 
         builder.Property(x => x.Status).IsRequired().HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Label).HasMaxLength(200);
-        builder.Property(x => x.ErrorMessage).HasMaxLength(1000);
+        builder.Property(x => x.Failure).HasColumnName("ErrorMessage").HasConversion(new MigrationJobFailureConverter()).HasMaxLength(1000);
         builder.Property(x => x.CreatedAt).IsRequired();
 
         builder.Property(x => x.SourceUrl).IsRequired().HasMaxLength(500).HasDefaultValue(string.Empty);
@@ -59,5 +68,21 @@ public sealed class MigrationJobConfiguration : IEntityTypeConfiguration<Migrati
         builder.Property(x => x.KnowledgebaseSkipped).IsRequired().HasDefaultValue(0);
         builder.Property(x => x.ContactsSkipped).IsRequired().HasDefaultValue(0);
         builder.Property(x => x.TicketRepliesSkipped).IsRequired().HasDefaultValue(0);
+
+        builder.Property(x => x.ClientsFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.InvoicesFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.ServicesFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.DomainsFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.TicketsFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.ProductsFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.OrdersFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.TransactionsFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.QuotesFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.KnowledgebaseFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.ContactsFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.TicketRepliesFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.AnnouncementsFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.DownloadsFailed).IsRequired().HasDefaultValue(0);
+        builder.Property(x => x.NetworkIssuesFailed).IsRequired().HasDefaultValue(0);
     }
 }

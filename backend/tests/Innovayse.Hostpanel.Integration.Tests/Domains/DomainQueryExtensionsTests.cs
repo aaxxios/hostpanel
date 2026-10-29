@@ -1,14 +1,11 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
@@ -25,12 +22,12 @@ public sealed class DomainQueryExtensionsTests(IntegrationTestFactory factory) :
     {
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var client = Client.Create($"user-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"user-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(client);
         await context.SaveChangesAsync(CancellationToken.None);
 
         var domain = RegisteredDomain.Register(
-            client.Id, $"children-{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow.AddYears(1), autoRenew: true, whoisPrivacy: false);
+            client.Id, $"children-{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(1), autoRenew: true, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
         domain.SetNameservers(["ns1.example.test", "ns2.example.test"]);
         domain.AddDnsRecord(DnsRecordType.A, "www", "192.0.2.10", 3600, null);
         context.Domains.Add(domain);
@@ -65,7 +62,7 @@ public sealed class DomainQueryExtensionsTests(IntegrationTestFactory factory) :
 
         dto.Id.Should().Be(domainId);
         dto.Name.Should().Be(domain.Name);
-        dto.AutoRenew.Should().BeTrue();
+        dto.Features.AutoRenew.Should().BeTrue();
         dto.Nameservers.Should().HaveCount(2);
         dto.DnsRecords.Should().ContainSingle();
         dto.EmailForwardingRules.Should().BeEmpty();

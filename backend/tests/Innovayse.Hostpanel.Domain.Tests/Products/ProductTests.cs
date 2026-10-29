@@ -1,10 +1,15 @@
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Products.Events;
+
 namespace Innovayse.Hostpanel.Domain.Tests.Products;
+
 /// <summary>Unit tests for the <see cref="Product"/> aggregate.</summary>
 public class ProductTests
 {
+    /// <summary>The fixed moment every domain method in these tests is handed as "now".</summary>
+    private static readonly DateTimeOffset Now = new(2026, 3, 10, 12, 0, 0, TimeSpan.Zero);
+
     /// <summary>Create sets all properties and raises ProductCreatedEvent.</summary>
     [Fact]
     public void Create_SetsAllProperties_AndRaisesEvent()
@@ -18,7 +23,8 @@ public class ProductTests
             packageName: null,
             type: ProductType.SharedHosting,
             monthlyPrice: 5.99m,
-            annualPrice: 59.99m);
+            annualPrice: 59.99m,
+            now: Now);
 
         Assert.Equal(1, product.GroupId);
         Assert.Equal("Starter", product.Name);
@@ -27,14 +33,15 @@ public class ProductTests
         Assert.Equal(5.99m, product.MonthlyPrice);
         Assert.Equal(59.99m, product.AnnualPrice);
         Assert.Single(product.DomainEvents);
-        Assert.IsType<ProductCreatedEvent>(product.DomainEvents.Single());
+        var created = Assert.IsType<ProductCreatedEvent>(product.DomainEvents.Single());
+        Assert.Equal(Now, created.OccurredAt);
     }
 
     /// <summary>Update changes name and prices.</summary>
     [Fact]
     public void Update_ChangesNameAndPrices()
     {
-        var product = Product.Create(1, "Old", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+        var product = Product.Create(1, "Old", null, null, null, null, ProductType.SharedHosting, 5m, 50m, Now);
         product.Update("New", "desc", null, null, null, 9m, 90m, null);
         Assert.Equal("New", product.Name);
         Assert.Equal(9m, product.MonthlyPrice);
@@ -45,7 +52,7 @@ public class ProductTests
     [Fact]
     public void Deactivate_ChangesStatus()
     {
-        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m, Now);
         product.Deactivate();
         Assert.Equal(ProductStatus.Inactive, product.Status);
     }
@@ -55,7 +62,7 @@ public class ProductTests
     public void Create_WithServerGroupId_SetsProperty()
     {
         var product = Product.Create(1, "Linked", null, null, null, null,
-            ProductType.SharedHosting, 5m, 50m, serverGroupId: 42);
+            ProductType.SharedHosting, 5m, 50m, Now, serverGroupId: 42);
 
         Assert.Equal(42, product.ServerGroupId);
     }
@@ -65,7 +72,7 @@ public class ProductTests
     public void Create_WithoutServerGroupId_DefaultsToNull()
     {
         var product = Product.Create(1, "Unlinked", null, null, null, null,
-            ProductType.SharedHosting, 5m, 50m);
+            ProductType.SharedHosting, 5m, 50m, Now);
 
         Assert.Null(product.ServerGroupId);
     }
@@ -74,7 +81,7 @@ public class ProductTests
     [Fact]
     public void Update_WithServerGroupId_ChangesValue()
     {
-        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m, Now);
         Assert.Null(product.ServerGroupId);
 
         product.Update("P", null, null, null, null, 5m, 50m, serverGroupId: 7);
@@ -86,7 +93,7 @@ public class ProductTests
     [Fact]
     public void Create_Defaults_NotFeaturedAndSortOrderZero()
     {
-        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m, Now);
 
         Assert.False(product.IsFeatured);
         Assert.Equal(0, product.SortOrder);
@@ -97,6 +104,7 @@ public class ProductTests
     public void Create_WithFeaturedAndSortOrder_SetsBoth()
     {
         var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m,
+            Now,
             isFeatured: true, sortOrder: 3);
 
         Assert.True(product.IsFeatured);
@@ -107,7 +115,7 @@ public class ProductTests
     [Fact]
     public void FeatureAndUnfeature_ToggleTheFlag()
     {
-        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m, Now);
 
         product.Feature();
         Assert.True(product.IsFeatured);
@@ -120,7 +128,7 @@ public class ProductTests
     [Fact]
     public void SetSortOrder_ChangesThePosition()
     {
-        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m, Now);
 
         product.SetSortOrder(9);
 
@@ -131,7 +139,7 @@ public class ProductTests
     [Fact]
     public void Update_WithFeaturedAndSortOrder_ChangesBoth()
     {
-        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+        var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m, Now);
 
         product.Update("P", null, null, null, null, 5m, 50m, null, isFeatured: true, sortOrder: 4);
 
@@ -144,6 +152,7 @@ public class ProductTests
     public void Update_WithoutFeaturedAndSortOrder_KeepsBoth()
     {
         var product = Product.Create(1, "P", null, null, null, null, ProductType.SharedHosting, 5m, 50m,
+            Now,
             isFeatured: true, sortOrder: 6);
 
         product.Update("P2", null, null, null, null, 5m, 50m, null);

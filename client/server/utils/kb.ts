@@ -1,18 +1,15 @@
 /**
- * Shapes and mapping for the knowledgebase, shared by the three BFF routes under
- * `server/api/portal/knowledgebase/`.
+ * Mapping for the knowledgebase article BFF route under `server/api/portal/knowledgebase/`.
  *
- * The C# backend answers `KbArticleDto` -- `{ id, title, content, category, isPublished }` --
+ * The C# backend answers `PublishedKbArticleDto` (`{ id, title, content, category }`)
  * while the public pages read the legacy-shaped `KbArticle` (`body`, `excerpt`). One mapping
- * lives here rather than three copies in the routes, so a field added on either side is
- * changed once.
+ * lives here, so a field added on either side is changed once.
  *
  * @module server/utils/kb
  */
 
 import type { BackendKbArticle } from '~/types/backendkbarticle'
 import type { KbArticle } from '~/types/kbarticle'
-import type { KbCategory } from '~/types/kbcategory'
 
 /** How many characters of plain text a list row's excerpt carries. */
 const EXCERPT_LENGTH = 140
@@ -21,7 +18,7 @@ const EXCERPT_LENGTH = 140
  * Reduces an article body to the plain-text lead-in a list row shows.
  *
  * The body is HTML, and a row renders its excerpt as text, so tags are stripped rather than
- * escaped -- an excerpt that kept its markup would print the tags at the reader.
+ * escaped: an excerpt that kept its markup would print the tags at the reader.
  *
  * @param html - The article body.
  * @returns Up to {@link EXCERPT_LENGTH} characters of collapsed plain text.
@@ -49,31 +46,3 @@ export const toKbArticle = (article: BackendKbArticle): KbArticle => ({
   excerpt: toExcerpt(article.content),
   body: article.content
 })
-
-/**
- * Derives the category list from the published articles.
- *
- * There is no category endpoint on the public API and no category id anywhere in the payload:
- * an article names its category as a string. So a category *is* its name here, and the name
- * doubles as the id the category page routes on. A category holding no published article does
- * not appear, which is the intended answer for a public listing -- it would link to an empty
- * page.
- *
- * @param articles - Every published article.
- * @returns One entry per distinct category, alphabetical, with its article count.
- */
-export const toKbCategories = (articles: BackendKbArticle[]): KbCategory[] => {
-  const counts = new Map<string, number>()
-
-  for (const article of articles) {
-    const name = (article.category ?? '').trim()
-    if (!name) {
-      continue
-    }
-    counts.set(name, (counts.get(name) ?? 0) + 1)
-  }
-
-  return [...counts.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([name, count]) => ({ id: name, name, articlecount: count }))
-}

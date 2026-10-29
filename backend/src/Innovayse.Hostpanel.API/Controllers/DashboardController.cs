@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Admin.Common;
 using Innovayse.Hostpanel.Application.Admin.Queries.GetDashboardStats;
 using Innovayse.Hostpanel.Application.Admin.Queries.GetRecentActivity;
 using Innovayse.Hostpanel.Shared.Authorization;
@@ -11,7 +12,8 @@ namespace Innovayse.Hostpanel.API.Controllers;
 
 /// <summary>Admin dashboard statistics and the notification feed.</summary>
 [Route("api/admin/dashboard")]
-[Authorize(Policy = Policies.ResellerOrAdmin)]
+[Authorize(Policy = Policies.Admin)]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class DashboardController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -26,9 +28,11 @@ public sealed class DashboardController : BaseApiController
 
     /// <summary>Returns aggregated statistics for the admin dashboard.</summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the statistics; 401; 403.</returns>
+    /// <returns>200 with the statistics; 401 without a session; 403 for a caller who is not staff; 429 when the rate limit is hit.</returns>
     [HttpGet("stats")]
     [ProducesResponseType(typeof(DashboardStatsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetStatsAsync(CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<DashboardStatsDto>>(new GetDashboardStatsQuery(), ct);
@@ -38,9 +42,12 @@ public sealed class DashboardController : BaseApiController
     /// <summary>Returns the most recent noteworthy events for the notification bell.</summary>
     /// <param name="query">The maximum number of events to return, newest first.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the merged, newest-first activity events; 401; 403.</returns>
+    /// <returns>200 with the merged, newest-first activity events; 401 without a session; 403 for a caller who is not staff; 400 when the body, query or route fails validation; 429 when the rate limit is hit.</returns>
     [HttpGet("activity")]
     [ProducesResponseType(typeof(IReadOnlyList<ActivityEventDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetActivityAsync([FromQuery] GetRecentActivityQuery query, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<IReadOnlyList<ActivityEventDto>>>(query, ct);

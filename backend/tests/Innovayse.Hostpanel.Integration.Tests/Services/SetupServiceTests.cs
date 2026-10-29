@@ -1,24 +1,23 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Services.Commands.SetupService;
+using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
 using Innovayse.Hostpanel.Domain.Services;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Shared.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
 /// <summary>
 /// Integration tests for <see cref="SetupServiceCommand"/>: refusing a service that is not
-/// Pending, and refusing one with no eligible server.
+/// Pending, and refusing one with no eligible server while keeping the stored details.
 /// </summary>
-/// <remarks>Moved from the deleted <c>ServiceLifecycleEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class SetupServiceTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -29,11 +28,9 @@ public sealed class SetupServiceTests(IntegrationTestFactory factory) : IClassFi
         using var scope = factory.Services.CreateScope();
         var (clientId, productId) = await ServicesTestSeeds.SeedClientAndProductAsync(scope, monthlyPrice: 1m);
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var service = ClientService.Create(clientId, productId, BillingCycleNames.Monthly);
-        service.Activate("panel-ref-1");
-        context.ClientServices.Add(service);
-        await uow.SaveChangesAsync(CancellationToken.None);
+        var service = ClientService.Create(clientId, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        await ServicesTestSeeds.AddActivatedAsync(context, service, "panel-ref-1", DateTimeOffset.UtcNow);
+        await context.SaveChangesAsync(CancellationToken.None);
 
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var outcome = await bus.InvokeAsync<Result>(
@@ -53,10 +50,9 @@ public sealed class SetupServiceTests(IntegrationTestFactory factory) : IClassFi
         using var scope = factory.Services.CreateScope();
         var (clientId, productId) = await ServicesTestSeeds.SeedClientAndProductAsync(scope, monthlyPrice: 1m);
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var service = ClientService.Create(clientId, productId, BillingCycleNames.Monthly);
+        var service = ClientService.Create(clientId, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
         context.ClientServices.Add(service);
-        await uow.SaveChangesAsync(CancellationToken.None);
+        await context.SaveChangesAsync(CancellationToken.None);
 
         var selector = scope.ServiceProvider.GetRequiredService<IServerSelector>();
         (await selector.SelectAsync(ServerModule.Cwp7, CancellationToken.None)).Should().BeNull(
@@ -68,6 +64,15 @@ public sealed class SetupServiceTests(IntegrationTestFactory factory) : IClassFi
 
         outcome.IsFailure.Should().BeTrue();
         outcome.ErrorCode.Should().Be(HostpanelErrorCodes.NO_ELIGIBLE_SERVER);
+
+        // The details stay stored for the next attempt, and the service stays Pending.
+        using var readScope = factory.Services.CreateScope();
+        var stored = await readScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>().ClientServices
+            .AsNoTracking()
+            .SingleAsync(s => s.Id == service.Id);
+        stored.Domain.Should().Be("example.com");
+        stored.Username.Should().Be("jdoe");
+        stored.Status.Should().Be(ServiceStatus.Pending);
     }
 
     /// <summary>Setting up a service that does not exist refuses <c>SERVICE_NOT_FOUND</c>.</summary>

@@ -1,5 +1,5 @@
 <template>
-  <UiStack gap="none" class="relative" :data-testid="`product-plan-${plan.pid}`">
+  <UiStack gap="none" class="relative" :data-testid="`product-plan-${plan.id}`">
     <!-- Outside the card, which would clip a badge sitting on its edge. -->
     <UiText
       v-if="popular"
@@ -87,7 +87,7 @@
         <UiButton
           :variant="inCart ? UiButtonVariant.Secondary : UiButtonVariant.Primary"
           full-width
-          :data-testid="`product-add-${plan.pid}`"
+          :data-testid="`product-add-${plan.id}`"
           @click="emit('addToCart', plan)"
         >
           <Check v-if="inCart" :size="16" :stroke-width="2.5" class="mr-2" />
@@ -100,7 +100,7 @@
           v-if="trialUrl"
           :variant="UiButtonVariant.Outline"
           full-width
-          :data-testid="`product-trial-${plan.pid}`"
+          :data-testid="`product-trial-${plan.id}`"
           @click="emit('trial', plan)"
         >
           {{ $t('products.pricing.trial') }}

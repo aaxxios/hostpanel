@@ -131,7 +131,7 @@
  * aurora testimonials carousel. The quotes come from the storefront store
  * (`GET /api/public/testimonials`); with none the section renders nothing.
  *
- * Up to three cards show at once -- one on phones, two from `sm`, three from `lg` -- and the
+ * Up to three cards show at once (one on phones, two from `sm`, three from `lg`) and the
  * arrows, the dots and the left/right keys all move the window one quote at a time, wrapping at
  * both ends; the arrows and dots show only when there are more quotes than cards on screen. Fewer
  * quotes than columns stay centred at the normal card width. Each compact card carries the star rating, the author's avatar (or

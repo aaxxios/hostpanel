@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>
 /// EF Core configuration for the <see cref="EmailForwardingRule"/> entity.
 /// Maps to the <c>EmailForwardingRules</c> table.

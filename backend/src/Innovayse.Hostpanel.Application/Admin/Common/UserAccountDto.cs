@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Common;
 /// <param name="LastName">Client last name.</param>
 /// <param name="CompanyName">Company name, or null for individuals.</param>
 /// <param name="IsOwner">True if this user owns the client account.</param>
-public record UserAccountDto(
+public sealed record UserAccountDto(
     int ClientId,
     string FirstName,
     string LastName,

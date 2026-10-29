@@ -3,7 +3,7 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.RegisterDomain;
 /// <summary>Command to register a new domain name for a client.</summary>
 /// <param name="ClientId">The client requesting domain registration.</param>
 /// <param name="DomainName">Fully-qualified domain name to register (e.g. "example.com").</param>
-/// <param name="Years">Number of years to register the domain for (1–10).</param>
+/// <param name="Years">Number of years to register the domain for (1 to 10).</param>
 /// <param name="WhoisPrivacy">Whether to enable WHOIS privacy on registration.</param>
 /// <param name="AutoRenew">Whether to enable automatic renewal at the registrar.</param>
 /// <param name="Nameserver1">Primary nameserver hostname; null to use registrar defaults.</param>
@@ -11,7 +11,8 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.RegisterDomain;
 /// <param name="FirstPaymentAmount">One-time registration cost to record on the domain.</param>
 /// <param name="RecurringAmount">Recurring renewal price to record on the domain.</param>
 /// <param name="PaymentMethod">Payment method label to record on the domain; null if not set.</param>
-public record RegisterDomainCommand(
+/// <param name="PriceCurrency">ISO 4217 code of the currency the amounts are in (the paid order's currency); null bills in the client's billing currency.</param>
+public sealed record RegisterDomainCommand(
     int ClientId,
     string DomainName,
     int Years,
@@ -21,4 +22,5 @@ public record RegisterDomainCommand(
     string? Nameserver2,
     decimal FirstPaymentAmount = 0,
     decimal RecurringAmount = 0,
-    string? PaymentMethod = null);
+    string? PaymentMethod = null,
+    string? PriceCurrency = null);

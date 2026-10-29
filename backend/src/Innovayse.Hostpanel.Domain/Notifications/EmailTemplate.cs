@@ -2,14 +2,20 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Notifications;
+
 /// <summary>
 /// Represents an email template used to generate outbound emails.
-/// Templates are identified by a unique slug and contain Liquid-syntax subject and body.
+/// A template is identified by its slug and language: each slug has one version per language, and
+/// a recipient gets the version in their language, or the default language's when theirs is missing.
+/// Subject and body use Liquid syntax.
 /// </summary>
 public sealed class EmailTemplate : BaseEntity, IAggregateRoot
 {
     /// <summary>Gets the unique identifier slug used to look up this template.</summary>
     public string Slug { get; private set; } = string.Empty;
+
+    /// <summary>Gets the ISO 639-1 code of the language this version is written in; fixed once created.</summary>
+    public string Language { get; private set; } = string.Empty;
 
     /// <summary>Gets the email subject line, which may contain Liquid template variables.</summary>
     public string Subject { get; private set; } = string.Empty;
@@ -36,18 +42,25 @@ public sealed class EmailTemplate : BaseEntity, IAggregateRoot
     }
 
     /// <summary>
-    /// Creates a new active email template.
+    /// Creates a new active email template version.
     /// </summary>
-    /// <param name="slug">Unique slug used to look up the template.</param>
+    /// <param name="slug">Slug used to look up the template; unique together with <paramref name="language"/>.</param>
+    /// <param name="language">ISO 639-1 code of the language the subject and body are written in.</param>
     /// <param name="subject">Email subject line, may include Liquid variables.</param>
     /// <param name="body">Email body, may include Liquid variables.</param>
     /// <param name="description">Optional description of the template's purpose.</param>
     /// <returns>A new <see cref="EmailTemplate"/> with <see cref="IsActive"/> set to <see langword="true"/>.</returns>
-    public static EmailTemplate Create(string slug, string subject, string body, string? description)
+    public static EmailTemplate Create(string slug, string language, string subject, string body, string? description)
     {
+        if (string.IsNullOrWhiteSpace(language))
+        {
+            throw new ArgumentException("An email template needs the language it is written in.", nameof(language));
+        }
+
         var template = new EmailTemplate(0)
         {
             Slug = slug,
+            Language = language.Trim().ToLowerInvariant(),
             Subject = subject,
             Body = body,
             Description = description,

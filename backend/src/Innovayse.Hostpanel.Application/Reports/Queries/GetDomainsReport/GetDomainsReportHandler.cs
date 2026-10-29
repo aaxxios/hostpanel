@@ -1,7 +1,11 @@
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Reports.Common;
+using Innovayse.Hostpanel.Application.Reports.Extensions;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Reports.Queries.GetDomainsReport;
 
@@ -11,18 +15,24 @@ public sealed class GetDomainsReportHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The bus the owning clients' names are asked through.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetDomainsReportHandler(IHostpanelDbContext context)
+    /// <param name="bus">The bus the owning clients' names are asked through.</param>
+    public GetDomainsReportHandler(IHostpanelDbContext context, IMessageBus bus)
     {
         _context = context;
+        _bus = bus;
     }
 
     /// <summary>Handles the query.</summary>
     /// <param name="query">The filters and page to return.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The matching page of domains and the unfiltered total. Never refuses.</returns>
-    public async Task<Result<DomainReportResultDto>> HandleAsync(GetDomainsReportQuery query, CancellationToken ct)
+    /// <exception cref="InvalidOperationException">A domain names a client that does not exist, so the database is broken.</exception>
+    public async Task<Result<PaginatedList<DomainReportDto>>> HandleAsync(GetDomainsReportQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -40,46 +50,35 @@ public sealed class GetDomainsReportHandler
 
         if (query.RegisteredFrom.HasValue)
         {
-            domains = domains.Where(d => d.RegisteredAt >= query.RegisteredFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            domains = domains.Where(d => d.RegisteredAt >= query.RegisteredFrom.Value.StartOfDayUtc());
         }
 
         if (query.RegisteredTo.HasValue)
         {
-            domains = domains.Where(d => d.RegisteredAt <= query.RegisteredTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc));
+            domains = domains.Where(d => d.RegisteredAt < query.RegisteredTo.Value.EndOfDayExclusiveUtc());
         }
 
         if (query.ExpiresFrom.HasValue)
         {
-            domains = domains.Where(d => d.ExpiresAt >= query.ExpiresFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            domains = domains.Where(d => d.ExpiresAt >= query.ExpiresFrom.Value.StartOfDayUtc());
         }
 
         if (query.ExpiresTo.HasValue)
         {
-            domains = domains.Where(d => d.ExpiresAt <= query.ExpiresTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc));
+            domains = domains.Where(d => d.ExpiresAt < query.ExpiresTo.Value.EndOfDayExclusiveUtc());
         }
 
         if (query.NextDueFrom.HasValue)
         {
-            domains = domains.Where(d => d.NextDueDate >= query.NextDueFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            domains = domains.Where(d => d.NextDueDate >= query.NextDueFrom.Value.StartOfDayUtc());
         }
 
         if (query.NextDueTo.HasValue)
         {
-            domains = domains.Where(d => d.NextDueDate <= query.NextDueTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc));
+            domains = domains.Where(d => d.NextDueDate < query.NextDueTo.Value.EndOfDayExclusiveUtc());
         }
 
         var totalCount = await domains.CountAsync(ct);
-
-        // The pre-conversion repository joined the Identity Users table for this dictionary
-        // without ever reading anything from it, which under AUTH_MODE=sso — where that table is
-        // empty — silently blanked every client name in the report. The client's own name is on
-        // the Client row already; the join added nothing but the bug. Dropped.
-        var clientIds = await domains.Select(d => d.ClientId).Distinct().ToListAsync(ct);
-        var clientNames = await _context.Clients
-            .AsNoTracking()
-            .Where(c => clientIds.Contains(c.Id))
-            .Select(c => new { c.Id, Name = c.FirstName + " " + c.LastName })
-            .ToDictionaryAsync(x => x.Id, x => x.Name, ct);
 
         var items = await domains
             .OrderByDescending(d => d.RegisteredAt)
@@ -104,24 +103,29 @@ public sealed class GetDomainsReportHandler
             })
             .ToListAsync(ct);
 
-        IReadOnlyList<DomainReportDto> result = items.Select(d => new DomainReportDto(
+        // FK_Domains_Clients_ClientId restricts deleting a client that has domains, so every owner on
+        // the page is there; the name comes from the client record, never from the identity store.
+        var clientIds = items.Select(d => d.ClientId).Distinct().ToList();
+        var clients = await _bus.GetRequiredClientBriefsByIdAsync(clientIds, ct);
+
+        var result = items.Select(d => new DomainReportDto(
             d.Id,
             d.ClientId,
-            clientNames.GetValueOrDefault(d.ClientId, string.Empty),
+            clients[d.ClientId].FullName,
             d.OrderId,
             d.OrderType,
             d.Name,
-            d.FirstPaymentAmount,
-            d.RecurringAmount,
+            new DomainReportAmountsDto(d.FirstPaymentAmount, d.RecurringAmount),
             d.RegistrationPeriod,
-            d.RegisteredAt.ToString("yyyy-MM-dd"),
-            d.ExpiresAt.ToString("yyyy-MM-dd"),
-            d.NextDueDate.ToString("yyyy-MM-dd"),
+            new DomainReportDatesDto(
+                d.RegisteredAt.ToString("yyyy-MM-dd"),
+                d.ExpiresAt.ToString("yyyy-MM-dd"),
+                d.NextDueDate.ToString("yyyy-MM-dd")),
             d.Registrar,
             d.PaymentMethod,
-            d.Status.ToString(),
+            d.Status,
             d.AdminNotes)).ToList();
 
-        return Result<DomainReportResultDto>.Success(new DomainReportResultDto(result, totalCount));
+        return Result<PaginatedList<DomainReportDto>>.Success(new PaginatedList<DomainReportDto>(result, totalCount, query.Page, query.PageSize));
     }
 }

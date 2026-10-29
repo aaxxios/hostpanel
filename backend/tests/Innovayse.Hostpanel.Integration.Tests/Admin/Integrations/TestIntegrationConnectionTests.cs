@@ -2,15 +2,12 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.SDK.Plugins;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Integrations;
 
@@ -22,7 +19,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Integrations;
 /// slug is refused <c>INTEGRATION_NOT_FOUND</c>, a caller with only the Client role is refused, and the
 /// route is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>IntegrationsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class TestIntegrationConnectionTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -81,22 +77,18 @@ public sealed class TestIntegrationConnectionTests(IntegrationTestFactory factor
         resolver.Register("inecobank", plugin);
 
         var host = factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services => services.AddScoped<IPaymentPluginResolver>(_ => resolver)));
+            builder.ConfigureTestServices(services => services.AddSingleton<IPaymentPluginResolver>(resolver)));
 
         var token = await factory.GetAdminTokenAsync();
         var client = host.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        await client.PutAsJsonAsync("/api/admin/integrations/inecobank", new
-        {
-            isEnabled = true,
-            config = new Dictionary<string, string>
-            {
-                ["gateway_url"] = "https://gateway.example.com",
-                ["username"] = "merchant",
-                ["password"] = "secret",
-            },
-        });
+        // Planted directly: the hosted gateway is a plugin, and the save endpoint accepts only the
+        // fields a loaded plugin declares, which this host need not have loaded.
+        await SecretSettingTestSeeds.StoreAsync(factory, "integration:inecobank:is_enabled", "true");
+        await SecretSettingTestSeeds.StoreAsync(factory, "integration:inecobank:gateway_url", "https://gateway.example.com");
+        await SecretSettingTestSeeds.StoreAsync(factory, "integration:inecobank:username", "merchant");
+        await SecretSettingTestSeeds.StoreAsync(factory, "integration:inecobank:password", "secret");
 
         var response = await client.PostAsync("/api/admin/integrations/inecobank/test", null);
 
@@ -208,7 +200,7 @@ public sealed class TestIntegrationConnectionTests(IntegrationTestFactory factor
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<IIntegrationConnectionProbe>();
-                services.AddScoped<IIntegrationConnectionProbe>(_ => probe);
+                services.AddSingleton<IIntegrationConnectionProbe>(probe);
             }));
 
         var token = await factory.GetAdminTokenAsync();

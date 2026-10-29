@@ -3,8 +3,10 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.UpdateEmailForwardingRule;
 
@@ -14,24 +16,27 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.UpdateEmailForwarding
 /// </summary>
 public sealed class UpdateEmailForwardingRuleHandler
 {
-    /// <summary>The registrar provider the updated rule is synced to.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
 
     /// <summary>The data context the domain aggregate is loaded, mutated and saved through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work the aggregate is saved through.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>Logger that records the registrar's refusal code for operators.</summary>
+    private readonly ILogger<UpdateEmailForwardingRuleHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="registrar">The registrar provider the updated rule is synced to.</param>
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
     /// <param name="context">The data context the domain aggregate is loaded, mutated and saved through.</param>
-    /// <param name="uow">Unit of work the aggregate is saved through.</param>
-    public UpdateEmailForwardingRuleHandler(IRegistrarProvider registrar, IHostpanelDbContext context, IUnitOfWork uow)
+    /// <param name="logger">Logger that records the registrar's refusal code for operators.</param>
+    public UpdateEmailForwardingRuleHandler(
+        RegistrarProviderResolver registrars,
+        IHostpanelDbContext context,
+        ILogger<UpdateEmailForwardingRuleHandler> logger)
     {
-        _registrar = registrar;
+        _registrars = registrars;
         _context = context;
-        _uow = uow;
+        _logger = logger;
     }
 
     /// <summary>
@@ -60,14 +65,17 @@ public sealed class UpdateEmailForwardingRuleHandler
         }
 
         domain.UpdateForwardingRule(cmd.RuleId!.Value, cmd.Source, cmd.Destination, cmd.IsActive);
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
 
-        var result = await _registrar.UpdateEmailForwardingRuleAsync(domain.Name, cmd.Source, cmd.Destination, ct);
+        var registrar = await _registrars.ResolveAsync(domain, ct);
+        var result = await registrar.UpdateEmailForwardingRuleAsync(
+            new EmailForwardingRuleChange(domain.Name, cmd.Source, cmd.Destination), ct);
         if (!result.Success)
         {
-            return Result.Failure(
-                $"Registrar failed to update email forwarding rule for '{domain.Name}': {result.ErrorMessage}",
-                HostpanelErrorCodes.EMAIL_FORWARDING_RULE_UPSTREAM_FAILED);
+            _logger.LogWarning(
+                "Registrar failed to update email forwarding rule for '{DomainName}': {Reason}",
+                domain.Name, result.ErrorCode);
+            return Result.FailureCode(result.ToFailureCode(HostpanelErrorCodes.EMAIL_FORWARDING_RULE_UPSTREAM_FAILED));
         }
 
         return Result.Success();

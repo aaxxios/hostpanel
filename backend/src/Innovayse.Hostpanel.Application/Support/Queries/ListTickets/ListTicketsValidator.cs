@@ -1,15 +1,16 @@
+using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Support.Queries.ListTickets;
 
-/// <summary>
-///     Validator for ListTicketsQuery.
-///     Page and page size are clamped to a sane window by the handler and status/search are free
-///     text filters that simply match nothing when they name no ticket, so no rule is declared —
-///     decided, not forgotten.
-/// </summary>
+/// <summary>Validator for <see cref="ListTicketsQuery"/>.</summary>
+/// <remarks>
+/// Page and page size are clamped by the handler and the search term is free text that simply
+/// matches nothing. A <c>Status</c> outside the enum is refused, so a bad filter is a 400
+/// instead of silently listing every ticket.
+/// </remarks>
 public sealed class ListTicketsValidator : LocalizedValidator<ListTicketsQuery>
 {
     /// <summary>Initializes validator with localization service.</summary>
@@ -17,5 +18,8 @@ public sealed class ListTicketsValidator : LocalizedValidator<ListTicketsQuery>
     public ListTicketsValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
+        RuleFor(x => x.Status)
+            .IsInEnum()
+            .WithMessage(L["TicketStatusInvalid"]);
     }
 }

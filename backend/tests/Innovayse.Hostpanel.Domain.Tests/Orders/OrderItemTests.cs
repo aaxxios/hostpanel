@@ -1,31 +1,36 @@
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Orders;
-using Innovayse.Hostpanel.Domain.Products;
+using Innovayse.Hostpanel.Domain.Orders.Enums;
+using Innovayse.Hostpanel.Domain.Products.Enums;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Orders;
+
 /// <summary>Unit tests for <see cref="OrderItem"/> domain fields.</summary>
 public sealed class OrderItemTests
 {
+    /// <summary>The fixed moment every domain method in these tests is handed as "now".</summary>
+    private static readonly DateTimeOffset Now = new(2026, 3, 10, 12, 0, 0, TimeSpan.Zero);
+
     /// <summary>AddItem with domain action stores all domain fields on the order item.</summary>
     [Fact]
     public void AddItem_WithDomainAction_StoresDomainFields()
     {
-        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null, "USD");
+        var order = Order.Create("ORD-0001", 1, PaymentMethodNames.Card, null, "USD", Now);
 
         order.AddItem(
             productId: 99,
             productName: "Domain Registration",
-            billingCycle: BillingCycleNames.Annually,
+            billingCycle: BillingCycle.Annual,
             firstPaymentAmount: 12.99m,
             recurringAmount: 12.99m,
             domain: "example.com",
             hostname: null,
-            domainAction: DomainActionNames.Register,
+            domainAction: DomainAction.Register,
             eppCode: null,
             years: 1);
 
         var item = order.Items[0];
-        Assert.Equal(DomainActionNames.Register, item.DomainAction);
+        Assert.Equal(DomainAction.Register, item.DomainAction);
         Assert.Null(item.EppCode);
         Assert.Equal(1, item.Years);
     }
@@ -34,22 +39,22 @@ public sealed class OrderItemTests
     [Fact]
     public void AddItem_WithTransferAction_StoresEppCode()
     {
-        var order = Order.Create("ORD-0002", 1, PaymentMethodNames.Card, null, "USD");
+        var order = Order.Create("ORD-0002", 1, PaymentMethodNames.Card, null, "USD", Now);
 
         order.AddItem(
             productId: 99,
             productName: "Domain Registration",
-            billingCycle: BillingCycleNames.Annually,
+            billingCycle: BillingCycle.Annual,
             firstPaymentAmount: 12.99m,
             recurringAmount: 12.99m,
             domain: "transfer.com",
             hostname: null,
-            domainAction: DomainActionNames.Transfer,
+            domainAction: DomainAction.Transfer,
             eppCode: "EPP-ABC-123",
             years: 1);
 
         var item = order.Items[0];
-        Assert.Equal(DomainActionNames.Transfer, item.DomainAction);
+        Assert.Equal(DomainAction.Transfer, item.DomainAction);
         Assert.Equal("EPP-ABC-123", item.EppCode);
     }
 
@@ -57,12 +62,12 @@ public sealed class OrderItemTests
     [Fact]
     public void AddItem_WithoutDomainAction_LeavesFieldsNull()
     {
-        var order = Order.Create("ORD-0003", 1, PaymentMethodNames.Card, null, "USD");
+        var order = Order.Create("ORD-0003", 1, PaymentMethodNames.Card, null, "USD", Now);
 
         order.AddItem(
             productId: 5,
             productName: "Starter Hosting",
-            billingCycle: BillingCycleNames.Monthly,
+            billingCycle: BillingCycle.Monthly,
             firstPaymentAmount: 4.99m,
             recurringAmount: 4.99m,
             domain: null,

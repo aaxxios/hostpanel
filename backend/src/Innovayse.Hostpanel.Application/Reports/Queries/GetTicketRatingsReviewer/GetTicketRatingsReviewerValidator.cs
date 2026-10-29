@@ -6,8 +6,8 @@ namespace Innovayse.Hostpanel.Application.Reports.Queries.GetTicketRatingsReview
 
 /// <summary>
 /// Validator for <see cref="GetTicketRatingsReviewerQuery"/>. Every field is a plain <c>WHERE</c>
-/// filter with no iteration behind it — an out-of-range minimum rating simply matches nothing — so
-/// nothing here can crash the handler; no rule is declared — decided, not forgotten.
+/// filter with no iteration behind it, an out-of-range minimum rating simply matches nothing, so
+/// nothing here can crash the handler; no rule is declared, decided, not forgotten.
 /// </summary>
 public sealed class GetTicketRatingsReviewerValidator : LocalizedValidator<GetTicketRatingsReviewerQuery>
 {

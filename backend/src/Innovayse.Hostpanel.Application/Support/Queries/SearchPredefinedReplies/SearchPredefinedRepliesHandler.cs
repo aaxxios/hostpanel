@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Application.Support.Queries.SearchPredefinedReplie
 /// <summary>Searches predefined replies by name or content and maps results to <see cref="PredefinedReplyDto"/>.</summary>
 /// <remarks>
 /// The category join is an inner join, on purpose: a reply whose category row no longer exists is
-/// not returned. That is the pre-conversion repository's own behaviour, kept exactly.
+/// not returned.
 /// </remarks>
 public sealed class SearchPredefinedRepliesHandler
 {

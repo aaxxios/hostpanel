@@ -28,21 +28,27 @@ public sealed class DemoScheduledJobsStartup : IHostedService
     /// <summary>Structured logger.</summary>
     private readonly ILogger<DemoScheduledJobsStartup> _logger;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Creates the hosted service.</summary>
     /// <param name="scopeFactory">Creates a scope to resolve the bus from.</param>
     /// <param name="options">The demo switch and the reset interval.</param>
     /// <param name="schedule">Records when the next reset is due.</param>
     /// <param name="logger">Structured logger.</param>
+    /// <param name="clock">The source of the current moment.</param>
     public DemoScheduledJobsStartup(
         IServiceScopeFactory scopeFactory,
         IOptions<DemoOptions> options,
         IDemoResetSchedule schedule,
-        ILogger<DemoScheduledJobsStartup> logger)
+        ILogger<DemoScheduledJobsStartup> logger,
+        IClock clock)
     {
         _scopeFactory = scopeFactory;
         _options = options;
         _schedule = schedule;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>Schedules the first reset when the demo is enabled.</summary>
@@ -56,7 +62,7 @@ public sealed class DemoScheduledJobsStartup : IHostedService
             return;
         }
 
-        var next = DateTimeOffset.UtcNow.AddHours(options.ResetIntervalHours);
+        var next = _clock.UtcNow.AddHours(options.ResetIntervalHours);
 
         await using var scope = _scopeFactory.CreateAsyncScope();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();

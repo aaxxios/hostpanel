@@ -16,9 +16,9 @@ test('the summary page shows the client and its rollups', async ({ page }) => {
     routes: [
       json(HttpMethod.Get, '/api/clients/7', adaDetail),
       json(HttpMethod.Get, '/api/clients/7/summary', emptyClientSummary),
-      json(HttpMethod.Get, '/api/services', { items: [], totalCount: 0, page: 1, pageSize: 5 }),
-      json(HttpMethod.Get, '/api/domains', { items: [], totalCount: 0, page: 1, pageSize: 5 }),
-      json(HttpMethod.Get, '/api/billing/quotes/client/7', { items: [], totalCount: 0, page: 1, pageSize: 5 }),
+      json(HttpMethod.Get, '/api/services', { items: [], pageNumber: 1, pageSize: 5, totalCount: 0, totalPages: 0 }),
+      json(HttpMethod.Get, '/api/domains', { items: [], pageNumber: 1, pageSize: 5, totalCount: 0, totalPages: 0 }),
+      json(HttpMethod.Get, '/api/billing/quotes/client/7', { items: [], pageNumber: 1, pageSize: 5, totalCount: 0, totalPages: 0 }),
     ],
   })
 

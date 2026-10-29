@@ -1,6 +1,6 @@
 /**
- * Tests for `GET /api/portal/client/me`: in single sign-on mode it merges the SSO identity with the
- * billing profile, in local mode it maps the billing profile alone.
+ * Tests for `GET /api/portal/client/me`: the backend profile passes through as sent, with the
+ * permissions added; in single sign-on mode the email and 2FA flag come from the SSO identity.
  *
  * @module tests/server/api/portal/client/me.get.test
  */
@@ -20,28 +20,35 @@ let route: RouteModule
 
 /** The billing profile the C# API answers with. */
 const billing = {
-  id: 'b-1',
+  id: 7,
   firstName: 'Ann',
   lastName: 'Lee',
   companyName: 'Acme',
   email: 'ann@b.test',
   phone: '+1',
-  street: 'Main 1',
-  address2: 'Apt 2',
-  city: 'Yerevan',
-  state: 'AR',
-  postCode: '0001',
-  country: 'AM',
+  address: {
+    street: 'Main 1',
+    address2: 'Apt 2',
+    city: 'Yerevan',
+    state: 'AR',
+    postCode: '0001',
+    country: 'AM',
+  },
   paymentMethod: 'card',
   language: 'hy',
   currency: 'USD',
-  notifyGeneral: true,
-  notifyInvoice: false,
-  notifySupport: true,
-  notifyProduct: false,
-  notifyDomain: true,
-  notifyAffiliate: false,
+  notifications: {
+    general: true,
+    invoice: false,
+    support: true,
+    product: false,
+    domain: true,
+    affiliate: false,
+    marketingOptIn: false,
+    statusUpdate: false,
+  },
   twoFactorEnabled: true,
+  contacts: [],
 }
 
 /** The permissions the C# API reports for the signed-in person: two of the thirteen flags. */
@@ -78,24 +85,18 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
     backend.respondWith(answer)
   })
 
-  it('merges identity and billing, preferring billing names, and forwards the language to the billing call', async () => {
+  it('passes the billing profile through with the identity email and 2FA flag, and forwards the language to the billing call', async () => {
     const result = await route.default(makeEvent({ cookies: await signedIn('jwt'), headers: { 'x-language': 'ru' } }))
 
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
     expect(backend.requests[1]?.url).toBe('/api/clients/me')
     expect(backend.requests[1]?.headers['x-language']).toBe('ru')
-    expect(result).toMatchObject({
-      id: 'sso-1',
-      firstname: 'Ann',
-      lastname: 'Lee',
-      companyname: 'Acme',
+    expect(result).toEqual({
+      ...billing,
       email: 'sso@b.test',
-      phonenumber: '+1',
-      postcode: '0001',
-      defaultgateway: 'card',
-      currency: 'USD',
       twoFactorEnabled: true,
-      email_preferences: { general: 1, invoice: 0, support: 1, product: 0, domain: 1, affiliate: 0 },
+      permissions: granted,
+      hasClientProfile: true,
     })
   })
 
@@ -114,15 +115,28 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
     expect(result['permissions']).toBe(Permission.None)
   })
 
-  it('falls back to the identity when the billing profile is refused', async () => {
-    backend.respondWith(request => (request.url === '/api/account/profile' ? answer(request) : { status: 404, body: { type: 'CLIENT_PROFILE_NOT_FOUND', detail: 'None.' } }))
+  it('answers the identity with every billing field null when the billing profile is refused', async () => {
+    backend.respondWith(request => (request.url === '/api/clients/me' ? { status: 404, body: { type: 'CLIENT_PROFILE_NOT_FOUND', detail: 'None.' } } : answer(request)))
 
     const result = await route.default(makeEvent({ cookies: await signedIn('jwt') })) as Record<string, unknown>
 
-    expect(result['firstname']).toBe('Id')
-    expect(result['phonenumber']).toBe('+9')
-    expect(result['email_preferences']).toBeNull()
-    expect(result['currency']).toBeNull()
+    expect(result).toEqual({
+      id: null,
+      email: 'sso@b.test',
+      firstName: 'Id',
+      lastName: 'Entity',
+      companyName: null,
+      phone: '+9',
+      address: null,
+      language: null,
+      currency: null,
+      paymentMethod: null,
+      notifications: null,
+      twoFactorEnabled: true,
+      contacts: [],
+      permissions: granted,
+      hasClientProfile: false,
+    })
   })
 
   it('flags a customer account as having a client profile', async () => {
@@ -159,7 +173,16 @@ describe('GET /api/portal/client/me in single sign-on mode', () => {
 
     const error = await refusal(async () => route.default(makeEvent({ cookies: await signedIn('jwt') })))
 
-    expect(error).toMatchObject({ statusCode: 403 })
+    expect(error).toMatchObject({ statusCode: 403, data: { code: 'SIGN_ON_REFUSED' } })
+  })
+
+  it('answers 502 with a code and no address when the SSO fails or cannot be reached', async () => {
+    backend.respondWith(() => ({ status: 500, body: {} }))
+
+    const error = await refusal(async () => route.default(makeEvent({ cookies: await signedIn('jwt') })))
+
+    expect(error).toMatchObject({ statusCode: 502, data: { code: 'SIGN_ON_UNAVAILABLE' } })
+    expect(String(error['message'] ?? '')).not.toContain(backend.baseUrl)
   })
 })
 
@@ -174,15 +197,7 @@ describe('GET /api/portal/client/me in local mode', () => {
     const result = await route.default(makeEvent({ cookies: await signedIn('jwt') }))
 
     expect(backend.requests.map(request => request.url)).toEqual(['/api/clients/me', '/api/auth/me'])
-    expect(result).toMatchObject({
-      permissions: granted,
-      id: 'b-1',
-      firstname: 'Ann',
-      address1: 'Main 1',
-      language: 'hy',
-      twoFactorEnabled: true,
-      email_preferences: { general: 1, invoice: 0, support: 1, product: 0, domain: 1, affiliate: 0 },
-    })
+    expect(result).toEqual({ ...billing, permissions: granted, hasClientProfile: true })
   })
 
   it('passes the backend refusal through with its code and sentence', async () => {

@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Application.Reports.Queries.GetSslMonitoring;
 
 /// <summary>
 /// Validator for <see cref="GetSslMonitoringQuery"/>. Its one input is a flag, which every value
-/// of is valid, so no rule is declared — decided, not forgotten.
+/// of is valid, so no rule is declared: decided, not forgotten.
 /// </summary>
 public sealed class GetSslMonitoringValidator : LocalizedValidator<GetSslMonitoringQuery>
 {

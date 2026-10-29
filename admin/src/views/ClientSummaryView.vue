@@ -1,22 +1,22 @@
 <script setup lang="ts">
 /**
- * Client summary dashboard -- shows aggregated billing, service, and activity
+ * Client summary dashboard: shows aggregated billing, service, and activity
  * data across 7 information cards and 3 mini tables.
  */
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import { useClientSummaryStore } from '@/stores/clientSummary'
 import { useClientsStore } from '@/stores/clients'
-import { QUOTE_STAGE_OPTIONS } from '@/lib/constants'
+import { useResultBanner } from '@/composables/useResultBanner'
+import { QUOTE_STAGE_OPTIONS, SERVICE_STATUS_OPTIONS } from '@/lib/constants'
 import { capitalize, formatDate } from '@/lib/format'
 import { formatMoney, formatPrice } from '@/lib/money'
 import { domainStatusTone, serviceStatusTone, statusLabel, clientStatusTone, contactTypeTone, quoteStageTone } from '@/lib/tones'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
@@ -24,6 +24,7 @@ import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiLink from '@/components/ui/UiLink.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -36,14 +37,10 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { UiTone } from '@/utils/ui/tone'
 import { ClientSection, clientItemPath, clientSectionPath, clientTicketNewPath, quoteAddPath, quotePath } from '@/lib/routes'
 
 const { t } = useI18n()
-
-
-/** Fallback text for fields the API leaves unresolved. */
-
-const { productLabel } = useFallbackLabels()
 
 /** Empty-value dash. */
 const DASH = '—'
@@ -139,12 +136,12 @@ const clientInfoRows = computed<InfoRow[]>(() => {
     { label: t('shared.companyName'), value: c.companyName || DASH },
     { label: t('shared.emailAddress'), value: c.email || DASH },
     { label: t('shared.phoneNumber'), value: c.phone || DASH },
-    { label: t('shared.address1'), value: c.street || DASH },
-    { label: t('shared.address2'), value: c.address2 || DASH },
-    { label: t('shared.city'), value: c.city || DASH },
-    { label: t('clients.clientSummary.stateRegion'), value: c.state || DASH },
-    { label: t('shared.postcode'), value: c.postCode || DASH },
-    { label: t('shared.country'), value: c.country || DASH },
+    { label: t('shared.address1'), value: c.address.street || DASH },
+    { label: t('shared.address2'), value: c.address.address2 || DASH },
+    { label: t('shared.city'), value: c.address.city || DASH },
+    { label: t('clients.clientSummary.stateRegion'), value: c.address.state || DASH },
+    { label: t('shared.postcode'), value: c.address.postCode || DASH },
+    { label: t('shared.country'), value: c.address.country || DASH },
   ]
 })
 
@@ -172,10 +169,9 @@ const flagRows = computed<FlagRow[]>(() => {
    */
   const yesNo = (on: boolean): string => (on ? t('shared.yes') : t('shared.no'))
   return [
-    flag(t('shared.taxExempt'), c.taxExempt, yesNo(c.taxExempt)),
-    flag(t('clients.clientSummary.autoCcProcessing'), !c.disableCcProcessing, yesNo(!c.disableCcProcessing)),
-    flag(t('clients.clientSummary.overdueReminders'), c.overdueNotices, yesNo(c.overdueNotices)),
-    flag(t('shared.lateFees'), c.lateFees, yesNo(c.lateFees)),
+    flag(t('shared.taxExempt'), c.settings.taxExempt, yesNo(c.settings.taxExempt)),
+    flag(t('clients.clientSummary.autoCcProcessing'), !c.settings.disableCcProcessing, yesNo(!c.settings.disableCcProcessing)),
+    flag(t('clients.clientSummary.overdueReminders'), c.settings.overdueNotices, yesNo(c.settings.overdueNotices)),
     flag(t('clients.clientSummary.twoFactorAuth'), c.twoFactorEnabled, c.twoFactorEnabled ? t('shared.enabled') : t('shared.disabled')),
   ]
 })
@@ -197,12 +193,12 @@ const invoiceRows = computed<InvoiceRow[]>(() => {
     return []
   }
   return [
-    { label: t('clients.clientSummary.paid'), count: s.paid.count, total: s.paid.total },
-    { label: t('clients.clientSummary.draft'), count: s.draft.count, total: s.draft.total },
-    { label: t('clients.clientSummary.unpaidDue'), count: s.unpaid.count, total: s.unpaid.total },
-    { label: t('clients.clientSummary.overdue'), count: s.overdue.count, total: s.overdue.total },
-    { label: t('clients.clientSummary.cancelled'), count: s.cancelled.count, total: s.cancelled.total },
-    { label: t('clients.clientSummary.refunded'), count: s.refunded.count, total: s.refunded.total },
+    { label: t('clients.clientSummary.paid'), count: s.invoices.paid.count, total: s.invoices.paid.total },
+    { label: t('clients.clientSummary.draft'), count: s.invoices.draft.count, total: s.invoices.draft.total },
+    { label: t('clients.clientSummary.unpaidDue'), count: s.invoices.unpaid.count, total: s.invoices.unpaid.total },
+    { label: t('clients.clientSummary.overdue'), count: s.invoices.overdue.count, total: s.invoices.overdue.total },
+    { label: t('clients.clientSummary.cancelled'), count: s.invoices.cancelled.count, total: s.invoices.cancelled.total },
+    { label: t('clients.clientSummary.refunded'), count: s.invoices.refunded.count, total: s.invoices.refunded.total },
   ]
 })
 
@@ -213,9 +209,9 @@ const incomeRows = computed<InfoRow[]>(() => {
     return []
   }
   return [
-    { label: t('clients.clientSummary.grossRevenue'), value: formatMoney(s.grossRevenue) },
-    { label: t('clients.clientSummary.clientExpenses'), value: formatMoney(s.clientExpenses) },
-    { label: t('clients.clientSummary.netIncome'), value: formatMoney(s.netIncome) },
+    { label: t('clients.clientSummary.grossRevenue'), value: formatMoney(s.transactions.grossRevenue) },
+    { label: t('clients.clientSummary.clientExpenses'), value: formatMoney(s.transactions.clientExpenses) },
+    { label: t('clients.clientSummary.netIncome'), value: formatMoney(s.transactions.netIncome) },
     { label: t('clients.clientSummary.creditBalance'), value: formatMoney(s.creditBalance) },
   ]
 })
@@ -230,30 +226,36 @@ const countRows = computed<InfoRow[]>(() => {
     {
       label: t('clients.clientSummary.activeServices'),
       value: t('clients.clientSummary.activeservicescountTotalservicescountTotal', {
-        activeServicesCount: s.activeServicesCount,
-        totalServicesCount: s.totalServicesCount,
+        activeServicesCount: s.counts.activeServicesCount,
+        totalServicesCount: s.counts.totalServicesCount,
       }),
     },
-    { label: t('shared.domains'), value: String(s.totalDomainsCount) },
+    { label: t('shared.domains'), value: String(s.counts.totalDomainsCount) },
     {
       label: t('clients.clientSummary.acceptedQuotes'),
       value: t('clients.clientSummary.acceptedquotescountTotalquotescountTotal', {
-        acceptedQuotesCount: s.acceptedQuotesCount,
-        totalQuotesCount: s.totalQuotesCount,
+        acceptedQuotesCount: s.counts.acceptedQuotesCount,
+        totalQuotesCount: s.counts.totalQuotesCount,
       }),
     },
     {
       label: t('clients.clientSummary.openTickets'),
       value: t('clients.clientSummary.openticketscountTotalticketscountTotal', {
-        openTicketsCount: s.openTicketsCount,
-        totalTicketsCount: s.totalTicketsCount,
+        openTicketsCount: s.counts.openTicketsCount,
+        totalTicketsCount: s.counts.totalTicketsCount,
       }),
     },
   ]
 })
 
+/** The outcome line of the last notes save, shown under the Save button. */
+const notesFeedback = useResultBanner()
+
+/** Tone of the notes outcome line: danger for a refusal, success otherwise. */
+const notesFeedbackTone = computed<UiTone>(() => (notesFeedback.isError.value ? UiTone.Danger : UiTone.Success))
+
 /**
- * Saves admin notes for the current client.
+ * Saves admin notes for the current client and shows the outcome (success, or the API's sentence).
  *
  * @returns Promise that resolves when save completes.
  */
@@ -261,9 +263,15 @@ const saveNotes = async (): Promise<void> => {
   if (!client.value) {
     return
   }
+  notesFeedback.clear()
   savingNotes.value = true
-  await clientsStore.updateClient(clientId.value, { adminNotes: adminNotes.value })
+  const saved = await clientsStore.saveAdminNotes(clientId.value, adminNotes.value)
   savingNotes.value = false
+  if (saved) {
+    notesFeedback.show(t('clients.clientSummary.notesSaved'), false)
+  } else {
+    notesFeedback.show(clientsStore.saveError ?? t('errors.noAnswer'), true)
+  }
 }
 
 /**
@@ -297,7 +305,7 @@ const openQuote = (id: number): void => {
 }
 
 /** Initialize admin notes from the client detail when it loads. */
-watch(() => client.value?.adminNotes, (val) => {
+watch(() => client.value?.preferences.adminNotes, (val) => {
   adminNotes.value = val ?? ''
 }, { immediate: true })
 
@@ -310,9 +318,13 @@ onMounted(() => {
   <UiStack gap="lg">
     <UiHeading :level="1" variant="card">{{ t('clients.clientSummary.summary') }}</UiHeading>
 
-    <UiAlert v-if="summaryStore.error" variant="error" data-testid="client-summary-error">
-      {{ summaryStore.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="summaryStore.error"
+      :message="summaryStore.error"
+      :loading="summaryStore.loading"
+      testid="client-summary-error"
+      @retry="summaryStore.fetchAll(clientId)"
+    />
 
     <UiStack v-if="summaryStore.loading && !summary" data-testid="client-summary-loading">
       <UiSkeleton :lines="3" />
@@ -483,6 +495,7 @@ onMounted(() => {
                 {{ savingNotes ? t('shared.saving') : t('shared.save') }}
               </UiButton>
             </UiStack>
+            <UiStatusMessage :message="notesFeedback.message.value" :tone="notesFeedbackTone" data-testid="client-summary-notes-feedback" />
           </UiStack>
         </UiCard>
       </UiGrid>
@@ -522,13 +535,13 @@ onMounted(() => {
                 @click="openService(service.id)"
               >
                 <UiTableCell muted>{{ service.id }}</UiTableCell>
-                <UiTableCell>{{ productLabel(service.productName) }}</UiTableCell>
+                <UiTableCell>{{ service.productName }}</UiTableCell>
                 <UiTableCell muted>{{ service.domain ?? DASH }}</UiTableCell>
                 <UiTableCell muted>{{ formatPrice(service.price, service.priceCurrency) }}</UiTableCell>
                 <UiTableCell muted>{{ capitalize(service.billingCycle) }}</UiTableCell>
                 <UiTableCell muted>{{ formatDate(service.nextDueDate) }}</UiTableCell>
                 <UiTableCell>
-                  <UiBadge :tone="serviceStatusTone(service.status)" small>{{ service.status }}</UiBadge>
+                  <UiBadge :tone="serviceStatusTone(service.status)" small>{{ statusLabel(SERVICE_STATUS_OPTIONS, service.status) }}</UiBadge>
                 </UiTableCell>
                 <UiTableCell>
                   <UiIconButton

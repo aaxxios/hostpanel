@@ -5,9 +5,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import CurrenciesView from '@/views/CurrenciesView.vue'
 import type { CurrencyDto } from '@/types/currency'
-import { json, problem } from '../helpers/fetch'
+import { json, problem, stubFetch } from '../helpers/fetch'
 import { mountScreen } from '../helpers/mount'
 import { requestsOf, stubRouteTable } from '../helpers/routes'
+import { flushPromises } from '@vue/test-utils'
 
 /** The base currency. */
 const usd: CurrencyDto = {
@@ -133,5 +134,18 @@ describe('CurrenciesView', () => {
     stubRouteTable({ 'GET /admin/currencies': () => problem('Currencies are unavailable.', 503) })
     const failed = await mountScreen(CurrenciesView)
     expect(failed.wrapper.get('[data-testid="currencies-error"]').text()).toBe('Currencies are unavailable.')
+  })
+
+  it('loads again from the Retry of a refused load', async () => {
+    stubFetch(problem('Not allowed.', 403))
+    const wrapper = (await mountScreen(CurrenciesView)).wrapper
+    await flushPromises()
+    const fetchMock = vi.mocked(fetch)
+    const before = fetchMock.mock.calls.length
+
+    await wrapper.get('[data-testid="currencies-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(before)
   })
 })

@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Support;
+
 /// <summary>
 /// Represents a download category used to organise downloadable files.
 /// Categories can be hidden from public view and support hierarchical nesting.
@@ -20,7 +21,7 @@ public sealed class DownloadCategory : BaseEntity
     /// <summary>Gets the FK to the parent category for nesting, or null if top-level.</summary>
     public int? ParentCategoryId { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private DownloadCategory() { }
 
     /// <summary>

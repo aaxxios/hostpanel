@@ -1,12 +1,9 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Infrastructure.Demo;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Settings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Demo;
 
@@ -34,14 +31,18 @@ public sealed class DemoServiceRegistrationTests
     /// <param name="settings">The configuration values.</param>
     /// <param name="ownsItsUsers">Whether accounts live in the local store.</param>
     /// <returns>The collection and the provider built from it.</returns>
-    private static (ServiceCollection Services, ServiceProvider Provider) Build(
+    private static BuiltServices Build(
         Dictionary<string, string?> settings, bool ownsItsUsers = true)
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddDemoMode(configuration, ownsItsUsers);
-        return (services, services.BuildServiceProvider());
+
+        // The host registers its configuration as a service; the demo options bind from it.
+        services.AddSingleton<IConfiguration>(configuration);
+        var demo = configuration.GetSection(DemoOptions.SectionName).Get<DemoOptions>() ?? new DemoOptions();
+        services.AddDemoMode(demo, ownsItsUsers);
+        return new(services, services.BuildServiceProvider());
     }
 
     /// <summary>The implementation type registered for a service, or null when it is not registered.</summary>
@@ -57,7 +58,6 @@ public sealed class DemoServiceRegistrationTests
     {
         var (services, _) = Build(ValidSettings());
 
-        ImplementationOf<IPaymentGateway>(services).Should().Be<DemoPaymentGateway>();
         ImplementationOf<ICardPaymentGateway>(services).Should().Be<DemoCardPaymentGateway>();
         ImplementationOf<IPaymentPluginResolver>(services).Should().Be<DemoPaymentPluginResolver>();
         ImplementationOf<IRegistrarProvider>(services).Should().Be<DemoRegistrarProvider>();
@@ -67,6 +67,7 @@ public sealed class DemoServiceRegistrationTests
         ImplementationOf<IServerConnectionTester>(services).Should().Be<DemoServerConnectionTester>();
         ImplementationOf<IExchangeRateSource>(services).Should().Be<DemoExchangeRateSource>();
         ImplementationOf<IContactNotifier>(services).Should().Be<DemoContactNotifier>();
+        ImplementationOf<IHostingProbe>(services).Should().Be<DemoHostingProbe>();
         ImplementationOf<IDemoDataManager>(services).Should().Be<DemoDataManager>();
     }
 
@@ -85,7 +86,7 @@ public sealed class DemoServiceRegistrationTests
     {
         var (services, provider) = Build(new Dictionary<string, string?>());
 
-        services.Should().NotContain(d => d.ServiceType == typeof(IPaymentGateway));
+        services.Should().NotContain(d => d.ServiceType == typeof(ICardPaymentGateway));
         services.Should().NotContain(d => d.ServiceType == typeof(IRegistrarProvider));
         ImplementationOf<IDemoDataManager>(services).Should().Be<DisabledDemoDataManager>();
         provider.GetRequiredService<IOptions<DemoOptions>>().Value.Enabled.Should().BeFalse();

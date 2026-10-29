@@ -1,5 +1,5 @@
 /**
- * A registered domain and everything that hangs off it — nameservers, DNS records,
+ * A registered domain and everything that hangs off it: nameservers, DNS records,
  * forwarding rules and renewal reminders.
  */
 
@@ -12,8 +12,8 @@ export interface Domain {
   clientId: number
   /** Domain name (e.g. example.com). */
   name: string
-  /** Domain status (active, expired, pending). */
-  status: string
+  /** Domain lifecycle status. */
+  status: DomainStatus
   /** ISO 8601 expiry date. */
   expiresAt: string
 }
@@ -24,8 +24,8 @@ export interface DomainRegistration {
   id: number
   /** Associated client identifier. */
   clientId: number
-  /** Full name of the owning client; null when unresolved. */
-  clientName: string | null
+  /** Full name of the owning client; every domain has one, since its client cannot be deleted. */
+  clientName: string
   /** Domain name (e.g. example.com). */
   name: string
   /** Registration period in years; 0 or less means unknown. */
@@ -41,9 +41,71 @@ export interface DomainRegistration {
   /** Domain expiration date (ISO 8601). */
   expiresAt: string
   /** Current lifecycle status. */
-  status: string
+  status: DomainStatus
   /** Whether auto-renew is enabled. */
   autoRenew: boolean
+}
+
+/** Registration, expiry and renewal dates of a domain and the length of its registration. */
+export interface DomainTerm {
+  /** ISO 8601 registration date. */
+  registeredAt: string
+  /** ISO 8601 expiry date. */
+  expiresAt: string
+  /** ISO 8601 next renewal payment due date. */
+  nextDueDate: string
+  /** Registration period in years. */
+  registrationPeriod: number
+}
+
+/** The registrar a domain is registered with and the identifiers it holds for the domain. */
+export interface DomainRegistrar {
+  /** Registrar module name, or null when not set. */
+  module: string | null
+  /** Registrar-assigned reference, or null when not yet registered. */
+  reference: string | null
+  /** EPP authorization code, or null when not available. */
+  eppCode: string | null
+}
+
+/** The switches that can be turned on or off for a domain. */
+export interface DomainFeatures {
+  /** Whether auto-renew is enabled. */
+  autoRenew: boolean
+  /** Whether WHOIS privacy is enabled. */
+  whoisPrivacy: boolean
+  /** Whether registrar transfer lock is enabled. */
+  isLocked: boolean
+  /** Whether DNS management is enabled. */
+  dnsManagement: boolean
+  /** Whether email forwarding is enabled. */
+  emailForwarding: boolean
+}
+
+/** What a domain costs and how it is paid for. */
+export interface DomainBilling {
+  /** One-time registration cost. */
+  firstPaymentAmount: number
+  /** Recurring renewal amount. */
+  recurringAmount: number
+  /** ISO 4217 currency code. */
+  priceCurrency: string
+  /** Payment method label. */
+  paymentMethod: string | null
+  /** Applied promotion code. */
+  promotionCode: string | null
+  /** External subscription reference. */
+  subscriptionId: string | null
+}
+
+/** The order that created a domain and the service it is linked to. */
+export interface DomainOrigin {
+  /** Order ID that created this domain. */
+  orderId: number | null
+  /** Order type: "Register" or "Transfer". */
+  orderType: string
+  /** Linked hosting service ID. */
+  linkedServiceId: number | null
 }
 
 /** Full domain detail returned by GET /api/domains/{id}. */
@@ -57,51 +119,19 @@ export interface DomainDetail {
   /** Top-level domain suffix. */
   tld: string
   /** Current lifecycle status. */
-  status: string
-  /** ISO 8601 registration date. */
-  registeredAt: string
-  /** ISO 8601 expiry date. */
-  expiresAt: string
-  /** Whether auto-renew is enabled. */
-  autoRenew: boolean
-  /** Whether WHOIS privacy is enabled. */
-  whoisPrivacy: boolean
-  /** Whether registrar transfer lock is enabled. */
-  isLocked: boolean
-  /** Registrar-assigned reference. */
-  registrarRef: string | null
-  /** EPP authorization code. */
-  eppCode: string | null
-  /** Linked hosting service ID. */
-  linkedServiceId: number | null
-  /** One-time registration cost. */
-  firstPaymentAmount: number
-  /** Recurring renewal amount. */
-  recurringAmount: number
-  /** ISO 4217 currency code. */
-  priceCurrency: string
-  /** ISO 8601 next due date. */
-  nextDueDate: string
-  /** Registrar module name. */
-  registrar: string | null
-  /** Registration period in years. */
-  registrationPeriod: number
-  /** Payment method label. */
-  paymentMethod: string | null
-  /** Applied promotion code. */
-  promotionCode: string | null
-  /** External subscription reference. */
-  subscriptionId: string | null
+  status: DomainStatus
   /** Free-text admin notes. */
   adminNotes: string | null
-  /** Order ID that created this domain. */
-  orderId: number | null
-  /** Order type: "Register" or "Transfer". */
-  orderType: string
-  /** Whether DNS management is enabled. */
-  dnsManagement: boolean
-  /** Whether email forwarding is enabled. */
-  emailForwarding: boolean
+  /** Registration, expiry and renewal dates and the registration period. */
+  term: DomainTerm
+  /** The registrar and the identifiers it holds for the domain. */
+  registrar: DomainRegistrar
+  /** The auto-renew, privacy, lock, DNS and forwarding switches. */
+  features: DomainFeatures
+  /** Prices, currency, payment method, promotion and subscription. */
+  billing: DomainBilling
+  /** The order that created the domain and the service it is linked to. */
+  origin: DomainOrigin
   /** Nameserver list. */
   nameservers: NameserverItem[]
   /** DNS records. */
@@ -152,8 +182,8 @@ export interface EmailForwardingRuleItem {
 export interface DomainReminderItem {
   /** Reminder primary key. */
   id: number
-  /** Reminder type label. */
-  reminderType: string
+  /** Kind of reminder that was sent. */
+  reminderType: DomainReminderType
   /** Recipient email. */
   sentTo: string
   /** ISO 8601 sent timestamp. */
@@ -193,7 +223,7 @@ export interface UpdateDomainPayload {
   /** Registration period in years. */
   registrationPeriod: number
   /** Lifecycle status. */
-  status: string
+  status: DomainStatus
   /** Nameserver hostnames, empty ones dropped. */
   nameservers: string[]
 }
@@ -203,7 +233,7 @@ export type DomainContactPayload = Record<string, string>
 
 /** Body that adds or replaces a DNS record. */
 export interface DnsRecordPayload {
-  /** Record type (A, MX, ...). */
+  /** Record type (A, MX and so on). */
   type: string
   /** Host label. */
   host: string
@@ -255,3 +285,25 @@ export const DnsRecordType = {
 
 /** One of the DNS record types. */
 export type DnsRecordType = (typeof DnsRecordType)[keyof typeof DnsRecordType]
+
+/** Kind of expiry reminder recorded against a domain, exactly as the API sends it. */
+export enum DomainReminderType {
+  ThirtyDaysBeforeExpiry = 'ThirtyDaysBeforeExpiry',
+  FourteenDaysBeforeExpiry = 'FourteenDaysBeforeExpiry',
+  SevenDaysBeforeExpiry = 'SevenDaysBeforeExpiry',
+  OneDayBeforeExpiry = 'OneDayBeforeExpiry',
+  ExpiredNotice = 'ExpiredNotice',
+  RedemptionNotice = 'RedemptionNotice',
+  Unknown = 'Unknown',
+}
+
+/** Locale key of the label shown for each domain reminder type. */
+export const DOMAIN_REMINDER_TYPE_LABEL_KEYS: Record<DomainReminderType, string> = {
+  [DomainReminderType.ThirtyDaysBeforeExpiry]: 'clients.domainRemindersTable.types.thirtyDaysBeforeExpiry',
+  [DomainReminderType.FourteenDaysBeforeExpiry]: 'clients.domainRemindersTable.types.fourteenDaysBeforeExpiry',
+  [DomainReminderType.SevenDaysBeforeExpiry]: 'clients.domainRemindersTable.types.sevenDaysBeforeExpiry',
+  [DomainReminderType.OneDayBeforeExpiry]: 'clients.domainRemindersTable.types.oneDayBeforeExpiry',
+  [DomainReminderType.ExpiredNotice]: 'clients.domainRemindersTable.types.expiredNotice',
+  [DomainReminderType.RedemptionNotice]: 'clients.domainRemindersTable.types.redemptionNotice',
+  [DomainReminderType.Unknown]: 'clients.domainRemindersTable.types.unknown',
+}

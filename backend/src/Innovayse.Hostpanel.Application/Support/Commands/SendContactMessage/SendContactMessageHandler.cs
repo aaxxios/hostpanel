@@ -18,24 +18,19 @@ namespace Innovayse.Hostpanel.Application.Support.Commands.SendContactMessage;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This use case is the reason the platform no longer has two SMTP clients. The public site's Nuxt
-/// server used to hold the relay credentials and send this mail itself, with its own TLS decision
-/// and its own failure behaviour; the mail account's password lived in a second container that had
-/// no other reason to hold it. The frontend now posts here and the one configured relay --
-/// <c>SmtpEmailSender</c> -- sends everything this platform sends.
+/// The public site posts here, so the one configured relay, <c>SmtpEmailSender</c>, sends
+/// everything this platform sends and no other container holds the mail credentials.
 /// </para>
 /// <para>
 /// <b>The mail is not best-effort.</b> Every way it can fail answers a refusal, and the API layer
-/// turns each into a status and a code. The route this replaced skipped the send when its
-/// configuration was incomplete and returned success regardless, so an operator who filled in none
-/// of it had a contact form that told every visitor their message had arrived and delivered none
-/// of them, with nothing in any log. A caller of this handler that gets success back can rely on
+/// turns each into a status and a code; incomplete mail configuration is a refusal, never a
+/// silent success. A caller of this handler that gets success back can rely on
 /// the relay having accepted the message.
 /// </para>
 /// <para>
 /// <b>The chat post is</b>, and only it. It happens after the mail and its failure is logged and
 /// dropped: the enquiry inbox is the delivery the operator's process is built on, so an enquiry
-/// whose mail was accepted has arrived and a Telegram outage must not report it as lost.
+/// whose mail was accepted has arrived and a chat channel outage must not report it as lost.
 /// </para>
 /// <para>
 /// Field shape (required, length) is now a <see cref="SendContactMessageValidator"/> rule, run by
@@ -59,21 +54,27 @@ public sealed class SendContactMessageHandler
     /// <summary>Logger, for the failures an operator has to see.</summary>
     private readonly ILogger<SendContactMessageHandler> _logger;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="emailSender">The one configured SMTP relay.</param>
     /// <param name="contactNotifier">The operator's chat channel, notified after the mail is away.</param>
     /// <param name="options">Notification recipients, including the enquiry inbox.</param>
     /// <param name="logger">Logger, for the failures an operator has to see.</param>
+    /// <param name="clock">The source of the current moment.</param>
     public SendContactMessageHandler(
         IEmailSender emailSender,
         IContactNotifier contactNotifier,
         IOptions<NotificationOptions> options,
-        ILogger<SendContactMessageHandler> logger)
+        ILogger<SendContactMessageHandler> logger,
+        IClock clock)
     {
         _emailSender = emailSender;
         _contactNotifier = contactNotifier;
         _options = options;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>Handles <see cref="SendContactMessageCommand"/>.</summary>
@@ -94,7 +95,7 @@ public sealed class SendContactMessageHandler
         var message = cmd.Message.Trim();
         var phone = Trimmed(cmd.Phone);
         var service = Trimmed(cmd.Service);
-        var submittedAt = Trimmed(cmd.SubmittedAt);
+        var submittedAt = Trimmed(cmd.SubmittedAt) ?? _clock.UtcNow.ToString("u");
 
         var recipient = _options.Value.ContactEmail;
         if (string.IsNullOrWhiteSpace(recipient))
@@ -110,25 +111,22 @@ public sealed class SendContactMessageHandler
         var subject = $"Website enquiry from {name}";
         var body = BuildBody(name, email, phone, service, message, submittedAt);
 
-        try
+        var sent = await _emailSender.SendAsync(new EmailMessage(recipient, subject, body), ct);
+        if (!sent.Delivered)
         {
-            await _emailSender.SendAsync(new EmailMessage(recipient, subject, body), ct);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            // Logged here rather than only at the boundary, because the relay's own message is the
-            // only thing that says whether this is a credential, a certificate or an outage, and it
-            // must not travel to the visitor.
-            _logger.LogError(ex, "Contact form message to {Recipient} was refused by the SMTP relay.", recipient);
+            // The adapter has logged the relay's own wording; the classified reason is logged here
+            // beside the recipient, and neither travels to the visitor.
+            _logger.LogError(
+                "Contact form message to {Recipient} was refused by the SMTP relay: {Failure}.", recipient, sent.Failure);
             return Result.FailureCode(HostpanelErrorCodes.CONTACT_SEND_FAILED);
         }
 
         // Only after the mail is away, and only ever after: the chat post is the operator's
-        // convenience and the mail is the record. Attempting it first would let a Telegram outage
+        // convenience and the mail is the record. Attempting it first would let a chat channel outage
         // hold up a delivery that does not depend on it.
         await NotifyChatAsync(
             new ContactEnquiry(
-                name, email, phone, service, message, submittedAt ?? DateTimeOffset.UtcNow.ToString("u")),
+                name, email, phone, service, message, submittedAt),
             ct);
 
         return Result.Success();
@@ -188,10 +186,10 @@ public sealed class SendContactMessageHandler
     /// <param name="phone">Sender's phone number, or <see langword="null"/>.</param>
     /// <param name="service">Service the enquiry is about, or <see langword="null"/>.</param>
     /// <param name="message">The message body.</param>
-    /// <param name="submittedAt">The browser's own formatted send time, or <see langword="null"/>.</param>
+    /// <param name="submittedAt">The browser's own formatted send time, or the server's when the browser sent none.</param>
     /// <returns>The HTML body.</returns>
     private static string BuildBody(
-        string name, string email, string? phone, string? service, string message, string? submittedAt)
+        string name, string email, string? phone, string? service, string message, string submittedAt)
     {
         var sb = new StringBuilder();
         sb.Append("<h2>New website enquiry</h2>");
@@ -209,7 +207,7 @@ public sealed class SendContactMessageHandler
             AppendRow(sb, "Service", service);
         }
 
-        AppendRow(sb, "Submitted", submittedAt ?? DateTimeOffset.UtcNow.ToString("u"));
+        AppendRow(sb, "Submitted", submittedAt);
         sb.Append("</table>");
         sb.Append("<h3>Message</h3>");
 

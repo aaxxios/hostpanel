@@ -13,6 +13,7 @@ import type { ExpectedRequest } from '../../helpers/stubTransport'
 import type { StubServer } from '../../helpers/stubServer'
 import { faqFixture, locationFixture, partnerFixture, projectFixture, testimonialFixture } from '../../helpers/storefrontFixtures'
 import { useStorefrontApi } from '~/composables/apis/useStorefrontApi'
+import { HttpMethod } from '~/types/httpmethod'
 
 /** The stub started by the current test. */
 let stub: StubServer | undefined
@@ -27,11 +28,11 @@ const api = useStorefrontApi()
 
 /** Every endpoint function with the request it must send. */
 const rows: ExpectedRequest[] = [
-  { name: 'fetchTestimonials reads the testimonials', call: () => api.fetchTestimonials(), method: 'GET', url: '/api/portal/public/testimonials' },
-  { name: 'fetchPartners reads the partners', call: () => api.fetchPartners(), method: 'GET', url: '/api/portal/public/partners' },
-  { name: 'fetchLocations reads the server locations', call: () => api.fetchLocations(), method: 'GET', url: '/api/portal/public/locations' },
-  { name: 'fetchProjects reads the projects', call: () => api.fetchProjects(), method: 'GET', url: '/api/portal/public/projects' },
-  { name: 'fetchFaqs reads the questions', call: () => api.fetchFaqs(), method: 'GET', url: '/api/portal/public/faqs' },
+  { name: 'fetchTestimonials reads the testimonials', call: () => api.fetchTestimonials(), method: HttpMethod.Get, url: '/api/portal/public/testimonials' },
+  { name: 'fetchPartners reads the partners', call: () => api.fetchPartners(), method: HttpMethod.Get, url: '/api/portal/public/partners' },
+  { name: 'fetchLocations reads the server locations', call: () => api.fetchLocations(), method: HttpMethod.Get, url: '/api/portal/public/locations' },
+  { name: 'fetchProjects reads the projects', call: () => api.fetchProjects(), method: HttpMethod.Get, url: '/api/portal/public/projects' },
+  { name: 'fetchFaqs reads the questions', call: () => api.fetchFaqs(), method: HttpMethod.Get, url: '/api/portal/public/faqs' },
 ]
 
 describe('useStorefrontApi', () => {

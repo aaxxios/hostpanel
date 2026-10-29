@@ -2,7 +2,9 @@ using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Products.Events;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Products;
+
 /// <summary>
 /// A product in the catalogue that clients can order as a service.
 /// Belongs to a <see cref="ProductGroup"/>.
@@ -10,6 +12,9 @@ namespace Innovayse.Hostpanel.Domain.Products;
 /// </summary>
 public sealed class Product : BaseEntity, IAggregateRoot
 {
+    /// <summary>Longest a website URL may be: matches the <c>Products.Website</c> column.</summary>
+    public const int WebsiteMaxLength = 500;
+
     /// <summary>Gets the FK to the <see cref="ProductGroup"/> this product belongs to.</summary>
     public int GroupId { get; private set; }
 
@@ -72,7 +77,7 @@ public sealed class Product : BaseEntity, IAggregateRoot
     /// </remarks>
     public IReadOnlyList<ProductPrice> Prices => _prices.AsReadOnly();
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Product() { }
 
     /// <summary>
@@ -87,6 +92,7 @@ public sealed class Product : BaseEntity, IAggregateRoot
     /// <param name="type">Product type.</param>
     /// <param name="monthlyPrice">Monthly price (≥ 0).</param>
     /// <param name="annualPrice">Annual price (≥ 0).</param>
+    /// <param name="now">The current moment (UTC), read by the caller; stamped on the domain event.</param>
     /// <param name="serverGroupId">Optional FK to the server group for provisioning.</param>
     /// <param name="isFeatured">Whether the product is the group's recommended plan.</param>
     /// <param name="sortOrder">Position inside the group, lowest first.</param>
@@ -101,6 +107,7 @@ public sealed class Product : BaseEntity, IAggregateRoot
         ProductType type,
         decimal monthlyPrice,
         decimal annualPrice,
+        DateTimeOffset now,
         int? serverGroupId = null,
         bool isFeatured = false,
         int sortOrder = 0)
@@ -120,9 +127,8 @@ public sealed class Product : BaseEntity, IAggregateRoot
             ServerGroupId = serverGroupId,
             IsFeatured = isFeatured,
             SortOrder = sortOrder,
-            CreatedAt = DateTimeOffset.UtcNow,
         };
-        product.AddDomainEvent(new ProductCreatedEvent(0, name, groupId));
+        product.AddDomainEvent(new ProductCreatedEvent(0, name, groupId, now));
         return product;
     }
 
@@ -217,6 +223,42 @@ public sealed class Product : BaseEntity, IAggregateRoot
     {
         var code = currencyCode.ToUpperInvariant();
         _prices.RemoveAll(p => p.CurrencyCode == code);
+    }
+
+    /// <summary>
+    /// Makes the stored prices match <paramref name="prices"/>. Every currency listed is rewritten
+    /// in full: a cycle left null is removed, not kept at its old amount.
+    /// </summary>
+    /// <param name="prices">The prices to store, one entry per currency.</param>
+    /// <param name="replaceAllCurrencies">
+    /// <see langword="true"/> when a currency absent from <paramref name="prices"/> is removed, so
+    /// the list is the whole truth; <see langword="false"/> when only the listed currencies change,
+    /// because the caller spoke for those alone.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">An amount is negative.</exception>
+    public void ReplacePrices(IReadOnlyCollection<ProductCurrencyPrices> prices, bool replaceAllCurrencies)
+    {
+        ArgumentNullException.ThrowIfNull(prices);
+
+        if (replaceAllCurrencies)
+        {
+            var wanted = prices.Select(p => p.CurrencyCode.ToUpperInvariant()).ToHashSet();
+            _prices.RemoveAll(p => !wanted.Contains(p.CurrencyCode));
+        }
+
+        foreach (var entry in prices)
+        {
+            RemovePrices(entry.CurrencyCode);
+            if (entry.Monthly is { } monthly)
+            {
+                SetPrice(entry.CurrencyCode, BillingCycle.Monthly, monthly);
+            }
+
+            if (entry.Annual is { } annual)
+            {
+                SetPrice(entry.CurrencyCode, BillingCycle.Annual, annual);
+            }
+        }
     }
 
     /// <summary>Reads the stored price for a currency and cycle.</summary>

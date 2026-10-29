@@ -7,8 +7,8 @@ namespace Innovayse.Hostpanel.Application.Admin.Plugins.Commands.InstallPlugin;
 
 /// <summary>
 ///     Validates <see cref="InstallPluginCommand"/> before it reaches the handler.
-///     Only the shape is checked here -- whether the archive is a well-formed plugin is the
-///     handler's answer.
+///     Only that a file was sent is checked here; whether it is a well-formed plugin (an empty
+///     file included) is the handler's answer.
 /// </summary>
 public sealed class InstallPluginValidator : LocalizedValidator<InstallPluginCommand>
 {
@@ -19,6 +19,6 @@ public sealed class InstallPluginValidator : LocalizedValidator<InstallPluginCom
     public InstallPluginValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
-        RuleFor(x => x.Length).GreaterThan(0).WithMessage(L["PluginZipRequired"]);
+        RuleFor(x => x.Content).NotNull().WithMessage(L["PluginZipRequired"]);
     }
 }

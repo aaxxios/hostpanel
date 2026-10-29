@@ -3,7 +3,7 @@ namespace Innovayse.Hostpanel.Application.Reports.Queries.ExportTransactionsRepo
 /// <summary>
 /// Query for exporting the Transactions report as CSV. Carries the same filters as
 /// <see cref="Innovayse.Hostpanel.Application.Reports.Queries.TransactionsReport.TransactionsReportQuery"/>
-/// without paging — the export always writes every matching row up to the handler's row ceiling.
+/// without paging: the export always writes every matching row up to the handler's row ceiling.
 /// </summary>
 /// <param name="DateFrom">Earliest transaction date to include.</param>
 /// <param name="DateTo">Latest transaction date to include.</param>

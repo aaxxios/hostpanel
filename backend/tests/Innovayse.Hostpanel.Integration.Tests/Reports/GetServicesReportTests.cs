@@ -1,21 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
 /// <summary>
 /// <c>GET /api/reports/services</c> against Postgres: the paginated services report.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingRemainderEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetServicesReportTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -32,11 +28,11 @@ public sealed class GetServicesReportTests(IntegrationTestFactory factory) : ICl
             db.ProductGroups.Add(group);
             await db.SaveChangesAsync();
             var product = Product.Create(
-                group.Id, $"SvcProduct-{marker}", null, null, null, null, ProductType.SharedHosting, 10m, 100m);
+                group.Id, $"SvcProduct-{marker}", null, null, null, null, ProductType.SharedHosting, 10m, 100m, DateTimeOffset.UtcNow);
             db.Products.Add(product);
             await db.SaveChangesAsync();
 
-            var service = ClientService.Create(clientId, product.Id, BillingCycleNames.Monthly);
+            var service = ClientService.Create(clientId, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow);
             db.ClientServices.Add(service);
             await db.SaveChangesAsync();
         }
@@ -71,7 +67,7 @@ public sealed class GetServicesReportTests(IntegrationTestFactory factory) : ICl
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

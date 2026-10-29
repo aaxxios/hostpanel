@@ -12,6 +12,8 @@ import { expectLastRequest, startTransport } from '../../helpers/stubTransport'
 import type { ExpectedRequest } from '../../helpers/stubTransport'
 import type { StubServer } from '../../helpers/stubServer'
 import { useSupportApi } from '~/composables/apis/useSupportApi'
+import { TicketPriority } from '~/types/ticketpriority'
+import { HttpMethod } from '~/types/httpmethod'
 
 /** The stub started by the current test. */
 let stub: StubServer | undefined
@@ -26,11 +28,11 @@ const api = useSupportApi()
 
 /** Every endpoint function with the request it must send. */
 const rows: ExpectedRequest[] = [
-  { name: 'fetchTicket reads one ticket with its thread', call: () => api.fetchTicket('8'), method: 'GET', url: '/api/portal/client/tickets/8' },
-  { name: 'fetchDepartments reads the public list', call: () => api.fetchDepartments(), method: 'GET', url: '/api/portal/public/departments' },
-  { name: 'createTicket posts the ticket', call: () => api.createTicket({ departmentId: 1, subject: 's', message: 'm', priority: 'Medium' }), method: 'POST', url: '/api/portal/client/tickets', body: { departmentId: 1, subject: 's', message: 'm', priority: 'Medium' } },
-  { name: 'replyToTicket posts the message only', call: () => api.replyToTicket('8', 'thanks'), method: 'POST', url: '/api/portal/client/tickets/8/reply', body: { message: 'thanks' } },
-  { name: 'sendContactMessage posts to the site route', call: () => api.sendContactMessage({ name: 'A', email: 'a@b.c', message: 'hi' } as never), method: 'POST', url: '/api/contact', body: { name: 'A', email: 'a@b.c', message: 'hi' } },
+  { name: 'fetchTicket reads one ticket with its thread', call: () => api.fetchTicket('8'), method: HttpMethod.Get, url: '/api/portal/client/tickets/8' },
+  { name: 'fetchDepartments reads the public list', call: () => api.fetchDepartments(), method: HttpMethod.Get, url: '/api/portal/public/departments' },
+  { name: 'createTicket posts the ticket', call: () => api.createTicket({ departmentId: 1, subject: 's', message: 'm', priority: TicketPriority.Medium }), method: HttpMethod.Post, url: '/api/portal/client/tickets', body: { departmentId: 1, subject: 's', message: 'm', priority: TicketPriority.Medium } },
+  { name: 'replyToTicket posts the message only', call: () => api.replyToTicket('8', 'thanks'), method: HttpMethod.Post, url: '/api/portal/client/tickets/8/reply', body: { message: 'thanks' } },
+  { name: 'sendContactMessage posts to the site route', call: () => api.sendContactMessage({ name: 'A', email: 'a@b.c', message: 'hi' } as never), method: HttpMethod.Post, url: '/api/contact', body: { name: 'A', email: 'a@b.c', message: 'hi' } },
 ]
 
 describe('useSupportApi', () => {

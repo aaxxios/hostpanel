@@ -1,20 +1,23 @@
+using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
+using Innovayse.Hostpanel.Application.Billing.Extensions;
+using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Application.Orders.Commands.FulfillPaidOrder;
+using Innovayse.Hostpanel.Application.Orders.Commands.FulfillInvoicedOrder;
 using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Domain.Billing.Enums;
+using Innovayse.Hostpanel.Shared.Infrastructure;
 using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.SDK.Plugins;
 using Innovayse.SDK.Plugins.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Wolverine;
-using Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment.Enums;
 namespace Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment;
 
 /// <summary>
 /// Handles <see cref="CompleteGatewayPaymentCommand"/>. Called from the payer's
-/// return page and from the reconciliation job — both paths converge here, so
+/// return page and from the reconciliation job: both paths converge here, so
 /// idempotency is load-bearing.
 /// </summary>
 public sealed class CompleteGatewayPaymentHandler
@@ -31,57 +34,76 @@ public sealed class CompleteGatewayPaymentHandler
     /// <summary>Structured logger.</summary>
     private readonly ILogger<CompleteGatewayPaymentHandler> _logger;
 
+    /// <summary>The clock every moment in this handler is read from.</summary>
+    private readonly IClock _clock;
+
+    /// <summary>Puts what the gateway took beyond the amount due on the client's credit balance.</summary>
+    private readonly IClientCredit _clientCredit;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="pluginResolver">Resolves the configured payment plugin for a module id.</param>
     /// <param name="bus">Wolverine message bus.</param>
     /// <param name="logger">Structured logger.</param>
+    /// <param name="clock">The clock the current moment is read from.</param>
+    /// <param name="clientCredit">Puts what the gateway took beyond the amount due on the client's credit balance.</param>
     public CompleteGatewayPaymentHandler(
         IHostpanelDbContext context,
         IPaymentPluginResolver pluginResolver,
         IMessageBus bus,
-        ILogger<CompleteGatewayPaymentHandler> logger)
+        ILogger<CompleteGatewayPaymentHandler> logger,
+        IClock clock,
+        IClientCredit clientCredit)
     {
         _context = context;
         _pluginResolver = pluginResolver;
         _bus = bus;
         _logger = logger;
+        _clock = clock;
+        _clientCredit = clientCredit;
     }
 
     /// <summary>Handles the command.</summary>
     /// <param name="cmd">The complete command.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// The completion state, or <c>INVOICE_NOT_FOUND</c>, <c>GATEWAY_SESSION_NOT_FOUND</c> or
-    /// <c>PAYMENT_PLUGIN_NOT_CONFIGURED</c>.
+    /// The completion state, or <c>INVOICE_NOT_FOUND</c>, <c>GATEWAY_SESSION_NOT_FOUND</c>,
+    /// <c>PAYMENT_PLUGIN_NOT_CONFIGURED</c>, or <c>GATEWAY_PAYMENT_MISMATCH</c> when the gateway
+    /// reports a paid amount below what the invoice owes, or another currency (the invoice stays
+    /// unpaid). A paid amount above what is owed (a payment recorded while the session was open)
+    /// settles the invoice and puts the rest on the client's credit balance. A paid status without
+    /// an amount is a mismatch. When another path settled or closed the invoice while the session
+    /// was open, whatever the session took that the ledger does not hold goes to the client's
+    /// balance (<c>INVOICE_NOT_PAYABLE</c> when the invoice was closed unpaid).
     /// </returns>
-    public async Task<Result<GatewayCompletionState>> HandleAsync(
+    public async Task<Result<GatewayCompletionDto>> HandleAsync(
         CompleteGatewayPaymentCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
+        // Payments are loaded because the gateway's amount is compared with what is still due.
         var invoice = await _context.Invoices
             .Include(i => i.Transactions)
             .FirstOrDefaultAsync(i => i.Id == cmd.InvoiceId, ct);
         if (invoice is null)
         {
-            return Result<GatewayCompletionState>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
+            return Result<GatewayCompletionDto>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
         }
 
-        if (invoice.Status is InvoiceStatus.Paid or InvoiceStatus.Refunded)
+        if (invoice.IsSettled)
         {
-            return Result<GatewayCompletionState>.Success(GatewayCompletionState.Paid);
+            return await CompleteSettledAsync(invoice, ct);
         }
 
         if (invoice.GatewayModule is null || invoice.GatewayOrderId is null)
         {
-            return Result<GatewayCompletionState>.FailureCode(HostpanelErrorCodes.GATEWAY_SESSION_NOT_FOUND);
+            return Result<GatewayCompletionDto>.FailureCode(HostpanelErrorCodes.GATEWAY_SESSION_NOT_FOUND);
         }
 
         var plugin = await _pluginResolver.ResolveAsync(invoice.GatewayModule, ct);
         if (plugin is null)
         {
-            return Result<GatewayCompletionState>.FailureCode(HostpanelErrorCodes.PAYMENT_PLUGIN_NOT_CONFIGURED);
+            return Result<GatewayCompletionDto>.FailureCode(HostpanelErrorCodes.PAYMENT_PLUGIN_NOT_CONFIGURED);
         }
 
         var status = await plugin.GetStatusAsync(invoice.GatewayOrderId, ct);
@@ -91,57 +113,239 @@ public sealed class CompleteGatewayPaymentHandler
             _logger.LogInformation(
                 "Invoice {InvoiceId} gateway session {GatewayOrderId} is {State} ({Raw}).",
                 invoice.Id, invoice.GatewayOrderId, status.State, status.RawStatus);
-            return Result<GatewayCompletionState>.Success(
+            return Result<GatewayCompletionDto>.Success(new GatewayCompletionDto(
                 status.State == GatewayPaymentState.Pending
                     ? GatewayCompletionState.Pending
-                    : GatewayCompletionState.Declined);
+                    : GatewayCompletionState.Declined));
+        }
+
+        var dueMinor = CurrencyCode.ToMinorUnits(invoice.AmountDue, invoice.Currency);
+
+        // A paid status with no amount says nothing about what was taken, so it is not a settlement.
+        if (status.AmountMinor is not { } paidMinor || paidMinor < dueMinor || !await MatchesCurrencyAsync(invoice, status, ct))
+        {
+            _logger.LogWarning(
+                "Invoice {InvoiceId} gateway session {GatewayOrderId} reports {Amount} in {Currency}, which is not what the invoice owes; not marked paid.",
+                invoice.Id, invoice.GatewayOrderId, status.AmountMinor, status.CurrencyNumeric);
+            return Result<GatewayCompletionDto>.FailureCode(HostpanelErrorCodes.GATEWAY_PAYMENT_MISMATCH);
         }
 
         var gatewayTransactionId = status.TransactionId ?? invoice.GatewayOrderId;
 
-        // Read before the Paid mark records it: the session charged what was due, not the total.
-        var charged = invoice.AmountDue;
-        invoice.MarkPaidViaGateway(gatewayTransactionId);
-
-        // The client's ledger row is written here, in the same save as the Paid mark, rather than by
-        // an event handler: the concurrent-completion guard below then makes "ledger row exists"
-        // and "invoice is Paid" one atomic fact, so the row can neither be missed nor doubled.
-        if (charged > 0)
+        // The ledger row is saved with the Paid mark; the concurrent-completion guard below then
+        // makes "ledger row exists" and "invoice is Paid" one atomic fact.
+        var module = invoice.GatewayModule;
+        var ledgerRow = invoice.Settle(
+            module, gatewayTransactionId, _clock.UtcNow);
+        if (ledgerRow is not null)
         {
-            _context.Transactions.Add(Transaction.CreateInvoicePayment(
-                invoice, DateTimeOffset.UtcNow, invoice.GatewayModule, gatewayTransactionId, charged, 0m));
+            _context.Transactions.Add(ledgerRow);
+        }
+
+        // The session was opened for the amount due then; a payment recorded while it was open
+        // lowered what is due now, so the gateway took more than the settlement records. The rest
+        // belongs to the client and is kept on their balance, in the same save.
+        if (paidMinor > dueMinor)
+        {
+            var credited = await _clientCredit.AddAsync(
+                new ClientCreditChange(invoice.ClientId, CurrencyCode.FromMinorUnits(paidMinor - dueMinor, invoice.Currency)), ct);
+            if (credited.IsFailure)
+            {
+                return Result<GatewayCompletionDto>.FailureCode(credited.ErrorCode!);
+            }
         }
 
         try
         {
             await _context.SaveChangesAsync(ct);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (ConcurrencyConflictException)
         {
-            // Another writer (the result-page auto-check racing the reconciler, or a retried
-            // click) already completed this same payment between our read and our write. A
-            // fresh AsNoTracking read bypasses this context's identity map, which still holds
-            // this invoice as Modified with the in-memory Status = Paid set above, so it goes
-            // to the database rather than returning that stale tracked instance.
-            var current = await _context.Invoices
-                .AsNoTracking()
-                .FirstOrDefaultAsync(i => i.Id == cmd.InvoiceId, ct);
-            if (current?.Status is InvoiceStatus.Paid or InvoiceStatus.Refunded)
+            // Another writer changed the invoice between our read and our write: the result-page
+            // auto-check racing the reconciler or a retried click completing this same payment, an
+            // admin recording another payment, or an admin cancelling it. The failed changes are
+            // dropped so the invoice and the ledger are read as the database holds them.
+            _context.DetachAll();
+            var outcome = await CompleteAfterConflictAsync(cmd.InvoiceId, module, gatewayTransactionId, status, ct);
+            if (outcome is null)
             {
-                _logger.LogInformation(
-                    "Invoice {InvoiceId} was already marked paid by a concurrent completion.", cmd.InvoiceId);
-                return Result<GatewayCompletionState>.Success(GatewayCompletionState.Paid);
+                throw;
             }
 
-            throw;
+            return outcome;
         }
 
-        var order = await _context.Orders.FirstOrDefaultAsync(o => o.InvoiceId == invoice.Id, ct);
-        if (order is not null)
+        await _bus.InvokeAsync(new FulfillInvoicedOrderCommand(invoice.Id), ct);
+
+        return Result<GatewayCompletionDto>.Success(new GatewayCompletionDto(GatewayCompletionState.Paid));
+    }
+
+    /// <summary>
+    /// Answers for an invoice that is already settled. When it still holds a session no payment was
+    /// recorded through (another path settled it while the session was open), the gateway is asked
+    /// whether that session took money too, and money it took that the ledger does not hold is put
+    /// on the client's balance. The linked order is fulfilled either way: fulfilment is idempotent,
+    /// and a completion whose save landed but whose fulfilment failed is finished by this replay.
+    /// </summary>
+    /// <param name="invoice">The settled invoice (tracked, payments loaded).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The Paid completion state.</returns>
+    private async Task<Result<GatewayCompletionDto>> CompleteSettledAsync(Invoice invoice, CancellationToken ct)
+    {
+        if (invoice is { GatewayModule: { } module, GatewayOrderId: { } orderId }
+            && !invoice.WasPaidThrough(module))
         {
-            await _bus.InvokeAsync(new FulfillPaidOrderCommand(order.Id), ct);
+            var plugin = await _pluginResolver.ResolveAsync(module, ct);
+            if (plugin is not null)
+            {
+                var status = await plugin.GetStatusAsync(orderId, ct);
+                if (status.State == GatewayPaymentState.Paid)
+                {
+                    await HandBackUnrecordedAsync(invoice, module, status.TransactionId ?? orderId, status, ct);
+                }
+            }
         }
 
-        return Result<GatewayCompletionState>.Success(GatewayCompletionState.Paid);
+        await _bus.InvokeAsync(new FulfillInvoicedOrderCommand(invoice.Id), ct);
+        return Result<GatewayCompletionDto>.Success(new GatewayCompletionDto(GatewayCompletionState.Paid));
+    }
+
+    /// <summary>
+    /// Decides a paid completion whose save lost to another writer, from the invoice and ledger as
+    /// the database now holds them.
+    /// </summary>
+    /// <param name="invoiceId">The invoice id.</param>
+    /// <param name="module">The plugin id of the session that took the money.</param>
+    /// <param name="reference">The gateway's reference of the payment.</param>
+    /// <param name="status">The gateway's paid status.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// Paid when this payment is on the ledger (a concurrent completion) or another path settled the
+    /// invoice (the money then goes to the balance); <c>INVOICE_NOT_PAYABLE</c> when the invoice was
+    /// closed without payment, the money going to the balance; <see langword="null"/> when the
+    /// invoice is still open, so the conflict is the caller's to raise.
+    /// </returns>
+    private async Task<Result<GatewayCompletionDto>?> CompleteAfterConflictAsync(
+        int invoiceId, string module, string reference, GatewayPaymentStatus status, CancellationToken ct)
+    {
+        var current = await _context.Invoices
+            .Include(i => i.Transactions)
+            .FirstOrDefaultAsync(i => i.Id == invoiceId, ct);
+        if (current is null || current.IsPayable)
+        {
+            return null;
+        }
+
+        if (current.Transactions.Any(t => t.TransactionId == reference) || await IsOnLedgerAsync(reference, ct))
+        {
+            _logger.LogInformation("Invoice {InvoiceId} was already marked paid by a concurrent completion.", invoiceId);
+        }
+        else
+        {
+            await HandBackUnrecordedAsync(current, module, reference, status, ct);
+        }
+
+        if (!current.IsSettled)
+        {
+            return Result<GatewayCompletionDto>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_PAYABLE);
+        }
+
+        await _bus.InvokeAsync(new FulfillInvoicedOrderCommand(current.Id), ct);
+        return Result<GatewayCompletionDto>.Success(new GatewayCompletionDto(GatewayCompletionState.Paid));
+    }
+
+    /// <summary>Whether a payment reference is already on the ledger.</summary>
+    /// <param name="reference">The gateway's reference of the payment.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns><see langword="true"/> when a ledger row carries it.</returns>
+    private async Task<bool> IsOnLedgerAsync(string reference, CancellationToken ct)
+    {
+        return await _context.Transactions.AsNoTracking().AnyAsync(t => t.TransactionId == reference, ct);
+    }
+
+    /// <summary>
+    /// Puts the whole amount a gateway session took on the client's credit balance when the invoice
+    /// could not record it (another path settled it, or it was closed), the same rule as the part
+    /// above what is due on a settlement. The money is written to the ledger under the gateway's
+    /// reference in the same save, so a replay finds it there and never credits it twice. Money in
+    /// another currency than the client's billing currency, or that the gateway reports without an
+    /// amount, is not credited: it is written as held and raised as a critical log line for an operator.
+    /// </summary>
+    /// <param name="invoice">The invoice the session was opened for (tracked).</param>
+    /// <param name="module">The plugin id of the session that took the money.</param>
+    /// <param name="reference">The gateway's reference of the payment.</param>
+    /// <param name="status">The gateway's paid status.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task that completes once the outcome is saved.</returns>
+    private async Task HandBackUnrecordedAsync(
+        Invoice invoice, string module, string reference, GatewayPaymentStatus status, CancellationToken ct)
+    {
+        // Recorded on the invoice's own payment history or on the ledger: the money is accounted for.
+        if (invoice.Transactions.Any(t => t.TransactionId == reference) || await IsOnLedgerAsync(reference, ct))
+        {
+            return;
+        }
+
+        if (status.AmountMinor is not { } paidMinor || paidMinor <= 0)
+        {
+            _logger.LogCritical(
+                "Invoice {InvoiceId} gateway session {Reference} through {Module} reports paid with no amount while the invoice could not record it; an operator has to settle it.",
+                invoice.Id, reference, module);
+            return;
+        }
+
+        var amount = CurrencyCode.FromMinorUnits(paidMinor, invoice.Currency);
+        var credit = await MatchesCurrencyAsync(invoice, status, ct)
+            && await _bus.IsClientBillingCurrencyAsync(invoice, invoice.Currency, ct)
+            && (await _clientCredit.AddAsync(new ClientCreditChange(invoice.ClientId, amount), ct)).IsSuccess;
+        if (!credit)
+        {
+            _logger.LogCritical(
+                "Invoice {InvoiceId} gateway payment {Reference} of {Amount} through {Module} could not be recorded or credited; held for an operator.",
+                invoice.Id, reference, amount, module);
+        }
+
+        // Not linked to the invoice: none of this money pays it.
+        _context.Transactions.Add(Transaction.Create(
+            invoice.ClientId,
+            _clock.UtcNow,
+            credit
+                ? $"Gateway payment for Invoice #{invoice.Id} credited to balance"
+                : $"Gateway payment for Invoice #{invoice.Id} held for operator review",
+            reference,
+            null,
+            module,
+            amount,
+            0m,
+            0m,
+            addedToCredit: credit,
+            invoice.Currency));
+        await _context.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Whether the gateway took the money in the invoice's currency. A currency the gateway does
+    /// not report cannot be compared and is not held against it.
+    /// </summary>
+    /// <param name="invoice">The invoice being completed.</param>
+    /// <param name="status">The gateway's paid status.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns><see langword="true"/> when the reported currency does not contradict the invoice.</returns>
+    private async Task<bool> MatchesCurrencyAsync(Invoice invoice, GatewayPaymentStatus status, CancellationToken ct)
+    {
+        if (status.CurrencyNumeric is null)
+        {
+            return true;
+        }
+
+        var numeric = await _context.Currencies
+            .AsNoTracking()
+            .Where(c => c.Code == invoice.Currency)
+            .Select(c => c.Numeric)
+            .FirstOrDefaultAsync(ct);
+        return numeric is not null
+            && int.TryParse(numeric, out var expected)
+            && int.TryParse(status.CurrencyNumeric, out var reported)
+            && expected == reported;
     }
 }

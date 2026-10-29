@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Options;
 
 namespace Innovayse.Hostpanel.Infrastructure.Resilience.Settings;
+
 /// <summary>
 /// Startup validation for <see cref="HttpResilienceOptions"/>.
 /// </summary>
@@ -9,7 +10,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Resilience.Settings;
 /// <para>
 /// Written by hand rather than left to <c>ValidateDataAnnotations()</c> because that only reads
 /// attributes on the options object's own properties and never descends into the eleven nested
-/// profiles — which is where every number actually lives. A misconfigured section would have
+/// profiles, which is where every number actually lives. A misconfigured section would have
 /// passed validation and then thrown out of <c>AddResilienceHandler</c> on the first call to the
 /// affected client, in a different process lifetime and with a message naming Polly rather than
 /// the setting.
@@ -28,7 +29,7 @@ public sealed class HttpResilienceOptionsValidator : IValidateOptions<HttpResili
     /// <param name="name">The named options instance; unused, only the default is registered.</param>
     /// <param name="options">The bound options to check.</param>
     /// <returns>
-    /// <see cref="ValidateOptionsResult.Success"/>, or a failure listing every problem found —
+    /// <see cref="ValidateOptionsResult.Success"/>, or a failure listing every problem found:
     /// all of them at once, so a wrong section is fixed in one pass rather than one restart per
     /// mistake.
     /// </returns>

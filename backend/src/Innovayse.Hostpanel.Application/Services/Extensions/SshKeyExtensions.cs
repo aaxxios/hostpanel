@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Services.Extensions;
 public static class SshKeyExtensions
 {
     /// <summary>Maps a key to its portal DTO.</summary>
-    /// <param name="key">The key.</param>
+    /// <param name="key">The stored key record.</param>
     /// <param name="context">The resolved service context, used to tell whether the key is stale.</param>
     /// <param name="presentOnServer">What the server reported, if it was asked.</param>
     /// <returns>The DTO.</returns>

@@ -1,23 +1,19 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
 /// <summary>
 /// <c>GET /api/transactions</c> against Postgres: the admin-wide, paginated transaction ledger.
 /// </summary>
-/// <remarks>Split from the deleted <c>TransactionsEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListTransactionsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>A transaction just created appears in the admin's list.</summary>
+    /// <summary>A transaction just created appears in the admin's list, named after its client.</summary>
     [Fact]
     public async Task ListIncludesAFreshlyCreatedTransaction()
     {
@@ -31,6 +27,9 @@ public sealed class ListTransactionsTests(IntegrationTestFactory factory) : ICla
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         body.RootElement.GetProperty("transactions").GetProperty("items").EnumerateArray()
             .Select(i => i.GetProperty("id").GetInt32()).Should().Contain(transactionId);
+        body.RootElement.GetProperty("transactions").GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetInt32() == transactionId)
+            .GetProperty("clientName").GetString().Should().Be("Ada Lovelace");
     }
 
     /// <summary>
@@ -142,7 +141,7 @@ public sealed class ListTransactionsTests(IntegrationTestFactory factory) : ICla
     {
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-        var invoice = Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(14), currency);
+        var invoice = Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(14), currency, DateTimeOffset.UtcNow);
         invoice.AddItem("Hosting", 20m, 1);
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);

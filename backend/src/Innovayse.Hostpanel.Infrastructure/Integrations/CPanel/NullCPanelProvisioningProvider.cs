@@ -3,6 +3,7 @@ using Innovayse.Hostpanel.Domain.Provisioning;
 using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.CPanel;
+
 /// <summary>
 /// No-op cPanel provisioning provider used in development and testing.
 /// Returns predictable results without calling any external cPanel/WHM API.
@@ -27,7 +28,7 @@ public sealed class NullCPanelProvisioningProvider : IProvisioningProvider
         _logger.LogInformation(
             "NullCPanelProvisioningProvider: provisioned service {ServiceId} → domain={Domain} user={Username} ref={Ref}",
             req.ServiceId, req.DomainName, req.Username, provRef);
-        return Task.FromResult(new ProvisioningResult(true, provRef, null));
+        return Task.FromResult(ProvisioningResult.Created(provRef));
     }
 
     /// <inheritdoc/>

@@ -1,9 +1,10 @@
 /**
- * Tests of CustomerRetentionView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of CustomerRetentionView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses, and runs its own actions.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
+import { ReportRetentionGroupKind } from '@/types/reportretention'
 import CustomerRetentionView from '@/views/CustomerRetentionView.vue'
 import { json } from '../helpers/fetch'
 import { mountView } from '../helpers/mount'
@@ -17,13 +18,22 @@ runReportCase({
   view: CustomerRetentionView,
   routes: {
     'GET /reports/customer-retention': () => json({
-      groups: [{
-        groupName: 'Hosting',
-        rows: [{ productName: 'Basic', billingCycle: 'Monthly', productCount: 2, avgDaysActive: 30, avgYearsMonthsActive: '0 years, 1 month' }],
-      }],
+      groups: [
+        {
+          kind: ReportRetentionGroupKind.ProductGroup,
+          groupName: 'Hosting',
+          rows: [{ productName: 'Basic', billingCycle: 'Monthly', termYears: null, productCount: 2, avgDaysActive: 400, avgYears: 1, avgMonths: 1 }],
+        },
+        {
+          kind: ReportRetentionGroupKind.Domains,
+          groupName: null,
+          rows: [{ productName: 'com', billingCycle: null, termYears: 1, productCount: 3, avgDaysActive: 12, avgYears: 0, avgMonths: 0 }],
+        },
+      ],
     }),
   },
-  expected: ['Average Customer Retention Time', 'Hosting', 'Basic', '0 years, 1 month'],
+  expected: ['Average Customer Retention Time', 'Hosting', 'Basic', '1 year 1 month', 'Domains', '1 year', '12 days'],
+  retryable: true,
 })
 
 describe('CustomerRetentionView actions', () => {

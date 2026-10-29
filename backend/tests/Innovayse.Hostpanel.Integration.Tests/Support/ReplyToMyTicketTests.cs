@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Support.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -13,7 +10,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// replying to another client's ticket is refused <c>TICKET_NOT_FOUND</c>, for the same reason as
 /// the read; and the action is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>MyTicketsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ReplyToMyTicketTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

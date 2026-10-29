@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Application.Common.Errors;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -10,7 +8,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>POST /api/clients/{clientId}/billable-items/time-billing</c> against Postgres: batch
 /// creating one billable item per timesheet entry.
 /// </summary>
-/// <remarks>Split from the deleted <c>BillableItemsEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateTimeBillingEntriesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -45,5 +42,20 @@ public sealed class CreateTimeBillingEntriesTests(IntegrationTestFactory factory
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>Time billing entries for a client that does not exist answer 404 with <c>CLIENT_NOT_FOUND</c>.</summary>
+    [Fact]
+    public async Task CreateTimeBillingEntriesRefusesAnUnknownClient()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.PostAsJsonAsync($"/api/clients/{BillingTestSeeds.NoSuchId}/billable-items/time-billing", new
+        {
+            entries = new[] { new { description = "Hour 1", hours = 1m, rate = 50m } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.CLIENT_NOT_FOUND);
     }
 }

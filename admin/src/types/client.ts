@@ -3,8 +3,10 @@
  */
 
 import type { Contact } from '@/types/contact'
+import type { ContactNotifications } from '@/types/contactnotifications'
 import type { EmailLog } from '@/types/emaillog'
 import type { InvoiceStatusCount } from '@/types/invoice'
+import type { PostalAddress } from '@/types/postaladdress'
 
 /** Summary DTO returned by the clients list endpoint. */
 export interface ClientListItem {
@@ -20,8 +22,8 @@ export interface ClientListItem {
   lastName: string
   /** Optional company name. */
   companyName?: string
-  /** Account status (Active, Inactive, Suspended, Closed). */
-  status: string
+  /** Account status. */
+  status: ClientStatus
   /** True if the linked Identity user has been deleted. */
   isUserDeleted: boolean
   /** True if the user has TOTP 2FA enabled. */
@@ -30,44 +32,22 @@ export interface ClientListItem {
   createdAt: string
 }
 
-/** Full client DTO returned by the detail endpoint. */
-export interface ClientDetail extends ClientListItem {
-  /** Phone number. */
-  phone?: string
-  /** Street address. */
-  street?: string
-  /** Second address line. */
-  address2?: string
-  /** City. */
-  city?: string
-  /** State or province. */
-  state?: string
-  /** Postal code. */
-  postCode?: string
-  /** ISO 3166-1 alpha-2 country code. */
-  country?: string
+/** Language, billing currency and payment preferences of a client, with the internal notes. */
+export interface ClientPreferences {
+  /** Preferred UI language of the account holder, or null where the deployment holds none. */
+  language?: string | null
   /** ISO 4217 currency code. */
-  currency?: string
+  currency?: string | null
   /** Payment method identifier or label. */
-  paymentMethod?: string
+  paymentMethod?: string | null
   /** Billing contact name or reference. */
-  billingContact?: string
+  billingContact?: string | null
   /** Internal admin notes. */
-  adminNotes?: string
-  /** Whether the client receives general notification emails. */
-  notifyGeneral: boolean
-  /** Whether the client receives invoice notification emails. */
-  notifyInvoice: boolean
-  /** Whether the client receives support notification emails. */
-  notifySupport: boolean
-  /** Whether the client receives product notification emails. */
-  notifyProduct: boolean
-  /** Whether the client receives domain notification emails. */
-  notifyDomain: boolean
-  /** Whether the client receives affiliate notification emails. */
-  notifyAffiliate: boolean
-  /** Whether late fees are applied to overdue invoices. */
-  lateFees: boolean
+  adminNotes?: string | null
+}
+
+/** The account switches staff set on a client. */
+export interface ClientSettings {
   /** Whether overdue notices are sent for this client. */
   overdueNotices: boolean
   /** Whether the client is exempt from taxes. */
@@ -82,14 +62,28 @@ export interface ClientDetail extends ClientListItem {
   statusUpdate: boolean
   /** Whether the client may use single sign-on. */
   allowSso: boolean
+}
+
+/** Full client DTO returned by the detail endpoint. */
+export interface ClientDetail extends ClientListItem {
+  /** Phone number. */
+  phone?: string
+  /** Billing address. */
+  address: PostalAddress
+  /** Language, currency, payment preferences and internal notes. */
+  preferences: ClientPreferences
+  /** Which kinds of email the client receives. */
+  notifications: ContactNotifications
+  /** The account switches staff set on the client. */
+  settings: ClientSettings
   /** True if the user has TOTP 2FA enabled. */
   twoFactorEnabled: boolean
   /** Associated contacts. */
   contacts: Contact[]
 }
 
-/** Aggregated summary data for the client profile dashboard. */
-export interface ClientSummaryData {
+/** Invoice count and total per status for one client. */
+export interface ClientInvoiceStatuses {
   /** Draft invoice stats. */
   draft: InvoiceStatusCount
   /** Unpaid invoice stats. */
@@ -102,6 +96,10 @@ export interface ClientSummaryData {
   cancelled: InvoiceStatusCount
   /** Refunded invoice stats. */
   refunded: InvoiceStatusCount
+}
+
+/** What a client's transactions add up to. */
+export interface ClientTransactionTotals {
   /** Total income from transactions. */
   grossRevenue: number
   /** Total outgoing from transactions. */
@@ -110,8 +108,10 @@ export interface ClientSummaryData {
   totalFees: number
   /** Computed: grossRevenue - clientExpenses - totalFees. */
   netIncome: number
-  /** Current credit balance. */
-  creditBalance: number
+}
+
+/** How many services, domains, quotes and tickets a client has. */
+export interface ClientRecordCounts {
   /** Services with Active status. */
   activeServicesCount: number
   /** Total number of services. */
@@ -126,6 +126,18 @@ export interface ClientSummaryData {
   openTicketsCount: number
   /** Total tickets. */
   totalTicketsCount: number
+}
+
+/** Aggregated summary data for the client profile dashboard. */
+export interface ClientSummaryData {
+  /** Invoice count and total per status. */
+  invoices: ClientInvoiceStatuses
+  /** Income, outgoing and fee totals from transactions. */
+  transactions: ClientTransactionTotals
+  /** Current credit balance. */
+  creditBalance: number
+  /** Number of services, domains, quotes and tickets. */
+  counts: ClientRecordCounts
   /** Last 5 email log entries. */
   recentEmails: EmailLog[]
 }
@@ -150,8 +162,8 @@ export interface ClientFilters {
   email?: string
   /** Phone partial match. */
   phone?: string
-  /** Status filter (Active, Inactive, Suspended, Closed). */
-  status?: string
+  /** Status filter. */
+  status?: ClientStatus
 }
 
 /** Currency row of the admin currency configuration, as the client pickers read it. */

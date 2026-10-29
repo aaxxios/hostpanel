@@ -8,6 +8,7 @@ public sealed class SshPublicKeyTests
     /// <summary>A throwaway key generated with <c>ssh-keygen -t ed25519</c>; its fingerprint is what <c>ssh-keygen -lf</c> printed.</summary>
     private const string RealKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG6EJIHRxsxge2aZnl+clPBfoX0nmvD7FfHXM2QQ3+3b user@host";
 
+    /// <summary>A real ED25519 key parses and its SHA256 fingerprint equals what <c>ssh-keygen -lf</c> printed.</summary>
     [Fact]
     public void TryParse_RealKey_FingerprintMatchesSshKeygen()
     {
@@ -15,6 +16,7 @@ public sealed class SshPublicKeyTests
         Assert.Equal("SHA256:xK0G2nacQ5l2jswa38Dl9jmRCsESwmesIiz26XjE5+o", key!.Fingerprint);
     }
 
+    /// <summary>The canonical form keeps only the type and the key blob, without the comment or surrounding whitespace.</summary>
     [Fact]
     public void TryParse_DropsCommentAndSurroundingWhitespace()
     {
@@ -22,6 +24,8 @@ public sealed class SshPublicKeyTests
         Assert.Equal("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG6EJIHRxsxge2aZnl+clPBfoX0nmvD7FfHXM2QQ3+3b", key!.Canonical);
     }
 
+    /// <summary>Empty, truncated, non-ED25519, multi-line and option-prefixed inputs are refused and not flagged as private keys.</summary>
+    /// <param name="input">The malformed key text.</param>
     [Theory]
     [InlineData("")]
     [InlineData("ssh-ed25519")]
@@ -37,6 +41,7 @@ public sealed class SshPublicKeyTests
         Assert.False(isPrivate);
     }
 
+    /// <summary>A pasted OpenSSH private key is refused and flagged as private so the caller can warn about it.</summary>
     [Fact]
     public void TryParse_PrivateKey_FlaggedAsPrivate()
     {

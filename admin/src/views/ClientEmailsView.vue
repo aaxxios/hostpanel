@@ -2,15 +2,17 @@
 /**
  * Displays a paginated log of emails sent to the current client.
  *
- * Read-only view — no actions available.
+ * Read-only view: no actions available.
  */
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useClientEmailStore } from '@/stores/clientEmail'
 import { formatDate } from '@/lib/format'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import { emailOutcomeLabelKey } from '@/lib/emailLogStatus'
+import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
@@ -24,6 +26,7 @@ import UiTableRow from '@/components/ui/UiTableRow.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { UiTone } from '@/utils/ui/tone'
 import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 const { t } = useI18n()
@@ -70,9 +73,13 @@ onMounted(load)
   <UiStack>
     <UiHeading :level="1" variant="card">{{ t('clients.clientEmails.emails') }}</UiHeading>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="client-emails-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="client-emails-error"
+      @retry="load"
+    />
 
     <UiStack v-if="store.loading && store.emails.length === 0" data-testid="client-emails-loading">
       <UiSkeleton :lines="3" />
@@ -83,19 +90,25 @@ onMounted(load)
       <UiTable
         density="comfortable"
         :empty="store.emails.length === 0"
-        :colspan="2"
+        :colspan="3"
         data-testid="client-emails-table"
       >
         <UiTableHead>
           <UiTableRow>
             <UiTableHeader>{{ t('shared.date') }}</UiTableHeader>
             <UiTableHeader>{{ t('shared.subject') }}</UiTableHeader>
+            <UiTableHeader>{{ t('clients.clientEmails.status') }}</UiTableHeader>
           </UiTableRow>
         </UiTableHead>
         <UiTableBody divided>
           <UiTableRow v-for="email in store.emails" :key="email.id" hoverable>
             <UiTableCell muted>{{ formatDate(email.sentAt) }}</UiTableCell>
             <UiTableCell>{{ email.subject }}</UiTableCell>
+            <UiTableCell>
+              <UiBadge :tone="email.success ? UiTone.Success : UiTone.Danger" :data-testid="`client-emails-outcome-${email.id}`">
+                {{ t(emailOutcomeLabelKey(email)) }}
+              </UiBadge>
+            </UiTableCell>
           </UiTableRow>
         </UiTableBody>
         <template #empty>

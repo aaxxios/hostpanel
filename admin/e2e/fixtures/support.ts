@@ -16,10 +16,8 @@ export const openTicket: Ticket = {
   message: 'My site returns an error since this morning.',
   status: TicketStatus.Open,
   priority: TicketPriority.High,
-  departmentId: 1,
-  departmentName: 'Technical',
-  assignedToStaffId: null,
-  assignedToStaffName: null,
+  department: { id: 1, name: 'Technical' },
+  assignee: { id: null, name: null },
   createdAt: '2026-10-14T07:00:00Z',
   replies: [],
 }

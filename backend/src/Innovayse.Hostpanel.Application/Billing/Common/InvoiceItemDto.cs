@@ -6,4 +6,4 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <param name="UnitPrice">Price per unit.</param>
 /// <param name="Quantity">Number of units.</param>
 /// <param name="Amount">Line total (UnitPrice × Quantity).</param>
-public record InvoiceItemDto(int Id, string Description, decimal UnitPrice, int Quantity, decimal Amount);
+public sealed record InvoiceItemDto(int Id, string Description, decimal UnitPrice, int Quantity, decimal Amount);

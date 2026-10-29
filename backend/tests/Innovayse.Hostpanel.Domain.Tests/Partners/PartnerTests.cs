@@ -1,5 +1,4 @@
 using Innovayse.Hostpanel.Domain.Partners;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Partners;
 
@@ -10,12 +9,10 @@ public sealed class PartnerTests
     /// <returns>A new, active partner.</returns>
     private static Partner NewEntity() => Partner.Create(logoUrl: "/logo.png", url: "https://acme.example", sortOrder: 2, isActive: true);
 
-    /// <summary>Create stores every field, starts with no translations and stamps the creation time.</summary>
+    /// <summary>Create stores every field and starts with no translations.</summary>
     [Fact]
     public void Create_StoresFields_AndStartsWithoutTranslations()
     {
-        var before = DateTimeOffset.UtcNow;
-
         var entity = NewEntity();
 
         Assert.Equal("/logo.png", entity.LogoUrl);
@@ -23,15 +20,13 @@ public sealed class PartnerTests
         Assert.Equal(2, entity.SortOrder);
         Assert.True(entity.IsActive);
         Assert.Empty(entity.Translations);
-        Assert.True(entity.CreatedAt >= before);
     }
 
-    /// <summary>Update replaces every non-translation field and keeps the creation time.</summary>
+    /// <summary>Update replaces every non-translation field.</summary>
     [Fact]
     public void Update_ReplacesEveryField()
     {
         var entity = NewEntity();
-        var created = entity.CreatedAt;
 
         entity.Update(logoUrl: null, url: null, sortOrder: 7, isActive: false);
 
@@ -39,7 +34,6 @@ public sealed class PartnerTests
         Assert.Null(entity.Url);
         Assert.Equal(7, entity.SortOrder);
         Assert.False(entity.IsActive);
-        Assert.Equal(created, entity.CreatedAt);
     }
 
     /// <summary>Deactivate hides the partner and Activate shows it again.</summary>
@@ -138,5 +132,26 @@ public sealed class PartnerTests
         entity.SetSortOrder(0);
 
         Assert.Equal(0, entity.SortOrder);
+    }
+
+    /// <summary>
+    /// ReplaceTranslations leaves exactly the given locales: a locale it does not name is removed, a
+    /// kept one is updated in place and a new one is added.
+    /// </summary>
+    [Fact]
+    public void ReplaceTranslations_RemovesUnlisted_UpdatesKept_AddsNew()
+    {
+        var entity = NewEntity();
+        entity.SetTranslation("en", name: "Acme");
+        entity.SetTranslation("ru", name: "Acme Ru");
+
+        entity.ReplaceTranslations(new Dictionary<string, PartnerTranslationContent>
+        {
+            ["en"] = new PartnerTranslationContent("Acme Ltd"),
+            ["hy"] = new PartnerTranslationContent("Acme Hy"),
+        });
+
+        Assert.Equal(["en", "hy"], entity.Translations.Select(t => t.Locale).Order());
+        Assert.Equal("Acme Ltd", entity.Translations.Single(t => t.Locale == "en").Name);
     }
 }

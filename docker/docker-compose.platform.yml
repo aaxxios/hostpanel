@@ -1,10 +1,12 @@
-# Joins innovayse_network and parks what the platform already provides. Goes last in every chain:
-#   laptop in the workspace: shared + dev + platform     deployed host: shared + prod + platform
+# Joins the shared external network and parks what the platform already provides. Goes last in every chain:
+#   local development: shared + dev + platform     deployed host: shared + prod + platform
 # Parked services carry no container_name, so their names never collide with the platform's.
 name: hostpanel
 
 networks:
-  default:
+  # Replaces the stack network of dev.yml / prod.yml: the platform network exists already, so its subnet
+  # is not ours to set. STACK_NETWORK_SUBNET then names that network's subnet.
+  default: !override
     name: innovayse_network
     external: true
 

@@ -2,14 +2,12 @@
  * Tag-manager loader: loads Google Tag Manager once the operator has configured a
  * container **and** the visitor has accepted all cookies.
  *
- * Both halves used to be missing. The container id was a literal in `app.vue` — the
- * vendor's own, which every self-hosted install shipped and sent its visitors' data to —
- * and the loader was in the server-rendered HTML for everyone, consent or not, while the
- * cookie banner recorded an answer nothing read.
+ * The container id is the operator's own setting, never a literal, so an install sends its
+ * visitors' data only where its operator chose.
  *
  * Client-only by design: there is nothing to render on the server, and a tag that runs
- * before the visitor answered is the thing consent exists to prevent. The `<noscript>`
- * iframe fallback is gone with it; it cannot be gated on consent, and a visitor with
+ * before the visitor answered is the thing consent exists to prevent. There is no
+ * `<noscript>` iframe fallback: it cannot be gated on consent, and a visitor with
  * scripts off is not one who can be tracked anyway.
  *
  * @module plugins/tracking.client

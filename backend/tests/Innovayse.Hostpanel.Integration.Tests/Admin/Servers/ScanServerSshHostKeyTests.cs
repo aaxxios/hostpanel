@@ -1,21 +1,23 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Domain.Ssh.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
 /// <summary><c>POST api/admin/servers/{id}/ssh-settings/scan-host-key</c>: show, compare, never pin.</summary>
+/// <param name="factory">The shared API and PostgreSQL host.</param>
 public sealed class ScanServerSshHostKeyTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>Gets the fake scanner the shared host resolves.</summary>
     private FakeSshHostKeyScanner Scanner => (FakeSshHostKeyScanner)factory.Services.GetRequiredService<ISshHostKeyScanner>();
 
+    /// <summary>The presented host key is shown and compared with the pin, and the scan never pins it.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task PresentedKey_IsShownAndComparedWithThePinAsync()
     {
@@ -58,17 +60,16 @@ public sealed class ScanServerSshHostKeyTests(IntegrationTestFactory factory) : 
         (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(code);
     }
 
+    /// <summary>A server with no agent host saved answers <c>SSH_SETTINGS_INCOMPLETE</c>.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task NoAgentHostSaved_IsIncompleteAsync()
     {
         var admin = await SshAdminTestSupport.AdminAsync(factory);
-        var created = await admin.PostAsJsonAsync("/api/admin/servers", new
-        {
-            name = $"bare-{Guid.NewGuid():N}",
-            hostname = "bare.example.test",
-            module = Domain.Servers.Enums.ServerModule.Cwp7,
-            username = "root",
-        });
+        var created = await admin.PostAsJsonAsync(
+            "/api/admin/servers",
+            ServersTestSeeds.ServerBody($"bare-{Guid.NewGuid():N}", "bare.example.test", Domain.Servers.Enums.ServerModule.Cwp7));
+        created.EnsureSuccessStatusCode();
         var serverId = await created.Content.ReadFromJsonAsync<int>();
 
         var response = await admin.PostAsync($"/api/admin/servers/{serverId}/ssh-settings/scan-host-key", null);

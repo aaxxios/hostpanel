@@ -17,20 +17,15 @@ public sealed class DeleteTldConfigHandler
     /// <summary>The data context the configuration is loaded from and removed through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work for committing the deletion.</summary>
-    private readonly IUnitOfWork _uow;
-
     /// <summary>Memory cache for invalidating pricing data.</summary>
     private readonly IMemoryCache _cache;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The data context the configuration is loaded from and removed through.</param>
-    /// <param name="uow">Unit of work for committing the deletion.</param>
     /// <param name="cache">Memory cache for invalidating pricing data.</param>
-    public DeleteTldConfigHandler(IHostpanelDbContext context, IUnitOfWork uow, IMemoryCache cache)
+    public DeleteTldConfigHandler(IHostpanelDbContext context, IMemoryCache cache)
     {
         _context = context;
-        _uow = uow;
         _cache = cache;
     }
 
@@ -52,7 +47,7 @@ public sealed class DeleteTldConfigHandler
         }
 
         _context.TldConfigs.Remove(entity);
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
 
         // Invalidate the TLD pricing cache so clients no longer see the deleted TLD.
         _cache.Remove("tld-pricing-configs");

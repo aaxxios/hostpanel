@@ -66,7 +66,7 @@ const totalLabel = computed(() => {
  * @param item The line the visitor removed.
  */
 const removeItem = (item: CartItem): void => {
-  cart.removeItem(item.pid, item.domain, item.domainAction)
+  cart.removeItem(item.pid, item.billingcycle, item.domain, item.domainAction)
 }
 
 useHead({ title: computed(() => `${t('cart.title')} — ${siteName.value}`) })

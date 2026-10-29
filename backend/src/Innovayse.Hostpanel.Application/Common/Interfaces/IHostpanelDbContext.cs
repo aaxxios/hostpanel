@@ -21,12 +21,13 @@ using Innovayse.Hostpanel.Domain.Ssl;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Testimonials;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 
 /// <summary>
 /// The repository. Handlers write LINQ against these sets and save through
-/// <see cref="SaveChangesAsync"/>; there is no repository layer on top (rules/architecture.md).
+/// <see cref="SaveChangesAsync"/>; there is no repository layer on top.
 /// Implemented by the Infrastructure <c>AppDbContext</c>.
 /// </summary>
 public interface IHostpanelDbContext
@@ -37,7 +38,7 @@ public interface IHostpanelDbContext
     /// <summary>
     /// Gets the roles held by each subject. Separate from Identity's own role tables
     /// because it is keyed by whatever the configured identity provider calls a person,
-    /// which in SSO mode is not a row in <c>AspNetUsers</c>.
+    /// which in single sign-on mode is not a row in <c>AspNetUsers</c>.
     ///
     /// <para>
     /// Named for the subject rather than the user because <c>IdentityDbContext</c> already
@@ -66,7 +67,7 @@ public interface IHostpanelDbContext
     /// <summary>Gets the per-currency product prices table.</summary>
     public DbSet<ProductPrice> ProductPrices { get; }
 
-    /// <summary>Gets the currencies table — one base row plus every rated currency.</summary>
+    /// <summary>Gets the currencies table: one base row plus every rated currency.</summary>
     public DbSet<Currency> Currencies { get; }
 
     /// <summary>Gets the client services table.</summary>
@@ -223,4 +224,32 @@ public interface IHostpanelDbContext
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The number of rows written.</returns>
     public Task<int> SaveChangesAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Starts an explicit transaction, for the few writes that must commit together across more than
+    /// one save (a row whose generated id another row then records). Domain events saved inside it are
+    /// published only when it commits and dropped when it rolls back.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The open transaction; disposing it without a commit rolls it back.</returns>
+    public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct);
+
+    /// <summary>Detaches every tracked entity, clearing pending or failed change state before a fresh save.</summary>
+    public void DetachAll();
+
+    /// <summary>
+    /// Throws away every change not yet saved: added entities are detached, modified and deleted
+    /// ones return to their last loaded values. Entities already saved stay tracked, so one failed
+    /// write does not poison the next save of the same unit of work.
+    /// </summary>
+    public void DiscardPendingChanges();
+
+    /// <summary>
+    /// Overwrites a tracked entity with what the database holds now and marks it unchanged, so a
+    /// change that lost a concurrency conflict is not retried by a later save.
+    /// </summary>
+    /// <param name="entity">The tracked entity.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    public Task ReloadAsync(object entity, CancellationToken ct);
 }

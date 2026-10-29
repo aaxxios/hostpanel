@@ -7,100 +7,103 @@ using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Migration;
 using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Application.Migration.Importers;
 
 /// <summary>
-/// Imports quote records, deduplicated by client and subject. Split out of
-/// <c>MigrationPullWorker</c> (A6 Task 6).
+/// Imports quote records, deduplicated by client and subject.
 /// </summary>
-/// <param name="context">The module's data context.</param>
-/// <param name="uow">Unit of work the imported quote is saved through.</param>
-/// <param name="pager">Pages through the source plugin's <c>quotes</c> dataset.</param>
-/// <param name="logWriter">Writes one migration log row per record.</param>
-/// <param name="clientResolver">Resolves each record's client email to a local client id.</param>
-/// <param name="payerCurrency">Decides the currency a quote with no currency of its own is in.</param>
-/// <param name="logger">Logs a skipped or failed record.</param>
-public sealed class QuotesImporter(
-    IHostpanelDbContext context,
-    IUnitOfWork uow,
-    MigrationRecordPager pager,
-    MigrationLogWriter logWriter,
-    MigrationClientResolver clientResolver,
-    IPayerCurrencyResolver payerCurrency,
-    ILogger<QuotesImporter> logger) : IMigrationEntityImporter
+public sealed class QuotesImporter : IMigrationEntityImporter
 {
-    /// <inheritdoc/>
-    public async Task ImportAsync(MigrationJob job, CancellationToken ct)
+    /// <summary>The module's data context.</summary>
+    private readonly IHostpanelDbContext _context;
+
+    /// <summary>Pages through each record dataset and records each record's outcome.</summary>
+    private readonly MigrationRecordRunner _runner;
+
+    /// <summary>Resolves each record's client email to a local client id.</summary>
+    private readonly MigrationClientResolver _clientResolver;
+
+    /// <summary>Decides the currency a quote with no currency of its own is in.</summary>
+    private readonly IPayerCurrencyResolver _payerCurrency;
+
+    /// <summary>Initializes a new instance of the <see cref="QuotesImporter"/> class.</summary>
+    /// <param name="context">The module's data context.</param>
+    /// <param name="runner">Pages through each record dataset and records each record's outcome.</param>
+    /// <param name="clientResolver">Resolves each record's client email to a local client id.</param>
+    /// <param name="payerCurrency">Decides the currency a quote with no currency of its own is in.</param>
+    public QuotesImporter(
+        IHostpanelDbContext context,
+        MigrationRecordRunner runner,
+        MigrationClientResolver clientResolver,
+        IPayerCurrencyResolver payerCurrency)
     {
-        int imported = 0, skipped = 0;
+        _context = context;
+        _runner = runner;
+        _clientResolver = clientResolver;
+        _payerCurrency = payerCurrency;
+    }
 
-        await foreach (var page in pager.PagesAsync<QuoteRecord>(job, "quotes", ct))
+    /// <inheritdoc/>
+    public MigrationEntityType EntityType => MigrationEntityType.Quotes;
+
+    /// <inheritdoc/>
+    public Task ImportAsync(MigrationJob job, CancellationToken ct) =>
+        _runner.RunAsync(new MigrationRecordRun<QuoteRecord>(job, EntityType, "quotes", ImportQuoteAsync), ct);
+
+    /// <summary>Imports one plugin-side quote record.</summary>
+    /// <param name="rec">The quote record read from the source plugin.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Whether the quote was imported or skipped, and why when skipped.</returns>
+    private async Task<RecordImportResult> ImportQuoteAsync(QuoteRecord rec, CancellationToken ct)
+    {
+        var clientId = await _clientResolver.ResolveClientIdAsync(rec.ClientEmail, ct);
+        if (clientId is null)
         {
-            foreach (var rec in page)
-            {
-                try
-                {
-                    var clientId = await clientResolver.ResolveClientIdAsync(rec.ClientEmail, ct);
-                    if (clientId is null)
-                    {
-                        logger.LogWarning("Quote skipped — client {Email} not found", rec.ClientEmail);
-                        await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Quotes, rec.Subject, ImportOutcome.Skipped, $"Client '{rec.ClientEmail}' not found", ct);
-                        skipped++;
-                        continue;
-                    }
-
-                    // Was IQuoteRepository.FindByClientAndSubjectAsync -- read-only, so no tracking is needed.
-                    var existingQuote = await context.Quotes.AsNoTracking()
-                        .FirstOrDefaultAsync(q => q.ClientId == clientId.Value && q.Subject.ToLower() == rec.Subject.ToLower(), ct);
-                    if (existingQuote is not null)
-                    {
-                        await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Quotes, rec.Subject, ImportOutcome.Skipped, "Quote already exists", ct);
-                        skipped++;
-                        continue;
-                    }
-
-                    // The source record carries no currency, so the quote is in what the migrated client is billed in.
-                    var currency = (await payerCurrency.ForClientAsync(clientId.Value, ct)).Code;
-                    var quote = Quote.Create(clientId.Value, rec.Subject, rec.ExpiryDate, currency,
-                        proposalText: rec.ProposalText,
-                        customerNotes: rec.CustomerNotes);
-
-                    foreach (var item in rec.Items)
-                    {
-                        quote.AddItem(item.Description, item.UnitPrice, item.Quantity, item.DiscountPercent);
-                    }
-
-                    switch (rec.Stage)
-                    {
-                        case SourceQuoteStages.Delivered:
-                            quote.Deliver();
-                            break;
-                        case SourceQuoteStages.Accepted:
-                            quote.Accept();
-                            break;
-                        case SourceQuoteStages.Lost:
-                            quote.MarkLost();
-                            break;
-                        case SourceQuoteStages.Dead:
-                            quote.MarkDead();
-                            break;
-                    }
-
-                    context.Quotes.Add(quote);
-                    await uow.SaveChangesAsync(ct);
-                    imported++;
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Quotes, rec.Subject, ImportOutcome.Imported, null, ct);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Skipped quote '{Subject}' during migration", rec.Subject);
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Quotes, rec.Subject, ImportOutcome.Failed, ex.Message, ct);
-                }
-            }
-
-            job.UpdateProgress(MigrationEntityType.Quotes, imported, skipped);
-            await uow.SaveChangesAsync(ct);
+            return RecordImportResult.Skipped(MigrationSkipReason.ClientNotFound);
         }
+
+        if (rec.ExpiryDate is not { } expiryDate)
+        {
+            return RecordImportResult.Skipped(MigrationSkipReason.DateMissing);
+        }
+
+        var existingQuote = await _context.Quotes.AsNoTracking()
+            .FirstOrDefaultAsync(q => q.ClientId == clientId.Value && q.Subject.ToLower() == rec.Subject.ToLower(), ct);
+        if (existingQuote is not null)
+        {
+            return RecordImportResult.Skipped(MigrationSkipReason.AlreadyExists);
+        }
+
+        // The source record carries no currency, so the quote is in what the migrated client is billed in.
+        var currency = (await _payerCurrency.ForClientAsync(clientId.Value, ct)).Code;
+        var quote = Quote.Create(clientId.Value, rec.Subject, expiryDate, currency,
+            proposalText: rec.ProposalText,
+            customerNotes: rec.CustomerNotes);
+
+        foreach (var item in rec.Items)
+        {
+            quote.AddItem(item.Description, item.UnitPrice, item.Quantity, item.DiscountPercent);
+        }
+
+        switch (rec.Stage)
+        {
+            case SourceQuoteStages.Delivered:
+                quote.Deliver();
+                break;
+            case SourceQuoteStages.Accepted:
+                quote.Accept();
+                break;
+            case SourceQuoteStages.Lost:
+                quote.MarkLost();
+                break;
+            case SourceQuoteStages.Dead:
+                quote.MarkDead();
+                break;
+        }
+
+        _context.Quotes.Add(quote);
+        await _context.SaveChangesAsync(ct);
+        return RecordImportResult.Imported;
     }
 }

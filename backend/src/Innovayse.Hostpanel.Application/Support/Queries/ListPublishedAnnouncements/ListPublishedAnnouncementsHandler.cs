@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Support.Common;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +31,7 @@ public sealed class ListPublishedAnnouncementsHandler
     /// <param name="query">The paging window. It carries no visibility switch.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Success with the page of published announcements. This use case answers no refusal code.</returns>
-    public async Task<Result<PagedResult<PublishedAnnouncementDto>>> HandleAsync(
+    public async Task<Result<PaginatedList<PublishedAnnouncementDto>>> HandleAsync(
         ListPublishedAnnouncementsQuery query,
         CancellationToken ct)
     {
@@ -42,7 +43,8 @@ public sealed class ListPublishedAnnouncementsHandler
         var baseQuery = _context.Announcements
             .AsNoTracking()
             .Where(a => a.IsPublished)
-            .OrderByDescending(a => a.CreatedAt);
+            .OrderByDescending(a => a.CreatedAt)
+            .ThenByDescending(a => a.Id);
 
         var totalCount = await baseQuery.CountAsync(ct);
         var items = await baseQuery
@@ -50,6 +52,6 @@ public sealed class ListPublishedAnnouncementsHandler
             .Select(a => new PublishedAnnouncementDto(a.Id, a.Title, a.Content, a.CreatedAt))
             .ToListAsync(ct);
 
-        return Result.Success(new PagedResult<PublishedAnnouncementDto>(items, totalCount, page, pageSize));
+        return Result.Success(new PaginatedList<PublishedAnnouncementDto>(items, totalCount, page, pageSize));
     }
 }

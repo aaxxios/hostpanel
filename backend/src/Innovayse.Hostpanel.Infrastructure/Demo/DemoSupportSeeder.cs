@@ -48,52 +48,52 @@ internal sealed class DemoSupportSeeder
     };
 
     /// <summary>The subjects, opening messages and handling departments of the tickets, in order and repeating past the end; the first ones belong to the demo client.</summary>
-    private static readonly (string Subject, string Message, string Department)[] TicketTopics =
+    private static readonly DemoTicketTopic[] TicketTopics =
     [
-        ("My site is loading slowly since yesterday", "The pages of my site have taken several seconds to load since yesterday evening. I have not changed anything on my side. Could you take a look?", TechnicalDepartment),
-        ("Question about the invoice for last month", "Could you tell me why the invoice for last month includes a domain renewal line?", BillingDepartment),
-        ("Please add an extra mailbox to my plan", "We hired a new colleague and need one more mailbox on our domain. What is the quickest way to add it?", SalesDepartment),
-        ("Need help pointing my domain to an external service", "I need to add a CNAME record for a third-party service and I am not sure which values to use.", TechnicalDepartment),
-        ("Request to upgrade to a VPS", "I would like to move from shared hosting to a VPS. What are the steps and the new monthly price?", SalesDepartment),
-        ("Certificate warning on my site", "Visitors see a security warning on my site since this morning. Please check the certificate.", TechnicalDepartment),
-        ("Email is bouncing for one recipient", "Messages to one customer come back as undeliverable. Other recipients are fine.", TechnicalDepartment),
-        ("Restore a file deleted by mistake", "I removed a folder from my account this morning and would like it restored from last night's backup.", TechnicalDepartment),
-        ("Transfer a domain from another provider", "I started a transfer yesterday and have not received any confirmation. Can you check the status?", GeneralDepartment),
-        ("Charged twice for the same service", "My card statement shows two charges for the same hosting renewal. Please look into it.", BillingDepartment),
-        ("How do I enable two-factor sign-in?", "I cannot find the setting for two-factor sign-in in my account. Where is it?", GeneralDepartment),
-        ("Server unreachable from my office", "My dedicated server answers from home but not from the office network. Could a firewall rule be blocking us?", TechnicalDepartment),
-        ("Change the billing contact", "Our accountant has changed. Please send invoices to the new address from now on.", BillingDepartment),
-        ("Increase the disk quota", "My account is close to its disk limit. What are the options for more space?", SalesDepartment),
-        ("Reverse DNS for my mail server", "Our outgoing mail is flagged because the reverse DNS does not match. Can you set it for our address?", TechnicalDepartment),
-        ("Website shows a database error", "Since an update this afternoon the site shows a database connection error.", TechnicalDepartment),
-        ("Cancel auto-renew for an old domain", "We no longer need one of our domains. Please turn off auto-renew for it.", GeneralDepartment),
-        ("Quote for a managed migration", "We plan to move twelve sites from another host. Could you quote a managed migration?", SalesDepartment),
-        ("Abuse report received about my account", "I received a notice that a site on my account sent spam. I believe it was hacked. What should I do?", ExtraDepartment),
-        ("Slow response from the control panel", "The control panel takes a long time to open in the evening. Is there a known issue?", TechnicalDepartment),
-        ("Add a staging copy of my site", "We would like a staging copy of our shop to test changes before they go live. Is that possible on our plan?", TechnicalDepartment),
-        ("Cron job does not run", "A scheduled task I set up last week has never run. The command works when I start it by hand.", TechnicalDepartment),
-        ("Need a copy of a paid invoice", "Our auditor asks for a copy of an invoice we paid in spring. Where can I download it?", BillingDepartment),
-        ("Move my VPS to another region", "Most of our visitors are now in North America. Can the VPS be moved closer to them?", SalesDepartment),
-        ("Upload limit too small", "Uploading a large video to the site fails. Can the upload size limit be raised?", TechnicalDepartment),
-        ("Domain shows as expired", "One of our domains shows as expired although auto-renew was on. What happened?", GeneralDepartment),
-        ("Set up mail on a new phone", "A colleague needs the mailbox on a new phone. Which server settings should she use?", TechnicalDepartment),
-        ("Too many failed sign-in alerts", "We get alerts about failed sign-ins on our account every night. Is someone trying to break in?", ExtraDepartment),
-        ("Change the primary domain of a service", "We rebranded and want the hosting service to use the new domain as its main one.", GeneralDepartment),
-        ("Invoice in the wrong currency", "Our latest invoice is in dollars but we pay in euros. Can it be reissued?", BillingDepartment),
-        ("Snapshot before an upgrade", "Please take a snapshot of the VPS before we upgrade the operating system tonight.", TechnicalDepartment),
-        ("Website redirects to the wrong page", "After moving to secure connections the home page redirects to an old landing page.", TechnicalDepartment),
-        ("Add a second admin to our account", "Our new office manager needs access to billing and tickets. How do we add her?", GeneralDepartment),
-        ("Bandwidth warning received", "We got a notice that the service is close to its monthly bandwidth. What happens if we go over?", SalesDepartment),
-        ("Unable to connect over SSH", "SSH to the server times out since this morning. The website itself still loads.", TechnicalDepartment),
-        ("Refund for an unused add-on", "We ordered a dedicated IP by mistake and never used it. Could it be refunded?", BillingDepartment),
-        ("Wildcard certificate installation", "We bought a wildcard certificate and need help installing it on three subdomains.", TechnicalDepartment),
-        ("Mailbox is full", "One mailbox stopped receiving mail because it is full. Can it be enlarged or archived?", TechnicalDepartment),
-        ("Database import fails", "Importing a database dump stops halfway with a timeout. Is there another way to import it?", TechnicalDepartment),
-        ("Question about the reseller plan", "How many client accounts can we create on the reseller plan, and can they have their own branding?", SalesDepartment),
-        ("PHP version for an old site", "One of our older sites needs an older PHP version. Can it run side by side with the others?", TechnicalDepartment),
-        ("Order stuck in pending", "We placed an order two days ago and it still shows as pending. Is anything missing on our side?", SalesDepartment),
-        ("Block traffic from one address", "One address keeps flooding our contact form. Can you block it at the server level?", ExtraDepartment),
-        ("Close our old account", "We have moved everything to a new account. Please close the old one once the last invoice is settled.", GeneralDepartment),
+        new("My site is loading slowly since yesterday", "The pages of my site have taken several seconds to load since yesterday evening. I have not changed anything on my side. Could you take a look?", TechnicalDepartment),
+        new("Question about the invoice for last month", "Could you tell me why the invoice for last month includes a domain renewal line?", BillingDepartment),
+        new("Please add an extra mailbox to my plan", "We hired a new colleague and need one more mailbox on our domain. What is the quickest way to add it?", SalesDepartment),
+        new("Need help pointing my domain to an external service", "I need to add a CNAME record for a third-party service and I am not sure which values to use.", TechnicalDepartment),
+        new("Request to upgrade to a VPS", "I would like to move from shared hosting to a VPS. What are the steps and the new monthly price?", SalesDepartment),
+        new("Certificate warning on my site", "Visitors see a security warning on my site since this morning. Please check the certificate.", TechnicalDepartment),
+        new("Email is bouncing for one recipient", "Messages to one customer come back as undeliverable. Other recipients are fine.", TechnicalDepartment),
+        new("Restore a file deleted by mistake", "I removed a folder from my account this morning and would like it restored from last night's backup.", TechnicalDepartment),
+        new("Transfer a domain from another provider", "I started a transfer yesterday and have not received any confirmation. Can you check the status?", GeneralDepartment),
+        new("Charged twice for the same service", "My card statement shows two charges for the same hosting renewal. Please look into it.", BillingDepartment),
+        new("How do I enable two-factor sign-in?", "I cannot find the setting for two-factor sign-in in my account. Where is it?", GeneralDepartment),
+        new("Server unreachable from my office", "My dedicated server answers from home but not from the office network. Could a firewall rule be blocking us?", TechnicalDepartment),
+        new("Change the billing contact", "Our accountant has changed. Please send invoices to the new address from now on.", BillingDepartment),
+        new("Increase the disk quota", "My account is close to its disk limit. What are the options for more space?", SalesDepartment),
+        new("Reverse DNS for my mail server", "Our outgoing mail is flagged because the reverse DNS does not match. Can you set it for our address?", TechnicalDepartment),
+        new("Website shows a database error", "Since an update this afternoon the site shows a database connection error.", TechnicalDepartment),
+        new("Cancel auto-renew for an old domain", "We no longer need one of our domains. Please turn off auto-renew for it.", GeneralDepartment),
+        new("Quote for a managed migration", "We plan to move twelve sites from another host. Could you quote a managed migration?", SalesDepartment),
+        new("Abuse report received about my account", "I received a notice that a site on my account sent spam. I believe it was hacked. What should I do?", ExtraDepartment),
+        new("Slow response from the control panel", "The control panel takes a long time to open in the evening. Is there a known issue?", TechnicalDepartment),
+        new("Add a staging copy of my site", "We would like a staging copy of our shop to test changes before they go live. Is that possible on our plan?", TechnicalDepartment),
+        new("Cron job does not run", "A scheduled task I set up last week has never run. The command works when I start it by hand.", TechnicalDepartment),
+        new("Need a copy of a paid invoice", "Our auditor asks for a copy of an invoice we paid in spring. Where can I download it?", BillingDepartment),
+        new("Move my VPS to another region", "Most of our visitors are now in North America. Can the VPS be moved closer to them?", SalesDepartment),
+        new("Upload limit too small", "Uploading a large video to the site fails. Can the upload size limit be raised?", TechnicalDepartment),
+        new("Domain shows as expired", "One of our domains shows as expired although auto-renew was on. What happened?", GeneralDepartment),
+        new("Set up mail on a new phone", "A colleague needs the mailbox on a new phone. Which server settings should she use?", TechnicalDepartment),
+        new("Too many failed sign-in alerts", "We get alerts about failed sign-ins on our account every night. Is someone trying to break in?", ExtraDepartment),
+        new("Change the primary domain of a service", "We rebranded and want the hosting service to use the new domain as its main one.", GeneralDepartment),
+        new("Invoice in the wrong currency", "Our latest invoice is in dollars but we pay in euros. Can it be reissued?", BillingDepartment),
+        new("Snapshot before an upgrade", "Please take a snapshot of the VPS before we upgrade the operating system tonight.", TechnicalDepartment),
+        new("Website redirects to the wrong page", "After moving to secure connections the home page redirects to an old landing page.", TechnicalDepartment),
+        new("Add a second admin to our account", "Our new office manager needs access to billing and tickets. How do we add her?", GeneralDepartment),
+        new("Bandwidth warning received", "We got a notice that the service is close to its monthly bandwidth. What happens if we go over?", SalesDepartment),
+        new("Unable to connect over SSH", "SSH to the server times out since this morning. The website itself still loads.", TechnicalDepartment),
+        new("Refund for an unused add-on", "We ordered a dedicated IP by mistake and never used it. Could it be refunded?", BillingDepartment),
+        new("Wildcard certificate installation", "We bought a wildcard certificate and need help installing it on three subdomains.", TechnicalDepartment),
+        new("Mailbox is full", "One mailbox stopped receiving mail because it is full. Can it be enlarged or archived?", TechnicalDepartment),
+        new("Database import fails", "Importing a database dump stops halfway with a timeout. Is there another way to import it?", TechnicalDepartment),
+        new("Question about the reseller plan", "How many client accounts can we create on the reseller plan, and can they have their own branding?", SalesDepartment),
+        new("PHP version for an old site", "One of our older sites needs an older PHP version. Can it run side by side with the others?", TechnicalDepartment),
+        new("Order stuck in pending", "We placed an order two days ago and it still shows as pending. Is anything missing on our side?", SalesDepartment),
+        new("Block traffic from one address", "One address keeps flooding our contact form. Can you block it at the server level?", ExtraDepartment),
+        new("Close our old account", "We have moved everything to a new account. Please close the old one once the last invoice is settled.", GeneralDepartment),
     ];
 
     /// <summary>What staff say in a thread, in turn.</summary>
@@ -314,30 +314,30 @@ internal sealed class DemoSupportSeeder
 
             // A ticket goes to the department that handles its subject; a deployment whose departments were renamed falls back to the first one.
             var department = departments.FirstOrDefault(d => d.Name == departmentName) ?? departments[0];
-            var ticket = Ticket.Create(owner.Id, subject, message, department.Id, priorities[n % priorities.Length]);
+            var ticket = Ticket.Create(owner.Id, subject, message, department.Id, priorities[n % priorities.Length], _today);
             var customer = $"{owner.FirstName} {owner.LastName}".Trim();
 
             var shape = n % 5;
             if (shape >= 1)
             {
-                ticket.AddReply(StaffReplies[n % StaffReplies.Length], AgentName, true);
+                ticket.AddReply(StaffReplies[n % StaffReplies.Length], AgentName, true, _today);
             }
 
             if (shape is 2 or 3)
             {
-                ticket.AddReply(ClientReplies[n % ClientReplies.Length], customer, false);
-                ticket.AddReply(StaffReplies[(n + 2) % StaffReplies.Length], AgentName, true);
+                ticket.AddReply(ClientReplies[n % ClientReplies.Length], customer, false, _today);
+                ticket.AddReply(StaffReplies[(n + 2) % StaffReplies.Length], AgentName, true, _today);
             }
 
             if (shape == 2)
             {
-                ticket.AddReply(ClientReplies[(n + 1) % ClientReplies.Length], customer, false);
+                ticket.AddReply(ClientReplies[(n + 1) % ClientReplies.Length], customer, false, _today);
             }
 
             if (shape is 3 or 4)
             {
-                ticket.Close();
-                ticket.LeaveFeedback(6 + (n % 5), shape == 3 ? "Quick and helpful, thank you." : null, customer);
+                ticket.Close(_today);
+                ticket.LeaveFeedback(6 + (n % 5), shape == 3 ? "Quick and helpful, thank you." : null, customer, _today);
             }
 
             var tags = TagsByDepartment.GetValueOrDefault(department.Name) ?? TagsByDepartment[GeneralDepartment];

@@ -4,4 +4,4 @@ namespace Innovayse.Hostpanel.Application.Admin.Servers.Commands.DeleteServerGro
 /// Deletes a server group. Servers in the group are unassigned, not deleted.
 /// </summary>
 /// <param name="Id">The group to delete.</param>
-public record DeleteServerGroupCommand(int Id);
+public sealed record DeleteServerGroupCommand(int Id);

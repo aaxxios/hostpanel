@@ -2,16 +2,17 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
 /// <summary><c>GET api/admin/servers/{id}/ssh-setup</c>: the values the one-command installer is built from.</summary>
+/// <param name="factory">The shared API and PostgreSQL host.</param>
 public sealed class GetServerSshSetupTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>The setup names the profile, the management user, the bundle whose hash it verifies and the source addresses.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task Setup_NamesTheProfileAndTheBundleItsHashVerifiesAsync()
     {
@@ -29,6 +30,8 @@ public sealed class GetServerSshSetupTests(IntegrationTestFactory factory) : ICl
             .Should().Equal("203.0.113.10", "2001:db8::10");
     }
 
+    /// <summary>A server whose module has no key agent has no profile.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task UnsupportedModule_HasNoProfileAsync()
     {
@@ -40,6 +43,8 @@ public sealed class GetServerSshSetupTests(IntegrationTestFactory factory) : ICl
         setup.GetProperty("profile").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
+    /// <summary>An unknown server answers 404 <c>SERVER_NOT_FOUND</c>.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task UnknownServer_Returns404Async()
     {

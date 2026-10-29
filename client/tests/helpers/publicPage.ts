@@ -2,7 +2,7 @@
  * Helpers for testing the public pages (contact, FAQ, knowledge base, announcements, legal texts).
  *
  * A Nuxt page leans on auto-imports that do not exist in a unit test (`useSeo`, `useLocalePath`,
- * `createError`, ...) and awaits `useAsyncData` at the top of its setup, which makes it an async
+ * `createError` and the rest) and awaits `useAsyncData` at the top of its setup, which makes it an async
  * component. This module stands in for the first and wraps the second in `<Suspense>`, so a test
  * mounts the real page against the real kit and a real Pinia and reads what it renders.
  *
@@ -21,13 +21,13 @@ import { stubLocalePath, stubRoute } from '~/tests/helpers/runtimeStubs'
 
 /** The spies a test reads after mounting a page. */
 export interface PublicPageSpies {
-  /** `useSeo` -- called by the pages that set canonical, hreflang and social tags. */
+  /** `useSeo`: called by the pages that set canonical, hreflang and social tags. */
   useSeo: ReturnType<typeof vi.fn>
-  /** `useSeoMeta` -- called by the pages that set only title, description and robots. */
+  /** `useSeoMeta`: called by the pages that set only title, description and robots. */
   useSeoMeta: ReturnType<typeof vi.fn>
-  /** `injectSchema` -- the structured data a page publishes. */
+  /** `injectSchema`: the structured data a page publishes. */
   injectSchema: ReturnType<typeof vi.fn>
-  /** `createError` -- how a page raises a 404 for a route it does not serve. */
+  /** `createError`: how a page raises a 404 for a route it does not serve. */
   createError: ReturnType<typeof vi.fn>
 }
 
@@ -36,7 +36,7 @@ export interface PublicPageOptions {
   /** The route parameters (`route.params`). */
   params?: Record<string, string>
   /** The route query (`route.query`). */
-  query?: Record<string, string>
+  query?: Record<string, string | string[]>
   /** `tm` of vue-i18n: returns the raw message tree a page reads arrays from. */
   tm?: (key: string) => unknown
   /** Whether the page is in dark mode. */
@@ -51,7 +51,7 @@ export interface PublicPageOptions {
  */
 export const stubPublicPageRuntime = (options: PublicPageOptions = {}): PublicPageSpies => {
   const spies: PublicPageSpies = {
-    useSeo: vi.fn(() => ({ baseUrl: 'https://portal.test' })),
+    useSeo: vi.fn(() => ({ baseUrl: 'https://portal.test', canonicalUrl: ref('https://portal.test/canonical') })),
     useSeoMeta: vi.fn(),
     injectSchema: vi.fn(),
     createError: vi.fn((details: { statusCode: number, statusMessage?: string }) =>
@@ -72,6 +72,7 @@ export const stubPublicPageRuntime = (options: PublicPageOptions = {}): PublicPa
     productFamilySchema: (family: unknown) => ({ '@type': 'Product', family }),
     breadcrumbSchema: (items: unknown[]) => ({ '@type': 'BreadcrumbList', items }),
     faqSchema: (items: unknown[]) => ({ '@type': 'FAQPage', items }),
+    articleSchema: (article: object) => ({ '@type': 'Article', ...article }),
     injectSchema: spies.injectSchema,
   }))
   vi.stubGlobal('useAppColorMode', () => ({ isDark: ref(options.dark ?? false) }))

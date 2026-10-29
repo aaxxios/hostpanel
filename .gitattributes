@@ -5,3 +5,9 @@
 # remote shell then reads `set -eu\r` and answers "Illegal option -", which reads
 # like a bug in the script rather than in how it travelled.
 *.sh text eol=lf
+
+# The SSH key agent bundle is assembled from these files and installed on Linux servers
+# (EmbeddedSshAgentBundle embeds them as they are on disk). A CRLF checkout would ship a
+# shebang ending in a carriage return and break the version line the bundle reads, so they
+# keep LF everywhere.
+backend/agent/ssh-key-agent/** text eol=lf

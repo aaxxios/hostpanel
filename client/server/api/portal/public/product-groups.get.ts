@@ -12,4 +12,4 @@ import type { PortalProductGroup } from '~/types/portalproductgroup'
 
 /** Handler: the backend's active product groups, passed through as sent. */
 export default defineEventHandler(async (event): Promise<PortalProductGroup[]> =>
-  await internalApiCall<PortalProductGroup[]>(event, '/products/groups'))
+  await internalApiCall<PortalProductGroup[]>(event, '/public/product-groups'))

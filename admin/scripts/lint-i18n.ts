@@ -1,5 +1,5 @@
 /**
- * `npm run lint:i18n` — fails the build when the catalogues drift.
+ * `npm run lint:i18n`: fails the build when the catalogues drift.
  *
  * Loads `src/locales/{en,ru,hy}/<area>.json` (every key prefixed with the file name, the area),
  * then reports keys missing in a language, extra keys, unused keys and `t('literal')` calls whose key

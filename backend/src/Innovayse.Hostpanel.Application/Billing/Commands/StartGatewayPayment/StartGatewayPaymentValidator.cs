@@ -19,8 +19,9 @@ public sealed class StartGatewayPaymentValidator : LocalizedValidator<StartGatew
     public StartGatewayPaymentValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
-        RuleFor(x => x.InvoiceId).GreaterThan(0);
-        RuleFor(x => x.Module).NotEmpty();
-        RuleFor(x => x.ReturnUrl).NotEmpty();
+        RuleFor(x => x.InvoiceId).GreaterThan(0).WithMessage(L["InvoiceIdInvalid"]);
+        RuleFor(x => x.Module).NotEmpty().WithMessage(L["GatewayModuleRequired"]);
+        RuleFor(x => x.ReturnUrl).NotEmpty().WithMessage(L["ReturnUrlRequired"])
+            .MustBeAbsoluteWebUrl(L["ReturnUrlInvalid"]);
     }
 }

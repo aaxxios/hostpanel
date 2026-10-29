@@ -2,7 +2,6 @@ using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Domain.Hosting;
-using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Services;
@@ -91,13 +90,23 @@ internal sealed class DemoServiceSeeder
     /// <returns>The service count.</returns>
     private static int ServiceCountFor(int position) => position == 0 ? 12 : 1 + (position % 3);
 
-    /// <summary>The status a service ends up in, following the pattern but never contradicting its owner.</summary>
+    /// <summary>
+    /// The status a service ends up in, following the pattern but never contradicting its owner. Only a hosting
+    /// service is left pending, because provisioning is the one thing a pending service waits for and only a hosting
+    /// account can be provisioned; any other product takes the active state in its place.
+    /// </summary>
     /// <param name="client">The owner.</param>
     /// <param name="sequence">The service's running number.</param>
+    /// <param name="type">The type of the product the service is of.</param>
     /// <returns>The status to move the service to.</returns>
-    private static ServiceStatus StatusFor(Client client, int sequence)
+    private static ServiceStatus StatusFor(Client client, int sequence, ProductType type)
     {
         var fromPattern = StatusPattern[sequence % StatusPattern.Length];
+        if (fromPattern == ServiceStatus.Pending && !DemoCatalogueSeeder.IsHosting(type))
+        {
+            fromPattern = ServiceStatus.Active;
+        }
+
         return client.Status switch
         {
             ClientStatus.Closed => ServiceStatus.Terminated,
@@ -134,27 +143,27 @@ internal sealed class DemoServiceSeeder
             for (var i = 0; i < ServiceCountFor(c); i++)
             {
                 var product = products[((c * 3) + (i * 5)) % products.Count];
-                var cycleName = (c + i) % 3 == 0 ? BillingCycleNames.Annual : BillingCycleNames.Monthly;
-                var price = product.PriceFor(currency, BillingCycleParser.Parse(cycleName)) ?? 0m;
-                var status = StatusFor(client, sequence);
+                var cycle = (c + i) % 3 == 0 ? BillingCycle.Annual : BillingCycle.Monthly;
+                var price = product.PriceFor(currency, cycle) ?? 0m;
+                var status = StatusFor(client, sequence, product.Type);
                 var host = i == 0 ? DemoSites.HostOf(client) : $"{SitePrefixes[(c + i) % SitePrefixes.Length]}.{DemoSites.HostOf(client)}";
                 var reference = status == ServiceStatus.Pending ? null : $"demo-account-{client.Id}-{i}";
 
                 // Ordered a few days after the customer signed up, one service after another, not at the moment of seeding.
-                var service = ClientService.Create(client.Id, product.Id, cycleName);
+                var service = ClientService.Create(client.Id, product.Id, cycle, _today);
                 service.Backdate(client.CreatedAt.AddDays(2 + (3 * i)));
                 if (status != ServiceStatus.Pending)
                 {
-                    service.Activate(reference!);
+                    service.Activate(reference!, service.CreatedAt, _today);
                 }
 
                 if (status == ServiceStatus.Suspended)
                 {
-                    service.Suspend("Unpaid invoice", true, SuspensionSource.Overdue);
+                    service.Suspend(_today, "Unpaid invoice", true, SuspensionSource.Overdue);
                 }
                 else if (status == ServiceStatus.Terminated)
                 {
-                    service.Terminate("Cancelled by the customer", true);
+                    service.Terminate(_today, "Cancelled by the customer", true);
                 }
 
                 var serverId = status == ServiceStatus.Pending ? null : PickServerId(product.Type, groups, servers, serverTurn);
@@ -178,28 +187,28 @@ internal sealed class DemoServiceSeeder
                     renewalDemoPlaced = true;
                 }
 
-                service.Update(
-                    domain: host,
-                    dedicatedIp: product.Type is ProductType.Vps or ProductType.Dedicated ? $"198.51.100.{100 + sequence}" : null,
-                    username: product.Type is ProductType.SharedHosting or ProductType.Vps or ProductType.Dedicated ? $"demo{client.Id}{i}" : null,
-                    password: null,
-                    billingCycle: cycleName,
-                    recurringAmount: price,
-                    paymentMethod: PaymentMethodNames.Card,
-                    nextRenewalAt: renewal,
-                    subscriptionId: null,
-                    overrideAutoSuspend: false,
-                    suspendUntil: null,
-                    autoTerminateEndOfCycle: false,
-                    autoTerminateReason: null,
-                    adminNotes: status == ServiceStatus.Suspended ? "Suspended by the billing run until the invoice is paid." : null,
-                    provisioningRef: reference,
-                    firstPaymentAmount: price,
-                    promotionCode: null,
-                    terminatedAt: status == ServiceStatus.Terminated ? _today.AddDays(-(10 + ((c + i) % 40))) : null,
-                    serverId: serverId,
-                    quantity: 1,
-                    productId: null);
+                service.ChangeBillingTerms(new ServiceBillingTerms(
+                    BillingCycle: cycle,
+                    Quantity: 1,
+                    FirstPaymentAmount: price,
+                    RecurringAmount: price,
+                    NextRenewalAt: renewal,
+                    PaymentMethod: PaymentMethodNames.Card,
+                    PromotionCode: null,
+                    SubscriptionId: null));
+                service.RecordHostingAccount(new ServiceHostingAccount(
+                    ServerId: serverId,
+                    Domain: host,
+                    ProvisioningRef: reference,
+                    DedicatedIp: product.Type is ProductType.Vps or ProductType.Dedicated ? $"198.51.100.{100 + sequence}" : null,
+                    Username: DemoCatalogueSeeder.IsHosting(product.Type) ? $"demo{client.Id}{i}" : null,
+                    Password: null));
+                service.UpdateAdminNotes(status == ServiceStatus.Suspended ? "Suspended by the billing run until the invoice is paid." : null);
+                if (status == ServiceStatus.Terminated)
+                {
+                    service.CorrectTerminationDate(_today.AddDays(-(10 + ((c + i) % 40))));
+                }
+
                 _db.ClientServices.Add(service);
                 sequence++;
             }
@@ -266,7 +275,8 @@ internal sealed class DemoServiceSeeder
                 diskLimit * diskShare / 100,
                 diskLimit,
                 bandwidthLimit * bandwidthShare / 100,
-                bandwidthLimit));
+                bandwidthLimit,
+                _today));
         }
 
         await _db.SaveChangesAsync(ct);

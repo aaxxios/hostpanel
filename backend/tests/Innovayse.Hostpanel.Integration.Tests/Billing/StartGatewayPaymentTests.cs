@@ -1,18 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.SDK.Plugins;
 using Innovayse.SDK.Plugins.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -36,7 +33,7 @@ public sealed class StartGatewayPaymentTests(IntegrationTestFactory factory) : I
     private WebApplicationFactory<Program> BuildHost(FakePaymentPluginResolver resolver) =>
         factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
-                services.AddScoped<IPaymentPluginResolver>(_ => resolver)));
+                services.AddSingleton<IPaymentPluginResolver>(resolver)));
 
     /// <summary>Stamps the client's billing currency, the only way to control what an invoice raised for them bills in.</summary>
     /// <param name="host">The host whose database the client lives in.</param>
@@ -106,7 +103,7 @@ public sealed class StartGatewayPaymentTests(IntegrationTestFactory factory) : I
 
     /// <summary>
     /// A USD invoice against a plugin configured for AMD is refused with
-    /// <c>GATEWAY_CURRENCY_MISMATCH</c> before the gateway is ever called — the invoice's own
+    /// <c>GATEWAY_CURRENCY_MISMATCH</c> before the gateway is ever called. The invoice's own
     /// currency decides the match, not the client's current one, and no other lookup is made
     /// that a later currency change on the client record could reach.
     /// </summary>
@@ -153,8 +150,7 @@ public sealed class StartGatewayPaymentTests(IntegrationTestFactory factory) : I
         var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "gw-start-paid");
         var admin = await BillingTestSeeds.AdminClientAsync(factory, host);
         var invoiceId = await BillingTestSeeds.CreateInvoiceAsync(admin, clientId, 10m);
-        (await client.PostAsync($"/api/me/invoices/{invoiceId}/pay", content: null))
-            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await BillingTestSeeds.MarkPaidAsync(admin, invoiceId, 10m);
 
         var response = await StartAsync(client, invoiceId);
 
@@ -226,6 +222,42 @@ public sealed class StartGatewayPaymentTests(IntegrationTestFactory factory) : I
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         body.GetProperty("redirectUrl").GetString().Should().Be("https://pg.example/pay?mdOrder=gw-second");
+    }
+
+    /// <summary>
+    /// A plugin that throws while registering the payment (a gateway outage) answers 503 with
+    /// <c>PAYMENT_GATEWAY_SERVICE_UNAVAILABLE</c> and <c>Retry-After</c>, never a 500; the gateway's
+    /// own text stays out of the body and no session is stored on the invoice.
+    /// </summary>
+    [Fact]
+    public async Task PluginOutageAnswersServiceUnavailableWithoutStoringASession()
+    {
+        const string gatewayText = "bank-gateway internal fault 0xDEAD";
+        var plugin = new FakePaymentPlugin
+        {
+            CurrencyCode = "840",
+            CreatePaymentThrows = new HttpRequestException(gatewayText),
+        };
+        var resolver = new FakePaymentPluginResolver();
+        resolver.Register("bank-gateway", plugin);
+        var host = BuildHost(resolver);
+        var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "gw-start-outage");
+        var admin = await BillingTestSeeds.AdminClientAsync(factory, host);
+        var invoiceId = await BillingTestSeeds.CreateInvoiceAsync(admin, clientId, 10m);
+
+        var response = await StartAsync(client, invoiceId);
+
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.PAYMENT_GATEWAY_SERVICE_UNAVAILABLE);
+        response.Headers.RetryAfter.Should().NotBeNull();
+        (await response.Content.ReadAsStringAsync()).Should().NotContain(gatewayText);
+        plugin.CreatePaymentCallCount.Should().Be(1);
+
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var invoice = await context.Invoices.AsNoTracking().FirstAsync(i => i.Id == invoiceId, CancellationToken.None);
+        invoice.GatewayOrderId.Should().BeNull();
+        invoice.GatewayStartedAt.Should().BeNull();
     }
 
     /// <summary>

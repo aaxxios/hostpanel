@@ -2,6 +2,7 @@ using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Products.Common;
 using Innovayse.Hostpanel.Application.Resources;
+using Innovayse.Hostpanel.Domain.Products;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Products.Commands.CreateProduct;
@@ -30,6 +31,8 @@ public sealed class CreateProductValidator : LocalizedValidator<CreateProductCom
             .MaximumLength(NameMaxLength).WithMessage(L["ProductNameTooLong", NameMaxLength]);
         RuleFor(x => x.Description).MaximumLength(DescriptionMaxLength).When(x => x.Description is not null)
             .WithMessage(L["ProductDescriptionTooLong", DescriptionMaxLength]);
+        RuleFor(x => x.Website).MaximumLength(Product.WebsiteMaxLength).When(x => x.Website is not null)
+            .WithMessage(L["ContentUrlTooLong", Product.WebsiteMaxLength]);
         RuleFor(x => x.PackageName).MaximumLength(PackageNameMaxLength).When(x => x.PackageName is not null)
             .WithMessage(L["ProductPackageNameTooLong", PackageNameMaxLength]);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0)

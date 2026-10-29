@@ -106,14 +106,13 @@
   <data name="Forbidden" xml:space="preserve">
     <value>Մուտքը արգելված է</value>
   </data>
+  <data name="CsrfHeaderMissingDetail" xml:space="preserve">
+    <value>Այս հարցումը պետք է ուղարկվի հենց վահանակից։ Թարմացրեք էջը և կրկին փորձեք։</value>
+  </data>
   <data name="ForbiddenDetail" xml:space="preserve">
     <value>Դուք իրավունք չունեք կատարելու այս գործողությունը։</value>
   </data>
   <data name="InvalidFieldValue" xml:space="preserve">
     <value>Այս արժեքը վավեր չէ։</value>
-  </data>
-  <data name="RateLimited" xml:space="preserve">
-    <value>Հարցումները ուղարկվում են չափազանց հաճախ։ Խնդրում ենք մի փոքր սպասել և կրկնել փորձը։</value>
-    <comment>RATE_LIMITED. Wording reused from client/locales/*/error.json -&gt; error.rateLimited.</comment>
   </data>
 </root>

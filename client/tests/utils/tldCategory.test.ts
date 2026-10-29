@@ -9,7 +9,12 @@ import { describe, expect, it } from 'vitest'
 import { TldCategory } from '~/types/tldcategory'
 import { tldCategoryLabel, tldCategorySlug } from '~/utils/tldCategory'
 
-/** Translator that echoes the key so the lookup is visible. */
+/**
+ * Translator that echoes the key so the lookup is visible.
+ *
+ * @param key Message key.
+ * @returns The key wrapped as `T(key)`.
+ */
 const echo = (key: string): string => `T(${key})`
 
 describe('tldCategorySlug', () => {

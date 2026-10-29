@@ -1,21 +1,21 @@
 <script setup lang="ts">
 /**
- * Order detail view — one order with its items, linked invoice and the admin actions
+ * Order detail view: one order with its items, linked invoice and the admin actions
  * (accept, cancel, delete).
  *
- * Reads `stores/orders`; a refused load shows `store.error`, a refused accept, cancel or delete
- * shows `store.actionError` above the order.
+ * Reads `stores/orders`; a refused load shows `store.error` with a retry. The outcome of an accept
+ * or cancel (success, or the API's sentence) shows above the order; a delete returns to the list.
+ * Cancelling and deleting are confirmed first in a danger prompt.
  */
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import { useRoute, useRouter } from 'vue-router'
 import OrderFact from '@/components/orders/OrderFact.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
@@ -23,6 +23,7 @@ import UiLink from '@/components/ui/UiLink.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -39,20 +40,50 @@ import { invoiceStatusTone, orderItemStatusTone, orderStatusTone, statusLabel } 
 import { OrderStatus } from '@/types/order'
 import { useOrdersStore } from '@/stores/orders'
 import { AppRoute, clientPath, invoicePath } from '@/lib/routes'
+import { useResultBanner } from '@/composables/useResultBanner'
+import { UiDialogVariant } from '@/utils/ui/dialog'
+import { UiTone } from '@/utils/ui/tone'
+
+/** The irreversible order changes the danger confirmation guards. */
+enum OrderDangerAction {
+  /** Cancel the pending order. */
+  Cancel = 'cancel',
+  /** Delete the order. */
+  Delete = 'delete',
+}
 
 const { t } = useI18n()
-
-
-/** Fallback text for fields the API leaves unresolved. */
-
-const { clientLabel } = useFallbackLabels()
 
 const route = useRoute()
 const router = useRouter()
 const store = useOrdersStore()
 
-/** Whether the delete confirmation dialog is open. */
-const showDeleteConfirm = ref(false)
+/** The irreversible change waiting for confirmation, null when the prompt is closed. */
+const dangerConfirm = ref<OrderDangerAction | null>(null)
+
+/** True while an order command is in flight. */
+const processing = ref(false)
+
+/** The outcome line of the last accept or cancel. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/** Title of the danger confirmation. */
+const dangerTitle = computed<string>(() =>
+  dangerConfirm.value === OrderDangerAction.Cancel ? t('orders.orderDetail.confirmCancelTitle') : t('orders.orderDetail.deleteOrder'),
+)
+
+/** Prompt of the danger confirmation. */
+const dangerMessage = computed<string>(() =>
+  dangerConfirm.value === OrderDangerAction.Cancel ? t('orders.orderDetail.confirmCancelMessage') : t('orders.orderDetail.areYouSureYouWant'),
+)
+
+/** Confirm label of the danger confirmation. */
+const dangerLabel = computed<string>(() =>
+  dangerConfirm.value === OrderDangerAction.Cancel ? t('orders.orderDetail.cancelOrder') : t('shared.delete'),
+)
 
 /** Admin notes text area value. */
 const notesText = ref('')
@@ -65,34 +96,60 @@ const notesText = ref('')
 const orderId = (): number => Number(route.params.id)
 
 /**
+ * Runs one order command and shows its outcome above the order.
+ *
+ * @param command - The store call to run.
+ * @param successKey - Locale key of the success sentence, or null when success navigates away.
+ * @returns True when the API accepted the command.
+ */
+const runCommand = async (command: () => Promise<boolean>, successKey: string | null): Promise<boolean> => {
+  feedback.clear()
+  processing.value = true
+  const ok = await command()
+  processing.value = false
+  if (!ok) {
+    feedback.show(store.actionError ?? t('errors.noAnswer'), true)
+  } else if (successKey !== null) {
+    feedback.show(t(successKey), false)
+  }
+  return ok
+}
+
+/**
  * Accepts the current order.
  *
  * @returns Resolves when the store has finished.
  */
 const handleAccept = async (): Promise<void> => {
-  await store.acceptOrder(orderId())
+  const ok = await runCommand(() => store.acceptOrder(orderId()), 'orders.orderDetail.orderAccepted')
+  if (ok && store.acceptFailures.length > 0) {
+    feedback.show(t('orders.fulfillment.acceptedWithFailedLines', { lines: store.acceptFailureNames }), true)
+  }
 }
 
 /**
- * Cancels the current order.
+ * Runs the change the operator confirmed: a cancel stays on the order, a delete returns to the
+ * list; a refusal stays on the page with the API's sentence.
  *
- * @returns Resolves when the store has finished.
+ * @returns Resolves when the change has settled.
  */
-const handleCancel = async (): Promise<void> => {
-  await store.cancelOrder(orderId())
-}
-
-/**
- * Deletes the current order and returns to the list; a refusal stays on the page and shows
- * `store.actionError`.
- *
- * @returns Resolves when the order is gone and the list is open, or the dialog is closed.
- */
-const handleDelete = async (): Promise<void> => {
-  const deleted = await store.deleteOrder(orderId())
-  showDeleteConfirm.value = false
+const confirmDanger = async (): Promise<void> => {
+  if (dangerConfirm.value === OrderDangerAction.Cancel) {
+    await runCommand(() => store.cancelOrder(orderId()), 'orders.orderDetail.orderCancelled')
+    dangerConfirm.value = null
+    return
+  }
+  const deleted = await runCommand(() => store.deleteOrder(orderId()), null)
+  dangerConfirm.value = null
   if (deleted) {
     await router.push(AppRoute.Orders)
+  }
+}
+
+/** Closes the danger confirmation; ignored while the confirmed change runs. */
+const dismissDanger = (): void => {
+  if (!processing.value) {
+    dangerConfirm.value = null
   }
 }
 
@@ -120,14 +177,16 @@ onMounted(async () => {
       <UiSkeleton :lines="3" />
     </UiStack>
 
-    <UiAlert v-else-if="store.error" variant="danger" data-testid="order-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="order-error"
+      @retry="store.fetchOne(orderId())"
+    />
 
     <template v-else-if="store.currentOrder">
-      <UiAlert v-if="store.actionError" variant="danger" data-testid="order-action-error">
-        {{ store.actionError }}
-      </UiAlert>
+      <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="order-action-feedback" />
 
       <UiPageHeader :title="store.currentOrder.orderNumber" data-testid="order-header">
         <UiStack direction="row" gap="sm" align="center" wrap>
@@ -154,7 +213,7 @@ onMounted(async () => {
             variant="danger"
             size="sm"
             data-testid="order-cancel"
-            @click="handleCancel"
+            @click="dangerConfirm = OrderDangerAction.Cancel"
           >
             <UiIcon :markup="Icon.Close" size="sm" />
             {{ t('shared.cancel') }}
@@ -164,7 +223,7 @@ onMounted(async () => {
             variant="ghost"
             size="sm"
             data-testid="order-delete"
-            @click="showDeleteConfirm = true"
+            @click="dangerConfirm = OrderDangerAction.Delete"
           >
             <UiIcon :markup="Icon.Trash" size="sm" />
             {{ t('shared.delete') }}
@@ -180,7 +239,7 @@ onMounted(async () => {
             </UiHeading>
             <OrderFact :label="t('shared.client')">
               <UiLink variant="link" :to="clientPath(store.currentOrder.clientId)" data-testid="order-client">
-                {{ clientLabel(store.currentOrder.clientName, store.currentOrder.clientId) }}
+                {{ store.currentOrder.clientName }}
               </UiLink>
             </OrderFact>
             <OrderFact :label="t('shared.paymentMethod')">
@@ -191,6 +250,11 @@ onMounted(async () => {
             </OrderFact>
             <OrderFact :label="t('orders.orderDetail.created')">
               {{ formatDateTime(store.currentOrder.createdAt) }}
+            </OrderFact>
+            <OrderFact :label="t('orders.orderDetail.linesSubtotal')">
+              <span data-testid="order-lines-subtotal">
+                {{ formatPlainAmount(store.currentOrder.total, store.currentOrder.currency) }}
+              </span>
             </OrderFact>
           </UiStack>
         </UiCard>
@@ -218,8 +282,14 @@ onMounted(async () => {
                   &mdash;
                 </template>
               </OrderFact>
-              <OrderFact :label="t('shared.total')">
-                {{ formatPlainAmount(store.currentOrder.total, store.currentOrder.currency) }}
+              <OrderFact :label="t('orders.orderDetail.invoiceTotal')">
+                <span data-testid="order-invoice-total">
+                  {{
+                    store.currentOrder.invoiceTotal === null
+                      ? '—'
+                      : formatPlainAmount(store.currentOrder.invoiceTotal, store.currentOrder.currency)
+                  }}
+                </span>
               </OrderFact>
             </template>
             <UiText v-else tone="muted" size="md">
@@ -283,14 +353,15 @@ onMounted(async () => {
     </template>
 
     <UiDialog
-      v-if="showDeleteConfirm"
-      variant="confirm"
-      tone="danger"
-      :title="t('orders.orderDetail.deleteOrder')"
-      :message="t('orders.orderDetail.areYouSureYouWant')"
-      :confirm-label="t('shared.delete')"
-      @confirm="handleDelete"
-      @close="showDeleteConfirm = false"
+      :open="dangerConfirm !== null"
+      :variant="UiDialogVariant.Confirm"
+      :title="dangerTitle"
+      :message="dangerMessage"
+      :confirm-label="dangerLabel"
+      :loading="processing"
+      :tone="UiTone.Danger"
+      @confirm="confirmDanger"
+      @close="dismissDanger"
     />
   </UiStack>
 </template>

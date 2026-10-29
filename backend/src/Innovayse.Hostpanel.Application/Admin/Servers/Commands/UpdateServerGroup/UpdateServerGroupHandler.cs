@@ -38,7 +38,8 @@ public sealed class UpdateServerGroupHandler
             return Result.FailureCode(HostpanelErrorCodes.SERVER_GROUP_NOT_FOUND);
         }
 
-        group.Update(cmd.Name, cmd.FillType);
+        group.Rename(cmd.Name);
+        group.ChangeFillType(cmd.FillType);
 
         // Remove servers no longer in the group.
         foreach (var server in group.Servers.Where(s => !cmd.ServerIds.Contains(s.Id)).ToList())
@@ -47,7 +48,7 @@ public sealed class UpdateServerGroupHandler
         }
 
         // Add newly assigned servers. A server named in the list but not found is silently
-        // skipped -- the same shape the pre-conversion handler used.
+        // skipped.
         var currentIds = group.Servers.Select(s => s.Id).ToHashSet();
         var newIds = cmd.ServerIds.Where(id => !currentIds.Contains(id)).ToList();
         var newServers = await _context.Servers

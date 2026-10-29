@@ -60,7 +60,7 @@ test('a refused creation shows the API sentence', async ({ page }) => {
   await fieldOf(page, 'migration-source-url').fill('https://old.example.test')
   await page.getByTestId('migration-create').click()
 
-  await expect(page.getByTestId('migration-error')).toContainText(sentence)
+  await expect(page.getByTestId('migration-create-error')).toContainText(sentence)
 })
 
 test('an existing job is listed in the history and selecting it shows its setup', async ({ page }) => {

@@ -40,7 +40,7 @@
 
 <script setup lang="ts">
 /**
- * aurora domain search bar — the wide field and category filter that head the
+ * aurora domain search bar: the wide field and category filter that head the
  * domains page. Presentation only: it emits the term and the chosen category.
  */
 import { BRAND_BUTTON } from '~/templates/aurora/buttons'

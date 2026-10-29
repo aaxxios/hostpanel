@@ -26,4 +26,6 @@ export interface ReportDailyTransactions {
   totalFees: number
   /** Money paid out in the month. */
   totalAmountOut: number
+  /** ISO 4217 code of the base currency every amount is converted to. */
+  currency: string
 }

@@ -1,5 +1,5 @@
 /**
- * Tests of IncomeForecastView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of IncomeForecastView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -13,7 +13,8 @@ runReportCase({
   name: 'IncomeForecastView',
   view: IncomeForecastView,
   routes: {
-    'GET /reports/income-forecast': () => json([{ month: 'Jan', monthly: 1, quarterly: 2, semiAnnual: 3, annual: 4, total: 10 }]),
+    'GET /reports/income-forecast': () => json([{ month: 'Jan', monthly: 1, quarterly: 2, semiAnnual: 3, annual: 4, total: 10, currency: 'USD' }]),
   },
   expected: ['Income Forecast', 'Jan', '$10.00'],
+  retryable: true,
 })

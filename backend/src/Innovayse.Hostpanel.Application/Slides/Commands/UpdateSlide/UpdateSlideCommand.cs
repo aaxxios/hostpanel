@@ -1,13 +1,13 @@
 using Innovayse.Hostpanel.Application.Slides.Common;
 using Innovayse.Hostpanel.Domain.Slides;
-
 using Innovayse.Hostpanel.Domain.Slides.Enums;
+
 namespace Innovayse.Hostpanel.Application.Slides.Commands.UpdateSlide;
 
 /// <summary>Command to update an existing homepage slide and replace its translations.</summary>
 /// <param name="Id">
 /// The slide identifier to update; wins over any id in the body. A value type, so it is left
-/// non-nullable — a missing <c>int</c> in the body binds to <c>0</c> rather than being treated as
+/// non-nullable: a missing <c>int</c> in the body binds to <c>0</c> rather than being treated as
 /// a required member, and the route overlay (<c>command with { Id = id }</c>) replaces it.
 /// </param>
 /// <param name="IconName">New MDI icon name.</param>

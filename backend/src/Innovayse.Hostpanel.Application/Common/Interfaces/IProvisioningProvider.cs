@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Domain.Provisioning;
+using Innovayse.Hostpanel.Domain.Provisioning.Enums;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 
@@ -15,7 +16,9 @@ public interface IProvisioningProvider
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// A <see cref="ProvisioningResult"/> indicating success or failure,
-    /// and the provider-assigned reference on success.
+    /// and the provider-assigned reference on success. An account the provider already holds under the
+    /// requested username is answered with <see cref="ProvisioningOutcome.AlreadyExists"/>, so a retry
+    /// after a lost answer is safe.
     /// </returns>
     Task<ProvisioningResult> ProvisionAsync(ProvisionAccountOrder req, CancellationToken ct);
 
@@ -25,7 +28,8 @@ public interface IProvisioningProvider
     /// <param name="req">Suspension request containing the account reference and reason.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <exception cref="System.InvalidOperationException">
-    /// Thrown when the account does not exist or is already suspended.
+    /// Thrown when the provider refuses and the account is not already suspended; an account already
+    /// suspended is success, so a retry is safe.
     /// </exception>
     Task SuspendAsync(SuspendAccountOrder req, CancellationToken ct);
 
@@ -35,7 +39,8 @@ public interface IProvisioningProvider
     /// <param name="provisioningRef">Provider-assigned reference for the account to unsuspend.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <exception cref="System.InvalidOperationException">
-    /// Thrown when the account does not exist or is not currently suspended.
+    /// Thrown when the provider refuses and the account is not already active; an account already
+    /// active is success, so a retry is safe.
     /// </exception>
     Task UnsuspendAsync(string provisioningRef, CancellationToken ct);
 
@@ -45,7 +50,8 @@ public interface IProvisioningProvider
     /// <param name="req">Termination request containing the account reference and reason.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <exception cref="System.InvalidOperationException">
-    /// Thrown when the account does not exist on the provider.
+    /// Thrown when the provider refuses and the account is not confirmed gone; an account already
+    /// removed is success, so a retry is safe.
     /// </exception>
     Task TerminateAsync(TerminateAccountOrder req, CancellationToken ct);
 
@@ -65,7 +71,7 @@ public interface IProvisioningProvider
     /// </summary>
     /// <param name="provisioningRef">Provider-assigned reference for the account.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>A time-limited control panel SSO URL string.</returns>
+    /// <returns>A time-limited control-panel sign-in link string.</returns>
     Task<string> GetCPanelSsoUrlAsync(string provisioningRef, CancellationToken ct);
 
     /// <summary>

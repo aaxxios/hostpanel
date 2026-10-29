@@ -1,7 +1,7 @@
 /**
  * The one endpoint the admin panel may read before anybody has signed in.
  *
- * No state lives here — the branding store owns that. This file only says what the
+ * No state lives here: the branding store owns that. This file only says what the
  * backend offers and in what shape.
  *
  * `GET /api/settings/public` is `[AllowAnonymous]` and returns an allow-listed subset of
@@ -28,7 +28,7 @@ export const usePublicSettingsApi = () => {
   /**
    * Reads the settings a signed-out page is allowed to see.
    *
-   * Anonymous, and has to be — the login screen renders before any session exists and
+   * Anonymous, and has to be: the login screen renders before any session exists and
    * still has to show the operator's mark rather than the product's.
    *
    * @returns The allow-listed key/value pairs that currently have a value.

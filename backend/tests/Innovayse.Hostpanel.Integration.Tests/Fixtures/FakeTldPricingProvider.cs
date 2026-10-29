@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Domain.Domains;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
@@ -31,52 +32,51 @@ public sealed class FakeTldPricingProvider : IRegistrarProvider
         Task.FromResult(new RegistrarResult(true, "FAKE-RENEW-REF", DateTimeOffset.UtcNow.AddYears(1), null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> CancelTransferAsync(string domainName, string registrarRef, CancellationToken ct) =>
-        Task.FromResult(new RegistrarResult(true, registrarRef, null, null));
+    public Task<RegistrarResult> CancelTransferAsync(DomainRef domain, CancellationToken ct) =>
+        Task.FromResult(new RegistrarResult(true, domain.RegistrarRef, null, null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> InitiateOutgoingTransferAsync(string domainName, string registrarRef, CancellationToken ct) =>
-        Task.FromResult(new RegistrarResult(true, registrarRef, null, null));
+    public Task<RegistrarResult> InitiateOutgoingTransferAsync(DomainRef domain, CancellationToken ct) =>
+        Task.FromResult(new RegistrarResult(true, domain.RegistrarRef, null, null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetAutoRenewAsync(string domainName, string registrarRef, bool enabled, CancellationToken ct) =>
-        Task.FromResult(new RegistrarResult(true, registrarRef, null, null));
+    public Task<RegistrarResult> SetAutoRenewAsync(RegistrarFlagChange change, CancellationToken ct) =>
+        Task.FromResult(new RegistrarResult(true, change.Domain.RegistrarRef, null, null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetWhoisPrivacyAsync(string domainName, string registrarRef, bool enabled, CancellationToken ct) =>
-        Task.FromResult(new RegistrarResult(true, registrarRef, null, null));
+    public Task<RegistrarResult> SetWhoisPrivacyAsync(RegistrarFlagChange change, CancellationToken ct) =>
+        Task.FromResult(new RegistrarResult(true, change.Domain.RegistrarRef, null, null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetRegistrarLockAsync(string domainName, string registrarRef, bool locked, CancellationToken ct) =>
-        Task.FromResult(new RegistrarResult(true, registrarRef, null, null));
+    public Task<RegistrarResult> SetRegistrarLockAsync(RegistrarFlagChange change, CancellationToken ct) =>
+        Task.FromResult(new RegistrarResult(true, change.Domain.RegistrarRef, null, null));
 
     /// <inheritdoc/>
-    public Task<string?> GetEppCodeAsync(string domainName, string registrarRef, CancellationToken ct) =>
+    public Task<string?> GetEppCodeAsync(DomainRef domain, CancellationToken ct) =>
         Task.FromResult<string?>("FAKE-EPP");
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetNameserversAsync(
-        string domainName, string registrarRef, IReadOnlyList<string> nameservers, CancellationToken ct) =>
-        Task.FromResult(new RegistrarResult(true, registrarRef, null, null));
+    public Task<RegistrarResult> SetNameserversAsync(NameserverChange change, CancellationToken ct) =>
+        Task.FromResult(new RegistrarResult(true, change.Domain.RegistrarRef, null, null));
 
     /// <inheritdoc/>
-    public Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(string domainName, string registrarRef, CancellationToken ct) =>
+    public Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(DomainRef domain, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<DnsRecord>>([]);
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> AddDnsRecordAsync(string domainName, string registrarRef, DnsRecord record, CancellationToken ct) =>
-        Task.FromResult(new RegistrarResult(true, registrarRef, null, null));
+    public Task<RegistrarResult> AddDnsRecordAsync(DnsRecordChange change, CancellationToken ct) =>
+        Task.FromResult(new RegistrarResult(true, change.Domain.RegistrarRef, null, null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> UpdateDnsRecordAsync(string domainName, string registrarRef, DnsRecord record, CancellationToken ct) =>
-        Task.FromResult(new RegistrarResult(true, registrarRef, null, null));
+    public Task<RegistrarResult> UpdateDnsRecordAsync(DnsRecordChange change, CancellationToken ct) =>
+        Task.FromResult(new RegistrarResult(true, change.Domain.RegistrarRef, null, null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> DeleteDnsRecordAsync(string domainName, string registrarRef, int recordId, CancellationToken ct) =>
-        Task.FromResult(new RegistrarResult(true, registrarRef, null, null));
+    public Task<RegistrarResult> DeleteDnsRecordAsync(DnsRecordRemoval removal, CancellationToken ct) =>
+        Task.FromResult(new RegistrarResult(true, removal.Domain.RegistrarRef, null, null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> ModifyContactDetailsAsync(string domainName, DomainContact contact, CancellationToken ct) =>
+    public Task<RegistrarResult> ModifyContactDetailsAsync(DomainContactChange change, CancellationToken ct) =>
         Task.FromResult(new RegistrarResult(true, "FAKE-REF", null, null));
 
     /// <inheritdoc/>
@@ -84,23 +84,23 @@ public sealed class FakeTldPricingProvider : IRegistrarProvider
         Task.FromResult<DomainContact?>(null);
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetEmailForwardingAsync(string domainName, bool enabled, CancellationToken ct) =>
+    public Task<RegistrarResult> SetEmailForwardingAsync(DomainFeatureToggle toggle, CancellationToken ct) =>
         Task.FromResult(new RegistrarResult(true, "FAKE-REF", null, null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> AddEmailForwardingRuleAsync(string domainName, string source, string destination, CancellationToken ct) =>
+    public Task<RegistrarResult> AddEmailForwardingRuleAsync(EmailForwardingRuleChange change, CancellationToken ct) =>
         Task.FromResult(new RegistrarResult(true, "FAKE-REF", null, null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> UpdateEmailForwardingRuleAsync(string domainName, string source, string destination, CancellationToken ct) =>
+    public Task<RegistrarResult> UpdateEmailForwardingRuleAsync(EmailForwardingRuleChange change, CancellationToken ct) =>
         Task.FromResult(new RegistrarResult(true, "FAKE-REF", null, null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> DeleteEmailForwardingRuleAsync(string domainName, string source, CancellationToken ct) =>
+    public Task<RegistrarResult> DeleteEmailForwardingRuleAsync(EmailForwardingRuleRemoval removal, CancellationToken ct) =>
         Task.FromResult(new RegistrarResult(true, "FAKE-REF", null, null));
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetDnsManagementAsync(string domainName, bool enabled, CancellationToken ct) =>
+    public Task<RegistrarResult> SetDnsManagementAsync(DomainFeatureToggle toggle, CancellationToken ct) =>
         Task.FromResult(new RegistrarResult(true, "FAKE-REF", null, null));
 
     /// <inheritdoc/>

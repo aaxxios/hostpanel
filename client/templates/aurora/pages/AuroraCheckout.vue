@@ -199,7 +199,7 @@
                   />
                 </UiGrid>
 
-                <UiStack v-if="selectedMethod === PAYMENT_MODULE_STRIPE" gap="none" class="mt-6 overflow-hidden">
+                <UiStack v-if="selectedMethod === PaymentModule.Stripe" gap="none" class="mt-6 overflow-hidden">
                   <CheckoutStripeCardForm ref="stripeCardFormRef" />
                 </UiStack>
               </UiCard>
@@ -326,7 +326,7 @@ import {
 } from 'lucide-vue-next'
 import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
 import { BRAND_BUTTON } from '~/templates/aurora/buttons'
-import { PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
+import { PaymentModule } from '~/types/paymentmodule'
 import { useCheckoutPage } from '~/composables/useCheckoutPage'
 
 /** Translator for the active locale. */

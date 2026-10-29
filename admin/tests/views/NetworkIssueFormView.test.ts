@@ -6,9 +6,26 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import NetworkIssueFormView from '@/views/NetworkIssueFormView.vue'
 import { NetworkIssuePriority, NetworkIssueStatus, NetworkIssueType } from '@/types/networkissue'
-import { callOf } from '../helpers/fetch'
+import { callOf, json, problem } from '../helpers/fetch'
 import { mountView } from '../helpers/mount'
-import { stubPathRoutes } from '../helpers/routes'
+import { stubPathRoutes, stubRoutes } from '../helpers/routes'
+
+/** The issue the edit-mode tests load. */
+const issue = {
+  id: 2,
+  title: 'Packet loss',
+  type: NetworkIssueType.Other,
+  server: null,
+  priority: NetworkIssuePriority.High,
+  status: NetworkIssueStatus.Scheduled,
+  startDate: '2026-10-01T08:00:00Z',
+  endDate: null,
+  description: 'Maintenance',
+  createdAt: '2026-10-01T08:00:00Z',
+}
+
+/** Where the edit-mode tests open the form. */
+const editRoute = { path: '/support/network-issues/2/edit', pattern: '/support/network-issues/:id/edit' }
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -73,5 +90,36 @@ describe('NetworkIssueFormView', () => {
       method: 'PUT',
       body: { type: NetworkIssueType.Other, priority: NetworkIssuePriority.High, status: NetworkIssueStatus.Scheduled },
     })
+  })
+
+  it('shows the API sentence next to the save button when the save is refused', async () => {
+    stubRoutes({ 'POST /api/network-issues': () => problem('Title is taken.', 409) })
+    const wrapper = await mountView(NetworkIssueFormView)
+
+    await wrapper.get('[data-testid="network-issue-form-title"]').setValue('Packet loss')
+    await wrapper.get('[data-testid="network-issue-form-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="network-issue-form-save-error"]').text()).toBe('Title is taken.')
+  })
+
+  it('offers a retry instead of the form when the issue cannot be loaded', async () => {
+    let calls = 0
+    stubRoutes({
+      'GET /api/network-issues/2': () => {
+        calls += 1
+        return calls === 1 ? problem('No such issue.', 404) : json(issue)
+      },
+    })
+    const wrapper = await mountView(NetworkIssueFormView, editRoute)
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="network-issue-form-error"]').text()).toContain('No such issue.')
+    expect(wrapper.find('[data-testid="network-issue-form-title"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="network-issue-form-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect((wrapper.get('[data-testid="network-issue-form-title"]').element as HTMLInputElement).value).toBe('Packet loss')
   })
 })

@@ -20,6 +20,7 @@ public sealed class CreateLocationValidator : LocalizedValidator<CreateLocationC
         RuleFor(x => x.CountryCode).NotEmpty().WithMessage(L["LocationCountryCodeInvalid"]).Matches("^[A-Za-z]{2}$").WithMessage(L["LocationCountryCodeInvalid"]);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0).WithMessage(L["ContentSortOrderInvalid"]);
         RuleFor(x => x.Translations).NotEmpty().WithMessage(L["ContentTranslationsRequired"]);
+        RuleFor(x => x.Translations).MustIncludeDefaultLocale(L["ContentDefaultTranslationRequired"]);
         RuleForEach(x => x.Translations).SetValidator(new LocationTranslationValidator(localizer));
     }
 }

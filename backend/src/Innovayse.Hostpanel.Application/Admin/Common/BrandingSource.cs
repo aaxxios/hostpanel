@@ -6,9 +6,9 @@ namespace Innovayse.Hostpanel.Application.Admin.Common;
 /// <remarks>
 /// <para>
 /// <b>Deliberately carries no content type.</b> The multipart part's <c>Content-Type</c> header
-/// is written by the client and is therefore a claim, not a fact -- the previous version of this
-/// upload trusted it as its only check, so a file named <c>.png</c> and declared
-/// <c>image/png</c> was written to the web root whatever its actual bytes were. The format is
+/// is written by the client and is therefore a claim, not a fact: trusted as the only check, a
+/// file named <c>.png</c> and declared <c>image/png</c> would be written to the web root
+/// whatever its actual bytes were. The format is
 /// decided by <see cref="Innovayse.Hostpanel.Application.Common.Interfaces.IBrandingImageProcessor"/>
 /// from the content itself.
 /// </para>
@@ -18,6 +18,9 @@ namespace Innovayse.Hostpanel.Application.Admin.Common;
 /// walk out of the upload directory.
 /// </para>
 /// </remarks>
-/// <param name="Content">The uploaded bytes, already length-capped by the caller.</param>
+/// <param name="Content">
+/// The uploaded stream, unread. The processor reads at most one byte past its ceiling from it, so
+/// an oversized upload is refused without being buffered whole.
+/// </param>
 /// <param name="FileName">The client-supplied name, for diagnostics only.</param>
-public sealed record BrandingSource(byte[] Content, string FileName);
+public sealed record BrandingSource(Stream Content, string FileName);

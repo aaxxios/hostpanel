@@ -9,6 +9,8 @@ export interface MigrationEntityProgress {
   imported: number
   /** Rows skipped because they already existed. */
   skipped: number
+  /** Rows whose import failed with an error. */
+  failed: number
   /** Rows the source reported for this group. */
   total: number
   /** True once the group has been fully processed. */
@@ -93,22 +95,12 @@ export interface MigrationLogEntry {
   identifier: string
   /** What happened to the row. */
   action: MigrationLogAction
-  /** Why the row was skipped or failed, null otherwise. */
+  /** Why the row was skipped, null unless it was skipped. */
+  skipReason: MigrationSkipReason | null
+  /** Technical detail of the error for a failed row, null otherwise. */
   reason: string | null
   /** When the row was logged. */
   createdAt: string
-}
-
-/** One page of a job's import log. */
-export interface MigrationLogPage {
-  /** The rows on this page. */
-  items: MigrationLogEntry[]
-  /** Rows matching the filter across all pages. */
-  totalCount: number
-  /** One-based page number. */
-  page: number
-  /** Rows per page. */
-  pageSize: number
 }
 
 /** A migration job as the API returns it. */
@@ -123,8 +115,8 @@ export interface MigrationJob {
   status: MigrationStatus
   /** Label the operator gave the job, null when none. */
   label: string | null
-  /** Why the job failed, null otherwise. */
-  errorMessage: string | null
+  /** Why the job failed, null otherwise; the detail stays in the server log. */
+  failure: MigrationJobFailure | null
   /** Which entity groups the job exports. */
   entitySelection: MigrationEntitySelection
   /** Per-group counters. */
@@ -192,13 +184,13 @@ export interface CreateMigrationJobPayload {
 /** Filter and paging of a job's import log. */
 export interface MigrationLogQuery {
   /** Keep only rows with this action. */
-  action?: string
+  action?: MigrationLogAction
   /** Keep only rows of this entity group. */
-  entityType?: string
-  /** One-based page number, 1 by default. */
-  page?: number
-  /** Rows per page, 50 by default. */
-  pageSize?: number
+  entityType?: MigrationEntityType
+  /** One-based page number. */
+  page: number
+  /** Rows per page. */
+  pageSize: number
 }
 
 /** Closed set of lifecycle states of a migration job. */
@@ -211,6 +203,8 @@ export const MigrationStatus = {
   Completed: 'Completed',
   /** The import stopped with an error. */
   Failed: 'Failed',
+  /** The import was requested and waits for the background worker. */
+  Queued: 'Queued',
 } as const
 
 /** Closed set of outcomes the import log records for a row. */
@@ -269,25 +263,100 @@ export interface MigrationExportFlags {
 /** One of the {@link MigrationStatus} values. */
 export type MigrationStatus = (typeof MigrationStatus)[keyof typeof MigrationStatus]
 
+/** Closed set of reasons a job failed, as the API sends them. */
+export const MigrationJobFailure = {
+  /** A reason not listed here, including jobs that failed before the reason was recorded. */
+  Unknown: 'Unknown',
+  /** The source plugin could not be reached. */
+  SourceUnreachable: 'SourceUnreachable',
+  /** The source plugin answered with a refusal, for example a wrong key. */
+  SourceRefused: 'SourceRefused',
+  /** The records could not be read or saved here. */
+  ImportFailed: 'ImportFailed',
+  /** The import was stopped before it finished. */
+  Cancelled: 'Cancelled',
+  /** The server stopped while the import was queued or running. */
+  Interrupted: 'Interrupted',
+  /** The source address is not one the server may call. */
+  SourceAddressNotAllowed: 'SourceAddressNotAllowed',
+} as const
+
+/** One of the {@link MigrationJobFailure} values. */
+export type MigrationJobFailure = (typeof MigrationJobFailure)[keyof typeof MigrationJobFailure]
+
 /** One of the {@link MigrationLogAction} values. */
 export type MigrationLogAction = (typeof MigrationLogAction)[keyof typeof MigrationLogAction]
 
+/** Closed set of reasons the import log gives for a skipped or failed row, as the API sends them. */
+export const MigrationSkipReason = {
+  /** The same record already exists here. */
+  AlreadyExists: 'AlreadyExists',
+  /** The client the record belongs to does not exist here. */
+  ClientNotFound: 'ClientNotFound',
+  /** The account for a client could not be created. */
+  AccountNotProvisioned: 'AccountNotProvisioned',
+  /** The product group the record refers to was not imported. */
+  ProductGroupNotFound: 'ProductGroupNotFound',
+  /** No product exists here to attach the service to. */
+  NoProducts: 'NoProducts',
+  /** The ticket the reply belongs to does not exist here. */
+  TicketNotFound: 'TicketNotFound',
+  /** The ticket the reply belongs to is closed. */
+  TicketClosed: 'TicketClosed',
+  /** Importing the record failed with an error; the detail stays in the server log. */
+  ImportFailed: 'ImportFailed',
+  /** No product here carries the name the record refers to. */
+  ProductNotFound: 'ProductNotFound',
+  /** The invoice the record pays was not imported here. */
+  InvoiceNotFound: 'InvoiceNotFound',
+  /** The source record carries no date the import needs. */
+  DateMissing: 'DateMissing',
+  /** No department exists here to place the ticket in. */
+  DepartmentNotFound: 'DepartmentNotFound',
+  /** No download category exists here to place the file in. */
+  DownloadCategoryNotFound: 'DownloadCategoryNotFound',
+  /** The client record has no first name and no email address to take one from. */
+  NameMissing: 'NameMissing',
+  /** The record names a billing cycle that cannot be billed here. */
+  BillingCycleUnsupported: 'BillingCycleUnsupported',
+  /** Every line of the order is a domain or a service addon, which has no catalogue product here. */
+  NoProductLines: 'NoProductLines',
+} as const
+
+/** One of the {@link MigrationSkipReason} values. */
+export type MigrationSkipReason = (typeof MigrationSkipReason)[keyof typeof MigrationSkipReason]
+
 /** Closed set of entity groups the import log names a row under, as the API sends them. */
 export const MigrationEntityType = {
+  /** Clients. */
   Clients: 'Clients',
+  /** Invoices. */
   Invoices: 'Invoices',
+  /** Services. */
   Services: 'Services',
+  /** Domains. */
   Domains: 'Domains',
+  /** Tickets. */
   Tickets: 'Tickets',
+  /** Products. */
   Products: 'Products',
+  /** Orders. */
   Orders: 'Orders',
+  /** Transactions. */
   Transactions: 'Transactions',
+  /** Quotes. */
   Quotes: 'Quotes',
+  /** Knowledgebase articles. */
   Knowledgebase: 'Knowledgebase',
+  /** Contacts. */
   Contacts: 'Contacts',
+  /** Ticket replies. */
   TicketReplies: 'TicketReplies',
+  /** Announcements. */
   Announcements: 'Announcements',
+  /** Downloads. */
   Downloads: 'Downloads',
+  /** Network issues. */
   NetworkIssues: 'NetworkIssues',
 } as const
 

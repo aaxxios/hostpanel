@@ -1,17 +1,13 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 
 /// <summary>
-/// <c>GET /api/admin/dashboard/activity</c>: an admin or reseller reads the merged, newest-first
+/// <c>GET /api/admin/dashboard/activity</c>: an admin reads the merged, newest-first
 /// activity feed, an out-of-range limit substitutes the default rather than being refused, a
 /// caller with only the Client role is refused, and the route is closed to a caller with no
 /// credential. This use case refuses nothing once authorized.
 /// </summary>
-/// <remarks>Split out of the deleted <c>DashboardEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetRecentActivityTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

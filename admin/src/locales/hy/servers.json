@@ -89,9 +89,6 @@
     "leastFull": "Ավելացնել ամենաքիչ լցված սերվերին",
     "fillUntilFull": "Լցնել ակտիվ սերվերը մինչև լրիվ լինելը, ապա անցնել հաջորդին"
   },
-  "moduleLabels": {
-    "wordPressHosting": "Innovayse WordPress Hosting"
-  },
   "ssh": {
     "open": "SSH",
     "title": "SSH բանալիների կառավարում — {name}",
@@ -99,8 +96,32 @@
     "healthy": "Agent-ը հասանելի է",
     "unhealthy": "Agent-ը հասանելի չէ",
     "notTested": "Ստուգված չէ",
-    "agentVersion": "Agent {version} ({provider})",
-    "agentError": "Վերջին ստուգումը ձախողվեց՝ {code}",
+    "agentVersion": "Agent {version}",
+    "agentVersionWithProvider": "Agent {version} ({provider})",
+    "agentError": "Վերջին ստուգումը ձախողվեց՝ {reason}",
+    "failures": {
+      "Unknown": "անհայտ պատճառ",
+      "Unreachable": "սերվերը հասանելի չէ",
+      "Timeout": "գործակալը ժամանակին չպատասխանեց",
+      "InternalError": "գործակալի ներքին սխալ",
+      "UnsupportedVersion": "գործակալի տարբերակը չի աջակցվում",
+      "InvalidRequest": "գործակալը մերժեց հարցումը",
+      "UnknownOperation": "գործակալը չի աջակցում այս գործողությունը",
+      "RequestTooLarge": "հարցումը չափազանց մեծ է",
+      "InvalidAccount": "հաշվի անունը անվավեր է",
+      "AccountNotFound": "հաշիվը չի գտնվել",
+      "AccountNotEligible": "այս հաշվի բանալիները հնարավոր չէ կառավարել",
+      "SshDisabled": "հաշվի համար shell մուտքն անջատված է",
+      "InvalidKey": "բանալին անվավեր է",
+      "DuplicateKey": "բանալին արդեն տեղադրված է",
+      "KeyIdConflict": "բանալու նույնացուցիչն արդեն զբաղված է",
+      "TooManyKeys": "հաշիվը հասել է բանալիների սահմանաչափին",
+      "UnsafePath": "բանալիների ֆայլի ուղին անվտանգ չէ",
+      "FileTooLarge": "բանալիների ֆայլը չափազանց մեծ է",
+      "AccountSuspended": "հաշիվը կասեցված է սերվերում",
+      "AgentNotConfigured": "սերվերը չունի agent-ի ամբողջական կարգավորումներ",
+      "BindingMismatch": "agent-ը տեղադրված է այլ սերվերի համար"
+    },
     "enabled": "Այս սերվերի հաճախորդները կարող են կառավարել SSH բանալիները",
     "enabledHint": "Միացնելու համար պահանջվում է հաջող ստուգում պահված կարգավորումներով, և դա ոչ մի հաշվի համար shell մուտք չի բացում։",
     "sshHostname": "SSH հոսթ",
@@ -153,6 +174,9 @@
     "stepTest": "4. Agent-ի ստուգում",
     "bindingMismatch": "Պատասխանած agent-ը տեղադրված է այլ սերվերի համար։ Ստուգեք agent-ի հոսթը կամ դրա վրա գործարկեք այս սերվերի տեղադրման հրամանը։",
     "stepEnable": "5. Միացում հաճախորդների համար",
-    "advanced": "Լրացուցիչ՝ օգտագործել գոյություն ունեցող ծառայողական բանալի"
+    "advanced": "Լրացուցիչ՝ օգտագործել գոյություն ունեցող ծառայողական բանալի",
+    "networkCsf": "CSF",
+    "networkFirewalld": "firewalld",
+    "networkUfw": "ufw"
   }
 }

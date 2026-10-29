@@ -3,10 +3,13 @@ name: CI
 # Checks pull requests from contributors, who build the standalone flavour.
 #
 # The full pipeline (images, deploys) runs on GitLab, and GitLab always has the private
-# registry credential, so it only ever compiles the SSO build. This workflow covers the
+# package feed credential, so it only ever compiles the external sign-on build. This workflow covers the
 # other one: the build every outside contributor gets from a plain clone, with
-# Innovayse.Auth left out (-p:InnovayseSso=false, see backend/Directory.Build.props).
+# the private authentication package left out (-p:InnovayseSso=false, see backend/Directory.Build.props).
 # It needs no secrets, which is also what makes it safe to run on pull requests from forks.
+#
+# Third-party actions are pinned to a commit SHA with the version in a comment; Dependabot
+# (github-actions ecosystem) keeps both up to date.
 
 on:
   pull_request:
@@ -20,6 +23,7 @@ permissions:
 env:
   DOTNET_VERSION: "9.0.x"
   NODE_VERSION: "22"
+  PHP_VERSION: "8.3"
 
 # A newer push to a pull request supersedes the older run, so only that one is cancelled.
 # Pushes to develop/main are never cancelled: a cancelled run there shows as a red check on
@@ -40,8 +44,8 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
       - name: Restore
@@ -54,13 +58,25 @@ jobs:
             dotnet test "tests/Innovayse.$suite.Tests" -c Release --no-build
           done
 
+  # Fails when a top-level folder of the Integration test project is in no shard below (its tests
+  # would run nowhere), is in two, or when a shard names a folder that is gone. The same script
+  # checks the GitLab pipeline, so the two lists cannot drift apart.
+  integration-shards:
+    name: Backend integration (shard coverage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Check every test folder is in exactly one shard
+        run: sh scripts/check-integration-shards.sh .github/workflows/ci.yml .gitlab-ci.yml
+
   # The Integration suite starts a full API host for every test class (about 430 of them), each on
   # a database of its own on one shared PostgreSQL container. The test project's
   # integration.runsettings (picked up by dotnet test) bounds its native memory, and the suite is
   # split for speed by top-level test folder into four shards that run
   # in parallel, mirroring backend:test:integration:a-d in .gitlab-ci.yml (which runs them one at a time). Every
-  # folder under Integration.Tests belongs to exactly one shard; a new folder must be added to
-  # one of them or its tests run nowhere. (Fixtures/ holds fakes only, no tests.)
+  # folder under the test project belongs to exactly one shard; a new folder must be added to
+  # one of them or its tests run nowhere, which integration-shards above enforces. (Fixtures/ holds fakes only, no tests.)
   integration:
     name: Backend integration (${{ matrix.shard }})
     runs-on: ubuntu-latest
@@ -74,7 +90,7 @@ jobs:
               FullyQualifiedName~Integration.Tests.Adapters.|FullyQualifiedName~Integration.Tests.Admin.|FullyQualifiedName~Integration.Tests.Audit.|FullyQualifiedName~Integration.Tests.Auth.|FullyQualifiedName~Integration.Tests.Clients.|FullyQualifiedName~Integration.Tests.Common.|FullyQualifiedName~Integration.Tests.Demo.|FullyQualifiedName~Integration.Tests.Health.|FullyQualifiedName~Integration.Tests.Identity.|FullyQualifiedName~Integration.Tests.Security.|FullyQualifiedName~Integration.Tests.Shared.
           - shard: 2 of 4
             filter: >-
-              FullyQualifiedName~Integration.Tests.Billing.|FullyQualifiedName~Integration.Tests.Domains.
+              FullyQualifiedName~Integration.Tests.Billing.|FullyQualifiedName~Integration.Tests.Domains.|FullyQualifiedName~Integration.Tests.Time.|FullyQualifiedName~Integration.Tests.Scheduling.
           - shard: 3 of 4
             filter: >-
               FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Support.|FullyQualifiedName~Integration.Tests.Faqs.|FullyQualifiedName~Integration.Tests.Partners.|FullyQualifiedName~Integration.Tests.Locations.|FullyQualifiedName~Integration.Tests.Projects.|FullyQualifiedName~Integration.Tests.Testimonials.
@@ -90,8 +106,8 @@ jobs:
       # Ryuk stays on in CI so a killed shard cannot leave PostgreSQL containers behind.
       TESTCONTAINERS_RYUK_DISABLED: "false"
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
       - name: Restore
@@ -101,21 +117,45 @@ jobs:
       - name: Integration tests (Testcontainers, shard ${{ matrix.shard }})
         run: dotnet test tests/Innovayse.Hostpanel.Integration.Tests -c Release --no-build --blame-crash --filter "${{ matrix.filter }}"
 
+  # Unit tests of the migration source addon (PHP). They run the exporters against an in-memory
+  # SQLite database, so the PHP setup must carry pdo_sqlite. Mirrors backend:test:migration-addon
+  # in .gitlab-ci.yml.
+  migration-addon:
+    name: Migration addon (PHP unit tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend/plugins/innovayse_migration
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: pdo_sqlite
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - run: composer test
+
   client:
-    name: Client portal (unit tests)
+    name: Client portal (lint + typecheck + unit tests)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
       run:
         working-directory: client
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: yarn
           cache-dependency-path: client/yarn.lock
       - run: yarn install --frozen-lockfile
+      - run: yarn lint
+      - run: yarn lint:i18n
+      - run: yarn typecheck
       - run: yarn test
 
   admin:
@@ -126,8 +166,8 @@ jobs:
       run:
         working-directory: admin
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -154,6 +194,6 @@ jobs:
       run:
         working-directory: admin
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: npm ci
       - run: npm run e2e

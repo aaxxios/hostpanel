@@ -4,6 +4,7 @@ using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Services.Commands.UnsuspendService;
+
 /// <summary>Validates <see cref="UnsuspendServiceCommand"/> before the handler executes.</summary>
 public sealed class UnsuspendServiceValidator : LocalizedValidator<UnsuspendServiceCommand>
 {

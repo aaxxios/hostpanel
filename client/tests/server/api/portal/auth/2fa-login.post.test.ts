@@ -51,4 +51,21 @@ describe('POST /api/portal/auth/2fa-login', () => {
     expect(error).toMatchObject({ statusCode: 400, data: { code: 'INVALID_CODE' } })
     expect(event.written).toEqual({})
   })
+
+  it('refuses with 502 and starts no session when the backend completes the sign-in without an access token', async () => {
+    backend.respondWith(() => ({ body: {} }))
+    const event = makeEvent({ body: { pendingToken: 'p', code: '123456' } })
+
+    const error = await refusal(() => route.default(event))
+
+    expect(error).toMatchObject({ statusCode: 502, data: { code: 'TWO_FACTOR_NO_TOKEN' } })
+    expect(event.written).toEqual({})
+  })
+
+  it.each([undefined, null, 'text', [1]])('refuses the body %j with 400 before calling the backend', async (body) => {
+    const error = await refusal(() => route.default(makeEvent({ body })))
+
+    expect(error).toMatchObject({ statusCode: 400, data: { code: 'BAD_BODY' } })
+    expect(backend.requests).toHaveLength(0)
+  })
 })

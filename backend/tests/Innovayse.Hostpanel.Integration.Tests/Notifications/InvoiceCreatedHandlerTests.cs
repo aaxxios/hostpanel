@@ -1,21 +1,22 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing.Events;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 
 /// <summary>
 /// Tests for <c>InvoiceCreatedHandler</c>: a newly created invoice notifies the owning client.
 /// Each test builds its own host from <see cref="IntegrationTestFactory"/> with the one port this platform
-/// does not own -- the SMTP relay -- replaced by <see cref="FakeEmailSender"/>, publishes the event exactly once
+/// does not own (the SMTP relay) replaced by <see cref="FakeEmailSender"/>, publishes the event exactly once
 /// through the real message bus and asserts the handler's one effect happened exactly once.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class InvoiceCreatedHandlerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>The fixed moment the published event says the change happened.</summary>
+    private static readonly DateTimeOffset EventMoment = new(2026, 10, 1, 9, 0, 0, TimeSpan.Zero);
+
     /// <summary>A newly created invoice notifies the owning client exactly once.</summary>
     [Fact]
     public async Task InvoiceCreated_NotifiesOwningClientExactlyOnceAsync()
@@ -28,9 +29,11 @@ public sealed class InvoiceCreatedHandlerTests(IntegrationTestFactory factory) :
 
         var (client, email) = await EventHandlerTestHost.SeedIdentityClientAsync(scope.ServiceProvider, context, "notification-event");
 
-        await bus.InvokeAsync(new InvoiceCreatedEvent(1, client.Id), CancellationToken.None);
+        await bus.InvokeAsync(new InvoiceCreatedEvent(1, client.Id, 19.90m, "USD") { OccurredAt = EventMoment }, CancellationToken.None);
 
         var message = Assert.Single(emailSender.Sent);
         Assert.Equal(email, message.To);
+        Assert.Contains("19.90", message.Body);
+        Assert.Contains("USD", message.Body);
     }
 }

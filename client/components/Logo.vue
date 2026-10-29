@@ -53,7 +53,7 @@
  * wordmark, in the variant that stays readable on the background it sits on.
  *
  * On the page-mode surface both wordmarks are rendered and swapped by the `dark:` variant
- * (never a JavaScript pick — see `useBrandLogo` for the hydration reason); on an
+ * (never a JavaScript pick: see `useBrandLogo` for the hydration reason); on an
  * always-dark surface only the dark-background wordmark is rendered.
  */
 import { UiImageFit, UiImageLoading } from '~/utils/ui/enums'

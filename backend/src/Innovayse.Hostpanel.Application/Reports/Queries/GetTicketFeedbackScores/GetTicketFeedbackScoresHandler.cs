@@ -1,4 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Reports.Common;
+using Innovayse.Hostpanel.Application.Reports.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,14 +32,14 @@ public sealed class GetTicketFeedbackScoresHandler
 
         if (query.From.HasValue)
         {
-            var fromDto = new DateTimeOffset(query.From.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+            var fromDto = query.From.Value.StartOfDayUtc();
             tickets = tickets.Where(t => t.FeedbackAt >= fromDto);
         }
 
         if (query.To.HasValue)
         {
-            var toDto = new DateTimeOffset(query.To.Value.ToDateTime(TimeOnly.MaxValue), TimeSpan.Zero);
-            tickets = tickets.Where(t => t.FeedbackAt <= toDto);
+            var toDto = query.To.Value.EndOfDayExclusiveUtc();
+            tickets = tickets.Where(t => t.FeedbackAt < toDto);
         }
 
         var raw = await tickets.ToListAsync(ct);

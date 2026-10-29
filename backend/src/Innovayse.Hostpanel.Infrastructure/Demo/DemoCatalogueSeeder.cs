@@ -49,12 +49,22 @@ internal sealed class DemoCatalogueSeeder
     /// <summary>The data context the rows are added to and saved through.</summary>
     private readonly AppDbContext _db;
 
+    /// <summary>The anchor the registrar price sync is stamped with.</summary>
+    private readonly DateTimeOffset _today;
+
     /// <summary>Creates the seeder.</summary>
     /// <param name="db">The data context the rows are added to and saved through.</param>
-    public DemoCatalogueSeeder(AppDbContext db)
+    /// <param name="today">The anchor the registrar price sync is stamped with.</param>
+    public DemoCatalogueSeeder(AppDbContext db, DateTimeOffset today)
     {
         _db = db;
+        _today = today;
     }
+
+    /// <summary>Whether a product runs on a hosting account, so it names the panel package its accounts are created with.</summary>
+    /// <param name="type">The product type.</param>
+    /// <returns><see langword="true"/> for shared hosting, VPS and dedicated products.</returns>
+    internal static bool IsHosting(ProductType type) => type is ProductType.SharedHosting or ProductType.Vps or ProductType.Dedicated;
 
     /// <summary>Converts a dollar price to the euro list price, rounded to a whole euro less one cent (x.99).</summary>
     /// <param name="usd">The price in dollars.</param>
@@ -201,8 +211,9 @@ internal sealed class DemoCatalogueSeeder
             {
                 // The legacy columns carry the dollar figures for the rollback release; the
                 // storefront reads the per-currency rows set below.
+                // A hosting plan names the panel package its accounts are created with; provisioning refuses one without it.
                 var product = Product.Create(
-                    group.Id, name, blurb, null, slug, null, type, monthly, annual,
+                    group.Id, name, blurb, null, slug, IsHosting(type) ? slug : null, type, monthly, annual, _today,
                     isFeatured: FeaturedSlugs.Contains(slug), sortOrder: positions[slug]);
                 product.SetPrice(BaseCurrency, BillingCycle.Monthly, monthly);
                 product.SetPrice(BaseCurrency, BillingCycle.Annual, annual);
@@ -278,7 +289,7 @@ internal sealed class DemoCatalogueSeeder
                 new Dictionary<int, decimal> { [1] = register, [2] = register * 2 },
                 new Dictionary<int, decimal> { [1] = transfer },
                 new Dictionary<int, decimal> { [1] = renew, [2] = renew * 2 });
-            config.MarkSynced();
+            config.MarkSynced(_today);
             _db.TldConfigs.Add(config);
             sortOrder++;
         }

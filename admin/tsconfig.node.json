@@ -15,6 +15,10 @@
     "module": "preserve",
     "moduleResolution": "bundler",
 
+    // vite.config.ts and the src/lib/themeBoot.ts it loads spell relative imports with their `.ts`
+    // extension, which Node needs when it loads the config; the app tsconfig allows the same.
+    "allowImportingTsExtensions": true,
+
     // The e2e fixtures import types from src/, which spell their own imports with the `@/` alias.
     "paths": {
       "@/*": ["./src/*"]

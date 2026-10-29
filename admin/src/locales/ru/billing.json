@@ -2,7 +2,12 @@
   "invoiceCreditTab": {
     "addCreditToInvoice": "Добавить кредит к счёту",
     "valueUsdAvailable": "Доступно: ${value} USD",
-    "removeCreditFromInvoice": "Снять кредит со счёта"
+    "removeCreditFromInvoice": "Снять кредит со счёта",
+    "creditApplied": "Кредит применён к счёту.",
+    "creditRemoved": "Кредит снят со счёта.",
+    "confirmRemoveCreditTitle": "Снять кредит?",
+    "confirmRemoveCreditMessage": "Снять {amount} кредита со счёта #{id}?",
+    "removeCredit": "Снять кредит"
   },
   "invoiceNotesTab": {
     "thereAreNoNotesOn": "В этом счёте нет заметок."
@@ -15,14 +20,14 @@
     "publishTheInvoiceBeforeAdding": "Опубликуйте счёт, прежде чем добавлять платежи.",
     "invoiceIsCancelledPleaseMark": "Счёт отменён: сначала отметьте его как неоплаченный, чтобы применить платёж.",
     "addPayment": "Добавить платёж",
-    "gatewayReference": "Ссылка на платёж в шлюзе"
+    "gatewayReference": "Ссылка на платёж в шлюзе",
+    "paymentAdded": "Платёж записан."
   },
   "invoiceRefundTab": {
     "thereAreNoTransactionsThat": "Нет транзакций, подходящих для возврата.",
     "publishTheInvoiceBeforeRequesting": "Опубликуйте счёт, прежде чем запрашивать возврат.",
     "cannotRefundACancelledInvoice": "Нельзя вернуть средства по отменённому счёту.",
     "thisInvoiceHasAlreadyBeen": "По этому счёту возврат уже выполнен.",
-    "leaveBlankForFullRefund": "Оставьте пустым для полного возврата",
     "refundType": "Тип возврата",
     "externalRefundReference": "Внешняя ссылка на возврат",
     "warning": "ВНИМАНИЕ",
@@ -35,34 +40,32 @@
     "refundThroughGateway": "Возврат через шлюз",
     "manualRefundProcessedExternally": "Ручной возврат, выполненный вне системы",
     "noTransactionsAppliedToThis": "К этому счёту пока не применено ни одной транзакции",
-    "selectATransaction": "Выберите транзакцию..."
+    "selectATransaction": "Выберите транзакцию...",
+    "confirmRefundTitle": "Подтверждение возврата",
+    "confirmRefundMessage": "Вернуть {amount} способом «{method}»? Это действие нельзя отменить.",
+    "refunded": "Возврат отправлен."
   },
   "invoiceSummaryTab": {
     "thisIsADraftInvoice": "Это черновик счёта. Клиент не видит этот счёт и не имеет к нему доступа, пока он не опубликован.",
     "viewInvoices": "( Посмотреть счета )",
     "invoiceAmount": "Сумма счёта",
-    "lastCaptureAttempt": "Последняя попытка списания:",
     "paymentMethod": "Способ оплаты:",
     "publish": "Опубликовать",
-    "attemptCapture": "Попытаться списать",
-    "markPaid": "Отметить оплаченным"
+    "markPaid": "Отметить оплаченным",
+    "published": "Счёт опубликован.",
+    "cancelled": "Счёт отменён.",
+    "markedPaid": "Счёт отмечен как оплаченный.",
+    "confirmCancelTitle": "Отмена счёта",
+    "confirmCancelMessage": "Отменить счёт #{id}? Клиент больше не сможет его оплатить.",
+    "confirmMarkPaidTitle": "Отметка об оплате",
+    "confirmMarkPaidMessage": "Отметить счёт #{id} как оплаченный? Остаток {amount} будет закрыт без записи платежа."
   },
   "addBillableItem": {
     "createANewBillableItem": "Создайте новую оплачиваемую позицию для клиента",
     "whatIsThisChargeFor": "За что это начисление?",
-    "recurEvery": "Повторять каждые",
-    "nextDueDate": "(Следующий) срок оплаты",
-    "donTInvoiceForNow": "Пока не выставлять счёт",
-    "invoiceOnNextCronRun": "Выставить при следующем запуске планировщика",
-    "addToUserSNext": "Добавить в следующий счёт пользователя",
-    "invoiceAsNormalForDue": "Выставить как обычно к сроку оплаты",
-    "recurringEvery": "Повторять каждые",
-    "dayS": "день/дн.",
-    "weekS": "неделю/нед.",
-    "monthS": "месяц/мес.",
-    "yearS": "год/лет",
-    "oneTime": "Разовый",
-    "recurUnit": "Период"
+    "invoiceOn": "Дата выставления счёта",
+    "nextDueDate": "Следующий срок оплаты",
+    "recurringPeriod": "Период повторения"
   },
   "addQuote": {
     "createQuote": "Создать предложение",
@@ -108,7 +111,8 @@
     "activeRecurring": "Активные повторяющиеся",
     "completedRecurring": "Завершённые повторяющиеся",
     "deleteItems": "Удалить начисления",
-    "deleteItemsMessage": "Удалить {count} выбранное начисление? Это действие нельзя отменить. | Удалить {count} выбранных начисления? Это действие нельзя отменить. | Удалить {count} выбранных начислений? Это действие нельзя отменить."
+    "deleteItemsMessage": "Удалить {count} выбранное начисление? Это действие нельзя отменить. | Удалить {count} выбранных начисления? Это действие нельзя отменить. | Удалить {count} выбранных начислений? Это действие нельзя отменить.",
+    "itemsDeleted": "Оплачиваемые позиции удалены."
   },
   "disputes": {
     "listDisputes": "Список споров",
@@ -152,7 +156,6 @@
   "invoicesList": {
     "manageBillingInvoices": "Управление счетами на оплату",
     "dateRefunded": "Дата возврата",
-    "dateCancelled": "Дата отмены",
     "totalcountRecordsFoundShowingValue": "Найдено записей: {totalCount}, показаны {value}–{value2}",
     "markPaid": "Отметить оплаченным",
     "markUnpaid": "Отметить неоплаченным",
@@ -162,7 +165,11 @@
     "deleteInvoice": "Удалить счёт",
     "deleteInvoiceMessage": "Удалить счёт №{id}? Это действие нельзя отменить.",
     "deleteInvoices": "Удалить счета",
-    "deleteInvoicesMessage": "Удалить {count} выбранный счёт? Это действие нельзя отменить. | Удалить {count} выбранных счета? Это действие нельзя отменить. | Удалить {count} выбранных счетов? Это действие нельзя отменить."
+    "deleteInvoicesMessage": "Удалить {count} выбранный счёт? Это действие нельзя отменить. | Удалить {count} выбранных счета? Это действие нельзя отменить. | Удалить {count} выбранных счетов? Это действие нельзя отменить.",
+    "bulkActionDone": "Выполнено для выбранных счетов.",
+    "invoiceDeleted": "Счёт удалён.",
+    "cancelInvoices": "Отменить счета",
+    "cancelInvoicesMessage": "Отметить {count} выбранный счёт как отменённый? | Отметить {count} выбранных счета как отменённые? | Отметить {count} выбранных счетов как отменённые?"
   },
   "offlineCC": {
     "offlineCreditCardProcessing": "Обработка офлайн-платежей по картам",

@@ -59,11 +59,11 @@
       <UiStack gap="sm">
         <UiText size="sm" weight="medium">{{ $t('client.contacts.emailNotifications') }}</UiText>
         <UiGrid cols="2" gap="sm">
-          <UiCheckbox id="cm-general" v-model="form.notifyGeneral" :label="$t('client.contacts.generalEmails')" testid="account-contact-general" />
-          <UiCheckbox id="cm-invoice" v-model="form.notifyInvoice" :label="$t('client.contacts.invoiceEmails')" testid="account-contact-invoice" />
-          <UiCheckbox id="cm-domain" v-model="form.notifyDomain" :label="$t('client.contacts.domainEmails')" testid="account-contact-domain" />
-          <UiCheckbox id="cm-product" v-model="form.notifyProduct" :label="$t('client.contacts.productEmails')" testid="account-contact-product" />
-          <UiCheckbox id="cm-support" v-model="form.notifySupport" :label="$t('client.contacts.supportEmails')" testid="account-contact-support" />
+          <UiCheckbox id="cm-general" v-model="form.notifications.general" :label="$t('client.contacts.generalEmails')" testid="account-contact-general" />
+          <UiCheckbox id="cm-invoice" v-model="form.notifications.invoice" :label="$t('client.contacts.invoiceEmails')" testid="account-contact-invoice" />
+          <UiCheckbox id="cm-domain" v-model="form.notifications.domain" :label="$t('client.contacts.domainEmails')" testid="account-contact-domain" />
+          <UiCheckbox id="cm-product" v-model="form.notifications.product" :label="$t('client.contacts.productEmails')" testid="account-contact-product" />
+          <UiCheckbox id="cm-support" v-model="form.notifications.support" :label="$t('client.contacts.supportEmails')" testid="account-contact-support" />
         </UiGrid>
       </UiStack>
     </UiForm>
@@ -147,18 +147,15 @@ const form = reactive({
   email: '',
   phone: '',
   type: ContactType.General,
-  street: '',
-  address2: '',
-  city: '',
-  state: '',
-  postCode: '',
-  country: '',
-  notifyGeneral: true,
-  notifyInvoice: true,
-  notifySupport: true,
-  notifyProduct: true,
-  notifyDomain: false,
-  notifyAffiliate: false
+  address: { street: '', address2: '', city: '', state: '', postCode: '', country: '' },
+  notifications: {
+    general: true,
+    invoice: true,
+    support: true,
+    product: true,
+    domain: false,
+    affiliate: false
+  }
 })
 
 /** Set when a contact is submitted without a name, so no request was made. */
@@ -180,18 +177,22 @@ watch(() => props.modelValue, (open) => {
     email: contact?.email ?? '',
     phone: contact?.phone ?? '',
     type: contact?.type ?? ContactType.General,
-    street: contact?.street ?? '',
-    address2: contact?.address2 ?? '',
-    city: contact?.city ?? '',
-    state: contact?.state ?? '',
-    postCode: contact?.postCode ?? '',
-    country: contact?.country ?? '',
-    notifyGeneral: contact?.notifyGeneral ?? true,
-    notifyInvoice: contact?.notifyInvoice ?? true,
-    notifySupport: contact?.notifySupport ?? true,
-    notifyProduct: contact?.notifyProduct ?? true,
-    notifyDomain: contact?.notifyDomain ?? false,
-    notifyAffiliate: contact?.notifyAffiliate ?? false
+    address: {
+      street: contact?.address.street ?? '',
+      address2: contact?.address.address2 ?? '',
+      city: contact?.address.city ?? '',
+      state: contact?.address.state ?? '',
+      postCode: contact?.address.postCode ?? '',
+      country: contact?.address.country ?? ''
+    },
+    notifications: {
+      general: contact?.notifications.general ?? true,
+      invoice: contact?.notifications.invoice ?? true,
+      support: contact?.notifications.support ?? true,
+      product: contact?.notifications.product ?? true,
+      domain: contact?.notifications.domain ?? false,
+      affiliate: contact?.notifications.affiliate ?? false
+    }
   })
   invalid.value = false
   account.clearModalErrors()
@@ -214,18 +215,20 @@ const toInput = (): AccountContactInput => ({
   ...form,
   companyName: toNullable(form.companyName),
   phone: toNullable(form.phone),
-  street: toNullable(form.street),
-  address2: toNullable(form.address2),
-  city: toNullable(form.city),
-  state: toNullable(form.state),
-  postCode: toNullable(form.postCode),
-  country: toNullable(form.country)
+  address: {
+    street: toNullable(form.address.street),
+    address2: toNullable(form.address.address2),
+    city: toNullable(form.address.city),
+    state: toNullable(form.address.state),
+    postCode: toNullable(form.address.postCode),
+    country: toNullable(form.address.country)
+  }
 })
 
 /** Saves the draft; on success closes the dialog and asks for a fresh list. */
 const onSubmit = async (): Promise<void> => {
   // An edit without a contact is unreachable, and creating is the safe reading of it; the
-  // alternative was a PUT to `/contacts/null`.
+  // alternative would be a PUT to `/contacts/null`.
   const outcome = await account.saveContact(props.contact?.id ?? null, toInput())
   invalid.value = outcome === ContactSaveOutcome.Invalid
   if (outcome === ContactSaveOutcome.Saved) {

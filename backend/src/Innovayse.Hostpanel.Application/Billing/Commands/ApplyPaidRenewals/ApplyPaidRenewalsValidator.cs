@@ -13,6 +13,6 @@ public sealed class ApplyPaidRenewalsValidator : LocalizedValidator<ApplyPaidRen
     public ApplyPaidRenewalsValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
-        RuleFor(x => x.InvoiceId).GreaterThan(0);
+        RuleFor(x => x.InvoiceId).GreaterThan(0).WithMessage(L["InvoiceIdInvalid"]);
     }
 }

@@ -1,48 +1,37 @@
 <template>
-  <UiForm spacing="lg" :error="saveError" data-testid="account-profile-form" @submit="onSubmit">
+  <UiForm spacing="lg" :error="saveError" :success="success" data-testid="account-profile-form" @submit="onSubmit">
     <UiGrid cols="2" gap="lg">
       <UiCard :title="$t('client.profile.accountInfo')">
         <UiGrid cols="2" gap="md">
           <UiInput
-            v-model="form.firstname"
+            v-model="form.firstName"
             :label="$t('client.profile.firstName')"
             :placeholder="$t('client.account.placeholders.firstName')"
-            :error="fieldErrors.firstname"
+            :error="errors.firstName"
             size="sm"
             required
             testid="account-firstname"
           />
           <UiInput
-            v-model="form.lastname"
+            v-model="form.lastName"
             :label="$t('client.profile.lastName')"
             :placeholder="$t('client.account.placeholders.lastName')"
-            :error="fieldErrors.lastname"
+            :error="errors.lastName"
             size="sm"
             required
             testid="account-lastname"
           />
           <UiInput
-v-model="form.companyname"
+            v-model="form.companyName"
             data-testid="profile-company"
             :label="$t('client.profile.companyName')"
             :placeholder="$t('client.account.placeholders.companyName')"
-            :error="fieldErrors.companyname"
+            :error="errors.companyName"
             size="sm"
             class="sm:col-span-2"
-          />
-          <UiInput
-            v-model="form.email"
-            type="email"
-            :label="$t('client.profile.emailAddress')"
-            :placeholder="$t('client.account.placeholders.email')"
-            :error="fieldErrors.email"
-            size="sm"
-            required
-            class="sm:col-span-2"
-            testid="account-email"
           />
           <UiSelect
-v-model="form.paymentmethod"
+            v-model="form.paymentMethod"
             data-testid="profile-payment-method"
             :label="$t('client.profile.paymentMethod')"
             :placeholder="$t('ui.selectPlaceholder')"
@@ -65,49 +54,49 @@ v-model="form.paymentmethod"
       <UiCard :title="$t('client.profile.billingAddress')">
         <UiGrid cols="2" gap="md">
           <UiInput
-v-model="form.address1"
+            v-model="form.address.street"
             data-testid="profile-address1"
             :label="$t('client.profile.address1')"
             :placeholder="$t('client.account.placeholders.address1')"
-            :error="fieldErrors.address1"
+            :error="errors['address.street']"
             size="sm"
             class="sm:col-span-2"
           />
           <UiInput
-v-model="form.address2"
+            v-model="form.address.address2"
             data-testid="profile-address2"
             :label="$t('client.profile.address2')"
             :placeholder="$t('client.account.placeholders.address2')"
-            :error="fieldErrors.address2"
+            :error="errors['address.address2']"
             size="sm"
             class="sm:col-span-2"
           />
           <UiInput
-v-model="form.city"
+            v-model="form.address.city"
             data-testid="profile-city"
             :label="$t('client.profile.city')"
             :placeholder="$t('client.account.placeholders.city')"
-            :error="fieldErrors.city"
+            :error="errors['address.city']"
             size="sm"
           />
           <UiInput
-v-model="form.state"
+            v-model="form.address.state"
             data-testid="profile-state"
             :label="$t('client.profile.state')"
             :placeholder="$t('client.account.placeholders.state')"
-            :error="fieldErrors.state"
+            :error="errors['address.state']"
             size="sm"
           />
           <UiInput
-v-model="form.postcode"
+            v-model="form.address.postCode"
             data-testid="profile-postcode"
             :label="$t('client.profile.postcode')"
             :placeholder="$t('client.account.placeholders.postcode')"
-            :error="fieldErrors.postcode"
+            :error="errors['address.postCode']"
             size="sm"
           />
           <UiSelect
-v-model="form.country"
+            v-model="form.address.country"
             data-testid="profile-country"
             :label="$t('client.profile.country')"
             :placeholder="$t('ui.selectPlaceholder')"
@@ -115,12 +104,12 @@ v-model="form.country"
             size="sm"
           />
           <UiInput
-v-model="form.phonenumber"
+            v-model="form.phone"
             data-testid="profile-phone"
             type="tel"
             :label="$t('client.profile.phone')"
             :placeholder="$t('client.account.placeholders.phone')"
-            :error="fieldErrors.phonenumber"
+            :error="errors.phone"
             size="sm"
             class="sm:col-span-2"
           />
@@ -149,7 +138,10 @@ v-model="form.phonenumber"
  * ProfileForm - the edit form for the profile, billing address and email preferences.
  *
  * Owns only the draft; saving goes through the account store, which keeps the refusal sentence
- * and the per-field messages this form renders. A refused save leaves the form open.
+ * and the per-field messages this form renders. The required fields are checked before anything
+ * is sent; the sign-in address is not edited here but through `EmailChangeCard`, which asks for the
+ * password and a mailed confirmation; a saved draft stays open with a confirmation, and a refused
+ * save leaves the form open with the reason.
  *
  * @module components/account/ProfileForm
  */
@@ -160,7 +152,13 @@ import { useAccountStore } from '~/stores/account'
 import { useCatalogStore } from '~/stores/catalog'
 import type { ClientUser } from '~/types/clientuser'
 import { ActionOutcome } from '~/types/actionoutcome'
+import { EmailPreference } from '~/types/emailpreference'
+import type { ProfileUpdate } from '~/types/profileupdate'
 import { decodeEmailPrefs } from '~/utils/emailPreferences'
+import { validateProfile } from '~/utils/profileValidation'
+
+/** The draft of the profile: a {@link ProfileUpdate} whose address is always present, so its inputs bind to it. */
+type ProfileDraft = ProfileUpdate & { address: Required<NonNullable<ProfileUpdate['address']>> }
 
 /** One option of a select. */
 interface Option {
@@ -187,8 +185,6 @@ const props = defineProps<Props>()
 
 /** Events of {@link ProfileForm}. */
 const emit = defineEmits<{
-  /** The profile was saved. */
-  saved: []
   /** The edit was abandoned. */
   cancel: []
 }>()
@@ -203,34 +199,75 @@ const { countries: storedCountries } = storeToRefs(useCatalogStore())
 /** The country choices; empty until the catalogue has loaded them. */
 const countries = computed<Option[]>(() => storedCountries.value ?? [])
 
-/** The draft of the editable fields, seeded from the profile. */
-const form = reactive({
-  firstname: props.user.firstname,
-  lastname: props.user.lastname,
-  companyname: props.user.companyname ?? '',
-  email: props.user.email,
-  phonenumber: props.user.phonenumber ?? '',
-  address1: props.user.address1 ?? '',
-  address2: props.user.address2 ?? '',
-  city: props.user.city ?? '',
-  state: props.user.state ?? '',
-  postcode: props.user.postcode ?? '',
-  country: props.user.country ?? '',
-  paymentmethod: props.user.defaultgateway ?? '',
-  language: props.user.language ?? ''
+/** Translator for the local validation reasons and the confirmation. */
+const { t } = useI18n()
+
+/** The i18n key of each field the local check refused, by field name; empty when the draft passed. */
+const localErrors = ref<Record<string, string>>({})
+
+/** The message on each field: the local check's reason, else the API's per-field message. */
+const errors = computed<Record<string, string>>(() => {
+  const local = Object.fromEntries(Object.entries(localErrors.value).map(([field, key]) => [field, t(key)]))
+  return { ...fieldErrors.value, ...local }
+})
+
+/** The confirmation shown after a successful save; empty otherwise. */
+const success = ref('')
+
+/**
+ * The draft of the editable fields, seeded from the profile and keyed by the backend's names, so
+ * it is the save body as is and a refused field's message lands on its input.
+ */
+const form = reactive<ProfileDraft>({
+  firstName: props.user.firstName,
+  lastName: props.user.lastName,
+  companyName: props.user.companyName ?? '',
+  phone: props.user.phone ?? '',
+  address: {
+    street: props.user.address?.street ?? '',
+    address2: props.user.address?.address2 ?? '',
+    city: props.user.address?.city ?? '',
+    state: props.user.address?.state ?? '',
+    postCode: props.user.address?.postCode ?? '',
+    country: props.user.address?.country ?? ''
+  },
+  paymentMethod: props.user.paymentMethod ?? '',
+  // Sent only where this deployment stores the language; left out, the backend keeps it as is.
+  language: props.ownsLanguage ? (props.user.language ?? '') : undefined
 })
 
 /** The draft of the email preferences. */
-const emailPrefs = ref(decodeEmailPrefs(props.user.email_preferences))
+const emailPrefs = ref(decodeEmailPrefs(props.user.notifications))
 
 // A stale sentence from an earlier attempt must not greet a fresh edit.
 account.clearModalErrors()
 
-/** Saves the draft; on success tells the tab to leave edit mode. */
+/**
+ * Checks the draft and, when it passes, saves it; a saved draft shows the confirmation.
+ *
+ * @returns Resolves when the save has ended, or at once when the local check refused the draft.
+ */
 const onSubmit = async (): Promise<void> => {
+  success.value = ''
+  localErrors.value = validateProfile(form)
+  if (Object.keys(localErrors.value).length > 0) {
+    return
+  }
   // A refusal stays in the store as `saveError`, worded by the API.
-  if (await account.saveProfile({ ...form, emailprefs: emailPrefs.value }) === ActionOutcome.Succeeded) {
-    emit('saved')
+  const prefs = emailPrefs.value
+  const profile: ProfileUpdate = {
+    ...form,
+    notifications: {
+      general: prefs[EmailPreference.General],
+      invoice: prefs[EmailPreference.Invoice],
+      support: prefs[EmailPreference.Support],
+      product: prefs[EmailPreference.Product],
+      domain: prefs[EmailPreference.Domain],
+      affiliate: prefs[EmailPreference.Affiliate]
+    }
+  }
+  if (await account.saveProfile(profile) === ActionOutcome.Succeeded) {
+    success.value = t('client.profile.saved')
   }
 }
 </script>

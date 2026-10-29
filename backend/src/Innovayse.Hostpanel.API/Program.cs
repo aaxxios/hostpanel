@@ -11,18 +11,18 @@ using Innovayse.Hostpanel.Domain.Auth;
 using Innovayse.Hostpanel.Infrastructure;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.OpenApi;
 using Microsoft.EntityFrameworkCore;
+using JasperFx;
 using Microsoft.Extensions.Options;
-using Scalar.AspNetCore;
 using Serilog;
 using Innovayse.Hostpanel.API.Auth;
 using Innovayse.Hostpanel.Application.Admin.Seeding;
 using Innovayse.Hostpanel.Application.Auth.Seeding;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Notifications.Seeding;
 using Innovayse.Hostpanel.Application.Support.Seeding;
 using Innovayse.Hostpanel.Shared.Constants;
-using Innovayse.Hostpanel.Shared.Localization;
+using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Middleware;
 using Innovayse.Hostpanel.Shared.Settings;
 
@@ -38,7 +38,7 @@ try
     // but the leak guard's rule is that nothing upstream is named in a response.
     builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
-    // Serilog — skip in Testing environment to avoid ReloadableLogger.Freeze() conflicts
+    // Serilog: skip in Testing environment to avoid ReloadableLogger.Freeze() conflicts
     if (!builder.Environment.IsEnvironment(EnvironmentNames.Testing))
     {
         builder.Host.UseSerilog((ctx, services, config) =>
@@ -48,7 +48,7 @@ try
     }
 
     // The layers, each registering itself. Application first (validators), then Infrastructure
-    // (EF Core, Identity, external clients, plugin discovery), then Wolverine, then the web edge --
+    // (EF Core, Identity, external clients, plugin discovery), then Wolverine, then the web edge:
     // localization, authentication and authorization each get their own well-named extension, since
     // a deployment mode switch or a locale rule is easier to find and to change in a file named for
     // it than as one more paragraph in this one.
@@ -57,7 +57,7 @@ try
     // hosted services, and .NET starts IHostedServices in registration order. Registered the other
     // way round, DomainScheduledJobsStartup.StartAsync reaches for the bus before Wolverine's own
     // hosted service has started the runtime, and every scheduled job throws
-    // WolverineHasNotStartedException the moment the host comes up -- proven by running it that way
+    // WolverineHasNotStartedException the moment the host comes up: proven by running it that way
     // once and watching every Integration test that boots the host fail on exactly that.
     builder.Services.AddApplication();
 
@@ -74,14 +74,10 @@ try
 
     var app = builder.Build();
 
-    // Apply EF Core migrations on startup, in every environment except Testing —
+    // Apply EF Core migrations on startup, in every environment except Testing:
     // the test factory runs them itself once the host is up.
-    //
-    // This used to be Development-only, which quietly made Development the only
-    // environment a deployed host could run: name it anything else and the schema
-    // simply stopped following the code, with nothing in the log to say so. Nobody
-    // was going to notice until a migration was missing. The SSO has always migrated
-    // this way; hostpanel is the one that did not.
+    // Gating this on Development would make Development the only environment a deployed
+    // host could run: under any other name the schema would silently stop following the code.
     if (!app.Environment.IsEnvironment(EnvironmentNames.Testing))
     {
         using var migrScope = app.Services.CreateScope();
@@ -89,27 +85,23 @@ try
         await dbCtx.Database.MigrateAsync();
     }
 
-    // Seed roles — skip in Testing environment (migrations run after host starts via factory)
+    // Seed roles: skip in Testing environment (migrations run after host starts via factory)
     if (!app.Environment.IsEnvironment(EnvironmentNames.Testing))
     {
         using var scope = app.Services.CreateScope();
 
         // Identity's own role table, and only where this deployment owns its users. A
-        // deployment whose people live in the SSO does not register Identity at all, so
-        // RoleManager is not there to resolve — asking for it with GetRequiredService
+        // deployment whose people live in the external sign-on provider does not register Identity at all, so
+        // RoleManager is not there to resolve: asking for it with GetRequiredService
         // threw before the API had finished starting, and the container never came up.
         //
         // Nothing is lost by skipping it. Every grant this product makes is written to
         // SubjectRoles, and SubjectRoleClaimsEnricher merges that store onto the principal
-        // on every JWT scheme in both modes — so a role granted there authorizes in both.
+        // on every JWT scheme in both modes, so a role granted there authorizes in both.
         //
-        // This comment used to say authorization was decided by SubjectRoles in both modes
-        // full stop, and that was not true: no scheme registered under AUTH_MODE=local read
-        // the store at all, so local authorization was decided solely by the claims baked
-        // into the token at sign-in. It is worth stating precisely, because the two role
-        // tables still are not one. AspNetRoles remains scaffolding for the local
-        // UserManager, and the roles it holds also reach the principal — via the token
-        // LocalAuthController mints from IUserService.GetRolesAsync. A local deployment
+        // The two role tables are still not one. AspNetRoles remains scaffolding for the local
+        // UserManager, and the roles it holds also reach the principal: via the token
+        // the local sign-in (SessionIssuer) mints from IUserService.GetRolesAsync. A local deployment
         // therefore authorizes on the union of the two, with SubjectRoles the only one a
         // grant made after sign-in can land in.
         if (isLocalMode)
@@ -126,23 +118,32 @@ try
             }
         }
 
-        // Support departments — every environment, for the same reason as the roles
+        // Support departments; every environment, for the same reason as the roles
         // above: the ticket form cannot be submitted without at least one.
         await DefaultDepartmentsSeeder.EnsureSeededAsync(
             scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(),
-            scope.ServiceProvider.GetRequiredService<IUnitOfWork>(),
             scope.ServiceProvider
                 .GetRequiredService<IOptions<DefaultDepartmentsOptions>>().Value);
 
-        // Storefront settings — also every environment. SettingsController can update
+        // Storefront settings: also every environment. SettingsController can update
         // an existing key but cannot create one, so a key that was never seeded is a
         // key no operator can ever set from the admin panel.
         await PortalSettingsSeeder.EnsureSeededAsync(
-            scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(),
-            scope.ServiceProvider.GetRequiredService<IUnitOfWork>());
+            scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>());
 
-        // Dev seed — populate test data in Development. Local mode only: the seeder
-        // creates its people through Identity's UserManager, which an SSO-owned
+        // The translated versions of the schema-seeded mail templates, also every environment:
+        // a client who chose Russian or Armenian would otherwise get English mail. Never
+        // overwrites a stored version, so an operator's edit survives a restart.
+        await TransactionalTemplatesSeeder.EnsureSeededAsync(
+            scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(), CancellationToken.None);
+
+        // The four domain mails the domain handlers send: with no stored template a send only logs
+        // "template not found" and the client or staff member never hears about the event.
+        await DomainTemplatesSeeder.EnsureSeededAsync(
+            scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(), CancellationToken.None);
+
+        // Dev seed: populate test data in Development. Local mode only: the seeder
+        // creates its people through Identity's UserManager, which an provider-owned
         // deployment does not register, and there would be nowhere local to put them
         // anyway. Running it there threw on construction and took the API down with it.
         //
@@ -166,12 +167,20 @@ try
             await seeder.SeedAsync();
         }
 
-        // The first-run setup token, and only where this deployment owns its own people.
+        // Secret settings stored as plain text by an earlier release are encrypted here, after
+        // every seeder that writes settings. Idempotent: an encrypted value carries a marker and
+        // is skipped, so after the first start of an upgraded install this only reads the table.
+        await SecretSettingsProtector.EnsureProtectedAsync(
+            scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(),
+            scope.ServiceProvider.GetRequiredService<ISecretSettingCipher>(),
+            scope.ServiceProvider.GetRequiredService<IPluginRegistry>());
+
+        // The first-run setup token, in every authentication mode.
         //
         // POST /api/auth/setup grants the Admin role, and until this existed it granted it to
         // whichever authenticated caller asked first. Registration on a standalone install is
-        // public, so on a box that is reachable before its owner has finished configuring it —
-        // the normal shape of a self-hosted deployment — whoever registered and claimed first
+        // public, so on a box that is reachable before its owner has finished configuring it,
+        // the normal shape of a self-hosted deployment, whoever registered and claimed first
         // owned the installation. The token moves that decision to "who can read this log",
         // which the operator can and a passer-by cannot.
         //
@@ -179,33 +188,29 @@ try
         // an Admin by the time this runs, so nothing is issued and no token line is printed to
         // be mistaken for one that matters.
         //
-        // Nothing happens under Auth:Mode=sso. Accounts there belong to the sign-on service, so
-        // the callers who can reach an authenticated endpoint at all are already the ones the
-        // operator provisioned, and that path is in production use.
-        if (isLocalMode)
-        {
-            var setupToken = await SetupTokenSeeder.EnsureIssuedAsync(
-                scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(),
-                scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>(),
-                scope.ServiceProvider.GetRequiredService<IUnitOfWork>());
+        // The same holds under an external sign-on provider: an account there proves the provider
+        // knows the caller, not that the caller runs this installation. An installation that
+        // already has an Admin issues nothing, so this changes nothing for one already set up.
+        var setupToken = await SetupTokenSeeder.EnsureIssuedAsync(
+            scope.ServiceProvider.GetRequiredService<ISetupTokenStore>(),
+            scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>());
 
-            if (setupToken is not null)
-            {
-                // Warning level so it survives a production log filter, and formatted to be
-                // read by a person tailing `docker logs` rather than by a sink. It is repeated
-                // on every boot for as long as setup is outstanding: that is what makes a
-                // restart mid-setup recoverable instead of a lockout, and the token is retired
-                // the moment it is used.
-                //
-                // The token is a template argument rather than a concatenation so that a
-                // structured sink stores it as a field — this line is a secret either way, and
-                // an operator who ships logs off the box should know it is in them until setup
-                // completes.
-                Log.Warning(
-                    "FIRST-RUN SETUP IS OUTSTANDING. Nobody holds the Admin role yet. " +
-                    "Open the admin panel, create your account, and paste this setup token when " +
-                    "it asks for one: {SetupToken}", setupToken);
-            }
+        if (setupToken is not null)
+        {
+            // Warning level so it survives a production log filter, and formatted to be
+            // read by a person tailing `docker logs` rather than by a sink. It is repeated
+            // on every boot for as long as setup is outstanding: that is what makes a
+            // restart mid-setup recoverable instead of a lockout, and the token is retired
+            // the moment it is used.
+            //
+            // The token is a template argument rather than a concatenation so that a
+            // structured sink stores it as a field: this line is a secret either way, and
+            // an operator who ships logs off the box should know it is in them until setup
+            // completes.
+            Log.Warning(
+                "FIRST-RUN SETUP IS OUTSTANDING. Nobody holds the Admin role yet. " +
+                "Open the admin panel, sign in, and paste this setup token when " +
+                "it asks for one: {SetupToken}", setupToken);
         }
     }
 
@@ -215,27 +220,13 @@ try
     }
 
     // Above the exception handler, deliberately. This middleware sets CurrentUICulture and the
-    // one below it is what turns a refusal into a response body -- run the other way round, the
+    // one below it is what turns a refusal into a response body: run the other way round, the
     // sentence would be resolved outside the culture the request asked for and every caller would
-    // read English. Supported cultures come from the Application layer's LocaleOptions so they
-    // cannot drift from the .resx files they select.
-    //
-    // XLanguageRequestCultureProvider (Shared/Localization/) goes first, reading the platform's
-    // own X-Language header; AcceptLanguageHeaderRequestCultureProvider stays right behind it as
-    // the fallback. Both frontends send only Accept-Language today, so an X-Language-only switch
-    // would answer every production caller in English -- the fallback is removed only once the
-    // frontends send X-Language too (plan ruling C, alongside the compat shim).
-    var localeOptions = app.Services.GetRequiredService<IOptions<LocaleOptions>>().Value;
-    var localizationOptions = new RequestLocalizationOptions()
-        .SetDefaultCulture(localeOptions.DefaultLocale)
-        .AddSupportedCultures([.. LocaleOptions.SupportedLocales])
-        .AddSupportedUICultures([.. LocaleOptions.SupportedLocales]);
-    localizationOptions.RequestCultureProviders.Insert(
-        0, new XLanguageRequestCultureProvider());
-    app.UseRequestLocalization(localizationOptions);
+    // read English. The culture comes from the X-Language header alone, which both frontends stamp
+    // on every call; the default comes from LocaleOptions so it cannot drift from the .resx files.
+    app.UsePlatformLocalization(app.Services.GetRequiredService<IOptions<LocaleOptions>>().Value.DefaultLocale);
 
-    // Reference order (innovayse-ai's Program.cs, which Shared/Middleware/ was copied from file
-    // for file): localization, then TraceIdMiddleware, then ProviderLeakGuardMiddleware, then the
+    // Order: localization, then TraceIdMiddleware, then ProviderLeakGuardMiddleware, then the
     // exception handler. The trace id has to exist before anything downstream might fault, and
     // the leak guard's header sweep has to be registered before the exception handler's own
     // response write, so a fault answered here is swept the same as every other response.
@@ -243,17 +234,20 @@ try
     app.UseMiddleware<ProviderLeakGuardMiddleware>();
     app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+    // The generated OpenAPI document and its UI, in Development and Testing only.
+    app.UseHostpanelSwagger();
+
     // Forwarded headers first, in BOTH modes, and above everything that reads the request's
     // origin. Two things depend on it: Request.Scheme, which is otherwise Kestrel's view of the
-    // plain-HTTP hop from nginx, and Connection.RemoteIpAddress, which is otherwise nginx itself
-    // — and that address is what the rate limiter partitions anonymous callers on. Left to
+    // plain-HTTP hop from nginx, and Connection.RemoteIpAddress, which is otherwise nginx itself,
+    // and that address is what the rate limiter partitions anonymous callers on. Left to
     // resolve wrongly it would put every visitor in one bucket, so one person's burst refuses
     // everybody: the failure that looks most like the feature working.
     //
-    // UseInnovayseAuth runs its own forwarded-header handling in the SSO branch below, with the
-    // framework's default ForwardLimit of 1 — one entry short of this two-hop chain. Running ours
-    // first resolves the address correctly and consumes the header, so its call finds nothing left
-    // to process and cannot undo the result.
+    // UseInnovayseAuth runs its own forwarded-header handling in the external sign-on branch below, with the
+    // framework's default ForwardLimit of 1. Running ours first, with only the configured
+    // RateLimit KnownProxies/KnownNetworks believed, resolves the address and consumes the header,
+    // so its call finds nothing left to process and cannot undo the result.
     app.UseForwardedHeaders();
 
     app.UseStaticFiles();
@@ -261,7 +255,7 @@ try
     if (!isLocalMode)
     {
         // Forwarded headers, the CSRF check, authentication and authorisation, in the
-        // order they have to be in. Bearer callers pass the CSRF check untouched — a
+        // order they have to be in. Bearer callers pass the CSRF check untouched: a
         // bearer header is already something a cross-site page cannot attach.
 #if INNOVAYSE_SSO
         app.UseInnovayseAuth();
@@ -271,7 +265,7 @@ try
         app.MapInnovayseAuth(mapMe: false);
 #endif
 
-        // The limiter has to sit after authentication — it partitions on the signed-in subject
+        // The limiter has to sit after authentication: it partitions on the signed-in subject
         // and falls back to an address only for callers with no credential, so above
         // UseAuthentication it would see an empty User on every request and quietly degrade to
         // one bucket per address, which for the client portal is one bucket for every customer.
@@ -280,11 +274,11 @@ try
         // by authorisation still spends budget. It cannot here: UseInnovayseAuth is one call that
         // does forwarded headers, the CSRF check, authentication and authorisation together, and
         // splitting it would mean re-running authentication or forking a published package. The
-        // consequence is bounded and worth stating — a caller spraying an [Authorize] route with
+        // consequence is bounded and worth stating: a caller spraying an [Authorize] route with
         // no credential is refused by authorisation before the limiter counts them. That is cheap
         // to serve (no handler, no database), and every route where an unauthenticated flood is
-        // actually expensive — the credential endpoints, the contact form, the registrar lookups
-        // — is [AllowAnonymous], so authorisation does not short-circuit it and the budget applies.
+        // actually expensive, the credential endpoints, the contact form, the registrar lookups,
+        // is [AllowAnonymous], so authorisation does not short-circuit it and the budget applies.
         //
         // Not in Testing: every partition there is NoLimiter (RateLimitingExtensions), so the
         // middleware would limit nothing, but it still builds two PartitionedRateLimiters whose
@@ -300,7 +294,7 @@ try
     else
     {
         // Above authentication, so a cross-site forgery is refused before anything reads the
-        // cookie it was hoping to ride on. The SSO branch gets the equivalent check from
+        // cookie it was hoping to ride on. The external sign-on branch gets the equivalent check from
         // UseInnovayseAuth; local mode had none because a bearer header in an Authorization
         // header is CSRF-safe on its own, and that stopped being the whole story the moment the
         // local session moved into a cookie. It examines only requests that actually present
@@ -310,13 +304,13 @@ try
         app.UseAuthentication();
 
         // Sliding renewal of the local session; needs the authenticated User, so it follows
-        // authentication. Local mode only: the SSO branch above is unchanged.
+        // authentication. Local mode only: the external sign-on branch above is unchanged.
         app.UseMiddleware<LocalSessionRenewalMiddleware>();
 
         // Between authentication and authorisation, which is where it belongs: User is populated,
         // so the per-subject partition works, and a request that authorisation is about to refuse
         // has already spent budget rather than being free to repeat. Not in Testing, for the reason
-        // given on the SSO branch above.
+        // given on the external sign-on branch above.
         if (!app.Environment.IsEnvironment(EnvironmentNames.Testing))
         {
             app.UseRateLimiter();
@@ -325,31 +319,21 @@ try
         app.UseAuthorization();
     }
 
-    app.MapOpenApi();
-    app.MapScalarApiReference(options =>
-    {
-        options.Title = "Innovayse API";
-        options.Theme = ScalarTheme.Purple;
-        options.DefaultHttpClient = new(ScalarTarget.Shell, ScalarClient.Curl);
-    });
-
-    // Liveness for the container healthcheck. Deliberately not a database probe: this
-    // answers "is the process still serving HTTP", which is the question a restart
-    // policy can act on. Without it the container had no healthcheck at all and Docker
-    // reported "Up" through a crash loop — main-api spent minutes restarting on an
-    // unresolvable database host while `docker ps` showed nothing wrong.
-    app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
     app.MapControllers();
 
-    app.Run();
+    // Without arguments this runs the host exactly as app.Run() did. The JasperFx command line is
+    // what the image build uses (`codegen write`) to generate the message handler code ahead of
+    // time, so a production host loads it instead of compiling every handler on its first request
+    // (see MessagingRegistration).
+    return await app.RunJasperFxCommands(args);
 }
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
 
     // Rethrow, don't just log. Swallowing it made Main return normally, so the process
-    // exited 0 — a container whose startup failed reported success and the orchestrator
+    // exited 0: a container whose startup failed reported success and the orchestrator
     // had no reason to restart or alert. In the integration tests the same swallow turned
     // every startup error into "The entry point exited without ever building an IHost",
     // which names nothing about the actual cause.
@@ -360,5 +344,5 @@ finally
     Log.CloseAndFlush();
 }
 
-/// <summary>Entry point partial class — required for WebApplicationFactory in integration tests.</summary>
+/// <summary>Entry point partial class: required for WebApplicationFactory in integration tests.</summary>
 public partial class Program;

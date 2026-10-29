@@ -11,6 +11,11 @@ public sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
     public void Configure(EntityTypeBuilder<Project> builder)
     {
         builder.HasKey(x => x.Id);
+
+        // Two operators reordering the same list at once cannot overwrite each other: the second save of a
+        // changed row fails with a concurrency conflict (409) instead of silently winning.
+        builder.UseXminConcurrencyToken();
+
         builder.Property(x => x.Slug).IsRequired().HasMaxLength(Project.SlugMaxLength);
         builder.Property(x => x.Url).HasMaxLength(Project.UrlMaxLength);
         builder.Property(x => x.ImageUrls).IsRequired();

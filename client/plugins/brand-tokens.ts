@@ -3,7 +3,7 @@
  * stylesheet applies.
  *
  * One `<style id="brand-tokens">` in `<head>`, rendered on the server from the
- * `portal.brand.*` settings, so the first paint already carries the brand — a client-side
+ * `portal.brand.*` settings, so the first paint already carries the brand: a client-side
  * write would flash the template's own colours first. Every consumer of these variables
  * (Tailwind's `primary`/`secondary` scales, aurora's `--ac1/--ac2`, nova's `--n-brand`)
  * names the template's original literal as its `var()` fallback, and this plugin emits

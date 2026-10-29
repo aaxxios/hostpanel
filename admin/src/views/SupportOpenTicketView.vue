@@ -1,15 +1,16 @@
 <script setup lang="ts">
 /**
  * Open a new ticket: the staff form that creates a support ticket on behalf of a client, with a
- * client search, department and priority. Opens the ticket's detail page on success.
+ * client search, department and priority. Opens the ticket's detail page on success; a refusal shows
+ * the API's sentence next to the submit button.
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiCheckbox from '@/components/ui/UiCheckbox.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
@@ -18,6 +19,7 @@ import UiLink from '@/components/ui/UiLink.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
 import { TICKET_PRIORITY_OPTIONS } from '@/lib/constants'
@@ -28,6 +30,7 @@ import type { ClientListItem } from '@/types/client'
 import { Icon } from '@/lib/icons'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiSize } from '@/utils/ui/size'
+import { UiTone } from '@/utils/ui/tone'
 import { SEARCH_DEBOUNCE_MS } from '@/lib/limits'
 import { AppRoute, supportTicketPath } from '@/lib/routes'
 
@@ -177,8 +180,6 @@ onMounted(() => {
       </template>
     </UiPageHeader>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="support-open-ticket-error">{{ store.error }}</UiAlert>
-
     <UiCard padding="lg">
       <UiStack>
         <UiField :label="t('shared.client')" :error="store.fieldErrors.clientId">
@@ -257,7 +258,14 @@ onMounted(() => {
 
         <UiGrid :columns="2">
           <UiField :label="t('shared.department')" :error="store.fieldErrors.departmentId">
+            <UiErrorState
+              v-if="store.departmentsError !== null"
+              :message="store.departmentsError"
+              testid="support-open-ticket-departments-error"
+              @retry="store.fetchDepartments"
+            />
             <UiSelect
+              v-else
               v-model="departmentId"
               :options="departmentOptions"
               :placeholder="t('shared.selectDepartment')"
@@ -294,6 +302,7 @@ onMounted(() => {
             {{ store.loading ? t('shared.creating') : t('support.supportOpenTicket.openTicket') }}
           </UiButton>
         </UiStack>
+        <UiStatusMessage :message="store.actionError" :tone="UiTone.Danger" data-testid="support-open-ticket-error" />
       </UiStack>
     </UiCard>
   </UiStack>

@@ -11,6 +11,6 @@ namespace Innovayse.Hostpanel.Domain.Faqs;
 /// </remarks>
 public static class FaqErrors
 {
-    /// <summary>The sort order is negative (400) — <see cref="Faq.Create"/>, <see cref="Faq.Update"/> and <see cref="Faq.SetSortOrder"/>.</summary>
+    /// <summary>The sort order is negative (400): <see cref="Faq.Create"/>, <see cref="Faq.Update"/> and <see cref="Faq.SetSortOrder"/>.</summary>
     public const string SortOrderNegative = "FAQ_SORT_ORDER_NEGATIVE";
 }

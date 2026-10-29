@@ -20,10 +20,9 @@ let route: RouteModule
 beforeEach(async () => {
   backend = await startBackend(() => ({
     body: [
-      { id: 1, name: 'Web Hosting', isActive: true, productCount: 4 },
-      { id: 3, name: 'Alpha Suite', isActive: true, productCount: 2 },
-      { id: 4, name: 'Beta Kit', isActive: true, productCount: 0 },
-      { id: 5, name: 'Gamma Tool', isActive: false, productCount: 3 }
+      { id: 1, name: 'Web Hosting', productCount: 4 },
+      { id: 3, name: 'Alpha Suite', productCount: 2 },
+      { id: 4, name: 'Beta Kit', productCount: 0 }
     ]
   }))
   route = await import('~/server/api/sitemap/products.get')
@@ -37,7 +36,7 @@ describe('GET /api/sitemap/products', () => {
   it('lists the active, non-empty families except hosting, which has its own page', async () => {
     const result = await route.default(makeEvent())
 
-    expect(backend.requests[0]?.url).toBe('/api/products/groups')
+    expect(backend.requests[0]?.url).toBe('/api/public/product-groups')
     expect(result).toEqual([{ loc: '/products/alpha-suite', changefreq: 'weekly', priority: 0.8 }])
   })
 

@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Application.Billing.Common;
+
 namespace Innovayse.Hostpanel.Application.Billing.Commands.CreateQuote;
 
 /// <summary>Command to create a new quote with line items.</summary>

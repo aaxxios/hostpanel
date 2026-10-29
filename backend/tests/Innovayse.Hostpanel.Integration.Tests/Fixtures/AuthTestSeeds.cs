@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
@@ -14,13 +13,16 @@ namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 /// </summary>
 internal static class AuthTestSeeds
 {
+    /// <summary>The password every account <see cref="NewAccountClientAsync"/> registers signs in with.</summary>
+    public const string AccountPassword = "Password123!";
+
     /// <summary>Registers and signs in a brand-new local account, and returns an authenticated client.</summary>
     /// <param name="client">A fresh, unauthenticated client of the host the account is created on.</param>
     /// <returns>A client carrying the new account's bearer token.</returns>
     public static async Task<HttpClient> NewAccountClientAsync(HttpClient client)
     {
         var email = $"twofactor-{Guid.NewGuid():N}@example.com";
-        const string password = "Password123!";
+        const string password = AccountPassword;
 
         (await client.PostAsJsonAsync("/api/auth/register",
             new { email, password, firstName = "Two", lastName = "Factor" }))

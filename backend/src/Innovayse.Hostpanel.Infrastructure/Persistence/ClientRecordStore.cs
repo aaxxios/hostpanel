@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Clients;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,7 @@ public sealed class ClientRecordStore : IClientRecordStore
     }
 
     /// <inheritdoc/>
-    public async Task<(Client Client, bool Created)> AddOrGetAsync(Client candidate, CancellationToken ct)
+    public async Task<ClientRecordWriteResult> AddOrGetAsync(Client candidate, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
@@ -33,7 +34,7 @@ public sealed class ClientRecordStore : IClientRecordStore
         try
         {
             await _db.SaveChangesAsync(ct);
-            return (candidate, true);
+            return new ClientRecordWriteResult(candidate, Created: true);
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: UniqueViolation })
         {
@@ -48,7 +49,7 @@ public sealed class ClientRecordStore : IClientRecordStore
                 throw;
             }
 
-            return (existing, false);
+            return new ClientRecordWriteResult(existing, Created: false);
         }
     }
 }

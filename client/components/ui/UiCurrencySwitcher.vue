@@ -71,7 +71,7 @@
  * writes the choice back through it, so the selection persists in the store's own localStorage key
  * and every page that watches the payer's currency (home, hosting, products, domains) reads its
  * prices again in the new one. A signed-in client whose currency is fixed on their record gets the
- * same chip read-only, with a hint explaining why -- the backend prices them in that currency
+ * same chip read-only, with a hint explaining why: the backend prices them in that currency
  * whatever is requested.
  */
 import { computed, onMounted, ref } from 'vue'

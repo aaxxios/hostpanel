@@ -4,7 +4,9 @@
  * @module types/accountcontact
  */
 
+import type { ContactNotifications } from '~/types/contactnotifications'
 import type { ContactType } from '~/types/contacttype'
+import type { PostalAddress } from '~/types/postaladdress'
 
 /**
  * One sub-contact on the client account, as `GET /api/portal/client/contacts` lists it. Mirrors
@@ -25,28 +27,8 @@ export interface AccountContact {
   phone: string | null
   /** Classification of the contact. */
   type: ContactType
-  /** Street address, if any. */
-  street: string | null
-  /** Second address line, if any. */
-  address2: string | null
-  /** City, if any. */
-  city: string | null
-  /** State or region, if any. */
-  state: string | null
-  /** Postal code, if any. */
-  postCode: string | null
-  /** ISO 3166-1 alpha-2 country code, if any. */
-  country: string | null
-  /** Whether the contact receives general emails. */
-  notifyGeneral: boolean
-  /** Whether the contact receives invoice emails. */
-  notifyInvoice: boolean
-  /** Whether the contact receives support emails. */
-  notifySupport: boolean
-  /** Whether the contact receives product emails. */
-  notifyProduct: boolean
-  /** Whether the contact receives domain emails. */
-  notifyDomain: boolean
-  /** Whether the contact receives affiliate emails. */
-  notifyAffiliate: boolean
+  /** The contact's postal address. */
+  address: PostalAddress
+  /** Which kinds of email the contact receives. */
+  notifications: ContactNotifications
 }

@@ -2,10 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 
@@ -16,12 +13,11 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 /// caller with only the Client role is refused, and the route is closed to a caller with no
 /// credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>SettingsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UploadBrandingImageTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>
-    /// A minimal, genuinely decodable 1x1 transparent PNG -- the branding processor decodes the
+    /// A minimal, genuinely decodable 1x1 transparent PNG: the branding processor decodes the
     /// bytes for real, so a file that is merely named <c>.png</c> is not enough to exercise the
     /// success path.
     /// </summary>

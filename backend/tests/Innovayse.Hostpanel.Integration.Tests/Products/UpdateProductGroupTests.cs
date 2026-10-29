@@ -1,10 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Products;
 
 /// <summary>
@@ -12,10 +10,8 @@ namespace Innovayse.Hostpanel.Integration.Tests.Products;
 /// refusal.
 /// </summary>
 /// <remarks>
-/// Split from the deleted <c>ProductGroupsEndpointTests</c>, converted from an
-/// <c>IProductGroupRepository</c>-backed handler returning a bare value to an
-/// <c>IHostpanelDbContext</c> handler returning <c>Result</c>. Pins the <c>PRODUCT_GROUP_NOT_FOUND</c>
-/// refusal (404, was a bare 400 <c>InvalidOperationException</c>) (A7 Task 6).
+/// Pins the <c>PRODUCT_GROUP_NOT_FOUND</c>
+/// refusal (404).
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateProductGroupTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>

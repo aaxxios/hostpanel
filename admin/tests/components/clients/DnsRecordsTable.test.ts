@@ -1,5 +1,6 @@
 /**
- * Mount tests for DnsRecordsTable: rows, the shared add/edit row and the delete prompt.
+ * Mount tests for DnsRecordsTable: rows, the shared add/edit row, the delete prompt and the
+ * outcome line of each change.
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
@@ -7,7 +8,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import DnsRecordsTable from '@/components/clients/DnsRecordsTable.vue'
 import type { DnsRecordItem } from '@/types/domain'
 import { createTestI18n } from '../../helpers/i18n'
-import { json, stubFetch, callOf } from '../../helpers/fetch'
+import { json, problem, stubFetch, callOf } from '../../helpers/fetch'
 
 /**
  * Builds a DNS record fixture.
@@ -78,5 +79,51 @@ describe('DnsRecordsTable', () => {
 
     expect(callOf(fetchMock).method).toBe('DELETE')
     expect(wrapper.emitted('refresh')).toHaveLength(1)
+  })
+
+  it('reports a deleted entry under the heading', async () => {
+    stubFetch(new Response(null, { status: 204 }))
+    const wrapper = mountTable([record()])
+
+    await wrapper.get('[data-testid="clients-dns-delete-7"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="clients-dns-feedback"]').text()).toBe('DNS record deleted.')
+  })
+
+  it('shows the API sentence when the delete is refused and asks for no refresh', async () => {
+    stubFetch(problem('The registrar refused the change.', 502))
+    const wrapper = mountTable([record()])
+
+    await wrapper.get('[data-testid="clients-dns-delete-7"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="clients-dns-feedback"]').text()).toBe('The registrar refused the change.')
+    expect(wrapper.emitted('refresh')).toBeUndefined()
+  })
+
+  it('does not delete when the confirmation is cancelled', async () => {
+    const fetchMock = stubFetch(json({}))
+    const wrapper = mountTable([record()])
+
+    await wrapper.get('[data-testid="clients-dns-delete-7"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+  })
+
+  it('reports a saved entry under the heading', async () => {
+    stubFetch(json({}))
+    const wrapper = mountTable([record()])
+
+    await wrapper.get('[data-testid="clients-dns-edit-7"]').trigger('click')
+    await wrapper.get('[data-testid="clients-dns-draft-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="clients-dns-feedback"]').text()).toBe('DNS record saved.')
   })
 })

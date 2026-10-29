@@ -1,15 +1,13 @@
 using System.Net;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>GetWhois</c> use case —
-/// <c>GET /api/domains/whois?name=...</c>. The client-facing equivalent is
-/// <c>GetMyDomainWhois</c>. Had no Integration coverage of its own before this batch.
+/// Integration tests for the admin <c>GetWhois</c> use case:
+/// <c>GET /api/domains/whois?name={domain}</c>. The client-facing equivalent is
+/// <c>GetMyDomainWhois</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetWhoisTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -38,5 +36,17 @@ public sealed class GetWhoisTests(IntegrationTestFactory factory) : IClassFixtur
         var response = await client.GetAsync("/api/domains/whois?name=nowhere.test");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>An empty domain name is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task GetWhois_EmptyName_Returns400ValidationErrorAsync()
+    {
+        var admin = await DomainsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.GetAsync("/api/domains/whois?name=");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

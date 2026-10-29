@@ -1,17 +1,26 @@
-using System.Net.Http.Json;
+using System.Globalization;
+using System.Text.Json;
 using Innovayse.Providers.CWP7.Models;
 using Innovayse.SDK.Plugins;
 using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Providers.CWP7;
+
 /// <summary>
 /// HTTP client wrapper for the Control Web Panel 7 (CWP7) REST API.
 /// Sends form-encoded POST requests to /v1/account and related endpoints.
 /// </summary>
+/// <remarks>
+/// Logs carry operation names, statuses and sizes only. The panel's own message text and the
+/// request URLs can echo account data, so neither is written to a log.
+/// </remarks>
 internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
 {
-    /// <summary>Default CWP7 API port when not specified in configuration.</summary>
-    private const int DefaultPort = 2304;
+    /// <summary>The panel's display name in fixed failure phrases and logs.</summary>
+    private const string PanelName = "CWP7";
+
+    /// <summary>The failure text for a session payload that issued nothing for the asked account.</summary>
+    private const string NoSessionMessage = "CWP7 issued no session for the account.";
 
     /// <summary>The underlying HTTP client used for all requests.</summary>
     private readonly HttpClient _http;
@@ -30,125 +39,51 @@ internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
         _logger = logger;
     }
 
-    /// <summary>Maximum number of characters of a non-JSON body carried into the error message.</summary>
-    /// <remarks>
-    /// A CWP7 error page is a full HTML document. The first few hundred characters hold the
-    /// <c>&lt;title&gt;</c> and the error text an operator needs; the rest is markup that would
-    /// only bloat every log line and every provisioning failure message.
-    /// </remarks>
-    private const int MaxErrorBodyLength = 500;
-
-    /// <summary>
-    /// Reads the HTTP response body and parses it as <see cref="Cwp7ApiWire"/>.
-    /// </summary>
-    /// <remarks>
-    /// CWP7 answers errors with HTTP 200 and an HTML body, so <c>EnsureSuccessStatusCode</c>
-    /// upstream cannot catch them. A body that is not the JSON envelope is therefore a
-    /// <em>failure</em>: it is returned as a response with status "Error" carrying the start of
-    /// the body, so the caller's <c>IsSuccess</c> check refuses the operation. This used to be
-    /// reported as a success, which turned a CWP7 error page into a provisioned account.
-    /// </remarks>
-    /// <param name="response">The HTTP response message.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>Parsed CWP7 response, or a failure response when the body is not JSON.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the response body is empty.</exception>
-    private async Task<Cwp7ApiWire> ParseResponseAsync(HttpResponseMessage response, CancellationToken ct)
-    {
-        var raw = await response.Content.ReadAsStringAsync(ct);
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            throw new InvalidOperationException("CWP7 API returned an empty response body.");
-        }
-
-        try
-        {
-            return System.Text.Json.JsonSerializer.Deserialize<Cwp7ApiWire>(raw)
-                ?? throw new InvalidOperationException("CWP7 API returned null JSON.");
-        }
-        catch (System.Text.Json.JsonException ex)
-        {
-            var excerpt = raw.Length > MaxErrorBodyLength
-                ? raw[..MaxErrorBodyLength]
-                : raw;
-
-            _logger.LogError(
-                ex,
-                "CWP7 API returned a non-JSON response body; treating the call as failed. Body starts: {Body}",
-                excerpt);
-
-            return new Cwp7ApiWire
-            {
-                Status = Cwp7ApiWire.ErrorStatus,
-                Msj = $"CWP7 returned a non-JSON response: {excerpt}",
-            };
-        }
-    }
-
     /// <summary>
     /// Creates a new hosting account on the CWP7 server.
     /// </summary>
-    /// <param name="host">CWP7 server base URL including port.</param>
-    /// <param name="apiKey">CWP7 API key for authentication.</param>
-    /// <param name="domain">Primary domain for the account.</param>
-    /// <param name="username">Username to create.</param>
-    /// <param name="password">Account password.</param>
-    /// <param name="package">Hosting package name.</param>
-    /// <param name="email">Contact email address.</param>
-    /// <param name="inode">Inode limit (0 for unlimited).</param>
-    /// <param name="limitNproc">Process limit.</param>
-    /// <param name="limitNofile">Open files limit.</param>
-    /// <param name="serverIps">Server IP address.</param>
+    /// <param name="connection">Where and how to reach the CWP7 API.</param>
+    /// <param name="account">The account to create.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The CWP7 API response indicating success or failure.</returns>
-    public Task<Cwp7ApiWire> CreateAccountAsync(
-        string host,
-        string apiKey,
-        string domain,
-        string username,
-        string password,
-        string package,
-        string email,
-        string inode,
-        string limitNproc,
-        string limitNofile,
-        string serverIps,
+    public Task<HostingPanelApiWire> CreateAccountAsync(
+        Cwp7Connection connection,
+        Cwp7NewAccount account,
         CancellationToken ct) =>
         SendAccountAsync(
-            host,
+            connection.BaseUrl,
             new Cwp7AccountRequest
             {
-                Key = apiKey,
+                Key = connection.ApiKey,
                 Action = "add",
-                Domain = domain,
-                User = username,
-                Pass = password,
-                Package = package,
-                Email = email,
-                Inode = inode,
-                LimitNproc = limitNproc,
-                LimitNofile = limitNofile,
-                ServerIps = serverIps,
+                Domain = account.Domain,
+                User = account.Username,
+                Pass = account.Password,
+                Package = account.Package,
+                Email = account.Email,
+                Inode = account.InodeLimit.ToString(CultureInfo.InvariantCulture),
+                LimitNproc = account.ProcessLimit.ToString(CultureInfo.InvariantCulture),
+                LimitNofile = account.OpenFileLimit.ToString(CultureInfo.InvariantCulture),
+                ServerIps = account.ServerIp,
             },
             ct);
 
     /// <summary>
     /// Suspends an existing hosting account.
     /// </summary>
-    /// <param name="host">CWP7 server base URL including port.</param>
-    /// <param name="apiKey">CWP7 API key for authentication.</param>
+    /// <param name="connection">Where and how to reach the CWP7 API.</param>
     /// <param name="username">Username of the account to suspend.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The CWP7 API response indicating success or failure.</returns>
-    public Task<Cwp7ApiWire> SuspendAccountAsync(
-        string host,
-        string apiKey,
+    public Task<HostingPanelApiWire> SuspendAccountAsync(
+        Cwp7Connection connection,
         string username,
         CancellationToken ct) =>
         SendAccountAsync(
-            host,
+            connection.BaseUrl,
             new Cwp7AccountRequest
             {
-                Key = apiKey,
+                Key = connection.ApiKey,
                 Action = "susp",
                 User = username,
             },
@@ -157,21 +92,19 @@ internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
     /// <summary>
     /// Unsuspends a previously suspended hosting account.
     /// </summary>
-    /// <param name="host">CWP7 server base URL including port.</param>
-    /// <param name="apiKey">CWP7 API key for authentication.</param>
+    /// <param name="connection">Where and how to reach the CWP7 API.</param>
     /// <param name="username">Username of the account to unsuspend.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The CWP7 API response indicating success or failure.</returns>
-    public Task<Cwp7ApiWire> UnsuspendAccountAsync(
-        string host,
-        string apiKey,
+    public Task<HostingPanelApiWire> UnsuspendAccountAsync(
+        Cwp7Connection connection,
         string username,
         CancellationToken ct) =>
         SendAccountAsync(
-            host,
+            connection.BaseUrl,
             new Cwp7AccountRequest
             {
-                Key = apiKey,
+                Key = connection.ApiKey,
                 Action = "unsp",
                 User = username,
             },
@@ -180,23 +113,21 @@ internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
     /// <summary>
     /// Terminates (permanently deletes) a hosting account.
     /// </summary>
-    /// <param name="host">CWP7 server base URL including port.</param>
-    /// <param name="apiKey">CWP7 API key for authentication.</param>
+    /// <param name="connection">Where and how to reach the CWP7 API.</param>
     /// <param name="username">Username of the account to delete.</param>
     /// <param name="email">Email associated with the account.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The CWP7 API response indicating success or failure.</returns>
-    public Task<Cwp7ApiWire> TerminateAccountAsync(
-        string host,
-        string apiKey,
+    public Task<HostingPanelApiWire> TerminateAccountAsync(
+        Cwp7Connection connection,
         string username,
         string email,
         CancellationToken ct) =>
         SendAccountAsync(
-            host,
+            connection.BaseUrl,
             new Cwp7AccountRequest
             {
-                Key = apiKey,
+                Key = connection.ApiKey,
                 Action = "del",
                 User = username,
                 Email = email,
@@ -206,113 +137,118 @@ internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
     /// <summary>
     /// Changes the password for an existing hosting account.
     /// </summary>
-    /// <param name="host">CWP7 server base URL including port.</param>
-    /// <param name="apiKey">CWP7 API key for authentication.</param>
+    /// <param name="connection">Where and how to reach the CWP7 API.</param>
     /// <param name="username">Username of the account.</param>
     /// <param name="newPassword">New password to set.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The CWP7 API response indicating success or failure.</returns>
-    public async Task<Cwp7ApiWire> ChangePasswordAsync(
-        string host,
-        string apiKey,
+    public async Task<HostingPanelApiWire> ChangePasswordAsync(
+        Cwp7Connection connection,
         string username,
         string newPassword,
         CancellationToken ct)
     {
-        var url = $"{host}/v1/changepass";
-        _logger.LogDebug("CWP7 API request: ChangePassword url={Url} user={User}", url, username);
-
         using var content = new FormUrlEncodedContent(
         [
-            new KeyValuePair<string, string>("key", apiKey),
+            new KeyValuePair<string, string>("key", connection.ApiKey),
             new KeyValuePair<string, string>("action", "udp"),
             new KeyValuePair<string, string>("user", username),
             new KeyValuePair<string, string>("pass", newPassword),
         ]);
 
-        using var response = await _http.PostAsync(url, content, ct);
-        response.EnsureSuccessStatusCode();
-
-        var result = await ParseResponseAsync(response, ct);
-
-        _logger.LogDebug("CWP7 ChangePassword response: status={Status} message={Message}", result.Status, result.Message);
-        return result;
+        return await PostAsync($"{connection.BaseUrl}/v1/changepass", content, "ChangePassword", ct);
     }
 
     /// <summary>
     /// Changes the hosting package for an existing account (upgrade/downgrade).
     /// </summary>
-    /// <param name="host">CWP7 server base URL including port.</param>
-    /// <param name="apiKey">CWP7 API key for authentication.</param>
+    /// <param name="connection">Where and how to reach the CWP7 API.</param>
     /// <param name="username">Username of the account.</param>
     /// <param name="email">Email associated with the account.</param>
     /// <param name="package">New package name or ID (prefix ID with @).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The CWP7 API response indicating success or failure.</returns>
-    public async Task<Cwp7ApiWire> ChangePackageAsync(
-        string host,
-        string apiKey,
+    public async Task<HostingPanelApiWire> ChangePackageAsync(
+        Cwp7Connection connection,
         string username,
         string email,
         string package,
         CancellationToken ct)
     {
-        var url = $"{host}/v1/changepack";
-        _logger.LogDebug("CWP7 API request: ChangePackage url={Url} user={User} package={Package}", url, username, package);
-
         using var content = new FormUrlEncodedContent(
         [
-            new KeyValuePair<string, string>("key", apiKey),
+            new KeyValuePair<string, string>("key", connection.ApiKey),
             new KeyValuePair<string, string>("action", "udp"),
             new KeyValuePair<string, string>("user", username),
             new KeyValuePair<string, string>("email", email),
             new KeyValuePair<string, string>("newpackage", package),
         ]);
 
-        using var response = await _http.PostAsync(url, content, ct);
-        response.EnsureSuccessStatusCode();
-
-        var result = await ParseResponseAsync(response, ct);
-
-        _logger.LogDebug("CWP7 ChangePackage response: status={Status} message={Message}", result.Status, result.Message);
-        return result;
+        return await PostAsync($"{connection.BaseUrl}/v1/changepack", content, "ChangePackage", ct);
     }
 
     /// <summary>
-    /// Generates an auto-login (SSO) URL for the given user.
+    /// Asks CWP7 whether an account exists, and what its domain and suspension state are.
     /// </summary>
-    /// <param name="host">CWP7 server base URL including port.</param>
-    /// <param name="apiKey">CWP7 API key for authentication.</param>
-    /// <param name="username">Username to generate SSO link for.</param>
+    /// <param name="connection">Where and how to reach the CWP7 API.</param>
+    /// <param name="username">Username of the account.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// A response whose message is the control-panel URL on success, or CWP7's own refusal on
-    /// failure.
+    /// The account when CWP7 reports it, "not found" when CWP7 answers successfully without it,
+    /// and "unknown" for any answer that cannot be relied on.
     /// </returns>
-    /// <remarks>
-    /// <c>/v1/user_session</c>, not <c>/v1/autologin</c> — the latter is not a route CWP7 serves
-    /// and answered 404 for every client who ever pressed the button, which the page then showed
-    /// as the plain login form. This endpoint also breaks the shape every other call returns: its
-    /// <c>msj</c> is an object carrying one entry per matched account, so it is parsed with its
-    /// own model and flattened back into the shared response here.
-    /// </remarks>
-    public async Task<Cwp7ApiWire> GetAutoLoginUrlAsync(
-        string host,
-        string apiKey,
+    /// <exception cref="HttpRequestException">Thrown when the API request fails.</exception>
+    public async Task<Cwp7AccountLookup> FindAccountAsync(
+        Cwp7Connection connection,
         string username,
         CancellationToken ct)
     {
-        var url = $"{host}/v1/user_session";
-        _logger.LogDebug("CWP7 API request: AutoLogin url={Url} user={User}", url, username);
+        using var content = new Cwp7AccountRequest
+        {
+            Key = connection.ApiKey,
+            Action = "list",
+            User = username,
+        }.ToFormContent();
 
+        using var response = await _http.PostAsync($"{connection.BaseUrl}/v1/accountdetail", content, ct);
+        response.EnsureSuccessStatusCode();
+
+        var raw = await response.Content.ReadAsStringAsync(ct);
+        var lookup = Cwp7AccountLookup.FromBody(raw, username);
+
+        _logger.LogDebug("CWP7 FindAccount answered {Outcome} for {User}.", lookup.Outcome, username);
+        return lookup;
+    }
+
+    /// <summary>
+    /// Generates an auto-login URL for the given user.
+    /// </summary>
+    /// <param name="connection">Where and how to reach the CWP7 API.</param>
+    /// <param name="username">Username to generate control-panel sign-in link for.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// A response whose message is the control-panel URL on success, or a fixed phrase on failure;
+    /// CWP7's own refusal goes to the log only.
+    /// </returns>
+    /// <remarks>
+    /// <c>/v1/user_session</c>, not <c>/v1/autologin</c>: the latter is not a route CWP7 serves,
+    /// and its 404 shows the client the plain login form. This endpoint also breaks the shape every other call returns: its
+    /// <c>msj</c> is an object carrying one entry per matched account, so it is parsed with its
+    /// own model and flattened back into the shared response here.
+    /// </remarks>
+    public async Task<HostingPanelApiWire> GetAutoLoginUrlAsync(
+        Cwp7Connection connection,
+        string username,
+        CancellationToken ct)
+    {
         using var content = new FormUrlEncodedContent(
         [
-            new KeyValuePair<string, string>("key", apiKey),
+            new KeyValuePair<string, string>("key", connection.ApiKey),
             new KeyValuePair<string, string>("action", "list"),
             new KeyValuePair<string, string>("user", username),
         ]);
 
-        using var response = await _http.PostAsync(url, content, ct);
+        using var response = await _http.PostAsync($"{connection.BaseUrl}/v1/user_session", content, ct);
         response.EnsureSuccessStatusCode();
 
         var raw = await response.Content.ReadAsStringAsync(ct);
@@ -323,21 +259,65 @@ internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
         var detail = session?.Payload?.Details?
             .Find(d => string.Equals(d.User, username, StringComparison.OrdinalIgnoreCase));
 
-        if (session is null
-            || !string.Equals(session.Status, Cwp7ApiWire.OkStatus, StringComparison.OrdinalIgnoreCase)
+        if (session is null)
+        {
+            // Not a session payload, so the body is a refusal or an error page. Only its status and
+            // size are logged: the body may echo account data and has no place in the log.
+            _logger.LogWarning(
+                "CWP7 AutoLogin did not yield a session URL for {User}: status {Status}, body length {Length}.",
+                username,
+                (int)response.StatusCode,
+                raw.Length);
+
+            return HostingPanelApiWire.Failure(NoSessionMessage);
+        }
+
+        if (!string.Equals(session.Status, HostingPanelApiWire.OkStatus, StringComparison.OrdinalIgnoreCase)
             || string.IsNullOrWhiteSpace(detail?.Url))
         {
-            var excerpt = raw.Length > MaxErrorBodyLength ? raw[..MaxErrorBodyLength] : raw;
+            // A session payload holds live login tokens, possibly for other accounts, so neither
+            // the log nor the result repeats it.
             _logger.LogWarning(
-                "CWP7 AutoLogin did not yield a session URL for {User}. Body starts: {Body}",
-                username,
-                excerpt);
+                "CWP7 AutoLogin returned status {Status} without a session URL for {User}.",
+                session.Status,
+                username);
 
-            return new Cwp7ApiWire { Status = Cwp7ApiWire.ErrorStatus, Msj = excerpt };
+            return HostingPanelApiWire.Failure(NoSessionMessage);
         }
 
         _logger.LogDebug("CWP7 AutoLogin response: session URL issued for {User}", username);
-        return new Cwp7ApiWire { Status = Cwp7ApiWire.OkStatus, Msj = detail.Url };
+        return new HostingPanelApiWire { Status = HostingPanelApiWire.OkStatus, Message = detail.Url };
+    }
+
+    /// <summary>
+    /// Fetches the list of hosting packages to verify connectivity.
+    /// Since CWP7 has no version endpoint and Account LIST is not enabled,
+    /// we use Packages LIST as a health check.
+    /// </summary>
+    /// <param name="connection">Where and how to reach the CWP7 API.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The number of packages configured on the server.</returns>
+    /// <exception cref="HttpRequestException">Thrown when the API request fails.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the response body cannot be parsed.</exception>
+    public async Task<HostingPanelV7ServerInfo> GetServerInfoAsync(HostingPanelConnection connection, CancellationToken ct)
+    {
+        using var packagesContent = new FormUrlEncodedContent(
+        [
+            new KeyValuePair<string, string>("key", connection.ApiKey),
+            new KeyValuePair<string, string>("action", "list"),
+        ]);
+
+        using var packagesResponse = await _http.PostAsync($"{connection.BaseUrl}/v1/packages", packagesContent, ct);
+        packagesResponse.EnsureSuccessStatusCode();
+
+        var packageList = await HostingPanelApiReader.ReadPayloadAsync<Cwp7PackageListResponse>(
+            packagesResponse, PanelName, _logger, ct);
+
+        var packagesCount = packageList.Packages?.Count ?? 0;
+
+        _logger.LogDebug("CWP7 GetServerInfo: packages={Count}", packagesCount);
+
+        return new HostingPanelV7ServerInfo(packagesCount);
     }
 
     /// <summary>Deserializes a user-session body, returning null when it is not that shape.</summary>
@@ -352,9 +332,9 @@ internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
 
         try
         {
-            return System.Text.Json.JsonSerializer.Deserialize<Cwp7UserSessionWire>(raw);
+            return JsonSerializer.Deserialize<Cwp7UserSessionWire>(raw);
         }
-        catch (System.Text.Json.JsonException ex)
+        catch (JsonException ex)
         {
             // An error from this endpoint arrives as `msj: "<sentence>"`, which is this model's
             // object field holding a string. That is a refusal to report, not a fault to raise.
@@ -364,71 +344,36 @@ internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
     }
 
     /// <summary>
-    /// Fetches the list of hosting packages to verify connectivity.
-    /// Since CWP7 has no version endpoint and Account LIST is not enabled,
-    /// we use Packages LIST as a health check.
-    /// </summary>
-    /// <param name="host">CWP7 server hostname or IP.</param>
-    /// <param name="port">CWP7 API port (e.g. "2304").</param>
-    /// <param name="apiKey">CWP7 API key for authentication.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>The number of packages configured on the server.</returns>
-    /// <exception cref="HttpRequestException">Thrown when the API request fails.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the response body cannot be parsed.</exception>
-    public async Task<int> GetServerInfoAsync(
-        string host, string port, string apiKey, CancellationToken ct)
-    {
-        var resolvedPort = int.TryParse(port, out var p) ? p : DefaultPort;
-        var baseUrl = $"https://{host}:{resolvedPort}";
-
-        var packagesUrl = $"{baseUrl}/v1/packages";
-        _logger.LogDebug("CWP7 GetServerInfo: fetching packages from {Url}", packagesUrl);
-
-        using var packagesContent = new FormUrlEncodedContent(
-        [
-            new KeyValuePair<string, string>("key", apiKey),
-            new KeyValuePair<string, string>("action", "list"),
-        ]);
-
-        using var packagesResponse = await _http.PostAsync(packagesUrl, packagesContent, ct);
-        packagesResponse.EnsureSuccessStatusCode();
-
-        var packageList = await packagesResponse.Content.ReadFromJsonAsync<Cwp7PackageListResponse>(ct)
-            ?? throw new InvalidOperationException("CWP7 API returned an empty packages response.");
-
-        var packagesCount = packageList.Packages?.Count ?? 0;
-
-        _logger.LogDebug("CWP7 GetServerInfo: packages={Count}", packagesCount);
-
-        return packagesCount;
-    }
-
-    /// <summary>
     /// Sends a form-encoded POST to the CWP7 /v1/account endpoint and parses the JSON response.
     /// </summary>
     /// <param name="baseUrl">CWP7 server base URL including port.</param>
     /// <param name="request">The request parameters to send.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Parsed <see cref="Cwp7ApiWire"/>.</returns>
+    /// <returns>Parsed <see cref="HostingPanelApiWire"/>.</returns>
     /// <exception cref="HttpRequestException">Thrown when the HTTP request fails.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the response body cannot be parsed.</exception>
-    private async Task<Cwp7ApiWire> SendAccountAsync(string baseUrl, Cwp7AccountRequest request, CancellationToken ct)
+    /// <exception cref="InvalidOperationException">Thrown when the response body is empty.</exception>
+    private async Task<HostingPanelApiWire> SendAccountAsync(string baseUrl, Cwp7AccountRequest request, CancellationToken ct)
     {
-        var url = $"{baseUrl}/v1/account";
-        _logger.LogDebug("CWP7 API request: action={Action} url={Url}", request.Action, url);
-
         using var content = request.ToFormContent();
-        using var response = await _http.PostAsync(url, content, ct);
+        return await PostAsync($"{baseUrl}/v1/account", content, request.Action, ct);
+    }
 
+    /// <summary>Posts a form and reads the answer through the shared panel response path.</summary>
+    /// <param name="url">The absolute endpoint URL; never logged.</param>
+    /// <param name="content">The form body.</param>
+    /// <param name="operation">The operation name, for the log line.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The parsed envelope, or a failure envelope when the body is not JSON.</returns>
+    /// <exception cref="HttpRequestException">Thrown when the HTTP request fails.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the response body is empty.</exception>
+    private async Task<HostingPanelApiWire> PostAsync(string url, FormUrlEncodedContent content, string operation, CancellationToken ct)
+    {
+        using var response = await _http.PostAsync(url, content, ct);
         response.EnsureSuccessStatusCode();
 
-        var result = await ParseResponseAsync(response, ct);
+        var result = await HostingPanelApiReader.ReadEnvelopeAsync(response, PanelName, _logger, ct);
 
-        _logger.LogDebug(
-            "CWP7 API response: status={Status} message={Message}",
-            result.Status,
-            result.Message);
-
+        _logger.LogDebug("CWP7 {Operation} answered with status {Status}.", operation, result.Status);
         return result;
     }
 }

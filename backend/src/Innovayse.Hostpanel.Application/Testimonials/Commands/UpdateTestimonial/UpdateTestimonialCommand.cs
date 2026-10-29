@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Application.Testimonials.Commands.UpdateTestimonia
 /// <summary>Command to update an existing testimonial and replace its translations.</summary>
 /// <param name="Id">
 /// The testimonial identifier to update; wins over any id in the body. A value type, so it is left
-/// non-nullable — a missing <c>int</c> in the body binds to <c>0</c> and the route overlay
+/// non-nullable: a missing <c>int</c> in the body binds to <c>0</c> and the route overlay
 /// (<c>command with { Id = id }</c>) replaces it.
 /// </param>
 /// <param name="Name">The client's display name.</param>

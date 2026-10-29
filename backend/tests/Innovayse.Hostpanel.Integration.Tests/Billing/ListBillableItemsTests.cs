@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -12,11 +9,10 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>GET /api/billing/billable-items</c> against Postgres: the admin-wide, paginated billable
 /// item list with an optional type filter.
 /// </summary>
-/// <remarks>New coverage — gap-filled for A7 Task 3, ruling 2; no grouped file exercised this route.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListBillableItemsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>A billable item just created for a client appears in the admin-wide list.</summary>
+    /// <summary>A billable item just created for a client appears in the admin-wide list, named after its client.</summary>
     [Fact]
     public async Task ListIncludesAFreshlyCreatedBillableItem()
     {
@@ -37,6 +33,9 @@ public sealed class ListBillableItemsTests(IntegrationTestFactory factory) : ICl
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         body.RootElement.GetProperty("items").EnumerateArray()
             .Select(i => i.GetProperty("id").GetInt32()).Should().Contain(itemId);
+        body.RootElement.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetInt32() == itemId)
+            .GetProperty("clientName").GetString().Should().Be("Ada Lovelace");
     }
 
     /// <summary>Listing billable items is not for anonymous callers.</summary>
@@ -46,5 +45,16 @@ public sealed class ListBillableItemsTests(IntegrationTestFactory factory) : ICl
         var response = await factory.CreateClient().GetAsync("/api/billing/billable-items");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A type filter that names no billable item type is refused.</summary>
+    [Fact]
+    public async Task UnknownTypeFilterIsRefused()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.GetAsync("/api/billing/billable-items?type=NotAType");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

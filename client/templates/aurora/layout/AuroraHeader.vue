@@ -224,8 +224,8 @@ const PICKER_CONTROL = `${HEADER_CONTROL} gap-2 px-3`
 
 // Where "Sign in" goes is a deployment decision, not a constant: `sso` starts the
 // OIDC flow against the platform identity provider, `local` opens this product's
-// own form. This header used to hard-code the latter, so an SSO deployment sent
-// every visitor to a login page its users have no credentials for.
+// own form. Hard-coding the form would send every visitor of an SSO deployment to a
+// login page its users have no credentials for.
 /** Where the sign-in link goes under the configured auth mode. */
 const { signInHref } = useAuthMode()
 /** Whether a session exists. */

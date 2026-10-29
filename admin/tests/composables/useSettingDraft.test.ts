@@ -5,7 +5,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
 import { useSettingDraft } from '@/composables/useSettingDraft'
-import type { Setting } from '@/types/setting'
+import type { Setting, SettingSave } from '@/types/setting'
 
 /**
  * Builds the settings list the composable watches.
@@ -41,24 +41,24 @@ describe('useSettingDraft', () => {
     expect(draft.dirty.value).toBe(false)
   })
 
-  it('hands the row id and the edit to the saver, once there is something to save', () => {
+  it('hands the row id and the edit to the saver, once there is something to save', async () => {
     const draft = useSettingDraft(settingsWith('nova'), 'portal.template')
-    const save = vi.fn()
+    const save = vi.fn<SettingSave>(async () => ({ saved: true, error: null }))
 
-    draft.submit(save)
+    await draft.submit(save)
     expect(save).not.toHaveBeenCalled()
 
     draft.value.value = 'classic'
-    draft.submit(save)
+    await draft.submit(save)
     expect(save).toHaveBeenCalledWith(7, 'classic')
   })
 
-  it('saves nothing for a row that was never seeded', () => {
+  it('saves nothing for a row that was never seeded', async () => {
     const draft = useSettingDraft(ref<Setting[]>([]), 'portal.template')
-    const save = vi.fn()
+    const save = vi.fn<SettingSave>(async () => ({ saved: true, error: null }))
 
     draft.value.value = 'classic'
-    draft.submit(save)
+    await draft.submit(save)
 
     expect(save).not.toHaveBeenCalled()
   })
@@ -79,5 +79,38 @@ describe('useSettingDraft', () => {
     await nextTick()
     expect(draft.dirty.value).toBe(false)
     expect(draft.value.value).toBe('classic')
+  })
+
+  it('records the outcome of a save, and forgets it on the next edit', async () => {
+    const draft = useSettingDraft(settingsWith('nova'), 'portal.template')
+    expect(draft.outcome.value).toBeNull()
+
+    draft.value.value = 'classic'
+    await draft.submit(async () => ({ saved: false, error: 'Unknown template.' }))
+    expect(draft.outcome.value).toEqual({ saved: false, error: 'Unknown template.' })
+
+    draft.value.value = 'nova2'
+    expect(draft.outcome.value).toBeNull()
+
+    await draft.submit(async () => ({ saved: true, error: null }))
+    expect(draft.outcome.value).toEqual({ saved: true, error: null })
+  })
+
+  it('is saving while the request is in flight and refuses a second submit meanwhile', async () => {
+    const draft = useSettingDraft(settingsWith('nova'), 'portal.template')
+    let finish: (result: { saved: boolean; error: string | null }) => void = () => undefined
+    const save = vi.fn<SettingSave>(() => new Promise((resolve) => {
+      finish = resolve
+    }))
+    draft.value.value = 'classic'
+
+    const first = draft.submit(save)
+    expect(draft.saving.value).toBe(true)
+    await draft.submit(save)
+    expect(save).toHaveBeenCalledTimes(1)
+
+    finish({ saved: true, error: null })
+    await first
+    expect(draft.saving.value).toBe(false)
   })
 })

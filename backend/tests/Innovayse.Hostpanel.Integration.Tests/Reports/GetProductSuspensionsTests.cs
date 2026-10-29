@@ -1,21 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
 /// <summary>
 /// <c>GET /api/reports/product-suspensions</c> against Postgres: one row per suspended service.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingRemainderEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetProductSuspensionsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -32,14 +28,13 @@ public sealed class GetProductSuspensionsTests(IntegrationTestFactory factory) :
             db.ProductGroups.Add(group);
             await db.SaveChangesAsync();
             var product = Product.Create(
-                group.Id, $"SuspProduct-{marker}", null, null, null, null, ProductType.SharedHosting, 10m, 100m);
+                group.Id, $"SuspProduct-{marker}", null, null, null, null, ProductType.SharedHosting, 10m, 100m, DateTimeOffset.UtcNow);
             db.Products.Add(product);
             await db.SaveChangesAsync();
 
-            var service = ClientService.Create(clientId, product.Id, BillingCycleNames.Monthly);
-            service.Activate("provisioning-ref");
-            service.Suspend("non-payment");
-            db.ClientServices.Add(service);
+            var service = ClientService.Create(clientId, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+            await ServicesTestSeeds.AddActivatedAsync(db, service, "provisioning-ref", DateTimeOffset.UtcNow);
+            service.Suspend(DateTimeOffset.UtcNow, "non-payment");
             await db.SaveChangesAsync();
         }
 
@@ -62,7 +57,7 @@ public sealed class GetProductSuspensionsTests(IntegrationTestFactory factory) :
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

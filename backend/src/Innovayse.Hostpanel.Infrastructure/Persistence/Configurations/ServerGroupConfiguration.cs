@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table configuration for <see cref="ServerGroup"/>.</summary>
 public sealed class ServerGroupConfiguration : IEntityTypeConfiguration<ServerGroup>
 {

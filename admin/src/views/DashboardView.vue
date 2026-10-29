@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Admin dashboard — a grid of KPI tiles with the platform's headline numbers, the latest events of
+ * Admin dashboard: a grid of KPI tiles with the platform's headline numbers, the latest events of
  * the activity feed and shortcuts to the screens operators open most.
  *
  * Reads `stores/dashboard` (a refusal shows the store's sentence in an alert) and `stores/activity`
@@ -8,9 +8,9 @@
  */
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
@@ -24,25 +24,25 @@ import { activityEventLink } from '@/lib/activityEventLink'
 import { ACTIVITY_EVENT_LOOK } from '@/lib/activityEventLook'
 import { formatRelativeFromNow } from '@/lib/format'
 import { Icon } from '@/lib/icons'
-import { formatMoneyWhole } from '@/lib/money'
+import { formatCurrencyWhole } from '@/lib/money'
 import { AppRoute } from '@/lib/routes'
 import { useActivityStore } from '@/stores/activity'
 import { useDashboardStore } from '@/stores/dashboard'
-import type { DashboardStats } from '@/types/dashboardstats'
+import type { DashboardFigure } from '@/types/dashboardstats'
 import { UiTone } from '@/utils/ui/tone'
 
 /** One KPI tile of the dashboard. */
 interface StatTileConfig {
   /** Field of `DashboardStats` the tile shows. */
-  key: keyof DashboardStats
+  key: DashboardFigure
   /** Locale key of the tile caption. */
   labelKey: string
   /** Colour of the number. */
   tone: UiTone
   /** Inner SVG markup of the tile icon. */
   icon: string
-  /** Turns the raw number into the text shown on the tile. */
-  format: (value: number) => string
+  /** Turns the raw number, with the currency the revenue figures are in, into the text shown on the tile. */
+  format: (value: number, currency: string) => string
 }
 
 /** One shortcut of the quick-links card. */
@@ -76,8 +76,8 @@ const formatCount = (value: number): string => value.toString()
 
 /** The tiles, in display order. */
 const statConfig: StatTileConfig[] = [
-  { key: 'totalRevenue', labelKey: 'dashboard.stats.totalRevenue', tone: UiTone.Neutral, icon: Icon.Dollar, format: formatMoneyWhole },
-  { key: 'monthlyRevenue', labelKey: 'dashboard.stats.monthlyRevenue', tone: UiTone.Neutral, icon: Icon.Calendar, format: formatMoneyWhole },
+  { key: 'totalRevenue', labelKey: 'dashboard.stats.totalRevenue', tone: UiTone.Neutral, icon: Icon.Dollar, format: formatCurrencyWhole },
+  { key: 'monthlyRevenue', labelKey: 'dashboard.stats.monthlyRevenue', tone: UiTone.Neutral, icon: Icon.Calendar, format: formatCurrencyWhole },
   { key: 'activeServices', labelKey: 'dashboard.stats.activeServices', tone: UiTone.Success, icon: Icon.CheckCircle, format: formatCount },
   { key: 'overdueInvoices', labelKey: 'dashboard.stats.overdueInvoices', tone: UiTone.Danger, icon: Icon.Alert, format: formatCount },
   { key: 'openTickets', labelKey: 'dashboard.stats.openTickets', tone: UiTone.Warning, icon: Icon.Chat, format: formatCount },
@@ -121,16 +121,20 @@ onMounted(() => {
       <UiSkeleton :lines="3" />
     </UiStack>
 
-    <UiAlert v-else-if="store.error" variant="danger" data-testid="dashboard-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="dashboard-error"
+      @retry="store.fetchStats()"
+    />
 
     <UiGrid v-else-if="store.stats" :columns="3" data-testid="dashboard-stats">
       <UiStatTile
         v-for="stat in statConfig"
         :key="stat.key"
         :label="t(stat.labelKey)"
-        :value="stat.format(store.stats[stat.key])"
+        :value="stat.format(store.stats[stat.key], store.stats.currency)"
         :tone="stat.tone"
         :data-testid="`dashboard-stat-${stat.key}`"
       >

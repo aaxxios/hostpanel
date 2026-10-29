@@ -1,7 +1,7 @@
 /**
  * Harness for testing the Nitro BFF routes (`server/api/**`) in isolation.
  *
- * A route file is `export default defineEventHandler(async (event) => ...)` and reaches the rest
+ * A route file is `export default defineEventHandler(async (event) => { })` and reaches the rest
  * of the runtime through Nitro auto-imports. This module stands those names in as globals and
  * points the real `internalApiCall` at a real `node:http` stub (see `stubServer.ts`), so a test
  * drives the route's handler directly and asserts on what reached the "backend" and on what the
@@ -20,6 +20,7 @@ import { vi } from 'vitest'
 import type { H3Event } from 'h3'
 import { startStubServer } from './stubServer'
 import type { StubReply, StubRequest, StubServer } from './stubServer'
+import { HttpMethod } from '~/types/httpmethod'
 
 /** A cookie the route under test wrote to the response, with the options it passed. */
 export interface WrittenCookie {
@@ -44,11 +45,17 @@ export interface FakeEventInit {
   /** The parsed query string that `getQuery` returns. */
   query?: Record<string, string>
   /** The HTTP method. */
-  method?: string
+  method?: HttpMethod
+  /** The address of the connection itself; empty (unknown) when a test sends none. */
+  socketAddress?: string
 }
 
-/** The fake request/response the globals below read and write. */
-export interface FakeEvent extends Required<Omit<FakeEventInit, 'body'>> {
+/**
+ * The fake request/response the globals below read and write. The method stays out of it: a route
+ * reads it from the `H3Event` side, whose own string type would otherwise conflict with the enum and
+ * reduce `H3Event & FakeEvent` to `never`.
+ */
+export interface FakeEvent extends Required<Omit<FakeEventInit, 'body' | 'method'>> {
   /** The parsed request body. */
   body: unknown
   /** Cookies written to the response, by name. */
@@ -79,7 +86,8 @@ export const makeEvent = (init: FakeEventInit = {}): H3Event & FakeEvent => {
     params: {},
     path: '/',
     query: {},
-    method: 'GET',
+    method: HttpMethod.Get,
+    socketAddress: '',
     ...init,
     body: init.body,
     written: {},
@@ -101,6 +109,8 @@ vi.stubGlobal('deleteCookie', (event: FakeEvent, name: string) => {
   event.deleted.push(name)
 })
 vi.stubGlobal('getRouterParam', (event: FakeEvent, name: string) => event.params[name])
+// The connection's own address, the way h3 answers when it is not asked to believe X-Forwarded-For.
+vi.stubGlobal('getRequestIP', (event: FakeEvent) => event.socketAddress || undefined)
 vi.stubGlobal('setResponseStatus', (event: FakeEvent, status: number) => {
   event.status = status
 })
@@ -119,12 +129,6 @@ vi.stubGlobal('setResponseHeaders', (event: FakeEvent, headers: Record<string, s
 // A cache wrapper only changes how often the handler runs, never what it answers, so the
 // harness runs the handler on every call.
 vi.stubGlobal('defineCachedEventHandler', <T>(handler: T): T => handler)
-// The proxy helper streams the upstream answer through; the harness performs the real request
-// against the stub and hands back the body text.
-vi.stubGlobal('proxyRequest', async (_event: FakeEvent, target: string) => {
-  const response = await fetch(target)
-  return response.text()
-})
 vi.stubGlobal('useRuntimeConfig', () => runtimeConfig)
 
 const { getApiUrl, internalApiBinaryCall, internalApiCall } = await import('~/server/utils/api')

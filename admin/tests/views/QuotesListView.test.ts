@@ -14,9 +14,10 @@ import { stubRoutes } from '../helpers/routes'
 const quotesPage = () =>
   json({
     items: [quoteRowFixture(), quoteRowFixture({ id: 4, subject: 'Other work', stage: 'Draft' })],
-    totalCount: 2,
-    page: 1,
+    pageNumber: 1,
     pageSize: 25,
+    totalCount: 2,
+    totalPages: 1,
   })
 
 /**
@@ -47,7 +48,7 @@ describe('QuotesListView', () => {
 
   it('prints the quote total in the currency of the quote', async () => {
     stubRoutes({
-      'GET /api/billing/quotes': () => json({ items: [quoteRowFixture({ total: 250, currency: 'EUR' })], totalCount: 1, page: 1, pageSize: 25 }),
+      'GET /api/billing/quotes': () => json({ items: [quoteRowFixture({ total: 250, currency: 'EUR' })], pageNumber: 1, pageSize: 25, totalCount: 1, totalPages: 1 }),
       'GET /api/clients': () => json({ items: [], totalCount: 0 }),
     })
     const wrapper = await mountList()
@@ -77,10 +78,28 @@ describe('QuotesListView', () => {
     expect(wrapper.get('[data-testid="billing-quotes-error"]').text()).toContain('Quotes are unavailable.')
   })
 
+  it('loads the page again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRoutes({
+      'GET /api/billing/quotes': () => {
+        calls += 1
+        return calls === 1 ? problem('Quotes are unavailable.', 403) : quotesPage()
+      },
+      'GET /api/clients': () => json({ items: [], totalCount: 0 }),
+    })
+    const wrapper = await mountList()
+
+    await wrapper.get('[data-testid="billing-quotes-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="billing-quotes-error"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="billing-quotes-table"] tbody tr')).toHaveLength(2)
+  })
+
   it('prints a quote stage as a name, not the value the API sends', async () => {
     stubRoutes({
       'GET /api/billing/quotes': () =>
-        json({ items: [quoteRowFixture({ stage: 'OnHold' })], totalCount: 1, page: 1, pageSize: 25 }),
+        json({ items: [quoteRowFixture({ stage: 'OnHold' })], pageNumber: 1, pageSize: 25, totalCount: 1, totalPages: 1 }),
       'GET /api/clients': () => json({ items: [], totalCount: 0 }),
     })
     const wrapper = await mountList()

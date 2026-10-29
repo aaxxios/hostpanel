@@ -22,26 +22,13 @@ public static class FaqExtensions
             x.Translations.ToDictionary(t => t.Locale, t => new FaqTranslationDto(t.Question, t.Answer)));
     }
 
-    /// <summary>
-    /// Makes the question's translations exactly the given set: locales that are no longer sent are
-    /// removed, the rest are added or updated in place.
-    /// </summary>
-    /// <param name="x">The question to change.</param>
-    /// <param name="translations">The complete set of translations, keyed by locale code.</param>
-    public static void ApplyTranslations(this Faq x, IReadOnlyDictionary<string, FaqTranslationDto> translations)
+    /// <summary>Turns the translations a command carries into the text the question keeps per locale.</summary>
+    /// <param name="translations">The translations as sent, keyed by locale code.</param>
+    /// <returns>The same set, keyed by locale code, ready for <see cref="Faq.ReplaceTranslations"/>.</returns>
+    public static IReadOnlyDictionary<string, FaqTranslationContent> ToContent(this IReadOnlyDictionary<string, FaqTranslationDto> translations)
     {
-        ArgumentNullException.ThrowIfNull(x);
         ArgumentNullException.ThrowIfNull(translations);
 
-        var stale = x.Translations.Select(t => t.Locale).Where(locale => !translations.ContainsKey(locale)).ToList();
-        foreach (var locale in stale)
-        {
-            x.RemoveTranslation(locale);
-        }
-
-        foreach (var (locale, translation) in translations)
-        {
-            x.SetTranslation(locale, translation.Question, translation.Answer);
-        }
+        return translations.ToDictionary(t => t.Key, t => new FaqTranslationContent(t.Value.Question, t.Value.Answer));
     }
 }

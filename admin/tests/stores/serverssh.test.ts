@@ -1,10 +1,13 @@
 /**
  * Unit tests for the server SSH settings store: load, save with field errors, the health check,
- * and that a stored private key is never read back.
+ * that a stored private key is never read back, the installer setup with identity generation and
+ * host key scan, and the installer command and network lines it derives.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useServerSshStore } from '@/stores/serverssh'
+import type { ServerSshSetupDto } from '@/types/serverssh'
+import { SshAgentProfile, SshProviderFailure } from '@/types/sshenums'
 import { callOf, invalid, json, problem, stubFetch } from '../helpers/fetch'
 
 /** Settings as the API answers them. */
@@ -23,6 +26,19 @@ const SETTINGS = {
   operationTimeoutSeconds: 20,
   isHealthy: null,
   lastHealthCheckAt: null,
+}
+
+/** Installer setup before an identity exists. */
+const SETUP: ServerSshSetupDto = {
+  serverId: 4,
+  profile: SshAgentProfile.Cwp,
+  publicKey: null,
+  binding: null,
+  agentUsername: 'hpsshkeys',
+  bundleVersion: '1.1.0',
+  bundleSha256: 'c'.repeat(64),
+  bundlePath: '/api/public/ssh-agent/bundle.tar.gz',
+  sourceAddresses: ['203.0.113.10'],
 }
 
 describe('serverSshStore', () => {
@@ -67,14 +83,16 @@ describe('serverSshStore', () => {
   })
 
   it('runs the health check, then reloads to show the recorded outcome', async () => {
-    const mock = stubFetch(json({ isHealthy: false, agentVersion: null, error: 'unreachable' }), json({ ...SETTINGS, isHealthy: false }))
+    const mock = stubFetch(json({ isHealthy: false, agentVersion: null, error: SshProviderFailure.Unreachable, provider: null }),
+      json({ ...SETTINGS, isHealthy: false }))
     const store = useServerSshStore()
 
     await store.test(4)
 
     expect(callOf(mock, 0).method).toBe('POST')
     expect(callOf(mock, 0).url).toContain('/ssh-settings/test')
-    expect(store.lastTest?.error).toBe('unreachable')
+    expect(store.lastTest?.error).toBe(SshProviderFailure.Unreachable)
+
     expect(store.settings?.isHealthy).toBe(false)
     expect(store.testing).toBe(false)
   })
@@ -93,13 +111,13 @@ describe('serverSshStore', () => {
   })
 
   it('loads settings and setup together, generates an identity and scans the host key', async () => {
-    const setup = { serverId: 4, profile: 'cwp', publicKey: null, binding: null, agentUsername: 'hpsshkeys', bundleVersion: '1.1.0', bundleSha256: 'c'.repeat(64), bundlePath: '/api/public/ssh-agent/bundle.tar.gz', sourceAddresses: [] }
+    const setup = { ...SETUP, sourceAddresses: [] }
     const generated = { ...setup, publicKey: 'ssh-ed25519 AAAA x', binding: '33333333-3333-4333-8333-333333333333' }
     const mock = stubFetch(json(SETTINGS), json(setup), json(generated), json({ ...SETTINGS, isEnabled: false }), json({ algorithm: 'ssh-ed25519', fingerprint: 'SHA256:x', matchesPinned: false }))
     const store = useServerSshStore()
 
     await store.loadAll(4)
-    expect(store.setup?.profile).toBe('cwp')
+    expect(store.setup?.profile).toBe(SshAgentProfile.Cwp)
     expect(await store.generateIdentity(4)).toBe(true)
     expect(callOf(mock, 2).url).toContain('/api/admin/servers/4/ssh-identity')
     expect(store.setup?.binding).toBe(generated.binding)
@@ -115,5 +133,30 @@ describe('serverSshStore', () => {
 
     expect(await store.generateIdentity(4)).toBe(false)
     expect(store.error).toBe('SSH key management is not supported for this server type.')
+  })
+
+  it('derives the installer command only once an identity exists, from the page origin', async () => {
+    const generated = { ...SETUP, publicKey: 'ssh-ed25519 AAAA x', binding: '33333333-3333-4333-8333-333333333333' }
+    stubFetch(json(SETTINGS), json(SETUP), json(generated), json(SETTINGS))
+    const store = useServerSshStore()
+
+    await store.loadAll(4)
+    expect(store.installCommand).toBeNull()
+    await store.generateIdentity(4)
+
+    expect(store.installCommand).toContain(`'${window.location.origin}/api/public/ssh-agent/bundle.tar.gz'`)
+    expect(store.installCommand).toContain(`--binding '${generated.binding}'`)
+  })
+
+  it('derives the network lines for the saved agent port, and none without an address', async () => {
+    stubFetch(json(SETTINGS), json(SETUP))
+    const store = useServerSshStore()
+    expect(store.networkLines).toBeNull()
+
+    await store.loadAll(4)
+    expect(store.networkLines?.ufw).toBe(`ufw allow from 203.0.113.10 to any port ${SETTINGS.agentPort} proto tcp`)
+
+    store.setup = { ...SETUP, sourceAddresses: [] }
+    expect(store.networkLines).toBeNull()
   })
 })

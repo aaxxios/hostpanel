@@ -1,15 +1,13 @@
 using System.Net;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>DeleteEmailForwardingRule</c> use case —
+/// Integration tests for the admin <c>DeleteEmailForwardingRule</c> use case:
 /// <c>DELETE /api/domains/{id}/email-forwarding/{ruleId}</c>. The full add/update/delete
 /// lifecycle lives in <see cref="UpdateEmailForwardingRuleTests"/>; these tests cover this use
 /// case's own refusals directly. The client-facing equivalent is
@@ -55,5 +53,17 @@ public sealed class DeleteEmailForwardingRuleTests(IntegrationTestFactory factor
         var response = await client.DeleteAsync($"/api/domains/{DomainsTestSeeds.UnknownId}/email-forwarding/1");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A non-positive rule id is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task DeleteEmailForwardingRule_NonPositiveRuleId_Returns400ValidationErrorAsync()
+    {
+        var client = await DomainsTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.DeleteAsync($"/api/domains/{DomainsTestSeeds.UnknownId}/email-forwarding/0");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

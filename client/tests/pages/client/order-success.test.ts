@@ -22,28 +22,46 @@ vi.mock('~/composables/apis/useClientApi', () => ({
   useClientApi: () => ({ fetchServices })
 }))
 
+/** The mocked invoice read, re-created for every test. */
+const fetchInvoice = vi.fn()
+
+vi.mock('~/composables/apis/useBillingApi', () => ({
+  /**
+   * Stands in for the billing API so the invoice store runs without transport.
+   *
+   * @returns Only the invoice read this page reaches through the store.
+   */
+  useBillingApi: () => ({ fetchInvoice })
+}))
+
 const { default: OrderSuccessPage } = await import('~/pages/client/order-success.vue')
 
 beforeEach(() => {
   fetchServices.mockReset()
   fetchServices.mockResolvedValue([])
+  fetchInvoice.mockReset()
+  fetchInvoice.mockResolvedValue({ id: 7, total: 25, currency: 'USD' })
 })
 
 describe('client order-success page', () => {
-  it('shows the order number and amount from the link', async () => {
-    stubAuthRuntime({ query: { order: 'A-1001', amount: '$25.00' } })
+  it('shows the order number from the link and the amount from the order invoice', async () => {
+    stubAuthRuntime({ query: { order: 'A-1001', invoice: '7' } })
 
     const wrapper = await mountAuthPage(OrderSuccessPage)
+    await flushPromises()
 
+    expect(fetchInvoice).toHaveBeenCalledWith('7')
     expect(wrapper.find('[data-testid="order-success-number"]').text()).toContain('A-1001')
     expect(wrapper.find('[data-testid="order-success-amount"]').text()).toContain('$25.00')
   })
 
-  it('shows dashes when the link carries no order and a zero amount', async () => {
-    stubAuthRuntime({ query: { amount: '0.00' } })
+  it('shows dashes and reads no invoice when the link carries neither an order nor an invoice', async () => {
+    stubAuthRuntime({ query: { amount: '$9.00' } })
 
     const wrapper = await mountAuthPage(OrderSuccessPage)
+    await flushPromises()
 
+    expect(fetchInvoice).not.toHaveBeenCalled()
     expect(wrapper.find('[data-testid="order-success-number"]').text()).toContain('—')
     expect(wrapper.find('[data-testid="order-success-amount"]').text()).toContain('—')
   })

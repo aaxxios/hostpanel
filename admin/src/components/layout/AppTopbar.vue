@@ -125,9 +125,8 @@ const notificationCount = computed<number>(() => activity.events.length)
 /**
  * The signed-in operator's address, or a neutral label before the profile has loaded.
  *
- * The header used to read "Admin" for everyone, spelled into the markup — so an operator could
- * not tell which account they were acting as, which matters on a panel where several people
- * share one screen.
+ * Naming the account lets an operator tell which account they are acting as, which matters on a
+ * panel where several people share one screen.
  */
 const accountLabel = computed<string>(() => auth.user?.email ?? t('common.admin'))
 

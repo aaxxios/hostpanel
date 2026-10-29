@@ -8,7 +8,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// once and nothing leaves the process. The provisioning reference is derived from the account
 /// name, so provisioning the same account twice gives the same reference.
 /// </summary>
-internal sealed class DemoProvisioningProvider : IProvisioningProvider
+public sealed class DemoProvisioningProvider : IProvisioningProvider
 {
     /// <summary>The address the fake control panel claims to live at; reserved for documentation.</summary>
     private const string PanelUrl = "https://panel.demo-hosting.example/";
@@ -18,7 +18,7 @@ internal sealed class DemoProvisioningProvider : IProvisioningProvider
 
     /// <inheritdoc/>
     public Task<ProvisioningResult> ProvisionAsync(ProvisionAccountOrder req, CancellationToken ct) =>
-        Task.FromResult(new ProvisioningResult(true, $"demo-{req.Username}@{req.DomainName}", null));
+        Task.FromResult(ProvisioningResult.Created($"demo-{req.Username}@{req.DomainName}"));
 
     /// <inheritdoc/>
     public Task SuspendAsync(SuspendAccountOrder req, CancellationToken ct) => Task.CompletedTask;

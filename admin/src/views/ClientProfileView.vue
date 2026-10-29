@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Client profile editing page — displays and allows editing of all client fields.
+ * Client profile editing page: displays and allows editing of all client fields.
  *
  * Rendered inside {@link ClientLayout} which handles data fetching and the header.
  * All sections are on a single scrollable page in a two-column layout.
@@ -13,7 +13,10 @@ import { CLIENT_STATUS_OPTIONS } from '@/lib/constants'
 import { contactTypeTone } from '@/lib/tones'
 import { formatDate } from '@/lib/format'
 import { useGeoOptions } from '@/composables/useGeoOptions'
-import { ClientStatus } from '@/types/client'
+import { restrictsAccount, type RestrictiveClientStatus } from '@/lib/clientStatus'
+import { ClientStatus, type ClientSettings } from '@/types/client'
+import type { ContactNotifications } from '@/types/contactnotifications'
+import ClientStatusConfirmDialog from '@/components/clients/ClientStatusConfirmDialog.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -79,7 +82,7 @@ const phone = ref('')
 const phoneCountry = ref('US')
 
 /** Client status. */
-const status = ref<string>(ClientStatus.Active)
+const status = ref<ClientStatus>(ClientStatus.Active)
 
 /** Client email (read-only, from Identity). */
 const email = ref('')
@@ -118,18 +121,17 @@ const paymentMethod = ref('')
 const billingContact = ref('')
 
 /** Email notification switches, named as the payload fields. */
-const notify = reactive({
-  notifyGeneral: true,
-  notifyInvoice: true,
-  notifySupport: true,
-  notifyProduct: true,
-  notifyDomain: true,
-  notifyAffiliate: true,
+const notify = reactive<ContactNotifications>({
+  general: true,
+  invoice: true,
+  support: true,
+  product: true,
+  domain: true,
+  affiliate: true,
 })
 
 /** Account setting switches, named as the payload fields. */
-const settings = reactive({
-  lateFees: true,
+const settings = reactive<ClientSettings>({
   overdueNotices: true,
   taxExempt: false,
   separateInvoices: false,
@@ -149,17 +151,16 @@ interface ToggleDef<K extends string> {
 
 /** Email notification switches in display order. */
 const notifyToggles = computed<ToggleDef<keyof typeof notify>[]>(() => [
-  { key: 'notifyGeneral', label: t('shared.generalEmails') },
-  { key: 'notifyInvoice', label: t('shared.invoiceEmails') },
-  { key: 'notifySupport', label: t('shared.supportEmails') },
-  { key: 'notifyProduct', label: t('shared.productEmails') },
-  { key: 'notifyDomain', label: t('shared.domainEmails') },
-  { key: 'notifyAffiliate', label: t('shared.affiliateEmails') },
+  { key: 'general', label: t('shared.generalEmails') },
+  { key: 'invoice', label: t('shared.invoiceEmails') },
+  { key: 'support', label: t('shared.supportEmails') },
+  { key: 'product', label: t('shared.productEmails') },
+  { key: 'domain', label: t('shared.domainEmails') },
+  { key: 'affiliate', label: t('shared.affiliateEmails') },
 ])
 
 /** Account setting switches in display order. */
 const settingToggles = computed<ToggleDef<keyof typeof settings>[]>(() => [
-  { key: 'lateFees', label: t('shared.lateFees') },
   { key: 'overdueNotices', label: t('shared.overdueNotices') },
   { key: 'taxExempt', label: t('shared.taxExempt') },
   { key: 'separateInvoices', label: t('shared.separateInvoices') },
@@ -184,6 +185,12 @@ const currencyOptions = computed(() =>
 
 /** Status options for the dropdown. */
 const statusOptions = CLIENT_STATUS_OPTIONS
+
+/** The status chosen in the form when it restricts the account, whose effects are shown under the select. */
+const chosenRestrictiveStatus = computed(() => (restrictsAccount(status.value) ? status.value : null))
+
+/** The restrictive status awaiting the operator's confirmation, null when no prompt is open. */
+const pendingStatus = ref<RestrictiveClientStatus | null>(null)
 
 /** Field-level validation errors. */
 const errors = ref({ firstName: '', lastName: '' })
@@ -235,35 +242,19 @@ const populateForm = (): void => {
     phone.value = ''
   }
 
-  street.value = c.street ?? ''
-  address2.value = c.address2 ?? ''
-  city.value = c.city ?? ''
-  state.value = c.state ?? ''
-  postCode.value = c.postCode ?? ''
-  country.value = c.country ?? ''
-  currency.value = c.currency ?? ''
-  paymentMethod.value = c.paymentMethod ?? ''
-  billingContact.value = c.billingContact ?? ''
-  adminNotes.value = c.adminNotes ?? ''
+  street.value = c.address.street ?? ''
+  address2.value = c.address.address2 ?? ''
+  city.value = c.address.city ?? ''
+  state.value = c.address.state ?? ''
+  postCode.value = c.address.postCode ?? ''
+  country.value = c.address.country ?? ''
+  currency.value = c.preferences.currency ?? ''
+  paymentMethod.value = c.preferences.paymentMethod ?? ''
+  billingContact.value = c.preferences.billingContact ?? ''
+  adminNotes.value = c.preferences.adminNotes ?? ''
 
-  Object.assign(notify, {
-    notifyGeneral: c.notifyGeneral,
-    notifyInvoice: c.notifyInvoice,
-    notifySupport: c.notifySupport,
-    notifyProduct: c.notifyProduct,
-    notifyDomain: c.notifyDomain,
-    notifyAffiliate: c.notifyAffiliate,
-  })
-  Object.assign(settings, {
-    lateFees: c.lateFees,
-    overdueNotices: c.overdueNotices,
-    taxExempt: c.taxExempt,
-    separateInvoices: c.separateInvoices,
-    disableCcProcessing: c.disableCcProcessing,
-    marketingOptIn: c.marketingOptIn,
-    statusUpdate: c.statusUpdate,
-    allowSso: c.allowSso,
-  })
+  Object.assign(notify, c.notifications)
+  Object.assign(settings, c.settings)
 }
 
 /**
@@ -278,15 +269,40 @@ const handleCancel = (): void => {
 }
 
 /**
- * Submits all changes to the API.
+ * Validates the form and saves it. Moving the account to Suspended or Closed is first put to the
+ * operator, with the effects spelled out, because both change what the client and their services can do.
  *
- * @returns Promise that resolves when the save attempt has finished.
+ * @returns Promise that resolves when the save attempt has finished or the prompt is open.
  */
 const handleSave = async (): Promise<void> => {
   if (!validate()) {
     return
   }
 
+  if (restrictsAccount(status.value) && status.value !== store.current?.status) {
+    pendingStatus.value = status.value
+    return
+  }
+
+  await saveClient()
+}
+
+/**
+ * Confirms the staged status change and saves.
+ *
+ * @returns Promise that resolves when the save attempt has finished.
+ */
+const confirmStatusChange = async (): Promise<void> => {
+  pendingStatus.value = null
+  await saveClient()
+}
+
+/**
+ * Submits all changes to the API.
+ *
+ * @returns Promise that resolves when the save attempt has finished.
+ */
+const saveClient = async (): Promise<void> => {
   saveSuccess.value = false
 
   const saved = await store.updateClient(clientId.value, {
@@ -295,19 +311,25 @@ const handleSave = async (): Promise<void> => {
     lastName: lastName.value.trim(),
     companyName: companyName.value.trim() || null,
     phone: phone.value.trim() ? `${selectedPhoneCode.value} ${phone.value.trim()}` : null,
-    street: street.value.trim() || null,
-    address2: address2.value.trim() || null,
-    city: city.value.trim() || null,
-    state: state.value.trim() || null,
-    postCode: postCode.value.trim() || null,
-    country: country.value || null,
-    currency: currency.value || null,
-    paymentMethod: paymentMethod.value.trim() || null,
-    billingContact: billingContact.value.trim() || null,
-    adminNotes: adminNotes.value.trim() || null,
+    address: {
+      street: street.value.trim() || null,
+      address2: address2.value.trim() || null,
+      city: city.value.trim() || null,
+      state: state.value.trim() || null,
+      postCode: postCode.value.trim() || null,
+      country: country.value || null,
+    },
+    preferences: {
+      // The account language is not edited on this form; null leaves it as it is.
+      language: null,
+      currency: currency.value || null,
+      paymentMethod: paymentMethod.value.trim() || null,
+      billingContact: billingContact.value.trim() || null,
+      adminNotes: adminNotes.value.trim() || null,
+    },
     status: status.value,
-    ...notify,
-    ...settings,
+    notifications: { ...notify },
+    settings: { ...settings },
   })
   if (saved) {
     saveSuccess.value = true
@@ -429,6 +451,9 @@ onBeforeUnmount(() => {
             </UiGrid>
             <UiField :label="t('shared.status')">
               <UiSelect data-testid="client-profile-status" v-model="status" :options="statusOptions" :placeholder="t('shared.status')" />
+              <UiText v-if="chosenRestrictiveStatus" :tone="UiTextTone.Muted" :size="UiTextSize.Sm" data-testid="client-profile-status-effects">
+                {{ t(`clients.clientProfile.statusEffects.${chosenRestrictiveStatus}`) }}
+              </UiText>
             </UiField>
           </UiStack>
         </UiCard>
@@ -538,7 +563,7 @@ onBeforeUnmount(() => {
           <UiStack>
             <UiHeading :level="2" variant="card">{{ t('shared.emailNotifications') }}</UiHeading>
             <UiLabel v-for="toggle in notifyToggles" :key="toggle.key" :variant="UiLabelVariant.Inline">
-              <UiToggle v-model="notify[toggle.key]" :data-testid="`client-profile-${toggle.key}`" />
+              <UiToggle v-model="notify[toggle.key]" :data-testid="`client-profile-notify-${toggle.key}`" />
               {{ toggle.label }}
             </UiLabel>
           </UiStack>
@@ -603,5 +628,14 @@ onBeforeUnmount(() => {
         </UiTable>
       </UiStack>
     </UiCard>
+
+    <ClientStatusConfirmDialog
+      v-if="pendingStatus"
+      :status="pendingStatus"
+      :loading="saving"
+      testid="client-profile-status-confirm"
+      @confirm="confirmStatusChange"
+      @close="pendingStatus = null"
+    />
   </UiForm>
 </template>

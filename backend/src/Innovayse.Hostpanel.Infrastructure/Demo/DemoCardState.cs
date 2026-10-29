@@ -1,19 +1,48 @@
 using System.Collections.Concurrent;
+using Innovayse.Hostpanel.Application.Billing.Common;
 
 namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>
-/// What visitors changed on the demo's sample payment methods: which one each customer made the default
-/// and which were removed. One instance lives for the whole process (the card gateway is scoped, the
+/// What visitors changed on the demo's sample payment methods (which one each customer made the default
+/// and which were removed), the payment intents the demo gateway opened and the saved-method charges it took. One instance lives for the whole process (the card gateway is scoped, the
 /// changes must outlive a request) and the demo reset clears it together with the database.
 /// </summary>
-internal sealed class DemoCardState
+public sealed class DemoCardState
 {
     /// <summary>The default method each customer chose, by customer id.</summary>
     private readonly ConcurrentDictionary<string, string> _chosenDefaults = new();
 
     /// <summary>The ids of the methods that were removed; every id carries its customer.</summary>
     private readonly ConcurrentDictionary<string, byte> _removed = new();
+
+    /// <summary>The payment intents the demo gateway opened, by intent id.</summary>
+    private readonly ConcurrentDictionary<string, CardPaymentIntentStatus> _intents = new();
+
+    /// <summary>The saved-method charges the demo gateway took, by idempotency key.</summary>
+    private readonly ConcurrentDictionary<string, CardChargeLookupResult> _charges = new();
+
+    /// <summary>Remembers a saved-method charge the demo gateway took.</summary>
+    /// <param name="idempotencyKey">The key the charge was sent with.</param>
+    /// <param name="charge">What the charge took.</param>
+    public void RecordCharge(string idempotencyKey, CardChargeLookupResult charge) => _charges[idempotencyKey] = charge;
+
+    /// <summary>Reads back a saved-method charge the demo gateway took.</summary>
+    /// <param name="idempotencyKey">The key the charge was sent with.</param>
+    /// <returns>The charge, or <see langword="null"/> when the demo took none under the key.</returns>
+    public CardChargeLookupResult? FindCharge(string idempotencyKey) =>
+        _charges.TryGetValue(idempotencyKey, out var charge) ? charge : null;
+
+    /// <summary>Remembers a payment intent the demo gateway opened.</summary>
+    /// <param name="intentId">The intent id.</param>
+    /// <param name="status">What the intent was opened for, reported as settled.</param>
+    public void OpenIntent(string intentId, CardPaymentIntentStatus status) => _intents[intentId] = status;
+
+    /// <summary>Reads back a payment intent the demo gateway opened.</summary>
+    /// <param name="intentId">The intent id.</param>
+    /// <returns>The intent, or <see langword="null"/> when the demo never opened it.</returns>
+    public CardPaymentIntentStatus? FindIntent(string intentId) =>
+        _intents.TryGetValue(intentId, out var status) ? status : null;
 
     /// <summary>Remembers the default a customer chose.</summary>
     /// <param name="customerId">The customer.</param>
@@ -45,5 +74,7 @@ internal sealed class DemoCardState
     {
         _chosenDefaults.Clear();
         _removed.Clear();
+        _intents.Clear();
+        _charges.Clear();
     }
 }

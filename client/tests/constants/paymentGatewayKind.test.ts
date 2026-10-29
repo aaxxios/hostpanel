@@ -9,16 +9,16 @@ import {
   paymentGatewayKind
 } from '~/constants/paymentGatewayKind'
 import { PaymentGatewayKind } from '~/types/paymentgatewaykind'
-import { PAYMENT_MODULE_BANK_TRANSFER, PAYMENT_MODULE_INECOBANK, PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
+import { PaymentModule } from '~/types/paymentmodule'
 
 describe('paymentGatewayKind', () => {
   it('maps the card gateways to the card kind', () => {
-    expect(paymentGatewayKind(PAYMENT_MODULE_STRIPE)).toBe(PaymentGatewayKind.Card)
-    expect(paymentGatewayKind(PAYMENT_MODULE_INECOBANK)).toBe(PaymentGatewayKind.Card)
+    expect(paymentGatewayKind(PaymentModule.Stripe)).toBe(PaymentGatewayKind.Card)
+    expect(paymentGatewayKind(PaymentModule.Inecobank)).toBe(PaymentGatewayKind.Card)
   })
 
   it('maps the manual transfer to the bank transfer kind', () => {
-    expect(paymentGatewayKind(PAYMENT_MODULE_BANK_TRANSFER)).toBe(PaymentGatewayKind.BankTransfer)
+    expect(paymentGatewayKind(PaymentModule.BankTransfer)).toBe(PaymentGatewayKind.BankTransfer)
   })
 
   it('reads an unknown module as the generic kind', () => {

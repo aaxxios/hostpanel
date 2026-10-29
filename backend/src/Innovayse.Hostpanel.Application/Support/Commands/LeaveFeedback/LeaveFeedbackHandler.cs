@@ -11,11 +11,16 @@ public sealed class LeaveFeedbackHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public LeaveFeedbackHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public LeaveFeedbackHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the command.</summary>
@@ -32,7 +37,7 @@ public sealed class LeaveFeedbackHandler
             return Result.FailureCode(HostpanelErrorCodes.TICKET_NOT_FOUND);
         }
 
-        ticket.LeaveFeedback(cmd.Rating, cmd.Comment, cmd.LeftBy);
+        ticket.LeaveFeedback(cmd.Rating, cmd.Comment, cmd.LeftBy, _clock.UtcNow);
         await _context.SaveChangesAsync(ct);
         return Result.Success();
     }

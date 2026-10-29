@@ -2,9 +2,10 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Support;
+
 /// <summary>
 /// Represents a support department that tickets can be routed to (e.g. "Technical Support", "Billing").
-/// Created via <see cref="Create"/> factory — no public constructor.
+/// Created via <see cref="Create"/> factory: no public constructor.
 /// </summary>
 public sealed class Department : BaseEntity
 {
@@ -14,10 +15,10 @@ public sealed class Department : BaseEntity
     /// <summary>Gets the email address associated with this department.</summary>
     public string Email { get; private set; } = string.Empty;
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Department() { }
 
-    /// <summary>Internal constructor — use <see cref="Create"/> factory instead.</summary>
+    /// <summary>Internal constructor: use <see cref="Create"/> factory instead.</summary>
     /// <param name="name">The department display name.</param>
     /// <param name="email">The department email address.</param>
     private Department(string name, string email)

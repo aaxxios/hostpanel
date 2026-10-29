@@ -46,10 +46,22 @@ describe('StorefrontFormShell', () => {
     expect(wrapper.find('[data-testid="body"]').exists()).toBe(false)
   })
 
-  it('shows the error banner', async () => {
+  it('shows the refusal of a save next to the footer', async () => {
     const { wrapper } = await mountScreen(hostWith({ error: 'Name taken.' }))
 
     expect(wrapper.get('[data-testid="widget-form-error"]').text()).toBe('Name taken.')
+    expect(wrapper.get('[data-testid="widget-form-error"]').attributes('data-tone')).toBe('danger')
+  })
+
+  it('shows a refused load with a retry instead of the body', async () => {
+    const { wrapper } = await mountScreen(hostWith({ loadError: 'Widgets are locked.' }))
+    const shell = wrapper.findComponent(StorefrontFormShell)
+
+    expect(wrapper.get('[data-testid="widget-form-load-error"]').text()).toBe('Widgets are locked.')
+    expect(wrapper.find('[data-testid="body"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="widget-form-load-error-retry"]').trigger('click')
+    expect(shell.emitted('retry')).toHaveLength(1)
   })
 
   it('emits save and cancel from the footer', async () => {

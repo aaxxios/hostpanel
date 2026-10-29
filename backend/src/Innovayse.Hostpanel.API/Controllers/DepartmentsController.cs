@@ -18,6 +18,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 /// </summary>
 [Route("api/departments")]
 [Authorize(Policy = Policies.Admin)]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class DepartmentsController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -32,8 +33,8 @@ public sealed class DepartmentsController : BaseApiController
 
     /// <summary>Returns all support departments.</summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the department list.</returns>
-    // AllowAnonymous overrides the controller-level Authorize for this action only -- the ticket
+    /// <returns>200 with the department list; 429 when the rate limit is hit.</returns>
+    // AllowAnonymous overrides the controller-level Authorize for this action only: the ticket
     // form needs the department picker before the visitor has any admin context. The writes below
     // stay admin-only via the class attribute.
     [HttpGet]
@@ -48,22 +49,28 @@ public sealed class DepartmentsController : BaseApiController
     /// <summary>Creates a new support department.</summary>
     /// <param name="command">The department's name and email.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>201 with the new department's id; 401; 403.</returns>
+    /// <returns>201 with the new department's id; 401 without a session; 403 for a caller who is not an admin; 400 when the body, query or route fails validation; 429 when the rate limit is hit.</returns>
     [HttpPost]
     [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateAsync([FromBody] CreateDepartmentCommand command, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<int>>(command, ct);
-        return HandleResult(outcome, id => CreatedResult($"api/departments/{id}", id));
+        return HandleResult(outcome, id => CreatedResult("/api/departments", id));
     }
 
     /// <summary>Updates an existing support department's name and email.</summary>
     /// <param name="id">Department primary key; wins over any id in the body.</param>
     /// <param name="command">The updated name and email.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>204 on success; 404 when the id names no department; 401; 403.</returns>
+    /// <returns>204 on success; 404 when the id names no department; 401 without a session; 403 for a caller who is not an admin; 400 when the body, query or route fails validation; 429 when the rate limit is hit.</returns>
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateAsync(int id, [FromBody] UpdateDepartmentCommand command, CancellationToken ct)
     {

@@ -1,5 +1,5 @@
+using Innovayse.Hostpanel.Application.Billing.Common;
 using System.Linq.Expressions;
-using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Shared.Extensions;
@@ -50,7 +50,7 @@ public sealed class ListClientBillableItemsHandler
             .Select(MapProjection())
             .ToListAsync(ct);
 
-        var pagedInvoiced = new PagedResult<ClientBillableItemDto>(
+        var pagedInvoiced = new PaginatedList<ClientBillableItemDto>(
             invoicedDtos, totalCount, qry.InvoicedPage, qry.InvoicedPageSize);
 
         return Result<ClientBillableItemsResultDto>.Success(
@@ -61,6 +61,6 @@ public sealed class ListClientBillableItemsHandler
     /// <returns>The projection expression, reused for both the uninvoiced and invoiced pages.</returns>
     private static Expression<Func<BillableItem, ClientBillableItemDto>> MapProjection() =>
         item => new ClientBillableItemDto(
-            item.Id, item.ClientId, item.Description, item.Amount, item.Currency, item.Type.ToString(),
+            item.Id, item.ClientId, item.Description, item.Amount, item.Currency, item.Type,
             item.RecurringPeriod, item.IsInvoiced, item.InvoiceId, item.NextDueDate, item.CreatedAt);
 }

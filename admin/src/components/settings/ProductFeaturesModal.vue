@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Dialog for editing one product's specification — the lines the storefront's plan comparison
+ * Dialog for editing one product's specification: the lines the storefront's plan comparison
  * table is built from.
  *
  * Each line is saved on its own, matching the API: there is no bulk endpoint, and a failure
@@ -10,13 +10,20 @@
  * Rows line up across plans by label, so the label of an existing line is what an operator has to
  * keep consistent between products. The hint below the list says so, because nothing in the UI
  * would otherwise reveal it.
+ *
+ * A refused load shows the API's sentence with a retry; the outcome of an add, save or remove
+ * (success, or the API's sentence) shows above the list; removing a line is confirmed first.
  */
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SettingsLoading from '@/components/settings/SettingsLoading.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
+import { UiDialogVariant } from '@/utils/ui/dialog'
+import { UiTone } from '@/utils/ui/tone'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
@@ -62,10 +69,37 @@ const newValue = ref('')
 /** True while a new line is being added. */
 const adding = ref(false)
 
+/** Whether the last load of the lines was refused. */
+const loadFailed = ref(false)
+
+/** The line waiting for the removal confirmation, null when the prompt is closed. */
+const removeTarget = ref<ProductFeature | null>(null)
+
+/** The outcome line of the last add, save or remove. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Shows the outcome of a change: the success sentence, or the API's refusal.
+ *
+ * @param ok - Whether the API accepted the change.
+ * @param successKey - Locale key of the success sentence.
+ */
+const report = (ok: boolean, successKey: string): void => {
+  if (ok) {
+    feedback.show(t(successKey), false)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
+}
+
 /** Loads the product's lines, newest state from the server. */
 const load = async (): Promise<void> => {
   loading.value = true
   const lines = await store.fetchFeatures(props.product.id)
+  loadFailed.value = lines === null
   if (lines) {
     features.value = lines
   }
@@ -79,8 +113,10 @@ const add = async (): Promise<void> => {
   if (!newLabel.value.trim() || !newValue.value.trim()) {
     return
   }
+  feedback.clear()
   adding.value = true
   const added = await store.addFeature(props.product.id, newLabel.value.trim(), newValue.value.trim(), features.value.length)
+  report(added, 'shared.recordCreated')
   if (added) {
     newLabel.value = ''
     newValue.value = ''
@@ -98,24 +134,38 @@ const save = async (feature: ProductFeature): Promise<void> => {
   if (!feature.label.trim() || !feature.value.trim()) {
     return
   }
+  feedback.clear()
   busyId.value = feature.id
-  if (!(await store.saveFeature(feature))) {
+  const saved = await store.saveFeature(feature)
+  report(saved, 'shared.changesSavedSuccessfully')
+  if (!saved) {
     await load()
   }
   busyId.value = null
 }
 
-/**
- * Removes a line.
- *
- * @param feature - The line to remove.
- */
-const remove = async (feature: ProductFeature): Promise<void> => {
+/** Removes the line the operator confirmed and shows the outcome. */
+const remove = async (): Promise<void> => {
+  const feature = removeTarget.value
+  if (feature === null) {
+    return
+  }
+  feedback.clear()
   busyId.value = feature.id
-  if (await store.removeFeature(feature.id)) {
+  const removed = await store.removeFeature(feature.id)
+  busyId.value = null
+  removeTarget.value = null
+  report(removed, 'shared.recordDeleted')
+  if (removed) {
     await load()
   }
-  busyId.value = null
+}
+
+/** Closes the removal confirmation; ignored while the removal runs. */
+const dismissRemove = (): void => {
+  if (busyId.value === null) {
+    removeTarget.value = null
+  }
 }
 </script>
 
@@ -125,11 +175,16 @@ const remove = async (feature: ProductFeature): Promise<void> => {
       {{ t('settings.productFeatures.shownInTheStorefrontS') }} {{ product.name }}.
     </UiText>
 
-    <UiAlert v-if="store.error" variant="danger" data-testid="product-features-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="product-features-error" />
 
     <SettingsLoading v-if="loading" :message="t('shared.loading')" />
+
+    <UiErrorState
+      v-else-if="loadFailed"
+      :message="store.error ?? t('errors.noAnswer')"
+      testid="product-features-load-error"
+      @retry="load"
+    />
 
     <template v-else>
       <UiEmptyState
@@ -173,7 +228,7 @@ const remove = async (feature: ProductFeature): Promise<void> => {
             size="sm"
             :disabled="busyId === feature.id"
             :data-testid="`product-feature-remove-${feature.id}`"
-            @click="remove(feature)"
+            @click="removeTarget = feature"
           >
             <UiIcon :markup="Icon.Trash" size="sm" />
           </UiIconButton>
@@ -215,5 +270,17 @@ const remove = async (feature: ProductFeature): Promise<void> => {
         {{ t('settings.productFeatures.plansLineUpByFeature') }}
       </UiText>
     </template>
+
+    <UiDialog
+      :open="removeTarget !== null"
+      :variant="UiDialogVariant.Confirm"
+      :title="t('settings.productFeatures.confirmRemoveTitle')"
+      :message="t('settings.productFeatures.confirmRemoveMessage', { label: removeTarget?.label ?? '' })"
+      :confirm-label="t('settings.productFeatures.removeLine')"
+      :loading="busyId !== null"
+      :tone="UiTone.Danger"
+      @confirm="remove"
+      @close="dismissRemove"
+    />
   </UiDialog>
 </template>

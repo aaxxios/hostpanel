@@ -31,45 +31,23 @@
         {{ article.excerpt }}…
       </UiText>
     </UiStack>
-    <UiText
-      v-if="article.views"
-      as="span"
-      size="xs"
-      tone="muted"
-      class="ml-auto flex flex-shrink-0 items-center gap-1 [.tpl-classic_&]:text-classic-muted"
-      data-testid="kb-article-views"
-    >
-      <Eye :size="12" :stroke-width="2" />
-      {{ article.views }}
-    </UiText>
   </UiLink>
 </template>
 
 <script setup lang="ts">
 /**
  * Reusable article list row for the knowledgebase index and category pages.
- * Displays title, short excerpt, and view count. Under the classic template the row is charcoal
+ * Displays the title and the plain-text excerpt the backend lists. Under the classic template the row is charcoal
  * text on a neutral hover with the brand colour for the icon and the hovered title.
  */
 
-import { FileText, Eye } from 'lucide-vue-next'
-
-/** The article the row shows. */
-interface ArticleSummary {
-  /** Article id; the row links to `/knowledgebase/<id>`. */
-  id: string | number
-  /** Headline. */
-  title: string
-  /** Short extract of the body. */
-  excerpt?: string
-  /** How many times the article was read. */
-  views?: number
-}
+import { FileText } from 'lucide-vue-next'
+import type { KbArticleSummary } from '~/types/kbarticlesummary'
 
 /** Props of ArticleRow. */
 interface Props {
   /** Article data. */
-  article: ArticleSummary
+  article: KbArticleSummary
 }
 
 defineProps<Props>()

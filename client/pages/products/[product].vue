@@ -139,7 +139,7 @@ const priceFor = (plan: ProductPlan): string => {
  * @param plan The plan.
  * @returns True when it is.
  */
-const isInCart = (plan: ProductPlan): boolean => cart.hasItem(plan.pid, selectedCycle.value)
+const isInCart = (plan: ProductPlan): boolean => cart.hasItem(plan.id, selectedCycle.value)
 
 /** Breadcrumb steps: the products list, then this product. */
 const breadcrumbItems = computed(() => [
@@ -173,7 +173,7 @@ const planCtaUrl = (plan: ProductPlan): string | null => {
   if (!billingPortalUrl) {
     return null
   }
-  return `${billingPortalUrl}/cart.php?a=add&pid=${plan.pid}&billingcycle=${selectedCycle.value}`
+  return `${billingPortalUrl}/cart.php?a=add&pid=${plan.id}&billingcycle=${selectedCycle.value}`
 }
 
 /**
@@ -200,7 +200,7 @@ const addPlanToCart = (plan: ProductPlan): void => {
     return
   }
   cart.addItem({
-    pid: plan.pid,
+    pid: plan.id,
     name: plan.tier,
     billingcycle: cycle,
     cycleLabel: t(`hosting.cycles.${PRICING_CYCLE_I18N_KEY[cycle]}`),

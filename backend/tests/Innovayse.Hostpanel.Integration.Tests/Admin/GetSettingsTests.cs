@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 
@@ -11,7 +8,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 /// <c>GET /api/admin/settings</c>: an admin reads back every configured setting, a caller with
 /// only the Client role is refused, and the route is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>SettingsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetSettingsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

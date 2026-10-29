@@ -15,6 +15,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 [Route("auth")]
 [AllowAnonymous]
 [BackchannelKey]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class BackchannelLogoutController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -34,9 +35,10 @@ public sealed class BackchannelLogoutController : BaseApiController
     /// </remarks>
     /// <param name="command">The person who signed out.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 once the sessions are gone; 401 for a missing or wrong key; 422 for a malformed address.</returns>
+    /// <returns>200 once the sessions are gone; 400 when the body fails validation, such as a malformed address; 401 for a missing or wrong key; 429 when the rate limit is hit.</returns>
     [HttpPost("backchannel-logout")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> BackchannelLogoutAsync([FromBody] BackchannelLogoutCommand command, CancellationToken ct)
     {

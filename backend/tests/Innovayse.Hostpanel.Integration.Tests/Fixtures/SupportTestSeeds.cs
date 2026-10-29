@@ -2,7 +2,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
@@ -10,10 +11,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 /// <summary>
 /// Seeding and assertion helpers shared by every <c>Support/&lt;UseCase&gt;Tests.cs</c> class, so
 /// each per-use-case file states only what makes it different rather than re-deriving an admin
-/// token or a department id. Moved out of the endpoint-grouped files this batch dissolved
-/// (<c>SupportEndpointTests</c>, <c>DepartmentsEndpointTests</c>, <c>MyTicketsEndpointTests</c>,
-/// <c>TicketsAdminEndpointTests</c> and the rest) rather than duplicated into each of the 64 files
-/// that replaced them.
+/// token or a department id.
 /// </summary>
 public static class SupportTestSeeds
 {
@@ -60,7 +58,7 @@ public static class SupportTestSeeds
     /// <param name="factory">The shared API + PostgreSQL host.</param>
     /// <param name="label">A short, unique-per-test label folded into the registered email.</param>
     /// <returns>The authenticated client and its numeric client id.</returns>
-    public static async Task<(HttpClient Client, int ClientId)> RegisterClientAsync(
+    public static async Task<SignedInClient> RegisterClientAsync(
         IntegrationTestFactory factory, string label)
     {
         var httpClient = factory.CreateClient();
@@ -73,6 +71,7 @@ public static class SupportTestSeeds
             lastName = label,
         });
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var userId = (await registerResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("userId").GetString()!;
 
         var token = await factory.GetClientTokenAsync(email, TestPassword);
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -93,7 +92,7 @@ public static class SupportTestSeeds
         }
 
         clientId.Should().BeGreaterThan(0, "Wolverine should have created the Client record");
-        return (httpClient, clientId);
+        return new SignedInClient(httpClient, clientId, userId, email);
     }
 
     /// <summary>Creates a support department as admin and returns its id.</summary>
@@ -108,6 +107,17 @@ public static class SupportTestSeeds
         });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         return int.Parse((await response.Content.ReadAsStringAsync()).Trim());
+    }
+
+    /// <summary>Seeds a support department straight through the data context and returns its id.</summary>
+    /// <param name="context">The data context to seed through.</param>
+    /// <returns>The saved department's id.</returns>
+    public static async Task<int> SeedDepartmentAsync(IHostpanelDbContext context)
+    {
+        var department = Department.Create($"Dept-{Guid.NewGuid():N}", "dept@example.com");
+        context.Departments.Add(department);
+        await context.SaveChangesAsync(CancellationToken.None);
+        return department.Id;
     }
 
     /// <summary>Creates a download category as admin and returns its id.</summary>
@@ -155,16 +165,18 @@ public static class SupportTestSeeds
     }
 
     /// <summary>Creates a department and a staff-filed ticket in it, as admin, and returns the ticket id.</summary>
+    /// <param name="factory">The shared API + PostgreSQL host, used to seed the client when none is named.</param>
     /// <param name="admin">A client authenticated as Admin.</param>
-    /// <param name="clientId">The client the ticket is filed on behalf of.</param>
+    /// <param name="clientId">The client the ticket is filed on behalf of, or <see langword="null"/> to seed one.</param>
     /// <returns>The new ticket's id.</returns>
-    public static async Task<int> CreateAdminTicketAsync(HttpClient admin, int clientId = 1)
+    public static async Task<int> CreateAdminTicketAsync(IntegrationTestFactory factory, HttpClient admin, int? clientId = null)
     {
         var departmentId = await CreateDepartmentAsync(admin);
+        var ownerId = clientId ?? (await ClientsTestSeeds.SeedClientAsync(factory)).ClientId;
 
         var response = await admin.PostAsJsonAsync("/api/tickets", new
         {
-            clientId,
+            clientId = ownerId,
             subject = "Admin-created ticket",
             message = "Filed by staff on behalf of the client.",
             departmentId,

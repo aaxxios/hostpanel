@@ -1,6 +1,6 @@
 /**
- * Tests for `GET /api/portal/client/emails`: it reads the first 100 sent e-mails and reduces each
- * to id, date and subject.
+ * Tests for `GET /api/portal/client/emails`: it reads the first 100 sent e-mails and passes the
+ * backend page through as sent.
  *
  * @module tests/server/api/portal/client/emails.get.test
  */
@@ -26,23 +26,22 @@ afterEach(async () => {
 })
 
 describe('GET /api/portal/client/emails', () => {
-  it('maps log entries to string id, date and subject only', async () => {
-    backend.respondWith(() => ({
-      body: { items: [{ id: 5, to: 'a@b.test', subject: 'Invoice', sentAt: '2026-02-03T00:00:00Z', success: true, error: null }] },
-    }))
+  it('passes the backend page through as sent', async () => {
+    const page = {
+      items: [{ id: 5, to: 'a@b.test', subject: 'Invoice', sentAt: '2026-02-03T00:00:00Z', success: true }],
+      pageNumber: 1,
+      pageSize: 100,
+      totalCount: 1,
+      totalPages: 1,
+    }
+    backend.respondWith(() => ({ body: page }))
 
     const result = await route.default(makeEvent({ cookies: await signedIn('jwt'), headers: { 'x-language': 'hy' } }))
 
     expect(backend.requests[0]?.url).toBe('/api/me/emails?page=1&pageSize=100')
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
     expect(backend.requests[0]?.headers['x-language']).toBe('hy')
-    expect(result).toEqual([{ id: '5', date: '2026-02-03T00:00:00Z', subject: 'Invoice' }])
-  })
-
-  it('answers an empty list when the backend sends no items', async () => {
-    backend.respondWith(() => ({ body: {} }))
-
-    expect(await route.default(makeEvent())).toEqual([])
+    expect(result).toEqual(page)
   })
 
   it('passes the backend refusal through with its code and sentence', async () => {

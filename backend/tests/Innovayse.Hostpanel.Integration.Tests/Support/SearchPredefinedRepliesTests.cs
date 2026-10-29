@@ -1,8 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -11,7 +8,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// content, an empty term is refused before any query runs, and the action is closed to a caller
 /// with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>PredefinedRepliesEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class SearchPredefinedRepliesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

@@ -1,6 +1,6 @@
-using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Application.Clients.Queries.GetClientUsers;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 using Wolverine;
 
@@ -12,11 +12,16 @@ public sealed class GetMyClientUsersHandler
     /// <summary>Wolverine bus the caller lookup and the read are dispatched through.</summary>
     private readonly IMessageBus _bus;
 
+    /// <summary>Resolves the account the caller acts for (the owner only).</summary>
+    private readonly IClientAccess _access;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="bus">Wolverine bus the caller lookup and the read are dispatched through.</param>
-    public GetMyClientUsersHandler(IMessageBus bus)
+    /// <param name="access">Resolves the account the caller acts for (the owner only).</param>
+    public GetMyClientUsersHandler(IMessageBus bus, IClientAccess access)
     {
         _bus = bus;
+        _access = access;
     }
 
     /// <summary>Handles the query.</summary>
@@ -27,13 +32,13 @@ public sealed class GetMyClientUsersHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var profile = await _bus.GetCallerClientAsync(ct);
-        if (profile.IsFailure)
+        var clientId = await _access.RequireOwnClientIdAsync(ct);
+        if (clientId.IsFailure)
         {
-            return Result<IReadOnlyList<ClientUserDto>>.FailureCode(profile.ErrorCode!);
+            return Result<IReadOnlyList<ClientUserDto>>.FailureCode(clientId.ErrorCode!);
         }
 
         return await _bus.InvokeAsync<Result<IReadOnlyList<ClientUserDto>>>(
-            new GetClientUsersQuery(profile.Value!.Id), ct);
+            new GetClientUsersQuery(clientId.Value), ct);
     }
 }

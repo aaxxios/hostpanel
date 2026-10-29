@@ -3,4 +3,4 @@ namespace Innovayse.Hostpanel.Application.Services.Queries.ListCancellationReque
 /// <summary>Returns a paginated list of cancellation requests (admin view).</summary>
 /// <param name="Page">1-based page number.</param>
 /// <param name="PageSize">Items per page (max 100).</param>
-public record ListCancellationRequestsQuery(int Page = 1, int PageSize = 20);
+public sealed record ListCancellationRequestsQuery(int Page = 1, int PageSize = 20);

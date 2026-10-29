@@ -5,8 +5,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import DomainRegistrationsView from '@/views/DomainRegistrationsView.vue'
 import { mountRoutedSettled } from '../helpers/mount'
-import { json, problem } from '../helpers/fetch'
+import { json, problem, stubFetch } from '../helpers/fetch'
 import { stubRoutes } from '../helpers/routes'
+import { DomainStatus } from '@/types/domain'
+import { flushPromises } from '@vue/test-utils'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -26,10 +28,10 @@ describe('DomainRegistrationsView', () => {
     nextDueDate: '2027-01-01T00:00:00Z',
     expiresAt: '2027-01-01T00:00:00Z',
     autoRenew: true,
-    status: 'Active',
+    status: DomainStatus.Active,
   }
 
-  it('renders the registration with its price and client link', async () => {
+  it('renders the registration with its price and the named client link', async () => {
     stubRoutes({ 'GET /api/domains': () => json({ items: [domain], totalCount: 1 }) })
     const wrapper = await mountRoutedSettled(DomainRegistrationsView, '/clients/domain-registrations')
 
@@ -37,13 +39,13 @@ describe('DomainRegistrationsView', () => {
     expect(row).toContain('example.com')
     expect(row).toContain('$12.99')
     expect(wrapper.get('[data-testid="domain-registrations-client-4"]').attributes('href')).toBe('/clients/9')
+    expect(wrapper.get('[data-testid="domain-registrations-client-4"]').text()).toBe('Grace Hopper')
   })
 
-  it('falls back when the client name is unresolved and the period is unknown', async () => {
-    stubRoutes({ 'GET /api/domains': () => json({ items: [{ ...domain, clientName: null, regPeriodYears: 0 }], totalCount: 1 }) })
+  it('falls back when the period is unknown', async () => {
+    stubRoutes({ 'GET /api/domains': () => json({ items: [{ ...domain, regPeriodYears: 0 }], totalCount: 1 }) })
     const wrapper = await mountRoutedSettled(DomainRegistrationsView, '/clients/domain-registrations')
 
-    expect(wrapper.get('[data-testid="domain-registrations-client-4"]').text()).toBe('Client #9')
     expect(wrapper.get('[data-testid="domain-registrations-row-4"]').text()).toContain('N/A')
   })
 
@@ -62,5 +64,18 @@ describe('DomainRegistrationsView', () => {
     stubRoutes({ 'GET /api/domains': () => problem('Not allowed.', 403) })
     const refused = await mountRoutedSettled(DomainRegistrationsView, '/clients/domain-registrations')
     expect(refused.get('[data-testid="domain-registrations-error"]').text()).toContain('Not allowed.')
+  })
+
+  it('loads again from the Retry of a refused load', async () => {
+    stubFetch(problem('Not allowed.', 403))
+    const wrapper = await mountRoutedSettled(DomainRegistrationsView, '/clients/domain-registrations')
+    await flushPromises()
+    const fetchMock = vi.mocked(fetch)
+    const before = fetchMock.mock.calls.length
+
+    await wrapper.get('[data-testid="domain-registrations-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(before)
   })
 })

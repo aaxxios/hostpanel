@@ -4,7 +4,7 @@ using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Billing.Commands.SuspendOverdueServicesCron;
 
-/// <summary>Validates <see cref="SuspendOverdueServicesCronCommand"/>: no rules — the command carries no input.</summary>
+/// <summary>Validates <see cref="SuspendOverdueServicesCronCommand"/>: no rules; the command carries no input.</summary>
 public sealed class SuspendOverdueServicesCronValidator : LocalizedValidator<SuspendOverdueServicesCronCommand>
 {
     /// <summary>Initializes the validator with the localization service.</summary>

@@ -34,6 +34,14 @@ describe('ClientExportModal', () => {
     expect(wrapper.get('[data-testid="clients-export-field-invoices"]').attributes('aria-checked')).toBe('true')
   })
 
+  it('offers the linked users and invitations sections and explains how thin sections are exported', () => {
+    const wrapper = mountModal()
+
+    expect(wrapper.get('[data-testid="clients-export-field-users"]').attributes('aria-checked')).toBe('true')
+    expect(wrapper.get('[data-testid="clients-export-field-invitations"]').attributes('aria-checked')).toBe('true')
+    expect(wrapper.get('[data-testid="clients-export-storage-note"]').text()).toContain('empty list')
+  })
+
   it('disables download when nothing is selected', async () => {
     const wrapper = mountModal()
 

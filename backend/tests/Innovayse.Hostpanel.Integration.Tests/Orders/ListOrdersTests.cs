@@ -1,20 +1,18 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Domain.Orders.Enums;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Orders;
 
 /// <summary>
-/// <c>GET /api/orders</c> against Postgres: the happy path (never refuses on content) and the
-/// authorization boundary (anonymous, wrong role).
+/// <c>GET /api/orders</c> against Postgres: the happy path, the status filter (an unknown status
+/// is refused, never read as no filter) and the authorization boundary (anonymous, wrong role).
 /// </summary>
-/// <remarks>Split from the deleted <c>OrdersAdminEndpointTests</c> (A7 Task 6).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListOrdersTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>A seeded pending order appears in the admin list.</summary>
+    /// <summary>A seeded pending order appears in the admin list, named after its client.</summary>
     [Fact]
     public async Task ListShowsTheSeededOrder()
     {
@@ -24,6 +22,9 @@ public sealed class ListOrdersTests(IntegrationTestFactory factory) : IClassFixt
         var list = await admin.GetFromJsonAsync<JsonElement>("/api/orders?page=1&pageSize=100");
 
         list.GetProperty("items").EnumerateArray().Should().Contain(o => o.GetProperty("id").GetInt32() == orderId);
+        list.GetProperty("items").EnumerateArray()
+            .Single(o => o.GetProperty("id").GetInt32() == orderId)
+            .GetProperty("clientName").GetString().Should().Be("Ada Lovelace");
     }
 
     /// <summary>The list says which currency each order's total is in, so the admin can show a unit.</summary>
@@ -40,6 +41,34 @@ public sealed class ListOrdersTests(IntegrationTestFactory factory) : IClassFixt
             .GetProperty("currency").GetString().Should().Be("USD");
     }
 
+    /// <summary>The status filter keeps only orders in that status.</summary>
+    [Fact]
+    public async Task StatusFilterKeepsOnlyThatStatus()
+    {
+        var pendingId = await OrdersTestSeeds.SeedOrderAsync(factory);
+        var cancelledId = await OrdersTestSeeds.SeedOrderAsync(factory, OrderStatus.Cancelled);
+        var admin = await OrdersTestSeeds.AdminClientAsync(factory);
+
+        var list = await admin.GetFromJsonAsync<JsonElement>(
+            $"/api/orders?page=1&pageSize=100&status={nameof(OrderStatus.Cancelled)}");
+
+        var items = list.GetProperty("items").EnumerateArray().ToList();
+        items.Should().NotContain(o => o.GetProperty("id").GetInt32() == pendingId);
+        items.Should().Contain(o => o.GetProperty("id").GetInt32() == cancelledId);
+        items.Should().OnlyContain(o => o.GetProperty("status").GetString() == nameof(OrderStatus.Cancelled));
+    }
+
+    /// <summary>An unknown status is refused with 400 rather than silently listing every order.</summary>
+    [Fact]
+    public async Task UnknownStatusIsRefused()
+    {
+        var admin = await OrdersTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.GetAsync("/api/orders?page=1&pageSize=100&status=NoSuchStatus");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     /// <summary>Listing orders is not for anonymous callers.</summary>
     [Fact]
     public async Task RefusesAnonymous()
@@ -49,7 +78,7 @@ public sealed class ListOrdersTests(IntegrationTestFactory factory) : IClassFixt
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A plain client caller, who is neither a reseller nor an admin, is refused with 403.</summary>
+    /// <summary>A plain client caller, who is not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesAClientCaller()
     {

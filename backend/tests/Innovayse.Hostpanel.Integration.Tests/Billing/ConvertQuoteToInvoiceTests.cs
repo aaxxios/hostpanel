@@ -1,8 +1,5 @@
 using System.Net;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -11,7 +8,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// a draft invoice, the refusal to convert an already-accepted quote a second time, and the
 /// <c>QUOTE_NOT_FOUND</c> refusal for an id that names no quote.
 /// </summary>
-/// <remarks>Split from the deleted <c>QuotesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ConvertQuoteToInvoiceTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

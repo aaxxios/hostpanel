@@ -1,7 +1,10 @@
+using System.Globalization;
 using System.Text.Json;
 using Innovayse.Hostpanel.Infrastructure.Resilience;
+using Innovayse.SDK.Plugins;
 
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.CPanel;
+
 /// <summary>
 /// Lightweight per-server WHM API helper.
 /// Unlike <see cref="CPanelClient"/> (which is DI-configured for a single server),
@@ -26,14 +29,8 @@ public sealed class CpanelWhmApi
     /// <param name="apiToken">WHM API token.</param>
     /// <param name="factory">Source of the underlying HTTP client.</param>
     /// <returns>A client bound to that server.</returns>
-    public static CpanelWhmApi Create(string hostname, string username, string apiToken, IHttpClientFactory factory)
-    {
-        var http = factory.CreateClient();
-        http.BaseAddress = new Uri($"https://{hostname}:{WhmPort}");
-        http.DefaultRequestHeaders.Add("Authorization", $"whm {username}:{apiToken}");
-        http.Timeout = HttpBackstopTimeouts.Whm;
-        return new CpanelWhmApi(http);
-    }
+    public static CpanelWhmApi Create(string hostname, string username, string apiToken, IHttpClientFactory factory) =>
+        Connect(hostname, $"whm {username}:{apiToken}", factory);
 
     /// <summary>Creates an instance connected to the given server using an access hash.</summary>
     /// <param name="hostname">WHM host name; port 2087 is used.</param>
@@ -43,13 +40,9 @@ public sealed class CpanelWhmApi
     /// <returns>A client bound to that server.</returns>
     public static CpanelWhmApi CreateWithHash(string hostname, string username, string accessHash, IHttpClientFactory factory)
     {
-        var http = factory.CreateClient();
-        http.BaseAddress = new Uri($"https://{hostname}:{WhmPort}");
-        // WHM access hash auth — strip whitespace from hash
+        // WHM access hash auth: the hash is stored wrapped across lines, so whitespace is stripped.
         var cleanHash = accessHash.Replace("\n", "").Replace("\r", "").Trim();
-        http.DefaultRequestHeaders.Add("Authorization", $"WHM {username}:{cleanHash}");
-        http.Timeout = HttpBackstopTimeouts.Whm;
-        return new CpanelWhmApi(http);
+        return Connect(hostname, $"WHM {username}:{cleanHash}", factory);
     }
 
     /// <summary>
@@ -85,11 +78,11 @@ public sealed class CpanelWhmApi
 
             // Disk usage: "diskused" in MB, "disklimit" in MB ("unlimited" = 0)
             long diskUsed = ParseMb(acct, "diskused");
-            long diskLimit = ParseLimitMb(acct, "disklimit");
+            long diskLimit = ParseMb(acct, "disklimit");
 
             // Bandwidth: "bwused" in MB, "bwlimit" in MB
             long bwUsed = ParseMb(acct, "bwused");
-            long bwLimit = ParseLimitMb(acct, "bwlimit");
+            long bwLimit = ParseMb(acct, "bwlimit");
 
             results.Add(new WhmAccountUsage(user, domain, owner, diskUsed, diskLimit, bwUsed, bwLimit));
         }
@@ -97,10 +90,27 @@ public sealed class CpanelWhmApi
         return results;
     }
 
-    /// <summary>Reads a megabyte figure that WHM sends either as a number or as a numeric string.</summary>
+    /// <summary>Builds a client for one WHM server with the given authorization header value.</summary>
+    /// <param name="hostname">WHM host name; port 2087 is used.</param>
+    /// <param name="authorization">The complete <c>Authorization</c> header value.</param>
+    /// <param name="factory">Source of the underlying HTTP client.</param>
+    /// <returns>A client bound to that server.</returns>
+    private static CpanelWhmApi Connect(string hostname, string authorization, IHttpClientFactory factory)
+    {
+        var http = factory.CreateClient();
+        http.BaseAddress = new Uri(HostingPanelAddress.BaseUrl(hostname, WhmPort));
+        http.DefaultRequestHeaders.Add("Authorization", authorization);
+        http.Timeout = HttpBackstopTimeouts.Whm;
+        return new CpanelWhmApi(http);
+    }
+
+    /// <summary>
+    /// Reads a megabyte figure that WHM sends either as a number or as a numeric string, where
+    /// the string <c>unlimited</c> (a limit with no cap) reads as 0.
+    /// </summary>
     /// <param name="el">The JSON object holding the figure.</param>
     /// <param name="prop">Name of the property to read.</param>
-    /// <returns>Whole megabytes; 0 when the property is missing or not numeric.</returns>
+    /// <returns>Whole megabytes; 0 when the property is missing, unlimited or not numeric.</returns>
     private static long ParseMb(JsonElement el, string prop)
     {
         if (!el.TryGetProperty(prop, out var val))
@@ -115,36 +125,10 @@ public sealed class CpanelWhmApi
 
         if (val.ValueKind == JsonValueKind.String)
         {
-            var s = val.GetString() ?? "0";
-            return double.TryParse(s, out var d) ? (long)d : 0;
-        }
-        return 0;
-    }
-
-    /// <summary>Reads a megabyte limit, where WHM spells "no limit" as the string <c>unlimited</c>.</summary>
-    /// <param name="el">The JSON object holding the limit.</param>
-    /// <param name="prop">Name of the property to read.</param>
-    /// <returns>Whole megabytes; 0 when the property is missing, unlimited or not numeric.</returns>
-    private static long ParseLimitMb(JsonElement el, string prop)
-    {
-        if (!el.TryGetProperty(prop, out var val))
-        {
-            return 0;
-        }
-
-        if (val.ValueKind == JsonValueKind.String)
-        {
-            var s = val.GetString() ?? "";
-            if (s.Equals("unlimited", StringComparison.OrdinalIgnoreCase))
-            {
-                return 0;
-            }
-
-            return double.TryParse(s, out var d) ? (long)d : 0;
-        }
-        if (val.ValueKind == JsonValueKind.Number)
-        {
-            return (long)val.GetDouble();
+            // Invariant: WHM writes "1.5" with a dot whatever the culture of this process is.
+            return double.TryParse(val.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var d)
+                ? (long)d
+                : 0;
         }
 
         return 0;

@@ -21,20 +21,24 @@ interface I18nLocale {
   locale: Ref<string>
 }
 
-/** Language name recorded on the conversation, so the person answering knows which to use. */
+/**
+ * Language name recorded on the conversation, so the person answering knows which to use.
+ *
+ * @param code Active locale code.
+ * @returns The English name of the language; English for any unknown code.
+ */
 const languageOf = (code: string): string =>
   code === AppLocale.Hy ? 'Armenian' : code === AppLocale.Ru ? 'Russian' : 'English'
 
 /**
  * Live-chat widget loader, driven entirely by settings.
  *
- * The chat server and its website tokens used to be literals in `app.vue` — the vendor's
- * own — so every self-hosted install opened a chat with the vendor. Now
+ * Nothing is hard-coded, so a self-hosted install opens a chat only with its own server.
  * `portal.chat.provider` is the switch, `portal.chat.base_url` names the server and
  * `portal.chat.website_token` (with `.ru` / `.hy` overrides) identifies the storefront;
  * with any of the three empty, no script is emitted.
  *
- * The loader is still injected through `useHead` at `bodyClose` so the SDK fetch starts
+ * The loader is injected through `useHead` at `bodyClose` so the SDK fetch starts
  * from the server-rendered HTML rather than after hydration. It does not wait for cookie
  * consent: the widget is how a visitor reaches a person, not a tracker, and it opens only
  * when they click it.

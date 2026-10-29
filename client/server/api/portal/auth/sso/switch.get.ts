@@ -1,77 +1,45 @@
 /**
  * GET /api/portal/auth/sso/switch?sub=XXX&redirect=/some/path
  *
- * Switches the active SSO session to a remembered account.
- * Generates a PKCE pair and redirects to sso.innovayse.local/switch-init
- * which auto-submits to the SSO switch endpoint, then comes back
- * via the normal OIDC callback, which starts a new session.
+ * Switches to a remembered account. The caller is a header widget that navigates the browser here,
+ * so this is a GET that answers with a redirect.
+ *
+ * The browser is sent to the sign-on provider's `switch-init` page with the account (`sub`) and a
+ * relative authorize address to continue to. That page runs on the provider's own origin, so the
+ * provider's remembered-accounts cookie is sent with it; this app cannot read that cookie, which is
+ * why the account is chosen there and not through a hint on the authorize request.
+ *
+ * Why a GET is safe: the handler never changes the local session. It only starts the sign-on
+ * authorize flow, exactly as `authorize.get.ts` does: a fresh `state` and PKCE verifier are bound to
+ * this browser in httpOnly cookies. The account actually changes in `callback.get.ts`, after the
+ * returned `state` and the PKCE proof are verified against those cookies. A cross-site GET can
+ * therefore at most send the visitor through the sign-on page for an account they already have; it
+ * cannot sign them in as anyone or end their session.
+ *
+ * A repeated `sub` or `redirect` key is a coded 400 before any cookie is written. Only a path inside
+ * this app is kept as the place to return to; anything else falls back to the client area.
  *
  * @module server/api/portal/auth/sso/switch.get
  */
 
-import { randomBytes, createHash } from 'node:crypto'
 import { CLIENT_AREA_PATH, SSO_AUTHORIZE_PATH } from '~/constants/clientRoutes'
-import { SessionCookie } from '~/constants/sessionCookie'
-import { SSO_FLOW_COOKIE_MAX_AGE } from '~/server/utils/auth-cookie'
-import { requireSsoSetting } from '~/server/utils/requireSsoSetting'
+import { readQueryString } from '~/server/utils/readQueryString'
+import { MAX_LOGIN_HINT_LENGTH, safeReturnPath, startSignonFlow } from '~/server/utils/signon-flow'
 
-export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig()
+export default defineEventHandler((event) => {
+  // A repeated key is refused (400) before any cookie is set.
   const query = getQuery(event)
-  const sub = query.sub as string | undefined
-  const redirectTo = (query.redirect as string | undefined) || CLIENT_AREA_PATH
+  const sub = readQueryString(query.sub)
+  const redirect = readQueryString(query.redirect)
 
-  if (!sub) {
+  if (!sub || !sub.trim() || sub.length > MAX_LOGIN_HINT_LENGTH) {
     return sendRedirect(event, SSO_AUTHORIZE_PATH, 302)
   }
 
-  // Fail closed before any cookie is set: an unconfigured SSO has nowhere to send the browser.
-  const ssoPublicUrl = requireSsoSetting(config.public.ssoPublicUrl)
-  const redirectUri = requireSsoSetting(config.ssoCallbackUrl)
+  const { ssoPublicUrl, params } = startSignonFlow(event, safeReturnPath(redirect) ?? CLIENT_AREA_PATH)
 
-  // Generate PKCE
-  const codeVerifier = randomBytes(32).toString('base64url')
-  const codeChallenge = createHash('sha256')
-    .update(codeVerifier)
-    .digest('base64url')
-
-  setCookie(event, SessionCookie.PkceVerifier, codeVerifier, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: SSO_FLOW_COOKIE_MAX_AGE,
-    path: '/',
-  })
-
-  const state = randomBytes(16).toString('hex')
-  setCookie(event, SessionCookie.OauthState, state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: SSO_FLOW_COOKIE_MAX_AGE,
-    path: '/',
-  })
-
-  setCookie(event, SessionCookie.PostLoginRedirect, redirectTo, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: SSO_FLOW_COOKIE_MAX_AGE,
-    path: '/',
-  })
-
-  const oidcParams = new URLSearchParams({
-    client_id: config.ssoClientId,
-    response_type: 'code',
-    redirect_uri: redirectUri,
-    scope: 'openid profile email offline_access',
-    code_challenge: codeChallenge,
-    code_challenge_method: 'S256',
-    state,
-  })
-  const oidcReturnUrl = `/connect/authorize?${oidcParams}`
-
-  // Redirect to the SSO's switch-init page — runs same-origin so the sso_remembered cookie is sent
-  const switchInitUrl = `${ssoPublicUrl}/switch-init?sub=${encodeURIComponent(sub)}&returnUrl=${encodeURIComponent(oidcReturnUrl)}`
+  // The provider's switch-init page runs same-origin there, so its remembered-accounts cookie is sent.
+  const authorizeReturnUrl = `/connect/authorize?${params}`
+  const switchInitUrl = `${ssoPublicUrl}/switch-init?sub=${encodeURIComponent(sub.trim())}&returnUrl=${encodeURIComponent(authorizeReturnUrl)}`
   return sendRedirect(event, switchInitUrl, 302)
 })

@@ -33,7 +33,7 @@ public sealed class ListMySshKeysHandler
     /// <param name="ownership">The rule that says a client may only touch their own services.</param>
     /// <param name="resolver">Resolves server, provider and account once ownership is settled.</param>
     /// <param name="context">Data context.</param>
-    /// <param name="logger">Logger.</param>
+    /// <param name="logger">Records a provider failure without putting its detail on the wire.</param>
     public ListMySshKeysHandler(
         IServiceOwnership ownership, ISshServiceContextResolver resolver,
         IHostpanelDbContext context, ILogger<ListMySshKeysHandler> logger)
@@ -45,7 +45,7 @@ public sealed class ListMySshKeysHandler
     }
 
     /// <summary>Handles <see cref="ListMySshKeysQuery"/>.</summary>
-    /// <param name="query">The query.</param>
+    /// <param name="query">Names the caller's service whose keys are listed.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The keys, oldest first; <c>SERVICE_NOT_FOUND</c> when the service is not the caller's;
@@ -85,7 +85,8 @@ public sealed class ListMySshKeysHandler
             }
             catch (SshProviderException ex)
             {
-                _logger.LogWarning(ex, "SSH key listing for service {ServiceId} failed: {Code}", context.Service.Id, ex.Code);
+                _logger.LogWarning(ex, "SSH key listing for service {ServiceId} failed: {Failure}", context.Service.Id, ex.Failure);
+
             }
         }
 

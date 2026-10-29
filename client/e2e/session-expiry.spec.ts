@@ -12,6 +12,7 @@
 import { expect, test } from './support/test'
 import { CLIENT_CREDENTIALS, INVOICE } from './support/fixtures.mjs'
 import { resetStub, scriptStub, signIn, waitForHydration } from './support/helpers'
+import { HttpMethod } from '../types/httpmethod'
 
 test('a 401 on a client-side step sends the customer to sign in, and signing in returns to the page they were on', async ({ page, context, request, baseURL }) => {
   await resetStub(request)
@@ -22,7 +23,7 @@ test('a 401 on a client-side step sends the customer to sign in, and signing in 
   await expect(page.getByTestId('invoices-table')).toBeVisible()
 
   // The session dies now: the next read of one invoice is refused.
-  await scriptStub(request, { method: 'GET', path: `/api/me/invoices/${INVOICE.id}`, status: 401, code: 'UNAUTHORIZED', detail: 'E2E: the session has expired.' })
+  await scriptStub(request, { method: HttpMethod.Get, path: `/api/me/invoices/${INVOICE.id}`, status: 401, code: 'UNAUTHORIZED', detail: 'E2E: the session has expired.' })
   await page.getByTestId(`invoice-view-${INVOICE.id}`).click()
 
   // The sign-in page remembers the page the refusal interrupted: the invoice being opened.
@@ -37,7 +38,7 @@ test('a 401 on a client-side step sends the customer to sign in, and signing in 
   await page.getByTestId('login-password').fill(CLIENT_CREDENTIALS.password)
   await page.getByTestId('login-submit').click()
 
-  // ...and signing in sends them back there, not to the dashboard.
+  // Signing in sends them back there, not to the dashboard.
   await expect(page).toHaveURL(new RegExp(`/client/invoices/${INVOICE.id}$`))
   await expect(page.getByTestId('invoice-heading')).toBeVisible()
 })
@@ -48,7 +49,7 @@ test('after the session expired the gate keeps the client area closed until sign
 
   await page.goto('/client/invoices')
   await waitForHydration(page)
-  await scriptStub(request, { method: 'GET', path: `/api/me/invoices/${INVOICE.id}`, status: 401, code: 'UNAUTHORIZED', detail: 'E2E: the session has expired.' })
+  await scriptStub(request, { method: HttpMethod.Get, path: `/api/me/invoices/${INVOICE.id}`, status: 401, code: 'UNAUTHORIZED', detail: 'E2E: the session has expired.' })
   await page.getByTestId(`invoice-view-${INVOICE.id}`).click()
   await expect(page).toHaveURL(/\/client\/login/)
 

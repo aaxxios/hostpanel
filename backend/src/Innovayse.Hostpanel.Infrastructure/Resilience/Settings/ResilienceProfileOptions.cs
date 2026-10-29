@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 
 namespace Innovayse.Hostpanel.Infrastructure.Resilience.Settings;
+
 /// <summary>
 /// The numbers one outbound HTTP client's resilience pipeline is built from: a per-attempt
 /// timeout, a ceiling on the whole call, an optional retry ladder and an optional circuit
@@ -20,7 +21,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Resilience.Settings;
 /// how far apart; <em>which requests may be repeated</em> is a per-client predicate in
 /// <c>HttpClientResilienceExtensions</c>, because it depends on what the request does rather
 /// than on a number an operator may tune. A client whose operations are all unsafe to repeat is
-/// registered without a retry stage, and <see cref="MaxRetryAttempts"/> is then unused — raising
+/// registered without a retry stage, and <see cref="MaxRetryAttempts"/> is then unused: raising
 /// it in configuration will not make that client retry.
 /// </para>
 /// </remarks>
@@ -47,7 +48,7 @@ public sealed class ResilienceProfileOptions
 
     /// <summary>
     /// How many times a retryable request is repeated after the first attempt. Ignored on a
-    /// client registered without a retry stage — see the remarks on this class.
+    /// client registered without a retry stage: see the remarks on this class.
     /// </summary>
     [Range(0, 10)]
     public int MaxRetryAttempts { get; set; } = 2;
@@ -67,7 +68,7 @@ public sealed class ResilienceProfileOptions
     /// <remarks>
     /// Off for any client that addresses more than one host through the same registration. A
     /// breaker is per-registration, not per-host, so on a multi-target client one dead server
-    /// would open the breaker for every healthy one — turning a single unreachable node into a
+    /// would open the breaker for every healthy one: turning a single unreachable node into a
     /// platform-wide provisioning outage, which is a worse failure than the one the breaker
     /// exists to prevent.
     /// </remarks>

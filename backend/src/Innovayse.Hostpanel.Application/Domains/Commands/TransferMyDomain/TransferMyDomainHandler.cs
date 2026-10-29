@@ -1,16 +1,16 @@
-using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Orders.Commands.PlaceOrder;
 using Innovayse.Hostpanel.Application.Orders.Common;
-using Innovayse.Hostpanel.Domain.Orders;
-using Innovayse.Hostpanel.Domain.Products;
+using Innovayse.Hostpanel.Application.Products.Common;
+using Innovayse.Hostpanel.Application.Products.Queries.GetActiveDomainProduct;
+using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Wolverine;
+
 namespace Innovayse.Hostpanel.Application.Domains.Commands.TransferMyDomain;
+
 /// <summary>
 /// Places a paid transfer-in order for a domain the calling client is bringing to this
 /// registrar, and never lets the caller say whose account it lands on.
@@ -20,15 +20,15 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.TransferMyDomain;
 /// <b>Why this is an order and not a direct registrar call.</b> The obvious mirror of
 /// <c>RenewMyDomainHandler</c> would be to settle the caller and dispatch
 /// <c>TransferDomainCommand</c> straight away. That command calls the registrar immediately and
-/// records a price on the new domain without ever raising an invoice -- which is correct for the
+/// records a price on the new domain without ever raising an invoice, which is correct for the
 /// admin route it was written for, where a person has already decided the transfer is warranted,
 /// and wrong for a self-service one, where it would hand out transfers for free.
 /// </para>
 /// <para>
 /// A transfer-in is already a thing this platform sells: <c>PlaceOrderCommand</c> accepts an
-/// item with <c>DomainAction = "transfer"</c>, prices it from the TLD table, raises the invoice,
+/// item with <see cref="DomainAction.Transfer"/>, prices it from the TLD table, raises the invoice,
 /// and <c>FulfillPaidOrderHandler</c> dispatches <c>TransferDomainCommand</c> once that invoice
-/// is paid -- refunding automatically if the registrar rejects it. So the shared use case this
+/// is paid; refunding automatically if the registrar rejects it. So the shared use case this
 /// handler reaches for is the order, not the registrar, and everything downstream of payment is
 /// the code the public checkout already runs.
 /// </para>
@@ -47,35 +47,28 @@ public sealed class TransferMyDomainHandler
     /// <remarks>
     /// Domain lines are priced from the TLD table by action and year count, not from the
     /// product's cycle prices, so this is a label rather than an input to the total. It is the
-    /// same string the public cart puts on a domain item, and the order validator requires a
-    /// non-empty one.
+    /// same cycle the public cart puts on a domain item.
     /// </remarks>
-    private const string DomainBillingCycle = BillingCycleNames.Annually;
-
-    /// <summary>The data context, for the domain product lookup.</summary>
-    private readonly IHostpanelDbContext _context;
+    private const BillingCycle DomainBillingCycle = BillingCycle.Annual;
 
     /// <summary>Who is transferring; the command does not say, and must not.</summary>
     private readonly ICurrentUserService _caller;
 
-    /// <summary>Wolverine bus, used to reach the order use case once the caller is settled.</summary>
+    /// <summary>Wolverine bus, used to find the domain product and to reach the order use case once the caller is settled.</summary>
     private readonly IMessageBus _bus;
 
     /// <summary>Structured logger.</summary>
     private readonly ILogger<TransferMyDomainHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="context">The data context, for the domain product lookup.</param>
     /// <param name="caller">Who is transferring; the command does not say, and must not.</param>
-    /// <param name="bus">Wolverine bus, used to reach the order use case once the caller is settled.</param>
+    /// <param name="bus">Wolverine bus, used to find the domain product and to reach the order use case once the caller is settled.</param>
     /// <param name="logger">Structured logger.</param>
     public TransferMyDomainHandler(
-        IHostpanelDbContext context,
         ICurrentUserService caller,
         IMessageBus bus,
         ILogger<TransferMyDomainHandler> logger)
     {
-        _context = context;
         _caller = caller;
         _bus = bus;
         _logger = logger;
@@ -96,7 +89,7 @@ public sealed class TransferMyDomainHandler
     {
         var userId = _caller.RequireUserId();
 
-        var domainProductOutcome = await FindDomainProductAsync(ct);
+        var domainProductOutcome = await _bus.InvokeAsync<Result<DomainProductDto>>(new GetActiveDomainProductQuery(), ct);
         if (domainProductOutcome.IsFailure)
         {
             return Result<PlaceOrderResultDto>.FailureCode(domainProductOutcome.ErrorCode!);
@@ -125,42 +118,10 @@ public sealed class TransferMyDomainHandler
                         BillingCycle: DomainBillingCycle,
                         Domain: cmd.DomainName,
                         Hostname: null,
-                        DomainAction: DomainActionNames.Transfer,
+                        DomainAction: DomainAction.Transfer,
                         EppCode: cmd.EppCode,
                         Years: cmd.Years),
                 ]),
             ct);
-    }
-
-    /// <summary>
-    /// Finds the active product a domain order line hangs off.
-    /// </summary>
-    /// <remarks>
-    /// Keyed on <see cref="ProductType.Domain"/>, which is what the type is for. The public
-    /// domain-search page picks this product by looking for "domain" in the name, and that is a
-    /// guess -- an operator who calls the product "Domain names" and an operator who calls a
-    /// hosting plan "Domain + Hosting" get different answers from it. Nothing new should be
-    /// written that way, so this reads the flag instead.
-    /// </remarks>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>
-    /// The domain product to order against, or <c>DOMAIN_PRODUCT_NOT_CONFIGURED</c> when this
-    /// installation has no active domain product, so there is nothing to sell a transfer as -- a
-    /// configuration gap rather than a caller error, but the caller still needs a sentence
-    /// rather than a 500.
-    /// </returns>
-    private async Task<Result<Product>> FindDomainProductAsync(CancellationToken ct)
-    {
-        // Was IProductRepository.ListAsync(groupId: null, activeOnly: true), which ordered by
-        // name -- preserved here so a caller with several active domain products still gets the
-        // one that used to sort first. Read-only, so no tracking is needed.
-        var domainProduct = await _context.Products
-            .AsNoTracking()
-            .Where(p => p.Status == ProductStatus.Active && p.Type == ProductType.Domain)
-            .OrderBy(p => p.Name)
-            .FirstOrDefaultAsync(ct);
-        return domainProduct is null
-            ? Result<Product>.FailureCode(HostpanelErrorCodes.DOMAIN_PRODUCT_NOT_CONFIGURED)
-            : Result.Success(domainProduct);
     }
 }

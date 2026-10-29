@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Billing.Enums;
+
 /// <summary>Classification for billable items.</summary>
 public enum BillableItemType
 {

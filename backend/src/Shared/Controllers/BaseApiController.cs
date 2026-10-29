@@ -14,14 +14,16 @@ namespace Innovayse.Hostpanel.Shared.Controllers;
 /// The base of every controller: the members that turn a <see cref="Result"/> into HTTP. A
 /// controller binds, dispatches once and hands the outcome here; it never names a status code
 /// and never builds a body. Authorization is required by default so that a controller added
-/// without an attribute is closed rather than open.
+/// without an attribute is closed rather than open. The one status declared here is the one every
+/// action can answer: 500 from the exception middleware. Every other status is declared where it is
+/// true: 400 and 422 on the actions that bind input or map a refusal to them, 401 on the actions
+/// behind authentication, and 429 on each controller the rate limiter measures (every one except the
+/// exempt liveness probe).
 /// </summary>
 [Authorize]
 [ApiController]
 [ServiceFilter(typeof(ActionTimingFilter))]
-[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
-[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status422UnprocessableEntity)]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status500InternalServerError)]
 public abstract class BaseApiController : ControllerBase
 {
     /// <summary>Answers a refusal in the product's shape.</summary>
@@ -70,7 +72,7 @@ public abstract class BaseApiController : ControllerBase
 
     /// <summary>200 with data that did not come from a use case (a health probe, a static list).</summary>
     /// <typeparam name="T">The data type.</typeparam>
-    /// <param name="data">The data.</param>
+    /// <param name="data">The payload written as the response body.</param>
     /// <returns>The response.</returns>
     protected IActionResult HandleData<T>(T data)
     {
@@ -85,6 +87,53 @@ public abstract class BaseApiController : ControllerBase
     protected IActionResult CreatedResult<T>(string relativeUri, T value)
     {
         return Created(relativeUri, value);
+    }
+
+    /// <summary>
+    /// A sign-in answer: sets the httpOnly session cookie when the outcome carries a session token,
+    /// and answers 200 with the outcome itself as the body, or answers the mapped refusal.
+    /// </summary>
+    /// <remarks>
+    /// The token stays in the body as well as in the cookie, because the sign-in endpoints have a
+    /// second class of caller, anything scripted or machine-to-machine, which has no cookie jar.
+    /// An outcome with no session token (a second factor is still owed) sets no cookie.
+    /// </remarks>
+    /// <typeparam name="T">The sign-in outcome type.</typeparam>
+    /// <param name="result">The handler's outcome.</param>
+    /// <returns>The response.</returns>
+    protected IActionResult HandleSession<T>(Result<T> result)
+        where T : ISessionGrant
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        if (result.IsFailure || result.Value is null)
+        {
+            return MapFailure(result);
+        }
+
+        if (result.Value.SessionToken is { } token)
+        {
+            LocalSessionCookie.Issue(HttpContext, token);
+        }
+
+        return Ok(result.Value);
+    }
+
+    /// <summary>Clears the httpOnly session cookie and answers 200 with the value, or answers the mapped refusal.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="result">The handler's outcome.</param>
+    /// <returns>The response.</returns>
+    protected IActionResult HandleSessionEnded<T>(Result<T> result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        if (result.IsFailure)
+        {
+            return MapFailure(result);
+        }
+
+        LocalSessionCookie.Clear(HttpContext);
+        return Ok(result.Value);
     }
 
     /// <summary>A success that is not a plain 200; the refusal path stays identical.</summary>
@@ -133,7 +182,7 @@ public abstract class BaseApiController : ControllerBase
         return result.IsFailure ? MapFailure(result) : StatusCode(StatusCodes.Status202Accepted);
     }
 
-    /// <summary>Maps a refusal to its status and localizes its sentence by code.</summary>
+    /// <summary>Maps a refusal to its status and localizes its sentence by code; a 503 also carries <c>Retry-After</c>.</summary>
     /// <remarks>
     /// Protected so that an action needing a non-default success shape routes its failure through
     /// the one canonical mapping instead of choosing a status itself.
@@ -150,6 +199,7 @@ public abstract class BaseApiController : ControllerBase
         // Localized by code, not by the handler's English sentence: the resource file holds the
         // person-facing wording in every language, and the handler's Error string goes to the log.
         var resolver = HttpContext.RequestServices.GetRequiredService<IErrorMessageResolver>();
+        RetryAfterHeader.ApplyFor(HttpContext, status);
         return Error(code, title, status, resolver.Resolve(code), result.Errors);
     }
 }

@@ -1,13 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the <c>SetAutoRenew</c> use case — the admin/reseller
+/// Integration tests for the <c>SetAutoRenew</c> use case: the admin
 /// <c>PUT /api/domains/{id}/auto-renew</c>. The client-facing equivalent is
 /// <c>SetMyDomainAutoRenew</c>.
 /// </summary>
@@ -54,5 +52,17 @@ public sealed class SetAutoRenewTests(IntegrationTestFactory factory) : IClassFi
             $"/api/domains/{DomainsTestSeeds.UnknownId}/auto-renew", new { enabled = true });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A non-positive domain id is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task SetAutoRenew_NonPositiveDomainId_Returns400ValidationErrorAsync()
+    {
+        var admin = await DomainsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.PutAsJsonAsync("/api/domains/0/auto-renew", new { enabled = true });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

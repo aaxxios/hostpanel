@@ -1,9 +1,7 @@
 using System.Security.Claims;
-using FluentAssertions;
 using Innovayse.Hostpanel.API.Identity;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Http;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Identity;
@@ -13,7 +11,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Identity;
 /// </summary>
 /// <remarks>
 /// What is worth pinning is that it reads the caller out of a token issued by either mode. The two
-/// deliver the same facts under different claim names: SSO mode turns inbound claim mapping off, so
+/// deliver the same facts under different claim names: single sign-on mode turns inbound claim mapping off, so
 /// <c>sub</c> and <c>email</c> arrive as themselves, while local mode leaves the mapping on and they
 /// arrive renamed. Reading only one spelling returns null against the other, and because these values
 /// are what an audit row records, the failure is silent: the action succeeds, attributed to nobody.
@@ -49,7 +47,7 @@ public sealed class HttpCurrentUserServiceTests
         return new HttpCurrentUserService(accessor, identity);
     }
 
-    /// <summary>Under the SSO the subject arrives as the raw <c>sub</c> claim.</summary>
+    /// <summary>Under the sign-on provider the subject arrives as the raw <c>sub</c> claim.</summary>
     [Fact]
     public void UserId_UnderTheSso_ReadsTheRawSubClaim()
     {
@@ -67,7 +65,7 @@ public sealed class HttpCurrentUserServiceTests
         service.UserId.Should().Be(Subject);
     }
 
-    /// <summary>Under the SSO the email arrives as the raw <c>email</c> claim.</summary>
+    /// <summary>Under the sign-on provider the email arrives as the raw <c>email</c> claim.</summary>
     [Fact]
     public void Email_UnderTheSso_ReadsTheRawEmailClaim()
     {
@@ -87,41 +85,41 @@ public sealed class HttpCurrentUserServiceTests
 
     /// <summary>
     /// The token carries no display name in either mode, which is why this is a lookup at all; going
-    /// through the provider is what lets it work where the people live in the SSO.
+    /// through the provider is what lets it work where the people live in the sign-on provider.
     /// </summary>
     [Fact]
-    public void UserName_ComesFromTheIdentityProvider_NotTheToken()
+    public async Task GetUserNameAsync_ComesFromTheIdentityProvider_NotTheToken()
     {
         var service = Build(new FakeIdentityProvider(Ada), new Claim("sub", Subject));
 
-        service.UserName.Should().Be("Ada Lovelace");
+        (await service.GetUserNameAsync(CancellationToken.None)).Should().Be("Ada Lovelace");
     }
 
     /// <summary>
-    /// Every admin action records the name more than once; where the SSO owns the people each lookup is
+    /// Every admin action records the name more than once; where the sign-on provider owns the people each lookup is
     /// an HTTP call, so the answer is held for the life of the scope.
     /// </summary>
     [Fact]
-    public void UserName_IsLookedUpOncePerRequest()
+    public async Task GetUserNameAsync_IsLookedUpOncePerRequest()
     {
         var identity = new FakeIdentityProvider(Ada);
         var service = Build(identity, new Claim("sub", Subject));
 
-        _ = service.UserName;
-        _ = service.UserName;
-        _ = service.UserName;
+        _ = await service.GetUserNameAsync(CancellationToken.None);
+        _ = await service.GetUserNameAsync(CancellationToken.None);
+        _ = await service.GetUserNameAsync(CancellationToken.None);
 
         identity.SubjectLookups.Should().Be(1);
     }
 
     /// <summary>An anonymous request has no name and asks the provider nothing.</summary>
     [Fact]
-    public void UserName_ForAnAnonymousRequest_IsNullAndAsksNobody()
+    public async Task GetUserNameAsync_ForAnAnonymousRequest_IsNullAndAsksNobody()
     {
         var identity = new FakeIdentityProvider(Ada);
         var service = Build(identity);
 
-        service.UserName.Should().BeNull();
+        (await service.GetUserNameAsync(CancellationToken.None)).Should().BeNull();
         service.UserId.Should().BeNull();
         service.IsAuthenticated.Should().BeFalse();
         identity.SubjectLookups.Should().Be(0);
@@ -129,11 +127,11 @@ public sealed class HttpCurrentUserServiceTests
 
     /// <summary>A subject the provider does not know has no name.</summary>
     [Fact]
-    public void UserName_WhenTheSubjectResolvesToNobody_IsNull()
+    public async Task GetUserNameAsync_WhenTheSubjectResolvesToNobody_IsNull()
     {
         var service = Build(new FakeIdentityProvider(null), new Claim("sub", Subject));
 
-        service.UserName.Should().BeNull();
+        (await service.GetUserNameAsync(CancellationToken.None)).Should().BeNull();
     }
 
     /// <summary>An authenticated caller's subject is returned.</summary>
@@ -147,7 +145,7 @@ public sealed class HttpCurrentUserServiceTests
     }
 
     /// <summary>
-    /// Handlers scope every "my …" read and write to this value; answering something falsy instead of
+    /// Handlers scope every "my" read and write to this value; answering something falsy instead of
     /// throwing would scope them to nobody, which reads as an empty account rather than a refusal.
     /// </summary>
     [Fact]

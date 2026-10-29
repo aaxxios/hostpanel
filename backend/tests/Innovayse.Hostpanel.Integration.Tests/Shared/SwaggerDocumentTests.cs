@@ -1,0 +1,51 @@
+using System.Net;
+using System.Text.Json;
+using Innovayse.Hostpanel.API.Extensions;
+
+namespace Innovayse.Hostpanel.Integration.Tests.Shared;
+
+/// <summary>
+/// The generated OpenAPI document is served in the Testing environment and describes both halves of
+/// the surface: the admin routes and the anonymous public routes.
+/// </summary>
+/// <param name="factory">The shared API + PostgreSQL host.</param>
+public sealed class SwaggerDocumentTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+{
+    /// <summary>The document is served and lists admin and public paths, tagged by area.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task Document_IsServed_AndListsAdminAndPublicPathsAsync()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync(SwaggerRegistration.DocumentPath);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var paths = document.RootElement.GetProperty("paths").EnumerateObject().Select(p => p.Name).ToList();
+
+        paths.Should().Contain(path => path.StartsWith("/api/admin/", StringComparison.Ordinal));
+        paths.Should().Contain(path => path.StartsWith("/api/public/", StringComparison.Ordinal));
+        paths.Should().Contain("/health");
+
+        var tags = document.RootElement.GetProperty("paths").EnumerateObject()
+            .SelectMany(path => path.Value.EnumerateObject())
+            .SelectMany(operation => operation.Value.GetProperty("tags").EnumerateArray())
+            .Select(tag => tag.GetString())
+            .Distinct()
+            .ToList();
+        tags.Should().Contain([SwaggerRegistration.AdminTag, SwaggerRegistration.PublicTag, SwaggerRegistration.AuthTag]);
+    }
+
+    /// <summary>Failures in the document are described by the one error body.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task Document_DescribesTheErrorBodyAsync()
+    {
+        var client = factory.CreateClient();
+
+        var text = await client.GetStringAsync(SwaggerRegistration.DocumentPath);
+
+        text.Should().Contain("ErrorResponse");
+    }
+}

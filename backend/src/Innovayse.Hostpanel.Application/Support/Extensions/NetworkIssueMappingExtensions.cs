@@ -20,10 +20,10 @@ public static class NetworkIssueMappingExtensions
         return source.Select(n => new NetworkIssueDto(
             n.Id,
             n.Title,
-            n.Type.ToString(),
+            n.Type,
             n.Server,
-            n.Priority.ToString(),
-            n.Status.ToString(),
+            n.Priority,
+            n.Status,
             n.StartDate,
             n.EndDate,
             n.Description,

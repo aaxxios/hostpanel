@@ -4,7 +4,7 @@ using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Billing.Commands.CheckOverdueInvoicesCron;
 
-/// <summary>Validates <see cref="CheckOverdueInvoicesCronCommand"/>: no rules — the command carries no input.</summary>
+/// <summary>Validates <see cref="CheckOverdueInvoicesCronCommand"/>: no rules; the command carries no input.</summary>
 public sealed class CheckOverdueInvoicesCronValidator : LocalizedValidator<CheckOverdueInvoicesCronCommand>
 {
     /// <summary>Initializes the validator with the localization service.</summary>

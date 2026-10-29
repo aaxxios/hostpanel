@@ -7,9 +7,9 @@ namespace Innovayse.Hostpanel.Domain.Locations;
 /// A data-centre location shown on the storefront, with per-locale translations.
 /// Stored in the <c>ServerLocations</c> table.
 /// </summary>
-public sealed class ServerLocation : BaseEntity, IAggregateRoot
+public sealed class ServerLocation : BaseEntity, IAggregateRoot, ISortable
 {
-    /// <summary>Length of an ISO 3166 alpha-2 country code — matches the <c>ServerLocations.CountryCode</c> column.</summary>
+    /// <summary>Length of an ISO 3166 alpha-2 country code: matches the <c>ServerLocations.CountryCode</c> column.</summary>
     public const int CountryCodeLength = 2;
 
     /// <summary>Gets the ISO 3166 alpha-2 country code, upper case.</summary>
@@ -30,7 +30,7 @@ public sealed class ServerLocation : BaseEntity, IAggregateRoot
     /// <summary>Gets the per-locale translations.</summary>
     public IReadOnlyList<ServerLocationTranslation> Translations => _translations.AsReadOnly();
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private ServerLocation() { }
 
     /// <summary>
@@ -51,7 +51,6 @@ public sealed class ServerLocation : BaseEntity, IAggregateRoot
             CountryCode = code,
             SortOrder = sortOrder,
             IsActive = isActive,
-            CreatedAt = DateTimeOffset.UtcNow
         };
     }
 
@@ -117,6 +116,23 @@ public sealed class ServerLocation : BaseEntity, IAggregateRoot
         if (existing is not null)
         {
             _translations.Remove(existing);
+        }
+    }
+
+    /// <summary>
+    /// Makes the location's translations exactly the given set: locales that are not in it are
+    /// removed, the rest are added or updated in place.
+    /// </summary>
+    /// <param name="translations">The complete set of translations, keyed by BCP-47 locale code.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="translations"/> is null.</exception>
+    public void ReplaceTranslations(IReadOnlyDictionary<string, ServerLocationTranslationContent> translations)
+    {
+        ArgumentNullException.ThrowIfNull(translations);
+
+        _translations.RemoveAll(t => !translations.ContainsKey(t.Locale));
+        foreach (var (locale, content) in translations)
+        {
+            SetTranslation(locale, content.Name, content.City, content.LatencyNote);
         }
     }
 

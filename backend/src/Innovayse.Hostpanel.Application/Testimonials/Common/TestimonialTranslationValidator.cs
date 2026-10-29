@@ -9,7 +9,7 @@ using Microsoft.Extensions.Localization;
 namespace Innovayse.Hostpanel.Application.Testimonials.Common;
 
 /// <summary>
-/// Validates one entry of a testimonial's translation map — the locale it is keyed by and the translation
+/// Validates one entry of a testimonial's translation map: the locale it is keyed by and the translation
 /// itself; shared by the create and update validators.
 /// </summary>
 public sealed class TestimonialTranslationValidator : LocalizedValidator<KeyValuePair<string, TestimonialTranslationDto>>

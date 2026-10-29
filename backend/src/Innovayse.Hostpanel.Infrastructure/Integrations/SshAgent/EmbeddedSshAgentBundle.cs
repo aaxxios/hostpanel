@@ -12,7 +12,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 /// (<c>backend/agent/ssh-key-agent</c>, tests excluded). Entries are sorted and carry fixed times,
 /// owners and modes, so the same build always produces the same bytes and the same SHA256.
 /// </summary>
-public sealed partial class EmbeddedSshAgentBundle : ISshAgentBundle
+internal sealed partial class EmbeddedSshAgentBundle : ISshAgentBundle
 {
     /// <summary>Prefix of the agent files' manifest resource names.</summary>
     private const string ResourcePrefix = "SshAgent/";

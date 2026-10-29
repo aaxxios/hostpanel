@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Domain.Settings.Enums;
 using Innovayse.Hostpanel.Domain.Settings;
 
 namespace Innovayse.Hostpanel.Application.Admin.Integrations.Common;
@@ -18,20 +19,20 @@ public static class IntegrationCatalogue
     /// <summary>Category label of the hosting and provisioning panels.</summary>
     private const string HostingProvisioning = "Hosting / Provisioning";
 
-    /// <summary>Input type of a plain text field.</summary>
-    private const string Text = "text";
+    /// <summary>Input kind of a plain text field.</summary>
+    private const IntegrationFieldType Text = IntegrationFieldType.Text;
 
-    /// <summary>Input type of a masked secret field.</summary>
-    private const string Password = "password";
+    /// <summary>Input kind of a masked secret field.</summary>
+    private const IntegrationFieldType Password = IntegrationFieldType.Password;
 
-    /// <summary>Input type of a drop-down field.</summary>
-    private const string Select = "select";
+    /// <summary>Input kind of a drop-down field.</summary>
+    private const IntegrationFieldType Select = IntegrationFieldType.Select;
 
-    /// <summary>Input type of a multi-line text field.</summary>
-    private const string TextArea = "textarea";
+    /// <summary>Input kind of a multi-line text field.</summary>
+    private const IntegrationFieldType TextArea = IntegrationFieldType.TextArea;
 
-    /// <summary>Input type of an on/off switch.</summary>
-    private const string Toggle = "toggle";
+    /// <summary>Input kind of an on/off switch.</summary>
+    private const IntegrationFieldType Toggle = IntegrationFieldType.Toggle;
 
     /// <summary>
     /// Integrations shown in the list and the detail form, in display order. The hosted payment
@@ -43,7 +44,6 @@ public static class IntegrationCatalogue
             [
                 new("secret_key", "Secret Key", Password, Required: true),
                 new("publishable_key", "Publishable Key", Text, Required: true),
-                new("webhook_secret", "Webhook Secret", Password, Required: false),
                 new("mode", "Mode", Select, Required: false, Options: ["Live", "Test"]),
             ],
             ["secret_key"]),

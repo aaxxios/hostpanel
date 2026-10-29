@@ -3,7 +3,7 @@ using Innovayse.Hostpanel.Application.Admin.Servers.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Common.Settings;
-using Innovayse.Hostpanel.Domain.Ssh;
+using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
@@ -49,7 +49,8 @@ public sealed class GenerateServerSshIdentityHandler
     /// <param name="caller">The administrator, for the audit trail.</param>
     /// <param name="logger">Logger; also the admin audit trail.</param>
     public GenerateServerSshIdentityHandler(
-        IHostpanelDbContext context, ISshKeyProviderFactory factory, ISshIdentityGenerator generator, ISshAgentBundle bundle, IOptions<SshAgentOptions> network, ICurrentUserService caller, ILogger<GenerateServerSshIdentityHandler> logger)
+        IHostpanelDbContext context, ISshKeyProviderFactory factory, ISshIdentityGenerator generator, ISshAgentBundle bundle,
+        IOptions<SshAgentOptions> network, ICurrentUserService caller, ILogger<GenerateServerSshIdentityHandler> logger)
     {
         _caller = caller;
         _logger = logger;

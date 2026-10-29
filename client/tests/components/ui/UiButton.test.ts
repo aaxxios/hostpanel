@@ -25,7 +25,12 @@ describe('UiButton', () => {
 
   it('shares each size step minimum height with the text controls so a row lines up', () => {
     for (const size of Object.values(UiSize)) {
-      /** Reads the minimum-height class out of a class list. */
+      /**
+       * Reads the minimum-height class out of a class list.
+       *
+       * @param classes Space-separated class list.
+       * @returns The `min-h-*` class.
+       */
       const height = (classes: string): string => classes.split(' ').find(c => c.startsWith('min-h-'))!
 
       expect(height(BUTTON_SIZE_CLASSES[size])).toBe(height(CONTROL_SIZE_CLASSES[size]))

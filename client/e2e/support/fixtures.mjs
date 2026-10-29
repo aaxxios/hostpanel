@@ -5,7 +5,7 @@
  * never drift apart. Plain `.mjs` because the stub is started by Playwright's `webServer` with
  * `node` directly, with no TypeScript loader in between.
  *
- * Shapes follow what the C# backend sends (camelCase `ProductDto`, `InvoiceDto`, ...); the Nuxt
+ * Shapes follow what the C# backend sends (camelCase `ProductDto`, `InvoiceDto` and the rest); the Nuxt
  * BFF in `server/api/portal/**` maps them exactly as it does in production.
  *
  * @module e2e/support/fixtures
@@ -112,19 +112,19 @@ export const EXTRA_FAMILY_PLANS = [
 export const PRODUCTS = [PLAN, PLAN_PRO, DOMAIN_PRODUCT, ...EXTRA_FAMILY_PLANS]
 
 /** The hosting product group, the family the product page is headed by. */
-export const HOSTING_GROUP = { id: 1, name: 'Web Hosting', description: null, isActive: true, productCount: 2 }
+export const HOSTING_GROUP = { id: 1, name: 'Web Hosting', description: null, productCount: 2 }
 
 /**
- * The catalogue's product groups as `GET /api/products/groups` serves them. The hosting group is a
- * product family; the domain group is switched off, so no family page lists the domain product.
+ * The catalogue's product groups as `GET /api/public/product-groups` serves them: active groups only,
+ * with no staff field. The hosting group is a product family; the domain product's group (9) is
+ * switched off, so the endpoint leaves it out and no family page lists the domain product.
  */
 export const PRODUCT_GROUPS = [
   HOSTING_GROUP,
-  { id: 2, name: 'VPS Hosting', description: 'Virtual servers with root access for the end-to-end suite', isActive: true, productCount: 5 },
-  { id: 3, name: 'Dedicated Servers', description: null, isActive: true, productCount: 1 },
-  { id: 4, name: 'Business Email', description: null, isActive: true, productCount: 1 },
-  { id: 5, name: 'SSL Certificates', description: null, isActive: true, productCount: 1 },
-  { id: 9, name: 'E2E Domain Registration', description: null, isActive: false, productCount: 1 },
+  { id: 2, name: 'VPS Hosting', description: 'Virtual servers with root access for the end-to-end suite', productCount: 5 },
+  { id: 3, name: 'Dedicated Servers', description: null, productCount: 1 },
+  { id: 4, name: 'Business Email', description: null, productCount: 1 },
+  { id: 5, name: 'SSL Certificates', description: null, productCount: 1 },
 ]
 
 /**
@@ -147,7 +147,7 @@ export const CURRENCIES = [
 ]
 
 /**
- * The catalogue as `GET /api/products?currency=` prices it: every product's `pricing` is its stored
+ * The catalogue as `GET /api/public/products?currency=` prices it: every product's `pricing` is its stored
  * price in the requested currency (the base one when the code is missing or unknown).
  *
  * @param {string | null} code Requested ISO 4217 code, or null for the payer's default.
@@ -168,31 +168,33 @@ export const FREE_TERM = 'fresh-e2e'
 /** TLD price table served by `GET /api/domains/tld-pricing`. */
 export const TLD_PRICING = {
   currency: { code: 'USD', prefix: '$' },
-  pricing: {
-    com: {
+  pricing: [
+    {
+      tld: 'com',
       sellCurrency: 'USD',
-      register: { 1: '10.00' },
-      transfer: { 1: '10.00' },
-      renew: { 1: '12.00' },
+      register: [{ years: 1, amount: 10 }],
+      transfer: [{ years: 1, amount: 10 }],
+      renew: [{ years: 1, amount: 12 }],
       categories: ['popular'],
     },
-    net: {
+    {
+      tld: 'net',
       sellCurrency: 'USD',
-      register: { 1: '12.00' },
-      transfer: { 1: '12.00' },
-      renew: { 1: '14.00' },
+      register: [{ years: 1, amount: 12 }],
+      transfer: [{ years: 1, amount: 12 }],
+      renew: [{ years: 1, amount: 14 }],
       categories: ['popular'],
     },
-  },
+  ],
 }
 
 /** TLD price table priced in AMD, served when `GET /api/domains/tld-pricing?currency=AMD` is asked. */
 export const TLD_PRICING_AMD = {
   currency: { code: 'AMD', prefix: '' },
-  pricing: {
-    com: { ...TLD_PRICING.pricing.com, sellCurrency: 'AMD', register: { 1: '4000' }, transfer: { 1: '4000' }, renew: { 1: '4800' } },
-    net: { ...TLD_PRICING.pricing.net, sellCurrency: 'AMD', register: { 1: '4800' }, transfer: { 1: '4800' }, renew: { 1: '5600' } },
-  },
+  pricing: [
+    { ...TLD_PRICING.pricing[0], sellCurrency: 'AMD', register: [{ years: 1, amount: 4000 }], transfer: [{ years: 1, amount: 4000 }], renew: [{ years: 1, amount: 4800 }] },
+    { ...TLD_PRICING.pricing[1], sellCurrency: 'AMD', register: [{ years: 1, amount: 4800 }], transfer: [{ years: 1, amount: 4800 }], renew: [{ years: 1, amount: 5600 }] },
+  ],
 }
 
 /** The signed-in customer, as `GET /api/clients/me` returns them. */
@@ -200,25 +202,25 @@ export const CLIENT = {
   id: 1,
   firstName: 'Eve',
   lastName: 'Tester',
-  companyName: '',
+  companyName: null,
   email: 'e2e@example.com',
-  phone: '',
-  street: '',
-  address2: '',
-  city: '',
-  state: '',
-  postCode: '',
-  country: 'US',
-  paymentMethod: 'stripe',
-  language: '',
+  phone: null,
+  address: { street: null, address2: null, city: null, state: null, postCode: null, country: 'US' },
+  language: null,
   currency: 'USD',
+  paymentMethod: 'stripe',
+  notifications: {
+    general: true,
+    invoice: true,
+    support: true,
+    product: true,
+    domain: true,
+    affiliate: false,
+    marketingOptIn: false,
+    statusUpdate: false,
+  },
   twoFactorEnabled: false,
-  notifyGeneral: true,
-  notifyInvoice: true,
-  notifySupport: true,
-  notifyProduct: true,
-  notifyDomain: true,
-  notifyAffiliate: false,
+  contacts: [],
 }
 
 /** Credentials the stub accepts on sign-in. */
@@ -239,8 +241,6 @@ export const TWO_FACTOR_LOGIN_CODE = '654321'
 /** The unpaid invoice the pay flow settles. */
 export const INVOICE = {
   id: 501,
-  clientId: CLIENT.id,
-  clientName: 'Eve Tester',
   status: 'Unpaid',
   currency: 'USD',
   invoiceDate: '2030-01-01T00:00:00Z',
@@ -248,12 +248,11 @@ export const INVOICE = {
   createdAt: '2030-01-01T00:00:00Z',
   paidAt: null,
   total: 5,
+  amountDue: 5,
   subTotal: 5,
   tax: 0,
   taxRate: 0,
   credit: 0,
-  gatewayTransactionId: null,
-  notes: null,
   paymentMethod: null,
   items: [{ id: 1, description: 'E2E Starter - monthly', unitPrice: 5, quantity: 1, amount: 5 }],
   transactions: [],
@@ -368,10 +367,9 @@ export const NEW_TICKET = {
 /** Reply the ticket spec posts onto an open ticket. */
 export const TICKET_REPLY = 'Thanks, this is still happening.'
 
-/** The open ticket the stub starts with (restored on every reset), as the list endpoint returns it (`TicketListItemDto`). */
+/** The open ticket the stub starts with (restored on every reset), as the list endpoint returns it (`MyTicketListItemDto`). */
 export const SEEDED_TICKET = {
   id: 801,
-  clientId: CLIENT.id,
   subject: 'Seeded e2e ticket',
   status: 'Open',
   priority: 'Medium',
@@ -379,7 +377,6 @@ export const SEEDED_TICKET = {
   replyCount: 1,
   departmentName: 'Technical Support',
   lastReplyAt: '2030-02-01T11:00:00Z',
-  isFlagged: false,
 }
 
 /** The opening message and the staff answer of {@link SEEDED_TICKET} (`TicketDto.Message` and `TicketReplyDto`). */
@@ -395,43 +392,37 @@ export const SERVICE = {
   id: 21,
   productId: PLAN.id,
   productName: PLAN.name,
-  domain: 'e2e-site.com',
+  billingCycle: 'monthly',
   status: 'Active',
-  price: '5.00',
-  billingCycle: 'Monthly',
   nextRenewalAt: '2030-02-01T00:00:00Z',
+  domain: 'e2e-site.com',
   username: 'e2euser',
+  price: 5,
+  firstPaymentAmount: 5,
+  paymentMethod: null,
+  server: null,
+  createdAt: '2030-01-01T00:00:00Z',
+  suspensionSource: null,
+  usage: null,
 }
 
 /** A registered domain, as `GET /api/me/domains` returns it. */
 export const DOMAIN = {
   id: 41,
-  clientId: CLIENT.id,
   name: 'e2e-site.com',
-  tld: '.com',
   status: 'Active',
   registeredAt: '2029-02-01T00:00:00Z',
   expiresAt: '2030-02-01T00:00:00Z',
   autoRenew: true,
   whoisPrivacy: false,
   isLocked: true,
-  registrarRef: null,
-  eppCode: null,
-  linkedServiceId: null,
   firstPaymentAmount: 10,
   recurringAmount: 12,
   paymentMethod: null,
-  promotionCode: null,
-  subscriptionId: null,
-  adminNotes: null,
-  orderId: null,
-  orderType: 'Register',
-  dnsManagement: false,
-  emailForwarding: false,
   priceCurrency: 'USD',
   nextDueDate: '2030-02-01T00:00:00Z',
-  registrar: null,
   registrationPeriod: 1,
+  management: { dnsManagement: false, emailForwarding: false, nameservers: [], dnsRecords: [], emailForwardingRules: [] },
 }
 
 /** Invoice ids the stub treats as the three hosted-gateway outcomes (any other id is unknown to it). */
@@ -458,25 +449,39 @@ export const BAD_CONTACT_EMAIL_MESSAGE = 'E2E: this email address is not accepte
 /** A new profile name the account spec saves. */
 export const NEW_FIRST_NAME = 'Evelyn'
 
+/** The disk and bandwidth figures the server last reported for {@link SERVICE_MANAGED}, both with a limit so both bars show. */
+export const SERVICE_USAGE = {
+  diskUsedMb: 512,
+  diskLimitMb: 2048,
+  bandwidthUsedMb: 1024,
+  bandwidthLimitMb: 10240,
+  updatedAt: '2030-01-15T00:00:00Z',
+}
+
 /**
  * A hosting service that is already set up and has NO domain.
  *
- * The BFF resolves the live nameservers and certificate of a service's domain (a DNS lookup and
- * a TLS handshake, `hosting-info.get.ts`), which the stub cannot answer and which would make a
- * spec depend on the network. The BFF already has a seam for that: a service without a domain
- * returns an empty answer without looking anything up. Every spec that opens a service's detail
- * page therefore uses this one (or {@link SERVICE_PENDING}), never {@link SERVICE}.
+ * The backend resolves the live nameservers and certificate of a service's domain (a DNS lookup
+ * and a TLS handshake), which a spec must not depend on the network for. A service without a
+ * domain returns an empty answer without looking anything up. Every spec that opens a service's
+ * detail page therefore uses this one (or {@link SERVICE_PENDING}), never {@link SERVICE}.
  */
 export const SERVICE_MANAGED = {
   id: 22,
   productId: PLAN_PRO.id,
   productName: PLAN_PRO.name,
-  domain: '',
+  billingCycle: 'monthly',
   status: 'Active',
-  price: '15.00',
-  billingCycle: 'Monthly',
   nextRenewalAt: '2030-02-01T00:00:00Z',
+  domain: null,
   username: 'e2emgd',
+  price: 15,
+  firstPaymentAmount: 15,
+  paymentMethod: null,
+  server: null,
+  createdAt: '2030-01-01T00:00:00Z',
+  suspensionSource: null,
+  usage: SERVICE_USAGE,
 }
 
 /** What the stub answers for the managed service's SSH access; the username and command are filled from the service. */
@@ -495,12 +500,37 @@ export const SERVICE_PENDING = {
   id: 23,
   productId: PLAN.id,
   productName: PLAN.name,
-  domain: '',
+  billingCycle: 'monthly',
   status: 'Pending',
-  price: '5.00',
-  billingCycle: 'Monthly',
   nextRenewalAt: '2030-02-01T00:00:00Z',
-  username: '',
+  domain: null,
+  username: null,
+  price: 5,
+  firstPaymentAmount: 5,
+  paymentMethod: null,
+  server: null,
+  createdAt: '2030-01-01T00:00:00Z',
+  suspensionSource: null,
+  usage: null,
+}
+
+/** A hosting service suspended for an overdue invoice (no domain, for the same reason as {@link SERVICE_MANAGED}). */
+export const SERVICE_SUSPENDED = {
+  id: 24,
+  productId: PLAN.id,
+  productName: PLAN.name,
+  billingCycle: 'monthly',
+  status: 'Suspended',
+  nextRenewalAt: '2030-02-01T00:00:00Z',
+  domain: null,
+  username: 'e2esusp',
+  price: 5,
+  firstPaymentAmount: 5,
+  paymentMethod: null,
+  server: null,
+  createdAt: '2030-01-01T00:00:00Z',
+  suspensionSource: 'Overdue',
+  usage: null,
 }
 
 /** What the setup wizard types: a valid hostname, a username of 3-8 letters/digits, a password of 8+ characters. */
@@ -525,7 +555,7 @@ export const SERVICE_INVOICE = {
   status: INVOICE.status,
 }
 
-/** The nameservers the domain starts with, as `GET /api/me/domains/:id/nameservers` returns them. */
+/** The nameservers the domain starts with, as `GET /api/me/domains/:id` carries them in `management.nameservers`. */
 export const DOMAIN_NAMESERVERS = [
   { id: 1, host: 'ns1.e2e-site.test' },
   { id: 2, host: 'ns2.e2e-site.test' },
@@ -543,11 +573,13 @@ export const TRANSFER = {
   eppCode: 'EPP-E2E-1',
 }
 
-/** Order the stub answers every order placement with (order, its invoice and the payment token). */
+/** Order the stub answers every order placement with (order, its invoice, the payment token and what it bills). */
 export const ORDER = {
   orderId: 301,
   invoiceId: INVOICE.id,
   paymentToken: 'tok-e2e',
+  total: PLAN.pricing.monthly,
+  currency: 'USD',
 }
 
 /** Order raised by a domain renewal or transfer; the invoice is the unpaid one. */
@@ -586,18 +618,8 @@ export const SEEDED_CONTACT = {
   email: 'carl@e2e.test',
   phone: null,
   type: 'General',
-  street: null,
-  address2: null,
-  city: null,
-  state: null,
-  postCode: null,
-  country: null,
-  notifyGeneral: true,
-  notifyInvoice: true,
-  notifySupport: true,
-  notifyProduct: true,
-  notifyDomain: false,
-  notifyAffiliate: false,
+  address: { street: null, address2: null, city: null, state: null, postCode: null, country: null },
+  notifications: { general: true, invoice: true, support: true, product: true, domain: false, affiliate: false },
 }
 
 /** The contact the spec adds. */
@@ -733,33 +755,21 @@ export const SLIDES = [
     iconName: 'server',
     brandColor: '#2563eb',
     imageUrl: '/demo/slides/cloud-vps.svg',
-    demoUrl: null,
-    learnMoreUrl: '/products',
     productId: null,
-    monthlyPrice: null,
-    annualPrice: null,
-    title: 'Example slide with a photograph',
-    tagline: 'Fast hosting',
-    description: 'A slide whose background is an image under a dark scrim.',
-    features: ['Free SSL', 'Daily backups'],
-    ctaText: null,
-    ctaUrl: null,
+    content: { title: 'Example slide with a photograph', tagline: 'Fast hosting', description: 'A slide whose background is an image under a dark scrim.', features: ['Free SSL', 'Daily backups'] },
+    links: { demoUrl: null, learnMoreUrl: '/products' },
+    callToAction: { text: null, url: null },
+    pricing: { monthlyPrice: null, annualPrice: null },
   },
   {
     id: 2,
     iconName: 'web',
     brandColor: '#0d9488',
     imageUrl: '',
-    demoUrl: null,
-    learnMoreUrl: '/vps',
     productId: null,
-    monthlyPrice: null,
-    annualPrice: null,
-    title: 'Example slide without an image',
-    tagline: 'Plain background',
-    description: 'A slide with no image follows the active colour mode.',
-    features: [],
-    ctaText: null,
-    ctaUrl: null,
+    content: { title: 'Example slide without an image', tagline: 'Plain background', description: 'A slide with no image follows the active colour mode.', features: [] },
+    links: { demoUrl: null, learnMoreUrl: '/vps' },
+    callToAction: { text: null, url: null },
+    pricing: { monthlyPrice: null, annualPrice: null },
   },
 ]

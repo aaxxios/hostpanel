@@ -1,15 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Products;
 
 /// <summary>
 /// <c>POST /api/products/groups</c> against Postgres: the happy path and the authorization
 /// boundary.
 /// </summary>
-/// <remarks>Split from the deleted <c>ProductsEndpointTests</c> (A7 Task 6).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateProductGroupTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

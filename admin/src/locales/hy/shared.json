@@ -49,10 +49,8 @@
   "addBillableItem": "Ավելացնել վճարվող դիրք",
   "client": "Հաճախորդ",
   "productService": "Ապրանք/ծառայություն",
-  "hoursQty": "Ժամեր/քանակ",
   "hours": "Ժամեր",
   "qty": "Քանակ",
-  "invoiceAction": "Գործողություն հաշվի հետ",
   "selectDate": "Ընտրեք ամսաթիվը...",
   "subject": "Թեմա",
   "stage": "Փուլ",
@@ -125,7 +123,6 @@
   "domainEmails": "Դոմեյնների նամակներ",
   "affiliateEmails": "Գործընկերային ծրագրի նամակներ",
   "settings": "Կարգավորումներ",
-  "lateFees": "Ուշացման տուգանքներ",
   "overdueNotices": "Ժամկետանցության ծանուցումներ",
   "taxExempt": "Ազատված է հարկից",
   "separateInvoices": "Առանձին հաշիվներ",
@@ -182,8 +179,6 @@
   "year": "Տարի",
   "unknown": "Անհայտ",
   "notAvailable": "Հ/Ա",
-  "clientFallback": "Հաճախորդ №{id}",
-  "productFallback": "Ապրանք №{id}",
   "years": "{n} տարի | {n} տարի",
   "month": "Ամիս",
   "noData": "Տվյալներ չկան։",
@@ -227,5 +222,7 @@
     "internalPath": "/order/product",
     "tagManagerId": "GTM-XXXXXXX",
     "colorHex": "#06b6d4"
-  }
+  },
+  "recordDeleted": "Գրառումը ջնջված է։",
+  "recordCreated": "Գրառումը ստեղծված է։"
 }

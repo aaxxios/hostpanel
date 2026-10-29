@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 
@@ -26,7 +27,7 @@ public sealed class GetAuthModeHandler
     }
 
     /// <summary>Handles <see cref="GetAuthModeQuery"/>.</summary>
-    /// <param name="query">The query.</param>
+    /// <param name="query">The query; it carries no input.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The mode, <c>local</c> or <c>sso</c>.</returns>
     public Task<Result<AuthModeDto>> HandleAsync(GetAuthModeQuery query, CancellationToken ct)

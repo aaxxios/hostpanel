@@ -5,9 +5,9 @@
  * The page draws whatever the deployment actually supports, which it does not guess:
  * `GET /api/auth/mode` is called before anything is rendered.
  *
- * - **sso** — one button, which hands the browser to single sign-on. The API performs
+ * - **sso**: one button, which hands the browser to single sign-on. The API performs
  *   the token exchange and returns a session cookie; nothing is exchanged here.
- * - **local** — an email/password form, and a TOTP field after it when the account has
+ * - **local**: an email/password form, and a TOTP field after it when the account has
  *   a second factor. This is the standalone, open-source path.
  *
  * It also surfaces first-run bootstrap: while nobody holds the Admin role,
@@ -117,7 +117,7 @@ const handleUseDemoAccount = (): void => {
 }
 
 /**
- * Starts the SSO login flow — navigates the browser away from this app. Only reachable
+ * Starts the SSO login flow: navigates the browser away from this app. Only reachable
  * when the API reported `sso`.
  *
  * @returns Nothing; the document navigates away.
@@ -134,7 +134,7 @@ const handleSsoLogin = (): void => {
  */
 const handleLocalLogin = async (): Promise<void> => {
   const outcome = await authStore.signInLocal(email.value, password.value)
-  // The TOTP outcome needs no action here — the store now reports awaitingTwoFactor and the
+  // The TOTP outcome needs no action here: the store now reports awaitingTwoFactor and the
   // template swaps in the code field. A failure left the reason in authStore.error.
   if (outcome === SignInResult.Done) {
     await finishSignIn()
@@ -167,9 +167,7 @@ const handleCancelTwoFactor = (): void => {
  * @returns Promise resolving once the claim has been handled.
  */
 const handleClaimAdmin = async (): Promise<void> => {
-  const granted = await authStore.claimAdminRole(
-    authStore.setupTokenRequired ? setupToken.value : undefined,
-  )
+  const granted = await authStore.claimAdminRole(setupToken.value)
   if (!granted) {
     return
   }
@@ -252,28 +250,25 @@ onMounted(async () => {
         </UiText>
 
         <!--
-          Local-mode installations gate the claim on the token the API printed to its
-          log, because registration is public and otherwise whoever claimed first would
-          own a box that was reachable before its owner had finished configuring it.
-          Whether the field is wanted is the API's answer, not this page's guess: under
-          SSO no token exists and none is asked for.
+          The claim is gated on the token the API printed to its log, because being
+          signed in does not prove the caller runs this installation, and otherwise
+          whoever claimed first would own a box that was reachable before its owner had
+          finished configuring it.
         -->
-        <template v-if="authStore.setupTokenRequired">
-          <UiText tone="secondary" size="md">
-            {{ t('auth.login.theApiPrintedASetup') }}
-            {{ t('auth.login.logsCommand') }}
-            {{ t('auth.login.andPasteItHereRestarting') }}
-          </UiText>
-          <UiInput
-            v-model="setupToken"
-            :label="t('auth.login.setupToken')"
-            autocomplete="off"
-            :placeholder="t('auth.login.pasteTheTokenFromThe')"
-            :autofocus="true"
-            :disabled="authStore.loading"
-            data-testid="login-setup-token"
-          />
-        </template>
+        <UiText tone="secondary" size="md">
+          {{ t('auth.login.theApiPrintedASetup') }}
+          {{ t('auth.login.logsCommand') }}
+          {{ t('auth.login.andPasteItHereRestarting') }}
+        </UiText>
+        <UiInput
+          v-model="setupToken"
+          :label="t('auth.login.setupToken')"
+          autocomplete="off"
+          :placeholder="t('auth.login.pasteTheTokenFromThe')"
+          :autofocus="true"
+          :disabled="authStore.loading"
+          data-testid="login-setup-token"
+        />
 
         <UiButton
           variant="primary"

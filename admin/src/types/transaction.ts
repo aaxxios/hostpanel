@@ -2,7 +2,7 @@
  * A payment transaction and the paged envelope it arrives in.
  */
 
-import type { PagedResult } from '@/types/pagedresult'
+import type { PaginatedList } from '@/types/paginatedlist'
 
 /** Client-level financial ledger entry. */
 export interface Transaction {
@@ -10,8 +10,8 @@ export interface Transaction {
   id: number
   /** Associated client identifier. */
   clientId: number
-  /** Full name of the owning client; null when unresolved. */
-  clientName: string | null
+  /** Full name of the owning client; every transaction has one, since its client cannot be deleted. */
+  clientName: string
   /** ISO 8601 transaction date. */
   date: string
   /** Human-readable description of the transaction. */
@@ -20,7 +20,7 @@ export interface Transaction {
   transactionId: string
   /** Optional linked invoice identifier. */
   invoiceId: number | null
-  /** Payment method used (e.g. Stripe, Manual). */
+  /** Payment method used (a gateway or a manual entry). */
   paymentMethod: string
   /** Amount received. */
   amountIn: number
@@ -37,7 +37,7 @@ export interface Transaction {
 /** Response from the transactions list endpoint with summary totals. */
 export interface TransactionsResult {
   /** Paginated transaction list. */
-  transactions: PagedResult<Transaction>
+  transactions: PaginatedList<Transaction>
   /** Sum of all AmountIn values. */
   totalIn: number
   /** Sum of all AmountOut values. */

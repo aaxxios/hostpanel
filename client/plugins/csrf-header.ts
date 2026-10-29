@@ -4,14 +4,14 @@
  * The header is one half of the check in `server/middleware/csrf.ts`; this is the
  * other. A cross-site page can make the browser send a request with the session
  * cookie attached, but it cannot set a custom header on it without a CORS preflight
- * this API never approves — so a request carrying the header came from this origin.
+ * this API never approves, so a request carrying the header came from this origin.
  *
  * Done here rather than at each call site because there is no list of call sites:
  * pages, composables and components all reach the API through the global `$fetch`,
  * and one missed call would be a broken button rather than a missing protection.
  *
- * Only relative URLs. An absolute one is a different origin — another product's API
- * or a third party — and sending a header it did not ask for turns a simple request
+ * Only relative URLs. An absolute one is a different origin, another product's API
+ * or a third party, and sending a header it did not ask for turns a simple request
  * into a preflighted one, which fails wherever the other side has not allowed it.
  *
  * @module plugins/csrf-header
@@ -35,8 +35,8 @@ export default defineNuxtPlugin(() => {
       else {
         // The declared type is `Headers`, so this branch only runs on an older ofetch that
         // hands over a plain object. Normalising into a `Headers` rather than assigning a
-        // fresh object literal keeps the runtime fallback and the declared type agreeing --
-        // the object literal did not satisfy `Headers` and was the error here.
+        // fresh object literal keeps the runtime fallback and the declared type agreeing:
+        // an object literal does not satisfy `Headers`.
         const headers = new Headers(options.headers)
         headers.set('X-Requested-With', 'XMLHttpRequest')
         options.headers = headers

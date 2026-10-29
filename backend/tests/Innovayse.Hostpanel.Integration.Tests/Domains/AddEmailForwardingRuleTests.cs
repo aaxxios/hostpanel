@@ -1,19 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>AddEmailForwardingRule</c> use case —
+/// Integration tests for the admin <c>AddEmailForwardingRule</c> use case:
 /// <c>POST /api/domains/{id}/email-forwarding</c>. The full add/update/delete lifecycle lives in
 /// <see cref="UpdateEmailForwardingRuleTests"/>; these tests cover this use case's own refusals
-/// directly, since A6 left it with no Integration coverage of its own before this batch. The
+/// directly. The
 /// client-facing equivalent is <c>AddMyDomainEmailForwardingRule</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -61,5 +59,18 @@ public sealed class AddEmailForwardingRuleTests(IntegrationTestFactory factory) 
             new { source = "info", destination = "info@example.test" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A non-positive domain id is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task AddEmailForwardingRule_NonPositiveDomainId_Returns400ValidationErrorAsync()
+    {
+        var client = await DomainsTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/domains/0/email-forwarding", new { source = "info", destination = "info@example.test" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

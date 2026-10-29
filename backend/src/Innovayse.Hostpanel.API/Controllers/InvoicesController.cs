@@ -24,11 +24,12 @@ using Wolverine;
 namespace Innovayse.Hostpanel.API.Controllers;
 
 /// <summary>
-/// Admin and reseller endpoints for the invoice lifecycle: creating, listing, editing and
+/// Admin endpoints for the invoice lifecycle: creating, listing, editing and
 /// transitioning invoices. Payments, credits, refunds and bulk actions are
 /// <c>InvoicePaymentsController</c>'s; quotes are <c>QuotesController</c>'s.
 /// </summary>
 [Route("api/billing")]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class InvoicesController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -44,13 +45,19 @@ public sealed class InvoicesController : BaseApiController
     /// <summary>Returns a paginated, optionally filtered list of all invoices.</summary>
     /// <param name="query">The page, filters and page size to list by.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the page; 401 without a session; 403 for a caller who is not staff.</returns>
+    /// <returns>
+    /// 200 with the page; 401 without a session; 403 for a caller who is not staff; 400 when the request is refused;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpGet]
-    [Authorize(Policy = Policies.ResellerOrAdmin)]
-    [ProducesResponseType(typeof(PagedResult<InvoiceListItemDto>), StatusCodes.Status200OK)]
+    [Authorize(Policy = Policies.Admin)]
+    [ProducesResponseType(typeof(PaginatedList<InvoiceListItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ListAsync([FromQuery] ListInvoicesQuery query, CancellationToken ct)
     {
-        var outcome = await _bus.InvokeAsync<Result<PagedResult<InvoiceListItemDto>>>(query, ct);
+        var outcome = await _bus.InvokeAsync<Result<PaginatedList<InvoiceListItemDto>>>(query, ct);
         return HandleResult(outcome);
     }
 
@@ -58,14 +65,20 @@ public sealed class InvoicesController : BaseApiController
     /// <param name="clientId">The client's primary key; wins over any client id in the query.</param>
     /// <param name="query">The page and filters to list by.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the page; 401 without a session; 403 for a caller who is not staff.</returns>
+    /// <returns>
+    /// 200 with the page; 401 without a session; 403 for a caller who is not staff; 400 when the request is refused;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpGet("client/{clientId:int}")]
-    [Authorize(Policy = Policies.ResellerOrAdmin)]
-    [ProducesResponseType(typeof(PagedResult<InvoiceListItemDto>), StatusCodes.Status200OK)]
+    [Authorize(Policy = Policies.Admin)]
+    [ProducesResponseType(typeof(PaginatedList<InvoiceListItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ListByClientAsync(
         int clientId, [FromQuery] ListClientInvoicesQuery query, CancellationToken ct)
     {
-        var outcome = await _bus.InvokeAsync<Result<PagedResult<InvoiceListItemDto>>>(
+        var outcome = await _bus.InvokeAsync<Result<PaginatedList<InvoiceListItemDto>>>(
             query with { ClientId = clientId }, ct);
         return HandleResult(outcome);
     }
@@ -74,12 +87,16 @@ public sealed class InvoicesController : BaseApiController
     /// <param name="id">Invoice primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 200 with the invoice; 404 when the id names no invoice; 401; 403 for a caller who is not staff.
+    /// 200 with the invoice; 404 when the id names no invoice; 401 without a session; 403 for a caller who is not staff; 400 when the request is refused;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpGet("{id:int}")]
-    [Authorize(Policy = Policies.ResellerOrAdmin)]
+    [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(typeof(InvoiceDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetByIdAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<InvoiceDto>>(new GetInvoiceQuery(id), ct);
@@ -92,11 +109,11 @@ public sealed class InvoicesController : BaseApiController
     /// <returns>
     /// 200 with <c>invoice-{id}.pdf</c> as an attachment; 400 for an id that is not positive, or with
     /// <c>INVOICE_PDF_EXCEEDS_LIMIT</c> when the invoice has more lines than <c>InvoicePdf:MaxLines</c>;
-    /// 401; 403 for a caller who is not staff; 404 with <c>INVOICE_NOT_FOUND</c> when the id names no
-    /// invoice.
+    /// 401 without a session; 403 for a caller who is not staff; 404 with <c>INVOICE_NOT_FOUND</c> when the id
+    /// names no invoice; 429 when the rate limit is hit.
     /// </returns>
     [HttpGet("{id:int}/pdf")]
-    [Authorize(Policy = Policies.ResellerOrAdmin)]
+    [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
@@ -111,10 +128,17 @@ public sealed class InvoicesController : BaseApiController
     /// <summary>Creates a new invoice for a client.</summary>
     /// <param name="command">The invoice to create.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>201 with the new invoice ID; 401; 403 for a caller who is not an admin.</returns>
+    /// <returns>
+    /// 201 with the new invoice ID; 404 when the client does not exist; 401 without a session; 403 for a caller who is not an admin; 400 when the request is refused;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpPost]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreateAsync([FromBody] CreateInvoiceCommand command, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<int>>(command, ct);
@@ -126,12 +150,16 @@ public sealed class InvoicesController : BaseApiController
     /// <param name="command">The item changes.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when written; 404 when the id names no invoice; 401; 403 for a caller who is not an admin.
+    /// 204 when written; 404 when the id names no invoice; 401 without a session; 403 for a caller who is not an admin; 400 when the request is refused;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPut("{id:int}/items")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> UpdateItemsAsync(
         int id, [FromBody] UpdateInvoiceItemsCommand command, CancellationToken ct)
     {
@@ -144,12 +172,17 @@ public sealed class InvoicesController : BaseApiController
     /// <param name="command">The options to write.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when written; 404 when the id names no invoice; 401; 403 for a caller who is not an admin.
+    /// 204 when written; 404 when the id names no invoice; 409 with <c>CLIENT_TAX_EXEMPT</c> when a tax rate is set on a tax-exempt client's invoice; 401 without a session; 403 for a caller who is not an admin; 400 when the request is refused;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPut("{id:int}/options")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdateOptionsAsync(
         int id, [FromBody] UpdateInvoiceOptionsCommand command, CancellationToken ct)
     {
@@ -162,12 +195,16 @@ public sealed class InvoicesController : BaseApiController
     /// <param name="command">The notes to write.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when written; 404 when the id names no invoice; 401; 403 for a caller who is not an admin.
+    /// 204 when written; 404 when the id names no invoice; 401 without a session; 403 for a caller who is not an admin; 400 when the request is refused;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPut("{id:int}/notes")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> UpdateNotesAsync(
         int id, [FromBody] UpdateInvoiceNotesCommand command, CancellationToken ct)
     {
@@ -180,12 +217,16 @@ public sealed class InvoicesController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 when published; 404 when the id names no invoice; 400 when the invoice is not a draft;
-    /// 401; 403 for a caller who is not an admin.
+    /// 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost("{id:int}/publish")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> PublishAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result>(new PublishInvoiceCommand(id), ct);
@@ -196,13 +237,16 @@ public sealed class InvoicesController : BaseApiController
     /// <param name="id">Invoice primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 201 with the new draft invoice ID; 404 when the id names no invoice; 401;
-    /// 403 for a caller who is not an admin.
+    /// 201 with the new draft invoice ID; 404 when the id names no invoice; 401 without a session; 403 for a caller who is not an admin; 400 when the request is refused;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost("{id:int}/duplicate")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> DuplicateAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<int>>(new DuplicateInvoiceCommand(id), ct);
@@ -214,12 +258,16 @@ public sealed class InvoicesController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 when cancelled; 404 when the id names no invoice; 400 when the invoice is already paid;
-    /// 401; 403 for a caller who is not an admin.
+    /// 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost("{id:int}/cancel")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CancelAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result>(new CancelInvoiceCommand(id), ct);
@@ -231,12 +279,16 @@ public sealed class InvoicesController : BaseApiController
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// 204 when marked; 404 when the id names no invoice; 400 when the status cannot transition;
-    /// 401; 403 for a caller who is not an admin.
+    /// 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost("{id:int}/mark-overdue")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> MarkOverdueAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result>(new MarkInvoiceOverdueCommand(id), ct);
@@ -247,12 +299,17 @@ public sealed class InvoicesController : BaseApiController
     /// <param name="id">Invoice primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when deleted; 404 when the id names no invoice; 401; 403 for a caller who is not an admin.
+    /// 204 when deleted; 404 when the id names no invoice; 400 with <c>INVOICE_NOT_DELETABLE</c> when it
+    /// is not a Draft or Cancelled invoice; 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpDelete("{id:int}")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result>(new DeleteInvoiceCommand(id), ct);

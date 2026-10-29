@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.Application.Services.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Services.Queries.GetMyServiceCancellationStatus;
+
 /// <summary>
 /// Query for a signed-in client to read the cancellation status of one of their own services.
 /// </summary>

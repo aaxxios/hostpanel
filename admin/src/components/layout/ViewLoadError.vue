@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Shown in place of a screen whose code could not be downloaded, even after the repeats.
+ * Shown by `RoutedView` in place of a screen whose code could not be downloaded, even after the repeats.
  *
  * The usual cause is a release that replaced the files this page was built against, or a lost
  * connection; reloading fetches the current shell, which fixes the first and retries the second.

@@ -1,4 +1,4 @@
-# C# Code Style Rules — Innovayse Backend
+# C# Code Style Rules for the Hostpanel Backend
 
 ## General
 
@@ -17,7 +17,7 @@
 
 ```csharp
 // CORRECT
-public class CreateClientRequest
+public sealed class ClientContactDto
 {
     public required string FirstName { get; init; }
     public required string LastName  { get; init; }
@@ -26,7 +26,7 @@ public class CreateClientRequest
 }
 
 // WRONG
-public class CreateClientRequest
+public sealed class ClientContactDto
 {
     public required string firstName { get; init; }  // camelCase — forbidden
     public string email;                             // field instead of property — forbidden
@@ -39,28 +39,37 @@ public class CreateClientRequest
 - No `!` null-forgiving operator except in tests
 - Use `ArgumentNullException.ThrowIfNull()` at public API boundaries
 
-## Primary Constructors (C# 12)
+## Constructors
+
+Handlers and other classes with dependencies use an explicit constructor and one documented
+`private readonly` field per dependency. Primary constructors are for records and types with no
+dependencies to explain.
 
 ```csharp
 // CORRECT
-public class CreateInvoiceHandler(IInvoiceRepository repo, IUnitOfWork uow)
+public sealed class CreateInvoiceHandler
 {
-    public async Task<int> Handle(CreateInvoiceCommand cmd, CancellationToken ct) { ... }
+    /// <summary>The module's data context.</summary>
+    private readonly IHostpanelDbContext _context;
+
+    /// <summary>Initializes the handler.</summary>
+    /// <param name="context">The module's data context.</param>
+    public CreateInvoiceHandler(IHostpanelDbContext context)
+    {
+        _context = context;
+    }
 }
 
-// AVOID (old style)
-public class CreateInvoiceHandler
-{
-    private readonly IInvoiceRepository _repo;
-    public CreateInvoiceHandler(IInvoiceRepository repo) { _repo = repo; }
-}
+// AVOID: no repositories, no IUnitOfWork, no undocumented primary-constructor dependencies
+public class CreateInvoiceHandler(IInvoiceRepository repo, IUnitOfWork uow) { }
 ```
 
 ## Records for Commands/Queries/DTOs
 
 ```csharp
-public record CreateInvoiceCommand(int ClientId, List<InvoiceItemDto> Items);
-public record InvoiceDto(int Id, decimal Total, string Status, DateTimeOffset CreatedAt);
+public sealed record CreateInvoiceCommand(
+    int ClientId, DateTimeOffset DueDate, IReadOnlyList<CreateInvoiceItemDto> Items, bool IsDraft = false);
+public sealed record InvoiceBriefDto(int Id, int ClientId, InvoiceStatus Status, decimal Total, string Currency);
 ```
 
 ## Collection Expressions (C# 12)
@@ -98,13 +107,17 @@ public async Task<InvoiceDto> GetInvoiceAsync(int id, CancellationToken ct) { ..
 
 ## Error Handling
 
-- Domain errors: throw custom exceptions from Domain layer (e.g., `InvoiceNotFoundException`)
-- API layer catches domain exceptions via global exception middleware — no try/catch in controllers
+- Domain refusals throw a `DomainException(code, message)` subclass (for example `DomainRuleException`);
+  the code is a constant in the module's error-code class, never a bespoke `*NotFoundException`
+- A handler that can foresee a refusal (not found, forbidden, conflict) returns `Result.Failure(code)`
+  instead of throwing
+- The exception middleware turns an uncaught `DomainException` into an `ErrorResponse` whose status
+  comes from `StatusMapping.For(code)`: no try/catch in controllers
 - No swallowing exceptions (`catch (Exception) { }`)
 
 ## Logging
 
-- Use `ILogger<T>` injected via primary constructor
+- Inject `ILogger<T>` through the explicit constructor into a documented `private readonly` field
 - Structured logging — no string interpolation in log messages
 
 ```csharp
@@ -125,38 +138,36 @@ _logger.LogInformation($"Invoice {invoice.Id} created");
   ownership and the DI carve-out: [clean-architecture.md](clean-architecture.md)
 
 ```csharp
-// File: src/Innovayse.Application/Billing/Commands/CreateInvoice/CreateInvoiceHandler.cs
-namespace Innovayse.Application.Billing.Commands.CreateInvoice;
+// File: src/Innovayse.Hostpanel.Application/Billing/Commands/CreateInvoice/CreateInvoiceHandler.cs
+namespace Innovayse.Hostpanel.Application.Billing.Commands.CreateInvoice;
 ```
 
 ### GlobalUsings.cs
 
-**Every project gets a `GlobalUsings.cs` at its root, and the usings a project needs in nearly
-every file belong there rather than repeated at the top of two hundred of them.**
+**Every backend project has a `GlobalUsings.cs` at its root, and it holds only what that project
+uses in nearly every file.** `<ImplicitUsings>enable</ImplicitUsings>` (set in
+`Directory.Build.props`) covers the BCL; every other `using` is written at the top of the file
+unless it is used project-wide. What each layer holds today:
+
+- `Shared`: `Microsoft.AspNetCore.Http` and `Microsoft.Extensions.Logging`.
+- `SharedKernel`, Domain, Application, Infrastructure, API, `Innovayse.SDK` and the
+  `Innovayse.Providers.*` projects: no directives. In these projects each namespace is used by one
+  folder only (controllers, EF configurations, handlers), not by the whole project, so the file
+  stays empty except for its comment.
+- Test projects: `FluentAssertions` and `Xunit`; `Integration.Tests` also has its own `Fixtures`
+  namespace.
 
 ```csharp
-// File: src/Innovayse.<Product>.Application/GlobalUsings.cs
-global using FluentValidation;
-global using Microsoft.EntityFrameworkCore;
-global using Microsoft.Extensions.DependencyInjection;
+// File: src/Shared/GlobalUsings.cs
+global using Microsoft.AspNetCore.Http;
 global using Microsoft.Extensions.Logging;
 ```
 
-One per project, not one per solution — the set is different for each layer, and that is the
-point. Domain needs almost nothing; Application needs the validation and logging namespaces;
-Infrastructure needs EF Core; API needs the MVC ones. A namespace that belongs to one feature
-does not go here: `global using` is for what a project uses *everywhere*, and a global using
-that only three files need makes those three files harder to read, not easier, because the
-reader can no longer see where the type came from.
-
-This is not the same as `<ImplicitUsings>enable</ImplicitUsings>`, which adds a fixed SDK list
-you do not control. Use both: implicit usings for the BCL, `GlobalUsings.cs` for the packages
-and internal namespaces this project actually leans on.
-
-**A `global using` is a dependency you can no longer see at the call site**, so keep the file
-short and keep it sorted. If adding one to the file would let a layer reach something it should
-not — EF Core in Application, an ASP.NET type in Domain — that is the file-layout rule speaking,
-and the answer is not to hide the using.
+A namespace that belongs to one feature never goes here: a global using that only three files
+need makes those files harder to read, because the reader can no longer see where the type came
+from. **A `global using` is a dependency you can no longer see at the call site**, so keep the
+file short and sorted, and never use it to let a layer reach something it should not: no EF Core
+global using in Domain or Application, no ASP.NET type in Domain.
 
 ## No Magic Numbers / Strings
 
@@ -174,12 +185,14 @@ if (items.Count > 100) ...
 
 - Always inject interfaces, never concrete types (except in Infrastructure registrations)
 - No `ServiceLocator` pattern — no `IServiceProvider` injection except in factories
-- Register services in module extension methods:
+- Register services in the layer's `DependencyInjection.cs` extension method:
 
 ```csharp
-public static IServiceCollection AddBillingModule(this IServiceCollection services)
+// File: src/Innovayse.Hostpanel.Application/DependencyInjection.cs
+public static IServiceCollection AddApplication(this IServiceCollection services)
 {
-    services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+    services.AddValidatorsFromAssemblyContaining<AcceptInvitationCommand>();
+
     return services;
 }
 ```

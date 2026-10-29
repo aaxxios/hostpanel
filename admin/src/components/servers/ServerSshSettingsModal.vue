@@ -2,7 +2,8 @@
 /**
  * Guided SSH key management setup for one server:
  *
- * 1. Connection — where customers connect, and how HostPanel reaches the server's agent.
+ * 1. Connection — where customers connect, and how HostPanel reaches the server's agent, with the
+ *    firewall and sshd lines that let only HostPanel reach the agent port.
  * 2. Install — HostPanel generates a per-server ED25519 identity and shows a one-command installer
  *    that verifies the bundle's SHA256 before running anything.
  * 3. Host key — HostPanel reads the key the endpoint presents; the administrator compares it with
@@ -11,15 +12,18 @@
  * 5. Enable — refused by the API until a test with the saved settings succeeded.
  *
  * The private key is write-only: generated and kept by HostPanel, or pasted under "advanced", and
- * never shown. Requests and refusals belong to the server SSH store.
+ * never shown; leaving the field empty keeps the stored one. Requests, refusals and everything
+ * derived from the loaded setup belong to the server SSH store; a refusal comes back as the API's
+ * own sentence and per-field sentences. A save keeps the dialog open, since the later steps use
+ * what was saved, and is confirmed beside its button. Save and the health check never run
+ * together: both buttons are blocked while either is in flight.
  */
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
-import { buildInstallCommand } from '@/lib/sshAgentInstall'
-import { buildNetworkLines } from '@/lib/sshAgentNetwork'
 import { useServerSshStore } from '@/stores/serverssh'
-import type { ServerSshSettingsDto, ServerSshSettingsPayload } from '@/types/serverssh'
+import type { ServerSshSettingsDto, ServerSshSettingsPayload, SshAgentNetworkLines } from '@/types/serverssh'
+import { SshProviderFailure } from '@/types/sshenums'
 import { UiTone } from '@/utils/ui/tone'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
@@ -56,24 +60,134 @@ const emit = defineEmits<{
   close: []
 }>()
 
+/** The management user the installer creates unless the server already has one saved. */
+const DEFAULT_AGENT_USERNAME = 'hpsshkeys'
+
+/** The standard SSH port, the default for both the customer and the agent connection. */
+const DEFAULT_SSH_PORT = 22
+
+/** Default connect timeout, seconds. */
+const DEFAULT_CONNECT_TIMEOUT_SECONDS = 10
+
+/** Default operation timeout, seconds. */
+const DEFAULT_OPERATION_TIMEOUT_SECONDS = 20
+
+/** Label key of each network line, in the order the lines are shown. */
+const NETWORK_LINE_LABELS: Record<keyof SshAgentNetworkLines, string> = {
+  csf: 'servers.ssh.networkCsf',
+  firewalld: 'servers.ssh.networkFirewalld',
+  ufw: 'servers.ssh.networkUfw',
+  sshd: 'servers.ssh.networkSshd',
+}
+
 /** The SSH settings store. */
 const store = useServerSshStore()
 
 /** Reactive state of the store this dialog renders. */
-const { settings, setup, loading, saving, testing, generating, scanning, lastTest, lastScan, error, scanError, fieldErrors } = storeToRefs(store)
+const {
+  settings, setup, loading, saving, testing, generating, scanning, lastTest, lastScan, error, scanError, fieldErrors,
+  installCommand, networkLines,
+} = storeToRefs(store)
 
 /** The form as the inputs hold it. */
 const form = reactive<ServerSshSettingsPayload>({
   isEnabled: false,
   sshHostname: '',
-  sshPort: 22,
+  sshPort: DEFAULT_SSH_PORT,
   agentHost: '',
-  agentPort: 22,
-  agentUsername: 'hpsshkeys',
+  agentPort: DEFAULT_SSH_PORT,
+  agentUsername: DEFAULT_AGENT_USERNAME,
   agentPrivateKey: '',
   agentHostKeyFingerprint: '',
-  connectTimeoutSeconds: 10,
-  operationTimeoutSeconds: 20,
+  connectTimeoutSeconds: DEFAULT_CONNECT_TIMEOUT_SECONDS,
+  operationTimeoutSeconds: DEFAULT_OPERATION_TIMEOUT_SECONDS,
+})
+
+/** The form as last saved successfully, null when the last save failed or none ran. */
+const savedSnapshot = ref<string | null>(null)
+
+/** Whether the last save in this dialog was refused. */
+const saveFailed = ref(false)
+
+/** True while a save or a health check is in flight; both buttons wait for it. */
+const busy = computed<boolean>(() => saving.value || testing.value)
+
+/** The badge of the last recorded health check. */
+const health = computed<{ tone: UiTone; label: string }>(() => {
+  if (settings.value?.isHealthy === true) {
+    return { tone: UiTone.Success, label: t('servers.ssh.healthy') }
+  }
+  if (settings.value?.isHealthy === false) {
+    return { tone: UiTone.Danger, label: t('servers.ssh.unhealthy') }
+  }
+  return { tone: UiTone.Neutral, label: t('servers.ssh.notTested') }
+})
+
+/** Whether the saved settings point at an agent host, so a scan and a test can run. */
+const hasEndpoint = computed<boolean>(() => Boolean(settings.value?.agentHost))
+
+/** The body to send: an empty private key field means "keep the stored one". */
+const payload = computed<ServerSshSettingsPayload>(() => ({
+  ...form,
+  agentPrivateKey: form.agentPrivateKey?.trim() ? form.agentPrivateKey : null,
+}))
+
+/** Whether the form still holds exactly what was last saved, so "Saved" is true. */
+const showSaved = computed<boolean>(() => savedSnapshot.value !== null && savedSnapshot.value === JSON.stringify(payload.value))
+
+/** Why the last save was refused, for the line beside the button; null when it was not. */
+const saveFailure = computed<string | null>(() => {
+  if (!saveFailed.value) {
+    return null
+  }
+  return Object.keys(fieldErrors.value).length > 0
+    ? t('servers.ssh.saveFieldErrors')
+    : t('servers.ssh.saveFailed', { reason: error.value ?? '' })
+})
+
+/** HostPanel's source addresses as one readable list, for the network intro. */
+const sourceAddressList = computed<string>(() => (setup.value?.sourceAddresses ?? []).join(', '))
+
+/** The network lines with their labels, in display order; empty while there are none. */
+const networkBlocks = computed<{ key: keyof SshAgentNetworkLines; label: string; code: string }[]>(() => {
+  const lines = networkLines.value
+  if (!lines) {
+    return []
+  }
+  return (Object.keys(NETWORK_LINE_LABELS) as (keyof SshAgentNetworkLines)[]).map((key) => ({
+    key,
+    label: t(NETWORK_LINE_LABELS[key]),
+    code: lines[key],
+  }))
+})
+
+/** The scanned host key as one copyable line, algorithm then fingerprint; null before a scan. */
+const scannedKey = computed<string | null>(() => (lastScan.value ? `${lastScan.value.algorithm} ${lastScan.value.fingerprint}` : null))
+
+/** Whether the scanned key is the one in the fingerprint field, i.e. the one that is or will be pinned. */
+const scanMatches = computed<boolean>(() => Boolean(lastScan.value) && lastScan.value?.fingerprint === form.agentHostKeyFingerprint.trim())
+
+/** The version line of the agent that answered the last check, with its profile when it sent one. */
+const agentVersionLabel = computed<string | null>(() => {
+  const result = lastTest.value
+  if (!result?.agentVersion) {
+    return null
+  }
+  return result.provider
+    ? t('servers.ssh.agentVersionWithProvider', { version: result.agentVersion, provider: result.provider })
+    : t('servers.ssh.agentVersion', { version: result.agentVersion })
+})
+
+/** Whether the last check reached an agent installed for another server. */
+const isBindingMismatch = computed<boolean>(() => lastTest.value?.error === SshProviderFailure.BindingMismatch)
+
+/** Why the last check failed, in words, for every failure but a binding mismatch; null when it did not. */
+const agentFailure = computed<string | null>(() => {
+  const failure = lastTest.value?.error
+  if (!failure || failure === SshProviderFailure.BindingMismatch) {
+    return null
+  }
+  return t('servers.ssh.agentError', { reason: t(`servers.ssh.failures.${failure}`) })
 })
 
 /**
@@ -95,67 +209,21 @@ const fill = (loaded: ServerSshSettingsDto): void => {
   form.operationTimeoutSeconds = loaded.operationTimeoutSeconds
 }
 
-watch(settings, (loaded) => {
-  if (loaded) {
-    fill(loaded)
-  }
-})
-
-/** The badge of the last recorded health check. */
-const health = computed(() => {
-  if (settings.value?.isHealthy === true) {
-    return { tone: UiTone.Success, label: t('servers.ssh.healthy') }
-  }
-  if (settings.value?.isHealthy === false) {
-    return { tone: UiTone.Danger, label: t('servers.ssh.unhealthy') }
-  }
-  return { tone: UiTone.Neutral, label: t('servers.ssh.notTested') }
-})
-
-/** The one-command installer, once an identity exists. */
-/** Firewall and sshd lines that let only this HostPanel reach the saved agent port, when its address is known. */
-const networkLines = computed(() => (setup.value && settings.value ? buildNetworkLines(setup.value.sourceAddresses ?? [], settings.value.agentPort) : null))
-
-const installCommand = computed(() => (setup.value ? buildInstallCommand(window.location.origin, setup.value) : null))
-
-/** Whether the saved settings point at an agent host, so a scan and a test can run. */
-const hasEndpoint = computed(() => Boolean(settings.value?.agentHost))
-
-/** The body to send: an empty private key field means "keep the stored one". */
-const payload = computed<ServerSshSettingsPayload>(() => ({
-  ...form,
-  agentPrivateKey: form.agentPrivateKey?.trim() ? form.agentPrivateKey : null,
-}))
-
 /**
  * Saves the settings. The dialog stays open, so the next step can use what was saved.
  *
  * @returns Resolves when the attempt has ended.
  */
 const handleSave = async (): Promise<void> => {
+  if (busy.value) {
+    return
+  }
   const ok = await store.save(props.serverId, payload.value)
   saveFailed.value = !ok
   // The saved settings refill the form; the confirmation holds for exactly what came back.
   await nextTick()
   savedSnapshot.value = ok ? JSON.stringify(payload.value) : null
 }
-
-/** The form as last saved successfully, null when the last save failed or none ran. */
-const savedSnapshot = ref<string | null>(null)
-
-/** Whether the last save in this dialog was refused. */
-const saveFailed = ref(false)
-
-/** Whether the form still holds exactly what was last saved, so "Saved" is true. */
-const showSaved = computed(() => savedSnapshot.value !== null && savedSnapshot.value === JSON.stringify(payload.value))
-
-/** Why the last save was refused, for the line beside the button; null when it was not. */
-const saveFailure = computed(() => {
-  if (!saveFailed.value) {
-    return null
-  }
-  return Object.keys(fieldErrors.value).length > 0 ? t('servers.ssh.saveFieldErrors') : t('servers.ssh.saveFailed', { reason: error.value ?? '' })
-})
 
 /**
  * Generates (or rotates) the server's management identity.
@@ -173,9 +241,6 @@ const handleGenerate = async (): Promise<void> => {
  */
 const handleScan = (): Promise<void> => store.scanHostKey(props.serverId)
 
-/** Whether the scanned key is the one in the fingerprint field, i.e. the one that is or will be pinned. */
-const scanMatches = computed(() => Boolean(lastScan.value) && lastScan.value?.fingerprint === form.agentHostKeyFingerprint.trim())
-
 /** Puts the scanned fingerprint into the form; it is pinned when the settings are saved. */
 const useScannedFingerprint = (): void => {
   if (lastScan.value) {
@@ -188,11 +253,22 @@ const useScannedFingerprint = (): void => {
  *
  * @returns Resolves when the check has ended.
  */
-const handleTest = (): Promise<void> => store.test(props.serverId)
+const handleTest = async (): Promise<void> => {
+  if (busy.value) {
+    return
+  }
+  await store.test(props.serverId)
+}
 
 onMounted(() => {
   store.reset()
   return store.loadAll(props.serverId)
+})
+
+watch(settings, (loaded) => {
+  if (loaded) {
+    fill(loaded)
+  }
 })
 </script>
 
@@ -244,18 +320,14 @@ onMounted(() => {
             <UiText size="sm" tone="muted">{{ t('servers.ssh.connectionHint') }}</UiText>
           </UiForm>
           <UiStack v-if="setup" gap="sm" data-testid="server-ssh-network">
-            <UiText size="sm" weight="semibold">{{ t('servers.ssh.networkTitle') }}</UiText>
-            <template v-if="networkLines">
-              <UiText size="sm" tone="muted">{{ t('servers.ssh.networkIntro', { addresses: (setup.sourceAddresses ?? []).join(', ') }) }}</UiText>
+            <UiHeading :level="5">{{ t('servers.ssh.networkTitle') }}</UiHeading>
+            <template v-if="networkBlocks.length > 0">
+              <UiText size="sm" tone="muted">{{ t('servers.ssh.networkIntro', { addresses: sourceAddressList }) }}</UiText>
               <UiStack gap="xs" data-testid="server-ssh-network-lines">
-                <UiText size="xs" tone="muted">CSF</UiText>
-                <UiCodeBlock :code="networkLines.csf" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" />
-                <UiText size="xs" tone="muted">firewalld</UiText>
-                <UiCodeBlock :code="networkLines.firewalld" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" />
-                <UiText size="xs" tone="muted">ufw</UiText>
-                <UiCodeBlock :code="networkLines.ufw" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" />
-                <UiText size="xs" tone="muted">{{ t('servers.ssh.networkSshd') }}</UiText>
-                <UiCodeBlock :code="networkLines.sshd" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" />
+                <UiStack v-for="block in networkBlocks" :key="block.key" gap="xs">
+                  <UiText size="xs" tone="muted">{{ block.label }}</UiText>
+                  <UiCodeBlock :code="block.code" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" :data-testid="`server-ssh-network-${block.key}`" />
+                </UiStack>
               </UiStack>
             </template>
             <UiText v-else size="sm" tone="muted" data-testid="server-ssh-network-unset">{{ t('servers.ssh.networkUnset') }}</UiText>
@@ -292,8 +364,8 @@ onMounted(() => {
             </UiButton>
           </UiStack>
           <UiAlert v-if="scanError" variant="error" data-testid="server-ssh-scan-error">{{ scanError }}</UiAlert>
-          <template v-if="lastScan">
-            <UiCodeBlock :code="`${lastScan.algorithm} ${lastScan.fingerprint}`" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" data-testid="server-ssh-scanned" />
+          <template v-if="scannedKey">
+            <UiCodeBlock :code="scannedKey" :copy-label="t('servers.ssh.copy')" :copied-label="t('servers.ssh.copied')" data-testid="server-ssh-scanned" />
             <UiStack direction="row" gap="sm" wrap>
               <UiBadge :tone="scanMatches ? UiTone.Success : UiTone.Warning" dot data-testid="server-ssh-scan-match">
                 {{ scanMatches ? t('servers.ssh.matchesPinned') : t('servers.ssh.notPinned') }}
@@ -318,23 +390,19 @@ onMounted(() => {
               type="button"
               variant="secondary"
               :loading="testing"
-              :disabled="!settings.hasAgentPrivateKey || !hasEndpoint"
+              :disabled="busy || !settings.hasAgentPrivateKey || !hasEndpoint"
               data-testid="server-ssh-test"
               @click="handleTest"
             >
               {{ t('servers.ssh.test') }}
             </UiButton>
             <UiBadge :tone="health.tone" dot data-testid="server-ssh-health">{{ health.label }}</UiBadge>
-            <UiText v-if="lastTest?.agentVersion" size="sm" tone="muted" data-testid="server-ssh-agent-version">
-              {{ t('servers.ssh.agentVersion', { version: lastTest.agentVersion, provider: lastTest.provider ?? '—' }) }}
-            </UiText>
+            <UiText v-if="agentVersionLabel" size="sm" tone="muted" data-testid="server-ssh-agent-version">{{ agentVersionLabel }}</UiText>
           </UiStack>
-          <UiAlert v-if="lastTest?.error === 'binding_mismatch'" variant="error" data-testid="server-ssh-binding-mismatch">
+          <UiAlert v-if="isBindingMismatch" variant="error" data-testid="server-ssh-binding-mismatch">
             {{ t('servers.ssh.bindingMismatch') }}
           </UiAlert>
-          <UiText v-else-if="lastTest?.error" size="sm" tone="muted" data-testid="server-ssh-agent-error">
-            {{ t('servers.ssh.agentError', { code: lastTest.error }) }}
-          </UiText>
+          <UiText v-else-if="agentFailure" size="sm" tone="muted" data-testid="server-ssh-agent-error">{{ agentFailure }}</UiText>
         </UiStack>
 
         <!-- 5. Enable -->
@@ -381,7 +449,7 @@ onMounted(() => {
       <UiButton type="button" variant="secondary" data-testid="server-ssh-cancel" @click="emit('close')">
         {{ t('shared.close') }}
       </UiButton>
-      <UiButton type="button" variant="primary" :loading="saving" :disabled="!settings" data-testid="server-ssh-save" @click="handleSave">
+      <UiButton type="button" variant="primary" :loading="saving" :disabled="busy || !settings" data-testid="server-ssh-save" @click="handleSave">
         {{ t('shared.saveChanges') }}
       </UiButton>
     </template>

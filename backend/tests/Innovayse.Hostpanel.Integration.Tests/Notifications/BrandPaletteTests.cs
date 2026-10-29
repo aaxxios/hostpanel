@@ -1,5 +1,4 @@
 using Innovayse.Hostpanel.Application.Notifications.Rendering;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 

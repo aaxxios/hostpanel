@@ -8,6 +8,7 @@ import { useStorefrontApi } from '@/composables/apis/useStorefrontApi'
 import { ApiPath } from '@/lib/apiPaths'
 import { useStorefrontCrud } from '@/composables/useStorefrontCrud'
 import { useStorefrontList } from '@/composables/useStorefrontList'
+import { StorefrontListOutcome } from '@/types/storefront'
 import { json, problem } from '../helpers/fetch'
 import { requestsOf, stubRouteTable } from '../helpers/routes'
 
@@ -64,6 +65,7 @@ describe('useStorefrontList', () => {
     expect(requestsOf(mock)).toContain('DELETE /admin/faqs/4')
     expect(list.deleteTarget.value).toBeNull()
     expect(list.deleting.value).toBe(false)
+    expect(list.outcome.value).toBe(StorefrontListOutcome.Deleted)
   })
 
   it('a refused confirmDelete closes the question, keeps the sentence and reloads the list', async () => {
@@ -75,6 +77,7 @@ describe('useStorefrontList', () => {
     await list.confirmDelete()
 
     expect(crud.actionError.value).toBe('Pinned.')
+    expect(list.outcome.value).toBeNull()
     expect(crud.items.value).toEqual([widget])
     expect(requestsOf(mock)).toEqual(['DELETE /admin/faqs/4', 'GET /admin/faqs'])
     expect(list.deleteTarget.value).toBeNull()
@@ -88,6 +91,7 @@ describe('useStorefrontList', () => {
     await list.saveOrder([{ id: 4, sortOrder: 3 }])
 
     expect(crud.actionError.value).toBe('Locked.')
+    expect(list.outcome.value).toBeNull()
     expect(requestsOf(mock)).toContain('GET /admin/faqs')
     expect(list.savingOrder.value).toBe(false)
   })
@@ -108,5 +112,6 @@ describe('useStorefrontList', () => {
 
     expect(requestsOf(mock)).toContain('PUT /admin/faqs/order')
     expect(list.savingOrder.value).toBe(false)
+    expect(list.outcome.value).toBe(StorefrontListOutcome.OrderSaved)
   })
 })

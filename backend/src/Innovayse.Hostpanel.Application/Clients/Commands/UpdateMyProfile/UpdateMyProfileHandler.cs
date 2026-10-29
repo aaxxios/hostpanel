@@ -1,14 +1,17 @@
 using Innovayse.Hostpanel.Application.Clients.Commands.UpdateClient;
 using Innovayse.Hostpanel.Application.Clients.Common;
+using Innovayse.Hostpanel.Application.Clients.Queries.GetClient;
 using Innovayse.Hostpanel.Application.Clients.Queries.GetMyProfile;
+using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Shared.Models;
 using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Clients.Commands.UpdateMyProfile;
 
 /// <summary>
-/// Resolves the caller's own client, applies the update through the shared write, and answers with
-/// the profile as it now stands.
+/// Resolves the caller's own client, overlays the provided members on the stored profile, applies
+/// the result through the shared write, and answers with the profile as it now stands.
 /// </summary>
 public sealed class UpdateMyProfileHandler
 {
@@ -29,58 +32,59 @@ public sealed class UpdateMyProfileHandler
     /// The updated profile, <c>CLIENT_PROFILE_NOT_FOUND</c> when the caller has no client record,
     /// or any refusal the shared write answers with.
     /// </returns>
-    public async Task<Result<ClientDto>> HandleAsync(UpdateMyProfileCommand cmd, CancellationToken ct)
+    public async Task<Result<MyProfileDto>> HandleAsync(UpdateMyProfileCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var profile = await _bus.InvokeAsync<Result<ClientDto>>(new GetMyProfileQuery(), ct);
+        var profile = await _bus.InvokeAsync<Result<MyProfileDto>>(new GetMyProfileQuery(), ct);
         if (profile.IsFailure)
         {
             return profile;
         }
 
-        // Currency is deliberately null: it is set once, at the first order or by the admin who
-        // created the client, and only an admin may change it before the first invoice.
+        // The caller's own profile carries no staff-owned fields, so the stored record they are
+        // written back from is read through the full staff read, by the id the caller resolved to.
+        var stored = await _bus.InvokeAsync<Result<ClientDto>>(new GetClientQuery(profile.Value!.Id), ct);
+        if (stored.IsFailure)
+        {
+            return Result<MyProfileDto>.FailureCode(HostpanelErrorCodes.CLIENT_PROFILE_NOT_FOUND);
+        }
+
+        // Absent members keep what is stored; the staff-owned fields are not on the command and
+        // are always written back unchanged. Email, currency and status stay null, which the shared
+        // write reads as "leave it alone", as does a null language. The sign-in address never
+        // changes here: that takes the password and a mailed confirmation.
+        var current = stored.Value!;
         var update = new UpdateClientCommand(
-            profile.Value!.Id,
-            cmd.Email,
-            cmd.FirstName,
-            cmd.LastName,
-            cmd.CompanyName,
-            cmd.Phone,
-            cmd.Street,
-            cmd.Address2,
-            cmd.City,
-            cmd.State,
-            cmd.PostCode,
-            cmd.Country,
-            cmd.Language,
+            current.Id,
             null,
-            cmd.PaymentMethod,
-            cmd.BillingContact,
-            cmd.AdminNotes,
-            cmd.NotifyGeneral,
-            cmd.NotifyInvoice,
-            cmd.NotifySupport,
-            cmd.NotifyProduct,
-            cmd.NotifyDomain,
-            cmd.NotifyAffiliate,
-            cmd.LateFees,
-            cmd.OverdueNotices,
-            cmd.TaxExempt,
-            cmd.SeparateInvoices,
-            cmd.DisableCcProcessing,
-            cmd.MarketingOptIn,
-            cmd.StatusUpdate,
-            cmd.AllowSso,
-            cmd.Status);
+            cmd.FirstName ?? current.FirstName,
+            cmd.LastName ?? current.LastName,
+            cmd.CompanyName ?? current.CompanyName,
+            cmd.Phone ?? current.Phone,
+            new PostalAddress(
+                cmd.Address?.Street ?? current.Address.Street,
+                cmd.Address?.Address2 ?? current.Address.Address2,
+                cmd.Address?.City ?? current.Address.City,
+                cmd.Address?.State ?? current.Address.State,
+                cmd.Address?.PostCode ?? current.Address.PostCode,
+                cmd.Address?.Country ?? current.Address.Country),
+            current.Preferences with
+            {
+                Language = cmd.Language,
+                Currency = null,
+                PaymentMethod = cmd.PaymentMethod ?? current.Preferences.PaymentMethod,
+            },
+            cmd.Notifications ?? current.Notifications,
+            current.Settings,
+            null);
 
         var written = await _bus.InvokeAsync<Result>(update, ct);
         if (written.IsFailure)
         {
-            return Result<ClientDto>.FailureCode(written.ErrorCode!);
+            return Result<MyProfileDto>.FailureCode(written.ErrorCode!);
         }
 
-        return await _bus.InvokeAsync<Result<ClientDto>>(new GetMyProfileQuery(), ct);
+        return await _bus.InvokeAsync<Result<MyProfileDto>>(new GetMyProfileQuery(), ct);
     }
 }

@@ -1,7 +1,10 @@
-using System.Text.Json;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Products.Extensions;
+using Innovayse.Hostpanel.Application.Slides.Extensions;
 using Innovayse.Hostpanel.Domain.Slides;
 using Innovayse.Hostpanel.Shared.Models;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Slides.Commands.CreateSlide;
 
@@ -14,13 +17,23 @@ public sealed class CreateSlideHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The clock that dates the new slide.</summary>
+    private readonly IClock _clock;
+
+    /// <summary>Wolverine bus the owning modules' existence queries are dispatched through.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>
     ///     Initializes the handler.
     /// </summary>
     /// <param name="context">The module's data context.</param>
-    public CreateSlideHandler(IHostpanelDbContext context)
+    /// <param name="clock">The clock that dates the new slide.</param>
+    /// <param name="bus">Wolverine bus the owning modules' existence queries are dispatched through.</param>
+    public CreateSlideHandler(IHostpanelDbContext context, IClock clock, IMessageBus bus)
     {
         _context = context;
+        _clock = clock;
+        _bus = bus;
     }
 
     /// <summary>
@@ -28,12 +41,17 @@ public sealed class CreateSlideHandler
     /// </summary>
     /// <param name="cmd">The slide and its translations.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The newly created slide id. This use case refuses nothing.</returns>
+    /// <returns>The newly created slide id, or <c>PRODUCT_NOT_FOUND</c> when the product id names no product.</returns>
     public async Task<Result<int>> HandleAsync(CreateSlideCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var slide = Slide.Create(
+        if (cmd.ProductId is { } productId && !await _bus.ProductExistsAsync(productId, ct))
+        {
+            return Result<int>.FailureCode(HostpanelErrorCodes.PRODUCT_NOT_FOUND);
+        }
+
+        var slide = Slide.Create(new SlideSettings(
             cmd.IconName,
             cmd.BrandColor,
             cmd.ImageUrl,
@@ -44,16 +62,10 @@ public sealed class CreateSlideHandler
             cmd.IsActive,
             cmd.TargetAudience,
             cmd.VisibleFrom,
-            cmd.VisibleUntil);
+            cmd.VisibleUntil),
+            _clock.UtcNow);
 
-        foreach (var t in cmd.Translations)
-        {
-            var featuresJson = t.Features is not null
-                ? JsonSerializer.Serialize(t.Features)
-                : null;
-
-            slide.SetTranslation(t.Locale, t.Title, t.Tagline, t.Description, featuresJson, t.CtaText, t.CtaUrl);
-        }
+        slide.ReplaceTranslations(cmd.Translations.ToContent());
 
         _context.Slides.Add(slide);
         await _context.SaveChangesAsync(ct);

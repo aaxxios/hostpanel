@@ -2,7 +2,7 @@
   <!--
     z-[55] puts the bar, and the menu panel that hangs off it, above
     UiCookieBanner. The banner is fixed at z-50 and grows tall on a narrow
-    screen — at 320px it covers the lower half of the viewport — so at z-40 the
+    screen, at 320px it covers the lower half of the viewport, so at z-40 the
     open menu was drawn beneath it and its lower entries could not be tapped.
     The floating contact button sits above both at z-[60]; it shares no space
     with the header, so the order between them never shows.
@@ -39,8 +39,8 @@
         The desktop layout starts at xl, not lg, and aurora's header switches at
         the same point for the same reason: at 1024 the six links, the logo and
         the full action row come to more than the container can hold, and the
-        row has no shrink path — it ran 33px past the edge and took the page's
-        horizontal scrollbar with it. Below xl the links live in the menu panel.
+        row has no shrink path: it would run past the edge and give the page a
+        horizontal scrollbar. Below xl the links live in the menu panel.
       -->
       <nav :aria-label="t('nova.nav.menu')" class="hidden flex-auto items-center justify-center gap-1 xl:flex">
         <UiLink
@@ -63,7 +63,7 @@
           Locale and theme are bar controls only where the bar has room for them.
           Below xl they move into the menu panel: together they are about 130px
           of fixed-width chrome, and with the logo, the cart and the menu button
-          the row could not fit a 390px screen — it did not wrap or shrink, it
+          the row could not fit a 390px screen: it did not wrap or shrink, it
           simply ran past the edge and gave the whole page a horizontal scroll.
           Neither control is lost; both are the first thing in the panel.
         -->
@@ -163,7 +163,7 @@
         </UiText>
         <!--
           The locale and theme controls are shared components sized for a
-          pointer — 36px tall, below the 44px a finger needs. The arbitrary
+          pointer: 36px tall, below the 44px a finger needs. The arbitrary
           variants raise their hit area here rather than in the components
           themselves, which aurora and classic also render and which this
           change must not reach. The nested selector deliberately matches only
@@ -212,8 +212,8 @@
  * portal's existing pieces, restyled rather than reimplemented. The navigation
  * itself comes from `content.ts`, so an entry is added there and nowhere else.
  *
- * The mobile panel is a disclosure, not a dialog — it sits in the page flow
- * under the bar rather than covering it — so it carries `aria-expanded` and
+ * The mobile panel is a disclosure, not a dialog, it sits in the page flow
+ * under the bar rather than covering it, so it carries `aria-expanded` and
  * `aria-controls` and keeps focus inside itself while open, but does not claim
  * `role="dialog"` or hide the rest of the page from assistive technology.
  */
@@ -246,7 +246,7 @@ const cart = useCartStore()
 const route = useRoute()
 
 /**
- * Where "Sign in" goes is a deployment decision, not a constant — see
+ * Where "Sign in" goes is a deployment decision, not a constant: see
  * `useAuthMode`. Hard-coding /client/login sent an SSO deployment's visitors to a
  * form their accounts have no credentials for.
  */
@@ -263,7 +263,11 @@ const toggleRef = ref<ComponentPublicInstance | null>(null)
 /** Number of lines in the cart. */
 const cartCount = computed(() => cart.items.length)
 
-/** Everything inside the panel a keyboard can land on, in document order. */
+/**
+ * Everything inside the panel a keyboard can land on, in document order.
+ *
+ * @returns The focusable links and enabled buttons; empty while the panel is not mounted.
+ */
 const focusables = (): HTMLElement[] =>
   Array.from(menuRef.value?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? [])
 
@@ -339,7 +343,7 @@ const onMenuKeydown = (event: KeyboardEvent): void => {
 /**
  * Closes the panel on Escape from anywhere on the page.
  *
- * Escape must work even before focus has entered the panel — the button that
+ * Escape must work even before focus has entered the panel: the button that
  * opened it still holds focus at that point, and its keydown does not bubble
  * through the panel's handler.
  *

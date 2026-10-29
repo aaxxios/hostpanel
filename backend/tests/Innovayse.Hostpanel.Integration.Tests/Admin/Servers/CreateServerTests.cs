@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
@@ -14,7 +11,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 /// a caller with only the Client role is refused, and the route is closed to a caller with no
 /// credential. This use case always succeeds once validation has passed.
 /// </summary>
-/// <remarks>Split out of the deleted <c>ServersEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateServerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -35,7 +31,7 @@ public sealed class CreateServerTests(IntegrationTestFactory factory) : IClassFi
 
         using var doc = System.Text.Json.JsonDocument.Parse(body);
         var row = doc.RootElement.EnumerateArray().Single(r => r.GetProperty("name").GetString() == name);
-        row.TryGetProperty("accessHash", out _).Should().BeFalse("the DTO never carries a server's credentials");
+        row.GetProperty("credentials").TryGetProperty("accessHash", out _).Should().BeFalse("the DTO never carries a server's credentials");
     }
 
     /// <summary>A server with an empty name is refused by the validator before it reaches the handler.</summary>
@@ -44,20 +40,27 @@ public sealed class CreateServerTests(IntegrationTestFactory factory) : IClassFi
     {
         var client = await ServersTestSeeds.AdminClientAsync(factory);
 
-        var response = await client.PostAsJsonAsync("/api/admin/servers", new
-        {
-            name = string.Empty,
-            hostname = "empty-name.example.com",
-            module = ServerModule.Cwp7,
-            username = "root",
-            useSSL = true,
-            isDefault = false,
-            isDisabled = false,
-            monthlyCost = 0m,
-        });
+        var response = await client.PostAsJsonAsync(
+            "/api/admin/servers", ServersTestSeeds.ServerBody(string.Empty, hostname: "empty-name.example.com"));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         await ServersTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
+    }
+
+    /// <summary>A body that leaves out one of the nested groups (endpoint, credentials, limits, hosting, name servers) is refused at binding.</summary>
+    [Fact]
+    public async Task RefusesABodyWithoutItsNestedGroupsAsync()
+    {
+        var client = await ServersTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync("/api/admin/servers", new
+        {
+            name = "Missing-groups",
+            module = ServerModule.Cwp7,
+            username = "root",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     /// <summary>A caller with only the Client role is refused with 403.</summary>

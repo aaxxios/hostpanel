@@ -2,14 +2,13 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
 /// Shared seeding and authentication helpers for the Admin/Integrations module's per-use-case
 /// Integration tests. Every <c>Admin/Integrations/*Tests.cs</c> file calls into this rather than
-/// repeating its own copy. Moved out of the deleted <c>IntegrationsEndpointTests</c>.
+/// repeating its own copy.
 /// </summary>
 internal static class IntegrationsTestSeeds
 {
@@ -29,7 +28,7 @@ internal static class IntegrationsTestSeeds
 
     /// <summary>
     /// Registers a brand-new client user and returns an authenticated <see cref="HttpClient"/>
-    /// carrying only the Client role -- the caller every admin-only boundary test refuses.
+    /// carrying only the Client role: the caller every admin-only boundary test refuses.
     /// </summary>
     /// <param name="factory">The shared API + PostgreSQL host.</param>
     /// <param name="label">A short label folded into the unique email, for readable test failures.</param>

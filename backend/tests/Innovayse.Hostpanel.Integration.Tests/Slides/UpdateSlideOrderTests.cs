@@ -1,14 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Application.Common;
+using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Slides;
 
 /// <summary>
-/// Integration tests for the <c>UpdateSlideOrder</c> use case — <c>PUT /api/admin/slides/order</c>.
+/// Integration tests for the <c>UpdateSlideOrder</c> use case: <c>PUT /api/admin/slides/order</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateSlideOrderTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -40,21 +40,39 @@ public sealed class UpdateSlideOrderTests(IntegrationTestFactory factory) : ICla
         secondIndex.Should().BeLessThan(firstIndex);
     }
 
-    /// <summary>Unknown ids in the list are silently skipped, and the command still succeeds.</summary>
+    /// <summary>An id that names no slide refuses the whole request with 404 and moves nothing.</summary>
     [Fact]
-    public async Task UpdateOrder_UnknownIdsAreSkipped()
+    public async Task UpdateOrder_UnknownId_RefusesNotFoundAndMovesNothing()
     {
         var client = await SlidesTestSeeds.AdminClientAsync(factory);
+        var created = await client.PostAsJsonAsync("/api/admin/slides", SlidesTestSeeds.CreateBody(sortOrder: 70));
+        var id = await created.Content.ReadFromJsonAsync<int>();
 
         var response = await client.PutAsJsonAsync("/api/admin/slides/order", new
         {
-            items = new[] { new { id = 999999, sortOrder = 1 } },
+            items = new[] { new { id = 2147483000, sortOrder = 1 }, new { id, sortOrder = 5 } },
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await SlidesTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.SLIDE_NOT_FOUND);
+        var fetched = await client.GetFromJsonAsync<JsonElement>($"/api/admin/slides/{id}");
+        fetched.GetProperty("sortOrder").GetInt32().Should().Be(70);
     }
 
-    /// <summary>The route is not for anonymous callers.</summary>
+    /// <summary>A request naming more rows than the bound is refused as a validation failure.</summary>
+    [Fact]
+    public async Task UpdateOrder_TooManyItems_RefusesWithValidationError()
+    {
+        var client = await SlidesTestSeeds.AdminClientAsync(factory);
+        var items = Enumerable.Range(1, SortOrderLimits.MaxItems + 1).Select(i => new { id = i, sortOrder = i }).ToArray();
+
+        var response = await client.PutAsJsonAsync("/api/admin/slides/order", new { items });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await SlidesTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
+    }
+
+    /// <summary>An anonymous caller is refused with 401 before the request reaches the handler.</summary>
     [Fact]
     public async Task UpdateOrder_RefusesAnonymous()
     {
@@ -62,5 +80,20 @@ public sealed class UpdateSlideOrderTests(IntegrationTestFactory factory) : ICla
             "/api/admin/slides/order", new { items = Array.Empty<object>() });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>An item with a non-positive id is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task UpdateOrder_NonPositiveItemId_RefusesWithValidationError()
+    {
+        var client = await SlidesTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PutAsJsonAsync("/api/admin/slides/order", new
+        {
+            items = new[] { new { id = 0, sortOrder = 1 } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await SlidesTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
     }
 }

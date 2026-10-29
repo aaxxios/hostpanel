@@ -12,16 +12,11 @@ public sealed class DeleteCancellationRequestHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work for persisting changes.</summary>
-    private readonly IUnitOfWork _uow;
-
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    /// <param name="uow">Unit of work for persisting changes.</param>
-    public DeleteCancellationRequestHandler(IHostpanelDbContext context, IUnitOfWork uow)
+    public DeleteCancellationRequestHandler(IHostpanelDbContext context)
     {
         _context = context;
-        _uow = uow;
     }
 
     /// <summary>
@@ -32,7 +27,7 @@ public sealed class DeleteCancellationRequestHandler
     /// <returns>Success, or <c>CANCELLATION_REQUEST_NOT_FOUND</c> when the id names no request.</returns>
     public async Task<Result> HandleAsync(DeleteCancellationRequestCommand cmd, CancellationToken ct)
     {
-        // Was ICancellationRequestRepository.FindByIdAsync. Tracked, not AsNoTracking: the entity
+        // Tracked, not AsNoTracking: the entity
         // is removed below and saved in this same pass.
         var request = await _context.CancellationRequests.FirstOrDefaultAsync(r => r.Id == cmd.Id, ct);
         if (request is null)
@@ -41,7 +36,7 @@ public sealed class DeleteCancellationRequestHandler
         }
 
         _context.CancellationRequests.Remove(request);
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
         return Result.Success();
     }
 }

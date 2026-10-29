@@ -1,39 +1,35 @@
 /**
  * Universal API composable
  *
- * - `useApi`    — wraps `useFetch` with an explicit locale-aware key.
- *                 Uses Nuxt's SSR-aware fetch so relative URLs like `/api/...`
+ * - `useApi`: wraps `useFetch` with an explicit locale-aware key.
+ *                 Uses Nuxt's SSR-aware fetch so relative URLs like `/api/<route>`
  *                 resolve correctly during server-side rendering.
  *                 Each locale gets its own cached response.
  *                 Re-fetches automatically when locale or query changes.
  *
- * - `apiFetch`  — wraps `$fetch` for one-shot calls (event handlers, Pinia stores).
+ * - `apiFetch`: wraps `$fetch` for one-shot calls (event handlers, Pinia stores).
  *                 Always runs client-side so relative URLs are fine.
  *                 Same headers. On 401: delegates to the global auth guard plugin.
  *
  * 401 handling strategy:
  * - The Nuxt server transparently refreshes expired tokens before the client
  *   ever sees a 401. If a 401 reaches the client, it means the refresh token
- *   is also expired — the session is truly dead.
+ *   is also expired: the session is truly dead.
  * - `apiFetch` catches 401s and calls `$handleAuthExpired()` from the
  *   auth-guard plugin to clear state and redirect to login.
- * - `useApi` does NOT handle 401s — errors from useFetch are caught by
+ * - `useApi` does NOT handle 401s: errors from useFetch are caught by
  *   the calling component or by Vue's error boundaries.
  *
  * ## Why this file carries an overloaded signature rather than one inferred return
  *
- * The previous version ended `} as UseFetchOptions<T>)`, casting the whole options object at
- * the call to `useFetch`. That cast pinned `UseFetchOptions`'s six type parameters to their
- * defaults — including `R extends NitroFetchRequest = string & {}` — while `useFetch` was
- * inferring `ReqT` from the `ComputedRef<string>` url beside it. The two disagreed, neither
- * overload matched, and TypeScript fell back to the last one with `DataT` left unresolved.
- *
- * The visible cost was not one error here but roughly a hundred and seventy across the app:
- * every `data.value` reached through this composable typed as
- * `never[] | NonNullable<PickFrom<_ResT, KeysOf<DataT>>>`, on which no property of `T` exists.
- * Pages read `invoice.total` and got TS2339 — a message that reads like a wrong field name and
- * is in fact a wrong cast two layers away. Removing the cast is what makes a genuine
- * field-name mismatch legible again, so it is a prerequisite for trusting the rest of the run.
+ * Casting the options object to `UseFetchOptions<T>` at the call to `useFetch` would pin its
+ * six type parameters to their defaults, including `R extends NitroFetchRequest = string & {}`,
+ * while `useFetch` infers `ReqT` from the `ComputedRef<string>` url beside it. The two
+ * disagree, no overload matches, and TypeScript falls back to the last one with `DataT`
+ * unresolved: every `data.value` read through this composable would type as
+ * `never[] | NonNullable<PickFrom<_ResT, KeysOf<DataT>>>`, and a page reading `invoice.total`
+ * would get TS2339, which reads like a wrong field name and is in fact a wrong cast two layers
+ * away.
  *
  * The two overloads mirror `useFetch`'s own: with a `default` factory the data is never
  * `undefined`, without one it is. Collapsing them into a single `T | undefined` return would
@@ -48,6 +44,7 @@ import type { FetchError } from 'ofetch'
 import { DEFAULT_APP_LOCALE } from '~/constants/appLocales'
 import { LANGUAGE_HEADER, resolveLanguage } from '~/utils/transportLanguage'
 import { CSRF_HEADER, CSRF_HEADER_VALUE } from '~/constants/csrfHeader'
+import type { ApiFetchOptions } from '~/types/apifetchoptions'
 
 /**
  * The key list `useFetch` uses to describe a picked subset of a response.
@@ -62,7 +59,7 @@ type KeysOf<T> = Array<T extends T ? keyof T extends string ? keyof T : never : 
 /**
  * Options for {@link useApi}, extending `useFetch`'s own.
  *
- * `key` is omitted because this composable builds a locale-aware one itself — a caller-supplied
+ * `key` is omitted because this composable builds a locale-aware one itself: a caller-supplied
  * key would defeat the per-locale cache separation that is the reason this wrapper exists.
  *
  * `method` is omitted because this is the read path. The split at the top of this module is the
@@ -71,11 +68,11 @@ type KeysOf<T> = Array<T extends T ? keyof T extends string ? keyof T : never : 
  * fixing it at `get` is what lets the `useFetch` call below pin its type parameters at all.
  */
 export interface UseApiOptions<T> extends Omit<UseFetchOptions<T>, 'key' | 'query' | 'watch' | 'default' | 'method'> {
-  /** Query parameters — reactive or static. */
+  /** Query parameters: reactive or static. */
   query?: MaybeRefOrGetter<Record<string, unknown>>
   /**
    * Additional sources to watch for automatic re-fetch, or `false` to disable watching
-   * entirely. `false` suppresses the locale and query watchers this composable adds too — it
+   * entirely. `false` suppresses the locale and query watchers this composable adds too: it
    * means "fetch once", which is the only reading under which it is worth passing.
    */
   watch?: MultiWatchSources | false
@@ -112,7 +109,7 @@ interface ThrownStatus {
   status?: number
 }
 
-/** The two shapes {@link useApi} answers in — see the module note for why they are separate. */
+/** The two shapes {@link useApi} answers in: see the module note for why they are separate. */
 interface UseApi {
   /**
    * Reads an endpoint whose data is guaranteed present, because a `default` factory supplies
@@ -137,12 +134,12 @@ interface UseApi {
 /**
  * The shared implementation behind {@link useApi}'s two overloads.
  *
- * Declared with the honest return type — data may be absent — because that is what is true
+ * Declared with the honest return type, data may be absent, because that is what is true
  * when no `default` factory is supplied. The `default` case is expressed by the overload, not
  * by this signature; see the note on {@link useApi}.
  *
  * The return type is left to inference rather than annotated. `useFetch` describes its data as
- * `PickFrom<T, KeysOf<T>>`, which only reduces to `T` once `T` is a concrete type — that is, at
+ * `PickFrom<T, KeysOf<T>>`, which only reduces to `T` once `T` is a concrete type: that is, at
  * a call site, not here. Annotating it would mean asserting the reduction while `T` is still a
  * parameter; letting it infer means every caller gets the reduced form for free.
  *
@@ -165,7 +162,7 @@ const request = <T>(
 
   const key = `api:${locale.value}:${toValue(url)}:${JSON.stringify(toValue(query) ?? {})}`
 
-  // `watch: false` is not a list of extra sources, it is "do not watch anything" — and it has
+  // `watch: false` is not a list of extra sources, it is "do not watch anything", and it has
   // to be handled before the spread rather than with `?? []`, which only catches null and
   // undefined. Spreading `false` throws "is not iterable" at runtime, so a caller passing the
   // documented value would have crashed the render.
@@ -175,7 +172,7 @@ const request = <T>(
 
   // The type arguments are spelled out as far as `_ResT` on purpose. Left to inference,
   // `useFetch` computes `_ResT` as `T extends void ? unknown : T`, a conditional it cannot
-  // resolve while `T` is still a type parameter — so `default: () => T` matches neither
+  // resolve while `T` is still a type parameter, so `default: () => T` matches neither
   // overload and the whole call falls back to an unresolved `DataT`. That is the failure this
   // module's note describes. Pinning `_ResT = T` lets both the option and the result reduce.
   return useFetch<T, FetchError, string, 'get', string, string, T, T, KeysOf<T>, T | undefined>(resolvedUrl, {
@@ -207,24 +204,24 @@ export const useApi = request as UseApi
 /**
  * One-shot API fetch for event handlers and Pinia stores.
  *
- * On 401 (session truly expired — server-side refresh already failed),
+ * On 401 (session truly expired: server-side refresh already failed),
  * delegates to the global auth guard plugin to clear state and redirect.
  *
  * @param url - API endpoint URL
- * @param opts - $fetch options
+ * @param opts - $fetch options, the verb taken from {@link ApiFetchOptions}'s closed set
  * @returns Parsed response data
  * @throws Whatever `$fetch` throws; a 401 is re-thrown after the auth guard has run.
  */
 export const apiFetch = async <T = unknown>(
   url: string,
-  opts: Parameters<typeof $fetch>[1] = {}
+  opts: ApiFetchOptions = {}
 ): Promise<T> => {
   let locale: string = DEFAULT_APP_LOCALE
   try {
     locale = (useNuxtApp().$i18n as LocaleHolder).locale.value
   }
   catch {
-    // No Nuxt instance — a unit test, or a call from outside a render. `en` is the right answer.
+    // No Nuxt instance: a unit test, or a call from outside a render. `en` is the right answer.
   }
 
   // During SSR a bare `$fetch` calls the server route without the visitor's cookies, so a
@@ -232,13 +229,15 @@ export const apiFetch = async <T = unknown>(
   // forwards them, which is what `useFetch` (and so `useApi`) already does.
   //
   // The browser branch reads `globalThis.$fetch` at call time on purpose. A bare `$fetch` used as a
-  // value is bound once, when the module loads, to the original function -- before the
-  // `csrf-header` plugin replaces the global -- so every state-changing call went out without
-  // `X-Requested-With` and the server refused it with 403.
+  // value is bound once, when the module loads, to the original function, before the
+  // `csrf-header` plugin replaces the global, so every state-changing call would go out without
+  // `X-Requested-With` and the server would refuse it with 403.
   const fetcher = (import.meta.server ? useRequestFetch() : globalThis.$fetch) as typeof $fetch
 
   try {
-    return await fetcher<T>(url, {
+    // The request type is stated as a plain `string`, so the reply is the caller's `T` rather than
+    // a union over every Nitro route `$fetch` would otherwise type it as.
+    return await fetcher<T, string>(url, {
       ...opts,
       headers: {
         [LANGUAGE_HEADER]: resolveLanguage(locale),

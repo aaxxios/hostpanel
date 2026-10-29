@@ -1,16 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Faqs.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Faqs;
 
 /// <summary>
-/// Integration tests for the <c>ListActiveFaqs</c> use case — <c>GET /api/public/faqs</c>, the public
+/// Integration tests for the <c>ListActiveFaqs</c> use case: <c>GET /api/public/faqs</c>, the public
 /// storefront feed. Anonymous: the storefront needs it before anyone has signed in.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>

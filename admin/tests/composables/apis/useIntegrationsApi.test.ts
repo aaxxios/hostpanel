@@ -40,14 +40,11 @@ describe('useIntegrationsApi', () => {
     expect(callOf(mock)).toMatchObject({ url: '/api/admin/integrations/stripe/test', method: 'POST' })
   })
 
-  it('getCwpServerInfo and getCwp7ServerInfo read their server-info endpoints', async () => {
+  it('getCwpServerInfo reads the CWP server-info endpoint', async () => {
     const mock = stubFetch(json({}))
-    const api = useIntegrationsApi()
 
-    await api.getCwpServerInfo()
-    await api.getCwp7ServerInfo()
-    expect(callOf(mock, 0).url).toBe('/api/admin/integrations/cwp/server-info')
-    expect(callOf(mock, 1).url).toBe('/api/admin/integrations/cwp7/server-info')
+    await useIntegrationsApi().getCwpServerInfo()
+    expect(callOf(mock).url).toBe('/api/admin/integrations/cwp/server-info')
   })
 
   it('rejects when the API refuses', async () => {

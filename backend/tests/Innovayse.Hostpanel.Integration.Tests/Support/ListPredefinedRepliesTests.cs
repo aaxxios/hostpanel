@@ -1,7 +1,4 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -9,7 +6,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// <c>GET /api/predefined-replies</c>: an admin can list predefined replies, optionally filtered
 /// by category, and the list is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>PredefinedRepliesEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListPredefinedRepliesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

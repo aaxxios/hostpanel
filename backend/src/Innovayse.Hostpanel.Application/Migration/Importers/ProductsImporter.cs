@@ -8,43 +8,71 @@ using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Application.Migration.Importers;
 
 /// <summary>
 /// Imports product groups (creating any this install does not already have, matched by name),
-/// then products deduplicated by name against this install's base currency. Split out of
-/// <c>MigrationPullWorker</c> (A6 Task 6).
+/// then products deduplicated by name against this install's base currency.
 /// </summary>
-/// <param name="context">The module's data context.</param>
-/// <param name="uow">Unit of work the imported group or product is saved through.</param>
-/// <param name="pager">Pages through the source plugin's <c>product_groups</c> and <c>products</c> datasets.</param>
-/// <param name="logWriter">Writes one migration log row per product record.</param>
-/// <param name="productLookup">Loads the products a record's name is deduplicated against.</param>
-/// <param name="payerCurrency">Decides the base currency an imported product prices into.</param>
-/// <param name="logger">Logs a skipped or failed record.</param>
-public sealed class ProductsImporter(
-    IHostpanelDbContext context,
-    IUnitOfWork uow,
-    MigrationRecordPager pager,
-    MigrationLogWriter logWriter,
-    MigrationProductLookup productLookup,
-    IPayerCurrencyResolver payerCurrency,
-    ILogger<ProductsImporter> logger) : IMigrationEntityImporter
+public sealed class ProductsImporter : IMigrationEntityImporter
 {
+    /// <summary>The module's data context.</summary>
+    private readonly IHostpanelDbContext _context;
+
+    /// <summary>Pages through the source plugin's <c>product_groups</c> and <c>products</c> datasets.</summary>
+    private readonly MigrationRecordPager _pager;
+
+    /// <summary>Pages through each record dataset and records each record's outcome.</summary>
+    private readonly MigrationRecordRunner _runner;
+
+    /// <summary>Loads the products a record's name is deduplicated against.</summary>
+    private readonly MigrationProductLookup _productLookup;
+
+    /// <summary>Decides the base currency an imported product prices into.</summary>
+    private readonly IPayerCurrencyResolver _payerCurrency;
+
+    /// <summary>Reads the moment each product is imported.</summary>
+    private readonly IClock _clock;
+
+    /// <summary>Initializes a new instance of the <see cref="ProductsImporter"/> class.</summary>
+    /// <param name="context">The module's data context.</param>
+    /// <param name="pager">Pages through the source plugin's <c>product_groups</c> and <c>products</c> datasets.</param>
+    /// <param name="runner">Pages through each record dataset and records each record's outcome.</param>
+    /// <param name="productLookup">Loads the products a record's name is deduplicated against.</param>
+    /// <param name="payerCurrency">Decides the base currency an imported product prices into.</param>
+    /// <param name="clock">Reads the moment each product is imported.</param>
+    public ProductsImporter(
+        IHostpanelDbContext context,
+        MigrationRecordPager pager,
+        MigrationRecordRunner runner,
+        MigrationProductLookup productLookup,
+        IPayerCurrencyResolver payerCurrency,
+        IClock clock)
+    {
+        _context = context;
+        _pager = pager;
+        _runner = runner;
+        _productLookup = productLookup;
+        _payerCurrency = payerCurrency;
+        _clock = clock;
+    }
+
+    /// <inheritdoc/>
+    public MigrationEntityType EntityType => MigrationEntityType.Products;
+
     /// <inheritdoc/>
     public async Task ImportAsync(MigrationJob job, CancellationToken ct)
     {
         // Step 1: fetch all product groups, create missing ones, build sourceId→localId map
-        // Was IProductGroupRepository.ListAsync -- read-only, so no tracking is needed.
-        var localGroups = await context.ProductGroups
+        var localGroups = await _context.ProductGroups
             .AsNoTracking()
             .Include(g => g.Products)
             .OrderBy(g => g.Name)
             .ToListAsync(ct);
         var groupIdMap = new Dictionary<int, int>(); // sourceId → localGroupId
 
-        await foreach (var page in pager.PagesAsync<ProductGroupRecord>(job, "product_groups", ct))
+        await foreach (var page in _pager.PagesAsync<ProductGroupRecord>(job, "product_groups", ct))
         {
             foreach (var grp in page)
             {
@@ -58,79 +86,68 @@ public sealed class ProductsImporter(
                 else
                 {
                     var newGroup = ProductGroup.Create(grp.Name, grp.Description);
-                    context.ProductGroups.Add(newGroup);
-                    await uow.SaveChangesAsync(ct);
+                    _context.ProductGroups.Add(newGroup);
+                    await _context.SaveChangesAsync(ct);
                     groupIdMap[grp.Id] = newGroup.Id;
                 }
             }
         }
 
         // Step 2: page through products
-        int imported = 0, skipped = 0;
-        var allProducts = await productLookup.LoadAllProductsAsync(ct);
-        var baseCurrency = (await payerCurrency.BaseAsync(ct)).Code;
+        var allProducts = await _productLookup.LoadAllProductsAsync(ct);
+        var baseCurrency = (await _payerCurrency.BaseAsync(ct)).Code;
 
-        await foreach (var page in pager.PagesAsync<ProductRecord>(job, "products", ct))
+        await _runner.RunAsync(new MigrationRecordRun<ProductRecord>(job, EntityType, "products", ImportProductAsync), ct);
+
+        // One record of the dataset; the runner counts, logs and isolates its outcome.
+        async Task<RecordImportResult> ImportProductAsync(ProductRecord rec, CancellationToken ct)
         {
-            foreach (var rec in page)
+            if (MigrationProductLookup.FindByName(allProducts, rec.Name) is not null)
             {
-                try
-                {
-                    var exists = allProducts.Any(p =>
-                        string.Equals(p.Name, rec.Name, StringComparison.OrdinalIgnoreCase));
-
-                    if (exists)
-                    {
-                        await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Products, rec.Name, ImportOutcome.Skipped, "Product already exists", ct);
-                        skipped++;
-                        continue;
-                    }
-
-                    if (!groupIdMap.TryGetValue(rec.GroupId, out var localGroupId))
-                    {
-                        await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Products, rec.Name, ImportOutcome.Skipped, $"Group {rec.GroupId} not resolved", ct);
-                        skipped++;
-                        continue;
-                    }
-
-                    // The source install is single-currency, so its two figures become the
-                    // product's prices in this install's base currency. The legacy columns get
-                    // the same figures for the rollback release.
-                    var product = Product.Create(
-                        localGroupId,
-                        rec.Name,
-                        rec.Description,
-                        null,
-                        null,
-                        null,
-                        MapProductType(rec.Type),
-                        rec.MonthlyPrice,
-                        rec.AnnualPrice);
-                    product.SetPrice(baseCurrency, BillingCycle.Monthly, rec.MonthlyPrice);
-                    product.SetPrice(baseCurrency, BillingCycle.Annual, rec.AnnualPrice);
-
-                    context.Products.Add(product);
-                    await uow.SaveChangesAsync(ct);
-                    imported++;
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Products, rec.Name, ImportOutcome.Imported, null, ct);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Skipped product '{Name}' during migration", rec.Name);
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Products, rec.Name, ImportOutcome.Failed, ex.Message, ct);
-                }
+                return RecordImportResult.Skipped(MigrationSkipReason.AlreadyExists);
             }
 
-            job.UpdateProgress(MigrationEntityType.Products, imported, skipped);
-            await uow.SaveChangesAsync(ct);
+            if (!groupIdMap.TryGetValue(rec.GroupId, out var localGroupId))
+            {
+                return RecordImportResult.Skipped(MigrationSkipReason.ProductGroupNotFound);
+            }
+
+            // The source sends its prices in its default currency, so its two figures become
+            // the product's prices in this install's base currency. A cycle the source does not
+            // sell gets no price row, so it is not offered here either. The legacy columns get
+            // the same figures, zero for an unsold cycle, for the rollback release.
+            var product = Product.Create(
+                localGroupId,
+                rec.Name,
+                rec.Description,
+                null,
+                null,
+                null,
+                MapProductType(rec.Type),
+                rec.MonthlyPrice ?? 0m,
+                rec.AnnualPrice ?? 0m,
+                _clock.UtcNow);
+            if (rec.MonthlyPrice is { } monthlyPrice)
+            {
+                product.SetPrice(baseCurrency, BillingCycle.Monthly, monthlyPrice);
+            }
+
+            if (rec.AnnualPrice is { } annualPrice)
+            {
+                product.SetPrice(baseCurrency, BillingCycle.Annual, annualPrice);
+            }
+
+            _context.Products.Add(product);
+            await _context.SaveChangesAsync(ct);
+            return RecordImportResult.Imported;
         }
     }
 
     /// <summary>
     /// Maps a source-system product `type` column value to the closest <see cref="ProductType"/>.
     /// The source system's type is a provisioning-module category, not a marketing category, so this
-    /// only recognizes the one value with an unambiguous match; everything else — custom
-    /// SaaS products, "other", "server", "reselleraccount" — stays <see cref="ProductType.Other"/>
+    /// only recognizes the one value with an unambiguous match; everything else, custom
+    /// SaaS products, "other", "server", "reselleraccount", stays <see cref="ProductType.Other"/>
     /// rather than guessing at Vps/Dedicated/Ssl/Domain from a string that doesn't carry that
     /// information.
     /// </summary>

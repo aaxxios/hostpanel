@@ -1,9 +1,8 @@
 /**
  * The name this storefront calls itself by, set by the operator.
  *
- * The operator's name used to be written into `nuxt.config.ts`, `useSchemaOrg.ts` and every
- * logo's `alt`; now it comes only from the `portal.site.name` setting or its runtime-config
- * fallback. An install that has set neither shows the neutral product name, never an operator's.
+ * The name comes only from the `portal.site.name` setting or its runtime-config fallback,
+ * never from a literal in the code. An install that has set neither shows the neutral product name, never an operator's.
  */
 
 import { PortalSettingKey } from '~/constants/portalSettingKey'

@@ -31,8 +31,8 @@ const { default: Page } = await import('~/pages/announcements/index.vue')
 /** Two announcements in different months. */
 const TWO_MONTHS = {
   items: [
-    { id: 11, title: 'Maintenance window', excerpt: 'Short outage', date: '2026-03-15T12:00:00Z', body: '<p>x</p>' },
-    { id: 12, title: 'New data centre', excerpt: 'More capacity', date: '2026-02-10T12:00:00Z', body: '<p>y</p>' },
+    { id: 11, title: 'Maintenance window', publishedAt: '2026-03-15T12:00:00Z', content: '<p>x</p>' },
+    { id: 12, title: 'New data centre', publishedAt: '2026-02-10T12:00:00Z', content: '<p>y</p>' },
   ],
 }
 
@@ -66,7 +66,6 @@ describe('pages/announcements/index', () => {
     const first = wrapper.find('[data-testid="announcement-11"]')
     expect(first.attributes('href')).toBe('/en/announcements/11')
     expect(first.text()).toContain('Maintenance window')
-    expect(first.text()).toContain('Short outage')
     expect(first.text()).toContain('Mar 15, 2026')
     expect(wrapper.findAll('[data-testid^="announcement-"]')).toHaveLength(2)
   })

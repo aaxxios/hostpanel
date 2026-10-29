@@ -1,8 +1,8 @@
 /**
  * Whether a domain is close to its expiry date.
  *
- * Shared by the domain list and the domain detail page, which each had a private copy that
- * disagreed on the sentinel for "no date" and on whether the last day counts.
+ * Shared by the domain list and the domain detail page, so they agree on the sentinel for
+ * "no date" and on whether the last day counts.
  *
  * @module utils/domainExpiry
  */

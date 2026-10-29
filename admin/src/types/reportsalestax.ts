@@ -1,13 +1,17 @@
+import type { PaginatedList } from '@/types/paginatedlist'
+
 /** One invoice of the sales tax report. */
 export interface ReportSalesTaxRow {
   /** Invoice id. */
   id: number
   /** Client name. */
   clientName: string
-  /** Invoice date. */
+  /** Day raised, `yyyy-MM-dd`. */
   invoiceDate: string
-  /** Date paid, when paid. */
-  datePaid: string | null
+  /** Day paid, `yyyy-MM-dd`. */
+  datePaid: string
+  /** ISO 4217 code every amount on the row is in. */
+  currency: string
   /** Sub total. */
   subTotal: number
   /** Tax. */
@@ -18,16 +22,22 @@ export interface ReportSalesTaxRow {
   total: number
 }
 
+/** The sales tax totals of one invoice currency. */
+export interface ReportSalesTaxTotal {
+  /** ISO 4217 code. */
+  currency: string
+  /** Number of invoices paid in the period. */
+  totalInvoices: number
+  /** Sum of their totals. */
+  totalInvoiced: number
+  /** Sum of their tax. */
+  taxLiability: number
+}
+
 /** The sales tax report. */
 export interface ReportSalesTax {
-  /** Number of invoices found. */
-  totalInvoices: number
-  /** Sum invoiced. */
-  totalInvoiced: number
-  /** Liability at the first tax level. */
-  taxLevel1Liability: number
-  /** Liability at the second tax level. */
-  taxLevel2Liability: number
-  /** The invoices. */
-  rows: ReportSalesTaxRow[]
+  /** Totals per currency over every matching invoice. */
+  totals: ReportSalesTaxTotal[]
+  /** One page of the invoices, in the order they were paid. */
+  rows: PaginatedList<ReportSalesTaxRow>
 }

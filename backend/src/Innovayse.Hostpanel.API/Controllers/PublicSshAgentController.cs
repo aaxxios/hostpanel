@@ -17,13 +17,14 @@ namespace Innovayse.Hostpanel.API.Controllers;
 /// the value the administrator copied from the authenticated admin panel.
 /// </summary>
 [Route("api/public/ssh-agent")]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class PublicSshAgentController : BaseApiController
 {
-    /// <summary>Wolverine bus.</summary>
+    /// <summary>Wolverine bus the action dispatches through.</summary>
     private readonly IMessageBus _bus;
 
     /// <summary>Initialises the controller.</summary>
-    /// <param name="bus">Wolverine bus.</param>
+    /// <param name="bus">Wolverine bus the action dispatches through.</param>
     public PublicSshAgentController(IMessageBus bus)
     {
         _bus = bus;
@@ -31,11 +32,11 @@ public sealed class PublicSshAgentController : BaseApiController
 
     /// <summary>Downloads the agent bundle this HostPanel build ships.</summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The <c>.tar.gz</c>.</returns>
+    /// <returns>200 with the <c>.tar.gz</c>; 429 when the rate limit is hit.</returns>
     [HttpGet("bundle.tar.gz")]
     [AllowAnonymous]
     [EnableRateLimiting(RateLimitPolicies.Upstream)]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetBundleAsync(CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<FileDownloadDto>>(new GetSshAgentBundleQuery(), ct);

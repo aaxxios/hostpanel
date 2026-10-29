@@ -5,12 +5,12 @@
  *
  * The store owns every in-flight flag and every failure sentence, so a page only renders them
  * and branches on the returned {@link DomainActionOutcome}; no page wraps an API call in
- * try/catch. Sentences come from `lib/errorHandler.ts` -- the wording is the API's own.
+ * try/catch. Sentences come from `lib/errorHandler.ts`: the wording is the API's own.
  *
- * It also owns the storefront's domain lookup -- the TLD price rows, their categories and the
- * availability search across the offered extensions -- on top of the price table that
+ * It also owns the storefront's domain lookup (the TLD price rows, their categories and the
+ * availability search across the offered extensions) on top of the price table that
  * `stores/catalog.ts` reads. Prices are quoted in the payer's own currency, never the page's
- * language; see `docs/superpowers/specs/2026-09-13-multi-currency-pricing-design.md` §5.
+ * language.
  *
  * URLs and transport belong to {@link useDomainsApi}, {@link useCatalogApi} and
  * {@link useBillingApi}; this store owns only the state.
@@ -30,12 +30,15 @@ import { DomainResultStatus } from '~/templates/aurora/types/domainresultstatus'
 import type { DomainResult } from '~/templates/aurora/types/domainresult'
 import type { DomainCheckResult } from '~/types/domaincheckresult'
 import type { TldPriceRow } from '~/types/tldpricerow'
+import type { TldPeriodPrice } from '~/types/tldperiodprice'
+import { ONE_YEAR, priceForYears } from '~/utils/tldPeriodPrice'
 import { EMPTY_AMOUNT } from '~/utils/formatCurrency'
 import { formatMoney } from '~/utils/formatMoney'
 import { contactFromRegistrant } from '~/utils/domainContacts'
 import { DomainActionOutcome } from '~/types/domainactionoutcome'
-import type { DomainNameserver } from '~/types/domainnameserver'
+import { ProductType } from '~/types/producttype'
 import type { AccountContact } from '~/types/accountcontact'
+import type { ClientUser } from '~/types/clientuser'
 import type { DomainContactFields } from '~/types/domaincontactfields'
 import type { DomainDetail } from '~/types/domaindetail'
 import type { WhoisRecord } from '~/types/whoisrecord'
@@ -106,30 +109,30 @@ export const useDomainsStore = defineStore('domains', () => {
   const rowCurrency = computed(() =>
     currencyStore.moneyCurrencyFor(catalogStore.tldPricing?.currency?.code))
 
-  /** Currency code the prices are quoted in, as the API reports it -- the payer's own currency. */
+  /** Currency code the prices are quoted in, as the API reports it: the payer's own currency. */
   const currencyCode = computed(() => catalogStore.tldPricing?.currency?.code ?? '')
 
   /**
-   * Formats a price from the period-keyed map, falling back to a dash.
+   * Formats the one-year price of an action, falling back to a dash.
    *
-   * @param map - Period-keyed price map as the API returned it.
+   * @param prices - The action's price list as the API returned it.
    * @returns The one-year price formatted in the row currency, or a dash.
    */
-  const oneYear = (map: Record<string, string> | undefined): string => {
-    const value = map?.['1']
-    return value ? formatMoney(parseFloat(value), rowCurrency.value) : EMPTY_AMOUNT
+  const oneYear = (prices: TldPeriodPrice[] | undefined): string => {
+    const amount = priceForYears(prices, ONE_YEAR)
+    return amount === null ? EMPTY_AMOUNT : formatMoney(amount, rowCurrency.value)
   }
 
   /** Every priced extension, for the full price table. */
   const priceRows = computed<TldPriceRow[]>(() =>
-    Object.entries(catalogStore.tldPricing?.pricing ?? {}).map(([tld, entry]) => ({
-      tld: tld.startsWith('.') ? tld : `.${tld}`,
-      register: oneYear(entry?.register),
-      renew: oneYear(entry?.renew ?? entry?.register),
-      transfer: oneYear(entry?.transfer ?? entry?.register),
-      categories: entry?.categories ?? [],
-      registerAmount: Number(entry?.register?.['1'] ?? 0) || 0,
-      sellCurrency: entry?.sellCurrency ?? '',
+    (catalogStore.tldPricing?.pricing ?? []).map(entry => ({
+      tld: entry.tld.startsWith('.') ? entry.tld : `.${entry.tld}`,
+      register: oneYear(entry.register),
+      renew: oneYear(entry.renew ?? entry.register),
+      transfer: oneYear(entry.transfer ?? entry.register),
+      categories: entry.categories ?? [],
+      registerAmount: priceForYears(entry.register, ONE_YEAR) ?? 0,
+      sellCurrency: entry.sellCurrency,
     })))
 
   /**
@@ -221,14 +224,14 @@ export const useDomainsStore = defineStore('domains', () => {
   }
 
   /** The account's primary profile the WHOIS form is pre-filled from; null until asked for. */
-  const primaryProfile = ref<Record<string, string> | null>(null)
+  const primaryProfile = ref<ClientUser | null>(null)
 
   /**
    * Reads the account's primary profile once; later calls reuse the answer.
    *
    * @returns The profile, or null when it could not be read.
    */
-  const loadPrimaryProfile = async (): Promise<Record<string, string> | null> => {
+  const loadPrimaryProfile = async (): Promise<ClientUser | null> => {
     if (!primaryProfile.value) {
       try {
         primaryProfile.value = await client.fetchMeOnce()
@@ -271,8 +274,8 @@ export const useDomainsStore = defineStore('domains', () => {
    */
   const fetchDomainProductId = async (): Promise<number | null> => {
     try {
-      const products = await catalog.fetchProducts<{ id: number, type: string }>()
-      return products.find(p => p.type === 'Domain')?.id ?? null
+      const products = await catalog.fetchProducts()
+      return products.find(p => p.type === ProductType.Domain)?.id ?? null
     } catch {
       return null
     }
@@ -430,9 +433,6 @@ export const useDomainsStore = defineStore('domains', () => {
 
   // -- Nameservers ------------------------------------------------------------------------
 
-  /** Whether the nameservers are being read. */
-  const nsLoading = ref(false)
-
   /** Whether the nameservers are being saved. */
   const nsSaving = ref(false)
 
@@ -440,24 +440,9 @@ export const useDomainsStore = defineStore('domains', () => {
   const nsError = ref('')
 
   /**
-   * Reads the domain's nameservers.
-   *
-   * @param id - Domain id.
-   * @returns The nameservers; empty when they could not be read, so the form stays blank.
-   */
-  const loadNameservers = async (id: string): Promise<DomainNameserver[]> => {
-    nsLoading.value = true
-    try {
-      return await api.fetchNameservers<DomainNameserver>(id)
-    } catch {
-      return []
-    } finally {
-      nsLoading.value = false
-    }
-  }
-
-  /**
-   * Replaces the domain's nameservers.
+   * Replaces the domain's nameservers. The nameservers themselves are read from
+   * {@link domain}'s `management`, so after a save the domain is read again, without clearing
+   * it, to keep that list the one the registrar now holds.
    *
    * @param id - Domain id.
    * @param nameservers - The complete list to set.
@@ -468,13 +453,20 @@ export const useDomainsStore = defineStore('domains', () => {
     nsError.value = ''
     try {
       await api.setNameservers(id, nameservers)
-      return DomainActionOutcome.Done
     } catch (e: unknown) {
       nsError.value = apiErrorMessage(e)
+      nsSaving.value = false
       return DomainActionOutcome.Failed
+    }
+    try {
+      domain.value = await api.fetchDomain(id)
+    } catch {
+      // The save itself succeeded; a failed re-read only leaves the previous copy in place, and
+      // the form still shows what was just saved, so it is not reported as a failed save.
     } finally {
       nsSaving.value = false
     }
+    return DomainActionOutcome.Done
   }
 
   // -- EPP code ---------------------------------------------------------------------------
@@ -643,10 +635,8 @@ export const useDomainsStore = defineStore('domains', () => {
     setAutoRenew,
     setLock,
     setIdProtect,
-    nsLoading,
     nsSaving,
     nsError,
-    loadNameservers,
     saveNameservers,
     eppSending,
     eppCode,

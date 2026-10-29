@@ -111,7 +111,7 @@ export const useTldConfigsStore = defineStore('tldConfigs', () => {
   /**
    * Imports TLDs from a registrar provider and refreshes the list.
    *
-   * @param module - Registrar module name (e.g. "NameAm", "Namecheap").
+   * @param module - Registrar module name, as the backend's registrar module enum spells it.
    * @returns Import result with counts, or null when refused (see `actionError`).
    */
   const importFromProvider = async (module: string): Promise<TldImportResult | null> => {

@@ -1,14 +1,14 @@
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment;
-using Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment.Enums;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Clients;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Infrastructure;
 using Innovayse.SDK.Plugins;
 using Innovayse.SDK.Plugins.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -17,7 +17,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -29,10 +28,10 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// </summary>
 /// <remarks>
 /// The two concurrent-writer races are kept as direct handler calls through a DI scope: making two real HTTP requests race
-/// each other onto the same row reliably enough for a unit test is not achievable — the race is
+/// each other onto the same row reliably enough for a unit test is not achievable, so the race is
 /// manufactured here instead, a second <see cref="Innovayse.Hostpanel.Infrastructure.Persistence.AppDbContext"/>
 /// changing the row between this handler's read and its write, which is exactly what
-/// <c>DbUpdateConcurrencyException</c> guards against. The ownership boundary itself is
+/// <c>ConcurrencyConflictException</c> guards against. The ownership boundary itself is
 /// <see cref="CompleteMyGatewayPaymentTests"/>'s.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -44,7 +43,7 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
     private WebApplicationFactory<Program> BuildHost(FakePaymentPluginResolver resolver) =>
         factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
-                services.AddScoped<IPaymentPluginResolver>(_ => resolver)));
+                services.AddSingleton<IPaymentPluginResolver>(resolver)));
 
     /// <summary>Creates an invoice for <paramref name="clientId"/> and starts a gateway session on it.</summary>
     /// <param name="host">The host to create the invoice against.</param>
@@ -78,7 +77,7 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
     [Fact]
     public async Task GatewaySaysPaidMarksPaidWithGatewayTransaction()
     {
-        var plugin = new FakePaymentPlugin { StatusResult = new(GatewayPaymentState.Paid, "ref-9", "orderStatus:2") };
+        var plugin = new FakePaymentPlugin { StatusResult = new(GatewayPaymentState.Paid, "ref-9", "orderStatus:2", AmountMinor: 1000) };
         var resolver = new FakePaymentPluginResolver();
         resolver.Register("bank-gateway", plugin);
         var host = BuildHost(resolver);
@@ -89,15 +88,15 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("state").GetString().Should().Be("paid");
+        body.GetProperty("state").GetString().Should().Be(nameof(GatewayCompletionState.Paid));
 
         var admin = await BillingTestSeeds.AdminClientAsync(factory, host);
         var fetched = await admin.GetAsync($"/api/billing/{invoiceId}");
         using var fetchedBody = JsonDocument.Parse(await fetched.Content.ReadAsStringAsync());
         fetchedBody.RootElement.GetProperty("status").GetString().Should().Be(nameof(InvoiceStatus.Paid));
-        fetchedBody.RootElement.GetProperty("gatewayTransactionId").GetString().Should().Be("ref-9");
+        fetchedBody.RootElement.GetProperty("payment").GetProperty("gatewayTransactionId").GetString().Should().Be("ref-9");
 
-        // The client ledger row is written inline by the handler, once -- no event handler repeats it.
+        // The client ledger row is written inline by the handler, once; no event handler repeats it.
         using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var ledger = await context.Transactions
@@ -109,11 +108,59 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
         ledger[0].AmountIn.Should().Be(10m);
     }
 
+    /// <summary>
+    /// A gateway that reports a paid amount other than what the invoice owes is refused with
+    /// <c>GATEWAY_PAYMENT_MISMATCH</c> and the invoice stays unpaid.
+    /// </summary>
+    [Fact]
+    public async Task GatewayReportingAnotherAmountIsRefused()
+    {
+        var plugin = new FakePaymentPlugin
+        {
+            StatusResult = new(GatewayPaymentState.Paid, "ref-9", "orderStatus:2", AmountMinor: 500),
+        };
+        var resolver = new FakePaymentPluginResolver();
+        resolver.Register("bank-gateway", plugin);
+        var host = BuildHost(resolver);
+        var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "gw-complete-mismatch");
+        var invoiceId = await CreateInvoiceWithSessionAsync(host, client, clientId, plugin);
+
+        var response = await CompleteAsync(client, invoiceId);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.GATEWAY_PAYMENT_MISMATCH);
+        var admin = await BillingTestSeeds.AdminClientAsync(factory, host);
+        var fetched = await admin.GetAsync($"/api/billing/{invoiceId}");
+        using var fetchedBody = JsonDocument.Parse(await fetched.Content.ReadAsStringAsync());
+        fetchedBody.RootElement.GetProperty("status").GetString().Should().Be(nameof(InvoiceStatus.Unpaid));
+    }
+
+    /// <summary>A gateway that reports exactly the amount owed completes the payment.</summary>
+    [Fact]
+    public async Task GatewayReportingTheOwedAmountMarksPaid()
+    {
+        var plugin = new FakePaymentPlugin
+        {
+            StatusResult = new(GatewayPaymentState.Paid, "ref-9", "orderStatus:2", AmountMinor: 1000),
+        };
+        var resolver = new FakePaymentPluginResolver();
+        resolver.Register("bank-gateway", plugin);
+        var host = BuildHost(resolver);
+        var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "gw-complete-match");
+        var invoiceId = await CreateInvoiceWithSessionAsync(host, client, clientId, plugin);
+
+        var response = await CompleteAsync(client, invoiceId);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("state").GetString().Should().Be(nameof(GatewayCompletionState.Paid));
+    }
+
     /// <summary>An already-paid invoice answers Paid again without ever asking the gateway a second time.</summary>
     [Fact]
     public async Task AlreadyPaidIsIdempotentWithoutASecondGatewayCall()
     {
-        var plugin = new FakePaymentPlugin { StatusResult = new(GatewayPaymentState.Paid, "ref-9", "orderStatus:2") };
+        var plugin = new FakePaymentPlugin { StatusResult = new(GatewayPaymentState.Paid, "ref-9", "orderStatus:2", AmountMinor: 1000) };
         var resolver = new FakePaymentPluginResolver();
         resolver.Register("bank-gateway", plugin);
         var host = BuildHost(resolver);
@@ -126,11 +173,11 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("state").GetString().Should().Be("paid");
+        body.GetProperty("state").GetString().Should().Be(nameof(GatewayCompletionState.Paid));
         plugin.GetStatusCallCount.Should().Be(callsAfterFirstComplete);
     }
 
-    /// <summary>A gateway session still pending leaves the invoice unpaid and answers "pending".</summary>
+    /// <summary>A gateway session still pending leaves the invoice unpaid and answers Pending.</summary>
     [Fact]
     public async Task PendingLeavesTheInvoiceUnpaid()
     {
@@ -144,7 +191,7 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
         var response = await CompleteAsync(client, invoiceId);
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("state").GetString().Should().Be("pending");
+        body.GetProperty("state").GetString().Should().Be(nameof(GatewayCompletionState.Pending));
 
         var admin = await BillingTestSeeds.AdminClientAsync(factory, host);
         var fetched = await admin.GetAsync($"/api/billing/{invoiceId}");
@@ -152,7 +199,7 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
         fetchedBody.RootElement.GetProperty("status").GetString().Should().Be(nameof(InvoiceStatus.Unpaid));
     }
 
-    /// <summary>A declined gateway session leaves the invoice unpaid and answers "declined".</summary>
+    /// <summary>A declined gateway session leaves the invoice unpaid and answers Declined.</summary>
     [Fact]
     public async Task DeclinedLeavesTheInvoiceUnpaid()
     {
@@ -166,7 +213,7 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
         var response = await CompleteAsync(client, invoiceId);
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("state").GetString().Should().Be("declined");
+        body.GetProperty("state").GetString().Should().Be(nameof(GatewayCompletionState.Declined));
     }
 
     /// <summary>
@@ -181,32 +228,34 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
     {
         var invoiceId = await SeedInvoiceWithSessionDirectlyAsync();
         var resolver = new FakePaymentPluginResolver();
-        var plugin = new FakePaymentPlugin { StatusResult = new(GatewayPaymentState.Paid, "ref-9", "orderStatus:2") };
+        var plugin = new FakePaymentPlugin { StatusResult = new(GatewayPaymentState.Paid, "ref-9", "orderStatus:2", AmountMinor: 1000) };
         resolver.Register("bank-gateway", plugin);
 
         using var readerScope = factory.Services.CreateScope();
         var readerContext = readerScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = readerScope.ServiceProvider.GetRequiredService<IMessageBus>();
         var handler = new CompleteGatewayPaymentHandler(
-            readerContext, resolver, bus, NullLogger<CompleteGatewayPaymentHandler>.Instance);
+            readerContext, resolver, bus, NullLogger<CompleteGatewayPaymentHandler>.Instance,
+            readerScope.ServiceProvider.GetRequiredService<IClock>(),
+            readerScope.ServiceProvider.GetRequiredService<IClientCredit>());
 
         // Loads the same row the handler is about to load, then wins the race by saving first.
         using (var winnerScope = factory.Services.CreateScope())
         {
             var winnerContext = winnerScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
             var winnerInvoice = await winnerContext.Invoices.FirstAsync(i => i.Id == invoiceId);
-            winnerInvoice.MarkPaidViaGateway("ref-9");
+            winnerInvoice.Settle("bank-gateway", "ref-9", DateTimeOffset.UtcNow);
             await winnerContext.SaveChangesAsync(CancellationToken.None);
         }
 
         var result = await handler.HandleAsync(new CompleteGatewayPaymentCommand(invoiceId), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(GatewayCompletionState.Paid);
+        result.Value!.State.Should().Be(GatewayCompletionState.Paid);
     }
 
     /// <summary>
-    /// A concurrency conflict from an unrelated writer — not the same payment already won — is not
+    /// A concurrency conflict from an unrelated writer, not the same payment already won, is not
     /// swallowed: the handler rethrows rather than answering <c>Paid</c> for a row that is still
     /// unpaid on reload.
     /// </summary>
@@ -215,14 +264,16 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
     {
         var invoiceId = await SeedInvoiceWithSessionDirectlyAsync();
         var resolver = new FakePaymentPluginResolver();
-        var plugin = new FakePaymentPlugin { StatusResult = new(GatewayPaymentState.Paid, "ref-9", "orderStatus:2") };
+        var plugin = new FakePaymentPlugin { StatusResult = new(GatewayPaymentState.Paid, "ref-9", "orderStatus:2", AmountMinor: 1000) };
         resolver.Register("bank-gateway", plugin);
 
         using var readerScope = factory.Services.CreateScope();
         var readerContext = readerScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = readerScope.ServiceProvider.GetRequiredService<IMessageBus>();
         var handler = new CompleteGatewayPaymentHandler(
-            readerContext, resolver, bus, NullLogger<CompleteGatewayPaymentHandler>.Instance);
+            readerContext, resolver, bus, NullLogger<CompleteGatewayPaymentHandler>.Instance,
+            readerScope.ServiceProvider.GetRequiredService<IClock>(),
+            readerScope.ServiceProvider.GetRequiredService<IClientCredit>());
 
         // The handler's own context has to be holding the row *before* the competing write, or it
         // saves against the current version and there is no conflict to test. Loading it here is
@@ -238,20 +289,226 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
             var otherContext = otherWriterScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
             var otherInvoice = await otherContext.Invoices.FirstAsync(i => i.Id == invoiceId);
             // A different session reference, not the seeded "gw-1": writing the same values back is
-            // no change at all to EF, which then issues no UPDATE and leaves xmin where it was —
+            // no change at all to EF, which then issues no UPDATE and leaves xmin where it was,
             // and the conflict this test exists to provoke never happens.
-            otherInvoice.SetGatewaySession("bank-gateway", "gw-1-touched");
+            otherInvoice.SetGatewaySession("bank-gateway", "gw-1-touched", otherWriterScope.ServiceProvider.GetRequiredService<IClock>().UtcNow);
             await otherContext.SaveChangesAsync(CancellationToken.None);
         }
 
         var act = () => handler.HandleAsync(new CompleteGatewayPaymentCommand(invoiceId), CancellationToken.None);
 
-        await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
+        await act.Should().ThrowAsync<ConcurrencyConflictException>();
     }
 
     /// <summary>
+    /// A payment an administrator records while the gateway session is open lowers what is due, so
+    /// the gateway then takes more than the invoice still owes: the invoice settles on what is due
+    /// and the rest goes to the client's credit balance instead of the payment being refused.
+    /// </summary>
+    [Fact]
+    public async Task PaymentRecordedDuringTheSessionSettlesAndCreditsTheRest()
+    {
+        var invoiceId = await SeedInvoiceWithSessionDirectlyAsync();
+        int clientId;
+        using (var adminScope = factory.Services.CreateScope())
+        {
+            var adminContext = adminScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            var invoice = await adminContext.Invoices.Include(i => i.Transactions).FirstAsync(i => i.Id == invoiceId);
+            adminContext.Transactions.Add(invoice.AddPayment(
+                DateTimeOffset.UtcNow, PaymentMethodNames.Manual, $"manual-{Guid.NewGuid():N}", 4m, 0m, null));
+            await adminContext.SaveChangesAsync(CancellationToken.None);
+            clientId = invoice.ClientId;
+        }
+
+        var resolver = new FakePaymentPluginResolver();
+        var gatewayReference = $"ref-{Guid.NewGuid():N}";
+        resolver.Register("bank-gateway", new FakePaymentPlugin
+        {
+            // The session was opened for the full 10.00 before the 4.00 was recorded.
+            StatusResult = new(GatewayPaymentState.Paid, gatewayReference, "orderStatus:2", AmountMinor: 1000),
+        });
+        using var scope = factory.Services.CreateScope();
+        var handler = new CompleteGatewayPaymentHandler(
+            scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(),
+            resolver,
+            scope.ServiceProvider.GetRequiredService<IMessageBus>(),
+            NullLogger<CompleteGatewayPaymentHandler>.Instance,
+            scope.ServiceProvider.GetRequiredService<IClock>(),
+            scope.ServiceProvider.GetRequiredService<IClientCredit>());
+
+        var result = await handler.HandleAsync(new CompleteGatewayPaymentCommand(invoiceId), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.State.Should().Be(GatewayCompletionState.Paid);
+        using var checkScope = factory.Services.CreateScope();
+        var check = checkScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        (await check.Invoices.AsNoTracking().SingleAsync(i => i.Id == invoiceId)).Status.Should().Be(InvoiceStatus.Paid);
+        (await check.Transactions.AsNoTracking().SingleAsync(t => t.TransactionId == gatewayReference)).AmountIn.Should().Be(6m);
+        (await BillingTestSeeds.CreditBalanceOfAsync(factory, clientId)).Should().Be(4m);
+    }
+
+    /// <summary>
+    /// A paid status that reports no amount says nothing about what was taken: it is refused with
+    /// <c>GATEWAY_PAYMENT_MISMATCH</c> and the invoice stays unpaid.
+    /// </summary>
+    [Fact]
+    public async Task PaidWithoutAnAmountIsAMismatch()
+    {
+        var invoiceId = await SeedInvoiceWithSessionDirectlyAsync();
+        var resolver = new FakePaymentPluginResolver();
+        resolver.Register("bank-gateway", new FakePaymentPlugin
+        {
+            StatusResult = new(GatewayPaymentState.Paid, $"ref-{Guid.NewGuid():N}", "orderStatus:2"),
+        });
+        using var scope = factory.Services.CreateScope();
+
+        var result = await HandlerFor(scope, resolver).HandleAsync(new CompleteGatewayPaymentCommand(invoiceId), CancellationToken.None);
+
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.GATEWAY_PAYMENT_MISMATCH);
+        using var checkScope = factory.Services.CreateScope();
+        var check = checkScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        (await check.Invoices.AsNoTracking().SingleAsync(i => i.Id == invoiceId)).Status.Should().Be(InvoiceStatus.Unpaid);
+    }
+
+    /// <summary>
+    /// An invoice another path settled while its session stayed open answers Paid, and what the
+    /// session took, which no payment records, goes whole to the client's balance once: the replay
+    /// credits nothing more.
+    /// </summary>
+    [Fact]
+    public async Task SessionPaidAfterAnotherPathSettledCreditsTheWholeAmountOnce()
+    {
+        var invoiceId = await SeedInvoiceWithSessionDirectlyAsync();
+        int clientId;
+        using (var adminScope = factory.Services.CreateScope())
+        {
+            // Settled by another payment while the session's state is kept.
+            var adminContext = adminScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            var invoice = await adminContext.Invoices.Include(i => i.Transactions).FirstAsync(i => i.Id == invoiceId);
+            adminContext.Transactions.Add(invoice.Settle(
+                PaymentMethodNames.Manual, $"manual-{Guid.NewGuid():N}", DateTimeOffset.UtcNow)!);
+            await adminContext.SaveChangesAsync(CancellationToken.None);
+            clientId = invoice.ClientId;
+        }
+
+        var resolver = new FakePaymentPluginResolver();
+        var gatewayReference = $"ref-{Guid.NewGuid():N}";
+        resolver.Register("bank-gateway", new FakePaymentPlugin
+        {
+            StatusResult = new(GatewayPaymentState.Paid, gatewayReference, "orderStatus:2", AmountMinor: 1000),
+        });
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var first = await HandlerFor(scope, resolver).HandleAsync(new CompleteGatewayPaymentCommand(invoiceId), CancellationToken.None);
+            first.Value!.State.Should().Be(GatewayCompletionState.Paid);
+        }
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var replay = await HandlerFor(scope, resolver).HandleAsync(new CompleteGatewayPaymentCommand(invoiceId), CancellationToken.None);
+            replay.Value!.State.Should().Be(GatewayCompletionState.Paid);
+        }
+
+        (await BillingTestSeeds.CreditBalanceOfAsync(factory, clientId)).Should().Be(10m);
+        using var checkScope = factory.Services.CreateScope();
+        var check = checkScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var row = await check.Transactions.AsNoTracking().SingleAsync(t => t.TransactionId == gatewayReference);
+        row.AddedToCredit.Should().BeTrue();
+        row.AmountIn.Should().Be(10m);
+        row.InvoiceId.Should().BeNull();
+    }
+
+    /// <summary>
+    /// An administrator records the full payment while the client's hosted session is still open;
+    /// the session keeps its state, so when the gateway later reports it paid the money is matched
+    /// and goes whole to the client's balance, once, however often the completion is replayed.
+    /// </summary>
+    [Fact]
+    public async Task AdminPaymentDuringAnOpenSessionThenGatewayPaidCreditsTheBalanceOnce()
+    {
+        var plugin = new FakePaymentPlugin { StatusResult = new(GatewayPaymentState.Pending, null, "orderStatus:0") };
+        var resolver = new FakePaymentPluginResolver();
+        resolver.Register("bank-gateway", plugin);
+        var host = BuildHost(resolver);
+        var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "gw-admin-then-gateway");
+        var invoiceId = await CreateInvoiceWithSessionAsync(host, client, clientId, plugin);
+        var admin = await BillingTestSeeds.AdminClientAsync(factory, host);
+        await BillingTestSeeds.MarkPaidAsync(admin, invoiceId, 10m);
+
+        var gatewayReference = $"ref-{Guid.NewGuid():N}";
+        plugin.StatusResult = new(GatewayPaymentState.Paid, gatewayReference, "orderStatus:2", AmountMinor: 1000);
+        var first = await CompleteAsync(client, invoiceId);
+        var replay = await CompleteAsync(client, invoiceId);
+
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        replay.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await first.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("state").GetString()
+            .Should().Be(nameof(GatewayCompletionState.Paid));
+        (await BillingTestSeeds.CreditBalanceOfAsync(host, clientId)).Should().Be(10m);
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var row = await context.Transactions.AsNoTracking().SingleAsync(t => t.TransactionId == gatewayReference);
+        row.AddedToCredit.Should().BeTrue();
+        row.AmountIn.Should().Be(10m);
+        row.InvoiceId.Should().BeNull();
+        (await context.Transactions.AsNoTracking().CountAsync(t => t.InvoiceId == invoiceId)).Should().Be(1);
+    }
+
+    /// <summary>
+    /// An administrator cancelling the invoice between the handler's read and its save leaves the
+    /// gateway's money unrecordable on it: the conflict is caught, the money goes to the client's
+    /// balance under the gateway's reference, and the answer is <c>INVOICE_NOT_PAYABLE</c>.
+    /// </summary>
+    [Fact]
+    public async Task ConcurrentCancelCreditsTheGatewayPayment()
+    {
+        var invoiceId = await SeedInvoiceWithSessionDirectlyAsync();
+        var resolver = new FakePaymentPluginResolver();
+        var gatewayReference = $"ref-{Guid.NewGuid():N}";
+        resolver.Register("bank-gateway", new FakePaymentPlugin
+        {
+            StatusResult = new(GatewayPaymentState.Paid, gatewayReference, "orderStatus:2", AmountMinor: 1000),
+        });
+        using var readerScope = factory.Services.CreateScope();
+        var readerContext = readerScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var handler = HandlerFor(readerScope, resolver);
+
+        // The handler's context holds the pre-cancel row, so its save conflicts.
+        var clientId = (await readerContext.Invoices.FirstAsync(i => i.Id == invoiceId)).ClientId;
+        using (var adminScope = factory.Services.CreateScope())
+        {
+            var adminContext = adminScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            (await adminContext.Invoices.FirstAsync(i => i.Id == invoiceId)).Cancel();
+            await adminContext.SaveChangesAsync(CancellationToken.None);
+        }
+
+        var result = await handler.HandleAsync(new CompleteGatewayPaymentCommand(invoiceId), CancellationToken.None);
+
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.INVOICE_NOT_PAYABLE);
+        (await BillingTestSeeds.CreditBalanceOfAsync(factory, clientId)).Should().Be(10m);
+        using var checkScope = factory.Services.CreateScope();
+        var check = checkScope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        (await check.Transactions.AsNoTracking().SingleAsync(t => t.TransactionId == gatewayReference))
+            .AddedToCredit.Should().BeTrue();
+    }
+
+    /// <summary>Builds the handler on a scope's own context, with plugins from <paramref name="resolver"/>.</summary>
+    /// <param name="scope">The DI scope whose context the handler uses.</param>
+    /// <param name="resolver">The fake plugin resolver.</param>
+    /// <returns>The handler.</returns>
+    private static CompleteGatewayPaymentHandler HandlerFor(IServiceScope scope, FakePaymentPluginResolver resolver) =>
+        new(
+            scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>(),
+            resolver,
+            scope.ServiceProvider.GetRequiredService<IMessageBus>(),
+            NullLogger<CompleteGatewayPaymentHandler>.Instance,
+            scope.ServiceProvider.GetRequiredService<IClock>(),
+            scope.ServiceProvider.GetRequiredService<IClientCredit>());
+
+    /// <summary>
     /// Seeds a client and an invoice with a live gateway session directly against the database,
-    /// bypassing HTTP, for the two DI-scope concurrency tests that only need a row to race over.
+    /// bypassing HTTP, for the DI-scope tests that only need a row to race over.
     /// </summary>
     /// <returns>The seeded invoice's primary key.</returns>
     private async Task<int> SeedInvoiceWithSessionDirectlyAsync()
@@ -260,13 +517,13 @@ public sealed class CompleteGatewayPaymentTests(IntegrationTestFactory factory) 
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
 
         var client = Client.Create(
-            $"user-{Guid.NewGuid():N}", "Gateway", "Race", $"gw-race-{Guid.NewGuid():N}@example.test");
+            $"user-{Guid.NewGuid():N}", "Gateway", "Race", $"gw-race-{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(client);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(14), "USD");
+        var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(14), "USD", DateTimeOffset.UtcNow);
         invoice.AddItem("Hosting", 10m, 1);
-        invoice.SetGatewaySession("bank-gateway", "gw-1");
+        invoice.SetGatewaySession("bank-gateway", "gw-1", scope.ServiceProvider.GetRequiredService<IClock>().UtcNow);
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(CancellationToken.None);
 

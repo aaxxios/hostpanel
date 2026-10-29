@@ -11,7 +11,7 @@ import { translate } from '@/lib/translate'
 import { MessageLanguage } from '@/locales/messages'
 import { ClientStatus } from '@/types/client'
 import { CurrencyCode } from '@/types/currency'
-import { BillableInvoiceAction, RecurrencePeriod } from '@/types/billableitem'
+import { BillableItemType, RecurringPeriod } from '@/types/billableitem'
 import { DnsRecordType, DomainStatus } from '@/types/domain'
 import { PaymentGateway } from '@/types/gateway'
 import { InvoiceStatus } from '@/types/invoice'
@@ -21,16 +21,20 @@ import { BillingCycle, ServiceStatus } from '@/types/service'
 import { TicketPriority } from '@/types/ticket'
 import { PaymentMethod } from '@/types/transaction'
 
-/** One option of a dropdown or radio group: the wire value and the label shown for it. */
-export interface SelectOption {
+/**
+ * One option of a dropdown or radio group: the wire value and the label shown for it.
+ *
+ * @typeParam T - The wire value type; an enum when the options cover a closed set.
+ */
+export interface SelectOption<T extends string = string> {
   /** Value stored and sent to the API. */
-  value: string
+  value: T
   /** Text shown to the operator, in the current language. */
   label: string
 }
 
 /** Client account status options for dropdowns. */
-export const CLIENT_STATUS_OPTIONS: SelectOption[] = [
+export const CLIENT_STATUS_OPTIONS: SelectOption<ClientStatus>[] = [
   { value: ClientStatus.Active, get label() { return translate('shared.active') } },
   { value: ClientStatus.Inactive, get label() { return translate('shared.inactive') } },
   { value: ClientStatus.Suspended, get label() { return translate('clients.clientForm.suspended') } },
@@ -38,7 +42,7 @@ export const CLIENT_STATUS_OPTIONS: SelectOption[] = [
 ]
 
 /** Service status options for dropdowns. */
-export const SERVICE_STATUS_OPTIONS: SelectOption[] = [
+export const SERVICE_STATUS_OPTIONS: SelectOption<ServiceStatus>[] = [
   { value: ServiceStatus.Pending, get label() { return translate('constants.serviceStatusOptions.pending') } },
   { value: ServiceStatus.Active, get label() { return translate('shared.active') } },
   { value: ServiceStatus.Suspended, get label() { return translate('clients.clientForm.suspended') } },
@@ -100,30 +104,22 @@ export const DNS_RECORD_TYPE_OPTIONS: SelectOption[] = [
 
 /** Billing cycle options for service dropdowns. */
 export const BILLING_CYCLE_OPTIONS: SelectOption[] = [
-  { value: BillingCycle.Free, get label() { return translate('constants.billingCycleOptions.free') } },
   { value: BillingCycle.Monthly, get label() { return translate('settings.productForm.monthly') } },
-  { value: BillingCycle.Quarterly, get label() { return translate('constants.billingCycleOptions.quarterly') } },
-  { value: BillingCycle.SemiAnnual, get label() { return translate('constants.billingCycleOptions.semiAnnual') } },
   { value: BillingCycle.Annual, get label() { return translate('settings.productForm.annual') } },
-  { value: BillingCycle.Biennial, get label() { return translate('constants.billingCycleOptions.biennial') } },
-  { value: BillingCycle.Triennial, get label() { return translate('constants.billingCycleOptions.triennial') } },
 ]
 
-/** Invoice action options for billable item forms. */
-export const INVOICE_ACTION_OPTIONS: SelectOption[] = [
-  { value: BillableInvoiceAction.DontInvoice, get label() { return translate('billing.addBillableItem.donTInvoiceForNow') } },
-  { value: BillableInvoiceAction.InvoiceOnNextCron, get label() { return translate('billing.addBillableItem.invoiceOnNextCronRun') } },
-  { value: BillableInvoiceAction.AddToNextInvoice, get label() { return translate('billing.addBillableItem.addToUserSNext') } },
-  { value: BillableInvoiceAction.InvoiceForDueDate, get label() { return translate('billing.addBillableItem.invoiceAsNormalForDue') } },
-  { value: BillableInvoiceAction.Recur, get label() { return translate('constants.invoiceActionOptions.recur') } },
+/** Billable item type options: a one time charge or a recurring one. */
+export const BILLABLE_ITEM_TYPE_OPTIONS: SelectOption<BillableItemType>[] = [
+  { value: BillableItemType.OneTime, get label() { return translate('billing.billableItems.typeOneTime') } },
+  { value: BillableItemType.Recurring, get label() { return translate('billing.billableItems.typeRecurring') } },
 ]
 
-/** Recurrence period options for billable items. */
-export const RECURRENCE_PERIOD_OPTIONS: SelectOption[] = [
-  { value: RecurrencePeriod.Days, get label() { return translate('constants.recurrencePeriodOptions.days') } },
-  { value: RecurrencePeriod.Weeks, get label() { return translate('constants.recurrencePeriodOptions.weeks') } },
-  { value: RecurrencePeriod.Months, get label() { return translate('constants.recurrencePeriodOptions.months') } },
-  { value: RecurrencePeriod.Years, get label() { return translate('settings.tldConfigForm.years') } },
+/** How often a recurring billable item repeats. */
+export const RECURRING_PERIOD_OPTIONS: SelectOption<RecurringPeriod>[] = [
+  { value: RecurringPeriod.Weekly, get label() { return translate('constants.recurringPeriodOptions.weekly') } },
+  { value: RecurringPeriod.Monthly, get label() { return translate('constants.recurringPeriodOptions.monthly') } },
+  { value: RecurringPeriod.Quarterly, get label() { return translate('constants.recurringPeriodOptions.quarterly') } },
+  { value: RecurringPeriod.Annually, get label() { return translate('constants.recurringPeriodOptions.annually') } },
 ]
 
 /** Invoice status options for filter dropdowns. */

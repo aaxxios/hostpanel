@@ -1,9 +1,9 @@
 /**
- * Shapes the provisioning-provider status card is fed with, independent of which provider
- * (CWP, CWP7) the figures come from.
+ * Shapes the provisioning-provider status card is fed with, independent of which hosting panel
+ * provider the figures come from.
  */
 
-/** One labelled figure of the status card (accounts, version, packages...). */
+/** One labelled figure of the status card (accounts, version, packages). */
 export interface ProviderMetric {
   /** Caption above the figure (already translated). */
   label: string
@@ -15,7 +15,7 @@ export interface ProviderMetric {
   mono?: boolean
 }
 
-/** Server info the status card summarises; the CWP and CWP7 DTOs both satisfy it. */
+/** Server info the status card summarises; the server info DTO of every hosting panel version satisfies it. */
 export interface ProviderInfo {
   /** True if the API connection succeeded. */
   connected: boolean

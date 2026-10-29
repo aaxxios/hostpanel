@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 
 namespace Innovayse.Hostpanel.Infrastructure.Security;
+
 /// <summary>
 /// AES-256-CBC implementation of <see cref="IEncryptionService"/>.
 /// Uses a 32-byte key from configuration and a random 16-byte IV per encryption.
@@ -57,7 +58,7 @@ public sealed class AesEncryptionService : IEncryptionService
             // IV is 16 bytes; ciphertext must be at least one AES block (16 bytes)
             if (fullBytes.Length < 17)
             {
-                return ciphertext; // Too short to be encrypted — legacy plaintext
+                return ciphertext; // Too short to be encrypted: legacy plaintext
             }
 
             using var aes = Aes.Create();
@@ -77,12 +78,12 @@ public sealed class AesEncryptionService : IEncryptionService
         }
         catch (FormatException)
         {
-            // Not valid Base64 — legacy plaintext data
+            // Not valid Base64: legacy plaintext data
             return ciphertext;
         }
         catch (CryptographicException)
         {
-            // Decryption failed — legacy plaintext data
+            // Decryption failed: legacy plaintext data
             return ciphertext;
         }
     }

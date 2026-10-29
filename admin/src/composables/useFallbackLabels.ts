@@ -1,6 +1,6 @@
 /**
- * Display fallbacks for fields the API leaves `null` when it cannot resolve them (client name,
- * product name, service name, country) and for the registration period in years.
+ * Display fallbacks for values the API leaves empty because they are genuinely optional (a ticket
+ * reply with no author, a field nobody filled in) and for the registration period in years.
  *
  * The backend never invents a placeholder; every screen shows its own, and they all come from here
  * so the wording is the same on every list, detail and report.
@@ -9,10 +9,6 @@ import { useI18n } from 'vue-i18n'
 
 /** What {@link useFallbackLabels} hands back. */
 export interface FallbackLabels {
-  /** Name, or "Client #id" when the name is unresolved and an id is known, else "Unknown". */
-  clientLabel: (name: string | null | undefined, id?: number | null) => string
-  /** Name, or "Product #id" when the name is unresolved and an id is known, else "Unknown". */
-  productLabel: (name: string | null | undefined, id?: number | null) => string
   /** Value, or "Unknown" when it is unresolved. */
   orUnknown: (value: string | null | undefined) => string
   /** Value, or "N/A" when it is empty. */
@@ -37,44 +33,6 @@ export const useFallbackLabels = (): FallbackLabels => {
    */
   const hasText = (value: string | null | undefined): value is string => {
     return typeof value === 'string' && value.trim() !== ''
-  }
-
-  /**
-   * Whether an id can be shown.
-   *
-   * @param id - Entity id.
-   * @returns True for a positive number.
-   */
-  const hasId = (id: number | null | undefined): id is number => {
-    return typeof id === 'number' && id > 0
-  }
-
-  /**
-   * Name, or "Client #id" / "Unknown" when unresolved.
-   *
-   * @param name - Resolved client name.
-   * @param id - Client id used for the fallback.
-   * @returns The label to show.
-   */
-  const clientLabel = (name: string | null | undefined, id?: number | null): string => {
-    if (hasText(name)) {
-      return name
-    }
-    return hasId(id) ? t('shared.clientFallback', { id }) : t('shared.unknown')
-  }
-
-  /**
-   * Name, or "Product #id" / "Unknown" when unresolved.
-   *
-   * @param name - Resolved product name.
-   * @param id - Product id used for the fallback.
-   * @returns The label to show.
-   */
-  const productLabel = (name: string | null | undefined, id?: number | null): string => {
-    if (hasText(name)) {
-      return name
-    }
-    return hasId(id) ? t('shared.productFallback', { id }) : t('shared.unknown')
   }
 
   /**
@@ -110,5 +68,5 @@ export const useFallbackLabels = (): FallbackLabels => {
     return t('shared.years', { n: years }, years)
   }
 
-  return { clientLabel, productLabel, orUnknown, orNotAvailable, yearsLabel }
+  return { orUnknown, orNotAvailable, yearsLabel }
 }

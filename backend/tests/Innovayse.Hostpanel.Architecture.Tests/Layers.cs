@@ -1,6 +1,7 @@
 using System.Reflection;
 
 namespace Innovayse.Hostpanel.Architecture.Tests;
+
 /// <summary>One handle per layer assembly, so a rule names the layer and not a type it happens to contain.</summary>
 internal static class Layers
 {
@@ -15,6 +16,9 @@ internal static class Layers
 
     /// <summary>The application layer: use cases, ports, resources.</summary>
     public static readonly Assembly Application = typeof(Innovayse.Hostpanel.Application.Common.Errors.HostpanelErrorCodes).Assembly;
+
+    /// <summary>The infrastructure layer: the DbContext, adapters and external clients.</summary>
+    public static readonly Assembly Infrastructure = typeof(Innovayse.Hostpanel.Infrastructure.Persistence.AppDbContext).Assembly;
 
     /// <summary>The API layer: controllers and the HTTP edge.</summary>
     public static readonly Assembly Api = typeof(Innovayse.Hostpanel.API.Controllers.HealthController).Assembly;

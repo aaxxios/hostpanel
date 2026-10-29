@@ -11,7 +11,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <param name="Fees">Transaction fees charged by the gateway.</param>
 /// <param name="Type">Transaction type (Payment, Refund, Credit).</param>
 /// <param name="Notes">Optional notes; null when not provided.</param>
-public record InvoiceTransactionDto(
+public sealed record InvoiceTransactionDto(
     int Id,
     DateTimeOffset Date,
     string Gateway,

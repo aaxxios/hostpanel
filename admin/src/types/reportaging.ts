@@ -1,7 +1,16 @@
+/** Aging bucket of an overdue invoice, exactly as the API sends it. */
+export enum ReportAgingBucket {
+  Days0To30 = 'Days0To30',
+  Days30To60 = 'Days30To60',
+  Days60To90 = 'Days60To90',
+  Days90To120 = 'Days90To120',
+  Over120 = 'Over120',
+}
+
 /** One overdue period of the aging invoices report. */
 export interface ReportAgingPeriod {
-  /** Period caption, for example the first thirty days. */
-  period: string
+  /** The aging bucket the row totals. */
+  period: ReportAgingBucket
   /** Overdue amount per currency code. */
   amountsByCurrency: Record<string, number>
 }

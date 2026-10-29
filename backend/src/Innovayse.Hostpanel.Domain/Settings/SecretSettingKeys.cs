@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Domain.Settings.Enums;
+
 namespace Innovayse.Hostpanel.Domain.Settings;
 
 /// <summary>
@@ -24,12 +26,6 @@ public static class SecretSettingKeys
     /// <summary>Key the outstanding first-run setup token is stored under.</summary>
     public const string SetupToken = "auth:setup-token";
 
-    /// <summary>The input type a plugin manifest gives a field that holds a secret.</summary>
-    public const string PluginSecretFieldType = "secret";
-
-    /// <summary>The input type the built-in integration catalogue gives a field that holds a secret.</summary>
-    public const string PasswordFieldType = "password";
-
     /// <summary>
     /// Integration field names (the last segment of <c>integration:{slug}:{field}</c>) that hold a
     /// credential, whichever integration they belong to.
@@ -52,13 +48,12 @@ public static class SecretSettingKeys
         SetupToken,
     };
 
-    /// <summary>Tells whether a field input type marks the field as a secret.</summary>
-    /// <param name="fieldType">The input type from a plugin manifest or the integration catalogue.</param>
-    /// <returns><c>true</c> for <see cref="PluginSecretFieldType"/> and <see cref="PasswordFieldType"/>.</returns>
-    public static bool IsSecretFieldType(string? fieldType)
+    /// <summary>Tells whether a field input kind marks the field as a secret.</summary>
+    /// <param name="fieldType">The input kind from a plugin manifest or the integration catalogue.</param>
+    /// <returns><c>true</c> for <see cref="IntegrationFieldType.Secret"/> and <see cref="IntegrationFieldType.Password"/>.</returns>
+    public static bool IsSecretFieldType(IntegrationFieldType fieldType)
     {
-        return string.Equals(fieldType, PluginSecretFieldType, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(fieldType, PasswordFieldType, StringComparison.OrdinalIgnoreCase);
+        return fieldType is IntegrationFieldType.Secret or IntegrationFieldType.Password;
     }
 
     /// <summary>Tells whether a full setting key names a secret this registry knows.</summary>

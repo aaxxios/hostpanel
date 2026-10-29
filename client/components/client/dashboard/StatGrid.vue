@@ -21,8 +21,8 @@
 
 <script setup lang="ts">
 /**
- * The counters at the top of the dashboard — active services, domains, unpaid invoices
- * and open tickets — each a tile that opens the matching section.
+ * The counters at the top of the dashboard (active services, domains, unpaid invoices
+ * and open tickets) each a tile that opens the matching section.
  */
 import { FileText, Globe, MessageSquare, Server } from 'lucide-vue-next'
 import type { Component } from 'vue'

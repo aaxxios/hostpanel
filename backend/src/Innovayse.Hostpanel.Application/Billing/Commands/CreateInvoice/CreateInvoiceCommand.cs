@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Application.Billing.Common;
+
 namespace Innovayse.Hostpanel.Application.Billing.Commands.CreateInvoice;
 
 /// <summary>Command to create a new invoice for a client with at least one line item.</summary>

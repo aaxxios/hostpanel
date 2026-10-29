@@ -7,10 +7,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useReportsStore } from '@/stores/reports'
 
-/** Builds a JSON response. */
+/**
+ * Builds a JSON response.
+ *
+ * @param body - Value serialised as the body.
+ * @param status - HTTP status, 200 by default.
+ * @returns The response.
+ */
 const json = (body: unknown, status = 200): Response => new Response(JSON.stringify(body), { status })
 
-/** A problem+json refusal carrying a finished sentence. */
+/**
+ * A problem+json refusal carrying a finished sentence.
+ *
+ * @returns A 403 response with a `detail` sentence.
+ */
 const refusal = (): Response =>
   json({ type: 'REPORT_REFUSED', title: 'Refused', status: 403, detail: 'No access.' }, 403)
 

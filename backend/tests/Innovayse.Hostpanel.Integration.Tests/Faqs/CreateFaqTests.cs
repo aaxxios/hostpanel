@@ -1,16 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Faqs.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Faqs;
 
 /// <summary>
-/// Integration tests for the <c>CreateFaq</c> use case — <c>POST /api/admin/faqs</c>.
+/// Integration tests for the <c>CreateFaq</c> use case: <c>POST /api/admin/faqs</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateFaqTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -64,6 +61,17 @@ public sealed class CreateFaqTests(IntegrationTestFactory factory) : IClassFixtu
         var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
 
         var response = await client.PostAsJsonAsync("/api/admin/faqs", new { category = "general", sortOrder = 0, isActive = true, translations = new { fr = new { question = "Comment?", answer = "Ainsi." } } });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>A question without the default-locale translation is refused.</summary>
+    [Fact]
+    public async Task Create_WithoutDefaultLocale_Refuses()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync("/api/admin/faqs", new { category = "general", sortOrder = 0, isActive = true, translations = new { ru = new { question = "Как?", answer = "Так." } } });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }

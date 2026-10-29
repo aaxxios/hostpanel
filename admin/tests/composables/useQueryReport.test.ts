@@ -70,7 +70,7 @@ describe('useQueryReport', () => {
 
   it('loads the first page on mount', async () => {
     const mock = stubRouteTable({
-      'GET /reports/things': () => json({ items: [{ id: 1, clientName: 'Acme', status: 'Paid' }], totalCount: 7 }),
+      'GET /reports/things': () => json({ items: [{ id: 1, clientName: 'Acme', status: 'Paid' }], pageNumber: 1, pageSize: 50, totalCount: 7, totalPages: 1 }),
     })
     const { wrapper, state } = mountHost()
     await flushPromises()
@@ -81,7 +81,7 @@ describe('useQueryReport', () => {
   })
 
   it('moves to another page and starts over from page 1 on generate', async () => {
-    const mock = stubRouteTable({ 'GET /reports/things': () => json({ items: [], totalCount: 0 }) })
+    const mock = stubRouteTable({ 'GET /reports/things': () => json({ items: [], pageNumber: 1, pageSize: 50, totalCount: 0, totalPages: 0 }) })
     const { state } = mountHost()
     await flushPromises()
 
@@ -98,7 +98,10 @@ describe('useQueryReport', () => {
     const mock = stubRouteTable({
       'GET /reports/things': () => json({
         items: [{ id: 1, clientName: 'Acme', status: 'Paid' }, { id: 2, clientName: 'Beta', status: 'Paid' }],
+        pageNumber: 1,
+        pageSize: 50,
         totalCount: 2,
+        totalPages: 1,
       }),
     })
     const { wrapper, state } = mountHost()
@@ -116,7 +119,7 @@ describe('useQueryReport', () => {
   })
 
   it('sends a chosen date range under its parameter prefix', async () => {
-    const mock = stubRouteTable({ 'GET /reports/things': () => json({ items: [], totalCount: 0 }) })
+    const mock = stubRouteTable({ 'GET /reports/things': () => json({ items: [], pageNumber: 1, pageSize: 50, totalCount: 0, totalPages: 0 }) })
     const { state } = mountHost()
     await flushPromises()
 
@@ -127,7 +130,7 @@ describe('useQueryReport', () => {
   })
 
   it('shows no column until chosen, then toggles, selects and clears them', async () => {
-    stubRouteTable({ 'GET /reports/things': () => json({ items: [], totalCount: 0 }) })
+    stubRouteTable({ 'GET /reports/things': () => json({ items: [], pageNumber: 1, pageSize: 50, totalCount: 0, totalPages: 0 }) })
     const { state } = mountHost()
     await flushPromises()
 
@@ -143,7 +146,7 @@ describe('useQueryReport', () => {
   })
 
   it('opens the export of the chosen filters without paging, and prints', async () => {
-    stubRouteTable({ 'GET /reports/things': () => json({ items: [], totalCount: 0 }) })
+    stubRouteTable({ 'GET /reports/things': () => json({ items: [], pageNumber: 1, pageSize: 50, totalCount: 0, totalPages: 0 }) })
     const open = vi.fn()
     const print = vi.fn()
     vi.stubGlobal('open', open)

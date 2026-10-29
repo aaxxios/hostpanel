@@ -16,7 +16,7 @@ export interface DomainResult {
    * Availability as reported by the registrar check.
    *
    * `unknown` is its own state rather than being folded into `taken`: a check
-   * that failed — no registrar configured, registrar unreachable — is not the
+   * that failed (no registrar configured, registrar unreachable) is not the
    * same as a name someone owns, and showing it as taken hides the fault.
    */
   status: `${DomainResultStatus}`

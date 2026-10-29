@@ -7,22 +7,20 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.Telegram;
+
 /// <summary>
 /// Posts contact-form enquiries to the operator's Telegram chat through the Bot API's
 /// <c>sendMessage</c> method.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The whole of this used to live in the public site's Nuxt server, beside the bot token it
-/// needed. It is here so that container holds no credential at all; the message it renders is
-/// the same message, down to the emoji and the separator rule, because that is what the operator
-/// reads every day.
+/// Lives in the backend so the public site's container holds no credential at all. The message
+/// layout, down to the emoji and the separator rule, is what the operator reads every day.
 /// </para>
 /// <para>
-/// <b>Legacy <c>Markdown</c> parse mode, not <c>MarkdownV2</c>.</b> That is the mode the previous
-/// implementation used and <see cref="EscapeMarkdown"/> escapes exactly the character set it
-/// escaped. Moving to <c>MarkdownV2</c> would be a different escape set and a message that reads
-/// differently, which is not what a move of the credential is allowed to change.
+/// <b>Legacy <c>Markdown</c> parse mode, not <c>MarkdownV2</c>.</b>
+/// <see cref="EscapeMarkdown"/> escapes exactly that mode's character set; <c>MarkdownV2</c>
+/// would need a different escape set and would render the message differently.
 /// </para>
 /// <para>
 /// Failures are thrown, not swallowed, as
@@ -39,13 +37,13 @@ public sealed class TelegramContactNotifier : IContactNotifier
     /// <summary>Bound <see cref="TelegramOptions"/>.</summary>
     private readonly IOptions<TelegramOptions> _options;
 
-    /// <summary>Logger, for the unconfigured case -- the only outcome nothing else records.</summary>
+    /// <summary>Logger, for the unconfigured case: the only outcome nothing else records.</summary>
     private readonly ILogger<TelegramContactNotifier> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="TelegramContactNotifier"/> class.</summary>
     /// <param name="http">The typed <see cref="HttpClient"/> configured by <c>IHttpClientFactory</c>.</param>
     /// <param name="options">Bound <see cref="TelegramOptions"/>.</param>
-    /// <param name="logger">Logger, for the unconfigured case -- the only outcome nothing else records.</param>
+    /// <param name="logger">Logger, for the unconfigured case: the only outcome nothing else records.</param>
     public TelegramContactNotifier(HttpClient http, IOptions<TelegramOptions> options, ILogger<TelegramContactNotifier> logger)
     {
         _http = http;
@@ -59,8 +57,8 @@ public sealed class TelegramContactNotifier : IContactNotifier
     /// </summary>
     /// <remarks>
     /// Carried over character for character from the Nuxt route's regular expression. It is wider
-    /// than the legacy parser strictly needs -- that mode only acts on <c>_ * [</c> and a
-    /// backtick -- and stays wide on purpose: a name containing an underscore did not break the
+    /// than the legacy parser strictly needs, that mode only acts on <c>_ * [</c> and a
+    /// backtick, and stays wide on purpose: a name containing an underscore did not break the
     /// message before this move and must not now, and narrowing the set is a behaviour change
     /// dressed as a tidy-up.
     /// </remarks>
@@ -70,7 +68,7 @@ public sealed class TelegramContactNotifier : IContactNotifier
     /// <param name="enquiry">The validated submission.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// A task that completes when Telegram has accepted the post -- or immediately, having logged
+    /// A task that completes when Telegram has accepted the post, or immediately, having logged
     /// it, when this deployment configured no bot.
     /// </returns>
     /// <exception cref="HttpRequestException">
@@ -94,7 +92,7 @@ public sealed class TelegramContactNotifier : IContactNotifier
         }
 
         // The token is a path segment of the Bot API, so it cannot be part of the client's base
-        // address -- that is set once at registration, while this is read per call from options.
+        // address: that is set once at registration, while this is read per call from options.
         var url = $"bot{settings.BotToken}/sendMessage";
         var payload = new
         {

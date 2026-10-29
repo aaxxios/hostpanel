@@ -1,7 +1,10 @@
+using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.GetQuote;
 
@@ -11,11 +14,16 @@ public sealed class GetQuoteHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The message bus, for the Clients module's client briefs; Billing never reads the client tables.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetQuoteHandler(IHostpanelDbContext context)
+    /// <param name="bus">The message bus, for the Clients module's client briefs; Billing never reads the client tables.</param>
+    public GetQuoteHandler(IHostpanelDbContext context, IMessageBus bus)
     {
         _context = context;
+        _bus = bus;
     }
 
     /// <summary>Handles the query.</summary>
@@ -35,11 +43,7 @@ public sealed class GetQuoteHandler
             return Result<QuoteDto>.FailureCode(HostpanelErrorCodes.QUOTE_NOT_FOUND);
         }
 
-        var clientName = await _context.Clients
-            .AsNoTracking()
-            .Where(c => c.Id == quote.ClientId)
-            .Select(c => c.FirstName + " " + c.LastName)
-            .FirstOrDefaultAsync(ct);
+        var client = await _bus.GetRequiredClientBriefAsync(quote.ClientId, withEmail: false, ct);
 
         var itemDtos = quote.Items
             .Select(item => new QuoteItemDto(
@@ -50,7 +54,7 @@ public sealed class GetQuoteHandler
         var dto = new QuoteDto(
             quote.Id,
             quote.ClientId,
-            clientName,
+            client.FullName,
             quote.Subject,
             quote.Stage,
             quote.CreatedAt,

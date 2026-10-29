@@ -1,10 +1,7 @@
 using Innovayse.Hostpanel.Application.Billing.Queries.GetInvoicePdf;
 using Innovayse.Hostpanel.Application.Common;
-using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Shared.Models;
-using Microsoft.EntityFrameworkCore;
 using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.GetMyInvoicePdf;
@@ -20,9 +17,10 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.GetMyInvoicePdf;
 /// dispatches <see cref="GetInvoicePdfQuery"/> rather than growing a second copy of it.
 /// </para>
 /// <para>
-/// <b>Drafts are admin-only.</b> A client is not meant to see an invoice before it is published,
-/// so the caller's own draft answers <c>INVOICE_NOT_FOUND</c>, the same as a stranger's invoice
-/// or an id that names nothing, and the response does not reveal that a draft exists.
+/// <b>Drafts are admin-only.</b> A client is not meant to see an invoice before it is published.
+/// The ownership rule reads invoices through <c>Invoice.ClientVisibleFilter</c>, so the caller's
+/// own draft answers <c>INVOICE_NOT_FOUND</c>, the same as a stranger's invoice or an id that
+/// names nothing, and the response does not reveal that a draft exists.
 /// </para>
 /// </remarks>
 public sealed class GetMyInvoicePdfHandler
@@ -30,20 +28,15 @@ public sealed class GetMyInvoicePdfHandler
     /// <summary>The rule that says a client may only read their own invoices.</summary>
     private readonly IInvoiceOwnership _ownership;
 
-    /// <summary>The module's data context, for reading the invoice's status.</summary>
-    private readonly IHostpanelDbContext _context;
-
     /// <summary>Wolverine bus, used to reach the shared rendering once access is settled.</summary>
     private readonly IMessageBus _bus;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="ownership">The rule that says a client may only read their own invoices.</param>
-    /// <param name="context">The module's data context, for reading the invoice's status.</param>
     /// <param name="bus">Wolverine bus, used to reach the shared rendering once access is settled.</param>
-    public GetMyInvoicePdfHandler(IInvoiceOwnership ownership, IHostpanelDbContext context, IMessageBus bus)
+    public GetMyInvoicePdfHandler(IInvoiceOwnership ownership, IMessageBus bus)
     {
         _ownership = ownership;
-        _context = context;
         _bus = bus;
     }
 
@@ -63,16 +56,6 @@ public sealed class GetMyInvoicePdfHandler
         if (ownershipOutcome.IsFailure)
         {
             return Result<FileDownloadDto>.FailureCode(ownershipOutcome.ErrorCode!);
-        }
-
-        var status = await _context.Invoices
-            .AsNoTracking()
-            .Where(i => i.Id == query.InvoiceId)
-            .Select(i => (InvoiceStatus?)i.Status)
-            .FirstOrDefaultAsync(ct);
-        if (status is null or InvoiceStatus.Draft)
-        {
-            return Result<FileDownloadDto>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
         }
 
         return await _bus.InvokeAsync<Result<FileDownloadDto>>(new GetInvoicePdfQuery(query.InvoiceId), ct);

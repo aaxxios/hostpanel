@@ -2,11 +2,18 @@
  * Tests for SettingToggleField: the switch shows the stored value, an empty row reads as the
  * default, a flip saves the literal string, and an unseeded row is replaced by the warning.
  */
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SettingToggleField from '@/components/settings/SettingToggleField.vue'
 import { SettingKey } from '@/types/setting'
-import type { Setting } from '@/types/setting'
+import type { Setting, SettingSave } from '@/types/setting'
 import { mountScreen } from '../../helpers/mount'
+
+/** The save callback the card is given; it answers that the value was stored. */
+const save = vi.fn<SettingSave>(async () => ({ saved: true, error: null }))
+
+beforeEach(() => {
+  save.mockClear()
+})
 
 /**
  * Builds the props of the field for one stored value.
@@ -22,6 +29,7 @@ const propsFor = (value: string, defaultOn = true) => ({
   hint: 'Frequently asked questions.',
   defaultOn,
   testid: 'field',
+  save,
 })
 
 describe('SettingToggleField', () => {
@@ -47,7 +55,7 @@ describe('SettingToggleField', () => {
     await wrapper.get('[data-testid="field"]').trigger('click')
     await wrapper.get('[data-testid="field-save"]').trigger('click')
 
-    expect(wrapper.emitted('save')).toEqual([[4, 'false']])
+    expect(save.mock.calls).toEqual([[4, 'false']])
   })
 
   it('does not save before anything changed', async () => {
@@ -55,7 +63,7 @@ describe('SettingToggleField', () => {
 
     await wrapper.get('[data-testid="field-save"]').trigger('click')
 
-    expect(wrapper.emitted('save')).toBeUndefined()
+    expect(save).not.toHaveBeenCalled()
   })
 
   it('names the key and hides the switch when the row was never seeded', async () => {

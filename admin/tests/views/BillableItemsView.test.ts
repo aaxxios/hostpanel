@@ -33,7 +33,7 @@ const item = (overrides: Record<string, unknown> = {}) => ({
 
 /** The items endpoint answer: a domain charge and a support charge. */
 const itemsPage = () =>
-  json({ items: [item(), item({ id: 6, description: 'Support hours' })], totalCount: 2, page: 1, pageSize: 100 })
+  json({ items: [item(), item({ id: 6, description: 'Support hours' })], pageNumber: 1, pageSize: 100, totalCount: 2, totalPages: 1 })
 
 /** The clients endpoint answer: nobody (the filter is not under test). */
 const noClients = () => json({ items: [], totalCount: 0 })
@@ -102,7 +102,7 @@ describe('BillableItemsView', () => {
   it('prints a billable item type as a name, not the value the API sends', async () => {
     stubRoutes({
       'GET /api/billing/billable-items': () =>
-        json({ items: [item(), item({ id: 6, type: 'Recurring' })], totalCount: 2, page: 1, pageSize: 100 }),
+        json({ items: [item(), item({ id: 6, type: 'Recurring' })], pageNumber: 1, pageSize: 100, totalCount: 2, totalPages: 1 }),
       'GET /api/clients': noClients,
     })
     const wrapper = await mountList()
@@ -111,5 +111,65 @@ describe('BillableItemsView', () => {
     expect(rows[0]?.text()).toContain('One time')
     expect(rows[0]?.text()).not.toContain('OneTime')
     expect(rows[1]?.text()).toContain('Recurring')
+  })
+
+  it('reports the deleted items next to the list', async () => {
+    stubRoutes({
+      'GET /api/billing/billable-items': itemsPage,
+      'GET /api/clients': noClients,
+      'DELETE /api/billing/billable-items/5': () => new Response(null, { status: 204 }),
+    })
+    const wrapper = await mountList()
+
+    await wrapper.get('[data-testid="billing-billable-item-select-5"]').trigger('click')
+    await wrapper.get('[data-testid="billing-billable-items-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="billing-billable-items-feedback"]').text()).toBe('Billable items deleted.')
+  })
+
+  it('shows the API sentence when a delete is refused, without the load error', async () => {
+    stubRoutes({
+      'GET /api/billing/billable-items': itemsPage,
+      'GET /api/clients': noClients,
+      'DELETE /api/billing/billable-items/5': () => problem('The item is already invoiced.', 409),
+    })
+    const wrapper = await mountList()
+
+    await wrapper.get('[data-testid="billing-billable-item-select-5"]').trigger('click')
+    await wrapper.get('[data-testid="billing-billable-items-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="billing-billable-items-feedback"]').text()).toBe('The item is already invoiced.')
+    expect(wrapper.find('[data-testid="billing-billable-items-error"]').exists()).toBe(false)
+  })
+
+  it('keeps the items when the confirmation is cancelled', async () => {
+    const mock = stubRoutes({ 'GET /api/billing/billable-items': itemsPage, 'GET /api/clients': noClients })
+    const wrapper = await mountList()
+
+    await wrapper.get('[data-testid="billing-billable-item-select-5"]').trigger('click')
+    await wrapper.get('[data-testid="billing-billable-items-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(false)
+  })
+
+  it('reloads the items from the Retry of a refused load', async () => {
+    let refused = true
+    stubRoutes({
+      'GET /api/billing/billable-items': () => (refused ? problem('Items are unavailable.', 403) : itemsPage()),
+      'GET /api/clients': noClients,
+    })
+    const wrapper = await mountList()
+
+    refused = false
+    await wrapper.get('[data-testid="billing-billable-items-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="billing-billable-items-error"]').exists()).toBe(false)
   })
 })

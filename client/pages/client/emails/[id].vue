@@ -12,11 +12,11 @@
     <template v-else>
       <UiStack gap="xs">
         <UiHeading :level="1">{{ email.subject }}</UiHeading>
-        <UiText size="sm" tone="subtle">{{ formatDateTime(email.date) }}</UiText>
+        <UiText size="sm" tone="subtle">{{ formatDateTime(email.sentAt) }}</UiText>
       </UiStack>
 
       <UiCard padding="none">
-        <ClientEmailsEmailFrame :html="email.message" :title="$t('client.emails.messageFrame')" />
+        <ClientEmailsEmailFrame :html="email.body" :title="$t('client.emails.messageFrame')" />
       </UiCard>
     </template>
   </UiStack>

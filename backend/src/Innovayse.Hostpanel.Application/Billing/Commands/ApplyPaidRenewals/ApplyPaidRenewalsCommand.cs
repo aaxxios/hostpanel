@@ -6,4 +6,4 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.ApplyPaidRenewals;
 /// payment handler and the daily sweep may both send it.
 /// </summary>
 /// <param name="InvoiceId">The invoice.</param>
-public record ApplyPaidRenewalsCommand(int InvoiceId);
+public sealed record ApplyPaidRenewalsCommand(int InvoiceId);

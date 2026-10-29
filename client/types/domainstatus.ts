@@ -1,5 +1,5 @@
 /**
- * Lifecycle statuses of a domain the portal branches on, as the API names them on
+ * Lifecycle statuses of a domain, as the API names them on
  * `ClientDomain.status`.
  */
 export enum DomainStatus {
@@ -10,5 +10,11 @@ export enum DomainStatus {
   /** Ordered, the registrar has not finished registering it. */
   PendingRegistration = 'PendingRegistration',
   /** A transfer in is under way. */
-  PendingTransfer = 'PendingTransfer'
+  PendingTransfer = 'PendingTransfer',
+  /** In the registrar redemption grace period. */
+  Redemption = 'Redemption',
+  /** Transferred out to another registrar. */
+  Transferred = 'Transferred',
+  /** Cancelled before activation. */
+  Cancelled = 'Cancelled'
 }

@@ -37,7 +37,7 @@ export const flattenKeys = (value: unknown, prefix = ''): string[] => {
 }
 
 /**
- * Extracts the literal keys passed to `t('...')` / `$t('...')` / `i18n.global.t('...')` / `translate('...')` / `translateOrRaw('...', raw)`.
+ * Extracts the literal keys passed to `t('key')` / `$t('key')` / `i18n.global.t('key')` / `translate('key')` / `translateOrRaw('key', raw)`.
  *
  * @param source - Source text.
  * @returns The set of literal keys.

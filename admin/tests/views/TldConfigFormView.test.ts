@@ -20,12 +20,8 @@ const stored: TldConfig = {
   isEnabled: false,
   sortOrder: 3,
   categories: ['tech', 'popular'],
-  costRegister: { '1': 10 },
-  costTransfer: {},
-  costRenew: {},
-  sellRegister: { '1': 12.5 },
-  sellTransfer: {},
-  sellRenew: {},
+  costs: { register: { '1': 10 }, transfer: {}, renew: {} },
+  sells: { register: { '1': 12.5 }, transfer: {}, renew: {} },
   lastSyncedAt: null,
   createdAt: '2026-01-01T00:00:00Z',
 }
@@ -129,11 +125,25 @@ describe('TldConfigFormView', () => {
     })
   })
 
-  it('says when the configuration being edited does not exist', async () => {
-    stubRouteTable({ 'GET /admin/tld-configs/9': () => problem('No such TLD.', 404) })
+  it('shows the API sentence with a retry when the configuration cannot be loaded', async () => {
+    let calls = 0
+    stubRouteTable({
+      'GET /admin/tld-configs/9': () => {
+        calls += 1
+        return calls === 1 ? problem('No such TLD.', 404) : json({ ...stored, id: 9 })
+      },
+    })
     const { wrapper } = await mountScreen(TldConfigFormView, {}, '/settings/tld-pricing/9/edit', EDIT)
 
-    expect(wrapper.get('[data-testid="tld-config-form-error"]').text()).toBe('TLD config #9 not found.')
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="tld-config-form-load-error"]').text()).toBe('No such TLD.')
+    })
+    expect(wrapper.find('[data-testid="tld-config-form-tld"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="tld-config-form-load-error-retry"]').trigger('click')
+    await vi.waitFor(() => {
+      expect((wrapper.get('[data-testid="tld-config-form-tld"]').element as HTMLInputElement).value).toBe('net')
+    })
   })
 
   it('shows the API sentence when saving is refused and stays on the form', async () => {

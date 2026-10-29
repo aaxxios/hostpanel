@@ -23,7 +23,7 @@ export interface Feature {
    * Operator setting that must be non-empty for this card to render, by its
    * `portal.*` setting key, read through {@link usePortalSettings} from settings only (no env fallback).
    *
-   * Present on every claim this codebase cannot verify on its own — NVMe
+   * Present on every claim this codebase cannot verify on its own: NVMe
    * storage, a CDN, a malware scanner. The platform provisions accounts through
    * a hosting control panel and has no idea what hardware sits behind it, so
    * printing those as facts would be inventing them. An operator who does offer

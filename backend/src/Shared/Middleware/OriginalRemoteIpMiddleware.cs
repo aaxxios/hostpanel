@@ -2,7 +2,7 @@ namespace Innovayse.Hostpanel.Shared.Middleware;
 
 /// <summary>
 /// Records the client IP as resolved by the trusted forwarded-headers step, before
-/// <c>UseInnovayseAuth</c> runs its own forwarded-headers pass that trusts every proxy. The edge
+/// the shared authentication package runs its own forwarded-headers pass that trusts every proxy. The edge
 /// rate limiter partitions anonymous callers on this value, so a forged <c>X-Forwarded-For</c>
 /// cannot choose a partition.
 /// </summary>

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core configuration for <see cref="ClientUser"/>.</summary>
 public sealed class ClientUserConfiguration : IEntityTypeConfiguration<ClientUser>
 {

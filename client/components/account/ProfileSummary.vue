@@ -1,10 +1,10 @@
 <template>
   <UiCard data-testid="account-profile-summary">
     <UiStack direction="row" align="center" gap="md">
-      <UiAvatar :first-name="user.firstname" :last-name="user.lastname" :email="user.email" />
+      <UiAvatar :first-name="user.firstName" :last-name="user.lastName" :email="user.email" />
       <UiStack gap="none" class="flex-1 min-w-0">
         <UiHeading :level="UiHeadingLevel.H2" size="subsection" data-testid="account-full-name">
-          {{ user.firstname }} {{ user.lastname }}
+          {{ user.firstName }} {{ user.lastName }}
         </UiHeading>
         <UiText size="sm" tone="muted">{{ user.email }}</UiText>
       </UiStack>

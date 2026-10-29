@@ -1,14 +1,14 @@
 using Innovayse.Hostpanel.Application.Orders.Common;
 
-
 namespace Innovayse.Hostpanel.Application.Domains.Commands.TransferMyDomain;
+
 /// <summary>Command for a client to transfer a domain in to their own account.</summary>
 /// <remarks>
 /// <para>
 /// Carries no client id. Which account the transferred domain lands on is resolved from the
 /// credential, so the scoping cannot be separated from the message the way an id in the body
 /// can. The admin route that may transfer a domain in for any client dispatches
-/// <c>TransferDomainCommand</c> directly, and that command <b>does</b> name a client -- which
+/// <c>TransferDomainCommand</c> directly, and that command <b>does</b> name a client, which
 /// is precisely why a client-facing route must not reach it.
 /// </para>
 /// <para>

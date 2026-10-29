@@ -47,12 +47,13 @@ describe('GET /api/portal/client/invoices/:id/pdf', () => {
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
   })
 
-  it('encodes the id, so it cannot reach another backend path', async () => {
+  it('refuses an id that is not a number with 400, and never calls the backend', async () => {
     backend.respondWith(pdfReply)
 
-    await route.default(makeEvent({ params: { id: '7/../../clients' }, cookies: await signedIn('jwt') }))
+    const error = await refusal(async () => route.default(makeEvent({ params: { id: '7/../../clients' }, cookies: await signedIn('jwt') })))
 
-    expect(backend.requests[0]?.url).toBe('/api/me/invoices/7%2F..%2F..%2Fclients/pdf')
+    expect(error).toMatchObject({ statusCode: 400, data: { code: 'BAD_ROUTE_PARAM' } })
+    expect(backend.requests).toHaveLength(0)
   })
 
   it('returns the PDF bytes and download headers unchanged', async () => {

@@ -1,20 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>ListTldConfigs</c> use case —
+/// Integration tests for the admin <c>ListTldConfigs</c> use case:
 /// <c>GET /api/admin/tld-configs</c>. The happy path (create then list) lives in
 /// <see cref="CreateTldConfigTests"/>; this file covers the empty and authorization cases.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListTldConfigsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>Listing never refuses -- it answers 200 even before any configuration is created.</summary>
+    /// <summary>Listing never refuses: it answers 200 even before any configuration is created.</summary>
     [Fact]
     public async Task List_ReturnsOkEvenWithNoConfigurationsCreatedByThisTestAsync()
     {

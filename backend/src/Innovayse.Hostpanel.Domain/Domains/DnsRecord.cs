@@ -1,10 +1,12 @@
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Domains;
+
 /// <summary>
 /// Represents a single DNS record belonging to a domain.
-/// Owned by the <see cref="Domain"/> aggregate — cannot exist independently.
+/// Owned by the <see cref="Domain"/> aggregate: cannot exist independently.
 /// </summary>
 public sealed class DnsRecord : BaseEntity
 {
@@ -26,7 +28,7 @@ public sealed class DnsRecord : BaseEntity
     /// <summary>Gets the priority for MX/SRV records; null for other types.</summary>
     public int? Priority { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private DnsRecord() { }
 
     /// <summary>

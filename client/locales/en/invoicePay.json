@@ -3,13 +3,6 @@
     "makePayment": "Make Payment",
     "invoiceNum": "Invoice #{id}",
     "paymentMethod": "Payment Method",
-    "enterCardBelow": "Enter New Card Information Below",
-    "newCard": "Enter New Card Information",
-    "cardNumber": "Card Number",
-    "expiryDate": "Expiry Date",
-    "cvv": "CVV/CVC2",
-    "cardDescription": "Card Description",
-    "cardDescriptionPlaceholder": "Enter a name for this card (Optional)",
     "submitPayment": "Submit Payment",
     "processing": "Processing...",
     "paymentsToDate": "Payments to Date",
@@ -19,8 +12,7 @@
     "paymentSuccess": "Payment processed successfully!",
     "securityNotice": "Any data you enter here is submitted securely and is encrypted to reduce the risk of fraud",
     "payByCardHosted": "Pay by card",
-    "cardNumberPlaceholder": "1234 1234 1234 1234",
-    "expiryPlaceholder": "MM / YY",
-    "cvvPlaceholder": "CVC"
+    "noSavedCardsHosted": "You have no saved cards. Choose Pay by card to finish the payment on the payment provider's secure page.",
+    "noPaymentOption": "Online payment is not available right now. Please contact support to pay this invoice."
   }
 }

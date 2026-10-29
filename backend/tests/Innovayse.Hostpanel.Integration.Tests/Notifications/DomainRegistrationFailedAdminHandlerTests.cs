@@ -1,16 +1,14 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Domains.Events;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 
 /// <summary>
 /// Tests for <c>DomainRegistrationFailedAdminHandler</c>: a failed domain registration alerts the platform admin.
 /// Each test builds its own host from <see cref="IntegrationTestFactory"/> with the one port this platform
-/// does not own -- the SMTP relay -- replaced by <see cref="FakeEmailSender"/>, publishes the event exactly once
+/// does not own (the SMTP relay) replaced by <see cref="FakeEmailSender"/>, publishes the event exactly once
 /// through the real message bus and asserts the handler's one effect happened exactly once.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -31,7 +29,7 @@ public sealed class DomainRegistrationFailedAdminHandlerTests(IntegrationTestFac
         await NotificationsTestSeeds.EnsureTemplateAsync(context, "domain-registration-failed", "Your domain registration failed");
 
         await bus.InvokeAsync(
-            new DomainRegistrationFailedEvent(client.Id, "example.test", 1, "registrar rejected"), CancellationToken.None);
+            new DomainRegistrationFailedEvent(client.Id, "example.test", 1, "registrar rejected") { OccurredAt = DateTimeOffset.UtcNow }, CancellationToken.None);
 
         var toAdmin = Assert.Single(emailSender.Sent, m => m.To == NotificationsTestSeeds.AdminEmail);
         Assert.NotNull(toAdmin);

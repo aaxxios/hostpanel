@@ -4,10 +4,10 @@
  * @module types/invitepermissionmode
  */
 
-/** Whether an invitee receives every permission or only the ones ticked. */
+/** Whether an invitee receives every permission or only the ones ticked; values match the API enum. */
 export enum InvitePermissionMode {
-  /** Every permission; sent to the API as the word `all`. */
-  All = 'all',
+  /** Every permission; the permission list is sent empty. */
+  All = 'All',
   /** Only the ticked permissions. */
-  Choose = 'choose'
+  Choose = 'Choose'
 }

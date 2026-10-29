@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Innovayse.Hostpanel.Domain.Settings.Enums;
 
 namespace Innovayse.Hostpanel.Domain.Settings;
+
 /// <summary>
 /// The <c>portal.*</c> keys in the <c>Settings</c> table: what the storefront reads to decide
 /// its template, colour mode, branding, identity and contact channels.
@@ -10,15 +11,14 @@ namespace Innovayse.Hostpanel.Domain.Settings;
 /// <para>
 /// This is the one place the key list lives on the backend. <c>PortalSettingsSeeder</c> creates
 /// the rows from <see cref="Defaults"/> and <c>GetPublicSettingsHandler</c> exposes the rows in
-/// <see cref="Public"/> — before this class each held its own hand-maintained copy of the same
-/// strings, and a key added to one and not the other failed silently: the row existed, the
-/// storefront never saw it, and the site rendered its build-time default as though the operator
-/// had never set anything.
+/// <see cref="Public"/>. Two hand-maintained copies of the same strings would fail silently
+/// when a key is added to one and not the other: the row exists, the storefront never sees it,
+/// and the site renders its build-time default as though the operator had never set anything.
 /// </para>
 /// <para>
 /// <see cref="Public"/> is an explicit set and must stay one. A prefix match on <c>portal.</c>
 /// would start exposing, without authentication, anything a future contributor happens to name
-/// that way — and the same table holds integration credentials under <c>integration:*</c>.
+/// that way, and the same table holds integration credentials under <c>integration:*</c>.
 /// </para>
 /// <para>
 /// The Nuxt BFF keeps a manual twin of this list in
@@ -315,7 +315,7 @@ public static class PortalSettingKeys
         new HashSet<string>(Enum.GetValues<StorefrontTemplate>().Select(TemplateValue), StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The value <c>portal.template</c> stores for a template: its member name in lower case.</summary>
-    /// <param name="template">The template.</param>
+    /// <param name="template">The storefront template to store.</param>
     /// <returns>The stored spelling, e.g. <c>classic</c>.</returns>
     public static string TemplateValue(StorefrontTemplate template) => template.ToString().ToLowerInvariant();
 
@@ -329,7 +329,7 @@ public static class PortalSettingKeys
 
     /// <summary>
     /// The typefaces an operator can pick. Mirrors <c>client/utils/brandFonts.ts</c>, whose
-    /// stacks are the self-hosted <c>@fontsource</c> packages the storefront already ships —
+    /// stacks are the self-hosted <c>@fontsource</c> packages the storefront already ships:
     /// nothing here causes a request to a font CDN. <c>system</c> is the device's own face.
     /// </summary>
     public static readonly IReadOnlySet<string> FontNames =
@@ -338,6 +338,13 @@ public static class PortalSettingKeys
             "inter", "noto-sans-armenian", "noto-serif-armenian", "system",
         };
 
+    /// <summary>
+    /// The keys that hold an uploaded branding image. When one is saved with a new value, the files
+    /// its previous value pointed at are removed: nothing references them any more.
+    /// </summary>
+    public static readonly IReadOnlySet<string> BrandingImages =
+        new HashSet<string>(StringComparer.Ordinal) { Logo, LogoDark, LogoMark, Favicon };
+
     // Declared before Patterns: static fields initialise in textual order, and the dictionary
     // below reads this one.
     /// <summary>A six-digit hex colour, stored lower-case with its <c>#</c>.</summary>
@@ -345,6 +352,29 @@ public static class PortalSettingKeys
         new Regex("^#[0-9a-f]{6}$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant),
         "a colour like #1a73e8",
         v => v.ToLowerInvariant());
+
+    /// <summary>An absolute <c>https://</c> address: a host, then an optional path, no spaces.</summary>
+    private static readonly Regex HttpsAddress =
+        new("^https://[^\\s/]+(/[^\\s]*)?$", RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// A link the storefront renders as an anchor (a social profile, an app launcher entry). Only
+    /// <c>https://</c>: a <c>javascript:</c> or plain <c>http:</c> value would otherwise reach every
+    /// visitor's page.
+    /// </summary>
+    private static readonly ValuePattern LinkAddress = new(
+        HttpsAddress,
+        "an https:// address like https://example.com/page",
+        v => v);
+
+    /// <summary>
+    /// An image the storefront loads (a logo): an <c>https://</c> address, or a path under
+    /// <c>/uploads/</c> as the branding upload stores it.
+    /// </summary>
+    private static readonly ValuePattern ImageAddress = new(
+        new Regex("^(https://[^\\s/]+(/[^\\s]*)?|/uploads/[^\\s]+)$", RegexOptions.CultureInvariant),
+        "an https:// address like https://cdn.example.com/logo.svg, or an uploaded path like /uploads/branding/logo.png",
+        v => v);
 
     /// <summary>
     /// The keys whose value is free text but must have a shape, and that shape.
@@ -366,7 +396,7 @@ public static class PortalSettingKeys
                 "a container id like GTM-ABC1234",
                 v => v.ToUpperInvariant()),
             [ChatBaseUrl] = new(
-                new Regex("^https://[^\\s/]+(/[^\\s]*)?$", RegexOptions.CultureInvariant),
+                HttpsAddress,
                 "an https:// address like https://chat.example.com",
                 v => v.TrimEnd('/')),
             [ContactEmail] = new(
@@ -374,9 +404,25 @@ public static class PortalSettingKeys
                 "an address like support@example.com",
                 v => v),
             [ContactMapUrl] = new(
-                new Regex("^https://[^\\s/]+(/[^\\s]*)?$", RegexOptions.CultureInvariant),
+                HttpsAddress,
                 "an https:// address like https://maps.example.com/embed",
                 v => v),
+            [Logo] = ImageAddress,
+            [LogoDark] = ImageAddress,
+            [LogoMark] = ImageAddress,
+            [SocialFacebook] = LinkAddress,
+            [SocialInstagram] = LinkAddress,
+            [SocialLinkedin] = LinkAddress,
+            [SocialYoutube] = LinkAddress,
+            [SocialTwitter] = LinkAddress,
+            [AppsAccount] = LinkAddress,
+            [AppsTasks] = LinkAddress,
+            [AppsErp] = LinkAddress,
+            [AppsHostpanel] = LinkAddress,
+            [AppsSheets] = LinkAddress,
+            [AppsMail] = LinkAddress,
+            [AppsDocs] = LinkAddress,
+            [AppsCalendar] = LinkAddress,
             [GuaranteeMoneyBackDays] = new(
                 new Regex("^[0-9]{1,3}$", RegexOptions.CultureInvariant),
                 "a whole number of days like 30",
@@ -440,104 +486,104 @@ public static class PortalSettingKeys
     /// Every contact channel and image starts empty, which the storefront renders as "hidden"
     /// or "built-in" rather than as a broken link. <see cref="ThemeDefault"/> starts as
     /// <c>dark</c> and <see cref="ThemeUserToggle"/> as <c>true</c> because that is what the
-    /// storefront did before either key existed — an upgrade changes nothing an operator sees.
+    /// storefront did before either key existed: an upgrade changes nothing an operator sees.
     /// </para>
     /// </summary>
-    public static readonly IReadOnlyList<(string Key, string Value, string Description)> Defaults =
+    public static readonly IReadOnlyList<SettingDefault> Defaults =
     [
-        (Template,            TemplateValue(DefaultTemplate), "Active storefront template: classic, aurora or nova."),
-        (SiteName,            "",       "Site name used in the browser title, social previews and image alt text. Empty shows the built-in name."),
-        (SiteTagline,         "",       "One-line description used as the default meta description. Empty hides it."),
-        (ThemeDefault,        "dark",   "Colour mode for a visitor who has not chosen one: light, dark or system."),
-        (ThemeUserToggle,     "true",   "Show the light/dark switch to visitors: true or false."),
-        (Logo,                "",       "Logo shown on light backgrounds. Empty renders the built-in mark and wordmark."),
-        (LogoDark,            "",       "Logo shown on dark backgrounds. Empty falls back to the light logo."),
-        (LogoMark,            "",       "Square icon-only logo for compact headers and sign-in pages. Empty falls back to the built-in mark."),
-        (Favicon,             "",       "URL of the browser tab icon. Empty falls back to the built-in favicon."),
-        (BrandPrimary,        "",       "Brand colour as #rrggbb; buttons, links and highlights derive from it. Empty keeps the template's own."),
-        (BrandAccent,         "",       "Accent colour as #rrggbb; gradients and secondary highlights. Empty keeps the template's own."),
-        (BrandFontHeading,    "",       "Heading typeface: inter, noto-sans-armenian, noto-serif-armenian or system. Empty keeps the template's own."),
-        (BrandFontBody,       "",       "Body typeface: inter, noto-sans-armenian, noto-serif-armenian or system. Empty keeps the template's own."),
-        (AnalyticsGtmId,      "",       "Google Tag Manager container id (GTM-XXXXXXX). Loads only after a visitor accepts all cookies. Empty loads nothing."),
-        (ChatBaseUrl,         "",       "Live chat server origin, https:// only. Empty hides the widget."),
-        (ChatWebsiteToken,    "",       "Live chat website token. Empty hides the widget."),
-        (ChatWebsiteTokenRu,  "",       "Live chat website token for Russian visitors. Empty uses the default token."),
-        (ChatWebsiteTokenHy,  "",       "Live chat website token for Armenian visitors. Empty uses the default token."),
-        (ContactWhatsapp,     "",       "WhatsApp number in international format, no leading +. Empty hides the action."),
-        (ContactTelegram,     "",       "Telegram handle without the @. Empty hides the action."),
-        (ChatProvider,        "",       "Live chat provider: chatwoot, or empty to disable the widget."),
-        (NewsletterActionUrl, "",       "External newsletter form action URL. Empty hides the footer block."),
-        (ContactEmail,        "",       "Public support address shown in the storefront footer. Empty hides it."),
-        (SocialFacebook,      "",       "Facebook page URL. Empty hides the icon."),
-        (SocialInstagram,     "",       "Instagram profile URL. Empty hides the icon."),
-        (SocialLinkedin,      "",       "LinkedIn page URL. Empty hides the icon."),
-        (SocialYoutube,       "",       "YouTube channel URL. Empty hides the icon."),
-        (ContactPhone,        "",       "Public phone number shown in the footer. Empty hides it."),
-        (LegalTaxId,          "",       "Company tax identifier shown in the footer. Empty hides it."),
-        (AppsEnabled,         "false",  "Show the header app launcher. Off unless this deployment runs the apps it links to."),
-        (AppsAccount,         "",       "URL for the Account entry in the header app launcher. Empty hides it."),
-        (AppsTasks,           "",       "URL for the Tasks entry in the header app launcher. Empty hides it."),
-        (AppsErp,             "",       "URL for the ERP entry in the header app launcher. Empty hides it."),
-        (AppsHostpanel,       "",       "URL for the Hostpanel entry in the header app launcher. Empty hides it."),
-        (AppsSheets,          "",       "URL for the Sheets entry in the header app launcher. Empty hides it."),
-        (AppsMail,            "",       "URL for the Mail entry in the header app launcher. Empty hides it."),
-        (AppsDocs,            "",       "URL for the Docs entry in the header app launcher. Empty hides it."),
-        (AppsCalendar,        "",       "URL for the Calendar entry in the header app launcher. Empty hides it."),
-        (StatsClients,        "",       "Headline client count shown in the hero, e.g. 120+. Empty hides it."),
-        (StatsUptime,         "",       "Published uptime figure shown in the hero, e.g. 99.9%. Empty hides it."),
-        (StatsRegions,        "",       "Server regions shown in the hero, e.g. Armenia, Europe. Empty hides it."),
-        (HeroBadge,           "",       "Short claim shown in the hero badge. Empty shows the built-in text."),
-        (ContactAddress,      "",       "Office street address shown on the contact page and in the footer. Empty hides it."),
-        (ContactMapUrl,       "",       "Embeddable map address of the office, https:// only. Empty hides the map."),
-        (SocialTwitter,       "",       "Twitter profile URL. Empty hides the icon."),
-        (ContactHours,        "",       "Support working hours shown on the contact page. Empty hides the row."),
-        (ContactTimezone,     "",       "Time zone the working hours are stated in, shown beside them. Ignored while the hours are empty."),
-        (ContactAddressRu,    "",       "Office address for Russian visitors. Empty uses the default address."),
-        (ContactAddressHy,    "",       "Office address for Armenian visitors. Empty uses the default address."),
-        (ContactHoursRu,      "",       "Support working hours for Russian visitors. Empty uses the default hours."),
-        (ContactHoursHy,      "",       "Support working hours for Armenian visitors. Empty uses the default hours."),
-        (FeaturesBackups,     "",       "Show the backups claims on the nova template: true or false. Empty hides them."),
-        (FeaturesStorage,     "",       "Show the storage claim on the nova template: true or false. Empty hides it."),
-        (FeaturesCaching,     "",       "Show the caching claim on the nova template: true or false. Empty hides it."),
-        (FeaturesCdn,         "",       "Show the CDN claim on the nova template: true or false. Empty hides it."),
-        (FeaturesFirewall,    "",       "Show the firewall claim on the nova template: true or false. Empty hides it."),
-        (FeaturesMalware,     "",       "Show the malware-scanning claim on the nova template: true or false. Empty hides it."),
-        (MigrationFree,       "",       "Show the free-migration badge on the nova template: true or false. Empty hides it."),
-        (AboutText,           "",       "Company story on the About page; a blank line starts a new paragraph. Empty hides the page."),
-        (AboutTextRu,         "",       "Company story for Russian visitors. Empty uses the default text."),
-        (AboutTextHy,         "",       "Company story for Armenian visitors. Empty uses the default text."),
-        (SectionStats, "true", "Show the hero stats strip and trust bar section on the home page: true or false."),
-        (SectionPartners, "true", "Show the partners strip section on the home page: true or false."),
-        (SectionServices, "true", "Show the why-choose-us and services blocks section on the home page: true or false."),
-        (SectionProcess, "true", "Show the how-it-works process section on the home page: true or false."),
-        (SectionPlans, "true", "Show the plan cards, products and pricing section on the home page: true or false."),
-        (SectionComparison, "true", "Show the comparison table section on the home page: true or false."),
-        (SectionDashboard, "true", "Show the dashboard preview section on the home page: true or false."),
-        (SectionUseCases, "true", "Show the use cases section on the home page: true or false."),
-        (SectionMigration, "true", "Show the migration block section on the home page: true or false."),
-        (SectionProjects, "false", "Show the portfolio projects section on the home page: true or false."),
-        (SectionTestimonials, "true", "Show the testimonials section on the home page: true or false."),
-        (SectionFaq, "true", "Show the frequently asked questions section on the home page: true or false."),
-        (SectionCta, "true", "Show the closing call to action section on the home page: true or false."),
-        (SectionLocations, "true", "Show the server locations section on the home page: true or false."),
-        (SectionPerformance, "true", "Show the performance figures section on the home page: true or false."),
-        (SectionSecurity, "true", "Show the security features section on the home page: true or false."),
-        (SectionApps, "true", "Show the one-click application installer section on the home page: true or false."),
-        (SectionGuarantees, "true", "Show the guarantees section on the home page: true or false."),
-        (SectionSupport, "true", "Show the support channels section on the home page: true or false."),
-        (SectionTrusted, "true", "Show the trusted-by logo strip section on the home page: true or false."),
-        (StatsResponseTime, "", "Average server response time shown in the performance section, e.g. 180 ms. Empty hides it."),
-        (StatsSitesHosted, "", "Number of sites hosted, shown in the performance section, e.g. 12,000+. Empty hides it."),
-        (StatsSupportResponse, "", "Typical first support response time shown in the performance section, e.g. 15 min. Empty hides it."),
-        (FeaturesSsl, "", "Show the SSL card in the security section: true or false. Empty hides it."),
-        (FeaturesDdos, "", "Show the DDoS protection card in the security section: true or false. Empty hides it."),
-        (InstallerAppCount, "", "Number of applications the one-click installer offers, e.g. 150+. Empty hides the count line."),
-        (GuaranteeMoneyBackDays, "", "Money-back guarantee length in days, digits only, e.g. 30. Empty hides the guarantee."),
-        (GuaranteeNoHiddenFees, "", "Show the no-hidden-fees guarantee: true or false. Empty hides it."),
-        (SupportResponseChat, "", "Typical live-chat response time, e.g. 2 min. Empty hides it."),
-        (SupportResponseTicket, "", "Typical ticket response time, e.g. 1 hour. Empty hides it."),
-        (SupportResponseEmail, "", "Typical e-mail response time, e.g. 4 hours. Empty hides it."),
-        (SupportResponsePhone, "", "Typical phone response time, e.g. immediate. Empty hides it."),
+        new(Template,            TemplateValue(DefaultTemplate), "Active storefront template: classic, aurora or nova."),
+        new(SiteName,            "",       "Site name used in the browser title, social previews and image alt text. Empty shows the built-in name."),
+        new(SiteTagline,         "",       "One-line description used as the default meta description. Empty hides it."),
+        new(ThemeDefault,        "dark",   "Colour mode for a visitor who has not chosen one: light, dark or system."),
+        new(ThemeUserToggle,     "true",   "Show the light/dark switch to visitors: true or false."),
+        new(Logo,                "",       "Logo shown on light backgrounds. Empty renders the built-in mark and wordmark."),
+        new(LogoDark,            "",       "Logo shown on dark backgrounds. Empty falls back to the light logo."),
+        new(LogoMark,            "",       "Square icon-only logo for compact headers and sign-in pages. Empty falls back to the built-in mark."),
+        new(Favicon,             "",       "URL of the browser tab icon. Empty falls back to the built-in favicon."),
+        new(BrandPrimary,        "",       "Brand colour as #rrggbb; buttons, links and highlights derive from it. Empty keeps the template's own."),
+        new(BrandAccent,         "",       "Accent colour as #rrggbb; gradients and secondary highlights. Empty keeps the template's own."),
+        new(BrandFontHeading,    "",       "Heading typeface: inter, noto-sans-armenian, noto-serif-armenian or system. Empty keeps the template's own."),
+        new(BrandFontBody,       "",       "Body typeface: inter, noto-sans-armenian, noto-serif-armenian or system. Empty keeps the template's own."),
+        new(AnalyticsGtmId,      "",       "Google Tag Manager container id (GTM-XXXXXXX). Loads only after a visitor accepts all cookies. Empty loads nothing."),
+        new(ChatBaseUrl,         "",       "Live chat server origin, https:// only. Empty hides the widget."),
+        new(ChatWebsiteToken,    "",       "Live chat website token. Empty hides the widget."),
+        new(ChatWebsiteTokenRu,  "",       "Live chat website token for Russian visitors. Empty uses the default token."),
+        new(ChatWebsiteTokenHy,  "",       "Live chat website token for Armenian visitors. Empty uses the default token."),
+        new(ContactWhatsapp,     "",       "WhatsApp number in international format, no leading +. Empty hides the action."),
+        new(ContactTelegram,     "",       "Telegram handle without the @. Empty hides the action."),
+        new(ChatProvider,        "",       "Live chat provider: chatwoot, or empty to disable the widget."),
+        new(NewsletterActionUrl, "",       "External newsletter form action URL. Empty hides the footer block."),
+        new(ContactEmail,        "",       "Public support address shown in the storefront footer. Empty hides it."),
+        new(SocialFacebook,      "",       "Facebook page URL. Empty hides the icon."),
+        new(SocialInstagram,     "",       "Instagram profile URL. Empty hides the icon."),
+        new(SocialLinkedin,      "",       "LinkedIn page URL. Empty hides the icon."),
+        new(SocialYoutube,       "",       "YouTube channel URL. Empty hides the icon."),
+        new(ContactPhone,        "",       "Public phone number shown in the footer. Empty hides it."),
+        new(LegalTaxId,          "",       "Company tax identifier shown in the footer. Empty hides it."),
+        new(AppsEnabled,         "false",  "Show the header app launcher. Off unless this deployment runs the apps it links to."),
+        new(AppsAccount,         "",       "URL for the Account entry in the header app launcher. Empty hides it."),
+        new(AppsTasks,           "",       "URL for the Tasks entry in the header app launcher. Empty hides it."),
+        new(AppsErp,             "",       "URL for the ERP entry in the header app launcher. Empty hides it."),
+        new(AppsHostpanel,       "",       "URL for the Hostpanel entry in the header app launcher. Empty hides it."),
+        new(AppsSheets,          "",       "URL for the Sheets entry in the header app launcher. Empty hides it."),
+        new(AppsMail,            "",       "URL for the Mail entry in the header app launcher. Empty hides it."),
+        new(AppsDocs,            "",       "URL for the Docs entry in the header app launcher. Empty hides it."),
+        new(AppsCalendar,        "",       "URL for the Calendar entry in the header app launcher. Empty hides it."),
+        new(StatsClients,        "",       "Headline client count shown in the hero, e.g. 120+. Empty hides it."),
+        new(StatsUptime,         "",       "Published uptime figure shown in the hero, e.g. 99.9%. Empty hides it."),
+        new(StatsRegions,        "",       "Server regions shown in the hero, e.g. Armenia, Europe. Empty hides it."),
+        new(HeroBadge,           "",       "Short claim shown in the hero badge. Empty shows the built-in text."),
+        new(ContactAddress,      "",       "Office street address shown on the contact page and in the footer. Empty hides it."),
+        new(ContactMapUrl,       "",       "Embeddable map address of the office, https:// only. Empty hides the map."),
+        new(SocialTwitter,       "",       "Twitter profile URL. Empty hides the icon."),
+        new(ContactHours,        "",       "Support working hours shown on the contact page. Empty hides the row."),
+        new(ContactTimezone,     "",       "Time zone the working hours are stated in, shown beside them. Ignored while the hours are empty."),
+        new(ContactAddressRu,    "",       "Office address for Russian visitors. Empty uses the default address."),
+        new(ContactAddressHy,    "",       "Office address for Armenian visitors. Empty uses the default address."),
+        new(ContactHoursRu,      "",       "Support working hours for Russian visitors. Empty uses the default hours."),
+        new(ContactHoursHy,      "",       "Support working hours for Armenian visitors. Empty uses the default hours."),
+        new(FeaturesBackups,     "",       "Show the backups claims on the nova template: true or false. Empty hides them."),
+        new(FeaturesStorage,     "",       "Show the storage claim on the nova template: true or false. Empty hides it."),
+        new(FeaturesCaching,     "",       "Show the caching claim on the nova template: true or false. Empty hides it."),
+        new(FeaturesCdn,         "",       "Show the CDN claim on the nova template: true or false. Empty hides it."),
+        new(FeaturesFirewall,    "",       "Show the firewall claim on the nova template: true or false. Empty hides it."),
+        new(FeaturesMalware,     "",       "Show the malware-scanning claim on the nova template: true or false. Empty hides it."),
+        new(MigrationFree,       "",       "Show the free-migration badge on the nova template: true or false. Empty hides it."),
+        new(AboutText,           "",       "Company story on the About page; a blank line starts a new paragraph. Empty hides the page."),
+        new(AboutTextRu,         "",       "Company story for Russian visitors. Empty uses the default text."),
+        new(AboutTextHy,         "",       "Company story for Armenian visitors. Empty uses the default text."),
+        new(SectionStats, "true", "Show the hero stats strip and trust bar section on the home page: true or false."),
+        new(SectionPartners, "true", "Show the partners strip section on the home page: true or false."),
+        new(SectionServices, "true", "Show the why-choose-us and services blocks section on the home page: true or false."),
+        new(SectionProcess, "true", "Show the how-it-works process section on the home page: true or false."),
+        new(SectionPlans, "true", "Show the plan cards, products and pricing section on the home page: true or false."),
+        new(SectionComparison, "true", "Show the comparison table section on the home page: true or false."),
+        new(SectionDashboard, "true", "Show the dashboard preview section on the home page: true or false."),
+        new(SectionUseCases, "true", "Show the use cases section on the home page: true or false."),
+        new(SectionMigration, "true", "Show the migration block section on the home page: true or false."),
+        new(SectionProjects, "false", "Show the portfolio projects section on the home page: true or false."),
+        new(SectionTestimonials, "true", "Show the testimonials section on the home page: true or false."),
+        new(SectionFaq, "true", "Show the frequently asked questions section on the home page: true or false."),
+        new(SectionCta, "true", "Show the closing call to action section on the home page: true or false."),
+        new(SectionLocations, "true", "Show the server locations section on the home page: true or false."),
+        new(SectionPerformance, "true", "Show the performance figures section on the home page: true or false."),
+        new(SectionSecurity, "true", "Show the security features section on the home page: true or false."),
+        new(SectionApps, "true", "Show the one-click application installer section on the home page: true or false."),
+        new(SectionGuarantees, "true", "Show the guarantees section on the home page: true or false."),
+        new(SectionSupport, "true", "Show the support channels section on the home page: true or false."),
+        new(SectionTrusted, "true", "Show the trusted-by logo strip section on the home page: true or false."),
+        new(StatsResponseTime, "", "Average server response time shown in the performance section, e.g. 180 ms. Empty hides it."),
+        new(StatsSitesHosted, "", "Number of sites hosted, shown in the performance section, e.g. 12,000+. Empty hides it."),
+        new(StatsSupportResponse, "", "Typical first support response time shown in the performance section, e.g. 15 min. Empty hides it."),
+        new(FeaturesSsl, "", "Show the SSL card in the security section: true or false. Empty hides it."),
+        new(FeaturesDdos, "", "Show the DDoS protection card in the security section: true or false. Empty hides it."),
+        new(InstallerAppCount, "", "Number of applications the one-click installer offers, e.g. 150+. Empty hides the count line."),
+        new(GuaranteeMoneyBackDays, "", "Money-back guarantee length in days, digits only, e.g. 30. Empty hides the guarantee."),
+        new(GuaranteeNoHiddenFees, "", "Show the no-hidden-fees guarantee: true or false. Empty hides it."),
+        new(SupportResponseChat, "", "Typical live-chat response time, e.g. 2 min. Empty hides it."),
+        new(SupportResponseTicket, "", "Typical ticket response time, e.g. 1 hour. Empty hides it."),
+        new(SupportResponseEmail, "", "Typical e-mail response time, e.g. 4 hours. Empty hides it."),
+        new(SupportResponsePhone, "", "Typical phone response time, e.g. immediate. Empty hides it."),
     ];
 
     /// <summary>
@@ -556,7 +602,7 @@ public static class PortalSettingKeys
     /// <para>
     /// Derived from <see cref="Defaults"/> so the two cannot drift: every seeded
     /// <c>portal.*</c> key is public, and nothing that is not seeded here is. That holds
-    /// because none of these values is a secret — the whole list is what the storefront
+    /// because none of these values is a secret: the whole list is what the storefront
     /// renders into public HTML. A future <c>portal.*</c> key that must <b>not</b> be public
     /// does not belong in <see cref="Defaults"/>; give it its own list.
     /// </para>

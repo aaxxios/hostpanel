@@ -1,19 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Services.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
 /// <summary>
 /// Integration tests for <c>DELETE /api/admin/cancellation-requests/{id}</c>.
 /// </summary>
-/// <remarks>Moved from the deleted <c>ServiceLifecycleEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DeleteCancellationRequestTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -36,7 +32,7 @@ public sealed class DeleteCancellationRequestTests(IntegrationTestFactory factor
         var (owner, ownerClientId) = await ServicesTestSeeds.RegisterOwnerAsync(factory, "delete-cancel-owner");
         var serviceId = await ServicesTestSeeds.SeedPendingServiceAsync(factory, ownerClientId);
         (await owner.PostAsJsonAsync(
-            $"/api/me/services/{serviceId}/cancel", new { type = nameof(CancellationType.Immediate), reason = (string?)null }))
+            $"/api/me/services/{serviceId}/cancel", new { type = nameof(CancellationType.EndOfBillingPeriod), reason = (string?)null }))
             .EnsureSuccessStatusCode();
 
         int requestId;
@@ -64,7 +60,7 @@ public sealed class DeleteCancellationRequestTests(IntegrationTestFactory factor
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A plain client calling the admin delete route is refused -- the policy is admin only.</summary>
+    /// <summary>A plain client calling the admin delete route is refused: the policy is admin only.</summary>
     [Fact]
     public async Task DeleteCancellationRequest_Returns403_AsPlainClientAsync()
     {

@@ -105,7 +105,7 @@ describe('ProjectFormView', () => {
     stubRouteTable(routes)
     const { wrapper } = await mountScreen(ProjectFormView, {}, '/storefront/projects/99/edit', '/storefront/projects/:id/edit')
 
-    expect(wrapper.get('[data-testid="project-form-error"]').text()).toBe('Entry #99 was not found.')
+    expect(wrapper.get('[data-testid="project-form-load-error"]').text()).toBe('Entry #99 was not found.')
   })
 
   it('shows the API sentence and the slug message when saving is refused', async () => {

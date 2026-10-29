@@ -10,6 +10,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
+import { GatewayPaymentState } from '~/types/gatewaypaymentstate'
 import { PaymentTarget } from '~/types/paymenttarget'
 
 /** The mocked saved-method payment call, re-created for every test. */
@@ -70,10 +71,10 @@ describe('useInvoicePaymentStore.payWithSavedMethod', () => {
     payInvoiceMock.mockResolvedValue({})
     const store = useInvoicePaymentStore()
 
-    const outcome = await store.payWithSavedMethod('7', 'pm_1')
+    const outcome = await store.payWithSavedMethod('7', 'pm_1', 'attempt-1')
 
     expect(outcome).toBe(ActionOutcome.Succeeded)
-    expect(payInvoiceMock).toHaveBeenCalledWith('7', 'pm_1')
+    expect(payInvoiceMock).toHaveBeenCalledWith('7', 'pm_1', 'attempt-1')
     expect(store.paySuccess).toBe(true)
     expect(store.submitting).toBe(false)
     expect(store.error).toBe('')
@@ -83,7 +84,7 @@ describe('useInvoicePaymentStore.payWithSavedMethod', () => {
     payInvoiceMock.mockRejectedValue({ data: { detail: 'Card declined.' } })
     const store = useInvoicePaymentStore()
 
-    const outcome = await store.payWithSavedMethod('7', 'pm_1')
+    const outcome = await store.payWithSavedMethod('7', 'pm_1', 'attempt-1')
 
     expect(outcome).toBe(ActionOutcome.Failed)
     expect(store.paySuccess).toBe(false)
@@ -107,6 +108,17 @@ describe('useInvoicePaymentStore.startGatewayPayment', () => {
     expect(url).toBe('https://bank.example/pay')
     expect(startGatewayMock).toHaveBeenCalledWith('7', 'gw', 'https://app.example/result')
     expect(store.submitting).toBe(true)
+  })
+
+  it('refuses a gateway address the browser must not follow and releases the flag', async () => {
+    startGatewayMock.mockResolvedValue({ redirectUrl: 'javascript:alert(1)' })
+    const store = useInvoicePaymentStore()
+
+    const url = await store.startGatewayPayment('7', 'gw', 'https://app.example/result')
+
+    expect(url).toBeNull()
+    expect(store.submitting).toBe(false)
+    expect(store.error).not.toBe('')
   })
 
   it('returns null, keeps the sentence and releases the flag on failure', async () => {
@@ -199,16 +211,25 @@ describe('useInvoicePaymentStore.verifyGatewayPayment', () => {
   })
 
   it.each([
-    ['paid', 'paid'],
-    ['pending', 'pending'],
-    ['declined', 'declined']
-  ])('reports the bank word %s as the state %s', async (word, expected) => {
+    [GatewayPaymentState.Paid],
+    [GatewayPaymentState.Pending],
+    [GatewayPaymentState.Declined]
+  ])('returns the backend state %s as it is', async (word) => {
     completeGatewayMock.mockResolvedValue({ state: word })
 
     const state = await useInvoicePaymentStore().verifyGatewayPayment(PaymentTarget.Order, '42', 'tok')
 
-    expect(state).toBe(expected)
+    expect(state).toBe(word)
     expect(completeGatewayMock).toHaveBeenCalledWith('order', '42', 'tok')
+  })
+
+  it('keeps the order number the backend answered with', async () => {
+    completeGatewayMock.mockResolvedValue({ state: GatewayPaymentState.Paid, orderNumber: 'ORD-0042' })
+    const store = useInvoicePaymentStore()
+
+    await store.verifyGatewayPayment(PaymentTarget.Order, '42', 'tok')
+
+    expect(store.verifiedOrderNumber).toBe('ORD-0042')
   })
 
   it('reports Unknown, never Declined, when no answer could be had', async () => {
@@ -216,7 +237,46 @@ describe('useInvoicePaymentStore.verifyGatewayPayment', () => {
 
     const state = await useInvoicePaymentStore().verifyGatewayPayment(PaymentTarget.Invoice, '7')
 
-    expect(state).toBe('unknown')
+    expect(state).toBe(GatewayPaymentState.Unknown)
+  })
+})
+
+describe('useInvoicePaymentStore.downloadInvoicePdf', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    fetchInvoicePdfMock.mockReset()
+    saveBlobMock.mockReset()
+  })
+
+  it('saves the PDF under the invoice number and releases the in-flight flag', async () => {
+    const pdf = new Blob(['%PDF'], { type: 'application/pdf' })
+    fetchInvoicePdfMock.mockResolvedValue(pdf)
+    const store = useInvoicePaymentStore()
+
+    const pending = store.downloadInvoicePdf('41')
+    expect(store.pdfDownloading).toBe(true)
+    await pending
+
+    expect(fetchInvoicePdfMock).toHaveBeenCalledWith('41')
+    expect(saveBlobMock).toHaveBeenCalledWith(pdf, 'invoice-41.pdf')
+    expect(store.pdfDownloading).toBe(false)
+    expect(store.pdfError).toBe('')
+  })
+
+  it('keeps the API sentence when the download is refused, and clears it on the next try', async () => {
+    fetchInvoicePdfMock.mockRejectedValueOnce({ data: { detail: 'This invoice has too many lines to download as a PDF.' } })
+    const store = useInvoicePaymentStore()
+
+    await store.downloadInvoicePdf('41')
+
+    expect(saveBlobMock).not.toHaveBeenCalled()
+    expect(store.pdfError).toBe('This invoice has too many lines to download as a PDF.')
+    expect(store.pdfDownloading).toBe(false)
+
+    fetchInvoicePdfMock.mockResolvedValueOnce(new Blob(['%PDF']))
+    await store.downloadInvoicePdf('41')
+
+    expect(store.pdfError).toBe('')
   })
 })
 

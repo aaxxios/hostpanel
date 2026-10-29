@@ -78,13 +78,11 @@
 
 <script setup lang="ts">
 /**
- * aurora template account menu — the signed-in half of the site header.
+ * aurora template account menu: the signed-in half of the site header.
  *
- * The public header used to render "Sign in" / "Get started" to everyone,
- * because it never consulted the session at all: the auth store was wired into
- * the client-area shell and into the legacy `components/layout/Header.vue`, but
- * the active template's header read neither. This is the treatment that belongs
- * beside the apps launcher — avatar, account destinations, sign out.
+ * It reads the session, so a signed-in visitor sees their account rather than
+ * "Sign in" / "Get started": avatar, account destinations, sign out, beside the
+ * apps launcher.
  *
  * The avatar comes from `UiAvatar` and the floating panel from `UiPopover`, so nothing is
  * drawn by hand twice and the outside-click / Escape handling lives in one place.
@@ -114,10 +112,10 @@ const { fetchUser, signOut } = authStore
 const open = ref(false)
 
 /** Given name, empty until the profile request resolves. */
-const firstName = computed(() => user.value?.firstname ?? '')
+const firstName = computed(() => user.value?.firstName ?? '')
 
 /** Family name, empty until the profile request resolves. */
-const lastName = computed(() => user.value?.lastname ?? '')
+const lastName = computed(() => user.value?.lastName ?? '')
 
 /** E-mail address, empty until the profile request resolves. */
 const email = computed(() => user.value?.email ?? '')
@@ -152,7 +150,7 @@ const onSignOut = async (): Promise<void> => {
 
 onMounted(() => {
   // The cookie says there is a session; the name and e-mail behind it still have
-  // to be fetched, and only on the client — the panel renders without them.
+  // to be fetched, and only on the client: the panel renders without them.
   fetchUser()
 })
 </script>

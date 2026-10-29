@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Billing;
+
 /// <summary>
 /// Represents a financial transaction on a client's account.
 /// Tracks money in (payments), money out (refunds/withdrawals), fees, and credit adjustments.
@@ -42,7 +43,7 @@ public sealed class Transaction : BaseEntity
     /// <summary>Gets the ISO 4217 currency code the transaction's amounts are in (e.g. "USD"). Set at creation, never changed.</summary>
     public string Currency { get; private set; } = string.Empty;
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Transaction() { }
 
     /// <summary>
@@ -60,7 +61,8 @@ public sealed class Transaction : BaseEntity
     /// <param name="addedToCredit">Whether this affects the client's credit balance.</param>
     /// <param name="currency">ISO 4217 currency code the amounts are in (e.g. "USD"); the related invoice's currency when there is one.</param>
     /// <returns>A new <see cref="Transaction"/>.</returns>
-    /// <exception cref="ArgumentException">Thrown when both <paramref name="amountIn"/> and <paramref name="amountOut"/> are 0, or the currency is not a three-letter code.</exception>
+    /// <exception cref="DomainRuleException">Neither <paramref name="amountIn"/> nor <paramref name="amountOut"/> is positive.</exception>
+    /// <exception cref="ArgumentException">The currency is not a three-letter code.</exception>
     public static Transaction Create(
         int clientId,
         DateTimeOffset date,
@@ -74,10 +76,7 @@ public sealed class Transaction : BaseEntity
         bool addedToCredit,
         string currency)
     {
-        if (amountIn <= 0 && amountOut <= 0)
-        {
-            throw new ArgumentException("At least one of AmountIn or AmountOut must be greater than 0.");
-        }
+        EnsureMovesMoney(amountIn, amountOut);
 
         return new Transaction
         {
@@ -109,7 +108,7 @@ public sealed class Transaction : BaseEntity
     /// <param name="fees">Transaction fees (≥ 0).</param>
     /// <returns>A new payment <see cref="Transaction"/> in the invoice's currency.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="invoice"/> is null.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="amount"/> is not positive.</exception>
+    /// <exception cref="DomainRuleException"><paramref name="amount"/> is not positive.</exception>
     public static Transaction CreateInvoicePayment(
         Invoice invoice,
         DateTimeOffset date,
@@ -134,38 +133,94 @@ public sealed class Transaction : BaseEntity
             invoice.Currency);
     }
 
-    /// <summary>Updates the editable fields of this transaction.</summary>
+    /// <summary>
+    /// Creates the ledger row for a refund paid out against <paramref name="invoice"/>: invoice
+    /// currency, description and a zero credit, the mirror of <see cref="CreateInvoicePayment"/>.
+    /// </summary>
+    /// <param name="invoice">The invoice refunded.</param>
+    /// <param name="date">UTC timestamp of the refund.</param>
+    /// <param name="gateway">Payment method or gateway name recorded on the row.</param>
+    /// <param name="transactionId">Reference of the refund.</param>
+    /// <param name="amount">Amount refunded (greater than 0).</param>
+    /// <param name="addedToCredit">Whether the refund went to the client's credit balance.</param>
+    /// <returns>A new refund <see cref="Transaction"/> in the invoice's currency.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="invoice"/> is null.</exception>
+    /// <exception cref="DomainRuleException"><paramref name="amount"/> is not positive.</exception>
+    public static Transaction CreateInvoiceRefund(
+        Invoice invoice,
+        DateTimeOffset date,
+        string gateway,
+        string transactionId,
+        decimal amount,
+        bool addedToCredit)
+    {
+        ArgumentNullException.ThrowIfNull(invoice);
+
+        return Create(
+            invoice.ClientId,
+            date,
+            $"Invoice #{invoice.Id} Refund",
+            transactionId,
+            invoice.Id,
+            gateway,
+            0m,
+            amount,
+            0m,
+            addedToCredit,
+            invoice.Currency);
+    }
+
+    /// <summary>
+    /// Corrects how the transaction is recorded: when it happened, what it was for, the external
+    /// reference and the method used. The amounts and currency are not touched.
+    /// </summary>
     /// <param name="date">UTC timestamp of the transaction.</param>
     /// <param name="description">Human-readable description.</param>
     /// <param name="transactionId">External transaction reference.</param>
-    /// <param name="invoiceId">Optional related invoice ID.</param>
     /// <param name="paymentMethod">Payment method used.</param>
-    /// <param name="amountIn">Amount credited (≥ 0).</param>
-    /// <param name="amountOut">Amount debited (≥ 0).</param>
-    /// <param name="fees">Transaction fees (≥ 0).</param>
-    /// <exception cref="ArgumentException">Thrown when both amounts are 0.</exception>
-    public void Update(
-        DateTimeOffset date,
-        string description,
-        string transactionId,
-        int? invoiceId,
-        string paymentMethod,
-        decimal amountIn,
-        decimal amountOut,
-        decimal fees)
+    public void CorrectDetails(DateTimeOffset date, string description, string transactionId, string paymentMethod)
     {
-        if (amountIn <= 0 && amountOut <= 0)
-        {
-            throw new ArgumentException("At least one of AmountIn or AmountOut must be greater than 0.");
-        }
-
         Date = date;
         Description = description;
         TransactionId = transactionId;
-        InvoiceId = invoiceId;
         PaymentMethod = paymentMethod;
+    }
+
+    /// <summary>Points the transaction at the invoice it belongs to, or detaches it from any.</summary>
+    /// <param name="invoiceId">The related invoice id, or <see langword="null"/> for none.</param>
+    public void LinkToInvoice(int? invoiceId)
+    {
+        InvoiceId = invoiceId;
+    }
+
+    /// <summary>
+    /// Corrects the money the transaction moved. The three amounts change together so the row
+    /// never holds a half-corrected total.
+    /// </summary>
+    /// <param name="amountIn">Amount credited (≥ 0).</param>
+    /// <param name="amountOut">Amount debited (≥ 0).</param>
+    /// <param name="fees">Transaction fees (≥ 0).</param>
+    /// <exception cref="DomainRuleException">Neither <paramref name="amountIn"/> nor <paramref name="amountOut"/> is positive.</exception>
+    public void CorrectAmounts(decimal amountIn, decimal amountOut, decimal fees)
+    {
+        EnsureMovesMoney(amountIn, amountOut);
+
         AmountIn = amountIn;
         AmountOut = amountOut;
         Fees = fees;
+    }
+
+    /// <summary>The one invariant every transaction keeps: it moves money in at least one direction.</summary>
+    /// <param name="amountIn">Amount credited.</param>
+    /// <param name="amountOut">Amount debited.</param>
+    /// <exception cref="DomainRuleException">Neither amount is positive.</exception>
+    private static void EnsureMovesMoney(decimal amountIn, decimal amountOut)
+    {
+        if (amountIn <= 0 && amountOut <= 0)
+        {
+            throw new DomainRuleException(
+                BillingErrors.TransactionAmountRequired,
+                "At least one of AmountIn or AmountOut must be greater than 0.");
+        }
     }
 }

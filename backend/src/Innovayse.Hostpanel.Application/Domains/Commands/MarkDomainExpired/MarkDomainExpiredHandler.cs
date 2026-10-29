@@ -17,16 +17,16 @@ public sealed class MarkDomainExpiredHandler
     /// <summary>The data context the domain aggregate is loaded, mutated and saved through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work the aggregate is saved through.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>The clock that dates the expiry.</summary>
+    private readonly IClock _clock;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The data context the domain aggregate is loaded, mutated and saved through.</param>
-    /// <param name="uow">Unit of work the aggregate is saved through.</param>
-    public MarkDomainExpiredHandler(IHostpanelDbContext context, IUnitOfWork uow)
+    /// <param name="clock">The clock that dates the expiry.</param>
+    public MarkDomainExpiredHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
-        _uow = uow;
+        _clock = clock;
     }
 
     /// <summary>
@@ -45,8 +45,8 @@ public sealed class MarkDomainExpiredHandler
             return Result.FailureCode(HostpanelErrorCodes.DOMAIN_NOT_FOUND);
         }
 
-        domain.MarkExpired();
-        await _uow.SaveChangesAsync(ct);
+        domain.MarkExpired(_clock.UtcNow);
+        await _context.SaveChangesAsync(ct);
         return Result.Success();
     }
 }

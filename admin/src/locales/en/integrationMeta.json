@@ -1,10 +1,8 @@
 {
   "stripe": {
     "shortDescription": "Accept credit card payments online with Stripe's payment processing platform.",
-    "hint": "Add this webhook endpoint in your Stripe dashboard: https://yourdomain.com/api/webhooks/stripe",
     "fieldSecretKey": "Secret Key",
     "fieldPublishableKey": "Publishable Key",
-    "fieldWebhookSecret": "Webhook Secret",
     "fieldMode": "Mode"
   },
   "paypal": {

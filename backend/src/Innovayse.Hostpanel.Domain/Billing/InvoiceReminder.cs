@@ -17,7 +17,7 @@ public sealed class InvoiceReminder : BaseEntity
     /// <summary>Gets when it was sent (UTC).</summary>
     public DateTimeOffset SentAt { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private InvoiceReminder() { }
 
     /// <summary>Records a sent reminder.</summary>

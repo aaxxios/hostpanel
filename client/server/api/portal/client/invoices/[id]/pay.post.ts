@@ -1,15 +1,19 @@
 /**
  * POST /api/portal/client/invoices/:id/pay
- * Initiates payment for an invoice via the C# backend.
+ * Charges the saved payment method for an invoice via the backend.
  *
- * Body: { paymethodid?: number }
+ * Body: { paymentMethodId: string, attemptId: string }, passed through unchanged: the attempt id
+ * is what the backend deduplicates the charge by.
  */
+
+import { HttpMethod } from '~/types/httpmethod'
+
 export default defineEventHandler(async (event) => {
   const id = requireRouteParam(event, 'id')
 
   const body = await readBody(event)
   return await internalApiCall<Record<string, unknown>>(event, `/me/invoices/${id}/pay`, {
-    method: 'POST',
+    method: HttpMethod.Post,
     body,
   })
 })

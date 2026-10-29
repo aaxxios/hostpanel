@@ -3,20 +3,27 @@
  * Plugin Manager page.
  *
  * Lists installed plugins, provides ZIP upload for installation,
- * and shows a restart banner when pending changes need to take effect.
+ * and shows a restart banner when pending changes need to take effect. A refused load offers a
+ * retry; the outcome of an install or remove (success, or the API's sentence) shows above the list;
+ * a removal is confirmed first in a danger prompt.
  */
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePluginsStore } from '@/stores/plugins'
 import PluginCard from '@/components/plugins/PluginCard.vue'
 import PluginUploader from '@/components/plugins/PluginUploader.vue'
 import RestartBanner from '@/components/plugins/RestartBanner.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
+import { UiDialogVariant } from '@/utils/ui/dialog'
+import { UiTone } from '@/utils/ui/tone'
 
 /** Translation function. */
 const { t } = useI18n()
@@ -30,15 +37,57 @@ const removingId = ref<string | null>(null)
 /** True while the server restart request is in flight. */
 const restarting = ref(false)
 
+/** Id of the plugin waiting for the removal confirmation, null when the prompt is closed. */
+const confirmingId = ref<string | null>(null)
+
+/** The outcome line of the last install or remove. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
 /**
- * Removes a plugin.
+ * Shows the outcome of an install or remove.
+ *
+ * @param ok - Whether the API accepted the change.
+ * @param successKey - Locale key of the success sentence.
+ */
+const showOutcome = (ok: boolean, successKey: string): void => {
+  if (ok) {
+    feedback.show(t(successKey), false)
+  } else {
+    feedback.show(store.actionError ?? t('errors.noAnswer'), true)
+  }
+}
+
+/**
+ * Opens the removal confirmation for a plugin.
  *
  * @param id - Id of the plugin to remove.
  */
-const handleRemove = async (id: string): Promise<void> => {
+const askRemove = (id: string): void => {
+  confirmingId.value = id
+}
+
+/** Closes the removal confirmation; ignored while the removal runs. */
+const dismissRemove = (): void => {
+  if (removingId.value === null) {
+    confirmingId.value = null
+  }
+}
+
+/** Removes the plugin the operator confirmed and shows the outcome. */
+const handleRemove = async (): Promise<void> => {
+  const id = confirmingId.value
+  if (id === null) {
+    return
+  }
+  feedback.clear()
   removingId.value = id
-  await store.remove(id)
+  const ok = await store.remove(id)
   removingId.value = null
+  confirmingId.value = null
+  showOutcome(ok, 'plugins.plugins.pluginRemoved')
 }
 
 /** Restarts the server so installed or removed plugins take effect. */
@@ -54,7 +103,8 @@ const handleRestart = async (): Promise<void> => {
  * @param file - The chosen `.zip` archive.
  */
 const handleUpload = async (file: File): Promise<void> => {
-  await store.install(file)
+  feedback.clear()
+  showOutcome(await store.install(file), 'plugins.plugins.pluginInstalled')
 }
 
 /** Loads the installed plugins. */
@@ -76,13 +126,19 @@ onMounted(store.fetchAll)
     <!-- Upload -->
     <PluginUploader @upload="handleUpload" />
 
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="plugins-feedback" />
+
     <!-- Error -->
-    <UiAlert v-if="store.error" variant="error" data-testid="plugins-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="plugins-error"
+      @retry="store.fetchAll()"
+    />
 
     <!-- Loading -->
-    <UiSkeleton v-if="store.loading && store.plugins.length === 0" :lines="3" data-testid="plugins-loading" />
+    <UiSkeleton v-else-if="store.loading && store.plugins.length === 0" :lines="3" data-testid="plugins-loading" />
 
     <!-- Empty state -->
     <UiEmptyState
@@ -100,8 +156,20 @@ onMounted(store.fetchAll)
         :key="plugin.id"
         :plugin="plugin"
         :removing="removingId === plugin.id"
-        @remove="handleRemove"
+        @remove="askRemove"
       />
     </UiStack>
+
+    <UiDialog
+      :open="confirmingId !== null"
+      :variant="UiDialogVariant.Confirm"
+      :title="t('plugins.plugins.confirmRemoveTitle')"
+      :message="t('plugins.plugins.confirmRemoveMessage', { id: confirmingId ?? '' })"
+      :confirm-label="t('plugins.pluginCard.remove')"
+      :loading="removingId !== null"
+      :tone="UiTone.Danger"
+      @confirm="handleRemove"
+      @close="dismissRemove"
+    />
   </UiStack>
 </template>

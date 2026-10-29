@@ -35,7 +35,7 @@
  *
  * Drawn in CSS rather than shipped as an image. No screenshot of this panel
  * exists in the repository, and a stock dashboard image would be a picture of
- * software the visitor is not being sold — so the preview names the areas the
+ * software the visitor is not being sold, so the preview names the areas the
  * client area really has and shows nothing it cannot name.
  *
  * `compact` drops the copy and the section wrapper, which is how the hero

@@ -1,24 +1,31 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Products;
 
 /// <summary>
-/// <c>GET /api/products</c> against Postgres: the public happy path.
+/// <c>GET /api/products</c> against Postgres: the staff view of the products, which carries the
+/// provisioning fields and is therefore closed to anyone but staff.
 /// </summary>
-/// <remarks>Split from the deleted <c>ProductsEndpointTests</c> (A7 Task 6).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetProductsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>GET /api/products is publicly accessible without authentication.</summary>
+    /// <summary>An admin reads the staff view, inactive and unsellable products included.</summary>
     [Fact]
-    public async Task GetProductsAsync_ReturnsOk_WithoutAuthAsync()
+    public async Task GetProductsAsync_ReturnsOk_ForAnAdminAsync()
     {
-        var client = factory.CreateClient();
+        var admin = await ProductsTestSeeds.AdminClientAsync(factory);
 
-        var response = await client.GetAsync("/api/products");
+        var response = await admin.GetAsync("/api/products?activeOnly=false&includeUnsellable=true");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>An anonymous caller is refused with 401: the storefront reads <c>/api/public/products</c>.</summary>
+    [Fact]
+    public async Task GetProductsAsync_Returns401_WithoutAuthAsync()
+    {
+        var response = await factory.CreateClient().GetAsync("/api/products");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

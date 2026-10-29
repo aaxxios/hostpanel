@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -11,7 +8,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>GET /api/clients/{clientId}/billable-items</c> against Postgres: a client's own uninvoiced
 /// and invoiced billable items.
 /// </summary>
-/// <remarks>Split from the deleted <c>BillableItemsEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListClientBillableItemsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

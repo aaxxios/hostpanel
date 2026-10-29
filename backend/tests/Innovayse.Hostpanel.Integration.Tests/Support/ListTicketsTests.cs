@@ -1,21 +1,17 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
 /// <summary>
-/// <c>GET /api/tickets</c>: staff can list every support ticket, and a plain client is refused --
-/// the route carries the class-level <c>ResellerOrAdmin</c> policy.
+/// <c>GET /api/tickets</c>: staff can list every support ticket, and a plain client is refused:
+/// the route carries the class-level <c>Admin</c> policy.
 /// </summary>
-/// <remarks>Split out of the deleted <c>SupportEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListTicketsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -30,7 +26,7 @@ public sealed class ListTicketsTests(IntegrationTestFactory factory) : IClassFix
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    /// <summary>A registered client, who is neither a reseller nor an admin, is forbidden.</summary>
+    /// <summary>A registered client, who is not staff, is forbidden.</summary>
     [Fact]
     public async Task ClientIsForbiddenAsync()
     {
@@ -59,10 +55,11 @@ public sealed class ListTicketsTests(IntegrationTestFactory factory) : IClassFix
         using (var scope = factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-            var client = Client.Create($"user-{Guid.NewGuid():N}", "Grace", "Hopper", $"grace-{Guid.NewGuid():N}@example.test");
+            var client = Client.Create($"user-{Guid.NewGuid():N}", "Grace", "Hopper", $"grace-{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
             context.Clients.Add(client);
             await context.SaveChangesAsync(CancellationToken.None);
-            var ticket = Ticket.Create(client.Id, "Named requestor", "Hello", departmentId: 1, TicketPriority.Medium);
+            var departmentId = await SupportTestSeeds.SeedDepartmentAsync(context);
+            var ticket = Ticket.Create(client.Id, "Named requestor", "Hello", departmentId, TicketPriority.Medium, DateTimeOffset.UtcNow);
             context.Tickets.Add(ticket);
             await context.SaveChangesAsync(CancellationToken.None);
             ticketId = ticket.Id;
@@ -74,5 +71,54 @@ public sealed class ListTicketsTests(IntegrationTestFactory factory) : IClassFix
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var row = body.RootElement.GetProperty("items").EnumerateArray().Single(t => t.GetProperty("id").GetInt32() == ticketId);
         row.GetProperty("clientName").GetString().Should().Be("Grace Hopper");
+    }
+
+    /// <summary>A status filter that names no ticket status is refused with 400, not silently ignored.</summary>
+    [Fact]
+    public async Task UnknownStatusFilterIsRejectedAsync()
+    {
+        var admin = await SupportTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.GetAsync("/api/tickets?status=Archived");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>The status filter binds by name and keeps only tickets in that status.</summary>
+    [Fact]
+    public async Task StatusFilterKeepsOnlyThatStatusAsync()
+    {
+        var admin = await SupportTestSeeds.AdminClientAsync(factory);
+        var openId = await SupportTestSeeds.CreateAdminTicketAsync(factory, admin);
+        var closedId = await SupportTestSeeds.CreateAdminTicketAsync(factory, admin);
+        (await admin.PostAsync($"/api/tickets/{closedId}/close", content: null)).StatusCode
+            .Should().Be(HttpStatusCode.NoContent);
+
+        var response = await admin.GetAsync($"/api/tickets?status={nameof(TicketStatus.Closed)}&pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var items = body.RootElement.GetProperty("items").EnumerateArray().ToList();
+        items.Should().OnlyContain(t => t.GetProperty("status").GetString() == nameof(TicketStatus.Closed));
+        items.Select(t => t.GetProperty("id").GetInt32()).Should().Contain(closedId).And.NotContain(openId);
+    }
+
+    /// <summary>The flagged filter keeps only tickets staff flagged.</summary>
+    [Fact]
+    public async Task FlaggedFilterKeepsOnlyFlaggedTicketsAsync()
+    {
+        var admin = await SupportTestSeeds.AdminClientAsync(factory);
+        var unflaggedId = await SupportTestSeeds.CreateAdminTicketAsync(factory, admin);
+        var flaggedId = await SupportTestSeeds.CreateAdminTicketAsync(factory, admin);
+        (await admin.PostAsync($"/api/tickets/{flaggedId}/toggle-flag", content: null)).StatusCode
+            .Should().Be(HttpStatusCode.NoContent);
+
+        var response = await admin.GetAsync("/api/tickets?flagged=true&pageSize=100");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var items = body.RootElement.GetProperty("items").EnumerateArray().ToList();
+        items.Should().OnlyContain(t => t.GetProperty("isFlagged").GetBoolean());
+        items.Select(t => t.GetProperty("id").GetInt32()).Should().Contain(flaggedId).And.NotContain(unflaggedId);
     }
 }

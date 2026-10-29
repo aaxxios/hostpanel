@@ -15,7 +15,7 @@
 <script setup lang="ts">
 /**
  * nova "why choose us" grid. Every card states something the platform does,
- * so none of them is gated — but the section still guards on an empty list,
+ * so none of them is gated, but the section still guards on an empty list,
  * because a heading with nothing under it is worse than no heading.
  */
 import NovaFeatureCard from '~/templates/nova/sections/FeatureCard.vue'

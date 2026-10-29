@@ -8,10 +8,10 @@ namespace Innovayse.Hostpanel.Domain.Partners;
 /// </summary>
 public sealed class PartnerTranslation : BaseEntity
 {
-    /// <summary>Longest a locale code may be — matches the <c>PartnerTranslations.Locale</c> column.</summary>
+    /// <summary>Longest a locale code may be: matches the <c>PartnerTranslations.Locale</c> column.</summary>
     public const int LocaleMaxLength = 10;
 
-    /// <summary>Longest Name may be — matches the <c>PartnerTranslations.Name</c> column.</summary>
+    /// <summary>Longest Name may be: matches the <c>PartnerTranslations.Name</c> column.</summary>
     public const int NameMaxLength = 200;
 
     /// <summary>Gets the FK to the parent <see cref="Partner"/>.</summary>
@@ -23,7 +23,7 @@ public sealed class PartnerTranslation : BaseEntity
     /// <summary>Gets the partner's name in this locale.</summary>
     public string Name { get; private set; } = string.Empty;
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private PartnerTranslation() { }
 
     /// <summary>

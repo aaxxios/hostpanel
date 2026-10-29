@@ -1,8 +1,5 @@
 using System.Net;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -11,7 +8,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// names no ticket is refused <c>TICKET_NOT_FOUND</c>, and the action is closed to a caller with
 /// no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>TicketsAdminEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ToggleTicketFlagTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -20,7 +16,7 @@ public sealed class ToggleTicketFlagTests(IntegrationTestFactory factory) : ICla
     public async Task AdminCanToggleTheFlagAsync()
     {
         var client = await SupportTestSeeds.AdminClientAsync(factory);
-        var id = await SupportTestSeeds.CreateAdminTicketAsync(client);
+        var id = await SupportTestSeeds.CreateAdminTicketAsync(factory, client);
 
         var response = await client.PostAsync($"/api/tickets/{id}/toggle-flag", content: null);
 

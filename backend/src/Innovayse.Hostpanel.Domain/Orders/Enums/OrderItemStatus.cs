@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Orders.Enums;
+
 /// <summary>Lifecycle status of an individual order item.</summary>
 public enum OrderItemStatus
 {

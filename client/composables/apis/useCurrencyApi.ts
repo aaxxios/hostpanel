@@ -2,7 +2,7 @@
  * Endpoints under `/api/portal/public` that expose the operator's configured billing
  * currencies to an anonymous visitor.
  *
- * Like the other `apis/use*Api.ts` files, this one is a list of URLs and nothing else — no
+ * Like the other `apis/use*Api.ts` files, this one is a list of URLs and nothing else: no
  * `ref`, no caching, no error handling. `stores/currency.ts` is the only intended caller.
  *
  * @module composables/apis/useCurrencyApi

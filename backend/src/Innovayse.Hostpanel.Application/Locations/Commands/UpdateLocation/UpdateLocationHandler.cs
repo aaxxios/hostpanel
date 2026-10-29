@@ -41,7 +41,7 @@ public sealed class UpdateLocationHandler
         }
 
         entity.Update(cmd.CountryCode, cmd.SortOrder, cmd.IsActive);
-        entity.ApplyTranslations(cmd.Translations);
+        entity.ReplaceTranslations(cmd.Translations.ToContent());
 
         await _context.SaveChangesAsync(ct);
         return Result.Success();

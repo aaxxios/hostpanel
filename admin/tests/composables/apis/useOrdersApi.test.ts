@@ -5,6 +5,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useOrdersApi } from '@/composables/apis/useOrdersApi'
+import { OrderStatus } from '@/types/order'
 import { json, stubFetch, callOf } from '../../helpers/fetch'
 
 afterEach(() => {
@@ -16,7 +17,7 @@ describe('useOrdersApi', () => {
     const mock = stubFetch(json({ items: [], totalCount: 0 }))
     const api = useOrdersApi()
 
-    await api.listOrders({ page: 1, pageSize: 20, status: 'Pending' })
+    await api.listOrders({ page: 1, pageSize: 20, status: OrderStatus.Pending })
     await api.listOrders({ page: 1, pageSize: 20, status: null })
     expect(callOf(mock, 0).url).toBe('/api/orders?page=1&pageSize=20&status=Pending')
     expect(callOf(mock, 1).url).toBe('/api/orders?page=1&pageSize=20')

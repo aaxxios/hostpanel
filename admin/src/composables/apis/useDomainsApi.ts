@@ -16,7 +16,7 @@ import type {
   ForwardingRulePayload,
   UpdateDomainPayload,
 } from '@/types/domain'
-import type { PagedResult } from '@/types/pagedresult'
+import type { PaginatedList } from '@/types/paginatedlist'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
 
@@ -34,8 +34,8 @@ export const useDomainsApi = () => {
    * @param filter - Page, page size, name search and owning client.
    * @returns The page and the total count.
    */
-  const listDomains = (filter: DomainFilter): Promise<PagedResult<DomainRegistration>> =>
-    request<PagedResult<DomainRegistration>>(
+  const listDomains = (filter: DomainFilter): Promise<PaginatedList<DomainRegistration>> =>
+    request<PaginatedList<DomainRegistration>>(
       `/domains${buildQuery({
         clientId: filter.clientId,
         page: filter.page,

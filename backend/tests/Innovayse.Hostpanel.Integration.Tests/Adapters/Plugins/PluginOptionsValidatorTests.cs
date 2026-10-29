@@ -1,0 +1,70 @@
+using Innovayse.Hostpanel.Infrastructure.Plugins.Settings;
+
+namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Plugins;
+
+/// <summary><see cref="PluginOptionsValidator"/> refuses plugin settings that would leave the limits or the trusted list unusable.</summary>
+public sealed class PluginOptionsValidatorTests
+{
+    /// <summary>The validator under test.</summary>
+    private readonly PluginOptionsValidator _validator = new();
+
+    /// <summary>The defaults are usable: an install works on a host that sets nothing.</summary>
+    [Fact]
+    public void Defaults_Pass()
+    {
+        _validator.Validate(null, new PluginOptions()).Succeeded.Should().BeTrue();
+    }
+
+    /// <summary>A listed digest of the right shape is accepted, upper or lower case.</summary>
+    [Fact]
+    public void AWellFormedDigest_Passes()
+    {
+        var options = new PluginOptions { TrustedPackageSha256 = [new string('a', 64), new string('F', 64)] };
+
+        _validator.Validate(null, options).Succeeded.Should().BeTrue();
+    }
+
+    /// <summary>A zero or negative entry limit refuses startup.</summary>
+    [Fact]
+    public void ANonPositiveEntryLimit_Fails()
+    {
+        var result = _validator.Validate(null, new PluginOptions { MaxEntryCount = 0 });
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain(nameof(PluginOptions.MaxEntryCount));
+    }
+
+    /// <summary>A zero or negative size limit refuses startup.</summary>
+    [Fact]
+    public void ANonPositiveSizeLimit_Fails()
+    {
+        var result = _validator.Validate(null, new PluginOptions { MaxUncompressedBytes = -1 });
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain(nameof(PluginOptions.MaxUncompressedBytes));
+    }
+
+    /// <summary>A trusted-list entry that is not a 64-character hex digest refuses startup.</summary>
+    /// <param name="digest">The malformed entry.</param>
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")]
+    public void AMalformedDigest_Fails(string digest)
+    {
+        var result = _validator.Validate(null, new PluginOptions { TrustedPackageSha256 = [digest] });
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain(nameof(PluginOptions.TrustedPackageSha256));
+    }
+
+    /// <summary>An upload folder inside the build's own plugin folder refuses startup: it would make uploads look built-in.</summary>
+    [Fact]
+    public void AnUploadFolderInsideTheBuiltInFolder_Fails()
+    {
+        var result = _validator.Validate(
+            null, new PluginOptions { InstallPath = Path.Combine(PluginOptions.BuiltInRoot, "uploads") });
+
+        result.Failed.Should().BeTrue();
+        result.FailureMessage.Should().Contain(nameof(PluginOptions.InstallPath));
+    }
+}

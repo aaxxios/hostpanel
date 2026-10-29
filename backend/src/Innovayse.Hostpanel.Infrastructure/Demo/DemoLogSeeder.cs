@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Domain.Audit;
 using Innovayse.Hostpanel.Domain.Notifications;
+using Innovayse.Hostpanel.Domain.Notifications.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,11 +24,11 @@ internal sealed class DemoLogSeeder
     private const int FailureEvery = 9;
 
     /// <summary>The staff who appear in the activity log: id, name and email.</summary>
-    private static readonly (string Id, string Name, string Email)[] Staff =
+    private static readonly DemoStaffMember[] Staff =
     [
-        ("demo-staff-1", "Demo Admin", "demo-admin@demo.example"),
-        ("demo-staff-2", "Rafael Torres", "support.lead@demo.example"),
-        ("demo-staff-3", "Julia Weiss", "billing.manager@demo.example"),
+        new("demo-staff-1", "Demo Admin", "demo-admin@demo.example"),
+        new("demo-staff-2", "Rafael Torres", "support.lead@demo.example"),
+        new("demo-staff-3", "Julia Weiss", "billing.manager@demo.example"),
     ];
 
     /// <summary>What happened on an account, rotated.</summary>
@@ -48,14 +49,14 @@ internal sealed class DemoLogSeeder
     ];
 
     /// <summary>The emails that were sent: subject and body, rotated.</summary>
-    private static readonly (string Subject, string Body)[] Emails =
+    private static readonly DemoLoggedEmail[] Emails =
     [
-        ("Welcome to Hostpanel Demo", "Your account is ready. Sign in to manage your services."),
-        ("Your invoice is ready", "A new invoice has been issued for your account. You can pay it from the billing area."),
-        ("Payment received", "Thank you. We have received your payment and applied it to your invoice."),
-        ("Your domain expires soon", "A domain on your account expires in less than thirty days. Renew it to keep it."),
-        ("Re: your support ticket", "We have replied to your ticket. Open the support area to read the answer."),
-        ("Your service is now active", "The service you ordered has been set up and is ready to use."),
+        new($"Welcome to {DemoPortalSettingsSeeder.SiteName}", "Your account is ready. Sign in to manage your services."),
+        new("Your invoice is ready", "A new invoice has been issued for your account. You can pay it from the billing area."),
+        new("Payment received", "Thank you. We have received your payment and applied it to your invoice."),
+        new("Your domain expires soon", "A domain on your account expires in less than thirty days. Renew it to keep it."),
+        new("Re: your support ticket", "We have replied to your ticket. Open the support area to read the answer."),
+        new("Your service is now active", "The service you ordered has been set up and is ready to use."),
     ];
 
     /// <summary>The data context the rows are added to and saved through.</summary>
@@ -127,8 +128,9 @@ internal sealed class DemoLogSeeder
                     ? address
                     : $"{DemoSites.LabelOf(client)}@demo.example";
                 var sent = EmailLog.Create(
-                    to, subject, body, !failed,
-                    failed ? "Recipient mailbox unavailable." : null);
+                    to, subject, body,
+                    failed ? EmailSendFailure.RecipientRejected : null,
+                    _today);
                 sent.Backdate(MomentFor(client, 1 + ((n * 5) % 110), 7 + (n % 12)));
                 _db.EmailLogs.Add(sent);
             }

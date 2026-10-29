@@ -2,10 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Infrastructure.Auth.Settings;
-using Innovayse.Hostpanel.Shared.Contracts.Interfaces;
-using Innovayse.Hostpanel.Shared.Controllers;
 using Innovayse.Hostpanel.Shared.Infrastructure;
-using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -49,9 +46,6 @@ public sealed class BackchannelKeyAttribute : Attribute, IAuthorizationFilter
             return;
         }
 
-        var code = HostpanelErrorCodes.BACKCHANNEL_LOGOUT_UNAUTHORIZED;
-        var (status, title) = StatusMapping.For(code);
-        var detail = services.GetRequiredService<IErrorMessageResolver>().Resolve(code);
-        context.Result = ErrorBody.ToActionResult(new ErrorResponse(code, title, status, detail));
+        context.Result = ErrorBody.ToActionResult(ErrorBody.ForCode(services, HostpanelErrorCodes.BACKCHANNEL_LOGOUT_UNAUTHORIZED));
     }
 }

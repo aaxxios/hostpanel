@@ -1,7 +1,8 @@
 using Innovayse.Hostpanel.Domain.Domains;
-
 using Innovayse.Hostpanel.Domain.Domains.Enums;
+
 namespace Innovayse.Hostpanel.Application.Domains.Commands.AddMyDomainDnsRecord;
+
 /// <summary>Command for a client to add a DNS record to one of their own domains.</summary>
 /// <remarks>
 /// Carries a domain id but no client id. Which account the domain must belong to is resolved inside

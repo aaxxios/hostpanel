@@ -5,7 +5,6 @@ using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
 using Innovayse.Hostpanel.Domain.Services;
-using Innovayse.Hostpanel.Domain.Ssh;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
@@ -45,8 +44,8 @@ public static class SshTestSeeds
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var server = Server.Create(new ServerDetails(
-            $"ssh-srv-{Guid.NewGuid():N}", hostname, null, null, module, "root", null, null, "hash", true, null,
-            false, false, 0m, null, null, null, null, null, null, null, null, null, null, null, null));
+            $"ssh-srv-{Guid.NewGuid():N}", hostname, null, null, module, "root", new ServerCredentials(null, null, "hash"), true, null,
+            false, false, 0m, null, null, ServerNameServers.None), DateTimeOffset.UtcNow);
         context.Servers.Add(server);
         await context.SaveChangesAsync(CancellationToken.None);
 
@@ -71,13 +70,12 @@ public static class SshTestSeeds
         var group = ProductGroup.Create($"ssh-{Guid.NewGuid():N}", null);
         context.ProductGroups.Add(group);
         await context.SaveChangesAsync(CancellationToken.None);
-        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
         context.Products.Add(product);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var service = ClientService.Create(clientId, product.Id, BillingCycleNames.Monthly);
-        service.ActivateOn(serverId, username);
-        context.ClientServices.Add(service);
+        var service = ClientService.Create(clientId, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        await ServicesTestSeeds.AddActivatedAsync(context, service, username, DateTimeOffset.UtcNow, serverId);
         await context.SaveChangesAsync(CancellationToken.None);
         return service.Id;
     }
@@ -86,13 +84,33 @@ public static class SshTestSeeds
     /// <param name="factory">The shared host.</param>
     /// <param name="label">Label for the generated e-mail.</param>
     /// <returns>The client's HTTP client, its id, the server id and the service id.</returns>
-    public static async Task<(HttpClient Http, int ClientId, int ServerId, int ServiceId)> OwnerWithServiceAsync(
+    public static async Task<SshOwnerScenario> OwnerWithServiceAsync(
         IntegrationTestFactory factory, string label)
     {
         var (http, clientId) = await DomainsTestSeeds.RegisterOwnerAsync(factory, label);
         var serverId = await SeedServerAsync(factory, $"{label}.example.test", 22);
         var serviceId = await SeedServiceAsync(factory, clientId, serverId, "web");
-        return (http, clientId, serverId, serviceId);
+        return new SshOwnerScenario(http, clientId, serverId, serviceId);
+    }
+
+    /// <summary>
+    /// Changes a service through its own domain method and saves it with domain events suppressed, so
+    /// no handler reacts and the test can dispatch the one command it is about.
+    /// </summary>
+    /// <param name="factory">The shared host.</param>
+    /// <param name="serviceId">The service.</param>
+    /// <param name="change">The domain method to call, for example a suspension.</param>
+    /// <returns>A task that completes once the change is saved.</returns>
+    public static async Task ChangeServiceQuietlyAsync(IntegrationTestFactory factory, int serviceId, Action<ClientService> change)
+    {
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        using (scope.ServiceProvider.GetRequiredService<IDomainEventGate>().Suppress())
+        {
+            var service = await context.ClientServices.FindAsync([serviceId], CancellationToken.None);
+            change(service!);
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
     }
 
     /// <summary>Adds a key through the API and returns its id.</summary>

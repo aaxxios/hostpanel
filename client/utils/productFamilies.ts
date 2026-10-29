@@ -113,8 +113,7 @@ export const buildPricingRows = (plans: PortalProduct[], format: MoneyFormatter,
     const offered = firstOfferedPrice(plan.pricing)
     const { features } = parseDescription(plan.description || '')
     return {
-      // The proxy always adds `pid`; the type marks it optional.
-      pid: plan.pid as number,
+      id: plan.id,
       tier: plan.name,
       slug: plan.slug || '',
       price: offered ? format(offered.amount) : '',
@@ -148,8 +147,8 @@ export const specificationBullets = (lines: readonly ProductFeature[]): string[]
 /**
  * The plan whose features speak for a whole family: the cheapest one that has a price.
  *
- * A family card used to mix lines from different plans ("Websites: 1" beside "Accounts: 50"),
- * which described no real plan. One plan's lines always agree with each other. Ties and plans
+ * Mixing lines from different plans ("Websites: 1" beside "Accounts: 50") would describe no
+ * real plan; one plan's lines always agree with each other. Ties and plans
  * with no price keep catalogue order, so the choice is stable.
  *
  * @param plans The family's plans.
@@ -221,7 +220,7 @@ export const familyCardBullets = (plans: readonly PortalProduct[], specification
  * @param products The group's products.
  * @returns The hosting type for the hosting group, otherwise the products' dominant type; null when unknown.
  */
-export const familyProductType = (group: PortalProductGroup, products: readonly PortalProduct[]): string | null =>
+export const familyProductType = (group: PortalProductGroup, products: readonly PortalProduct[]): ProductType | null =>
   group.id === HOSTING_GROUP_ID ? ProductType.SharedHosting : dominantProductType(products)
 
 /**
@@ -341,7 +340,6 @@ export const findProductDetail = (
 
   const plans: ProductPlan[] = planProducts.map((plan) => ({
     id: plan.id,
-    pid: plan.pid as number,
     tier: plan.name,
     pricing: plan.pricing ?? null,
     description: parseDescription(plan.description || '').summary,
@@ -352,7 +350,6 @@ export const findProductDetail = (
   return {
     id: key,
     gid: group.id,
-    pid: found.pid,
     // The family is named by its group, as on its card in the products list.
     name: group.name,
     icon: config.icon,
@@ -373,15 +370,15 @@ export const findProductDetail = (
  * middle to point at, so none is recommended.
  *
  * @param plans The family's plans, in display order.
- * @returns The `pid` of the recommended plan, or null when there is none.
+ * @returns The id of the recommended plan, or null when there is none.
  */
-export const recommendedPlanPid = (plans: readonly ProductPlan[]): number | null => {
+export const recommendedPlanId = (plans: readonly ProductPlan[]): number | null => {
   const featured = plans.find((plan) => plan.isFeatured && plan.pricing?.monthly !== 0)
   if (featured) {
-    return featured.pid
+    return featured.id
   }
   if (plans.length < MIN_PLANS_FOR_MIDDLE) {
     return null
   }
-  return plans[Math.floor((plans.length - 1) / 2)]?.pid ?? null
+  return plans[Math.floor((plans.length - 1) / 2)]?.id ?? null
 }

@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Clients.Enums;
+
 /// <summary>Classification of an additional contact on a client account.</summary>
 public enum ContactType
 {

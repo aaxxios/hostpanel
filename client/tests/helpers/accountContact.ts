@@ -23,18 +23,8 @@ export const makeContact = (overrides: Partial<AccountContact> = {}): AccountCon
   email: 'ann@example.com',
   phone: null,
   type: ContactType.General,
-  street: null,
-  address2: null,
-  city: null,
-  state: null,
-  postCode: null,
-  country: null,
-  notifyGeneral: true,
-  notifyInvoice: true,
-  notifySupport: true,
-  notifyProduct: true,
-  notifyDomain: false,
-  notifyAffiliate: false,
+  address: { street: null, address2: null, city: null, state: null, postCode: null, country: null },
+  notifications: { general: true, invoice: true, support: true, product: true, domain: false, affiliate: false },
   ...overrides
 })
 

@@ -22,7 +22,7 @@ public static class CurrencyExtensions
     /// <param name="context">The module's data context.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The base currency.</returns>
-    /// <exception cref="InvalidOperationException">No row is marked as the base — a seed or migration failure, never a runtime state.</exception>
+    /// <exception cref="InvalidOperationException">No row is marked as the base: a seed or migration failure, never a runtime state.</exception>
     public static async Task<Currency> GetBaseCurrencyAsync(this IHostpanelDbContext context, CancellationToken ct) =>
         await context.Currencies.AsNoTracking().FirstOrDefaultAsync(c => c.IsBase, ct)
         ?? throw new InvalidOperationException("No base currency is configured.");
@@ -56,7 +56,7 @@ public static class CurrencyExtensions
     /// "Offering" is both halves: configured, and switched on. A currency an operator set up and
     /// then disabled keeps the clients it already has (<c>Currency.Disable</c> says so) but may
     /// not be given to a new one, and neither may a code the panel has never heard of. Every
-    /// place a client's currency is chosen — the admin form, guest checkout — asks this one
+    /// place a client's currency is chosen, the admin form, guest checkout, asks this one
     /// question so that the three cannot drift apart on what "available" means.
     /// </remarks>
     /// <param name="context">The module's data context.</param>

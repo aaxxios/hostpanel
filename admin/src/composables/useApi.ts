@@ -1,23 +1,18 @@
 /**
- * Fetch wrapper for the Hostpanel API — the only layer that knows about transport.
+ * Fetch wrapper for the Hostpanel API: the only layer that knows about transport.
  *
  * Under `AUTH_MODE=sso` it holds no credential at all: the API performs the OIDC
  * exchange itself and hands the browser an opaque, httpOnly session cookie, which the
- * browser attaches on its own and the server renews behind. (This file used to keep an
- * access token AND a refresh token in localStorage — a 30-day credential readable by
- * any script on the page — plus its own refresh loop. That is gone and is not coming
- * back.)
+ * browser attaches on its own and the server renews behind. A token in browser storage
+ * would be readable by any script on the page.
  *
- * Under `AUTH_MODE=local` it now holds no credential either. `POST /api/auth/login`
- * still mints a short-lived (15 minute) JWT, but the API writes the browser's copy into
- * an httpOnly `hostpanel_session` cookie and reads it back from there when no
- * `Authorization` header is present. This file used to park that token in
- * `sessionStorage` — readable by any script injected into the page — which contradicted
- * the decision the SSO path had already made for the same reason. Memory-only storage
- * was not the alternative: it signs the operator out on every refresh, which is why
- * `sessionStorage` was reached for in the first place.
+ * Under `AUTH_MODE=local` it holds no credential either. `POST /api/auth/login`
+ * mints a short-lived (15 minute) JWT, but the API writes the browser's copy into an
+ * httpOnly `hostpanel_session` cookie and reads it back from there when no
+ * `Authorization` header is present. `sessionStorage` would expose it to injected
+ * scripts, and memory-only storage would sign the operator out on every refresh.
  *
- * So there is no token slot here any more, in either mode. Whether a session exists is a
+ * So there is no token slot here, in either mode. Whether a session exists is a
  * question only the server can answer, which is what `/auth/me` is for.
  */
 
@@ -94,7 +89,7 @@ export class ApiError extends Error {
  * Turns a failed response into an {@link ApiError} that keeps its body.
  *
  * The body is read rather than discarded: every failure the API reports explains itself
- * in a problem+json `{ type, detail, … }`, and a page that cannot see it has no choice
+ * in a problem+json `{ type, detail }`, and a page that cannot see it has no choice
  * but to make a sentence up.
  *
  * @param response - A response whose status is not 2xx.
@@ -106,7 +101,7 @@ const failureOf = async (response: Response): Promise<ApiError> => {
   try {
     failureBody = failureText ? JSON.parse(failureText) : null
   } catch {
-    // Not JSON — a proxy error page, most likely. The status still means something.
+    // Not JSON: a proxy error page, most likely. The status still means something.
     failureBody = null
   }
   return new ApiError(response.status, failureBody)
@@ -115,7 +110,8 @@ const failureOf = async (response: Response): Promise<ApiError> => {
 /**
  * Composable for making authenticated API calls via the same-origin proxy.
  *
- * @returns `request` for JSON calls, `upload` for one multipart file and `probe` for 401-tolerant reads.
+ * @returns `request` for JSON calls, `upload` for one multipart file, `probe` for 401-tolerant reads
+ * and `href` for an address the browser opens itself.
  */
 export const useApi = () => {
   /**
@@ -140,10 +136,8 @@ export const useApi = () => {
 
     // A 401 is thrown like any other error and nothing is redirected from here.
     //
-    // The old code pushed to /login on 401, which was survivable only because it never
-    // reached the API without a token in hand. fetchMe now always asks the server —
-    // that is the whole point, the browser can no longer answer "am I signed in" — so
-    // a redirect here fires *inside* the router guard that called it. vue-router
+    // fetchMe always asks the server, because the browser cannot answer "am I signed in",
+    // so a redirect here would fire *inside* the router guard that called it. vue-router
     // aborts the navigation in progress and nothing renders at all: a blank page, no
     // error. The guard already sends unauthenticated visitors to /login; this layer
     // only has to report what happened.
@@ -169,7 +163,7 @@ export const useApi = () => {
    * Separate from {@link request} because a fixed `Content-Type: application/json`
    * header would stop the browser writing its own multipart boundary.
    *
-   * @param endpoint - API path (e.g. '/admin/slides/upload-image').
+   * @param endpoint - API path (e.g. '/admin/storefront/upload-image').
    * @param file - The file to send, under the form field `file`.
    * @returns Parsed JSON response data.
    * @throws {ApiError} When the API answers with a non-2xx status.
@@ -197,7 +191,7 @@ export const useApi = () => {
    * Used by the session probe, which runs on every cold load including the signed-out one.
    * A 401 resolves to null, so nothing is thrown and nothing is logged by the app; every
    * other failure still throws like {@link request}. (The browser's own network panel still
-   * lists the 401 — that line is not reachable from script.)
+   * lists the 401: that line is not reachable from script.)
    *
    * @param endpoint - API path (e.g. '/auth/me').
    * @returns Parsed JSON response data, or null when the API answered 401.
@@ -214,5 +208,14 @@ export const useApi = () => {
     }
   }
 
-  return { request, upload, probe }
+  /**
+   * The address of an endpoint the browser opens itself (a file download in a new tab) instead of
+   * a request made here. The session cookie goes with it like with any same-origin request.
+   *
+   * @param endpoint - API path (e.g. '/billing/5/pdf').
+   * @returns The full address to open.
+   */
+  const href = (endpoint: string): string => `${API_BASE}${endpoint}`
+
+  return { request, upload, probe, href }
 }

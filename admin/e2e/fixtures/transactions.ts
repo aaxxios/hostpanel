@@ -23,7 +23,7 @@ export const newTransaction: Transaction = {
 
 /** A ledger with nothing in it. */
 export const ledgerEmpty: TransactionsResult = {
-  transactions: { items: [], totalCount: 0, page: 1, pageSize: 25 },
+  transactions: { items: [], pageNumber: 1, pageSize: 25, totalCount: 0, totalPages: 0 },
   totalIn: 0,
   totalOut: 0,
   totalFees: 0,
@@ -33,7 +33,7 @@ export const ledgerEmpty: TransactionsResult = {
 
 /** The ledger once the entry exists. */
 export const ledgerAfterAdd: TransactionsResult = {
-  transactions: { items: [newTransaction], totalCount: 1, page: 1, pageSize: 25 },
+  transactions: { items: [newTransaction], pageNumber: 1, pageSize: 25, totalCount: 1, totalPages: 1 },
   totalIn: 100,
   totalOut: 0,
   totalFees: 0,

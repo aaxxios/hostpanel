@@ -210,6 +210,38 @@ describe('useSchemaOrg', () => {
     ])
   })
 
+  it('describes an article with an absolute URL and only the fields it was given', () => {
+    stubRuntime()
+    const { articleSchema } = useSchemaOrg()
+
+    expect(articleSchema({ headline: 'H', url: '/announcements/3', description: 'D', datePublished: '2026-03-15T12:00:00Z' })).toEqual({
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: 'H',
+      mainEntityOfPage: `${BASE}/announcements/3`,
+      url: `${BASE}/announcements/3`,
+      publisher: { '@id': `${BASE}/#organization` },
+      description: 'D',
+      datePublished: '2026-03-15T12:00:00Z',
+    })
+    const bare = articleSchema({ headline: 'H', url: 'https://other.test/a' })
+    expect(bare).not.toHaveProperty('description')
+    expect(bare).not.toHaveProperty('datePublished')
+    expect(bare.url).toBe('https://other.test/a')
+  })
+
+  it('reads a getter again each time the head renders', () => {
+    stubRuntime()
+    const schema = ref<object[]>([])
+
+    useSchemaOrg().injectSchema(() => schema.value)
+    const render = useHead.mock.calls[0]![0] as () => { script: unknown[] }
+    expect(render().script).toEqual([])
+
+    schema.value = [{ '@type': 'A' }]
+    expect(render().script).toHaveLength(1)
+  })
+
   it('injects one JSON-LD script per schema into the head', () => {
     stubRuntime()
     const { injectSchema } = useSchemaOrg()
@@ -218,7 +250,7 @@ describe('useSchemaOrg', () => {
 
     injectSchema([first, second])
 
-    const scripts = (useHead.mock.calls[0]![0] as { script: Array<{ type: string, innerHTML: string }> }).script
+    const scripts = (useHead.mock.calls[0]![0] as () => { script: Array<{ type: string, innerHTML: string }> })().script
     expect(scripts).toEqual([
       { type: 'application/ld+json', innerHTML: JSON.stringify(first) },
       { type: 'application/ld+json', innerHTML: JSON.stringify(second) },
@@ -230,6 +262,6 @@ describe('useSchemaOrg', () => {
 
     useSchemaOrg().injectSchema({ '@type': 'A' })
 
-    expect((useHead.mock.calls[0]![0] as { script: unknown[] }).script).toHaveLength(1)
+    expect((useHead.mock.calls[0]![0] as () => { script: unknown[] })().script).toHaveLength(1)
   })
 })

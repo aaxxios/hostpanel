@@ -13,11 +13,11 @@ export default defineNuxtConfig({
    * unix socket, and on this Docker-for-Windows setup that exchange never completes for this
    * app: every server-rendered route either hangs or answers 500 "IPC connection closed",
    * while API routes, static assets and the `ssr: false` pages under /client all work. It is
-   * not the application code — the same routes render correctly in production, and the
+   * not the application code: the same routes render correctly in production, and the
    * failure reproduces on an unmodified checkout.
    *
-   * Turning SSR off in development trades away one thing — you cannot see server-rendered
-   * output locally — to get back every page, which otherwise cannot be opened at all.
+   * Turning SSR off in development trades away one thing, you cannot see server-rendered
+   * output locally, to get back every page, which otherwise cannot be opened at all.
    * Production is untouched: `$development` applies only to `nuxt dev`.
    *
    * Remove this once the dev-server issue is fixed, and verify by loading any public page.
@@ -29,29 +29,29 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-02-04',
   devtools: { enabled: true },
 
-  // Client area pages are auth-gated and fetch data client-side only — disable SSR
+  // Client area pages are auth-gated and fetch data client-side only: disable SSR
   // to avoid hydration mismatches (server renders empty state, client renders content)
   // X-Robots-Tag: noindex prevents search engines from indexing private pages
   routeRules: {
-    // Immutable hashed assets — cache for 1 year
+    // Immutable hashed assets: cache for 1 year
     '/_nuxt/**': { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
-    // Public static assets — cache for 30 days
+    // Public static assets: cache for 30 days
     '/images/**': { headers: { 'Cache-Control': 'public, max-age=2592000, stale-while-revalidate=86400' } },
     '/fonts/**': { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
-    // Auth-gated SPA pages — no SSR, no indexing
+    // Auth-gated SPA pages: no SSR, no indexing
     '/client/**': { ssr: false, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     '/cart/**': { ssr: false, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     '/checkout/**': { ssr: false, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     // The hosted-gateway returnUrl landing page. It belongs to this group for the same two
     // reasons: it has nothing to server-render (the payment outcome is only known after the
     // on-mount verification call), and a page whose URL carries an invoice/order id must
-    // never be indexed. Omitting it is not cosmetic — it was the one page left server-
-    // rendered, and SSR of it returned 500 in production, breaking every payer's return
-    // from the bank. Development runs with `ssr: false` globally (see the note at the top
-    // of this file), so this can only ever be caught against a production build.
+    // never be indexed. Omitting it is not cosmetic: server-rendering it answers 500 in
+    // production, breaking every payer's return from the bank. Development runs with
+    // `ssr: false` globally (see the note at the top of this file), so this can only ever
+    // be caught against a production build.
     '/payment/**': { ssr: false, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
     // The live-chat SDK (plugins/live-chat.ts) draws its launcher bubble in *this* page and
-    // points the inbox icon at a root-relative `/brand-assets/...`, which would 404 into the
+    // points the inbox icon at a root-relative `/brand-assets/` path, which would 404 into the
     // Vue Router. When the operator names a chat server (NUXT_PUBLIC_PORTAL_CHAT_BASE_URL) the
     // path is proxied to it; with none configured there is no chat widget and no rule, so no
     // host is ever assumed. Route rules are fixed at build time, hence the environment value.
@@ -86,8 +86,8 @@ export default defineNuxtConfig({
   modules: [
     /**
      * Inline module: drops the `vue-router/volar/sfc-route-blocks` Volar plugin that Nuxt adds to the
-     * generated tsconfig. vue-router 4.6 no longer exports that path, so vue-tsc printed
-     * `Resolve plugin path failed ... ERR_PACKAGE_PATH_NOT_EXPORTED` on every typecheck. The plugin only
+     * generated tsconfig. vue-router 4.6 does not export that path, so vue-tsc would print
+     * `Resolve plugin path failed` with `ERR_PACKAGE_PATH_NOT_EXPORTED` on every typecheck. The plugin only
      * type-checks `<route>` blocks, which this app does not use.
      */
     (_options, nuxt) => {
@@ -123,7 +123,7 @@ export default defineNuxtConfig({
     quality: 80,
     format: ['webp'],
     // No `loading: 'lazy'` here. It sat in this block claiming to set a default for every
-    // NuxtImg, but `@nuxt/image`'s ModuleOptions has no such key -- the module ignored it and
+    // NuxtImg, but `@nuxt/image`'s ModuleOptions has no such key: the module ignored it and
     // the comment described behaviour nobody had. Lazy loading is per-component: a `<NuxtImg>`
     // that should defer needs its own `loading="lazy"`, as the eager ones already spell out
     // `loading="eager"`.
@@ -140,7 +140,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css', '@fontsource-variable/inter', '~/assets/styles/animations.css', '~/assets/styles/global.css'],
 
   runtimeConfig: {
-    // Server-side only. No credential for an external service belongs here — only this
+    // Server-side only. No credential for an external service belongs here: only this
     // BFF's own OIDC client credential, internal addresses, and the auth-mode switch.
     authMode: process.env.AUTH_MODE || 'sso',
     apiUrl: process.env.API_URL || 'http://localhost:5000',
@@ -152,12 +152,19 @@ export default defineNuxtConfig({
     // Empty (no development host baked in) unless configured: SSO sign-in cannot work without it, and a
     // silent default would ship to production. Set SSO_CALLBACK_URL to the portal's callback address.
     ssoCallbackUrl: process.env.SSO_CALLBACK_URL || '',
-    // Internal URL of the main portal, used for backchannel logout delegation; empty skips the call
-    mainApiUrl: process.env.NUXT_MAIN_API_URL || '',
     // Redis that keeps the signed-in sessions (the tokens never reach the browser). The same value
     // as the API's REDIS_CONNECTION, overridden at runtime by NUXT_SESSION_REDIS. Empty keeps the
     // sessions in this process's memory, which only suits a single process (tests, local dev).
     sessionRedis: process.env.SESSION_REDIS || '',
+    // Key the sessions are encrypted with before they reach Redis (32 random bytes, base64). Filled at runtime from
+    // NUXT_SESSION_ENCRYPTION_KEY and required whenever sessionRedis is set outside development: the server
+    // refuses to start without it (server/utils/session-crypto.ts).
+    sessionEncryptionKey: '',
+    // How many trusted proxies stand in front of this server, filled at runtime from
+    // NUXT_TRUSTED_PROXY_COUNT. The visitor's address sent to the API is the Nth entry from the right of
+    // X-Forwarded-For (the same reading as the API's RateLimit__TrustedProxyCount); 0 uses the socket
+    // address and believes no header at all (server/utils/clientAddress.ts).
+    trustedProxyCount: 0,
 
     // Public runtime config (exposed to client)
     public: {
@@ -172,8 +179,8 @@ export default defineNuxtConfig({
       sheetsUrl: process.env.NUXT_PUBLIC_SHEETS_URL || '',
       emailUrl: process.env.NUXT_PUBLIC_EMAIL_URL || '',
       driveUrl: process.env.NUXT_PUBLIC_DRIVE_URL || '',
-      // Address of the billing-portal install this panel hands visitors off to (card
-      // management, invoice payment, domain transfer). An address only — the legacy billing
+      // Address of the billing-portal install this panel hands visitors off to (announcements,
+      // product orders, domain transfer). Cards and invoices are handled in this panel. An address only: the billing portal's
       // API credentials are the C# backend's and deliberately absent here. Empty
       // hides every link that needs it rather than rendering a broken one.
       //
@@ -184,7 +191,7 @@ export default defineNuxtConfig({
       billingPortalUrl: (process.env.BILLING_PORTAL_URL || '').replace(/\/+$/, ''),
       // Stripe.js's publishable key, read by useStripe(). Public by design; the
       // secret key is the backend's. Overridden at runtime with
-      // NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY — empty leaves the card form uninitialised.
+      // NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: empty leaves the card form uninitialised.
       stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
       mainUrl: process.env.NUXT_PUBLIC_MAIN_URL || '',
       // Active portal template when the operator's portal.template setting is empty. Empty here
@@ -213,7 +220,7 @@ export default defineNuxtConfig({
       portalBrandAccent: process.env.NUXT_PUBLIC_PORTAL_BRAND_ACCENT || '',
       portalBrandFontHeading: process.env.NUXT_PUBLIC_PORTAL_BRAND_FONT_HEADING || '',
       portalBrandFontBody: process.env.NUXT_PUBLIC_PORTAL_BRAND_FONT_BODY || '',
-      // Tracking and live chat. Nothing loads until these are set — and the tag only after
+      // Tracking and live chat. Nothing loads until these are set, and the tag only after
       // the visitor accepts all cookies (plugins/tracking.client.ts).
       portalGtmId: process.env.NUXT_PUBLIC_PORTAL_GTM_ID || '',
       portalChatBaseUrl: process.env.NUXT_PUBLIC_PORTAL_CHAT_BASE_URL || '',
@@ -224,7 +231,7 @@ export default defineNuxtConfig({
       // apps it links to; every app URL below has a development default, so
       // presence of a URL cannot decide this on its own.
       portalAppsEnabled: process.env.NUXT_PUBLIC_PORTAL_APPS_ENABLED || '',
-      // Contact and widget configuration. Each is hidden when empty — a fresh
+      // Contact and widget configuration. Each is hidden when empty: a fresh
       // install with none of these set still renders a complete site.
       portalWhatsapp: process.env.NUXT_PUBLIC_PORTAL_WHATSAPP || '',
       portalTelegram: process.env.NUXT_PUBLIC_PORTAL_TELEGRAM || '',
@@ -269,7 +276,7 @@ export default defineNuxtConfig({
     restructureDir: '.',
     vueI18n: './i18n.config.ts',
     // Locale messages are loaded dynamically by plugins/i18n.ts via setLocaleMessage.
-    // No langDir/files needed here — the plugin handles all locale JSON imports.
+    // No langDir/files needed here: the plugin handles all locale JSON imports.
     locales: [
       { code: 'en', name: 'English', language: 'en-US' },
       { code: 'ru', name: 'Русский', language: 'ru-RU' },
@@ -281,9 +288,7 @@ export default defineNuxtConfig({
   },
 
   // Canonical origin for generated URLs. @nuxtjs/sitemap v7 reads this rather
-  // than its own `hostname` option, which earlier versions used and which was
-  // still set here — silently ignored, so the sitemap advertised whatever host
-  // the request arrived on, down to the container's own address.
+  // than its own `hostname` option, which it silently ignores.
   //
   // Deliberately no default: with nothing set, nuxt-site-config keeps falling
   // back to the request host, which is at least the operator's own domain. A
@@ -345,7 +350,9 @@ export default defineNuxtConfig({
 
   vite: {
     server: {
-      allowedHosts: ['panel.innovayse.local', 'panel-admin.innovayse.local']
+      // Host names the dev server answers to besides localhost, comma separated, from the environment
+      // (NUXT_DEV_ALLOWED_HOSTS): a deployment's own names are not written into the repository.
+      allowedHosts: (process.env.NUXT_DEV_ALLOWED_HOSTS ?? '').split(',').map(host => host.trim()).filter(Boolean)
     },
     ssr: {
       // Force lucide-vue-next to be bundled into the SSR output (not treated as external)
@@ -355,8 +362,8 @@ export default defineNuxtConfig({
     build: {
       rolldownOptions: {
         // Production builds drop console.* calls and debugger statements. Vite 8 minifies with the Oxc
-        // minifier and ignores the old `esbuild.drop` option (it printed a warning saying so), so the
-        // same rule is stated for the minifier itself.
+        // minifier and ignores `esbuild.drop` with a warning, so the same rule is stated for the
+        // minifier itself.
         output: process.env.NODE_ENV === 'production'
           ? { minify: { compress: { dropConsole: true, dropDebugger: true } } }
           : {},
@@ -395,7 +402,7 @@ export default defineNuxtConfig({
         { name: 'keywords', content: 'web hosting, domain registration, VPS, dedicated servers, SSL certificates, client portal, online billing' },
         { name: 'robots', content: 'index, follow' },
 
-        // Open Graph / Facebook
+        // Open Graph
         { property: 'og:type', content: 'website' },
         { property: 'og:title', content: 'Web Hosting, Domains and Servers' },
         { property: 'og:description', content: 'Hosting, domains and servers with online billing and a client portal' },
@@ -433,7 +440,7 @@ export default defineNuxtConfig({
         // all is the operator's setting plus the visitor's consent (plugins/tracking.client.ts).
         // The favicon links are NOT here. app.vue emits them through brandingIcons(),
         // built-in defaults included, because unhead only dedupes link tags that share an
-        // explicit key -- so a static link here and an uploaded one there both render, and
+        // explicit key, so a static link here and an uploaded one there both render, and
         // Chrome picks the SVG. An operator who uploaded a favicon would keep seeing the
         // built-in one. One owner instead of two.
         { rel: 'manifest', href: '/site.webmanifest' }

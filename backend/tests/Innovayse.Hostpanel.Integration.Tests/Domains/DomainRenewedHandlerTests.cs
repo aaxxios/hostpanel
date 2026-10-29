@@ -2,21 +2,20 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Events;
 using Innovayse.Hostpanel.Domain.Notifications;
+using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Services.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
 /// Tests for <c>DomainRenewedHandler</c>: a renewed domain unsuspends its linked service and notifies the client.
 /// Each test builds its own host from <see cref="IntegrationTestFactory"/> with the one port this platform
-/// does not own -- the SMTP relay -- replaced by <see cref="FakeEmailSender"/>, publishes the event exactly once
+/// does not own (the SMTP relay) replaced by <see cref="FakeEmailSender"/>, publishes the event exactly once
 /// through the real message bus and asserts the handler's one effect happened exactly once.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -37,34 +36,39 @@ public sealed class DomainRenewedHandlerTests(IntegrationTestFactory factory) : 
 
         var (client, email) = await EventHandlerTestHost.SeedIdentityClientAsync(scope.ServiceProvider, context, "domain-event");
         var productId = await DomainsTestSeeds.SeedHostingProductAsync(context);
-        var service = ClientService.Create(client.Id, productId, BillingCycleNames.Monthly);
-        service.Activate("provisioning-ref");
-        service.Suspend(source: SuspensionSource.DomainExpired);
-        context.ClientServices.Add(service);
+        var service = ClientService.Create(client.Id, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        // The seeded service's own activation is not news here: its events are discarded, so the
+        // only mail sent is the one from the handler under test.
+        using (scope.ServiceProvider.GetRequiredService<IDomainEventGate>().Suppress())
+        {
+            await ServicesTestSeeds.AddActivatedAsync(context, service, "provisioning-ref", DateTimeOffset.UtcNow);
+            service.Suspend(DateTimeOffset.UtcNow, source: SuspensionSource.DomainExpired);
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
 
         // The slug is unique and the class shares one database, so the sibling test may have seeded it.
         if (!await context.EmailTemplates.AnyAsync(t => t.Slug == "domain-renewed", CancellationToken.None))
         {
             context.EmailTemplates.Add(
-                EmailTemplate.Create("domain-renewed", "Domain renewed: {{ domain.name }}", "Thanks", null));
+                EmailTemplate.Create("domain-renewed", "en", "Domain renewed: {{ domain.name }}", "Thanks", null));
         }
 
         await context.SaveChangesAsync(CancellationToken.None);
 
         var domain = RegisteredDomain.Register(
-            client.Id, "example.test", DateTimeOffset.UtcNow.AddYears(1), autoRenew: false, whoisPrivacy: false);
+            client.Id, "example.test", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(1), autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
         domain.LinkService(service.Id);
         context.Domains.Add(domain);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        await bus.InvokeAsync(new DomainRenewedEvent(domain.Id, client.Id, DateTimeOffset.UtcNow.AddYears(2)), CancellationToken.None);
+        await bus.InvokeAsync(new DomainRenewedEvent(domain.Id, client.Id, DateTimeOffset.UtcNow.AddYears(2)) { OccurredAt = DateTimeOffset.UtcNow }, CancellationToken.None);
 
         var message = Assert.Single(emailSender.Sent);
         Assert.Equal(email, message.To);
 
         // AsNoTracking, not FindAsync: FindAsync would return the locally-tracked instance this
         // test's own context already holds (added above, never mutated by it), masking whatever
-        // the nested UnsuspendServiceCommand actually wrote through its own scope.
+        // the nested LiftDomainExpirySuspensionCommand actually wrote through its own scope.
         var reloaded = await context.ClientServices.AsNoTracking()
             .FirstAsync(s => s.Id == service.Id, CancellationToken.None);
         Assert.Equal(ServiceStatus.Active, reloaded.Status);
@@ -85,34 +89,39 @@ public sealed class DomainRenewedHandlerTests(IntegrationTestFactory factory) : 
 
         var (client, email) = await EventHandlerTestHost.SeedIdentityClientAsync(scope.ServiceProvider, context, "domain-event-manual");
         var productId = await DomainsTestSeeds.SeedHostingProductAsync(context);
-        var service = ClientService.Create(client.Id, productId, BillingCycleNames.Monthly);
-        service.Activate("provisioning-ref");
-        service.Suspend(source: SuspensionSource.Manual);
-        context.ClientServices.Add(service);
+        var service = ClientService.Create(client.Id, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        // The seeded service's own activation is not news here: its events are discarded, so the
+        // only mail sent is the one from the handler under test.
+        using (scope.ServiceProvider.GetRequiredService<IDomainEventGate>().Suppress())
+        {
+            await ServicesTestSeeds.AddActivatedAsync(context, service, "provisioning-ref", DateTimeOffset.UtcNow);
+            service.Suspend(DateTimeOffset.UtcNow, source: SuspensionSource.Manual);
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
 
         // The slug is unique and the class shares one database, so the sibling test may have seeded it.
         if (!await context.EmailTemplates.AnyAsync(t => t.Slug == "domain-renewed", CancellationToken.None))
         {
             context.EmailTemplates.Add(
-                EmailTemplate.Create("domain-renewed", "Domain renewed: {{ domain.name }}", "Thanks", null));
+                EmailTemplate.Create("domain-renewed", "en", "Domain renewed: {{ domain.name }}", "Thanks", null));
         }
 
         await context.SaveChangesAsync(CancellationToken.None);
 
         var domain = RegisteredDomain.Register(
-            client.Id, "manual.test", DateTimeOffset.UtcNow.AddYears(1), autoRenew: false, whoisPrivacy: false);
+            client.Id, "manual.test", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(1), autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
         domain.LinkService(service.Id);
         context.Domains.Add(domain);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        await bus.InvokeAsync(new DomainRenewedEvent(domain.Id, client.Id, DateTimeOffset.UtcNow.AddYears(2)), CancellationToken.None);
+        await bus.InvokeAsync(new DomainRenewedEvent(domain.Id, client.Id, DateTimeOffset.UtcNow.AddYears(2)) { OccurredAt = DateTimeOffset.UtcNow }, CancellationToken.None);
 
         var message = Assert.Single(emailSender.Sent);
         Assert.Equal(email, message.To);
 
         // AsNoTracking, not FindAsync: FindAsync would return the locally-tracked instance this
         // test's own context already holds (added above, never mutated by it), masking whatever
-        // the nested UnsuspendServiceCommand actually wrote through its own scope.
+        // the nested LiftDomainExpirySuspensionCommand actually wrote through its own scope.
         var reloaded = await context.ClientServices.AsNoTracking()
             .FirstAsync(s => s.Id == service.Id, CancellationToken.None);
         Assert.Equal(ServiceStatus.Suspended, reloaded.Status);
@@ -135,32 +144,38 @@ public sealed class DomainRenewedHandlerTests(IntegrationTestFactory factory) : 
 
         var (client, _) = await EventHandlerTestHost.SeedIdentityClientAsync(scope.ServiceProvider, context, "domain-event-legacy");
         var productId = await DomainsTestSeeds.SeedHostingProductAsync(context);
-        var service = ClientService.Create(client.Id, productId, BillingCycleNames.Monthly);
-        service.Activate("provisioning-ref");
-        service.Suspend();
-        context.ClientServices.Add(service);
+        var service = ClientService.Create(client.Id, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        // The seeded service's own activation is not news here: its events are discarded, so the
+        // only mail sent is the one from the handler under test.
+        using (scope.ServiceProvider.GetRequiredService<IDomainEventGate>().Suppress())
+        {
+            await ServicesTestSeeds.AddActivatedAsync(context, service, "provisioning-ref", DateTimeOffset.UtcNow);
+            service.Suspend(DateTimeOffset.UtcNow);
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
 
         // The slug is unique and the class shares one database, so a sibling test may have seeded it.
         if (!await context.EmailTemplates.AnyAsync(t => t.Slug == "domain-renewed", CancellationToken.None))
         {
             context.EmailTemplates.Add(
-                EmailTemplate.Create("domain-renewed", "Domain renewed: {{ domain.name }}", "Thanks", null));
+                EmailTemplate.Create("domain-renewed", "en", "Domain renewed: {{ domain.name }}", "Thanks", null));
         }
 
         await context.SaveChangesAsync(CancellationToken.None);
 
-        // A row suspended before this release: no domain method leaves the source empty, so the
-        // column is cleared directly, as the migration left existing suspended rows.
+        // A suspended row with no recorded source, the state the migration leaves on rows suspended
+        // before the column existed. No domain method leaves the source empty, so the column is
+        // cleared directly.
         await context.ClientServices.Where(s => s.Id == service.Id)
             .ExecuteUpdateAsync(set => set.SetProperty(s => s.SuspensionSource, (SuspensionSource?)null), CancellationToken.None);
 
         var domain = RegisteredDomain.Register(
-            client.Id, $"legacy-{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow.AddYears(1), autoRenew: false, whoisPrivacy: false);
+            client.Id, $"legacy-{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(1), autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
         domain.LinkService(service.Id);
         context.Domains.Add(domain);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        await bus.InvokeAsync(new DomainRenewedEvent(domain.Id, client.Id, DateTimeOffset.UtcNow.AddYears(2)), CancellationToken.None);
+        await bus.InvokeAsync(new DomainRenewedEvent(domain.Id, client.Id, DateTimeOffset.UtcNow.AddYears(2)) { OccurredAt = DateTimeOffset.UtcNow }, CancellationToken.None);
 
         var reloaded = await context.ClientServices.AsNoTracking()
             .FirstAsync(s => s.Id == service.Id, CancellationToken.None);

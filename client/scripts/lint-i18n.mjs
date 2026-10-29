@@ -1,5 +1,5 @@
 /**
- * `yarn lint:i18n` -- checks the three locale trees against each other and against the source.
+ * `yarn lint:i18n`: checks the three locale trees against each other and against the source.
  *
  * Reports, per module file under `locales/<lang>/`:
  *  - missing: a key present in `en` but absent from `ru` or `hy`;

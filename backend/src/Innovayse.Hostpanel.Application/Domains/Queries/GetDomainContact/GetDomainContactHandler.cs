@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,16 +16,16 @@ public sealed class GetDomainContactHandler
     /// <summary>The data context the domain aggregate is read through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>The registrar provider the contact is read from.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The data context the domain aggregate is read through.</param>
-    /// <param name="registrar">The registrar provider the contact is read from.</param>
-    public GetDomainContactHandler(IHostpanelDbContext context, IRegistrarProvider registrar)
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
+    public GetDomainContactHandler(IHostpanelDbContext context, RegistrarProviderResolver registrars)
     {
         _context = context;
-        _registrar = registrar;
+        _registrars = registrars;
     }
 
     /// <summary>Handles <see cref="GetDomainContactQuery"/>.</summary>
@@ -43,7 +44,8 @@ public sealed class GetDomainContactHandler
                 $"Domain {query.DomainId} not found.", HostpanelErrorCodes.DOMAIN_NOT_FOUND);
         }
 
-        var contact = await _registrar.GetContactDetailsAsync(domain.Name, ct);
+        var registrar = await _registrars.ResolveAsync(domain, ct);
+        var contact = await registrar.GetContactDetailsAsync(domain.Name, ct);
         if (contact is null)
         {
             return Result.Failure<DomainContactDto>(

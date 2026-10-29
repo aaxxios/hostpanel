@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Application.Common.Errors;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -10,7 +8,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// <c>POST /api/predefined-replies</c>: an admin can create a predefined reply, and the action is
 /// closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>PredefinedRepliesEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreatePredefinedReplyTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -29,6 +26,23 @@ public sealed class CreatePredefinedReplyTests(IntegrationTestFactory factory) :
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    /// <summary>A category that does not exist is refused with 404 <c>PREDEFINED_REPLY_CATEGORY_NOT_FOUND</c>.</summary>
+    [Fact]
+    public async Task CreateRefusesAnUnknownCategoryAsync()
+    {
+        var client = await SupportTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync("/api/predefined-replies", new
+        {
+            name = $"Reply-{Guid.NewGuid():N}",
+            content = "Thanks for reaching out.",
+            categoryId = SupportTestSeeds.NoSuchId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await SupportTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.PREDEFINED_REPLY_CATEGORY_NOT_FOUND);
     }
 
     /// <summary>A caller with no credential cannot create a predefined reply.</summary>

@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Support.Enums;
+
 /// <summary>Represents the lifecycle status of a support ticket.</summary>
 public enum TicketStatus
 {

@@ -1,8 +1,3 @@
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using OtpNet;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
@@ -20,8 +15,8 @@ internal sealed class TwoFactorHost : IDisposable
     /// <summary>How far into its step the clock stands; clear of both edges, so the neighbours stay neighbours.</summary>
     private const int OffsetIntoStepSeconds = 15;
 
-    /// <summary>The host running on <see cref="Clock"/>.</summary>
-    private readonly WebApplicationFactory<Program> _host;
+    /// <summary>The clocked host the two-factor test runs against.</summary>
+    private readonly ClockedHost _host;
 
     /// <summary>Initializes a new instance of the <see cref="TwoFactorHost"/> class.</summary>
     /// <param name="factory">The shared API + PostgreSQL host the clocked host is derived from.</param>
@@ -29,19 +24,11 @@ internal sealed class TwoFactorHost : IDisposable
     {
         var now = DateTimeOffset.UtcNow;
         var stepStart = now.ToUnixTimeSeconds() / StepSeconds * StepSeconds;
-        Clock = new ManualTimeProvider(DateTimeOffset.FromUnixTimeSeconds(stepStart + OffsetIntoStepSeconds));
-        _host = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureTestServices(services =>
-            {
-                services.RemoveAll<TimeProvider>();
-                services.AddSingleton<TimeProvider>(Clock);
-            });
-        });
+        _host = new ClockedHost(factory, DateTimeOffset.FromUnixTimeSeconds(stepStart + OffsetIntoStepSeconds));
     }
 
     /// <summary>Gets the clock both the API and the codes use.</summary>
-    public ManualTimeProvider Clock { get; }
+    public ManualTimeProvider Clock => _host.Clock;
 
     /// <summary>Gets the services of the clocked host.</summary>
     public IServiceProvider Services => _host.Services;

@@ -6,34 +6,46 @@ using Innovayse.Hostpanel.Domain.Migration;
 using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Innovayse.Hostpanel.Domain.Support;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Application.Migration.Importers;
 
 /// <summary>
 /// Imports knowledge-base categories (creating any this install does not already have, matched by
-/// name), then articles deduplicated by title. Split out of <c>MigrationPullWorker</c> (A6 Task 6).
+/// name), then articles deduplicated by title.
 /// </summary>
-/// <param name="context">The module's data context.</param>
-/// <param name="uow">Unit of work the imported category or article is saved through.</param>
-/// <param name="pager">Pages through the source plugin's knowledge-base datasets.</param>
-/// <param name="logWriter">Writes one migration log row per article record.</param>
-/// <param name="logger">Logs a skipped or failed record.</param>
-public sealed class KnowledgebaseImporter(
-    IHostpanelDbContext context,
-    IUnitOfWork uow,
-    MigrationRecordPager pager,
-    MigrationLogWriter logWriter,
-    ILogger<KnowledgebaseImporter> logger) : IMigrationEntityImporter
+public sealed class KnowledgebaseImporter : IMigrationEntityImporter
 {
+    /// <summary>The module's data context.</summary>
+    private readonly IHostpanelDbContext _context;
+
+    /// <summary>Pages through the source plugin's knowledge-base datasets.</summary>
+    private readonly MigrationRecordPager _pager;
+
+    /// <summary>Pages through each record dataset and records each record's outcome.</summary>
+    private readonly MigrationRecordRunner _runner;
+
+    /// <summary>Initializes a new instance of the <see cref="KnowledgebaseImporter"/> class.</summary>
+    /// <param name="context">The module's data context.</param>
+    /// <param name="pager">Pages through the source plugin's knowledge-base datasets.</param>
+    /// <param name="runner">Pages through each record dataset and records each record's outcome.</param>
+    public KnowledgebaseImporter(IHostpanelDbContext context, MigrationRecordPager pager, MigrationRecordRunner runner)
+    {
+        _context = context;
+        _pager = pager;
+        _runner = runner;
+    }
+
+    /// <inheritdoc/>
+    public MigrationEntityType EntityType => MigrationEntityType.Knowledgebase;
+
     /// <inheritdoc/>
     public async Task ImportAsync(MigrationJob job, CancellationToken ct)
     {
         // Step 1: fetch categories, create missing ones, build sourceCatId→localCategoryName map
-        // Was IKbCategoryRepository.ListAllAsync -- read-only, so no tracking is needed.
-        var localCats = await context.KbCategories.AsNoTracking().OrderBy(c => c.Name).ToListAsync(ct);
+        var localCats = await _context.KbCategories.AsNoTracking().OrderBy(c => c.Name).ToListAsync(ct);
         var catNameMap = new Dictionary<int, string>(); // sourceCatId → local category name
 
-        await foreach (var page in pager.PagesAsync<KbCategoryRecord>(job, "knowledgebase_categories", ct))
+        await foreach (var page in _pager.PagesAsync<KbCategoryRecord>(job, "knowledgebase_categories", ct))
         {
             foreach (var cat in page)
             {
@@ -47,55 +59,36 @@ public sealed class KnowledgebaseImporter(
                 else
                 {
                     var newCat = KbCategory.Create(cat.Name, cat.Description, false, null);
-                    // Was IKbCategoryRepository.Add.
-                    context.KbCategories.Add(newCat);
-                    await uow.SaveChangesAsync(ct);
+                    _context.KbCategories.Add(newCat);
+                    await _context.SaveChangesAsync(ct);
                     catNameMap[cat.Id] = newCat.Name;
                 }
             }
         }
 
         // Step 2: page through articles
-        int imported = 0, skipped = 0;
+        await _runner.RunAsync(new MigrationRecordRun<KbArticleRecord>(job, EntityType, "knowledgebase", ImportArticleAsync), ct);
 
-        await foreach (var page in pager.PagesAsync<KbArticleRecord>(job, "knowledgebase", ct))
+        // One record of the dataset; the runner counts, logs and isolates its outcome.
+        async Task<RecordImportResult> ImportArticleAsync(KbArticleRecord rec, CancellationToken ct)
         {
-            foreach (var rec in page)
+            var categoryName = rec.CategoryId.HasValue && catNameMap.TryGetValue(rec.CategoryId.Value, out var n) && !string.IsNullOrWhiteSpace(n)
+                ? n
+                : MigrationDefaults.KnowledgebaseCategoryName;
+
+            var existingArticle = await _context.KbArticles.FirstOrDefaultAsync(a => a.Title.ToLower() == rec.Title.ToLower(), ct);
+            if (existingArticle is not null)
             {
-                try
-                {
-                    var categoryName = rec.CategoryId.HasValue && catNameMap.TryGetValue(rec.CategoryId.Value, out var n) && !string.IsNullOrWhiteSpace(n)
-                        ? n
-                        : "General";
-
-                    // Was IKbArticleRepository.FindByTitleAsync.
-                    var existingArticle = await context.KbArticles.FirstOrDefaultAsync(a => a.Title.ToLower() == rec.Title.ToLower(), ct);
-                    if (existingArticle is not null)
-                    {
-                        await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Knowledgebase, rec.Title, ImportOutcome.Skipped, "Article already exists", ct);
-                        skipped++;
-                        continue;
-                    }
-
-                    var article = KbArticle.Create(rec.Title, rec.Content, categoryName);
-
-                    article.Publish();
-
-                    // Was IKbArticleRepository.Add.
-                    context.KbArticles.Add(article);
-                    await uow.SaveChangesAsync(ct);
-                    imported++;
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Knowledgebase, rec.Title, ImportOutcome.Imported, null, ct);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Skipped KB article '{Title}' during migration", rec.Title);
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Knowledgebase, rec.Title, ImportOutcome.Failed, ex.Message, ct);
-                }
+                return RecordImportResult.Skipped(MigrationSkipReason.AlreadyExists);
             }
 
-            job.UpdateProgress(MigrationEntityType.Knowledgebase, imported, skipped);
-            await uow.SaveChangesAsync(ct);
+            var article = KbArticle.Create(rec.Title, rec.Content, categoryName);
+
+            article.Publish();
+
+            _context.KbArticles.Add(article);
+            await _context.SaveChangesAsync(ct);
+            return RecordImportResult.Imported;
         }
     }
 }

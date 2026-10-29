@@ -1,5 +1,5 @@
 /**
- * Client auth initialisation plugin — runs on CLIENT SIDE ONLY
+ * Client auth initialisation plugin: runs on CLIENT SIDE ONLY
  *
  * After Nuxt hydrates on the browser, if the `authed` cookie is present
  * (meaning the user logged in previously), we fetch their profile once and

@@ -2,7 +2,7 @@
  * Counting helpers behind `npm run audit` (see `audit.mjs`).
  *
  * The audit is a heuristic over source text, so it must look at code only: a comment that
- * explains why `v-html` is avoided, or a sentence such as "Rating choices: any, then ...", is
+ * explains why `v-html` is avoided, or a sentence such as "Rating choices: any, then the rest", is
  * not a use of `v-html` or of the `any` type. Comments are removed before those patterns run.
  */
 

@@ -1,6 +1,9 @@
+using Innovayse.Hostpanel.Application.Admin.Servers.Common;
+using Innovayse.Hostpanel.Application.Admin.Servers.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Ssh;
+using Innovayse.Hostpanel.Domain.Ssh.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,13 +21,18 @@ public sealed class TestServerSshAgentHandler
     /// <summary>Provider factory.</summary>
     private readonly ISshKeyProviderFactory _factory;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initialises the handler.</summary>
     /// <param name="context">Data context.</param>
     /// <param name="factory">Provider factory.</param>
-    public TestServerSshAgentHandler(IHostpanelDbContext context, ISshKeyProviderFactory factory)
+    /// <param name="clock">The source of the current moment.</param>
+    public TestServerSshAgentHandler(IHostpanelDbContext context, ISshKeyProviderFactory factory, IClock clock)
     {
         _context = context;
         _factory = factory;
+        _clock = clock;
     }
 
     /// <summary>Handles the command.</summary>
@@ -48,7 +56,7 @@ public sealed class TestServerSshAgentHandler
             return Result<TestServerSshAgentResultDto>.FailureCode(HostpanelErrorCodes.SSH_SETTINGS_INCOMPLETE);
         }
 
-        var provider = _factory.CreateFor(server, settings);
+        var provider = _factory.CreateFor(server.ToSshTarget(settings));
         if (provider is null)
         {
             return Result<TestServerSshAgentResultDto>.FailureCode(HostpanelErrorCodes.SSH_MODULE_NOT_SUPPORTED);
@@ -63,14 +71,14 @@ public sealed class TestServerSshAgentHandler
             // bindings (or was installed by hand) and is only accepted when this record has none either.
             outcome = info.Binding == settings.AgentBinding
                 ? new TestServerSshAgentResultDto(true, info.Version, null, info.Provider)
-                : new TestServerSshAgentResultDto(false, info.Version, "binding_mismatch", info.Provider);
+                : new TestServerSshAgentResultDto(false, info.Version, SshProviderFailure.BindingMismatch, info.Provider);
         }
         catch (SshProviderException ex)
         {
-            outcome = new TestServerSshAgentResultDto(false, null, ex.Code);
+            outcome = new TestServerSshAgentResultDto(false, null, ex.Failure, null);
         }
 
-        settings.RecordHealthCheck(outcome.IsHealthy);
+        settings.RecordHealthCheck(outcome.IsHealthy, _clock.UtcNow);
         await _context.SaveChangesAsync(ct);
         return Result<TestServerSshAgentResultDto>.Success(outcome);
     }

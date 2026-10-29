@@ -43,9 +43,6 @@ import { isFreePlan } from '~/utils/isFreePlan'
 import { cycleAmount } from '~/utils/productFamilies'
 import { buildSeoLinks } from '~/utils/seoLinks'
 
-/** Billing cycle label of a plan the catalogue declares free of charge. */
-const FREE_CYCLE = 'free'
-
 /** Translation helpers and the active language. */
 const { t, locale } = useI18n()
 
@@ -101,7 +98,7 @@ const planParam = computed(() => String(route.params.plan))
 
 /** The plan the address names, or null when there is none. */
 const currentPlan = computed<PortalProduct | null>(() =>
-  plans.value.find((plan) => String(plan.pid) === planParam.value || plan.slug === planParam.value || slugOf(plan.name) === planParam.value) ?? null)
+  plans.value.find((plan) => String(plan.id) === planParam.value || plan.slug === planParam.value || slugOf(plan.name) === planParam.value) ?? null)
 
 /** Summary paragraph and feature lines parsed out of the plan's description (the copy is HTML). */
 const parsedPlan = computed(() => parseDescription(currentPlan.value?.description || ''))
@@ -119,11 +116,23 @@ const planPrice = computed(() => {
   return amount === null ? t('hosting.custom') : formatMoney(amount, payerCurrency.value)
 })
 
-/** The cycles the current plan is priced for, labelled and formatted. */
+/** Whether the current plan is free (zero monthly price, as in the catalogue store). */
+const isFree = computed(() => (currentPlan.value ? isFreePlan(currentPlan.value.pricing) : false))
+
+/** The cycle the plan goes into the cart on: monthly for a free plan, the selected one otherwise. */
+const cartCycle = computed<PricingCycle>(() => (isFree.value ? PricingCycle.Monthly : selectedCycle.value))
+
+/**
+ * The cycles the current plan is priced for, labelled and formatted. A free plan offers only its one
+ * monthly, no-charge choice, so no other cycle is shown that would silently become monthly in the cart.
+ */
 const cycleOptions = computed<PricingCycleOption[]>(() => {
   const plan = currentPlan.value
   if (!plan?.pricing) {
     return []
+  }
+  if (isFree.value) {
+    return [{ cycle: PricingCycle.Monthly, label: t('hosting.cycles.free'), price: formatMoney(0, payerCurrency.value) }]
   }
   return PRICING_CYCLES
     .filter((cycle) => cycleAmount(plan.pricing, cycle) !== null)
@@ -141,14 +150,14 @@ watch(cycleOptions, (options) => {
   }
 }, { immediate: true })
 
-/** Whether the current plan is already in the cart for the selected cycle. */
-const inCart = computed(() => (currentPlan.value ? cart.hasItem(currentPlan.value.pid as number, selectedCycle.value) : false))
+/** Whether the current plan is already in the cart on the cycle it is added with. */
+const inCart = computed(() => (currentPlan.value ? cart.hasItem(currentPlan.value.id, cartCycle.value) : false))
 
 /**
  * Adds the current plan to the cart.
  *
  * The selected cycle is used when it is priced, otherwise the monthly one, and a free plan (zero monthly
- * price, as in the catalogue store) is always added at no charge on the free cycle.
+ * price, as in the catalogue store) is always added at no charge on the monthly cycle, labelled free.
  */
 const addToCart = (): void => {
   const plan = currentPlan.value
@@ -156,23 +165,20 @@ const addToCart = (): void => {
     return
   }
 
-  let amount = cycleAmount(plan.pricing, selectedCycle.value) ?? cycleAmount(plan.pricing, PricingCycle.Monthly)
-  let billingCycle: string = selectedCycle.value
-  if (isFreePlan(plan.pricing)) {
-    billingCycle = FREE_CYCLE
-    amount = 0
-  }
+  const free = isFree.value
+  const billingCycle = cartCycle.value
+  const amount = free ? 0 : (cycleAmount(plan.pricing, billingCycle) ?? cycleAmount(plan.pricing, PricingCycle.Monthly))
   if (amount === null) {
     return
   }
 
   cart.addItem({
-    pid: plan.pid as number,
+    pid: plan.id,
     name: plan.name,
     billingcycle: billingCycle,
-    cycleLabel: billingCycle === FREE_CYCLE
+    cycleLabel: free
       ? t('hosting.cycles.free')
-      : t(`hosting.cycles.${PRICING_CYCLE_I18N_KEY[selectedCycle.value]}`),
+      : t(`hosting.cycles.${PRICING_CYCLE_I18N_KEY[billingCycle]}`),
     amount,
     currency: currencyStore.payerCode,
   })

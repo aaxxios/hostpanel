@@ -3,7 +3,7 @@
  * Table every report draws its rows in.
  *
  * Columns are data (`ReportColumn`): the key reads a property of the row, the format turns the raw
- * value into text (money, percent, date, status badge ...), and an empty value shows a dash. A
+ * value into text (money, percent, date, status badge and so on), and an empty value shows a dash. A
  * screen that needs a cell the formats cannot express fills the `cell-<key>` slot; one that needs
  * grouped rows replaces the whole body with the `body` slot. `totals` adds a footer row, and the
  * empty text shows when there are no rows.
@@ -20,7 +20,8 @@ import UiTableHead from '@/components/ui/UiTableHead.vue'
 import UiTableHeader from '@/components/ui/UiTableHeader.vue'
 import UiTableRow from '@/components/ui/UiTableRow.vue'
 import { formatDate } from '@/lib/format'
-import { formatReportAmount } from '@/lib/money'
+import { formatCurrencyCode, formatReportAmount } from '@/lib/money'
+import { valueAtPath } from '@/lib/valueAtPath'
 import { ReportCellFormat } from '@/types/reportcolumn'
 import type { ReportColumn } from '@/types/reportcolumn'
 
@@ -91,10 +92,10 @@ const columnCount = computed<number>(() => Math.max(1, props.columns.length))
  * Reads the raw value a column shows for a row.
  *
  * @param row - The row.
- * @param key - Column key.
+ * @param key - Column key, a property name or a dot path into a nested record.
  * @returns The property of the row, whatever its type.
  */
-const valueOf = (row: T, key: string): unknown => (row as Record<string, unknown>)[key]
+const valueOf = (row: T, key: string): unknown => valueAtPath(row, key)
 
 /**
  * Turns a raw value into the text of a cell.
@@ -121,6 +122,23 @@ const formatValue = (value: unknown, format: ReportCellFormat | undefined): stri
     default:
       return String(value)
   }
+}
+
+/**
+ * Text of one body cell: a money cell whose column names a `currencyKey` is written in the row's
+ * own currency; every other cell goes through {@link formatValue}.
+ *
+ * @param row - The row.
+ * @param column - The column.
+ * @returns The cell text.
+ */
+const cellText = (row: T, column: ReportColumn): string => {
+  const value = valueOf(row, column.key)
+  const currency = column.currencyKey === undefined ? undefined : valueOf(row, column.currencyKey)
+  if (column.format === ReportCellFormat.Money && typeof currency === 'string' && typeof value === 'number') {
+    return formatCurrencyCode(value, currency)
+  }
+  return formatValue(value, column.format)
 }
 
 /**
@@ -173,7 +191,7 @@ const totalText = (column: ReportColumn, position: number): string => {
                   :status="String(valueOf(row, column.key))"
                 />
                 <template v-else>
-                  {{ formatValue(valueOf(row, column.key), column.format) }}
+                  {{ cellText(row, column) }}
                 </template>
               </slot>
             </UiTableCell>

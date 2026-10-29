@@ -26,26 +26,13 @@ public static class TestimonialExtensions
             x.Translations.ToDictionary(t => t.Locale, t => new TestimonialTranslationDto(t.Role, t.Quote)));
     }
 
-    /// <summary>
-    /// Makes the testimonial's translations exactly the given set: locales that are no longer sent are
-    /// removed, the rest are added or updated in place.
-    /// </summary>
-    /// <param name="x">The testimonial to change.</param>
-    /// <param name="translations">The complete set of translations, keyed by locale code.</param>
-    public static void ApplyTranslations(this Testimonial x, IReadOnlyDictionary<string, TestimonialTranslationDto> translations)
+    /// <summary>Turns the translations a command carries into the text the testimonial keeps per locale.</summary>
+    /// <param name="translations">The translations as sent, keyed by locale code.</param>
+    /// <returns>The same set, keyed by locale code, ready for <see cref="Testimonial.ReplaceTranslations"/>.</returns>
+    public static IReadOnlyDictionary<string, TestimonialTranslationContent> ToContent(this IReadOnlyDictionary<string, TestimonialTranslationDto> translations)
     {
-        ArgumentNullException.ThrowIfNull(x);
         ArgumentNullException.ThrowIfNull(translations);
 
-        var stale = x.Translations.Select(t => t.Locale).Where(locale => !translations.ContainsKey(locale)).ToList();
-        foreach (var locale in stale)
-        {
-            x.RemoveTranslation(locale);
-        }
-
-        foreach (var (locale, translation) in translations)
-        {
-            x.SetTranslation(locale, translation.Role, translation.Quote);
-        }
+        return translations.ToDictionary(t => t.Key, t => new TestimonialTranslationContent(t.Value.Role, t.Value.Quote));
     }
 }

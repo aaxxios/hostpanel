@@ -50,20 +50,18 @@ export type IntegrationSlug = (typeof IntegrationSlug)[keyof typeof IntegrationS
 
 /** Summary of a single integration returned by GET /api/admin/integrations. */
 export interface IntegrationDto {
-  /** URL-safe slug used in routes and API calls (e.g. "stripe", "cpanel"). */
+  /** URL-safe slug used in routes and API calls. */
   slug: string
-  /** Human-readable name (e.g. "Stripe"). */
+  /** Human-readable name, as the integration list shows it. */
   name: string
-  /** Short description shown in the integration row. */
-  description: string
   /** Category this integration belongs to. */
   category: IntegrationCategory
   /** Whether this integration is currently enabled. */
   isEnabled: boolean
-  /** ISO 8601 timestamp of the last successful connection test, or null. */
-  lastTestedAt: string | null
+  /** Whether every field the integration needs holds a stored value. */
+  isConfigured: boolean
   /** True if this integration comes from an installed plugin (not built-in). */
-  isPlugin?: boolean
+  isPlugin: boolean
 }
 
 /** Metadata for one configuration field, returned by the detail endpoint. */
@@ -72,7 +70,7 @@ export interface FieldDefinitionDto {
   key: string
   /** Human-readable label shown above the input. */
   label: string
-  /** Input type — "text", "password", "select", "textarea", or "toggle". */
+  /** Input kind of the field. */
   type: IntegrationFieldType
   /** Whether the field is required before the integration can be enabled. */
   required: boolean
@@ -91,7 +89,13 @@ export interface IntegrationFieldValue {
 }
 
 /** Full config for a single integration returned by GET /api/admin/integrations/:slug. */
-export interface IntegrationDetailDto extends IntegrationDto {
+export interface IntegrationDetailDto {
+  /** URL-safe slug used in routes and API calls. */
+  slug: string
+  /** Human-readable name from the built-in catalogue or the plugin manifest. */
+  name: string
+  /** Whether this integration is currently enabled. */
+  isEnabled: boolean
   /** Field key to its stored state; a secret field answers only whether it is set. */
   config: Record<string, IntegrationFieldValue>
   /**
@@ -120,7 +124,7 @@ export interface IntegrationTestResult {
   success: boolean
   /** Human-readable message (error detail or "Connection OK"). */
   message: string
-  /** ISO 8601 UTC timestamp of when the backend ran the test. Sent by the API; it was being dropped. */
+  /** ISO 8601 UTC timestamp of when the backend ran the test. */
   testedAt?: string
   /**
    * Round-trip time of the test as seen from the browser, in milliseconds. Measured here rather
@@ -132,14 +136,14 @@ export interface IntegrationTestResult {
 
 /**
  * Static metadata for rendering each integration card.
- * Not fetched from the API — defined client-side.
+ * Not fetched from the API: defined client-side.
  */
 export interface IntegrationMeta {
   /** Matches IntegrationDto.slug. */
   slug: string
   /** Tailwind background color class for the logo block (e.g. "bg-[#635bff]"). */
   color: string
-  /** Path to the SVG logo in /public/integrations/ (e.g. "/integrations/stripe.svg"). */
+  /** Path to the SVG logo in /public/integrations/ (e.g. "/integrations/<slug>.svg"). */
   logo: string
   /** Short description shown on the integration card. */
   shortDescription: string
@@ -157,24 +161,26 @@ export interface IntegrationField {
   key: string
   /** Human-readable label. */
   label: string
-  /** Input type — "text" for most, "password" for secrets, "select" for enums, "toggle" for booleans. */
+  /** Input type: "text" for most, "password" for secrets, "select" for enums, "toggle" for booleans. */
   type: IntegrationFieldType
   /** Options for "select" type fields. */
   options?: string[]
 }
 
-/** Closed set of input kinds an integration configuration field can use. */
+/** Closed set of input kinds an integration configuration field can use; the strings are the API's enum names. */
 export const IntegrationFieldType = {
   /** Plain text. */
-  Text: 'text',
-  /** A secret, masked while typing. */
-  Password: 'password',
+  Text: 'Text',
+  /** A secret from the built-in catalogue, write-only in the form. */
+  Password: 'Password',
+  /** A secret declared by a plugin manifest, write-only in the form. */
+  Secret: 'Secret',
   /** One of a fixed list of options. */
-  Select: 'select',
+  Select: 'Select',
   /** Multi-line text. */
-  Textarea: 'textarea',
+  Textarea: 'TextArea',
   /** A yes/no switch. */
-  Toggle: 'toggle',
+  Toggle: 'Toggle',
 } as const
 
 /** One of the {@link IntegrationFieldType} values. */

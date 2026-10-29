@@ -4,7 +4,7 @@
  * The anchor case is the production bug these were extracted to fix: the payment page computed
  * both money figures from `invoice.balance`, a field `InvoiceDto` has never sent. `balance ??
  * total` always took the second branch, so **Payments to date rendered `0.00` on every invoice
- * and Balance Due rendered the full total on an invoice already part-paid** — on the screen
+ * and Balance Due rendered the full total on an invoice already part-paid**: on the screen
  * that then asks the customer to pay it. The part-paid case is therefore the first test here,
  * not an edge case.
  *
@@ -18,25 +18,32 @@ import { describe, expect, it } from 'vitest'
 import { balanceDue, isInvoiceOutstanding, isInvoiceOverdue, paymentsToDate } from '~/utils/invoice'
 import type { ClientInvoice } from '~/types/clientinvoice'
 import type { ClientInvoiceTransaction } from '~/types/clientinvoicetransaction'
+import { InvoiceStatus } from '~/types/invoicestatus'
+import { InvoiceTransactionType } from '~/types/invoicetransactiontype'
 
-/** A transaction carrying only the fields these functions read. */
-const txn = (amount: number, fees = 0, type = 'Payment'): ClientInvoiceTransaction => ({
+/**
+ * A transaction carrying only the fields these functions read.
+ *
+ * @param amount - The amount, positive as the API stores every kind.
+ * @param type - Which way the money moved; a payment unless stated.
+ * @returns The transaction.
+ */
+const txn = (amount: number, type: InvoiceTransactionType = InvoiceTransactionType.Payment): ClientInvoiceTransaction => ({
   id: 1,
   date: '2026-08-01T10:00:00+00:00',
-  gateway: 'stripe',
-  transactionId: 'ch_1',
   amount,
-  fees,
-  type,
-  notes: null
+  type
 })
 
-/** A minimal invoice; every test overrides the fields it cares about. */
+/**
+ * A minimal invoice; every test overrides the fields it cares about.
+ *
+ * @param over - The fields to override.
+ * @returns The invoice.
+ */
 const invoice = (over: Partial<ClientInvoice> = {}): ClientInvoice => ({
   id: 8,
-  clientId: 1,
-  clientName: null,
-  status: 'Unpaid',
+  status: InvoiceStatus.Unpaid,
   currency: 'USD',
   invoiceDate: '2026-08-01T00:00:00+00:00',
   dueDate: '2026-08-15T00:00:00+00:00',
@@ -48,8 +55,6 @@ const invoice = (over: Partial<ClientInvoice> = {}): ClientInvoice => ({
   taxRate: 0,
   credit: 0,
   amountDue: 20000,
-  gatewayTransactionId: null,
-  notes: null,
   paymentMethod: null,
   items: [],
   transactions: [],
@@ -61,19 +66,12 @@ describe('paymentsToDate', () => {
     expect(paymentsToDate([txn(5000), txn(3000)])).toBe(8000)
   })
 
-  it('subtracts a refund, which is recorded as a negative amount', () => {
-    expect(paymentsToDate([txn(5000), txn(-2000)])).toBe(3000)
-  })
-
-  it('subtracts a Refund transaction, which the API records as a positive amount', () => {
-    // `InvoiceTransactionDto` sends refunds and payment reversals as positive amounts typed
-    // `Refund`; a plain sum added them to what the customer had paid.
-    expect(paymentsToDate([txn(5000), txn(2000, 0, 'Refund')])).toBe(3000)
-  })
-
-  it('ignores gateway fees, which are the gateway\'s cut and not the customer\'s money', () => {
-    // The customer handed over 5000; that 150 came out of the merchant's side of the ledger.
-    expect(paymentsToDate([txn(5000, 150)])).toBe(5000)
+  it('counts only payments, never a refund or a credit, which are stored as positive amounts', () => {
+    expect(paymentsToDate([
+      txn(5000),
+      txn(2000, InvoiceTransactionType.Refund),
+      txn(1000, InvoiceTransactionType.Credit)
+    ])).toBe(5000)
   })
 
   it('reads an absent or empty transaction list as nothing received', () => {
@@ -100,7 +98,15 @@ describe('balanceDue', () => {
   })
 
   it('reports nothing outstanding on a fully paid invoice', () => {
-    expect(balanceDue(invoice({ status: 'Paid', total: 20000, amountDue: 0, transactions: [txn(20000)] }))).toBe(0)
+    expect(balanceDue(invoice({ status: InvoiceStatus.Paid, total: 20000, amountDue: 0, transactions: [txn(20000)] }))).toBe(0)
+  })
+
+  it('reads the API figure after a refund instead of counting the refund as money received', () => {
+    // A refund must not raise the paid figure, which could zero the balance and hide the pay panel.
+    const refunded = invoice({ total: 20000, amountDue: 15000, transactions: [txn(5000), txn(5000, InvoiceTransactionType.Refund)] })
+
+    expect(paymentsToDate(refunded.transactions)).toBe(5000)
+    expect(balanceDue(refunded)).toBe(15000)
   })
 
   it('reports the full total when nothing has been received', () => {
@@ -117,20 +123,20 @@ describe('isInvoiceOutstanding', () => {
   it('counts an invoice the cron has already marked Overdue', () => {
     // The case the dashboard was dropping. Overdue is what Unpaid becomes, not a separate
     // kind of debt, and it is the more urgent half of what the customer owes.
-    expect(isInvoiceOutstanding(invoice({ status: 'Overdue' }))).toBe(true)
+    expect(isInvoiceOutstanding(invoice({ status: InvoiceStatus.Overdue }))).toBe(true)
   })
 
   it('counts an invoice that is still Unpaid', () => {
-    expect(isInvoiceOutstanding(invoice({ status: 'Unpaid' }))).toBe(true)
+    expect(isInvoiceOutstanding(invoice({ status: InvoiceStatus.Unpaid }))).toBe(true)
   })
 
   it('agrees with the banner and the stat card, which is the bug it exists for', () => {
-    // Six Unpaid and six Overdue on one account rendered as "6" on the card and "12" in the
-    // banner beside it. One predicate over the same list is now the only answer available.
+    // Six Unpaid and six Overdue on one account must read "12" on the card and in the banner
+    // beside it alike: one predicate over the same list is the only answer available.
     const invoices = [
-      ...Array.from({ length: 6 }, () => invoice({ status: 'Unpaid' })),
-      ...Array.from({ length: 6 }, () => invoice({ status: 'Overdue' })),
-      ...Array.from({ length: 3 }, () => invoice({ status: 'Paid' })),
+      ...Array.from({ length: 6 }, () => invoice({ status: InvoiceStatus.Unpaid })),
+      ...Array.from({ length: 6 }, () => invoice({ status: InvoiceStatus.Overdue })),
+      ...Array.from({ length: 3 }, () => invoice({ status: InvoiceStatus.Paid })),
     ]
 
     expect(invoices.filter(isInvoiceOutstanding)).toHaveLength(12)
@@ -138,7 +144,7 @@ describe('isInvoiceOutstanding', () => {
 
   it('does not count a status with nothing owing on it', () => {
     // Draft was never issued, Cancelled was voided, Refunded was returned, Paid is settled.
-    for (const status of ['Paid', 'Draft', 'Cancelled', 'Refunded'] as const) {
+    for (const status of [InvoiceStatus.Paid, InvoiceStatus.Draft, InvoiceStatus.Cancelled, InvoiceStatus.Refunded]) {
       expect(isInvoiceOutstanding(invoice({ status }))).toBe(false)
     }
   })
@@ -149,29 +155,29 @@ describe('isInvoiceOverdue', () => {
   const now = new Date('2026-08-20T12:00:00Z')
 
   it('treats the backend\'s own Overdue status as overdue', () => {
-    expect(isInvoiceOverdue(invoice({ status: 'Overdue' }), now)).toBe(true)
+    expect(isInvoiceOverdue(invoice({ status: InvoiceStatus.Overdue }), now)).toBe(true)
   })
 
   it('treats an unpaid invoice past its due date as overdue before the cron catches up', () => {
     // `ProcessRenewalsCronHandler` writes the `Overdue` status, so there is a window in which
     // the invoice is late on the customer's calendar but still reads `Unpaid`.
-    expect(isInvoiceOverdue(invoice({ status: 'Unpaid', dueDate: '2026-08-15T00:00:00+00:00' }), now)).toBe(true)
+    expect(isInvoiceOverdue(invoice({ status: InvoiceStatus.Unpaid, dueDate: '2026-08-15T00:00:00+00:00' }), now)).toBe(true)
   })
 
   it('does not call an unpaid invoice overdue before its due date', () => {
-    expect(isInvoiceOverdue(invoice({ status: 'Unpaid', dueDate: '2026-08-25T00:00:00+00:00' }), now)).toBe(false)
+    expect(isInvoiceOverdue(invoice({ status: InvoiceStatus.Unpaid, dueDate: '2026-08-25T00:00:00+00:00' }), now)).toBe(false)
   })
 
   it('never calls a paid, draft, cancelled or refunded invoice overdue, whatever its date', () => {
-    // A past due date on any of these is not a debt — the invoice was paid, never issued,
+    // A past due date on any of these is not a debt: the invoice was paid, never issued,
     // voided, or already returned.
-    for (const status of ['Paid', 'Draft', 'Cancelled', 'Refunded', 'Collections'] as const) {
+    for (const status of [InvoiceStatus.Paid, InvoiceStatus.Draft, InvoiceStatus.Cancelled, InvoiceStatus.Refunded, InvoiceStatus.Collections]) {
       expect(isInvoiceOverdue(invoice({ status, dueDate: '2026-01-01T00:00:00+00:00' }), now)).toBe(false)
     }
   })
 
   it('does not treat an unparseable due date as evidence of lateness', () => {
-    expect(isInvoiceOverdue(invoice({ status: 'Unpaid', dueDate: 'not a date' }), now)).toBe(false)
+    expect(isInvoiceOverdue(invoice({ status: InvoiceStatus.Unpaid, dueDate: 'not a date' }), now)).toBe(false)
   })
 
   it('reports false rather than throwing while the invoice is still loading', () => {

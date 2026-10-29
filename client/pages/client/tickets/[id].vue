@@ -108,7 +108,7 @@ const { user } = storeToRefs(useAuthStore())
 /**
  * The signed-in person's display name, for the author line on their own ticket message.
  *
- * `ClientUser` carries `firstname` and `lastname` rather than a `name`, so the line is composed
+ * `ClientUser` carries `firstName` and `lastName` rather than a `name`, so the line is composed
  * from those and falls back to the email so the avatar is never an empty circle.
  */
 const authorName = computed(() => {
@@ -117,7 +117,7 @@ const authorName = computed(() => {
     return ''
   }
 
-  return `${person.firstname ?? ''} ${person.lastname ?? ''}`.trim() || person.email
+  return `${person.firstName} ${person.lastName}`.trim() || person.email
 })
 
 /** The support store: the ticket, the reply flags and the refusal sentences. */

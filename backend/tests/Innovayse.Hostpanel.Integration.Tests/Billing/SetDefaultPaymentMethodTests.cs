@@ -1,15 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -18,7 +16,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <see cref="FakeCardPaymentGateway"/>: making a saved card the authenticated client's default, and
 /// the <c>NO_SAVED_PAYMENT_METHODS</c> / <c>PAYMENT_METHOD_NOT_OWNED</c> refusals.
 /// </summary>
-/// <remarks>New coverage — gap-filled for A7 Task 3, ruling 2; no grouped file exercised this route.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class SetDefaultPaymentMethodTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -27,7 +24,7 @@ public sealed class SetDefaultPaymentMethodTests(IntegrationTestFactory factory)
     /// <returns>The test host.</returns>
     private WebApplicationFactory<Program> BuildHost(FakeCardPaymentGateway cardGateway) =>
         factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services => services.AddScoped<ICardPaymentGateway>(_ => cardGateway)));
+            builder.ConfigureTestServices(services => services.AddSingleton<ICardPaymentGateway>(cardGateway)));
 
     /// <summary>Setting a saved, owned card as default asks card payment gateway to make it so.</summary>
     [Fact]
@@ -35,7 +32,7 @@ public sealed class SetDefaultPaymentMethodTests(IntegrationTestFactory factory)
     {
         var cardGateway = new FakeCardPaymentGateway
         {
-            SavedPaymentMethods = [new CardPaymentMethodDto("pm_1", "card", "visa", "4242", 12, 2030, false)],
+            SavedPaymentMethods = [new CardPaymentMethodDto("pm_1", SavedPaymentMethodType.Card, "visa", "4242", 12, 2030, false)],
         };
         var host = BuildHost(cardGateway);
         var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "set-default-owned");
@@ -66,7 +63,7 @@ public sealed class SetDefaultPaymentMethodTests(IntegrationTestFactory factory)
     {
         var cardGateway = new FakeCardPaymentGateway
         {
-            SavedPaymentMethods = [new CardPaymentMethodDto("pm_mine", "card", "visa", "4242", 12, 2030, true)],
+            SavedPaymentMethods = [new CardPaymentMethodDto("pm_mine", SavedPaymentMethodType.Card, "visa", "4242", 12, 2030, true)],
         };
         var host = BuildHost(cardGateway);
         var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "set-default-unowned");
@@ -76,6 +73,43 @@ public sealed class SetDefaultPaymentMethodTests(IntegrationTestFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.PAYMENT_METHOD_NOT_OWNED);
+    }
+
+    /// <summary>A card gateway that cannot be reached for the change answers 503 with <c>PAYMENT_GATEWAY_SERVICE_UNAVAILABLE</c>.</summary>
+    [Fact]
+    public async Task SetDefault_GatewayUnavailable_Answers503()
+    {
+        var cardGateway = new FakeCardPaymentGateway
+        {
+            SavedPaymentMethods = [new CardPaymentMethodDto("pm_1", SavedPaymentMethodType.Card, "visa", "4242", 12, 2030, false)],
+            MethodChangeFailure = CardGatewayFailure.Unavailable,
+        };
+        var host = BuildHost(cardGateway);
+        var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "set-default-unavailable");
+        await BillingTestSeeds.StampCardCustomerAsync(host, clientId, "cus_1");
+
+        var response = await client.PutAsJsonAsync("/api/me/payment-methods/pm_1", new { setAsDefault = true });
+
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.PAYMENT_GATEWAY_SERVICE_UNAVAILABLE);
+        response.Headers.RetryAfter.Should().NotBeNull();
+        cardGateway.LastSetDefaultPaymentMethodId.Should().BeNull();
+    }
+
+    /// <summary>A card gateway that refuses to list the methods answers 502 with <c>PAYMENT_METHOD_UPSTREAM_FAILED</c>.</summary>
+    [Fact]
+    public async Task SetDefault_GatewayRefusesListing_Answers502()
+    {
+        var cardGateway = new FakeCardPaymentGateway { ListFailure = CardGatewayFailure.Refused };
+        var host = BuildHost(cardGateway);
+        var (client, clientId) = await BillingTestSeeds.RegisterClientAsync(factory, host, "set-default-refused");
+        await BillingTestSeeds.StampCardCustomerAsync(host, clientId, "cus_1");
+
+        var response = await client.PutAsJsonAsync("/api/me/payment-methods/pm_1", new { setAsDefault = true });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadGateway);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.PAYMENT_METHOD_UPSTREAM_FAILED);
+        cardGateway.LastSetDefaultPaymentMethodId.Should().BeNull();
     }
 
     /// <summary>Setting a default payment method is not for anonymous callers.</summary>

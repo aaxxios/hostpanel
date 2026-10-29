@@ -35,11 +35,11 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
 }))
 
 /** The product's group. */
-const groups: PortalProductGroup[] = [{ id: 9, name: 'Gamma Tool', isActive: true, productCount: 1 }]
+const groups: PortalProductGroup[] = [{ id: 9, name: 'Gamma Tool', productCount: 1 }]
 
 /** The product's catalogue entry. */
 const catalogue: PortalProduct[] = [
-  { id: 90, pid: 90, groupId: 9, name: 'Gamma Tool', description: 'Tasks<br />✔ Boards<br />✔ Reports' },
+  { id: 90, groupId: 9, name: 'Gamma Tool', description: 'Tasks<br />✔ Boards<br />✔ Reports' },
 ]
 
 /** What the stood-in runtime recorded for the current test. */

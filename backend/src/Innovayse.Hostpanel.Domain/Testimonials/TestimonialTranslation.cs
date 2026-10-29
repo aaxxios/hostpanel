@@ -8,13 +8,13 @@ namespace Innovayse.Hostpanel.Domain.Testimonials;
 /// </summary>
 public sealed class TestimonialTranslation : BaseEntity
 {
-    /// <summary>Longest a locale code may be — matches the <c>TestimonialTranslations.Locale</c> column.</summary>
+    /// <summary>Longest a locale code may be: matches the <c>TestimonialTranslations.Locale</c> column.</summary>
     public const int LocaleMaxLength = 10;
 
-    /// <summary>Longest Role may be — matches the <c>TestimonialTranslations.Role</c> column.</summary>
+    /// <summary>Longest Role may be: matches the <c>TestimonialTranslations.Role</c> column.</summary>
     public const int RoleMaxLength = 200;
 
-    /// <summary>Longest Quote may be — matches the <c>TestimonialTranslations.Quote</c> column.</summary>
+    /// <summary>Longest Quote may be: matches the <c>TestimonialTranslations.Quote</c> column.</summary>
     public const int QuoteMaxLength = 2000;
 
     /// <summary>Gets the FK to the parent <see cref="Testimonial"/>.</summary>
@@ -29,7 +29,7 @@ public sealed class TestimonialTranslation : BaseEntity
     /// <summary>Gets the testimonial text in this locale.</summary>
     public string Quote { get; private set; } = string.Empty;
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private TestimonialTranslation() { }
 
     /// <summary>

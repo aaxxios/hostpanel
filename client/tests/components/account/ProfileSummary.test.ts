@@ -5,9 +5,10 @@ import { describe, expect, it } from 'vitest'
 import { mountAccount } from '~/tests/helpers/mountAccount'
 import ProfileSummary from '~/components/account/ProfileSummary.vue'
 import type { ClientUser } from '~/types/clientuser'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 
 /** A minimal profile. */
-const user: ClientUser = { id: 1, firstname: 'Jane', lastname: 'Doe', email: 'jane@example.com', permissions: 0 }
+const user: ClientUser = makeClientUser({ firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com' })
 
 describe('ProfileSummary', () => {
   it('shows the full name and email', () => {

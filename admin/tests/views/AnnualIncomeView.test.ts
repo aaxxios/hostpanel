@@ -1,5 +1,5 @@
 /**
- * Tests of AnnualIncomeView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of AnnualIncomeView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -12,6 +12,7 @@ vi.mock('chart.js', async () => (await import('../helpers/chartJsMock')).chartJs
 runReportCase({
   name: 'AnnualIncomeView',
   view: AnnualIncomeView,
-  routes: { 'GET /reports/annual-income': () => json([{ month: 'January', amount: 12 }]) },
+  routes: { 'GET /reports/annual-income': () => json([{ month: 'January', amount: 12, currency: 'USD' }]) },
   expected: ['Annual Income Report', 'January', '$12.00'],
+  retryable: true,
 })

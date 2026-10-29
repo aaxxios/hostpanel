@@ -9,7 +9,7 @@ import HostingPlanHero from '~/components/catalog/HostingPlanHero.vue'
 import type { PortalProduct } from '~/types/portalproduct'
 
 /** The plan the tests render. */
-const plan: PortalProduct = { id: 2, pid: 2, groupId: 1, name: 'Starter', description: '', pricing: { monthly: 5, annual: 50 } }
+const plan: PortalProduct = { id: 2, groupId: 1, name: 'Starter', description: '', pricing: { monthly: 5, annual: 50 } }
 
 /**
  * Mounts the hero.

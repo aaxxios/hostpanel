@@ -8,16 +8,16 @@ namespace Innovayse.Hostpanel.Domain.Projects;
 /// </summary>
 public sealed class ProjectTranslation : BaseEntity
 {
-    /// <summary>Longest a locale code may be — matches the <c>ProjectTranslations.Locale</c> column.</summary>
+    /// <summary>Longest a locale code may be: matches the <c>ProjectTranslations.Locale</c> column.</summary>
     public const int LocaleMaxLength = 10;
 
-    /// <summary>Longest Title may be — matches the <c>ProjectTranslations.Title</c> column.</summary>
+    /// <summary>Longest Title may be: matches the <c>ProjectTranslations.Title</c> column.</summary>
     public const int TitleMaxLength = 200;
 
-    /// <summary>Longest Summary may be — matches the <c>ProjectTranslations.Summary</c> column.</summary>
+    /// <summary>Longest Summary may be: matches the <c>ProjectTranslations.Summary</c> column.</summary>
     public const int SummaryMaxLength = 500;
 
-    /// <summary>Longest Description may be — matches the <c>ProjectTranslations.Description</c> column.</summary>
+    /// <summary>Longest Description may be: matches the <c>ProjectTranslations.Description</c> column.</summary>
     public const int DescriptionMaxLength = 4000;
 
     /// <summary>Gets the FK to the parent <see cref="Project"/>.</summary>
@@ -35,7 +35,7 @@ public sealed class ProjectTranslation : BaseEntity
     /// <summary>Gets the long description in this locale, or <c>null</c>.</summary>
     public string? Description { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private ProjectTranslation() { }
 
     /// <summary>

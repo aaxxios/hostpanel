@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Offline credit card processing — card payments entered by hand.
+ * Offline credit card processing: card payments entered by hand.
  *
  * The feature is not built yet, so the screen says so instead of showing records that do not exist.
  */

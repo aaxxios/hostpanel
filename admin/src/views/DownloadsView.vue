@@ -1,19 +1,20 @@
 <script setup lang="ts">
 /**
  * Downloads management: categories and downloadable files, with nested category navigation and
- * add, edit and delete for both.
+ * add, edit and delete for both. Every change reports its outcome (success, or the API's sentence)
+ * under the header, a delete is confirmed first, and a refused load shows the sentence with a Retry.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import DownloadCategoryEditDialog from '@/components/support/DownloadCategoryEditDialog.vue'
 import DownloadItemEditDialog from '@/components/support/DownloadItemEditDialog.vue'
 import SupportCheckboxField from '@/components/support/SupportCheckboxField.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
@@ -24,10 +25,12 @@ import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
 import { useDownloadOptions } from '@/composables/useDownloadOptions'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { enumValueOf } from '@/lib/enumValue'
 import { DownloadTarget, useDownloadsStore } from '@/stores/downloads'
 import type { DownloadCategory, DownloadCategoryPayload } from '@/types/downloadcategory'
@@ -128,6 +131,29 @@ const deleteRequest = ref<DeleteRequest | null>(null)
 /** Whether a deletion is in progress. */
 const deleting = ref(false)
 
+/** The sentence of the last refused load, shown with Retry; null when the page loaded. */
+const loadError = ref<string | null>(null)
+
+/** The outcome line of the last change. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Shows the outcome of one change: the success sentence, or the API's sentence of the refusal.
+ *
+ * @param ok - Whether the API accepted the change.
+ * @param successKey - Locale key of the success sentence.
+ */
+const report = (ok: boolean, successKey: string): void => {
+  if (ok) {
+    feedback.show(t(successKey), false)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
+}
+
 const { typeOptions, categoryOptions } = useDownloadOptions(computed(() => store.categories))
 
 /** Categories visible at the current navigation level. */
@@ -151,15 +177,15 @@ const selectTab = (value: string): void => {
  * Loads the downloads of the level being browsed.
  */
 const fetchDownloads = async (): Promise<void> => {
-  await store.fetchDownloads(currentCategoryId.value)
+  loadError.value = (await store.fetchDownloads(currentCategoryId.value)) ? null : store.error
 }
 
 /**
- * Loads categories and downloads, showing the loading state meanwhile.
+ * Loads categories and downloads, showing the loading state meanwhile and recording a refusal.
  */
 const fetchAll = async (): Promise<void> => {
   loading.value = true
-  await store.fetchAll(currentCategoryId.value)
+  loadError.value = (await store.fetchAll(currentCategoryId.value)) ? null : store.error
   loading.value = false
 }
 
@@ -170,6 +196,7 @@ const createCategory = async (): Promise<void> => {
   if (!newCategoryName.value.trim()) {
     return
   }
+  feedback.clear()
   saving.value = true
   const created = await store.createCategory({
     name: newCategoryName.value.trim(),
@@ -178,6 +205,7 @@ const createCategory = async (): Promise<void> => {
     parentCategoryId: currentCategoryId.value,
   })
   saving.value = false
+  report(created, 'support.downloads.categorySaved')
   if (created) {
     newCategoryName.value = ''
     newCategoryDescription.value = ''
@@ -195,9 +223,11 @@ const updateCategory = async (payload: DownloadCategoryPayload): Promise<void> =
   if (!editingCategory.value) {
     return
   }
+  feedback.clear()
   saving.value = true
   const updated = await store.updateCategory(editingCategory.value.id, payload)
   saving.value = false
+  report(updated, 'support.downloads.categorySaved')
   if (updated) {
     editingCategory.value = null
     await fetchAll()
@@ -225,6 +255,7 @@ const createDownload = async (): Promise<void> => {
   if (!newDownloadTitle.value.trim()) {
     return
   }
+  feedback.clear()
   saving.value = true
   const created = await store.createDownload({
     title: newDownloadTitle.value.trim(),
@@ -237,6 +268,7 @@ const createDownload = async (): Promise<void> => {
     isHidden: newDownloadHidden.value,
   })
   saving.value = false
+  report(created, 'support.downloads.downloadSaved')
   if (created) {
     resetDownloadForm()
     await fetchAll()
@@ -252,9 +284,11 @@ const updateDownload = async (payload: DownloadItemPayload): Promise<void> => {
   if (!editingDownload.value) {
     return
   }
+  feedback.clear()
   saving.value = true
   const updated = await store.updateDownload(editingDownload.value.id, payload)
   saving.value = false
+  report(updated, 'support.downloads.downloadSaved')
   if (updated) {
     editingDownload.value = null
     await fetchAll()
@@ -262,18 +296,27 @@ const updateDownload = async (payload: DownloadItemPayload): Promise<void> => {
 }
 
 /**
- * Deletes what the confirmation asked about, then reloads.
+ * Deletes what the confirmation asked about, shows the outcome and reloads on success.
  */
 const handleDelete = async (): Promise<void> => {
   if (!deleteRequest.value) {
     return
   }
+  feedback.clear()
   deleting.value = true
   const removed = await store.remove(deleteRequest.value.type, deleteRequest.value.id)
   deleting.value = false
+  deleteRequest.value = null
+  report(removed, 'support.downloads.deleted')
   if (removed) {
-    deleteRequest.value = null
     await fetchAll()
+  }
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    deleteRequest.value = null
   }
 }
 
@@ -318,8 +361,9 @@ watch(currentCategoryId, (id) => {
   newDownloadCategoryId.value = id ?? 0
 })
 
+/** Loads the root level. */
 onMounted(() => {
-  fetchAll()
+  void fetchAll()
 })
 </script>
 
@@ -330,7 +374,15 @@ onMounted(() => {
       :subtitle="t('support.downloads.manageDownloadableFilesAndCategories')"
     />
 
-    <UiAlert v-if="store.error" variant="error" data-testid="downloads-error">{{ store.error }}</UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="downloads-feedback" />
+
+    <UiErrorState
+      v-if="loadError !== null"
+      :message="loadError"
+      :loading="loading"
+      testid="downloads-error"
+      @retry="fetchAll"
+    />
 
     <UiTabs :items="tabItems" :model-value="activeTab" @update:model-value="selectTab" />
 
@@ -611,7 +663,7 @@ onMounted(() => {
       :loading="deleting"
       tone="danger"
       @confirm="handleDelete"
-      @close="deleteRequest = null"
+      @close="dismissDelete"
     />
   </UiStack>
 </template>

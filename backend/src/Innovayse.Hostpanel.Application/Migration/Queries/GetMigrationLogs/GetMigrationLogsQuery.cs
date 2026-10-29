@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Domain.Migration.Enums;
+
 namespace Innovayse.Hostpanel.Application.Migration.Queries.GetMigrationLogs;
 
 /// <summary>Returns a paginated list of log entries for a migration job.</summary>
@@ -9,7 +11,7 @@ namespace Innovayse.Hostpanel.Application.Migration.Queries.GetMigrationLogs;
 /// <param name="PageSize">How many entries a page holds at most.</param>
 public sealed record GetMigrationLogsQuery(
     int JobId,
-    string? Action,
-    string? EntityType,
+    MigrationLogAction? Action,
+    MigrationEntityType? EntityType,
     int Page = 1,
     int PageSize = 50);

@@ -37,7 +37,7 @@ describe('networkIssuesStore', () => {
     const store = useNetworkIssuesStore()
 
     expect(await store.fetchAll()).toBe(true)
-    expect(callOf(mock).url).toBe('/api/network-issues?page=1&pageSize=20&status=Open')
+    expect(callOf(mock).url).toBe('/api/network-issues?page=1&pageSize=20&statuses=Reported&statuses=Investigating')
     expect(store.issues).toEqual([{ id: 1 }])
     expect(store.totalCount).toBe(1)
   })
@@ -86,5 +86,14 @@ describe('networkIssuesStore', () => {
     stubFetch(problem('Locked.', 409))
     expect(await store.update(2, payload)).toBe(false)
     expect(store.error).toBe('Locked.')
+  })
+
+  it('keeps a refused delete apart from the load error', async () => {
+    const store = useNetworkIssuesStore()
+    stubFetch(problem('In use.', 409))
+
+    expect(await store.remove(2)).toBe(false)
+    expect(store.actionError).toBe('In use.')
+    expect(store.error).toBeNull()
   })
 })

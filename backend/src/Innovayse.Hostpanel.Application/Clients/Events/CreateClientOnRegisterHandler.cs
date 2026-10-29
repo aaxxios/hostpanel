@@ -15,15 +15,20 @@ public sealed class CreateClientOnRegisterHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>Reads the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public CreateClientOnRegisterHandler(IHostpanelDbContext context)
+    /// <param name="clock">Reads the current moment.</param>
+    public CreateClientOnRegisterHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Creates a Client record when a new user registers.</summary>
-    /// <param name="evt">The integration event published by <c>LocalAuthController.RegisterAsync</c>.</param>
+    /// <param name="evt">The integration event published by <c>RegisterHandler</c>.</param>
     /// <param name="ct">Cancellation token.</param>
     public async Task HandleAsync(ClientRegisteredIntegrationEvent evt, CancellationToken ct)
     {
@@ -33,9 +38,9 @@ public sealed class CreateClientOnRegisterHandler
             return;
         }
 
-        var client = Client.Create(evt.UserId, evt.FirstName, evt.LastName, evt.Email,
-            registrationIp: evt.IpAddress, registrationUserAgent: evt.UserAgent,
-            deviceType: evt.DeviceType, operatingSystem: evt.OperatingSystem, browser: evt.Browser);
+        var client = Client.Create(
+            evt.UserId, evt.FirstName, evt.LastName, evt.Email, _clock.UtcNow,
+            registration: new RegistrationInfo(evt.IpAddress, evt.UserAgent, evt.DeviceType, evt.OperatingSystem, evt.Browser));
         _context.Clients.Add(client);
         await _context.SaveChangesAsync(ct);
     }

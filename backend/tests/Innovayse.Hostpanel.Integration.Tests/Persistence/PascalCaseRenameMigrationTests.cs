@@ -1,15 +1,13 @@
 using System.Data.Common;
 using System.Text.RegularExpressions;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Persistence;
 
@@ -44,7 +42,7 @@ public sealed partial class PascalCaseRenameMigrationTests(IntegrationTestFactor
         try
         {
             var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connectionString).Options;
-            await using var context = new AppDbContext(options);
+            await using var context = new AppDbContext(options, new ModelOnlyEncryptionService());
             await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
 
             var before = await RelationNamesAsync(connectionString);
@@ -91,7 +89,7 @@ public sealed partial class PascalCaseRenameMigrationTests(IntegrationTestFactor
         // Tables created by migrations after the rename are dropped by going down past them, so they are not
         // expected in the Down snapshot; they are empty in the demo data, so nothing is lost.
         // Every later migration that creates a table must add it here, or going Down past it fails the comparison.
-        var createdAfterTheRename = new[] { "invoicereminders", "serversshsettings", "sshkeys" };
+        var createdAfterTheRename = new[] { "invoicereminders", "serversshsettings", "sshkeys", "jobruns", "dataprotectionkeys" };
         var rowsExpectedDown = rowsBefore.Where(row => !createdAfterTheRename.Contains(row.Key)).ToDictionary(row => row.Key, row => row.Value);
         (await RowCountsAsync(connectionString)).Should().Equal(rowsExpectedDown, "Down renames in place and copies nothing");
 

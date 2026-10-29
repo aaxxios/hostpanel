@@ -5,9 +5,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountPage, stubClientRuntime } from '~/tests/helpers/mountClient'
 import DomainPage from '~/pages/client/domains/[id].vue'
+import { DomainStatus } from '~/types/domainstatus'
 
 /** The mocked endpoints the store reaches. */
-const domainsApi = vi.hoisted(() => ({ fetchDomain: vi.fn(), setLock: vi.fn(), fetchNameservers: vi.fn() }))
+const domainsApi = vi.hoisted(() => ({ fetchDomain: vi.fn(), setLock: vi.fn() }))
 
 vi.mock('~/composables/apis/useDomainsApi', () => ({ useDomainsApi: () => domainsApi }))
 vi.mock('~/composables/apis/useClientApi', () => ({ useClientApi: () => ({}) }))
@@ -22,16 +23,17 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({ useCurrencyApi: () => ({})
  * @returns The domain.
  */
 const domain = (overrides: Record<string, unknown> = {}) => ({
-  id: 7, name: 'example.com', status: 'Active', registeredAt: '2025-01-01', expiresAt: '2099-01-01', nextDueDate: '2098-12-01',
+  id: 7, name: 'example.com', status: DomainStatus.Active, registeredAt: '2025-01-01', expiresAt: '2099-01-01', nextDueDate: '2098-12-01',
   firstPaymentAmount: 15, recurringAmount: 12, registrationPeriod: 1, paymentMethod: 'card', priceCurrency: 'USD',
-  autoRenew: false, isLocked: true, whoisPrivacy: false, ...overrides
+  autoRenew: false, isLocked: true, whoisPrivacy: false,
+  management: { dnsManagement: false, emailForwarding: false, nameservers: [], dnsRecords: [], emailForwardingRules: [] },
+  ...overrides
 })
 
 describe('domain page', () => {
   beforeEach(() => {
     Object.values(domainsApi).forEach((fn) => fn.mockReset())
     domainsApi.fetchDomain.mockResolvedValue(domain())
-    domainsApi.fetchNameservers.mockResolvedValue([])
     stubClientRuntime({ params: { id: '7' } })
   })
 
@@ -59,7 +61,7 @@ describe('domain page', () => {
   })
 
   it('explains a pending registration and locks the other panels', async () => {
-    domainsApi.fetchDomain.mockResolvedValue(domain({ status: 'PendingRegistration' }))
+    domainsApi.fetchDomain.mockResolvedValue(domain({ status: DomainStatus.PendingRegistration }))
 
     const wrapper = await mountPage(DomainPage)
 
@@ -68,7 +70,7 @@ describe('domain page', () => {
   })
 
   it('explains a pending transfer', async () => {
-    domainsApi.fetchDomain.mockResolvedValue(domain({ status: 'PendingTransfer' }))
+    domainsApi.fetchDomain.mockResolvedValue(domain({ status: DomainStatus.PendingTransfer }))
 
     const wrapper = await mountPage(DomainPage)
 

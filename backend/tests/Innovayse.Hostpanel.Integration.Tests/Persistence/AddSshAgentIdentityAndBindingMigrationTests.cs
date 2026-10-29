@@ -1,13 +1,5 @@
-using FluentAssertions;
-using Innovayse.Hostpanel.Domain.Clients;
-using Innovayse.Hostpanel.Domain.Products;
-using Innovayse.Hostpanel.Domain.Products.Enums;
-using Innovayse.Hostpanel.Domain.Servers;
-using Innovayse.Hostpanel.Domain.Servers.Enums;
-using Innovayse.Hostpanel.Domain.Services;
-using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -26,6 +18,8 @@ public sealed class AddSshAgentIdentityAndBindingMigrationTests
     /// <summary>The migration before the one under test.</summary>
     private const string PreviousMigration = "20261027064149_AddSshKeyManagement";
 
+    /// <summary>Applying, reverting and reapplying the migration over existing SSH data keeps every row and value.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task UpDownUp_OnExistingSshData_KeepsEveryRowAndValueAsync()
     {
@@ -34,15 +28,15 @@ public sealed class AddSshAgentIdentityAndBindingMigrationTests
         try
         {
             var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connectionString).Options;
-            await using (var context = new AppDbContext(options))
+            await using (var context = NewContext(options))
             {
                 await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
             }
 
-            var (serverId, serviceId) = await SeedExistingStateAsync(options, connectionString);
+            var (serverId, serviceId) = await SeedExistingStateAsync(connectionString);
             var before = await SnapshotAsync(connectionString);
 
-            await using (var context = new AppDbContext(options))
+            await using (var context = NewContext(options))
             {
                 await context.Database.MigrateAsync();
             }
@@ -51,7 +45,7 @@ public sealed class AddSshAgentIdentityAndBindingMigrationTests
             (await ScalarAsync(connectionString, "SELECT \"AgentBinding\" IS NULL AND \"AgentPublicKey\" IS NULL FROM \"ServerSshSettings\"")).Should().Be(true);
 
             // The upgraded model reads the old rows: an existing key keeps working, unbound.
-            await using (var context = new AppDbContext(options))
+            await using (var context = NewContext(options))
             {
                 // Projected, so the encrypted key column is not decrypted (it holds a placeholder here).
                 var settings = await context.ServerSshSettings.AsNoTracking()
@@ -63,7 +57,7 @@ public sealed class AddSshAgentIdentityAndBindingMigrationTests
                 (await context.SshKeys.AsNoTracking().CountAsync(k => k.ClientServiceId == serviceId)).Should().Be(1);
             }
 
-            await using (var context = new AppDbContext(options))
+            await using (var context = NewContext(options))
             {
                 await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
             }
@@ -71,7 +65,7 @@ public sealed class AddSshAgentIdentityAndBindingMigrationTests
             (await SnapshotAsync(connectionString)).Should().BeEquivalentTo(before, "Down drops only the two new columns");
             (await ScalarAsync(connectionString, "SELECT count(*) FROM information_schema.columns WHERE table_name = 'ServerSshSettings' AND column_name IN ('AgentBinding','AgentPublicKey')")).Should().Be(0L);
 
-            await using (var context = new AppDbContext(options))
+            await using (var context = NewContext(options))
             {
                 await context.Database.MigrateAsync();
             }
@@ -86,46 +80,122 @@ public sealed class AddSshAgentIdentityAndBindingMigrationTests
         }
     }
 
+    /// <summary>Opens a context over the test database; nothing here reads an encrypted column.</summary>
+    /// <param name="options">The options pointing at the test database.</param>
+    /// <returns>A new context.</returns>
+    private static AppDbContext NewContext(DbContextOptions<AppDbContext> options) =>
+        new(options, new ModelOnlyEncryptionService());
+
     /// <summary>
-    /// A server, an active service with one installed SSH key, and that server's SSH settings written
-    /// in the pre-migration column set (raw SQL, as the current model has columns that do not exist yet).
+    /// A client, a product, a server, an active service on that server with one installed SSH key, and the
+    /// server's SSH settings.
     /// </summary>
-    private static async Task<(int ServerId, int ServiceId)> SeedExistingStateAsync(DbContextOptions<AppDbContext> options, string connectionString)
+    /// <remarks>
+    /// The rows are written in SQL naming only the columns the schema had at <see cref="PreviousMigration"/>.
+    /// Saving entities would write every column the model has today, and a column a later migration adds
+    /// does not exist yet in this older schema.
+    /// </remarks>
+    /// <param name="connectionString">The connection string of the test database.</param>
+    /// <returns>The ids of the seeded server and service.</returns>
+    private static async Task<(int ServerId, int ServiceId)> SeedExistingStateAsync(string connectionString)
     {
-        await using var context = new AppDbContext(options);
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
-        context.Clients.Add(client);
-        var group = ProductGroup.Create($"mig-{Guid.NewGuid():N}", null);
-        context.ProductGroups.Add(group);
-        var server = Server.Create(new ServerDetails(
-            "existing", "existing.example.test", null, null, ServerModule.Cwp7, "root", null, null, "hash", true, null,
-            false, false, 0m, null, null, null, null, null, null, null, null, null, null, null, null));
-        context.Servers.Add(server);
-        await context.SaveChangesAsync();
-        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
-        context.Products.Add(product);
-        await context.SaveChangesAsync();
-        var service = ClientService.Create(client.Id, product.Id, BillingCycleNames.Monthly);
-        service.ActivateOn(server.Id, "web");
-        context.ClientServices.Add(service);
-        await context.SaveChangesAsync();
-
-        var key = SshKey.Create(service.Id, server.Id, "web", "laptop", "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG6EJIHRxsxge2aZnl+clPBfoX0nmvD7FfHXM2QQ3+3b", "SHA256:xK0G2nacQ5l2jswa38Dl9jmRCsESwmesIiz26XjE5+o");
-        key.MarkInstalled();
-        context.SshKeys.Add(key);
-        await context.SaveChangesAsync();
-
+        var now = DateTimeOffset.UtcNow;
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
-        await using var insert = new NpgsqlCommand(
-            "INSERT INTO \"ServerSshSettings\" (\"ServerId\",\"IsEnabled\",\"SshHostname\",\"SshPort\",\"AgentHost\",\"AgentPort\",\"AgentUsername\",\"AgentPrivateKey\",\"AgentHostKeyFingerprint\",\"ConnectTimeoutSeconds\",\"OperationTimeoutSeconds\",\"IsHealthy\") " +
-            "VALUES (@s, true, 'existing.example.test', 2299, '10.0.0.9', 22, 'hpsshkeys', 'ENCRYPTED-BLOB', 'SHA256:V8WRk2pDzj4fSTJHYxEiHG4otIDHJcABkgUk2/Swhwk', 10, 20, true)", connection);
-        insert.Parameters.AddWithValue("s", server.Id);
-        await insert.ExecuteNonQueryAsync();
-        return (server.Id, service.Id);
+
+        var clientId = await InsertAsync(
+            connection,
+            """
+            INSERT INTO "Clients" ("UserId", "FirstName", "LastName", "Status", "CreatedAt",
+                "AllowSso", "DisableCcProcessing", "LateFees", "MarketingOptIn", "NotifyAffiliate", "NotifyDomain",
+                "NotifyGeneral", "NotifyInvoice", "NotifyProduct", "NotifySupport", "OverdueNotices",
+                "SeparateInvoices", "StatusUpdate", "TaxExempt")
+            VALUES (@user, 'Ada', 'Lovelace', 'Active', @now,
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false)
+            RETURNING "Id"
+            """,
+            ("user", $"subject-{Guid.NewGuid():N}"),
+            ("now", now));
+
+        var groupId = await InsertAsync(
+            connection,
+            """INSERT INTO "ProductGroups" ("Name", "IsActive") VALUES (@name, true) RETURNING "Id" """,
+            ("name", $"mig-{Guid.NewGuid():N}"));
+
+        var productId = await InsertAsync(
+            connection,
+            """
+            INSERT INTO "Products" ("GroupId", "Name", "Type", "Status", "MonthlyPrice", "AnnualPrice", "IsFeatured", "SortOrder", "CreatedAt")
+            VALUES (@group, 'Starter', 'SharedHosting', 'Active', 0, 0, false, 0, @now) RETURNING "Id"
+            """,
+            ("group", groupId),
+            ("now", now));
+
+        var serverId = await InsertAsync(
+            connection,
+            """
+            INSERT INTO "Servers" ("Name", "Hostname", "Module", "Username", "UseSSL", "IsDefault", "IsDisabled", "MonthlyCost", "CreatedAt")
+            VALUES ('existing', 'existing.example.test', 'Cwp7', 'root', true, false, false, 0, @now) RETURNING "Id"
+            """,
+            ("now", now));
+
+        var serviceId = await InsertAsync(
+            connection,
+            """
+            INSERT INTO "ClientServices" ("ClientId", "ProductId", "ServerId", "Username", "BillingCycle", "Status", "Quantity",
+                "FirstPaymentAmount", "RecurringAmount", "AutoRenew", "AutoTerminateEndOfCycle", "OverrideAutoSuspend", "CreatedAt")
+            VALUES (@client, @product, @server, 'web', 'monthly', 'Active', 1, 0, 0, true, false, false, @now) RETURNING "Id"
+            """,
+            ("client", clientId),
+            ("product", productId),
+            ("server", serverId),
+            ("now", now));
+
+        await InsertAsync(
+            connection,
+            """
+            INSERT INTO "SshKeys" ("KeyId", "ClientServiceId", "ServerId", "AccountUsername", "Label", "PublicKey", "Fingerprint", "SyncState", "CreatedAt")
+            VALUES (@key, @service, @server, 'web', 'laptop',
+                'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG6EJIHRxsxge2aZnl+clPBfoX0nmvD7FfHXM2QQ3+3b',
+                'SHA256:xK0G2nacQ5l2jswa38Dl9jmRCsESwmesIiz26XjE5+o', 'Installed', @now) RETURNING "Id"
+            """,
+            ("key", Guid.NewGuid()),
+            ("service", serviceId),
+            ("server", serverId),
+            ("now", now));
+
+        await InsertAsync(
+            connection,
+            """
+            INSERT INTO "ServerSshSettings" ("ServerId", "IsEnabled", "SshHostname", "SshPort", "AgentHost", "AgentPort", "AgentUsername",
+                "AgentPrivateKey", "AgentHostKeyFingerprint", "ConnectTimeoutSeconds", "OperationTimeoutSeconds", "IsHealthy")
+            VALUES (@server, true, 'existing.example.test', 2299, '10.0.0.9', 22, 'hpsshkeys', 'ENCRYPTED-BLOB',
+                'SHA256:V8WRk2pDzj4fSTJHYxEiHG4otIDHJcABkgUk2/Swhwk', 10, 20, true) RETURNING "Id"
+            """,
+            ("server", serverId));
+
+        return (serverId, serviceId);
+    }
+
+    /// <summary>Runs one insert that returns the new row's id.</summary>
+    /// <param name="connection">The open connection to the test database.</param>
+    /// <param name="sql">The insert, ending in <c>RETURNING "Id"</c>.</param>
+    /// <param name="parameters">The named parameters of the insert.</param>
+    /// <returns>The new row's id.</returns>
+    private static async Task<int> InsertAsync(NpgsqlConnection connection, string sql, params (string Name, object Value)[] parameters)
+    {
+        await using var command = new NpgsqlCommand(sql, connection);
+        foreach (var (name, value) in parameters)
+        {
+            command.Parameters.AddWithValue(name, value);
+        }
+
+        return (int)(await command.ExecuteScalarAsync())!;
     }
 
     /// <summary>Every pre-existing value of the SSH tables, as text, for an exact before/after comparison.</summary>
+    /// <param name="connectionString">The connection string of the test database.</param>
+    /// <returns>One line per row, the values joined by a bar.</returns>
     private static async Task<List<string>> SnapshotAsync(string connectionString)
     {
         await using var connection = new NpgsqlConnection(connectionString);
@@ -150,6 +220,9 @@ public sealed class AddSshAgentIdentityAndBindingMigrationTests
     }
 
     /// <summary>Runs a scalar query.</summary>
+    /// <param name="connectionString">The connection string of the test database.</param>
+    /// <param name="sql">The query.</param>
+    /// <returns>The first column of the first row.</returns>
     private static async Task<object?> ScalarAsync(string connectionString, string sql)
     {
         await using var connection = new NpgsqlConnection(connectionString);

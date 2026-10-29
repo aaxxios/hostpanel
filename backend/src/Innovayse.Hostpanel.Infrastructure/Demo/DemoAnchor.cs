@@ -15,10 +15,10 @@ internal static class DemoAnchor
     internal const int HistoryMonths = 12;
 
     /// <summary>Reads the anchor: midnight UTC at the start of the current day.</summary>
+    /// <param name="now">The current moment, from the clock.</param>
     /// <returns>Midnight UTC today.</returns>
-    internal static DateTimeOffset Today()
+    internal static DateTimeOffset Today(DateTimeOffset now)
     {
-        var now = DateTimeOffset.UtcNow;
         return new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
     }
 

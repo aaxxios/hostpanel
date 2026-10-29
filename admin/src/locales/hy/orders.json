@@ -13,7 +13,14 @@
     "addNotesAboutThisOrder": "Ավելացրեք նշումներ այս պատվերի համար...",
     "notesAreOnlyVisibleTo": "Նշումները տեսանելի են միայն ադմինիստրատորներին։",
     "deleteOrder": "Ջնջել պատվերը",
-    "areYouSureYouWant": "Վստա՞հ եք, որ ցանկանում եք ընդմիշտ ջնջել այս պատվերը։ Այս գործողությունը հնարավոր չէ չեղարկել։"
+    "areYouSureYouWant": "Վստա՞հ եք, որ ցանկանում եք ընդմիշտ ջնջել այս պատվերը։ Այս գործողությունը հնարավոր չէ չեղարկել։",
+    "orderAccepted": "Պատվերը ընդունված է։",
+    "orderCancelled": "Պատվերը չեղարկված է։",
+    "confirmCancelTitle": "Չեղարկե՞լ այս պատվերը",
+    "confirmCancelMessage": "Պատվերը կչեղարկվի։ Այս գործողությունը հնարավոր չէ հետարկել։",
+    "cancelOrder": "Չեղարկել պատվերը",
+    "linesSubtotal": "Պատվերի տողերի գումար (առանց հարկի և կրեդիտի)",
+    "invoiceTotal": "Հաշվի ընդհանուր գումար"
   },
   "ordersList": {
     "orders": "Պատվերներ",
@@ -23,6 +30,14 @@
     "items": "Դիրքեր",
     "accept": "Ընդունել",
     "totalcountOrderValue": "Պատվերներ՝ {totalCount}",
-    "noOrdersFound": "Պատվերներ չեն գտնվել"
+    "noOrdersFound": "Պատվերներ չեն գտնվել",
+    "orderAccepted": "Պատվերը ընդունված է։",
+    "orderCancelled": "Պատվերը չեղարկված է։",
+    "confirmCancelTitle": "Չեղարկե՞լ այս պատվերը",
+    "confirmCancelMessage": "Պատվերը կչեղարկվի։ Այս գործողությունը հնարավոր չէ հետարկել։",
+    "cancelOrder": "Չեղարկել պատվերը"
+  },
+  "fulfillment": {
+    "acceptedWithFailedLines": "Պատվերն ընդունվեց, բայց այս տողերը չհաջողվեց կատարել. {lines}։"
   }
 }

@@ -11,6 +11,6 @@ namespace Innovayse.Hostpanel.Domain.Partners;
 /// </remarks>
 public static class PartnerErrors
 {
-    /// <summary>The sort order is negative (400) — <see cref="Partner.Create"/>, <see cref="Partner.Update"/> and <see cref="Partner.SetSortOrder"/>.</summary>
+    /// <summary>The sort order is negative (400): <see cref="Partner.Create"/>, <see cref="Partner.Update"/> and <see cref="Partner.SetSortOrder"/>.</summary>
     public const string SortOrderNegative = "PARTNER_SORT_ORDER_NEGATIVE";
 }

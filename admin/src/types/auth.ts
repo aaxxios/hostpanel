@@ -36,14 +36,11 @@ export interface AuthModeResponse {
 
 /** Body of `GET /api/auth/setup-required`. */
 export interface SetupRequiredResponse {
-  /** True while nobody holds the Admin role yet. */
-  required: boolean
   /**
-   * True when claiming the Admin role also needs the setup token this installation
-   * printed to its log. Local-mode deployments only — under SSO the accounts belong to
-   * the sign-on service and no token is ever issued.
+   * True while nobody holds the Admin role yet. Claiming it always needs the setup token
+   * this installation printed to its log.
    */
-  tokenRequired: boolean
+  required: boolean
 }
 
 /** Body of a successful `POST /api/auth/register`. */
@@ -56,7 +53,7 @@ export interface RegisterResponse {
 export interface MeResponse {
   /** Email address of the signed-in account. */
   email: string
-  /** Roles granted locally in Hostpanel — never read off an SSO token. */
+  /** Roles granted locally in Hostpanel, never read off an SSO token. */
   roles: string[]
   /** Whether the identity provider reports the address as confirmed. */
   emailVerified: boolean
@@ -75,7 +72,7 @@ export interface LocalLoginResponse {
   /** True when a TOTP code is still needed before a token is issued. */
   twoFactorRequired?: boolean
   /**
-   * Continuation token for the TOTP step. Stays in the response body and in memory —
+   * Continuation token for the TOTP step. Stays in the response body and in memory:
    * it must never reach the URL, where it would be bookmarkable and land in history.
    */
   pendingToken?: string

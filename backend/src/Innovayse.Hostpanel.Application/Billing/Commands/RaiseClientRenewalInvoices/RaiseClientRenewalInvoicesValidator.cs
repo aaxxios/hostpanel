@@ -13,6 +13,6 @@ public sealed class RaiseClientRenewalInvoicesValidator : LocalizedValidator<Rai
     public RaiseClientRenewalInvoicesValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
-        RuleFor(x => x.ClientId).GreaterThan(0);
+        RuleFor(x => x.ClientId).GreaterThan(0).WithMessage(L["ClientIdInvalid"]);
     }
 }

@@ -2,139 +2,130 @@ using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Application.Migration.Importers.Enums;
 using Innovayse.Hostpanel.Application.Migration.Importers.Records;
 using Innovayse.Hostpanel.Application.Migration.Importers.SourceValues;
 using Innovayse.Hostpanel.Domain.Domains;
+using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Migration;
 using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Application.Migration.Importers;
 
 /// <summary>
 /// Imports domain records, deduplicated by domain name, with the same status-transition mapping
-/// the source system used. Split out of <c>MigrationPullWorker</c> (A6 Task 6).
+/// the source system used.
 /// </summary>
-/// <param name="context">The module's data context.</param>
-/// <param name="uow">Unit of work the imported domain is saved through.</param>
-/// <param name="pager">Pages through the source plugin's <c>domains</c> dataset.</param>
-/// <param name="logWriter">Writes one migration log row per record.</param>
-/// <param name="clientResolver">Resolves each record's client email to a local client id.</param>
-/// <param name="logger">Logs a skipped or failed record.</param>
-public sealed class DomainsImporter(
-    IHostpanelDbContext context,
-    IUnitOfWork uow,
-    MigrationRecordPager pager,
-    MigrationLogWriter logWriter,
-    MigrationClientResolver clientResolver,
-    ILogger<DomainsImporter> logger) : IMigrationEntityImporter
+public sealed class DomainsImporter : IMigrationEntityImporter
 {
-    /// <inheritdoc/>
-    public async Task ImportAsync(MigrationJob job, CancellationToken ct)
+    /// <summary>The module's data context.</summary>
+    private readonly IHostpanelDbContext _context;
+
+    /// <summary>Pages through the source plugin's <c>domains</c> dataset and records each record's outcome.</summary>
+    private readonly MigrationRecordRunner _runner;
+
+    /// <summary>Resolves each record's client email to a local client id.</summary>
+    private readonly MigrationClientResolver _clientResolver;
+
+    /// <summary>Decides the currency an imported domain is billed in: the client's billing currency.</summary>
+    private readonly IPayerCurrencyResolver _payerCurrency;
+
+    /// <summary>Names the registrar module an imported domain is managed through: the one its TLD is configured for.</summary>
+    private readonly RegistrarProviderResolver _registrars;
+
+    /// <summary>Initializes a new instance of the <see cref="DomainsImporter"/> class.</summary>
+    /// <param name="context">The module's data context.</param>
+    /// <param name="runner">Pages through the source plugin's <c>domains</c> dataset and records each record's outcome.</param>
+    /// <param name="clientResolver">Resolves each record's client email to a local client id.</param>
+    /// <param name="payerCurrency">Decides the currency an imported domain is billed in: the client's billing currency.</param>
+    /// <param name="registrars">Names the registrar module an imported domain is managed through: the one its TLD is configured for.</param>
+    public DomainsImporter(
+        IHostpanelDbContext context,
+        MigrationRecordRunner runner,
+        MigrationClientResolver clientResolver,
+        IPayerCurrencyResolver payerCurrency,
+        RegistrarProviderResolver registrars)
     {
-        int imported = 0, skipped = 0;
-
-        await foreach (var page in pager.PagesAsync<DomainRecord>(job, "domains", ct))
-        {
-            foreach (var rec in page)
-            {
-                try
-                {
-                    var result = await ImportDomainAsync(rec, ct);
-                    if (result.Action == ImportOutcome.Imported)
-                    {
-                        imported++;
-                    }
-                    else if (result.Action == ImportOutcome.Skipped)
-                    {
-                        skipped++;
-                    }
-
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Domains, rec.DomainName, result.Action, result.Reason, ct);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Skipped domain {Name} during migration", rec.DomainName);
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Domains, rec.DomainName, ImportOutcome.Failed, ex.Message, ct);
-                }
-            }
-
-            job.UpdateProgress(MigrationEntityType.Domains, imported, skipped);
-            await uow.SaveChangesAsync(ct);
-        }
+        _context = context;
+        _runner = runner;
+        _clientResolver = clientResolver;
+        _payerCurrency = payerCurrency;
+        _registrars = registrars;
     }
 
-    /// <summary>Imports one plugin-side domain record, applying its status transitions.</summary>
+    /// <inheritdoc/>
+    public MigrationEntityType EntityType => MigrationEntityType.Domains;
+
+    /// <inheritdoc/>
+    public Task ImportAsync(MigrationJob job, CancellationToken ct) =>
+        _runner.RunAsync(new MigrationRecordRun<DomainRecord>(job, EntityType, "domains", ImportDomainAsync), ct);
+
+    /// <summary>Imports one plugin-side domain record in the status it had at the source, raising no domain events.</summary>
     /// <param name="rec">The domain record read from the source plugin.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Whether the domain was imported or skipped, and why when skipped.</returns>
-    private async Task<(ImportOutcome Action, string? Reason)> ImportDomainAsync(DomainRecord rec, CancellationToken ct)
+    private async Task<RecordImportResult> ImportDomainAsync(DomainRecord rec, CancellationToken ct)
     {
-        var clientId = await clientResolver.ResolveClientIdAsync(rec.ClientEmail, ct);
+        var clientId = await _clientResolver.ResolveClientIdAsync(rec.ClientEmail, ct);
         if (clientId is null)
         {
-            logger.LogWarning("Domain {Name} skipped — client {Email} not found", rec.DomainName, rec.ClientEmail);
-            return (ImportOutcome.Skipped, $"Client '{rec.ClientEmail}' not found");
+            return RecordImportResult.Skipped(MigrationSkipReason.ClientNotFound);
         }
 
-        var existing = await context.Domains
+        if (rec.RegisteredAt is not { } registeredAt || rec.ExpiresAt is not { } expiresAt)
+        {
+            return RecordImportResult.Skipped(MigrationSkipReason.DateMissing);
+        }
+
+        var existing = await _context.Domains
             .IncludeChildren()
-            .FirstOrDefaultAsync(x => x.Name == rec.DomainName, ct);
+            .FirstOrDefaultAsync(x => x.Name == RegisteredDomain.NormaliseName(rec.DomainName), ct);
         if (existing is not null)
         {
-            logger.LogDebug("Domain {Name} already exists — skipping", rec.DomainName);
-            return (ImportOutcome.Skipped, "Domain already exists");
+            return RecordImportResult.Skipped(MigrationSkipReason.AlreadyExists);
         }
 
-        var domain = RegisteredDomain.Register(
+        // The source record carries no currency of its own; its amounts are in the client's billing currency.
+        var currency = (await _payerCurrency.ForClientAsync(clientId.Value, ct)).Code;
+        var registrar = await _registrars.ResolveForTldAsync(rec.DomainName, ct);
+        var domain = RegisteredDomain.Import(
             clientId: clientId.Value,
             name: rec.DomainName,
-            expiresAt: rec.ExpiresAt,
+            status: MapStatus(rec.Status),
+            registeredAt: registeredAt,
+            expiresAt: expiresAt,
             autoRenew: rec.AutoRenew,
-            whoisPrivacy: false,
-            registrar: rec.Registrar);
-
-        // Apply status transitions — always start from PendingRegistration
-        var sourceStatus = (rec.Status ?? SourceDomainStatuses.Active).ToLowerInvariant();
-        switch (sourceStatus)
-        {
-            case SourceDomainStatuses.Expired:
-                domain.Activate("migrated");
-                domain.MarkExpired();
-                break;
-            case SourceDomainStatuses.Redemption:
-                domain.Activate("migrated");
-                domain.MarkExpired();
-                domain.MarkRedemption();
-                break;
-            case SourceDomainStatuses.Transferred:
-                domain.Activate("migrated");
-                domain.MarkTransferred();
-                break;
-            case SourceDomainStatuses.Cancelled:
-            case SourceDomainStatuses.Fraud:
-                domain.Activate("migrated");
-                domain.MarkExpired();
-                domain.Cancel();
-                break;
-            default: // "active", "grace", "pending", etc.
-                domain.Activate("migrated");
-                break;
-        }
+            priceCurrency: currency,
+            registrar: rec.Registrar,
+            registrarModule: registrar.Module);
 
         domain.Update(
             rec.FirstPaymentAmount, rec.RecurringAmount, rec.PaymentMethod,
             null, rec.SubscriptionId, rec.AdminNotes,
-            rec.ExpiresAt, rec.NextDueDate ?? rec.ExpiresAt, 1, domain.Status);
+            expiresAt, rec.NextDueDate ?? expiresAt, 1, domain.Status);
 
         if (rec.Nameservers is { Count: > 0 })
         {
             domain.SetNameservers(rec.Nameservers);
         }
 
-        context.Domains.Add(domain);
-        await uow.SaveChangesAsync(ct);
-        return (ImportOutcome.Imported, null);
+        _context.Domains.Add(domain);
+        await _context.SaveChangesAsync(ct);
+        return RecordImportResult.Imported;
     }
+
+    /// <summary>Maps the source system's status word to the local domain status.</summary>
+    /// <param name="sourceStatus">The source's status word; null is read as active.</param>
+    /// <returns>The matching <see cref="DomainStatus"/>; any word without its own state (grace, pending and the like) is <see cref="DomainStatus.Active"/>.</returns>
+    private static DomainStatus MapStatus(string? sourceStatus) =>
+        (sourceStatus ?? SourceDomainStatuses.Active).ToLowerInvariant() switch
+        {
+            SourceDomainStatuses.Expired => DomainStatus.Expired,
+            SourceDomainStatuses.Redemption => DomainStatus.Redemption,
+            SourceDomainStatuses.Transferred => DomainStatus.Transferred,
+            SourceDomainStatuses.Cancelled or SourceDomainStatuses.Fraud => DomainStatus.Cancelled,
+            _ => DomainStatus.Active,
+        };
 }

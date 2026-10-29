@@ -10,10 +10,12 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
 import type { CartItem } from '~/types/cartitem'
 import type { PlaceOrderInput } from '~/types/placeorderinput'
 import { CartItemType } from '~/types/cartitemtype'
 import { DomainOrderAction } from '~/types/domainorderaction'
+import { PricingCycle } from '~/types/pricingcycle'
 
 /** The mocked order endpoints, re-created for every test. */
 const billing = {
@@ -35,6 +37,18 @@ const rememberToken = vi.fn()
 
 /** The chosen-currency calls the currency store stand-in receives. */
 const selectCurrency = vi.fn()
+
+/** The catalogue read the price refresh makes. */
+const loadProducts = vi.fn()
+
+vi.mock('~/stores/catalog', () => ({
+  /**
+   * Stands in for the catalogue store.
+   *
+   * @returns The catalogue read the checkout store uses to re-price the cart.
+   */
+  useCatalogStore: () => ({ loadProducts })
+}))
 
 vi.mock('~/composables/apis/useBillingApi', () => ({
   /**
@@ -83,11 +97,11 @@ const { useCartStore } = await import('~/stores/cart')
 const { CheckoutDestinationKind } = await import('~/types/checkoutdestinationkind')
 
 /** A hosting item priced in dollars. */
-const hosting: CartItem = { pid: 5, name: 'Pro', billingcycle: 'monthly', cycleLabel: 'Monthly', amount: 12, currency: 'USD' }
+const hosting: CartItem = { pid: 5, name: 'Pro', billingcycle: PricingCycle.Monthly, cycleLabel: 'Monthly', amount: 12, currency: 'USD' }
 
 /** A domain item priced in dollars. */
 const domainItem: CartItem = {
-  pid: 9, name: 'a.com', billingcycle: 'annually', cycleLabel: '1 Year', amount: 10, currency: 'USD',
+  pid: 9, name: 'a.com', billingcycle: PricingCycle.Annual, cycleLabel: '1 Year', amount: 10, currency: 'USD',
   domain: 'a.com', itemType: CartItemType.Domain, domainAction: DomainOrderAction.Register, years: 1
 }
 
@@ -95,17 +109,22 @@ const domainItem: CartItem = {
 const guest = { firstname: 'Ada', lastname: 'L', email: 'ada@example.com', password: 'pw-123456', phonenumber: '+374' }
 
 /** The order the API answers a placed order with. */
-const placed = { orderId: 42, invoiceId: 77, paymentToken: 'tok' }
+const placed = { orderId: 42, orderNumber: 'A 42', invoiceId: 77, paymentToken: 'tok', total: 12, currency: 'USD' }
 
 /**
  * Builds the input a checkout page hands the store.
  *
  * @param confirmCard - The card confirmation to use; succeeds by default.
+ * @param confirmTotalChange - The answer to a changed total; agrees by default.
  * @returns The input.
  */
-const input = (confirmCard: PlaceOrderInput['confirmCard'] = async () => ({ id: 'pi_1' })): PlaceOrderInput => ({
+const input = (
+  confirmCard: PlaceOrderInput['confirmCard'] = async () => ({ id: 'pi_1' }),
+  confirmTotalChange: PlaceOrderInput['confirmTotalChange'] = () => true
+): PlaceOrderInput => ({
   guest,
   confirmCard,
+  confirmTotalChange,
   localizePath: path => `/en${path}`
 })
 
@@ -226,10 +245,11 @@ describe('useCheckoutStore.placeOrder', () => {
     expect(billing.confirmOrderPayment).toHaveBeenCalledWith(42, { paymentIntentId: 'pi_9' }, 'tok')
     expect(destination).toEqual({
       kind: CheckoutDestinationKind.Route,
-      target: '/en/client/order-success?order=ORD-0042&amount=$10.00&domain=a.com&action=register'
+      target: '/en/client/order-success?order=A+42&invoice=77&domain=a.com&action=register'
     })
     expect(useCartStore().items).toEqual([])
-    expect(store.submitting).toBe(false)
+    // The page is leaving: the button stays disabled so a second click cannot place another order.
+    expect(store.submitting).toBe(true)
   })
 
   it('hands a hosted gateway the localised return address, remembers the token and leaves the site', async () => {
@@ -238,12 +258,57 @@ describe('useCheckoutStore.placeOrder', () => {
 
     const destination = await store.placeOrder(input())
 
-    expect(rememberToken).toHaveBeenCalledWith(42, 'tok')
+    expect(rememberToken).toHaveBeenCalledWith(42, 'tok', 77)
     const returnUrl = billing.startOrderGatewayPayment.mock.calls[0]?.[2] as string
     expect(new URL(returnUrl).pathname).toBe('/en/payment/result')
     expect(new URL(returnUrl).search).toBe('?order=42')
     expect(destination).toEqual({ kind: CheckoutDestinationKind.External, target: 'https://bank.example/pay' })
-    expect(useCartStore().items).toEqual([])
+    // Kept until the result page sees the payment confirmed.
+    expect(useCartStore().items).toHaveLength(1)
+    expect(store.submitting).toBe(true)
+  })
+
+  it('refuses a gateway address that is not secure and lets the payer try again', async () => {
+    billing.startOrderGatewayPayment.mockResolvedValue({ redirectUrl: 'javascript:alert(1)' })
+    const store = arrange('inecobank')
+
+    const destination = await store.placeOrder(input())
+
+    expect(destination).toBeNull()
+    expect(store.error).toBe('checkout.errors.generic')
+    expect(store.submitting).toBe(false)
+    expect(useCartStore().items).toHaveLength(1)
+  })
+
+  it('places one order for two concurrent submits and one only', async () => {
+    billing.createOrder.mockImplementation(async () => {
+      await Promise.resolve()
+      return placed
+    })
+    const store = arrange('bank_transfer')
+
+    const [first, second] = await Promise.all([store.placeOrder(input()), store.placeOrder(input())])
+
+    expect(billing.createOrder).toHaveBeenCalledTimes(1)
+    expect([first, second].filter(destination => destination !== null)).toHaveLength(1)
+  })
+
+  it('places nothing for an empty cart', async () => {
+    const store = arrange('bank_transfer', [])
+
+    expect(await store.placeOrder(input())).toBeNull()
+    expect(billing.createOrder).not.toHaveBeenCalled()
+    expect(store.submitting).toBe(false)
+  })
+
+  it('keeps the button disabled after a hand-off until the checkout page opens again', async () => {
+    const store = arrange('bank_transfer')
+    await store.placeOrder(input())
+    expect(store.submitting).toBe(true)
+
+    store.resetFlow()
+
+    expect(store.submitting).toBe(false)
   })
 
   it('sends a bank transfer to the invoice, or to the invoice list when there is none', async () => {
@@ -284,6 +349,174 @@ describe('useCheckoutStore.placeOrder', () => {
       throw new Error('')
     }))
     expect(store.error).toBe('checkout.errors.generic')
+  })
+
+  it('pays the same order again on a retry after a failed payment', async () => {
+    billing.createOrderPaymentIntent.mockResolvedValue({ clientSecret: 'sec' })
+    const store = arrange('stripe')
+
+    await store.placeOrder(input(async () => {
+      throw new Error('Your card was declined.')
+    }))
+    const destination = await store.placeOrder(input())
+
+    expect(billing.createOrder).toHaveBeenCalledTimes(1)
+    expect(auth.login).toHaveBeenCalledTimes(1)
+    expect(billing.confirmOrderPayment).toHaveBeenCalledWith(42, { paymentIntentId: 'pi_1' }, 'tok')
+    expect(destination).toMatchObject({ kind: CheckoutDestinationKind.Route })
+  })
+
+  it('repeats only the backend confirmation when it failed after the card was charged', async () => {
+    billing.createOrderPaymentIntent.mockResolvedValue({ clientSecret: 'sec' })
+    billing.confirmOrderPayment.mockRejectedValueOnce({ data: { detail: 'Try again shortly.' } })
+    const confirmCard = vi.fn().mockResolvedValue({ id: 'pi_9' })
+    const store = arrange('stripe')
+
+    expect(await store.placeOrder(input(confirmCard))).toBeNull()
+    expect(store.pendingPaymentIntentId).toBe('pi_9')
+    const destination = await store.placeOrder(input(confirmCard))
+
+    expect(billing.createOrderPaymentIntent).toHaveBeenCalledTimes(1)
+    expect(confirmCard).toHaveBeenCalledTimes(1)
+    expect(billing.confirmOrderPayment).toHaveBeenCalledTimes(2)
+    expect(billing.confirmOrderPayment).toHaveBeenLastCalledWith(42, { paymentIntentId: 'pi_9' }, 'tok')
+    expect(destination).toMatchObject({ kind: CheckoutDestinationKind.Route })
+  })
+
+  it('forgets the charged card payment when the cart changes', async () => {
+    billing.createOrderPaymentIntent.mockResolvedValue({ clientSecret: 'sec' })
+    billing.confirmOrderPayment.mockRejectedValueOnce({ data: { detail: 'Try again shortly.' } })
+    const store = arrange('stripe')
+    await store.placeOrder(input())
+
+    useCartStore().addItem({ ...hosting, pid: 6 })
+    await nextTick()
+
+    expect(store.pendingPaymentIntentId).toBeNull()
+  })
+
+  it('places a new order when the cart changed after a failed payment', async () => {
+    billing.createOrderPaymentIntent.mockResolvedValue({ clientSecret: 'sec' })
+    const store = arrange('stripe')
+
+    await store.placeOrder(input(async () => {
+      throw new Error('Your card was declined.')
+    }))
+    useCartStore().addItem({ ...hosting, pid: 6 })
+    await nextTick()
+
+    expect(store.pendingOrder).toBeNull()
+    await store.placeOrder(input())
+    expect(billing.createOrder).toHaveBeenCalledTimes(2)
+  })
+
+  it('skips the payment step for a zero-total order and goes to the success page', async () => {
+    billing.createOrder.mockResolvedValue({ ...placed, total: 0 })
+    const store = arrange('stripe', [{ ...hosting, amount: 0 }])
+
+    const destination = await store.placeOrder(input())
+
+    expect(billing.createOrderPaymentIntent).not.toHaveBeenCalled()
+    expect(billing.startOrderGatewayPayment).not.toHaveBeenCalled()
+    expect(destination).toEqual({
+      kind: CheckoutDestinationKind.Route,
+      target: '/en/client/order-success?order=A+42&invoice=77'
+    })
+    expect(useCartStore().items).toEqual([])
+  })
+})
+
+describe('useCheckoutStore billed total', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    Object.values(billing).forEach(fn => fn.mockReset())
+    auth.isLoggedIn = true
+    payer.code = 'USD'
+    billing.createOrder.mockResolvedValue(placed)
+  })
+
+  it('pays without asking when the billed total is the one the cart showed', async () => {
+    const confirmTotalChange = vi.fn(() => true)
+
+    await arrange('bank_transfer').placeOrder(input(undefined, confirmTotalChange))
+
+    expect(confirmTotalChange).not.toHaveBeenCalled()
+  })
+
+  it('asks with both amounts when the billed total differs, and goes on when the payer agrees', async () => {
+    billing.createOrder.mockResolvedValue({ ...placed, total: 15 })
+    const confirmTotalChange = vi.fn(() => true)
+
+    const destination = await arrange('bank_transfer').placeOrder(input(undefined, confirmTotalChange))
+
+    expect(confirmTotalChange).toHaveBeenCalledWith('$12.00', '$15.00')
+    expect(destination).toMatchObject({ kind: CheckoutDestinationKind.Route })
+  })
+
+  it('asks when the billed currency differs from the payer currency', async () => {
+    billing.createOrder.mockResolvedValue({ ...placed, currency: 'EUR' })
+    const confirmTotalChange = vi.fn(() => false)
+
+    await arrange('bank_transfer').placeOrder(input(undefined, confirmTotalChange))
+
+    expect(confirmTotalChange).toHaveBeenCalled()
+  })
+
+  it('takes no payment and keeps the cart when the payer declines the billed total, and asks again on a retry', async () => {
+    billing.createOrder.mockResolvedValue({ ...placed, total: 15 })
+    billing.createOrderPaymentIntent.mockResolvedValue({ clientSecret: 'sec' })
+    const confirmTotalChange = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true)
+    const store = arrange('stripe')
+
+    expect(await store.placeOrder(input(undefined, confirmTotalChange))).toBeNull()
+    expect(store.error).toBe('checkout.errors.totalNotAccepted')
+    expect(store.submitting).toBe(false)
+    expect(billing.createOrderPaymentIntent).not.toHaveBeenCalled()
+    expect(useCartStore().items).toHaveLength(1)
+
+    await store.placeOrder(input(undefined, confirmTotalChange))
+
+    expect(confirmTotalChange).toHaveBeenCalledTimes(2)
+    expect(billing.createOrder).toHaveBeenCalledTimes(1)
+    expect(billing.confirmOrderPayment).toHaveBeenCalled()
+  })
+
+  it('does not ask again for an order whose changed total the payer already accepted', async () => {
+    billing.createOrder.mockResolvedValue({ ...placed, total: 15 })
+    billing.createOrderPaymentIntent.mockResolvedValue({ clientSecret: 'sec' })
+    billing.confirmOrderPayment.mockRejectedValueOnce({ data: { detail: 'Try again shortly.' } })
+    const confirmTotalChange = vi.fn(() => true)
+    const store = arrange('stripe')
+
+    await store.placeOrder(input(undefined, confirmTotalChange))
+    await store.placeOrder(input(undefined, confirmTotalChange))
+
+    expect(confirmTotalChange).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('useCheckoutStore.refreshCartPrices', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    loadProducts.mockReset()
+    payer.code = 'USD'
+  })
+
+  it('re-prices the cart from the catalogue', async () => {
+    loadProducts.mockResolvedValue([{ id: 5, groupId: 1, name: 'Pro', pricing: { monthly: 14, annual: 140 } }])
+    const store = arrange('stripe')
+
+    await store.refreshCartPrices()
+
+    expect(useCartStore().items[0]?.amount).toBe(14)
+  })
+
+  it('reads nothing for an empty cart or an unknown payer currency', async () => {
+    await useCheckoutStore().refreshCartPrices()
+    payer.code = null
+    await arrange('stripe').refreshCartPrices()
+
+    expect(loadProducts).not.toHaveBeenCalled()
   })
 })
 

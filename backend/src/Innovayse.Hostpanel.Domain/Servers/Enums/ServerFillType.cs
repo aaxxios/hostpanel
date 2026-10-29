@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Servers.Enums;
+
 /// <summary>
 /// Determines how new accounts are distributed across servers within a group.
 /// </summary>

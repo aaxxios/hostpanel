@@ -1,5 +1,4 @@
 using Innovayse.Hostpanel.Domain.Testimonials;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Testimonials;
 
@@ -10,12 +9,10 @@ public sealed class TestimonialTests
     /// <returns>A new, active testimonial.</returns>
     private static Testimonial NewEntity() => Testimonial.Create(name: "Ann", company: "Acme", avatarUrl: "/a.png", rating: 4, sortOrder: 2, isActive: true, publishedAt: null);
 
-    /// <summary>Create stores every field, starts with no translations and stamps the creation time.</summary>
+    /// <summary>Create stores every field and starts with no translations.</summary>
     [Fact]
     public void Create_StoresFields_AndStartsWithoutTranslations()
     {
-        var before = DateTimeOffset.UtcNow;
-
         var entity = NewEntity();
 
         Assert.Equal("Ann", entity.Name);
@@ -25,15 +22,13 @@ public sealed class TestimonialTests
         Assert.Equal(2, entity.SortOrder);
         Assert.True(entity.IsActive);
         Assert.Empty(entity.Translations);
-        Assert.True(entity.CreatedAt >= before);
     }
 
-    /// <summary>Update replaces every non-translation field and keeps the creation time.</summary>
+    /// <summary>Update replaces every non-translation field.</summary>
     [Fact]
     public void Update_ReplacesEveryField()
     {
         var entity = NewEntity();
-        var created = entity.CreatedAt;
 
         entity.Update(name: "Bob", company: null, avatarUrl: null, rating: 5, sortOrder: 7, isActive: false, publishedAt: null);
 
@@ -43,7 +38,6 @@ public sealed class TestimonialTests
         Assert.Equal(5, entity.Rating);
         Assert.Equal(7, entity.SortOrder);
         Assert.False(entity.IsActive);
-        Assert.Equal(created, entity.CreatedAt);
     }
 
     /// <summary>Create stores the admin-set date, and Update replaces it.</summary>
@@ -225,5 +219,26 @@ public sealed class TestimonialTests
 
         Assert.Equal(TestimonialErrors.RatingOutOfRange, ex.Code);
         Assert.Equal(4, entity.Rating);
+    }
+
+    /// <summary>
+    /// ReplaceTranslations leaves exactly the given locales: a locale it does not name is removed, a
+    /// kept one is updated in place and a new one is added.
+    /// </summary>
+    [Fact]
+    public void ReplaceTranslations_RemovesUnlisted_UpdatesKept_AddsNew()
+    {
+        var entity = NewEntity();
+        entity.SetTranslation("en", role: "CEO", quote: "Great.");
+        entity.SetTranslation("ru", role: null, quote: "Otlichno.");
+
+        entity.ReplaceTranslations(new Dictionary<string, TestimonialTranslationContent>
+        {
+            ["en"] = new TestimonialTranslationContent(null, "Even better."),
+            ["hy"] = new TestimonialTranslationContent(null, "Lav e."),
+        });
+
+        Assert.Equal(["en", "hy"], entity.Translations.Select(t => t.Locale).Order());
+        Assert.Equal("Even better.", entity.Translations.Single(t => t.Locale == "en").Quote);
     }
 }

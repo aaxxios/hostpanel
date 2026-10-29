@@ -27,11 +27,9 @@ public sealed class CreateBillableItemValidator : LocalizedValidator<CreateBilla
             .WithMessage(L["BillableItemDescriptionInvalid", DescriptionMaxLength]);
         RuleFor(x => x.Amount).GreaterThanOrEqualTo(0).WithMessage(L["BillableItemAmountInvalid"]);
         RuleFor(x => x.Currency).NotEmpty().Length(CurrencyCodeLength).WithMessage(L["BillableItemCurrencyInvalid"]);
-        RuleFor(x => x.Type)
-            .Must(t => t is nameof(BillableItemType.OneTime) or nameof(BillableItemType.Recurring))
-            .WithMessage(L["BillableItemTypeInvalid"]);
+        RuleFor(x => x.Type).IsInEnum().WithMessage(L["BillableItemTypeInvalid"]);
         RuleFor(x => x.RecurringPeriod)
-            .Must((cmd, period) => cmd.Type == nameof(BillableItemType.OneTime) || !string.IsNullOrEmpty(period))
+            .Must((cmd, period) => cmd.Type == BillableItemType.OneTime || !string.IsNullOrEmpty(period))
             .WithMessage(L["BillableItemRecurringPeriodRequired"]);
     }
 }

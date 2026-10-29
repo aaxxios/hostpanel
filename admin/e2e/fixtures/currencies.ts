@@ -3,7 +3,7 @@
  */
 import type { CurrencyDto } from '../../src/types/currency'
 
-/** The base currency — its rate is fixed and its edit form disables the rate field. */
+/** The base currency: its rate is fixed and its edit form disables the rate field. */
 export const usd: CurrencyDto = {
   code: 'USD',
   numeric: '840',

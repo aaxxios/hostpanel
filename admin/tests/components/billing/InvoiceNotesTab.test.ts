@@ -1,12 +1,12 @@
 /**
  * Mount tests for InvoiceNotesTab: the read-only notes and their empty warning, and saving the
- * edited notes through the store.
+ * edited notes through the store, with the outcome shown under the editor.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import InvoiceNotesTab from '@/components/billing/InvoiceNotesTab.vue'
 import { invoiceFixture } from '../../helpers/billingFixtures'
-import { json } from '../../helpers/fetch'
+import { json, problem } from '../../helpers/fetch'
 import { mountWithApp } from '../../helpers/mount'
 import { stubRoutes } from '../../helpers/routes'
 
@@ -30,7 +30,7 @@ describe('InvoiceNotesTab', () => {
     expect(wrapper.get('[data-testid="billing-invoice-notes-empty"]').text()).toContain('no notes')
   })
 
-  it('saves the edited notes and tells the parent', async () => {
+  it('saves the edited notes and confirms it under the editor', async () => {
     const mock = stubRoutes({
       'PUT /api/billing/1/notes': () => new Response(null, { status: 204 }),
       'GET /api/billing/1': () => json(invoiceFixture()),
@@ -45,6 +45,16 @@ describe('InvoiceNotesTab', () => {
 
     const put = mock.mock.calls.find(([url]) => String(url).endsWith('/billing/1/notes'))
     expect(JSON.parse(String((put?.[1] as RequestInit | undefined)?.body))).toEqual({ notes: 'New notes' })
-    expect(wrapper.emitted('updated')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="billing-invoice-notes-feedback"]').text()).toBe('Changes saved successfully.')
+  })
+
+  it('shows the API sentence under the editor when the save is refused', async () => {
+    stubRoutes({ 'PUT /api/billing/1/notes': () => problem('Notes are too long.', 400) })
+    const wrapper = mountWithApp(InvoiceNotesTab, { props: { invoice: invoiceFixture() } })
+
+    await wrapper.get('[data-testid="billing-invoice-notes-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="billing-invoice-notes-feedback"]').text()).toBe('Notes are too long.')
   })
 })

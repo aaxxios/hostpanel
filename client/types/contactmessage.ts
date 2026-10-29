@@ -2,7 +2,7 @@
 export interface ContactMessage {
   /** Sender's name. */
   name: string
-  /** Sender's email — where the reply goes. */
+  /** Sender's email, where the reply goes. */
   email: string
   /** Sender's phone number, when they gave one. */
   phone?: string

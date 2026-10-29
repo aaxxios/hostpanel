@@ -4,12 +4,14 @@ export interface ReportTopClient {
   clientId: number
   /** Client name. */
   clientName: string
-  /** Money received from the client. */
+  /** Money taken on the client's invoices. */
   totalAmountIn: number
-  /** Fees charged on the client payments. */
+  /** Gateway fees recorded on those payments and refunds. */
   totalFees: number
-  /** Money paid out to the client. */
+  /** Money refunded on the client's invoices. */
   totalAmountOut: number
-  /** Net balance. */
+  /** Net income: money taken less refunds and fees. */
   balance: number
+  /** ISO 4217 code of the base currency the amounts are converted to. */
+  currency: string
 }

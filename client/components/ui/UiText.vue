@@ -9,7 +9,7 @@
  * UiText - body text with a size, a colour role and a weight.
  *
  * Renders a paragraph by default; pass as="span" for inline text. Colour is a role (muted,
- * subtle, danger...), never a literal, so light and dark stay consistent.
+ * subtle, danger and so on), never a literal, so light and dark stay consistent.
  */
 import { computed } from 'vue'
 import { UiTextSize, UiTextTone, UiTextWeight } from '~/utils/ui/enums'

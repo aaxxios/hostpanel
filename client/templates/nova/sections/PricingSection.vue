@@ -51,7 +51,7 @@
 /**
  * nova pricing section.
  *
- * Plans and their formatted prices arrive as props — templates never fetch —
+ * Plans and their formatted prices arrive as props, templates never fetch,
  * and the billing toggle is reported upward rather than owned here, so the page
  * can keep the hosting page and the homepage on the same state.
  */

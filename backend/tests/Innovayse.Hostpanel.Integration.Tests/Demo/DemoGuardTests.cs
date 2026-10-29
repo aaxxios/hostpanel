@@ -2,11 +2,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Settings;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Demo;
 
@@ -29,7 +26,7 @@ public sealed class DemoGuardTests(IntegrationTestFactory factory)
     /// <param name="host">The host to call.</param>
     /// <param name="language">The <c>X-Language</c> to send, or null for the default.</param>
     /// <returns>The client and the setting id.</returns>
-    private async Task<(HttpClient Client, int SettingId)> AdminAndSettingAsync(
+    private async Task<AdminSetting> AdminAndSettingAsync(
         Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> host, string? language = null)
     {
         var client = host.CreateClient();
@@ -39,7 +36,7 @@ public sealed class DemoGuardTests(IntegrationTestFactory factory)
             client.DefaultRequestHeaders.Add("X-Language", language);
         }
 
-        return (client, await AdminTestSeeds.FindSettingIdAsync(client, SettingKey));
+        return new(client, await AdminTestSeeds.FindSettingIdAsync(client, SettingKey));
     }
 
     /// <summary>On a demo deployment the restricted command is refused 403 with the demo code and a sentence.</summary>

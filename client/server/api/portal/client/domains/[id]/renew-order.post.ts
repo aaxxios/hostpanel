@@ -3,24 +3,23 @@
  *
  * Places an order to renew one of the signed-in client's own domains.
  *
- * This used to post to `/me/domains/{id}/renew-order`, which does not exist, so every renewal
- * answered 404. The route behind it is `POST /me/domains/{id}/renew`, whose
+ * The backend route is `POST /me/domains/{id}/renew`, whose
  * `RenewMyDomainCommand` carries no client id and resolves the owning account from the
- * credential — not the admin `POST /api/domains/{id}/renew`, which is
+ * credential, not the admin `POST /api/domains/{id}/renew`, which is
  * `[Authorize(Roles = Admin,Reseller)]`, calls the registrar immediately and raises no invoice.
  *
- * Repointing it at `/renew` alone would have been worse than the 404: that route answered 204 and
- * the page renders its success panel out of an order id and an invoice id, so it would have
- * announced a renewal nobody was billed for and offered no invoice to pay. A renewal is a
- * purchase, exactly as a transfer-in is, so the API now answers with the order and the invoice
- * raised for it and the registrar is not called until that invoice is paid.
+ * A renewal is a purchase, exactly as a transfer-in is, so the API answers with the order and
+ * the invoice raised for it, and the registrar is not called until that invoice is paid. The
+ * page renders its success panel out of those two ids.
  *
  * The field names are translated here rather than in the page, the same way
- * `transfer-order.post.ts` does it: the form has carried `paymentmethod` since the portal talked
- * to a different backend, and the request spells it `paymentMethod`. Nothing is validated here —
- * `RenewMyDomainValidator` refuses a period outside 1–10 and an empty payment method, and its
+ * `transfer-order.post.ts` does it: the form carries `paymentmethod`, and the request spells it
+ * `paymentMethod`. Nothing is validated here:
+ * `RenewMyDomainValidator` refuses a period outside 1 to 10 and an empty payment method, and its
  * sentences are the ones the page shows.
  */
+
+import { HttpMethod } from '~/types/httpmethod'
 
 /** The order the API raised, and the invoice the client has to pay for it. */
 interface RenewOrderResult {
@@ -36,7 +35,7 @@ export default defineEventHandler(async (event): Promise<RenewOrderResult> => {
   const body = await readBody<Record<string, unknown>>(event)
 
   return await internalApiCall<RenewOrderResult>(event, `/me/domains/${id}/renew`, {
-    method: 'POST',
+    method: HttpMethod.Post,
     body: {
       years: body.years,
       paymentMethod: body.paymentmethod

@@ -58,6 +58,26 @@ describe('SystemSettingsView', () => {
     const put = mock.mock.calls.find((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')
     expect(JSON.parse((put?.[1] as RequestInit | undefined)?.body as string)).toEqual({ value: 'new@example.com' })
     expect(requestsOf(mock).filter((call) => call === 'GET /admin/settings')).toHaveLength(2)
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="setting-outcome-21"]').text()).toBe('Changes saved successfully.')
+    })
+  })
+
+  it('shows the outcome of a card save inside the card, with no page-level line', async () => {
+    stubRouteTable({
+      'GET /admin/settings': () => json(stored),
+      'PUT /admin/settings/1': () => problem('Name is too long.', 400),
+    })
+    const { wrapper } = await mountScreen(SystemSettingsView)
+
+    await wrapper.get('[data-testid="site-identity-name"]').setValue('Acme Cloud')
+    await wrapper.get('[data-testid="site-identity-save-name"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('Name is too long.')
+    })
+    expect(wrapper.find('[data-testid="system-settings-feedback"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="setting-outcome-21"]').text()).toBe('')
   })
 
   it('keeps the typed text and shows the API sentence when a save is refused', async () => {
@@ -71,7 +91,7 @@ describe('SystemSettingsView', () => {
     await wrapper.get('[data-testid="setting-save-21"]').trigger('click')
 
     await vi.waitFor(() => {
-      expect(wrapper.get('[data-testid="system-settings-error"]').text()).toBe('Not a valid e-mail address.')
+      expect(wrapper.get('[data-testid="setting-outcome-21"]').text()).toBe('Not a valid e-mail address.')
     })
     expect((wrapper.get('[data-testid="setting-value-21"]').element as HTMLInputElement).value).toBe('nope')
   })
@@ -134,5 +154,25 @@ describe('SystemSettingsView', () => {
     const { wrapper } = await mountScreen(SystemSettingsView)
 
     expect(wrapper.get('[data-testid="system-settings-error"]').text()).toBe('The settings store is down.')
+  })
+
+  it('loads the settings again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRouteTable({
+      'GET /admin/settings': () => {
+        calls += 1
+        return calls === 1 ? problem('The settings store is down.', 503) : json(stored)
+      },
+    })
+    const { wrapper } = await mountScreen(SystemSettingsView)
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="system-settings-error"]').text()).toBe('The settings store is down.')
+    })
+    await wrapper.get('[data-testid="system-settings-error-retry"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="setting-row-21"]').text()).toContain('portal.contact.email')
+    })
   })
 })

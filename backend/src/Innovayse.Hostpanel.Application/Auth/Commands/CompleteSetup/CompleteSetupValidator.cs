@@ -6,8 +6,8 @@ namespace Innovayse.Hostpanel.Application.Auth.Commands.CompleteSetup;
 
 /// <summary>
 ///     Validator for CompleteSetupCommand. Declares no rules: <see cref="CompleteSetupCommand.SetupToken"/>
-///     is optional — absent under sso, and any string is a syntactically valid guess under local
-///     mode — and whether it matches the one this installation issued is the handler's answer, not
+///     is optional, absent under sso, and any string is a syntactically valid guess under local
+///     mode, and whether it matches the one this installation issued is the handler's answer, not
 ///     a field rule. The absence was decided, not forgotten.
 /// </summary>
 public sealed class CompleteSetupValidator : LocalizedValidator<CompleteSetupCommand>

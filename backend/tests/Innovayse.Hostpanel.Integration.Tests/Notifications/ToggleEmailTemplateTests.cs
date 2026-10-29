@@ -1,14 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 
 /// <summary>
-/// Integration tests for the <c>ToggleEmailTemplate</c> use case —
+/// Integration tests for the <c>ToggleEmailTemplate</c> use case:
 /// <c>PUT /api/admin/email-templates/{id}/toggle</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>

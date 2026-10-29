@@ -6,7 +6,7 @@ import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
 import { ada, clientsPage, grace } from './fixtures/clients'
 import type { ClientListItem } from '../src/types/client'
-import type { PagedResult } from '../src/types/pagedresult'
+import type { PaginatedList } from '../src/types/paginatedlist'
 import { fieldOf } from './support/locators'
 import { json, stubApi } from './support/stubApi'
 
@@ -48,13 +48,14 @@ test('the pagination control loads the page that was clicked', async ({ page }) 
    * @param number - The 1-based page.
    * @returns The page body.
    */
-  const pageOf = (number: number): PagedResult<ClientListItem> => ({
+  const pageOf = (number: number): PaginatedList<ClientListItem> => ({
     items: Array.from({ length: Math.min(pageSize, totalCount - (number - 1) * pageSize) }, (_, index) => {
       const id = (number - 1) * pageSize + index + 1
       return { ...ada, id, userId: `user-${id}`, email: `client${id}@example.test`, firstName: 'Client', lastName: String(id) }
     }),
     totalCount,
-    page: number,
+    pageNumber: number,
+    totalPages: Math.ceil(totalCount / pageSize),
     pageSize,
   })
 

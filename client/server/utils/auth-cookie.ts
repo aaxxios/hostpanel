@@ -2,11 +2,9 @@
  * Lifetime of a session that holds a refresh token, in seconds: the lifetime the identity
  * provider grants a refresh token (thirty days).
  *
- * It had drifted once: every place that stored a refresh token wrote its own
- * `60 * 60 * 24 * 7`, so on the eighth day a credential the provider would still have accepted
- * for another three weeks was thrown away, and the user was sent back through a sign-in they did
- * not need. Defining it once is the point. If the provider's lifetime changes, change it here and
- * nowhere else.
+ * Defined once so every place that stores a refresh token agrees: a shorter local value throws
+ * away a credential the provider would still accept and sends the user through a sign-in they do
+ * not need. If the provider's lifetime changes, change it here and nowhere else.
  */
 export const REFRESH_TOKEN_MAX_AGE = 60 * 60 * 24 * 30
 
@@ -51,7 +49,7 @@ export const readTokenExpiry = (token: string): number | null => {
  *
  * @param token - The access token the API issued.
  * @param nowSeconds - Current time in seconds since the epoch; defaults to the clock.
- * @returns Seconds until `exp` (never negative), or undefined -- a session cookie -- when `exp` is missing.
+ * @returns Seconds until `exp` (never negative), or undefined, a session cookie, when `exp` is missing.
  */
 export const authCookieMaxAge = (token: string, nowSeconds: number = Math.floor(Date.now() / 1000)): number | undefined => {
   const exp = readTokenExpiry(token)
@@ -72,3 +70,33 @@ export const SSO_SILENT_COOKIE_MAX_AGE = 30
 
 /** Access-token lifetime, in seconds, assumed when the identity provider does not state one (15 minutes). */
 export const ACCESS_TOKEN_FALLBACK_MAX_AGE = 60 * 15
+
+/** The attributes every cookie this app writes carries. */
+export interface PortalCookieOptions {
+  /** Lifetime in seconds. */
+  maxAge: number
+  /** Hidden from page scripts. */
+  httpOnly: boolean
+  /** Sent over HTTPS only. */
+  secure: boolean
+  /** Cross-site policy; Lax, because the sign-in callback is a top-level redirect that Strict would not let carry the cookie. */
+  sameSite: 'lax'
+  /** Applies to the whole site. */
+  path: string
+}
+
+/**
+ * The options of every cookie a server route or middleware writes: httpOnly, Secure everywhere but
+ * development, SameSite=Lax, path `/`. One definition, so no writer drifts from the others.
+ *
+ * @param maxAge - Lifetime in seconds (0 for a cookie being cleared).
+ * @param httpOnly - False only for the readable `authed` hint the route middleware checks.
+ * @returns The cookie options.
+ */
+export const cookieOptions = (maxAge: number, httpOnly: boolean = true): PortalCookieOptions => ({
+  maxAge,
+  httpOnly,
+  secure: process.env.NODE_ENV !== 'development',
+  sameSite: 'lax',
+  path: '/',
+})

@@ -1,20 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Integrations;
 
 /// <summary>
 /// <c>PUT /api/admin/integrations/{slug}</c>: an admin upserts an integration's configuration,
 /// re-saving a secret field empty keeps the stored secret, a new value replaces it, an explicit
-/// clear removes it, a caller
-/// with only the Client role is refused, and the route is closed to a caller with no credential.
-/// This use case refuses nothing once validation has passed -- always succeeds.
+/// clear removes it, a secret is stored encrypted, an unknown slug answers 404, an undeclared
+/// field answers 400, a caller with only the Client role is refused, and the route is closed to a
+/// caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>IntegrationsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class SaveIntegrationConfigTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -107,6 +103,59 @@ public sealed class SaveIntegrationConfigTests(IntegrationTestFactory factory) :
         (await SecretSettingTestSeeds.ReadAsync(factory, "integration:smtp:password")).Should().BeEmpty();
         var detail = await client.GetFromJsonAsync<JsonElement>("/api/admin/integrations/smtp");
         detail.GetProperty("config").GetProperty("password").GetProperty("hasValue").GetBoolean().Should().BeFalse();
+    }
+
+    /// <summary>A saved secret is stored encrypted: the raw column differs from the input, the read returns it.</summary>
+    [Fact]
+    public async Task SaveSecret_StoresItEncryptedAsync()
+    {
+        var client = await IntegrationsTestSeeds.AdminClientAsync(factory);
+        var secret = SecretSettingTestSeeds.Sentinel("cpanel-token");
+
+        var save = await client.PutAsJsonAsync("/api/admin/integrations/cpanel", new
+        {
+            isEnabled = false,
+            config = new Dictionary<string, string> { ["api_token"] = secret },
+        });
+
+        save.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var raw = await SecretSettingTestSeeds.ReadRawAsync(factory, "integration:cpanel:api_token");
+        raw.Should().NotBeNullOrEmpty();
+        raw.Should().NotBe(secret).And.NotContain(secret);
+        (await SecretSettingTestSeeds.ReadAsync(factory, "integration:cpanel:api_token")).Should().Be(secret);
+    }
+
+    /// <summary>A slug that names neither a built-in integration nor a loaded plugin is refused with 404.</summary>
+    [Fact]
+    public async Task UnknownSlug_IsNotFoundAsync()
+    {
+        var client = await IntegrationsTestSeeds.AdminClientAsync(factory);
+        var slug = $"unknown-{Guid.NewGuid():N}";
+
+        var response = await client.PutAsJsonAsync($"/api/admin/integrations/{slug}", new
+        {
+            isEnabled = true,
+            config = new Dictionary<string, string> { ["anything"] = "value" },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await SecretSettingTestSeeds.ReadAsync(factory, $"integration:{slug}:anything")).Should().BeNull();
+    }
+
+    /// <summary>A field the integration does not declare is refused with 400 and nothing is written.</summary>
+    [Fact]
+    public async Task UndeclaredField_IsRefusedAsync()
+    {
+        var client = await IntegrationsTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PutAsJsonAsync("/api/admin/integrations/stripe", new
+        {
+            isEnabled = false,
+            config = new Dictionary<string, string> { ["not_a_field"] = "value" },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await SecretSettingTestSeeds.ReadAsync(factory, "integration:stripe:not_a_field")).Should().BeNull();
     }
 
     /// <summary>A caller with only the Client role is refused with 403.</summary>

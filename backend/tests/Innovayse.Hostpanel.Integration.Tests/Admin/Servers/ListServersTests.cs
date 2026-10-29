@@ -1,7 +1,4 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
@@ -10,7 +7,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 /// Client role is refused, and the route is closed to a caller with no credential. This use case
 /// refuses nothing once authorized.
 /// </summary>
-/// <remarks>Split out of the deleted <c>ServersEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListServersTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

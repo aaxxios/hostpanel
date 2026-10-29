@@ -1,0 +1,21 @@
+using Innovayse.Hostpanel.Domain.Servers.Enums;
+
+namespace Innovayse.Hostpanel.Application.Admin.Servers.Common;
+
+/// <summary>
+/// What a provisioning provider needs to reach one server's control panel. Server-side only; it
+/// carries the panel's access hash and is never sent to a browser.
+/// </summary>
+/// <param name="Id">The server.</param>
+/// <param name="Name">Its display name, for log lines.</param>
+/// <param name="Module">Its control panel module, which picks the provider.</param>
+/// <param name="Hostname">The host the panel answers on.</param>
+/// <param name="IpAddress">Its primary address, or <see langword="null"/> when only the hostname is known.</param>
+/// <param name="AccessHash">The panel's API access hash, or <see langword="null"/> when none is configured.</param>
+public sealed record ServerConnectionDto(
+    int Id,
+    string Name,
+    ServerModule Module,
+    string Hostname,
+    string? IpAddress,
+    string? AccessHash);

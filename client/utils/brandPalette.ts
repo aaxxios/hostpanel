@@ -21,7 +21,7 @@
  * @module utils/brandPalette
  */
 
-/** One shade as sRGB 0–255 integers. */
+/** One shade as sRGB 0 to 255 integers. */
 export type Rgb = readonly [number, number, number]
 
 /** The Tailwind shade steps, in order. */
@@ -69,7 +69,7 @@ export const rgbToHex = ([r, g, b]: Rgb): string => {
 }
 
 /**
- * sRGB 0–255 → linear 0–1.
+ * sRGB 0 to 255 → linear 0 to 1.
  *
  * @param c One sRGB channel.
  * @returns The linear value.
@@ -80,7 +80,7 @@ const toLinear = (c: number): number => {
 }
 
 /**
- * Linear 0–1 → sRGB 0–255, clamped.
+ * Linear 0 to 1 → sRGB 0 to 255, clamped.
  *
  * @param l One linear channel.
  * @returns The sRGB channel.
@@ -137,7 +137,7 @@ const inGamut = (lin: [number, number, number]): boolean =>
 /**
  * OKLCH → sRGB, mapped into gamut by reducing chroma at fixed lightness and hue.
  *
- * Clamping channels instead — what a naive conversion does — turns a light tint of a
+ * Clamping channels instead, what a naive conversion does, turns a light tint of a
  * saturated blue into cyan and a light yellow into acid green, because the clipped channel
  * changes the hue. Pulling chroma back until the colour fits keeps the hue the operator
  * chose; the tint just gets a little paler, which is what a tint is.
@@ -148,7 +148,12 @@ const inGamut = (lin: [number, number, number]): boolean =>
  * @returns The in-gamut colour.
  */
 const oklchToRgb = (L: number, chroma: number, hue: number): Rgb => {
-  /** The unclamped linear colour at a given chroma. */
+  /**
+   * The unclamped linear colour at a given chroma.
+   *
+   * @param c - OKLCH chroma to try, at the caller's lightness and hue.
+   * @returns Linear sRGB channels, possibly outside 0 to 1.
+   */
   const at = (c: number): [number, number, number] =>
     oklabToLinear([L, c * Math.cos(hue), c * Math.sin(hue)])
 
@@ -219,14 +224,14 @@ export const buildScale = (hex: string): Scale => {
  * WCAG 2 relative luminance.
  *
  * @param rgb The channels.
- * @returns Luminance in 0–1.
+ * @returns Luminance in 0 to 1.
  */
 export const luminance = ([r, g, b]: Rgb): number => {
   return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b)
 }
 
 /**
- * WCAG 2 contrast ratio between two colours, 1–21.
+ * WCAG 2 contrast ratio between two colours, 1 to 21.
  *
  * @param a One colour, `#rrggbb`.
  * @param b The other, `#rrggbb`.
@@ -251,7 +256,7 @@ export const WCAG_AA_LARGE = 3
 /**
  * The text colour to put on a filled surface of the given colour.
  *
- * White wins whenever it reaches the large-text threshold (3:1) — buttons are bold, and
+ * White wins whenever it reaches the large-text threshold (3:1): buttons are bold, and
  * white on a mid blue or purple is what every design system ships even where dark text
  * would score a little higher. Below that, whichever of white and near-black reads better:
  * a brand yellow or a pale teal gets dark text.

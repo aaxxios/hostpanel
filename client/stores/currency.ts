@@ -5,7 +5,7 @@
  * Loads `GET /api/portal/public/billing-currencies` once and derives {@link payerCode}: the
  * signed-in client's own currency when there is one, else the guest's chosen currency
  * (persisted in localStorage, validated against the loaded list), else the base currency.
- * Nothing here converts an amount — every price on the storefront is a stored price in one of
+ * Nothing here converts an amount: every price on the storefront is a stored price in one of
  * these currencies, formatted with `utils/formatMoney.ts`.
  *
  * @module stores/currency
@@ -47,7 +47,7 @@ export const useCurrencyStore = defineStore('currency', {
      *
      * Precedence: the signed-in client's own recorded currency, else the guest's chosen
      * currency (only if it is still a valid, loaded code), else the base currency. Mirrors
-     * `PayerCurrencyResolver.ForCallerAsync` on the backend — a signed-in client's currency is
+     * `PayerCurrencyResolver.ForCallerAsync` on the backend: a signed-in client's currency is
      * never overridden by a stale guest selection left over from before they signed in.
      */
     payerCode(state): string | null {
@@ -88,7 +88,7 @@ export const useCurrencyStore = defineStore('currency', {
      * Looks up one currency's row by code, shaped for `formatMoney`.
      *
      * Falls back to two decimals and no symbol rather than throwing, so a page that has not
-     * yet loaded {@link currencies} — or is passed a code the list does not carry — still
+     * yet loaded {@link currencies}, or is passed a code the list does not carry, still
      * renders a plain number instead of crashing.
      *
      * @returns A function taking a code and returning a {@link MoneyCurrency}.
@@ -129,7 +129,7 @@ export const useCurrencyStore = defineStore('currency', {
     /**
      * Sets the guest's chosen currency and persists it.
      *
-     * @param code - The currency code to select. Only meaningful for a guest — a signed-in
+     * @param code - The currency code to select. Only meaningful for a guest: a signed-in
      * client's currency is fixed ({@link isFixed}), so the call is a no-op for them.
      */
     select(code: string) {
@@ -163,7 +163,7 @@ export const useCurrencyStore = defineStore('currency', {
         this.currencies = await useCurrencyApi().loadBillingCurrencies()
         this.loaded = true
       } catch {
-        // Currencies failing to load is not fatal to the page rendering — formatMoney and the
+        // Currencies failing to load is not fatal to the page rendering: formatMoney and the
         // getters above all degrade to a plain number rather than throwing.
       } finally {
         this.loading = false

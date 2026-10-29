@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Unit tests of the migration addon. Run from this folder: composer install, then composer test.
+    The tests use an in-memory SQLite database through the same query builder the source system
+    ships, so they need the pdo_sqlite extension.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         failOnWarning="true"
+         failOnRisky="true"
+         cacheDirectory=".phpunit.cache">
+    <testsuites>
+        <testsuite name="migration-addon">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>modules/addons/innovayse_migration/lib</directory>
+        </include>
+    </source>
+</phpunit>

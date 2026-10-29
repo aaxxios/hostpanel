@@ -10,7 +10,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Auth;
 /// </para>
 /// <para>
 /// Exists as a static helper, rather than folding the comparison into
-/// <c>ConfigurationAuthModeProvider</c> alone, because one caller — <c>Program.cs</c> —
+/// <c>ConfigurationAuthModeProvider</c> alone, because one caller, <c>Program.cs</c>,
 /// runs during service registration, before the DI container is built, and cannot resolve
 /// anything DI-registered. That code and the provider's implementation both call this, so
 /// the comparison itself never has two copies to drift apart.

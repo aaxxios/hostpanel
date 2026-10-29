@@ -6,10 +6,7 @@ using Microsoft.Extensions.Localization;
 namespace Innovayse.Hostpanel.Application.Products.Queries.GetProducts;
 
 /// <summary>
-///     Validator for GetProductsQuery.
-///     <see cref="GetProductsQuery.Currency"/> is not checked here: any value, valid or not, is
-///     handled gracefully by the handler, which falls back to the resolver's usual currency for an
-///     unknown or disabled code rather than refusing the request.
+///     Validator for GetProductsQuery: a group filter, when given, names a real id shape.
 /// </summary>
 public sealed class GetProductsValidator : LocalizedValidator<GetProductsQuery>
 {

@@ -58,7 +58,7 @@
     <!-- Signed in: the client-area links. -->
     <UiStack v-if="isLoggedIn" gap="none" class="mt-4 border-t border-classic-border pt-4" data-testid="header-drawer-account">
       <UiStack direction="row" align="center" gap="sm" class="min-w-0 px-3 pb-2">
-        <UiAvatar :first-name="user?.firstname ?? ''" :last-name="user?.lastname ?? ''" :email="user?.email ?? ''" />
+        <UiAvatar :first-name="user?.firstName ?? ''" :last-name="user?.lastName ?? ''" :email="user?.email ?? ''" />
         <UiStack gap="none" class="min-w-0">
           <UiText as="span" size="sm" weight="semibold" tone="inherit" truncate class="text-classic-ink">
             {{ accountName }}
@@ -195,7 +195,7 @@ const accountLinks = computed(() => buildAccountLinks(t, localePath))
 
 /** Name shown above the account links; the generic label until the profile loads. */
 const accountName = computed(() =>
-  [user.value?.firstname, user.value?.lastname].filter(Boolean).join(' ') || t('nav.clientArea'))
+  [user.value?.firstName, user.value?.lastName].filter(Boolean).join(' ') || t('nav.clientArea'))
 
 /** Closes the drawer. */
 const close = (): void => {

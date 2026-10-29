@@ -19,6 +19,7 @@ public sealed class CreateFaqValidator : LocalizedValidator<CreateFaqCommand>
         RuleFor(x => x.Category).IsInEnum().WithMessage(L["FaqCategoryInvalid"]);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0).WithMessage(L["ContentSortOrderInvalid"]);
         RuleFor(x => x.Translations).NotEmpty().WithMessage(L["ContentTranslationsRequired"]);
+        RuleFor(x => x.Translations).MustIncludeDefaultLocale(L["ContentDefaultTranslationRequired"]);
         RuleForEach(x => x.Translations).SetValidator(new FaqTranslationValidator(localizer));
     }
 }

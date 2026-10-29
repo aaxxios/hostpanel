@@ -1,7 +1,8 @@
+using System.Globalization;
+using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Clients;
-using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,8 @@ namespace Innovayse.Hostpanel.Application.Clients.Queries.ListClients;
 
 /// <summary>
 /// Returns a paginated list of clients with the details of the people behind them. Supports
-/// filtering by name, email, phone and status.
+/// filtering by name (first, last or full name), company, client id, email, phone and status. The order is
+/// stable: last name, first name, then id, so a page never repeats or skips a row between requests.
 /// </summary>
 public sealed class ListClientsHandler
 {
@@ -36,12 +38,11 @@ public sealed class ListClientsHandler
     /// <param name="query">The list query with pagination and filters.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The requested page of clients, never a refusal.</returns>
-    public async Task<Result<PagedResult<ClientListItemDto>>> HandleAsync(ListClientsQuery query, CancellationToken ct)
+    public async Task<Result<PaginatedList<ClientListItemDto>>> HandleAsync(ListClientsQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
-        var page = Math.Max(1, query.Page);
+        // Page and page size are validated (400 when out of range), so they are used as given.
 
         // The address is not a column on the client row, so filtering by it means asking the
         // identity provider which subjects match and then filtering on those.
@@ -52,36 +53,40 @@ public sealed class ListClientsHandler
         IReadOnlyList<string>? emailUserIds = null;
         if (!string.IsNullOrWhiteSpace(query.Email))
         {
-            var (matches, _) = await _identity.ListAsync(query.Email, 1, EmailMatchLimit, ct);
-            emailUserIds = matches.Select(m => m.Subject).ToList();
-        }
-
-        ClientStatus? statusFilter = null;
-        if (!string.IsNullOrWhiteSpace(query.Status) && Enum.TryParse<ClientStatus>(query.Status, true, out var parsed))
-        {
-            statusFilter = parsed;
+            var matches = await _identity.ListAsync(new IdentityAccountListQuery(query.Email, 1, EmailMatchLimit), ct);
+            emailUserIds = matches.Items.Select(m => m.Subject).ToList();
         }
 
         var clients = _context.Clients.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            var term = query.Search.ToLower();
+            var term = query.Search.Trim();
+            var pattern = LikePattern.Contains(term);
+
+            // The whole-number term also finds the client by id. The id is parsed here, outside the
+            // query, so the SQL compares a plain parameter.
+            var searchId = int.TryParse(term, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedId) ? parsedId : (int?)null;
+
+            // The full name is matched as "First Last" so a staff member can type a person's name the
+            // way it is read, which neither column alone contains.
             clients = clients.Where(c =>
-                c.FirstName.ToLower().Contains(term) ||
-                c.LastName.ToLower().Contains(term) ||
-                (c.CompanyName != null && c.CompanyName.ToLower().Contains(term)));
+                c.Id == searchId ||
+                EF.Functions.Like(c.FirstName.ToLower(), pattern, LikePattern.EscapeCharacter) ||
+                EF.Functions.Like(c.LastName.ToLower(), pattern, LikePattern.EscapeCharacter) ||
+                EF.Functions.Like((c.FirstName + " " + c.LastName).ToLower(), pattern, LikePattern.EscapeCharacter) ||
+                (c.CompanyName != null && EF.Functions.Like(c.CompanyName.ToLower(), pattern, LikePattern.EscapeCharacter)));
         }
 
         if (!string.IsNullOrWhiteSpace(query.Phone))
         {
-            var phoneTerm = query.Phone.ToLower();
-            clients = clients.Where(c => c.Phone != null && c.Phone.ToLower().Contains(phoneTerm));
+            var phonePattern = LikePattern.Contains(query.Phone.Trim());
+            clients = clients.Where(c => c.Phone != null && EF.Functions.Like(c.Phone.ToLower(), phonePattern, LikePattern.EscapeCharacter));
         }
 
-        if (statusFilter is not null)
+        if (query.Status is { } status)
         {
-            clients = clients.Where(c => c.Status == statusFilter.Value);
+            clients = clients.Where(c => c.Status == status);
         }
 
         if (emailUserIds is not null)
@@ -94,7 +99,8 @@ public sealed class ListClientsHandler
         var items = await clients
             .OrderBy(c => c.LastName)
             .ThenBy(c => c.FirstName)
-            .Paginate(page, pageSize)
+            .ThenBy(c => c.Id)
+            .Paginate(query.Page, query.PageSize)
             .ToListAsync(ct);
 
         // One lookup for the whole page, rather than one per row.
@@ -102,7 +108,7 @@ public sealed class ListClientsHandler
 
         var dtos = items.Select(c => MapToListItem(c, accounts)).ToList();
 
-        return Result<PagedResult<ClientListItemDto>>.Success(new PagedResult<ClientListItemDto>(dtos, totalCount, page, pageSize));
+        return Result<PaginatedList<ClientListItemDto>>.Success(new PaginatedList<ClientListItemDto>(dtos, totalCount, query.Page, query.PageSize));
     }
 
     /// <summary>Maps a <see cref="Client"/> to <see cref="ClientListItemDto"/>.</summary>

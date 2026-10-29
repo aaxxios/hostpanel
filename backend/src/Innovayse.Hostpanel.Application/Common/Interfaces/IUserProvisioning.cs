@@ -1,25 +1,27 @@
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Shared.Models;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
+
 /// <summary>
 /// Creates and edits the records that describe people.
 ///
 /// <para>
 /// Separate from <see cref="IIdentityProvider"/>, which only reads, because only one of
 /// the two deployments may do this at all. Where this product owns its users it creates
-/// and edits them; where an SSO owns them it must not, and every implementation of this
+/// and edits them; where an external sign-on provider owns them it must not, and every implementation of this
 /// interface in that mode refuses.
 /// </para>
 ///
 /// <para>
 /// Refusing rather than omitting the interface is deliberate. A flow that still tries to
-/// create a person in SSO mode is a flow nobody has finished thinking about, and it should
-/// say so where it happens — loudly, naming what to do instead — rather than fail to
+/// create a person in single sign-on mode is a flow nobody has finished thinking about, and it should
+/// say so where it happens, loudly, naming what to do instead, rather than fail to
 /// resolve at start-up in a stack trace that names dependency injection.
 /// </para>
 ///
 /// <para>
-/// Every method answers a <see cref="Result"/> rather than throwing where an SSO owns the
+/// Every method answers a <see cref="Result"/> rather than throwing where an external sign-on provider owns the
 /// accounts: the refusal is an expected outcome every caller must handle, and a
 /// <c>HostpanelErrorCodes.USER_PROVISIONING_NOT_ALLOWED_*</c> code names exactly which flow was
 /// refused, so the caller chooses the code without a per-operation exception type to catch.
@@ -30,39 +32,34 @@ public interface IUserProvisioning
     /// <summary>
     /// Creates a person and returns their subject.
     /// </summary>
-    /// <param name="email">The address they will sign in with.</param>
-    /// <param name="password">
-    /// The password to set. Required: every flow that reaches this either collects one
-    /// from an operator or generates one, and an account created without a password is one
-    /// nobody can sign in to and nobody notices until they try.
+    /// <param name="account">
+    /// The address they will sign in with, the password and their name. The password is
+    /// required: every flow that reaches this either collects one from an operator or generates
+    /// one, and an account created without a password is one nobody can sign in to and nobody
+    /// notices until they try. A null given name is derived from the address.
     /// </param>
-    /// <param name="firstName">Given name, or null to derive one from the address.</param>
-    /// <param name="lastName">Family name, or null for none.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The new subject, or a failed <see cref="Result{T}"/> carrying
-    /// <c>USER_PROVISIONING_NOT_ALLOWED_CREATE_ACCOUNT</c> where an SSO owns the accounts.
+    /// <c>USER_PROVISIONING_NOT_ALLOWED_CREATE_ACCOUNT</c> where an external sign-on provider owns the accounts.
     /// </returns>
-    Task<Result<string>> CreateAsync(
-        string email, string password, string? firstName, string? lastName, CancellationToken ct);
+    Task<Result<string>> CreateAsync(CreateUserInput account, CancellationToken ct);
 
     /// <summary>
     /// Updates a person's name and preferred UI language.
     /// </summary>
-    /// <param name="subject">Whose profile to update.</param>
-    /// <param name="firstName">The new given name.</param>
-    /// <param name="lastName">The new family name.</param>
-    /// <param name="language">Preferred UI language, or null to leave it unset.</param>
+    /// <param name="profile">Whose profile to update, and the new name and language.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success, or a failed <see cref="Result"/> carrying
-    /// <c>USER_PROVISIONING_NOT_ALLOWED_CHANGE_NAME</c> where an SSO owns the accounts.
+    /// <c>USER_PROVISIONING_NOT_ALLOWED_CHANGE_NAME</c> where an external sign-on provider owns the accounts.
     /// </returns>
-    Task<Result> UpdateProfileAsync(
-        string subject, string firstName, string lastName, string? language, CancellationToken ct);
+    Task<Result> UpdateProfileAsync(UserProfileUpdate profile, CancellationToken ct);
 
     /// <summary>
-    /// Changes the address a person signs in with.
+    /// Changes the address a person signs in with, at once, on an operator's word. Every session
+    /// the person held ends. A person changing their own address goes through
+    /// <see cref="IssueEmailChangeTokenAsync"/> and <see cref="ConfirmEmailChangeAsync"/> instead.
     /// </summary>
     /// <remarks>
     /// Its own method, not a field on <see cref="UpdateProfileAsync"/>. The address is the
@@ -76,10 +73,55 @@ public interface IUserProvisioning
     /// <param name="email">The new address.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// Success, or a failed <see cref="Result"/> carrying
-    /// <c>USER_PROVISIONING_NOT_ALLOWED_CHANGE_EMAIL</c> where an SSO owns the accounts.
+    /// Success (also when no such subject exists here, matching the other writes); a failure carrying
+    /// <c>EMAIL_ALREADY_IN_USE</c> when another account holds the new address (checked before
+    /// anything is written); or <c>USER_PROVISIONING_NOT_ALLOWED_CHANGE_EMAIL</c> where an external
+    /// sign-on provider owns the accounts.
     /// </returns>
     Task<Result> ChangeEmailAsync(string subject, string email, CancellationToken ct);
+
+    /// <summary>
+    /// Applies an operator's edit of an account (name, language and sign-in address) as one
+    /// write. The address moves, and every session the person held ends, only when it differs from
+    /// the stored one; a save that repeats the stored address leaves the sessions alone.
+    /// </summary>
+    /// <param name="account">Whose account, and its new name, address and language.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// Success; or a failure carrying <c>USER_NOT_FOUND</c> when the subject names no live account,
+    /// <c>EMAIL_ALREADY_IN_USE</c> when another account holds the new address (checked before
+    /// anything is written), or <c>USER_PROVISIONING_NOT_ALLOWED_CHANGE_NAME</c> where an external
+    /// sign-on provider owns the accounts.
+    /// </returns>
+    Task<Result> UpdateAccountAsync(UserAccountUpdate account, CancellationToken ct);
+
+    /// <summary>
+    /// Checks the current password and issues a token that moves the sign-in to a new address once
+    /// it comes back from that address. Nothing about the account changes yet.
+    /// </summary>
+    /// <param name="start">Whose account, the new address and the current password.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// The token, to be embedded in a link mailed to the new address; or a failure carrying
+    /// <c>IDENTITY_USER_NOT_FOUND</c>, <c>CURRENT_PASSWORD_INVALID</c>, <c>EMAIL_ALREADY_IN_USE</c>, or
+    /// <c>USER_PROVISIONING_NOT_ALLOWED_CHANGE_EMAIL</c> where an external sign-on provider owns the accounts.
+    /// </returns>
+    Task<Result<string>> IssueEmailChangeTokenAsync(EmailChangeStart start, CancellationToken ct);
+
+    /// <summary>
+    /// Moves the sign-in to the new address when the token issued by
+    /// <see cref="IssueEmailChangeTokenAsync"/> matches, marks the address confirmed and ends every
+    /// session the person held.
+    /// </summary>
+    /// <param name="confirmation">Whose account, the new address and the mailed token.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// A successful <see cref="Result{T}"/> carrying <see langword="true"/> when the address changed,
+    /// or <see langword="false"/> when the account is gone or the token is wrong or expired; or a
+    /// failure carrying <c>EMAIL_ALREADY_IN_USE</c> when another account took the address meanwhile,
+    /// or <c>USER_PROVISIONING_NOT_ALLOWED_CHANGE_EMAIL</c> where an external sign-on provider owns the accounts.
+    /// </returns>
+    Task<Result<bool>> ConfirmEmailChangeAsync(EmailChangeConfirmation confirmation, CancellationToken ct);
 
     /// <summary>
     /// Deletes an account. Records that reference the subject are left alone.
@@ -88,9 +130,28 @@ public interface IUserProvisioning
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success, or a failed <see cref="Result"/> carrying
-    /// <c>USER_PROVISIONING_NOT_ALLOWED_DELETE_ACCOUNT</c> where an SSO owns the accounts.
+    /// <c>USER_PROVISIONING_NOT_ALLOWED_DELETE_ACCOUNT</c> where an external sign-on provider owns the accounts.
     /// </returns>
     Task<Result> DeleteAsync(string subject, CancellationToken ct);
+
+    /// <summary>
+    /// Removes an account for real, so its address is free to register again. Only for compensation:
+    /// an account this same request created moments ago and that nothing has used yet (no client
+    /// row, no session, no record naming it) because the work that was to follow it failed.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="DeleteAsync"/> only marks an account deleted and keeps its address taken, which is
+    /// right for a person who really existed. An account nobody ever held would leave an address
+    /// that nobody can use again, so this one is deleted outright. Never call it for an account
+    /// that existed before the request, or that anything may already reference.
+    /// </remarks>
+    /// <param name="subject">The account this request created.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// Success (also when no such subject exists here), or a failed <see cref="Result"/> carrying
+    /// <c>USER_PROVISIONING_NOT_ALLOWED_DELETE_ACCOUNT</c> where an external sign-on provider owns the accounts.
+    /// </returns>
+    Task<Result> PurgeUnusedAsync(string subject, CancellationToken ct);
 
     /// <summary>
     /// Sets a password directly, without the holder's involvement.
@@ -100,11 +161,11 @@ public interface IUserProvisioning
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// A successful <see cref="Result{T}"/> carrying <see langword="true"/> when the subject was
-    /// found and the password set, or <see langword="false"/> when no such subject exists here --
+    /// found and the password set, or <see langword="false"/> when no such subject exists here:
     /// returned rather than a failure, because "not found" is an answer the caller
     /// (<c>SetUserPasswordHandler</c>) turns into its own <c>Result</c> code. A failed
     /// <see cref="Result{T}"/> carries <c>USER_PROVISIONING_NOT_ALLOWED_SET_PASSWORD</c> where an
-    /// SSO owns the accounts.
+    /// the sign-on provider owns the accounts.
     /// </returns>
     Task<Result<bool>> SetPasswordAsync(string subject, string password, CancellationToken ct);
 
@@ -115,27 +176,38 @@ public interface IUserProvisioning
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// A successful <see cref="Result{T}"/> carrying the token, to be embedded in a reset link, or
-    /// <see langword="null"/> when no such subject exists here -- returned rather than a failure,
+    /// <see langword="null"/> when no such subject exists here: returned rather than a failure,
     /// for the same reason as <see cref="SetPasswordAsync"/>'s <see langword="bool"/>. A failed
     /// <see cref="Result{T}"/> carries <c>USER_PROVISIONING_NOT_ALLOWED_ISSUE_PASSWORD_RESET</c>
-    /// where an SSO owns the accounts.
+    /// where an external sign-on provider owns the accounts.
     /// </returns>
     Task<Result<string?>> IssuePasswordResetTokenAsync(string subject, CancellationToken ct);
 
     /// <summary>
     /// Sets a new password using a token issued by <see cref="IssuePasswordResetTokenAsync"/>.
     /// </summary>
-    /// <param name="email">The account's email address.</param>
-    /// <param name="token">The reset token from the email link.</param>
-    /// <param name="newPassword">The password to set.</param>
+    /// <param name="reset">The account's email address, the reset token and the new password.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// A successful <see cref="Result{T}"/> carrying <see langword="true"/> when the password was
     /// changed, or <see langword="false"/> when no such account exists or the token is invalid or
     /// expired. A failed <see cref="Result{T}"/> carries <c>USER_PROVISIONING_NOT_ALLOWED_SET_PASSWORD</c>
-    /// where an SSO owns the accounts.
+    /// where an external sign-on provider owns the accounts.
     /// </returns>
-    Task<Result<bool>> ResetPasswordWithTokenAsync(string email, string token, string newPassword, CancellationToken ct);
+    Task<Result<bool>> ResetPasswordWithTokenAsync(PasswordResetWithToken reset, CancellationToken ct);
+
+    /// <summary>
+    /// Marks an address confirmed using a token issued by <see cref="IssueEmailConfirmationTokenAsync"/>.
+    /// </summary>
+    /// <param name="confirmation">The account's email address and the mailed confirmation token.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// A successful <see cref="Result{T}"/> carrying <see langword="true"/> when the address was
+    /// confirmed, or <see langword="false"/> when no such account exists or the token is invalid or
+    /// expired. A failed <see cref="Result{T}"/> carries <c>USER_PROVISIONING_NOT_ALLOWED_CONFIRM_EMAIL</c>
+    /// where an external sign-on provider owns the accounts.
+    /// </returns>
+    Task<Result<bool>> ConfirmEmailWithTokenAsync(EmailConfirmationWithToken confirmation, CancellationToken ct);
 
     /// <summary>
     /// Marks a person's email address as confirmed without a mailed token.
@@ -149,7 +221,7 @@ public interface IUserProvisioning
     /// <returns>
     /// Success (also when no such subject exists here, matching the other writes), or a failed
     /// <see cref="Result"/> carrying <c>USER_PROVISIONING_NOT_ALLOWED_CONFIRM_EMAIL</c> where an
-    /// SSO owns the accounts.
+    /// the sign-on provider owns the accounts.
     /// </returns>
     Task<Result> ConfirmEmailAsync(string subject, CancellationToken ct);
 
@@ -161,10 +233,10 @@ public interface IUserProvisioning
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// A successful <see cref="Result{T}"/> carrying the token, to be embedded in a verification
-    /// link, or <see langword="null"/> when no such subject exists here -- returned rather than a
+    /// link, or <see langword="null"/> when no such subject exists here: returned rather than a
     /// failure, for the same reason as <see cref="IssuePasswordResetTokenAsync"/>. A failed
     /// <see cref="Result{T}"/> carries <c>USER_PROVISIONING_NOT_ALLOWED_ISSUE_EMAIL_CONFIRMATION</c>
-    /// where an SSO owns the accounts.
+    /// where an external sign-on provider owns the accounts.
     /// </returns>
     Task<Result<string?>> IssueEmailConfirmationTokenAsync(string subject, CancellationToken ct);
 }

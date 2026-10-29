@@ -23,7 +23,7 @@ public sealed class LoggingPolicy : IHandlerPolicy
         {
             var before = new MethodCall(typeof(LoggingMiddleware), nameof(LoggingMiddleware.BeforeAsync));
 
-            // ValidationMiddleware.BeforeAsync also returns a HandlerContinuation, and codegen names
+            // ValidationMiddleware<TMessage>.BeforeAsync also returns a HandlerContinuation, and codegen names
             // each result after its method: two "result_of_BeforeAsync" locals fail to compile (CS0128).
             foreach (var created in before.Creates)
             {

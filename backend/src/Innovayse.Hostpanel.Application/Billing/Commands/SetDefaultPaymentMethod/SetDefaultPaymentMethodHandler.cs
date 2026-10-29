@@ -1,8 +1,10 @@
+using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Billing.Extensions;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
-using Innovayse.Hostpanel.Shared.MultiTenancy;
-using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Commands.SetDefaultPaymentMethod;
 
@@ -11,25 +13,19 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.SetDefaultPaymentMeth
 /// </summary>
 public sealed class SetDefaultPaymentMethodHandler
 {
-    /// <summary>The module's data context.</summary>
-    private readonly IHostpanelDbContext _context;
+    /// <summary>The Wolverine bus, for the Clients module's card gateway customer query.</summary>
+    private readonly IMessageBus _bus;
 
     /// <summary>Card payment gateway, for updating the customer's default payment method.</summary>
     private readonly ICardPaymentGateway _cardGateway;
 
-    /// <summary>Who is asking; the command does not say, and must not.</summary>
-    private readonly ICurrentUserService _caller;
-
     /// <summary>Initializes the handler.</summary>
-    /// <param name="context">The module's data context.</param>
+    /// <param name="bus">The Wolverine bus, for the Clients module's card gateway customer query.</param>
     /// <param name="cardGateway">Card payment gateway, for updating the customer's default payment method.</param>
-    /// <param name="caller">Who is asking; the command does not say, and must not.</param>
-    public SetDefaultPaymentMethodHandler(
-        IHostpanelDbContext context, ICardPaymentGateway cardGateway, ICurrentUserService caller)
+    public SetDefaultPaymentMethodHandler(IMessageBus bus, ICardPaymentGateway cardGateway)
     {
-        _context = context;
+        _bus = bus;
         _cardGateway = cardGateway;
-        _caller = caller;
     }
 
     /// <summary>
@@ -40,36 +36,47 @@ public sealed class SetDefaultPaymentMethodHandler
     /// <returns>
     /// Success, or <c>CLIENT_PROFILE_NOT_FOUND</c> when the caller has no client record,
     /// <c>NO_SAVED_PAYMENT_METHODS</c> when the client has never saved one, or
-    /// <c>PAYMENT_METHOD_NOT_OWNED</c> when the id does not belong to this client.
+    /// <c>PAYMENT_METHOD_NOT_OWNED</c> when the id does not belong to this client, or
+    /// <c>PAYMENT_GATEWAY_SERVICE_UNAVAILABLE</c> / <c>PAYMENT_METHOD_UPSTREAM_FAILED</c> when the card
+    /// gateway could not be reached or refused the call.
     /// </returns>
     public async Task<Result> HandleAsync(SetDefaultPaymentMethodCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var userId = _caller.RequireUserId();
-
-        var client = await _context.Clients.FirstOrDefaultAsync(c => c.UserId == userId, ct);
-        if (client is null)
+        var customer = await _bus.GetCallerCardGatewayCustomerAsync(ct);
+        if (customer.IsFailure)
         {
-            return Result.FailureCode(HostpanelErrorCodes.CLIENT_PROFILE_NOT_FOUND);
+            return Result.FailureCode(customer.ErrorCode!);
         }
 
-        if (client.CardGatewayCustomerId is null)
+        var customerId = customer.Value!.CustomerId;
+        if (customerId is null)
         {
             return Result.FailureCode(HostpanelErrorCodes.NO_SAVED_PAYMENT_METHODS);
         }
 
         // The card gateway's own API would reject a payment method that isn't attached to this customer,
         // but checking here first means a mismatched ID gets this handler's own error rather
-        // than an opaque gateway API exception -- and it keeps the same check in place if that
+        // than an opaque gateway refusal, and it keeps the same check in place if that
         // gateway-side validation ever turns out to be less strict than assumed.
-        var methods = await _cardGateway.ListPaymentMethodsAsync(client.CardGatewayCustomerId, ct);
-        if (!methods.Any(m => m.Id == cmd.PaymentMethodId))
+        var methods = await _cardGateway.ListPaymentMethodsAsync(new CardCustomerInstruction(customerId), ct);
+        if (methods.Failure is { } listFailure)
+        {
+            return Result.FailureCode(listFailure.ToPaymentMethodErrorCode());
+        }
+
+        if (!methods.Methods.Any(m => m.Id == cmd.PaymentMethodId))
         {
             return Result.FailureCode(HostpanelErrorCodes.PAYMENT_METHOD_NOT_OWNED);
         }
 
-        await _cardGateway.SetDefaultPaymentMethodAsync(client.CardGatewayCustomerId, cmd.PaymentMethodId!, ct);
+        var updated = await _cardGateway.SetDefaultPaymentMethodAsync(
+            new CardDefaultMethodInstruction(customerId, cmd.PaymentMethodId!), ct);
+        if (updated.Failure is { } updateFailure)
+        {
+            return Result.FailureCode(updateFailure.ToPaymentMethodErrorCode());
+        }
 
         return Result.Success();
     }

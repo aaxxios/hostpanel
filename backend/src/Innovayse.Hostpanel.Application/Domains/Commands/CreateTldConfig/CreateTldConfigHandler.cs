@@ -6,6 +6,7 @@ using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+
 namespace Innovayse.Hostpanel.Application.Domains.Commands.CreateTldConfig;
 
 /// <summary>
@@ -18,20 +19,15 @@ public sealed class CreateTldConfigHandler
     /// <summary>The data context the uniqueness check runs against and the new configuration is persisted through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work for committing changes.</summary>
-    private readonly IUnitOfWork _uow;
-
     /// <summary>Memory cache for invalidating pricing data.</summary>
     private readonly IMemoryCache _cache;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The data context the uniqueness check runs against and the new configuration is persisted through.</param>
-    /// <param name="uow">Unit of work for committing changes.</param>
     /// <param name="cache">Memory cache for invalidating pricing data.</param>
-    public CreateTldConfigHandler(IHostpanelDbContext context, IUnitOfWork uow, IMemoryCache cache)
+    public CreateTldConfigHandler(IHostpanelDbContext context, IMemoryCache cache)
     {
         _context = context;
-        _uow = uow;
         _cache = cache;
     }
 
@@ -76,7 +72,7 @@ public sealed class CreateTldConfigHandler
         entity.UpdateSellPrices(cmd.SellRegister, cmd.SellTransfer, cmd.SellRenew);
 
         _context.TldConfigs.Add(entity);
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
 
         // Invalidate the TLD pricing cache so clients see the new TLD.
         _cache.Remove("tld-pricing-configs");

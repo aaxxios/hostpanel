@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table configuration for <see cref="Download"/>.</summary>
 public sealed class DownloadConfiguration : IEntityTypeConfiguration<Download>
 {
@@ -22,10 +23,11 @@ public sealed class DownloadConfiguration : IEntityTypeConfiguration<Download>
         builder.Property(x => x.IsHidden).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
 
+        // A category that still holds downloads cannot be deleted; the delete use case refuses it first.
         builder.HasOne<DownloadCategory>()
             .WithMany()
             .HasForeignKey(x => x.CategoryId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.CategoryId);
     }

@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// no ticket is refused <c>TICKET_NOT_FOUND</c>, and the action is closed to a caller with no
 /// credential.
 /// </summary>
-/// <remarks>New this batch: no grouped file exercised the removal route before.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class RemoveTicketTagTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -21,7 +17,7 @@ public sealed class RemoveTicketTagTests(IntegrationTestFactory factory) : IClas
     public async Task AdminCanRemoveATagAsync()
     {
         var client = await SupportTestSeeds.AdminClientAsync(factory);
-        var id = await SupportTestSeeds.CreateAdminTicketAsync(client);
+        var id = await SupportTestSeeds.CreateAdminTicketAsync(factory, client);
         await client.PostAsJsonAsync($"/api/tickets/{id}/tags", new { tag = "urgent" });
 
         var response = await client.DeleteAsync($"/api/tickets/{id}/tags/urgent");

@@ -2,9 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing.Currencies;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing.Currencies;
 /// <c>PUT /api/admin/currencies/{code}</c> against Postgres: creating a currency row and rewriting
 /// it in place on a second call.
 /// </summary>
-/// <remarks>Split from the deleted <c>Billing/CurrenciesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpsertCurrencyTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

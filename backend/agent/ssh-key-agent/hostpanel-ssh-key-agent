@@ -3,7 +3,7 @@
 """
 hostpanel-ssh-key-agent -- manages ED25519 public keys in hosting accounts' authorized_keys.
 
-Installed once per managed CWP server. HostPanel reaches it over SSH as a dedicated management
+Installed once per managed hosting server. HostPanel reaches it over SSH as a dedicated management
 user whose single authorized key is pinned to a forced command:
 
     restrict,command="sudo -n /usr/local/sbin/hostpanel-ssh-key-agent" ssh-ed25519 AAAA... hostpanel

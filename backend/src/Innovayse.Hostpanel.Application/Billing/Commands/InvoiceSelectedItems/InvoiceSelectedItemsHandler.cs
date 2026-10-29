@@ -20,13 +20,18 @@ public sealed class InvoiceSelectedItemsHandler
     /// <summary>Resolves the currency the invoiced client is billed in, stamped on the invoice.</summary>
     private readonly IPayerCurrencyResolver _payerCurrency;
 
+    /// <summary>The clock every moment in this handler is read from.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="payerCurrency">The currency the invoiced client is billed in, stamped on the invoice.</param>
-    public InvoiceSelectedItemsHandler(IHostpanelDbContext context, IPayerCurrencyResolver payerCurrency)
+    /// <param name="clock">The clock the current moment is read from.</param>
+    public InvoiceSelectedItemsHandler(IHostpanelDbContext context, IPayerCurrencyResolver payerCurrency, IClock clock)
     {
         _context = context;
         _payerCurrency = payerCurrency;
+        _clock = clock;
     }
 
     /// <summary>Handles the command.</summary>
@@ -63,8 +68,9 @@ public sealed class InvoiceSelectedItemsHandler
         }
 
         var currency = (await _payerCurrency.ForClientAsync(cmd.ClientId, ct)).Code;
+        var now = _clock.UtcNow;
         var invoice = Invoice.CreateForBillableItems(
-            cmd.ClientId, DateTimeOffset.UtcNow.Add(PaymentTerm), currency, items);
+            cmd.ClientId, now.Add(PaymentTerm), currency, items, now);
 
         _context.Invoices.Add(invoice);
         await _context.SaveChangesAsync(ct);

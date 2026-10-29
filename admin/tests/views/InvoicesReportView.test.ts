@@ -15,7 +15,7 @@ vi.mock('chart.js', async () => (await import('../helpers/chartJsMock')).chartJs
 runReportCase({
   name: 'InvoicesReportView',
   view: InvoicesReportView,
-  routes: { 'GET /reports/invoices': () => json({ items: [], totalCount: 0 }) },
+  routes: { 'GET /reports/invoices': () => json({ items: [], pageNumber: 1, pageSize: 50, totalCount: 0, totalPages: 0 }) },
   expected: ['Invoices', '0 invoice(s) found', 'No invoices found.'],
 })
 
@@ -26,7 +26,7 @@ describe('InvoicesReportView actions', () => {
   })
 
   it('loads again on Generate and opens the export in a new tab', async () => {
-    const mock = stubRouteTable({ 'GET /reports/invoices': () => json({ items: [], totalCount: 0 }) })
+    const mock = stubRouteTable({ 'GET /reports/invoices': () => json({ items: [], pageNumber: 1, pageSize: 50, totalCount: 0, totalPages: 0 }) })
     const open = vi.fn()
     vi.stubGlobal('open', open)
     const wrapper = await mountView(InvoicesReportView)
@@ -40,7 +40,7 @@ describe('InvoicesReportView actions', () => {
   })
 
   it('offers only date ranges the endpoint filters by', async () => {
-    stubRouteTable({ 'GET /reports/invoices': () => json({ items: [], totalCount: 0 }) })
+    stubRouteTable({ 'GET /reports/invoices': () => json({ items: [], pageNumber: 1, pageSize: 50, totalCount: 0, totalPages: 0 }) })
     const wrapper = await mountView(InvoicesReportView)
 
     for (const key of ['created', 'due', 'paid']) {

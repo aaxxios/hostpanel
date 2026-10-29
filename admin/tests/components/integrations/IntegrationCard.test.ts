@@ -1,5 +1,5 @@
 /**
- * Mount tests for IntegrationCard: name, status badge, plugin badge and the link to the
+ * Mount tests for IntegrationCard: name, status badge, plugin and not-configured badges and the link to the
  * configuration page.
  */
 import { describe, expect, it } from 'vitest'
@@ -20,6 +20,14 @@ describe('IntegrationCard', () => {
     const wrapper = mountWithApp(IntegrationCard, { props: { integration: integrationDto({ isEnabled: false }) } })
 
     expect(wrapper.get('[data-testid="integration-status-stripe"]').text()).toBe('Inactive')
+  })
+
+  it('marks an integration whose required fields are not stored as not configured', () => {
+    const configured = mountWithApp(IntegrationCard, { props: { integration: integrationDto() } })
+    const unconfigured = mountWithApp(IntegrationCard, { props: { integration: integrationDto({ isConfigured: false }) } })
+
+    expect(configured.find('[data-testid="integration-unconfigured-stripe"]').exists()).toBe(false)
+    expect(unconfigured.get('[data-testid="integration-unconfigured-stripe"]').text()).toBe('Not configured')
   })
 
   it('marks a plugin-provided integration', () => {

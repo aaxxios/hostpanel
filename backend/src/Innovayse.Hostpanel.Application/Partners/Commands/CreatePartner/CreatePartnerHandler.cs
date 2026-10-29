@@ -34,7 +34,7 @@ public sealed class CreatePartnerHandler
         ArgumentNullException.ThrowIfNull(cmd);
 
         var entity = Partner.Create(cmd.LogoUrl, cmd.Url, cmd.SortOrder, cmd.IsActive);
-        entity.ApplyTranslations(cmd.Translations);
+        entity.ReplaceTranslations(cmd.Translations.ToContent());
 
         _context.Partners.Add(entity);
         await _context.SaveChangesAsync(ct);

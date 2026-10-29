@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Storefront card — the home-page figures, the hero badge and the contact details the portal shows.
+ * Storefront card: the home-page figures, the hero badge and the contact details the portal shows.
  *
  * The figures (clients, uptime, regions) and the badge are the numbers and the line in the hero;
  * the contact details feed the footer and the contact page. Each field is saved on its own, so a
@@ -12,13 +12,14 @@ import { useI18n } from 'vue-i18n'
 import { useSettingDraft } from '@/composables/useSettingDraft'
 import type { SettingDraft } from '@/composables/useSettingDraft'
 import SettingNotSeeded from '@/components/settings/SettingNotSeeded.vue'
+import SettingOutcome from '@/components/settings/SettingOutcome.vue'
 import SettingSaveButton from '@/components/settings/SettingSaveButton.vue'
 import SettingsSection from '@/components/settings/SettingsSection.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import { SettingEnv, SettingKey } from '@/types/setting'
-import type { Setting } from '@/types/setting'
+import type { Setting, SettingSave } from '@/types/setting'
 import { SHORT_TEXT_MAX_LENGTH } from '@/lib/limits'
 import { isValidSettingValue, SettingFieldRule } from '@/lib/settingValidation'
 import { UiInputType } from '@/utils/ui/input'
@@ -29,13 +30,8 @@ const { t } = useI18n()
 const props = defineProps<{
   /** All system settings, as loaded from the backend. */
   settings: Setting[]
-  /** True while a save is in flight. */
-  saving?: boolean
-}>()
-
-const emit = defineEmits<{
-  /** Emitted with the row id and the new value when the operator saves a field. */
-  save: [id: number, value: string]
+  /** Persists one row and answers how it went; each control shows its own outcome. */
+  save: SettingSave
 }>()
 
 /** The settings list as a ref, which is what the draft composable watches. */
@@ -207,15 +203,15 @@ const isInvalid = (field: StorefrontField): boolean =>
   field.rule !== undefined && !isValidSettingValue(field.rule, field.draft.value.value)
 
 /**
- * Hands a field's edit to the parent, unless the text breaks the field's rule.
+ * Hands a field's edit to the save callback, unless the text breaks the field's rule.
  *
  * @param field - The field being saved.
  */
-const save = (field: StorefrontField): void => {
+const submitField = (field: StorefrontField): void => {
   if (isInvalid(field)) {
     return
   }
-  field.draft.submit((id, value) => emit('save', id, value))
+  void field.draft.submit(props.save)
 }
 </script>
 
@@ -237,14 +233,15 @@ const save = (field: StorefrontField): void => {
             :invalid="isInvalid(field)"
             :data-testid="`storefront-${field.testid}`"
             class="min-w-72 flex-1"
-            @keyup.enter="save(field)"
+            @keyup.enter="submitField(field)"
           />
           <SettingSaveButton
             :dirty="field.draft.dirty.value && !isInvalid(field)"
-            :saving="saving"
+            :saving="field.draft.saving.value"
             :data-testid="`storefront-save-${field.testid}`"
-            @click="save(field)"
+            @click="submitField(field)"
           />
+          <SettingOutcome :outcome="field.draft.outcome.value" />
         </UiStack>
         <UiText
           v-if="isInvalid(field) && field.invalidKey"

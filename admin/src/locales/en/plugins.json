@@ -1,5 +1,6 @@
 {
   "pluginCard": {
+    "builtIn": "Built-in",
     "pendingRestart": "Pending restart",
     "categoryByAuthor": "{category} · by {author}",
     "removing": "Removing…",
@@ -27,6 +28,10 @@
     "uploadA": "Upload a",
     "fileAboveToGetStarted": "file above to get started",
     "zip": ".zip",
-    "installedPlugins": "Installed Plugins"
+    "installedPlugins": "Installed Plugins",
+    "pluginInstalled": "Plugin installed.",
+    "pluginRemoved": "Plugin removed.",
+    "confirmRemoveTitle": "Remove this plugin?",
+    "confirmRemoveMessage": "The plugin {id} will be removed from the server."
   }
 }

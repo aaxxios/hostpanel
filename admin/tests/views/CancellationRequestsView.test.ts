@@ -1,6 +1,6 @@
 /**
  * Mount tests of CancellationRequestsView (cancellation requests): it renders what the API sent, shows the empty state where it
- * has one, and shows the API's sentence when the load is refused.
+ * has one, confirms and reports a delete, and shows the API's sentence with a Retry when the load is refused.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
@@ -63,5 +63,62 @@ describe('CancellationRequestsView', () => {
     stubRoutes({ 'GET /api/admin/cancellation-requests': () => problem('Not allowed.', 403) })
     const refused = await mountRoutedSettled(CancellationRequestsView, '/clients/cancellations')
     expect(refused.get('[data-testid="cancellations-error"]').text()).toContain('Not allowed.')
+  })
+
+  it('reports a successful delete next to the list', async () => {
+    stubRoutes({
+      'DELETE /api/admin/cancellation-requests/5': () => new Response(null, { status: 204 }),
+      'GET /api/admin/cancellation-requests': () => json({ items: [request], totalCount: 1 }),
+    })
+    const wrapper = await mountRoutedSettled(CancellationRequestsView, '/clients/cancellations')
+
+    await wrapper.get('[data-testid="cancellations-delete-5"]').trigger('click')
+    await wrapper.get('[data-testid="cancellations-delete-dialog"] [data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="cancellations-feedback"]').text()).toBe('Cancellation request deleted.')
+  })
+
+  it('shows the API sentence when the delete is refused and keeps the list', async () => {
+    stubRoutes({
+      'DELETE /api/admin/cancellation-requests/5': () => problem('The request is being processed.', 409),
+      'GET /api/admin/cancellation-requests': () => json({ items: [request], totalCount: 1 }),
+    })
+    const wrapper = await mountRoutedSettled(CancellationRequestsView, '/clients/cancellations')
+
+    await wrapper.get('[data-testid="cancellations-delete-5"]').trigger('click')
+    await wrapper.get('[data-testid="cancellations-delete-dialog"] [data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="cancellations-feedback"]').text()).toBe('The request is being processed.')
+    expect(wrapper.find('[data-testid="cancellations-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="cancellations-row-5"]').exists()).toBe(true)
+  })
+
+  it('does not delete when the confirmation is cancelled', async () => {
+    const mock = stubRoutes({ 'GET /api/admin/cancellation-requests': () => json({ items: [request], totalCount: 1 }) })
+    const wrapper = await mountRoutedSettled(CancellationRequestsView, '/clients/cancellations')
+
+    await wrapper.get('[data-testid="cancellations-delete-5"]').trigger('click')
+    await wrapper.get('[data-testid="cancellations-delete-dialog"] [data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(false)
+    expect(wrapper.find('[data-testid="cancellations-delete-dialog"]').exists()).toBe(false)
+  })
+
+  it('reloads the list from the Retry of a refused load', async () => {
+    let refused = true
+    stubRoutes({
+      'GET /api/admin/cancellation-requests': () => (refused ? problem('Not allowed.', 403) : json({ items: [request], totalCount: 1 })),
+    })
+    const wrapper = await mountRoutedSettled(CancellationRequestsView, '/clients/cancellations')
+
+    refused = false
+    await wrapper.get('[data-testid="cancellations-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="cancellations-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="cancellations-row-5"]').exists()).toBe(true)
   })
 })

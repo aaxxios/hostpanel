@@ -21,9 +21,9 @@ const ssoPublicUrl = (config.public.ssoPublicUrl as string | undefined) ?? ''
 /** Whether the platform SSO, not a local form, is the identity provider. */
 const { isSso } = useAuthMode()
 
-// Under SSO mode the accounts -- and their passwords -- belong to innovayse-sso, and the C# API
+// Under SSO mode the accounts, and their passwords, belong to the external single sign-on provider, and the C# API
 // answers this page's request with 404 by design (`LocalAuthController.ForgotPasswordAsync`).
-// Sent here anyway, a visitor got a form that could never succeed; they go to the SSO's own
+// Shown here anyway, the form could never succeed, so a visitor goes to the SSO's own
 // reset page instead, the same host `/client/login` hands them to for sign-in.
 if (isSso.value && ssoPublicUrl) {
   await navigateTo(`${ssoPublicUrl}/forgot-password`, { external: true })

@@ -10,8 +10,8 @@ public sealed class LocalTwoFactorOptions
     public const string ConfigurationKey = "AppName";
 
     /// <summary>
-    /// The name an authenticator app shows beside the account. A self-hosted deployment's own name,
-    /// so its users' QR codes do not carry this product's; the platform's own deployment never sets it.
+    /// The name an authenticator app shows beside the account. A deployment sets its own name; the
+    /// neutral product name is used when it sets none.
     /// </summary>
-    public string Issuer { get; set; } = "Innovayse";
+    public string Issuer { get; set; } = "Hostpanel";
 }

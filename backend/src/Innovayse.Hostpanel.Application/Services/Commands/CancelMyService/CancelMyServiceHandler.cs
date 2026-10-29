@@ -5,6 +5,7 @@ using Wolverine;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Services.Commands.CancelMyService;
+
 /// <summary>
 /// Raises a cancellation request against one of the calling client's own services, refusing every
 /// service that is not theirs.
@@ -16,7 +17,7 @@ namespace Innovayse.Hostpanel.Application.Services.Commands.CancelMyService;
 /// </para>
 /// <para>
 /// Ownership is settled <b>before</b> <see cref="CancelServiceCommand"/> is dispatched, so a
-/// stranger's id never reaches the repository read inside that handler -- which would otherwise
+/// stranger's id never reaches the database read inside that handler, which would otherwise
 /// refuse an id that does not exist and succeed for one that does, and so tell the two apart.
 /// </para>
 /// </remarks>

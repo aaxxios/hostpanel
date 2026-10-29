@@ -29,7 +29,7 @@ public sealed class SettingSecrecy
 
         var keys = plugins.GetLoadedManifests()
             .SelectMany(m => m.Fields
-                .Where(f => SecretSettingKeys.IsSecretFieldType(f.Type))
+                .Where(f => SecretSettingKeys.IsSecretFieldType(IntegrationFieldTypes.FromManifest(f.Type)))
                 .Select(f => IntegrationSettingKeys.FieldKey(m.Id, f.Key)))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 

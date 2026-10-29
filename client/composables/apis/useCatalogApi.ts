@@ -1,9 +1,9 @@
 /**
- * Endpoints under `/api/portal/public` — the catalogue and the reference data the storefront
+ * Endpoints under `/api/portal/public`: the catalogue and the reference data the storefront
  * renders before anybody signs in.
  *
  * Every function returns a plain `Promise` through `apiFetch`, which is what lets
- * `stores/catalog.ts` call them from a store action — including the action a server-rendered
+ * `stores/catalog.ts` call them from a store action, including the action a server-rendered
  * page wraps in `useAsyncData`. Nothing here is cached or held: the store keeps the state.
  *
  * @module composables/apis/useCatalogApi
@@ -19,6 +19,7 @@ import type { PortalProductQuery } from '~/types/portalproductquery'
 import type { ProductFeature } from '~/types/productfeature'
 import type { SlidePublic } from '~/types/slidepublic'
 import type { TldPricing } from '~/types/tldpricing'
+import { HttpMethod } from '~/types/httpmethod'
 
 /**
  * The public catalogue surface, one function per endpoint.
@@ -86,7 +87,7 @@ export const useCatalogApi = () => {
   /**
    * Reads the TLD price table.
    *
-   * @param currency - ISO 4217 code to quote prices in — the payer's currency, never the page's
+   * @param currency - ISO 4217 code to quote prices in: the payer's currency, never the page's
    * language. Omit to take the backend's default.
    * @returns The price table.
    * @throws Whatever `apiFetch` throws.
@@ -112,11 +113,11 @@ export const useCatalogApi = () => {
    *
    * @param domain - Fully qualified domain name to check.
    * @returns Availability and the registrar's own status word.
-   * @throws Whatever `apiFetch` throws — a registrar that is unreachable included.
+   * @throws Whatever `apiFetch` throws: a registrar that is unreachable included.
    */
   const checkDomain = (domain: string): Promise<DomainCheckResult> =>
     read<DomainCheckResult>('/api/portal/public/domain-check', {
-      method: 'POST',
+      method: HttpMethod.Post,
       body: { domain }
     })
 

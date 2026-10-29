@@ -2,11 +2,7 @@
   <UiCard data-testid="domain-nameservers">
     <UiCardHeader :title="$t('client.domains.nameservers')" :icon="Network" />
 
-    <UiStack v-if="nsLoading" gap="sm">
-      <UiSkeleton v-for="i in 2" :key="i" shape="block" class="h-10" />
-    </UiStack>
-
-    <UiForm v-else data-testid="domain-nameservers-form" :error="nsError" :success="success" spacing="sm" @submit="save">
+    <UiForm data-testid="domain-nameservers-form" :error="nsError" :success="success" spacing="sm" @submit="save">
       <UiAlert variant="info" :icon-size="16">{{ $t('client.domains.nsInfoNote') }}</UiAlert>
 
       <UiStack gap="sm">
@@ -53,10 +49,11 @@
 <script setup lang="ts">
 /**
  * DomainNameserversPanel - the nameservers a domain points at: use the registrar's defaults or
- * enter up to five custom ones. Reading and saving go through the domains store; its refusal
- * sentence is shown above the form.
+ * enter up to five custom ones. The current servers come from the domain the page already
+ * loaded into the domains store (its `management.nameservers`); saving goes through the store,
+ * and its refusal sentence is shown above the form.
  */
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { Network, Save } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { useDomainsStore } from '~/stores/domains'
@@ -80,24 +77,18 @@ const props = defineProps<Props>()
 /** The domains store: the in-flight flags and the refusal sentence. */
 const store = useDomainsStore()
 /** Reactive state of the store this component renders. */
-const { nsLoading, nsSaving, nsError } = storeToRefs(store)
+const { nsSaving, nsError } = storeToRefs(store)
 
 /** The confirmation shown after a successful save. */
 const success = ref('')
 
+/** The nameserver fields, one string each, filled from the domain's current nameservers. */
+const servers = ref<string[]>(
+  Array.from({ length: NAMESERVER_COUNT }, (_, index) => store.domain?.management.nameservers[index]?.host ?? '')
+)
+
 /** Whether the custom nameservers are used (false means the registrar's defaults). */
-const useCustom = ref(true)
-
-/** The nameserver fields, one string each. */
-const servers = ref<string[]>(Array.from({ length: NAMESERVER_COUNT }, () => ''))
-
-onMounted(async () => {
-  const loaded = await store.loadNameservers(props.domainId)
-  loaded.slice(0, NAMESERVER_COUNT).forEach((nameserver, index) => {
-    servers.value[index] = nameserver.host
-  })
-  useCustom.value = Boolean(servers.value[0] || servers.value[1])
-})
+const useCustom = ref(Boolean(servers.value[0] || servers.value[1]))
 
 /**
  * Saves the nameserver configuration through the store: the non-empty fields, in order.

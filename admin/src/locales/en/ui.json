@@ -72,5 +72,8 @@
     "dropOr": "Drop a file or",
     "browse": "browse",
     "uploading": "Uploading..."
+  },
+  "errorState": {
+    "retry": "Retry"
   }
 }

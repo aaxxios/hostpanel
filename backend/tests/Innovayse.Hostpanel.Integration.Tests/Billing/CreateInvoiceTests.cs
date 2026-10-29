@@ -2,9 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Application.Common.Errors;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -12,7 +10,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>POST /api/billing</c> against Postgres: an admin raises an invoice for a client and the
 /// created row round-trips its line item and totals.
 /// </summary>
-/// <remarks>Split from the deleted <c>BillingEndpointTests</c> and <c>InvoicesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateInvoiceTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -37,13 +34,12 @@ public sealed class CreateInvoiceTests(IntegrationTestFactory factory) : IClassF
         fetched.StatusCode.Should().Be(HttpStatusCode.OK);
         using var body = JsonDocument.Parse(await fetched.Content.ReadAsStringAsync());
         body.RootElement.GetProperty("id").GetInt32().Should().Be(invoiceId);
-        body.RootElement.GetProperty("subTotal").GetDecimal().Should().Be(9.99m);
+        body.RootElement.GetProperty("amounts").GetProperty("subTotal").GetDecimal().Should().Be(9.99m);
     }
 
     /// <summary>
     /// Registering a client, then creating an invoice for them as the admin, answers 201 with the
-    /// new invoice's id — the round-trip through the client-creation Wolverine handler that the
-    /// old grouped <c>BillingEndpointTests</c> proved.
+    /// new invoice's id, which proves the round-trip through the client-creation Wolverine handler.
     /// </summary>
     [Fact]
     public async Task CreateInvoiceAsync_Returns201_AsAdminAsync()
@@ -76,5 +72,22 @@ public sealed class CreateInvoiceTests(IntegrationTestFactory factory) : IClassF
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>An invoice for a client that does not exist answers 404 with <c>CLIENT_NOT_FOUND</c> and writes nothing.</summary>
+    [Fact]
+    public async Task CreateRefusesAnUnknownClient()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.PostAsJsonAsync("/api/billing", new
+        {
+            clientId = BillingTestSeeds.NoSuchId,
+            dueDate = DateTimeOffset.UtcNow.AddDays(14),
+            items = new[] { new { description = "Hosting", unitPrice = 9.99m, quantity = 1 } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.CLIENT_NOT_FOUND);
     }
 }

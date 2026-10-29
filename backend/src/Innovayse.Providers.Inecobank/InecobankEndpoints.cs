@@ -6,6 +6,13 @@ namespace Innovayse.Providers.Inecobank;
 /// </summary>
 internal static class InecobankEndpoints
 {
+    /// <summary>
+    /// The path every endpoint lives under, appended to the configured origin. The one place it is
+    /// written, so the client that builds the request and the configuration check that refuses an
+    /// origin already carrying it cannot disagree.
+    /// </summary>
+    public const string BasePath = "/payment/rest";
+
     /// <summary>Registers a new order (one-stage payment) and opens a hosted-page session.</summary>
     public const string Register = "register.do";
 

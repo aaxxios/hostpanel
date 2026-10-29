@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Application.Auth.Commands.SignIn;
 /// credentials say, so the command names the account by email.
 /// </summary>
 /// <remarks>
-/// It exists so the bus validates the body before the credential check runs: a body that omits a
+/// The bus validates the body before the credential check runs: a body that omits a
 /// field reaches the validator as <see langword="null"/> and is answered as a 400, instead of
 /// reaching the identity store as a null argument.
 /// </remarks>

@@ -1,9 +1,9 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Billing.Queries.ListDomainsOnOpenRenewalInvoices;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Commands.MarkDomainExpired;
-using Innovayse.Hostpanel.Application.Domains.Common;
-using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Domains.Commands.SendDomainExpiryWarning;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Domains.Events;
@@ -12,6 +12,7 @@ using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Wolverine;
+
 namespace Innovayse.Hostpanel.Application.Domains.Commands.CheckDomainExpiries;
 
 /// <summary>
@@ -21,20 +22,14 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.CheckDomainExpiries;
 /// </summary>
 public sealed class CheckDomainExpiriesHandler
 {
-    /// <summary>Hour (UTC) at which the daily check runs; the startup schedules the first run for it.</summary>
-    public const int CronHour = 9;
-
-    /// <summary>Warning intervals in days before expiry at which reminder emails are sent.</summary>
-    private static readonly int[] WarningDays = [30, 14, 7, 1];
-
-    /// <summary>The data context the expiring domains are read from and the reminder is saved through.</summary>
+    /// <summary>The data context the ids of the lapsed and expiring domains are read from.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Wolverine bus used to dispatch <see cref="MarkDomainExpiredCommand"/> and to raise the expiry-warning event.</summary>
+    /// <summary>Wolverine bus used to dispatch <see cref="MarkDomainExpiredCommand"/> and <see cref="SendDomainExpiryWarningCommand"/> and to ask billing which domains are on open renewal invoices.</summary>
     private readonly IMessageBus _bus;
 
-    /// <summary>Unit of work the reminder is saved through.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>Runs the passes under their lease and schedules the next run.</summary>
+    private readonly RecurringJobs _jobs;
 
     /// <summary>Billing settings: whether renewal reminders are configured at all.</summary>
     private readonly RenewalSettingsReader _settings;
@@ -42,21 +37,27 @@ public sealed class CheckDomainExpiriesHandler
     /// <summary>Structured logger.</summary>
     private readonly ILogger<CheckDomainExpiriesHandler> _logger;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
-    /// <param name="context">The data context the expiring domains are read from and the reminder is saved through.</param>
-    /// <param name="bus">Wolverine bus used to dispatch <see cref="MarkDomainExpiredCommand"/> and to raise the expiry-warning event.</param>
-    /// <param name="uow">Unit of work the reminder is saved through.</param>
+    /// <param name="context">The data context the ids of the lapsed and expiring domains are read from.</param>
+    /// <param name="bus">Wolverine bus used to dispatch <see cref="MarkDomainExpiredCommand"/> and <see cref="SendDomainExpiryWarningCommand"/> and to ask billing which domains are on open renewal invoices.</param>
+    /// <param name="jobs">Runs the passes under their lease and schedules the next run.</param>
     /// <param name="settings">Billing settings: whether renewal reminders are configured at all.</param>
     /// <param name="logger">Structured logger.</param>
+    /// <param name="clock">The source of the current moment.</param>
     public CheckDomainExpiriesHandler(
-        IHostpanelDbContext context, IMessageBus bus, IUnitOfWork uow, RenewalSettingsReader settings,
-        ILogger<CheckDomainExpiriesHandler> logger)
+        IHostpanelDbContext context, IMessageBus bus, RecurringJobs jobs, RenewalSettingsReader settings,
+        ILogger<CheckDomainExpiriesHandler> logger,
+        IClock clock)
     {
         _context = context;
         _bus = bus;
-        _uow = uow;
+        _jobs = jobs;
         _settings = settings;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>
@@ -71,73 +72,100 @@ public sealed class CheckDomainExpiriesHandler
     {
         _ = cmd;
 
-        return RecurringJob.RunAsync(
-            nameof(CheckDomainExpiriesCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
+        return _jobs.RunAsync<CheckDomainExpiriesCommand>(
+            _jobs.Schedules.CheckDomainExpiries, () => RunAsync(ct), ct);
     }
 
-    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJob"/>.</summary>
+    /// <summary>One pass of the job; <see cref="HandleAsync"/> runs it through <see cref="RecurringJobs"/>.</summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task.</returns>
     private async Task RunAsync(CancellationToken ct)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
 
-        // ── Mark already-expired domains ─────────────────────────────────
-        var expiredDomains = await ListExpiringBeforeAsync(now, ct);
+        // The two phases are independent: marking lapsed domains failing wholesale (a dead query, say)
+        // must not cost the client the expiry warnings of the domains still ahead of their date.
+        await RunPhaseAsync("marking lapsed domains expired", () => MarkLapsedDomainsAsync(now, ct), ct);
+        await RunPhaseAsync("sending expiry warnings", () => SendExpiryWarningsAsync(now, ct), ct);
+    }
 
-        foreach (var domain in expiredDomains)
+    /// <summary>Runs one phase of the pass and logs, never rethrows, its failure, so the next phase still runs.</summary>
+    /// <param name="phase">What the phase does, for the log.</param>
+    /// <param name="run">The phase.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task RunPhaseAsync(string phase, Func<Task> run, CancellationToken ct)
+    {
+        try
         {
-            if (domain.Status == DomainStatus.Active)
+            await run();
+        }
+        catch (Exception ex) when (JobFailure.IsFailure(ex, ct))
+        {
+            _logger.LogError(
+                ex, "{JobName} failed while {Phase}; the next run retries it.", nameof(CheckDomainExpiriesCommand), phase);
+        }
+    }
+
+    /// <summary>
+    /// Sends a <see cref="MarkDomainExpiredCommand"/> for every active domain already past its expiry
+    /// date. The ids are read in keyset batches (nothing is tracked here), and each command runs in
+    /// its own message scope, so one domain that cannot be marked never stops the others.
+    /// </summary>
+    /// <param name="now">The moment this pass started.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    private async Task MarkLapsedDomainsAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        var lastId = 0;
+        while (true)
+        {
+            var domainIds = await _context.Domains.AsNoTracking()
+                .Where(x => x.Id > lastId && x.ExpiresAt < now && x.Status == DomainStatus.Active)
+                .OrderBy(x => x.Id)
+                .Select(x => x.Id)
+                .Take(JobBatch.Size)
+                .ToListAsync(ct);
+            if (domainIds.Count == 0)
             {
-                var outcome = await _bus.InvokeAsync<Result>(new MarkDomainExpiredCommand(domain.Id), ct);
-                if (outcome.IsFailure)
+                return;
+            }
+
+            foreach (var domainId in domainIds)
+            {
+                try
                 {
-                    _logger.LogError(
-                        "Marking domain {DomainId} expired failed: {ErrorCode}.", domain.Id, outcome.ErrorCode);
+                    var outcome = await _bus.InvokeAsync<Result>(new MarkDomainExpiredCommand(domainId), ct);
+                    if (outcome.IsFailure)
+                    {
+                        _logger.LogError(
+                            "Marking domain {DomainId} expired failed: {ErrorCode}.", domainId, outcome.ErrorCode);
+                    }
+                }
+                catch (Exception ex) when (JobFailure.IsFailure(ex, ct))
+                {
+                    _logger.LogError(ex, "Marking domain {DomainId} expired failed; the next run retries it.", domainId);
                 }
             }
+
+            lastId = domainIds[^1];
         }
-
-        // ── Send expiry warnings ─────────────────────────────────────────
-        await SendExpiryWarningsAsync(now, ct);
     }
 
     /// <summary>
-    /// Schedules tomorrow's check. Before this the job never scheduled itself: it ran once after each
-    /// start, and domains stopped being marked expired or warned about until the next restart.
-    /// </summary>
-    /// <returns>A task.</returns>
-    private async Task ScheduleNextAsync()
-    {
-        var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
-        await _bus.ScheduleAsync(new CheckDomainExpiriesCommand(), nextRun);
-        _logger.LogInformation("CheckDomainExpiriesCommand re-scheduled for {NextRun:u}.", nextRun);
-    }
-
-    /// <summary>
-    /// Returns every active domain expiring before the given threshold, with the same graph a
-    /// reminder write needs.
-    /// </summary>
-    /// <param name="threshold">Upper-bound expiry date (exclusive).</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>Domains expiring before the threshold.</returns>
-    private async Task<List<RegisteredDomain>> ListExpiringBeforeAsync(
-        DateTimeOffset threshold, CancellationToken ct) =>
-        await _context.Domains
-            .IncludeChildren()
-            .Where(x => x.ExpiresAt < threshold && x.Status == DomainStatus.Active)
-            .ToListAsync(ct);
-
-    /// <summary>
-    /// Finds active domains expiring within the next 30 days and raises
-    /// <see cref="DomainExpiringEvent"/> for each matching warning interval,
-    /// provided a reminder of that type has not already been sent.
+    /// Sends a <see cref="SendDomainExpiryWarningCommand"/> for every active domain expiring within the
+    /// warning window, which lets the domain pick the warning due and raise
+    /// <see cref="DomainExpiringEvent"/> only once per expiry cycle.
     /// <para>
     /// A domain whose renewal line sits on an open invoice is skipped while renewal reminders are
     /// configured: the client is already being reminded about that invoice, and a second "expiring"
-    /// mail would contradict it. Every other domain -- auto-renewing or not -- still gets the warning:
+    /// mail would contradict it. Every other domain, auto-renewing or not, still gets the warning:
     /// one the renewal run could not price, one whose renewal invoice was cancelled, or any domain
     /// once the reminder days are cleared, would otherwise expire without a word to the client.
+    /// </para>
+    /// <para>
+    /// Each warning is its own command in its own message scope: a warning whose save fails leaves no
+    /// tracked change behind that could fail the next domain's save.
     /// </para>
     /// </summary>
     /// <param name="now">The current UTC time.</param>
@@ -145,75 +173,53 @@ public sealed class CheckDomainExpiriesHandler
     /// <returns>A task representing the asynchronous operation.</returns>
     private async Task SendExpiryWarningsAsync(DateTimeOffset now, CancellationToken ct)
     {
-        var maxThreshold = now.AddDays(WarningDays[0] + 1);
-        var expiringDomains = await ListExpiringBeforeAsync(maxThreshold, ct);
-        var beingReminded = await DomainsBeingRemindedAsync(expiringDomains, ct);
-
-        foreach (var domain in expiringDomains)
+        var maxThreshold = now.AddDays(RegisteredDomain.ExpiryWarningWindowDays + 1);
+        var lastId = 0;
+        while (true)
         {
-            if (domain.Status != DomainStatus.Active || domain.ExpiresAt <= now || beingReminded.Contains(domain.Id))
+            // A domain at or past its expiry is never warned (the domain refuses), so only those still ahead are read.
+            var domainIds = await _context.Domains.AsNoTracking()
+                .Where(x => x.Id > lastId && x.ExpiresAt > now && x.ExpiresAt < maxThreshold && x.Status == DomainStatus.Active)
+                .OrderBy(x => x.Id)
+                .Select(x => x.Id)
+                .Take(JobBatch.Size)
+                .ToListAsync(ct);
+            if (domainIds.Count == 0)
             {
-                continue;
+                return;
             }
 
-            var daysUntilExpiry = (int)Math.Ceiling((domain.ExpiresAt - now).TotalDays);
-
-            foreach (var warningDay in WarningDays)
+            var beingReminded = await DomainsBeingRemindedAsync(domainIds, ct);
+            foreach (var domainId in domainIds.Where(id => !beingReminded.Contains(id)))
             {
-                if (daysUntilExpiry > warningDay)
-                {
-                    continue;
-                }
-
-                var reminderType = $"{warningDay} Days Before Expiry";
-
-                if (domain.Reminders.Any(r => r.ReminderType == reminderType))
-                {
-                    continue;
-                }
-
                 try
                 {
-                    await _bus.PublishAsync(
-                        new DomainExpiringEvent(domain.Id, domain.ClientId, domain.Name, domain.ExpiresAt));
-
-                    domain.AddReminder(reminderType, $"client-{domain.ClientId}");
-                    await _uow.SaveChangesAsync(ct);
-
-                    _logger.LogInformation(
-                        "Raised expiry warning ({ReminderType}) for domain {DomainName} (ID {DomainId}).",
-                        reminderType,
-                        domain.Name,
-                        domain.Id);
+                    var outcome = await _bus.InvokeAsync<Result>(new SendDomainExpiryWarningCommand(domainId), ct);
+                    if (outcome.IsFailure)
+                    {
+                        _logger.LogWarning(
+                            "Expiry warning for domain {DomainId} was refused ({ErrorCode}).", domainId, outcome.ErrorCode);
+                    }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (JobFailure.IsFailure(ex, ct))
                 {
-                    _logger.LogWarning(
-                        ex,
-                        "Failed to send expiry warning ({ReminderType}) for domain {DomainId}.",
-                        reminderType,
-                        domain.Id);
+                    _logger.LogWarning(ex, "Failed to send expiry warning for domain {DomainId}.", domainId);
                 }
-
-                break;
             }
+
+            lastId = domainIds[^1];
         }
     }
 
     /// <summary>
-    /// The ids among <paramref name="domains"/> whose client is already reminded by a renewal invoice:
+    /// The ids among <paramref name="domainIds"/> whose client is already reminded by a renewal invoice:
     /// a domain renewal line on an open invoice, with renewal reminders configured.
     /// </summary>
-    /// <param name="domains">The domains about to be warned.</param>
+    /// <param name="domainIds">The domains about to be warned.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The domain ids to skip; empty when reminders are cleared.</returns>
-    private async Task<HashSet<int>> DomainsBeingRemindedAsync(IReadOnlyCollection<RegisteredDomain> domains, CancellationToken ct)
+    private async Task<HashSet<int>> DomainsBeingRemindedAsync(IReadOnlyCollection<int> domainIds, CancellationToken ct)
     {
-        if (domains.Count == 0)
-        {
-            return [];
-        }
-
         var settings = await _settings.ReadAsync(ct);
         if (settings.ReminderDays.Count == 0)
         {
@@ -221,14 +227,8 @@ public sealed class CheckDomainExpiriesHandler
             return [];
         }
 
-        var ids = domains.Select(d => d.Id).ToList();
-        var reminded = await _context.Invoices.AsNoTracking()
-            .Where(i => RenewalInvoiceStatuses.Open.Contains(i.Status))
-            .SelectMany(i => i.Items)
-            .Where(l => l.RegisteredDomainId != null && ids.Contains(l.RegisteredDomainId.Value) && l.RenewalPeriodStart != null)
-            .Select(l => l.RegisteredDomainId!.Value)
-            .Distinct()
-            .ToListAsync(ct);
-        return [.. reminded];
+        var reminded = await _bus.InvokeAsync<Result<IReadOnlyList<int>>>(
+            new ListDomainsOnOpenRenewalInvoicesQuery([.. domainIds]), ct);
+        return [.. reminded.Value!];
     }
 }

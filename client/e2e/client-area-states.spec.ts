@@ -7,10 +7,11 @@
  */
 import { expect, test } from './support/test'
 import { resetStub, scriptStub, signIn, waitForHydration } from './support/helpers'
+import { HttpMethod } from '../types/httpmethod'
 
 test('an account without a customer profile sees the notice instead of an empty list', async ({ page, context, request, baseURL }) => {
   await resetStub(request)
-  await scriptStub(request, { method: 'GET', path: '/api/me/invoices', status: 404, code: 'CLIENT_PROFILE_NOT_FOUND', detail: 'No customer profile.' })
+  await scriptStub(request, { method: HttpMethod.Get, path: '/api/me/invoices', status: 404, code: 'CLIENT_PROFILE_NOT_FOUND', detail: 'No customer profile.' })
   await signIn(context, baseURL ?? 'http://127.0.0.1:3100')
 
   await page.goto('/client/invoices')
@@ -22,7 +23,7 @@ test('an account without a customer profile sees the notice instead of an empty 
 
 test('a backend that is down shows an error state, not an empty invoice list', async ({ page, context, request, baseURL }) => {
   await resetStub(request)
-  await scriptStub(request, { method: 'GET', path: '/api/me/invoices', status: 503, code: 'SERVICE_UNAVAILABLE', detail: 'E2E: the service is unavailable.' })
+  await scriptStub(request, { method: HttpMethod.Get, path: '/api/me/invoices', status: 503, code: 'SERVICE_UNAVAILABLE', detail: 'E2E: the service is unavailable.' })
   await signIn(context, baseURL ?? 'http://127.0.0.1:3100')
 
   await page.goto('/client/invoices')

@@ -12,7 +12,7 @@ export default <Partial<Config>>{
   // The Nuxt Tailwind module scans components/, layouts/, pages/ and friends by
   // default. Portal templates deliberately live outside those directories, so
   // without listing templates/ here every utility used only inside a template
-  // is silently dropped from the bundle — the markup renders, unstyled.
+  // is silently dropped from the bundle: the markup renders, unstyled.
   content: [
     './components/**/*.{vue,js,ts}',
     './layouts/**/*.{vue,js,ts}',
@@ -36,7 +36,7 @@ export default <Partial<Config>>{
     extend: {
       colors: {
         // The brand scales read the :root variables plugins/brand-tokens.ts emits from
-        // portal.brand.primary / .accent, with today's literal as the fallback — an
+        // portal.brand.primary / .accent, with today's literal as the fallback: an
         // install that sets neither renders exactly what it did. The `r g b` form is
         // what lets the opacity modifier (bg-primary-500/30) keep working.
         primary: {
@@ -214,7 +214,7 @@ export default <Partial<Config>>{
         'nova-card': '0 24px 50px -30px rgb(0 0 0 / 0.5)',
       },
       // Marketing motion. `float`, `blob` and `gradient` already exist in assets/styles/animations.css;
-      // these are the ones that used to live in a scoped <style> of a single section.
+      // these are the section-level ones, kept here instead of in a scoped <style>.
       keyframes: {
         // Entrance reveal: runs in CSS so the content is in the markup and visible without any script.
         'reveal-up': { '0%': { opacity: '0', transform: 'translateY(24px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
@@ -250,7 +250,7 @@ export default <Partial<Config>>{
       },
       fontFamily: {
         // Each family reads the operator's typeface from :root first (see
-        // plugins/brand-tokens.ts) and falls back to the template's own — sans stays Inter
+        // plugins/brand-tokens.ts) and falls back to the template's own: sans stays Inter
         // so classic is untouched, aurora stays Noto Sans Armenian. --font-body drives the
         // body families and --font-heading the display ones.
         sans: ['var(--font-body, "Inter Variable", Inter, system-ui, sans-serif)'],

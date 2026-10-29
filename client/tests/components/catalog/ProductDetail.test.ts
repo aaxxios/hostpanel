@@ -19,15 +19,14 @@ import { balancedColumns } from '~/utils/balancedGrid'
 /**
  * Builds a plan.
  *
- * @param pid Order id, also the product id.
+ * @param id Product id.
  * @param overrides Fields that differ from the defaults.
  * @returns The plan.
  */
-const plan = (pid: number, overrides: Partial<ProductPlan> = {}): ProductPlan => ({
-  id: pid,
-  pid,
-  tier: `Plan ${pid}`,
-  pricing: { monthly: pid, annual: pid * 10 },
+const plan = (id: number, overrides: Partial<ProductPlan> = {}): ProductPlan => ({
+  id,
+  tier: `Plan ${id}`,
+  pricing: { monthly: id, annual: id * 10 },
   description: '',
   features: [],
   isFeatured: false,
@@ -38,7 +37,6 @@ const plan = (pid: number, overrides: Partial<ProductPlan> = {}): ProductPlan =>
 const product: ProductDetailData = {
   id: 'alpha-suite',
   gid: 3,
-  pid: 10,
   name: 'Alpha Suite',
   icon: 'school',
   color: '#8b5cf6',
@@ -129,7 +127,7 @@ describe('ProductDetail', () => {
   })
 
   it('centres five plans in a balanced grid instead of leaving an orphan row', () => {
-    const five = [11, 12, 13, 14, 15].map((pid) => plan(pid))
+    const five = [11, 12, 13, 14, 15].map((id) => plan(id))
     const grid = mountDetail({ product: { ...product, plans: five } }).find('[data-testid="product-plans-grid"]')
 
     expect(grid.attributes('data-columns')).toBe(String(balancedColumns(5)))
@@ -155,7 +153,7 @@ describe('ProductDetail', () => {
   })
 
   it('reports the plan the visitor adds to the cart, and shows "in cart" for one already there', async () => {
-    const wrapper = mountDetail({ isInCart: (item: ProductPlan) => item.pid === 12 })
+    const wrapper = mountDetail({ isInCart: (item: ProductPlan) => item.id === 12 })
 
     await wrapper.find('[data-testid="product-add-11"]').trigger('click')
 
@@ -165,7 +163,7 @@ describe('ProductDetail', () => {
   })
 
   it('shows the trial button only for a plan that has an external order page', async () => {
-    const wrapper = mountDetail({ trialUrlFor: (item: ProductPlan) => (item.pid === 11 ? 'https://orders.test/cart' : null) })
+    const wrapper = mountDetail({ trialUrlFor: (item: ProductPlan) => (item.id === 11 ? 'https://orders.test/cart' : null) })
 
     expect(wrapper.find('[data-testid="product-trial-12"]').exists()).toBe(false)
     await wrapper.find('[data-testid="product-trial-11"]').trigger('click')

@@ -1,65 +1,69 @@
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Application.Migration.Importers;
+using Innovayse.Hostpanel.Application.Migration.Common;
+using Innovayse.Hostpanel.Domain.Migration;
+using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Migration.Pull;
+
 /// <summary>
 /// Orchestrates the full pull for a migration job: fetches the source plugin's totals, then runs
-/// one <see cref="IMigrationEntityImporter"/> per entity kind the job selected, in the same
-/// dependency order every pull has always run in (clients first, since invoices, services,
-/// domains and tickets all reference them). Runs in a background task via a dedicated DI scope.
+/// one <see cref="IMigrationEntityImporter"/> per entity kind the job selected, in the order
+/// <see cref="MigrationImportOrder"/> names (clients first, since invoices, services, domains
+/// and tickets all reference them). Runs from the <c>RunMigrationPullCommand</c> handler, on the
+/// background message queue.
 /// </summary>
 /// <remarks>
-/// Split from a single 1,600-line class into one importer per entity kind (A6 Task 6) — the
-/// boundary that made this untestable (the HTTP transport) was already gone by the time of the
-/// split, behind <see cref="IMigrationSource"/>; what was left was size, not layering. This class
+/// Each entity kind has its own importer, behind <see cref="IMigrationSource"/>. This class
 /// keeps only the parts every importer shares: fetching totals, the dependency order, and the
-/// failure path that records an unhandled exception against the job.
+/// failure path that records why the job stopped as a <see cref="MigrationJobFailure"/>. The
+/// exception itself is logged here only; its text never reaches the job or the admin.
 /// </remarks>
-/// <param name="source">The migration source plugin, for the totals fetched before the first page.</param>
-/// <param name="context">The module's data context, for loading and failing the job itself.</param>
-/// <param name="uow">Unit of work the job's own state is saved through.</param>
-/// <param name="eventGate">Discards the domain events imported records raise, so a pull never e-mails migrated clients.</param>
-/// <param name="clientsImporter">Imports client records.</param>
-/// <param name="productsImporter">Imports product groups and products.</param>
-/// <param name="invoicesImporter">Imports invoice records.</param>
-/// <param name="servicesImporter">Imports client service records.</param>
-/// <param name="domainsImporter">Imports domain records.</param>
-/// <param name="ticketsImporter">Imports support ticket records.</param>
-/// <param name="ordersImporter">Imports order records.</param>
-/// <param name="transactionsImporter">Imports client ledger transaction records.</param>
-/// <param name="quotesImporter">Imports quote records.</param>
-/// <param name="knowledgebaseImporter">Imports knowledge-base categories and articles.</param>
-/// <param name="contactsImporter">Imports client contact records.</param>
-/// <param name="ticketRepliesImporter">Imports ticket reply records.</param>
-/// <param name="announcementsImporter">Imports announcement records.</param>
-/// <param name="downloadsImporter">Imports download categories and files.</param>
-/// <param name="networkIssuesImporter">Imports network issue records.</param>
-/// <param name="logger">Logs the job's completion and any unhandled failure.</param>
-public sealed class MigrationPullWorker(
-    IMigrationSource source,
-    IHostpanelDbContext context,
-    IUnitOfWork uow,
-    IDomainEventGate eventGate,
-    ClientsImporter clientsImporter,
-    ProductsImporter productsImporter,
-    InvoicesImporter invoicesImporter,
-    ServicesImporter servicesImporter,
-    DomainsImporter domainsImporter,
-    TicketsImporter ticketsImporter,
-    OrdersImporter ordersImporter,
-    TransactionsImporter transactionsImporter,
-    QuotesImporter quotesImporter,
-    KnowledgebaseImporter knowledgebaseImporter,
-    ContactsImporter contactsImporter,
-    TicketRepliesImporter ticketRepliesImporter,
-    AnnouncementsImporter announcementsImporter,
-    DownloadsImporter downloadsImporter,
-    NetworkIssuesImporter networkIssuesImporter,
-    ILogger<MigrationPullWorker> logger)
+public sealed class MigrationPullWorker
 {
+    /// <summary>The migration source plugin, for the totals fetched before the first page.</summary>
+    private readonly IMigrationSource _source;
+
+    /// <summary>The module's data context, for loading and failing the job itself.</summary>
+    private readonly IHostpanelDbContext _context;
+
+    /// <summary>Discards the domain events imported records raise, so a pull never e-mails migrated clients.</summary>
+    private readonly IDomainEventGate _eventGate;
+
+    /// <summary>The importers in the order a pull runs them.</summary>
+    private readonly IReadOnlyList<IMigrationEntityImporter> _importers;
+
+    /// <summary>Logs the job's completion and any unhandled failure.</summary>
+    private readonly ILogger<MigrationPullWorker> _logger;
+
+    /// <summary>Stamps when the job completed or failed.</summary>
+    private readonly IClock _clock;
+
+    /// <summary>Initializes a new instance of the <see cref="MigrationPullWorker"/> class.</summary>
+    /// <param name="source">The migration source plugin, for the totals fetched before the first page.</param>
+    /// <param name="context">The module's data context, for loading and failing the job itself.</param>
+    /// <param name="eventGate">Discards the domain events imported records raise, so a pull never e-mails migrated clients.</param>
+    /// <param name="importers">Every entity importer; the worker runs them in <see cref="MigrationImportOrder"/> order.</param>
+    /// <param name="logger">Logs the job's completion and any unhandled failure.</param>
+    /// <param name="clock">Stamps when the job completed or failed.</param>
+    public MigrationPullWorker(
+        IMigrationSource source,
+        IHostpanelDbContext context,
+        IDomainEventGate eventGate,
+        IEnumerable<IMigrationEntityImporter> importers,
+        ILogger<MigrationPullWorker> logger,
+        IClock clock)
+    {
+        _source = source;
+        _context = context;
+        _eventGate = eventGate;
+        _importers = MigrationImportOrder.Arrange(importers);
+        _logger = logger;
+        _clock = clock;
+    }
+
     /// <summary>Executes the full pull for a job identified by <paramref name="jobId"/>.</summary>
     /// <param name="jobId">The migration job's own id.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -68,7 +72,7 @@ public sealed class MigrationPullWorker(
     {
         // Imported clients, invoices and tickets already exist in the source system: publishing their
         // creation and payment events would send every migrated client a welcome and a receipt.
-        using var suppression = eventGate.Suppress();
+        using var suppression = _eventGate.Suppress();
 
         try
         {
@@ -76,23 +80,47 @@ public sealed class MigrationPullWorker(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Migration pull failed for job {JobId}", jobId);
+            _logger.LogError(ex, "Migration pull failed for job {JobId}", jobId);
             try
             {
-                // Clear any pending/failed EF change tracker state before saving failure
-                uow.DetachAll();
-                var job = await context.MigrationJobs.FirstOrDefaultAsync(j => j.Id == jobId, ct);
-                if (job is not null)
+                // Clear any pending/failed EF change tracker state before saving failure. The failure
+                // is saved without the pull's token, so a cancelled pull is still recorded as such.
+                _context.DetachAll();
+                var job = await _context.MigrationJobs.FirstOrDefaultAsync(j => j.Id == jobId, CancellationToken.None);
+                // Only a job this pull still owns is failed: one already failed by the startup
+                // recovery, or never queued, is left as it is.
+                if (job is { IsActive: true })
                 {
-                    job.Fail(ex.Message);
-                    await uow.SaveChangesAsync(ct);
+                    job.Fail(Classify(ex, ct), _clock.UtcNow);
+                    await _context.SaveChangesAsync(CancellationToken.None);
                 }
             }
             catch (Exception saveEx)
             {
-                logger.LogError(saveEx, "Failed to save failure state for job {JobId}", jobId);
+                _logger.LogError(saveEx, "Failed to save failure state for job {JobId}", jobId);
             }
         }
+    }
+
+    /// <summary>Names the reason a pull stopped from the exception it stopped with.</summary>
+    /// <param name="ex">The exception the pull threw.</param>
+    /// <param name="ct">The pull's cancellation token, to tell a requested stop from a timeout.</param>
+    /// <returns>The failure to record against the job.</returns>
+    private static MigrationJobFailure Classify(Exception ex, CancellationToken ct)
+    {
+        if (ex is OperationCanceledException && ct.IsCancellationRequested)
+        {
+            return MigrationJobFailure.Cancelled;
+        }
+
+        return ex switch
+        {
+            MigrationSourceAddressRefusedException => MigrationJobFailure.SourceAddressNotAllowed,
+            HttpRequestException { StatusCode: not null } => MigrationJobFailure.SourceRefused,
+            HttpRequestException => MigrationJobFailure.SourceUnreachable,
+            TimeoutException or OperationCanceledException => MigrationJobFailure.SourceUnreachable,
+            _ => MigrationJobFailure.ImportFailed,
+        };
     }
 
     /// <summary>
@@ -104,108 +132,49 @@ public sealed class MigrationPullWorker(
     /// <returns>A task that completes once every selected entity kind has been imported.</returns>
     private async Task PullAsync(int jobId, CancellationToken ct)
     {
-        var job = await context.MigrationJobs.FirstOrDefaultAsync(j => j.Id == jobId, ct)
+        var job = await _context.MigrationJobs.FirstOrDefaultAsync(j => j.Id == jobId, ct)
             ?? throw new InvalidOperationException($"Migration job {jobId} not found.");
 
+        // A pull runs only for the job's queued request. A second delivery of the same message, or
+        // one for a job the startup recovery already failed, finds it in another state and stops.
+        if (job.Status != MigrationJobStatus.Queued)
+        {
+            _logger.LogInformation("Migration job {JobId} is {Status}, not queued; nothing to pull.", jobId, job.Status);
+            return;
+        }
+
         // 1. Fetch totals from plugin
-        var totalsResp = await source.GetTotalsAsync(job.SourceUrl, job.Key, ct);
-        job.Start(
-            job.ExportClients ? totalsResp.Clients : 0,
-            job.ExportInvoices ? totalsResp.Invoices : 0,
-            job.ExportServices ? totalsResp.Services : 0,
-            job.ExportDomains ? totalsResp.Domains : 0,
-            job.ExportTickets ? totalsResp.Tickets : 0,
-            job.ExportProducts ? totalsResp.Products : 0,
-            job.ExportOrders ? totalsResp.Orders : 0,
-            job.ExportTransactions ? totalsResp.Transactions : 0,
-            job.ExportQuotes ? totalsResp.Quotes : 0,
-            job.ExportKnowledgebase ? totalsResp.Knowledgebase : 0,
-            job.ExportContacts ? totalsResp.Contacts : 0,
-            job.ExportTicketReplies ? totalsResp.TicketReplies : 0,
-            job.ExportAnnouncements ? totalsResp.Announcements : 0,
-            job.ExportDownloads ? totalsResp.Downloads : 0,
-            job.ExportNetworkIssues ? totalsResp.NetworkIssues : 0);
-        await uow.SaveChangesAsync(ct);
+        var totalsResp = await _source.GetTotalsAsync(new MigrationSourceEndpoint(job.SourceUrl, job.Key), ct);
+        job.Start(new MigrationTotals(
+            job.ExportClients ? totalsResp.Accounts.Clients : 0,
+            job.ExportInvoices ? totalsResp.Billing.Invoices : 0,
+            job.ExportServices ? totalsResp.Hosting.Services : 0,
+            job.ExportDomains ? totalsResp.Hosting.Domains : 0,
+            job.ExportTickets ? totalsResp.Support.Tickets : 0,
+            job.ExportProducts ? totalsResp.Hosting.Products : 0,
+            job.ExportOrders ? totalsResp.Billing.Orders : 0,
+            job.ExportTransactions ? totalsResp.Billing.Transactions : 0,
+            job.ExportQuotes ? totalsResp.Billing.Quotes : 0,
+            job.ExportKnowledgebase ? totalsResp.Content.Knowledgebase : 0,
+            job.ExportContacts ? totalsResp.Accounts.Contacts : 0,
+            job.ExportTicketReplies ? totalsResp.Support.TicketReplies : 0,
+            job.ExportAnnouncements ? totalsResp.Content.Announcements : 0,
+            job.ExportDownloads ? totalsResp.Content.Downloads : 0,
+            job.ExportNetworkIssues ? totalsResp.Support.NetworkIssues : 0));
+        job.RecordHeartbeat(_clock.UtcNow);
+        await _context.SaveChangesAsync(ct);
 
-        // 2. Run each entity kind's importer in dependency order:
-        //    Clients first (invoices/services/domains/tickets reference them)
-        if (job.ExportClients)
+        // 2. Run each selected entity kind's importer in the order MigrationImportOrder names.
+        foreach (var importer in _importers)
         {
-            await clientsImporter.ImportAsync(job, ct);
+            if (job.Includes(importer.EntityType))
+            {
+                await importer.ImportAsync(job, ct);
+            }
         }
 
-        if (job.ExportProducts)
-        {
-            await productsImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportInvoices)
-        {
-            await invoicesImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportServices)
-        {
-            await servicesImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportDomains)
-        {
-            await domainsImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportTickets)
-        {
-            await ticketsImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportOrders)
-        {
-            await ordersImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportTransactions)
-        {
-            await transactionsImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportQuotes)
-        {
-            await quotesImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportKnowledgebase)
-        {
-            await knowledgebaseImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportContacts)
-        {
-            await contactsImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportTicketReplies)
-        {
-            await ticketRepliesImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportAnnouncements)
-        {
-            await announcementsImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportDownloads)
-        {
-            await downloadsImporter.ImportAsync(job, ct);
-        }
-
-        if (job.ExportNetworkIssues)
-        {
-            await networkIssuesImporter.ImportAsync(job, ct);
-        }
-
-        job.Complete();
-        await uow.SaveChangesAsync(ct);
-        logger.LogInformation("Migration job {JobId} completed successfully.", jobId);
+        job.Complete(_clock.UtcNow);
+        await _context.SaveChangesAsync(ct);
+        _logger.LogInformation("Migration job {JobId} completed successfully.", jobId);
     }
 }

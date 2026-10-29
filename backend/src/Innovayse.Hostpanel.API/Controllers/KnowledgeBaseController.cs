@@ -6,10 +6,9 @@ using Innovayse.Hostpanel.Application.Support.Commands.PublishKbArticle;
 using Innovayse.Hostpanel.Application.Support.Commands.UpdateKbArticle;
 using Innovayse.Hostpanel.Application.Support.Commands.UpdateKbCategory;
 using Innovayse.Hostpanel.Application.Support.Common;
-using Innovayse.Hostpanel.Application.Support.Queries.GetKbArticle;
 using Innovayse.Hostpanel.Application.Support.Queries.GetPublishedKbArticle;
-using Innovayse.Hostpanel.Application.Support.Queries.ListKbArticles;
-using Innovayse.Hostpanel.Application.Support.Queries.ListKbCategories;
+using Innovayse.Hostpanel.Application.Support.Queries.ListPublishedKbArticles;
+using Innovayse.Hostpanel.Application.Support.Queries.ListPublishedKbCategories;
 using Innovayse.Hostpanel.Shared.Authorization;
 using Innovayse.Hostpanel.Shared.Controllers;
 using Innovayse.Hostpanel.Shared.Models;
@@ -29,6 +28,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 /// </remarks>
 [Route("api/knowledgebase")]
 [AllowAnonymous]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class KnowledgeBaseController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -41,14 +41,37 @@ public sealed class KnowledgeBaseController : BaseApiController
         _bus = bus;
     }
 
-    /// <summary>Returns all published knowledge base articles.</summary>
+    /// <summary>Returns the categories of the published knowledge base articles, each with its published article count.</summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the published articles.</returns>
-    [HttpGet]
-    [ProducesResponseType(typeof(IReadOnlyList<KbArticleDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> ListPublishedAsync(CancellationToken ct)
+    /// <returns>
+    /// 200 with the categories, ordered by name;
+    /// 429 when the rate limit is hit.
+    /// </returns>
+    [HttpGet("categories")]
+    [ProducesResponseType(typeof(IReadOnlyList<PublishedKbCategoryDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListPublishedCategoriesAsync(CancellationToken ct)
     {
-        var outcome = await _bus.InvokeAsync<Result<IReadOnlyList<KbArticleDto>>>(new ListKbArticlesQuery(true), ct);
+        var outcome = await _bus.InvokeAsync<Result<IReadOnlyList<PublishedKbCategoryDto>>>(
+            new ListPublishedKbCategoriesQuery(), ct);
+        return HandleResult(outcome);
+    }
+
+    /// <summary>
+    /// Returns one page of published knowledge base articles, filtered by category and search term: title,
+    /// plain-text excerpt and category of each, never the body.
+    /// </summary>
+    /// <param name="query">Category, search term and paging, bound from the query string.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// 200 with the page; 400 with <c>VALIDATION_ERROR</c> when the page or page size is out of range;
+    /// 429 when the rate limit is hit.
+    /// </returns>
+    [HttpGet("articles")]
+    [ProducesResponseType(typeof(PaginatedList<KbArticleSummaryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ListPublishedPageAsync([FromQuery] ListPublishedKbArticlesQuery query, CancellationToken ct)
+    {
+        var outcome = await _bus.InvokeAsync<Result<PaginatedList<KbArticleSummaryDto>>>(query, ct);
         return HandleResult(outcome);
     }
 
@@ -56,14 +79,17 @@ public sealed class KnowledgeBaseController : BaseApiController
     /// <param name="id">Article primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 200 with the article; 400 when the id names no row or names an unpublished draft -- the
-    /// two are answered alike so an anonymous caller cannot map the unpublished backlog by id.
+    /// 200 with the article; 404 with <c>KBARTICLE_NOT_FOUND</c> when the id names no row or names an unpublished draft: the
+    /// two are answered alike so an anonymous caller cannot map the unpublished backlog by id; 400 when the request is refused;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpGet("{id:int}")]
-    [ProducesResponseType(typeof(KbArticleDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PublishedKbArticleDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetPublishedByIdAsync(int id, CancellationToken ct)
     {
-        var outcome = await _bus.InvokeAsync<Result<KbArticleDto>>(new GetPublishedKbArticleQuery(id), ct);
+        var outcome = await _bus.InvokeAsync<Result<PublishedKbArticleDto>>(new GetPublishedKbArticleQuery(id), ct);
         return HandleResult(outcome);
     }
 }

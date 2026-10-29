@@ -1,13 +1,13 @@
 namespace Innovayse.Hostpanel.Shared.Infrastructure;
 
 /// <summary>
-/// Thrown by <c>IUnitOfWork.SaveChangesAsync</c> when an aggregate was modified by another writer
+/// Thrown by <c>IHostpanelDbContext.SaveChangesAsync</c> when an aggregate was modified by another writer
 /// between the time a handler read it and the time it tried to save.
 /// </summary>
 /// <remarks>
 /// <para>
 /// A framework-level signal, not a business refusal: the Application layer must not reference EF
-/// Core, so Infrastructure's <c>IUnitOfWork</c> implementation is the only place allowed to know
+/// Core, so Infrastructure's DbContext is the only place allowed to know
 /// the underlying cause was an optimistic-concurrency conflict, and it translates the real
 /// ORM-specific exception to this persistence-agnostic type. It lives in <c>Shared/</c> rather
 /// than in Application for the same reason: it crosses from Infrastructure to the API's own
@@ -18,7 +18,7 @@ namespace Innovayse.Hostpanel.Shared.Infrastructure;
 /// This is why it is not a <c>Result.FailureCode</c> the way every business refusal on this
 /// platform is: a handler cannot see the conflict coming to decide on a code for it, because the
 /// conflict is only detected inside the very <c>SaveChangesAsync</c> call that already assumed
-/// success. Retrying is the caller's own to do -- the row has since changed underneath them, and
+/// success. Retrying is the caller's own to do: the row has since changed underneath them, and
 /// nothing here decides that for them.
 /// </para>
 /// </remarks>

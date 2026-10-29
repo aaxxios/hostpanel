@@ -2,9 +2,10 @@ using Innovayse.Hostpanel.Domain.Services.Events;
 using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Provisioning.Events;
+
 /// <summary>
 /// Handles <see cref="ClientServiceCreatedEvent"/>.
-/// Auto-provisioning is disabled — services stay in Pending status until
+/// Auto-provisioning is disabled: services stay in Pending status until
 /// the client completes the setup wizard, which triggers provisioning explicitly.
 /// </summary>
 public sealed class ClientServiceCreatedHandler
@@ -28,7 +29,7 @@ public sealed class ClientServiceCreatedHandler
     public Task HandleAsync(ClientServiceCreatedEvent evt, CancellationToken ct)
     {
         _logger.LogInformation(
-            "Service {ServiceId} created for client {ClientId}, product {ProductId} — awaiting client setup",
+            "Service {ServiceId} created for client {ClientId}, product {ProductId}, awaiting client setup",
             evt.ServiceId, evt.ClientId, evt.ProductId);
         return Task.CompletedTask;
     }

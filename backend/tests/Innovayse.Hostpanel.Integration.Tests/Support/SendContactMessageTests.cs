@@ -1,29 +1,25 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Common.Settings;
 using Innovayse.Hostpanel.Application.Support.Commands.SendContactMessage;
-using Innovayse.Hostpanel.Application.Support.Common;
-using Innovayse.Hostpanel.Domain.Notifications;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Domain.Notifications.Enums;
+using Innovayse.Hostpanel.Infrastructure.Time;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
 /// <summary>
 /// The public contact form's <c>POST /api/contact</c> route, and
 /// <see cref="SendContactMessageHandler"/> exercised directly against fakes of the two ports it
-/// depends on -- the SMTP relay and the operator's chat -- neither of which this test host can
+/// depends on (the SMTP relay and the operator's chat), neither of which this test host can
 /// reach for real. This is the shape the code review guidance recommends for a port this project
 /// does not own: a fake, not a mock of our own code, and the handler itself is real.
 /// </summary>
 /// <remarks>
-/// Merged from the deleted <c>ContactEndpointTests</c> and <c>SendContactMessageHandlerTests</c>.
 /// The HTTP tests cover the refusal the default test configuration reaches on its own
 /// (<c>CONTACT_NOT_CONFIGURED</c>) and the validator; the handler tests cover the two outcomes
 /// that need a relay to behave in a specific way (accept, or refuse) that no test-tier
@@ -62,12 +58,12 @@ public sealed class SendContactMessageTests(IntegrationTestFactory factory) : IC
     {
         var options = Options.Create(new NotificationOptions { AdminEmail = ContactEmail, ContactEmail = ContactEmail });
         return new SendContactMessageHandler(
-            emailSender, contactNotifier, options, NullLogger<SendContactMessageHandler>.Instance);
+            emailSender, contactNotifier, options, NullLogger<SendContactMessageHandler>.Instance, new SystemClock(TimeProvider.System));
     }
 
     /// <summary>
     /// A well-formed submission on a deployment with no configured enquiry inbox answers 503 with
-    /// <c>CONTACT_NOT_CONFIGURED</c>, never a silent 204 -- the test host configures no
+    /// <c>CONTACT_NOT_CONFIGURED</c>, never a silent 204: the test host configures no
     /// <c>Notifications:ContactEmail</c>, so this is the refusal every submission over HTTP reaches.
     /// </summary>
     [Fact]
@@ -150,7 +146,7 @@ public sealed class SendContactMessageTests(IntegrationTestFactory factory) : IC
     [Fact]
     public async Task RelayRefusal_AnswersContactSendFailedAndSkipsTheChatAsync()
     {
-        var emailSender = new FakeEmailSender { ThrowOnSend = true };
+        var emailSender = new FakeEmailSender { FailWith = EmailSendFailure.RelayUnreachable };
         var contactNotifier = new FakeContactNotifier();
         var handler = BuildHandler(emailSender, contactNotifier);
 
@@ -163,7 +159,7 @@ public sealed class SendContactMessageTests(IntegrationTestFactory factory) : IC
 
     /// <summary>
     /// The chat channel failing does not turn a delivered mail into a refusal: the mail is the
-    /// record the operator's process is built on, and a Telegram outage must not report it lost.
+    /// record the operator's process is built on, and a chat channel outage must not report it lost.
     /// </summary>
     [Fact]
     public async Task ChatOutage_DoesNotFailTheOverallSubmissionAsync()
@@ -176,49 +172,5 @@ public sealed class SendContactMessageTests(IntegrationTestFactory factory) : IC
 
         Assert.True(outcome.IsSuccess);
         Assert.Single(emailSender.Sent);
-    }
-
-    /// <summary>A fake SMTP relay: records what it was asked to send, and can be made to refuse.</summary>
-    private sealed class FakeEmailSender : IEmailSender
-    {
-        /// <summary>Every message the handler asked this fake to send.</summary>
-        public List<EmailMessage> Sent { get; } = [];
-
-        /// <summary>When set, every call throws instead of recording the message.</summary>
-        public bool ThrowOnSend { get; init; }
-
-        /// <inheritdoc/>
-        public Task SendAsync(EmailMessage message, CancellationToken ct)
-        {
-            if (ThrowOnSend)
-            {
-                throw new InvalidOperationException("The fake relay was told to refuse this message.");
-            }
-
-            Sent.Add(message);
-            return Task.CompletedTask;
-        }
-    }
-
-    /// <summary>A fake chat channel: records what it was asked to post, and can be made to fail.</summary>
-    private sealed class FakeContactNotifier : IContactNotifier
-    {
-        /// <summary>Every enquiry this fake was asked to post.</summary>
-        public List<ContactEnquiry> Notified { get; } = [];
-
-        /// <summary>When set, every call throws instead of recording the enquiry.</summary>
-        public bool ThrowOnNotify { get; init; }
-
-        /// <inheritdoc/>
-        public Task NotifyAsync(ContactEnquiry enquiry, CancellationToken ct)
-        {
-            if (ThrowOnNotify)
-            {
-                throw new InvalidOperationException("The fake chat channel was told to fail this post.");
-            }
-
-            Notified.Add(enquiry);
-            return Task.CompletedTask;
-        }
     }
 }

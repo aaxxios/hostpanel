@@ -1,33 +1,29 @@
 /**
  * GET /api/portal/public/settings
  *
- * Returns the `portal.*` settings the storefront needs — the active template, the
+ * Returns the `portal.*` settings the storefront needs: the active template, the
  * operator-uploaded branding (logo, favicon) and the contact/newsletter widget
  * configuration.
  *
  * The key list below has to stay in step with `PortalSettingKeys.Public` in
- * `backend/src/Innovayse.Domain/Settings/PortalSettingKeys.cs`, which is what
+ * `backend/src/Innovayse.Hostpanel.Domain/Settings/PortalSettingKeys.cs`, which is what
  * `GetPublicSettingsHandler` serves. This file cannot import that class, so the two
  * are kept in step by hand; `PUBLIC_PORTAL_SETTING_KEYS` is explicit and a test pins it to the backend set. A key the backend serves but this list omits is dropped
  * here without a trace, and the storefront renders its build-time default as though
  * the operator had never set the value.
  *
- * **Deliberately uncached.** This was a `defineCachedEventHandler` with `maxAge: 60` and
- * `swr: true`, and that combination is what made the admin panel appear broken: an operator
- * uploaded a logo, reloaded the storefront, saw the old one, and had no way to tell whether
- * the setting had saved. Sixty seconds is bad enough; `swr` makes it worse, because the first
- * request after expiry is still answered from the stale entry while the refresh happens behind
- * it -- so the wait is a minute *and then* one more page load.
- *
- * What it bought was one indexed read of a table with a few dozen rows, on a request that is
- * already talking to the same API for the page it is rendering. That is not a trade worth a
- * minute of stale branding. The response still transfers to the browser with the SSR payload,
+ * **Deliberately uncached.** A cache makes the admin panel appear broken: an operator uploads
+ * a logo, reloads the storefront, sees the old one, and has no way to tell whether the
+ * setting saved. With `swr` the first request after expiry is still answered from the stale
+ * entry, so the wait would be the cache lifetime *and then* one more page load. A cache would
+ * save one indexed read of a table with a few dozen rows, on a request that is already
+ * talking to the same API for the page it is rendering. The response still transfers to the browser with the SSR payload,
  * so a visitor makes this call once per page render, not once per component that reads a
  * setting.
  *
  * Two things this deliberately does not do. It never returns the whole settings
  * table: that table holds integration credentials, and this endpoint is
- * unauthenticated. And it never fails the request — a backend that is down, or
+ * unauthenticated. And it never fails the request: a backend that is down, or
  * an older backend with no public settings endpoint at all, yields an empty
  * object so the caller falls back to its environment defaults rather than the
  * site failing to render.

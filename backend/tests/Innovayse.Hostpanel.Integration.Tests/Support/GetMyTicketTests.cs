@@ -1,20 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Support.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
 /// <summary>
 /// <c>GET /api/me/tickets/{id}</c>: a client can read their own ticket; a stranger's ticket and an
-/// id naming no ticket at all both answer 404 with <c>TICKET_NOT_FOUND</c> -- ids here are
-/// sequential, and telling those two apart is itself a way of enumerating them -- and the action
+/// id naming no ticket at all both answer 404 with <c>TICKET_NOT_FOUND</c> (ids here are
+/// sequential, and telling those two apart is itself a way of enumerating them) and the action
 /// is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>MyTicketsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetMyTicketTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -37,6 +33,41 @@ public sealed class GetMyTicketTests(IntegrationTestFactory factory) : IClassFix
         var response = await owner.GetAsync($"/api/me/tickets/{id}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// The client's own ticket, read alone or in the list, carries none of the staff-only fields:
+    /// a staff tag and the staff flag set on it stay out.
+    /// </summary>
+    [Fact]
+    public async Task OwnTicketCarriesNoStaffTagFlagOrAssignmentAsync()
+    {
+        var admin = await SupportTestSeeds.AdminClientAsync(factory);
+        var departmentId = await SupportTestSeeds.CreateDepartmentAsync(admin);
+        var (owner, _) = await SupportTestSeeds.RegisterClientAsync(factory, "get-my-ticket-internals");
+        var createResponse = await owner.PostAsJsonAsync("/api/me/tickets", new
+        {
+            subject = "Help with my account",
+            message = "Something is not working.",
+            departmentId,
+            priority = nameof(TicketPriority.Medium),
+        });
+        var id = int.Parse((await createResponse.Content.ReadAsStringAsync()).Trim());
+        var tag = $"staff-tag-{Guid.NewGuid():N}";
+        (await admin.PostAsJsonAsync($"/api/tickets/{id}/tags", new { tag })).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await admin.PostAsync($"/api/tickets/{id}/toggle-flag", content: null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var single = await owner.GetStringAsync($"/api/me/tickets/{id}");
+        var list = await owner.GetStringAsync("/api/me/tickets");
+
+        foreach (var json in new[] { single, list })
+        {
+            json.Should().NotContain(tag);
+            foreach (var field in new[] { "tags", "isFlagged", "assignedToStaffId", "assignedToStaffName", "feedbackLeftBy", "clientId", "clientName" })
+            {
+                json.Should().NotContain($"\"{field}\"");
+            }
+        }
     }
 
     /// <summary>

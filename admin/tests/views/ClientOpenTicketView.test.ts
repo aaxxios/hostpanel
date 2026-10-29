@@ -1,20 +1,94 @@
 /**
- * Smoke mount test for ClientOpenTicketView: it renders against the real kit and settles on an API refusal.
+ * Tests for ClientOpenTicketView: a failed departments load shows the error state with a Retry and
+ * hides the form until it loads, a refused create shows the API's sentence next to the submit
+ * button, and a created ticket opens its detail page, through the real stores and transport with
+ * `fetch` stubbed.
  */
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import ClientOpenTicketView from '@/views/ClientOpenTicketView.vue'
-import { mountClientView } from '../helpers/clientViews'
+import { ClientSection, clientItemPath } from '@/lib/routes'
+import { json, problem } from '../helpers/fetch'
+import { mountScreen } from '../helpers/mount'
+import { pickOption } from '../helpers/select'
+import { stubRoutes } from '../helpers/routes'
+
+/** Route pattern the view is mounted under. */
+const PATTERN = '/clients/:id/tickets/new'
+
+/** Concrete URL the view is opened at. */
+const URL = '/clients/5/tickets/new'
+
+/** Department list the stubbed API answers with. */
+const DEPARTMENTS = [{ id: 1, name: 'Support', email: 'support@example.test' }]
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('ClientOpenTicketView', () => {
-  it('mounts without throwing', async () => {
-    const wrapper = await mountClientView(ClientOpenTicketView)
+  it('renders the form with its placeholders once the departments are loaded', async () => {
+    stubRoutes({ 'GET /api/tickets/departments': () => json(DEPARTMENTS) })
 
-    expect(wrapper.exists()).toBe(true)
+    const { wrapper } = await mountScreen(ClientOpenTicketView, {}, URL, PATTERN)
+
+    expect(wrapper.find('[data-testid="client-open-ticket-departments-error"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="client-open-ticket-subject"]').attributes('placeholder')).toBe('Ticket subject')
+    expect(wrapper.get('[data-testid="client-open-ticket-message"]').attributes('placeholder')).toBeTruthy()
+    expect(wrapper.find('[data-testid="client-open-ticket-submit"]').exists()).toBe(true)
   })
 
-  it('renders its main action', async () => {
-    const wrapper = await mountClientView(ClientOpenTicketView)
+  it('shows the error state with Retry and no form when the departments fail, then the form after a retry', async () => {
+    let healthy = false
+    const mock = stubRoutes({
+      'GET /api/tickets/departments': () => (healthy ? json(DEPARTMENTS) : problem('Departments unavailable.', 500)),
+    })
 
+    const { wrapper } = await mountScreen(ClientOpenTicketView, {}, URL, PATTERN)
+
+    expect(wrapper.get('[data-testid="client-open-ticket-departments-error"]').text()).toBe('Departments unavailable.')
+    expect(wrapper.find('[data-testid="client-open-ticket-submit"]').exists()).toBe(false)
+
+    healthy = true
+    await wrapper.get('[data-testid="client-open-ticket-departments-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(mock).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[data-testid="client-open-ticket-departments-error"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="client-open-ticket-submit"]').exists()).toBe(true)
+  })
+
+  it('shows the API sentence next to the submit button when the create is refused', async () => {
+    stubRoutes({
+      'GET /api/tickets/departments': () => json(DEPARTMENTS),
+      'POST /api/tickets': () => problem('The client is closed.', 409),
+    })
+    const { wrapper, router } = await mountScreen(ClientOpenTicketView, {}, URL, PATTERN)
+
+    await wrapper.get('[data-testid="client-open-ticket-subject"]').setValue('Help')
+    await pickOption(wrapper, 'client-open-ticket-department', 'Support')
+    await wrapper.get('[data-testid="client-open-ticket-message"]').setValue('Please help.')
+    await wrapper.get('[data-testid="client-open-ticket-submit"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="client-open-ticket-error"]').text()).toBe('The client is closed.')
+    expect(wrapper.find('[data-testid="client-open-ticket-departments-error"]').exists()).toBe(false)
+    expect(router.currentRoute.value.path).toBe(URL)
+  })
+
+  it('opens the new ticket when the create succeeds', async () => {
+    stubRoutes({
+      'GET /api/tickets/departments': () => json(DEPARTMENTS),
+      'POST /api/tickets': () => json(15),
+    })
+    const { wrapper, router } = await mountScreen(ClientOpenTicketView, {}, URL, PATTERN)
+
+    await wrapper.get('[data-testid="client-open-ticket-subject"]').setValue('Help')
+    await pickOption(wrapper, 'client-open-ticket-department', 'Support')
+    await wrapper.get('[data-testid="client-open-ticket-message"]').setValue('Please help.')
+    await wrapper.get('[data-testid="client-open-ticket-submit"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe(clientItemPath('5', ClientSection.Tickets, 15))
   })
 })

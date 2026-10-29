@@ -1,13 +1,11 @@
 /**
  * The operator's logo, in every form a template needs.
  *
- * The only place the light/dark/mark rule lives. Three headers and a footer used to
- * each compute `logoUrl` from `portal.logo` on their own, and none could react to the
- * colour mode; with a dark variant that choice is a rule, and a rule in five files is
- * five bugs.
+ * The only place the light/dark/mark rule lives, so the headers and the footer cannot
+ * disagree about which logo a colour mode shows.
  *
  * A header renders **both** wordmarks ({@link light} and {@link dark}) and lets the
- * `dark:` variant pick — never the mode-aware {@link logo}. Under the `system`
+ * `dark:` variant pick, never the mode-aware {@link logo}. Under the `system`
  * default the server does not know the mode and renders as dark; production Vue does
  * not patch an `src` that disagrees after hydration, so a JavaScript pick would leave
  * a light-device visitor looking at the dark logo. Two images and a class swap cannot
@@ -15,7 +13,7 @@
  * browser after the mode is settled.
  *
  * Every value is `''` when the operator has uploaded nothing, and a template renders
- * its built-in mark and wordmark then — exactly as before this composable existed.
+ * its built-in mark and wordmark then.
  *
  * @returns Reactive logo URLs and the alt text to render them with.
  *
@@ -25,7 +23,12 @@
 import { PortalSettingKey } from '~/constants/portalSettingKey'
 import { pickBrandLogo, pickBrandMark, resolveBrandLogos } from '~/utils/brandLogo'
 
-/** Reads the operator's logo settings and binds them to the colour mode. */
+/**
+ * Reads the operator's logo settings and binds them to the colour mode.
+ *
+ * @returns The light, dark and mode-aware wordmarks, the mark, the alt text and whether any
+ * custom logo is set.
+ */
 export const useBrandLogo = () => {
   const { get } = usePortalSettings()
   const { isDark } = useAppColorMode()
@@ -54,8 +57,8 @@ export const useBrandLogo = () => {
   const logo = computed(() => pickBrandLogo(sources.value, isDark.value))
 
   /**
-   * The wordmark for a surface that is always dark whatever the page mode — the
-   * sign-in pages paint their own `#0a0a0f` — so the light logo would sit on black.
+   * The wordmark for a surface that is always dark whatever the page mode, the
+   * sign-in pages paint their own `#0a0a0f`, so the light logo would sit on black.
    */
   const logoOnDark = computed(() => pair.value.dark)
 
@@ -63,8 +66,8 @@ export const useBrandLogo = () => {
   const mark = computed(() => pickBrandMark(sources.value, isDark.value))
 
   /**
-   * Alt text for either image. The logo *is* the site name; the empty `alt=""` the
-   * headers shipped with told a screen reader the brand was decorative.
+   * Alt text for either image. The logo *is* the site name; an empty `alt=""` would tell a
+   * screen reader the brand is decorative.
    */
   const alt = name
 

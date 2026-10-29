@@ -20,9 +20,9 @@ import type { PortalApp } from '~/types/portalapp'
 /** The signed-in customer the auth stand-in reports. */
 export interface AuroraTestUser {
   /** Given name. */
-  firstname: string
+  firstName: string
   /** Family name. */
-  lastname: string
+  lastName: string
   /** E-mail address. */
   email: string
 }

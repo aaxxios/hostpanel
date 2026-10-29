@@ -1,4 +1,4 @@
-# JSDoc Rules — Innovayse Frontend (Vue / TypeScript)
+# JSDoc rules for the HostPanel frontend (Vue, TypeScript)
 
 ## Rule
 

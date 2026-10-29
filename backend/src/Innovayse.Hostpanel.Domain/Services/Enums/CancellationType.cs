@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Services.Enums;
+
 /// <summary>Specifies when a service cancellation should take effect.</summary>
 public enum CancellationType
 {

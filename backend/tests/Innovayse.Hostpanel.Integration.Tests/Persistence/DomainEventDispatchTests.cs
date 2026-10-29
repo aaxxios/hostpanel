@@ -1,14 +1,12 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Notifications;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Persistence;
 
@@ -18,7 +16,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Persistence;
 /// </summary>
 /// <remarks>
 /// Delivery is asynchronous (Wolverine's local queues), so each test waits for the effect with a
-/// bounded poll on <see cref="FakeEmailSender"/> -- the one port this platform does not own --
+/// bounded poll on <see cref="FakeEmailSender"/> (the one port this platform does not own)
 /// rather than a fixed delay. Nothing else is faked: the entities, the context, the interceptor, the
 /// bus, the handlers and the template rendering are the production ones.
 /// </remarks>
@@ -36,7 +34,7 @@ public sealed class DomainEventDispatchTests(IntegrationTestFactory factory) : I
     /// <returns>The isolated host.</returns>
     private WebApplicationFactory<Program> HostWithFakeRelay(FakeEmailSender emailSender) =>
         factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services => services.AddScoped<IEmailSender>(_ => emailSender)));
+            builder.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(emailSender)));
 
     /// <summary>Polls <paramref name="emailSender"/> until a message to <paramref name="to"/> arrives.</summary>
     /// <param name="emailSender">The fake relay to read.</param>
@@ -68,7 +66,7 @@ public sealed class DomainEventDispatchTests(IntegrationTestFactory factory) : I
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var email = $"dispatch-welcome-{Guid.NewGuid():N}@example.test";
 
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", email);
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", email, DateTimeOffset.UtcNow);
         context.Clients.Add(client);
         await context.SaveChangesAsync(CancellationToken.None);
 
@@ -97,7 +95,8 @@ public sealed class DomainEventDispatchTests(IntegrationTestFactory factory) : I
         context.Departments.Add(department);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var ticket = Ticket.Create(clientId: 1, "Dispatch me", "Please", department.Id, TicketPriority.Medium);
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
+        var ticket = Ticket.Create(clientId, "Dispatch me", "Please", department.Id, TicketPriority.Medium, DateTimeOffset.UtcNow);
         context.Tickets.Add(ticket);
         await context.SaveChangesAsync(CancellationToken.None);
 
@@ -119,7 +118,7 @@ public sealed class DomainEventDispatchTests(IntegrationTestFactory factory) : I
         {
             var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
             using var suppression = scope.ServiceProvider.GetRequiredService<IDomainEventGate>().Suppress();
-            var client = Client.Create($"subject-{Guid.NewGuid():N}", "Grace", "Hopper", suppressedEmail);
+            var client = Client.Create($"subject-{Guid.NewGuid():N}", "Grace", "Hopper", suppressedEmail, DateTimeOffset.UtcNow);
             context.Clients.Add(client);
             await context.SaveChangesAsync(CancellationToken.None);
 
@@ -131,11 +130,70 @@ public sealed class DomainEventDispatchTests(IntegrationTestFactory factory) : I
         using (var scope = host.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-            context.Clients.Add(Client.Create($"subject-{Guid.NewGuid():N}", "Alan", "Turing", markerEmail));
+            context.Clients.Add(Client.Create($"subject-{Guid.NewGuid():N}", "Alan", "Turing", markerEmail, DateTimeOffset.UtcNow));
             await context.SaveChangesAsync(CancellationToken.None);
         }
 
         (await WaitForMailAsync(emailSender, markerEmail)).Should().NotBeNull();
         emailSender.Sent.Should().NotContain(m => m.To == suppressedEmail);
+    }
+
+    /// <summary>
+    /// Events raised by a save inside an explicit transaction that rolls back are never published;
+    /// a later committed save on its own proves the pipeline was running.
+    /// </summary>
+    [Fact]
+    public async Task SavingInARolledBackTransaction_PublishesNothingAsync()
+    {
+        var emailSender = new FakeEmailSender();
+        var host = HostWithFakeRelay(emailSender);
+        var rolledBackEmail = $"dispatch-rolled-back-{Guid.NewGuid():N}@example.test";
+        var markerEmail = $"dispatch-rollback-marker-{Guid.NewGuid():N}@example.test";
+
+        using (var scope = host.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            context.Clients.Add(Client.Create($"subject-{Guid.NewGuid():N}", "Edsger", "Dijkstra", rolledBackEmail, DateTimeOffset.UtcNow));
+            await context.SaveChangesAsync(CancellationToken.None);
+            await transaction.RollbackAsync();
+        }
+
+        using (var scope = host.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            context.Clients.Add(Client.Create($"subject-{Guid.NewGuid():N}", "Barbara", "Liskov", markerEmail, DateTimeOffset.UtcNow));
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        (await WaitForMailAsync(emailSender, markerEmail)).Should().NotBeNull();
+        emailSender.Sent.Should().NotContain(m => m.To == rolledBackEmail);
+    }
+
+    /// <summary>
+    /// Events raised by a save inside an explicit transaction are held until it commits: nothing goes
+    /// out between the save and the commit, and the commit delivers them once.
+    /// </summary>
+    [Fact]
+    public async Task SavingInACommittedTransaction_PublishesOnCommitAsync()
+    {
+        var emailSender = new FakeEmailSender();
+        var host = HostWithFakeRelay(emailSender);
+        var email = $"dispatch-committed-{Guid.NewGuid():N}@example.test";
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        await using (var transaction = await context.Database.BeginTransactionAsync())
+        {
+            context.Clients.Add(Client.Create($"subject-{Guid.NewGuid():N}", "Donald", "Knuth", email, DateTimeOffset.UtcNow));
+            await context.SaveChangesAsync(CancellationToken.None);
+
+            // Saved but not committed: the welcome handler must not have been handed anything yet.
+            emailSender.Sent.Should().NotContain(m => m.To == email);
+            await transaction.CommitAsync();
+        }
+
+        (await WaitForMailAsync(emailSender, email)).Should().NotBeNull("the transaction committed, so its events go out");
+        emailSender.Sent.Count(m => m.To == email).Should().Be(1);
     }
 }

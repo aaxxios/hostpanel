@@ -3,7 +3,7 @@ namespace Innovayse.Providers.Inecobank.Enums;
 /// <summary>
 /// The Inecobank (Armenian Card) <c>getOrderStatusExtended.do</c> <c>orderStatus</c> protocol
 /// codes this gateway maps, as described in the bank's merchant API manual. Only errorCode 0
-/// responses carry a meaningful <c>orderStatus</c> — see <see cref="InecobankPaymentGateway.GetStatusAsync"/>.
+/// responses carry a meaningful <c>orderStatus</c>: see <see cref="InecobankPaymentGateway.GetStatusAsync"/>.
 /// Values not mapped by name here (0, 1, 5) are treated as pending by the gateway's switch.
 /// </summary>
 internal enum InecobankOrderStatusCode

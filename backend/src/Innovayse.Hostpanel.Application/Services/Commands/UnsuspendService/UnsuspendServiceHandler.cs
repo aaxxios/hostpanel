@@ -1,46 +1,75 @@
-using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Provisioning.Common.Enums;
+using Innovayse.Hostpanel.Application.Provisioning.Common;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Services.Commands.UnsuspendService;
-/// <summary>Re-activates a previously suspended client service. Provisioning is handled asynchronously via domain events.</summary>
+
+/// <summary>
+/// Re-activates a suspended client service on its panel, then marks it active on the platform.
+/// </summary>
+/// <remarks>
+/// The state is checked before the panel is asked, so a service the transition would refuse never
+/// reaches the panel. The panel is asked synchronously and its refusal answered, so the platform's
+/// record only changes when the panel agreed; a service with no account or no usable server is still
+/// moved, because there is nowhere upstream to tell.
+/// </remarks>
 public sealed class UnsuspendServiceHandler
 {
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work for persisting changes.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>Sends the operation to the panel the account lives on.</summary>
+    private readonly IHostedAccountOperations _hostedAccounts;
+
+    /// <summary>Reads the current moment.</summary>
+    private readonly IClock _clock;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    /// <param name="uow">Unit of work for persisting changes.</param>
-    public UnsuspendServiceHandler(IHostpanelDbContext context, IUnitOfWork uow)
+    /// <param name="hostedAccounts">Sends the operation to the panel the account lives on.</param>
+    /// <param name="clock">Reads the current moment.</param>
+    public UnsuspendServiceHandler(IHostpanelDbContext context, IHostedAccountOperations hostedAccounts, IClock clock)
     {
         _context = context;
-        _uow = uow;
+        _hostedAccounts = hostedAccounts;
+        _clock = clock;
     }
 
-    /// <summary>
-    /// Handles the command.
-    /// </summary>
+    /// <summary>Handles the command.</summary>
     /// <param name="cmd">The service to unsuspend.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success, or <c>SERVICE_NOT_FOUND</c> when the id names no service.</returns>
+    /// <returns>
+    /// Success, or <c>SERVICE_NOT_FOUND</c> when the id names no service, <c>SERVICE_NOT_SUSPENDED</c> when
+    /// the service is not Suspended, or <c>SERVICE_UNSUSPEND_UPSTREAM_FAILED</c> when the panel refuses.
+    /// </returns>
     public async Task<Result> HandleAsync(UnsuspendServiceCommand cmd, CancellationToken ct)
     {
-        // Was IClientServiceRepository.FindByIdAsync. Tracked, not AsNoTracking: the service is
-        // mutated and saved below.
+        // Tracked, not AsNoTracking: the service is mutated and saved below.
         var service = await _context.ClientServices.FirstOrDefaultAsync(s => s.Id == cmd.ServiceId, ct);
         if (service is null)
         {
             return Result.FailureCode(HostpanelErrorCodes.SERVICE_NOT_FOUND);
         }
 
-        service.Unsuspend();
-        await _uow.SaveChangesAsync(ct);
+        if (!service.CanUnsuspend)
+        {
+            return Result.FailureCode(HostpanelErrorCodes.SERVICE_NOT_SUSPENDED);
+        }
+
+        var outcome = await _hostedAccounts.UnsuspendAsync(
+            new HostedAccountUnsuspension(HostedAccountTarget.Of(service)), ct);
+        if (outcome is HostedAccountOutcome.Failed)
+        {
+            return Result.FailureCode(HostpanelErrorCodes.SERVICE_UNSUSPEND_UPSTREAM_FAILED);
+        }
+
+        // The panel was asked above and its failure answered, so the event that would ask again is skipped.
+        service.Unsuspend(_clock.UtcNow, hostingAlreadyUpdated: true);
+
+        await _context.SaveChangesAsync(ct);
         return Result.Success();
     }
 }

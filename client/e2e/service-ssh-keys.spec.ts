@@ -5,6 +5,7 @@
 import { expect, test } from './support/test'
 import { SERVICE_MANAGED, SSH_ACCESS, SSH_PUBLIC_KEY } from './support/fixtures.mjs'
 import { resetStub, scriptStub, signIn, stubRequests, waitForHydration } from './support/helpers'
+import { HttpMethod } from '../types/httpmethod'
 
 /** The SSH keys collection of the managed service, as the backend path reads. */
 const KEYS_PATH = `/api/me/services/${SERVICE_MANAGED.id}/ssh/keys`
@@ -65,7 +66,7 @@ test('a private key is refused in the browser and never sent', async ({ page, re
 })
 
 test('the API refusal is shown in the reader\'s language, as the API wrote it', async ({ page, request }) => {
-  await scriptStub(request, { method: 'POST', path: KEYS_PATH, status: 503, code: 'SSH_SERVER_UNAVAILABLE', detail: 'The hosting server could not be reached. Please try again later.' })
+  await scriptStub(request, { method: HttpMethod.Post, path: KEYS_PATH, status: 503, code: 'SSH_SERVER_UNAVAILABLE', detail: 'The hosting server could not be reached. Please try again later.' })
   await openSshTab(page)
 
   await page.getByTestId('service-ssh-public-key').fill(SSH_PUBLIC_KEY)

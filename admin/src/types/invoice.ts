@@ -18,16 +18,6 @@ export interface InvoiceItem {
   quantity: number
   /** Line total (unitPrice x quantity). */
   amount: number
-
-  /**
-   * BUG — read by `InvoiceDetailView`'s "Taxed" column, but `InvoiceItemDto` has no such
-   * field, so the column has always rendered "No" for every line regardless of tax.
-   *
-   * Declared optional so the type states what actually arrives (`undefined`) instead of
-   * promising a boolean. Whether tax is per-line or invoice-wide (`Invoice.taxRate`) is a
-   * product decision; nothing here can infer it.
-   */
-  taxed?: boolean
 }
 
 /** Payment, refund, or credit transaction recorded against an invoice. */
@@ -50,64 +40,96 @@ export interface InvoiceTransaction {
   notes?: string
 }
 
-/** Represents an invoice. */
+/** The dates of one invoice. */
+export interface InvoiceDates {
+  /** ISO 8601 invoice date. */
+  invoiceDate: string
+  /** ISO 8601 due date. */
+  dueDate: string
+  /** ISO 8601 creation timestamp. */
+  createdAt: string
+  /** ISO 8601 payment timestamp, null when never paid. */
+  paidAt: string | null
+}
+
+/** The money figures of one invoice, in the invoice's own currency. */
+export interface InvoiceAmounts {
+  /** Sub-total before tax and credit. */
+  subTotal: number
+  /** Credit applied to the invoice. */
+  credit: number
+  /** Computed tax amount. */
+  tax: number
+  /** Tax rate percentage. */
+  taxRate: number
+  /** Total amount due. */
+  total: number
+}
+
+/** How one invoice is, or is to be, paid. */
+export interface InvoicePayment {
+  /** Payment method label, null when none is set. */
+  method: string | null
+  /** Gateway transaction reference, null while unpaid. */
+  gatewayTransactionId: string | null
+}
+
+/** One invoice as the detail screen reads it (`GET /api/billing/{id}`). */
+export interface InvoiceDetail {
+  /** Unique invoice identifier. */
+  id: number
+  /** Associated client identifier. */
+  clientId: number
+  /** Display name of the owning client; every invoice has one, since its client cannot be deleted. */
+  clientName: string
+  /** Invoice status (Draft, Unpaid, Paid, Overdue, Cancelled, Refunded, Collections, PaymentPending). */
+  status: string
+  /** ISO 4217 code of the currency the invoice is issued in. */
+  currency: string
+  /** Invoice, due, creation and payment dates. */
+  dates: InvoiceDates
+  /** Sub-total, credit, tax, tax rate and total. */
+  amounts: InvoiceAmounts
+  /** What is still owed, as the API computes it: the total less the payments recorded; 0 for Paid, Refunded or Cancelled. */
+  amountDue: number
+  /** Payment method and gateway reference. */
+  payment: InvoicePayment
+  /** Optional admin notes. */
+  notes: string | null
+  /** Line items on the invoice. */
+  items: InvoiceItem[]
+  /** Payment/refund/credit transactions. */
+  transactions: InvoiceTransaction[]
+}
+
+/** One row of an invoice list (`GET /api/billing`). */
 export interface Invoice {
   /** Unique invoice identifier. */
   id: number
   /** Associated client identifier. */
   clientId: number
+  /** Display name of the owning client; every invoice has one, since its client cannot be deleted. */
+  clientName: string
   /** Invoice status (Draft, Unpaid, Paid, Overdue, Cancelled, Refunded, Collections, PaymentPending). */
   status: string
   /** ISO 8601 due date. */
   dueDate: string
   /** ISO 8601 creation timestamp. */
   createdAt: string
-  /** Total amount due. */
-  total: number
-  /** Optional admin notes. */
-  notes?: string
   /** ISO 8601 invoice date. */
   invoiceDate: string
-  /** Payment method label. */
-  paymentMethod?: string
-  /** Tax rate percentage. */
-  taxRate: number
-  /** Computed tax amount. */
-  tax: number
-  /** Sub-total before tax and credit. */
-  subTotal: number
-  /** Credit applied to the invoice. */
-  credit: number
   /** ISO 8601 payment timestamp, if paid. */
   paidAt?: string
-  /** Gateway transaction reference, if paid. */
-  gatewayTransactionId?: string
-  /** Display name of the owning client; null when unresolved. */
-  clientName: string | null
+  /** Total amount due. */
+  total: number
+  /** Sub-total before tax and credit. */
+  subTotal: number
+  /** Computed tax amount. */
+  tax: number
+  /** Payment method label. */
+  paymentMethod?: string
   /** ISO 4217 code of the currency the invoice is issued in; absent on an answer that does not carry it. */
   currency?: string
-  /** Line items on the invoice. */
-  items: InvoiceItem[]
-  /** Payment/refund/credit transactions. */
-  transactions: InvoiceTransaction[]
-
-  /**
-   * BUG — read by `InvoiceDetailView` (the "Payment Method" summary field and the payment
-   * panel), but `InvoiceDto` sends no `gateway`. Both call sites therefore show their
-   * fallback — '' and 'Not set' — on every invoice, paid or not.
-   *
-   * The API's nearest equivalents are {@link Invoice.paymentMethod} and
-   * {@link Invoice.gatewayTransactionId}. Switching to one of those changes what the screen
-   * displays, so it is left as-is and recorded here.
-   */
-  gateway?: string
-
-  /**
-   * BUG — read by `InvoicesListView`'s "Last Updated" column as
-   * `invoice.updatedAt || invoice.createdAt`, but `InvoiceListItemDto` has no `updatedAt`.
-   * The column has always shown the creation date.
-   */
-  updatedAt?: string
 }
 
 /** Invoice count and total for a single status. */
@@ -191,15 +213,13 @@ export interface InvoicePaymentPayload {
 
 /** Body of `POST /billing/{id}/refund`. */
 export interface InvoiceRefundPayload {
-  /** Reference of the payment being refunded. */
-  transactionId: string
-  /** Amount to refund. */
+  /** Amount to refund; greater than 0 and at most what is still refundable. */
   amount: number
-  /** Kind of refund the API understands. */
-  refundType: string
-  /** Gateway the refund goes through. */
-  gateway: string
-  /** Reference of the refund itself, when the gateway issued one. */
+  /** Kind of refund. */
+  refundType: InvoiceRefundType
+  /** Payment method recorded for a Manual refund; left off for the other kinds. */
+  gateway?: string
+  /** External reference of a Manual refund. */
   refundTransactionId?: string
   /** Admin notes, when any. */
   notes?: string

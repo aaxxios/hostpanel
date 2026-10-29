@@ -1,10 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json.Serialization;
+using Innovayse.Hostpanel.Application.Common;
+using Innovayse.Hostpanel.Shared.Models;
 
 namespace Innovayse.Hostpanel.Infrastructure.Auth;
+
 /// <summary>
-/// The SSO's service API, as this product uses it.
+/// The sign-on provider's service API, as this product uses it.
 ///
 /// <para>
 /// Authenticated with the shared service key rather than a user's token: these calls
@@ -14,26 +16,26 @@ namespace Innovayse.Hostpanel.Infrastructure.Auth;
 /// </para>
 ///
 /// <para>
-/// A missing account comes back as null. Anything else — the SSO refusing the key, being
-/// unreachable, or failing — throws. That distinction is the whole point of this class:
+/// A missing account comes back as null. Anything else, the sign-on provider refusing the key, being
+/// unreachable, or failing, throws. That distinction is the whole point of this class:
 /// a lookup that could not happen must never be reported as "no such person", because
 /// the caller would act on it as a deleted account.
 /// </para>
 /// </summary>
 public sealed class SsoServiceClient
 {
-    /// <summary>The http this class uses.</summary>
+    /// <summary>The sign-on provider's service API client, base address and resilience profile set at registration.</summary>
     private readonly HttpClient _http;
 
     /// <summary>Initializes a new instance of the <see cref="SsoServiceClient"/> class.</summary>
-    /// <param name="http">The http this class uses.</param>
+    /// <param name="http">The sign-on provider's service API client, base address and resilience profile set at registration.</param>
     public SsoServiceClient(HttpClient http)
     {
         _http = http;
     }
 
-    /// <summary>The account with this subject, or null if the SSO has no such account.</summary>
-    /// <param name="subject">The SSO subject to look up.</param>
+    /// <summary>The account with this subject, or null if the sign-on provider has no such account.</summary>
+    /// <param name="subject">The sign-on provider subject to look up.</param>
     /// <param name="ct">Cancels the request.</param>
     /// <returns>The account, or null.</returns>
     public async Task<SsoAccount?> GetByIdAsync(string subject, CancellationToken ct)
@@ -45,7 +47,7 @@ public sealed class SsoServiceClient
         }
 
         response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<SsoUserResponse>(ct);
+        var body = await response.Content.ReadFromJsonAsync<SsoUserWire>(ct);
         return body is null ? null : new SsoAccount(subject, body.Email, body.FirstName, body.LastName, body.TwoFactorEnabled);
     }
 
@@ -64,7 +66,7 @@ public sealed class SsoServiceClient
 
         response.EnsureSuccessStatusCode();
 
-        var found = await response.Content.ReadFromJsonAsync<SsoLookupResponse>(ct);
+        var found = await response.Content.ReadFromJsonAsync<SsoLookupWire>(ct);
         if (found is null || string.IsNullOrEmpty(found.UserId))
         {
             return null;
@@ -92,7 +94,7 @@ public sealed class SsoServiceClient
             "api/service/users/batch", new { ids = subjects }, ct);
         response.EnsureSuccessStatusCode();
 
-        var body = await response.Content.ReadFromJsonAsync<SsoBatchResponse>(ct);
+        var body = await response.Content.ReadFromJsonAsync<SsoBatchWire>(ct);
         if (body is null)
         {
             return new Dictionary<string, SsoAccount>();
@@ -104,70 +106,32 @@ public sealed class SsoServiceClient
     }
 
     /// <summary>One page of accounts, with the unpaged total.</summary>
-    public async Task<(IReadOnlyList<SsoAccount> Items, int Total)> ListAsync(
-        string? search, int page, int pageSize, CancellationToken ct)
+    /// <param name="query">The search text and the page to read.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The page of accounts with the total across all pages.</returns>
+    public async Task<PaginatedList<SsoAccount>> ListAsync(IdentityAccountListQuery query, CancellationToken ct)
     {
-        var query = $"api/service/users?page={page}&pageSize={pageSize}";
-        if (!string.IsNullOrWhiteSpace(search))
+        ArgumentNullException.ThrowIfNull(query);
+
+        var path = $"api/service/users?page={query.Page}&pageSize={query.PageSize}";
+        if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            query += $"&search={Uri.EscapeDataString(search)}";
+            path += $"&search={Uri.EscapeDataString(query.Search)}";
         }
 
-        using var response = await _http.GetAsync(query, ct);
+        using var response = await _http.GetAsync(path, ct);
         response.EnsureSuccessStatusCode();
 
-        var body = await response.Content.ReadFromJsonAsync<SsoListResponse>(ct);
+        var body = await response.Content.ReadFromJsonAsync<SsoListWire>(ct);
         if (body is null)
         {
-            return ([], 0);
+            return new PaginatedList<SsoAccount>([], 0, query.Page, query.PageSize);
         }
 
-        return (body.Users.Select(u => new SsoAccount(u.Id, u.Email, u.FirstName, u.LastName, u.TwoFactorEnabled)).ToList(),
-                body.Total);
+        return new PaginatedList<SsoAccount>(
+            body.Users.Select(u => new SsoAccount(u.Id, u.Email, u.FirstName, u.LastName, u.TwoFactorEnabled)).ToList(),
+            body.Total,
+            query.Page,
+            query.PageSize);
     }
-
-    /// <summary>An account as the SSO describes it.</summary>
-    public sealed record SsoAccount(
-        string Subject, string Email, string FirstName, string LastName, bool TwoFactorEnabled);
-
-    /// <summary>Wire shape of one account answered by the SSO user endpoint.</summary>
-    /// <param name="Email">The address the person signs in with.</param>
-    /// <param name="FirstName">Given name.</param>
-    /// <param name="LastName">Family name.</param>
-    /// <param name="TwoFactorEnabled">Whether a second factor is set up on the account.</param>
-    private sealed record SsoUserResponse(
-        [property: JsonPropertyName("email")] string Email,
-        [property: JsonPropertyName("firstName")] string FirstName,
-        [property: JsonPropertyName("lastName")] string LastName,
-        [property: JsonPropertyName("twoFactorEnabled")] bool TwoFactorEnabled);
-
-    /// <summary>Wire shape of the SSO answer to an email lookup.</summary>
-    /// <param name="UserId">The SSO subject that owns the looked-up address.</param>
-    private sealed record SsoLookupResponse(
-        [property: JsonPropertyName("userId")] string UserId);
-
-    /// <summary>Wire shape of the SSO answer to a batch lookup by subject.</summary>
-    /// <param name="Users">The accounts the SSO knows among the requested subjects.</param>
-    private sealed record SsoBatchResponse(
-        [property: JsonPropertyName("users")] List<SsoListItem> Users);
-
-    /// <summary>Wire shape of one page of the SSO account listing.</summary>
-    /// <param name="Total">Number of matching accounts before paging.</param>
-    /// <param name="Users">The accounts on the requested page.</param>
-    private sealed record SsoListResponse(
-        [property: JsonPropertyName("total")] int Total,
-        [property: JsonPropertyName("users")] List<SsoListItem> Users);
-
-    /// <summary>Wire shape of one account inside a batch or list answer.</summary>
-    /// <param name="Id">The SSO subject of the account.</param>
-    /// <param name="Email">The address the person signs in with.</param>
-    /// <param name="FirstName">Given name.</param>
-    /// <param name="LastName">Family name.</param>
-    /// <param name="TwoFactorEnabled">Whether a second factor is set up on the account.</param>
-    private sealed record SsoListItem(
-        [property: JsonPropertyName("id")] string Id,
-        [property: JsonPropertyName("email")] string Email,
-        [property: JsonPropertyName("firstName")] string FirstName,
-        [property: JsonPropertyName("lastName")] string LastName,
-        [property: JsonPropertyName("twoFactorEnabled")] bool TwoFactorEnabled);
 }

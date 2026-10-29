@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.UpdateInvoiceOptions;
 /// <param name="InvoiceDate">The new invoice issue date (UTC).</param>
 /// <param name="DueDate">The new payment due date (UTC).</param>
 /// <param name="PaymentMethod">Preferred payment method; null to clear.</param>
-/// <param name="TaxRate">Tax rate percentage (0–100).</param>
+/// <param name="TaxRate">Tax rate percentage (0 to 100).</param>
 public sealed record UpdateInvoiceOptionsCommand(
     int InvoiceId,
     DateTimeOffset InvoiceDate,

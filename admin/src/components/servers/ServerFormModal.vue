@@ -12,6 +12,7 @@ import { useI18n } from 'vue-i18n'
 import { MODULE_LABELS, ServerModule } from '@/types/server'
 import type { ServerDto, ServerPayload } from '@/types/server'
 import type { UiTabItem } from '@/utils/ui/tabs'
+import StoredSecretState from '@/components/servers/StoredSecretState.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
@@ -72,7 +73,7 @@ const ServerFormTab = {
 /** One of the dialog's tabs. */
 type ServerFormTab = (typeof ServerFormTab)[keyof typeof ServerFormTab]
 
-/** Keys of the nameserver hostname and IP fields of the form (`ns1Hostname` ... `ns5Ip`). */
+/** Keys of the nameserver hostname and IP fields of the form (`ns1Hostname` to `ns5Ip`). */
 type NameserverKey = `ns${1 | 2 | 3 | 4 | 5}${'Hostname' | 'Ip'}`
 
 /** The form as the inputs hold it: text fields are strings (empty = not set), the rest as in the payload. */
@@ -107,6 +108,12 @@ interface ServerFormState {
   apiToken: string
   /** Access hash (empty keeps the stored one when editing). */
   accessHash: string
+  /** Remove the stored API password on save. */
+  clearPassword: boolean
+  /** Remove the stored API token on save. */
+  clearApiToken: boolean
+  /** Remove the stored access hash on save. */
+  clearAccessHash: boolean
   /** Whether SSL is used for API connections. */
   useSSL: boolean
   /** Nameserver hostnames and IPs. */
@@ -140,32 +147,35 @@ const nameserverRows = computed<{ index: number; label: string; hostKey: Nameser
  */
 const initialForm = (s: ServerDto | null): ServerFormState => ({
   name: s?.name ?? '',
-  hostname: s?.hostname ?? '',
-  ipAddress: s?.ipAddress ?? '',
-  assignedIpAddresses: s?.assignedIpAddresses ?? '',
-  monthlyCost: s?.monthlyCost ?? 0,
-  datacenter: s?.datacenter ?? '',
-  maxAccounts: s?.maxAccounts ?? null,
-  serverStatusAddress: s?.serverStatusAddress ?? '',
-  isDisabled: s?.isDisabled ?? false,
-  isDefault: s?.isDefault ?? false,
+  hostname: s?.endpoint.hostname ?? '',
+  ipAddress: s?.endpoint.ipAddress ?? '',
+  assignedIpAddresses: s?.endpoint.assignedIpAddresses ?? '',
+  monthlyCost: s?.hosting.monthlyCost ?? 0,
+  datacenter: s?.hosting.datacenter ?? '',
+  maxAccounts: s?.limits.maxAccounts ?? null,
+  serverStatusAddress: s?.hosting.serverStatusAddress ?? '',
+  isDisabled: s?.limits.isDisabled ?? false,
+  isDefault: s?.limits.isDefault ?? false,
   module: s?.module ?? ServerModule.Cwp7,
   username: s?.username ?? '',
   password: '',
   apiToken: '',
   accessHash: '',
-  useSSL: s?.useSSL ?? true,
+  clearPassword: false,
+  clearApiToken: false,
+  clearAccessHash: false,
+  useSSL: s?.endpoint.useSSL ?? true,
   nameservers: {
-    ns1Hostname: s?.ns1Hostname ?? '',
-    ns1Ip: s?.ns1Ip ?? '',
-    ns2Hostname: s?.ns2Hostname ?? '',
-    ns2Ip: s?.ns2Ip ?? '',
-    ns3Hostname: s?.ns3Hostname ?? '',
-    ns3Ip: s?.ns3Ip ?? '',
-    ns4Hostname: s?.ns4Hostname ?? '',
-    ns4Ip: s?.ns4Ip ?? '',
-    ns5Hostname: s?.ns5Hostname ?? '',
-    ns5Ip: s?.ns5Ip ?? '',
+    ns1Hostname: s?.nameServers.ns1Hostname ?? '',
+    ns1Ip: s?.nameServers.ns1Ip ?? '',
+    ns2Hostname: s?.nameServers.ns2Hostname ?? '',
+    ns2Ip: s?.nameServers.ns2Ip ?? '',
+    ns3Hostname: s?.nameServers.ns3Hostname ?? '',
+    ns3Ip: s?.nameServers.ns3Ip ?? '',
+    ns4Hostname: s?.nameServers.ns4Hostname ?? '',
+    ns4Ip: s?.nameServers.ns4Ip ?? '',
+    ns5Hostname: s?.nameServers.ns5Hostname ?? '',
+    ns5Ip: s?.nameServers.ns5Ip ?? '',
   },
 })
 
@@ -182,7 +192,7 @@ watch(() => props.server, (s) => {
 
 // A refused save may concern a field on a hidden tab; show the tab of the first refused field.
 watch(() => props.fieldErrors, (errors) => {
-  if (errors.name || errors.hostname) {
+  if (errors.name || errors['endpoint.hostname']) {
     tab.value = ServerFormTab.General
   } else if (errors.username) {
     tab.value = ServerFormTab.Details
@@ -202,31 +212,46 @@ const handleSubmit = (): void => {
   const ns = form.nameservers
   emit('saved', {
     name: form.name,
-    hostname: form.hostname,
-    ipAddress: orNull(form.ipAddress),
-    assignedIpAddresses: orNull(form.assignedIpAddresses),
+    endpoint: {
+      hostname: form.hostname,
+      ipAddress: orNull(form.ipAddress),
+      assignedIpAddresses: orNull(form.assignedIpAddresses),
+      useSSL: form.useSSL,
+    },
     module: form.module,
     username: form.username,
-    password: orNull(form.password),
-    apiToken: orNull(form.apiToken),
-    accessHash: orNull(form.accessHash),
-    useSSL: form.useSSL,
-    maxAccounts: form.maxAccounts,
-    isDefault: form.isDefault,
-    isDisabled: form.isDisabled,
-    monthlyCost: form.monthlyCost,
-    datacenter: orNull(form.datacenter),
-    serverStatusAddress: orNull(form.serverStatusAddress),
-    ns1Hostname: orNull(ns.ns1Hostname),
-    ns1Ip: orNull(ns.ns1Ip),
-    ns2Hostname: orNull(ns.ns2Hostname),
-    ns2Ip: orNull(ns.ns2Ip),
-    ns3Hostname: orNull(ns.ns3Hostname),
-    ns3Ip: orNull(ns.ns3Ip),
-    ns4Hostname: orNull(ns.ns4Hostname),
-    ns4Ip: orNull(ns.ns4Ip),
-    ns5Hostname: orNull(ns.ns5Hostname),
-    ns5Ip: orNull(ns.ns5Ip),
+    credentials: {
+      password: orNull(form.password),
+      apiToken: orNull(form.apiToken),
+      accessHash: orNull(form.accessHash),
+    },
+    clears: {
+      password: form.clearPassword,
+      apiToken: form.clearApiToken,
+      accessHash: form.clearAccessHash,
+    },
+    limits: {
+      maxAccounts: form.maxAccounts,
+      isDefault: form.isDefault,
+      isDisabled: form.isDisabled,
+    },
+    hosting: {
+      datacenter: orNull(form.datacenter),
+      serverStatusAddress: orNull(form.serverStatusAddress),
+      monthlyCost: form.monthlyCost,
+    },
+    nameServers: {
+      ns1Hostname: orNull(ns.ns1Hostname),
+      ns1Ip: orNull(ns.ns1Ip),
+      ns2Hostname: orNull(ns.ns2Hostname),
+      ns2Ip: orNull(ns.ns2Ip),
+      ns3Hostname: orNull(ns.ns3Hostname),
+      ns3Ip: orNull(ns.ns3Ip),
+      ns4Hostname: orNull(ns.ns4Hostname),
+      ns4Ip: orNull(ns.ns4Ip),
+      ns5Hostname: orNull(ns.ns5Hostname),
+      ns5Ip: orNull(ns.ns5Ip),
+    },
   })
 }
 </script>
@@ -267,7 +292,7 @@ const handleSubmit = (): void => {
             <UiField
               :label="t('servers.serverForm.hostname')"
               :hint="t('servers.serverForm.usedForApiConnectionsTo')"
-              :error="props.fieldErrors.hostname"
+              :error="props.fieldErrors['endpoint.hostname']"
               required
             >
               <template #default="{ id, invalid, describedby }">
@@ -285,7 +310,7 @@ const handleSubmit = (): void => {
           </UiGrid>
 
           <UiGrid :columns="2" gap="sm">
-            <UiField :label="t('shared.ipAddress')" :error="props.fieldErrors.ipAddress">
+            <UiField :label="t('shared.ipAddress')" :error="props.fieldErrors['endpoint.ipAddress']">
               <template #default="{ id, invalid }">
                 <UiInput
                   :id="id"
@@ -297,7 +322,7 @@ const handleSubmit = (): void => {
                 />
               </template>
             </UiField>
-            <UiField :label="t('servers.serverForm.monthlyCostUsd')" :error="props.fieldErrors.monthlyCost">
+            <UiField :label="t('servers.serverForm.monthlyCostUsd')" :error="props.fieldErrors['hosting.monthlyCost']">
               <UiNumberInput
                 v-model="form.monthlyCost"
                 :min="0"
@@ -310,7 +335,7 @@ const handleSubmit = (): void => {
 
           <UiField
             :label="`${t('servers.serverForm.assignedIpAddresses')} ${t('servers.serverForm.onePerLine')}`"
-            :error="props.fieldErrors.assignedIpAddresses"
+            :error="props.fieldErrors['endpoint.assignedIpAddresses']"
           >
             <template #default="{ id, invalid }">
               <UiTextarea
@@ -325,7 +350,7 @@ const handleSubmit = (): void => {
           </UiField>
 
           <UiGrid :columns="2" gap="sm">
-            <UiField :label="t('servers.serverForm.datacenterNoc')" :error="props.fieldErrors.datacenter">
+            <UiField :label="t('servers.serverForm.datacenterNoc')" :error="props.fieldErrors['hosting.datacenter']">
               <template #default="{ id, invalid }">
                 <UiInput
                   :id="id"
@@ -337,7 +362,7 @@ const handleSubmit = (): void => {
                 />
               </template>
             </UiField>
-            <UiField :label="t('servers.serverForm.maxAccounts')" :error="props.fieldErrors.maxAccounts">
+            <UiField :label="t('servers.serverForm.maxAccounts')" :error="props.fieldErrors['limits.maxAccounts']">
               <UiNumberInput
                 v-model="form.maxAccounts"
                 :min="1"
@@ -350,7 +375,7 @@ const handleSubmit = (): void => {
           <UiField
             :label="t('servers.serverForm.serverStatusAddress')"
             :hint="t('servers.serverForm.fullPathToServerStatus')"
-            :error="props.fieldErrors.serverStatusAddress"
+            :error="props.fieldErrors['hosting.serverStatusAddress']"
           >
             <template #default="{ id, invalid, describedby }">
               <UiInput
@@ -427,32 +452,52 @@ const handleSubmit = (): void => {
           <UiGrid :columns="2" gap="sm">
             <UiField
               :label="t('servers.serverForm.passwordValue', { value: props.server ? t('servers.serverForm.blankKeep') : '' })"
-              :error="props.fieldErrors.password"
+              :error="props.fieldErrors['credentials.password']"
             >
               <template #default="{ id, invalid }">
-                <UiInput
-                  :id="id"
-                  v-model="form.password"
-                  type="password"
-                  :invalid="invalid"
-                  :placeholder="t('servers.serverForm.secretPlaceholder')"
-                  data-testid="server-form-password"
-                />
+                <UiStack gap="xs">
+                  <UiInput
+                    :id="id"
+                    v-model="form.password"
+                    type="password"
+                    :invalid="invalid"
+                    :placeholder="t('servers.serverForm.secretPlaceholder')"
+                    data-testid="server-form-password"
+                  />
+                  <StoredSecretState
+                    v-if="props.server"
+                    :has-value="props.server.credentials.hasPassword"
+                    :cleared="form.clearPassword"
+                    testid="server-form-password"
+                    @clear="form.clearPassword = true"
+                    @cancel="form.clearPassword = false"
+                  />
+                </UiStack>
               </template>
             </UiField>
             <UiField
               :label="t('servers.serverForm.apiTokenValue', { value: props.server ? t('servers.serverForm.blankKeep') : '' })"
-              :error="props.fieldErrors.apiToken"
+              :error="props.fieldErrors['credentials.apiToken']"
             >
               <template #default="{ id, invalid }">
-                <UiInput
-                  :id="id"
-                  v-model="form.apiToken"
-                  type="password"
-                  :invalid="invalid"
-                  :placeholder="t('servers.serverForm.secretPlaceholder')"
-                  data-testid="server-form-api-token"
-                />
+                <UiStack gap="xs">
+                  <UiInput
+                    :id="id"
+                    v-model="form.apiToken"
+                    type="password"
+                    :invalid="invalid"
+                    :placeholder="t('servers.serverForm.secretPlaceholder')"
+                    data-testid="server-form-api-token"
+                  />
+                  <StoredSecretState
+                    v-if="props.server"
+                    :has-value="props.server.credentials.hasApiToken"
+                    :cleared="form.clearApiToken"
+                    testid="server-form-api-token"
+                    @clear="form.clearApiToken = true"
+                    @cancel="form.clearApiToken = false"
+                  />
+                </UiStack>
               </template>
             </UiField>
           </UiGrid>
@@ -460,19 +505,29 @@ const handleSubmit = (): void => {
           <UiField
             :label="t('servers.serverForm.accessHashValue', { value: props.server ? t('servers.serverForm.blankKeep') : '' })"
             :hint="t('servers.serverForm.usedByCpanelWhmAnd')"
-            :error="props.fieldErrors.accessHash"
+            :error="props.fieldErrors['credentials.accessHash']"
           >
             <template #default="{ id, invalid, describedby }">
-              <UiTextarea
-                :id="id"
-                v-model="form.accessHash"
-                rows="4"
-                :invalid="invalid"
-                :aria-describedby="describedby"
-                :placeholder="t('servers.serverForm.accessHashPlaceholder')"
-                class="font-mono"
-                data-testid="server-form-access-hash"
-              />
+              <UiStack gap="xs">
+                <UiTextarea
+                  :id="id"
+                  v-model="form.accessHash"
+                  rows="4"
+                  :invalid="invalid"
+                  :aria-describedby="describedby"
+                  :placeholder="t('servers.serverForm.accessHashPlaceholder')"
+                  class="font-mono"
+                  data-testid="server-form-access-hash"
+                />
+                <StoredSecretState
+                  v-if="props.server"
+                  :has-value="props.server.credentials.hasAccessHash"
+                  :cleared="form.clearAccessHash"
+                  testid="server-form-access-hash"
+                  @clear="form.clearAccessHash = true"
+                  @cancel="form.clearAccessHash = false"
+                />
+              </UiStack>
             </template>
           </UiField>
 

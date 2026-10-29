@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Plugins;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Plugins;
 /// status, a caller with only the Client role is refused, and the route is closed to a caller
 /// with no credential. This use case refuses nothing once authorized.
 /// </summary>
-/// <remarks>Split out of the deleted <c>PluginsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListPluginsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -32,10 +28,32 @@ public sealed class ListPluginsTests(IntegrationTestFactory factory) : IClassFix
             var row = list!.Single(p => p.GetProperty("id").GetString() == pluginId);
             row.GetProperty("isLoaded").GetBoolean().Should()
                 .BeFalse("installing does not load it -- only a restart does");
+            row.GetProperty("isBuiltIn").GetBoolean().Should().BeFalse("it was uploaded");
         }
         finally
         {
             await client.DeleteAsync($"/api/admin/plugins/{pluginId}");
+        }
+    }
+
+    /// <summary>A plugin in the build output's plugin folder is listed as built-in.</summary>
+    [Fact]
+    public async Task ABuiltInPlugin_IsMarkedBuiltInAsync()
+    {
+        var client = await PluginsTestSeeds.AdminClientAsync(factory);
+        var pluginId = $"test-builtin-{Guid.NewGuid():N}";
+        var builtIn = PluginsTestSeeds.StageBuiltInPlugin(pluginId);
+
+        try
+        {
+            var list = await client.GetFromJsonAsync<List<JsonElement>>("/api/admin/plugins");
+
+            var row = list!.Single(p => p.GetProperty("id").GetString() == pluginId);
+            row.GetProperty("isBuiltIn").GetBoolean().Should().BeTrue();
+        }
+        finally
+        {
+            Directory.Delete(builtIn, recursive: true);
         }
     }
 

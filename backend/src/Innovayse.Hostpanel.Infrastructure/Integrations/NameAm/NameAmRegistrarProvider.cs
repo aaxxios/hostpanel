@@ -1,12 +1,17 @@
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Domains.Common;
+using Innovayse.Hostpanel.Application.Domains.Extensions;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
-using Innovayse.Hostpanel.Domain.Orders;
+using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.NameAm;
+
 /// <summary>
 /// Implements <see cref="IRegistrarProvider"/> using the Name.am JSON REST API.
 /// All operations are dispatched through <see cref="NameAmClient"/>.
@@ -16,23 +21,61 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     /// <summary>The <c>status</c> value Name.am reports for a domain that is live.</summary>
     private const string ActiveDomainStatus = "active";
 
-    /// <summary>The client this class uses.</summary>
+    /// <summary>The behaviour text Name.am gives a registration plan.</summary>
+    private const string RegisterBehavior = "register";
+
+    /// <summary>The behaviour text Name.am gives a transfer plan.</summary>
+    private const string TransferBehavior = "transfer";
+
+    /// <summary>The behaviour text Name.am gives a renewal plan.</summary>
+    private const string RenewBehavior = "renew";
+
+    /// <summary>The cart item type Name.am buys a new registration with.</summary>
+    private const string RegistrationItemType = "domain_registration";
+
+    /// <summary>The cart item type Name.am buys an incoming transfer with.</summary>
+    private const string TransferItemType = "domain_transfer";
+
+    /// <summary>The cart item type Name.am buys a renewal with.</summary>
+    private const string RenewalItemType = "domain_renew";
+
+    /// <summary>The write action Name.am expects on each record of a zone that is replaced as a whole.</summary>
+    private const string CreateRecordAction = "CREATE";
+
+    /// <summary>
+    /// The term of the plan an incoming transfer is bought on. A transfer carries a one year
+    /// extension, so it is bought on the one year transfer plan whatever period the order records.
+    /// </summary>
+    private const int TransferTermYears = 1;
+
+    /// <summary>The currency Name.am prices in, whatever its answer says.</summary>
+    private const string PricingCurrency = "AMD";
+
+    /// <summary>
+    /// Wording in a refusal message that says the name cannot be bought. Name.am sends no error
+    /// code, so the message text is the only signal besides the HTTP status.
+    /// </summary>
+    private static readonly string[] DomainUnavailableMarkers = ["not available", "unavailable", "already registered", "taken"];
+
+    /// <summary>The Name.am API client every registrar call goes through.</summary>
     private readonly NameAmClient _client;
 
-    /// <summary>The logger this class uses.</summary>
+    /// <summary>Records registrar failures and skipped records without putting their detail on the wire.</summary>
     private readonly ILogger<NameAmRegistrarProvider> _logger;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes a new instance of the <see cref="NameAmRegistrarProvider"/> class.</summary>
-    /// <param name="client">The client this class uses.</param>
-    /// <param name="logger">The logger this class uses.</param>
-    public NameAmRegistrarProvider(NameAmClient client, ILogger<NameAmRegistrarProvider> logger)
+    /// <param name="client">The Name.am API client every registrar call goes through.</param>
+    /// <param name="logger">Records registrar failures and skipped records without putting their detail on the wire.</param>
+    /// <param name="clock">The source of the current moment.</param>
+    public NameAmRegistrarProvider(NameAmClient client, ILogger<NameAmRegistrarProvider> logger, IClock clock)
     {
         _client = client;
         _logger = logger;
+        _clock = clock;
     }
-
-    /// <summary>The refusal reason for a change asked of an unconfigured registrar.</summary>
-    private const string NotConfiguredMessage = "Name.am is not configured.";
 
     /// <summary>
     /// The answer to a purchase or a change when the registrar is not configured: a refusal, never
@@ -40,7 +83,15 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     /// not save a change the registrar never made. Domains not held at a registrar never get here:
     /// the handlers skip the registrar for them.
     /// </summary>
-    private static readonly RegistrarResult NotConfiguredResult = new(false, null, null, NotConfiguredMessage);
+    private static readonly RegistrarResult NotConfiguredResult =
+        new(false, null, null, HostpanelErrorCodes.REGISTRAR_NOT_CONFIGURED);
+
+    /// <summary>
+    /// The answer to a change Name.am did not make: it failed, answered something unreadable or
+    /// timed out. The registrar's own wording is logged where it is caught, never returned.
+    /// </summary>
+    private static readonly RegistrarResult UpstreamFailedResult =
+        new(false, null, null, HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
 
     /// <inheritdoc/>
     public async Task<RegistrarResult> RegisterAsync(DomainRegistrationOrder request, CancellationToken ct)
@@ -50,47 +101,37 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
             return NotConfiguredResult;
         }
 
-        var (name, tld) = SplitDomain(request.DomainName);
-
-        var nameservers = BuildNameserverList(request.Nameserver1, request.Nameserver2);
-        var contacts = CreateDefaultContacts();
-
-        var purchasePayload = new[]
+        if (!request.Contact.IsCompleteForPurchase())
         {
-            new Dictionary<string, object>
-            {
-                ["name"] = tld,
-                ["type"] = "domain_registration",
-                ["domain"] = request.DomainName,
-                ["plan"] = new { _id = $"{request.Years}_year_register" },
-                ["registrantContacts"] = contacts,
-                ["administrativeContacts"] = contacts,
-                ["technicalContacts"] = contacts,
-                ["billingContacts"] = contacts,
-                ["nameServers"] = nameservers,
-            },
-        };
+            _logger.LogWarning("The registrant contact for '{DomainName}' is incomplete; nothing was ordered", request.DomainName);
+            return new RegistrarResult(false, null, null, HostpanelErrorCodes.REGISTRAR_CONTACT_VALIDATION_FAILED);
+        }
+
+        var contact = MapContact(request.Contact);
+        var item = new NameAmPurchaseItemWire(
+            RegistrarDomainName.Split(request.DomainName).Tld,
+            RegistrationItemType,
+            request.DomainName,
+            PlanFor(DomainAction.Register, request.Years),
+            RegistrantContacts: contact,
+            AdministrativeContacts: contact,
+            TechnicalContacts: contact,
+            BillingContacts: contact,
+            NameServers: BuildNameserverList(request.Nameserver1, request.Nameserver2));
 
         _logger.LogInformation("Registering domain {DomainName} for {Years} years via Name.am",
             request.DomainName, request.Years);
 
-        // An unrecognised answer is left for polling: the domain stays pending until Name.am
-        // reports it active. Test mode skips polling, so there only a purchase list counts.
-        var errorMessage = await PurchaseAsync(
-            purchasePayload, "registration", request.DomainName, requirePurchaseList: _client.IsTestMode, ct);
-        if (errorMessage is not null)
+        var errorCode = await PurchaseAsync(item, "registration", request.DomainName, ct);
+        if (errorCode is not null && !await IsHeldAsync(request.DomainName, errorCode, ct))
         {
-            return new RegistrarResult(false, null, null, errorMessage);
+            return new RegistrarResult(false, null, null, errorCode);
         }
 
-        var domainRef = request.DomainName;
-        var expiresAt = DateTimeOffset.UtcNow.AddYears(request.Years);
-
-        // In test mode, Name.am never actually activates the domain, so skip polling
-        // and let the handler activate it immediately.
-        var requiresPolling = !_client.IsTestMode;
-
-        return new RegistrarResult(true, domainRef, expiresAt, null, RequiresPolling: requiresPolling);
+        // In test mode Name.am never activates the domain, so there is nothing to poll for and
+        // the handler activates it at once.
+        return new RegistrarResult(
+            true, request.DomainName, _clock.UtcNow.AddYears(request.Years), null, RequiresPolling: !_client.IsTestMode);
     }
 
     /// <inheritdoc/>
@@ -101,39 +142,40 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
             return NotConfiguredResult;
         }
 
-        var (name, tld) = SplitDomain(request.DomainName);
-        var contacts = CreateDefaultContacts();
-
-        var purchasePayload = new[]
+        if (!request.Contact.IsCompleteForPurchase())
         {
-            new Dictionary<string, object>
-            {
-                ["name"] = tld,
-                ["type"] = "domain_transfer",
-                ["domain"] = request.DomainName,
-                ["plan"] = new { _id = "1_year_transfer" },
-                ["transferCode"] = request.EppCode,
-                ["registrantContacts"] = contacts,
-                ["administrativeContacts"] = contacts,
-                ["technicalContacts"] = contacts,
-                ["billingContacts"] = contacts,
-            },
-        };
+            _logger.LogWarning("The registrant contact for '{DomainName}' is incomplete; nothing was ordered", request.DomainName);
+            return new RegistrarResult(false, null, null, HostpanelErrorCodes.REGISTRAR_CONTACT_VALIDATION_FAILED);
+        }
+
+        var contact = MapContact(request.Contact);
+        var item = new NameAmPurchaseItemWire(
+            RegistrarDomainName.Split(request.DomainName).Tld,
+            TransferItemType,
+            request.DomainName,
+            PlanFor(DomainAction.Transfer, TransferTermYears),
+            TransferCode: request.EppCode,
+            RegistrantContacts: contact,
+            AdministrativeContacts: contact,
+            TechnicalContacts: contact,
+            BillingContacts: contact);
 
         _logger.LogInformation("Initiating transfer for domain {DomainName} via Name.am", request.DomainName);
 
-        // An unrecognised answer is left for polling, as for a registration.
-        var errorMessage = await PurchaseAsync(
-            purchasePayload, "transfer", request.DomainName, requirePurchaseList: false, ct);
-        if (errorMessage is not null)
+        var errorCode = await PurchaseAsync(item, "transfer", request.DomainName, ct);
+        if (errorCode is not null && !await IsHeldAsync(request.DomainName, errorCode, ct))
         {
-            return new RegistrarResult(false, null, null, errorMessage);
+            return new RegistrarResult(false, null, null, errorCode);
         }
 
         return new RegistrarResult(true, request.DomainName, null, null, RequiresPolling: true);
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Unlike a registration or a transfer, a refused renewal is never turned into success because
+    /// the account holds the domain: holding it says nothing about whether it was renewed.
+    /// </remarks>
     public async Task<RegistrarResult> RenewAsync(DomainRenewalOrder request, CancellationToken ct)
     {
         if (!await _client.IsConfiguredAsync(ct))
@@ -141,28 +183,19 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
             return NotConfiguredResult;
         }
 
-        var (name, tld) = SplitDomain(request.DomainName);
-
-        var purchasePayload = new[]
-        {
-            new Dictionary<string, object>
-            {
-                ["name"] = tld,
-                ["type"] = "domain_renew",
-                ["domain"] = request.DomainName,
-                ["plan"] = new { _id = $"{request.Years}_year_register" },
-            },
-        };
+        var item = new NameAmPurchaseItemWire(
+            RegistrarDomainName.Split(request.DomainName).Tld,
+            RenewalItemType,
+            request.DomainName,
+            PlanFor(DomainAction.Renew, request.Years));
 
         _logger.LogInformation("Renewing domain {DomainName} for {Years} years via Name.am",
             request.DomainName, request.Years);
 
-        // No polling follows a renewal, so only a purchase list counts as bought.
-        var errorMessage = await PurchaseAsync(
-            purchasePayload, "renewal", request.DomainName, requirePurchaseList: true, ct);
-        if (errorMessage is not null)
+        var errorCode = await PurchaseAsync(item, "renewal", request.DomainName, ct);
+        if (errorCode is not null)
         {
-            return new RegistrarResult(false, null, null, errorMessage);
+            return new RegistrarResult(false, null, null, errorCode);
         }
 
         // The purchase response carries no expiry. Reporting none lets the caller extend the
@@ -171,36 +204,22 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     }
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> CancelTransferAsync(
-        string domainName,
-        string registrarRef,
-        CancellationToken ct)
+    public Task<RegistrarResult> CancelTransferAsync(DomainRef domain, CancellationToken ct)
     {
-        return Task.FromResult(new RegistrarResult(false, registrarRef, null,
-            "Name.am does not support programmatic transfer cancellation."));
+        // Name.am has no cancel-transfer endpoint; an in-progress transfer is cancelled through its support.
+        return Task.FromResult(new RegistrarResult(false, domain.RegistrarRef, null,
+            HostpanelErrorCodes.REGISTRAR_OPERATION_UNSUPPORTED));
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> InitiateOutgoingTransferAsync(
-        string domainName,
-        string registrarRef,
-        CancellationToken ct)
+    public async Task<RegistrarResult> InitiateOutgoingTransferAsync(DomainRef domain, CancellationToken ct)
     {
-        if (!await _client.IsConfiguredAsync(ct))
-        {
-            return NotConfiguredResult;
-        }
-
         // Unlock the domain to permit outgoing transfer.
-        return await SetRegistrarLockAsync(domainName, registrarRef, false, ct);
+        return await SetRegistrarLockAsync(new RegistrarFlagChange(domain, false), ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> SetAutoRenewAsync(
-        string domainName,
-        string registrarRef,
-        bool enabled,
-        CancellationToken ct)
+    public async Task<RegistrarResult> SetAutoRenewAsync(RegistrarFlagChange change, CancellationToken ct)
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
@@ -209,71 +228,56 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
 
         // Name.am manages auto-renew on their side; no dedicated API endpoint.
         _logger.LogInformation("Auto-renew for {DomainName} set to {Enabled} (managed by Name.am)",
-            domainName, enabled);
+            change.Domain.Name, change.Enabled);
 
-        return new RegistrarResult(true, registrarRef, null, null);
+        return new RegistrarResult(true, change.Domain.RegistrarRef, null, null);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> SetWhoisPrivacyAsync(
-        string domainName,
-        string registrarRef,
-        bool enabled,
-        CancellationToken ct)
+    public async Task<RegistrarResult> SetWhoisPrivacyAsync(RegistrarFlagChange change, CancellationToken ct)
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
             return NotConfiguredResult;
         }
-
-        var payload = new { whoIsPrivacyStatus = enabled };
 
         _logger.LogInformation("Setting WHOIS privacy for {DomainName} to {Enabled} via Name.am",
-            domainName, enabled);
+            change.Domain.Name, change.Enabled);
 
-        using var doc = await _client.PutAsync($"/client/domains/{domainName}", payload, ct);
-
-        return new RegistrarResult(true, registrarRef, null, null);
+        return await UpdateDomainAsync(
+            change.Domain.Name, change.Domain.RegistrarRef, new NameAmDomainUpdateWire(WhoIsPrivacyStatus: change.Enabled), ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> SetRegistrarLockAsync(
-        string domainName,
-        string registrarRef,
-        bool locked,
-        CancellationToken ct)
+    public async Task<RegistrarResult> SetRegistrarLockAsync(RegistrarFlagChange change, CancellationToken ct)
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
             return NotConfiguredResult;
         }
 
-        var payload = new { transferLock = locked };
-
         _logger.LogInformation("Setting registrar lock for {DomainName} to {Locked} via Name.am",
-            domainName, locked);
+            change.Domain.Name, change.Enabled);
 
-        using var doc = await _client.PutAsync($"/client/domains/{domainName}", payload, ct);
-
-        return new RegistrarResult(true, registrarRef, null, null);
+        return await UpdateDomainAsync(
+            change.Domain.Name, change.Domain.RegistrarRef, new NameAmDomainUpdateWire(TransferLock: change.Enabled), ct);
     }
 
     /// <inheritdoc/>
-    public async Task<string?> GetEppCodeAsync(
-        string domainName,
-        string registrarRef,
-        CancellationToken ct)
+    public async Task<string?> GetEppCodeAsync(DomainRef domain, CancellationToken ct)
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
             return null;
         }
 
-        _logger.LogInformation("Retrieving EPP code for {DomainName} via Name.am", domainName);
+        _logger.LogInformation("Retrieving EPP code for {DomainName} via Name.am", domain.Name);
 
-        using var doc = await _client.GetAsync($"/client/domains/{domainName}/transfer", ct);
+        using var doc = await _client.GetAsync($"{DomainPath(domain.Name)}/transfer", ct);
 
-        if (doc.RootElement.TryGetProperty("transferCode", out var transferCodeEl))
+        if (doc.RootElement.ValueKind == JsonValueKind.Object
+            && doc.RootElement.TryGetProperty("transferCode", out var transferCodeEl)
+            && transferCodeEl.ValueKind == JsonValueKind.String)
         {
             return transferCodeEl.GetString();
         }
@@ -282,45 +286,34 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> SetNameserversAsync(
-        string domainName,
-        string registrarRef,
-        IReadOnlyList<string> nameservers,
-        CancellationToken ct)
+    public async Task<RegistrarResult> SetNameserversAsync(NameserverChange change, CancellationToken ct)
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
             return NotConfiguredResult;
         }
 
-        var nsList = nameservers.Select(ns => new { hostname = ns }).ToArray();
-        var payload = new { nameServers = nsList };
-
         _logger.LogInformation("Setting {Count} nameservers for {DomainName} via Name.am",
-            nameservers.Count, domainName);
+            change.Nameservers.Count, change.Domain.Name);
 
-        using var doc = await _client.PutAsync($"/client/domains/{domainName}", payload, ct);
+        var payload = new NameAmDomainUpdateWire(
+            NameServers: [.. change.Nameservers.Select(ns => new NameAmNameServerWire(ns))]);
 
-        return new RegistrarResult(true, registrarRef, null, null);
+        return await UpdateDomainAsync(change.Domain.Name, change.Domain.RegistrarRef, payload, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(
-        string domainName,
-        string registrarRef,
-        CancellationToken ct)
+    public async Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(DomainRef domain, CancellationToken ct)
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
             return [];
         }
 
-        using var doc = await _client.GetAsync("/client/domains", ct);
-
-        var domainEl = FindDomainInDocs(doc, domainName);
+        var domainEl = await FindDomainAsync(domain.Name, ct);
         if (domainEl is null)
         {
-            _logger.LogWarning("Domain {DomainName} not found in Name.am domain list", domainName);
+            _logger.LogWarning("Domain {DomainName} not found in Name.am domain list", domain.Name);
             return [];
         }
 
@@ -334,18 +327,21 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
 
         foreach (var rec in recordsEl.EnumerateArray())
         {
-            var typeRaw = rec.GetProperty("type").GetString() ?? "A";
+            var typeRaw = ReadString(rec, "type") ?? "A";
             if (!Enum.TryParse<DnsRecordType>(typeRaw, true, out var recordType))
             {
                 continue;
             }
 
-            var host = rec.GetProperty("name").GetString() ?? "@";
-            var value = rec.GetProperty("content").GetString() ?? string.Empty;
-            var ttl = rec.TryGetProperty("ttl", out var ttlEl) ? ttlEl.GetInt32() : 1800;
+            var host = ReadString(rec, "name") ?? "@";
+            var value = ReadString(rec, "content") ?? string.Empty;
+            var ttl = rec.TryGetProperty("ttl", out var ttlEl) && ttlEl.ValueKind == JsonValueKind.Number && ttlEl.TryGetInt32(out var parsedTtl)
+                ? parsedTtl
+                : 1800;
             int? priority = rec.TryGetProperty("priority", out var prioEl) &&
-                            prioEl.ValueKind == JsonValueKind.Number
-                ? prioEl.GetInt32()
+                            prioEl.ValueKind == JsonValueKind.Number &&
+                            prioEl.TryGetInt32(out var parsedPriority)
+                ? parsedPriority
                 : null;
 
             records.Add(DnsRecord.CreateDetached(recordType, host, value, ttl, priority));
@@ -355,65 +351,62 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> AddDnsRecordAsync(
-        string domainName,
-        string registrarRef,
-        DnsRecord record,
-        CancellationToken ct)
+    public async Task<RegistrarResult> AddDnsRecordAsync(DnsRecordChange change, CancellationToken ct)
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
             return NotConfiguredResult;
         }
 
-        var existing = await GetDnsRecordsAsync(domainName, registrarRef, ct);
-        var allRecords = existing.ToList();
-        allRecords.Add(record);
+        return await GuardAsync("adding a DNS record", async () =>
+        {
+            var existing = await GetDnsRecordsAsync(change.Domain, ct);
+            var allRecords = existing.ToList();
+            allRecords.Add(change.Record);
 
-        return await SetAllDnsRecordsAsync(domainName, allRecords, ct);
+            return await SetAllDnsRecordsAsync(change.Domain.Name, allRecords, ct);
+        }, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> UpdateDnsRecordAsync(
-        string domainName,
-        string registrarRef,
-        DnsRecord record,
-        CancellationToken ct)
+    public async Task<RegistrarResult> UpdateDnsRecordAsync(DnsRecordChange change, CancellationToken ct)
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
             return NotConfiguredResult;
         }
 
-        var existing = await GetDnsRecordsAsync(domainName, registrarRef, ct);
+        return await GuardAsync("updating a DNS record", async () =>
+        {
+            var existing = await GetDnsRecordsAsync(change.Domain, ct);
 
-        var updated = existing
-            .Select(r => r.Host == record.Host && r.Type == record.Type ? record : r)
-            .ToList();
+            var updated = existing
+                .Select(r => r.Host == change.Record.Host && r.Type == change.Record.Type ? change.Record : r)
+                .ToList();
 
-        return await SetAllDnsRecordsAsync(domainName, updated, ct);
+            return await SetAllDnsRecordsAsync(change.Domain.Name, updated, ct);
+        }, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> DeleteDnsRecordAsync(
-        string domainName,
-        string registrarRef,
-        int recordId,
-        CancellationToken ct)
+    public async Task<RegistrarResult> DeleteDnsRecordAsync(DnsRecordRemoval removal, CancellationToken ct)
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
             return NotConfiguredResult;
         }
 
-        var existing = await GetDnsRecordsAsync(domainName, registrarRef, ct);
+        return await GuardAsync("deleting a DNS record", async () =>
+        {
+            var existing = await GetDnsRecordsAsync(removal.Domain, ct);
 
-        // Name.am has no stable record IDs in our model — skip the record at the given 1-based index.
-        var updated = existing
-            .Where((_, idx) => idx + 1 != recordId)
-            .ToList();
+            // Name.am has no stable record IDs in our model: skip the record at the given 1-based index.
+            var updated = existing
+                .Where((_, idx) => idx + 1 != removal.RecordId)
+                .ToList();
 
-        return await SetAllDnsRecordsAsync(domainName, updated, ct);
+            return await SetAllDnsRecordsAsync(removal.Domain.Name, updated, ct);
+        }, ct);
     }
 
     /// <inheritdoc/>
@@ -426,45 +419,33 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
 
         _logger.LogInformation("Polling Name.am for active status of domain {DomainName}", domainName);
 
-        using var doc = await _client.GetAsync("/client/domains", ct);
-
-        var domainEl = FindDomainInDocs(doc, domainName);
-        if (domainEl is null)
+        return await GuardAsync("checking a domain's status", async () =>
         {
-            _logger.LogInformation("Domain {DomainName} not yet found in Name.am account", domainName);
-            return new RegistrarResult(false, null, null, "Domain not found in Name.am account yet.");
-        }
-
-        // Name.am reports status in the "status" field; "active" means the domain is live.
-        var status = string.Empty;
-        if (domainEl.Value.TryGetProperty("status", out var statusEl))
-        {
-            status = statusEl.GetString() ?? string.Empty;
-        }
-
-        if (!string.Equals(status, ActiveDomainStatus, StringComparison.OrdinalIgnoreCase))
-        {
-            _logger.LogInformation(
-                "Domain {DomainName} found in Name.am but status is '{Status}' — not yet active",
-                domainName, status);
-            return new RegistrarResult(false, null, null, $"Domain status is '{status}'.");
-        }
-
-        DateTimeOffset expiresAt = DateTimeOffset.UtcNow.AddYears(1);
-        if (domainEl.Value.TryGetProperty("expiration", out var expEl))
-        {
-            var expStr = expEl.GetString();
-            if (expStr is not null && DateTimeOffset.TryParse(expStr, out var parsed))
+            var domainEl = await FindDomainAsync(domainName, ct);
+            if (domainEl is null)
             {
-                expiresAt = parsed;
+                _logger.LogInformation("Domain {DomainName} not yet found in Name.am account", domainName);
+                return new RegistrarResult(false, null, null, HostpanelErrorCodes.REGISTRAR_DOMAIN_NOT_FOUND);
             }
-        }
 
-        _logger.LogInformation(
-            "Domain {DomainName} is now active in Name.am (expires {ExpiresAt:u})",
-            domainName, expiresAt);
+            // Name.am reports status in the "status" field; "active" means the domain is live.
+            var status = ReadString(domainEl.Value, "status") ?? string.Empty;
+            if (!string.Equals(status, ActiveDomainStatus, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation(
+                    "Domain {DomainName} found in Name.am but status is '{Status}' — not yet active",
+                    domainName, status);
+                return new RegistrarResult(false, null, null, HostpanelErrorCodes.REGISTRAR_DOMAIN_NOT_ACTIVE);
+            }
 
-        return new RegistrarResult(true, domainName, expiresAt, null);
+            var expiresAt = RegistrarDate.Parse(ReadString(domainEl.Value, "expiration")) ?? _clock.UtcNow.AddYears(1);
+
+            _logger.LogInformation(
+                "Domain {DomainName} is now active in Name.am (expires {ExpiresAt:u})",
+                domainName, expiresAt);
+
+            return new RegistrarResult(true, domainName, expiresAt, null);
+        }, ct);
     }
 
     /// <inheritdoc/>
@@ -472,7 +453,7 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
-            // Not "taken" — unknown. A change is refused with a failed result, but a yes/no
+            // Not "taken": unknown. A change is refused with a failed result, but a yes/no
             // question has no such answer: a storefront that reports every domain as taken
             // sells nothing and looks like it is working. Surfacing it means an operator who forgot to
             // configure a registrar finds out, instead of quietly selling nothing.
@@ -481,12 +462,10 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
                 + "Set the registrar credentials in Admin -> Integrations.");
         }
 
-        var (name, tld) = SplitDomain(domainName);
-
-        var checkPayload = new[]
-        {
-            new { tld, domain = domainName },
-        };
+        NameAmDomainCheckWire[] checkPayload =
+        [
+            new(RegistrarDomainName.Split(domainName).Tld, domainName),
+        ];
 
         _logger.LogInformation("Checking availability for {DomainName} via Name.am", domainName);
 
@@ -496,10 +475,11 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
         {
             foreach (var item in doc.RootElement.EnumerateArray())
             {
-                var domainVal = item.GetProperty("domain").GetString();
-                if (string.Equals(domainVal, domainName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(ReadString(item, "domain"), domainName, StringComparison.OrdinalIgnoreCase)
+                    && item.TryGetProperty("available", out var availableEl)
+                    && availableEl.ValueKind is JsonValueKind.True or JsonValueKind.False)
                 {
-                    return item.GetProperty("available").GetBoolean();
+                    return availableEl.GetBoolean();
                 }
             }
         }
@@ -515,9 +495,7 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
             return null;
         }
 
-        using var doc = await _client.GetAsync("/client/domains", ct);
-
-        var domainEl = FindDomainInDocs(doc, domainName);
+        var domainEl = await FindDomainAsync(domainName, ct);
         if (domainEl is null)
         {
             return null;
@@ -528,69 +506,37 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
         if (domainEl.Value.TryGetProperty("registrantContacts", out var contactsEl) &&
             contactsEl.ValueKind == JsonValueKind.Object)
         {
-            var firstName = contactsEl.TryGetProperty("firstName", out var fnEl)
-                ? fnEl.GetString() ?? string.Empty
-                : string.Empty;
-            var lastName = contactsEl.TryGetProperty("lastName", out var lnEl)
-                ? lnEl.GetString() ?? string.Empty
-                : string.Empty;
-            var org = contactsEl.TryGetProperty("organization", out var orgEl)
-                ? orgEl.GetString()
-                : null;
+            var firstName = ReadString(contactsEl, "firstName") ?? string.Empty;
+            var lastName = ReadString(contactsEl, "lastName") ?? string.Empty;
+            var org = ReadString(contactsEl, "organization");
 
             registrant = !string.IsNullOrWhiteSpace(org) ? org : $"{firstName} {lastName}".Trim();
         }
 
-        DateTimeOffset createdAt = DateTimeOffset.MinValue;
-        DateTimeOffset expiresAt = DateTimeOffset.MaxValue;
-
-        if (domainEl.Value.TryGetProperty("registered", out var regEl))
-        {
-            var regStr = regEl.GetString();
-            if (regStr is not null && DateTimeOffset.TryParse(regStr, out var parsed))
-            {
-                createdAt = parsed;
-            }
-        }
-
-        if (domainEl.Value.TryGetProperty("expiration", out var expEl))
-        {
-            var expStr = expEl.GetString();
-            if (expStr is not null && DateTimeOffset.TryParse(expStr, out var parsed))
-            {
-                expiresAt = parsed;
-            }
-        }
+        var createdAt = RegistrarDate.Parse(ReadString(domainEl.Value, "registered")) ?? DateTimeOffset.MinValue;
+        var expiresAt = RegistrarDate.Parse(ReadString(domainEl.Value, "expiration")) ?? DateTimeOffset.MaxValue;
 
         return new WhoisInfo("Name.am", registrant, createdAt, expiresAt);
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrarResult> ModifyContactDetailsAsync(
-        string domainName,
-        DomainContact contact,
-        CancellationToken ct)
+    public async Task<RegistrarResult> ModifyContactDetailsAsync(DomainContactChange change, CancellationToken ct)
     {
         if (!await _client.IsConfiguredAsync(ct))
         {
             return NotConfiguredResult;
         }
 
-        var contactObj = MapDomainContact(contact);
+        var contact = MapContact(change.Contact);
+        var payload = new NameAmDomainUpdateWire(
+            RegistrantContacts: contact,
+            AdministrativeContacts: contact,
+            TechnicalContacts: contact,
+            BillingContacts: contact);
 
-        var payload = new
-        {
-            registrantContacts = contactObj,
-            administrativeContacts = contactObj,
-            technicalContacts = contactObj,
-            billingContacts = contactObj,
-        };
+        _logger.LogInformation("Modifying contact details for {DomainName} via Name.am", change.DomainName);
 
-        _logger.LogInformation("Modifying contact details for {DomainName} via Name.am", domainName);
-
-        using var doc = await _client.PutAsync($"/client/domains/{domainName}", payload, ct);
-
-        return new RegistrarResult(true, null, null, null);
+        return await UpdateDomainAsync(change.DomainName, null, payload, ct);
     }
 
     /// <inheritdoc/>
@@ -601,9 +547,7 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
             return null;
         }
 
-        using var doc = await _client.GetAsync("/client/domains", ct);
-
-        var domainEl = FindDomainInDocs(doc, domainName);
+        var domainEl = await FindDomainAsync(domainName, ct);
         if (domainEl is null ||
             !domainEl.Value.TryGetProperty("registrantContacts", out var contactEl) ||
             contactEl.ValueKind != JsonValueKind.Object)
@@ -611,70 +555,53 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
             return null;
         }
 
-        var organization = ReadContactString(contactEl, "organization");
-        var address2 = ReadContactString(contactEl, "address2");
+        var organization = ReadString(contactEl, "organization") ?? string.Empty;
+        var address2 = ReadString(contactEl, "address2") ?? string.Empty;
 
         return new DomainContact(
-            ReadContactString(contactEl, "firstName"),
-            ReadContactString(contactEl, "lastName"),
+            ReadString(contactEl, "firstName") ?? string.Empty,
+            ReadString(contactEl, "lastName") ?? string.Empty,
             organization.Length == 0 ? null : organization,
-            ReadContactString(contactEl, "email"),
-            ReadContactString(contactEl, "phone"),
-            ReadContactString(contactEl, "address1"),
+            ReadString(contactEl, "email") ?? string.Empty,
+            ReadString(contactEl, "phone") ?? string.Empty,
+            ReadString(contactEl, "address1") ?? string.Empty,
             address2.Length == 0 ? null : address2,
-            ReadContactString(contactEl, "city"),
-            ReadContactString(contactEl, "state"),
-            ReadContactString(contactEl, "zip"),
-            ReadContactString(contactEl, "country"));
+            ReadString(contactEl, "city") ?? string.Empty,
+            ReadString(contactEl, "state") ?? string.Empty,
+            ReadString(contactEl, "zip") ?? string.Empty,
+            ReadString(contactEl, "country") ?? string.Empty);
     }
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetEmailForwardingAsync(
-        string domainName,
-        bool enabled,
-        CancellationToken ct)
+    public Task<RegistrarResult> SetEmailForwardingAsync(DomainFeatureToggle toggle, CancellationToken ct)
     {
         // Name.am does not expose an email forwarding API.
         return Task.FromResult(new RegistrarResult(true, null, null, null));
     }
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> AddEmailForwardingRuleAsync(
-        string domainName,
-        string source,
-        string destination,
-        CancellationToken ct)
+    public Task<RegistrarResult> AddEmailForwardingRuleAsync(EmailForwardingRuleChange change, CancellationToken ct)
     {
         // Name.am does not expose an email forwarding API.
         return Task.FromResult(new RegistrarResult(true, null, null, null));
     }
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> UpdateEmailForwardingRuleAsync(
-        string domainName,
-        string source,
-        string destination,
-        CancellationToken ct)
+    public Task<RegistrarResult> UpdateEmailForwardingRuleAsync(EmailForwardingRuleChange change, CancellationToken ct)
     {
         // Name.am does not expose an email forwarding API.
         return Task.FromResult(new RegistrarResult(true, null, null, null));
     }
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> DeleteEmailForwardingRuleAsync(
-        string domainName,
-        string source,
-        CancellationToken ct)
+    public Task<RegistrarResult> DeleteEmailForwardingRuleAsync(EmailForwardingRuleRemoval removal, CancellationToken ct)
     {
         // Name.am does not expose an email forwarding API.
         return Task.FromResult(new RegistrarResult(true, null, null, null));
     }
 
     /// <inheritdoc/>
-    public Task<RegistrarResult> SetDnsManagementAsync(
-        string domainName,
-        bool enabled,
-        CancellationToken ct)
+    public Task<RegistrarResult> SetDnsManagementAsync(DomainFeatureToggle toggle, CancellationToken ct)
     {
         // Name.am does not expose a separate DNS management toggle API.
         return Task.FromResult(new RegistrarResult(true, null, null, null));
@@ -702,56 +629,136 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
 
         foreach (var product in doc.RootElement.EnumerateArray())
         {
-            var tld = product.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null;
-            if (string.IsNullOrWhiteSpace(tld))
+            var pricing = ReadProductPricing(product);
+            if (pricing is not null)
             {
-                continue;
+                result.Add(pricing);
             }
-
-            Dictionary<int, decimal> registerPrices = [];
-            Dictionary<int, decimal> transferPrices = [];
-            Dictionary<int, decimal> renewPrices = [];
-            // Name.am always returns prices in AMD (drams) — force currency to AMD regardless of API response
-            var currency = "AMD";
-
-            if (!product.TryGetProperty("plans", out var plansEl) ||
-                plansEl.ValueKind != JsonValueKind.Array)
-            {
-                continue;
-            }
-
-            foreach (var plan in plansEl.EnumerateArray())
-            {
-                var behavior = plan.TryGetProperty("behavior", out var behaviorEl)
-                    ? behaviorEl.GetString() ?? string.Empty
-                    : string.Empty;
-                var duration = plan.TryGetProperty("duration", out var durationEl) && durationEl.TryGetInt32(out var d)
-                    ? d
-                    : 1;
-                var price = plan.TryGetProperty("currentPrice", out var priceEl)
-                    ? priceEl.GetDecimal()
-                    : 0m;
-
-                switch (behavior)
-                {
-                    case DomainActionNames.Register:
-                        registerPrices[duration] = price;
-                        break;
-                    case DomainActionNames.Transfer:
-                        transferPrices[duration] = price;
-                        break;
-                    case DomainActionNames.Renew:
-                        renewPrices[duration] = price;
-                        break;
-                }
-            }
-
-            result.Add(new TldPricing(tld, currency, registerPrices, transferPrices, renewPrices));
         }
 
         _logger.LogInformation("Loaded pricing for {Count} TLDs from Name.am", result.Count);
 
         return result;
+    }
+
+    /// <summary>
+    /// Reads the prices of one product of the <c>GET /client/products</c> list. A product, or a
+    /// plan within it, that does not have the expected shape is skipped, so one bad TLD does not
+    /// stop the rest from being priced.
+    /// </summary>
+    /// <param name="product">One element of the products array.</param>
+    /// <returns>The TLD's prices, or <see langword="null"/> when the product names no TLD or has no readable plan.</returns>
+    private TldPricing? ReadProductPricing(JsonElement product)
+    {
+        if (product.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var tld = ReadString(product, "name");
+        if (string.IsNullOrWhiteSpace(tld)
+            || !product.TryGetProperty("plans", out var plansEl)
+            || plansEl.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        Dictionary<int, decimal> registerPrices = [];
+        Dictionary<int, decimal> transferPrices = [];
+        Dictionary<int, decimal> renewPrices = [];
+
+        foreach (var plan in plansEl.EnumerateArray())
+        {
+            var duration = plan.ValueKind == JsonValueKind.Object
+                && plan.TryGetProperty("duration", out var durationEl)
+                && durationEl.ValueKind == JsonValueKind.Number
+                && durationEl.TryGetInt32(out var d)
+                    ? d
+                    : 1;
+
+            var price = plan.ValueKind == JsonValueKind.Object && plan.TryGetProperty("currentPrice", out var priceEl)
+                ? ReadPrice(priceEl)
+                : null;
+            if (price is null)
+            {
+                _logger.LogWarning("Name.am gave no readable price for a plan of '{Tld}'; the plan is skipped", tld);
+                continue;
+            }
+
+            switch (ReadString(plan, "behavior"))
+            {
+                case RegisterBehavior:
+                    registerPrices[duration] = price.Value;
+                    break;
+                case TransferBehavior:
+                    transferPrices[duration] = price.Value;
+                    break;
+                case RenewBehavior:
+                    renewPrices[duration] = price.Value;
+                    break;
+            }
+        }
+
+        return new TldPricing(tld, PricingCurrency, registerPrices, transferPrices, renewPrices);
+    }
+
+    /// <summary>
+    /// Reads a price Name.am sends either as a JSON number or as a numeric string.
+    /// </summary>
+    /// <param name="priceEl">The <c>currentPrice</c> element.</param>
+    /// <returns>The price, or <see langword="null"/> when it is neither a number nor a numeric string.</returns>
+    private static decimal? ReadPrice(JsonElement priceEl)
+    {
+        switch (priceEl.ValueKind)
+        {
+            case JsonValueKind.Number when priceEl.TryGetDecimal(out var number):
+                return number;
+            case JsonValueKind.String when decimal.TryParse(
+                priceEl.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var text):
+                return text;
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// Runs a change that is not a purchase and turns every way the registrar call can fail into a
+    /// failed result, so the handler answers with a code instead of an exception carrying the
+    /// registrar's wording.
+    /// </summary>
+    /// <param name="operation">What is being done, for the log.</param>
+    /// <param name="action">The change to run.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The change's result, or <see cref="UpstreamFailedResult"/> when the registrar call failed.</returns>
+    private async Task<RegistrarResult> GuardAsync(string operation, Func<Task<RegistrarResult>> action, CancellationToken ct)
+    {
+        try
+        {
+            return await action();
+        }
+        catch (Exception ex) when (RegistrarFailure.IsUpstream(ex, ct))
+        {
+            _logger.LogWarning(ex, "Name.am failed while {Operation}", operation);
+            return UpstreamFailedResult;
+        }
+    }
+
+    /// <summary>
+    /// Sends one <c>PUT /client/domains/{name}</c> change.
+    /// </summary>
+    /// <param name="domainName">The fully-qualified domain name.</param>
+    /// <param name="registrarRef">The registrar reference to hand back on success; <see langword="null"/> when there is none.</param>
+    /// <param name="payload">What to change.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Success, or the failed result when Name.am did not make the change.</returns>
+    private Task<RegistrarResult> UpdateDomainAsync(
+        string domainName, string? registrarRef, NameAmDomainUpdateWire payload, CancellationToken ct)
+    {
+        return GuardAsync("changing a domain", async () =>
+        {
+            using var doc = await _client.PutAsync(DomainPath(domainName), payload, ct);
+            return new RegistrarResult(true, registrarRef, null, null);
+        }, ct);
     }
 
     /// <summary>
@@ -762,29 +769,72 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     /// <param name="records">Complete list of DNS records to persist.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the operation succeeded.</returns>
-    private async Task<RegistrarResult> SetAllDnsRecordsAsync(
+    private Task<RegistrarResult> SetAllDnsRecordsAsync(
         string domainName,
         IList<DnsRecord> records,
         CancellationToken ct)
     {
-        var apiRecords = records.Select(r => new Dictionary<string, object?>
-        {
-            ["type"] = r.Type.ToString(),
-            ["name"] = r.Host,
-            ["content"] = r.Value,
-            ["ttl"] = r.Ttl,
-            ["action"] = "CREATE",
-            ["priority"] = r.Priority,
-        }).ToArray();
-
-        var payload = new { records = apiRecords };
-
         _logger.LogInformation("Setting {Count} DNS records for {DomainName} via Name.am",
             records.Count, domainName);
 
-        using var doc = await _client.PutAsync($"/client/domains/{domainName}", payload, ct);
+        var payload = new NameAmDomainUpdateWire(
+            Records: [.. records.Select(r => new NameAmDnsRecordWire(
+                r.Type.ToString(), r.Host, r.Value, r.Ttl, CreateRecordAction, r.Priority))]);
 
-        return new RegistrarResult(true, null, null, null);
+        return UpdateDomainAsync(domainName, null, payload, ct);
+    }
+
+    /// <summary>
+    /// Looks a domain up in the account's domain list, following the list's pages until the
+    /// domain is found or the last page has been read, so a domain beyond the first page is
+    /// never reported as missing.
+    /// </summary>
+    /// <param name="domainName">The fully-qualified domain name to locate.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The domain element, detached from the response it came in, or <see langword="null"/> when the account does not hold it.</returns>
+    private async Task<JsonElement?> FindDomainAsync(string domainName, CancellationToken ct)
+    {
+        for (var page = 1; ; page++)
+        {
+            using var doc = await _client.GetAsync($"/client/domains?page={page}", ct);
+
+            var found = FindDomainInDocs(doc, domainName);
+            if (found is not null)
+            {
+                return found.Value.Clone();
+            }
+
+            if (!HasNextPage(doc, page))
+            {
+                return null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads whether the domain list has a page after the one just read: the list's
+    /// <c>hasNextPage</c> flag when it sends one, otherwise its <c>totalPages</c> count.
+    /// </summary>
+    /// <param name="doc">The parsed JSON response from <c>GET /client/domains</c>.</param>
+    /// <param name="page">The page number that was read.</param>
+    /// <returns><see langword="true"/> when another page follows; a list that reports no paging is a single page.</returns>
+    private static bool HasNextPage(JsonDocument doc, int page)
+    {
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        if (doc.RootElement.TryGetProperty("hasNextPage", out var flag)
+            && flag.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            return flag.GetBoolean();
+        }
+
+        return doc.RootElement.TryGetProperty("totalPages", out var total)
+            && total.ValueKind == JsonValueKind.Number
+            && total.TryGetInt32(out var pages)
+            && page < pages;
     }
 
     /// <summary>
@@ -795,30 +845,32 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     /// <returns>The matching <see cref="JsonElement"/> or <see langword="null"/> if not found.</returns>
     private static JsonElement? FindDomainInDocs(JsonDocument doc, string domainName)
     {
-        if (!doc.RootElement.TryGetProperty("docs", out var docsEl) ||
-            docsEl.ValueKind != JsonValueKind.Array)
+        if (doc.RootElement.ValueKind != JsonValueKind.Object
+            || !doc.RootElement.TryGetProperty("docs", out var docsEl)
+            || docsEl.ValueKind != JsonValueKind.Array)
         {
             return null;
         }
 
         foreach (var item in docsEl.EnumerateArray())
         {
-            if (item.TryGetProperty("domain", out var domainProp))
+            if (item.ValueKind != JsonValueKind.Object)
             {
-                var fullDomain = domainProp.GetString();
+                continue;
+            }
 
-                // The API may return just the SLD in "domain" and the TLD separately.
-                if (item.TryGetProperty("tld", out var tldProp))
-                {
-                    var sld = fullDomain;
-                    var tld = tldProp.GetString();
-                    fullDomain = $"{sld}.{tld}";
-                }
+            var fullDomain = ReadString(item, "domain");
 
-                if (string.Equals(fullDomain, domainName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return item;
-                }
+            // The API may return just the SLD in "domain" and the TLD separately.
+            var tld = ReadString(item, "tld");
+            if (tld is not null)
+            {
+                fullDomain = $"{fullDomain}.{tld}";
+            }
+
+            if (string.Equals(fullDomain, domainName, StringComparison.OrdinalIgnoreCase))
+            {
+                return item;
             }
         }
 
@@ -826,101 +878,116 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
     }
 
     /// <summary>
-    /// Splits a fully-qualified domain name into its second-level and top-level parts.
-    /// </summary>
-    /// <param name="domainName">Fully-qualified domain name (e.g. <c>example.am</c>).</param>
-    /// <returns>A tuple of (Name, TLD) where Name is the first label and TLD is the remainder.</returns>
-    private static (string Name, string Tld) SplitDomain(string domainName)
-    {
-        var parts = domainName.Split('.');
-        var name = parts[0];
-        var tld = string.Join(".", parts[1..]);
-        return (name, tld);
-    }
-
-    /// <summary>
-    /// Maps a <see cref="DomainContact"/> value object to the Name.am API contact object format.
+    /// Maps a <see cref="DomainContact"/> value object to the Name.am API contact shape.
     /// </summary>
     /// <param name="contact">Domain contact to map.</param>
-    /// <returns>Anonymous object matching the Name.am API contact schema.</returns>
-    private static object MapDomainContact(DomainContact contact)
+    /// <returns>The contact as Name.am's JSON carries it.</returns>
+    private static NameAmContactWire MapContact(DomainContact contact)
     {
-        return new
-        {
-            firstName = contact.FirstName,
-            lastName = contact.LastName,
-            fullName = $"{contact.FirstName} {contact.LastName}".Trim(),
-            organization = contact.Organization ?? string.Empty,
-            email = contact.Email,
-            phone = contact.Phone,
-            address1 = contact.Address1,
-            address2 = contact.Address2 ?? string.Empty,
-            city = contact.City,
-            state = contact.State,
-            zip = contact.PostalCode,
-            country = contact.Country,
-        };
+        return new NameAmContactWire(
+            contact.FirstName,
+            contact.LastName,
+            $"{contact.FirstName} {contact.LastName}".Trim(),
+            contact.Organization ?? string.Empty,
+            contact.Email,
+            contact.Phone,
+            contact.Address1,
+            contact.Address2 ?? string.Empty,
+            contact.City,
+            contact.State,
+            contact.PostalCode,
+            contact.Country);
     }
 
     /// <summary>
-    /// Reads one string property of a Name.am contact object, treating an absent or non-string
-    /// property as empty so a partially filled contact still maps.
+    /// Reads one string property of a JSON object, treating an absent or non-string property as
+    /// absent so a partly filled answer still maps.
     /// </summary>
-    /// <param name="contactEl">The contact JSON object.</param>
+    /// <param name="element">The JSON element to read from.</param>
     /// <param name="name">The property name to read.</param>
-    /// <returns>The property value, or an empty string when absent.</returns>
-    private static string ReadContactString(JsonElement contactEl, string name)
+    /// <returns>The property value, or <see langword="null"/> when absent or not a string.</returns>
+    private static string? ReadString(JsonElement element, string name)
     {
-        return contactEl.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String
-            ? prop.GetString() ?? string.Empty
-            : string.Empty;
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(name, out var prop)
+            && prop.ValueKind == JsonValueKind.String
+                ? prop.GetString()
+                : null;
     }
 
     /// <summary>
-    /// Builds a list of nameserver objects in the format expected by the Name.am API.
+    /// Builds the plan of a purchase item: Name.am names a plan by its term and behaviour, joined
+    /// as <c>{years}_year_{behaviour}</c>, with the behaviour the plan reports in the products list
+    /// (<c>register</c>, <c>renew</c> or <c>transfer</c>). A renewal is therefore bought on the
+    /// renew plan, not on the register plan of the same term.
+    /// </summary>
+    /// <param name="action">The domain action the plan is bought for.</param>
+    /// <param name="years">The term in years.</param>
+    /// <returns>The plan reference.</returns>
+    private static NameAmPlanWire PlanFor(DomainAction action, int years)
+    {
+        var behavior = action switch
+        {
+            DomainAction.Register => RegisterBehavior,
+            DomainAction.Transfer => TransferBehavior,
+            DomainAction.Renew => RenewBehavior,
+            _ => throw new ArgumentOutOfRangeException(nameof(action), action, "No Name.am plan for this action."),
+        };
+        return new NameAmPlanWire($"{years}_year_{behavior}");
+    }
+
+    /// <summary>
+    /// Builds the URL path of one domain, with the name escaped so nothing in it can change the path.
+    /// </summary>
+    /// <param name="domainName">The fully-qualified domain name.</param>
+    /// <returns>The path, e.g. <c>/client/domains/example.am</c>.</returns>
+    private static string DomainPath(string domainName)
+    {
+        return $"/client/domains/{Uri.EscapeDataString(domainName)}";
+    }
+
+    /// <summary>
+    /// Builds the nameserver list of a registration.
     /// </summary>
     /// <param name="ns1">Primary nameserver hostname.</param>
     /// <param name="ns2">Optional secondary nameserver hostname.</param>
-    /// <returns>Array of anonymous objects with <c>hostname</c> property.</returns>
-    private static object[] BuildNameserverList(string? ns1, string? ns2)
+    /// <returns>The nameservers in the shape Name.am expects, empty when the registrar defaults apply.</returns>
+    private static IReadOnlyList<NameAmNameServerWire> BuildNameserverList(string? ns1, string? ns2)
     {
-        List<object> list = [];
+        List<NameAmNameServerWire> list = [];
 
         if (ns1 is not null)
         {
-            list.Add(new { hostname = ns1 });
+            list.Add(new NameAmNameServerWire(ns1));
         }
 
         if (ns2 is not null)
         {
-            list.Add(new { hostname = ns2 });
+            list.Add(new NameAmNameServerWire(ns2));
         }
 
-        return [.. list];
+        return list;
     }
 
     /// <summary>
-    /// Posts a cart purchase and reads Name.am's answer to it.
+    /// Posts a cart purchase and reads Name.am's answer to it. Only an array of purchased items
+    /// counts as bought: any other body, however the status reads, is not proof of a purchase.
     /// </summary>
-    /// <param name="payload">The purchase body.</param>
-    /// <param name="action">What is bought, for the log and the refusal (e.g. <c>renewal</c>).</param>
+    /// <param name="item">The item to buy.</param>
+    /// <param name="action">What is bought, for the log (e.g. <c>renewal</c>).</param>
     /// <param name="domainName">The domain the purchase is for.</param>
-    /// <param name="requirePurchaseList">
-    /// Whether only an array of purchased items counts as bought. A body Name.am answers with that
-    /// is neither that nor a known error is otherwise accepted, for callers that poll for the outcome.
-    /// </param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The refusal reason, or <see langword="null"/> when the purchase went through.</returns>
+    /// <returns>The refusal's error code, or <see langword="null"/> when the purchase went through.</returns>
     /// <exception cref="HttpRequestException">
     /// Thrown on a 5xx, a timeout or a transport failure: the outcome is unknown, so it is not a refusal.
     /// </exception>
     private async Task<string?> PurchaseAsync(
-        object payload, string action, string domainName, bool requirePurchaseList, CancellationToken ct)
+        NameAmPurchaseItemWire item, string action, string domainName, CancellationToken ct)
     {
         JsonDocument doc;
         try
         {
-            doc = await _client.PostAsync("/client/carts/purchase", payload, ct);
+            doc = await _client.PostAsync("/client/carts/purchase", new[] { item }, ct);
         }
         catch (HttpRequestException ex) when (IsDefiniteRefusal(ex.StatusCode))
         {
@@ -929,24 +996,81 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
             var status = (int)ex.StatusCode!.Value;
             _logger.LogWarning(
                 ex, "Name.am refused {Action} of '{DomainName}' with HTTP {Status}", action, domainName, status);
-            return $"Name.am refused the {action} (HTTP {status}).";
+            return RefusalCodeFor(ex.StatusCode, null);
         }
 
         using (doc)
         {
-            var errorMessage = ExtractErrorMessage(doc)
-                // A purchase that went through is answered with an array of purchased items.
-                ?? (requirePurchaseList && doc.RootElement.ValueKind != JsonValueKind.Array
-                    ? $"Name.am answered the {action} with an unexpected response."
-                    : null);
+            var errorMessage = ExtractErrorMessage(doc);
             if (errorMessage is not null)
             {
                 _logger.LogWarning(
                     "Name.am rejected {Action} of '{DomainName}': {Error}", action, domainName, errorMessage);
+                return RefusalCodeFor(null, errorMessage);
             }
 
-            return errorMessage;
+            if (doc.RootElement.ValueKind != JsonValueKind.Array || doc.RootElement.GetArrayLength() == 0)
+            {
+                _logger.LogWarning(
+                    "Name.am answered {Action} of '{DomainName}' with an unexpected response", action, domainName);
+                return HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED;
+            }
+
+            return null;
         }
+    }
+
+    /// <summary>
+    /// Settles a refused registration or transfer that may be an earlier attempt of the same order
+    /// whose outcome was never seen (a timeout, a 5xx): when the account already holds the name, the
+    /// order went through and refusing it would refund a domain we own. The listing is read only
+    /// then, and a failure to read it escapes, so an unconfirmed refusal is never reported as one.
+    /// </summary>
+    /// <param name="domainName">The domain that was ordered.</param>
+    /// <param name="errorCode">The refusal code the purchase ended with.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns><see langword="true"/> when the account holds the domain and the order should count as placed.</returns>
+    private async Task<bool> IsHeldAsync(string domainName, string errorCode, CancellationToken ct)
+    {
+        if (errorCode == HostpanelErrorCodes.REGISTRAR_INSUFFICIENT_FUNDS)
+        {
+            // An earlier attempt that went through would have been answered "taken" on the retry,
+            // never "insufficient funds", so the account's contents decide nothing here.
+            return false;
+        }
+
+        var held = await FindDomainAsync(domainName, ct) is not null;
+        if (held)
+        {
+            _logger.LogWarning(
+                "Name.am refused the order for '{DomainName}' but the account already holds it; counting it as placed", domainName);
+        }
+
+        return held;
+    }
+
+    /// <summary>
+    /// Picks the error code of a refused purchase from what Name.am gave: 402 and 409 mean what
+    /// they say, and a message is matched on the wording because Name.am sends no code.
+    /// </summary>
+    /// <param name="status">The HTTP status of a 4xx answer, if that is what was received.</param>
+    /// <param name="message">The error message of a 200 answer, if that is what was received.</param>
+    /// <returns>The specific code when the cause is recognised, otherwise the plain refusal code.</returns>
+    private static string RefusalCodeFor(HttpStatusCode? status, string? message)
+    {
+        if (status == HttpStatusCode.PaymentRequired
+            || (message is not null && message.Contains("insufficient", StringComparison.OrdinalIgnoreCase)))
+        {
+            return HostpanelErrorCodes.REGISTRAR_INSUFFICIENT_FUNDS;
+        }
+
+        if (status == HttpStatusCode.Conflict
+            || (message is not null && DomainUnavailableMarkers.Any(m => message.Contains(m, StringComparison.OrdinalIgnoreCase))))
+        {
+            return HostpanelErrorCodes.REGISTRAR_DOMAIN_UNAVAILABLE;
+        }
+
+        return HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED;
     }
 
     /// <summary>
@@ -973,61 +1097,30 @@ public sealed class NameAmRegistrarProvider : IRegistrarProvider
 
         // Name.am error responses are objects (not arrays) with a "message" or "error" field.
         // Successful cart purchase responses are arrays of purchased items.
-        if (root.ValueKind == JsonValueKind.Array)
-        {
-            return null; // array = success
-        }
-
         if (root.ValueKind != JsonValueKind.Object)
         {
-            return null; // unexpected — treat as success and let polling handle it
+            return null;
         }
 
         // Check for explicit error fields.
-        if (root.TryGetProperty("message", out var messageEl) &&
-            messageEl.ValueKind == JsonValueKind.String)
+        var message = ReadString(root, "message");
+        if (message is not null)
         {
-            return messageEl.GetString();
+            return message;
         }
 
-        if (root.TryGetProperty("error", out var errorEl) &&
-            errorEl.ValueKind == JsonValueKind.String)
+        var error = ReadString(root, "error");
+        if (error is not null)
         {
-            return errorEl.GetString();
+            return error;
         }
 
-        // Some APIs nest errors: { "data": null, "error": { "message": "..." } }
-        if (root.TryGetProperty("error", out var errorObjEl) &&
-            errorObjEl.ValueKind == JsonValueKind.Object &&
-            errorObjEl.TryGetProperty("message", out var nestedMsg))
+        // Some APIs nest errors: { "data": null, "error": { "message": "text" } }
+        if (root.TryGetProperty("error", out var errorObjEl) && errorObjEl.ValueKind == JsonValueKind.Object)
         {
-            return nestedMsg.GetString();
+            return ReadString(errorObjEl, "message");
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Creates a default contact object for registration requests where no contact is provided.
-    /// Uses empty strings for fields that will be populated by the registrar.
-    /// </summary>
-    /// <returns>Anonymous object matching the Name.am API contact schema with empty defaults.</returns>
-    private static object CreateDefaultContacts()
-    {
-        return new
-        {
-            firstName = "",
-            lastName = "",
-            fullName = "",
-            organization = "",
-            email = "",
-            phone = "",
-            address1 = "",
-            address2 = "",
-            city = "",
-            state = "",
-            zip = "",
-            country = "",
-        };
     }
 }

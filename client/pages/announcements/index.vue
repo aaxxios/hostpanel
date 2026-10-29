@@ -65,7 +65,7 @@
               class="mb-3 flex items-center gap-2"
             >
               <Calendar :size="13" :stroke-width="2" />
-              {{ formatDate(item.date, locale) }}
+              {{ formatDate(item.publishedAt, locale) }}
             </UiText>
             <UiHeading
               :level="2"
@@ -74,9 +74,6 @@
             >
               {{ item.title }}
             </UiHeading>
-            <UiText size="sm" tone="muted" class="mb-4 line-clamp-3 leading-relaxed">
-              {{ item.excerpt }}
-            </UiText>
             <UiText
               as="span"
               size="xs"
@@ -105,7 +102,7 @@ import { SessionCookie } from '~/constants/sessionCookie'
 import { Megaphone, Calendar, ArrowRight } from 'lucide-vue-next'
 import { useContentStore } from '~/stores/content'
 import { formatDate } from '~/utils/formatDate'
-import type { Announcement } from '~/types/announcement'
+import type { PublishedAnnouncement } from '~/types/publishedannouncement'
 import type { ChipTab } from '~/types/chiptab'
 
 /** Month-filter value that shows every announcement. */
@@ -136,21 +133,19 @@ const authed = useCookie(SessionCookie.Authed)
 /**
  * Whether the refusal is just "not signed in". The API serves published announcements to signed-in
  * members only, while the site footer links this page to every visitor, so a refusal with no
- * session is an invitation to sign in -- not a failure worth a "try again later".
+ * session is an invitation to sign in, not a failure worth a "try again later".
  */
 const needsSignIn = computed(() => !!error.value && !authed.value)
 
 /** All announcement items from API */
-const items = computed<Announcement[]>(() => content.announcements)
+const items = computed<PublishedAnnouncement[]>(() => content.announcements)
 
 /**
  * The month each announcement belongs to, as a label a person reads.
  *
- * Derived from the timestamp rather than by pattern-matching a formatted string. The previous
- * version ran `/(\w+ \d{4})$/` over `item.date` and depended on the backend happening to send
- * "August 2026" — it sends an ISO timestamp, so the match silently found nothing and the month
- * tabs never appeared. Parsing the date instead also makes the labels follow the chosen
- * language, which a regex over English month names could not do.
+ * Derived from the timestamp rather than by pattern-matching a formatted string: the backend
+ * sends an ISO timestamp, not a month name. Parsing the date also makes the labels follow the
+ * chosen language, which a regex over English month names could not do.
  *
  * @param value - The announcement's ISO publication timestamp.
  * @returns The month and year in the active locale, or an empty string when unparseable.
@@ -175,7 +170,7 @@ const monthLabel = (value: string | undefined): string => {
 const months = computed(() => {
   const seen: string[] = []
   for (const item of items.value) {
-    const label = monthLabel(item.date)
+    const label = monthLabel(item.publishedAt)
     if (label && !seen.includes(label)) {
       seen.push(label)
     }
@@ -198,6 +193,6 @@ const filtered = computed(() => {
   if (activeMonth.value === ALL_MONTHS) {
     return items.value
   }
-  return items.value.filter(item => monthLabel(item.date) === activeMonth.value)
+  return items.value.filter(item => monthLabel(item.publishedAt) === activeMonth.value)
 })
 </script>

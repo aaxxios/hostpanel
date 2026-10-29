@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core configuration for the <see cref="InvoiceItem"/> entity.</summary>
 public sealed class InvoiceItemConfiguration : IEntityTypeConfiguration<InvoiceItem>
 {
@@ -16,7 +17,7 @@ public sealed class InvoiceItemConfiguration : IEntityTypeConfiguration<InvoiceI
 
         // Nullable, unindexed-by-default no longer: "the invoices for this service" filters on
         // it, and without an index that read is a scan of every line ever billed. No FK
-        // constraint is declared -- a terminated service's row may be removed while the invoice
+        // constraint is declared: a terminated service's row may be removed while the invoice
         // that charged for it must survive as a financial record, and a constraint would either
         // block that or cascade the invoice line away with it.
         builder.Property(x => x.ClientServiceId);
@@ -27,10 +28,13 @@ public sealed class InvoiceItemConfiguration : IEntityTypeConfiguration<InvoiceI
         builder.Property(x => x.RegisteredDomainId);
         builder.Property(x => x.RenewalPeriodStart);
         builder.Property(x => x.RenewalPeriodEnd);
-        builder.Property(x => x.RenewalAppliedAt);
+        builder.Property(x => x.RenewalAppliedAt).IsConcurrencyToken();
 
-        // The claim taken before a registrar call; written only by a conditional ExecuteUpdate.
-        builder.Property(x => x.RenewalAttemptAt);
+        // The claim taken before a registrar call. Both renewal markers are concurrency tokens: the
+        // UPDATE that saves a claim or an apply carries their read values in its WHERE, so of two
+        // runners only one save wins and the other gets DbUpdateConcurrencyException. Tokens are
+        // not schema, so no column changes.
+        builder.Property(x => x.RenewalAttemptAt).IsConcurrencyToken();
 
         // The duplicate guard asks "is this period already invoiced" per target.
         builder.HasIndex(x => new { x.ClientServiceId, x.RenewalPeriodStart });

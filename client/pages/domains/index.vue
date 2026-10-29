@@ -19,7 +19,7 @@
  * Domains page.
  *
  * SEO and structured data belong here so both templates emit the same head, and
- * so does everything that touches the network or the cart — the template only
+ * so does everything that touches the network or the cart: the template only
  * renders and reports what the visitor clicked.
  */
 import { APP_LOCALES } from '~/constants/appLocales'
@@ -125,7 +125,7 @@ const cartDomains = computed(() =>
 /**
  * Adds a domain registration to the cart.
  *
- * Silently does nothing when no domain product exists — the button is only shown
+ * Silently does nothing when no domain product exists: the button is only shown
  * for available names, and an operator with no domain product configured has
  * nothing to sell here. The price row is already converted to the payer's currency by the
  * API (the TLD's own sell currency does not matter), so the cart line carries that amount.

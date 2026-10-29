@@ -1,8 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Reports.Common;
 using Innovayse.Hostpanel.Application.Reports.Extensions;
-using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -25,8 +23,8 @@ public sealed class InvoicesReportHandler
     /// <summary>Handles the query.</summary>
     /// <param name="query">The filters and page to return.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The matching page of invoices and the unfiltered total. Never refuses.</returns>
-    public async Task<Result<InvoiceReportResultDto>> HandleAsync(InvoicesReportQuery query, CancellationToken ct)
+    /// <returns>The matching page of invoices, newest first, and the count of every match. Never refuses.</returns>
+    public async Task<Result<PaginatedList<InvoiceReportRowDto>>> HandleAsync(InvoicesReportQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -38,29 +36,11 @@ public sealed class InvoicesReportHandler
 
         var rows = await invoices
             .OrderByDescending(i => i.CreatedAt)
+            .ThenByDescending(i => i.Id)
             .Paginate(query.Page, query.PageSize)
-            .Join(_context.Clients, i => i.ClientId, c => c.Id,
-                (i, c) => new { Invoice = i, ClientName = c.FirstName + " " + c.LastName })
-            .Select(x => new InvoiceReportRowDto(
-                x.Invoice.Id,
-                x.Invoice.ClientId,
-                x.ClientName,
-                null,
-                x.Invoice.CreatedAt.ToString("yyyy-MM-dd"),
-                x.Invoice.DueDate.ToString("yyyy-MM-dd"),
-                x.Invoice.PaidAt != null ? x.Invoice.PaidAt.Value.ToString("yyyy-MM-dd") : null,
-                null,
-                x.Invoice.Status == InvoiceStatus.Cancelled ? x.Invoice.CreatedAt.ToString("yyyy-MM-dd") : null,
-                x.Invoice.SubTotal,
-                x.Invoice.Credit,
-                x.Invoice.Tax,
-                x.Invoice.TaxRate,
-                x.Invoice.Total,
-                x.Invoice.Status.ToString(),
-                x.Invoice.PaymentMethod,
-                x.Invoice.Notes))
+            .SelectReportRows(_context.Clients.AsNoTracking())
             .ToListAsync(ct);
 
-        return Result<InvoiceReportResultDto>.Success(new InvoiceReportResultDto(rows, totalCount));
+        return Result<PaginatedList<InvoiceReportRowDto>>.Success(new PaginatedList<InvoiceReportRowDto>(rows, totalCount, query.Page, query.PageSize));
     }
 }

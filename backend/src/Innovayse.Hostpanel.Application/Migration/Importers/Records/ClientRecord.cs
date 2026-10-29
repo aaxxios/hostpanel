@@ -1,25 +1,30 @@
+using System.Text.Json.Serialization;
+
 namespace Innovayse.Hostpanel.Application.Migration.Importers.Records;
 
-/// <summary>One client as the source plugin describes it.</summary>
-/// <param name="Email">The email.</param>
-/// <param name="FirstName">The first name.</param>
-/// <param name="LastName">The last name.</param>
-/// <param name="Company">The company.</param>
-/// <param name="Phone">The phone.</param>
-/// <param name="Address">The address.</param>
-/// <param name="City">The city.</param>
-/// <param name="State">The state.</param>
-/// <param name="PostCode">The post code.</param>
-/// <param name="Country">The country.</param>
-/// <param name="Status">The status.</param>
-/// <param name="Currency">The currency.</param>
-/// <param name="TaxExempt">Whether tax exempt.</param>
-/// <param name="CreditBalance">The credit balance.</param>
-/// <param name="SignupDate">The signup date.</param>
-/// <param name="LastLogin">The last login.</param>
+/// <summary>
+/// One client as the source plugin describes it. The plugin sends the fields flat; the
+/// <see cref="ClientRecordConverter"/> reads them into this grouped shape.
+/// </summary>
+/// <param name="Email">The client's email; the duplicate check and the key other records link to the client by.</param>
+/// <param name="FirstName">Given name as stored in the source.</param>
+/// <param name="LastName">Family name as stored in the source.</param>
+/// <param name="Company">Company name; null or empty when the source holds none.</param>
+/// <param name="Phone">Phone number, free text as stored in the source.</param>
+/// <param name="Address">The postal address.</param>
+/// <param name="Billing">The currency, tax setting and credit the client is billed with.</param>
+/// <param name="Status">The source's client status (active, inactive, closed), mapped to a local status.</param>
+/// <param name="SignupDate">When the client signed up in the source.</param>
+/// <param name="LastLogin">When the client last signed in to the source; null when never.</param>
+[JsonConverter(typeof(ClientRecordConverter))]
 internal sealed record ClientRecord(
-    string Email, string FirstName, string LastName,
-    string? Company, string? Phone,
-    string? Address, string? City, string? State, string? PostCode, string? Country,
-    string Status, string? Currency, bool TaxExempt, decimal CreditBalance,
-    DateTimeOffset? SignupDate, DateTimeOffset? LastLogin);
+    string Email,
+    string FirstName,
+    string LastName,
+    string? Company,
+    string? Phone,
+    ClientAddressRecord Address,
+    ClientBillingRecord Billing,
+    string Status,
+    DateTimeOffset? SignupDate,
+    DateTimeOffset? LastLogin);

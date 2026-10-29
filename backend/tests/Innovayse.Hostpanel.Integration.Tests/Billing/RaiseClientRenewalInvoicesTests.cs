@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Commands.ApplyPaidRenewals;
 using Innovayse.Hostpanel.Application.Billing.Commands.RaiseClientRenewalInvoices;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
@@ -8,19 +7,18 @@ using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Notifications;
+using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Domain.Orders;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Domain.Settings;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -51,7 +49,7 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
     /// <returns>The saved client (still tracked).</returns>
     private static async Task<Client> SeedClientAsync(IHostpanelDbContext context)
     {
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(client);
         await context.SaveChangesAsync(CancellationToken.None);
         return client;
@@ -65,11 +63,11 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
     /// <param name="clientId">The owning client, or <see langword="null"/> to seed a new one.</param>
     /// <param name="recurringAmount">The service's recurring price.</param>
     /// <returns>
-    /// The client id, the seeded service, and the renewal date as Postgres actually stored it --
+    /// The client id, the seeded service, and the renewal date as Postgres actually stored it,
     /// truncated to microseconds, so comparisons after a reload never fail on a dropped tick.
     /// </returns>
-    private static async Task<(int ClientId, ClientService Service, DateTimeOffset StoredNextRenewalAt)> SeedServiceAsync(
-        IHostpanelDbContext context, DateTimeOffset nextRenewalAt, string cycle = BillingCycleNames.Monthly,
+    private static async Task<SeededRenewalService> SeedServiceAsync(
+        IHostpanelDbContext context, DateTimeOffset nextRenewalAt, BillingCycle cycle = BillingCycle.Monthly,
         bool autoRenew = true, int? clientId = null, decimal recurringAmount = 5m)
     {
         var ownerId = clientId ?? (await SeedClientAsync(context)).Id;
@@ -78,22 +76,18 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
         context.ProductGroups.Add(group);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+        var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 5m, 50m, DateTimeOffset.UtcNow);
         context.Products.Add(product);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var service = ClientService.Create(ownerId, product.Id, cycle);
-        service.Activate("panel-ref");
-        service.Update(
-            domain: null, dedicatedIp: null, username: null, password: null, billingCycle: cycle,
-            recurringAmount: recurringAmount, paymentMethod: null, nextRenewalAt: nextRenewalAt, subscriptionId: null,
-            overrideAutoSuspend: false, suspendUntil: null, autoTerminateEndOfCycle: false,
-            autoTerminateReason: null, adminNotes: null, provisioningRef: service.ProvisioningRef,
-            firstPaymentAmount: 5m, promotionCode: null, terminatedAt: null,
-            serverId: null, quantity: 1, productId: null);
-        service.SetAutoRenew(autoRenew);
+        var service = ClientService.Create(ownerId, product.Id, cycle, DateTimeOffset.UtcNow);
+        await ServicesTestSeeds.AddActivatedAsync(context, service, "panel-ref", DateTimeOffset.UtcNow);
+        service.ChangeBillingTerms(new ServiceBillingTerms(
+            BillingCycle: cycle, Quantity: 1, FirstPaymentAmount: 5m,
+            RecurringAmount: recurringAmount, NextRenewalAt: nextRenewalAt, PaymentMethod: null,
+            PromotionCode: null, SubscriptionId: null));
+        service.ConfigureAutomation(autoRenew, false, null, false, null);
 
-        context.ClientServices.Add(service);
         await context.SaveChangesAsync(CancellationToken.None);
 
         var stored = await context.ClientServices.AsNoTracking()
@@ -101,7 +95,7 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
             .Select(s => s.NextRenewalAt)
             .FirstAsync(CancellationToken.None);
 
-        return (ownerId, service, stored!.Value);
+        return new(ownerId, service, stored);
     }
 
     /// <summary>
@@ -115,7 +109,7 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
     /// <param name="sellCurrency">The currency the TLD's sell prices are in.</param>
     /// <param name="registrationPeriod">The domain's registration period in years.</param>
     /// <returns>The seeded domain and its expiry as Postgres stored it.</returns>
-    private static async Task<(RegisteredDomain Domain, DateTimeOffset StoredExpiresAt)> SeedDomainAsync(
+    private static async Task<SeededRenewableDomain> SeedDomainAsync(
         IHostpanelDbContext context, int clientId, DateTimeOffset expiresAt, Dictionary<int, decimal> sellRenew,
         string sellCurrency = "USD", int registrationPeriod = 1)
     {
@@ -125,16 +119,15 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
         context.TldConfigs.Add(config);
 
         var domain = RegisteredDomain.Register(
-            clientId, $"example.{tld}", expiresAt, autoRenew: true, whoisPrivacy: false, registrationPeriod: registrationPeriod);
-        domain.Activate("REF-STUB");
-        context.Domains.Add(domain);
+            clientId, $"example.{tld}", DateTimeOffset.UtcNow, expiresAt, autoRenew: true, whoisPrivacy: false, registrationPeriod: registrationPeriod, priceCurrency: TestCurrencies.Base);
+        await DomainsTestSeeds.AddActivatedAsync(context, domain, "REF-STUB", domain.ExpiresAt, DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         var stored = await context.Domains.AsNoTracking()
             .Where(d => d.Id == domain.Id)
             .Select(d => d.ExpiresAt)
             .FirstAsync(CancellationToken.None);
-        return (domain, stored);
+        return new(domain, stored);
     }
 
     /// <summary>Raises the client's renewal invoices.</summary>
@@ -198,9 +191,10 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
         var line = invoice.Items.Should().ContainSingle().Subject;
         line.ClientServiceId.Should().Be(service.Id);
         line.RegisteredDomainId.Should().BeNull();
+        line.Description.Should().Be("Renewal: Starter");
         line.Amount.Should().Be(5m);
         line.RenewalPeriodStart.Should().Be(start);
-        line.RenewalPeriodEnd.Should().Be(start.AddMonths(1));
+        line.RenewalPeriodEnd.Should().Be(start!.Value.AddMonths(1));
         line.RenewalAppliedAt.Should().BeNull();
 
         // Raising is not paying: the renewal date only moves when the line is paid and applied.
@@ -229,13 +223,12 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
         (await InvoicesOfAsync(context, clientId)).Should().BeEmpty();
     }
 
-    /// <summary>AutoRenew off, AutoTerminateEndOfCycle, an open cancellation request, or an unknown cycle all skip.</summary>
-    /// <param name="why">Which of the four reasons the service is seeded with.</param>
+    /// <summary>AutoRenew off, AutoTerminateEndOfCycle or an open cancellation request all skip.</summary>
+    /// <param name="why">Which of the three reasons the service is seeded with.</param>
     [Theory]
     [InlineData("autorenew")]
     [InlineData("terminate")]
     [InlineData("cancel")]
-    [InlineData("cycle")]
     public async Task Skips(string why)
     {
         using var scope = Host(new FakeEmailSender()).Services.CreateScope();
@@ -245,18 +238,16 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
         var (clientId, service, _) = why switch
         {
             "autorenew" => await SeedServiceAsync(context, due, autoRenew: false),
-            "cycle" => await SeedServiceAsync(context, due, cycle: "triennially"),
             _ => await SeedServiceAsync(context, due),
         };
 
         if (why == "terminate")
         {
-            service.Update(
-                domain: null, dedicatedIp: null, username: null, password: null, billingCycle: service.BillingCycle,
-                recurringAmount: service.RecurringAmount, paymentMethod: null, nextRenewalAt: service.NextRenewalAt,
-                subscriptionId: null, overrideAutoSuspend: false, suspendUntil: null, autoTerminateEndOfCycle: true,
-                autoTerminateReason: "Leaving", adminNotes: null, provisioningRef: service.ProvisioningRef,
-                firstPaymentAmount: 5m, promotionCode: null, terminatedAt: null, serverId: null, quantity: 1, productId: null);
+            service.ChangeBillingTerms(new ServiceBillingTerms(
+                BillingCycle: service.BillingCycle, Quantity: 1, FirstPaymentAmount: 5m,
+                RecurringAmount: service.RecurringAmount, NextRenewalAt: service.NextRenewalAt, PaymentMethod: null,
+                PromotionCode: null, SubscriptionId: null));
+            service.ConfigureAutomation(true, false, null, true, "Leaving");
             await context.SaveChangesAsync(CancellationToken.None);
         }
         else if (why == "cancel")
@@ -284,12 +275,10 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
 
         // Staff move the renewal date a few days on, still inside the lead time: a new period
         // start, so only the "open invoice" half of the duplicate rule can stop a second bill.
-        service.Update(
-            domain: null, dedicatedIp: null, username: null, password: null, billingCycle: service.BillingCycle,
-            recurringAmount: service.RecurringAmount, paymentMethod: null, nextRenewalAt: start.AddDays(3),
-            subscriptionId: null, overrideAutoSuspend: false, suspendUntil: null, autoTerminateEndOfCycle: false,
-            autoTerminateReason: null, adminNotes: null, provisioningRef: service.ProvisioningRef,
-            firstPaymentAmount: 5m, promotionCode: null, terminatedAt: null, serverId: null, quantity: 1, productId: null);
+        service.ChangeBillingTerms(new ServiceBillingTerms(
+            BillingCycle: service.BillingCycle, Quantity: 1, FirstPaymentAmount: 5m,
+            RecurringAmount: service.RecurringAmount, NextRenewalAt: start!.Value.AddDays(3), PaymentMethod: null,
+            PromotionCode: null, SubscriptionId: null));
         await context.SaveChangesAsync(CancellationToken.None);
 
         var result = await RaiseAsync(bus, clientId);
@@ -336,7 +325,7 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
 
         // The same Client method UpdateClientHandler calls for the admin's "separate invoices" switch.
         client.UpdateSettings(
-            lateFees: false, overdueNotices: true, taxExempt: false, separateInvoices: true,
+            overdueNotices: true, taxExempt: false, separateInvoices: true,
             disableCcProcessing: false, marketingOptIn: false, statusUpdate: true, allowSso: false);
         await context.SaveChangesAsync(CancellationToken.None);
         var (_, first, _) = await SeedServiceAsync(context, DateTimeOffset.UtcNow.AddDays(5), clientId: client.Id);
@@ -417,6 +406,32 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
         var invoice = (await InvoicesOfAsync(context, clientId)).Should().ContainSingle().Subject;
         invoice.Items.Should().HaveCount(2);
         invoice.DueDate.Should().Be(future);
+    }
+
+    /// <summary>A cancelled domain renewal invoice does not block its period, and the open one raised after it does.</summary>
+    [Fact]
+    public async Task CancelledDomainInvoice_IsReRaisedOnceOnly()
+    {
+        using var scope = Host(new FakeEmailSender()).Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var client = await SeedClientAsync(context);
+        var (domain, expiry) = await SeedDomainAsync(context, client.Id, DateTimeOffset.UtcNow.AddDays(10), new() { [1] = 12m });
+        (await RaiseAsync(bus, client.Id)).Value.Should().Be(1);
+        var first = await context.Invoices.FirstAsync(i => i.ClientId == client.Id, CancellationToken.None);
+        first.Cancel();
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        (await RaiseAsync(bus, client.Id)).Value.Should().Be(1);
+        (await RaiseAsync(bus, client.Id)).Value.Should().Be(0);
+
+        var invoices = await InvoicesOfAsync(context, client.Id);
+        invoices.Should().HaveCount(2);
+        invoices[0].Status.Should().Be(InvoiceStatus.Cancelled);
+        invoices[1].Status.Should().Be(InvoiceStatus.Unpaid);
+        var line = invoices[1].Items.Should().ContainSingle().Subject;
+        line.RegisteredDomainId.Should().Be(domain.Id);
+        line.RenewalPeriodStart.Should().Be(expiry);
     }
 
     /// <summary>A domain inside the lead time is priced from its TLD's renew price in the payer currency.</summary>
@@ -595,11 +610,11 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var client = await SeedClientAsync(context);
         var (domain, expiry) = await SeedDomainAsync(context, client.Id, DateTimeOffset.UtcNow.AddDays(10), new() { [1] = 12m });
-        var paid = Invoice.Create(client.Id, expiry, "USD");
+        var paid = Invoice.Create(client.Id, expiry, "USD", DateTimeOffset.UtcNow);
         paid.AddDomainRenewal($"{domain.Name} renewal", 12m, domain.Id, expiry, expiry.AddYears(1));
         context.Invoices.Add(paid);
         await context.SaveChangesAsync(CancellationToken.None);
-        paid.MarkPaid("t");
+        paid.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
         // Staff correct the expiry by two days, still inside the window: a new period start.
@@ -621,11 +636,11 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var (clientId, service, start) = await SeedServiceAsync(context, DateTimeOffset.UtcNow.AddDays(10));
-        var paid = Invoice.Create(clientId, start, "USD");
-        paid.AddServiceRenewal("Starter renewal", 5m, service.Id, start, start.AddMonths(1));
+        var paid = Invoice.Create(clientId, start!.Value, "USD", DateTimeOffset.UtcNow);
+        paid.AddServiceRenewal("Starter renewal", 5m, service.Id, start!.Value, start!.Value.AddMonths(1));
         context.Invoices.Add(paid);
         await context.SaveChangesAsync(CancellationToken.None);
-        paid.MarkPaid("t");
+        paid.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         paid.Items.Single().MarkRenewalApplied(DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
 
@@ -641,11 +656,11 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var (clientId, service, start) = await SeedServiceAsync(context, DateTimeOffset.UtcNow.AddDays(10));
-        var refunded = Invoice.Create(clientId, start, "USD");
-        refunded.AddServiceRenewal("Starter renewal", 5m, service.Id, start, start.AddMonths(1));
+        var refunded = Invoice.Create(clientId, start!.Value, "USD", DateTimeOffset.UtcNow);
+        refunded.AddServiceRenewal("Starter renewal", 5m, service.Id, start!.Value, start!.Value.AddMonths(1));
         context.Invoices.Add(refunded);
         await context.SaveChangesAsync(CancellationToken.None);
-        refunded.MarkPaid("t");
+        refunded.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         refunded.Refund();
         await context.SaveChangesAsync(CancellationToken.None);
 
@@ -722,7 +737,7 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
         var applied = await bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoice.Id), CancellationToken.None);
 
         applied.IsSuccess.Should().BeTrue();
-        (await ReloadServiceAsync(context, service.Id)).NextRenewalAt.Should().Be(start.AddMonths(1));
+        (await ReloadServiceAsync(context, service.Id)).NextRenewalAt.Should().Be(start!.Value.AddMonths(1));
     }
 
     /// <summary>With <c>auto_apply_credit</c> off the credit balance is left alone.</summary>
@@ -772,8 +787,8 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
 
     /// <summary>
     /// A client renew order for the domain (its line carries no domain id or period) blocks the
-    /// auto-renewal while it still bills the domain -- its invoice unpaid, or paid with the order not
-    /// fulfilled yet -- and stops blocking once the order is fulfilled. Without the block the renew
+    /// auto-renewal while it still bills the domain (its invoice unpaid, or paid with the order not
+    /// fulfilled yet) and stops blocking once the order is fulfilled. Without the block the renew
     /// order's payment and the auto-renewal would each buy the same year.
     /// </summary>
     [Fact]
@@ -787,25 +802,26 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
 
         // What PlaceOrderHandler leaves behind for a renew order: a plain invoice line, an order
         // item naming the domain, the order still Pending and linked to its invoice.
-        var orderInvoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var orderInvoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         orderInvoice.AddItem($"Domain renewal: {domain.Name}", 12m, 1);
         context.Invoices.Add(orderInvoice);
         await context.SaveChangesAsync(CancellationToken.None);
-        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..20], client.Id, "bank-transfer", null, "USD");
-        order.AddItem(1, "Domain", BillingCycleNames.Annually, 12m, 12m, domain.Name, null, DomainActionNames.Renew, null, 1);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..20], client.Id, "bank-transfer", null, "USD", DateTimeOffset.UtcNow);
+        order.AddItem(
+            await DomainsTestSeeds.SeedHostingProductAsync(context), "Domain", BillingCycle.Annual, 12m, 12m, domain.Name, null, DomainAction.Renew, null, 1);
         order.LinkInvoice(orderInvoice.Id);
         context.Orders.Add(order);
         await context.SaveChangesAsync(CancellationToken.None);
 
         (await RaiseAsync(bus, client.Id)).Value.Should().Be(0, "the renew order's unpaid invoice bills the domain");
 
-        orderInvoice.MarkPaid("t");
+        orderInvoice.RecordPaidHistory("t", DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
         (await RaiseAsync(bus, client.Id)).Value.Should().Be(0, "paid but not fulfilled: the registrar renewal is still pending");
 
         // Fulfilled. The expiry is left where it was on purpose, so the only thing that changed is
         // the order's state: normal behaviour resumes and the period is invoiced.
-        order.Accept();
+        order.Accept(DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
         (await RaiseAsync(bus, client.Id)).Value.Should().Be(1);
         (await InvoicesOfAsync(context, client.Id)).Should().Contain(i => i.Items.Any(l => l.RegisteredDomainId == domain.Id));
@@ -821,13 +837,14 @@ public sealed class RaiseClientRenewalInvoicesTests(IntegrationTestFactory facto
         var client = await SeedClientAsync(context);
         var (domain, _) = await SeedDomainAsync(context, client.Id, DateTimeOffset.UtcNow.AddDays(10), new() { [1] = 12m });
 
-        var orderInvoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var orderInvoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         orderInvoice.AddItem($"Domain renewal: {domain.Name}", 12m, 1);
         orderInvoice.Cancel();
         context.Invoices.Add(orderInvoice);
         await context.SaveChangesAsync(CancellationToken.None);
-        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..20], client.Id, "bank-transfer", null, "USD");
-        order.AddItem(1, "Domain", BillingCycleNames.Annually, 12m, 12m, domain.Name, null, DomainActionNames.Renew, null, 1);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..20], client.Id, "bank-transfer", null, "USD", DateTimeOffset.UtcNow);
+        order.AddItem(
+            await DomainsTestSeeds.SeedHostingProductAsync(context), "Domain", BillingCycle.Annual, 12m, 12m, domain.Name, null, DomainAction.Renew, null, 1);
         order.LinkInvoice(orderInvoice.Id);
         order.Cancel();
         context.Orders.Add(order);

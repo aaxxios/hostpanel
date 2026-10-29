@@ -1,3 +1,27 @@
+/**
+ * The row shape of the domains report.
+ */
+
+import type { DomainStatus } from '@/types/domain'
+
+/** The money figures of a domain row. */
+export interface ReportDomainAmounts {
+  /** Amount of the first payment. */
+  firstPayment: number
+  /** Amount of each renewal. */
+  recurring: number
+}
+
+/** The dates of a domain row. */
+export interface ReportDomainDates {
+  /** Registration date. */
+  registration: string
+  /** Expiry date. */
+  expiry: string
+  /** Next due date. */
+  nextDue: string
+}
+
 /** One row of the domains report. */
 export interface ReportDomainRow {
   /** Domain id. */
@@ -12,24 +36,18 @@ export interface ReportDomainRow {
   orderType: string
   /** The domain name. */
   domainName: string
-  /** Amount of the first payment. */
-  firstPaymentAmount: number
-  /** Amount of each renewal. */
-  recurringAmount: number
+  /** Amounts of the first payment and of each renewal. */
+  amounts: ReportDomainAmounts
   /** Registration period in years. */
   registrationPeriod: number
-  /** Registration date. */
-  registrationDate: string
-  /** Expiry date. */
-  expiryDate: string
-  /** Next due date. */
-  nextDueDate: string
+  /** Registration, expiry and next due dates. */
+  dates: ReportDomainDates
   /** Registrar, when set. */
   registrar: string | null
   /** Payment method, when set. */
   paymentMethod: string | null
   /** Domain status. */
-  status: string
+  status: DomainStatus
   /** Staff notes. */
   notes: string | null
 }

@@ -17,7 +17,7 @@ import { UiAlign } from '@/utils/ui/table'
 
 const { t } = useI18n()
 
-const { data } = useReport<ReportAging>(() => '/reports/aging-invoices-summary')
+const { data, load } = useReport<ReportAging>(() => '/reports/aging-invoices-summary')
 
 /** One column for the period and one per currency in the report. */
 const columns = computed<ReportColumn[]>(() => [
@@ -32,7 +32,7 @@ const columns = computed<ReportColumn[]>(() => [
 /** One row per period with its amounts already formatted in their own currency. */
 const rows = computed<Record<string, string>[]>(() =>
   (data.value?.periods ?? []).map(period => ({
-    period: period.period,
+    period: t(`reports.agingInvoices.buckets.${period.period}`),
     ...Object.fromEntries(
       (data.value?.currencies ?? []).map(currency => [currency, formatCurrencyCode(period.amountsByCurrency[currency] ?? 0, currency)]),
     ),
@@ -49,7 +49,7 @@ const totals = computed<Record<string, string>>(() =>
 /** Periods with something overdue; the pie compares periods, so each currency counts at face value. */
 const overduePeriods = computed(() =>
   (data.value?.periods ?? [])
-    .map(period => ({ label: period.period, total: Object.values(period.amountsByCurrency).reduce((sum, amount) => sum + amount, 0) }))
+    .map(period => ({ label: t(`reports.agingInvoices.buckets.${period.period}`), total: Object.values(period.amountsByCurrency).reduce((sum, amount) => sum + amount, 0) }))
     .filter(period => period.total > 0),
 )
 
@@ -61,7 +61,11 @@ const series = computed<UiChartSeries[]>(() => [{ label: t('shared.total'), data
 </script>
 
 <template>
-  <ReportPage :title="t('reports.agingInvoices.agingInvoices')" :description="t('reports.agingInvoices.aSummaryOfOutstandingInvoices')">
+  <ReportPage
+    :title="t('reports.agingInvoices.agingInvoices')"
+    :description="t('reports.agingInvoices.aSummaryOfOutstandingInvoices')"
+    :retry="load"
+  >
     <template v-if="data">
       <ReportTable :columns="columns" :rows="rows" row-key="period" :totals="totals" />
       <ReportChartCard

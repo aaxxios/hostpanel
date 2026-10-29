@@ -1,3 +1,9 @@
+/**
+ * The row shape of the services report.
+ */
+
+import type { BillingCycle, ServiceStatus } from '@/types/service'
+
 /** One row of the services report. */
 export interface ReportServiceRow {
   /** Service id. */
@@ -8,12 +14,12 @@ export interface ReportServiceRow {
   clientName: string
   /** Product id. */
   productId: number
-  /** Product name. */
-  productName: string | null
+  /** Product name; every service has one, since its product cannot be deleted. */
+  productName: string
   /** Domain of the service, when it has one. */
   domain: string | null
   /** Billing cycle. */
-  billingCycle: string
+  billingCycle: BillingCycle
   /** Amount of the first payment. */
   firstPaymentAmount: number
   /** Amount of each renewal. */
@@ -27,7 +33,7 @@ export interface ReportServiceRow {
   /** Termination date, when terminated. */
   terminatedAt: string | null
   /** Service status. */
-  status: string
+  status: ServiceStatus
   /** Staff notes. */
   notes: string | null
 }

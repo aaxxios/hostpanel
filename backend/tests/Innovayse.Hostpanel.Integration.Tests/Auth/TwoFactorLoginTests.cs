@@ -2,16 +2,13 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.Infrastructure.Auth.Settings;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 
@@ -265,12 +262,6 @@ public sealed class TwoFactorLoginTests(IntegrationTestFactory factory) : IClass
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         body.RootElement.GetProperty("type").GetString().Should().Be(code);
     }
-
-    /// <summary>An account with two-factor authentication enabled.</summary>
-    /// <param name="Email">The sign-in email.</param>
-    /// <param name="UserId">The account id.</param>
-    /// <param name="Secret">The base32 authenticator secret.</param>
-    private sealed record TwoFactorAccount(string Email, string UserId, string Secret);
 
     /// <summary>Disposes the clocked host.</summary>
     public void Dispose()

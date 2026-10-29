@@ -50,7 +50,9 @@ describe('client secret environment mapping', () => {
     it.each(CLIENT_COMPOSE_FILES)('%s feeds NUXT_SSO_CLIENT_SECRET from CLIENT_HOSTPANEL_SECRET', (file) => {
       const compose = read(resolve(DOCKER_DIR, file))
 
-      expect(compose).toMatch(/NUXT_SSO_CLIENT_SECRET:\s*\$\{CLIENT_HOSTPANEL_SECRET\}/)
+      // The production stacks run in local auth mode too, where no sign-on secret exists, so they
+      // read the variable with an empty default (`:-`); the name is what this pins, not whether it is set.
+      expect(compose).toMatch(/NUXT_SSO_CLIENT_SECRET:\s*\$\{CLIENT_HOSTPANEL_SECRET(:-)?\}/)
       expect(compose).not.toMatch(/(?<![A-Z_])SSO_CLIENT_SECRET/)
     })
 

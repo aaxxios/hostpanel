@@ -4,7 +4,7 @@
  * The storefront is server-rendered: the plan list, the settings and the TLD table are fetched
  * by the Nuxt server (Nitro), not by the browser, so `page.route` can never see them. A real
  * HTTP server standing in for the backend is therefore the only mock that covers both the SSR
- * calls and the BFF calls the browser makes -- the whole `browser -> Nitro BFF -> backend` path
+ * calls and the BFF calls the browser makes: the whole `browser -> Nitro BFF -> backend` path
  * stays real and only the outermost hop is replaced. This follows the testing rule: what is
  * stubbed is what the client does not own, as a real HTTP server.
  *
@@ -12,20 +12,20 @@
  * server is started with `API_URL` pointing here.
  *
  * Besides the backend routes it exposes six test-only endpoints:
- * - `GET  /__e2e/requests` -- every request received so far (method, path, body and the
+ * - `GET  /__e2e/requests`: every request received so far (method, path, body and the
  *   `X-Language` it carried), so a spec can assert that a form submission really reached the
  *   backend with the right body and in the right language;
- * - `POST /__e2e/script`   -- scripts one route to answer a given status (and problem body) until
+ * - `POST /__e2e/script`: scripts one route to answer a given status (and problem body) until
  *   the next reset: a refused form, a session that expired, a backend that is down;
- * - `POST /__e2e/settings` -- overrides one public portal setting (the template, the theme) until
+ * - `POST /__e2e/settings`: overrides one public portal setting (the template, the theme) until
  *   the next reset, so a spec can render the storefront in each template;
- * - `POST /__e2e/demo`     -- switches demo mode on; it is off by default, so only the spec that covers
+ * - `POST /__e2e/demo`: switches demo mode on; it is off by default, so only the spec that covers
  *   the demo banner and the sign-in hint turns it on, until the next reset;
- * - `POST /__e2e/slides`   -- switches the home-page slides on; the feed is empty by default (the home shows the
+ * - `POST /__e2e/slides`: switches the home-page slides on; the feed is empty by default (the home shows the
  *   text hero), so only the spec that covers the slider turns them on, until the next reset;
- * - `POST /__e2e/email-verified` -- sets whether the signed-in address reads as confirmed (it does by default),
+ * - `POST /__e2e/email-verified`: sets whether the signed-in address reads as confirmed (it does by default),
  *   so only the spec for the verification banner turns it off, until the next reset;
- * - `POST /__e2e/reset`    -- clears the log, the scripted answers, the settings overrides, demo mode and
+ * - `POST /__e2e/reset`: clears the log, the scripted answers, the settings overrides, demo mode and
  *   everything a spec changed: tickets, profile, services, the domain, payment methods, contacts,
  *   the team and the two-factor flag.
  *
@@ -81,6 +81,7 @@ import {
   SERVICE_MANAGED,
   SSH_ACCESS,
   SERVICE_PENDING,
+  SERVICE_SUSPENDED,
   STUB_PORT,
   TAKEN_DOMAIN,
   TAKEN_EMAIL,
@@ -166,9 +167,9 @@ let profile = { ...CLIENT }
 /**
  * Builds the services the stub starts with, so a reset can restore them.
  *
- * @returns {Record<string, unknown>[]} A fresh list: the set-up service with a domain, the set-up one without, and the one that needs setup.
+ * @returns {Record<string, unknown>[]} A fresh list: the set-up service with a domain, the set-up one without, the one that needs setup and the suspended one.
  */
-const seedServices = () => [{ ...SERVICE }, { ...SERVICE_MANAGED }, { ...SERVICE_PENDING }]
+const seedServices = () => [{ ...SERVICE }, { ...SERVICE_MANAGED }, { ...SERVICE_PENDING }, { ...SERVICE_SUSPENDED }]
 
 /** @type {Record<string, unknown>[]} The customer's services; a finished setup gives one a control-panel user, a reset restores them. */
 let services = seedServices()
@@ -185,6 +186,14 @@ const seedNameservers = () => DOMAIN_NAMESERVERS.map((nameserver) => ({ ...names
 
 /** @type {{ id: number, host: string }[]} The domain's nameservers. */
 let nameservers = seedNameservers()
+
+/**
+ * The domain as the backend answers it: the stored state with its current nameservers inside
+ * `management`, where `MyDomainDto` carries them.
+ *
+ * @returns {Record<string, unknown>} The domain.
+ */
+const domainView = () => ({ ...domainState, management: { ...DOMAIN.management, nameservers } })
 
 /** @type {Record<string, unknown>[]} The saved payment methods; a removal changes them, a reset restores them. */
 let savedCards = [{ ...SAVED_CARD }]
@@ -255,6 +264,22 @@ const send = (res, status, payload, type = 'application/json') => {
 }
 
 /**
+ * Builds one page of a list in the backend's `PaginatedList` shape: every row on the first page.
+ *
+ * @template T
+ * @param {T[]} items The rows.
+ * @param {number} pageSize The page size the caller asked for.
+ * @returns {{ items: T[], pageNumber: number, pageSize: number, totalCount: number, totalPages: number }} The page.
+ */
+const firstPage = (items, pageSize) => ({
+  items,
+  pageNumber: 1,
+  pageSize,
+  totalCount: items.length,
+  totalPages: items.length === 0 ? 0 : 1,
+})
+
+/**
  * Writes the backend's `ErrorResponse` shape (problem+json) the BFF knows how to forward.
  *
  * @param {import('node:http').ServerResponse} res The response to write.
@@ -274,13 +299,13 @@ const sendProblem = (res, status, code, detail, errors) => {
  * @param {string} path Request path without the query string.
  * @param {unknown} body Parsed JSON body, or `null`.
  * @param {import('node:http').ServerResponse} res The response to write.
- * @param {URLSearchParams} [query] The request's query string, read by routes that price by `currency`.
+ * @param {URLSearchParams} [query] The request's query string, read by the routes that filter, page or price by `currency`.
  * @returns {boolean} True when the route was handled.
  */
 const route = (method, path, body, res, query = new URLSearchParams()) => {
   const isGet = method === 'GET'
 
-  // Public storefront data -- read by the Nuxt server while rendering.
+  // Public storefront data: read by the Nuxt server while rendering.
   if (isGet && path === '/api/settings/public') {
     send(res, 200, publicSettings())
     return true
@@ -289,14 +314,20 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     send(res, 200, CURRENCIES)
     return true
   }
-  if (isGet && path === '/api/products/groups') {
+  if (isGet && path === '/api/public/product-groups') {
     send(res, 200, PRODUCT_GROUPS)
     return true
   }
-  if (isGet && path === '/api/products') {
-    // Like the real endpoint: `groupId` selects one group, `gids` a comma separated list, neither the whole catalogue.
-    const groupIds = (query.get('gids') ?? query.get('groupId') ?? '').split(',').filter(Boolean).map(Number)
-    const wanted = productsIn(query.get('currency')).filter((product) => groupIds.length === 0 || groupIds.includes(product.groupId))
+  if (isGet && path === '/api/public/products') {
+    // Like the real endpoint: `productId` selects one product, `groupId` one group, repeated `groupIds` several groups,
+    // none of them the whole catalogue; a product must satisfy every filter given.
+    const groupIds = query.getAll('groupIds').map(Number)
+    const groupId = query.get('groupId')
+    const productId = query.get('productId')
+    const wanted = productsIn(query.get('currency'))
+      .filter((product) => groupIds.length === 0 || groupIds.includes(product.groupId))
+      .filter((product) => groupId === null || String(product.groupId) === groupId)
+      .filter((product) => productId === null || String(product.id) === productId)
     send(res, 200, wanted)
     return true
   }
@@ -318,11 +349,35 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     return true
   }
   if (isGet && path === '/api/announcements/published') {
-    send(res, 200, { items: [ANNOUNCEMENT], page: 1, pageSize: 50, total: 1 })
+    send(res, 200, firstPage([ANNOUNCEMENT], Number(query.get('pageSize') ?? 10)))
     return true
   }
-  if (isGet && path === '/api/knowledgebase') {
-    send(res, 200, KB_ARTICLES)
+  if (isGet && path.startsWith('/api/public/announcements/')) {
+    if (path === `/api/public/announcements/${ANNOUNCEMENT.id}`) {
+      send(res, 200, ANNOUNCEMENT)
+    } else {
+      sendProblem(res, 404, 'NOT_FOUND', 'Announcement not found.')
+    }
+    return true
+  }
+  if (isGet && path === '/api/knowledgebase/categories') {
+    const counts = new Map()
+    for (const article of KB_ARTICLES) {
+      counts.set(article.category, (counts.get(article.category) ?? 0) + 1)
+    }
+    send(res, 200, [...counts.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, articleCount]) => ({ name, articleCount })))
+    return true
+  }
+  if (isGet && path === '/api/knowledgebase/articles') {
+    const category = (query.get('category') ?? '').toLowerCase()
+    const search = (query.get('search') ?? '').toLowerCase()
+    const items = KB_ARTICLES
+      .filter((a) => !category || a.category.toLowerCase() === category)
+      .filter((a) => !search || a.title.toLowerCase().includes(search) || a.content.toLowerCase().includes(search))
+      .map((a) => ({ id: a.id, title: a.title, excerpt: a.content.replace(/<[^>]*>/g, ' ').trim(), category: a.category }))
+    send(res, 200, firstPage(items, Number(query.get('pageSize') ?? 100)))
     return true
   }
   if (isGet && path.startsWith('/api/knowledgebase/')) {
@@ -343,7 +398,7 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     return true
   }
 
-  // Contact form -- the backend answers 204 and the BFF relays it; one address is refused
+  // Contact form: the backend answers 204 and the BFF relays it; one address is refused
   // with a field error so the form's refusal path can be driven.
   if (method === 'POST' && path === '/api/contact') {
     if (body?.email === BAD_CONTACT_EMAIL) {
@@ -368,7 +423,7 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     return true
   }
 
-  // Email verification -- status read and the authenticated resend (204, no body).
+  // Email verification: status read and the authenticated resend (204, no body).
   if (isGet && path === '/api/auth/email-verified') {
     send(res, 200, { verified: emailVerified })
     return true
@@ -382,7 +437,7 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     return true
   }
 
-  // Storefront content the operator manages -- anonymous, read by the Nuxt server while rendering.
+  // Storefront content the operator manages: anonymous, read by the Nuxt server while rendering.
   if (isGet && path === '/api/public/faqs') {
     send(res, 200, FAQS)
     return true
@@ -404,7 +459,7 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     return true
   }
 
-  // Demo mode -- anonymous, off unless a spec switched it on; the next reset is always DEMO_RESET_IN_MS from now.
+  // Demo mode: anonymous, off unless a spec switched it on; the next reset is always DEMO_RESET_IN_MS from now.
   if (isGet && path === '/api/slides') {
     send(res, 200, slidesEnabled ? SLIDES : [])
     return true
@@ -439,7 +494,7 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     return true
   }
 
-  // Client area -- the stub trusts any bearer; the specs do not test authorisation here.
+  // Client area: the stub trusts any bearer; the specs do not test authorisation here.
   if (isGet && path === '/api/auth/me') {
     send(res, 200, ACCOUNT)
     return true
@@ -453,16 +508,16 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     return true
   }
   if (isGet && path === '/api/me/domains') {
-    send(res, 200, [domainState])
+    send(res, 200, [domainView()])
     return true
   }
-  if (method === 'PUT' && path === '/api/clients/me') {
-    profile = { ...profile, firstName: body?.FirstName ?? profile.firstName }
+  if (method === 'PATCH' && path === '/api/clients/me') {
+    profile = { ...profile, firstName: body?.firstName ?? profile.firstName }
     send(res, 200, profile)
     return true
   }
 
-  // Support tickets -- kept in memory so a created ticket and a reply show up on the next read.
+  // Support tickets: kept in memory so a created ticket and a reply show up on the next read.
   if (isGet && path === '/api/me/tickets') {
     send(res, 200, tickets.map((ticket) => ticket.row))
     return true
@@ -509,22 +564,16 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     if (isGet && !ticketMatch[2]) {
       send(res, 200, {
         id: ticket.row.id,
-        clientId: ticket.row.clientId,
         subject: ticket.row.subject,
         message: ticket.message,
         status: ticket.row.status,
         priority: ticket.row.priority,
         departmentId: 1,
         departmentName: ticket.row.departmentName,
-        assignedToStaffId: null,
-        assignedToStaffName: null,
         createdAt: ticket.row.createdAt,
-        isFlagged: ticket.row.isFlagged,
         replies: ticket.replies,
-        tags: [],
         rating: null,
         feedbackComment: null,
-        feedbackLeftBy: null,
         feedbackAt: null,
       })
       return true
@@ -542,10 +591,10 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     send(res, 200, savedCards)
     return true
   }
-  // Hosted-gateway return: the invoice id picks the outcome (an unknown id is a 404, so the page cannot tell).
+  // Hosted-gateway return: the invoice id picks the outcome (an unknown id is a 404, so the page cannot tell); the state is spelled as the API sends its enum.
   const gatewayMatch = path.match(/^\/api\/me\/invoices\/(\d+)\/gateway-payment\/complete$/)
   if (method === 'POST' && gatewayMatch) {
-    const outcome = { [GATEWAY_PAID_INVOICE]: 'paid', [GATEWAY_PENDING_INVOICE]: 'pending', [GATEWAY_DECLINED_INVOICE]: 'declined' }[gatewayMatch[1]]
+    const outcome = { [GATEWAY_PAID_INVOICE]: 'Paid', [GATEWAY_PENDING_INVOICE]: 'Pending', [GATEWAY_DECLINED_INVOICE]: 'Declined' }[gatewayMatch[1]]
     if (outcome) {
       send(res, 200, { state: outcome })
     } else {
@@ -562,7 +611,7 @@ const route = (method, path, body, res, query = new URLSearchParams()) => {
     return true
   }
 
-  // Order placement -- the order, its invoice and the token that proves the order is the caller's.
+  // Order placement: the order, its invoice and the token that proves the order is the caller's.
   if (method === 'POST' && path === '/api/orders') {
     send(res, 200, ORDER)
     return true
@@ -637,7 +686,7 @@ const routeManagement = (method, path, body, res) => {
   }
 
   // One service: cancellation state, related invoices, password, cancellation and first-time setup.
-  const serviceMatch = path.match(/^\/api\/me\/services\/(\d+)\/(cancellation-status|invoices|change-password|cancel|setup)$/)
+  const serviceMatch = path.match(/^\/api\/me\/services\/(\d+)\/(cancellation-status|hosting-info|invoices|change-password|cancel|setup)$/)
   if (serviceMatch) {
     const service = services.find((s) => String(s.id) === serviceMatch[1])
     if (!service) {
@@ -648,13 +697,18 @@ const routeManagement = (method, path, body, res) => {
       send(res, 200, { pending: false })
       return true
     }
+    if (isGet && serviceMatch[2] === 'hosting-info') {
+      // The real backend probes the domain over the network; a spec gets the empty reading.
+      send(res, 200, { nameservers: [], ssl: null })
+      return true
+    }
     if (isGet && serviceMatch[2] === 'invoices') {
       send(res, 200, { invoices: [SERVICE_INVOICE], unattributedInvoiceCount: 0 })
       return true
     }
     if (method === 'POST' && serviceMatch[2] === 'setup') {
-      // The typed domain is deliberately not stored: a service with a domain makes the client's
-      // server look it up on the network, which a spec must not depend on.
+      // The typed domain is deliberately not stored: a service with a domain makes the
+      // backend probe it over the network, which a spec must not depend on.
       service.username = String(body?.username ?? '')
       service.status = 'Active'
       send(res, 204)
@@ -680,7 +734,7 @@ const routeManagement = (method, path, body, res) => {
     const part = domainMatch[2]
     const switches = { 'auto-renew': 'autoRenew', 'whois-privacy': 'whoisPrivacy', lock: 'isLocked' }
     if (isGet && !part) {
-      send(res, 200, domainState)
+      send(res, 200, domainView())
       return true
     }
     if (method === 'PUT' && part && switches[part]) {
@@ -698,10 +752,6 @@ const routeManagement = (method, path, body, res) => {
     }
     if (method === 'PUT' && part === 'whois') {
       send(res, 204)
-      return true
-    }
-    if (isGet && part === 'nameservers') {
-      send(res, 200, nameservers)
       return true
     }
     if (method === 'PUT' && part === 'nameservers') {
@@ -776,9 +826,9 @@ const routeManagement = (method, path, body, res) => {
     return true
   }
 
-  // Mail history of the account: empty.
+  // Mail history of the account: empty, one page of the hundred rows the BFF always asks for.
   if (isGet && path === '/api/me/emails') {
-    send(res, 200, { items: [], totalCount: 0, page: 1, pageSize: 100 })
+    send(res, 200, firstPage([], 100))
     return true
   }
 

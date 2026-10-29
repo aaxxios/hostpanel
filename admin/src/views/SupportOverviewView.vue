@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
  * Support overview dashboard: period-filtered ticket figures, the average first reply time and
- * the tickets-by-hour distribution.
+ * the tickets-by-hour distribution. A refused load shows the API's sentence with a retry.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiChart from '@/components/ui/UiChart.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
@@ -88,9 +88,12 @@ onMounted(() => {
 
     <UiSkeleton v-if="store.loading && !store.overviewStats" :lines="4" data-testid="support-overview-loading" />
 
-    <UiAlert v-else-if="store.error && !store.overviewStats" variant="error" data-testid="support-overview-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="store.error && !store.overviewStats"
+      :message="store.error"
+      testid="support-overview-error"
+      @retry="store.fetchOverview(selectedPeriod)"
+    />
 
     <template v-else>
       <UiGrid :columns="4">

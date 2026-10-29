@@ -2,7 +2,7 @@
   "id": "innovayse-cwp7",
   "name": "CWP7",
   "version": "1.0.0",
-  "author": "Innovayse",
+  "author": "Hostpanel",
   "description": "Provisioning provider for Control Web Panel 7 (CWP7).",
   "type": "Provisioning",
   "category": "Hosting / Provisioning",

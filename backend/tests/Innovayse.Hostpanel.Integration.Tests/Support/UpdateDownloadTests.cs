@@ -1,18 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
 /// <summary>
 /// <c>PUT /api/downloads/{id}</c>: an admin can update a download entry, an id names no download
-/// is refused <c>DOWNLOAD_NOT_FOUND</c> (the pre-conversion route answered 400), and the action is
+/// is refused <c>DOWNLOAD_NOT_FOUND</c>, and the action is
 /// closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>DownloadsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateDownloadTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

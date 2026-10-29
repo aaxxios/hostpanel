@@ -1,16 +1,14 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Provisioning.Events;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Provisioning;
 
 /// <summary>
 /// Tests for <c>ServiceTerminatedHandler</c>: a terminated service terminates the hosting account via the provisioning provider.
 /// Each test builds its own host from <see cref="IntegrationTestFactory"/> with the one port this platform
-/// does not own -- the hosting server's control-panel API -- replaced by <see cref="RecordingProvisioningProvider"/>,
+/// does not own (the hosting server's control-panel API) replaced by <see cref="RecordingProvisioningProvider"/>,
 /// publishes the event exactly once through the real message bus and asserts the provider call happened exactly once.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -28,7 +26,7 @@ public sealed class ServiceTerminatedHandlerTests(IntegrationTestFactory factory
 
         var (clientId, _, serviceId) = await ProvisioningTestSeeds.SeedActiveServiceAsync(context);
 
-        await bus.InvokeAsync(new ServiceTerminatedEvent(serviceId, clientId, "cancelled"), CancellationToken.None);
+        await bus.InvokeAsync(new ServiceTerminatedEvent(serviceId, clientId, "cancelled", DateTimeOffset.UtcNow), CancellationToken.None);
 
         var call = Assert.Single(provider.Terminated);
         Assert.Equal(serviceId, call.ServiceId);

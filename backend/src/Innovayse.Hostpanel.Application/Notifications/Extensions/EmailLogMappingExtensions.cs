@@ -17,6 +17,6 @@ public static class EmailLogMappingExtensions
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        return source.Select(l => new EmailLogDto(l.Id, l.To, l.Subject, l.SentAt, l.Success, l.Error));
+        return source.Select(l => new EmailLogDto(l.Id, l.To, l.Subject, l.SentAt, l.Success, l.Failure));
     }
 }

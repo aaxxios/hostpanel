@@ -9,15 +9,15 @@ import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import { stubTemplateGlobals } from '~/tests/helpers/templateGlobals'
 import LayoutHeader from '~/components/layout/Header.vue'
 import { useAuthStore } from '~/stores/auth'
-import type { ClientUser } from '~/types/clientuser'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 import type { PortalProduct } from '~/types/portalproduct'
 import type { PortalProductGroup } from '~/types/portalproductgroup'
 import { ProductType } from '~/types/producttype'
 
 /** Groups the stubbed catalogue API returns: hosting and a VPS group. */
 const GROUPS: PortalProductGroup[] = [
-  { id: 1, name: 'Web hosting', isActive: true, productCount: 2 },
-  { id: 9, name: 'Cloud servers', isActive: true, productCount: 1 },
+  { id: 1, name: 'Web hosting', productCount: 2 },
+  { id: 9, name: 'Cloud servers', productCount: 1 },
 ]
 
 /** Products the stubbed catalogue API returns. */
@@ -63,7 +63,7 @@ const CurrencySwitcherStub = defineComponent({
 })
 
 /** A signed-in client. */
-const client = { id: 1, firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.test' } as ClientUser
+const client = makeClientUser()
 
 /**
  * Mounts the header with the pickers stood in for and lets the catalogue read settle.
