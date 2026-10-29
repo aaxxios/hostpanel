@@ -1,3 +1,4 @@
+using JasperFx.CommandLine;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -7,6 +8,18 @@ namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 /// <summary>Boots Program.cs with the settings a provider-owned deployment supplies.</summary>
 internal sealed class SsoModeFactory(string connectionString) : WebApplicationFactory<Program>
 {
+    /// <summary>
+    /// Lets the API's entry point start the host under the test server, as <see cref="IntegrationTestFactory"/>
+    /// does. <c>Program</c> ends in <c>RunJasperFxCommands</c>, which otherwise prints its usage and never
+    /// starts the host: the container is still built, but no handler chain is compiled and every request
+    /// fails with "the server has not been started". Set here too so a run that touches only this factory
+    /// does not depend on another fixture having been loaded first.
+    /// </summary>
+    static SsoModeFactory()
+    {
+        JasperFxEnvironment.AutoStartHost = true;
+    }
+
     /// <summary>Boots the host in the Testing environment, in single sign-on mode, against the test database.</summary>
     /// <param name="builder">The web host being configured.</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)

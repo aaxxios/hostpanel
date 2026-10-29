@@ -12,8 +12,10 @@ namespace Innovayse.Hostpanel.API.Auth;
 /// </summary>
 /// <remarks>
 /// A resource filter, so the refusal comes before model binding and before the bus: the use cases
-/// behind these routes depend on services that exist only in local mode, and this is what keeps them
-/// from being resolved anywhere else. The mode is asked of the one shared
+/// behind these routes need the local account store, and this is what keeps them from running anywhere
+/// else. Outside local mode their ports resolve to stand-ins that hold no accounts (<c>SsoUserService</c>,
+/// <c>SsoTwoFactorChallengeService</c>), there only so their handler code can be generated. The mode
+/// is asked of the one shared
 /// <see cref="IAuthModeProvider"/>, so this filter always agrees with the rest of the process.
 /// </remarks>
 public sealed class LocalModeOnlyFilter : IAsyncResourceFilter

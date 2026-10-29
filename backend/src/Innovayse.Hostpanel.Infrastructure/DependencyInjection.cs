@@ -324,6 +324,15 @@ public static class DependencyInjection
                 .ValidateOnStart();
             services.AddSingleton<ITwoFactorCodeGuard, TwoFactorCodeGuard>();
         }
+        else
+        {
+            // No local password step and no local code exist in this mode, but the local sign-in
+            // handlers still do, and their code is generated at image build time in the image's mode
+            // with service location refused. These stand-ins open and accept nothing, so the container
+            // is complete in every mode without registering Identity or its key ring.
+            services.AddSingleton<ITwoFactorChallengeService, SsoTwoFactorChallengeService>();
+            services.AddSingleton<ITwoFactorCodeGuard, SsoTwoFactorCodeGuard>();
+        }
 
         // Auth services
         // Roles live in this product's own database in both modes, keyed by whatever the
@@ -359,6 +368,10 @@ public static class DependencyInjection
             services.AddScoped<IIdentityProvider, SsoIdentityProvider>();
             services.AddScoped<IUserProvisioning, SsoModeUserProvisioning>();
             services.AddScoped<ITwoFactorService, SsoTwoFactorService>();
+
+            // An account store with no accounts in it, for the local sign-in and registration
+            // handlers whose routes answer 404 here (LocalModeOnlyFilter); see SsoUserService.
+            services.AddScoped<IUserService, SsoUserService>();
 #if INNOVAYSE_SSO
             // Sessions live in the shared Innovayse.Auth store, so revoking is that store's call.
             services.AddScoped<ISessionRevoker, SsoSessionRevoker>();
