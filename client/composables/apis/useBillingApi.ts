@@ -108,8 +108,8 @@ export const useBillingApi = () => {
    * @returns The new order and invoice ids, plus the payment token that authorises paying for the order.
    * @throws Whatever `apiFetch` throws.
    */
-  const createOrder = (order: Record<string, unknown>): Promise<{ orderId: number, invoiceId: number, paymentToken: string }> =>
-    apiFetch<{ orderId: number, invoiceId: number, paymentToken: string }>('/api/portal/order/create', {
+  const createOrder = (order: Record<string, unknown>): Promise<{ orderId: number, invoiceId: number, paymentToken: string, paid?: boolean }> =>
+    apiFetch<{ orderId: number, invoiceId: number, paymentToken: string, paid?: boolean }>('/api/portal/order/create', {
       method: 'POST',
       body: order
     })
