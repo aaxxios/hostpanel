@@ -571,6 +571,9 @@
   <data name="INVOICE_NOT_UNPAID" xml:space="preserve">
     <value>Ժամկետանց կարելի է նշել միայն չվճարված հաշիվ-ապրանքագիրը։</value>
   </data>
+  <data name="INVOICE_NOT_OVERDUE" xml:space="preserve">
+    <value>Ժամկետը լրացած կարելի է նշել միայն ժամկետանց հաշիվ-ապրանքագիրը։</value>
+  </data>
   <data name="INVOICE_CANCEL_NOT_ALLOWED" xml:space="preserve">
     <value>Վճարված, վերադարձված կամ արդեն չեղարկված հաշիվ-ապրանքագիրը հնարավոր չէ չեղարկել։</value>
   </data>
@@ -882,6 +885,15 @@
   </data>
   <data name="PRODUCT_SKU_ALREADY_IN_USE" xml:space="preserve">
     <value>Այս SKU-ն արդեն օգտագործվում է մեկ այլ ապրանքում։ Ընտրեք այլ SKU։</value>
+  </data>
+  <data name="PRODUCT_SKU_INVALID" xml:space="preserve">
+    <value>SKU-ն կարող է պարունակել միայն տառեր և թվեր՝ միացված մեկական գծիկով, ընդգծիկով կամ կետով, և չի կարող գերազանցել 64 նիշը։</value>
+  </data>
+  <data name="PRODUCT_METADATA_INVALID" xml:space="preserve">
+    <value>Ապրանքի մետատվյալները պետք է լինեն JSON օբյեկտ։</value>
+  </data>
+  <data name="PRODUCT_GRACE_PERIOD_OUT_OF_RANGE" xml:space="preserve">
+    <value>Արտոնյալ ժամկետը պետք է լինի 0-ից 365 օր։</value>
   </data>
   <data name="EXTERNAL_ACCOUNT_ALREADY_LINKED" xml:space="preserve">
     <value>Այս արտաքին հաշիվն արդեն կապված է մեկ այլ հաճախորդի։</value>

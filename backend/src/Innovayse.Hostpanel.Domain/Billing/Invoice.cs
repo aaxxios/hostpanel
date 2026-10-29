@@ -55,6 +55,21 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// </summary>
     public DateTimeOffset? PaidAt { get; private set; }
 
+    /// <summary>
+    /// Gets when the invoice was marked lapsed (UTC): it stayed overdue past its grace period, so the
+    /// period it billed was never paid for. <see langword="null"/> while it has not lapsed. A historical
+    /// fact like <see cref="PaidAt"/>: a lapsed invoice paid later keeps it, and <see cref="Status"/> says
+    /// whether it is paid now.
+    /// </summary>
+    public DateTimeOffset? LapsedAt { get; private set; }
+
+    /// <summary>
+    /// Gets whether at least one line charges for a digital product (<see cref="InvoiceItem.IsDigital"/>).
+    /// Stored rather than read from the lines, so the fulfilment path can tell from the invoice row alone
+    /// whether plugins have anything to hear about; recomputed with the totals whenever a line changes.
+    /// </summary>
+    public bool HasDigitalItems { get; private set; }
+
     /// <summary>Gets the sum of all line item amounts before tax and credit.</summary>
     public decimal SubTotal { get; private set; }
 
@@ -168,6 +183,12 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
 
     /// <summary>Gets whether the invoice's money question is closed: Paid, PartiallyRefunded or Refunded.</summary>
     public bool IsSettled => IsPaid || Status == InvoiceStatus.Refunded;
+
+    /// <summary>
+    /// Gets whether <see cref="MarkLapsed"/> would mark the invoice now: it is Overdue and has not lapsed yet.
+    /// A sweep asks this before marking, so an invoice is never reported lapsed twice.
+    /// </summary>
+    public bool CanLapse => Status == InvoiceStatus.Overdue && LapsedAt is null;
 
     /// <summary>
     /// Gets whether <see cref="Cancel"/> is allowed: Draft, Unpaid or Overdue, and no payment
@@ -388,12 +409,17 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// the service itself may pass it: see <see cref="InvoiceItem.ClientServiceId"/> for why
     /// inferring it from the description is not allowed.
     /// </param>
+    /// <param name="productSnapshot">
+    /// What the product this line charges for is at billing time, or <see langword="null"/> when the line
+    /// is not a product's charge; see <see cref="InvoiceItem.ProductSnapshot"/>.
+    /// </param>
     /// <exception cref="DomainRuleException">Thrown when the invoice is no longer editable.</exception>
-    public void AddItem(string description, decimal unitPrice, int quantity, int? clientServiceId = null)
+    public void AddItem(
+        string description, decimal unitPrice, int quantity, int? clientServiceId = null, ProductSnapshot? productSnapshot = null)
     {
         EnsureEditable();
 
-        var item = InvoiceItem.Create(description, unitPrice, quantity, clientServiceId);
+        var item = InvoiceItem.Create(description, unitPrice, quantity, clientServiceId, productSnapshot);
         _items.Add(item);
         RecalculateTotals();
     }
@@ -404,9 +430,15 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// <param name="clientServiceId">The service renewed.</param>
     /// <param name="start">Period start.</param>
     /// <param name="end">Period end.</param>
+    /// <param name="productSnapshot">
+    /// What the renewed service's product is at billing time, so the renewal is fulfilled as what is sold
+    /// now; <see langword="null"/> only when the caller has no product for the service.
+    /// </param>
     /// <exception cref="DomainRuleException">The invoice is no longer editable.</exception>
-    public void AddServiceRenewal(string description, decimal amount, int clientServiceId, DateTimeOffset start, DateTimeOffset end) =>
-        AddRenewal(InvoiceItem.CreateRenewal(description, amount, clientServiceId, null, start, end));
+    public void AddServiceRenewal(
+        string description, decimal amount, int clientServiceId, DateTimeOffset start, DateTimeOffset end,
+        ProductSnapshot? productSnapshot = null) =>
+        AddRenewal(InvoiceItem.CreateRenewal(description, amount, clientServiceId, null, start, end, productSnapshot));
 
     /// <summary>Adds a renewal line for one domain and one period, and recalculates totals.</summary>
     /// <param name="description">Line description.</param>
@@ -416,7 +448,7 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// <param name="end">Period end.</param>
     /// <exception cref="DomainRuleException">The invoice is no longer editable.</exception>
     public void AddDomainRenewal(string description, decimal amount, int registeredDomainId, DateTimeOffset start, DateTimeOffset end) =>
-        AddRenewal(InvoiceItem.CreateRenewal(description, amount, null, registeredDomainId, start, end));
+        AddRenewal(InvoiceItem.CreateRenewal(description, amount, null, registeredDomainId, start, end, null));
 
     /// <summary>Appends a renewal line under the same editability rule as <see cref="AddItem"/>.</summary>
     /// <param name="item">The renewal line.</param>
@@ -830,6 +862,36 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     }
 
     /// <summary>
+    /// Marks an overdue invoice lapsed: it stayed unpaid past its grace period, so the period it billed was
+    /// never paid for. Sets <see cref="LapsedAt"/> and raises <see cref="SubscriptionLapsedEvent"/>. Marking an
+    /// invoice that has already lapsed is a no-op, so a sweep that runs twice reports it once. The status stays
+    /// Overdue: the debt is still owed and can still be paid.
+    /// </summary>
+    /// <param name="now">The current moment (UTC); becomes <see cref="LapsedAt"/> and is stamped on the event.</param>
+    /// <exception cref="DomainRuleException">
+    /// <see cref="BillingErrors.InvoiceNotOverdue"/> when the invoice has not lapsed yet and is not Overdue.
+    /// </exception>
+    public void MarkLapsed(DateTimeOffset now)
+    {
+        // Checked before the status: an invoice paid after it lapsed is no longer Overdue, and asking again
+        // must still answer that it has lapsed rather than refuse a fact that stands.
+        if (LapsedAt is not null)
+        {
+            return;
+        }
+
+        if (Status != InvoiceStatus.Overdue)
+        {
+            throw new DomainRuleException(
+                BillingErrors.InvoiceNotOverdue,
+                $"Only Overdue invoices can be marked lapsed; current status is {Status}.");
+        }
+
+        LapsedAt = now;
+        AddDomainEvent(new SubscriptionLapsedEvent(Id, ClientId, HasDigitalItems) { OccurredAt = now });
+    }
+
+    /// <summary>
     /// Cancels the invoice so it will not be collected. Applied credit stays on the invoice; the
     /// caller takes it back with <see cref="RemoveCredit"/> first so the client does not lose it.
     /// </summary>
@@ -1026,9 +1088,11 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// Creates a new Draft copy of this invoice (with all its line items).
     /// </summary>
     /// <remarks>
-    /// The copy carries each line's <see cref="InvoiceItem.ClientServiceId"/> across. A duplicate
-    /// is the same charges billed again, so a line that was for a service is still for that
-    /// service; dropping the link here would quietly hide the copy from the service it belongs to.
+    /// The copy carries each line's <see cref="InvoiceItem.ClientServiceId"/> and
+    /// <see cref="InvoiceItem.ProductSnapshot"/> across. A duplicate is the same charges billed
+    /// again, so a line that was for a service is still for that service and sells what it sold;
+    /// dropping the link here would quietly hide the copy from the service it belongs to, and
+    /// dropping the snapshot would leave a paid digital copy with nothing to fulfil.
     /// </remarks>
     /// <param name="issuedAt">When the copy is issued (UTC).</param>
     /// <returns>A new Draft invoice with the same client, due date, currency and lines.</returns>
@@ -1039,7 +1103,7 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
         // AddItem, never a renewal factory: a copy is not a renewal, and paying it must extend nothing.
         foreach (var item in _items)
         {
-            copy.AddItem(item.Description, item.UnitPrice, item.Quantity, item.ClientServiceId);
+            copy.AddItem(item.Description, item.UnitPrice, item.Quantity, item.ClientServiceId, item.ProductSnapshot);
         }
         return copy;
     }
@@ -1150,10 +1214,13 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
 
     /// <summary>
     /// Recomputes <see cref="SubTotal"/>, <see cref="Tax"/>, and <see cref="Total"/> from current
-    /// line items, the tax and the total rounded to the currency's minor unit.
+    /// line items, the tax and the total rounded to the currency's minor unit, and
+    /// <see cref="HasDigitalItems"/> from the lines' snapshots. Every path that changes a line runs
+    /// through here, so the stored flag cannot drift from the lines.
     /// </summary>
     private void RecalculateTotals()
     {
+        HasDigitalItems = _items.Any(i => i.IsDigital);
         SubTotal = _items.Sum(i => i.Amount);
         Tax = TaxOn(SubTotal, TaxRate);
         Total = CurrencyCode.RoundToMinorUnits(SubTotal + Tax - Credit, Currency);

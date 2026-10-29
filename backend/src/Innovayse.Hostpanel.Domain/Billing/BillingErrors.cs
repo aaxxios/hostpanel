@@ -2,7 +2,7 @@ namespace Innovayse.Hostpanel.Domain.Billing;
 
 /// <summary>
 /// Refusal codes the Billing aggregates (<see cref="Currency"/>, <see cref="Invoice"/>,
-/// <see cref="Quote"/>) throw as <see cref="Innovayse.Hostpanel.Domain.DomainRuleException"/>.
+/// <see cref="Quote"/>, <see cref="FulfilmentRecord"/>) throw as <see cref="Innovayse.Hostpanel.Domain.DomainRuleException"/>.
 /// </summary>
 /// <remarks>
 /// Declared here, not in <c>Application.Common.Errors.HostpanelErrorCodes</c>, because Domain may
@@ -44,6 +44,18 @@ public static class BillingErrors
     /// requires <c>Unpaid</c>.
     /// </summary>
     public const string InvoiceNotUnpaid = "INVOICE_NOT_UNPAID";
+
+    /// <summary>
+    /// The invoice is not eligible to be marked lapsed (400): <see cref="Invoice.MarkLapsed"/>
+    /// requires <c>Overdue</c>.
+    /// </summary>
+    public const string InvoiceNotOverdue = "INVOICE_NOT_OVERDUE";
+
+    /// <summary>
+    /// The fulfilment record has not failed, so there is nothing to retry (409):
+    /// <see cref="FulfilmentRecord.Retry"/>.
+    /// </summary>
+    public const string FulfilmentRecordNotRetryable = "FULFILMENT_RECORD_NOT_RETRYABLE";
 
     /// <summary>
     /// The invoice is past the point where it can be cancelled (400): it is paid, refunded or
