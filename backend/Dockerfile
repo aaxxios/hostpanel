@@ -89,10 +89,16 @@ COPY . .
 # compiled into the published API, and a production host (TypeLoadMode.Static) loads it. The Testing
 # environment is used only because its settings let the host be built with no database or secrets: the
 # command builds the host and writes the code, it never starts it. Writing it fresh on every build is
-# also what keeps it from going stale.
+# also what keeps it from going stale. The host is built in the auth mode the image runs in: the two
+# modes register different account adapters, and code generated for one cannot resolve the other's
+# (a sign-on image whose handlers were generated for local mode asks for Identity, which sso never
+# registers). Sign-on mode refuses to build the host without an authority and a client id; the
+# placeholders below only let it be built here, the running container takes its own from the environment.
 RUN SSO=$([ "$AUTH_MODE" = "sso" ] && echo "-p:InnovayseSso=true"); \
     cd src/Innovayse.Hostpanel.API && \
-    ASPNETCORE_ENVIRONMENT=Testing dotnet run -c Release --no-restore --no-launch-profile $SSO -- codegen write
+    ASPNETCORE_ENVIRONMENT=Testing Auth__Mode="${AUTH_MODE:-local}" \
+    Sso__Authority=https://sign-on.invalid Sso__ClientId=codegen \
+    dotnet run -c Release --no-restore --no-launch-profile $SSO -- codegen write
 
 RUN SSO=$([ "$AUTH_MODE" = "sso" ] && echo "-p:InnovayseSso=true"); \
     dotnet publish src/Innovayse.Hostpanel.API/Innovayse.Hostpanel.API.csproj -c Release -o /out --no-restore /p:ErrorOnDuplicatePublishOutputFiles=false $SSO
